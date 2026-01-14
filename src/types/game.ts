@@ -1,4 +1,4 @@
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'result';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'result';
 
 export interface Vector2 {
   x: number;

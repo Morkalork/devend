@@ -7,6 +7,7 @@ import { TutorialScreen } from '@/components/game/TutorialScreen';
 import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
+import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { GameResult, LevelScoreData } from '@/types/game';
 
 const Index = () => {
@@ -16,7 +17,9 @@ const Index = () => {
     startGame, 
     endGame, 
     goToWelcome, 
-    goToTutorial 
+    goToTutorial,
+    goToUpgradeShop,
+    goToGame,
   } = useGameState();
 
   const {
@@ -32,6 +35,7 @@ const Index = () => {
   } = useLevelManager();
 
   const {
+    upgrades,
     isLoading: isLoadingUpgrades,
     error: upgradeError,
     loadUpgrades,
@@ -45,6 +49,9 @@ const Index = () => {
   const [totalScore, setTotalScore] = useState(0);
   const [pendingLevelScore, setPendingLevelScore] = useState<LevelScoreData | null>(null);
   const [showLevelComplete, setShowLevelComplete] = useState(false);
+  
+  // Owned upgrades tracking
+  const [ownedUpgradeIds, setOwnedUpgradeIds] = useState<string[]>([]);
 
   const handleStartGame = useCallback(async () => {
     // Load both levels and upgrades in parallel
@@ -57,6 +64,7 @@ const Index = () => {
       setTotalScore(0);
       setPendingLevelScore(null);
       setShowLevelComplete(false);
+      setOwnedUpgradeIds([]);
       startGame();
     }
   }, [loadLevels, loadUpgrades, startGame]);
@@ -79,7 +87,6 @@ const Index = () => {
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
-    setPendingLevelScore(null);
     
     if (isLastLevel) {
       // All levels complete - show final win screen
@@ -95,17 +102,30 @@ const Index = () => {
         expectedCuts: pendingLevelScore?.expectedCuts,
         basePoints: pendingLevelScore?.basePoints,
       });
+      setPendingLevelScore(null);
     } else {
-      // Advance to next level
-      advanceToNextLevel();
+      // Go to upgrade shop before next level
+      goToUpgradeShop();
     }
-  }, [isLastLevel, advanceToNextLevel, endGame, currentLevel, currentLevelIndex, totalScore, pendingLevelScore]);
+  }, [isLastLevel, endGame, currentLevel, currentLevelIndex, totalScore, pendingLevelScore, goToUpgradeShop]);
+
+  const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
+    setTotalScore(prev => prev - price);
+    setOwnedUpgradeIds(prev => [...prev, upgradeId]);
+  }, []);
+
+  const handleContinueFromShop = useCallback(() => {
+    setPendingLevelScore(null);
+    advanceToNextLevel();
+    goToGame();
+  }, [advanceToNextLevel, goToGame]);
 
   const handlePlayAgain = useCallback(() => {
     resetToFirstLevel();
     setTotalScore(0);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
+    setOwnedUpgradeIds([]);
     startGame();
   }, [resetToFirstLevel, startGame]);
 
@@ -114,6 +134,7 @@ const Index = () => {
     setTotalScore(0);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
+    setOwnedUpgradeIds([]);
     goToWelcome();
   }, [resetToFirstLevel, goToWelcome]);
 
@@ -138,6 +159,16 @@ const Index = () => {
           totalScore={totalScore}
           onGameEnd={handleGameEnd}
           onLevelComplete={handleLevelComplete}
+        />
+      )}
+      {currentScreen === 'upgradeShop' && (
+        <UpgradeShop
+          playerPoints={totalScore}
+          levelNumber={currentLevelIndex + 1}
+          upgrades={upgrades}
+          ownedUpgradeIds={ownedUpgradeIds}
+          onPurchase={handlePurchaseUpgrade}
+          onContinue={handleContinueFromShop}
         />
       )}
       {currentScreen === 'result' && lastResult && (

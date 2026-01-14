@@ -27,6 +27,14 @@ export function useGameState() {
     setCurrentScreen('tutorial');
   }, []);
 
+  const goToUpgradeShop = useCallback(() => {
+    setCurrentScreen('upgradeShop');
+  }, []);
+
+  const goToGame = useCallback(() => {
+    setCurrentScreen('game');
+  }, []);
+
   return {
     currentScreen,
     lastResult,
@@ -35,5 +43,7 @@ export function useGameState() {
     endGame,
     goToWelcome,
     goToTutorial,
+    goToUpgradeShop,
+    goToGame,
   };
 }
