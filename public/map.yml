@@ -4,7 +4,7 @@ levels:
     rectangleColor: "ffffff"
     sizeThreshold: 50
     expectedCuts: 3
-    points: 100
+    points: 6
     balls:
       - id: "ball-1"
         initialSpeed: 300
@@ -16,7 +16,7 @@ levels:
     rectangleColor: "e8e8e8"
     sizeThreshold: 40
     expectedCuts: 5
-    points: 150
+    points: 10
     balls:
       - id: "ball-1"
         initialSpeed: 350
@@ -32,7 +32,7 @@ levels:
     rectangleColor: "f0f0f0"
     sizeThreshold: 35
     expectedCuts: 6
-    points: 200
+    points: 10
     balls:
       - id: "ball-1"
         initialSpeed: 380
@@ -48,7 +48,7 @@ levels:
     rectangleColor: "ffffff"
     sizeThreshold: 30
     expectedCuts: 8
-    points: 250
+    points: 14
     balls:
       - id: "ball-1"
         initialSpeed: 400
@@ -68,7 +68,7 @@ levels:
     rectangleColor: "fafafa"
     sizeThreshold: 25
     expectedCuts: 10
-    points: 300
+    points: 20
     balls:
       - id: "ball-1"
         initialSpeed: 420
