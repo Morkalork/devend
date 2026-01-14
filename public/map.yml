@@ -1,0 +1,74 @@
+levels:
+  - id: "level-1"
+    backgroundColor: "1a1a2e"
+    rectangleColor: "ffffff"
+    sizeThreshold: 50
+    balls:
+      - id: "ball-1"
+        initialSpeed: 300
+        topSpeed: 600
+        color: "00d4ff"
+
+  - id: "level-2"
+    backgroundColor: "0f3460"
+    rectangleColor: "e8e8e8"
+    sizeThreshold: 40
+    balls:
+      - id: "ball-1"
+        initialSpeed: 350
+        topSpeed: 700
+        color: "ff6b6b"
+      - id: "ball-2"
+        initialSpeed: 320
+        topSpeed: 680
+        color: "4ecdc4"
+
+  - id: "level-3"
+    backgroundColor: "16213e"
+    rectangleColor: "f0f0f0"
+    sizeThreshold: 35
+    balls:
+      - id: "ball-1"
+        initialSpeed: 380
+        topSpeed: 750
+        color: "ffd93d"
+      - id: "ball-2"
+        initialSpeed: 360
+        topSpeed: 720
+        color: "6bcb77"
+
+  - id: "level-4"
+    backgroundColor: "1a1a40"
+    rectangleColor: "ffffff"
+    sizeThreshold: 30
+    balls:
+      - id: "ball-1"
+        initialSpeed: 400
+        topSpeed: 800
+        color: "ff8c42"
+      - id: "ball-2"
+        initialSpeed: 380
+        topSpeed: 780
+        color: "98d8c8"
+      - id: "ball-3"
+        initialSpeed: 360
+        topSpeed: 760
+        color: "c792ea"
+
+  - id: "level-5"
+    backgroundColor: "0d0d0d"
+    rectangleColor: "fafafa"
+    sizeThreshold: 25
+    balls:
+      - id: "ball-1"
+        initialSpeed: 420
+        topSpeed: 850
+        color: "ff0055"
+      - id: "ball-2"
+        initialSpeed: 400
+        topSpeed: 830
+        color: "00ff88"
+      - id: "ball-3"
+        initialSpeed: 380
+        topSpeed: 810
+        color: "00aaff"

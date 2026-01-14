@@ -13,10 +13,13 @@ export interface Bounds {
 }
 
 export interface Ball {
+  id: string;
   position: Vector2;
   velocity: Vector2;
   radius: number;
   speed: number;
+  topSpeed: number;
+  color: string; // hex color with #
 }
 
 export interface GrowingWall {
@@ -31,7 +34,7 @@ export interface GrowingWall {
 export interface GameState {
   arena: Bounds;
   originalArea: number;
-  ball: Ball;
+  balls: Ball[];
   activeWall: GrowingWall | null;
   remainingPercent: number;
   isGameOver: boolean;
@@ -43,4 +46,12 @@ export interface SwipeData {
   startY: number;
   deltaX: number;
   deltaY: number;
+}
+
+export interface GameResult {
+  isWin: boolean;
+  remainingPercent: number;
+  levelId: string;
+  levelNumber: number;
+  completedAllLevels?: boolean;
 }

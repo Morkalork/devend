@@ -1,26 +1,24 @@
 import { useRef, useEffect, useState } from 'react';
-import { Ball, Bounds, GrowingWall, Vector2 } from '@/types/game';
+import { Ball, Bounds, GrowingWall, Vector2, GameResult } from '@/types/game';
+import { LevelConfig } from '@/types/level';
 
 interface GameCanvasProps {
-  onGameEnd: (isWin: boolean, remainingPercent: number) => void;
+  level: LevelConfig;
+  levelNumber: number;
+  totalLevels: number;
+  onGameEnd: (result: GameResult) => void;
+  onLevelComplete: () => void;
 }
 
 // Game constants
 const BALL_RADIUS = 10;
-const BALL_INITIAL_SPEED = 350;
-const BALL_MAX_SPEED = 900;
 const BALL_SPEED_INCREASE = 1.05;
 const WALL_THICKNESS = 6;
 const WALL_GROWTH_SPEED = 1200;
-const WIN_THRESHOLD = 25;
 const ARENA_MARGIN = 0.1;
 
 // Colors
 const COLORS = {
-  void: '#050508',
-  arena: '#ffffff',
-  ball: '#00d4ff',
-  ballGlow: 'rgba(0, 212, 255, 0.4)',
   wallActive: '#ff8800',
   wallActiveGlow: 'rgba(255, 136, 0, 0.5)',
 };
@@ -45,22 +43,31 @@ function circleRectCollision(
   return (dx * dx + dy * dy) < (r * r);
 }
 
-export function GameCanvas({ onGameEnd }: GameCanvasProps) {
+function hexToRgba(hex: string, alpha: number = 1): string {
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevelComplete }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
   
-  // All game state in a single ref to avoid closure issues
   const gameRef = useRef({
     arena: null as Bounds | null,
     originalArea: 0,
-    ball: null as Ball | null,
+    balls: [] as Ball[],
     activeWall: null as GrowingWall | null,
     gameOver: false,
+    levelComplete: false,
     swipeStart: null as Vector2 | null,
     lastTime: 0,
     animationId: 0,
     canvasSize: { width: 0, height: 0 },
+    backgroundColor: `#${level.backgroundColor}`,
+    arenaColor: `#${level.rectangleColor}`,
   });
 
   useEffect(() => {
@@ -69,6 +76,9 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
     if (!container || !canvas) return;
 
     const game = gameRef.current;
+    game.backgroundColor = `#${level.backgroundColor}`;
+    game.arenaColor = `#${level.rectangleColor}`;
+    
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
@@ -87,16 +97,29 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
       
       game.originalArea = arenaWidth * arenaHeight;
       
-      const dir = getRandomDirection();
-      game.ball = {
-        position: { x: margin + arenaWidth / 2, y: margin + arenaHeight / 2 },
-        velocity: { x: dir.x * BALL_INITIAL_SPEED, y: dir.y * BALL_INITIAL_SPEED },
-        radius: BALL_RADIUS,
-        speed: BALL_INITIAL_SPEED,
-      };
+      // Create balls from level config
+      game.balls = level.balls.map((ballConfig) => {
+        const dir = getRandomDirection();
+        return {
+          id: ballConfig.id,
+          position: { 
+            x: margin + arenaWidth / 2 + (Math.random() - 0.5) * arenaWidth * 0.3,
+            y: margin + arenaHeight / 2 + (Math.random() - 0.5) * arenaHeight * 0.3,
+          },
+          velocity: { 
+            x: dir.x * ballConfig.initialSpeed, 
+            y: dir.y * ballConfig.initialSpeed 
+          },
+          radius: BALL_RADIUS,
+          speed: ballConfig.initialSpeed,
+          topSpeed: ballConfig.topSpeed,
+          color: `#${ballConfig.color}`,
+        };
+      });
       
       game.activeWall = null;
       game.gameOver = false;
+      game.levelComplete = false;
       game.swipeStart = null;
       game.lastTime = 0;
       setRemainingPercent(100);
@@ -112,9 +135,9 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
       initGame();
     };
 
-    const updateBall = (dt: number) => {
-      const { ball, arena } = game;
-      if (!ball || !arena) return;
+    const updateBall = (ball: Ball, dt: number) => {
+      const { arena } = game;
+      if (!arena) return;
 
       ball.position.x += ball.velocity.x * dt;
       ball.position.y += ball.velocity.y * dt;
@@ -138,51 +161,77 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
     };
 
     const applyCut = (wall: GrowingWall) => {
-      const { arena, ball } = game;
-      if (!arena || !ball) return;
+      const { arena, balls } = game;
+      if (!arena || balls.length === 0) return;
 
-      let newArena: Bounds;
+      let region1: Bounds;
+      let region2: Bounds;
 
       if (wall.orientation === 'horizontal') {
         const cutY = wall.origin.y;
-        if (ball.position.y < cutY) {
-          newArena = { ...arena, bottom: cutY - wall.thickness / 2 };
-        } else {
-          newArena = { ...arena, top: cutY + wall.thickness / 2 };
-        }
+        region1 = { ...arena, bottom: cutY - wall.thickness / 2 }; // top region
+        region2 = { ...arena, top: cutY + wall.thickness / 2 }; // bottom region
       } else {
         const cutX = wall.origin.x;
-        if (ball.position.x < cutX) {
-          newArena = { ...arena, right: cutX - wall.thickness / 2 };
-        } else {
-          newArena = { ...arena, left: cutX + wall.thickness / 2 };
-        }
+        region1 = { ...arena, right: cutX - wall.thickness / 2 }; // left region
+        region2 = { ...arena, left: cutX + wall.thickness / 2 }; // right region
       }
 
-      game.arena = newArena;
+      // Check which balls are in which region
+      const ballsInRegion1: Ball[] = [];
+      const ballsInRegion2: Ball[] = [];
+
+      for (const ball of balls) {
+        const inRegion1 = ball.position.x >= region1.left && ball.position.x <= region1.right &&
+                          ball.position.y >= region1.top && ball.position.y <= region1.bottom;
+        const inRegion2 = ball.position.x >= region2.left && ball.position.x <= region2.right &&
+                          ball.position.y >= region2.top && ball.position.y <= region2.bottom;
+        
+        if (inRegion1) ballsInRegion1.push(ball);
+        if (inRegion2) ballsInRegion2.push(ball);
+      }
+
+      let newArena: Bounds | null = null;
+
+      // Apply cut only if exactly one region is empty
+      if (ballsInRegion1.length === 0 && ballsInRegion2.length > 0) {
+        newArena = region2;
+      } else if (ballsInRegion2.length === 0 && ballsInRegion1.length > 0) {
+        newArena = region1;
+      }
+      // If both have balls, cut is wasted - do nothing
+
       game.activeWall = null;
 
-      const currentArea = (newArena.right - newArena.left) * (newArena.bottom - newArena.top);
-      const percent = Math.round((currentArea / game.originalArea) * 100);
-      setRemainingPercent(percent);
+      if (newArena) {
+        game.arena = newArena;
+        
+        const currentArea = (newArena.right - newArena.left) * (newArena.bottom - newArena.top);
+        const percent = Math.round((currentArea / game.originalArea) * 100);
+        setRemainingPercent(percent);
 
-      if (percent < WIN_THRESHOLD) {
-        game.gameOver = true;
-        onGameEnd(true, percent);
-        return;
+        if (percent < level.sizeThreshold) {
+          game.levelComplete = true;
+          setTimeout(() => {
+            onLevelComplete();
+          }, 600);
+          return;
+        }
+
+        // Speed up all balls
+        for (const ball of balls) {
+          const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
+          const ratio = newSpeed / ball.speed;
+          ball.speed = newSpeed;
+          ball.velocity.x *= ratio;
+          ball.velocity.y *= ratio;
+        }
       }
-
-      // Speed up ball
-      const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, BALL_MAX_SPEED);
-      const ratio = newSpeed / ball.speed;
-      ball.speed = newSpeed;
-      ball.velocity.x *= ratio;
-      ball.velocity.y *= ratio;
     };
 
     const updateWall = (dt: number) => {
-      const { activeWall: wall, arena, ball } = game;
-      if (!wall || !arena || !ball || wall.isComplete) return;
+      const { activeWall: wall, arena, balls } = game;
+      if (!wall || !arena || balls.length === 0 || wall.isComplete) return;
 
       const growth = WALL_GROWTH_SPEED * dt;
 
@@ -200,7 +249,7 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
         }
       }
 
-      // Collision check while growing
+      // Collision check with any ball while growing
       if (!wall.isComplete) {
         let rx: number, ry: number, rw: number, rh: number;
         if (wall.orientation === 'horizontal') {
@@ -215,12 +264,19 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
           rh = wall.endExtent - wall.startExtent;
         }
 
-        if (circleRectCollision(ball.position.x, ball.position.y, ball.radius, rx, ry, rw, rh)) {
-          game.gameOver = true;
-          const currentArea = (arena.right - arena.left) * (arena.bottom - arena.top);
-          const percent = Math.round((currentArea / game.originalArea) * 100);
-          onGameEnd(false, percent);
-          return;
+        for (const ball of balls) {
+          if (circleRectCollision(ball.position.x, ball.position.y, ball.radius, rx, ry, rw, rh)) {
+            game.gameOver = true;
+            const currentArea = (arena.right - arena.left) * (arena.bottom - arena.top);
+            const percent = Math.round((currentArea / game.originalArea) * 100);
+            onGameEnd({
+              isWin: false,
+              remainingPercent: percent,
+              levelId: level.id,
+              levelNumber,
+            });
+            return;
+          }
         }
       }
 
@@ -230,15 +286,15 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
     };
 
     const render = () => {
-      const { arena, ball, activeWall: wall, canvasSize } = game;
+      const { arena, balls, activeWall: wall, canvasSize, backgroundColor, arenaColor } = game;
       const { width, height } = canvasSize;
 
-      ctx.fillStyle = COLORS.void;
+      ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, width, height);
 
-      if (!arena || !ball) return;
+      if (!arena) return;
 
-      ctx.fillStyle = COLORS.arena;
+      ctx.fillStyle = arenaColor;
       ctx.fillRect(arena.left, arena.top, arena.right - arena.left, arena.bottom - arena.top);
 
       if (wall && !wall.isComplete) {
@@ -265,31 +321,36 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
         ctx.restore();
       }
 
-      // Ball glow
-      ctx.beginPath();
-      ctx.arc(ball.position.x, ball.position.y, ball.radius + 10, 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.ballGlow;
-      ctx.fill();
+      // Render all balls
+      for (const ball of balls) {
+        // Ball glow
+        ctx.beginPath();
+        ctx.arc(ball.position.x, ball.position.y, ball.radius + 10, 0, Math.PI * 2);
+        ctx.fillStyle = hexToRgba(ball.color.slice(1), 0.4);
+        ctx.fill();
 
-      // Ball
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(ball.position.x, ball.position.y, ball.radius, 0, Math.PI * 2);
-      ctx.fillStyle = COLORS.ball;
-      ctx.shadowColor = COLORS.ball;
-      ctx.shadowBlur = 15;
-      ctx.fill();
-      ctx.restore();
+        // Ball
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ball.position.x, ball.position.y, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = ball.color;
+        ctx.shadowColor = ball.color;
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.restore();
+      }
     };
 
     const gameLoop = (timestamp: number) => {
-      if (game.gameOver) return;
+      if (game.gameOver || game.levelComplete) return;
 
       const dt = game.lastTime ? (timestamp - game.lastTime) / 1000 : 0;
       game.lastTime = timestamp;
       const cappedDt = Math.min(dt, 0.05);
 
-      updateBall(cappedDt);
+      for (const ball of game.balls) {
+        updateBall(ball, cappedDt);
+      }
       updateWall(cappedDt);
       render();
 
@@ -305,7 +366,7 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
     };
 
     const handlePointerDown = (e: PointerEvent) => {
-      if (game.gameOver || game.activeWall) return;
+      if (game.gameOver || game.levelComplete || game.activeWall) return;
       const { arena } = game;
       if (!arena) return;
 
@@ -323,7 +384,7 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!game.swipeStart || game.gameOver || game.activeWall) return;
+      if (!game.swipeStart || game.gameOver || game.levelComplete || game.activeWall) return;
 
       const pos = getCanvasCoords(e);
       const deltaX = pos.x - game.swipeStart.x;
@@ -368,16 +429,28 @@ export function GameCanvas({ onGameEnd }: GameCanvasProps) {
       canvas.removeEventListener('pointerleave', handlePointerUp);
       cancelAnimationFrame(game.animationId);
     };
-  }, [onGameEnd]);
+  }, [level, levelNumber, onGameEnd, onLevelComplete]);
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full" style={{ backgroundColor: `#${level.backgroundColor}` }}>
+      {/* Level indicator - top left */}
+      <div className="absolute top-4 left-4 z-10">
+        <div className="hud-display">
+          <span className="text-muted-foreground text-xs uppercase tracking-wider">Level</span>
+          <div className="text-2xl font-display font-bold text-primary">
+            {levelNumber} / {totalLevels}
+          </div>
+        </div>
+      </div>
+
+      {/* Remaining percentage - top right */}
       <div className="absolute top-4 right-4 z-10">
         <div className="hud-display">
           <span className="text-muted-foreground text-xs uppercase tracking-wider">Remaining</span>
           <div className="text-2xl font-display font-bold text-primary">
             {remainingPercent}%
           </div>
+          <span className="text-muted-foreground text-xs">Target: &lt;{level.sizeThreshold}%</span>
         </div>
       </div>
 

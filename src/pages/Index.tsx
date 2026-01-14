@@ -1,8 +1,11 @@
+import { useCallback } from 'react';
 import { useGameState } from '@/hooks/useGameState';
+import { useLevelManager } from '@/hooks/useLevelManager';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
 import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
+import { GameResult } from '@/types/game';
 
 const Index = () => {
   const { 
@@ -14,23 +17,82 @@ const Index = () => {
     goToTutorial 
   } = useGameState();
 
+  const {
+    currentLevel,
+    currentLevelIndex,
+    totalLevels,
+    isLastLevel,
+    isLoading,
+    error,
+    loadLevels,
+    advanceToNextLevel,
+    resetToFirstLevel,
+  } = useLevelManager();
+
+  const handleStartGame = useCallback(async () => {
+    const success = await loadLevels();
+    if (success) {
+      startGame();
+    }
+  }, [loadLevels, startGame]);
+
+  const handleGameEnd = useCallback((result: GameResult) => {
+    endGame(result);
+  }, [endGame]);
+
+  const handleLevelComplete = useCallback(() => {
+    if (isLastLevel) {
+      // All levels complete - show final win screen
+      endGame({
+        isWin: true,
+        remainingPercent: 0,
+        levelId: currentLevel?.id || '',
+        levelNumber: currentLevelIndex + 1,
+        completedAllLevels: true,
+      });
+    } else {
+      // Advance to next level
+      advanceToNextLevel();
+    }
+  }, [isLastLevel, advanceToNextLevel, endGame, currentLevel, currentLevelIndex]);
+
+  const handlePlayAgain = useCallback(() => {
+    resetToFirstLevel();
+    startGame();
+  }, [resetToFirstLevel, startGame]);
+
+  const handleBackToWelcome = useCallback(() => {
+    resetToFirstLevel();
+    goToWelcome();
+  }, [resetToFirstLevel, goToWelcome]);
+
   return (
     <>
       {currentScreen === 'welcome' && (
-        <WelcomeScreen onStartGame={startGame} onTutorial={goToTutorial} />
+        <WelcomeScreen 
+          onStartGame={handleStartGame} 
+          onTutorial={goToTutorial}
+          isLoading={isLoading}
+          error={error}
+        />
       )}
       {currentScreen === 'tutorial' && (
         <TutorialScreen onBack={goToWelcome} />
       )}
-      {currentScreen === 'game' && (
-        <GameScreen onGameEnd={endGame} />
+      {currentScreen === 'game' && currentLevel && (
+        <GameScreen 
+          level={currentLevel}
+          levelNumber={currentLevelIndex + 1}
+          totalLevels={totalLevels}
+          onGameEnd={handleGameEnd}
+          onLevelComplete={handleLevelComplete}
+        />
       )}
       {currentScreen === 'result' && lastResult && (
         <ResultScreen
-          isWin={lastResult.isWin}
-          remainingPercent={lastResult.remainingPercent}
-          onPlayAgain={startGame}
-          onBackToWelcome={goToWelcome}
+          result={lastResult}
+          onPlayAgain={handlePlayAgain}
+          onBackToWelcome={handleBackToWelcome}
         />
       )}
     </>

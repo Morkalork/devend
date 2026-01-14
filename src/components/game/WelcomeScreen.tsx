@@ -1,11 +1,14 @@
 import { motion } from 'framer-motion';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
   onTutorial: () => void;
+  isLoading?: boolean;
+  error?: string | null;
 }
 
-export function WelcomeScreen({ onStartGame, onTutorial }: WelcomeScreenProps) {
+export function WelcomeScreen({ onStartGame, onTutorial, isLoading, error }: WelcomeScreenProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
       {/* Animated background elements */}
@@ -66,6 +69,18 @@ export function WelcomeScreen({ onStartGame, onTutorial }: WelcomeScreenProps) {
           }}
         />
 
+        {/* Error state */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive"
+          >
+            <AlertCircle className="w-5 h-5" />
+            <span className="text-sm">{error}</span>
+          </motion.div>
+        )}
+
         {/* Buttons */}
         <motion.div
           className="flex flex-col gap-4 w-full max-w-xs"
@@ -74,18 +89,27 @@ export function WelcomeScreen({ onStartGame, onTutorial }: WelcomeScreenProps) {
           transition={{ delay: 0.4 }}
         >
           <motion.button
-            className="arcade-button-primary rounded-lg"
+            className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
             onClick={onStartGame}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            disabled={isLoading}
           >
-            Start Game
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Loading...
+              </>
+            ) : (
+              'Start Game'
+            )}
           </motion.button>
           <motion.button
             className="arcade-button-secondary rounded-lg"
             onClick={onTutorial}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
+            disabled={isLoading}
           >
             Tutorial
           </motion.button>

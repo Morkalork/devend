@@ -1,13 +1,25 @@
 import { GameCanvas } from './GameCanvas';
+import { LevelConfig } from '@/types/level';
+import { GameResult } from '@/types/game';
 
 interface GameScreenProps {
-  onGameEnd: (isWin: boolean, remainingPercent: number) => void;
+  level: LevelConfig;
+  levelNumber: number;
+  totalLevels: number;
+  onGameEnd: (result: GameResult) => void;
+  onLevelComplete: () => void;
 }
 
-export function GameScreen({ onGameEnd }: GameScreenProps) {
+export function GameScreen({ level, levelNumber, totalLevels, onGameEnd, onLevelComplete }: GameScreenProps) {
   return (
-    <div className="fixed inset-0 bg-void">
-      <GameCanvas onGameEnd={onGameEnd} />
+    <div className="fixed inset-0" style={{ backgroundColor: `#${level.backgroundColor}` }}>
+      <GameCanvas 
+        level={level}
+        levelNumber={levelNumber}
+        totalLevels={totalLevels}
+        onGameEnd={onGameEnd}
+        onLevelComplete={onLevelComplete}
+      />
     </div>
   );
 }
