@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { Ball, Bounds, GrowingWall, Vector2, GameResult } from '@/types/game';
+import { Ball, Bounds, GrowingWall, Vector2, GameResult, Region } from '@/types/game';
 import { LevelConfig } from '@/types/level';
 
 interface GameCanvasProps {
@@ -22,6 +22,11 @@ const COLORS = {
   wallActive: '#ff8800',
   wallActiveGlow: 'rgba(255, 136, 0, 0.5)',
 };
+
+let regionIdCounter = 0;
+function generateRegionId(): string {
+  return `region-${++regionIdCounter}`;
+}
 
 function getRandomDirection(): Vector2 {
   const minAngle = 15 * (Math.PI / 180);
@@ -50,24 +55,42 @@ function hexToRgba(hex: string, alpha: number = 1): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+function pointInBounds(x: number, y: number, bounds: Bounds): boolean {
+  return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
+}
+
+function getRegionArea(bounds: Bounds): number {
+  return (bounds.right - bounds.left) * (bounds.bottom - bounds.top);
+}
+
+function findRegionContainingPoint(regions: Region[], x: number, y: number): Region | null {
+  for (const region of regions) {
+    if (pointInBounds(x, y, region.bounds)) {
+      return region;
+    }
+  }
+  return null;
+}
+
 export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevelComplete }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
   
   const gameRef = useRef({
-    arena: null as Bounds | null,
+    regions: [] as Region[],
     originalArea: 0,
     balls: [] as Ball[],
     activeWall: null as GrowingWall | null,
     gameOver: false,
     levelComplete: false,
     swipeStart: null as Vector2 | null,
+    swipeRegionId: null as string | null, // track which region the swipe started in
     lastTime: 0,
     animationId: 0,
     canvasSize: { width: 0, height: 0 },
     backgroundColor: `#${level.backgroundColor}`,
-    arenaColor: `#${level.rectangleColor}`,
+    regionColor: `#${level.rectangleColor}`,
   });
 
   useEffect(() => {
@@ -77,7 +100,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
 
     const game = gameRef.current;
     game.backgroundColor = `#${level.backgroundColor}`;
-    game.arenaColor = `#${level.rectangleColor}`;
+    game.regionColor = `#${level.rectangleColor}`;
     
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -88,16 +111,26 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
       const arenaWidth = width - margin * 2;
       const arenaHeight = height - margin * 2;
       
-      game.arena = {
+      // Reset region counter for new level
+      regionIdCounter = 0;
+      
+      // Create initial single region
+      const initialRegionId = generateRegionId();
+      const initialBounds: Bounds = {
         left: margin,
         top: margin,
         right: margin + arenaWidth,
         bottom: margin + arenaHeight,
       };
       
+      game.regions = [{
+        id: initialRegionId,
+        bounds: initialBounds,
+      }];
+      
       game.originalArea = arenaWidth * arenaHeight;
       
-      // Create balls from level config
+      // Create balls from level config, all in the initial region
       game.balls = level.balls.map((ballConfig) => {
         const dir = getRandomDirection();
         return {
@@ -114,6 +147,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
           speed: ballConfig.initialSpeed,
           topSpeed: ballConfig.topSpeed,
           color: `#${ballConfig.color}`,
+          regionId: initialRegionId,
         };
       });
       
@@ -121,6 +155,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
       game.gameOver = false;
       game.levelComplete = false;
       game.swipeStart = null;
+      game.swipeRegionId = null;
       game.lastTime = 0;
       setRemainingPercent(100);
     };
@@ -135,90 +170,151 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
       initGame();
     };
 
+    // Find the region a ball is in
+    const findBallRegion = (ball: Ball): Region | null => {
+      return findRegionContainingPoint(game.regions, ball.position.x, ball.position.y);
+    };
+
+    // Update ball's regionId based on its position
+    const updateBallRegion = (ball: Ball) => {
+      const region = findBallRegion(ball);
+      if (region) {
+        ball.regionId = region.id;
+      }
+    };
+
+    // Bounce ball within its assigned region
     const updateBall = (ball: Ball, dt: number) => {
-      const { arena } = game;
-      if (!arena) return;
+      const region = game.regions.find(r => r.id === ball.regionId);
+      if (!region) return;
+
+      const bounds = region.bounds;
 
       ball.position.x += ball.velocity.x * dt;
       ball.position.y += ball.velocity.y * dt;
 
-      if (ball.position.x - ball.radius < arena.left) {
-        ball.position.x = arena.left + ball.radius;
+      if (ball.position.x - ball.radius < bounds.left) {
+        ball.position.x = bounds.left + ball.radius;
         ball.velocity.x = Math.abs(ball.velocity.x);
       }
-      if (ball.position.x + ball.radius > arena.right) {
-        ball.position.x = arena.right - ball.radius;
+      if (ball.position.x + ball.radius > bounds.right) {
+        ball.position.x = bounds.right - ball.radius;
         ball.velocity.x = -Math.abs(ball.velocity.x);
       }
-      if (ball.position.y - ball.radius < arena.top) {
-        ball.position.y = arena.top + ball.radius;
+      if (ball.position.y - ball.radius < bounds.top) {
+        ball.position.y = bounds.top + ball.radius;
         ball.velocity.y = Math.abs(ball.velocity.y);
       }
-      if (ball.position.y + ball.radius > arena.bottom) {
-        ball.position.y = arena.bottom - ball.radius;
+      if (ball.position.y + ball.radius > bounds.bottom) {
+        ball.position.y = bounds.bottom - ball.radius;
         ball.velocity.y = -Math.abs(ball.velocity.y);
       }
     };
 
-    const applyCut = (wall: GrowingWall) => {
-      const { arena, balls } = game;
-      if (!arena || balls.length === 0) return;
+    // Calculate combined area of all regions
+    const getCombinedArea = (): number => {
+      return game.regions.reduce((sum, region) => sum + getRegionArea(region.bounds), 0);
+    };
 
-      let region1: Bounds;
-      let region2: Bounds;
+    // Check if a ball's center is exactly on the cut line
+    const isBallOnCutLine = (ball: Ball, wall: GrowingWall): boolean => {
+      if (wall.orientation === 'horizontal') {
+        return Math.abs(ball.position.y - wall.origin.y) < 0.1;
+      } else {
+        return Math.abs(ball.position.x - wall.origin.x) < 0.1;
+      }
+    };
+
+    const applyCut = (wall: GrowingWall) => {
+      const { regions, balls } = game;
+      
+      // Find the active region
+      const activeRegionIndex = regions.findIndex(r => r.id === wall.activeRegionId);
+      if (activeRegionIndex === -1) return;
+      
+      const activeRegion = regions[activeRegionIndex];
+      const bounds = activeRegion.bounds;
+
+      // Check if any ball is exactly on the cut line - instant game over
+      for (const ball of balls) {
+        if (ball.regionId === activeRegion.id && isBallOnCutLine(ball, wall)) {
+          game.gameOver = true;
+          const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
+          onGameEnd({
+            isWin: false,
+            remainingPercent: percent,
+            levelId: level.id,
+            levelNumber,
+          });
+          return;
+        }
+      }
+
+      // Split the active region into two child regions
+      let childBounds1: Bounds;
+      let childBounds2: Bounds;
 
       if (wall.orientation === 'horizontal') {
         const cutY = wall.origin.y;
-        region1 = { ...arena, bottom: cutY - wall.thickness / 2 }; // top region
-        region2 = { ...arena, top: cutY + wall.thickness / 2 }; // bottom region
+        childBounds1 = { ...bounds, bottom: cutY - wall.thickness / 2 }; // top region
+        childBounds2 = { ...bounds, top: cutY + wall.thickness / 2 }; // bottom region
       } else {
         const cutX = wall.origin.x;
-        region1 = { ...arena, right: cutX - wall.thickness / 2 }; // left region
-        region2 = { ...arena, left: cutX + wall.thickness / 2 }; // right region
+        childBounds1 = { ...bounds, right: cutX - wall.thickness / 2 }; // left region
+        childBounds2 = { ...bounds, left: cutX + wall.thickness / 2 }; // right region
       }
 
-      // Check which balls are in which region
-      const ballsInRegion1: Ball[] = [];
-      const ballsInRegion2: Ball[] = [];
+      const child1Id = generateRegionId();
+      const child2Id = generateRegionId();
+
+      // Assign balls to child regions
+      const ballsInChild1: Ball[] = [];
+      const ballsInChild2: Ball[] = [];
 
       for (const ball of balls) {
-        const inRegion1 = ball.position.x >= region1.left && ball.position.x <= region1.right &&
-                          ball.position.y >= region1.top && ball.position.y <= region1.bottom;
-        const inRegion2 = ball.position.x >= region2.left && ball.position.x <= region2.right &&
-                          ball.position.y >= region2.top && ball.position.y <= region2.bottom;
+        if (ball.regionId !== activeRegion.id) continue;
         
-        if (inRegion1) ballsInRegion1.push(ball);
-        if (inRegion2) ballsInRegion2.push(ball);
+        const inChild1 = pointInBounds(ball.position.x, ball.position.y, childBounds1);
+        const inChild2 = pointInBounds(ball.position.x, ball.position.y, childBounds2);
+        
+        if (inChild1) {
+          ball.regionId = child1Id;
+          ballsInChild1.push(ball);
+        } else if (inChild2) {
+          ball.regionId = child2Id;
+          ballsInChild2.push(ball);
+        }
       }
 
-      let newArena: Bounds | null = null;
-
-      // Apply cut only if exactly one region is empty
-      if (ballsInRegion1.length === 0 && ballsInRegion2.length > 0) {
-        newArena = region2;
-      } else if (ballsInRegion2.length === 0 && ballsInRegion1.length > 0) {
-        newArena = region1;
+      // Remove the active region and add child regions (only those with balls)
+      const newRegions = regions.filter(r => r.id !== activeRegion.id);
+      
+      if (ballsInChild1.length > 0) {
+        newRegions.push({ id: child1Id, bounds: childBounds1 });
       }
-      // If both have balls, cut is wasted - do nothing
+      if (ballsInChild2.length > 0) {
+        newRegions.push({ id: child2Id, bounds: childBounds2 });
+      }
 
+      game.regions = newRegions;
       game.activeWall = null;
 
-      if (newArena) {
-        game.arena = newArena;
-        
-        const currentArea = (newArena.right - newArena.left) * (newArena.bottom - newArena.top);
-        const percent = Math.round((currentArea / game.originalArea) * 100);
-        setRemainingPercent(percent);
+      // Calculate combined remaining area
+      const combinedArea = getCombinedArea();
+      const percent = Math.round((combinedArea / game.originalArea) * 100);
+      setRemainingPercent(percent);
 
-        if (percent < level.sizeThreshold) {
-          game.levelComplete = true;
-          setTimeout(() => {
-            onLevelComplete();
-          }, 600);
-          return;
-        }
+      // Check win condition
+      if (percent < level.sizeThreshold) {
+        game.levelComplete = true;
+        setTimeout(() => {
+          onLevelComplete();
+        }, 600);
+        return;
+      }
 
-        // Speed up all balls
+      // Speed up all balls if area was removed
+      if (ballsInChild1.length === 0 || ballsInChild2.length === 0) {
         for (const ball of balls) {
           const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
           const ratio = newSpeed / ball.speed;
@@ -230,21 +326,29 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
     };
 
     const updateWall = (dt: number) => {
-      const { activeWall: wall, arena, balls } = game;
-      if (!wall || !arena || balls.length === 0 || wall.isComplete) return;
+      const { activeWall: wall, regions, balls } = game;
+      if (!wall || wall.isComplete) return;
 
+      // Find the active region for this wall
+      const activeRegion = regions.find(r => r.id === wall.activeRegionId);
+      if (!activeRegion) {
+        game.activeWall = null;
+        return;
+      }
+
+      const bounds = activeRegion.bounds;
       const growth = WALL_GROWTH_SPEED * dt;
 
       if (wall.orientation === 'horizontal') {
-        wall.startExtent = Math.max(arena.left, wall.startExtent - growth);
-        wall.endExtent = Math.min(arena.right, wall.endExtent + growth);
-        if (wall.startExtent <= arena.left && wall.endExtent >= arena.right) {
+        wall.startExtent = Math.max(bounds.left, wall.startExtent - growth);
+        wall.endExtent = Math.min(bounds.right, wall.endExtent + growth);
+        if (wall.startExtent <= bounds.left && wall.endExtent >= bounds.right) {
           wall.isComplete = true;
         }
       } else {
-        wall.startExtent = Math.max(arena.top, wall.startExtent - growth);
-        wall.endExtent = Math.min(arena.bottom, wall.endExtent + growth);
-        if (wall.startExtent <= arena.top && wall.endExtent >= arena.bottom) {
+        wall.startExtent = Math.max(bounds.top, wall.startExtent - growth);
+        wall.endExtent = Math.min(bounds.bottom, wall.endExtent + growth);
+        if (wall.startExtent <= bounds.top && wall.endExtent >= bounds.bottom) {
           wall.isComplete = true;
         }
       }
@@ -267,8 +371,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
         for (const ball of balls) {
           if (circleRectCollision(ball.position.x, ball.position.y, ball.radius, rx, ry, rw, rh)) {
             game.gameOver = true;
-            const currentArea = (arena.right - arena.left) * (arena.bottom - arena.top);
-            const percent = Math.round((currentArea / game.originalArea) * 100);
+            const combinedArea = game.regions.reduce((sum, r) => sum + getRegionArea(r.bounds), 0);
+            const percent = Math.round((combinedArea / game.originalArea) * 100);
             onGameEnd({
               isWin: false,
               remainingPercent: percent,
@@ -286,17 +390,21 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
     };
 
     const render = () => {
-      const { arena, balls, activeWall: wall, canvasSize, backgroundColor, arenaColor } = game;
+      const { regions, balls, activeWall: wall, canvasSize, backgroundColor, regionColor } = game;
       const { width, height } = canvasSize;
 
+      // Fill with darkness (background)
       ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, width, height);
 
-      if (!arena) return;
+      // Fill all regions with region color
+      ctx.fillStyle = regionColor;
+      for (const region of regions) {
+        const b = region.bounds;
+        ctx.fillRect(b.left, b.top, b.right - b.left, b.bottom - b.top);
+      }
 
-      ctx.fillStyle = arenaColor;
-      ctx.fillRect(arena.left, arena.top, arena.right - arena.left, arena.bottom - arena.top);
-
+      // Render growing wall
       if (wall && !wall.isComplete) {
         ctx.save();
         ctx.fillStyle = COLORS.wallActive;
@@ -367,24 +475,30 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
 
     const handlePointerDown = (e: PointerEvent) => {
       if (game.gameOver || game.levelComplete || game.activeWall) return;
-      const { arena } = game;
-      if (!arena) return;
 
       const pos = getCanvasCoords(e);
       const margin = WALL_THICKNESS;
       
+      // Find which region contains this point
+      const region = findRegionContainingPoint(game.regions, pos.x, pos.y);
+      if (!region) return; // Clicked in darkness - ignore
+      
+      const bounds = region.bounds;
+      
+      // Check if inside the region with margin
       if (
-        pos.x > arena.left + margin &&
-        pos.x < arena.right - margin &&
-        pos.y > arena.top + margin &&
-        pos.y < arena.bottom - margin
+        pos.x > bounds.left + margin &&
+        pos.x < bounds.right - margin &&
+        pos.y > bounds.top + margin &&
+        pos.y < bounds.bottom - margin
       ) {
         game.swipeStart = pos;
+        game.swipeRegionId = region.id;
       }
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!game.swipeStart || game.gameOver || game.levelComplete || game.activeWall) return;
+      if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete || game.activeWall) return;
 
       const pos = getCanvasCoords(e);
       const deltaX = pos.x - game.swipeStart.x;
@@ -402,13 +516,16 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
         endExtent: orientation === 'horizontal' ? game.swipeStart.x : game.swipeStart.y,
         thickness: WALL_THICKNESS,
         isComplete: false,
+        activeRegionId: game.swipeRegionId,
       };
 
       game.swipeStart = null;
+      game.swipeRegionId = null;
     };
 
     const handlePointerUp = () => {
       game.swipeStart = null;
+      game.swipeRegionId = null;
     };
 
     // Setup
