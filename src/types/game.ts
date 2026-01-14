@@ -12,6 +12,11 @@ export interface Bounds {
   bottom: number;
 }
 
+export interface Region {
+  id: string;
+  bounds: Bounds;
+}
+
 export interface Ball {
   id: string;
   position: Vector2;
@@ -20,6 +25,7 @@ export interface Ball {
   speed: number;
   topSpeed: number;
   color: string; // hex color with #
+  regionId: string; // which region this ball is in
 }
 
 export interface GrowingWall {
@@ -29,10 +35,11 @@ export interface GrowingWall {
   endExtent: number;
   thickness: number;
   isComplete: boolean;
+  activeRegionId: string; // the region this wall is growing in
 }
 
 export interface GameState {
-  arena: Bounds;
+  regions: Region[];
   originalArea: number;
   balls: Ball[];
   activeWall: GrowingWall | null;
