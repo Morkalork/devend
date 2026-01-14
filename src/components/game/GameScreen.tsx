@@ -1,13 +1,13 @@
 import { GameCanvas } from './GameCanvas';
 import { LevelConfig } from '@/types/level';
-import { GameResult } from '@/types/game';
+import { GameResult, LevelScoreData } from '@/types/game';
 
 interface GameScreenProps {
   level: LevelConfig;
   levelNumber: number;
   totalLevels: number;
   onGameEnd: (result: GameResult) => void;
-  onLevelComplete: () => void;
+  onLevelComplete: (scoreData: LevelScoreData) => void;
 }
 
 export function GameScreen({ level, levelNumber, totalLevels, onGameEnd, onLevelComplete }: GameScreenProps) {

@@ -1,5 +1,5 @@
-import { useRef, useEffect, useState } from 'react';
-import { Ball, Bounds, GrowingWall, Vector2, GameResult, Region } from '@/types/game';
+import { useRef, useEffect, useState, useCallback } from 'react';
+import { Ball, Bounds, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from '@/types/game';
 import { LevelConfig } from '@/types/level';
 
 interface GameCanvasProps {
@@ -7,7 +7,7 @@ interface GameCanvasProps {
   levelNumber: number;
   totalLevels: number;
   onGameEnd: (result: GameResult) => void;
-  onLevelComplete: () => void;
+  onLevelComplete: (scoreData: LevelScoreData) => void;
 }
 
 // Game constants
@@ -72,10 +72,21 @@ function findRegionContainingPoint(regions: Region[], x: number, y: number): Reg
   return null;
 }
 
+function computeLevelScore(basePoints: number, expectedCuts: number, actualCuts: number): number {
+  let score: number;
+  if (actualCuts <= expectedCuts) {
+    score = basePoints + (expectedCuts - actualCuts);
+  } else {
+    score = basePoints - (actualCuts - expectedCuts);
+  }
+  return Math.max(0, score);
+}
+
 export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevelComplete }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
+  const [cutCount, setCutCount] = useState(0);
   
   const gameRef = useRef({
     regions: [] as Region[],
@@ -91,6 +102,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
     canvasSize: { width: 0, height: 0 },
     backgroundColor: `#${level.backgroundColor}`,
     regionColor: `#${level.rectangleColor}`,
+    cutCount: 0, // track cuts internally too
   });
 
   useEffect(() => {
@@ -157,6 +169,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
       game.swipeStart = null;
       game.swipeRegionId = null;
       game.lastTime = 0;
+      game.cutCount = 0;
+      setCutCount(0);
       setRemainingPercent(100);
     };
 
@@ -245,6 +259,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
             remainingPercent: percent,
             levelId: level.id,
             levelNumber,
+            cutCount: game.cutCount,
+            expectedCuts: level.expectedCuts,
+            basePoints: level.points,
           });
           return;
         }
@@ -307,8 +324,18 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
       // Check win condition
       if (percent < level.sizeThreshold) {
         game.levelComplete = true;
+        const levelScore = computeLevelScore(level.points, level.expectedCuts, game.cutCount);
+        
         setTimeout(() => {
-          onLevelComplete();
+          onLevelComplete({
+            levelNumber,
+            levelId: level.id,
+            cutCount: game.cutCount,
+            expectedCuts: level.expectedCuts,
+            basePoints: level.points,
+            levelScore,
+            remainingPercent: percent,
+          });
         }, 600);
         return;
       }
@@ -378,6 +405,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
               remainingPercent: percent,
               levelId: level.id,
               levelNumber,
+              cutCount: game.cutCount,
+              expectedCuts: level.expectedCuts,
+              basePoints: level.points,
             });
             return;
           }
@@ -519,6 +549,10 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
         activeRegionId: game.swipeRegionId,
       };
 
+      // Increment cut count when a valid wall is created
+      game.cutCount += 1;
+      setCutCount(game.cutCount);
+
       game.swipeStart = null;
       game.swipeRegionId = null;
     };
@@ -556,6 +590,16 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
           <span className="text-muted-foreground text-xs uppercase tracking-wider">Level</span>
           <div className="text-2xl font-display font-bold text-primary">
             {levelNumber} / {totalLevels}
+          </div>
+        </div>
+      </div>
+
+      {/* Cuts counter - top center */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+        <div className="hud-display">
+          <span className="text-muted-foreground text-xs uppercase tracking-wider">Cuts</span>
+          <div className="text-2xl font-display font-bold text-foreground">
+            {cutCount}
           </div>
         </div>
       </div>

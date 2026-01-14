@@ -39,6 +39,16 @@ export function useLevelManager() {
             typeof level.sizeThreshold !== 'number' || !Array.isArray(level.balls)) {
           throw new Error(`Invalid level configuration for: ${level.id || 'unknown'}`);
         }
+        
+        // Validate expectedCuts and points exist
+        if (typeof level.expectedCuts !== 'number' || typeof level.points !== 'number') {
+          throw new Error(`Level "${level.id}" is missing expectedCuts or points`);
+        }
+        
+        // Validate expectedCuts < points
+        if (level.expectedCuts >= level.points) {
+          throw new Error(`Level "${level.id}" is invalid: expectedCuts (${level.expectedCuts}) must be less than points (${level.points})`);
+        }
       }
       
       setState({

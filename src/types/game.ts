@@ -61,4 +61,19 @@ export interface GameResult {
   levelId: string;
   levelNumber: number;
   completedAllLevels?: boolean;
+  totalScore?: number;
+  levelScore?: number;
+  cutCount?: number;
+  expectedCuts?: number;
+  basePoints?: number;
+}
+
+export interface LevelScoreData {
+  levelNumber: number;
+  levelId: string;
+  cutCount: number;
+  expectedCuts: number;
+  basePoints: number;
+  levelScore: number;
+  remainingPercent: number;
 }

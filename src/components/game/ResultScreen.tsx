@@ -9,7 +9,7 @@ interface ResultScreenProps {
 }
 
 export function ResultScreen({ result, onPlayAgain, onBackToWelcome }: ResultScreenProps) {
-  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels } = result;
+  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
@@ -109,6 +109,18 @@ export function ResultScreen({ result, onPlayAgain, onBackToWelcome }: ResultScr
               {remainingPercent}%
             </p>
           </div>
+
+          {/* Total Score - only show on win */}
+          {isWin && totalScore !== undefined && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
+                Total Score
+              </p>
+              <p className="text-5xl font-display font-bold text-primary">
+                {totalScore}
+              </p>
+            </div>
+          )}
         </motion.div>
 
         {/* Buttons */}
