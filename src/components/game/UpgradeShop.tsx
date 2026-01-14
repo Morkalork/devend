@@ -1,7 +1,8 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig } from '@/types/upgrade';
-import { Coins, ArrowRight, Info } from 'lucide-react';
+import { Coins, ArrowRight, Info, Check } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface UpgradeOffer {
   upgrade: UpgradeConfig;
@@ -42,8 +43,10 @@ export function UpgradeShop({
   onPurchase,
   onContinue,
 }: UpgradeShopProps) {
+  const { toast } = useToast();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [pressedId, setPressedId] = useState<string | null>(null);
+  const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
 
   // Compute eligible upgrades and select up to 3 random offers
   const offers = useMemo<UpgradeOffer[]>(() => {
@@ -63,10 +66,21 @@ export function UpgradeShop({
   }, [upgrades, levelNumber, ownedUpgradeIds]);
 
   const handlePurchase = useCallback((offer: UpgradeOffer) => {
+    if (purchasedThisSession.includes(offer.upgrade.id)) {
+      return; // Already purchased this session
+    }
+    
     if (playerPoints >= offer.price) {
       onPurchase(offer.upgrade.id, offer.price);
+      setPurchasedThisSession(prev => [...prev, offer.upgrade.id]);
+    } else {
+      toast({
+        title: "Not enough points",
+        description: `You need ${offer.price - playerPoints} more points to buy ${offer.upgrade.name}.`,
+        variant: "destructive",
+      });
     }
-  }, [playerPoints, onPurchase]);
+  }, [playerPoints, onPurchase, purchasedThisSession, toast]);
 
   // Mobile long-press handling
   const handleTouchStart = useCallback((id: string) => {
@@ -117,7 +131,8 @@ export function UpgradeShop({
             </motion.p>
           ) : (
             offers.map((offer, index) => {
-              const canAfford = playerPoints >= offer.price;
+              const isOwned = purchasedThisSession.includes(offer.upgrade.id);
+              const canAfford = playerPoints >= offer.price && !isOwned;
               const isHovered = hoveredId === offer.upgrade.id;
               const isPressed = pressedId === offer.upgrade.id;
               const showDescription = isHovered || isPressed;
@@ -137,19 +152,30 @@ export function UpgradeShop({
                 >
                   <motion.button
                     onClick={() => handlePurchase(offer)}
-                    disabled={!canAfford}
-                    whileHover={{ scale: canAfford ? 1.02 : 1 }}
-                    whileTap={{ scale: canAfford ? 0.98 : 1 }}
+                    disabled={isOwned}
+                    whileHover={{ scale: !isOwned ? 1.02 : 1 }}
+                    whileTap={{ scale: !isOwned ? 0.98 : 1 }}
                     className={`
                       relative w-48 p-4 rounded-xl border-2 transition-all duration-200
-                      ${canAfford 
-                        ? 'bg-card border-primary/50 hover:border-primary cursor-pointer' 
-                        : 'bg-card/50 border-muted cursor-not-allowed opacity-60'
+                      ${isOwned
+                        ? 'bg-green-500/20 border-green-500/50 cursor-default'
+                        : canAfford 
+                          ? 'bg-card border-primary/50 hover:border-primary cursor-pointer' 
+                          : 'bg-card/50 border-muted cursor-pointer opacity-60'
                       }
                     `}
                   >
+                    {/* Owned overlay */}
+                    {isOwned && (
+                      <div className="absolute inset-0 rounded-xl bg-green-500/10 flex items-center justify-center z-10">
+                        <div className="bg-green-500 rounded-full p-2">
+                          <Check className="w-6 h-6 text-white" />
+                        </div>
+                      </div>
+                    )}
+
                     {/* Icon */}
-                    <div className="w-16 h-16 mx-auto mb-3 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <div className={`w-16 h-16 mx-auto mb-3 rounded-lg bg-primary/10 flex items-center justify-center ${isOwned ? 'opacity-50' : ''}`}>
                       <img 
                         src={offer.upgrade.icon} 
                         alt={offer.upgrade.name}
@@ -161,23 +187,31 @@ export function UpgradeShop({
                     </div>
 
                     {/* Name */}
-                    <h3 className="font-semibold text-foreground text-center mb-2">
+                    <h3 className={`font-semibold text-foreground text-center mb-2 ${isOwned ? 'opacity-50' : ''}`}>
                       {offer.upgrade.name}
                     </h3>
 
-                    {/* Price */}
-                    <div className={`
-                      flex items-center justify-center gap-1 text-lg font-bold
-                      ${canAfford ? 'text-yellow-500' : 'text-muted-foreground'}
-                    `}>
-                      <Coins className="w-4 h-4" />
-                      {offer.price}
-                    </div>
+                    {/* Price or Owned label */}
+                    {isOwned ? (
+                      <div className="flex items-center justify-center gap-1 text-lg font-bold text-green-500">
+                        Owned
+                      </div>
+                    ) : (
+                      <div className={`
+                        flex items-center justify-center gap-1 text-lg font-bold
+                        ${canAfford ? 'text-yellow-500' : 'text-muted-foreground'}
+                      `}>
+                        <Coins className="w-4 h-4" />
+                        {offer.price}
+                      </div>
+                    )}
 
                     {/* Info hint */}
-                    <div className="absolute top-2 right-2 text-muted-foreground">
-                      <Info className="w-4 h-4" />
-                    </div>
+                    {!isOwned && (
+                      <div className="absolute top-2 right-2 text-muted-foreground">
+                        <Info className="w-4 h-4" />
+                      </div>
+                    )}
                   </motion.button>
 
                   {/* Description tooltip */}
