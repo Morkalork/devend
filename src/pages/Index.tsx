@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
+import { useUpgradeManager } from '@/hooks/useUpgradeManager';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
 import { GameScreen } from '@/components/game/GameScreen';
@@ -23,12 +24,22 @@ const Index = () => {
     currentLevelIndex,
     totalLevels,
     isLastLevel,
-    isLoading,
-    error,
+    isLoading: isLoadingLevels,
+    error: levelError,
     loadLevels,
     advanceToNextLevel,
     resetToFirstLevel,
   } = useLevelManager();
+
+  const {
+    isLoading: isLoadingUpgrades,
+    error: upgradeError,
+    loadUpgrades,
+  } = useUpgradeManager();
+
+  // Combined loading and error states
+  const isLoading = isLoadingLevels || isLoadingUpgrades;
+  const error = levelError || upgradeError;
 
   // Score tracking
   const [totalScore, setTotalScore] = useState(0);
@@ -36,14 +47,19 @@ const Index = () => {
   const [showLevelComplete, setShowLevelComplete] = useState(false);
 
   const handleStartGame = useCallback(async () => {
-    const success = await loadLevels();
-    if (success) {
+    // Load both levels and upgrades in parallel
+    const [levelsSuccess, upgradesSuccess] = await Promise.all([
+      loadLevels(),
+      loadUpgrades(),
+    ]);
+    
+    if (levelsSuccess && upgradesSuccess) {
       setTotalScore(0);
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       startGame();
     }
-  }, [loadLevels, startGame]);
+  }, [loadLevels, loadUpgrades, startGame]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // For game over, include current total score
