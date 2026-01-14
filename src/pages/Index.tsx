@@ -157,6 +157,8 @@ const Index = () => {
           levelNumber={currentLevelIndex + 1}
           totalLevels={totalLevels}
           totalScore={totalScore}
+          ownedUpgradeIds={ownedUpgradeIds}
+          upgrades={upgrades}
           onGameEnd={handleGameEnd}
           onLevelComplete={handleLevelComplete}
         />

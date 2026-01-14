@@ -1,12 +1,15 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Ball, Bounds, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from '@/types/game';
 import { LevelConfig } from '@/types/level';
+import { UpgradeConfig } from '@/types/upgrade';
 
 interface GameCanvasProps {
   level: LevelConfig;
   levelNumber: number;
   totalLevels: number;
   totalScore: number;
+  ownedUpgradeIds: string[];
+  upgrades: UpgradeConfig[];
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
 }
@@ -15,7 +18,7 @@ interface GameCanvasProps {
 const BALL_RADIUS = 10;
 const BALL_SPEED_INCREASE = 1.05;
 const WALL_THICKNESS = 6;
-const WALL_GROWTH_SPEED = 1200;
+const BASE_WALL_GROWTH_SPEED = 1200;
 const ARENA_MARGIN = 0.1;
 
 // Colors
@@ -83,11 +86,34 @@ function computeLevelScore(basePoints: number, expectedCuts: number, actualCuts:
   return Math.max(0, score);
 }
 
-export function GameCanvas({ level, levelNumber, totalLevels, totalScore, onGameEnd, onLevelComplete }: GameCanvasProps) {
+export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedUpgradeIds, upgrades, onGameEnd, onLevelComplete }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
+  
+  // Calculate active modifiers from owned upgrades
+  const activeModifiers = useMemo(() => {
+    let totalWallSpeedBonus = 0;
+    let totalReducedSize = 0;
+    
+    for (const upgradeId of ownedUpgradeIds) {
+      const upgrade = upgrades.find(u => u.id === upgradeId);
+      if (upgrade?.modifiers) {
+        if (upgrade.modifiers.wallGenerationSpeed) {
+          totalWallSpeedBonus += upgrade.modifiers.wallGenerationSpeed;
+        }
+        if (upgrade.modifiers.reducedSize) {
+          totalReducedSize += upgrade.modifiers.reducedSize;
+        }
+      }
+    }
+    
+    return {
+      wallGrowthSpeed: BASE_WALL_GROWTH_SPEED + totalWallSpeedBonus,
+      reducedSizePercent: totalReducedSize,
+    };
+  }, [ownedUpgradeIds, upgrades]);
   
   const gameRef = useRef({
     regions: [] as Region[],
@@ -127,13 +153,26 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, onGame
       // Reset region counter for new level
       regionIdCounter = 0;
       
-      // Create initial single region
+      // Calculate starting percentage based on reducedSize modifier
+      // targetRemaining = 100 - totalReducedSize, e.g., if reducedSize is 10, we start at 90%
+      const targetRemaining = Math.max(20, 100 - activeModifiers.reducedSizePercent); // Clamp to at least 20% to fit balls
+      
+      // Scale factor to shrink the region: scaleFactor = sqrt(targetRemaining/100)
+      const scaleFactor = Math.sqrt(targetRemaining / 100);
+      
+      // Calculate shrunk dimensions centered in the arena
+      const shrunkWidth = arenaWidth * scaleFactor;
+      const shrunkHeight = arenaHeight * scaleFactor;
+      const centerX = margin + arenaWidth / 2;
+      const centerY = margin + arenaHeight / 2;
+      
+      // Create initial single region (possibly shrunk)
       const initialRegionId = generateRegionId();
       const initialBounds: Bounds = {
-        left: margin,
-        top: margin,
-        right: margin + arenaWidth,
-        bottom: margin + arenaHeight,
+        left: centerX - shrunkWidth / 2,
+        top: centerY - shrunkHeight / 2,
+        right: centerX + shrunkWidth / 2,
+        bottom: centerY + shrunkHeight / 2,
       };
       
       game.regions = [{
@@ -141,16 +180,23 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, onGame
         bounds: initialBounds,
       }];
       
+      // Original area is still based on full arena (for percentage calculation)
       game.originalArea = arenaWidth * arenaHeight;
       
-      // Create balls from level config, all in the initial region
+      // Create balls from level config, all in the initial (possibly shrunk) region
+      const regionWidth = initialBounds.right - initialBounds.left;
+      const regionHeight = initialBounds.bottom - initialBounds.top;
+      const regionCenterX = (initialBounds.left + initialBounds.right) / 2;
+      const regionCenterY = (initialBounds.top + initialBounds.bottom) / 2;
+      
       game.balls = level.balls.map((ballConfig) => {
         const dir = getRandomDirection();
         return {
           id: ballConfig.id,
           position: { 
-            x: margin + arenaWidth / 2 + (Math.random() - 0.5) * arenaWidth * 0.3,
-            y: margin + arenaHeight / 2 + (Math.random() - 0.5) * arenaHeight * 0.3,
+            // Spawn balls within the shrunk region
+            x: regionCenterX + (Math.random() - 0.5) * regionWidth * 0.3,
+            y: regionCenterY + (Math.random() - 0.5) * regionHeight * 0.3,
           },
           velocity: { 
             x: dir.x * ballConfig.initialSpeed, 
@@ -172,7 +218,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, onGame
       game.lastTime = 0;
       game.cutCount = 0;
       setCutCount(0);
-      setRemainingPercent(100);
+      // Set initial remaining percentage based on shrunk region
+      setRemainingPercent(Math.round(targetRemaining));
     };
 
     const resizeCanvas = () => {
@@ -365,7 +412,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, onGame
       }
 
       const bounds = activeRegion.bounds;
-      const growth = WALL_GROWTH_SPEED * dt;
+      const growth = activeModifiers.wallGrowthSpeed * dt;
 
       if (wall.orientation === 'horizontal') {
         wall.startExtent = Math.max(bounds.left, wall.startExtent - growth);
@@ -633,7 +680,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, onGame
       canvas.removeEventListener('pointerleave', handlePointerUp);
       cancelAnimationFrame(game.animationId);
     };
-  }, [level, levelNumber, onGameEnd, onLevelComplete]);
+  }, [level, levelNumber, onGameEnd, onLevelComplete, activeModifiers]);
 
   return (
     <div className="relative w-full h-full" style={{ backgroundColor: `#${level.backgroundColor}` }}>
