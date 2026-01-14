@@ -1,0 +1,41 @@
+upgrades:
+  - id: "slow_balls"
+    name: "Slow Motion"
+    icon: "/icons/slow.svg"
+    description: "Reduces ball speed by 20%"
+    levelAvailability: 1
+    priceMin: 50
+    priceMax: 100
+    modifiers:
+      ballSpeed: 0.8
+
+  - id: "shrink_balls"
+    name: "Shrink Ray"
+    icon: "/icons/shrink.svg"
+    description: "Makes balls 25% smaller"
+    levelAvailability: 2
+    priceMin: 75
+    priceMax: 150
+    modifiers:
+      ballSize: 0.75
+
+  - id: "fast_walls"
+    name: "Quick Slice"
+    icon: "/icons/fast.svg"
+    description: "Walls generate 30% faster"
+    levelAvailability: 3
+    priceMin: 100
+    priceMax: 200
+    modifiers:
+      wallGenerationSpeed: 1.3
+
+  - id: "reduced_target"
+    name: "Easy Win"
+    icon: "/icons/easy.svg"
+    description: "Reduces win threshold by 5%"
+    levelAvailability: 4
+    levelRemoved: 8
+    priceMin: 150
+    priceMax: 300
+    modifiers:
+      reducedSize: 0.05
