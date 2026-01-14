@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import { GameScreen } from '@/types/game';
+import { GameScreen, GameResult } from '@/types/game';
 
 export function useGameState() {
   const [currentScreen, setCurrentScreen] = useState<GameScreen>('welcome');
-  const [lastResult, setLastResult] = useState<{ isWin: boolean; remainingPercent: number } | null>(null);
+  const [lastResult, setLastResult] = useState<GameResult | null>(null);
 
   const navigateTo = useCallback((screen: GameScreen) => {
     setCurrentScreen(screen);
@@ -14,8 +14,8 @@ export function useGameState() {
     setCurrentScreen('game');
   }, []);
 
-  const endGame = useCallback((isWin: boolean, remainingPercent: number) => {
-    setLastResult({ isWin, remainingPercent });
+  const endGame = useCallback((result: GameResult) => {
+    setLastResult(result);
     setCurrentScreen('result');
   }, []);
 

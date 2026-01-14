@@ -1,14 +1,16 @@
 import { motion } from 'framer-motion';
 import { Trophy, Skull, RotateCcw, Home } from 'lucide-react';
+import { GameResult } from '@/types/game';
 
 interface ResultScreenProps {
-  isWin: boolean;
-  remainingPercent: number;
+  result: GameResult;
   onPlayAgain: () => void;
   onBackToWelcome: () => void;
 }
 
-export function ResultScreen({ isWin, remainingPercent, onPlayAgain, onBackToWelcome }: ResultScreenProps) {
+export function ResultScreen({ result, onPlayAgain, onBackToWelcome }: ResultScreenProps) {
+  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels } = result;
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
       {/* Background effect */}
@@ -70,19 +72,43 @@ export function ResultScreen({ isWin, remainingPercent, onPlayAgain, onBackToWel
           {isWin ? 'YOU WIN!' : 'GAME OVER'}
         </motion.h1>
 
+        {/* Completed all levels message */}
+        {completedAllLevels && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="text-2xl font-display text-primary"
+          >
+            🎉 Completed all levels! 🎉
+          </motion.div>
+        )}
+
         {/* Stats */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="text-center"
+          className="text-center flex flex-col gap-4"
         >
-          <p className="text-muted-foreground text-sm uppercase tracking-wider mb-2">
-            Arena Remaining
-          </p>
-          <p className="text-5xl font-display font-bold text-foreground">
-            {remainingPercent}%
-          </p>
+          <div>
+            <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
+              {isWin ? 'Completed Level' : 'Failed at Level'}
+            </p>
+            <p className="text-3xl font-display font-bold text-foreground">
+              {levelNumber}
+            </p>
+            <p className="text-muted-foreground text-xs mt-1">{levelId}</p>
+          </div>
+
+          <div>
+            <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
+              Arena Remaining
+            </p>
+            <p className="text-5xl font-display font-bold text-foreground">
+              {remainingPercent}%
+            </p>
+          </div>
         </motion.div>
 
         {/* Buttons */}
