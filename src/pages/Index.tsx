@@ -119,6 +119,7 @@ const Index = () => {
           level={currentLevel}
           levelNumber={currentLevelIndex + 1}
           totalLevels={totalLevels}
+          totalScore={totalScore}
           onGameEnd={handleGameEnd}
           onLevelComplete={handleLevelComplete}
         />

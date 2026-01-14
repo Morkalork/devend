@@ -6,6 +6,7 @@ interface GameCanvasProps {
   level: LevelConfig;
   levelNumber: number;
   totalLevels: number;
+  totalScore: number;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
 }
@@ -82,7 +83,7 @@ function computeLevelScore(basePoints: number, expectedCuts: number, actualCuts:
   return Math.max(0, score);
 }
 
-export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevelComplete }: GameCanvasProps) {
+export function GameCanvas({ level, levelNumber, totalLevels, totalScore, onGameEnd, onLevelComplete }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
@@ -479,6 +480,56 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
       }
     };
 
+    // Handle ball-to-ball collisions
+    const handleBallCollisions = () => {
+      const balls = game.balls;
+      for (let i = 0; i < balls.length; i++) {
+        for (let j = i + 1; j < balls.length; j++) {
+          const ball1 = balls[i];
+          const ball2 = balls[j];
+          
+          // Only check collisions if balls are in the same region
+          if (ball1.regionId !== ball2.regionId) continue;
+          
+          const dx = ball2.position.x - ball1.position.x;
+          const dy = ball2.position.y - ball1.position.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const minDistance = ball1.radius + ball2.radius;
+          
+          if (distance < minDistance && distance > 0) {
+            // Normalize collision vector
+            const nx = dx / distance;
+            const ny = dy / distance;
+            
+            // Relative velocity
+            const dvx = ball1.velocity.x - ball2.velocity.x;
+            const dvy = ball1.velocity.y - ball2.velocity.y;
+            
+            // Relative velocity along collision normal
+            const dvn = dvx * nx + dvy * ny;
+            
+            // Only resolve if balls are moving towards each other
+            if (dvn > 0) {
+              // Update velocities (equal mass elastic collision)
+              ball1.velocity.x -= dvn * nx;
+              ball1.velocity.y -= dvn * ny;
+              ball2.velocity.x += dvn * nx;
+              ball2.velocity.y += dvn * ny;
+              
+              // Separate balls to prevent overlap
+              const overlap = minDistance - distance;
+              const separationX = (overlap / 2) * nx;
+              const separationY = (overlap / 2) * ny;
+              ball1.position.x -= separationX;
+              ball1.position.y -= separationY;
+              ball2.position.x += separationX;
+              ball2.position.y += separationY;
+            }
+          }
+        }
+      }
+    };
+
     const gameLoop = (timestamp: number) => {
       if (game.gameOver || game.levelComplete) return;
 
@@ -489,6 +540,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
       for (const ball of game.balls) {
         updateBall(ball, cappedDt);
       }
+      // Check ball-to-ball collisions
+      handleBallCollisions();
       updateWall(cappedDt);
       render();
 
@@ -584,12 +637,18 @@ export function GameCanvas({ level, levelNumber, totalLevels, onGameEnd, onLevel
 
   return (
     <div className="relative w-full h-full" style={{ backgroundColor: `#${level.backgroundColor}` }}>
-      {/* Level indicator - top left */}
-      <div className="absolute top-4 left-4 z-10">
+      {/* Level indicator and Score - top left */}
+      <div className="absolute top-4 left-4 z-10 flex gap-3">
         <div className="hud-display">
           <span className="text-muted-foreground text-xs uppercase tracking-wider">Level</span>
           <div className="text-2xl font-display font-bold text-primary">
             {levelNumber} / {totalLevels}
+          </div>
+        </div>
+        <div className="hud-display">
+          <span className="text-muted-foreground text-xs uppercase tracking-wider">Score</span>
+          <div className="text-2xl font-display font-bold text-accent">
+            {totalScore}
           </div>
         </div>
       </div>
