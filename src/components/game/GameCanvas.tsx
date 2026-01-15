@@ -146,6 +146,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     pushMode: 'none' as 'none' | 'prompt' | 'pushing',
     bestRemainingPercent: 100,
     gameLoopFn: null as ((timestamp: number) => void) | null,
+    wallCompleteTime: 0, // Time when wall completed, for visual delay
   });
 
   useEffect(() => {
@@ -506,7 +507,10 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
           vec2Distance(wall.endPoint, wall.targetEnd) < 1) {
         wall.startPoint = { ...wall.targetStart };
         wall.endPoint = { ...wall.targetEnd };
-        wall.isComplete = true;
+        if (!wall.isComplete) {
+          wall.isComplete = true;
+          game.wallCompleteTime = performance.now();
+        }
       }
 
       // Collision check with any ball while growing (capsule collision)
@@ -703,8 +707,13 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       render();
       
       // Apply completed wall cut AFTER rendering (so wall is visible when complete)
+      // Add a small delay (100ms) to ensure wall is visible before cut is applied
+      const WALL_VISIBLE_DELAY = 100; // ms
       if (game.activeWall && game.activeWall.isComplete) {
-        applyCut(game.activeWall);
+        const timeSinceComplete = performance.now() - game.wallCompleteTime;
+        if (timeSinceComplete >= WALL_VISIBLE_DELAY) {
+          applyCut(game.activeWall);
+        }
       }
 
       game.animationId = requestAnimationFrame(gameLoop);
