@@ -13,92 +13,114 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
   const bonusOrPenalty = cutCount <= expectedCuts 
     ? expectedCuts - cutCount 
     : -(cutCount - expectedCuts);
-  
-  // Calculate base level score without overcut bonus for display
-  const baseLevelScore = levelScore - overcutBonus;
-  
+
   return (
-    <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm overflow-y-auto">
-      <div className="min-h-full w-full flex items-start sm:items-center justify-center py-4 px-4 box-border">
-        <div className="bg-card border border-border rounded-xl p-4 sm:p-6 w-full max-w-sm shadow-2xl">
-        {/* Header */}
-        <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-success/20 flex items-center justify-center">
-            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
-          </div>
-          <div>
-            <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground">Level Complete!</h2>
-            <p className="text-muted-foreground text-xs sm:text-sm">{levelId}</p>
-          </div>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base">
-          <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-            <span className="text-muted-foreground">Level</span>
-            <span className="font-bold text-foreground">{levelNumber}</span>
-          </div>
-          
-          <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-            <span className="text-muted-foreground">Remaining</span>
-            <span className="font-bold text-foreground">{remainingPercent}%</span>
-          </div>
-          
-          <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-            <span className="text-muted-foreground">Cuts Made</span>
-            <span className="font-bold text-foreground">{cutCount}</span>
-          </div>
-          
-          <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-            <span className="text-muted-foreground">Expected Cuts</span>
-            <span className="font-bold text-foreground">{expectedCuts}</span>
-          </div>
-          
-          <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-            <span className="text-muted-foreground">Base Points</span>
-            <span className="font-bold text-foreground">{basePoints}</span>
-          </div>
-          
-          <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-            <span className="text-muted-foreground">
-              {bonusOrPenalty >= 0 ? 'Par Bonus' : 'Par Penalty'}
-            </span>
-            <span className={`font-bold ${bonusOrPenalty >= 0 ? 'text-success' : 'text-destructive'}`}>
-              {bonusOrPenalty >= 0 ? '+' : ''}{bonusOrPenalty}
-            </span>
-          </div>
-          
-          {overcutBonus > 0 && (
-            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2">
-              <span className="text-amber-400 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                Overcut Bonus
-              </span>
-              <span className="font-bold text-amber-400">+{overcutBonus}</span>
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm" />
+      
+      {/* Modal container with inline styles for bulletproof centering */}
+      <div 
+        className="level-complete-modal fixed z-50 overflow-y-auto"
+        style={{
+          top: '1rem',
+          left: '1rem',
+          right: '1rem',
+          maxHeight: 'calc(100vh - 2rem)',
+        }}
+      >
+        <style>{`
+          @media (min-width: 640px) {
+            .level-complete-modal {
+              top: 50% !important;
+              left: 50% !important;
+              right: auto !important;
+              width: 384px !important;
+              max-height: 90vh !important;
+              margin-top: -200px;
+            }
+          }
+        `}</style>
+        
+        <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
+          {/* Header */}
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-success/20 flex items-center justify-center">
+              <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
             </div>
-          )}
-          
-          <div className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
-            <span className="font-semibold text-foreground">Level Score</span>
-            <span className="text-xl sm:text-2xl font-bold text-primary">{levelScore}</span>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground">Level Complete!</h2>
+              <p className="text-muted-foreground text-xs sm:text-sm">{levelId}</p>
+            </div>
           </div>
-          
-          <div className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
-            <span className="font-semibold text-foreground">Total Score</span>
-            <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{totalScore}</span>
-          </div>
-        </div>
 
-        {/* Continue Button */}
-        <button
-          className="arcade-button-primary w-full rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-          onClick={onContinue}
-        >
-          Next Level
-          <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+          {/* Stats Grid */}
+          <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base">
+            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+              <span className="text-muted-foreground">Level</span>
+              <span className="font-bold text-foreground">{levelNumber}</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+              <span className="text-muted-foreground">Remaining</span>
+              <span className="font-bold text-foreground">{remainingPercent}%</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+              <span className="text-muted-foreground">Cuts Made</span>
+              <span className="font-bold text-foreground">{cutCount}</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+              <span className="text-muted-foreground">Expected Cuts</span>
+              <span className="font-bold text-foreground">{expectedCuts}</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+              <span className="text-muted-foreground">Base Points</span>
+              <span className="font-bold text-foreground">{basePoints}</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+              <span className="text-muted-foreground">
+                {bonusOrPenalty >= 0 ? 'Par Bonus' : 'Par Penalty'}
+              </span>
+              <span className={`font-bold ${bonusOrPenalty >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {bonusOrPenalty >= 0 ? '+' : ''}{bonusOrPenalty}
+              </span>
+            </div>
+            
+            {overcutBonus > 0 && (
+              <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2">
+                <span className="text-amber-400 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
+                  Overcut Bonus
+                </span>
+                <span className="font-bold text-amber-400">+{overcutBonus}</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
+              <span className="font-semibold text-foreground">Level Score</span>
+              <span className="text-xl sm:text-2xl font-bold text-primary">{levelScore}</span>
+            </div>
+            
+            <div className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
+              <span className="font-semibold text-foreground">Total Score</span>
+              <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{totalScore}</span>
+            </div>
+          </div>
+
+          {/* Continue Button */}
+          <button
+            className="arcade-button-primary w-full rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 hover:scale-[1.02] active:scale-[0.98] transition-transform"
+            onClick={onContinue}
+          >
+            Next Level
+            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
