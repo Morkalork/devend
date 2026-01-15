@@ -976,42 +976,43 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
   }, [pushMode]);
 
   return (
-    <div className={`relative w-full h-full ${isShaking ? 'animate-shake' : ''}`} style={{ backgroundColor: `#${level.backgroundColor}` }}>
+    <div className={`flex flex-col w-full h-full ${isShaking ? 'animate-shake' : ''}`} style={{ backgroundColor: `#${level.backgroundColor}` }}>
       {/* Screen flash overlay for damage feedback */}
       {screenFlash === 'red' && (
         <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />
       )}
       
-      {/* Cuts counter - top left */}
-      <div className="absolute top-4 left-4 z-10 flex gap-3">
-        <div className="hud-display">
-          <span className="text-muted-foreground text-xs uppercase tracking-wider">Cuts</span>
-          <div className="text-2xl font-display font-bold text-foreground">
-            {cutCount}
-          </div>
-        </div>
-        {/* Lives display */}
-        <div className={`hud-display ${isRecovering ? 'animate-pulse' : ''}`}>
-          <span className="text-muted-foreground text-xs uppercase tracking-wider">Lives</span>
-          <div className="text-2xl font-display font-bold text-red-400 flex items-center gap-1">
-            {Array.from({ length: displayLives }).map((_, i) => (
-              <span key={i}>❤️</span>
-            ))}
-            {displayLives === 0 && <span>0</span>}
-          </div>
-        </div>
-        {wallShieldCount > 0 && (
+      {/* HUD Section - fixed height, not overlaying canvas */}
+      <div className="flex-shrink-0 px-4 py-3 flex justify-between items-start gap-3">
+        {/* Left side: Cuts, Lives, Shields */}
+        <div className="flex gap-3">
           <div className="hud-display">
-            <span className="text-muted-foreground text-xs uppercase tracking-wider">Shields</span>
-            <div className="text-2xl font-display font-bold text-cyan-400">
-              {wallShieldCount}
+            <span className="text-muted-foreground text-xs uppercase tracking-wider">Cuts</span>
+            <div className="text-2xl font-display font-bold text-foreground">
+              {cutCount}
             </div>
           </div>
-        )}
-      </div>
+          {/* Lives display */}
+          <div className={`hud-display ${isRecovering ? 'animate-pulse' : ''}`}>
+            <span className="text-muted-foreground text-xs uppercase tracking-wider">Lives</span>
+            <div className="text-2xl font-display font-bold text-red-400 flex items-center gap-1">
+              {Array.from({ length: displayLives }).map((_, i) => (
+                <span key={i}>❤️</span>
+              ))}
+              {displayLives === 0 && <span>0</span>}
+            </div>
+          </div>
+          {wallShieldCount > 0 && (
+            <div className="hud-display">
+              <span className="text-muted-foreground text-xs uppercase tracking-wider">Shields</span>
+              <div className="text-2xl font-display font-bold text-cyan-400">
+                {wallShieldCount}
+              </div>
+            </div>
+          )}
+        </div>
 
-      {/* Remaining percentage - top right */}
-      <div className="absolute top-4 right-4 z-10">
+        {/* Right side: Remaining percentage */}
         <div className="hud-display">
           <span className="text-muted-foreground text-xs uppercase tracking-wider">Remaining</span>
           <div className={`text-2xl font-display font-bold ${pushMode === 'pushing' ? 'text-amber-400' : 'text-primary'}`}>
@@ -1023,7 +1024,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         </div>
       </div>
 
-      <div ref={containerRef} className="w-full h-full">
+      {/* Canvas container - takes remaining space */}
+      <div ref={containerRef} className="flex-1 min-h-0 relative">
         <canvas
           ref={canvasRef}
           className="touch-none cursor-crosshair"
