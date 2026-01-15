@@ -18,12 +18,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
   const baseLevelScore = levelScore - overcutBonus;
   
   return (
-    <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm overflow-y-auto">
       <div className="min-h-full w-full flex items-start sm:items-center justify-center py-4 px-4 box-border">
-        <div className="bg-card border border-border rounded-xl p-4 sm:p-6 w-full max-w-sm shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="bg-card border border-border rounded-xl p-4 sm:p-6 w-full max-w-sm shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-success/20 flex items-center justify-center animate-in zoom-in duration-300">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-success/20 flex items-center justify-center">
             <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
           </div>
           <div>
@@ -69,7 +69,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
           </div>
           
           {overcutBonus > 0 && (
-            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2 animate-in fade-in slide-in-from-left-2 duration-300">
+            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2">
               <span className="text-amber-400 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                 Overcut Bonus
