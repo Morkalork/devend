@@ -410,18 +410,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       }
 
       game.regions = newRegions;
-      
-      // Keep wall visible for a moment after completion, then clear it
-      const completedWall = game.activeWall;
-      if (completedWall) {
-        completedWall.isComplete = true;
-        // Delay clearing the wall so it remains visible
-        setTimeout(() => {
-          if (game.activeWall === completedWall) {
-            game.activeWall = null;
-          }
-        }, 500);
-      }
+      game.activeWall = null;
 
       // Calculate combined remaining area
       const combinedArea = getCombinedArea();
@@ -739,8 +728,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       render();
       
       // Apply completed wall cut AFTER rendering (so wall is visible when complete)
-      // Add a small delay (100ms) to ensure wall is visible before cut is applied
-      const WALL_VISIBLE_DELAY = 100; // ms
+      // Add a delay (500ms) to ensure wall is clearly visible before cut is applied
+      const WALL_VISIBLE_DELAY = 500; // ms
       if (game.activeWall && game.activeWall.isComplete) {
         const timeSinceComplete = performance.now() - game.wallCompleteTime;
         if (timeSinceComplete >= WALL_VISIBLE_DELAY) {
