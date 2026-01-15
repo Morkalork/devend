@@ -79,4 +79,6 @@ export interface LevelScoreData {
   basePoints: number;
   levelScore: number;
   remainingPercent: number;
+  overcutBonus?: number;
+  thresholdPercent?: number;
 }

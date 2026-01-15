@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Trophy, ArrowRight } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 
 interface LevelCompleteOverlayProps {
@@ -9,11 +9,14 @@ interface LevelCompleteOverlayProps {
 }
 
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: LevelCompleteOverlayProps) {
-  const { levelNumber, levelId, cutCount, expectedCuts, basePoints, levelScore, remainingPercent } = scoreData;
+  const { levelNumber, levelId, cutCount, expectedCuts, basePoints, levelScore, remainingPercent, overcutBonus = 0 } = scoreData;
   
   const bonusOrPenalty = cutCount <= expectedCuts 
     ? expectedCuts - cutCount 
     : -(cutCount - expectedCuts);
+  
+  // Calculate base level score without overcut bonus for display
+  const baseLevelScore = levelScore - overcutBonus;
   
   return (
     <motion.div
@@ -73,12 +76,27 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
           
           <div className="flex justify-between items-center py-2 border-b border-border">
             <span className="text-muted-foreground">
-              {bonusOrPenalty >= 0 ? 'Bonus' : 'Penalty'}
+              {bonusOrPenalty >= 0 ? 'Par Bonus' : 'Par Penalty'}
             </span>
             <span className={`font-bold ${bonusOrPenalty >= 0 ? 'text-success' : 'text-destructive'}`}>
               {bonusOrPenalty >= 0 ? '+' : ''}{bonusOrPenalty}
             </span>
           </div>
+          
+          {overcutBonus > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex justify-between items-center py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2"
+            >
+              <span className="text-amber-400 flex items-center gap-1">
+                <Sparkles className="w-4 h-4" />
+                Overcut Bonus
+              </span>
+              <span className="font-bold text-amber-400">+{overcutBonus}</span>
+            </motion.div>
+          )}
           
           <div className="flex justify-between items-center py-3 bg-primary/10 rounded-lg px-3">
             <span className="font-semibold text-foreground">Level Score</span>
