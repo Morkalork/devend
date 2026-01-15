@@ -113,6 +113,17 @@ upgrades:
     modifiers:
       scoreMultiplier: 1.1
 
+  - id: "extra_life"
+    name: "Extra Life"
+    grade: "uncommon"
+    icon: "/icons/heart_plus.svg"
+    description: "Gain +1 life"
+    levelAvailability: 3
+    priceMin: 220
+    priceMax: 380
+    modifiers:
+      lives: 1
+
   - id: "par_forgiveness"
     name: "Par Forgiveness"
     grade: "uncommon"
@@ -178,6 +189,17 @@ upgrades:
     priceMax: 550
     modifiers:
       reducedSize: 0.1
+
+  - id: "guardian_angel"
+    name: "Guardian Angel"
+    grade: "rare"
+    icon: "/icons/angel.svg"
+    description: "Gain +1 life (and a brief recovery window feels longer)"
+    levelAvailability: 6
+    priceMin: 450
+    priceMax: 750
+    modifiers:
+      lives: 1
 
   - id: "wall_safety_net"
     name: "Safety Net"
