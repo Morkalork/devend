@@ -147,6 +147,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     bestRemainingPercent: 100,
     gameLoopFn: null as ((timestamp: number) => void) | null,
     wallCompleteTime: 0, // Time when wall completed, for visual delay
+    completedCuts: [] as { start: Vector2; end: Vector2; thickness: number }[], // Store completed cuts to draw as gaps
   });
 
   useEffect(() => {
@@ -263,6 +264,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       game.currentSwipePos = null;
       game.lastTime = 0;
       game.cutCount = 0;
+      game.completedCuts = []; // Reset completed cuts
       setCutCount(0);
       setRemainingPercent(Math.round(targetRemaining));
     };
@@ -410,6 +412,14 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       }
 
       game.regions = newRegions;
+      
+      // Store the completed cut so we can draw it as a thick gap
+      game.completedCuts.push({
+        start: { ...wall.startPoint },
+        end: { ...wall.endPoint },
+        thickness: wall.thickness + 8, // Match visual thickness of growing wall
+      });
+      
       game.activeWall = null;
 
       // Calculate combined remaining area
@@ -574,6 +584,17 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         }
         ctx.closePath();
         ctx.fill();
+      }
+      
+      // Draw completed cuts as thick background-colored lines (to show the gap)
+      ctx.strokeStyle = backgroundColor;
+      ctx.lineCap = 'round';
+      for (const cut of game.completedCuts) {
+        ctx.lineWidth = cut.thickness;
+        ctx.beginPath();
+        ctx.moveTo(cut.start.x, cut.start.y);
+        ctx.lineTo(cut.end.x, cut.end.y);
+        ctx.stroke();
       }
 
       // Render cut preview if enabled and swiping
