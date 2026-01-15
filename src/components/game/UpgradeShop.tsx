@@ -197,7 +197,7 @@ export function UpgradeShop({
                     whileHover={{ scale: !isOwned ? 1.02 : 1 }}
                     whileTap={{ scale: !isOwned ? 0.98 : 1 }}
                     className={`
-                      relative w-48 p-4 rounded-xl border-2 transition-all duration-200
+                      relative w-48 h-56 p-4 rounded-xl border-2 transition-all duration-200 flex flex-col
                       ${isOwned
                         ? 'bg-green-500/20 border-green-500/50 cursor-default'
                         : canAfford 
@@ -221,7 +221,7 @@ export function UpgradeShop({
                     )}
 
                     {/* Icon */}
-                    <div className={`w-16 h-16 mx-auto mb-3 mt-4 rounded-lg bg-white flex items-center justify-center ${isOwned ? 'opacity-50' : ''}`}>
+                    <div className={`w-16 h-16 mx-auto mb-3 mt-4 rounded-lg bg-white flex items-center justify-center flex-shrink-0 ${isOwned ? 'opacity-50' : ''}`}>
                       <SvgIcon 
                         src={offer.upgrade.icon} 
                         alt={offer.upgrade.name}
@@ -230,29 +230,31 @@ export function UpgradeShop({
                     </div>
 
                     {/* Name */}
-                    <h3 className={`font-semibold text-foreground text-center mb-1 ${isOwned ? 'opacity-50' : ''}`}>
+                    <h3 className={`font-semibold text-foreground text-center mb-1 flex-shrink-0 ${isOwned ? 'opacity-50' : ''}`}>
                       {offer.upgrade.name}
                     </h3>
 
                     {/* Description */}
-                    <p className={`text-xs italic text-muted-foreground text-center mb-2 line-clamp-2 ${isOwned ? 'opacity-50' : ''}`}>
+                    <p className={`text-xs italic text-muted-foreground text-center mb-2 line-clamp-2 flex-grow ${isOwned ? 'opacity-50' : ''}`}>
                       {offer.upgrade.description}
                     </p>
 
                     {/* Price or Owned label */}
-                    {isOwned ? (
-                      <div className="flex items-center justify-center gap-1 text-lg font-bold text-green-500">
-                        Owned
-                      </div>
-                    ) : (
-                      <div className={`
-                        flex items-center justify-center gap-1 text-lg font-bold
-                        ${canAfford ? 'text-yellow-500' : 'text-muted-foreground'}
-                      `}>
-                        <Coins className="w-4 h-4" />
-                        {offer.price}
-                      </div>
-                    )}
+                    <div className="flex-shrink-0">
+                      {isOwned ? (
+                        <div className="flex items-center justify-center gap-1 text-lg font-bold text-green-500">
+                          Owned
+                        </div>
+                      ) : (
+                        <div className={`
+                          flex items-center justify-center gap-1 text-lg font-bold
+                          ${canAfford ? 'text-yellow-500' : 'text-muted-foreground'}
+                        `}>
+                          <Coins className="w-4 h-4" />
+                          {offer.price}
+                        </div>
+                      )}
+                    </div>
 
                     {/* Info hint */}
                     {!isOwned && (
