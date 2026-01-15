@@ -1,15 +1,34 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Skull, RotateCcw, Home } from 'lucide-react';
+import { Trophy, Skull, RotateCcw, Home, Medal } from 'lucide-react';
 import { GameResult } from '@/types/game';
+import { NameEntryDialog } from './NameEntryDialog';
 
 interface ResultScreenProps {
   result: GameResult;
   onPlayAgain: () => void;
   onBackToWelcome: () => void;
+  onSaveHighscore: (name: string) => void;
+  onViewHighscores: () => void;
 }
 
-export function ResultScreen({ result, onPlayAgain, onBackToWelcome }: ResultScreenProps) {
+export function ResultScreen({ 
+  result, 
+  onPlayAgain, 
+  onBackToWelcome,
+  onSaveHighscore,
+  onViewHighscores,
+}: ResultScreenProps) {
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
+  
+  const [showNameEntry, setShowNameEntry] = useState(true);
+  const [hasSaved, setHasSaved] = useState(false);
+
+  const handleNameSubmit = (name: string) => {
+    onSaveHighscore(name);
+    setShowNameEntry(false);
+    setHasSaved(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
@@ -110,8 +129,8 @@ export function ResultScreen({ result, onPlayAgain, onBackToWelcome }: ResultScr
             </p>
           </div>
 
-          {/* Total Score - only show on win */}
-          {isWin && totalScore !== undefined && (
+          {/* Total Score */}
+          {totalScore !== undefined && (
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
                 Total Score
@@ -139,6 +158,17 @@ export function ResultScreen({ result, onPlayAgain, onBackToWelcome }: ResultScr
             <RotateCcw className="w-5 h-5" />
             Play Again
           </motion.button>
+          {hasSaved && (
+            <motion.button
+              className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+              onClick={onViewHighscores}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Medal className="w-5 h-5" />
+              View Highscores
+            </motion.button>
+          )}
           <motion.button
             className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
             onClick={onBackToWelcome}
@@ -150,6 +180,15 @@ export function ResultScreen({ result, onPlayAgain, onBackToWelcome }: ResultScr
           </motion.button>
         </motion.div>
       </motion.div>
+
+      {/* Name Entry Dialog */}
+      {showNameEntry && (
+        <NameEntryDialog
+          onSubmit={handleNameSubmit}
+          levelReached={levelNumber}
+          totalScore={totalScore ?? 0}
+        />
+      )}
     </div>
   );
 }
