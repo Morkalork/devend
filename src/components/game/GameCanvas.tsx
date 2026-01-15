@@ -651,29 +651,10 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       // Render wall LAST - on top of everything
       if (wall) {
-        const isComplete = wall.isComplete;
-        
-        // When complete, use slightly inset coordinates so wall is clearly INSIDE the polygon
-        // This tests if the issue is the wall being exactly on the polygon edge
-        let startX = wall.startPoint.x;
-        let startY = wall.startPoint.y;
-        let endX = wall.endPoint.x;
-        let endY = wall.endPoint.y;
-        
-        if (isComplete) {
-          // Move the endpoints slightly inward (toward center of the line)
-          const dx = endX - startX;
-          const dy = endY - startY;
-          const len = Math.sqrt(dx * dx + dy * dy);
-          if (len > 20) {
-            const inset = 10; // Inset by 10 pixels from each end
-            startX += (dx / len) * inset;
-            startY += (dy / len) * inset;
-            endX -= (dx / len) * inset;
-            endY -= (dy / len) * inset;
-          }
-          console.log('Drawing inset complete wall');
-        }
+        const startX = wall.startPoint.x;
+        const startY = wall.startPoint.y;
+        const endX = wall.endPoint.x;
+        const endY = wall.endPoint.y;
         
         ctx.save();
         
@@ -697,15 +678,6 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         ctx.stroke();
         
         ctx.restore();
-        
-        // Draw BIG RED CIRCLES at endpoints
-        ctx.fillStyle = '#ff0000';
-        ctx.beginPath();
-        ctx.arc(startX, startY, 15, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(endX, endY, 15, 0, Math.PI * 2);
-        ctx.fill();
       }
     };
 
