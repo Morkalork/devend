@@ -36,11 +36,21 @@ interface GameCanvasProps {
 
 // Game constants
 const BASE_BALL_RADIUS = 10;
-const BALL_SPEED_INCREASE = 1.05;
+const BALL_SPEED_INCREASE = 1.03; // Post-cut speed ramp
 const WALL_THICKNESS = 6;
-const BASE_WALL_GROWTH_SPEED = 600; // Reduced from 1200 as per spec
-const BASE_SWIPE_MIN_DISTANCE = 20; // Updated minimum distance
+const BASE_SWIPE_MIN_DISTANCE = 20;
 const ARENA_MARGIN = 0.1;
+const MINIMUM_WALL_TIME = 0.35; // seconds
+
+// Difficulty curve: wall speed decreases per level (slower = harder)
+function getWallSpeedBase(levelIndex: number): number {
+  return Math.max(420, Math.min(700, 700 - (levelIndex - 1) * 30));
+}
+
+// Difficulty curve: ball speed increases per level (faster = harder)
+function getBallSpeedLevelMultiplier(levelIndex: number): number {
+  return 1 + (levelIndex - 1) * 0.06;
+}
 
 // Colors
 const COLORS = {
@@ -184,10 +194,14 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       const regionWidth = bounds.maxX - bounds.minX;
       const regionHeight = bounds.maxY - bounds.minY;
       
+      // Calculate ball speed with level curve and modifiers
+      const ballSpeedLevelMult = getBallSpeedLevelMultiplier(levelNumber);
+      
       game.balls = level.balls.map((ballConfig) => {
         const dir = getRandomDirection();
-        // Apply ball speed multiplier
-        const modifiedSpeed = ballConfig.initialSpeed * activeModifiers.ballSpeedMultiplier;
+        // Apply level curve and ball speed multiplier
+        const levelScaledSpeed = ballConfig.initialSpeed * ballSpeedLevelMult * activeModifiers.ballSpeedMultiplier;
+        const modifiedSpeed = Math.min(levelScaledSpeed, ballConfig.topSpeed);
         const modifiedTopSpeed = ballConfig.topSpeed * activeModifiers.ballSpeedMultiplier;
         
         return {
@@ -424,9 +438,16 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         return;
       }
 
-      // Apply wall speed multiplier
-      const effectiveWallSpeed = BASE_WALL_GROWTH_SPEED * activeModifiers.wallSpeedMultiplier;
-      const growth = effectiveWallSpeed * dt;
+      // Calculate wall speed with level curve and modifiers
+      const wallSpeedBase = getWallSpeedBase(levelNumber);
+      const wallSpeedEffective = wallSpeedBase * activeModifiers.wallSpeedMultiplier;
+      
+      // Cap speed so walls never complete too fast in tiny regions
+      const maxSegmentLength = vec2Distance(wall.targetStart, wall.targetEnd);
+      const maxSpeedForMinTime = maxSegmentLength / MINIMUM_WALL_TIME;
+      const wallSpeedFinal = Math.min(wallSpeedEffective, maxSpeedForMinTime);
+      
+      const growth = wallSpeedFinal * dt;
 
       // Grow in -direction
       const distToStart = vec2Distance(wall.startPoint, wall.targetStart);
