@@ -600,18 +600,42 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       // Render growing wall as a thick line (render even if just completed)
       if (wall) {
-        ctx.save();
-        ctx.strokeStyle = COLORS.wallActive;
-        ctx.lineWidth = wall.thickness;
-        ctx.lineCap = 'round';
-        ctx.shadowColor = COLORS.wallActiveGlow;
-        ctx.shadowBlur = 20;
+        const wallLength = vec2Distance(wall.startPoint, wall.endPoint);
         
+        // Only draw if wall has some length
+        if (wallLength > 1) {
+          // Draw a filled rectangle for the wall (more visible than stroke)
+          const dx = wall.endPoint.x - wall.startPoint.x;
+          const dy = wall.endPoint.y - wall.startPoint.y;
+          const angle = Math.atan2(dy, dx);
+          const halfThickness = wall.thickness / 2 + 2; // Slightly thicker for visibility
+          
+          ctx.save();
+          ctx.translate(wall.startPoint.x, wall.startPoint.y);
+          ctx.rotate(angle);
+          
+          // Glow effect
+          ctx.shadowColor = COLORS.wallActiveGlow;
+          ctx.shadowBlur = 25;
+          
+          // Fill a rectangle along the wall
+          ctx.fillStyle = COLORS.wallActive;
+          ctx.fillRect(-2, -halfThickness, wallLength + 4, halfThickness * 2);
+          
+          // White border for contrast
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(-2, -halfThickness, wallLength + 4, halfThickness * 2);
+          
+          ctx.restore();
+        }
+        
+        // Also draw endpoint markers for debugging
+        ctx.fillStyle = '#ff0000';
         ctx.beginPath();
-        ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
-        ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
-        ctx.stroke();
-        ctx.restore();
+        ctx.arc(wall.startPoint.x, wall.startPoint.y, 4, 0, Math.PI * 2);
+        ctx.arc(wall.endPoint.x, wall.endPoint.y, 4, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       // Render all balls
