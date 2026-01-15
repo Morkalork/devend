@@ -3,6 +3,7 @@ import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from '
 import { LevelConfig } from '@/types/level';
 import { UpgradeConfig } from '@/types/upgrade';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
+import { PushYourLuckOverlay } from './PushYourLuckOverlay';
 import {
   Polygon,
   vec2Add,
@@ -100,12 +101,26 @@ function computeLevelScore(basePoints: number, expectedCuts: number, actualCuts:
   return Math.max(0, score);
 }
 
+// Calculate overcut bonus
+function computeOvercutBonus(threshold: number, remaining: number, basePoints: number): number {
+  const overshoot = Math.max(0, threshold - remaining);
+  if (overshoot <= 0) return 0;
+  const overcutRatio = overshoot / threshold;
+  const bonus = Math.round(basePoints * 0.6 * Math.sqrt(overcutRatio));
+  const maxBonus = Math.floor(0.5 * basePoints);
+  return Math.min(bonus, maxBonus);
+}
+
 export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedUpgradeIds, upgrades, onGameEnd, onLevelComplete }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
+  
+  // Push Your Luck state
+  const [pushMode, setPushMode] = useState<'none' | 'prompt' | 'pushing'>('none');
+  const [clearedPercent, setClearedPercent] = useState<number | null>(null);
   
   // Calculate active modifiers from owned upgrades
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
@@ -128,6 +143,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     cutCount: 0,
     wallShieldsRemaining: 0,
     fastestBallId: null as string | null,
+    pushMode: 'none' as 'none' | 'prompt' | 'pushing',
+    bestRemainingPercent: 100,
+    gameLoopFn: null as ((timestamp: number) => void) | null,
   });
 
   useEffect(() => {
@@ -295,6 +313,28 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     const handleGameOver = () => {
       game.gameOver = true;
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
+      
+      // If in push mode, level is still cleared - just forfeit overcut bonus
+      if (game.pushMode === 'pushing') {
+        const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+        let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
+        levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
+        
+        // No overcut bonus on death during push mode
+        onLevelComplete({
+          levelNumber,
+          levelId: level.id,
+          cutCount: game.cutCount,
+          expectedCuts: level.expectedCuts,
+          basePoints: level.points,
+          levelScore,
+          remainingPercent: percent,
+          overcutBonus: 0,
+          thresholdPercent: level.sizeThreshold,
+        });
+        return;
+      }
+      
       onGameEnd({
         isWin: false,
         remainingPercent: percent,
@@ -376,28 +416,18 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       const percent = Math.round((combinedArea / game.originalArea) * 100);
       setRemainingPercent(percent);
 
-      // Check win condition
-      if (percent < level.sizeThreshold) {
-        game.levelComplete = true;
-        
-        // Apply expectedCutsBonus for scoring only
-        const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
-        let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
-        
-        // Apply score multiplier
-        levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
-        
-        setTimeout(() => {
-          onLevelComplete({
-            levelNumber,
-            levelId: level.id,
-            cutCount: game.cutCount,
-            expectedCuts: level.expectedCuts,
-            basePoints: level.points,
-            levelScore,
-            remainingPercent: percent,
-          });
-        }, 600);
+      // Track best remaining percent during push mode
+      if (game.pushMode === 'pushing' && percent < game.bestRemainingPercent) {
+        game.bestRemainingPercent = percent;
+      }
+
+      // Check if level just got cleared (first time crossing threshold)
+      if (percent < level.sizeThreshold && game.pushMode === 'none') {
+        // Show push your luck prompt
+        game.pushMode = 'prompt';
+        setPushMode('prompt');
+        setClearedPercent(percent);
+        game.bestRemainingPercent = percent;
         return;
       }
 
@@ -657,7 +687,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     };
 
     const gameLoop = (timestamp: number) => {
-      if (game.gameOver || game.levelComplete) return;
+      if (game.gameOver || game.levelComplete || game.pushMode === 'prompt') return;
 
       const dt = game.lastTime ? (timestamp - game.lastTime) / 1000 : 0;
       game.lastTime = timestamp;
@@ -673,6 +703,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       game.animationId = requestAnimationFrame(gameLoop);
     };
+    
+    // Store gameLoop in ref so it can be restarted
+    game.gameLoopFn = gameLoop;
 
     const getCanvasCoords = (e: PointerEvent): Vector2 => {
       const rect = canvas.getBoundingClientRect();
@@ -683,7 +716,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     };
 
     const handlePointerDown = (e: PointerEvent) => {
-      if (game.gameOver || game.levelComplete || game.activeWall) return;
+      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === 'prompt') return;
 
       const pos = getCanvasCoords(e);
       
@@ -780,6 +813,54 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     };
   }, [level, levelNumber, onGameEnd, onLevelComplete, activeModifiers]);
 
+  // Handlers for Push Your Luck overlay
+  const handleBankAndContinue = useCallback(() => {
+    const game = gameRef.current;
+    game.levelComplete = true;
+    
+    // Calculate score with overcut bonus
+    const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+    let baseScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
+    baseScore = Math.round(baseScore * activeModifiers.scoreMultiplier);
+    
+    const overcutBonus = computeOvercutBonus(level.sizeThreshold, game.bestRemainingPercent, level.points);
+    const levelScore = baseScore + overcutBonus;
+    
+    setTimeout(() => {
+      onLevelComplete({
+        levelNumber,
+        levelId: level.id,
+        cutCount: game.cutCount,
+        expectedCuts: level.expectedCuts,
+        basePoints: level.points,
+        levelScore,
+        remainingPercent: game.bestRemainingPercent,
+        overcutBonus,
+        thresholdPercent: level.sizeThreshold,
+      });
+    }, 300);
+  }, [level, levelNumber, activeModifiers, onLevelComplete]);
+
+  const handlePushYourLuck = useCallback(() => {
+    const game = gameRef.current;
+    game.pushMode = 'pushing';
+    setPushMode('pushing');
+  }, []);
+  
+  // Resume game loop when push mode becomes 'pushing'
+  useEffect(() => {
+    if (pushMode !== 'pushing') return;
+    
+    const game = gameRef.current;
+    game.lastTime = 0;
+    
+    // Restart the game loop
+    if (game.gameLoopFn) {
+      cancelAnimationFrame(game.animationId);
+      game.animationId = requestAnimationFrame(game.gameLoopFn);
+    }
+  }, [pushMode]);
+
   return (
     <div className="relative w-full h-full" style={{ backgroundColor: `#${level.backgroundColor}` }}>
       {/* Cuts counter - top left */}
@@ -804,10 +885,12 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       <div className="absolute top-4 right-4 z-10">
         <div className="hud-display">
           <span className="text-muted-foreground text-xs uppercase tracking-wider">Remaining</span>
-          <div className="text-2xl font-display font-bold text-primary">
+          <div className={`text-2xl font-display font-bold ${pushMode === 'pushing' ? 'text-amber-400' : 'text-primary'}`}>
             {remainingPercent}%
           </div>
-          <span className="text-muted-foreground text-xs">Target: &lt;{level.sizeThreshold}%</span>
+          <span className="text-muted-foreground text-xs">
+            {pushMode === 'pushing' ? 'Push Mode!' : `Target: <${level.sizeThreshold}%`}
+          </span>
         </div>
       </div>
 
@@ -817,6 +900,17 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
           className="touch-none cursor-crosshair"
         />
       </div>
+
+      {/* Push Your Luck Overlay */}
+      {pushMode === 'prompt' && clearedPercent !== null && (
+        <PushYourLuckOverlay
+          remainingPercent={clearedPercent}
+          thresholdPercent={level.sizeThreshold}
+          basePoints={level.points}
+          onBank={handleBankAndContinue}
+          onPush={handlePushYourLuck}
+        />
+      )}
     </div>
   );
 }
