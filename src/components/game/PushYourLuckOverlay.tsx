@@ -37,7 +37,7 @@ export function PushYourLuckOverlay({
               right: auto !important;
               width: 384px !important;
               margin-left: -192px !important;
-              margin-top: -120px !important;
+              margin-top: -140px !important;
             }
           }
         `}</style>
