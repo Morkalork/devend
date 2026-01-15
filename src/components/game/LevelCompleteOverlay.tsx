@@ -27,9 +27,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
     >
       <div className="min-h-full w-full flex items-start sm:items-center justify-center py-4 px-4 box-border">
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 20 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.2 }}
           className="bg-card border border-border rounded-xl p-4 sm:p-6 w-full max-w-sm shadow-2xl"
         >
         {/* Header */}
