@@ -449,24 +449,24 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       
       const growth = wallSpeedFinal * dt;
 
-      // Grow in -direction
+      // Grow toward targetStart
       const distToStart = vec2Distance(wall.startPoint, wall.targetStart);
-      if (distToStart > 0) {
+      if (distToStart > 0.5) {
         const moveStart = Math.min(growth, distToStart);
-        wall.startPoint = vec2Add(
-          wall.startPoint,
-          vec2Scale(vec2Scale(wall.direction, -1), moveStart)
-        );
+        const dirToStart = vec2Normalize(vec2Sub(wall.targetStart, wall.startPoint));
+        wall.startPoint = vec2Add(wall.startPoint, vec2Scale(dirToStart, moveStart));
+      } else {
+        wall.startPoint = { ...wall.targetStart };
       }
 
-      // Grow in +direction
+      // Grow toward targetEnd
       const distToEnd = vec2Distance(wall.endPoint, wall.targetEnd);
-      if (distToEnd > 0) {
+      if (distToEnd > 0.5) {
         const moveEnd = Math.min(growth, distToEnd);
-        wall.endPoint = vec2Add(
-          wall.endPoint,
-          vec2Scale(wall.direction, moveEnd)
-        );
+        const dirToEnd = vec2Normalize(vec2Sub(wall.targetEnd, wall.endPoint));
+        wall.endPoint = vec2Add(wall.endPoint, vec2Scale(dirToEnd, moveEnd));
+      } else {
+        wall.endPoint = { ...wall.targetEnd };
       }
 
       // Check if complete
