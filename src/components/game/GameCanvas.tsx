@@ -410,7 +410,18 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       }
 
       game.regions = newRegions;
-      game.activeWall = null;
+      
+      // Keep wall visible for a moment after completion, then clear it
+      const completedWall = game.activeWall;
+      if (completedWall) {
+        completedWall.isComplete = true;
+        // Delay clearing the wall so it remains visible
+        setTimeout(() => {
+          if (game.activeWall === completedWall) {
+            game.activeWall = null;
+          }
+        }, 500);
+      }
 
       // Calculate combined remaining area
       const combinedArea = getCombinedArea();
