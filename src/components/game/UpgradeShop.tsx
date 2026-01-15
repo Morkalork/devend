@@ -220,11 +220,12 @@ export function UpgradeShop({
                     )}
 
                     {/* Icon */}
-                    <div className={`w-16 h-16 mx-auto mb-3 mt-4 rounded-lg bg-primary/10 flex items-center justify-center ${isOwned ? 'opacity-50' : ''}`}>
+                    <div className={`w-16 h-16 mx-auto mb-3 mt-4 rounded-lg bg-white flex items-center justify-center ${isOwned ? 'opacity-50' : ''}`}>
                       <img 
                         src={offer.upgrade.icon} 
                         alt={offer.upgrade.name}
-                        className="w-10 h-10 object-contain"
+                        className="w-10 h-10 object-contain text-gray-900"
+                        style={{ filter: 'invert(0)' }}
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                         }}
