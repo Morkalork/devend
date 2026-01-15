@@ -23,12 +23,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm overflow-y-auto"
+      className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm overflow-y-auto"
     >
-      <div className="min-h-full flex items-start sm:items-center justify-center py-4 px-4">
+      <div className="min-h-full w-full flex items-start sm:items-center justify-center py-4 px-4 box-border">
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 20 }}
           className="bg-card border border-border rounded-xl p-4 sm:p-6 w-full max-w-sm shadow-2xl"
         >
