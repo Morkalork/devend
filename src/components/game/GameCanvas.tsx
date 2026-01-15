@@ -31,6 +31,8 @@ interface GameCanvasProps {
   totalScore: number;
   ownedUpgradeIds: string[];
   upgrades: UpgradeConfig[];
+  lives: number;
+  onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
 }
@@ -42,6 +44,7 @@ const WALL_THICKNESS = 6;
 const BASE_SWIPE_MIN_DISTANCE = 20;
 const ARENA_MARGIN = 0.1;
 const MINIMUM_WALL_TIME = 0.35; // seconds
+const RECOVERY_WINDOW_MS = 700; // Recovery time after failed cut
 
 // Difficulty curve: wall speed decreases per level (slower = harder)
 function getWallSpeedBase(levelIndex: number): number {
@@ -111,12 +114,15 @@ function computeOvercutBonus(threshold: number, remaining: number, basePoints: n
   return Math.min(bonus, maxBonus);
 }
 
-export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedUpgradeIds, upgrades, onGameEnd, onLevelComplete }: GameCanvasProps) {
+export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedUpgradeIds, upgrades, lives, onLivesChange, onGameEnd, onLevelComplete }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
+  const [displayLives, setDisplayLives] = useState(lives);
+  const [screenFlash, setScreenFlash] = useState<'none' | 'red'>('none');
+  const [isRecovering, setIsRecovering] = useState(false);
   
   // Push Your Luck state
   const [pushMode, setPushMode] = useState<'none' | 'prompt' | 'pushing'>('none');
@@ -148,6 +154,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     gameLoopFn: null as ((timestamp: number) => void) | null,
     wallCompleteTime: 0, // Time when wall completed, for visual delay
     completedCuts: [] as { start: Vector2; end: Vector2; thickness: number }[], // Store completed cuts to draw as gaps
+    isRecovering: false, // Recovery window after failed cut
+    recoveryEndTime: 0, // When recovery window ends
   });
 
   useEffect(() => {
@@ -527,7 +535,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       }
 
       // Collision check with any ball while growing (capsule collision)
-      if (!wall.isComplete) {
+      // Skip collision checks during recovery window
+      if (!wall.isComplete && !game.isRecovering) {
         for (const ball of balls) {
           // Apply wallGrace modifier - reduce effective ball radius for collision
           const graceMultiplier = 1 - activeModifiers.wallGrace;
@@ -540,16 +549,50 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
             wall.endPoint,
             wall.thickness / 2
           )) {
-            // Check if we have wall shields
+            // Check if we have wall shields first
             if (game.wallShieldsRemaining > 0) {
               game.wallShieldsRemaining--;
               setWallShieldCount(game.wallShieldsRemaining);
-              // Cancel the wall but don't game over
+              // Cancel the wall but don't lose a life
               game.activeWall = null;
+              // Trigger brief recovery window
+              game.isRecovering = true;
+              game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
+              setIsRecovering(true);
+              setScreenFlash('red');
+              setTimeout(() => setScreenFlash('none'), 150);
+              setTimeout(() => {
+                game.isRecovering = false;
+                setIsRecovering(false);
+              }, RECOVERY_WINDOW_MS);
               return;
             }
             
-            handleGameOver();
+            // Failed cut - lose a life
+            const newLives = lives - 1;
+            setDisplayLives(newLives);
+            onLivesChange(newLives);
+            
+            // Cancel the wall
+            game.activeWall = null;
+            
+            // If no lives left, game over is handled by parent via onLivesChange
+            if (newLives <= 0) {
+              handleGameOver();
+              return;
+            }
+            
+            // Still have lives - enter recovery window
+            game.isRecovering = true;
+            game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
+            setIsRecovering(true);
+            setScreenFlash('red');
+            setTimeout(() => setScreenFlash('none'), 150);
+            setTimeout(() => {
+              game.isRecovering = false;
+              setIsRecovering(false);
+            }, RECOVERY_WINDOW_MS);
+            
             return;
           }
         }
@@ -772,7 +815,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     };
 
     const handlePointerDown = (e: PointerEvent) => {
-      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === 'prompt') return;
+      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === 'prompt' || game.isRecovering) return;
 
       const pos = getCanvasCoords(e);
       
@@ -923,12 +966,27 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
   return (
     <div className="relative w-full h-full" style={{ backgroundColor: `#${level.backgroundColor}` }}>
+      {/* Screen flash overlay for damage feedback */}
+      {screenFlash === 'red' && (
+        <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/30 animate-pulse" />
+      )}
+      
       {/* Cuts counter - top left */}
       <div className="absolute top-4 left-4 z-10 flex gap-3">
         <div className="hud-display">
           <span className="text-muted-foreground text-xs uppercase tracking-wider">Cuts</span>
           <div className="text-2xl font-display font-bold text-foreground">
             {cutCount}
+          </div>
+        </div>
+        {/* Lives display */}
+        <div className={`hud-display ${isRecovering ? 'animate-pulse' : ''}`}>
+          <span className="text-muted-foreground text-xs uppercase tracking-wider">Lives</span>
+          <div className="text-2xl font-display font-bold text-red-400 flex items-center gap-1">
+            {Array.from({ length: displayLives }).map((_, i) => (
+              <span key={i}>❤️</span>
+            ))}
+            {displayLives === 0 && <span>0</span>}
           </div>
         </div>
         {wallShieldCount > 0 && (

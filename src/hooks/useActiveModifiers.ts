@@ -16,6 +16,7 @@ export interface ActiveModifiers {
   shopSlots: number;
   wallShield: number;
   priceMultiplier: number;
+  bonusLives: number; // Extra lives from upgrades
   
   // Boolean modifiers (OR of all values)
   cutPreview: boolean;
@@ -41,6 +42,7 @@ export function useActiveModifiers(
     let expectedCutsBonus = 0;
     let shopSlots = 0;
     let wallShield = 0;
+    let bonusLives = 0;
     
     // Initialize boolean modifiers to false
     let cutPreview = false;
@@ -88,6 +90,9 @@ export function useActiveModifiers(
       if (m.wallShield !== undefined) {
         wallShield += m.wallShield;
       }
+      if (m.lives !== undefined) {
+        bonusLives += m.lives;
+      }
       
       // Boolean modifiers
       if (m.cutPreview) {
@@ -110,6 +115,7 @@ export function useActiveModifiers(
       shopSlots,
       wallShield,
       priceMultiplier,
+      bonusLives,
       cutPreview,
       highlightFastestBall,
     };
