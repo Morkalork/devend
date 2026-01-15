@@ -4,6 +4,7 @@ import { UpgradeConfig, GRADE_WEIGHTS, GRADE_COLORS, UpgradeGrade } from '@/type
 import { Coins, ArrowRight, Info, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 interface UpgradeOffer {
   upgrade: UpgradeConfig;
@@ -221,14 +222,10 @@ export function UpgradeShop({
 
                     {/* Icon */}
                     <div className={`w-16 h-16 mx-auto mb-3 mt-4 rounded-lg bg-white flex items-center justify-center ${isOwned ? 'opacity-50' : ''}`}>
-                      <img 
+                      <SvgIcon 
                         src={offer.upgrade.icon} 
                         alt={offer.upgrade.name}
-                        className="w-10 h-10 object-contain text-gray-900"
-                        style={{ filter: 'invert(0)' }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
+                        className="w-10 h-10 text-gray-900 [&>svg]:w-full [&>svg]:h-full"
                       />
                     </div>
 
