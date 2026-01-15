@@ -640,23 +640,28 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       // Render wall LAST - on top of everything
       if (wall) {
-        // Debug
-        if (wall.isComplete) {
-          console.log('Drawing complete wall at:', wall.startPoint, wall.endPoint);
-          
-          // When complete, draw the wall OFFSET by 50 pixels to see if it's a coordinate issue
-          const offsetX = 50;
-          const offsetY = 50;
-          
-          // Draw a MASSIVE red line offset from the wall
-          ctx.save();
-          ctx.strokeStyle = '#ff0000';
-          ctx.lineWidth = 20;
-          ctx.beginPath();
-          ctx.moveTo(wall.startPoint.x + offsetX, wall.startPoint.y + offsetY);
-          ctx.lineTo(wall.endPoint.x + offsetX, wall.endPoint.y + offsetY);
-          ctx.stroke();
-          ctx.restore();
+        const isComplete = wall.isComplete;
+        
+        // When complete, use slightly inset coordinates so wall is clearly INSIDE the polygon
+        // This tests if the issue is the wall being exactly on the polygon edge
+        let startX = wall.startPoint.x;
+        let startY = wall.startPoint.y;
+        let endX = wall.endPoint.x;
+        let endY = wall.endPoint.y;
+        
+        if (isComplete) {
+          // Move the endpoints slightly inward (toward center of the line)
+          const dx = endX - startX;
+          const dy = endY - startY;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len > 20) {
+            const inset = 10; // Inset by 10 pixels from each end
+            startX += (dx / len) * inset;
+            startY += (dy / len) * inset;
+            endX -= (dx / len) * inset;
+            endY -= (dy / len) * inset;
+          }
+          console.log('Drawing inset complete wall');
         }
         
         ctx.save();
@@ -666,8 +671,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         ctx.lineWidth = wall.thickness + 8;
         ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
-        ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
         ctx.stroke();
         
         // Draw orange center
@@ -676,8 +681,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         ctx.shadowColor = COLORS.wallActiveGlow;
         ctx.shadowBlur = 25;
         ctx.beginPath();
-        ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
-        ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
+        ctx.moveTo(startX, startY);
+        ctx.lineTo(endX, endY);
         ctx.stroke();
         
         ctx.restore();
@@ -685,10 +690,10 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         // Draw BIG RED CIRCLES at endpoints
         ctx.fillStyle = '#ff0000';
         ctx.beginPath();
-        ctx.arc(wall.startPoint.x, wall.startPoint.y, 15, 0, Math.PI * 2);
+        ctx.arc(startX, startY, 15, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(wall.endPoint.x, wall.endPoint.y, 15, 0, Math.PI * 2);
+        ctx.arc(endX, endY, 15, 0, Math.PI * 2);
         ctx.fill();
       }
     };
