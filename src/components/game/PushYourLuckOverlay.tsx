@@ -24,7 +24,7 @@ export function PushYourLuckOverlay({
       <div 
         className="push-luck-modal absolute z-50 overflow-y-auto"
         style={{
-          top: '1rem',
+          bottom: '1rem',
           left: '1rem',
           right: '1rem',
         }}
@@ -33,6 +33,7 @@ export function PushYourLuckOverlay({
           @media (min-width: 640px) {
             .push-luck-modal {
               top: 50% !important;
+              bottom: auto !important;
               left: 50% !important;
               right: auto !important;
               width: 384px !important;

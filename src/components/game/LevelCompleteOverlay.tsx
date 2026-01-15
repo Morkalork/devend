@@ -23,7 +23,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
       <div 
         className="level-complete-modal fixed z-50 overflow-y-auto"
         style={{
-          top: '1rem',
+          bottom: '1rem',
           left: '1rem',
           right: '1rem',
           maxHeight: 'calc(100vh - 2rem)',
@@ -33,11 +33,13 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
           @media (min-width: 640px) {
             .level-complete-modal {
               top: 50% !important;
+              bottom: auto !important;
               left: 50% !important;
               right: auto !important;
               width: 384px !important;
               max-height: 90vh !important;
-              margin-top: -200px;
+              margin-left: -192px !important;
+              margin-top: -280px !important;
             }
           }
         `}</style>
