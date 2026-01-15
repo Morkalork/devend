@@ -125,6 +125,13 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
   const [isRecovering, setIsRecovering] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   
+  // Ref to track current lives value for use in closures
+  const livesRef = useRef(lives);
+  useEffect(() => {
+    livesRef.current = lives;
+    setDisplayLives(lives);
+  }, [lives]);
+  
   // Push Your Luck state
   const [pushMode, setPushMode] = useState<'none' | 'prompt' | 'pushing'>('none');
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
@@ -570,7 +577,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
             }
             
             // Failed cut - lose a life
-            const newLives = lives - 1;
+            const newLives = livesRef.current - 1;
+            livesRef.current = newLives;
             setDisplayLives(newLives);
             onLivesChange(newLives);
             
