@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
-import { UpgradeConfig, UpgradeData } from '@/types/upgrade';
+import { UpgradeConfig, UpgradeData, UpgradeGrade } from '@/types/upgrade';
+
+const VALID_GRADES: UpgradeGrade[] = ['common', 'uncommon', 'rare', 'legendary', 'godlike'];
 
 interface UpgradeManagerState {
   upgrades: UpgradeConfig[];
@@ -36,6 +38,11 @@ export function useUpgradeManager() {
         // Check required fields
         if (!upgrade.id || !upgrade.name || !upgrade.icon || !upgrade.description) {
           throw new Error(`Upgrade "${upgrade.id || 'unknown'}" is missing required fields (id, name, icon, description)`);
+        }
+        
+        // Validate grade
+        if (!upgrade.grade || !VALID_GRADES.includes(upgrade.grade)) {
+          throw new Error(`Upgrade "${upgrade.id}" has invalid or missing grade. Must be one of: ${VALID_GRADES.join(', ')}`);
         }
         
         if (typeof upgrade.levelAvailability !== 'number') {
