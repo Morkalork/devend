@@ -536,9 +536,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         }
       }
 
-      if (wall.isComplete) {
-        applyCut(wall);
-      }
+      // Don't call applyCut here - let it render complete wall first
+      // applyCut will be called from gameLoop after render
     };
 
     const render = () => {
@@ -593,8 +592,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         }
       }
 
-      // Render growing wall as a thick line
-      if (wall && !wall.isComplete) {
+      // Render growing wall as a thick line (render even if just completed)
+      if (wall) {
         ctx.save();
         ctx.strokeStyle = COLORS.wallActive;
         ctx.lineWidth = wall.thickness;
@@ -700,6 +699,11 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       handleBallCollisions();
       updateWall(cappedDt);
       render();
+      
+      // Apply completed wall cut AFTER rendering (so wall is visible when complete)
+      if (game.activeWall && game.activeWall.isComplete) {
+        applyCut(game.activeWall);
+      }
 
       game.animationId = requestAnimationFrame(gameLoop);
     };
@@ -854,10 +858,14 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     const game = gameRef.current;
     game.lastTime = 0;
     
-    // Restart the game loop
+    // Restart the game loop - cancel any existing and start fresh
     if (game.gameLoopFn) {
       cancelAnimationFrame(game.animationId);
-      game.animationId = requestAnimationFrame(game.gameLoopFn);
+      // Small delay to ensure state is settled, then restart
+      requestAnimationFrame(() => {
+        game.lastTime = 0;
+        game.animationId = requestAnimationFrame(game.gameLoopFn!);
+      });
     }
   }, [pushMode]);
 
