@@ -560,7 +560,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, width, height);
 
-      // Fill all regions with region color (polygons)
+      // Fill all regions with region color (polygons) and draw edges
       ctx.fillStyle = regionColor;
       for (const region of regions) {
         const { vertices } = region.polygon;
@@ -573,6 +573,11 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         }
         ctx.closePath();
         ctx.fill();
+        
+        // Draw polygon edges (so cut lines remain visible)
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.stroke();
       }
 
       // Render cut preview if enabled and swiping
