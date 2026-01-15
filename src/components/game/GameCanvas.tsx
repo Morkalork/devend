@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { Ball, Bounds, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from '@/types/game';
 import { LevelConfig } from '@/types/level';
 import { UpgradeConfig } from '@/types/upgrade';
+import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 
 interface GameCanvasProps {
   level: LevelConfig;
@@ -15,16 +16,19 @@ interface GameCanvasProps {
 }
 
 // Game constants
-const BALL_RADIUS = 10;
+const BASE_BALL_RADIUS = 10;
 const BALL_SPEED_INCREASE = 1.05;
 const WALL_THICKNESS = 6;
 const BASE_WALL_GROWTH_SPEED = 1200;
+const BASE_SWIPE_MIN_DISTANCE = 15;
 const ARENA_MARGIN = 0.1;
 
 // Colors
 const COLORS = {
   wallActive: '#ff8800',
   wallActiveGlow: 'rgba(255, 136, 0, 0.5)',
+  cutPreview: 'rgba(255, 255, 255, 0.3)',
+  fastestBallHighlight: '#00ffff',
 };
 
 let regionIdCounter = 0;
@@ -91,29 +95,10 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
+  const [wallShieldCount, setWallShieldCount] = useState(0);
   
   // Calculate active modifiers from owned upgrades
-  const activeModifiers = useMemo(() => {
-    let totalWallSpeedBonus = 0;
-    let totalReducedSize = 0;
-    
-    for (const upgradeId of ownedUpgradeIds) {
-      const upgrade = upgrades.find(u => u.id === upgradeId);
-      if (upgrade?.modifiers) {
-        if (upgrade.modifiers.wallGenerationSpeed) {
-          totalWallSpeedBonus += upgrade.modifiers.wallGenerationSpeed;
-        }
-        if (upgrade.modifiers.reducedSize) {
-          totalReducedSize += upgrade.modifiers.reducedSize;
-        }
-      }
-    }
-    
-    return {
-      wallGrowthSpeed: BASE_WALL_GROWTH_SPEED + totalWallSpeedBonus,
-      reducedSizePercent: totalReducedSize,
-    };
-  }, [ownedUpgradeIds, upgrades]);
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
   
   const gameRef = useRef({
     regions: [] as Region[],
@@ -123,13 +108,16 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     gameOver: false,
     levelComplete: false,
     swipeStart: null as Vector2 | null,
-    swipeRegionId: null as string | null, // track which region the swipe started in
+    swipeRegionId: null as string | null,
+    currentSwipePos: null as Vector2 | null, // For cut preview
     lastTime: 0,
     animationId: 0,
     canvasSize: { width: 0, height: 0 },
     backgroundColor: `#${level.backgroundColor}`,
     regionColor: `#${level.rectangleColor}`,
-    cutCount: 0, // track cuts internally too
+    cutCount: 0,
+    wallShieldsRemaining: 0,
+    fastestBallId: null as string | null,
   });
 
   useEffect(() => {
@@ -140,9 +128,17 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     const game = gameRef.current;
     game.backgroundColor = `#${level.backgroundColor}`;
     game.regionColor = `#${level.rectangleColor}`;
+    game.wallShieldsRemaining = activeModifiers.wallShield;
+    setWallShieldCount(activeModifiers.wallShield);
     
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Calculate effective ball radius with modifier
+    const effectiveBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
+    
+    // Calculate effective swipe distance with modifier
+    const effectiveSwipeMinDistance = BASE_SWIPE_MIN_DISTANCE / activeModifiers.swipeSensitivity;
 
     const initGame = () => {
       const { width, height } = game.canvasSize;
@@ -154,10 +150,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       regionIdCounter = 0;
       
       // Calculate starting percentage based on reducedSize modifier
-      // targetRemaining = 100 - totalReducedSize, e.g., if reducedSize is 10, we start at 90%
-      const targetRemaining = Math.max(20, 100 - activeModifiers.reducedSizePercent); // Clamp to at least 20% to fit balls
+      const targetRemaining = Math.max(20, 100 - activeModifiers.reducedSizePercent);
       
-      // Scale factor to shrink the region: scaleFactor = sqrt(targetRemaining/100)
+      // Scale factor to shrink the region
       const scaleFactor = Math.sqrt(targetRemaining / 100);
       
       // Calculate shrunk dimensions centered in the arena
@@ -183,7 +178,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       // Original area is still based on full arena (for percentage calculation)
       game.originalArea = arenaWidth * arenaHeight;
       
-      // Create balls from level config, all in the initial (possibly shrunk) region
+      // Create balls from level config with modifiers applied
       const regionWidth = initialBounds.right - initialBounds.left;
       const regionHeight = initialBounds.bottom - initialBounds.top;
       const regionCenterX = (initialBounds.left + initialBounds.right) / 2;
@@ -191,34 +186,51 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       
       game.balls = level.balls.map((ballConfig) => {
         const dir = getRandomDirection();
+        // Apply ball speed multiplier
+        const modifiedSpeed = ballConfig.initialSpeed * activeModifiers.ballSpeedMultiplier;
+        const modifiedTopSpeed = ballConfig.topSpeed * activeModifiers.ballSpeedMultiplier;
+        
         return {
           id: ballConfig.id,
           position: { 
-            // Spawn balls within the shrunk region
             x: regionCenterX + (Math.random() - 0.5) * regionWidth * 0.3,
             y: regionCenterY + (Math.random() - 0.5) * regionHeight * 0.3,
           },
           velocity: { 
-            x: dir.x * ballConfig.initialSpeed, 
-            y: dir.y * ballConfig.initialSpeed 
+            x: dir.x * modifiedSpeed, 
+            y: dir.y * modifiedSpeed,
           },
-          radius: BALL_RADIUS,
-          speed: ballConfig.initialSpeed,
-          topSpeed: ballConfig.topSpeed,
+          radius: effectiveBallRadius, // Apply ball size multiplier
+          speed: modifiedSpeed,
+          topSpeed: modifiedTopSpeed,
           color: `#${ballConfig.color}`,
           regionId: initialRegionId,
         };
       });
+      
+      // Find and track the fastest ball for highlighting
+      if (activeModifiers.highlightFastestBall && game.balls.length > 0) {
+        let fastestSpeed = 0;
+        let fastestId = game.balls[0].id;
+        for (const ball of game.balls) {
+          const speed = Math.sqrt(ball.velocity.x ** 2 + ball.velocity.y ** 2);
+          if (speed > fastestSpeed) {
+            fastestSpeed = speed;
+            fastestId = ball.id;
+          }
+        }
+        game.fastestBallId = fastestId;
+      }
       
       game.activeWall = null;
       game.gameOver = false;
       game.levelComplete = false;
       game.swipeStart = null;
       game.swipeRegionId = null;
+      game.currentSwipePos = null;
       game.lastTime = 0;
       game.cutCount = 0;
       setCutCount(0);
-      // Set initial remaining percentage based on shrunk region
       setRemainingPercent(Math.round(targetRemaining));
     };
 
@@ -230,19 +242,6 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       canvas.style.height = `${height}px`;
       game.canvasSize = { width, height };
       initGame();
-    };
-
-    // Find the region a ball is in
-    const findBallRegion = (ball: Ball): Region | null => {
-      return findRegionContainingPoint(game.regions, ball.position.x, ball.position.y);
-    };
-
-    // Update ball's regionId based on its position
-    const updateBallRegion = (ball: Ball) => {
-      const region = findBallRegion(ball);
-      if (region) {
-        ball.regionId = region.id;
-      }
     };
 
     // Bounce ball within its assigned region
@@ -287,6 +286,20 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       }
     };
 
+    const handleGameOver = () => {
+      game.gameOver = true;
+      const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
+      onGameEnd({
+        isWin: false,
+        remainingPercent: percent,
+        levelId: level.id,
+        levelNumber,
+        cutCount: game.cutCount,
+        expectedCuts: level.expectedCuts,
+        basePoints: level.points,
+      });
+    };
+
     const applyCut = (wall: GrowingWall) => {
       const { regions, balls } = game;
       
@@ -300,17 +313,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       // Check if any ball is exactly on the cut line - instant game over
       for (const ball of balls) {
         if (ball.regionId === activeRegion.id && isBallOnCutLine(ball, wall)) {
-          game.gameOver = true;
-          const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
-          onGameEnd({
-            isWin: false,
-            remainingPercent: percent,
-            levelId: level.id,
-            levelNumber,
-            cutCount: game.cutCount,
-            expectedCuts: level.expectedCuts,
-            basePoints: level.points,
-          });
+          handleGameOver();
           return;
         }
       }
@@ -321,12 +324,12 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       if (wall.orientation === 'horizontal') {
         const cutY = wall.origin.y;
-        childBounds1 = { ...bounds, bottom: cutY - wall.thickness / 2 }; // top region
-        childBounds2 = { ...bounds, top: cutY + wall.thickness / 2 }; // bottom region
+        childBounds1 = { ...bounds, bottom: cutY - wall.thickness / 2 };
+        childBounds2 = { ...bounds, top: cutY + wall.thickness / 2 };
       } else {
         const cutX = wall.origin.x;
-        childBounds1 = { ...bounds, right: cutX - wall.thickness / 2 }; // left region
-        childBounds2 = { ...bounds, left: cutX + wall.thickness / 2 }; // right region
+        childBounds1 = { ...bounds, right: cutX - wall.thickness / 2 };
+        childBounds2 = { ...bounds, left: cutX + wall.thickness / 2 };
       }
 
       const child1Id = generateRegionId();
@@ -372,7 +375,13 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       // Check win condition
       if (percent < level.sizeThreshold) {
         game.levelComplete = true;
-        const levelScore = computeLevelScore(level.points, level.expectedCuts, game.cutCount);
+        
+        // Apply expectedCutsBonus for scoring only
+        const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+        let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
+        
+        // Apply score multiplier
+        levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
         
         setTimeout(() => {
           onLevelComplete({
@@ -397,6 +406,20 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
           ball.velocity.x *= ratio;
           ball.velocity.y *= ratio;
         }
+        
+        // Update fastest ball tracking
+        if (activeModifiers.highlightFastestBall) {
+          let fastestSpeed = 0;
+          let fastestId = game.balls[0]?.id || null;
+          for (const ball of game.balls) {
+            const speed = Math.sqrt(ball.velocity.x ** 2 + ball.velocity.y ** 2);
+            if (speed > fastestSpeed) {
+              fastestSpeed = speed;
+              fastestId = ball.id;
+            }
+          }
+          game.fastestBallId = fastestId;
+        }
       }
     };
 
@@ -412,7 +435,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       }
 
       const bounds = activeRegion.bounds;
-      const growth = activeModifiers.wallGrowthSpeed * dt;
+      // Apply wall speed multiplier
+      const effectiveWallSpeed = BASE_WALL_GROWTH_SPEED * activeModifiers.wallSpeedMultiplier;
+      const growth = effectiveWallSpeed * dt;
 
       if (wall.orientation === 'horizontal') {
         wall.startExtent = Math.max(bounds.left, wall.startExtent - growth);
@@ -444,19 +469,21 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         }
 
         for (const ball of balls) {
-          if (circleRectCollision(ball.position.x, ball.position.y, ball.radius, rx, ry, rw, rh)) {
-            game.gameOver = true;
-            const combinedArea = game.regions.reduce((sum, r) => sum + getRegionArea(r.bounds), 0);
-            const percent = Math.round((combinedArea / game.originalArea) * 100);
-            onGameEnd({
-              isWin: false,
-              remainingPercent: percent,
-              levelId: level.id,
-              levelNumber,
-              cutCount: game.cutCount,
-              expectedCuts: level.expectedCuts,
-              basePoints: level.points,
-            });
+          // Apply wallGrace modifier - reduce effective ball radius for collision
+          const graceMultiplier = 1 - activeModifiers.wallGrace;
+          const effectiveCollisionRadius = ball.radius * graceMultiplier;
+          
+          if (circleRectCollision(ball.position.x, ball.position.y, effectiveCollisionRadius, rx, ry, rw, rh)) {
+            // Check if we have wall shields
+            if (game.wallShieldsRemaining > 0) {
+              game.wallShieldsRemaining--;
+              setWallShieldCount(game.wallShieldsRemaining);
+              // Cancel the wall but don't game over
+              game.activeWall = null;
+              return;
+            }
+            
+            handleGameOver();
             return;
           }
         }
@@ -468,7 +495,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     };
 
     const render = () => {
-      const { regions, balls, activeWall: wall, canvasSize, backgroundColor, regionColor } = game;
+      const { regions, balls, activeWall: wall, canvasSize, backgroundColor, regionColor, swipeStart, swipeRegionId, currentSwipePos } = game;
       const { width, height } = canvasSize;
 
       // Fill with darkness (background)
@@ -480,6 +507,36 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       for (const region of regions) {
         const b = region.bounds;
         ctx.fillRect(b.left, b.top, b.right - b.left, b.bottom - b.top);
+      }
+
+      // Render cut preview if enabled and swiping
+      if (activeModifiers.cutPreview && swipeStart && swipeRegionId && currentSwipePos && !wall) {
+        const region = regions.find(r => r.id === swipeRegionId);
+        if (region) {
+          const deltaX = currentSwipePos.x - swipeStart.x;
+          const deltaY = currentSwipePos.y - swipeStart.y;
+          
+          if (Math.abs(deltaX) >= effectiveSwipeMinDistance || Math.abs(deltaY) >= effectiveSwipeMinDistance) {
+            const isHorizontal = Math.abs(deltaX) >= Math.abs(deltaY);
+            
+            ctx.save();
+            ctx.strokeStyle = COLORS.cutPreview;
+            ctx.lineWidth = WALL_THICKNESS;
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            
+            if (isHorizontal) {
+              ctx.moveTo(region.bounds.left, swipeStart.y);
+              ctx.lineTo(region.bounds.right, swipeStart.y);
+            } else {
+              ctx.moveTo(swipeStart.x, region.bounds.top);
+              ctx.lineTo(swipeStart.x, region.bounds.bottom);
+            }
+            
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
       }
 
       // Render growing wall
@@ -509,6 +566,21 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       // Render all balls
       for (const ball of balls) {
+        const isFastest = activeModifiers.highlightFastestBall && ball.id === game.fastestBallId;
+        
+        // Fastest ball highlight ring
+        if (isFastest) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(ball.position.x, ball.position.y, ball.radius + 15, 0, Math.PI * 2);
+          ctx.strokeStyle = COLORS.fastestBallHighlight;
+          ctx.lineWidth = 3;
+          ctx.shadowColor = COLORS.fastestBallHighlight;
+          ctx.shadowBlur = 15;
+          ctx.stroke();
+          ctx.restore();
+        }
+        
         // Ball glow
         ctx.beginPath();
         ctx.arc(ball.position.x, ball.position.y, ball.radius + 10, 0, Math.PI * 2);
@@ -624,18 +696,23 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       ) {
         game.swipeStart = pos;
         game.swipeRegionId = region.id;
+        game.currentSwipePos = pos;
       }
     };
 
     const handlePointerMove = (e: PointerEvent) => {
-      if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete || game.activeWall) return;
+      if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete) return;
 
       const pos = getCanvasCoords(e);
+      game.currentSwipePos = pos; // Update for preview
+      
+      if (game.activeWall) return; // Wall already created
+      
       const deltaX = pos.x - game.swipeStart.x;
       const deltaY = pos.y - game.swipeStart.y;
 
-      const minDistance = 15;
-      if (Math.abs(deltaX) < minDistance && Math.abs(deltaY) < minDistance) return;
+      // Apply swipe sensitivity modifier
+      if (Math.abs(deltaX) < effectiveSwipeMinDistance && Math.abs(deltaY) < effectiveSwipeMinDistance) return;
 
       const orientation = Math.abs(deltaX) >= Math.abs(deltaY) ? 'horizontal' : 'vertical';
 
@@ -655,11 +732,13 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       game.swipeStart = null;
       game.swipeRegionId = null;
+      game.currentSwipePos = null;
     };
 
     const handlePointerUp = () => {
       game.swipeStart = null;
       game.swipeRegionId = null;
+      game.currentSwipePos = null;
     };
 
     // Setup
@@ -698,6 +777,14 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
             {totalScore}
           </div>
         </div>
+        {wallShieldCount > 0 && (
+          <div className="hud-display">
+            <span className="text-muted-foreground text-xs uppercase tracking-wider">Shields</span>
+            <div className="text-2xl font-display font-bold text-cyan-400">
+              {wallShieldCount}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Cuts counter - top center */}

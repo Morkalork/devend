@@ -1,8 +1,9 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UpgradeConfig } from '@/types/upgrade';
+import { UpgradeConfig, GRADE_WEIGHTS, GRADE_COLORS, UpgradeGrade } from '@/types/upgrade';
 import { Coins, ArrowRight, Info, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 
 interface UpgradeOffer {
   upgrade: UpgradeConfig;
@@ -18,7 +19,7 @@ interface UpgradeShopProps {
   onContinue: () => void;
 }
 
-function computePrice(upgrade: UpgradeConfig, levelNumber: number): number {
+function computeBasePrice(upgrade: UpgradeConfig, levelNumber: number): number {
   const levelsSinceAvail = Math.max(0, levelNumber - upgrade.levelAvailability);
   const decaySteps = Math.floor(levelsSinceAvail / 2);
   const effectiveMax = Math.max(upgrade.priceMin, upgrade.priceMax - decaySteps);
@@ -26,13 +27,39 @@ function computePrice(upgrade: UpgradeConfig, levelNumber: number): number {
   return Math.floor(Math.random() * (effectiveMax - upgrade.priceMin + 1)) + upgrade.priceMin;
 }
 
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+// Weighted random selection without replacement
+function weightedRandomSelect<T extends { grade: UpgradeGrade }>(
+  items: T[],
+  count: number
+): T[] {
+  if (items.length === 0) return [];
+  
+  const selected: T[] = [];
+  const remaining = [...items];
+  
+  while (selected.length < count && remaining.length > 0) {
+    // Calculate total weight
+    const totalWeight = remaining.reduce((sum, item) => sum + GRADE_WEIGHTS[item.grade], 0);
+    
+    // Pick a random value in [0, totalWeight)
+    let random = Math.random() * totalWeight;
+    
+    // Find the item that corresponds to this random value
+    for (let i = 0; i < remaining.length; i++) {
+      random -= GRADE_WEIGHTS[remaining[i].grade];
+      if (random <= 0) {
+        selected.push(remaining[i]);
+        remaining.splice(i, 1);
+        break;
+      }
+    }
   }
-  return shuffled;
+  
+  return selected;
+}
+
+function capitalizeFirst(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 export function UpgradeShop({
@@ -48,7 +75,13 @@ export function UpgradeShop({
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
 
-  // Compute eligible upgrades and select up to 3 random offers
+  // Get active modifiers from owned upgrades
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
+  
+  // Calculate shop slots (base 3 + shopSlots modifier)
+  const shopSlotCount = 3 + activeModifiers.shopSlots;
+
+  // Compute eligible upgrades and select using weighted random
   const offers = useMemo<UpgradeOffer[]>(() => {
     const eligible = upgrades.filter(upgrade => {
       const isAvailable = levelNumber >= upgrade.levelAvailability;
@@ -57,13 +90,19 @@ export function UpgradeShop({
       return isAvailable && isNotRemoved && isNotOwned;
     });
 
-    const selected = shuffleArray(eligible).slice(0, 3);
+    // Use weighted random selection based on grade
+    const selected = weightedRandomSelect(eligible, shopSlotCount);
     
-    return selected.map(upgrade => ({
-      upgrade,
-      price: computePrice(upgrade, levelNumber),
-    }));
-  }, [upgrades, levelNumber, ownedUpgradeIds]);
+    return selected.map(upgrade => {
+      const basePrice = computeBasePrice(upgrade, levelNumber);
+      // Apply price multiplier and round, minimum 1
+      const finalPrice = Math.max(1, Math.round(basePrice * activeModifiers.priceMultiplier));
+      return {
+        upgrade,
+        price: finalPrice,
+      };
+    });
+  }, [upgrades, levelNumber, ownedUpgradeIds, shopSlotCount, activeModifiers.priceMultiplier]);
 
   const handlePurchase = useCallback((offer: UpgradeOffer) => {
     if (purchasedThisSession.includes(offer.upgrade.id)) {
@@ -118,7 +157,7 @@ export function UpgradeShop({
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="flex flex-wrap justify-center gap-4 mb-8 max-w-3xl"
+        className="flex flex-wrap justify-center gap-4 mb-8 max-w-4xl"
       >
         <AnimatePresence>
           {offers.length === 0 ? (
@@ -136,6 +175,7 @@ export function UpgradeShop({
               const isHovered = hoveredId === offer.upgrade.id;
               const isPressed = pressedId === offer.upgrade.id;
               const showDescription = isHovered || isPressed;
+              const gradeColors = GRADE_COLORS[offer.upgrade.grade];
 
               return (
                 <motion.div
@@ -160,11 +200,16 @@ export function UpgradeShop({
                       ${isOwned
                         ? 'bg-green-500/20 border-green-500/50 cursor-default'
                         : canAfford 
-                          ? 'bg-card border-primary/50 hover:border-primary cursor-pointer' 
+                          ? `bg-card ${gradeColors.border} hover:border-primary cursor-pointer` 
                           : 'bg-card/50 border-muted cursor-pointer opacity-60'
                       }
                     `}
                   >
+                    {/* Grade badge */}
+                    <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-xs font-medium ${gradeColors.bg} ${gradeColors.text}`}>
+                      {capitalizeFirst(offer.upgrade.grade)}
+                    </div>
+
                     {/* Owned overlay */}
                     {isOwned && (
                       <div className="absolute inset-0 rounded-xl bg-green-500/10 flex items-center justify-center z-10">
@@ -175,7 +220,7 @@ export function UpgradeShop({
                     )}
 
                     {/* Icon */}
-                    <div className={`w-16 h-16 mx-auto mb-3 rounded-lg bg-primary/10 flex items-center justify-center ${isOwned ? 'opacity-50' : ''}`}>
+                    <div className={`w-16 h-16 mx-auto mb-3 mt-4 rounded-lg bg-primary/10 flex items-center justify-center ${isOwned ? 'opacity-50' : ''}`}>
                       <img 
                         src={offer.upgrade.icon} 
                         alt={offer.upgrade.name}
@@ -223,7 +268,10 @@ export function UpgradeShop({
                         exit={{ opacity: 0, y: 5 }}
                         className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-56 p-3 rounded-lg bg-popover border border-border shadow-lg z-10"
                       >
-                        <p className="text-sm text-popover-foreground text-center">
+                        <div className={`text-xs font-medium mb-1 ${gradeColors.text}`}>
+                          {capitalizeFirst(offer.upgrade.grade)}
+                        </div>
+                        <p className="text-sm text-popover-foreground">
                           {offer.upgrade.description}
                         </p>
                       </motion.div>

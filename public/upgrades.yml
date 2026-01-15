@@ -1,6 +1,7 @@
 upgrades:
   - id: "slow_balls"
     name: "Slow Motion"
+    grade: "common"
     icon: "/icons/slow.svg"
     description: "Reduces ball speed by 20%"
     levelAvailability: 1
@@ -11,6 +12,7 @@ upgrades:
 
   - id: "shrink_balls"
     name: "Shrink Ray"
+    grade: "common"
     icon: "/icons/shrink.svg"
     description: "Makes balls 25% smaller"
     levelAvailability: 2
@@ -21,6 +23,7 @@ upgrades:
 
   - id: "fast_walls"
     name: "Quick Slice"
+    grade: "uncommon"
     icon: "/icons/fast.svg"
     description: "Walls generate 30% faster"
     levelAvailability: 3
@@ -31,6 +34,7 @@ upgrades:
 
   - id: "reduced_target"
     name: "Easy Win"
+    grade: "rare"
     icon: "/icons/easy.svg"
     description: "Reduces win threshold by 5%"
     levelAvailability: 4
@@ -39,3 +43,226 @@ upgrades:
     priceMax: 300
     modifiers:
       reducedSize: 0.05
+
+  - id: "training_wheels"
+    name: "Training Wheels"
+    grade: "common"
+    icon: "/icons/training.svg"
+    description: "Lose condition is slightly more forgiving on growing walls"
+    levelAvailability: 1
+    levelRemoved: 3
+    priceMin: 40
+    priceMax: 90
+    modifiers:
+      wallGrace: 0.15
+
+  - id: "extra_time"
+    name: "Steady Hands"
+    grade: "common"
+    icon: "/icons/steady.svg"
+    description: "Walls generate 15% slower (more reaction time)"
+    levelAvailability: 1
+    levelRemoved: 4
+    priceMin: 30
+    priceMax: 80
+    modifiers:
+      wallGenerationSpeed: 0.85
+
+  - id: "snappy_cuts"
+    name: "Snappy Cuts"
+    grade: "uncommon"
+    icon: "/icons/snap.svg"
+    description: "Cuts start instantly with less input distance"
+    levelAvailability: 2
+    priceMin: 60
+    priceMax: 140
+    modifiers:
+      swipeSensitivity: 1.3
+
+  - id: "ball_bumper"
+    name: "Bumper Ball"
+    grade: "uncommon"
+    icon: "/icons/bumper.svg"
+    description: "Ball radius slightly increases, making bounces easier to read"
+    levelAvailability: 2
+    levelRemoved: 6
+    priceMin: 70
+    priceMax: 140
+    modifiers:
+      ballSize: 1.1
+
+  - id: "precision_edges"
+    name: "Precision Edges"
+    grade: "uncommon"
+    icon: "/icons/precision.svg"
+    description: "Shows a faint preview of the cut line before committing"
+    levelAvailability: 2
+    priceMin: 80
+    priceMax: 160
+    modifiers:
+      cutPreview: true
+
+  - id: "coin_boost"
+    name: "Bonus Points"
+    grade: "uncommon"
+    icon: "/icons/bonus.svg"
+    description: "Gain +10% points from level completion"
+    levelAvailability: 3
+    priceMin: 120
+    priceMax: 240
+    modifiers:
+      scoreMultiplier: 1.1
+
+  - id: "par_forgiveness"
+    name: "Par Forgiveness"
+    grade: "uncommon"
+    icon: "/icons/par.svg"
+    description: "Expected cuts effectively increase by 1 (scoring only)"
+    levelAvailability: 3
+    priceMin: 110
+    priceMax: 220
+    modifiers:
+      expectedCutsBonus: 1
+
+  - id: "ball_focus"
+    name: "Focus Ball"
+    grade: "rare"
+    icon: "/icons/focus.svg"
+    description: "Randomly highlights the fastest ball for easier tracking"
+    levelAvailability: 4
+    priceMin: 180
+    priceMax: 320
+    modifiers:
+      highlightFastestBall: true
+
+  - id: "micro_balls"
+    name: "Microscopic Balls"
+    grade: "rare"
+    icon: "/icons/micro.svg"
+    description: "Makes balls 40% smaller"
+    levelAvailability: 5
+    priceMin: 220
+    priceMax: 400
+    modifiers:
+      ballSize: 0.6
+
+  - id: "hyper_walls"
+    name: "Laser Cutter"
+    grade: "rare"
+    icon: "/icons/laser.svg"
+    description: "Walls generate 60% faster"
+    levelAvailability: 5
+    priceMin: 240
+    priceMax: 450
+    modifiers:
+      wallGenerationSpeed: 1.6
+
+  - id: "starting_shrink"
+    name: "Head Start"
+    grade: "uncommon"
+    icon: "/icons/headstart.svg"
+    description: "Start each level with 5% of area already removed"
+    levelAvailability: 3
+    priceMin: 140
+    priceMax: 260
+    modifiers:
+      reducedSize: 0.05
+
+  - id: "starting_shrink_plus"
+    name: "Big Head Start"
+    grade: "rare"
+    icon: "/icons/headstart_plus.svg"
+    description: "Start each level with 10% of area already removed"
+    levelAvailability: 6
+    priceMin: 300
+    priceMax: 550
+    modifiers:
+      reducedSize: 0.1
+
+  - id: "wall_safety_net"
+    name: "Safety Net"
+    grade: "rare"
+    icon: "/icons/net.svg"
+    description: "Survive one collision with a growing wall (consumed)"
+    levelAvailability: 6
+    priceMin: 350
+    priceMax: 650
+    modifiers:
+      wallShield: 1
+
+  - id: "double_offer"
+    name: "Bigger Shop"
+    grade: "uncommon"
+    icon: "/icons/shop.svg"
+    description: "Shop shows 4 upgrades instead of 3"
+    levelAvailability: 4
+    priceMin: 180
+    priceMax: 320
+    modifiers:
+      shopSlots: 1
+
+  - id: "discount"
+    name: "Haggler"
+    grade: "rare"
+    icon: "/icons/discount.svg"
+    description: "All shop prices are 10% cheaper"
+    levelAvailability: 4
+    priceMin: 220
+    priceMax: 420
+    modifiers:
+      priceMultiplier: 0.9
+
+  - id: "deep_discount"
+    name: "Master Haggler"
+    grade: "legendary"
+    icon: "/icons/discount_plus.svg"
+    description: "All shop prices are 20% cheaper"
+    levelAvailability: 7
+    priceMin: 500
+    priceMax: 900
+    modifiers:
+      priceMultiplier: 0.8
+
+  - id: "score_surge"
+    name: "Score Surge"
+    grade: "legendary"
+    icon: "/icons/surge.svg"
+    description: "Gain +25% points from level completion"
+    levelAvailability: 7
+    priceMin: 650
+    priceMax: 1100
+    modifiers:
+      scoreMultiplier: 1.25
+
+  - id: "perfect_par"
+    name: "Perfect Par"
+    grade: "legendary"
+    icon: "/icons/perfect.svg"
+    description: "Expected cuts effectively increase by 2 (scoring only)"
+    levelAvailability: 8
+    priceMin: 700
+    priceMax: 1200
+    modifiers:
+      expectedCutsBonus: 2
+
+  - id: "time_dilation"
+    name: "Time Dilation"
+    grade: "legendary"
+    icon: "/icons/time.svg"
+    description: "Ball speed reduced by 35%"
+    levelAvailability: 8
+    priceMin: 750
+    priceMax: 1300
+    modifiers:
+      ballSpeed: 0.65
+
+  - id: "divine_mercy"
+    name: "Divine Mercy"
+    grade: "godlike"
+    icon: "/icons/divine.svg"
+    description: "Survive two collisions with a growing wall (consumed)"
+    levelAvailability: 10
+    priceMin: 1500
+    priceMax: 2500
+    modifiers:
+      wallShield: 2
