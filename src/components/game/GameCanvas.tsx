@@ -1,8 +1,27 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { Ball, Bounds, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from '@/types/game';
+import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from '@/types/game';
 import { LevelConfig } from '@/types/level';
 import { UpgradeConfig } from '@/types/upgrade';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
+import {
+  Polygon,
+  vec2Add,
+  vec2Sub,
+  vec2Scale,
+  vec2Normalize,
+  vec2Length,
+  vec2Distance,
+  vec2Dot,
+  polygonArea,
+  pointInPolygon,
+  rayPolygonIntersection,
+  splitPolygon,
+  createRectPolygon,
+  resolveBallPolygonCollision,
+  circleCapsuleCollision,
+  polygonCentroid,
+  polygonBounds,
+} from '@/lib/polygon';
 
 interface GameCanvasProps {
   level: LevelConfig;
@@ -19,8 +38,8 @@ interface GameCanvasProps {
 const BASE_BALL_RADIUS = 10;
 const BALL_SPEED_INCREASE = 1.05;
 const WALL_THICKNESS = 6;
-const BASE_WALL_GROWTH_SPEED = 1200;
-const BASE_SWIPE_MIN_DISTANCE = 15;
+const BASE_WALL_GROWTH_SPEED = 600; // Reduced from 1200 as per spec
+const BASE_SWIPE_MIN_DISTANCE = 20; // Updated minimum distance
 const ARENA_MARGIN = 0.1;
 
 // Colors
@@ -45,17 +64,6 @@ function getRandomDirection(): Vector2 {
   return { x: Math.cos(angle), y: Math.sin(angle) };
 }
 
-function circleRectCollision(
-  cx: number, cy: number, r: number,
-  rx: number, ry: number, rw: number, rh: number
-): boolean {
-  const closestX = Math.max(rx, Math.min(cx, rx + rw));
-  const closestY = Math.max(ry, Math.min(cy, ry + rh));
-  const dx = cx - closestX;
-  const dy = cy - closestY;
-  return (dx * dx + dy * dy) < (r * r);
-}
-
 function hexToRgba(hex: string, alpha: number = 1): string {
   const r = parseInt(hex.substring(0, 2), 16);
   const g = parseInt(hex.substring(2, 4), 16);
@@ -63,17 +71,9 @@ function hexToRgba(hex: string, alpha: number = 1): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-function pointInBounds(x: number, y: number, bounds: Bounds): boolean {
-  return x >= bounds.left && x <= bounds.right && y >= bounds.top && y <= bounds.bottom;
-}
-
-function getRegionArea(bounds: Bounds): number {
-  return (bounds.right - bounds.left) * (bounds.bottom - bounds.top);
-}
-
 function findRegionContainingPoint(regions: Region[], x: number, y: number): Region | null {
   for (const region of regions) {
-    if (pointInBounds(x, y, region.bounds)) {
+    if (pointInPolygon({ x, y }, region.polygon)) {
       return region;
     }
   }
@@ -109,7 +109,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
     levelComplete: false,
     swipeStart: null as Vector2 | null,
     swipeRegionId: null as string | null,
-    currentSwipePos: null as Vector2 | null, // For cut preview
+    currentSwipePos: null as Vector2 | null,
     lastTime: 0,
     animationId: 0,
     canvasSize: { width: 0, height: 0 },
@@ -161,28 +161,28 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       const centerX = margin + arenaWidth / 2;
       const centerY = margin + arenaHeight / 2;
       
-      // Create initial single region (possibly shrunk)
+      // Create initial polygon region (rectangle)
       const initialRegionId = generateRegionId();
-      const initialBounds: Bounds = {
-        left: centerX - shrunkWidth / 2,
-        top: centerY - shrunkHeight / 2,
-        right: centerX + shrunkWidth / 2,
-        bottom: centerY + shrunkHeight / 2,
-      };
+      const left = centerX - shrunkWidth / 2;
+      const top = centerY - shrunkHeight / 2;
+      const right = centerX + shrunkWidth / 2;
+      const bottom = centerY + shrunkHeight / 2;
+      
+      const initialPolygon = createRectPolygon(left, top, right, bottom);
       
       game.regions = [{
         id: initialRegionId,
-        bounds: initialBounds,
+        polygon: initialPolygon,
       }];
       
       // Original area is still based on full arena (for percentage calculation)
       game.originalArea = arenaWidth * arenaHeight;
       
       // Create balls from level config with modifiers applied
-      const regionWidth = initialBounds.right - initialBounds.left;
-      const regionHeight = initialBounds.bottom - initialBounds.top;
-      const regionCenterX = (initialBounds.left + initialBounds.right) / 2;
-      const regionCenterY = (initialBounds.top + initialBounds.bottom) / 2;
+      const centroid = polygonCentroid(initialPolygon);
+      const bounds = polygonBounds(initialPolygon);
+      const regionWidth = bounds.maxX - bounds.minX;
+      const regionHeight = bounds.maxY - bounds.minY;
       
       game.balls = level.balls.map((ballConfig) => {
         const dir = getRandomDirection();
@@ -193,14 +193,14 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         return {
           id: ballConfig.id,
           position: { 
-            x: regionCenterX + (Math.random() - 0.5) * regionWidth * 0.3,
-            y: regionCenterY + (Math.random() - 0.5) * regionHeight * 0.3,
+            x: centroid.x + (Math.random() - 0.5) * regionWidth * 0.3,
+            y: centroid.y + (Math.random() - 0.5) * regionHeight * 0.3,
           },
           velocity: { 
             x: dir.x * modifiedSpeed, 
             y: dir.y * modifiedSpeed,
           },
-          radius: effectiveBallRadius, // Apply ball size multiplier
+          radius: effectiveBallRadius,
           speed: modifiedSpeed,
           topSpeed: modifiedTopSpeed,
           color: `#${ballConfig.color}`,
@@ -213,7 +213,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         let fastestSpeed = 0;
         let fastestId = game.balls[0].id;
         for (const ball of game.balls) {
-          const speed = Math.sqrt(ball.velocity.x ** 2 + ball.velocity.y ** 2);
+          const speed = vec2Length(ball.velocity);
           if (speed > fastestSpeed) {
             fastestSpeed = speed;
             fastestId = ball.id;
@@ -244,46 +244,38 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       initGame();
     };
 
-    // Bounce ball within its assigned region
+    // Update ball position and bounce off polygon edges
     const updateBall = (ball: Ball, dt: number) => {
       const region = game.regions.find(r => r.id === ball.regionId);
       if (!region) return;
 
-      const bounds = region.bounds;
-
+      // Move ball
       ball.position.x += ball.velocity.x * dt;
       ball.position.y += ball.velocity.y * dt;
 
-      if (ball.position.x - ball.radius < bounds.left) {
-        ball.position.x = bounds.left + ball.radius;
-        ball.velocity.x = Math.abs(ball.velocity.x);
-      }
-      if (ball.position.x + ball.radius > bounds.right) {
-        ball.position.x = bounds.right - ball.radius;
-        ball.velocity.x = -Math.abs(ball.velocity.x);
-      }
-      if (ball.position.y - ball.radius < bounds.top) {
-        ball.position.y = bounds.top + ball.radius;
-        ball.velocity.y = Math.abs(ball.velocity.y);
-      }
-      if (ball.position.y + ball.radius > bounds.bottom) {
-        ball.position.y = bounds.bottom - ball.radius;
-        ball.velocity.y = -Math.abs(ball.velocity.y);
-      }
+      // Resolve collisions with polygon edges
+      const result = resolveBallPolygonCollision(
+        ball.position,
+        ball.velocity,
+        ball.radius,
+        region.polygon
+      );
+      
+      ball.position = result.position;
+      ball.velocity = result.velocity;
     };
 
     // Calculate combined area of all regions
     const getCombinedArea = (): number => {
-      return game.regions.reduce((sum, region) => sum + getRegionArea(region.bounds), 0);
+      return game.regions.reduce((sum, region) => sum + polygonArea(region.polygon), 0);
     };
 
-    // Check if a ball's center is exactly on the cut line
+    // Check if a ball's center is on the cut line
     const isBallOnCutLine = (ball: Ball, wall: GrowingWall): boolean => {
-      if (wall.orientation === 'horizontal') {
-        return Math.abs(ball.position.y - wall.origin.y) < 0.1;
-      } else {
-        return Math.abs(ball.position.x - wall.origin.x) < 0.1;
-      }
+      // Distance from ball center to the cut line
+      const toOrigin = vec2Sub(ball.position, wall.origin);
+      const perpDist = Math.abs(toOrigin.x * (-wall.direction.y) + toOrigin.y * wall.direction.x);
+      return perpDist < 0.5;
     };
 
     const handleGameOver = () => {
@@ -308,7 +300,6 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       if (activeRegionIndex === -1) return;
       
       const activeRegion = regions[activeRegionIndex];
-      const bounds = activeRegion.bounds;
 
       // Check if any ball is exactly on the cut line - instant game over
       for (const ball of balls) {
@@ -318,20 +309,19 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         }
       }
 
-      // Split the active region into two child regions
-      let childBounds1: Bounds;
-      let childBounds2: Bounds;
+      // Split the polygon along the cut
+      const splitResult = splitPolygon(
+        activeRegion.polygon,
+        wall.startPoint,
+        wall.endPoint
+      );
 
-      if (wall.orientation === 'horizontal') {
-        const cutY = wall.origin.y;
-        childBounds1 = { ...bounds, bottom: cutY - wall.thickness / 2 };
-        childBounds2 = { ...bounds, top: cutY + wall.thickness / 2 };
-      } else {
-        const cutX = wall.origin.x;
-        childBounds1 = { ...bounds, right: cutX - wall.thickness / 2 };
-        childBounds2 = { ...bounds, left: cutX + wall.thickness / 2 };
+      if (!splitResult) {
+        game.activeWall = null;
+        return;
       }
 
+      const [poly1, poly2] = splitResult;
       const child1Id = generateRegionId();
       const child2Id = generateRegionId();
 
@@ -342,8 +332,8 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       for (const ball of balls) {
         if (ball.regionId !== activeRegion.id) continue;
         
-        const inChild1 = pointInBounds(ball.position.x, ball.position.y, childBounds1);
-        const inChild2 = pointInBounds(ball.position.x, ball.position.y, childBounds2);
+        const inChild1 = pointInPolygon(ball.position, poly1);
+        const inChild2 = pointInPolygon(ball.position, poly2);
         
         if (inChild1) {
           ball.regionId = child1Id;
@@ -358,10 +348,10 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       const newRegions = regions.filter(r => r.id !== activeRegion.id);
       
       if (ballsInChild1.length > 0) {
-        newRegions.push({ id: child1Id, bounds: childBounds1 });
+        newRegions.push({ id: child1Id, polygon: poly1 });
       }
       if (ballsInChild2.length > 0) {
-        newRegions.push({ id: child2Id, bounds: childBounds2 });
+        newRegions.push({ id: child2Id, polygon: poly2 });
       }
 
       game.regions = newRegions;
@@ -412,7 +402,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
           let fastestSpeed = 0;
           let fastestId = game.balls[0]?.id || null;
           for (const ball of game.balls) {
-            const speed = Math.sqrt(ball.velocity.x ** 2 + ball.velocity.y ** 2);
+            const speed = vec2Length(ball.velocity);
             if (speed > fastestSpeed) {
               fastestSpeed = speed;
               fastestId = ball.id;
@@ -434,46 +424,52 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         return;
       }
 
-      const bounds = activeRegion.bounds;
       // Apply wall speed multiplier
       const effectiveWallSpeed = BASE_WALL_GROWTH_SPEED * activeModifiers.wallSpeedMultiplier;
       const growth = effectiveWallSpeed * dt;
 
-      if (wall.orientation === 'horizontal') {
-        wall.startExtent = Math.max(bounds.left, wall.startExtent - growth);
-        wall.endExtent = Math.min(bounds.right, wall.endExtent + growth);
-        if (wall.startExtent <= bounds.left && wall.endExtent >= bounds.right) {
-          wall.isComplete = true;
-        }
-      } else {
-        wall.startExtent = Math.max(bounds.top, wall.startExtent - growth);
-        wall.endExtent = Math.min(bounds.bottom, wall.endExtent + growth);
-        if (wall.startExtent <= bounds.top && wall.endExtent >= bounds.bottom) {
-          wall.isComplete = true;
-        }
+      // Grow in -direction
+      const distToStart = vec2Distance(wall.startPoint, wall.targetStart);
+      if (distToStart > 0) {
+        const moveStart = Math.min(growth, distToStart);
+        wall.startPoint = vec2Add(
+          wall.startPoint,
+          vec2Scale(vec2Scale(wall.direction, -1), moveStart)
+        );
       }
 
-      // Collision check with any ball while growing
-      if (!wall.isComplete) {
-        let rx: number, ry: number, rw: number, rh: number;
-        if (wall.orientation === 'horizontal') {
-          rx = wall.startExtent;
-          ry = wall.origin.y - wall.thickness / 2;
-          rw = wall.endExtent - wall.startExtent;
-          rh = wall.thickness;
-        } else {
-          rx = wall.origin.x - wall.thickness / 2;
-          ry = wall.startExtent;
-          rw = wall.thickness;
-          rh = wall.endExtent - wall.startExtent;
-        }
+      // Grow in +direction
+      const distToEnd = vec2Distance(wall.endPoint, wall.targetEnd);
+      if (distToEnd > 0) {
+        const moveEnd = Math.min(growth, distToEnd);
+        wall.endPoint = vec2Add(
+          wall.endPoint,
+          vec2Scale(wall.direction, moveEnd)
+        );
+      }
 
+      // Check if complete
+      if (vec2Distance(wall.startPoint, wall.targetStart) < 1 &&
+          vec2Distance(wall.endPoint, wall.targetEnd) < 1) {
+        wall.startPoint = { ...wall.targetStart };
+        wall.endPoint = { ...wall.targetEnd };
+        wall.isComplete = true;
+      }
+
+      // Collision check with any ball while growing (capsule collision)
+      if (!wall.isComplete) {
         for (const ball of balls) {
           // Apply wallGrace modifier - reduce effective ball radius for collision
           const graceMultiplier = 1 - activeModifiers.wallGrace;
           const effectiveCollisionRadius = ball.radius * graceMultiplier;
           
-          if (circleRectCollision(ball.position.x, ball.position.y, effectiveCollisionRadius, rx, ry, rw, rh)) {
+          if (circleCapsuleCollision(
+            ball.position,
+            effectiveCollisionRadius,
+            wall.startPoint,
+            wall.endPoint,
+            wall.thickness / 2
+          )) {
             // Check if we have wall shields
             if (game.wallShieldsRemaining > 0) {
               game.wallShieldsRemaining--;
@@ -502,65 +498,63 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, width, height);
 
-      // Fill all regions with region color
+      // Fill all regions with region color (polygons)
       ctx.fillStyle = regionColor;
       for (const region of regions) {
-        const b = region.bounds;
-        ctx.fillRect(b.left, b.top, b.right - b.left, b.bottom - b.top);
+        const { vertices } = region.polygon;
+        if (vertices.length < 3) continue;
+        
+        ctx.beginPath();
+        ctx.moveTo(vertices[0].x, vertices[0].y);
+        for (let i = 1; i < vertices.length; i++) {
+          ctx.lineTo(vertices[i].x, vertices[i].y);
+        }
+        ctx.closePath();
+        ctx.fill();
       }
 
       // Render cut preview if enabled and swiping
       if (activeModifiers.cutPreview && swipeStart && swipeRegionId && currentSwipePos && !wall) {
         const region = regions.find(r => r.id === swipeRegionId);
         if (region) {
-          const deltaX = currentSwipePos.x - swipeStart.x;
-          const deltaY = currentSwipePos.y - swipeStart.y;
+          const delta = vec2Sub(currentSwipePos, swipeStart);
+          const dist = vec2Length(delta);
           
-          if (Math.abs(deltaX) >= effectiveSwipeMinDistance || Math.abs(deltaY) >= effectiveSwipeMinDistance) {
-            const isHorizontal = Math.abs(deltaX) >= Math.abs(deltaY);
+          if (dist >= effectiveSwipeMinDistance) {
+            const direction = vec2Normalize(delta);
             
-            ctx.save();
-            ctx.strokeStyle = COLORS.cutPreview;
-            ctx.lineWidth = WALL_THICKNESS;
-            ctx.setLineDash([10, 10]);
-            ctx.beginPath();
+            // Find intersection points with polygon
+            const intPos = rayPolygonIntersection(swipeStart, direction, region.polygon);
+            const intNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), region.polygon);
             
-            if (isHorizontal) {
-              ctx.moveTo(region.bounds.left, swipeStart.y);
-              ctx.lineTo(region.bounds.right, swipeStart.y);
-            } else {
-              ctx.moveTo(swipeStart.x, region.bounds.top);
-              ctx.lineTo(swipeStart.x, region.bounds.bottom);
+            if (intPos && intNeg) {
+              ctx.save();
+              ctx.strokeStyle = COLORS.cutPreview;
+              ctx.lineWidth = WALL_THICKNESS;
+              ctx.setLineDash([10, 10]);
+              ctx.beginPath();
+              ctx.moveTo(intNeg.point.x, intNeg.point.y);
+              ctx.lineTo(intPos.point.x, intPos.point.y);
+              ctx.stroke();
+              ctx.restore();
             }
-            
-            ctx.stroke();
-            ctx.restore();
           }
         }
       }
 
-      // Render growing wall
+      // Render growing wall as a thick line
       if (wall && !wall.isComplete) {
         ctx.save();
-        ctx.fillStyle = COLORS.wallActive;
+        ctx.strokeStyle = COLORS.wallActive;
+        ctx.lineWidth = wall.thickness;
+        ctx.lineCap = 'round';
         ctx.shadowColor = COLORS.wallActiveGlow;
         ctx.shadowBlur = 20;
         
-        if (wall.orientation === 'horizontal') {
-          ctx.fillRect(
-            wall.startExtent,
-            wall.origin.y - wall.thickness / 2,
-            wall.endExtent - wall.startExtent,
-            wall.thickness
-          );
-        } else {
-          ctx.fillRect(
-            wall.origin.x - wall.thickness / 2,
-            wall.startExtent,
-            wall.thickness,
-            wall.endExtent - wall.startExtent
-          );
-        }
+        ctx.beginPath();
+        ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
+        ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
+        ctx.stroke();
         ctx.restore();
       }
 
@@ -610,39 +604,31 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
           // Only check collisions if balls are in the same region
           if (ball1.regionId !== ball2.regionId) continue;
           
-          const dx = ball2.position.x - ball1.position.x;
-          const dy = ball2.position.y - ball1.position.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
+          const delta = vec2Sub(ball2.position, ball1.position);
+          const distance = vec2Length(delta);
           const minDistance = ball1.radius + ball2.radius;
           
           if (distance < minDistance && distance > 0) {
             // Normalize collision vector
-            const nx = dx / distance;
-            const ny = dy / distance;
+            const normal = vec2Normalize(delta);
             
             // Relative velocity
-            const dvx = ball1.velocity.x - ball2.velocity.x;
-            const dvy = ball1.velocity.y - ball2.velocity.y;
+            const relVel = vec2Sub(ball1.velocity, ball2.velocity);
             
             // Relative velocity along collision normal
-            const dvn = dvx * nx + dvy * ny;
+            const relVelNormal = vec2Dot(relVel, normal);
             
             // Only resolve if balls are moving towards each other
-            if (dvn > 0) {
+            if (relVelNormal > 0) {
               // Update velocities (equal mass elastic collision)
-              ball1.velocity.x -= dvn * nx;
-              ball1.velocity.y -= dvn * ny;
-              ball2.velocity.x += dvn * nx;
-              ball2.velocity.y += dvn * ny;
+              ball1.velocity = vec2Sub(ball1.velocity, vec2Scale(normal, relVelNormal));
+              ball2.velocity = vec2Add(ball2.velocity, vec2Scale(normal, relVelNormal));
               
               // Separate balls to prevent overlap
               const overlap = minDistance - distance;
-              const separationX = (overlap / 2) * nx;
-              const separationY = (overlap / 2) * ny;
-              ball1.position.x -= separationX;
-              ball1.position.y -= separationY;
-              ball2.position.x += separationX;
-              ball2.position.y += separationY;
+              const separation = vec2Scale(normal, overlap / 2);
+              ball1.position = vec2Sub(ball1.position, separation);
+              ball2.position = vec2Add(ball2.position, separation);
             }
           }
         }
@@ -679,25 +665,14 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       if (game.gameOver || game.levelComplete || game.activeWall) return;
 
       const pos = getCanvasCoords(e);
-      const margin = WALL_THICKNESS;
       
       // Find which region contains this point
       const region = findRegionContainingPoint(game.regions, pos.x, pos.y);
       if (!region) return; // Clicked in darkness - ignore
       
-      const bounds = region.bounds;
-      
-      // Check if inside the region with margin
-      if (
-        pos.x > bounds.left + margin &&
-        pos.x < bounds.right - margin &&
-        pos.y > bounds.top + margin &&
-        pos.y < bounds.bottom - margin
-      ) {
-        game.swipeStart = pos;
-        game.swipeRegionId = region.id;
-        game.currentSwipePos = pos;
-      }
+      game.swipeStart = pos;
+      game.swipeRegionId = region.id;
+      game.currentSwipePos = pos;
     };
 
     const handlePointerMove = (e: PointerEvent) => {
@@ -708,19 +683,42 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       
       if (game.activeWall) return; // Wall already created
       
-      const deltaX = pos.x - game.swipeStart.x;
-      const deltaY = pos.y - game.swipeStart.y;
+      const delta = vec2Sub(pos, game.swipeStart);
+      const dist = vec2Length(delta);
 
       // Apply swipe sensitivity modifier
-      if (Math.abs(deltaX) < effectiveSwipeMinDistance && Math.abs(deltaY) < effectiveSwipeMinDistance) return;
+      if (dist < effectiveSwipeMinDistance) return;
 
-      const orientation = Math.abs(deltaX) >= Math.abs(deltaY) ? 'horizontal' : 'vertical';
+      const direction = vec2Normalize(delta);
+      
+      // Find the active region
+      const region = game.regions.find(r => r.id === game.swipeRegionId);
+      if (!region) {
+        game.swipeStart = null;
+        game.swipeRegionId = null;
+        game.currentSwipePos = null;
+        return;
+      }
+
+      // Find intersection points with polygon boundary
+      const intPos = rayPolygonIntersection(game.swipeStart, direction, region.polygon);
+      const intNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), region.polygon);
+      
+      if (!intPos || !intNeg) {
+        // Cannot create valid cut
+        game.swipeStart = null;
+        game.swipeRegionId = null;
+        game.currentSwipePos = null;
+        return;
+      }
 
       game.activeWall = {
         origin: { ...game.swipeStart },
-        orientation,
-        startExtent: orientation === 'horizontal' ? game.swipeStart.x : game.swipeStart.y,
-        endExtent: orientation === 'horizontal' ? game.swipeStart.x : game.swipeStart.y,
+        direction,
+        startPoint: { ...game.swipeStart },
+        endPoint: { ...game.swipeStart },
+        targetStart: intNeg.point,
+        targetEnd: intPos.point,
         thickness: WALL_THICKNESS,
         isComplete: false,
         activeRegionId: game.swipeRegionId,
