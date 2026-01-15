@@ -763,18 +763,12 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
   return (
     <div className="relative w-full h-full" style={{ backgroundColor: `#${level.backgroundColor}` }}>
-      {/* Level indicator and Score - top left */}
+      {/* Cuts counter - top left */}
       <div className="absolute top-4 left-4 z-10 flex gap-3">
         <div className="hud-display">
-          <span className="text-muted-foreground text-xs uppercase tracking-wider">Level</span>
-          <div className="text-2xl font-display font-bold text-primary">
-            {levelNumber} / {totalLevels}
-          </div>
-        </div>
-        <div className="hud-display">
-          <span className="text-muted-foreground text-xs uppercase tracking-wider">Score</span>
-          <div className="text-2xl font-display font-bold text-accent">
-            {totalScore}
+          <span className="text-muted-foreground text-xs uppercase tracking-wider">Cuts</span>
+          <div className="text-2xl font-display font-bold text-foreground">
+            {cutCount}
           </div>
         </div>
         {wallShieldCount > 0 && (
@@ -785,16 +779,6 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
             </div>
           </div>
         )}
-      </div>
-
-      {/* Cuts counter - top center */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
-        <div className="hud-display">
-          <span className="text-muted-foreground text-xs uppercase tracking-wider">Cuts</span>
-          <div className="text-2xl font-display font-bold text-foreground">
-            {cutCount}
-          </div>
-        </div>
       </div>
 
       {/* Remaining percentage - top right */}
