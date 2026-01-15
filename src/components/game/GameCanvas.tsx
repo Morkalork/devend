@@ -473,14 +473,17 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       const wallSpeedEffective = wallSpeedBase * activeModifiers.wallSpeedMultiplier;
       
       // Cap speed so walls never complete too fast in tiny regions
+      // Wall grows in BOTH directions from origin, so use longest half-length for timing
       const maxSegmentLength = vec2Distance(wall.targetStart, wall.targetEnd);
-      const maxSpeedForMinTime = maxSegmentLength / MINIMUM_WALL_TIME;
+      let distToStart = vec2Distance(wall.startPoint, wall.targetStart);
+      let distToEnd = vec2Distance(wall.endPoint, wall.targetEnd);
+      const longestHalf = Math.max(distToStart, distToEnd, maxSegmentLength / 2);
+      const maxSpeedForMinTime = longestHalf / MINIMUM_WALL_TIME;
       const wallSpeedFinal = Math.min(wallSpeedEffective, maxSpeedForMinTime);
       
       const growth = wallSpeedFinal * dt;
 
       // Grow toward targetStart
-      const distToStart = vec2Distance(wall.startPoint, wall.targetStart);
       if (distToStart > 0.5) {
         const moveStart = Math.min(growth, distToStart);
         const dirToStart = vec2Normalize(vec2Sub(wall.targetStart, wall.startPoint));
@@ -490,7 +493,6 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       }
 
       // Grow toward targetEnd
-      const distToEnd = vec2Distance(wall.endPoint, wall.targetEnd);
       if (distToEnd > 0.5) {
         const moveEnd = Math.min(growth, distToEnd);
         const dirToEnd = vec2Normalize(vec2Sub(wall.targetEnd, wall.endPoint));
