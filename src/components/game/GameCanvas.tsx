@@ -434,6 +434,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       // Check if level just got cleared (first time crossing threshold)
       if (percent < level.sizeThreshold && game.pushMode === 'none') {
+        // Render one more frame to show the completed cut before showing prompt
+        render();
+        
         // Show push your luck prompt
         game.pushMode = 'prompt';
         setPushMode('prompt');
