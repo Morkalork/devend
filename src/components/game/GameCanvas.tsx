@@ -546,9 +546,15 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       // applyCut will be called from gameLoop after render
     };
 
+    let renderCount = 0;
     const render = () => {
+      renderCount++;
       const { regions, balls, activeWall: wall, canvasSize, backgroundColor, regionColor, swipeStart, swipeRegionId, currentSwipePos } = game;
       const { width, height } = canvasSize;
+
+      // DEBUG: Track if wall exists at start vs end of render
+      const wallExistsAtStart = !!wall;
+      const wallCompleteAtStart = wall?.isComplete;
 
       // Fill with darkness (background)
       ctx.fillStyle = backgroundColor;
@@ -636,7 +642,21 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       if (wall) {
         // Debug
         if (wall.isComplete) {
-          console.log('Drawing complete wall LAST, frame:', performance.now());
+          console.log('Drawing complete wall at:', wall.startPoint, wall.endPoint);
+          
+          // When complete, draw the wall OFFSET by 50 pixels to see if it's a coordinate issue
+          const offsetX = 50;
+          const offsetY = 50;
+          
+          // Draw a MASSIVE red line offset from the wall
+          ctx.save();
+          ctx.strokeStyle = '#ff0000';
+          ctx.lineWidth = 20;
+          ctx.beginPath();
+          ctx.moveTo(wall.startPoint.x + offsetX, wall.startPoint.y + offsetY);
+          ctx.lineTo(wall.endPoint.x + offsetX, wall.endPoint.y + offsetY);
+          ctx.stroke();
+          ctx.restore();
         }
         
         ctx.save();
@@ -662,7 +682,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         
         ctx.restore();
         
-        // Draw BIG RED CIRCLES at endpoints - ABSOLUTELY LAST
+        // Draw BIG RED CIRCLES at endpoints
         ctx.fillStyle = '#ff0000';
         ctx.beginPath();
         ctx.arc(wall.startPoint.x, wall.startPoint.y, 15, 0, Math.PI * 2);
