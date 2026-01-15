@@ -153,14 +153,14 @@ export function UpgradeShop({
         </div>
       </motion.div>
 
-      {/* Upgrade Cards */}
+      {/* Upgrade Cards - fixed min-height to prevent layout shift */}
       <motion.div
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="flex flex-wrap justify-center gap-4 mb-8 max-w-4xl"
+        className="flex flex-wrap justify-center gap-4 mb-8 max-w-4xl min-h-[240px] items-start content-start"
       >
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {offers.length === 0 ? (
             <motion.p
               initial={{ opacity: 0 }}
@@ -297,7 +297,7 @@ export function UpgradeShop({
         onClick={onContinue}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        className="arcade-button-secondary rounded-lg flex items-center gap-2"
+        className="arcade-button-primary rounded-lg flex items-center gap-2"
       >
         Continue
         <ArrowRight className="w-5 h-5" />
