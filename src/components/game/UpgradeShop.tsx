@@ -230,9 +230,14 @@ export function UpgradeShop({
                     </div>
 
                     {/* Name */}
-                    <h3 className={`font-semibold text-foreground text-center mb-2 ${isOwned ? 'opacity-50' : ''}`}>
+                    <h3 className={`font-semibold text-foreground text-center mb-1 ${isOwned ? 'opacity-50' : ''}`}>
                       {offer.upgrade.name}
                     </h3>
+
+                    {/* Description */}
+                    <p className={`text-xs italic text-muted-foreground text-center mb-2 line-clamp-2 ${isOwned ? 'opacity-50' : ''}`}>
+                      {offer.upgrade.description}
+                    </p>
 
                     {/* Price or Owned label */}
                     {isOwned ? (
