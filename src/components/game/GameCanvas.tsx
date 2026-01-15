@@ -749,14 +749,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       updateWall(cappedDt);
       render();
       
-      // Apply completed wall cut AFTER rendering (so wall is visible when complete)
-      // Add a delay (500ms) to ensure wall is clearly visible before cut is applied
-      const WALL_VISIBLE_DELAY = 500; // ms
+      // Apply completed wall cut immediately
       if (game.activeWall && game.activeWall.isComplete) {
-        const timeSinceComplete = performance.now() - game.wallCompleteTime;
-        if (timeSinceComplete >= WALL_VISIBLE_DELAY) {
-          applyCut(game.activeWall);
-        }
+        applyCut(game.activeWall);
       }
 
       game.animationId = requestAnimationFrame(gameLoop);
