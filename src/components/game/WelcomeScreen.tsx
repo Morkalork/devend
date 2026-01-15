@@ -4,11 +4,12 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 interface WelcomeScreenProps {
   onStartGame: () => void;
   onTutorial: () => void;
+  onHighscores: () => void;
   isLoading?: boolean;
   error?: string | null;
 }
 
-export function WelcomeScreen({ onStartGame, onTutorial, isLoading, error }: WelcomeScreenProps) {
+export function WelcomeScreen({ onStartGame, onTutorial, onHighscores, isLoading, error }: WelcomeScreenProps) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
       {/* Animated background elements */}
@@ -112,6 +113,15 @@ export function WelcomeScreen({ onStartGame, onTutorial, isLoading, error }: Wel
             disabled={isLoading}
           >
             Tutorial
+          </motion.button>
+          <motion.button
+            className="arcade-button-secondary rounded-lg"
+            onClick={onHighscores}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={isLoading}
+          >
+            Highscores
           </motion.button>
         </motion.div>
       </motion.div>

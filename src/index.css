@@ -122,6 +122,16 @@
     @apply hover:border-foreground hover:text-foreground hover:bg-secondary;
   }
 
+  .arcade-button-danger {
+    @apply arcade-button bg-danger/10 border-danger text-danger;
+    @apply hover:bg-danger hover:text-white;
+    box-shadow: 0 0 20px hsl(var(--danger) / 0.3), inset 0 0 20px hsl(var(--danger) / 0.1);
+  }
+
+  .arcade-button-danger:hover {
+    box-shadow: 0 0 40px hsl(var(--danger) / 0.5), inset 0 0 30px hsl(var(--danger) / 0.2);
+  }
+
   .hud-display {
     @apply px-4 py-2 bg-card/80 backdrop-blur-sm border border-border rounded-lg;
     font-family: 'Orbitron', sans-serif;

@@ -35,6 +35,10 @@ export function useGameState() {
     setCurrentScreen('game');
   }, []);
 
+  const goToHighscores = useCallback(() => {
+    setCurrentScreen('highscores');
+  }, []);
+
   return {
     currentScreen,
     lastResult,
@@ -45,5 +49,6 @@ export function useGameState() {
     goToTutorial,
     goToUpgradeShop,
     goToGame,
+    goToHighscores,
   };
 }

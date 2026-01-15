@@ -1,14 +1,16 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
+import { useHighscores } from '@/hooks/useHighscores';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
 import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
+import { HighscoresScreen } from '@/components/game/HighscoresScreen';
 import { GameResult, LevelScoreData } from '@/types/game';
 
 const BASE_LIVES = 2;
@@ -23,6 +25,7 @@ const Index = () => {
     goToTutorial,
     goToUpgradeShop,
     goToGame,
+    goToHighscores,
   } = useGameState();
 
   const {
@@ -58,6 +61,9 @@ const Index = () => {
   
   // Lives tracking (persists across levels in a run)
   const [currentLives, setCurrentLives] = useState(BASE_LIVES);
+
+  // Highscores management
+  const { highscores, add: addHighscore, clear: clearHighscores, refresh: refreshHighscores } = useHighscores();
 
   // Calculate modifiers to track bonus lives
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
@@ -170,12 +176,29 @@ const Index = () => {
     goToWelcome();
   }, [resetToFirstLevel, goToWelcome]);
 
+  const handleSaveHighscore = useCallback((name: string) => {
+    if (!lastResult) return;
+    
+    addHighscore({
+      name,
+      level: lastResult.levelNumber,
+      totalScore: lastResult.totalScore ?? 0,
+      dateTime: new Date().toISOString(),
+    });
+  }, [lastResult, addHighscore]);
+
+  const handleHighscoresFromWelcome = useCallback(() => {
+    refreshHighscores();
+    goToHighscores();
+  }, [refreshHighscores, goToHighscores]);
+
   return (
     <>
       {currentScreen === 'welcome' && (
         <WelcomeScreen 
           onStartGame={handleStartGame} 
           onTutorial={goToTutorial}
+          onHighscores={handleHighscoresFromWelcome}
           isLoading={isLoading}
           error={error}
         />
@@ -212,6 +235,15 @@ const Index = () => {
           result={lastResult}
           onPlayAgain={handlePlayAgain}
           onBackToWelcome={handleBackToWelcome}
+          onSaveHighscore={handleSaveHighscore}
+          onViewHighscores={goToHighscores}
+        />
+      )}
+      {currentScreen === 'highscores' && (
+        <HighscoresScreen
+          highscores={highscores}
+          onBack={goToWelcome}
+          onClear={clearHighscores}
         />
       )}
       
