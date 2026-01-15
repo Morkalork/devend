@@ -123,6 +123,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
   const [displayLives, setDisplayLives] = useState(lives);
   const [screenFlash, setScreenFlash] = useState<'none' | 'red'>('none');
   const [isRecovering, setIsRecovering] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
   
   // Push Your Luck state
   const [pushMode, setPushMode] = useState<'none' | 'prompt' | 'pushing'>('none');
@@ -587,7 +588,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
             game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
             setIsRecovering(true);
             setScreenFlash('red');
-            setTimeout(() => setScreenFlash('none'), 150);
+            setIsShaking(true);
+            setTimeout(() => setScreenFlash('none'), 200);
+            setTimeout(() => setIsShaking(false), 400);
             setTimeout(() => {
               game.isRecovering = false;
               setIsRecovering(false);
@@ -965,10 +968,10 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
   }, [pushMode]);
 
   return (
-    <div className="relative w-full h-full" style={{ backgroundColor: `#${level.backgroundColor}` }}>
+    <div className={`relative w-full h-full ${isShaking ? 'animate-shake' : ''}`} style={{ backgroundColor: `#${level.backgroundColor}` }}>
       {/* Screen flash overlay for damage feedback */}
       {screenFlash === 'red' && (
-        <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/30 animate-pulse" />
+        <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />
       )}
       
       {/* Cuts counter - top left */}
