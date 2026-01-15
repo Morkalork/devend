@@ -598,44 +598,46 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         }
       }
 
-      // Render growing wall as a thick line (render even if just completed)
+      // Render wall - ALWAYS draw if wall exists
       if (wall) {
-        const wallLength = vec2Distance(wall.startPoint, wall.endPoint);
+        ctx.save();
         
-        // Only draw if wall has some length
-        if (wallLength > 1) {
-          // Draw a filled rectangle for the wall (more visible than stroke)
-          const dx = wall.endPoint.x - wall.startPoint.x;
-          const dy = wall.endPoint.y - wall.startPoint.y;
-          const angle = Math.atan2(dy, dx);
-          const halfThickness = wall.thickness / 2 + 2; // Slightly thicker for visibility
-          
-          ctx.save();
-          ctx.translate(wall.startPoint.x, wall.startPoint.y);
-          ctx.rotate(angle);
-          
-          // Glow effect
-          ctx.shadowColor = COLORS.wallActiveGlow;
-          ctx.shadowBlur = 25;
-          
-          // Fill a rectangle along the wall
-          ctx.fillStyle = COLORS.wallActive;
-          ctx.fillRect(-2, -halfThickness, wallLength + 4, halfThickness * 2);
-          
-          // White border for contrast
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(-2, -halfThickness, wallLength + 4, halfThickness * 2);
-          
-          ctx.restore();
-        }
+        // Draw glow
+        ctx.shadowColor = COLORS.wallActiveGlow;
+        ctx.shadowBlur = 25;
         
-        // Also draw endpoint markers for debugging
-        ctx.fillStyle = '#ff0000';
+        // Draw the main wall line
+        ctx.strokeStyle = COLORS.wallActive;
+        ctx.lineWidth = wall.thickness + 4;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.arc(wall.startPoint.x, wall.startPoint.y, 4, 0, Math.PI * 2);
-        ctx.arc(wall.endPoint.x, wall.endPoint.y, 4, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
+        ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
+        ctx.stroke();
+        
+        // Draw white outline for contrast
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = wall.thickness + 6;
+        ctx.beginPath();
+        ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
+        ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
+        ctx.stroke();
+        
+        // Draw orange center
+        ctx.strokeStyle = COLORS.wallActive;
+        ctx.lineWidth = wall.thickness + 2;
+        ctx.beginPath();
+        ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
+        ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // Debug: log when wall is complete but still rendering
+        if (wall.isComplete) {
+          console.log('Rendering complete wall, length:', vec2Distance(wall.startPoint, wall.endPoint));
+        }
       }
 
       // Render all balls
