@@ -901,6 +901,21 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         />
       </div>
 
+      {/* Bank button during push mode */}
+      {pushMode === 'pushing' && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+          <button
+            onClick={handleBankAndContinue}
+            className="px-6 py-3 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg hover:from-amber-400 hover:to-orange-400 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            Bank & Continue
+          </button>
+        </div>
+      )}
+
       {/* Push Your Luck Overlay */}
       {pushMode === 'prompt' && clearedPercent !== null && (
         <PushYourLuckOverlay
