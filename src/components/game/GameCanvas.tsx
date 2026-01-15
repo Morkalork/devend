@@ -600,33 +600,31 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
 
       // Render wall - ALWAYS draw if wall exists
       if (wall) {
+        // Debug: log coordinates when complete
+        if (wall.isComplete) {
+          console.log('Complete wall coords:', {
+            start: wall.startPoint,
+            end: wall.endPoint,
+            length: vec2Distance(wall.startPoint, wall.endPoint)
+          });
+        }
+        
         ctx.save();
         
-        // Draw glow
-        ctx.shadowColor = COLORS.wallActiveGlow;
-        ctx.shadowBlur = 25;
-        
-        // Draw the main wall line
-        ctx.strokeStyle = COLORS.wallActive;
-        ctx.lineWidth = wall.thickness + 4;
+        // Draw white outline FIRST (underneath)
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = wall.thickness + 8;
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
         ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
         ctx.stroke();
         
-        // Draw white outline for contrast
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = wall.thickness + 6;
-        ctx.beginPath();
-        ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
-        ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
-        ctx.stroke();
-        
-        // Draw orange center
+        // Draw orange center ON TOP
         ctx.strokeStyle = COLORS.wallActive;
-        ctx.lineWidth = wall.thickness + 2;
+        ctx.lineWidth = wall.thickness + 4;
+        ctx.shadowColor = COLORS.wallActiveGlow;
+        ctx.shadowBlur = 25;
         ctx.beginPath();
         ctx.moveTo(wall.startPoint.x, wall.startPoint.y);
         ctx.lineTo(wall.endPoint.x, wall.endPoint.y);
@@ -634,10 +632,16 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
         
         ctx.restore();
         
-        // Debug: log when wall is complete but still rendering
-        if (wall.isComplete) {
-          console.log('Rendering complete wall, length:', vec2Distance(wall.startPoint, wall.endPoint));
-        }
+        // Draw BIG RED CIRCLES at endpoints that should ALWAYS be visible
+        ctx.save();
+        ctx.fillStyle = '#ff0000';
+        ctx.beginPath();
+        ctx.arc(wall.startPoint.x, wall.startPoint.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(wall.endPoint.x, wall.endPoint.y, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
 
       // Render all balls
