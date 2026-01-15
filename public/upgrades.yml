@@ -60,13 +60,13 @@ upgrades:
     name: "Steady Hands"
     grade: "common"
     icon: "/icons/steady.svg"
-    description: "Walls generate 15% slower (more reaction time)"
+    description: "Walls generate 15% faster (more reaction time)"
     levelAvailability: 1
     levelRemoved: 4
     priceMin: 30
     priceMax: 80
     modifiers:
-      wallGenerationSpeed: 0.85
+      wallGenerationSpeed: 1.15
 
   - id: "snappy_cuts"
     name: "Snappy Cuts"
