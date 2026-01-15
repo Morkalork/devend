@@ -11,6 +11,8 @@ interface GameScreenProps {
   totalScore: number;
   ownedUpgradeIds: string[];
   upgrades: UpgradeConfig[];
+  lives: number;
+  onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
 }
@@ -22,6 +24,8 @@ export function GameScreen({
   totalScore, 
   ownedUpgradeIds,
   upgrades,
+  lives,
+  onLivesChange,
   onGameEnd, 
   onLevelComplete 
 }: GameScreenProps) {
@@ -80,6 +84,8 @@ export function GameScreen({
           totalScore={totalScore}
           ownedUpgradeIds={ownedUpgradeIds}
           upgrades={upgrades}
+          lives={lives}
+          onLivesChange={onLivesChange}
           onGameEnd={onGameEnd}
           onLevelComplete={onLevelComplete}
         />

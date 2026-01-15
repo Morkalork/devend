@@ -19,6 +19,7 @@ export interface UpgradeModifiers {
   wallShield?: number;
   shopSlots?: number;
   priceMultiplier?: number;
+  lives?: number; // Adds to max lives and current lives when purchased
 }
 
 export interface UpgradeConfig {

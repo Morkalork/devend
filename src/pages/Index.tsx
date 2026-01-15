@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
+import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
 import { GameScreen } from '@/components/game/GameScreen';
@@ -9,6 +10,8 @@ import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { GameResult, LevelScoreData } from '@/types/game';
+
+const BASE_LIVES = 2;
 
 const Index = () => {
   const { 
@@ -52,6 +55,12 @@ const Index = () => {
   
   // Owned upgrades tracking
   const [ownedUpgradeIds, setOwnedUpgradeIds] = useState<string[]>([]);
+  
+  // Lives tracking (persists across levels in a run)
+  const [currentLives, setCurrentLives] = useState(BASE_LIVES);
+
+  // Calculate modifiers to track bonus lives
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
 
   const handleStartGame = useCallback(async () => {
     // Load both levels and upgrades in parallel
@@ -65,17 +74,32 @@ const Index = () => {
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
+      setCurrentLives(BASE_LIVES); // Reset lives at start of new run
       startGame();
     }
   }, [loadLevels, loadUpgrades, startGame]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
-    // For game over, include current total score
+    // For game over, include current total score and remaining lives
     endGame({
       ...result,
       totalScore,
     });
   }, [endGame, totalScore]);
+
+  const handleLivesChange = useCallback((newLives: number) => {
+    setCurrentLives(newLives);
+    
+    // Check for game over when lives reach 0
+    if (newLives <= 0) {
+      handleGameEnd({
+        isWin: false,
+        remainingPercent: 100, // Will be overwritten by actual value
+        levelId: currentLevel?.id || '',
+        levelNumber: currentLevelIndex + 1,
+      });
+    }
+  }, [handleGameEnd, currentLevel, currentLevelIndex]);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     // Accumulate score
@@ -112,7 +136,13 @@ const Index = () => {
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
-  }, []);
+    
+    // Check if this upgrade grants lives
+    const upgrade = upgrades.find(u => u.id === upgradeId);
+    if (upgrade?.modifiers?.lives) {
+      setCurrentLives(prev => prev + upgrade.modifiers.lives!);
+    }
+  }, [upgrades]);
 
   const handleContinueFromShop = useCallback(() => {
     setPendingLevelScore(null);
@@ -126,6 +156,7 @@ const Index = () => {
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
+    setCurrentLives(BASE_LIVES);
     startGame();
   }, [resetToFirstLevel, startGame]);
 
@@ -135,6 +166,7 @@ const Index = () => {
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
+    setCurrentLives(BASE_LIVES);
     goToWelcome();
   }, [resetToFirstLevel, goToWelcome]);
 
@@ -159,6 +191,8 @@ const Index = () => {
           totalScore={totalScore}
           ownedUpgradeIds={ownedUpgradeIds}
           upgrades={upgrades}
+          lives={currentLives}
+          onLivesChange={handleLivesChange}
           onGameEnd={handleGameEnd}
           onLevelComplete={handleLevelComplete}
         />
