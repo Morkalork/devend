@@ -23,14 +23,15 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-50 flex items-center justify-center bg-background/90 backdrop-blur-sm p-2 overflow-auto"
+      className="absolute inset-0 z-50 bg-background/90 backdrop-blur-sm overflow-y-auto"
     >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 20 }}
-        className="bg-card border border-border rounded-xl p-4 sm:p-6 max-w-sm w-full mx-2 shadow-2xl max-h-[95vh] overflow-y-auto"
-      >
+      <div className="min-h-full flex items-start sm:items-center justify-center py-4 px-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 20 }}
+          className="bg-card border border-border rounded-xl p-4 sm:p-6 w-full max-w-sm shadow-2xl"
+        >
         {/* Header */}
         <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
           <motion.div
@@ -119,7 +120,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
           Next Level
           <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
         </motion.button>
-      </motion.div>
+        </motion.div>
+      </div>
     </motion.div>
   );
 }
