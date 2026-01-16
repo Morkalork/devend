@@ -1,6 +1,6 @@
 import { Vector2, Polygon } from '@/lib/polygon';
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'result' | 'highscores';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'result' | 'highscores' | 'options';
 
 export type { Vector2 };
 

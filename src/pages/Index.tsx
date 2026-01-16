@@ -4,8 +4,10 @@ import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useHighscores } from '@/hooks/useHighscores';
+import { useInteractiveTutorial } from '@/hooks/useInteractiveTutorial';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
+import { OptionsScreen } from '@/components/game/OptionsScreen';
 import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
@@ -26,6 +28,7 @@ const Index = () => {
     goToUpgradeShop,
     goToGame,
     goToHighscores,
+    goToOptions,
   } = useGameState();
 
   const {
@@ -65,10 +68,21 @@ const Index = () => {
   // Highscores management
   const { highscores, add: addHighscore, clear: clearHighscores, refresh: refreshHighscores } = useHighscores();
 
+  // Interactive tutorial management
+  const {
+    tutorialMode,
+    tutorialStep,
+    startTutorialIfNeeded,
+    replayTutorial,
+    markTutorialComplete,
+    advanceToWaitingForCut,
+    exitTutorial,
+  } = useInteractiveTutorial();
+
   // Calculate modifiers to track bonus lives
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
 
-  const handleStartGame = useCallback(async () => {
+  const handleStartGame = useCallback(async (forceInteractiveTutorial = false) => {
     // Load both levels and upgrades in parallel
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
       loadLevels(),
@@ -81,9 +95,17 @@ const Index = () => {
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
       setCurrentLives(BASE_LIVES); // Reset lives at start of new run
+      
+      // Check if we need to start interactive tutorial
+      if (forceInteractiveTutorial) {
+        replayTutorial();
+      } else {
+        startTutorialIfNeeded();
+      }
+      
       startGame();
     }
-  }, [loadLevels, loadUpgrades, startGame]);
+  }, [loadLevels, loadUpgrades, startGame, startTutorialIfNeeded, replayTutorial]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // For game over, include current total score and remaining lives
@@ -192,12 +214,21 @@ const Index = () => {
     goToHighscores();
   }, [refreshHighscores, goToHighscores]);
 
+  const handleReplayInteractiveTutorial = useCallback(() => {
+    handleStartGame(true); // Force tutorial mode
+  }, [handleStartGame]);
+
+  const handleClearHighscoresFromOptions = useCallback(() => {
+    clearHighscores();
+  }, [clearHighscores]);
+
   return (
     <>
       {currentScreen === 'welcome' && (
         <WelcomeScreen 
-          onStartGame={handleStartGame} 
+          onStartGame={() => handleStartGame(false)} 
           onTutorial={goToTutorial}
+          onOptions={goToOptions}
           onHighscores={handleHighscoresFromWelcome}
           isLoading={isLoading}
           error={error}
@@ -205,6 +236,14 @@ const Index = () => {
       )}
       {currentScreen === 'tutorial' && (
         <TutorialScreen onBack={goToWelcome} />
+      )}
+      {currentScreen === 'options' && (
+        <OptionsScreen
+          onBack={goToWelcome}
+          onReplayTutorial={handleReplayInteractiveTutorial}
+          onClearHighscores={handleClearHighscoresFromOptions}
+          hasHighscores={highscores.length > 0}
+        />
       )}
       {currentScreen === 'game' && currentLevel && (
         <GameScreen 
@@ -218,6 +257,9 @@ const Index = () => {
           onLivesChange={handleLivesChange}
           onGameEnd={handleGameEnd}
           onLevelComplete={handleLevelComplete}
+          tutorialMode={tutorialMode && currentLevelIndex === 0}
+          tutorialStep={tutorialStep}
+          onTutorialCutSuccess={markTutorialComplete}
         />
       )}
       {currentScreen === 'upgradeShop' && (
