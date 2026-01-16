@@ -41,6 +41,11 @@ export function PushYourLuckOverlay({
               margin-top: -140px !important;
             }
           }
+          @media (max-width: 639px) {
+            .push-luck-modal {
+              bottom: 5rem !important;
+            }
+          }
         `}</style>
         
         <div className="bg-card/95 border-2 border-success rounded-xl p-4 sm:p-6 shadow-2xl backdrop-blur-sm">
