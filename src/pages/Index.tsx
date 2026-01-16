@@ -117,17 +117,8 @@ const Index = () => {
 
   const handleLivesChange = useCallback((newLives: number) => {
     setCurrentLives(newLives);
-    
-    // Check for game over when lives reach 0
-    if (newLives <= 0) {
-      handleGameEnd({
-        isWin: false,
-        remainingPercent: 100, // Will be overwritten by actual value
-        levelId: currentLevel?.id || '',
-        levelNumber: currentLevelIndex + 1,
-      });
-    }
-  }, [handleGameEnd, currentLevel, currentLevelIndex]);
+    // Game over handling is done in GameCanvas with a delay for visual feedback
+  }, []);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     // Accumulate score
