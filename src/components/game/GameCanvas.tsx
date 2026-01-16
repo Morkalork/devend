@@ -377,15 +377,25 @@ export function GameCanvas({
         return;
       }
       
-      onGameEnd({
-        isWin: false,
-        remainingPercent: percent,
-        levelId: level.id,
-        levelNumber,
-        cutCount: game.cutCount,
-        expectedCuts: level.expectedCuts,
-        basePoints: level.points,
-      });
+      // Freeze and shake for 1 second before showing game over
+      setScreenFlash('red');
+      setIsShaking(true);
+      
+      // Keep shaking for the full duration
+      setTimeout(() => {
+        setScreenFlash('none');
+        setIsShaking(false);
+        
+        onGameEnd({
+          isWin: false,
+          remainingPercent: percent,
+          levelId: level.id,
+          levelNumber,
+          cutCount: game.cutCount,
+          expectedCuts: level.expectedCuts,
+          basePoints: level.points,
+        });
+      }, 1000);
     };
 
     // Handle push-your-luck failure - level still complete, no life lost
