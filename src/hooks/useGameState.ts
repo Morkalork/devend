@@ -39,6 +39,10 @@ export function useGameState() {
     setCurrentScreen('highscores');
   }, []);
 
+  const goToOptions = useCallback(() => {
+    setCurrentScreen('options');
+  }, []);
+
   return {
     currentScreen,
     lastResult,
@@ -50,5 +54,6 @@ export function useGameState() {
     goToUpgradeShop,
     goToGame,
     goToHighscores,
+    goToOptions,
   };
 }

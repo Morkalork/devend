@@ -4,6 +4,8 @@ import { LevelConfig } from '@/types/level';
 import { UpgradeConfig } from '@/types/upgrade';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { PushYourLuckOverlay } from './PushYourLuckOverlay';
+import { InteractiveTutorialOverlay } from './InteractiveTutorialOverlay';
+import { TutorialStep } from '@/hooks/useInteractiveTutorial';
 import {
   Polygon,
   vec2Add,
@@ -35,6 +37,9 @@ interface GameCanvasProps {
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
+  tutorialMode?: boolean;
+  tutorialStep?: TutorialStep;
+  onTutorialCutSuccess?: () => void;
 }
 
 // Game constants
@@ -114,7 +119,21 @@ function computeOvercutBonus(threshold: number, remaining: number, basePoints: n
   return Math.min(bonus, maxBonus);
 }
 
-export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedUpgradeIds, upgrades, lives, onLivesChange, onGameEnd, onLevelComplete }: GameCanvasProps) {
+export function GameCanvas({ 
+  level, 
+  levelNumber, 
+  totalLevels, 
+  totalScore, 
+  ownedUpgradeIds, 
+  upgrades, 
+  lives, 
+  onLivesChange, 
+  onGameEnd, 
+  onLevelComplete,
+  tutorialMode = false,
+  tutorialStep = 'completed',
+  onTutorialCutSuccess,
+}: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
@@ -124,6 +143,9 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
   const [screenFlash, setScreenFlash] = useState<'none' | 'red'>('none');
   const [isRecovering, setIsRecovering] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  const [isPlayerDragging, setIsPlayerDragging] = useState(false);
+  const [canvasOffsetTop, setCanvasOffsetTop] = useState(0);
+  const [tutorialCutMade, setTutorialCutMade] = useState(false);
   
   // Ref to track current lives value for use in closures
   const livesRef = useRef(lives);
@@ -442,6 +464,12 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       const combinedArea = getCombinedArea();
       const percent = Math.round((combinedArea / game.originalArea) * 100);
       setRemainingPercent(percent);
+
+      // Check if a successful cut was made during tutorial (area reduced)
+      if (tutorialMode && !tutorialCutMade && percent < 100) {
+        setTutorialCutMade(true);
+        onTutorialCutSuccess?.();
+      }
 
       // Track best remaining percent during push mode
       if (game.pushMode === 'pushing' && percent < game.bestRemainingPercent) {
@@ -837,6 +865,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       game.swipeStart = pos;
       game.swipeRegionId = region.id;
       game.currentSwipePos = pos;
+      setIsPlayerDragging(true);
     };
 
     const handlePointerMove = (e: PointerEvent) => {
@@ -901,6 +930,7 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
       game.swipeStart = null;
       game.swipeRegionId = null;
       game.currentSwipePos = null;
+      setIsPlayerDragging(false);
     };
 
     // Setup
@@ -1055,6 +1085,17 @@ export function GameCanvas({ level, levelNumber, totalLevels, totalScore, ownedU
           basePoints={level.points}
           onBank={handleBankAndContinue}
           onPush={handlePushYourLuck}
+        />
+      )}
+
+      {/* Interactive Tutorial Overlay */}
+      {tutorialMode && tutorialStep !== 'completed' && !tutorialCutMade && (
+        <InteractiveTutorialOverlay
+          tutorialStep={tutorialStep}
+          isPlayerDragging={isPlayerDragging}
+          canvasWidth={gameRef.current.canvasSize.width}
+          canvasHeight={gameRef.current.canvasSize.height}
+          canvasOffsetTop={canvasOffsetTop}
         />
       )}
     </div>

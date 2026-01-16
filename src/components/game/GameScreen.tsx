@@ -3,6 +3,7 @@ import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { SvgIcon } from '@/components/ui/SvgIcon';
+import { TutorialStep } from '@/hooks/useInteractiveTutorial';
 
 interface GameScreenProps {
   level: LevelConfig;
@@ -15,6 +16,9 @@ interface GameScreenProps {
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
+  tutorialMode?: boolean;
+  tutorialStep?: TutorialStep;
+  onTutorialCutSuccess?: () => void;
 }
 
 export function GameScreen({ 
@@ -27,7 +31,10 @@ export function GameScreen({
   lives,
   onLivesChange,
   onGameEnd, 
-  onLevelComplete 
+  onLevelComplete,
+  tutorialMode = false,
+  tutorialStep = 'completed',
+  onTutorialCutSuccess,
 }: GameScreenProps) {
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
@@ -88,6 +95,9 @@ export function GameScreen({
           onLivesChange={onLivesChange}
           onGameEnd={onGameEnd}
           onLevelComplete={onLevelComplete}
+          tutorialMode={tutorialMode}
+          tutorialStep={tutorialStep}
+          onTutorialCutSuccess={onTutorialCutSuccess}
         />
       </div>
     </div>
