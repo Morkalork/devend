@@ -257,25 +257,19 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
-            {/* Dotted line using circles */}
+            {/* Static dotted line from start to end */}
             <svg 
               className="absolute inset-0 w-full h-full pointer-events-none"
               style={{ overflow: 'visible', zIndex: 100 }}
             >
-              {/* Start point - orange */}
-              <circle cx={startX} cy={startY} r={6} fill="#ff8800" />
-              
-              {/* End point - cyan */}
-              <circle cx={lineEndX} cy={lineEndY} r={5} fill="#00ffff" />
-              
-              {/* Fixed dots between start and end */}
-              {[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map((t) => (
+              {/* Dots from start (startX, startY) to end (endX, endY) */}
+              {[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((t) => (
                 <circle
                   key={t}
-                  cx={startX + (lineEndX - startX) * t}
-                  cy={startY + (lineEndY - startY) * t}
+                  cx={startX + (endX - startX) * t}
+                  cy={startY + (endY - startY) * t}
                   r={3}
-                  fill="rgba(255, 255, 255, 0.6)"
+                  fill="rgba(255, 255, 255, 0.4)"
                 />
               ))}
             </svg>
