@@ -257,6 +257,18 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
+            {/* Debug: big red square at fixed position */}
+            <div
+              className="absolute"
+              style={{
+                left: 100,
+                top: 200,
+                width: 50,
+                height: 50,
+                backgroundColor: 'red',
+              }}
+            />
+            
             {/* Static dotted line using divs */}
             {[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((t) => (
               <div
