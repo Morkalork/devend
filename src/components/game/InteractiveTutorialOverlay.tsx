@@ -257,22 +257,20 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
-            {/* Static dotted line from start to end */}
-            <svg 
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ overflow: 'visible', zIndex: 100 }}
-            >
-              {/* Dots from start (startX, startY) to end (endX, endY) */}
-              {[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((t) => (
-                <circle
-                  key={t}
-                  cx={startX + (endX - startX) * t}
-                  cy={startY + (endY - startY) * t}
-                  r={3}
-                  fill="rgba(255, 255, 255, 0.4)"
-                />
-              ))}
-            </svg>
+            {/* Static dotted line using divs */}
+            {[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((t) => (
+              <div
+                key={t}
+                className="absolute rounded-full"
+                style={{
+                  left: startX + (endX - startX) * t - 3,
+                  top: startY + (endY - startY) * t - 3,
+                  width: 6,
+                  height: 6,
+                  backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                }}
+              />
+            ))}
 
             {/* Hand icon container */}
             <div
