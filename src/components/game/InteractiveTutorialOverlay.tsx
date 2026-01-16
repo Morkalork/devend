@@ -257,36 +257,61 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
-            {/* Preview line that matches the game's cut preview style */}
-            <svg 
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ overflow: 'visible', zIndex: 100 }}
-            >
-              {/* Debug circle at start - orange */}
-              <circle
-                cx={startX}
-                cy={startY}
-                r={10}
-                fill="#ff8800"
-              />
+            {/* Calculate line angle and length */}
+            {(() => {
+              const dx = animState.handX - startX;
+              const dy = animState.handY - startY;
+              const length = Math.sqrt(dx * dx + dy * dy);
+              const angle = Math.atan2(dy, dx) * (180 / Math.PI);
               
-              {/* Use path instead of line */}
-              <path
-                d={`M ${startX} ${startY} L ${animState.handX} ${animState.handY}`}
-                stroke="#ffffff"
-                strokeWidth={8}
-                strokeLinecap="round"
-                fill="none"
-              />
-              
-              {/* Debug circle at hand - cyan */}
-              <circle
-                cx={animState.handX}
-                cy={animState.handY}
-                r={8}
-                fill="#00ffff"
-              />
-            </svg>
+              return (
+                <>
+                  {/* Line using a rotated div */}
+                  {length > 5 && (
+                    <div
+                      className="absolute"
+                      style={{
+                        left: startX,
+                        top: startY,
+                        width: length,
+                        height: 6,
+                        backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                        transformOrigin: '0 50%',
+                        transform: `rotate(${angle}deg)`,
+                        borderRadius: 3,
+                        boxShadow: '0 0 10px rgba(255, 255, 255, 0.3)',
+                      }}
+                    />
+                  )}
+                  
+                  {/* Start point indicator */}
+                  <div
+                    className="absolute rounded-full"
+                    style={{
+                      left: startX - 8,
+                      top: startY - 8,
+                      width: 16,
+                      height: 16,
+                      backgroundColor: 'rgba(255, 136, 0, 0.8)',
+                    }}
+                  />
+                  
+                  {/* End point indicator (follows hand) */}
+                  {length > 5 && (
+                    <div
+                      className="absolute rounded-full"
+                      style={{
+                        left: animState.handX - 6,
+                        top: animState.handY - 6,
+                        width: 12,
+                        height: 12,
+                        backgroundColor: 'rgba(255, 255, 255, 0.6)',
+                      }}
+                    />
+                  )}
+                </>
+              );
+            })()}
 
             {/* Hand icon container */}
             <div
