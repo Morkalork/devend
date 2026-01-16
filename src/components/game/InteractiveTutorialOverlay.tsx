@@ -262,17 +262,24 @@ export function InteractiveTutorialOverlay({
               className="absolute inset-0 w-full h-full pointer-events-none"
               style={{ overflow: 'visible', zIndex: 100 }}
             >
+              {/* Always show start point */}
+              <circle cx={startX} cy={startY} r={6} fill="#ff8800" />
+              
               {/* Generate dots along the line from start to hand position */}
               {(() => {
                 const dx = animState.handX - startX;
                 const dy = animState.handY - startY;
                 const length = Math.sqrt(dx * dx + dy * dy);
+                
+                // Only draw dots if there's distance
+                if (length < 10) return null;
+                
                 const dotSpacing = 12;
-                const numDots = Math.floor(length / dotSpacing);
+                const numDots = Math.max(1, Math.floor(length / dotSpacing));
                 const dots = [];
                 
-                for (let i = 0; i <= numDots; i++) {
-                  const t = numDots > 0 ? i / numDots : 0;
+                for (let i = 1; i <= numDots; i++) {
+                  const t = i / numDots;
                   const x = startX + dx * t;
                   const y = startY + dy * t;
                   dots.push(
@@ -281,7 +288,7 @@ export function InteractiveTutorialOverlay({
                       cx={x}
                       cy={y}
                       r={3}
-                      fill="rgba(255, 255, 255, 0.5)"
+                      fill="rgba(255, 255, 255, 0.6)"
                     />
                   );
                 }
