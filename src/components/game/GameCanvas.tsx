@@ -1128,17 +1128,18 @@ export function GameCanvas({
         </div>
       </div>
 
-      {/* Canvas container - takes remaining space, with bottom padding when push overlay is visible */}
-      <div ref={containerRef} className={`flex-1 min-h-0 relative ${pushMode === 'prompt' || pushMode === 'pushing' ? 'pb-24' : ''}`}>
+      {/* Canvas container - takes remaining space */}
+      <div ref={containerRef} className="flex-1 min-h-0 relative">
         <canvas
           ref={canvasRef}
           className="touch-none cursor-crosshair"
         />
       </div>
 
-      {/* Bank button during push mode */}
-      {pushMode === 'pushing' && (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+      {/* Bottom section - matches top HUD height for balanced ball area */}
+      <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center min-h-[60px]">
+        {/* Bank button during push mode */}
+        {pushMode === 'pushing' && (
           <button
             onClick={handleBankAndContinue}
             className="px-6 py-3 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg hover:from-amber-400 hover:to-orange-400 transition-colors flex items-center gap-2"
@@ -1148,8 +1149,8 @@ export function GameCanvas({
             </svg>
             Bank & Continue
           </button>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Push Your Luck Overlay */}
       {pushMode === 'prompt' && clearedPercent !== null && (
