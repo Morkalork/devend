@@ -145,6 +145,7 @@ export function GameCanvas({
   const [isShaking, setIsShaking] = useState(false);
   const [isPlayerDragging, setIsPlayerDragging] = useState(false);
   const [canvasOffsetTop, setCanvasOffsetTop] = useState(0);
+  const [canvasOffsetLeft, setCanvasOffsetLeft] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   
   // Ref to track current lives value for use in closures
@@ -1005,6 +1006,28 @@ export function GameCanvas({
     }
   }, [pushMode]);
 
+  // Track canvas position for tutorial overlay positioning
+  useEffect(() => {
+    const updateCanvasPosition = () => {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      setCanvasOffsetTop(rect.top);
+      setCanvasOffsetLeft(rect.left);
+    };
+
+    updateCanvasPosition();
+    window.addEventListener('resize', updateCanvasPosition);
+    
+    // Also update after a short delay to catch layout shifts
+    const timeoutId = setTimeout(updateCanvasPosition, 100);
+
+    return () => {
+      window.removeEventListener('resize', updateCanvasPosition);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
   return (
     <div className={`flex flex-col w-full h-full ${isShaking ? 'animate-shake' : ''}`} style={{ backgroundColor: `#${level.backgroundColor}` }}>
       {/* Screen flash overlay for damage feedback */}
@@ -1096,6 +1119,7 @@ export function GameCanvas({
           canvasWidth={gameRef.current.canvasSize.width}
           canvasHeight={gameRef.current.canvasSize.height}
           canvasOffsetTop={canvasOffsetTop}
+          canvasOffsetLeft={canvasOffsetLeft}
         />
       )}
     </div>

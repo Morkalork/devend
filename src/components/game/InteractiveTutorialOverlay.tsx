@@ -8,6 +8,7 @@ interface InteractiveTutorialOverlayProps {
   canvasWidth: number;
   canvasHeight: number;
   canvasOffsetTop: number;
+  canvasOffsetLeft: number;
 }
 
 // Animation timing constants (in seconds)
@@ -38,6 +39,7 @@ export function InteractiveTutorialOverlay({
   canvasWidth,
   canvasHeight,
   canvasOffsetTop,
+  canvasOffsetLeft,
 }: InteractiveTutorialOverlayProps) {
   const [showHand, setShowHand] = useState(true);
   const [loopCount, setLoopCount] = useState(0);
@@ -57,8 +59,9 @@ export function InteractiveTutorialOverlay({
     showLine: false,
   });
 
-  // Calculate hand animation positions based on canvas size
-  const startX = canvasWidth * 0.4;
+  // Calculate hand animation positions based on canvas size and position
+  // Center the gesture in the middle of the canvas
+  const startX = canvasOffsetLeft + canvasWidth * 0.4;
   const startY = canvasOffsetTop + canvasHeight * 0.45;
   const endX = startX + 140;
   const endY = startY + 90;
