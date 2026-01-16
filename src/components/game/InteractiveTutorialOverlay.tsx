@@ -262,32 +262,42 @@ export function InteractiveTutorialOverlay({
               className="absolute inset-0 w-full h-full pointer-events-none"
               style={{ overflow: 'visible', zIndex: 100 }}
             >
-              {/* Growing line - show whenever lineProgress > 0 (during drag/release phases) */}
-              {animState.lineProgress > 0.01 && (
-                <>
-                  {/* Outer glow for visibility */}
-                  <line
-                    x1={startX}
-                    y1={startY}
-                    x2={lineEndX}
-                    y2={lineEndY}
-                    stroke="rgba(255, 255, 255, 0.3)"
-                    strokeWidth={14}
-                    strokeLinecap="round"
-                  />
-                  {/* Main dashed line - matches game's WALL_THICKNESS (6px) and cutPreview style */}
-                  <line
-                    x1={startX}
-                    y1={startY}
-                    x2={lineEndX}
-                    y2={lineEndY}
-                    stroke="rgba(255, 255, 255, 0.5)"
-                    strokeWidth={6}
-                    strokeLinecap="round"
-                    strokeDasharray="10 10"
-                  />
-                </>
-              )}
+              {/* Debug circle - always visible */}
+              <circle
+                cx={startX}
+                cy={startY}
+                r={10}
+                fill="rgba(255, 136, 0, 0.9)"
+              />
+              
+              {/* Always draw the line from start to current hand position */}
+              <line
+                x1={startX}
+                y1={startY}
+                x2={animState.handX}
+                y2={animState.handY}
+                stroke="rgba(255, 255, 255, 0.3)"
+                strokeWidth={14}
+                strokeLinecap="round"
+              />
+              <line
+                x1={startX}
+                y1={startY}
+                x2={animState.handX}
+                y2={animState.handY}
+                stroke="rgba(255, 255, 255, 0.5)"
+                strokeWidth={6}
+                strokeLinecap="round"
+                strokeDasharray="10 10"
+              />
+              
+              {/* Debug: circle at hand position */}
+              <circle
+                cx={animState.handX}
+                cy={animState.handY}
+                r={6}
+                fill="rgba(0, 255, 255, 0.9)"
+              />
             </svg>
 
             {/* Hand icon container */}
