@@ -262,22 +262,26 @@ export function InteractiveTutorialOverlay({
               className="absolute inset-0 w-full h-full pointer-events-none"
               style={{ overflow: 'visible', zIndex: 100 }}
             >
-              {/* Always show start point */}
+              {/* Start point - orange */}
               <circle cx={startX} cy={startY} r={6} fill="#ff8800" />
               
-              {/* Generate dots along the line using lineEndX/lineEndY */}
-              {animState.lineProgress > 0.05 && (() => {
+              {/* End point - cyan (shows where line should end) */}
+              {animState.lineProgress > 0.02 && (
+                <circle cx={lineEndX} cy={lineEndY} r={5} fill="#00ffff" />
+              )}
+              
+              {/* Generate dots along the line */}
+              {animState.lineProgress > 0.02 && (() => {
                 const dx = lineEndX - startX;
                 const dy = lineEndY - startY;
                 const length = Math.sqrt(dx * dx + dy * dy);
                 
-                if (length < 5) return null;
-                
-                const dotSpacing = 12;
-                const numDots = Math.max(1, Math.floor(length / dotSpacing));
+                // Use smaller spacing for more dots
+                const dotSpacing = 8;
+                const numDots = Math.ceil(length / dotSpacing);
                 const dots = [];
                 
-                for (let i = 1; i <= numDots; i++) {
+                for (let i = 1; i < numDots; i++) {
                   const t = i / numDots;
                   const x = startX + dx * t;
                   const y = startY + dy * t;
