@@ -214,8 +214,22 @@ export function InteractiveTutorialOverlay({
   const lineEndX = startX + (endX - startX) * animState.lineProgress;
   const lineEndY = startY + (endY - startY) * animState.lineProgress;
 
+  // Debug: Log line visibility on each render cycle (only in dev)
+  if (process.env.NODE_ENV === 'development' && animState.phase === 'drag') {
+    console.log('[MagicHand] Line render:', {
+      showLine: animState.showLine,
+      lineProgress: animState.lineProgress,
+      startX,
+      startY,
+      lineEndX,
+      lineEndY,
+      canvasWidth,
+      canvasOffsetLeft,
+    });
+  }
+
   return (
-    <div className="fixed inset-0 pointer-events-none z-40">
+    <div className="fixed inset-0 pointer-events-none z-50">
       {/* Instruction text - top */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -244,34 +258,54 @@ export function InteractiveTutorialOverlay({
             }}
           >
             {/* Preview line that matches the game's cut preview style */}
-            {animState.showLine && (
-              <svg 
-                className="absolute inset-0 w-full h-full pointer-events-none"
-                style={{ overflow: 'visible' }}
-              >
-                {/* Outer glow for visibility */}
-                <line
-                  x1={startX}
-                  y1={startY}
-                  x2={lineEndX}
-                  y2={lineEndY}
-                  stroke="rgba(255, 255, 255, 0.25)"
-                  strokeWidth={12}
-                  strokeLinecap="round"
-                />
-                {/* Main dashed line - matches game's WALL_THICKNESS (6px) and cutPreview style */}
-                <line
-                  x1={startX}
-                  y1={startY}
-                  x2={lineEndX}
-                  y2={lineEndY}
-                  stroke="rgba(255, 255, 255, 0.5)"
-                  strokeWidth={6}
-                  strokeLinecap="round"
-                  strokeDasharray="10 10"
-                />
-              </svg>
-            )}
+            <svg 
+              className="absolute inset-0 w-full h-full pointer-events-none"
+              style={{ overflow: 'visible', zIndex: 100 }}
+            >
+              {/* Debug: Always visible circle at start point */}
+              <circle
+                cx={startX}
+                cy={startY}
+                r={8}
+                fill="rgba(255, 136, 0, 0.8)"
+              />
+              
+              {/* Growing line during drag phase */}
+              {animState.showLine && (
+                <>
+                  {/* Outer glow for visibility */}
+                  <line
+                    x1={startX}
+                    y1={startY}
+                    x2={animState.lineProgress > 0 ? lineEndX : startX}
+                    y2={animState.lineProgress > 0 ? lineEndY : startY}
+                    stroke="rgba(255, 255, 255, 0.3)"
+                    strokeWidth={14}
+                    strokeLinecap="round"
+                  />
+                  {/* Main dashed line - matches game's WALL_THICKNESS (6px) and cutPreview style */}
+                  <line
+                    x1={startX}
+                    y1={startY}
+                    x2={animState.lineProgress > 0 ? lineEndX : startX}
+                    y2={animState.lineProgress > 0 ? lineEndY : startY}
+                    stroke="rgba(255, 255, 255, 0.5)"
+                    strokeWidth={6}
+                    strokeLinecap="round"
+                    strokeDasharray="10 10"
+                  />
+                  {/* End point indicator */}
+                  {animState.lineProgress > 0 && (
+                    <circle
+                      cx={lineEndX}
+                      cy={lineEndY}
+                      r={5}
+                      fill="rgba(255, 255, 255, 0.6)"
+                    />
+                  )}
+                </>
+              )}
+            </svg>
 
             {/* Hand icon container */}
             <div
