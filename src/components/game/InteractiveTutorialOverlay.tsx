@@ -281,7 +281,7 @@ export function InteractiveTutorialOverlay({
               }}
             />
             
-            {/* Hardcoded midpoint - white */}
+            {/* Hardcoded midpoint - green */}
             <div
               className="absolute rounded-full"
               style={{
@@ -289,7 +289,7 @@ export function InteractiveTutorialOverlay({
                 top: (startY + endY) / 2 - 10,
                 width: 20,
                 height: 20,
-                backgroundColor: 'white',
+                backgroundColor: 'lime',
               }}
             />
 
