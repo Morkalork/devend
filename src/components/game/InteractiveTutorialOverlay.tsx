@@ -243,39 +243,32 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
-            {/* Preview line that follows the hand drag */}
+            {/* Preview line that matches the game's cut preview style */}
             {animState.showLine && (
               <svg 
                 className="absolute inset-0 w-full h-full pointer-events-none"
                 style={{ overflow: 'visible' }}
               >
-                {/* Outer glow line */}
+                {/* Outer glow for visibility */}
                 <line
                   x1={startX}
                   y1={startY}
                   x2={lineEndX}
                   y2={lineEndY}
-                  stroke="rgba(255, 255, 255, 0.15)"
-                  strokeWidth={8}
+                  stroke="rgba(255, 255, 255, 0.25)"
+                  strokeWidth={12}
                   strokeLinecap="round"
                 />
-                {/* Inner solid line */}
+                {/* Main dashed line - matches game's WALL_THICKNESS (6px) and cutPreview style */}
                 <line
                   x1={startX}
                   y1={startY}
                   x2={lineEndX}
                   y2={lineEndY}
-                  stroke="rgba(255, 255, 255, 0.4)"
-                  strokeWidth={3}
+                  stroke="rgba(255, 255, 255, 0.5)"
+                  strokeWidth={6}
                   strokeLinecap="round"
-                  strokeDasharray="6 4"
-                />
-                {/* Start point indicator */}
-                <circle
-                  cx={startX}
-                  cy={startY}
-                  r={6}
-                  fill="rgba(255, 255, 255, 0.3)"
+                  strokeDasharray="10 10"
                 />
               </svg>
             )}
