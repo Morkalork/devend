@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { TutorialStep } from '@/hooks/useInteractiveTutorial';
 
 interface InteractiveTutorialOverlayProps {
@@ -10,6 +10,28 @@ interface InteractiveTutorialOverlayProps {
   canvasOffsetTop: number;
 }
 
+// Animation timing constants (in seconds)
+const FADE_IN_DURATION = 0.2;
+const PRESS_DURATION = 0.15;
+const DRAG_DURATION = 0.9;
+const RELEASE_DURATION = 0.15;
+const PAUSE_DURATION = 0.7;
+const TOTAL_LOOP_DURATION = FADE_IN_DURATION + PRESS_DURATION + DRAG_DURATION + RELEASE_DURATION + PAUSE_DURATION;
+
+// Animation phases
+type AnimationPhase = 'fadeIn' | 'press' | 'drag' | 'release' | 'pause';
+
+interface AnimationState {
+  phase: AnimationPhase;
+  progress: number; // 0-1 within current phase
+  handX: number;
+  handY: number;
+  lineProgress: number; // 0-1 for line drawing
+  handScale: number;
+  handOpacity: number;
+  showLine: boolean;
+}
+
 export function InteractiveTutorialOverlay({
   tutorialStep,
   isPlayerDragging,
@@ -18,9 +40,142 @@ export function InteractiveTutorialOverlay({
   canvasOffsetTop,
 }: InteractiveTutorialOverlayProps) {
   const [showHand, setShowHand] = useState(true);
-  const [animationKey, setAnimationKey] = useState(0);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [loopCount, setLoopCount] = useState(0);
   const reshowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const animationRef = useRef<number>(0);
+  const startTimeRef = useRef<number>(0);
+  
+  // Animation state
+  const [animState, setAnimState] = useState<AnimationState>({
+    phase: 'fadeIn',
+    progress: 0,
+    handX: 0,
+    handY: 0,
+    lineProgress: 0,
+    handScale: 1,
+    handOpacity: 0,
+    showLine: false,
+  });
+
+  // Calculate hand animation positions based on canvas size
+  const startX = canvasWidth * 0.4;
+  const startY = canvasOffsetTop + canvasHeight * 0.45;
+  const endX = startX + 140;
+  const endY = startY + 90;
+
+  // Easing function for smooth motion
+  const easeInOutCubic = (t: number): number => {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  };
+
+  // Calculate animation state based on elapsed time
+  const calculateAnimState = useCallback((elapsedSec: number): AnimationState => {
+    const loopTime = elapsedSec % TOTAL_LOOP_DURATION;
+    
+    let phase: AnimationPhase;
+    let phaseProgress: number;
+    let currentX = startX;
+    let currentY = startY;
+    let scale = 1;
+    let opacity = 0.6;
+    let lineProgress = 0;
+    let showLine = false;
+
+    if (loopTime < FADE_IN_DURATION) {
+      // Fade in phase
+      phase = 'fadeIn';
+      phaseProgress = loopTime / FADE_IN_DURATION;
+      opacity = 0.6 * easeInOutCubic(phaseProgress);
+      currentX = startX;
+      currentY = startY;
+    } else if (loopTime < FADE_IN_DURATION + PRESS_DURATION) {
+      // Press phase
+      phase = 'press';
+      phaseProgress = (loopTime - FADE_IN_DURATION) / PRESS_DURATION;
+      scale = 1 - 0.1 * easeInOutCubic(phaseProgress);
+      currentX = startX;
+      currentY = startY;
+      showLine = true;
+      lineProgress = 0;
+    } else if (loopTime < FADE_IN_DURATION + PRESS_DURATION + DRAG_DURATION) {
+      // Drag phase
+      phase = 'drag';
+      phaseProgress = (loopTime - FADE_IN_DURATION - PRESS_DURATION) / DRAG_DURATION;
+      const eased = easeInOutCubic(phaseProgress);
+      currentX = startX + (endX - startX) * eased;
+      currentY = startY + (endY - startY) * eased;
+      scale = 0.9;
+      showLine = true;
+      lineProgress = eased;
+    } else if (loopTime < FADE_IN_DURATION + PRESS_DURATION + DRAG_DURATION + RELEASE_DURATION) {
+      // Release phase
+      phase = 'release';
+      phaseProgress = (loopTime - FADE_IN_DURATION - PRESS_DURATION - DRAG_DURATION) / RELEASE_DURATION;
+      scale = 0.9 + 0.1 * easeInOutCubic(phaseProgress);
+      currentX = endX;
+      currentY = endY;
+      showLine = true;
+      lineProgress = 1;
+      opacity = 0.6 * (1 - easeInOutCubic(phaseProgress) * 0.3);
+    } else {
+      // Pause phase
+      phase = 'pause';
+      phaseProgress = (loopTime - FADE_IN_DURATION - PRESS_DURATION - DRAG_DURATION - RELEASE_DURATION) / PAUSE_DURATION;
+      currentX = startX;
+      currentY = startY;
+      opacity = 0;
+      showLine = false;
+    }
+
+    return {
+      phase,
+      progress: phaseProgress,
+      handX: currentX,
+      handY: currentY,
+      lineProgress,
+      handScale: scale,
+      handOpacity: opacity,
+      showLine,
+    };
+  }, [startX, startY, endX, endY]);
+
+  // Animation loop using requestAnimationFrame
+  useEffect(() => {
+    if (!showHand || tutorialStep === 'completed') {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      return;
+    }
+
+    startTimeRef.current = performance.now();
+    
+    const animate = (timestamp: number) => {
+      const elapsed = (timestamp - startTimeRef.current) / 1000;
+      const newState = calculateAnimState(elapsed);
+      
+      // Track loop restarts for debugging
+      const currentLoop = Math.floor(elapsed / TOTAL_LOOP_DURATION);
+      if (currentLoop !== loopCount) {
+        setLoopCount(currentLoop);
+        // Dev log - can be removed later
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[MagicHand] Animation loop restart:', currentLoop + 1);
+        }
+      }
+      
+      setAnimState(newState);
+      animationRef.current = requestAnimationFrame(animate);
+    };
+
+    animationRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [showHand, tutorialStep, calculateAnimState, loopCount]);
 
   // Hide hand when player starts dragging
   useEffect(() => {
@@ -31,12 +186,13 @@ export function InteractiveTutorialOverlay({
         clearTimeout(reshowTimeoutRef.current);
         reshowTimeoutRef.current = null;
       }
-    } else {
-      // Re-show after a delay if player stopped dragging
+    } else if (!showHand) {
+      // Re-show after 2 seconds of inactivity if player stopped dragging
       reshowTimeoutRef.current = setTimeout(() => {
         setShowHand(true);
-        setAnimationKey(prev => prev + 1);
-      }, 1500);
+        startTimeRef.current = performance.now();
+        setLoopCount(0);
+      }, 2000);
     }
 
     return () => {
@@ -44,24 +200,16 @@ export function InteractiveTutorialOverlay({
         clearTimeout(reshowTimeoutRef.current);
       }
     };
-  }, [isPlayerDragging]);
-
-  // Calculate hand animation positions based on canvas size
-  const startX = canvasWidth * 0.35;
-  const startY = canvasOffsetTop + canvasHeight * 0.4;
-  const endX = canvasWidth * 0.65;
-  const endY = canvasOffsetTop + canvasHeight * 0.6;
-
-  // Preview line coordinates
-  const lineStartX = startX;
-  const lineStartY = startY;
-  const lineEndX = endX;
-  const lineEndY = endY;
+  }, [isPlayerDragging, showHand]);
 
   // Don't render if completed
   if (tutorialStep === 'completed') {
     return null;
   }
+
+  // Calculate current line end point based on progress
+  const lineEndX = startX + (endX - startX) * animState.lineProgress;
+  const lineEndY = startY + (endY - startY) * animState.lineProgress;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-40">
@@ -83,88 +231,80 @@ export function InteractiveTutorialOverlay({
       </motion.div>
 
       {/* Magic Hand Animation */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence>
         {showHand && (
-          <motion.div
-            key={animationKey}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute"
+          <div
+            className="absolute inset-0"
             style={{ 
-              left: 0, 
-              top: 0,
               width: '100%',
               height: '100%',
             }}
           >
             {/* Preview line that follows the hand drag */}
-            <svg 
-              className="absolute inset-0 w-full h-full pointer-events-none"
-              style={{ overflow: 'visible' }}
-            >
-              <motion.line
-                x1={lineStartX}
-                y1={lineStartY}
-                x2={lineStartX}
-                y2={lineStartY}
-                stroke="rgba(255, 255, 255, 0.25)"
-                strokeWidth={4}
-                strokeLinecap="round"
-                strokeDasharray="8 4"
-                animate={{
-                  x2: [lineStartX, lineEndX, lineEndX, lineStartX],
-                  y2: [lineStartY, lineEndY, lineEndY, lineStartY],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  times: [0, 0.4, 0.6, 1],
-                  ease: "easeInOut",
-                }}
-              />
-            </svg>
+            {animState.showLine && (
+              <svg 
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                style={{ overflow: 'visible' }}
+              >
+                {/* Outer glow line */}
+                <line
+                  x1={startX}
+                  y1={startY}
+                  x2={lineEndX}
+                  y2={lineEndY}
+                  stroke="rgba(255, 255, 255, 0.15)"
+                  strokeWidth={8}
+                  strokeLinecap="round"
+                />
+                {/* Inner solid line */}
+                <line
+                  x1={startX}
+                  y1={startY}
+                  x2={lineEndX}
+                  y2={lineEndY}
+                  stroke="rgba(255, 255, 255, 0.4)"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeDasharray="6 4"
+                />
+                {/* Start point indicator */}
+                <circle
+                  cx={startX}
+                  cy={startY}
+                  r={6}
+                  fill="rgba(255, 255, 255, 0.3)"
+                />
+              </svg>
+            )}
 
-            {/* Hand icon */}
-            <motion.div
+            {/* Hand icon container */}
+            <div
               className="absolute"
-              initial={{ x: startX - 20, y: startY - 10 }}
-              animate={{
-                x: [startX - 20, endX - 20, endX - 20, startX - 20],
-                y: [startY - 10, endY - 10, endY - 10, startY - 10],
-                scale: [1, 0.95, 1, 1],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                times: [0, 0.4, 0.6, 1],
-                ease: "easeInOut",
-              }}
-              style={{ 
-                width: 48, 
+              style={{
+                left: animState.handX - 24,
+                top: animState.handY - 12,
+                width: 48,
                 height: 48,
-                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+                transform: `scale(${animState.handScale})`,
+                opacity: animState.handOpacity,
+                filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
+                transition: 'none',
               }}
             >
-              {/* Tap indicator pulse at start */}
-              <motion.div
-                className="absolute -inset-4 rounded-full bg-primary/30"
-                animate={{
-                  scale: [0, 1.5, 0, 0],
-                  opacity: [0.6, 0, 0, 0],
-                }}
-                transition={{
-                  duration: 3,
-                  repeat: Infinity,
-                  times: [0, 0.15, 0.2, 1],
-                  ease: "easeOut",
-                }}
-              />
+              {/* Tap indicator pulse at press */}
+              {animState.phase === 'press' && (
+                <motion.div
+                  className="absolute -inset-4 rounded-full bg-primary/40"
+                  initial={{ scale: 0.5, opacity: 0.8 }}
+                  animate={{ scale: 2, opacity: 0 }}
+                  transition={{ duration: PRESS_DURATION, ease: "easeOut" }}
+                />
+              )}
               
               {/* Hand SVG */}
               <svg 
                 viewBox="0 0 64 64" 
-                className="w-12 h-12 text-white opacity-60"
+                className="w-12 h-12 text-white"
                 style={{
                   filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))',
                 }}
@@ -174,8 +314,8 @@ export function InteractiveTutorialOverlay({
                   d="M32 4c-2.2 0-4 1.8-4 4v24c0 1.1-.9 2-2 2s-2-.9-2-2V14c0-2.2-1.8-4-4-4s-4 1.8-4 4v22c0 1.1-.9 2-2 2s-2-.9-2-2V20c0-2.2-1.8-4-4-4s-4 1.8-4 4v20c0 13.3 10.7 24 24 24s24-10.7 24-24V16c0-2.2-1.8-4-4-4s-4 1.8-4 4v16c0 1.1-.9 2-2 2s-2-.9-2-2V8c0-2.2-1.8-4-4-4z"
                 />
               </svg>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
       </AnimatePresence>
 
