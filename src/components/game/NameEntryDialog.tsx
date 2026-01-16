@@ -5,11 +5,12 @@ import { sanitiseName, getLastName, saveLastName } from '@/hooks/useHighscores';
 
 interface NameEntryDialogProps {
   onSubmit: (name: string) => void;
+  onSkip: () => void;
   levelReached: number;
   totalScore: number;
 }
 
-export function NameEntryDialog({ onSubmit, levelReached, totalScore }: NameEntryDialogProps) {
+export function NameEntryDialog({ onSubmit, onSkip, levelReached, totalScore }: NameEntryDialogProps) {
   const [inputValue, setInputValue] = useState('');
   const [error, setError] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -108,15 +109,26 @@ export function NameEntryDialog({ onSubmit, levelReached, totalScore }: NameEntr
             )}
           </div>
 
-          <motion.button
-            type="submit"
-            className="w-full arcade-button-primary rounded-lg flex items-center justify-center gap-2"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <Check className="w-5 h-5" />
-            Save Score
-          </motion.button>
+          <div className="flex gap-3">
+            <motion.button
+              type="button"
+              onClick={onSkip}
+              className="flex-1 py-3 px-4 rounded-lg border border-border text-muted-foreground hover:bg-muted/50 transition-colors"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Nah...
+            </motion.button>
+            <motion.button
+              type="submit"
+              className="flex-1 arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Check className="w-5 h-5" />
+              Save
+            </motion.button>
+          </div>
         </form>
       </motion.div>
     </motion.div>

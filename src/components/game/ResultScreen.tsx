@@ -185,6 +185,7 @@ export function ResultScreen({
       {showNameEntry && (
         <NameEntryDialog
           onSubmit={handleNameSubmit}
+          onSkip={() => setShowNameEntry(false)}
           levelReached={levelNumber}
           totalScore={totalScore ?? 0}
         />
