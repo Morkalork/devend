@@ -81,4 +81,5 @@ export interface LevelScoreData {
   remainingPercent: number;
   overcutBonus?: number;
   thresholdPercent?: number;
+  pushFailed?: boolean; // true if player failed during push-your-luck mode
 }

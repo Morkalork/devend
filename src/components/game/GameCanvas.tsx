@@ -388,6 +388,30 @@ export function GameCanvas({
       });
     };
 
+    // Handle push-your-luck failure - level still complete, no life lost
+    const handlePushFailed = () => {
+      game.gameOver = true;
+      const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
+      
+      const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+      let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
+      levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
+      
+      // No overcut bonus on push failure
+      onLevelComplete({
+        levelNumber,
+        levelId: level.id,
+        cutCount: game.cutCount,
+        expectedCuts: level.expectedCuts,
+        basePoints: level.points,
+        levelScore,
+        remainingPercent: percent,
+        overcutBonus: 0,
+        thresholdPercent: level.sizeThreshold,
+        pushFailed: true,
+      });
+    };
+
     const applyCut = (wall: GrowingWall) => {
       const { regions, balls } = game;
       
@@ -602,6 +626,19 @@ export function GameCanvas({
                 game.isRecovering = false;
                 setIsRecovering(false);
               }, RECOVERY_WINDOW_MS);
+              return;
+            }
+            
+            // If in push mode, don't lose a life - just fail the push
+            if (game.pushMode === 'pushing') {
+              game.activeWall = null;
+              // Trigger visual feedback
+              setScreenFlash('red');
+              setIsShaking(true);
+              setTimeout(() => setScreenFlash('none'), 200);
+              setTimeout(() => setIsShaking(false), 400);
+              // End the level with push failed
+              handlePushFailed();
               return;
             }
             

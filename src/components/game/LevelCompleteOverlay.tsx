@@ -8,7 +8,7 @@ interface LevelCompleteOverlayProps {
 }
 
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: LevelCompleteOverlayProps) {
-  const { levelNumber, levelId, cutCount, expectedCuts, basePoints, levelScore, remainingPercent, overcutBonus = 0 } = scoreData;
+  const { levelNumber, levelId, cutCount, expectedCuts, basePoints, levelScore, remainingPercent, overcutBonus = 0, pushFailed = false } = scoreData;
   
   const bonusOrPenalty = cutCount <= expectedCuts 
     ? expectedCuts - cutCount 
@@ -55,6 +55,13 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
               <p className="text-muted-foreground text-xs sm:text-sm">{levelId}</p>
             </div>
           </div>
+
+          {/* Push Failed Warning */}
+          {pushFailed && (
+            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-center">
+              <p className="text-amber-400 text-sm font-medium">Push failed! No overcut bonus earned.</p>
+            </div>
+          )}
 
           {/* Stats Grid */}
           <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base">
