@@ -1128,8 +1128,8 @@ export function GameCanvas({
         </div>
       </div>
 
-      {/* Canvas container - takes remaining space */}
-      <div ref={containerRef} className="flex-1 min-h-0 relative">
+      {/* Canvas container - takes remaining space, with bottom padding when push overlay is visible */}
+      <div ref={containerRef} className={`flex-1 min-h-0 relative ${pushMode === 'prompt' || pushMode === 'pushing' ? 'pb-24' : ''}`}>
         <canvas
           ref={canvasRef}
           className="touch-none cursor-crosshair"
