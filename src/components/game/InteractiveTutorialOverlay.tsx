@@ -257,29 +257,29 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
-            {/* Dotted line from start to end */}
+            {/* Dotted line from start to end - using wall color #ff8800 */}
             {/* t=0 */}
-            <div className="absolute rounded-full" style={{ left: startX - 4, top: startY - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX - 4, top: startY - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.1 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.1 - 4, top: startY + (endY - startY) * 0.1 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.1 - 4, top: startY + (endY - startY) * 0.1 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.2 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.2 - 4, top: startY + (endY - startY) * 0.2 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.2 - 4, top: startY + (endY - startY) * 0.2 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.3 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.3 - 4, top: startY + (endY - startY) * 0.3 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.3 - 4, top: startY + (endY - startY) * 0.3 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.4 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.4 - 4, top: startY + (endY - startY) * 0.4 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.4 - 4, top: startY + (endY - startY) * 0.4 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.5 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.5 - 4, top: startY + (endY - startY) * 0.5 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.5 - 4, top: startY + (endY - startY) * 0.5 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.6 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.6 - 4, top: startY + (endY - startY) * 0.6 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.6 - 4, top: startY + (endY - startY) * 0.6 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.7 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.7 - 4, top: startY + (endY - startY) * 0.7 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.7 - 4, top: startY + (endY - startY) * 0.7 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.8 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.8 - 4, top: startY + (endY - startY) * 0.8 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.8 - 4, top: startY + (endY - startY) * 0.8 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=0.9 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.9 - 4, top: startY + (endY - startY) * 0.9 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.9 - 4, top: startY + (endY - startY) * 0.9 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
             {/* t=1 */}
-            <div className="absolute rounded-full" style={{ left: endX - 4, top: endY - 4, width: 8, height: 8, backgroundColor: 'rgba(255,255,255,0.5)' }} />
+            <div className="absolute rounded-full" style={{ left: endX - 4, top: endY - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
 
             {/* Hand icon container */}
             <div
