@@ -746,14 +746,28 @@ export function GameCanvas({
         ctx.restore();
       }
 
-      // Render wall LAST - on top of everything
+      // Render wall LAST - on top of everything, clipped to region
       if (wall) {
         const startX = wall.startPoint.x;
         const startY = wall.startPoint.y;
         const endX = wall.endPoint.x;
         const endY = wall.endPoint.y;
         
+        // Find the active region to clip to
+        const activeRegion = regions.find(r => r.id === wall.activeRegionId);
+        
         ctx.save();
+        
+        // Clip to the active region polygon so wall doesn't overflow
+        if (activeRegion && activeRegion.polygon.vertices.length > 0) {
+          ctx.beginPath();
+          ctx.moveTo(activeRegion.polygon.vertices[0].x, activeRegion.polygon.vertices[0].y);
+          for (let i = 1; i < activeRegion.polygon.vertices.length; i++) {
+            ctx.lineTo(activeRegion.polygon.vertices[i].x, activeRegion.polygon.vertices[i].y);
+          }
+          ctx.closePath();
+          ctx.clip();
+        }
         
         // Draw white outline
         ctx.strokeStyle = '#ffffff';
