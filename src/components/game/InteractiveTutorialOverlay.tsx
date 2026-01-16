@@ -257,29 +257,41 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
-            {/* Debug: big red square at fixed position */}
+            {/* Debug: dot at startX, startY - should be orange */}
             <div
-              className="absolute"
+              className="absolute rounded-full"
               style={{
-                left: 100,
-                top: 200,
-                width: 50,
-                height: 50,
-                backgroundColor: 'red',
+                left: startX - 10,
+                top: startY - 10,
+                width: 20,
+                height: 20,
+                backgroundColor: 'orange',
+              }}
+            />
+            
+            {/* Debug: dot at endX, endY - should be cyan */}
+            <div
+              className="absolute rounded-full"
+              style={{
+                left: endX - 10,
+                top: endY - 10,
+                width: 20,
+                height: 20,
+                backgroundColor: 'cyan',
               }}
             />
             
             {/* Static dotted line using divs */}
-            {[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((t) => (
+            {[0.2, 0.4, 0.6, 0.8].map((t) => (
               <div
                 key={t}
                 className="absolute rounded-full"
                 style={{
-                  left: startX + (endX - startX) * t - 3,
-                  top: startY + (endY - startY) * t - 3,
-                  width: 6,
-                  height: 6,
-                  backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                  left: startX + (endX - startX) * t - 5,
+                  top: startY + (endY - startY) * t - 5,
+                  width: 10,
+                  height: 10,
+                  backgroundColor: 'white',
                 }}
               />
             ))}
