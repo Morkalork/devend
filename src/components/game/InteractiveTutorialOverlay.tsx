@@ -257,7 +257,7 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
-            {/* Debug: dot at startX, startY - should be orange */}
+            {/* Debug: dot at startX, startY - orange */}
             <div
               className="absolute rounded-full"
               style={{
@@ -269,7 +269,7 @@ export function InteractiveTutorialOverlay({
               }}
             />
             
-            {/* Debug: dot at endX, endY - should be cyan */}
+            {/* Debug: dot at endX, endY - cyan */}
             <div
               className="absolute rounded-full"
               style={{
@@ -281,20 +281,17 @@ export function InteractiveTutorialOverlay({
               }}
             />
             
-            {/* Static dotted line using divs */}
-            {[0.2, 0.4, 0.6, 0.8].map((t) => (
-              <div
-                key={t}
-                className="absolute rounded-full"
-                style={{
-                  left: startX + (endX - startX) * t - 5,
-                  top: startY + (endY - startY) * t - 5,
-                  width: 10,
-                  height: 10,
-                  backgroundColor: 'white',
-                }}
-              />
-            ))}
+            {/* Hardcoded midpoint - white */}
+            <div
+              className="absolute rounded-full"
+              style={{
+                left: (startX + endX) / 2 - 10,
+                top: (startY + endY) / 2 - 10,
+                width: 20,
+                height: 20,
+                backgroundColor: 'white',
+              }}
+            />
 
             {/* Hand icon container */}
             <div
