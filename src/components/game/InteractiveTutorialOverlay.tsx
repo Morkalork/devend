@@ -157,14 +157,10 @@ export function InteractiveTutorialOverlay({
       const elapsed = (timestamp - startTimeRef.current) / 1000;
       const newState = calculateAnimState(elapsed);
       
-      // Track loop restarts for debugging
+      // Track loop restarts
       const currentLoop = Math.floor(elapsed / TOTAL_LOOP_DURATION);
       if (currentLoop !== loopCount) {
         setLoopCount(currentLoop);
-        // Dev log - can be removed later
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[MagicHand] Animation loop restart:', currentLoop + 1);
-        }
       }
       
       setAnimState(newState);
@@ -214,19 +210,19 @@ export function InteractiveTutorialOverlay({
   const lineEndX = startX + (endX - startX) * animState.lineProgress;
   const lineEndY = startY + (endY - startY) * animState.lineProgress;
 
-  // Debug: Log line visibility on each render cycle (only in dev)
-  if (process.env.NODE_ENV === 'development' && animState.phase === 'drag') {
-    console.log('[MagicHand] Line render:', {
-      showLine: animState.showLine,
-      lineProgress: animState.lineProgress,
-      startX,
-      startY,
-      lineEndX,
-      lineEndY,
-      canvasWidth,
-      canvasOffsetLeft,
-    });
-  }
+  // Helper to get dot style based on hand progress
+  const getDotStyle = (t: number) => {
+    const passed = animState.lineProgress >= t;
+    const size = passed ? 10 : 8;
+    const opacity = passed ? 1 : 0.4;
+    return {
+      width: size,
+      height: size,
+      backgroundColor: `rgba(255,136,0,${opacity})`,
+      transition: 'all 0.15s ease-out',
+    };
+  };
+
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50">
@@ -257,29 +253,18 @@ export function InteractiveTutorialOverlay({
               height: '100%',
             }}
           >
-            {/* Dotted line from start to end - using wall color #ff8800 */}
-            {/* t=0 */}
-            <div className="absolute rounded-full" style={{ left: startX - 4, top: startY - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.1 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.1 - 4, top: startY + (endY - startY) * 0.1 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.2 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.2 - 4, top: startY + (endY - startY) * 0.2 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.3 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.3 - 4, top: startY + (endY - startY) * 0.3 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.4 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.4 - 4, top: startY + (endY - startY) * 0.4 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.5 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.5 - 4, top: startY + (endY - startY) * 0.5 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.6 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.6 - 4, top: startY + (endY - startY) * 0.6 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.7 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.7 - 4, top: startY + (endY - startY) * 0.7 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.8 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.8 - 4, top: startY + (endY - startY) * 0.8 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=0.9 */}
-            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.9 - 4, top: startY + (endY - startY) * 0.9 - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
-            {/* t=1 */}
-            <div className="absolute rounded-full" style={{ left: endX - 4, top: endY - 4, width: 8, height: 8, backgroundColor: 'rgba(255,136,0,0.6)' }} />
+            {/* Dotted line from start to end - animates as hand passes */}
+            <div className="absolute rounded-full" style={{ left: startX - getDotStyle(0).width/2, top: startY - getDotStyle(0).height/2, ...getDotStyle(0) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.1 - getDotStyle(0.1).width/2, top: startY + (endY - startY) * 0.1 - getDotStyle(0.1).height/2, ...getDotStyle(0.1) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.2 - getDotStyle(0.2).width/2, top: startY + (endY - startY) * 0.2 - getDotStyle(0.2).height/2, ...getDotStyle(0.2) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.3 - getDotStyle(0.3).width/2, top: startY + (endY - startY) * 0.3 - getDotStyle(0.3).height/2, ...getDotStyle(0.3) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.4 - getDotStyle(0.4).width/2, top: startY + (endY - startY) * 0.4 - getDotStyle(0.4).height/2, ...getDotStyle(0.4) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.5 - getDotStyle(0.5).width/2, top: startY + (endY - startY) * 0.5 - getDotStyle(0.5).height/2, ...getDotStyle(0.5) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.6 - getDotStyle(0.6).width/2, top: startY + (endY - startY) * 0.6 - getDotStyle(0.6).height/2, ...getDotStyle(0.6) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.7 - getDotStyle(0.7).width/2, top: startY + (endY - startY) * 0.7 - getDotStyle(0.7).height/2, ...getDotStyle(0.7) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.8 - getDotStyle(0.8).width/2, top: startY + (endY - startY) * 0.8 - getDotStyle(0.8).height/2, ...getDotStyle(0.8) }} />
+            <div className="absolute rounded-full" style={{ left: startX + (endX - startX) * 0.9 - getDotStyle(0.9).width/2, top: startY + (endY - startY) * 0.9 - getDotStyle(0.9).height/2, ...getDotStyle(0.9) }} />
+            <div className="absolute rounded-full" style={{ left: endX - getDotStyle(1).width/2, top: endY - getDotStyle(1).height/2, ...getDotStyle(1) }} />
 
             {/* Hand icon container */}
             <div
