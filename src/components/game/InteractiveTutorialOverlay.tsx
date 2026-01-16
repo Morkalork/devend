@@ -265,38 +265,19 @@ export function InteractiveTutorialOverlay({
               {/* Start point - orange */}
               <circle cx={startX} cy={startY} r={6} fill="#ff8800" />
               
-              {/* End point - cyan (shows where line should end) */}
-              {animState.lineProgress > 0.02 && (
-                <circle cx={lineEndX} cy={lineEndY} r={5} fill="#00ffff" />
-              )}
+              {/* End point - cyan */}
+              <circle cx={lineEndX} cy={lineEndY} r={5} fill="#00ffff" />
               
-              {/* Generate dots along the line */}
-              {animState.lineProgress > 0.02 && (() => {
-                const dx = lineEndX - startX;
-                const dy = lineEndY - startY;
-                const length = Math.sqrt(dx * dx + dy * dy);
-                
-                // Use smaller spacing for more dots
-                const dotSpacing = 8;
-                const numDots = Math.ceil(length / dotSpacing);
-                const dots = [];
-                
-                for (let i = 1; i < numDots; i++) {
-                  const t = i / numDots;
-                  const x = startX + dx * t;
-                  const y = startY + dy * t;
-                  dots.push(
-                    <circle
-                      key={i}
-                      cx={x}
-                      cy={y}
-                      r={3}
-                      fill="rgba(255, 255, 255, 0.6)"
-                    />
-                  );
-                }
-                return dots;
-              })()}
+              {/* Fixed dots between start and end */}
+              {[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9].map((t) => (
+                <circle
+                  key={t}
+                  cx={startX + (lineEndX - startX) * t}
+                  cy={startY + (lineEndY - startY) * t}
+                  r={3}
+                  fill="rgba(255, 255, 255, 0.6)"
+                />
+              ))}
             </svg>
 
             {/* Hand icon container */}
