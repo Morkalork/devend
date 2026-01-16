@@ -265,14 +265,13 @@ export function InteractiveTutorialOverlay({
               {/* Always show start point */}
               <circle cx={startX} cy={startY} r={6} fill="#ff8800" />
               
-              {/* Generate dots along the line from start to hand position */}
-              {(() => {
-                const dx = animState.handX - startX;
-                const dy = animState.handY - startY;
+              {/* Generate dots along the line using lineEndX/lineEndY */}
+              {animState.lineProgress > 0.05 && (() => {
+                const dx = lineEndX - startX;
+                const dy = lineEndY - startY;
                 const length = Math.sqrt(dx * dx + dy * dy);
                 
-                // Only draw dots if there's distance
-                if (length < 10) return null;
+                if (length < 5) return null;
                 
                 const dotSpacing = 12;
                 const numDots = Math.max(1, Math.floor(length / dotSpacing));
