@@ -262,41 +262,29 @@ export function InteractiveTutorialOverlay({
               className="absolute inset-0 w-full h-full pointer-events-none"
               style={{ overflow: 'visible', zIndex: 100 }}
             >
-              {/* Debug circle - always visible */}
+              {/* Debug circle at start - orange */}
               <circle
                 cx={startX}
                 cy={startY}
                 r={10}
-                fill="rgba(255, 136, 0, 0.9)"
+                fill="#ff8800"
               />
               
-              {/* Always draw the line from start to current hand position */}
-              <line
-                x1={startX}
-                y1={startY}
-                x2={animState.handX}
-                y2={animState.handY}
-                stroke="rgba(255, 255, 255, 0.3)"
-                strokeWidth={14}
+              {/* Use path instead of line */}
+              <path
+                d={`M ${startX} ${startY} L ${animState.handX} ${animState.handY}`}
+                stroke="#ffffff"
+                strokeWidth={8}
                 strokeLinecap="round"
-              />
-              <line
-                x1={startX}
-                y1={startY}
-                x2={animState.handX}
-                y2={animState.handY}
-                stroke="rgba(255, 255, 255, 0.5)"
-                strokeWidth={6}
-                strokeLinecap="round"
-                strokeDasharray="10 10"
+                fill="none"
               />
               
-              {/* Debug: circle at hand position */}
+              {/* Debug circle at hand - cyan */}
               <circle
                 cx={animState.handX}
                 cy={animState.handY}
-                r={6}
-                fill="rgba(0, 255, 255, 0.9)"
+                r={8}
+                fill="#00ffff"
               />
             </svg>
 
