@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, lazy, Suspense } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
@@ -15,6 +15,10 @@ import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { HighscoresScreen } from '@/components/game/HighscoresScreen';
 import { GameResult, LevelScoreData } from '@/types/game';
 
+// Lazy load admin components (dev-only)
+const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
+const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
+
 const BASE_LIVES = 2;
 
 const Index = () => {
@@ -29,6 +33,8 @@ const Index = () => {
     goToGame,
     goToHighscores,
     goToOptions,
+    goToAdmin,
+    goToMapBuilder,
   } = useGameState();
 
   const {
@@ -221,6 +227,7 @@ const Index = () => {
           onTutorial={goToTutorial}
           onOptions={goToOptions}
           onHighscores={handleHighscoresFromWelcome}
+          onAdmin={import.meta.env.DEV ? goToAdmin : undefined}
           isLoading={isLoading}
           error={error}
         />
@@ -278,6 +285,18 @@ const Index = () => {
           onBack={goToWelcome}
           onClear={clearHighscores}
         />
+      )}
+      
+      {/* Dev-only Admin screens */}
+      {import.meta.env.DEV && currentScreen === 'admin' && (
+        <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
+          <AdminScreen onBack={goToWelcome} onMapBuilder={goToMapBuilder} />
+        </Suspense>
+      )}
+      {import.meta.env.DEV && currentScreen === 'mapBuilder' && (
+        <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
+          <MapBuilder onBack={goToAdmin} />
+        </Suspense>
       )}
       
       {/* Level Complete Overlay */}

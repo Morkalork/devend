@@ -7,11 +7,12 @@ interface WelcomeScreenProps {
   onTutorial: () => void;
   onOptions: () => void;
   onHighscores: () => void;
+  onAdmin?: () => void;
   isLoading?: boolean;
   error?: string | null;
 }
 
-export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores, isLoading, error }: WelcomeScreenProps) {
+export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores, onAdmin, isLoading, error }: WelcomeScreenProps) {
   return (
     <>
       <CRTBackground />
@@ -133,10 +134,10 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
           >
             Highscores
           </motion.button>
-          {import.meta.env.DEV && (
+          {import.meta.env.DEV && onAdmin && (
             <motion.button
               className="arcade-button-secondary rounded-lg opacity-70"
-              onClick={() => alert('ADMIN!')}
+              onClick={onAdmin}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >

@@ -43,6 +43,14 @@ export function useGameState() {
     setCurrentScreen('options');
   }, []);
 
+  const goToAdmin = useCallback(() => {
+    setCurrentScreen('admin');
+  }, []);
+
+  const goToMapBuilder = useCallback(() => {
+    setCurrentScreen('mapBuilder');
+  }, []);
+
   return {
     currentScreen,
     lastResult,
@@ -55,5 +63,7 @@ export function useGameState() {
     goToGame,
     goToHighscores,
     goToOptions,
+    goToAdmin,
+    goToMapBuilder,
   };
 }

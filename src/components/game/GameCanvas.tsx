@@ -281,10 +281,24 @@ export function GameCanvas({
                 width: entity.width,
                 height: entity.height,
               });
-            } else {
+            } else if (entity.shape === "polygon") {
               obstaclePolygon = createPolygonFromShape("polygon", {
                 points: entity.points,
               });
+            } else if (entity.shape === "circle") {
+              // Convert circle to polygon (approximate with 24 sides)
+              const numSides = 24;
+              const vertices: { x: number; y: number }[] = [];
+              for (let i = 0; i < numSides; i++) {
+                const angle = (i / numSides) * Math.PI * 2;
+                vertices.push({
+                  x: entity.cx + Math.cos(angle) * entity.radius,
+                  y: entity.cy + Math.sin(angle) * entity.radius,
+                });
+              }
+              obstaclePolygon = { vertices };
+            } else {
+              continue;
             }
 
             // Store obstacle for rendering
