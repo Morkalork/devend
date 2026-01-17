@@ -45,9 +45,9 @@ export function GameScreen({
       {/* CRT Terminal Background */}
       <CRTBackground />
       
-      <div className="fixed inset-0 flex flex-col z-10" style={{ backgroundColor: `#${level.backgroundColor}e8` }}>
+      <div className="fixed inset-0 flex flex-col z-10" style={{ backgroundColor: `#${level.backgroundColor}d0` }}>
       {/* Top HUD bar with level info and upgrades */}
-      <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between gap-4" style={{ backgroundColor: `#${level.backgroundColor}` }}>
+      <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between gap-4" style={{ backgroundColor: `#${level.backgroundColor}e0` }}>
         {/* Level and Score */}
         <div className="flex gap-3">
           <div className="hud-display">

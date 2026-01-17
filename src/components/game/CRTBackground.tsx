@@ -179,7 +179,7 @@ export function CRTBackground() {
       aria-hidden="true"
       style={{
         // CSS Custom Properties for easy tweaking
-        '--crt-scroll-duration': '60s',
+        '--crt-scroll-duration': '40s',
         '--crt-text-color': '#00ff88',
         '--crt-bg-color': '#001a0f',
         '--crt-glow-color': '#00ff8866',
