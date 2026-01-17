@@ -758,8 +758,12 @@ export function GameCanvas({
       const { width: screenWidth, height: screenHeight } = screenSize;
       const { scale } = boardRect;
 
-      // Fill entire screen with darkness (background)
-      ctx.fillStyle = backgroundColor;
+      // Clear the canvas (transparent to show CRT background through)
+      ctx.clearRect(0, 0, screenWidth, screenHeight);
+      
+      // Fill area outside the board with semi-transparent darkness
+      // This lets CRT show through slightly while darkening non-play areas
+      ctx.fillStyle = 'rgba(0, 10, 5, 0.92)';
       ctx.fillRect(0, 0, screenWidth, screenHeight);
 
       // NOTE: Don't fill boardRect with region color - only the polygon regions define the playable area
