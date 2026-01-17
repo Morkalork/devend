@@ -1,4 +1,5 @@
 import { GameCanvas } from './GameCanvas';
+import { CRTBackground } from './CRTBackground';
 import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -40,7 +41,11 @@ export function GameScreen({
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ backgroundColor: `#${level.backgroundColor}` }}>
+    <>
+      {/* CRT Terminal Background */}
+      <CRTBackground />
+      
+      <div className="fixed inset-0 flex flex-col z-10" style={{ backgroundColor: `#${level.backgroundColor}e8` }}>
       {/* Top HUD bar with level info and upgrades */}
       <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between gap-4" style={{ backgroundColor: `#${level.backgroundColor}` }}>
         {/* Level and Score */}
@@ -101,5 +106,6 @@ export function GameScreen({
         />
       </div>
     </div>
+    </>
   );
 }
