@@ -148,7 +148,11 @@ const DAMPING = 0.999;`,
 }`,
 ];
 
-export function CRTBackground() {
+interface CRTBackgroundProps {
+  accentColor?: string; // hex color with #
+}
+
+export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
   const codeContainerRef = useRef<HTMLDivElement>(null);
   
   // Generate a shuffled, repeated code block for seamless looping
@@ -173,6 +177,9 @@ export function CRTBackground() {
     }
   }, [codeContent]);
 
+  // Derive glow color from accent (same color with transparency)
+  const glowColor = accentColor + '66';
+
   return (
     <div 
       className="crt-background"
@@ -180,9 +187,9 @@ export function CRTBackground() {
       style={{
         // CSS Custom Properties for easy tweaking
         '--crt-scroll-duration': '40s',
-        '--crt-text-color': '#00ff88',
+        '--crt-text-color': accentColor,
         '--crt-bg-color': '#001a0f',
-        '--crt-glow-color': '#00ff8866',
+        '--crt-glow-color': glowColor,
         '--crt-text-opacity': '0.85',
         '--crt-scanline-opacity': '0.08',
         '--crt-vignette-opacity': '0.6',

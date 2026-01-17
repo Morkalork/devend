@@ -38,7 +38,7 @@ export function GameScreen({
   tutorialStep = 'completed',
   onTutorialCutSuccess,
 }: GameScreenProps) {
-  const { config, getBackgroundColor, getRegionColor } = useGameConfig();
+  const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
@@ -46,7 +46,7 @@ export function GameScreen({
   return (
     <>
       {/* CRT Terminal Background */}
-      <CRTBackground />
+      <CRTBackground accentColor={getAccentColor()} />
       
       <div className="fixed inset-0 flex flex-col z-10">
       {/* Top HUD bar with level info and upgrades */}
@@ -108,6 +108,7 @@ export function GameScreen({
           onTutorialCutSuccess={onTutorialCutSuccess}
           canvasOpacity={config.visuals.canvas_opacity}
           regionColor={getRegionColor()}
+          accentColor={getAccentColor()}
         />
       </div>
     </div>

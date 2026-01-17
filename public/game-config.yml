@@ -10,11 +10,13 @@ visuals:
   hud_opacity: 0.85
   
   # Global background color (hex without #)
-  # Used for: screen background, canvas fill, HUD bar
   background_color: "0a1a10"
   
   # Game board / region fill color (hex without #)
   region_color: "1a3020"
+  
+  # Accent color used for: CRT code text, active wall/line (hex without #)
+  accent_color: "00ff88"
 
 # Ball Settings
 ball:
