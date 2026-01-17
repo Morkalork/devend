@@ -75,24 +75,38 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   }, [levels.length, selectedLevelIndex]);
 
   // Add entity (obstacle)
-  const addEntity = useCallback((type: 'circle' | 'polygon') => {
+  const addEntity = useCallback((type: 'circle' | 'polygon' | 'rect') => {
     if (!currentLevel) return;
     
-    const newEntity: LevelEntity = type === 'circle' 
-      ? {
-          id: `obs-${Date.now()}`,
-          kind: 'obstacle',
-          shape: 'circle',
-          cx: 450,
-          cy: 800,
-          radius: 100,
-        }
-      : {
-          id: `obs-${Date.now()}`,
-          kind: 'obstacle',
-          shape: 'polygon',
-          points: [[350, 700], [550, 700], [550, 900], [350, 900]],
-        };
+    let newEntity: LevelEntity;
+    
+    if (type === 'circle') {
+      newEntity = {
+        id: `obs-${Date.now()}`,
+        kind: 'obstacle',
+        shape: 'circle',
+        cx: 450,
+        cy: 800,
+        radius: 100,
+      };
+    } else if (type === 'rect') {
+      newEntity = {
+        id: `obs-${Date.now()}`,
+        kind: 'obstacle',
+        shape: 'rect',
+        x: 350,
+        y: 700,
+        width: 200,
+        height: 200,
+      };
+    } else {
+      newEntity = {
+        id: `obs-${Date.now()}`,
+        kind: 'obstacle',
+        shape: 'polygon',
+        points: [[350, 700], [550, 700], [550, 900], [350, 900]],
+      };
+    }
     
     updateLevel({
       ...currentLevel,

@@ -1,5 +1,5 @@
-import { Plus, Trash2, Circle, Pentagon } from 'lucide-react';
-import { LevelConfig, LevelEntity, BallConfig, ObstacleCircleEntity, ObstaclePolygonEntity } from '@/types/level';
+import { Plus, Trash2, Circle, Pentagon, Square } from 'lucide-react';
+import { LevelConfig, LevelEntity, BallConfig, ObstacleCircleEntity, ObstaclePolygonEntity, ObstacleRectEntity } from '@/types/level';
 
 interface EntityPanelProps {
   level: LevelConfig;
@@ -7,7 +7,7 @@ interface EntityPanelProps {
   selectedBallId: string | null;
   onSelectEntity: (id: string | null) => void;
   onSelectBall: (id: string | null) => void;
-  onAddEntity: (type: 'circle' | 'polygon') => void;
+  onAddEntity: (type: 'circle' | 'polygon' | 'rect') => void;
   onAddBall: () => void;
   onDeleteEntity: (id: string) => void;
   onDeleteBall: (id: string) => void;
@@ -31,6 +31,23 @@ export function EntityPanel({
   const selectedEntity = (level.entities || []).find(e => e.id === selectedEntityId);
   const selectedBall = level.balls.find(b => b.id === selectedBallId);
 
+  const getShapeIcon = (shape: string) => {
+    switch (shape) {
+      case 'circle': return <Circle className="w-4 h-4 text-destructive" />;
+      case 'rect': return <Square className="w-4 h-4 text-destructive" />;
+      default: return <Pentagon className="w-4 h-4 text-destructive" />;
+    }
+  };
+
+  const getShapeLabel = (shape: string) => {
+    switch (shape) {
+      case 'circle': return 'Circle';
+      case 'rect': return 'Rectangle';
+      case 'polygon': return 'Polygon';
+      default: return shape;
+    }
+  };
+
   return (
     <div className="p-3 space-y-4">
       {/* Obstacles Section */}
@@ -38,6 +55,13 @@ export function EntityPanel({
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-sm font-semibold text-muted-foreground">Obstacles</h3>
           <div className="flex gap-1">
+            <button
+              onClick={() => onAddEntity('rect')}
+              className="p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+              title="Add Rectangle"
+            >
+              <Square className="w-3.5 h-3.5" />
+            </button>
             <button
               onClick={() => onAddEntity('circle')}
               className="p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors"
@@ -67,11 +91,7 @@ export function EntityPanel({
               }`}
             >
               <div className="flex items-center gap-2">
-                {entity.shape === 'circle' ? (
-                  <Circle className="w-4 h-4 text-destructive" />
-                ) : (
-                  <Pentagon className="w-4 h-4 text-destructive" />
-                )}
+                {getShapeIcon(entity.shape)}
                 <span className="text-sm">{entity.id}</span>
               </div>
               <button
@@ -97,12 +117,19 @@ export function EntityPanel({
       {selectedEntity && (
         <div className="p-2 rounded bg-muted/50 space-y-2">
           <h4 className="text-xs font-semibold text-muted-foreground">
-            {selectedEntity.shape === 'circle' ? 'Circle' : 'Polygon'} Properties
+            {getShapeLabel(selectedEntity.shape)} Properties
           </h4>
           
           {selectedEntity.shape === 'circle' && (
             <CircleEditor
               entity={selectedEntity as ObstacleCircleEntity}
+              onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates)}
+            />
+          )}
+          
+          {selectedEntity.shape === 'rect' && (
+            <RectEditor
+              entity={selectedEntity as ObstacleRectEntity}
               onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates)}
             />
           )}
@@ -204,6 +231,49 @@ function CircleEditor({ entity, onUpdate }: { entity: ObstacleCircleEntity; onUp
           type="number"
           value={Math.round(entity.radius)}
           onChange={(e) => onUpdate({ radius: Math.max(20, Number(e.target.value)) })}
+          className="w-full px-2 py-1 rounded bg-background border border-border"
+        />
+      </label>
+    </div>
+  );
+}
+
+function RectEditor({ entity, onUpdate }: { entity: ObstacleRectEntity; onUpdate: (updates: Partial<ObstacleRectEntity>) => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 text-xs">
+      <label className="space-y-1">
+        <span className="text-muted-foreground">X</span>
+        <input
+          type="number"
+          value={Math.round(entity.x)}
+          onChange={(e) => onUpdate({ x: Number(e.target.value) })}
+          className="w-full px-2 py-1 rounded bg-background border border-border"
+        />
+      </label>
+      <label className="space-y-1">
+        <span className="text-muted-foreground">Y</span>
+        <input
+          type="number"
+          value={Math.round(entity.y)}
+          onChange={(e) => onUpdate({ y: Number(e.target.value) })}
+          className="w-full px-2 py-1 rounded bg-background border border-border"
+        />
+      </label>
+      <label className="space-y-1">
+        <span className="text-muted-foreground">Width</span>
+        <input
+          type="number"
+          value={Math.round(entity.width)}
+          onChange={(e) => onUpdate({ width: Math.max(20, Number(e.target.value)) })}
+          className="w-full px-2 py-1 rounded bg-background border border-border"
+        />
+      </label>
+      <label className="space-y-1">
+        <span className="text-muted-foreground">Height</span>
+        <input
+          type="number"
+          value={Math.round(entity.height)}
+          onChange={(e) => onUpdate({ height: Math.max(20, Number(e.target.value)) })}
           className="w-full px-2 py-1 rounded bg-background border border-border"
         />
       </label>
