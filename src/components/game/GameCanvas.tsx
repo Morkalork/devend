@@ -21,10 +21,10 @@ import {
   splitPolygon,
   createRectPolygon,
   resolveBallPolygonCollision,
+  resolveBallPolygonCollisionOutward,
   circleCapsuleCollision,
   polygonCentroid,
   polygonBounds,
-  subtractPolygon,
   createPolygonFromShape,
 } from "@/lib/polygon";
 import {
@@ -264,10 +264,11 @@ export function GameCanvas({
       const right = centerX + shrunkWidth / 2;
       const bottom = centerY + shrunkHeight / 2;
 
-      let initialPolygon = createRectPolygon(left, top, right, bottom);
+      const initialPolygon = createRectPolygon(left, top, right, bottom);
 
       // Process entities - currently only obstacles
       game.obstacles = [];
+      let totalObstacleArea = 0;
 
       if (level.entities && level.entities.length > 0) {
         for (const entity of level.entities) {
@@ -301,14 +302,11 @@ export function GameCanvas({
               continue;
             }
 
-            // Store obstacle for rendering
+            // Store obstacle for rendering and collision
             game.obstacles.push(obstaclePolygon);
-
-            // Subtract obstacle from initial polygon to create playable space
-            const subtracted = subtractPolygon(initialPolygon, obstaclePolygon);
-            if (subtracted.length > 0) {
-              initialPolygon = subtracted[0];
-            }
+            
+            // Calculate obstacle area to subtract from playable area
+            totalObstacleArea += Math.abs(polygonArea(obstaclePolygon));
           }
         }
       }
@@ -320,12 +318,12 @@ export function GameCanvas({
         },
       ];
 
-      // Base playable area is the initial region area (after subtracting obstacles)
+      // Base playable area is the region area minus obstacle areas
       // This is what we use for win percentage calculation
-      game.basePlayableArea = polygonArea(initialPolygon);
+      const regionArea = polygonArea(initialPolygon);
+      game.basePlayableArea = regionArea - totalObstacleArea;
 
-      // Original area is based on full arena (for display percentage)
-      // But for win threshold, we use basePlayableArea
+      // Original area is the same as base playable area
       game.originalArea = game.basePlayableArea;
 
       // Create balls from level config with modifiers applied (world coordinates)
@@ -414,7 +412,7 @@ export function GameCanvas({
       initGame();
     };
 
-    // Update ball position and bounce off polygon edges (all in world coordinates)
+    // Update ball position and bounce off polygon edges and obstacles (all in world coordinates)
     const updateBall = (ball: Ball, dt: number) => {
       const region = game.regions.find((r) => r.id === ball.regionId);
       if (!region) return;
@@ -423,16 +421,25 @@ export function GameCanvas({
       ball.position.x += ball.velocity.x * dt;
       ball.position.y += ball.velocity.y * dt;
 
-      // Resolve collisions with polygon edges
-      const result = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, region.polygon);
+      // Resolve collisions with region polygon edges
+      const regionResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, region.polygon);
+      ball.position = regionResult.position;
+      ball.velocity = regionResult.velocity;
 
-      ball.position = result.position;
-      ball.velocity = result.velocity;
+      // Resolve collisions with obstacle edges (balls bounce OFF obstacles, so we flip the normal)
+      for (const obstacle of game.obstacles) {
+        const obstacleResult = resolveBallPolygonCollisionOutward(ball.position, ball.velocity, ball.radius, obstacle);
+        ball.position = obstacleResult.position;
+        ball.velocity = obstacleResult.velocity;
+      }
     };
 
-    // Calculate combined area of all regions
+    // Calculate combined area of all regions (subtracting obstacle areas that overlap)
     const getCombinedArea = (): number => {
-      return game.regions.reduce((sum, region) => sum + polygonArea(region.polygon), 0);
+      const regionsArea = game.regions.reduce((sum, region) => sum + polygonArea(region.polygon), 0);
+      // Subtract obstacle areas (obstacles are fixed dead zones)
+      const obstaclesArea = game.obstacles.reduce((sum, obs) => sum + Math.abs(polygonArea(obs)), 0);
+      return regionsArea - obstaclesArea;
     };
 
     // Check if a ball's center is on the cut line

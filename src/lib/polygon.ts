@@ -402,7 +402,7 @@ export function createPolygonFromShape(
   return { vertices: [] };
 }
 
-// Ball collision with polygon edges
+// Ball collision with polygon edges (ball INSIDE polygon, bounces off edges)
 export function resolveBallPolygonCollision(
   ballPos: Vector2,
   ballVel: Vector2,
@@ -443,6 +443,56 @@ export function resolveBallPolygonCollision(
       }
       
       // Push ball out
+      const penetration = ballRadius - dist;
+      newPos = vec2Add(newPos, vec2Scale(normal, penetration + 0.5));
+    }
+  }
+  
+  return { position: newPos, velocity: newVel, collided };
+}
+
+// Ball collision with polygon edges (ball OUTSIDE polygon, bounces off obstacle)
+// Used for obstacles where balls are on the outside and bounce off
+export function resolveBallPolygonCollisionOutward(
+  ballPos: Vector2,
+  ballVel: Vector2,
+  ballRadius: number,
+  poly: Polygon
+): { position: Vector2; velocity: Vector2; collided: boolean } {
+  const { vertices } = poly;
+  let newPos = { ...ballPos };
+  let newVel = { ...ballVel };
+  let collided = false;
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const j = (i + 1) % vertices.length;
+    const p1 = vertices[i];
+    const p2 = vertices[j];
+    
+    const dist = pointToSegmentDistance(newPos, p1, p2);
+    
+    if (dist < ballRadius) {
+      collided = true;
+      
+      // Get closest point on edge
+      const closestPoint = closestPointOnSegment(newPos, p1, p2);
+      const toBall = vec2Sub(newPos, closestPoint);
+      
+      // Normal points from obstacle edge toward ball (outward)
+      let normal = vec2Normalize(toBall);
+      if (vec2Length(toBall) < 0.001) {
+        // Ball exactly on edge, use edge perpendicular
+        const edge = vec2Sub(p2, p1);
+        normal = vec2Normalize({ x: -edge.y, y: edge.x });
+      }
+      
+      // Reflect velocity if moving toward obstacle
+      const velDotNormal = vec2Dot(newVel, normal);
+      if (velDotNormal < 0) {
+        newVel = vec2Sub(newVel, vec2Scale(normal, 2 * velDotNormal));
+      }
+      
+      // Push ball out of obstacle
       const penetration = ballRadius - dist;
       newPos = vec2Add(newPos, vec2Scale(normal, penetration + 0.5));
     }
