@@ -46,8 +46,10 @@
   padding: 1rem;
   white-space: pre;
   text-shadow: 
-    0 0 2px var(--crt-glow-color, #00ff8866),
-    0 0 8px var(--crt-glow-color, #00ff8833);
+    0 0 4px var(--crt-glow-color, #00ff88cc),
+    0 0 12px var(--crt-glow-color, #00ff8866),
+    0 0 20px var(--crt-glow-color, #00ff8844);
+  filter: blur(0.4px);
   margin: 0;
 }
 
