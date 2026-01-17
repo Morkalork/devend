@@ -1176,7 +1176,7 @@ export function GameCanvas({
   }, []);
 
   return (
-    <div className={`flex flex-col w-full h-full ${isShaking ? 'animate-shake' : ''}`} style={{ backgroundColor: `#${level.backgroundColor}` }}>
+    <div className={`flex flex-col w-full h-full ${isShaking ? 'animate-shake' : ''}`}>
       {/* Screen flash overlay for damage feedback */}
       {screenFlash === 'red' && (
         <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />
