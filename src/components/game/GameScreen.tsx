@@ -47,7 +47,7 @@ export function GameScreen({
       
       <div className="fixed inset-0 flex flex-col z-10">
       {/* Top HUD bar with level info and upgrades */}
-      <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between gap-4" style={{ backgroundColor: `#${level.backgroundColor}e8` }}>
+      <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between gap-4" style={{ backgroundColor: 'rgba(0, 10, 5, 0.85)' }}>
         {/* Level and Score */}
         <div className="flex gap-3">
           <div className="hud-display">
