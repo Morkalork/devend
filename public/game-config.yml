@@ -1,0 +1,28 @@
+# Game Configuration
+# Core visual and gameplay settings
+
+# Visual Settings
+visuals:
+  # Canvas transparency (0 = fully transparent, 1 = fully opaque)
+  canvas_opacity: 0.9
+  
+  # HUD bar transparency (0 = fully transparent, 1 = fully opaque)
+  hud_opacity: 0.85
+  
+  # Base background color (HSL values)
+  background:
+    hue: 140
+    saturation: 100
+    lightness: 2
+
+# Ball Settings
+ball:
+  default_speed: 4.5
+  max_speed: 12
+  radius_percent: 2.5  # As percentage of board size
+
+# Gameplay Settings
+gameplay:
+  starting_lives: 3
+  max_lives: 5
+  cut_completion_threshold: 0.75  # 75% of level must be cut to complete

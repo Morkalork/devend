@@ -5,6 +5,7 @@ import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { SvgIcon } from '@/components/ui/SvgIcon';
 import { TutorialStep } from '@/hooks/useInteractiveTutorial';
+import { useGameConfig } from '@/hooks/useGameConfig';
 
 interface GameScreenProps {
   level: LevelConfig;
@@ -37,6 +38,8 @@ export function GameScreen({
   tutorialStep = 'completed',
   onTutorialCutSuccess,
 }: GameScreenProps) {
+  const { config, getBackgroundColor } = useGameConfig();
+  
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
 
@@ -47,7 +50,7 @@ export function GameScreen({
       
       <div className="fixed inset-0 flex flex-col z-10">
       {/* Top HUD bar with level info and upgrades */}
-      <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between gap-4" style={{ backgroundColor: 'rgba(0, 10, 5, 0.85)' }}>
+      <div className="flex-shrink-0 px-4 py-3 flex items-center justify-between gap-4" style={{ backgroundColor: getBackgroundColor(config.visuals.hud_opacity) }}>
         {/* Level and Score */}
         <div className="flex gap-3">
           <div className="hud-display">
@@ -103,6 +106,7 @@ export function GameScreen({
           tutorialMode={tutorialMode}
           tutorialStep={tutorialStep}
           onTutorialCutSuccess={onTutorialCutSuccess}
+          canvasOpacity={config.visuals.canvas_opacity}
         />
       </div>
     </div>
