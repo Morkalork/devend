@@ -1,11 +1,11 @@
-import { useRef, useEffect, useState, useCallback } from 'react';
-import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from '@/types/game';
-import { LevelConfig, LevelEntity } from '@/types/level';
-import { UpgradeConfig } from '@/types/upgrade';
-import { useActiveModifiers } from '@/hooks/useActiveModifiers';
-import { PushYourLuckOverlay } from './PushYourLuckOverlay';
-import { InteractiveTutorialOverlay } from './InteractiveTutorialOverlay';
-import { TutorialStep } from '@/hooks/useInteractiveTutorial';
+import { useRef, useEffect, useState, useCallback } from "react";
+import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
+import { LevelConfig, LevelEntity } from "@/types/level";
+import { UpgradeConfig } from "@/types/upgrade";
+import { useActiveModifiers } from "@/hooks/useActiveModifiers";
+import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
+import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
+import { TutorialStep } from "@/hooks/useInteractiveTutorial";
 import {
   Polygon,
   vec2Add,
@@ -26,7 +26,7 @@ import {
   polygonBounds,
   subtractPolygon,
   createPolygonFromShape,
-} from '@/lib/polygon';
+} from "@/lib/polygon";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -40,7 +40,7 @@ import {
   screenToWorld,
   isPointInBoard,
   isPointInWorldBounds,
-} from '@/lib/boardConstants';
+} from "@/lib/boardConstants";
 
 interface GameCanvasProps {
   level: LevelConfig;
@@ -80,13 +80,13 @@ function getBallSpeedLevelMultiplier(levelIndex: number): number {
 
 // Colors
 const COLORS = {
-  wallActive: '#ff8800',
-  wallActiveGlow: 'rgba(255, 136, 0, 0.5)',
-  cutPreview: 'rgba(255, 255, 255, 0.3)',
-  fastestBallHighlight: '#00ffff',
-  debugOutline: '#ff00ff',
-  obstacle: '#ff4444', // Distinct color for obstacles
-  obstacleStroke: '#aa2222',
+  wallActive: "#ff8800",
+  wallActiveGlow: "rgba(255, 136, 0, 0.5)",
+  cutPreview: "rgba(255, 255, 255, 0.3)",
+  fastestBallHighlight: "#00ffff",
+  debugOutline: "#ff00ff",
+  obstacle: "#ff4444", // Distinct color for obstacles
+  obstacleStroke: "#aa2222",
 };
 
 let regionIdCounter = 0;
@@ -99,7 +99,7 @@ function getRandomDirection(): Vector2 {
   const maxAngle = 75 * (Math.PI / 180);
   const quadrant = Math.floor(Math.random() * 4);
   const baseAngle = minAngle + Math.random() * (maxAngle - minAngle);
-  const angle = baseAngle + (quadrant * Math.PI / 2);
+  const angle = baseAngle + (quadrant * Math.PI) / 2;
   return { x: Math.cos(angle), y: Math.sin(angle) };
 }
 
@@ -139,19 +139,19 @@ function computeOvercutBonus(threshold: number, remaining: number, basePoints: n
   return Math.min(bonus, maxBonus);
 }
 
-export function GameCanvas({ 
-  level, 
-  levelNumber, 
-  totalLevels, 
-  totalScore, 
-  ownedUpgradeIds, 
-  upgrades, 
-  lives, 
-  onLivesChange, 
-  onGameEnd, 
+export function GameCanvas({
+  level,
+  levelNumber,
+  totalLevels,
+  totalScore,
+  ownedUpgradeIds,
+  upgrades,
+  lives,
+  onLivesChange,
+  onGameEnd,
   onLevelComplete,
   tutorialMode = false,
-  tutorialStep = 'completed',
+  tutorialStep = "completed",
   onTutorialCutSuccess,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -160,7 +160,7 @@ export function GameCanvas({
   const [cutCount, setCutCount] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
   const [displayLives, setDisplayLives] = useState(lives);
-  const [screenFlash, setScreenFlash] = useState<'none' | 'red'>('none');
+  const [screenFlash, setScreenFlash] = useState<"none" | "red">("none");
   const [isRecovering, setIsRecovering] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [isPlayerDragging, setIsPlayerDragging] = useState(false);
@@ -168,21 +168,21 @@ export function GameCanvas({
   const [canvasOffsetLeft, setCanvasOffsetLeft] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
-  
+
   // Ref to track current lives value for use in closures
   const livesRef = useRef(lives);
   useEffect(() => {
     livesRef.current = lives;
     setDisplayLives(lives);
   }, [lives]);
-  
+
   // Push Your Luck state
-  const [pushMode, setPushMode] = useState<'none' | 'prompt' | 'pushing'>('none');
+  const [pushMode, setPushMode] = useState<"none" | "prompt" | "pushing">("none");
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
-  
+
   // Calculate active modifiers from owned upgrades
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
-  
+
   const gameRef = useRef({
     regions: [] as Region[],
     obstacles: [] as Polygon[], // Obstacle polygons for rendering
@@ -204,7 +204,7 @@ export function GameCanvas({
     cutCount: 0,
     wallShieldsRemaining: 0,
     fastestBallId: null as string | null,
-    pushMode: 'none' as 'none' | 'prompt' | 'pushing',
+    pushMode: "none" as "none" | "prompt" | "pushing",
     bestRemainingPercent: 100,
     gameLoopFn: null as ((timestamp: number) => void) | null,
     wallCompleteTime: 0,
@@ -223,13 +223,13 @@ export function GameCanvas({
     game.regionColor = `#${level.rectangleColor}`;
     game.wallShieldsRemaining = activeModifiers.wallShield;
     setWallShieldCount(activeModifiers.wallShield);
-    
-    const ctx = canvas.getContext('2d');
+
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     // Calculate effective ball radius with modifier (world units)
     const effectiveBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
-    
+
     // Calculate effective swipe distance with modifier (world units)
     const effectiveSwipeMinDistance = BASE_SWIPE_MIN_DISTANCE / activeModifiers.swipeSensitivity;
 
@@ -238,55 +238,55 @@ export function GameCanvas({
       const margin = Math.min(BOARD_WIDTH, BOARD_HEIGHT) * ARENA_MARGIN;
       const arenaWidth = BOARD_WIDTH - margin * 2;
       const arenaHeight = BOARD_HEIGHT - margin * 2;
-      
+
       // Reset region counter for new level
       regionIdCounter = 0;
-      
+
       // Calculate starting percentage based on reducedSize modifier
       const targetRemaining = Math.max(20, 100 - activeModifiers.reducedSizePercent);
-      
+
       // Scale factor to shrink the region
       const scaleFactor = Math.sqrt(targetRemaining / 100);
-      
+
       // Calculate shrunk dimensions centered in the arena
       const shrunkWidth = arenaWidth * scaleFactor;
       const shrunkHeight = arenaHeight * scaleFactor;
       const centerX = BOARD_WIDTH / 2;
       const centerY = BOARD_HEIGHT / 2;
-      
+
       // Create initial polygon region (rectangle) in world coordinates
       const initialRegionId = generateRegionId();
       const left = centerX - shrunkWidth / 2;
       const top = centerY - shrunkHeight / 2;
       const right = centerX + shrunkWidth / 2;
       const bottom = centerY + shrunkHeight / 2;
-      
+
       let initialPolygon = createRectPolygon(left, top, right, bottom);
-      
+
       // Process entities - currently only obstacles
       game.obstacles = [];
-      
+
       if (level.entities && level.entities.length > 0) {
         for (const entity of level.entities) {
-          if (entity.kind === 'obstacle') {
+          if (entity.kind === "obstacle") {
             // Create polygon from entity shape
             let obstaclePolygon: Polygon;
-            if (entity.shape === 'rect') {
-              obstaclePolygon = createPolygonFromShape('rect', {
+            if (entity.shape === "rect") {
+              obstaclePolygon = createPolygonFromShape("rect", {
                 x: entity.x,
                 y: entity.y,
                 width: entity.width,
                 height: entity.height,
               });
             } else {
-              obstaclePolygon = createPolygonFromShape('polygon', {
+              obstaclePolygon = createPolygonFromShape("polygon", {
                 points: entity.points,
               });
             }
-            
+
             // Store obstacle for rendering
             game.obstacles.push(obstaclePolygon);
-            
+
             // Subtract obstacle from initial polygon to create playable space
             const subtracted = subtractPolygon(initialPolygon, obstaclePolygon);
             if (subtracted.length > 0) {
@@ -295,47 +295,50 @@ export function GameCanvas({
           }
         }
       }
-      
-      game.regions = [{
-        id: initialRegionId,
-        polygon: initialPolygon,
-      }];
-      
+
+      game.regions = [
+        {
+          id: initialRegionId,
+          polygon: initialPolygon,
+        },
+      ];
+
       // Base playable area is the initial region area (after subtracting obstacles)
       // This is what we use for win percentage calculation
       game.basePlayableArea = polygonArea(initialPolygon);
-      
+
       // Original area is based on full arena (for display percentage)
       // But for win threshold, we use basePlayableArea
       game.originalArea = game.basePlayableArea;
-      
+
       // Create balls from level config with modifiers applied (world coordinates)
       const centroid = polygonCentroid(initialPolygon);
       const bounds = polygonBounds(initialPolygon);
       const regionWidth = bounds.maxX - bounds.minX;
       const regionHeight = bounds.maxY - bounds.minY;
-      
+
       // Calculate ball speed with level curve and modifiers (world units per second)
       const ballSpeedLevelMult = getBallSpeedLevelMultiplier(levelNumber);
-      
+
       // Base ball speed in world units (scaled up from old pixel-based values)
       const baseSpeedMultiplier = 2.0; // World is ~2x larger than old canvas
-      
+
       game.balls = level.balls.map((ballConfig) => {
         const dir = getRandomDirection();
         // Apply level curve and ball speed multiplier
-        const levelScaledSpeed = ballConfig.initialSpeed * baseSpeedMultiplier * ballSpeedLevelMult * activeModifiers.ballSpeedMultiplier;
+        const levelScaledSpeed =
+          ballConfig.initialSpeed * baseSpeedMultiplier * ballSpeedLevelMult * activeModifiers.ballSpeedMultiplier;
         const modifiedTopSpeed = ballConfig.topSpeed * baseSpeedMultiplier * activeModifiers.ballSpeedMultiplier;
         const modifiedSpeed = Math.min(levelScaledSpeed, modifiedTopSpeed);
-        
+
         return {
           id: ballConfig.id,
-          position: { 
+          position: {
             x: centroid.x + (Math.random() - 0.5) * regionWidth * 0.3,
             y: centroid.y + (Math.random() - 0.5) * regionHeight * 0.3,
           },
-          velocity: { 
-            x: dir.x * modifiedSpeed, 
+          velocity: {
+            x: dir.x * modifiedSpeed,
             y: dir.y * modifiedSpeed,
           },
           radius: effectiveBallRadius,
@@ -345,7 +348,7 @@ export function GameCanvas({
           regionId: initialRegionId,
         };
       });
-      
+
       // Find and track the fastest ball for highlighting
       if (activeModifiers.highlightFastestBall && game.balls.length > 0) {
         let fastestSpeed = 0;
@@ -359,7 +362,7 @@ export function GameCanvas({
         }
         game.fastestBallId = fastestId;
       }
-      
+
       game.activeWall = null;
       game.gameOver = false;
       game.levelComplete = false;
@@ -380,23 +383,23 @@ export function GameCanvas({
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       game.screenSize = { width, height };
-      
+
       // Compute the board rectangle
       game.boardRect = computeBoardRect(width, height);
-      
+
       // Update debug info
       setDebugInfo({
         boardWidth: Math.round(game.boardRect.width),
         boardHeight: Math.round(game.boardRect.height),
         scale: Math.round(game.boardRect.scale * 1000) / 1000,
       });
-      
+
       initGame();
     };
 
     // Update ball position and bounce off polygon edges (all in world coordinates)
     const updateBall = (ball: Ball, dt: number) => {
-      const region = game.regions.find(r => r.id === ball.regionId);
+      const region = game.regions.find((r) => r.id === ball.regionId);
       if (!region) return;
 
       // Move ball (world units)
@@ -404,13 +407,8 @@ export function GameCanvas({
       ball.position.y += ball.velocity.y * dt;
 
       // Resolve collisions with polygon edges
-      const result = resolveBallPolygonCollision(
-        ball.position,
-        ball.velocity,
-        ball.radius,
-        region.polygon
-      );
-      
+      const result = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, region.polygon);
+
       ball.position = result.position;
       ball.velocity = result.velocity;
     };
@@ -423,20 +421,20 @@ export function GameCanvas({
     // Check if a ball's center is on the cut line
     const isBallOnCutLine = (ball: Ball, wall: GrowingWall): boolean => {
       const toOrigin = vec2Sub(ball.position, wall.origin);
-      const perpDist = Math.abs(toOrigin.x * (-wall.direction.y) + toOrigin.y * wall.direction.x);
+      const perpDist = Math.abs(toOrigin.x * -wall.direction.y + toOrigin.y * wall.direction.x);
       return perpDist < 0.5;
     };
 
     const handleGameOver = () => {
       game.gameOver = true;
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
-      
+
       // If in push mode, level is still cleared - just forfeit overcut bonus
-      if (game.pushMode === 'pushing') {
+      if (game.pushMode === "pushing") {
         const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
         let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
         levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
-        
+
         onLevelComplete({
           levelNumber,
           levelId: level.id,
@@ -450,15 +448,15 @@ export function GameCanvas({
         });
         return;
       }
-      
+
       // Freeze and shake for 1 second before showing game over
-      setScreenFlash('red');
+      setScreenFlash("red");
       setIsShaking(true);
-      
+
       setTimeout(() => {
-        setScreenFlash('none');
+        setScreenFlash("none");
         setIsShaking(false);
-        
+
         onGameEnd({
           isWin: false,
           remainingPercent: percent,
@@ -475,11 +473,11 @@ export function GameCanvas({
     const handlePushFailed = () => {
       game.gameOver = true;
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
-      
+
       const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
       let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
       levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
-      
+
       onLevelComplete({
         levelNumber,
         levelId: level.id,
@@ -496,10 +494,10 @@ export function GameCanvas({
 
     const applyCut = (wall: GrowingWall) => {
       const { regions, balls } = game;
-      
-      const activeRegionIndex = regions.findIndex(r => r.id === wall.activeRegionId);
+
+      const activeRegionIndex = regions.findIndex((r) => r.id === wall.activeRegionId);
       if (activeRegionIndex === -1) return;
-      
+
       const activeRegion = regions[activeRegionIndex];
 
       // Check if any ball is exactly on the cut line - instant game over
@@ -511,11 +509,7 @@ export function GameCanvas({
       }
 
       // Split the polygon along the cut
-      const splitResult = splitPolygon(
-        activeRegion.polygon,
-        wall.startPoint,
-        wall.endPoint
-      );
+      const splitResult = splitPolygon(activeRegion.polygon, wall.startPoint, wall.endPoint);
 
       if (!splitResult) {
         game.activeWall = null;
@@ -532,10 +526,10 @@ export function GameCanvas({
 
       for (const ball of balls) {
         if (ball.regionId !== activeRegion.id) continue;
-        
+
         const inChild1 = pointInPolygon(ball.position, poly1);
         const inChild2 = pointInPolygon(ball.position, poly2);
-        
+
         if (inChild1) {
           ball.regionId = child1Id;
           ballsInChild1.push(ball);
@@ -546,8 +540,8 @@ export function GameCanvas({
       }
 
       // Remove the active region and add child regions (only those with balls)
-      const newRegions = regions.filter(r => r.id !== activeRegion.id);
-      
+      const newRegions = regions.filter((r) => r.id !== activeRegion.id);
+
       if (ballsInChild1.length > 0) {
         newRegions.push({ id: child1Id, polygon: poly1 });
       }
@@ -556,14 +550,14 @@ export function GameCanvas({
       }
 
       game.regions = newRegions;
-      
+
       // Store the completed cut (world coords)
       game.completedCuts.push({
         start: { ...wall.startPoint },
         end: { ...wall.endPoint },
         thickness: wall.thickness + 14, // Visual thickness
       });
-      
+
       game.activeWall = null;
 
       // Calculate combined remaining area
@@ -578,16 +572,16 @@ export function GameCanvas({
       }
 
       // Track best remaining percent during push mode
-      if (game.pushMode === 'pushing' && percent < game.bestRemainingPercent) {
+      if (game.pushMode === "pushing" && percent < game.bestRemainingPercent) {
         game.bestRemainingPercent = percent;
       }
 
       // Check if level just got cleared
-      if (percent < level.sizeThreshold && game.pushMode === 'none') {
+      if (percent < level.sizeThreshold && game.pushMode === "none") {
         render();
-        
-        game.pushMode = 'prompt';
-        setPushMode('prompt');
+
+        game.pushMode = "prompt";
+        setPushMode("prompt");
         setClearedPercent(percent);
         game.bestRemainingPercent = percent;
         return;
@@ -602,7 +596,7 @@ export function GameCanvas({
           ball.velocity.x *= ratio;
           ball.velocity.y *= ratio;
         }
-        
+
         // Update fastest ball tracking
         if (activeModifiers.highlightFastestBall) {
           let fastestSpeed = 0;
@@ -623,7 +617,7 @@ export function GameCanvas({
       const { activeWall: wall, regions, balls } = game;
       if (!wall || wall.isComplete) return;
 
-      const activeRegion = regions.find(r => r.id === wall.activeRegionId);
+      const activeRegion = regions.find((r) => r.id === wall.activeRegionId);
       if (!activeRegion) {
         game.activeWall = null;
         return;
@@ -632,14 +626,14 @@ export function GameCanvas({
       // Calculate wall speed (world units per second)
       const wallSpeedBase = getWallSpeedBase(levelNumber);
       const wallSpeedEffective = wallSpeedBase * activeModifiers.wallSpeedMultiplier;
-      
+
       const maxSegmentLength = vec2Distance(wall.targetStart, wall.targetEnd);
       let distToStart = vec2Distance(wall.startPoint, wall.targetStart);
       let distToEnd = vec2Distance(wall.endPoint, wall.targetEnd);
       const longestHalf = Math.max(distToStart, distToEnd, maxSegmentLength / 2);
       const maxSpeedForMinTime = longestHalf / MINIMUM_WALL_TIME;
       const wallSpeedFinal = Math.min(wallSpeedEffective, maxSpeedForMinTime);
-      
+
       const growth = wallSpeedFinal * dt;
 
       // Grow toward targetStart
@@ -661,8 +655,7 @@ export function GameCanvas({
       }
 
       // Check if complete
-      if (vec2Distance(wall.startPoint, wall.targetStart) < 1 &&
-          vec2Distance(wall.endPoint, wall.targetEnd) < 1) {
+      if (vec2Distance(wall.startPoint, wall.targetStart) < 1 && vec2Distance(wall.endPoint, wall.targetEnd) < 1) {
         wall.startPoint = { ...wall.targetStart };
         wall.endPoint = { ...wall.targetEnd };
         if (!wall.isComplete) {
@@ -676,14 +669,16 @@ export function GameCanvas({
         for (const ball of balls) {
           const graceMultiplier = 1 - activeModifiers.wallGrace;
           const effectiveCollisionRadius = ball.radius * graceMultiplier;
-          
-          if (circleCapsuleCollision(
-            ball.position,
-            effectiveCollisionRadius,
-            wall.startPoint,
-            wall.endPoint,
-            wall.thickness / 2
-          )) {
+
+          if (
+            circleCapsuleCollision(
+              ball.position,
+              effectiveCollisionRadius,
+              wall.startPoint,
+              wall.endPoint,
+              wall.thickness / 2,
+            )
+          ) {
             // Check if we have wall shields first
             if (game.wallShieldsRemaining > 0) {
               game.wallShieldsRemaining--;
@@ -692,52 +687,52 @@ export function GameCanvas({
               game.isRecovering = true;
               game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
               setIsRecovering(true);
-              setScreenFlash('red');
-              setTimeout(() => setScreenFlash('none'), 150);
+              setScreenFlash("red");
+              setTimeout(() => setScreenFlash("none"), 150);
               setTimeout(() => {
                 game.isRecovering = false;
                 setIsRecovering(false);
               }, RECOVERY_WINDOW_MS);
               return;
             }
-            
+
             // If in push mode, don't lose a life - just fail the push
-            if (game.pushMode === 'pushing') {
+            if (game.pushMode === "pushing") {
               game.activeWall = null;
-              setScreenFlash('red');
+              setScreenFlash("red");
               setIsShaking(true);
-              setTimeout(() => setScreenFlash('none'), 200);
+              setTimeout(() => setScreenFlash("none"), 200);
               setTimeout(() => setIsShaking(false), 400);
               handlePushFailed();
               return;
             }
-            
+
             // Failed cut - lose a life
             const newLives = livesRef.current - 1;
             livesRef.current = newLives;
             setDisplayLives(newLives);
             onLivesChange(newLives);
-            
+
             game.activeWall = null;
-            
+
             if (newLives <= 0) {
               handleGameOver();
               return;
             }
-            
+
             // Still have lives - enter recovery window
             game.isRecovering = true;
             game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
             setIsRecovering(true);
-            setScreenFlash('red');
+            setScreenFlash("red");
             setIsShaking(true);
-            setTimeout(() => setScreenFlash('none'), 200);
+            setTimeout(() => setScreenFlash("none"), 200);
             setTimeout(() => setIsShaking(false), 400);
             setTimeout(() => {
               game.isRecovering = false;
               setIsRecovering(false);
             }, RECOVERY_WINDOW_MS);
-            
+
             return;
           }
         }
@@ -754,7 +749,19 @@ export function GameCanvas({
     };
 
     const render = () => {
-      const { regions, obstacles, balls, activeWall: wall, screenSize, boardRect, backgroundColor, regionColor, swipeStart, swipeRegionId, currentSwipePos } = game;
+      const {
+        regions,
+        obstacles,
+        balls,
+        activeWall: wall,
+        screenSize,
+        boardRect,
+        backgroundColor,
+        regionColor,
+        swipeStart,
+        swipeRegionId,
+        currentSwipePos,
+      } = game;
       const { width: screenWidth, height: screenHeight } = screenSize;
       const { scale } = boardRect;
 
@@ -764,14 +771,14 @@ export function GameCanvas({
       // NOTE: Don't fill the entire screen - let CRT show through
       // The regions themselves define the playable area and will be drawn below
 
-      // Fill all regions with region color (polygons) - 95% opacity for CRT to show through
+      // Fill all regions with region color (polygons) - 90% opacity for CRT to show through
       ctx.save();
-      ctx.globalAlpha = 0.95;
+      ctx.globalAlpha = 0.9;
       ctx.fillStyle = regionColor;
       for (const region of regions) {
         const { vertices } = region.polygon;
         if (vertices.length < 3) continue;
-        
+
         ctx.beginPath();
         const start = worldToScreen(vertices[0].x, vertices[0].y);
         ctx.moveTo(start.x, start.y);
@@ -783,12 +790,12 @@ export function GameCanvas({
         ctx.fill();
       }
       ctx.restore();
-      
+
       // Render obstacles as filled shapes with distinct color
       for (const obstacle of obstacles) {
         const { vertices } = obstacle;
         if (vertices.length < 3) continue;
-        
+
         ctx.save();
         ctx.beginPath();
         const start = worldToScreen(vertices[0].x, vertices[0].y);
@@ -798,21 +805,21 @@ export function GameCanvas({
           ctx.lineTo(pt.x, pt.y);
         }
         ctx.closePath();
-        
+
         // Fill with obstacle color
         ctx.fillStyle = COLORS.obstacle;
         ctx.fill();
-        
+
         // Add stroke for visibility
         ctx.strokeStyle = COLORS.obstacleStroke;
         ctx.lineWidth = 3 * scale;
         ctx.stroke();
         ctx.restore();
       }
-      
+
       // Draw completed cuts as thick background-colored lines
       ctx.strokeStyle = backgroundColor;
-      ctx.lineCap = 'round';
+      ctx.lineCap = "round";
       for (const cut of game.completedCuts) {
         ctx.lineWidth = cut.thickness * scale;
         const startScreen = worldToScreen(cut.start.x, cut.start.y);
@@ -825,17 +832,17 @@ export function GameCanvas({
 
       // Render cut preview if enabled and swiping
       if (activeModifiers.cutPreview && swipeStart && swipeRegionId && currentSwipePos && !wall) {
-        const region = regions.find(r => r.id === swipeRegionId);
+        const region = regions.find((r) => r.id === swipeRegionId);
         if (region) {
           const delta = vec2Sub(currentSwipePos, swipeStart);
           const dist = vec2Length(delta);
-          
+
           if (dist >= effectiveSwipeMinDistance) {
             const direction = vec2Normalize(delta);
-            
+
             const intPos = rayPolygonIntersection(swipeStart, direction, region.polygon);
             const intNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), region.polygon);
-            
+
             if (intPos && intNeg) {
               ctx.save();
               ctx.strokeStyle = COLORS.cutPreview;
@@ -858,7 +865,7 @@ export function GameCanvas({
         const screenPos = worldToScreen(ball.position.x, ball.position.y);
         const screenRadius = ball.radius * scale;
         const isFastest = activeModifiers.highlightFastestBall && ball.id === game.fastestBallId;
-        
+
         // Fastest ball highlight ring
         if (isFastest) {
           ctx.save();
@@ -871,7 +878,7 @@ export function GameCanvas({
           ctx.stroke();
           ctx.restore();
         }
-        
+
         // Ball glow
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius + 10 * scale, 0, Math.PI * 2);
@@ -893,11 +900,11 @@ export function GameCanvas({
       if (wall) {
         const startScreen = worldToScreen(wall.startPoint.x, wall.startPoint.y);
         const endScreen = worldToScreen(wall.endPoint.x, wall.endPoint.y);
-        
-        const activeRegion = regions.find(r => r.id === wall.activeRegionId);
-        
+
+        const activeRegion = regions.find((r) => r.id === wall.activeRegionId);
+
         ctx.save();
-        
+
         // Clip to the active region polygon
         if (activeRegion && activeRegion.polygon.vertices.length > 0) {
           ctx.beginPath();
@@ -910,16 +917,16 @@ export function GameCanvas({
           ctx.closePath();
           ctx.clip();
         }
-        
+
         // Draw white outline
-        ctx.strokeStyle = '#ffffff';
+        ctx.strokeStyle = "#ffffff";
         ctx.lineWidth = (wall.thickness + 8) * scale;
-        ctx.lineCap = 'round';
+        ctx.lineCap = "round";
         ctx.beginPath();
         ctx.moveTo(startScreen.x, startScreen.y);
         ctx.lineTo(endScreen.x, endScreen.y);
         ctx.stroke();
-        
+
         // Draw orange center
         ctx.strokeStyle = COLORS.wallActive;
         ctx.lineWidth = (wall.thickness + 4) * scale;
@@ -929,7 +936,7 @@ export function GameCanvas({
         ctx.moveTo(startScreen.x, startScreen.y);
         ctx.lineTo(endScreen.x, endScreen.y);
         ctx.stroke();
-        
+
         ctx.restore();
       }
 
@@ -943,22 +950,22 @@ export function GameCanvas({
         for (let j = i + 1; j < balls.length; j++) {
           const ball1 = balls[i];
           const ball2 = balls[j];
-          
+
           if (ball1.regionId !== ball2.regionId) continue;
-          
+
           const delta = vec2Sub(ball2.position, ball1.position);
           const distance = vec2Length(delta);
           const minDistance = ball1.radius + ball2.radius;
-          
+
           if (distance < minDistance && distance > 0) {
             const normal = vec2Normalize(delta);
             const relVel = vec2Sub(ball1.velocity, ball2.velocity);
             const relVelNormal = vec2Dot(relVel, normal);
-            
+
             if (relVelNormal > 0) {
               ball1.velocity = vec2Sub(ball1.velocity, vec2Scale(normal, relVelNormal));
               ball2.velocity = vec2Add(ball2.velocity, vec2Scale(normal, relVelNormal));
-              
+
               const overlap = minDistance - distance;
               const separation = vec2Scale(normal, overlap / 2);
               ball1.position = vec2Sub(ball1.position, separation);
@@ -970,7 +977,7 @@ export function GameCanvas({
     };
 
     const gameLoop = (timestamp: number) => {
-      if (game.gameOver || game.levelComplete || game.pushMode === 'prompt') return;
+      if (game.gameOver || game.levelComplete || game.pushMode === "prompt") return;
 
       const dt = game.lastTime ? (timestamp - game.lastTime) / 1000 : 0;
       game.lastTime = timestamp;
@@ -982,7 +989,7 @@ export function GameCanvas({
       handleBallCollisions();
       updateWall(cappedDt);
       render();
-      
+
       // Apply completed wall cut immediately
       if (game.activeWall && game.activeWall.isComplete) {
         applyCut(game.activeWall);
@@ -990,7 +997,7 @@ export function GameCanvas({
 
       game.animationId = requestAnimationFrame(gameLoop);
     };
-    
+
     game.gameLoopFn = gameLoop;
 
     // Convert screen coords to canvas-relative coords
@@ -1003,20 +1010,21 @@ export function GameCanvas({
     };
 
     const handlePointerDown = (e: PointerEvent) => {
-      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === 'prompt' || game.isRecovering) return;
+      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === "prompt" || game.isRecovering)
+        return;
 
       const { screenX, screenY } = getCanvasCoords(e);
-      
+
       // Only allow interactions inside the board rect
       if (!isPointInBoard(screenX, screenY, game.boardRect)) return;
-      
+
       // Convert to world coordinates
       const worldPos = screenToWorld(screenX, screenY, game.boardRect);
-      
+
       // Find which region contains this point (world coords)
       const region = findRegionContainingPoint(game.regions, worldPos.x, worldPos.y);
       if (!region) return; // Clicked in darkness - ignore
-      
+
       game.swipeStart = worldPos;
       game.swipeRegionId = region.id;
       game.currentSwipePos = worldPos;
@@ -1029,17 +1037,17 @@ export function GameCanvas({
       const { screenX, screenY } = getCanvasCoords(e);
       const worldPos = screenToWorld(screenX, screenY, game.boardRect);
       game.currentSwipePos = worldPos;
-      
+
       if (game.activeWall) return;
-      
+
       const delta = vec2Sub(worldPos, game.swipeStart);
       const dist = vec2Length(delta);
 
       if (dist < effectiveSwipeMinDistance) return;
 
       const direction = vec2Normalize(delta);
-      
-      const region = game.regions.find(r => r.id === game.swipeRegionId);
+
+      const region = game.regions.find((r) => r.id === game.swipeRegionId);
       if (!region) {
         game.swipeStart = null;
         game.swipeRegionId = null;
@@ -1050,7 +1058,7 @@ export function GameCanvas({
       // Find intersection points with polygon boundary (world coords)
       const intPos = rayPolygonIntersection(game.swipeStart, direction, region.polygon);
       const intNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), region.polygon);
-      
+
       if (!intPos || !intNeg) {
         game.swipeStart = null;
         game.swipeRegionId = null;
@@ -1087,20 +1095,20 @@ export function GameCanvas({
 
     // Setup
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    canvas.addEventListener('pointermove', handlePointerMove);
-    canvas.addEventListener('pointerup', handlePointerUp);
-    canvas.addEventListener('pointerleave', handlePointerUp);
+    window.addEventListener("resize", resizeCanvas);
+    canvas.addEventListener("pointerdown", handlePointerDown);
+    canvas.addEventListener("pointermove", handlePointerMove);
+    canvas.addEventListener("pointerup", handlePointerUp);
+    canvas.addEventListener("pointerleave", handlePointerUp);
 
     game.animationId = requestAnimationFrame(gameLoop);
 
     return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      canvas.removeEventListener('pointerdown', handlePointerDown);
-      canvas.removeEventListener('pointermove', handlePointerMove);
-      canvas.removeEventListener('pointerup', handlePointerUp);
-      canvas.removeEventListener('pointerleave', handlePointerUp);
+      window.removeEventListener("resize", resizeCanvas);
+      canvas.removeEventListener("pointerdown", handlePointerDown);
+      canvas.removeEventListener("pointermove", handlePointerMove);
+      canvas.removeEventListener("pointerup", handlePointerUp);
+      canvas.removeEventListener("pointerleave", handlePointerUp);
       cancelAnimationFrame(game.animationId);
     };
   }, [level, levelNumber, onGameEnd, onLevelComplete, activeModifiers]);
@@ -1109,14 +1117,14 @@ export function GameCanvas({
   const handleBankAndContinue = useCallback(() => {
     const game = gameRef.current;
     game.levelComplete = true;
-    
+
     const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
     let baseScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
     baseScore = Math.round(baseScore * activeModifiers.scoreMultiplier);
-    
+
     const overcutBonus = computeOvercutBonus(level.sizeThreshold, game.bestRemainingPercent, level.points);
     const levelScore = baseScore + overcutBonus;
-    
+
     setTimeout(() => {
       onLevelComplete({
         levelNumber,
@@ -1134,17 +1142,17 @@ export function GameCanvas({
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;
-    game.pushMode = 'pushing';
-    setPushMode('pushing');
+    game.pushMode = "pushing";
+    setPushMode("pushing");
   }, []);
-  
+
   // Resume game loop when push mode becomes 'pushing'
   useEffect(() => {
-    if (pushMode !== 'pushing') return;
-    
+    if (pushMode !== "pushing") return;
+
     const game = gameRef.current;
     game.lastTime = 0;
-    
+
     if (game.gameLoopFn) {
       cancelAnimationFrame(game.animationId);
       requestAnimationFrame(() => {
@@ -1165,35 +1173,31 @@ export function GameCanvas({
     };
 
     updateCanvasPosition();
-    window.addEventListener('resize', updateCanvasPosition);
-    
+    window.addEventListener("resize", updateCanvasPosition);
+
     const timeoutId = setTimeout(updateCanvasPosition, 100);
 
     return () => {
-      window.removeEventListener('resize', updateCanvasPosition);
+      window.removeEventListener("resize", updateCanvasPosition);
       clearTimeout(timeoutId);
     };
   }, []);
 
   return (
-    <div className={`flex flex-col w-full h-full ${isShaking ? 'animate-shake' : ''}`}>
+    <div className={`flex flex-col w-full h-full ${isShaking ? "animate-shake" : ""}`}>
       {/* Screen flash overlay for damage feedback */}
-      {screenFlash === 'red' && (
-        <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />
-      )}
-      
+      {screenFlash === "red" && <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />}
+
       {/* HUD Section - Top UI band (~15% height) */}
-      <div className="flex-shrink-0 px-4 py-3 flex justify-between items-start gap-3" style={{ minHeight: '15%' }}>
+      <div className="flex-shrink-0 px-4 py-3 flex justify-between items-start gap-3" style={{ minHeight: "15%" }}>
         {/* Left side: Cuts, Lives, Shields */}
         <div className="flex gap-3">
           <div className="hud-display">
             <span className="text-muted-foreground text-xs uppercase tracking-wider">Cuts</span>
-            <div className="text-2xl font-display font-bold text-foreground">
-              {cutCount}
-            </div>
+            <div className="text-2xl font-display font-bold text-foreground">{cutCount}</div>
           </div>
           {/* Lives display */}
-          <div className={`hud-display ${isRecovering ? 'animate-pulse' : ''}`}>
+          <div className={`hud-display ${isRecovering ? "animate-pulse" : ""}`}>
             <span className="text-muted-foreground text-xs uppercase tracking-wider">Lives</span>
             <div className="text-2xl font-display font-bold text-red-400 flex items-center gap-1">
               {Array.from({ length: displayLives }).map((_, i) => (
@@ -1205,9 +1209,7 @@ export function GameCanvas({
           {wallShieldCount > 0 && (
             <div className="hud-display">
               <span className="text-muted-foreground text-xs uppercase tracking-wider">Shields</span>
-              <div className="text-2xl font-display font-bold text-cyan-400">
-                {wallShieldCount}
-              </div>
+              <div className="text-2xl font-display font-bold text-cyan-400">{wallShieldCount}</div>
             </div>
           )}
         </div>
@@ -1216,15 +1218,17 @@ export function GameCanvas({
         <div className="flex flex-col items-end gap-1">
           <div className="hud-display">
             <span className="text-muted-foreground text-xs uppercase tracking-wider">Remaining</span>
-            <div className={`text-2xl font-display font-bold ${pushMode === 'pushing' ? 'text-amber-400' : 'text-primary'}`}>
+            <div
+              className={`text-2xl font-display font-bold ${pushMode === "pushing" ? "text-amber-400" : "text-primary"}`}
+            >
               {remainingPercent}%
             </div>
             <span className="text-muted-foreground text-xs">
-              {pushMode === 'pushing' ? 'Push Mode!' : `Target: <${level.sizeThreshold}%`}
+              {pushMode === "pushing" ? "Push Mode!" : `Target: <${level.sizeThreshold}%`}
             </span>
           </div>
           {/* Debug info in dev mode */}
-          {process.env.NODE_ENV === 'development' && (
+          {process.env.NODE_ENV === "development" && (
             <div className="text-xs text-muted-foreground font-mono">
               {debugInfo.boardWidth}×{debugInfo.boardHeight} @ {debugInfo.scale}x
             </div>
@@ -1233,17 +1237,14 @@ export function GameCanvas({
       </div>
 
       {/* Canvas container - Board band (~70% height) */}
-      <div ref={containerRef} className="flex-1 min-h-0 relative" style={{ height: '70%' }}>
-        <canvas
-          ref={canvasRef}
-          className="touch-none cursor-crosshair"
-        />
+      <div ref={containerRef} className="flex-1 min-h-0 relative" style={{ height: "70%" }}>
+        <canvas ref={canvasRef} className="touch-none cursor-crosshair" />
       </div>
 
       {/* Bottom section - Bottom UI band (~15% height) */}
-      <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: '15%' }}>
+      <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: "15%" }}>
         {/* Bank button during push mode */}
-        {pushMode === 'pushing' && (
+        {pushMode === "pushing" && (
           <button
             onClick={handleBankAndContinue}
             className="px-6 py-3 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold shadow-lg hover:from-amber-400 hover:to-orange-400 transition-colors flex items-center gap-2"
@@ -1257,7 +1258,7 @@ export function GameCanvas({
       </div>
 
       {/* Push Your Luck Overlay */}
-      {pushMode === 'prompt' && clearedPercent !== null && (
+      {pushMode === "prompt" && clearedPercent !== null && (
         <PushYourLuckOverlay
           remainingPercent={clearedPercent}
           thresholdPercent={level.sizeThreshold}
@@ -1268,7 +1269,7 @@ export function GameCanvas({
       )}
 
       {/* Interactive Tutorial Overlay */}
-      {tutorialMode && tutorialStep !== 'completed' && !tutorialCutMade && (
+      {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && (
         <InteractiveTutorialOverlay
           tutorialStep={tutorialStep}
           isPlayerDragging={isPlayerDragging}
