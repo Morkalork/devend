@@ -808,7 +808,7 @@ export function GameCanvas({
       }
       ctx.restore();
 
-      // Render obstacles as filled shapes with distinct color
+      // Render obstacles as "cut out" regions - they look like the background
       for (const obstacle of obstacles) {
         const { vertices } = obstacle;
         if (vertices.length < 3) continue;
@@ -823,14 +823,9 @@ export function GameCanvas({
         }
         ctx.closePath();
 
-        // Fill with obstacle color
-        ctx.fillStyle = COLORS.obstacle;
+        // Fill with background color to look like cut-out region
+        ctx.fillStyle = backgroundColor;
         ctx.fill();
-
-        // Add stroke for visibility
-        ctx.strokeStyle = COLORS.obstacleStroke;
-        ctx.lineWidth = 3 * scale;
-        ctx.stroke();
         ctx.restore();
       }
 
