@@ -1106,7 +1106,27 @@ export function GameCanvas({
       if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete) return;
 
       const { screenX, screenY } = getCanvasCoords(e);
+      
+      // Cancel swipe if pointer moves outside the board
+      if (!isPointInBoard(screenX, screenY, game.boardRect)) {
+        game.swipeStart = null;
+        game.swipeRegionId = null;
+        game.currentSwipePos = null;
+        setIsPlayerDragging(false);
+        return;
+      }
+      
       const worldPos = screenToWorld(screenX, screenY, game.boardRect);
+      
+      // Also ensure world position is within bounds
+      if (!isPointInWorldBounds(worldPos.x, worldPos.y)) {
+        game.swipeStart = null;
+        game.swipeRegionId = null;
+        game.currentSwipePos = null;
+        setIsPlayerDragging(false);
+        return;
+      }
+      
       game.currentSwipePos = worldPos;
 
       if (game.activeWall) return;
