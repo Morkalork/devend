@@ -1,141 +1,167 @@
 levels:
-  - id: "level-1"
+  - id: level-1
     sizeThreshold: 40
     expectedCuts: 3
     points: 100
     balls:
-      - id: "ball-1"
+      - id: ball-1
         initialSpeed: 300
         topSpeed: 600
-        color: "00d4ff"
-
-  - id: "level-2"
+        color: 00d4ff
+  - id: level-2
     sizeThreshold: 40
     expectedCuts: 5
     points: 150
     balls:
-      - id: "ball-1"
+      - id: ball-1
         initialSpeed: 350
         topSpeed: 700
-        color: "ff6b6b"
-      - id: "ball-2"
+        color: ff6b6b
+      - id: ball-2
         initialSpeed: 320
         topSpeed: 680
-        color: "4ecdc4"
-
-  - id: "level-3"
+        color: 4ecdc4
+    entities:
+      - id: obs-1768672946807
+        kind: obstacle
+        shape: rect
+        x: 32
+        "y": 60
+        width: 852
+        height: 313
+      - id: obs-1768672962970
+        kind: obstacle
+        shape: rect
+        x: 347.5138649837445
+        "y": 1326.9506597819852
+        width: 200
+        height: 200
+  - id: level-3
     sizeThreshold: 35
     expectedCuts: 6
     points: 200
     balls:
-      - id: "ball-1"
+      - id: ball-1
         initialSpeed: 380
         topSpeed: 750
-        color: "ffd93d"
-      - id: "ball-2"
+        color: ffd93d
+      - id: ball-2
         initialSpeed: 360
         topSpeed: 720
-        color: "6bcb77"
+        color: 6bcb77
     entities:
-      - id: "obs-1"
-        kind: "obstacle"
-        shape: "rect"
+      - id: obs-1
+        kind: obstacle
+        shape: rect
         x: 350
-        y: 600
+        "y": 600
         width: 200
         height: 200
-
-  - id: "level-4"
+  - id: level-4
     sizeThreshold: 30
     expectedCuts: 8
     points: 250
     balls:
-      - id: "ball-1"
+      - id: ball-1
         initialSpeed: 400
         topSpeed: 800
-        color: "ff8c42"
-      - id: "ball-2"
+        color: ff8c42
+      - id: ball-2
         initialSpeed: 380
         topSpeed: 780
-        color: "98d8c8"
-      - id: "ball-3"
+        color: 98d8c8
+      - id: ball-3
         initialSpeed: 360
         topSpeed: 760
-        color: "c792ea"
+        color: c792ea
     entities:
-      - id: "obs-1"
-        kind: "obstacle"
-        shape: "rect"
+      - id: obs-1
+        kind: obstacle
+        shape: rect
         x: 100
-        y: 400
+        "y": 400
         width: 150
         height: 300
-      - id: "obs-2"
-        kind: "obstacle"
-        shape: "rect"
+      - id: obs-2
+        kind: obstacle
+        shape: rect
         x: 650
-        y: 900
+        "y": 900
         width: 150
         height: 300
-
-  - id: "level-5"
+  - id: level-5
     sizeThreshold: 25
     expectedCuts: 10
     points: 300
     balls:
-      - id: "ball-1"
+      - id: ball-1
         initialSpeed: 420
         topSpeed: 850
-        color: "ff0055"
-      - id: "ball-2"
+        color: ff0055
+      - id: ball-2
         initialSpeed: 400
         topSpeed: 830
-        color: "00ff88"
-      - id: "ball-3"
+        color: 00ff88
+      - id: ball-3
         initialSpeed: 380
         topSpeed: 810
-        color: "00aaff"
+        color: 00aaff
     entities:
-      - id: "obs-1"
-        kind: "obstacle"
-        shape: "polygon"
+      - id: obs-1
+        kind: obstacle
+        shape: polygon
         points:
-          - [450, 700]
-          - [550, 750]
-          - [500, 900]
-          - [400, 850]
-
-  - id: "level-6"
+          - - 450
+            - 700
+          - - 550
+            - 750
+          - - 500
+            - 900
+          - - 400
+            - 850
+  - id: level-6
     sizeThreshold: 15
     expectedCuts: 10
     points: 300
     balls:
-      - id: "ball-1"
+      - id: ball-1
         initialSpeed: 420
         topSpeed: 850
-        color: "ff0055"
-      - id: "ball-2"
+        color: ff0055
+      - id: ball-2
         initialSpeed: 200
         topSpeed: 430
-        color: "00ff88"
+        color: 00ff88
     entities:
-      - id: "obs-1"
-        kind: "obstacle"
-        shape: "polygon"
+      - id: obs-1
+        kind: obstacle
+        shape: polygon
         points:
-          - [450, 350]
-          - [579.9, 425]
-          - [579.9, 575]
-          - [450, 650]
-          - [320.1, 575]
-          - [320.1, 425]
-      - id: "obs-2"
-        kind: "obstacle"
-        shape: "polygon"
+          - - 450
+            - 350
+          - - 579.9
+            - 425
+          - - 579.9
+            - 575
+          - - 450
+            - 650
+          - - 320.1
+            - 575
+          - - 320.1
+            - 425
+      - id: obs-2
+        kind: obstacle
+        shape: polygon
         points:
-          - [450, 900]
-          - [623.2, 1000]
-          - [623.2, 1200]
-          - [450, 1300]
-          - [276.8, 1200]
-          - [276.8, 1000]
+          - - 450
+            - 900
+          - - 623.2
+            - 1000
+          - - 623.2
+            - 1200
+          - - 450
+            - 1300
+          - - 276.8
+            - 1200
+          - - 276.8
+            - 1000
