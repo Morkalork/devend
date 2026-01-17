@@ -19,13 +19,21 @@ export interface PolygonShape {
   points: [number, number][]; // array of [x, y] world coordinates
 }
 
-export type EntityShape = RectShape | PolygonShape;
+// Circle shape for obstacles
+export interface CircleShape {
+  shape: "circle";
+  cx: number;
+  cy: number;
+  radius: number;
+}
+
+export type EntityShape = RectShape | PolygonShape | CircleShape;
 
 // Base entity interface - extensible for future kinds
 export interface BaseEntity {
   id: string;
   kind: string;
-  shape: "rect" | "polygon";
+  shape: "rect" | "polygon" | "circle";
 }
 
 // Obstacle entity - carves away playable space
@@ -36,7 +44,8 @@ export interface ObstacleEntity extends BaseEntity {
 // Combined entity type with shape
 export type ObstacleRectEntity = ObstacleEntity & RectShape;
 export type ObstaclePolygonEntity = ObstacleEntity & PolygonShape;
-export type LevelEntity = ObstacleRectEntity | ObstaclePolygonEntity;
+export type ObstacleCircleEntity = ObstacleEntity & CircleShape;
+export type LevelEntity = ObstacleRectEntity | ObstaclePolygonEntity | ObstacleCircleEntity;
 
 export interface LevelConfig {
   id: string;
