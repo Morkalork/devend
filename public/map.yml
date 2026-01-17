@@ -1,7 +1,7 @@
 levels:
   - id: "level-1"
     backgroundColor: "1a1a2e"
-    rectangleColor: "909390"
+    rectangleColor: "376134"
     sizeThreshold: 40
     expectedCuts: 3
     points: 100
