@@ -1085,13 +1085,37 @@ export function GameCanvas({
         return;
       }
 
+      // Also check for obstacle intersections - walls can terminate at obstacles
+      let targetEnd = intPos.point;
+      let targetStart = intNeg.point;
+
+      for (const obstacle of game.obstacles) {
+        // Check positive direction
+        const obstacleIntPos = rayPolygonIntersection(game.swipeStart, direction, obstacle);
+        if (obstacleIntPos && obstacleIntPos.distance < intPos.distance) {
+          // Use obstacle edge if it's closer than the region boundary
+          if (!targetEnd || vec2Distance(game.swipeStart, obstacleIntPos.point) < vec2Distance(game.swipeStart, targetEnd)) {
+            targetEnd = obstacleIntPos.point;
+          }
+        }
+
+        // Check negative direction
+        const obstacleIntNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), obstacle);
+        if (obstacleIntNeg && obstacleIntNeg.distance < intNeg.distance) {
+          // Use obstacle edge if it's closer than the region boundary
+          if (!targetStart || vec2Distance(game.swipeStart, obstacleIntNeg.point) < vec2Distance(game.swipeStart, targetStart)) {
+            targetStart = obstacleIntNeg.point;
+          }
+        }
+      }
+
       game.activeWall = {
         origin: { ...game.swipeStart },
         direction,
         startPoint: { ...game.swipeStart },
         endPoint: { ...game.swipeStart },
-        targetStart: intNeg.point,
-        targetEnd: intPos.point,
+        targetStart,
+        targetEnd,
         thickness: WALL_THICKNESS,
         isComplete: false,
         activeRegionId: game.swipeRegionId,
