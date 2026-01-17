@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { LevelConfig, LevelEntity, BallConfig, ObstacleCircleEntity, ObstaclePolygonEntity } from '@/types/level';
+import { LevelConfig, LevelEntity, BallConfig, ObstacleCircleEntity, ObstaclePolygonEntity, ObstacleRectEntity } from '@/types/level';
 import { BOARD_WIDTH, BOARD_HEIGHT, computeBoardRect, BoardRect } from '@/lib/boardConstants';
 
 interface MapCanvasProps {
@@ -23,7 +23,8 @@ type DragMode =
   | { type: 'ball'; id: string; startX: number; startY: number; originalX: number; originalY: number }
   | { type: 'circle-radius'; id: string; startDistance: number; originalRadius: number }
   | { type: 'polygon-point'; id: string; pointIndex: number; startX: number; startY: number }
-  | { type: 'polygon-edge'; id: string; edgeIndex: number; startX: number; startY: number; originalPoints: [number, number][] };
+  | { type: 'polygon-edge'; id: string; edgeIndex: number; startX: number; startY: number; originalPoints: [number, number][] }
+  | { type: 'rect-resize'; id: string; handle: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } };
 
 export function MapCanvas({
   level,
@@ -47,7 +48,6 @@ export function MapCanvas({
     const positions: Record<string, { x: number; y: number }> = {};
     level.balls.forEach((ball, index) => {
       if (!ballPositions[ball.id]) {
-        // Spread balls across the center of the board
         positions[ball.id] = {
           x: BOARD_WIDTH / 2 + (index - (level.balls.length - 1) / 2) * 80,
           y: BOARD_HEIGHT / 2,
@@ -101,18 +101,15 @@ export function MapCanvas({
       const p1 = points[i];
       const p2 = points[(i + 1) % points.length];
       
-      // Midpoint
       const midpoint = {
         x: (p1[0] + p2[0]) / 2,
         y: (p1[1] + p2[1]) / 2,
       };
       
-      // Edge direction
       const dx = p2[0] - p1[0];
       const dy = p2[1] - p1[1];
       const len = Math.hypot(dx, dy);
       
-      // Perpendicular normal (pointing outward)
       const normal = len > 0 ? { x: -dy / len, y: dx / len } : { x: 0, y: -1 };
       
       edges.push({ midpoint, normal, p1Index: i, p2Index: (i + 1) % points.length });
@@ -183,13 +180,12 @@ export function MapCanvas({
         ctx.lineWidth = isSelected ? 3 : 2;
         ctx.stroke();
         
-        // Draw resize handles when selected (4 cardinal directions)
         if (isSelected) {
           const handlePositions = [
-            { x: center.x + radius, y: center.y },      // Right
-            { x: center.x - radius, y: center.y },      // Left
-            { x: center.x, y: center.y - radius },      // Top
-            { x: center.x, y: center.y + radius },      // Bottom
+            { x: center.x + radius, y: center.y },
+            { x: center.x - radius, y: center.y },
+            { x: center.x, y: center.y - radius },
+            { x: center.x, y: center.y + radius },
           ];
           
           handlePositions.forEach(pos => {
@@ -198,6 +194,43 @@ export function MapCanvas({
             ctx.strokeStyle = '#ff6b6b';
             ctx.lineWidth = 2;
             ctx.strokeRect(pos.x - HANDLE_SIZE/2, pos.y - HANDLE_SIZE/2, HANDLE_SIZE, HANDLE_SIZE);
+          });
+        }
+      } else if (entity.shape === 'rect') {
+        // Handle rect obstacles
+        const rectEntity = entity as ObstacleRectEntity;
+        const topLeft = worldToScreen(rectEntity.x, rectEntity.y);
+        const width = rectEntity.width * boardRect.scale;
+        const height = rectEntity.height * boardRect.scale;
+        
+        ctx.fillStyle = isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)';
+        ctx.fillRect(topLeft.x, topLeft.y, width, height);
+        
+        ctx.strokeStyle = isSelected ? '#ff6b6b' : '#cc5555';
+        ctx.lineWidth = isSelected ? 3 : 2;
+        ctx.strokeRect(topLeft.x, topLeft.y, width, height);
+        
+        // Draw resize handles when selected
+        if (isSelected) {
+          const handles = [
+            { x: topLeft.x, y: topLeft.y }, // tl
+            { x: topLeft.x + width, y: topLeft.y }, // tr
+            { x: topLeft.x, y: topLeft.y + height }, // bl
+            { x: topLeft.x + width, y: topLeft.y + height }, // br
+            { x: topLeft.x + width / 2, y: topLeft.y }, // t
+            { x: topLeft.x + width / 2, y: topLeft.y + height }, // b
+            { x: topLeft.x, y: topLeft.y + height / 2 }, // l
+            { x: topLeft.x + width, y: topLeft.y + height / 2 }, // r
+          ];
+          
+          handles.forEach((pos, i) => {
+            const isCorner = i < 4;
+            const size = isCorner ? HANDLE_SIZE : EDGE_HANDLE_SIZE;
+            ctx.fillStyle = isCorner ? '#fff' : '#00ff88';
+            ctx.fillRect(pos.x - size/2, pos.y - size/2, size, size);
+            ctx.strokeStyle = isCorner ? '#ff6b6b' : '#008844';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(pos.x - size/2, pos.y - size/2, size, size);
           });
         }
       } else if (entity.shape === 'polygon') {
@@ -215,14 +248,11 @@ export function MapCanvas({
         ctx.lineWidth = isSelected ? 3 : 2;
         ctx.stroke();
         
-        // Draw handles when selected
         if (isSelected) {
-          // Draw edge midpoint handles (for resizing)
           const edges = getEdgeInfo(polyEntity.points);
           edges.forEach(edge => {
             const screenMid = worldToScreen(edge.midpoint.x, edge.midpoint.y);
             
-            // Draw diamond shape for edge handles
             ctx.fillStyle = '#00ff88';
             ctx.beginPath();
             ctx.moveTo(screenMid.x, screenMid.y - EDGE_HANDLE_SIZE);
@@ -236,7 +266,6 @@ export function MapCanvas({
             ctx.stroke();
           });
           
-          // Draw corner point handles (for moving vertices)
           points.forEach((p, i) => {
             ctx.fillStyle = '#fff';
             ctx.beginPath();
@@ -246,7 +275,6 @@ export function MapCanvas({
             ctx.lineWidth = 2;
             ctx.stroke();
             
-            // Point index
             ctx.fillStyle = '#000';
             ctx.font = '10px monospace';
             ctx.textAlign = 'center';
@@ -287,7 +315,7 @@ export function MapCanvas({
   }, [level, boardRect, selectedEntityId, selectedBallId, ballPositions, worldToScreen, getEdgeInfo]);
 
   // Hit testing
-  const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle'; id: string; handleType?: string; pointIndex?: number; edgeIndex?: number } | null => {
+  const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle'; id: string; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: string } | null => {
     if (!boardRect) return null;
     
     const world = screenToWorld(sx, sy);
@@ -301,7 +329,6 @@ export function MapCanvas({
           const center = worldToScreen(circleEntity.cx, circleEntity.cy);
           const radius = circleEntity.radius * boardRect.scale;
           
-          // Check all 4 cardinal handles
           const handlePositions = [
             { x: center.x + radius, y: center.y },
             { x: center.x - radius, y: center.y },
@@ -314,10 +341,32 @@ export function MapCanvas({
               return { type: 'handle', id: entity.id, handleType: 'radius' };
             }
           }
+        } else if (entity.shape === 'rect') {
+          const rectEntity = entity as ObstacleRectEntity;
+          const topLeft = worldToScreen(rectEntity.x, rectEntity.y);
+          const width = rectEntity.width * boardRect.scale;
+          const height = rectEntity.height * boardRect.scale;
+          
+          const handles: { pos: { x: number; y: number }; name: string }[] = [
+            { pos: { x: topLeft.x, y: topLeft.y }, name: 'tl' },
+            { pos: { x: topLeft.x + width, y: topLeft.y }, name: 'tr' },
+            { pos: { x: topLeft.x, y: topLeft.y + height }, name: 'bl' },
+            { pos: { x: topLeft.x + width, y: topLeft.y + height }, name: 'br' },
+            { pos: { x: topLeft.x + width / 2, y: topLeft.y }, name: 't' },
+            { pos: { x: topLeft.x + width / 2, y: topLeft.y + height }, name: 'b' },
+            { pos: { x: topLeft.x, y: topLeft.y + height / 2 }, name: 'l' },
+            { pos: { x: topLeft.x + width, y: topLeft.y + height / 2 }, name: 'r' },
+          ];
+          
+          for (const handle of handles) {
+            const size = handle.name.length === 2 ? HANDLE_SIZE : EDGE_HANDLE_SIZE;
+            if (Math.abs(sx - handle.pos.x) < size && Math.abs(sy - handle.pos.y) < size) {
+              return { type: 'handle', id: entity.id, handleType: 'rect', rectHandle: handle.name };
+            }
+          }
         } else if (entity.shape === 'polygon') {
           const polyEntity = entity as ObstaclePolygonEntity;
           
-          // Check corner point handles first (higher priority)
           for (let i = 0; i < polyEntity.points.length; i++) {
             const pointPos = worldToScreen(polyEntity.points[i][0], polyEntity.points[i][1]);
             if (Math.hypot(sx - pointPos.x, sy - pointPos.y) < POINT_HANDLE_SIZE) {
@@ -325,7 +374,6 @@ export function MapCanvas({
             }
           }
           
-          // Check edge midpoint handles
           const edges = getEdgeInfo(polyEntity.points);
           for (let i = 0; i < edges.length; i++) {
             const edge = edges[i];
@@ -349,12 +397,18 @@ export function MapCanvas({
       }
     }
     
-    // Check entities
+    // Check entities (click to select)
     for (const entity of (level.entities || []).slice().reverse()) {
       if (entity.shape === 'circle') {
         const circleEntity = entity as ObstacleCircleEntity;
         const dist = Math.hypot(world.x - circleEntity.cx, world.y - circleEntity.cy);
         if (dist < circleEntity.radius) {
+          return { type: 'entity', id: entity.id };
+        }
+      } else if (entity.shape === 'rect') {
+        const rectEntity = entity as ObstacleRectEntity;
+        if (world.x >= rectEntity.x && world.x <= rectEntity.x + rectEntity.width &&
+            world.y >= rectEntity.y && world.y <= rectEntity.y + rectEntity.height) {
           return { type: 'entity', id: entity.id };
         }
       } else if (entity.shape === 'polygon') {
@@ -399,6 +453,18 @@ export function MapCanvas({
             originalRadius: entity.radius,
           });
         }
+      } else if (hit.handleType === 'rect' && hit.rectHandle) {
+        const entity = (level.entities || []).find(e => e.id === hit.id) as ObstacleRectEntity;
+        if (entity) {
+          setDragMode({
+            type: 'rect-resize',
+            id: hit.id,
+            handle: hit.rectHandle as 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r',
+            startX: world.x,
+            startY: world.y,
+            originalRect: { x: entity.x, y: entity.y, width: entity.width, height: entity.height },
+          });
+        }
       } else if (hit.handleType === 'point' && hit.pointIndex !== undefined) {
         setDragMode({
           type: 'polygon-point',
@@ -431,7 +497,7 @@ export function MapCanvas({
           id: hit.id,
           startX: world.x,
           startY: world.y,
-          originalEntity: { ...entity } as LevelEntity,
+          originalEntity: JSON.parse(JSON.stringify(entity)) as LevelEntity,
         });
       }
     } else if (hit.type === 'ball') {
@@ -473,6 +539,12 @@ export function MapCanvas({
           cx: circleOriginal.cx + dx,
           cy: circleOriginal.cy + dy,
         });
+      } else if (original.shape === 'rect') {
+        const rectOriginal = original as ObstacleRectEntity;
+        onUpdateEntity(dragMode.id, {
+          x: rectOriginal.x + dx,
+          y: rectOriginal.y + dy,
+        });
       } else if (original.shape === 'polygon') {
         const polyOriginal = original as ObstaclePolygonEntity;
         onUpdateEntity(dragMode.id, {
@@ -495,6 +567,63 @@ export function MapCanvas({
         const newRadius = Math.max(20, Math.hypot(world.x - entity.cx, world.y - entity.cy));
         onUpdateEntity(dragMode.id, { radius: Math.round(newRadius) });
       }
+    } else if (dragMode.type === 'rect-resize') {
+      const orig = dragMode.originalRect;
+      const handle = dragMode.handle;
+      
+      let newX = orig.x;
+      let newY = orig.y;
+      let newWidth = orig.width;
+      let newHeight = orig.height;
+      
+      const dx = world.x - dragMode.startX;
+      const dy = world.y - dragMode.startY;
+      
+      // Handle corners
+      if (handle === 'tl') {
+        newX = orig.x + dx;
+        newY = orig.y + dy;
+        newWidth = orig.width - dx;
+        newHeight = orig.height - dy;
+      } else if (handle === 'tr') {
+        newY = orig.y + dy;
+        newWidth = orig.width + dx;
+        newHeight = orig.height - dy;
+      } else if (handle === 'bl') {
+        newX = orig.x + dx;
+        newWidth = orig.width - dx;
+        newHeight = orig.height + dy;
+      } else if (handle === 'br') {
+        newWidth = orig.width + dx;
+        newHeight = orig.height + dy;
+      } else if (handle === 't') {
+        newY = orig.y + dy;
+        newHeight = orig.height - dy;
+      } else if (handle === 'b') {
+        newHeight = orig.height + dy;
+      } else if (handle === 'l') {
+        newX = orig.x + dx;
+        newWidth = orig.width - dx;
+      } else if (handle === 'r') {
+        newWidth = orig.width + dx;
+      }
+      
+      // Ensure minimum size
+      if (newWidth < 20) {
+        if (handle.includes('l')) newX = orig.x + orig.width - 20;
+        newWidth = 20;
+      }
+      if (newHeight < 20) {
+        if (handle.includes('t')) newY = orig.y + orig.height - 20;
+        newHeight = 20;
+      }
+      
+      onUpdateEntity(dragMode.id, {
+        x: Math.round(newX),
+        y: Math.round(newY),
+        width: Math.round(newWidth),
+        height: Math.round(newHeight),
+      });
     } else if (dragMode.type === 'polygon-point') {
       const entity = (level.entities || []).find(e => e.id === dragMode.id) as ObstaclePolygonEntity;
       if (entity) {
@@ -503,7 +632,6 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     } else if (dragMode.type === 'polygon-edge') {
-      // Move both vertices of the edge perpendicular to the edge direction
       const originalPoints = dragMode.originalPoints;
       const edgeIndex = dragMode.edgeIndex;
       const p1Index = edgeIndex;
@@ -512,22 +640,18 @@ export function MapCanvas({
       const p1 = originalPoints[p1Index];
       const p2 = originalPoints[p2Index];
       
-      // Calculate edge direction and normal
       const edgeDx = p2[0] - p1[0];
       const edgeDy = p2[1] - p1[1];
       const edgeLen = Math.hypot(edgeDx, edgeDy);
       
       if (edgeLen > 0) {
-        // Normal perpendicular to edge
         const normalX = -edgeDy / edgeLen;
         const normalY = edgeDx / edgeLen;
         
-        // Calculate how far we've moved along the normal
         const dx = world.x - dragMode.startX;
         const dy = world.y - dragMode.startY;
         const moveAlongNormal = dx * normalX + dy * normalY;
         
-        // Move both vertices along the normal
         const newPoints = originalPoints.map((p, i) => {
           if (i === p1Index || i === p2Index) {
             return [
@@ -561,7 +685,6 @@ export function MapCanvas({
   );
 }
 
-// Simple point-in-polygon test
 function pointInPolygon(x: number, y: number, points: [number, number][]): boolean {
   let inside = false;
   for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
