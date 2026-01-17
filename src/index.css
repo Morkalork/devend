@@ -2,7 +2,99 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+/*
+ * CRT Background Styles
+ * 
+ * CUSTOMIZATION GUIDE:
+ * - --crt-scroll-duration: How long one full scroll cycle takes (slower = more readable)
+ * - --crt-text-color: The green terminal text color
+ * - --crt-bg-color: The dark background color
+ * - --crt-glow-color: The subtle glow effect color
+ * - --crt-text-opacity: Overall text visibility (0-1)
+ * - --crt-scanline-opacity: Intensity of CRT scanlines (0-1, keep low)
+ * - --crt-vignette-opacity: Edge darkening intensity (0-1)
+ */
+
+.crt-background {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: var(--crt-bg-color, #001a0f);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Scrolling code container */
+.crt-code-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  animation: crt-scroll var(--crt-scroll-duration, 60s) linear infinite;
+  will-change: transform;
+}
+
+/* The actual code text */
+.crt-code {
+  color: var(--crt-text-color, #00ff88);
+  opacity: var(--crt-text-opacity, 0.85);
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 1rem;
+  white-space: pre;
+  text-shadow: 
+    0 0 2px var(--crt-glow-color, #00ff8866),
+    0 0 8px var(--crt-glow-color, #00ff8833);
+  margin: 0;
+}
+
+/* Seamless scroll animation using transform for GPU acceleration */
+@keyframes crt-scroll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+/* Scanline overlay */
+.crt-scanlines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 0, 0, var(--crt-scanline-opacity, 0.08)) 2px,
+    rgba(0, 0, 0, var(--crt-scanline-opacity, 0.08)) 4px
+  );
+  z-index: 1;
+}
+
+/* Vignette overlay for edge darkening */
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(0, 0, 0, var(--crt-vignette-opacity, 0.6)) 100%
+  );
+  z-index: 2;
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .crt-code-layer {
+    animation-duration: 300s; /* Much slower, essentially static */
+  }
+}
 
 @layer base {
   :root {
