@@ -40,8 +40,6 @@ export type LevelEntity = ObstacleRectEntity | ObstaclePolygonEntity;
 
 export interface LevelConfig {
   id: string;
-  backgroundColor: string; // 6-char hex without #
-  rectangleColor: string; // 6-char hex without #
   sizeThreshold: number; // percentage
   expectedCuts: number; // expected number of cuts to complete the level
   points: number; // base points for the level

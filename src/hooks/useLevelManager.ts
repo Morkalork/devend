@@ -35,8 +35,7 @@ export function useLevelManager() {
 
       // Validate level structure
       for (const level of data.levels) {
-        if (!level.id || !level.backgroundColor || !level.rectangleColor || 
-            typeof level.sizeThreshold !== 'number' || !Array.isArray(level.balls)) {
+        if (!level.id || typeof level.sizeThreshold !== 'number' || !Array.isArray(level.balls)) {
           throw new Error(`Invalid level configuration for: ${level.id || 'unknown'}`);
         }
         
