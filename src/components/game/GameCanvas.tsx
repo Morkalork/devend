@@ -58,6 +58,7 @@ interface GameCanvasProps {
   onTutorialCutSuccess?: () => void;
   canvasOpacity?: number;
   regionColor?: string; // hex color with #
+  accentColor?: string; // hex color with #
 }
 
 // Game constants - all in WORLD units
@@ -80,10 +81,8 @@ function getBallSpeedLevelMultiplier(levelIndex: number): number {
   return 1 + (levelIndex - 1) * 0.06;
 }
 
-// Colors
+// Colors (static, non-configurable)
 const COLORS = {
-  wallActive: "#ff8800",
-  wallActiveGlow: "rgba(255, 136, 0, 0.5)",
   cutPreview: "rgba(255, 255, 255, 0.3)",
   fastestBallHighlight: "#00ffff",
   debugOutline: "#ff00ff",
@@ -157,6 +156,7 @@ export function GameCanvas({
   onTutorialCutSuccess,
   canvasOpacity = 0.9,
   regionColor: regionColorProp = "#1a3020",
+  accentColor = "#00ff88",
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -930,10 +930,10 @@ export function GameCanvas({
         ctx.lineTo(endScreen.x, endScreen.y);
         ctx.stroke();
 
-        // Draw orange center
-        ctx.strokeStyle = COLORS.wallActive;
+        // Draw accent-colored center (uses config accent color)
+        ctx.strokeStyle = accentColor;
         ctx.lineWidth = (wall.thickness + 4) * scale;
-        ctx.shadowColor = COLORS.wallActiveGlow;
+        ctx.shadowColor = accentColor + '80'; // 50% alpha glow
         ctx.shadowBlur = 25 * scale;
         ctx.beginPath();
         ctx.moveTo(startScreen.x, startScreen.y);

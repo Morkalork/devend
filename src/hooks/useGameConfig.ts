@@ -7,6 +7,7 @@ export interface GameConfig {
     hud_opacity: number;
     background_color: string; // hex without #
     region_color: string; // hex without #
+    accent_color: string; // hex without #
   };
   ball: {
     default_speed: number;
@@ -26,6 +27,7 @@ const defaultConfig: GameConfig = {
     hud_opacity: 0.85,
     background_color: "0a1a10",
     region_color: "1a3020",
+    accent_color: "00ff88",
   },
   ball: {
     default_speed: 4.5,
@@ -64,23 +66,22 @@ export function useGameConfig() {
       });
   }, []);
 
-  // Helper to get background color as CSS string with optional alpha
-  const getBackgroundColor = (alpha: number = 1) => {
-    const hex = config.visuals.background_color;
+  // Helper to convert hex to rgba
+  const hexToRgba = (hex: string, alpha: number = 1) => {
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
     return alpha === 1 ? `#${hex}` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
+
+  // Helper to get background color as CSS string with optional alpha
+  const getBackgroundColor = (alpha: number = 1) => hexToRgba(config.visuals.background_color, alpha);
 
   // Helper to get region color as CSS string with optional alpha
-  const getRegionColor = (alpha: number = 1) => {
-    const hex = config.visuals.region_color;
-    const r = parseInt(hex.substring(0, 2), 16);
-    const g = parseInt(hex.substring(2, 4), 16);
-    const b = parseInt(hex.substring(4, 6), 16);
-    return alpha === 1 ? `#${hex}` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
+  const getRegionColor = (alpha: number = 1) => hexToRgba(config.visuals.region_color, alpha);
 
-  return { config, loading, getBackgroundColor, getRegionColor };
+  // Helper to get accent color as CSS string with optional alpha
+  const getAccentColor = (alpha: number = 1) => hexToRgba(config.visuals.accent_color, alpha);
+
+  return { config, loading, getBackgroundColor, getRegionColor, getAccentColor };
 }
