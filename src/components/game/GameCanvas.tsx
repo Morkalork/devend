@@ -56,6 +56,7 @@ interface GameCanvasProps {
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
+  canvasOpacity?: number;
 }
 
 // Game constants - all in WORLD units
@@ -153,6 +154,7 @@ export function GameCanvas({
   tutorialMode = false,
   tutorialStep = "completed",
   onTutorialCutSuccess,
+  canvasOpacity = 0.9,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -771,9 +773,9 @@ export function GameCanvas({
       // NOTE: Don't fill the entire screen - let CRT show through
       // The regions themselves define the playable area and will be drawn below
 
-      // Fill all regions with region color (polygons) - 90% opacity for CRT to show through
+      // Fill all regions with region color (polygons) - use config opacity for CRT to show through
       ctx.save();
-      ctx.globalAlpha = 0.9;
+      ctx.globalAlpha = canvasOpacity;
       ctx.fillStyle = regionColor;
       for (const region of regions) {
         const { vertices } = region.polygon;
