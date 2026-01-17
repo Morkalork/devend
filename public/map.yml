@@ -114,3 +114,40 @@ levels:
           - [550, 750]
           - [500, 900]
           - [400, 850]
+
+  - id: "level-6"
+    backgroundColor: "0d0d0d"
+    rectangleColor: "e4e7ff"
+    sizeThreshold: 15
+    expectedCuts: 10
+    points: 300
+    balls:
+      - id: "ball-1"
+        initialSpeed: 420
+        topSpeed: 850
+        color: "ff0055"
+      - id: "ball-2"
+        initialSpeed: 200
+        topSpeed: 430
+        color: "00ff88"
+    entities:
+      - id: "obs-1"
+        kind: "obstacle"
+        shape: "polygon"
+        points:
+          - [450, 350]
+          - [579.9, 425]
+          - [579.9, 575]
+          - [450, 650]
+          - [320.1, 575]
+          - [320.1, 425]
+      - id: "obs-2"
+        kind: "obstacle"
+        shape: "polygon"
+        points:
+          - [450, 900]
+          - [623.2, 1000]
+          - [623.2, 1200]
+          - [450, 1300]
+          - [276.8, 1200]
+          - [276.8, 1000]
