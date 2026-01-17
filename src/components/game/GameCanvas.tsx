@@ -718,9 +718,8 @@ export function GameCanvas({
       ctx.fillStyle = backgroundColor;
       ctx.fillRect(0, 0, screenWidth, screenHeight);
 
-      // Draw board background (region color) exactly inside boardRect
-      ctx.fillStyle = regionColor;
-      ctx.fillRect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
+      // NOTE: Don't fill boardRect with region color - only the polygon regions define the playable area
+      // The regions themselves will be drawn below
 
       // Fill all regions with region color (polygons) - transformed to screen coords
       ctx.fillStyle = regionColor;
