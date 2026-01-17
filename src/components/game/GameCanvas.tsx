@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from '@/types/game';
-import { LevelConfig } from '@/types/level';
+import { LevelConfig, LevelEntity } from '@/types/level';
 import { UpgradeConfig } from '@/types/upgrade';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { PushYourLuckOverlay } from './PushYourLuckOverlay';
@@ -24,6 +24,8 @@ import {
   circleCapsuleCollision,
   polygonCentroid,
   polygonBounds,
+  subtractPolygon,
+  createPolygonFromShape,
 } from '@/lib/polygon';
 import {
   BOARD_WIDTH,
@@ -83,6 +85,8 @@ const COLORS = {
   cutPreview: 'rgba(255, 255, 255, 0.3)',
   fastestBallHighlight: '#00ffff',
   debugOutline: '#ff00ff',
+  obstacle: '#ff4444', // Distinct color for obstacles
+  obstacleStroke: '#aa2222',
 };
 
 let regionIdCounter = 0;
@@ -181,7 +185,9 @@ export function GameCanvas({
   
   const gameRef = useRef({
     regions: [] as Region[],
+    obstacles: [] as Polygon[], // Obstacle polygons for rendering
     originalArea: 0,
+    basePlayableArea: 0, // Initial playable area after subtracting obstacles
     balls: [] as Ball[],
     activeWall: null as GrowingWall | null,
     gameOver: false,
@@ -255,15 +261,53 @@ export function GameCanvas({
       const right = centerX + shrunkWidth / 2;
       const bottom = centerY + shrunkHeight / 2;
       
-      const initialPolygon = createRectPolygon(left, top, right, bottom);
+      let initialPolygon = createRectPolygon(left, top, right, bottom);
+      
+      // Process entities - currently only obstacles
+      game.obstacles = [];
+      
+      if (level.entities && level.entities.length > 0) {
+        for (const entity of level.entities) {
+          if (entity.kind === 'obstacle') {
+            // Create polygon from entity shape
+            let obstaclePolygon: Polygon;
+            if (entity.shape === 'rect') {
+              obstaclePolygon = createPolygonFromShape('rect', {
+                x: entity.x,
+                y: entity.y,
+                width: entity.width,
+                height: entity.height,
+              });
+            } else {
+              obstaclePolygon = createPolygonFromShape('polygon', {
+                points: entity.points,
+              });
+            }
+            
+            // Store obstacle for rendering
+            game.obstacles.push(obstaclePolygon);
+            
+            // Subtract obstacle from initial polygon to create playable space
+            const subtracted = subtractPolygon(initialPolygon, obstaclePolygon);
+            if (subtracted.length > 0) {
+              initialPolygon = subtracted[0];
+            }
+          }
+        }
+      }
       
       game.regions = [{
         id: initialRegionId,
         polygon: initialPolygon,
       }];
       
-      // Original area is based on full arena (for percentage calculation)
-      game.originalArea = arenaWidth * arenaHeight;
+      // Base playable area is the initial region area (after subtracting obstacles)
+      // This is what we use for win percentage calculation
+      game.basePlayableArea = polygonArea(initialPolygon);
+      
+      // Original area is based on full arena (for display percentage)
+      // But for win threshold, we use basePlayableArea
+      game.originalArea = game.basePlayableArea;
       
       // Create balls from level config with modifiers applied (world coordinates)
       const centroid = polygonCentroid(initialPolygon);
@@ -710,7 +754,7 @@ export function GameCanvas({
     };
 
     const render = () => {
-      const { regions, balls, activeWall: wall, screenSize, boardRect, backgroundColor, regionColor, swipeStart, swipeRegionId, currentSwipePos } = game;
+      const { regions, obstacles, balls, activeWall: wall, screenSize, boardRect, backgroundColor, regionColor, swipeStart, swipeRegionId, currentSwipePos } = game;
       const { width: screenWidth, height: screenHeight } = screenSize;
       const { scale } = boardRect;
 
@@ -736,6 +780,32 @@ export function GameCanvas({
         }
         ctx.closePath();
         ctx.fill();
+      }
+      
+      // Render obstacles as filled shapes with distinct color
+      for (const obstacle of obstacles) {
+        const { vertices } = obstacle;
+        if (vertices.length < 3) continue;
+        
+        ctx.save();
+        ctx.beginPath();
+        const start = worldToScreen(vertices[0].x, vertices[0].y);
+        ctx.moveTo(start.x, start.y);
+        for (let i = 1; i < vertices.length; i++) {
+          const pt = worldToScreen(vertices[i].x, vertices[i].y);
+          ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.closePath();
+        
+        // Fill with obstacle color
+        ctx.fillStyle = COLORS.obstacle;
+        ctx.fill();
+        
+        // Add stroke for visibility
+        ctx.strokeStyle = COLORS.obstacleStroke;
+        ctx.lineWidth = 3 * scale;
+        ctx.stroke();
+        ctx.restore();
       }
       
       // Draw completed cuts as thick background-colored lines
