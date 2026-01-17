@@ -310,6 +310,98 @@ export function createRectPolygon(left: number, top: number, right: number, bott
   };
 }
 
+// Polygon boolean subtraction using Sutherland-Hodgman clipping
+// Returns array of resulting polygons (may be multiple if obstacle splits region)
+export function subtractPolygon(
+  subject: Polygon,
+  clip: Polygon
+): Polygon[] {
+  // For game purposes, we use a simpler approach:
+  // Create a polygon with the obstacle as a "hole" by connecting edges
+  // This works because our obstacles are simple convex shapes
+  
+  const subjectVerts = subject.vertices;
+  const clipVerts = clip.vertices;
+  
+  if (subjectVerts.length < 3 || clipVerts.length < 3) return [subject];
+  
+  // Check if clip polygon is entirely inside subject
+  let allInside = true;
+  for (const v of clipVerts) {
+    if (!pointInPolygon(v, subject)) {
+      allInside = false;
+      break;
+    }
+  }
+  
+  if (!allInside) {
+    // Clip polygon is not fully inside subject, return original
+    return [subject];
+  }
+  
+  // Find the closest pair of vertices between subject and clip
+  let minDist = Infinity;
+  let subjectIdx = 0;
+  let clipIdx = 0;
+  
+  for (let i = 0; i < subjectVerts.length; i++) {
+    for (let j = 0; j < clipVerts.length; j++) {
+      const dist = vec2Distance(subjectVerts[i], clipVerts[j]);
+      if (dist < minDist) {
+        minDist = dist;
+        subjectIdx = i;
+        clipIdx = j;
+      }
+    }
+  }
+  
+  // Create new polygon by walking: subject to bridge point, around clip (reversed), back to subject
+  const result: Vector2[] = [];
+  
+  // Walk subject from 0 to bridge point
+  for (let i = 0; i <= subjectIdx; i++) {
+    result.push({ ...subjectVerts[i] });
+  }
+  
+  // Walk clip in reverse (to create hole winding)
+  for (let i = 0; i < clipVerts.length; i++) {
+    const idx = (clipIdx - i + clipVerts.length) % clipVerts.length;
+    result.push({ ...clipVerts[idx] });
+  }
+  
+  // Close the bridge back
+  result.push({ ...clipVerts[clipIdx] });
+  result.push({ ...subjectVerts[subjectIdx] });
+  
+  // Continue subject from bridge point to end
+  for (let i = subjectIdx + 1; i < subjectVerts.length; i++) {
+    result.push({ ...subjectVerts[i] });
+  }
+  
+  return [{ vertices: result }];
+}
+
+// Create polygon from entity shape definition
+export function createPolygonFromShape(
+  shape: "rect" | "polygon",
+  params: { x?: number; y?: number; width?: number; height?: number; points?: [number, number][] }
+): Polygon {
+  if (shape === "rect" && params.x !== undefined && params.y !== undefined && 
+      params.width !== undefined && params.height !== undefined) {
+    return createRectPolygon(
+      params.x,
+      params.y,
+      params.x + params.width,
+      params.y + params.height
+    );
+  } else if (shape === "polygon" && params.points) {
+    return {
+      vertices: params.points.map(([x, y]) => ({ x, y }))
+    };
+  }
+  return { vertices: [] };
+}
+
 // Ball collision with polygon edges
 export function resolveBallPolygonCollision(
   ballPos: Vector2,

@@ -42,6 +42,14 @@ levels:
         initialSpeed: 360
         topSpeed: 720
         color: "6bcb77"
+    entities:
+      - id: "obs-1"
+        kind: "obstacle"
+        shape: "rect"
+        x: 350
+        y: 600
+        width: 200
+        height: 200
 
   - id: "level-4"
     backgroundColor: "1a1a40"
@@ -62,6 +70,21 @@ levels:
         initialSpeed: 360
         topSpeed: 760
         color: "c792ea"
+    entities:
+      - id: "obs-1"
+        kind: "obstacle"
+        shape: "rect"
+        x: 100
+        y: 400
+        width: 150
+        height: 300
+      - id: "obs-2"
+        kind: "obstacle"
+        shape: "rect"
+        x: 650
+        y: 900
+        width: 150
+        height: 300
 
   - id: "level-5"
     backgroundColor: "0d0d0d"
@@ -82,3 +105,12 @@ levels:
         initialSpeed: 380
         topSpeed: 810
         color: "00aaff"
+    entities:
+      - id: "obs-1"
+        kind: "obstacle"
+        shape: "polygon"
+        points:
+          - [450, 700]
+          - [550, 750]
+          - [500, 900]
+          - [400, 850]

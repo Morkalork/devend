@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
-import { LevelConfig, LevelData } from '@/types/level';
+import { LevelConfig, LevelData, LevelEntity } from '@/types/level';
 
 interface LevelManagerState {
   levels: LevelConfig[];
@@ -48,6 +48,28 @@ export function useLevelManager() {
         // Validate expectedCuts < points
         if (level.expectedCuts >= level.points) {
           throw new Error(`Level "${level.id}" is invalid: expectedCuts (${level.expectedCuts}) must be less than points (${level.points})`);
+        }
+        
+        // Validate entities if present
+        if (level.entities && Array.isArray(level.entities)) {
+          for (const entity of level.entities) {
+            const ent = entity as LevelEntity;
+            if (!ent.id || !ent.kind || !ent.shape) {
+              throw new Error(`Invalid entity in level "${level.id}": missing id, kind, or shape`);
+            }
+            
+            // Validate shape-specific properties
+            if (ent.shape === 'rect') {
+              if (typeof ent.x !== 'number' || typeof ent.y !== 'number' ||
+                  typeof ent.width !== 'number' || typeof ent.height !== 'number') {
+                throw new Error(`Invalid rect entity "${ent.id}" in level "${level.id}": missing x, y, width, or height`);
+              }
+            } else if (ent.shape === 'polygon') {
+              if (!Array.isArray(ent.points) || ent.points.length < 3) {
+                throw new Error(`Invalid polygon entity "${ent.id}" in level "${level.id}": points must be array with at least 3 vertices`);
+              }
+            }
+          }
         }
       }
       
