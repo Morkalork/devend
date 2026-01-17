@@ -133,6 +133,16 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
           >
             Highscores
           </motion.button>
+          {import.meta.env.DEV && (
+            <motion.button
+              className="arcade-button-secondary rounded-lg opacity-70"
+              onClick={() => alert('ADMIN!')}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Admin
+            </motion.button>
+          )}
         </motion.div>
       </motion.div>
     </div>
