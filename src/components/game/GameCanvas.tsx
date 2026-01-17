@@ -760,16 +760,13 @@ export function GameCanvas({
 
       // Clear the canvas (transparent to show CRT background through)
       ctx.clearRect(0, 0, screenWidth, screenHeight);
-      
-      // Fill area outside the board with semi-transparent darkness
-      // This lets CRT show through slightly while darkening non-play areas
-      ctx.fillStyle = 'rgba(0, 10, 5, 0.92)';
-      ctx.fillRect(0, 0, screenWidth, screenHeight);
 
-      // NOTE: Don't fill boardRect with region color - only the polygon regions define the playable area
-      // The regions themselves will be drawn below
+      // NOTE: Don't fill the entire screen - let CRT show through
+      // The regions themselves define the playable area and will be drawn below
 
-      // Fill all regions with region color (polygons) - transformed to screen coords
+      // Fill all regions with region color (polygons) - 95% opacity for CRT to show through
+      ctx.save();
+      ctx.globalAlpha = 0.95;
       ctx.fillStyle = regionColor;
       for (const region of regions) {
         const { vertices } = region.polygon;
@@ -785,6 +782,7 @@ export function GameCanvas({
         ctx.closePath();
         ctx.fill();
       }
+      ctx.restore();
       
       // Render obstacles as filled shapes with distinct color
       for (const obstacle of obstacles) {
@@ -935,15 +933,7 @@ export function GameCanvas({
         ctx.restore();
       }
 
-      // DEBUG: Draw board outline
-      if (process.env.NODE_ENV === 'development') {
-        ctx.save();
-        ctx.strokeStyle = COLORS.debugOutline;
-        ctx.lineWidth = 2;
-        ctx.setLineDash([5, 5]);
-        ctx.strokeRect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
-        ctx.restore();
-      }
+      // Debug board outline removed - was showing purple dashed border
     };
 
     // Handle ball-to-ball collisions
