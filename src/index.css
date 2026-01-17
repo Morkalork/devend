@@ -110,7 +110,7 @@
     --popover: 240 10% 6%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 187 100% 50%;
+    --primary: 145 100% 53%;
     --primary-foreground: 240 10% 4%;
 
     --secondary: 240 10% 12%;
@@ -119,7 +119,7 @@
     --muted: 240 10% 15%;
     --muted-foreground: 240 5% 55%;
 
-    --accent: 25 100% 55%;
+    --accent: 145 100% 53%;
     --accent-foreground: 240 10% 4%;
 
     --destructive: 0 85% 60%;
@@ -127,24 +127,24 @@
 
     --border: 240 10% 18%;
     --input: 240 10% 18%;
-    --ring: 187 100% 50%;
+    --ring: 145 100% 53%;
 
     --radius: 0.75rem;
 
     /* Game-specific colors */
     --arena: 0 0% 100%;
     --void: 240 10% 2%;
-    --ball: 187 100% 50%;
-    --ball-glow: 187 100% 50%;
-    --wall-active: 25 100% 55%;
+    --ball: 145 100% 53%;
+    --ball-glow: 145 100% 53%;
+    --wall-active: 145 100% 53%;
     --wall-complete: 0 0% 70%;
-    --success: 145 80% 50%;
+    --success: 145 100% 53%;
     --danger: 0 85% 60%;
 
     /* Glow effects */
-    --glow-primary: 0 0 30px hsl(187 100% 50% / 0.5);
-    --glow-accent: 0 0 30px hsl(25 100% 55% / 0.6);
-    --glow-success: 0 0 30px hsl(145 80% 50% / 0.5);
+    --glow-primary: 0 0 30px hsl(145 100% 53% / 0.5);
+    --glow-accent: 0 0 30px hsl(145 100% 53% / 0.6);
+    --glow-success: 0 0 30px hsl(145 100% 53% / 0.5);
   }
 
   .dark {
@@ -188,7 +188,7 @@
   .game-title {
     @apply text-5xl md:text-7xl font-black tracking-wider;
     font-family: 'Orbitron', sans-serif;
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(145 80% 40%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;

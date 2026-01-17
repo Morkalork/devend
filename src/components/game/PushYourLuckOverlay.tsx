@@ -64,7 +64,7 @@ export function PushYourLuckOverlay({
               <span className="text-muted-foreground"> / {thresholdPercent}% target</span>
             </p>
             <p className="text-xs text-muted-foreground">
-              Cut more to earn an <span className="text-amber-400 font-medium">Overcut Bonus</span>!
+              Cut more to earn an <span className="text-primary font-medium">Overcut Bonus</span>!
             </p>
           </div>
 
@@ -79,7 +79,8 @@ export function PushYourLuckOverlay({
             </button>
             <button
               onClick={onPush}
-              className="flex-1 px-4 py-3 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold flex items-center justify-center gap-2 shadow-lg hover:from-amber-400 hover:to-orange-400 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="flex-1 px-4 py-3 rounded-lg bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              style={{ boxShadow: '0 0 20px hsl(var(--primary) / 0.4)' }}
             >
               <Zap className="w-4 h-4" />
               Push Your Luck
