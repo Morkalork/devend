@@ -863,12 +863,27 @@ export function GameCanvas({
             const intNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), region.polygon);
 
             if (intPos && intNeg) {
+              // Check obstacle intersections for preview (obstacles act as walls)
+              let previewEnd = intPos.point;
+              let previewStart = intNeg.point;
+
+              for (const obstacle of obstacles) {
+                const obsIntPos = rayPolygonIntersection(swipeStart, direction, obstacle);
+                if (obsIntPos && vec2Distance(swipeStart, obsIntPos.point) < vec2Distance(swipeStart, previewEnd)) {
+                  previewEnd = obsIntPos.point;
+                }
+                const obsIntNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), obstacle);
+                if (obsIntNeg && vec2Distance(swipeStart, obsIntNeg.point) < vec2Distance(swipeStart, previewStart)) {
+                  previewStart = obsIntNeg.point;
+                }
+              }
+
               ctx.save();
               ctx.strokeStyle = COLORS.cutPreview;
               ctx.lineWidth = WALL_THICKNESS * scale;
               ctx.setLineDash([10 * scale, 10 * scale]);
-              const negScreen = worldToScreen(intNeg.point.x, intNeg.point.y);
-              const posScreen = worldToScreen(intPos.point.x, intPos.point.y);
+              const negScreen = worldToScreen(previewStart.x, previewStart.y);
+              const posScreen = worldToScreen(previewEnd.x, previewEnd.y);
               ctx.beginPath();
               ctx.moveTo(negScreen.x, negScreen.y);
               ctx.lineTo(posScreen.x, posScreen.y);
