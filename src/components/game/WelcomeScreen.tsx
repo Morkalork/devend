@@ -48,10 +48,8 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
           animate={{ scale: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          <h1 className="game-title animate-pulse-glow">
-            BALL
-            <br />
-            BREAKER
+        <h1 className="game-title animate-pulse-glow">
+            Dev/End
           </h1>
           <motion.p
             className="mt-4 text-muted-foreground text-lg tracking-wide"
