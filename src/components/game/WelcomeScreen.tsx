@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { AlertCircle, Loader2 } from 'lucide-react';
+import { CRTBackground } from './CRTBackground';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
@@ -12,8 +13,9 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores, isLoading, error }: WelcomeScreenProps) {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
-      {/* Animated background elements */}
+    <>
+      <CRTBackground />
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 relative z-10" style={{ backgroundColor: 'hsl(var(--background) / 0.85)' }}>
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
           className="absolute w-64 h-64 rounded-full bg-primary/5 blur-3xl"
@@ -134,5 +136,6 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
         </motion.div>
       </motion.div>
     </div>
+    </>
   );
 }
