@@ -25,17 +25,17 @@ levels:
       - id: obs-1768672946807
         kind: obstacle
         shape: rect
-        x: 32
-        "y": 60
-        width: 852
+        x: -41
+        "y": -41
+        width: 972
         height: 313
       - id: obs-1768672962970
         kind: obstacle
         shape: rect
-        x: 347.5138649837445
-        "y": 1326.9506597819852
+        x: 348
+        "y": 1416
         width: 200
-        height: 200
+        height: 249
   - id: level-3
     sizeThreshold: 35
     expectedCuts: 6
