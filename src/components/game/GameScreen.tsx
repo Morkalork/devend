@@ -38,7 +38,7 @@ export function GameScreen({
   tutorialStep = 'completed',
   onTutorialCutSuccess,
 }: GameScreenProps) {
-  const { config, getBackgroundColor } = useGameConfig();
+  const { config, getBackgroundColor, getRegionColor } = useGameConfig();
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
@@ -107,6 +107,7 @@ export function GameScreen({
           tutorialStep={tutorialStep}
           onTutorialCutSuccess={onTutorialCutSuccess}
           canvasOpacity={config.visuals.canvas_opacity}
+          regionColor={getRegionColor()}
         />
       </div>
     </div>

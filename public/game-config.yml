@@ -9,11 +9,12 @@ visuals:
   # HUD bar transparency (0 = fully transparent, 1 = fully opaque)
   hud_opacity: 0.85
   
-  # Base background color (HSL values)
-  background:
-    hue: 140
-    saturation: 100
-    lightness: 2
+  # Global background color (hex without #)
+  # Used for: screen background, canvas fill, HUD bar
+  background_color: "0a1a10"
+  
+  # Game board / region fill color (hex without #)
+  region_color: "1a3020"
 
 # Ball Settings
 ball:

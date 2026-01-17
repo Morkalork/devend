@@ -57,6 +57,7 @@ interface GameCanvasProps {
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
   canvasOpacity?: number;
+  regionColor?: string; // hex color with #
 }
 
 // Game constants - all in WORLD units
@@ -155,6 +156,7 @@ export function GameCanvas({
   tutorialStep = "completed",
   onTutorialCutSuccess,
   canvasOpacity = 0.9,
+  regionColor: regionColorProp = "#1a3020",
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -201,8 +203,8 @@ export function GameCanvas({
     animationId: 0,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
-    backgroundColor: `#${level.backgroundColor}`,
-    regionColor: `#${level.rectangleColor}`,
+    backgroundColor: "#0a1a10", // Will be overridden by config
+    regionColor: "#1a3020", // Will be overridden by config
     cutCount: 0,
     wallShieldsRemaining: 0,
     fastestBallId: null as string | null,
@@ -221,8 +223,7 @@ export function GameCanvas({
     if (!container || !canvas) return;
 
     const game = gameRef.current;
-    game.backgroundColor = `#${level.backgroundColor}`;
-    game.regionColor = `#${level.rectangleColor}`;
+    game.regionColor = regionColorProp;
     game.wallShieldsRemaining = activeModifiers.wallShield;
     setWallShieldCount(activeModifiers.wallShield);
 

@@ -5,11 +5,8 @@ export interface GameConfig {
   visuals: {
     canvas_opacity: number;
     hud_opacity: number;
-    background: {
-      hue: number;
-      saturation: number;
-      lightness: number;
-    };
+    background_color: string; // hex without #
+    region_color: string; // hex without #
   };
   ball: {
     default_speed: number;
@@ -27,11 +24,8 @@ const defaultConfig: GameConfig = {
   visuals: {
     canvas_opacity: 0.9,
     hud_opacity: 0.85,
-    background: {
-      hue: 140,
-      saturation: 100,
-      lightness: 2,
-    },
+    background_color: "0a1a10",
+    region_color: "1a3020",
   },
   ball: {
     default_speed: 4.5,
@@ -53,8 +47,14 @@ export function useGameConfig() {
     fetch('/game-config.yml')
       .then((res) => res.text())
       .then((text) => {
-        const parsed = yaml.load(text) as GameConfig;
-        setConfig({ ...defaultConfig, ...parsed });
+        const parsed = yaml.load(text) as Partial<GameConfig>;
+        setConfig({ 
+          ...defaultConfig, 
+          ...parsed,
+          visuals: { ...defaultConfig.visuals, ...parsed?.visuals },
+          ball: { ...defaultConfig.ball, ...parsed?.ball },
+          gameplay: { ...defaultConfig.gameplay, ...parsed?.gameplay },
+        });
       })
       .catch((err) => {
         console.warn('Failed to load game config, using defaults:', err);
@@ -64,11 +64,23 @@ export function useGameConfig() {
       });
   }, []);
 
-  // Helper to get background color as CSS string
+  // Helper to get background color as CSS string with optional alpha
   const getBackgroundColor = (alpha: number = 1) => {
-    const { hue, saturation, lightness } = config.visuals.background;
-    return `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+    const hex = config.visuals.background_color;
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return alpha === 1 ? `#${hex}` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
   };
 
-  return { config, loading, getBackgroundColor };
+  // Helper to get region color as CSS string with optional alpha
+  const getRegionColor = (alpha: number = 1) => {
+    const hex = config.visuals.region_color;
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return alpha === 1 ? `#${hex}` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  return { config, loading, getBackgroundColor, getRegionColor };
 }

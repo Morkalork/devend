@@ -1,7 +1,5 @@
 levels:
   - id: "level-1"
-    backgroundColor: "1a1a2e"
-    rectangleColor: "376134"
     sizeThreshold: 40
     expectedCuts: 3
     points: 100
@@ -12,8 +10,6 @@ levels:
         color: "00d4ff"
 
   - id: "level-2"
-    backgroundColor: "0f3460"
-    rectangleColor: "e8e8e8"
     sizeThreshold: 40
     expectedCuts: 5
     points: 150
@@ -28,8 +24,6 @@ levels:
         color: "4ecdc4"
 
   - id: "level-3"
-    backgroundColor: "16213e"
-    rectangleColor: "f0f0f0"
     sizeThreshold: 35
     expectedCuts: 6
     points: 200
@@ -52,8 +46,6 @@ levels:
         height: 200
 
   - id: "level-4"
-    backgroundColor: "1a1a40"
-    rectangleColor: "ffffff"
     sizeThreshold: 30
     expectedCuts: 8
     points: 250
@@ -87,8 +79,6 @@ levels:
         height: 300
 
   - id: "level-5"
-    backgroundColor: "0d0d0d"
-    rectangleColor: "fafafa"
     sizeThreshold: 25
     expectedCuts: 10
     points: 300
@@ -116,8 +106,6 @@ levels:
           - [400, 850]
 
   - id: "level-6"
-    backgroundColor: "0d0d0d"
-    rectangleColor: "e4e7ff"
     sizeThreshold: 15
     expectedCuts: 10
     points: 300
