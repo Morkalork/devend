@@ -338,6 +338,46 @@ export function GameCanvas({
       // Base ball speed in world units (scaled up from old pixel-based values)
       const baseSpeedMultiplier = 2.0; // World is ~2x larger than old canvas
 
+      // Helper function to check if a position is inside any obstacle
+      const isInsideObstacle = (pos: { x: number; y: number }, radius: number): boolean => {
+        for (const obstacle of game.obstacles) {
+          // Check if the ball center is inside the obstacle
+          if (pointInPolygon(pos, obstacle)) {
+            return true;
+          }
+          // Also check if ball edge would overlap with obstacle by checking points around the ball
+          const checkPoints = 8;
+          for (let i = 0; i < checkPoints; i++) {
+            const angle = (i / checkPoints) * Math.PI * 2;
+            const checkPos = {
+              x: pos.x + Math.cos(angle) * radius,
+              y: pos.y + Math.sin(angle) * radius,
+            };
+            if (pointInPolygon(checkPos, obstacle)) {
+              return true;
+            }
+          }
+        }
+        return false;
+      };
+
+      // Helper function to find a valid spawn position (not inside obstacles)
+      const findValidSpawnPosition = (): { x: number; y: number } => {
+        const maxAttempts = 100;
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const pos = {
+            x: centroid.x + (Math.random() - 0.5) * regionWidth * 0.6,
+            y: centroid.y + (Math.random() - 0.5) * regionHeight * 0.6,
+          };
+          // Check if position is inside the region and not inside any obstacle
+          if (pointInPolygon(pos, initialPolygon) && !isInsideObstacle(pos, effectiveBallRadius)) {
+            return pos;
+          }
+        }
+        // Fallback to centroid if no valid position found
+        return { ...centroid };
+      };
+
       game.balls = level.balls.map((ballConfig) => {
         const dir = getRandomDirection();
         // Apply level curve and ball speed multiplier
@@ -348,10 +388,7 @@ export function GameCanvas({
 
         return {
           id: ballConfig.id,
-          position: {
-            x: centroid.x + (Math.random() - 0.5) * regionWidth * 0.3,
-            y: centroid.y + (Math.random() - 0.5) * regionHeight * 0.3,
-          },
+          position: findValidSpawnPosition(),
           velocity: {
             x: dir.x * modifiedSpeed,
             y: dir.y * modifiedSpeed,
