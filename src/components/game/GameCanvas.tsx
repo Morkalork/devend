@@ -1267,18 +1267,50 @@ export function GameCanvas({
       
       const gridSize = 15; // SAMPLE_GRID_SIZE - must match
       const halfGrid = gridSize / 2;
-      // Add slight overlap for smoother edges (anti-aliasing effect)
-      const cellPadding = 1.5;
+      // Larger overlap for smoother edges
+      const cellPadding = 3;
       
       for (const region of regions) {
         if (region.samplePoints && region.samplePoints.length > 0) {
-          // Use sample-based rendering for accurate cut visualization
-          // Draw cells with slight overlap to reduce pixelation
+          // First pass: Draw filled cells with overlap
           for (const sample of region.samplePoints) {
             const topLeft = worldToScreen(sample.x - halfGrid - cellPadding, sample.y - halfGrid - cellPadding);
             const size = (gridSize + cellPadding * 2) * scale;
             ctx.fillRect(topLeft.x, topLeft.y, size, size);
           }
+          
+          // Second pass: Draw a smooth border around the edge cells to anti-alias
+          // Find edge cells (cells that don't have all 4 neighbors)
+          const sampleSet = new Set(region.samplePoints.map(s => `${s.x},${s.y}`));
+          const edgeCells: Vector2[] = [];
+          
+          for (const sample of region.samplePoints) {
+            const neighbors = [
+              `${sample.x - gridSize},${sample.y}`,
+              `${sample.x + gridSize},${sample.y}`,
+              `${sample.x},${sample.y - gridSize}`,
+              `${sample.x},${sample.y + gridSize}`,
+            ];
+            const isEdge = neighbors.some(n => !sampleSet.has(n));
+            if (isEdge) {
+              edgeCells.push(sample);
+            }
+          }
+          
+          // Draw smooth rounded rectangles on edge cells for anti-aliasing
+          ctx.save();
+          ctx.globalAlpha = canvasOpacity * 0.6;
+          const edgePadding = 5;
+          for (const sample of edgeCells) {
+            const topLeft = worldToScreen(sample.x - halfGrid - edgePadding, sample.y - halfGrid - edgePadding);
+            const size = (gridSize + edgePadding * 2) * scale;
+            const radius = 4 * scale;
+            
+            ctx.beginPath();
+            ctx.roundRect(topLeft.x, topLeft.y, size, size, radius);
+            ctx.fill();
+          }
+          ctx.restore();
         } else {
           // Fallback to polygon rendering (for initial region before any cuts)
           const { vertices } = region.polygon;
@@ -1320,15 +1352,15 @@ export function GameCanvas({
       }
 
       // Draw completed cuts - actually cut through the filled regions using destination-out
-      // Add extra width to ensure clean separation over the overlapping cells
+      // Extra width to ensure clean separation over the overlapping/anti-aliased cells
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
       ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       for (const cut of game.completedCuts) {
-        // Add extra thickness to cleanly cut through overlapping cells
-        ctx.lineWidth = (cut.thickness + 4) * scale;
+        // Extra thickness to cleanly cut through all the overlapping edge cells
+        ctx.lineWidth = (cut.thickness + 8) * scale;
         const startScreen = worldToScreen(cut.start.x, cut.start.y);
         const endScreen = worldToScreen(cut.end.x, cut.end.y);
         ctx.beginPath();
