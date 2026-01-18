@@ -26,6 +26,7 @@ import {
   polygonCentroid,
   polygonBounds,
   createPolygonFromShape,
+  pointToSegmentDistance,
 } from "@/lib/polygon";
 import {
   BOARD_WIDTH,
@@ -567,19 +568,39 @@ export function GameCanvas({
         }
       }
 
-      // Split the polygon along the cut
-      const splitResult = splitPolygon(activeRegion.polygon, wall.startPoint, wall.endPoint);
-
-      // Always record the cut visually, even if no split happens
+      // Check if either endpoint terminates at a wall obstacle (not on region boundary)
+      // If so, don't split - just draw the cut visually
+      const isStartAtWall = game.obstacles.some(obstacle => 
+        obstacle.vertices.some((v, idx) => {
+          const next = obstacle.vertices[(idx + 1) % obstacle.vertices.length];
+          return pointToSegmentDistance(wall.startPoint, v, next) < 5;
+        })
+      );
+      const isEndAtWall = game.obstacles.some(obstacle => 
+        obstacle.vertices.some((v, idx) => {
+          const next = obstacle.vertices[(idx + 1) % obstacle.vertices.length];
+          return pointToSegmentDistance(wall.endPoint, v, next) < 5;
+        })
+      );
+      
+      // Always record the cut visually
       game.completedCuts.push({
         start: { ...wall.startPoint },
         end: { ...wall.endPoint },
         thickness: wall.thickness + 14, // Visual thickness
       });
 
+      // If cut terminates at a wall, skip the split
+      if (isStartAtWall || isEndAtWall) {
+        game.activeWall = null;
+        return;
+      }
+
+      // Split the polygon along the cut
+      const splitResult = splitPolygon(activeRegion.polygon, wall.startPoint, wall.endPoint);
+
       if (!splitResult) {
-        // No valid split (e.g., cut terminated at a wall obstacle)
-        // The cut is drawn but no region is split
+        // No valid split
         game.activeWall = null;
         return;
       }
