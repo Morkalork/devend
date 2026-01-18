@@ -818,182 +818,241 @@ export function GameCanvas({
       return null;
     };
 
-    // Try to find and remove enclosed areas formed by cuts + obstacles
-    const tryRemoveEnclosedAreas = (region: Region) => {
-      const { balls } = game;
-      const threshold = 8;
-      
-      // Find all cuts that have one end on the region polygon and one end on an obstacle
-      const cutsToObstacles: { cut: { start: Vector2; end: Vector2; thickness: number }; wallEnd: Vector2; obstacleEnd: Vector2; obstacleIndex: number }[] = [];
-      
+    // Check if a line segment intersects any obstacle or completed cut
+    const lineBlockedByWall = (p1: Vector2, p2: Vector2): boolean => {
+      // Check obstacles
+      for (const obstacle of game.obstacles) {
+        for (let i = 0; i < obstacle.vertices.length; i++) {
+          const j = (i + 1) % obstacle.vertices.length;
+          if (lineSegmentIntersection(p1, p2, obstacle.vertices[i], obstacle.vertices[j])) {
+            return true;
+          }
+        }
+      }
+      // Check completed cuts
       for (const cut of game.completedCuts) {
-        const startOnWall = findPolygonEdgeAtPoint(cut.start, region, threshold);
-        const endOnWall = findPolygonEdgeAtPoint(cut.end, region, threshold);
-        const startOnObstacle = findObstacleAtPoint(cut.start, threshold);
-        const endOnObstacle = findObstacleAtPoint(cut.end, threshold);
-        
-        if (startOnWall && endOnObstacle) {
-          cutsToObstacles.push({ cut, wallEnd: cut.start, obstacleEnd: cut.end, obstacleIndex: endOnObstacle.obstacleIndex });
-        } else if (endOnWall && startOnObstacle) {
-          cutsToObstacles.push({ cut, wallEnd: cut.end, obstacleEnd: cut.start, obstacleIndex: startOnObstacle.obstacleIndex });
+        if (lineSegmentIntersection(p1, p2, cut.start, cut.end)) {
+          return true;
         }
       }
-      
-      console.log('[DEBUG] Cuts to obstacles:', cutsToObstacles.length);
-      
-      // For each pair of cuts that touch the same obstacle, try to form an enclosed area
-      for (let i = 0; i < cutsToObstacles.length; i++) {
-        for (let j = i + 1; j < cutsToObstacles.length; j++) {
-          const cutA = cutsToObstacles[i];
-          const cutB = cutsToObstacles[j];
-          
-          // Both cuts must touch the same obstacle
-          if (cutA.obstacleIndex !== cutB.obstacleIndex) continue;
-          
-          console.log('[DEBUG] Found pair of cuts on same obstacle');
-          
-          // Build a polygon: wallEndA → obstacleEndA → (obstacle edges) → obstacleEndB → wallEndB → (polygon edges back to wallEndA)
-          const obstacle = game.obstacles[cutA.obstacleIndex];
-          const polyVerts = region.polygon.vertices;
-          
-          // Find where cuts touch the polygon
-          const wallEdgeA = findPolygonEdgeAtPoint(cutA.wallEnd, region, threshold);
-          const wallEdgeB = findPolygonEdgeAtPoint(cutB.wallEnd, region, threshold);
-          if (!wallEdgeA || !wallEdgeB) continue;
-          
-          // Build enclosed polygon vertices
-          const enclosedVerts: Vector2[] = [];
-          
-          // Start at wallEndA
-          enclosedVerts.push({ ...cutA.wallEnd });
-          
-          // Go to obstacleEndA
-          enclosedVerts.push({ ...cutA.obstacleEnd });
-          
-          // Walk around obstacle to obstacleEndB (take shorter path)
-          // For simplicity, just add obstacle corners between the two points
-          const obsVerts = obstacle.vertices;
-          const distA = vec2Distance(cutA.obstacleEnd, cutB.obstacleEnd);
-          
-          // Find closest obstacle vertices to each cut endpoint
-          let closestToA = 0, closestToB = 0;
-          let minDistA = Infinity, minDistB = Infinity;
-          for (let k = 0; k < obsVerts.length; k++) {
-            const dA = vec2Distance(obsVerts[k], cutA.obstacleEnd);
-            const dB = vec2Distance(obsVerts[k], cutB.obstacleEnd);
-            if (dA < minDistA) { minDistA = dA; closestToA = k; }
-            if (dB < minDistB) { minDistB = dB; closestToB = k; }
-          }
-          
-          // Add obstacle vertices between the two cut points (shorter path)
-          if (closestToA !== closestToB) {
-            // Try both directions, pick shorter
-            const path1: Vector2[] = [];
-            const path2: Vector2[] = [];
-            
-            for (let k = closestToA; k !== closestToB; k = (k + 1) % obsVerts.length) {
-              path1.push({ ...obsVerts[(k + 1) % obsVerts.length] });
-            }
-            for (let k = closestToA; k !== closestToB; k = (k - 1 + obsVerts.length) % obsVerts.length) {
-              path2.push({ ...obsVerts[(k - 1 + obsVerts.length) % obsVerts.length] });
-            }
-            
-            const shorterPath = path1.length <= path2.length ? path1 : path2;
-            for (const v of shorterPath) {
-              if (enclosedVerts.length === 0 || vec2Distance(v, enclosedVerts[enclosedVerts.length - 1]) > 1) {
-                enclosedVerts.push(v);
-              }
-            }
-          }
-          
-          // Go to obstacleEndB
-          enclosedVerts.push({ ...cutB.obstacleEnd });
-          
-          // Go to wallEndB
-          enclosedVerts.push({ ...cutB.wallEnd });
-          
-          // Walk along polygon edges back to wallEndA
-          // Determine direction (shorter path along polygon)
-          const startEdge = wallEdgeB.edgeIndex;
-          const endEdge = wallEdgeA.edgeIndex;
-          
-          if (startEdge !== endEdge) {
-            // Walk from startEdge to endEdge
-            for (let k = (startEdge + 1) % polyVerts.length; k !== (endEdge + 1) % polyVerts.length; k = (k + 1) % polyVerts.length) {
-              enclosedVerts.push({ ...polyVerts[k] });
-            }
-          }
-          
-          if (enclosedVerts.length < 3) continue;
-          
-          const enclosedPoly: Polygon = { vertices: enclosedVerts };
-          const area = polygonArea(enclosedPoly);
-          
-          console.log('[DEBUG] Enclosed polygon area:', area, 'vertices:', enclosedVerts.length);
-          
-          if (area < 100) continue;
-          
-          // Check if this enclosed area contains any balls
-          const hasBalls = regionContainsBalls(enclosedPoly, balls);
-          
-          console.log('[DEBUG] Enclosed area has balls:', hasBalls);
-          
-          if (!hasBalls) {
-            // Remove this enclosed area from the region by subtracting it
-            // For now, we'll modify the region polygon to exclude this area
-            // This is complex - simpler approach: just mark that area was removed and update percentage
-            
-            // Create new polygon by cutting out the enclosed area
-            // Use the two wall endpoints as split points
-            const splitResult = splitPolygon(region.polygon, cutA.wallEnd, cutB.wallEnd);
-            if (splitResult) {
-              const [poly1, poly2] = splitResult;
-              const poly1HasBalls = regionContainsBalls(poly1, balls);
-              const poly2HasBalls = regionContainsBalls(poly2, balls);
-              
-              console.log('[DEBUG] Split result - poly1 has balls:', poly1HasBalls, 'poly2 has balls:', poly2HasBalls);
-              
-              const newRegions = game.regions.filter(r => r.id !== region.id);
-              
-              if (poly1HasBalls) {
-                const newId = generateRegionId();
-                newRegions.push({ id: newId, polygon: poly1 });
-                for (const ball of balls) {
-                  if (pointInPolygon(ball.position, poly1)) {
-                    ball.regionId = newId;
-                  }
-                }
-              }
-              
-              if (poly2HasBalls) {
-                const newId = generateRegionId();
-                newRegions.push({ id: newId, polygon: poly2 });
-                for (const ball of balls) {
-                  if (pointInPolygon(ball.position, poly2)) {
-                    ball.regionId = newId;
-                  }
-                }
-              }
-              
-              game.regions = newRegions;
-              
-              // Speed up balls
-              for (const ball of balls) {
-                const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
-                const ratio = newSpeed / ball.speed;
-                ball.speed = newSpeed;
-                ball.velocity.x *= ratio;
-                ball.velocity.y *= ratio;
-              }
-              
-              console.log('[DEBUG] Removed enclosed area! New region count:', newRegions.length);
-              return true;
-            }
-          }
-        }
-      }
-      
       return false;
+    };
+
+    // Find all distinct sub-regions within a region by flood-fill sampling
+    // Returns array of sample points, grouped by which sub-region they're in
+    const findSubRegions = (region: Region): Vector2[][] => {
+      const bounds = polygonBounds(region.polygon);
+      const gridSize = 30; // Sample every 30 pixels
+      const samplePoints: Vector2[] = [];
+      
+      // Generate sample points within the polygon
+      for (let x = bounds.minX + gridSize/2; x < bounds.maxX; x += gridSize) {
+        for (let y = bounds.minY + gridSize/2; y < bounds.maxY; y += gridSize) {
+          const point = { x, y };
+          if (pointInPolygon(point, region.polygon)) {
+            // Also check point is not inside any obstacle
+            let insideObstacle = false;
+            for (const obstacle of game.obstacles) {
+              if (pointInPolygon(point, obstacle)) {
+                insideObstacle = true;
+                break;
+              }
+            }
+            if (!insideObstacle) {
+              samplePoints.push(point);
+            }
+          }
+        }
+      }
+      
+      if (samplePoints.length === 0) return [];
+      
+      // Group points by connectivity (can reach each other without crossing walls)
+      const groups: Vector2[][] = [];
+      const assigned = new Set<number>();
+      
+      for (let i = 0; i < samplePoints.length; i++) {
+        if (assigned.has(i)) continue;
+        
+        const group: Vector2[] = [samplePoints[i]];
+        assigned.add(i);
+        
+        // BFS to find all connected points
+        const queue = [i];
+        while (queue.length > 0) {
+          const current = queue.shift()!;
+          const currentPoint = samplePoints[current];
+          
+          for (let j = 0; j < samplePoints.length; j++) {
+            if (assigned.has(j)) continue;
+            
+            const otherPoint = samplePoints[j];
+            // Check if we can reach this point without crossing walls
+            if (!lineBlockedByWall(currentPoint, otherPoint)) {
+              group.push(otherPoint);
+              assigned.add(j);
+              queue.push(j);
+            }
+          }
+        }
+        
+        groups.push(group);
+      }
+      
+      return groups;
+    };
+
+    // Build a polygon from a group of sample points (convex hull approximation)
+    const buildSubRegionPolygon = (samples: Vector2[], region: Region): Polygon | null => {
+      if (samples.length < 3) return null;
+      
+      // Find the centroid of samples
+      let cx = 0, cy = 0;
+      for (const s of samples) {
+        cx += s.x;
+        cy += s.y;
+      }
+      cx /= samples.length;
+      cy /= samples.length;
+      
+      // For each sample, find the closest polygon edge point
+      // This gives us a rough boundary of the sub-region
+      const boundaryPoints: Vector2[] = [];
+      const { vertices } = region.polygon;
+      
+      // Add polygon vertices that are "reachable" from the centroid
+      for (const v of vertices) {
+        if (!lineBlockedByWall({ x: cx, y: cy }, v)) {
+          boundaryPoints.push({ ...v });
+        }
+      }
+      
+      // Add cut endpoints that are reachable
+      for (const cut of game.completedCuts) {
+        if (!lineBlockedByWall({ x: cx, y: cy }, cut.start)) {
+          boundaryPoints.push({ ...cut.start });
+        }
+        if (!lineBlockedByWall({ x: cx, y: cy }, cut.end)) {
+          boundaryPoints.push({ ...cut.end });
+        }
+      }
+      
+      // Add obstacle vertices that are reachable
+      for (const obstacle of game.obstacles) {
+        for (const v of obstacle.vertices) {
+          if (!lineBlockedByWall({ x: cx, y: cy }, v)) {
+            boundaryPoints.push({ ...v });
+          }
+        }
+      }
+      
+      if (boundaryPoints.length < 3) return null;
+      
+      // Sort points by angle from centroid to form a polygon
+      boundaryPoints.sort((a, b) => {
+        const angleA = Math.atan2(a.y - cy, a.x - cx);
+        const angleB = Math.atan2(b.y - cy, b.x - cx);
+        return angleA - angleB;
+      });
+      
+      // Remove duplicate/very close points
+      const filtered: Vector2[] = [boundaryPoints[0]];
+      for (let i = 1; i < boundaryPoints.length; i++) {
+        if (vec2Distance(boundaryPoints[i], filtered[filtered.length - 1]) > 5) {
+          filtered.push(boundaryPoints[i]);
+        }
+      }
+      
+      if (filtered.length < 3) return null;
+      
+      return { vertices: filtered };
+    };
+
+    // Try to find and remove enclosed areas formed by cuts + obstacles
+    const tryRemoveEnclosedAreas = (region: Region): boolean => {
+      const { balls } = game;
+      
+      // Find all distinct sub-regions
+      const subRegions = findSubRegions(region);
+      
+      console.log('[DEBUG] Found sub-regions:', subRegions.length);
+      
+      if (subRegions.length <= 1) {
+        // No splits detected
+        return false;
+      }
+      
+      // Check which sub-regions contain balls
+      const subRegionsWithBalls: Vector2[][] = [];
+      const subRegionsWithoutBalls: Vector2[][] = [];
+      
+      for (const subRegion of subRegions) {
+        // Check if any ball is in this sub-region (can reach sample points without crossing walls)
+        let hasBall = false;
+        for (const ball of balls) {
+          // Check if ball can reach any sample point in this sub-region
+          for (const sample of subRegion) {
+            if (!lineBlockedByWall(ball.position, sample)) {
+              hasBall = true;
+              break;
+            }
+          }
+          if (hasBall) break;
+        }
+        
+        if (hasBall) {
+          subRegionsWithBalls.push(subRegion);
+        } else {
+          subRegionsWithoutBalls.push(subRegion);
+        }
+      }
+      
+      console.log('[DEBUG] Sub-regions with balls:', subRegionsWithBalls.length);
+      console.log('[DEBUG] Sub-regions without balls:', subRegionsWithoutBalls.length);
+      
+      if (subRegionsWithoutBalls.length === 0) {
+        return false;
+      }
+      
+      // Build new region polygons for sub-regions that have balls
+      const newRegions: Region[] = game.regions.filter(r => r.id !== region.id);
+      
+      for (const subRegion of subRegionsWithBalls) {
+        const subPoly = buildSubRegionPolygon(subRegion, region);
+        if (subPoly && polygonArea(subPoly) > 100) {
+          const newId = generateRegionId();
+          newRegions.push({ id: newId, polygon: subPoly });
+          
+          // Update ball region IDs
+          for (const ball of balls) {
+            for (const sample of subRegion) {
+              if (!lineBlockedByWall(ball.position, sample)) {
+                ball.regionId = newId;
+                break;
+              }
+            }
+          }
+        }
+      }
+      
+      if (newRegions.length === game.regions.length - 1 && subRegionsWithBalls.length > 0) {
+        // No valid polygons were created, keep original
+        return false;
+      }
+      
+      game.regions = newRegions;
+      
+      // Speed up balls since area was removed
+      for (const ball of balls) {
+        const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
+        const ratio = newSpeed / ball.speed;
+        ball.speed = newSpeed;
+        ball.velocity.x *= ratio;
+        ball.velocity.y *= ratio;
+      }
+      
+      console.log('[DEBUG] Removed enclosed areas! New region count:', newRegions.length);
+      return true;
     };
 
     const applyCut = (wall: GrowingWall) => {
