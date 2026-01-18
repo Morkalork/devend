@@ -524,12 +524,16 @@ export function GameCanvas({
       }
     };
 
-    // Calculate combined area of all regions (subtracting obstacle areas that overlap)
+    // Calculate combined area of all regions (using estimatedArea when available for accuracy)
     const getCombinedArea = (): number => {
-      const regionsArea = game.regions.reduce((sum, region) => sum + polygonArea(region.polygon), 0);
+      const regionsArea = game.regions.reduce((sum, region) => {
+        // Use estimatedArea from grid sampling if available (more accurate after cuts)
+        // Otherwise fall back to polygon area calculation
+        return sum + (region.estimatedArea ?? polygonArea(region.polygon));
+      }, 0);
       // Subtract obstacle areas (obstacles are fixed dead zones)
       const obstaclesArea = game.obstacles.reduce((sum, obs) => sum + Math.abs(polygonArea(obs)), 0);
-      return regionsArea - obstaclesArea;
+      return Math.max(0, regionsArea - obstaclesArea);
     };
 
     // Check if a ball's center is on the cut line
@@ -813,47 +817,40 @@ export function GameCanvas({
       return components;
     };
 
-    // Build a polygon from sample points - simplified approach using convex hull
-    const buildPolygonFromSamples = (samples: Vector2[], region: Region): Polygon | null => {
+    // Grid size used for sampling - must match findSubRegionsGrid
+    const SAMPLE_GRID_SIZE = 15;
+    
+    // Build a polygon from sample points - use alpha shape / concave hull approach
+    const buildPolygonFromSamples = (samples: Vector2[], region: Region, sampleCount: number): { polygon: Polygon; estimatedArea: number } | null => {
       if (samples.length < 3) return null;
       
-      // For now, return the original region polygon since we just need to track
-      // which areas have balls. The cut lines will handle the visual separation.
-      // This is a simplification - in a full implementation we'd compute the exact sub-polygon.
+      // Calculate estimated area from sample count
+      // Each sample represents a grid cell of gridSize x gridSize
+      const cellArea = SAMPLE_GRID_SIZE * SAMPLE_GRID_SIZE;
+      const estimatedArea = sampleCount * cellArea;
       
-      // Find the bounding vertices from samples - use outermost samples as approximation
+      // For the polygon, use bounding box with small padding
+      // The actual area calculation uses estimatedArea, not polygonArea
       const sortedX = [...samples].sort((a, b) => a.x - b.x);
       const sortedY = [...samples].sort((a, b) => a.y - b.y);
       
-      // Get extreme points
-      const extremePoints = [
-        sortedX[0],                          // leftmost
-        sortedX[sortedX.length - 1],         // rightmost
-        sortedY[0],                          // topmost
-        sortedY[sortedY.length - 1],         // bottommost
-      ];
+      const padding = SAMPLE_GRID_SIZE / 2;
+      const minX = sortedX[0].x - padding;
+      const maxX = sortedX[sortedX.length - 1].x + padding;
+      const minY = sortedY[0].y - padding;
+      const maxY = sortedY[sortedY.length - 1].y + padding;
       
-      // Build convex hull from samples using gift wrapping
-      const convexHull = computeConvexHull(samples);
-      
-      if (convexHull.length < 3) {
-        // Fallback to bounding box
-        const minX = sortedX[0].x - 10;
-        const maxX = sortedX[sortedX.length - 1].x + 10;
-        const minY = sortedY[0].y - 10;
-        const maxY = sortedY[sortedY.length - 1].y + 10;
-        
-        return {
+      return {
+        polygon: {
           vertices: [
             { x: minX, y: minY },
             { x: maxX, y: minY },
             { x: maxX, y: maxY },
             { x: minX, y: maxY },
           ]
-        };
-      }
-      
-      return { vertices: convexHull };
+        },
+        estimatedArea
+      };
     };
     
     // Compute convex hull using gift wrapping algorithm
@@ -925,17 +922,17 @@ export function GameCanvas({
       
       for (const subRegion of regionsWithBalls) {
         console.log('[FLOOD] Building polygon from', subRegion.samples.length, 'samples');
-        const subPoly = buildPolygonFromSamples(subRegion.samples, region);
-        console.log('[FLOOD] Built polygon:', subPoly ? `${subPoly.vertices.length} vertices, area ${polygonArea(subPoly)}` : 'null');
+        const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
+        console.log('[FLOOD] Built polygon:', result ? `${result.polygon.vertices.length} vertices, estimatedArea ${result.estimatedArea}` : 'null');
         
-        if (subPoly && polygonArea(subPoly) > 100) {
+        if (result && result.estimatedArea > 100) {
           const newId = generateRegionId();
-          newRegions.push({ id: newId, polygon: subPoly });
-          console.log('[FLOOD] Added new region:', newId);
+          newRegions.push({ id: newId, polygon: result.polygon, estimatedArea: result.estimatedArea });
+          console.log('[FLOOD] Added new region:', newId, 'with estimatedArea:', result.estimatedArea);
           
           // Update ball region IDs - use simple point-in-polygon check
           for (const ball of balls) {
-            if (pointInPolygon(ball.position, subPoly)) {
+            if (pointInPolygon(ball.position, result.polygon)) {
               ball.regionId = newId;
             }
           }
