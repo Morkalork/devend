@@ -188,6 +188,7 @@ export function GameCanvas({
   const gameRef = useRef({
     regions: [] as Region[],
     obstacles: [] as Polygon[], // Obstacle polygons for rendering
+    boardPolygon: null as Polygon | null, // Original board boundary for ball collision
     originalArea: 0,
     basePlayableArea: 0, // Initial playable area after subtracting obstacles
     balls: [] as Ball[],
@@ -378,6 +379,9 @@ export function GameCanvas({
 
       // Initialize completed cuts (used for cut-to-cut and cut-to-obstacle termination)
       game.completedCuts = [];
+      
+      // Store the board polygon for ball collision (never changes after init)
+      game.boardPolygon = boardPolygon;
 
       // For initialization, we use a simpler approach:
       // Start with the board as a single region. Obstacles are collision geometry
@@ -490,17 +494,16 @@ export function GameCanvas({
 
     // Update ball position and bounce off polygon edges and obstacles (all in world coordinates)
     const updateBall = (ball: Ball, dt: number) => {
-      const region = game.regions.find((r) => r.id === ball.regionId);
-      if (!region) return;
-
       // Move ball (world units)
       ball.position.x += ball.velocity.x * dt;
       ball.position.y += ball.velocity.y * dt;
 
-      // Resolve collisions with region polygon edges
-      const regionResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, region.polygon);
-      ball.position = regionResult.position;
-      ball.velocity = regionResult.velocity;
+      // Resolve collisions with board boundary (always use original board, not region bounding box)
+      if (game.boardPolygon) {
+        const boardResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, game.boardPolygon);
+        ball.position = boardResult.position;
+        ball.velocity = boardResult.velocity;
+      }
 
       // Resolve collisions with obstacle edges (balls bounce OFF obstacles, so we flip the normal)
       for (const obstacle of game.obstacles) {
@@ -509,7 +512,7 @@ export function GameCanvas({
         ball.velocity = obstacleResult.velocity;
       }
 
-      // Resolve collisions with completed cuts (visual lines that didn't split a region)
+      // Resolve collisions with completed cuts (these are internal barriers)
       for (const cut of game.completedCuts) {
         const cutResult = resolveBallLineCollision(
           ball.position,
