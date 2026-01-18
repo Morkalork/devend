@@ -1013,11 +1013,56 @@ export function GameCanvas({
       // - Wall-to-previousCut cuts
       // - Obstacle-to-obstacle cuts
       // - Any combination that creates enclosed areas
+      
+      // Process each region independently, then collect results
+      const updatedRegions: Region[] = [];
+      
       for (const region of [...game.regions]) {
         console.log('[CUT] Checking region:', region.id, 'for sub-regions...');
-        const result = tryRemoveEnclosedAreas(region);
-        console.log('[CUT] Result:', result, 'Total regions now:', game.regions.length);
+        
+        const subRegions = findSubRegionsGrid(region);
+        console.log('[CUT] Found', subRegions.length, 'sub-regions');
+        
+        if (subRegions.length <= 1) {
+          // No split, but still verify this region has balls
+          const hasBallsInRegion = subRegions.length === 1 && subRegions[0].hasBalls;
+          if (hasBallsInRegion) {
+            // Keep original region (with updated area estimate if available)
+            const totalSamples = subRegions[0].samples.length;
+            const cellArea = 15 * 15; // SAMPLE_GRID_SIZE squared
+            updatedRegions.push({ 
+              ...region, 
+              estimatedArea: totalSamples * cellArea 
+            });
+          }
+          console.log('[CUT] Region', region.id, hasBallsInRegion ? 'kept (has balls)' : 'removed (no balls)');
+          continue;
+        }
+        
+        // Multiple sub-regions - keep only those with balls
+        const regionsWithBalls = subRegions.filter(r => r.hasBalls);
+        console.log('[CUT] Regions with balls:', regionsWithBalls.length);
+        
+        for (const subRegion of regionsWithBalls) {
+          const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
+          if (result && result.estimatedArea > 100) {
+            const newId = generateRegionId();
+            updatedRegions.push({ id: newId, polygon: result.polygon, estimatedArea: result.estimatedArea });
+            console.log('[CUT] Added new region:', newId, 'with estimatedArea:', result.estimatedArea);
+            
+            // Update ball region IDs
+            for (const ball of balls) {
+              if (pointInPolygon(ball.position, result.polygon)) {
+                ball.regionId = newId;
+              }
+            }
+          }
+        }
       }
+      
+      // Replace all regions with the updated set
+      game.regions = updatedRegions;
+      console.log('[CUT] Final region count:', game.regions.length);
 
       game.activeWall = null;
 
