@@ -192,6 +192,8 @@ export function circleCapsuleCollision(
 }
 
 // Split a polygon along a line defined by two points
+// The cut line is treated as a finite segment from cutStart to cutEnd
+// This prevents cuts from extending through walls/obstacles
 export function splitPolygon(
   poly: Polygon,
   cutStart: Vector2,
@@ -200,35 +202,73 @@ export function splitPolygon(
   const { vertices } = poly;
   if (vertices.length < 3) return null;
   
-  const cutDir = vec2Sub(cutEnd, cutStart);
-  
-  // Find all intersection points with polygon edges
+  // Find all intersection points with polygon edges using the ACTUAL cut segment
+  // Not an extended infinite line - this ensures cuts stop at walls
   const intersections: { point: Vector2; edgeIndex: number; t: number }[] = [];
   
-  // Extend the cut line far in both directions
-  const lineP1 = vec2Sub(cutStart, vec2Scale(cutDir, 1000));
-  const lineP2 = vec2Add(cutEnd, vec2Scale(cutDir, 1000));
-  
+  // First check if cutStart and cutEnd are on or very close to polygon edges
+  // These become our intersection points (for cuts that terminate at walls)
   for (let i = 0; i < vertices.length; i++) {
     const j = (i + 1) % vertices.length;
-    const intersection = lineSegmentIntersection(
-      lineP1, lineP2,
-      vertices[i], vertices[j]
-    );
+    const p1 = vertices[i];
+    const p2 = vertices[j];
     
-    if (intersection) {
-      // Calculate t along edge for ordering
-      const edge = vec2Sub(vertices[j], vertices[i]);
+    // Check if cutStart is on this edge
+    const distStart = pointToSegmentDistance(cutStart, p1, p2);
+    if (distStart < 2) { // Small tolerance for points on edges
+      const edge = vec2Sub(p2, p1);
       const edgeLen = vec2Length(edge);
-      const toInt = vec2Sub(intersection, vertices[i]);
-      const t = edgeLen > 0 ? vec2Length(toInt) / edgeLen : 0;
+      const toPoint = vec2Sub(cutStart, p1);
+      const t = edgeLen > 0 ? vec2Dot(toPoint, vec2Normalize(edge)) / edgeLen : 0;
+      if (t >= -0.01 && t <= 1.01) {
+        intersections.push({ point: { ...cutStart }, edgeIndex: i, t: Math.max(0, Math.min(1, t)) });
+      }
+    }
+    
+    // Check if cutEnd is on this edge
+    const distEnd = pointToSegmentDistance(cutEnd, p1, p2);
+    if (distEnd < 2) { // Small tolerance for points on edges
+      const edge = vec2Sub(p2, p1);
+      const edgeLen = vec2Length(edge);
+      const toPoint = vec2Sub(cutEnd, p1);
+      const t = edgeLen > 0 ? vec2Dot(toPoint, vec2Normalize(edge)) / edgeLen : 0;
+      if (t >= -0.01 && t <= 1.01) {
+        intersections.push({ point: { ...cutEnd }, edgeIndex: i, t: Math.max(0, Math.min(1, t)) });
+      }
+    }
+  }
+  
+  // If we don't have 2 intersections from endpoints, try the segment intersection approach
+  if (intersections.length !== 2) {
+    intersections.length = 0; // Clear and retry with segment intersections
+    
+    for (let i = 0; i < vertices.length; i++) {
+      const j = (i + 1) % vertices.length;
+      const intersection = lineSegmentIntersection(
+        cutStart, cutEnd,
+        vertices[i], vertices[j]
+      );
       
-      intersections.push({ point: intersection, edgeIndex: i, t });
+      if (intersection) {
+        // Calculate t along edge for ordering
+        const edge = vec2Sub(vertices[j], vertices[i]);
+        const edgeLen = vec2Length(edge);
+        const toInt = vec2Sub(intersection, vertices[i]);
+        const t = edgeLen > 0 ? vec2Length(toInt) / edgeLen : 0;
+        
+        intersections.push({ point: intersection, edgeIndex: i, t });
+      }
     }
   }
   
   // We need exactly 2 intersection points to split
   if (intersections.length !== 2) return null;
+  
+  // Remove duplicate intersections (same edge, very close t values)
+  if (intersections[0].edgeIndex === intersections[1].edgeIndex &&
+      Math.abs(intersections[0].t - intersections[1].t) < 0.01) {
+    return null;
+  }
   
   // Sort by edge index, then by t
   intersections.sort((a, b) => {
