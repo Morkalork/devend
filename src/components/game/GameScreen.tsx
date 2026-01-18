@@ -49,42 +49,34 @@ export function GameScreen({
       <CRTBackground accentColor={getAccentColor()} />
       
       <div className="fixed inset-0 flex flex-col z-10">
-      {/* Compact Top HUD bar */}
-      <div className="flex-shrink-0 px-3 py-1.5 flex items-center justify-between gap-2" style={{ backgroundColor: getBackgroundColor(config.visuals.hud_opacity) }}>
-        {/* Level and Score - more compact */}
-        <div className="flex gap-2 items-center">
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground text-[10px] uppercase tracking-wider">Lvl</span>
-            <span className="text-base font-display font-bold text-primary">
-              {levelNumber}/{totalLevels}
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-muted-foreground text-[10px] uppercase tracking-wider">Score</span>
-            <span className="text-base font-display font-bold text-accent">
-              {totalScore}
-            </span>
-          </div>
+      {/* Minimal Top HUD bar */}
+      <div className="flex-shrink-0 px-2 py-0.5 flex items-center justify-between" style={{ backgroundColor: getBackgroundColor(config.visuals.hud_opacity) }}>
+        {/* Level and Score - minimal */}
+        <div className="flex gap-2 items-center text-xs">
+          <span className="font-display font-bold text-primary">
+            L{levelNumber}/{totalLevels}
+          </span>
+          <span className="font-display font-bold text-accent">
+            {totalScore}pts
+          </span>
         </div>
 
-        {/* Owned Upgrades Display - compact */}
+        {/* Owned Upgrades Display - minimal */}
         {ownedUpgrades.length > 0 && (
-          <div className="flex items-center gap-1">
-            <div className="flex gap-1">
-              {ownedUpgrades.map((upgrade) => (
-                <div
-                  key={upgrade.id}
-                  className="w-5 h-5 rounded bg-white/10 p-0.5 flex items-center justify-center"
-                  title={upgrade.name}
-                >
-                  <SvgIcon
-                    src={upgrade.icon}
-                    className="w-full h-full text-primary [&>svg]:w-full [&>svg]:h-full"
-                    alt={upgrade.name}
-                  />
-                </div>
-              ))}
-            </div>
+          <div className="flex gap-0.5">
+            {ownedUpgrades.map((upgrade) => (
+              <div
+                key={upgrade.id}
+                className="w-4 h-4 rounded bg-white/10 p-0.5 flex items-center justify-center"
+                title={upgrade.name}
+              >
+                <SvgIcon
+                  src={upgrade.icon}
+                  className="w-full h-full text-primary [&>svg]:w-full [&>svg]:h-full"
+                  alt={upgrade.name}
+                />
+              </div>
+            ))}
           </div>
         )}
       </div>
