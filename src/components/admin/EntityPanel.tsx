@@ -1,5 +1,5 @@
 import { Plus, Trash2, Circle, Pentagon, Square } from 'lucide-react';
-import { LevelConfig, LevelEntity, BallConfig, ObstacleCircleEntity, ObstaclePolygonEntity, ObstacleRectEntity } from '@/types/level';
+import { LevelConfig, LevelEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
 
 interface EntityPanelProps {
   level: LevelConfig;
@@ -50,10 +50,10 @@ export function EntityPanel({
 
   return (
     <div className="p-3 space-y-4">
-      {/* Obstacles Section */}
+      {/* Walls Section */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">Obstacles</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground">Walls</h3>
           <div className="flex gap-1">
             <button
               onClick={() => onAddEntity('rect')}
@@ -107,7 +107,7 @@ export function EntityPanel({
           ))}
           {(level.entities || []).length === 0 && (
             <div className="text-xs text-muted-foreground text-center py-2">
-              No obstacles
+              No walls
             </div>
           )}
         </div>
@@ -122,21 +122,21 @@ export function EntityPanel({
           
           {selectedEntity.shape === 'circle' && (
             <CircleEditor
-              entity={selectedEntity as ObstacleCircleEntity}
+              entity={selectedEntity as WallCircleEntity}
               onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates)}
             />
           )}
           
           {selectedEntity.shape === 'rect' && (
             <RectEditor
-              entity={selectedEntity as ObstacleRectEntity}
+              entity={selectedEntity as WallRectEntity}
               onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates)}
             />
           )}
           
           {selectedEntity.shape === 'polygon' && (
             <PolygonEditor
-              entity={selectedEntity as ObstaclePolygonEntity}
+              entity={selectedEntity as WallPolygonEntity}
               onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates)}
             />
           )}
@@ -204,7 +204,7 @@ export function EntityPanel({
   );
 }
 
-function CircleEditor({ entity, onUpdate }: { entity: ObstacleCircleEntity; onUpdate: (updates: Partial<ObstacleCircleEntity>) => void }) {
+function CircleEditor({ entity, onUpdate }: { entity: WallCircleEntity; onUpdate: (updates: Partial<WallCircleEntity>) => void }) {
   return (
     <div className="grid grid-cols-2 gap-2 text-xs">
       <label className="space-y-1">
@@ -238,7 +238,7 @@ function CircleEditor({ entity, onUpdate }: { entity: ObstacleCircleEntity; onUp
   );
 }
 
-function RectEditor({ entity, onUpdate }: { entity: ObstacleRectEntity; onUpdate: (updates: Partial<ObstacleRectEntity>) => void }) {
+function RectEditor({ entity, onUpdate }: { entity: WallRectEntity; onUpdate: (updates: Partial<WallRectEntity>) => void }) {
   return (
     <div className="grid grid-cols-2 gap-2 text-xs">
       <label className="space-y-1">
@@ -281,7 +281,7 @@ function RectEditor({ entity, onUpdate }: { entity: ObstacleRectEntity; onUpdate
   );
 }
 
-function PolygonEditor({ entity, onUpdate }: { entity: ObstaclePolygonEntity; onUpdate: (updates: Partial<ObstaclePolygonEntity>) => void }) {
+function PolygonEditor({ entity, onUpdate }: { entity: WallPolygonEntity; onUpdate: (updates: Partial<WallPolygonEntity>) => void }) {
   const addPoint = () => {
     if (entity.points.length < 2) return;
     const lastPoint = entity.points[entity.points.length - 1];

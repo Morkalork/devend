@@ -82,8 +82,8 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     
     if (type === 'circle') {
       newEntity = {
-        id: `obs-${Date.now()}`,
-        kind: 'obstacle',
+        id: `wall-${Date.now()}`,
+        kind: 'wall',
         shape: 'circle',
         cx: 450,
         cy: 800,
@@ -91,8 +91,8 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       };
     } else if (type === 'rect') {
       newEntity = {
-        id: `obs-${Date.now()}`,
-        kind: 'obstacle',
+        id: `wall-${Date.now()}`,
+        kind: 'wall',
         shape: 'rect',
         x: 350,
         y: 700,
@@ -101,8 +101,8 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       };
     } else {
       newEntity = {
-        id: `obs-${Date.now()}`,
-        kind: 'obstacle',
+        id: `wall-${Date.now()}`,
+        kind: 'wall',
         shape: 'polygon',
         points: [[350, 700], [550, 700], [550, 900], [350, 900]],
       };
