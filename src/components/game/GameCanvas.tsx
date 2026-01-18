@@ -899,18 +899,22 @@ export function GameCanvas({
             const intNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), region.polygon);
 
             if (intPos && intNeg) {
-              // Check obstacle intersections for preview (obstacles act as walls)
+              // Check wall intersections for preview (walls act as cut boundaries)
               let previewEnd = intPos.point;
               let previewStart = intNeg.point;
+              let previewEndDist = intPos.distance;
+              let previewStartDist = intNeg.distance;
 
-              for (const obstacle of obstacles) {
-                const obsIntPos = rayPolygonIntersection(swipeStart, direction, obstacle);
-                if (obsIntPos && vec2Distance(swipeStart, obsIntPos.point) < vec2Distance(swipeStart, previewEnd)) {
-                  previewEnd = obsIntPos.point;
+              for (const wall of obstacles) {
+                const wallIntPos = rayPolygonIntersection(swipeStart, direction, wall);
+                if (wallIntPos && wallIntPos.distance > 0.1 && wallIntPos.distance < previewEndDist) {
+                  previewEnd = wallIntPos.point;
+                  previewEndDist = wallIntPos.distance;
                 }
-                const obsIntNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), obstacle);
-                if (obsIntNeg && vec2Distance(swipeStart, obsIntNeg.point) < vec2Distance(swipeStart, previewStart)) {
-                  previewStart = obsIntNeg.point;
+                const wallIntNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), wall);
+                if (wallIntNeg && wallIntNeg.distance > 0.1 && wallIntNeg.distance < previewStartDist) {
+                  previewStart = wallIntNeg.point;
+                  previewStartDist = wallIntNeg.distance;
                 }
               }
 
@@ -1095,6 +1099,13 @@ export function GameCanvas({
       const region = findRegionContainingPoint(game.regions, worldPos.x, worldPos.y);
       if (!region) return; // Clicked in darkness - ignore
 
+      // Prevent starting swipes from inside wall areas
+      for (const wall of game.obstacles) {
+        if (pointInPolygon(worldPos, wall)) {
+          return; // Clicked inside a wall - ignore
+        }
+      }
+
       game.swipeStart = worldPos;
       game.swipeRegionId = region.id;
       game.currentSwipePos = worldPos;
@@ -1156,27 +1167,25 @@ export function GameCanvas({
         return;
       }
 
-      // Also check for obstacle intersections - walls can terminate at obstacles
+      // Also check for wall intersections - cuts terminate at walls
       let targetEnd = intPos.point;
       let targetStart = intNeg.point;
+      let targetEndDist = intPos.distance;
+      let targetStartDist = intNeg.distance;
 
-      for (const obstacle of game.obstacles) {
-        // Check positive direction
-        const obstacleIntPos = rayPolygonIntersection(game.swipeStart, direction, obstacle);
-        if (obstacleIntPos && obstacleIntPos.distance < intPos.distance) {
-          // Use obstacle edge if it's closer than the region boundary
-          if (!targetEnd || vec2Distance(game.swipeStart, obstacleIntPos.point) < vec2Distance(game.swipeStart, targetEnd)) {
-            targetEnd = obstacleIntPos.point;
-          }
+      for (const wall of game.obstacles) {
+        // Check positive direction - find where the ray enters the wall
+        const wallIntPos = rayPolygonIntersection(game.swipeStart, direction, wall);
+        if (wallIntPos && wallIntPos.distance > 0.1 && wallIntPos.distance < targetEndDist) {
+          targetEnd = wallIntPos.point;
+          targetEndDist = wallIntPos.distance;
         }
 
         // Check negative direction
-        const obstacleIntNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), obstacle);
-        if (obstacleIntNeg && obstacleIntNeg.distance < intNeg.distance) {
-          // Use obstacle edge if it's closer than the region boundary
-          if (!targetStart || vec2Distance(game.swipeStart, obstacleIntNeg.point) < vec2Distance(game.swipeStart, targetStart)) {
-            targetStart = obstacleIntNeg.point;
-          }
+        const wallIntNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), wall);
+        if (wallIntNeg && wallIntNeg.distance > 0.1 && wallIntNeg.distance < targetStartDist) {
+          targetStart = wallIntNeg.point;
+          targetStartDist = wallIntNeg.distance;
         }
       }
 
