@@ -820,8 +820,8 @@ export function GameCanvas({
     // Grid size used for sampling - must match findSubRegionsGrid
     const SAMPLE_GRID_SIZE = 15;
     
-    // Build a polygon from sample points - use alpha shape / concave hull approach
-    const buildPolygonFromSamples = (samples: Vector2[], region: Region, sampleCount: number): { polygon: Polygon; estimatedArea: number } | null => {
+    // Build a polygon from sample points - returns samples for grid-based rendering
+    const buildPolygonFromSamples = (samples: Vector2[], region: Region, sampleCount: number): { polygon: Polygon; estimatedArea: number; samplePoints: Vector2[] } | null => {
       if (samples.length < 3) return null;
       
       // Calculate estimated area from sample count
@@ -829,8 +829,7 @@ export function GameCanvas({
       const cellArea = SAMPLE_GRID_SIZE * SAMPLE_GRID_SIZE;
       const estimatedArea = sampleCount * cellArea;
       
-      // For the polygon, use bounding box with small padding
-      // The actual area calculation uses estimatedArea, not polygonArea
+      // For the polygon, use bounding box with small padding (for ball containment checks)
       const sortedX = [...samples].sort((a, b) => a.x - b.x);
       const sortedY = [...samples].sort((a, b) => a.y - b.y);
       
@@ -849,7 +848,8 @@ export function GameCanvas({
             { x: minX, y: maxY },
           ]
         },
-        estimatedArea
+        estimatedArea,
+        samplePoints: samples // Store for grid-based rendering
       };
     };
     
@@ -1047,8 +1047,13 @@ export function GameCanvas({
           const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
           if (result && result.estimatedArea > 100) {
             const newId = generateRegionId();
-            updatedRegions.push({ id: newId, polygon: result.polygon, estimatedArea: result.estimatedArea });
-            console.log('[CUT] Added new region:', newId, 'with estimatedArea:', result.estimatedArea);
+            updatedRegions.push({ 
+              id: newId, 
+              polygon: result.polygon, 
+              estimatedArea: result.estimatedArea,
+              samplePoints: result.samplePoints // Store samples for accurate rendering
+            });
+            console.log('[CUT] Added new region:', newId, 'with estimatedArea:', result.estimatedArea, 'samples:', result.samplePoints.length);
             
             // Update ball region IDs
             for (const ball of balls) {
@@ -1252,23 +1257,37 @@ export function GameCanvas({
       // NOTE: Don't fill the entire screen - let CRT show through
       // The regions themselves define the playable area and will be drawn below
 
-      // Fill all regions with region color (polygons) - use config opacity for CRT to show through
+      // Fill all regions - use sample points for accurate rendering if available
       ctx.save();
       ctx.globalAlpha = canvasOpacity;
       ctx.fillStyle = regionColor;
+      
+      const gridSize = 15; // SAMPLE_GRID_SIZE - must match
+      const halfGrid = gridSize / 2;
+      
       for (const region of regions) {
-        const { vertices } = region.polygon;
-        if (vertices.length < 3) continue;
+        if (region.samplePoints && region.samplePoints.length > 0) {
+          // Use sample-based rendering for accurate cut visualization
+          for (const sample of region.samplePoints) {
+            const topLeft = worldToScreen(sample.x - halfGrid, sample.y - halfGrid);
+            const size = gridSize * scale;
+            ctx.fillRect(topLeft.x, topLeft.y, size, size);
+          }
+        } else {
+          // Fallback to polygon rendering (for initial region before any cuts)
+          const { vertices } = region.polygon;
+          if (vertices.length < 3) continue;
 
-        ctx.beginPath();
-        const start = worldToScreen(vertices[0].x, vertices[0].y);
-        ctx.moveTo(start.x, start.y);
-        for (let i = 1; i < vertices.length; i++) {
-          const pt = worldToScreen(vertices[i].x, vertices[i].y);
-          ctx.lineTo(pt.x, pt.y);
+          ctx.beginPath();
+          const start = worldToScreen(vertices[0].x, vertices[0].y);
+          ctx.moveTo(start.x, start.y);
+          for (let i = 1; i < vertices.length; i++) {
+            const pt = worldToScreen(vertices[i].x, vertices[i].y);
+            ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.closePath();
+          ctx.fill();
         }
-        ctx.closePath();
-        ctx.fill();
       }
       ctx.restore();
 
@@ -1294,8 +1313,10 @@ export function GameCanvas({
         ctx.restore();
       }
 
-      // Draw completed cuts as thick background-colored lines
-      ctx.strokeStyle = backgroundColor;
+      // Draw completed cuts - actually cut through the filled regions using destination-out
+      ctx.save();
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
       ctx.lineCap = "round";
       for (const cut of game.completedCuts) {
         ctx.lineWidth = cut.thickness * scale;
@@ -1306,6 +1327,7 @@ export function GameCanvas({
         ctx.lineTo(endScreen.x, endScreen.y);
         ctx.stroke();
       }
+      ctx.restore();
 
       // Render cut preview if enabled and swiping
       if (activeModifiers.cutPreview && swipeStart && swipeRegionId && currentSwipePos && !wall) {
