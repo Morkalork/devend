@@ -897,19 +897,53 @@ export function GameCanvas({
       return segments;
     };
 
-    // Check if a line segment intersects any boundary
-    const lineIntersectsBoundary = (p1: Vector2, p2: Vector2, segments: { p1: Vector2; p2: Vector2 }[]): boolean => {
-      // Shrink the line slightly to avoid false positives at endpoints
-      const dir = vec2Normalize(vec2Sub(p2, p1));
-      const shrink = 2;
-      const shrunkP1 = vec2Add(p1, vec2Scale(dir, shrink));
-      const shrunkP2 = vec2Sub(p2, vec2Scale(dir, shrink));
-      
+    // Check if a line segment intersects or passes through any boundary
+    const lineIntersectsBoundary = (p1: Vector2, p2: Vector2, segments: { p1: Vector2; p2: Vector2 }[], cuts: { start: Vector2; end: Vector2; thickness: number }[]): boolean => {
+      // Check regular segments (polygon edges, obstacle edges)
       for (const seg of segments) {
-        if (lineSegmentIntersection(shrunkP1, shrunkP2, seg.p1, seg.p2)) {
+        if (lineSegmentIntersection(p1, p2, seg.p1, seg.p2)) {
           return true;
         }
       }
+      
+      // For cuts, check if the line segment crosses the cut or passes too close to it
+      // This handles both perpendicular and parallel crossings
+      for (const cut of cuts) {
+        // Check direct intersection
+        if (lineSegmentIntersection(p1, p2, cut.start, cut.end)) {
+          return true;
+        }
+        
+        // Check if either endpoint of our test line is within cut thickness of the cut line
+        const dist1 = pointToSegmentDistance(p1, cut.start, cut.end);
+        const dist2 = pointToSegmentDistance(p2, cut.start, cut.end);
+        const halfThickness = cut.thickness / 2 + 2;
+        
+        // If both points are on opposite sides of the cut, they're blocked
+        // Check by seeing if the midpoint is close to the cut
+        const midPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+        const distMid = pointToSegmentDistance(midPoint, cut.start, cut.end);
+        
+        // If midpoint is within cut thickness and we span across the cut, we're blocked
+        if (distMid < halfThickness) {
+          // Check if the cut actually spans between p1 and p2 by projecting onto cut direction
+          const cutDir = vec2Normalize(vec2Sub(cut.end, cut.start));
+          const perpDir = { x: -cutDir.y, y: cutDir.x };
+          const proj1 = vec2Dot(vec2Sub(p1, cut.start), perpDir);
+          const proj2 = vec2Dot(vec2Sub(p2, cut.start), perpDir);
+          
+          // If p1 and p2 are on opposite sides of the cut line, they're blocked
+          if ((proj1 > 0 && proj2 < 0) || (proj1 < 0 && proj2 > 0)) {
+            // Also verify we're within the cut segment's length
+            const along1 = vec2Dot(vec2Sub(midPoint, cut.start), cutDir);
+            const cutLen = vec2Distance(cut.start, cut.end);
+            if (along1 >= 0 && along1 <= cutLen) {
+              return true;
+            }
+          }
+        }
+      }
+      
       return false;
     };
 
@@ -917,8 +951,21 @@ export function GameCanvas({
     const findSubRegionsGrid = (region: Region): { samples: Vector2[]; hasBalls: boolean }[] => {
       const { balls } = game;
       const bounds = polygonBounds(region.polygon);
-      const gridSize = 25; // Sample every 25 pixels
-      const segments = getAllBoundarySegments(region);
+      const gridSize = 15; // Finer grid for better cut detection
+      
+      // Get non-cut segments (polygon edges + obstacles)
+      const nonCutSegments: { p1: Vector2; p2: Vector2 }[] = [];
+      const { vertices } = region.polygon;
+      for (let i = 0; i < vertices.length; i++) {
+        const j = (i + 1) % vertices.length;
+        nonCutSegments.push({ p1: vertices[i], p2: vertices[j] });
+      }
+      for (const obstacle of game.obstacles) {
+        for (let i = 0; i < obstacle.vertices.length; i++) {
+          const j = (i + 1) % obstacle.vertices.length;
+          nonCutSegments.push({ p1: obstacle.vertices[i], p2: obstacle.vertices[j] });
+        }
+      }
       
       // Generate valid sample points
       const samplePoints: Vector2[] = [];
@@ -941,6 +988,17 @@ export function GameCanvas({
           }
           if (insideObstacle) continue;
           
+          // Must not be too close to any cut line
+          let onCut = false;
+          for (const cut of game.completedCuts) {
+            const dist = pointToSegmentDistance(point, cut.start, cut.end);
+            if (dist < cut.thickness / 2) {
+              onCut = true;
+              break;
+            }
+          }
+          if (onCut) continue;
+          
           const key = `${Math.round(x)},${Math.round(y)}`;
           pointIndices.set(key, samplePoints.length);
           samplePoints.push(point);
@@ -955,18 +1013,22 @@ export function GameCanvas({
       for (let i = 0; i < samplePoints.length; i++) {
         const pi = samplePoints[i];
         
-        // Check neighbors (adjacent grid cells)
+        // Check all 8 neighbors (cardinal + diagonal)
         const neighbors = [
-          { x: pi.x + gridSize, y: pi.y },
-          { x: pi.x, y: pi.y + gridSize },
-          { x: pi.x + gridSize, y: pi.y + gridSize },
-          { x: pi.x - gridSize, y: pi.y + gridSize },
+          { x: pi.x + gridSize, y: pi.y },           // right
+          { x: pi.x - gridSize, y: pi.y },           // left
+          { x: pi.x, y: pi.y + gridSize },           // down
+          { x: pi.x, y: pi.y - gridSize },           // up
+          { x: pi.x + gridSize, y: pi.y + gridSize }, // down-right
+          { x: pi.x - gridSize, y: pi.y + gridSize }, // down-left
+          { x: pi.x + gridSize, y: pi.y - gridSize }, // up-right
+          { x: pi.x - gridSize, y: pi.y - gridSize }, // up-left
         ];
         
         for (const n of neighbors) {
           const key = `${Math.round(n.x)},${Math.round(n.y)}`;
           const j = pointIndices.get(key);
-          if (j !== undefined && !lineIntersectsBoundary(pi, samplePoints[j], segments)) {
+          if (j !== undefined && j > i && !lineIntersectsBoundary(pi, samplePoints[j], nonCutSegments, game.completedCuts)) {
             adjacency[i].add(j);
             adjacency[j].add(i);
           }
@@ -1001,7 +1063,7 @@ export function GameCanvas({
         for (const ball of balls) {
           // Check if ball can reach any sample in this component without crossing boundaries
           for (const sample of component) {
-            if (!lineIntersectsBoundary(ball.position, sample, segments)) {
+            if (!lineIntersectsBoundary(ball.position, sample, nonCutSegments, game.completedCuts)) {
               hasBalls = true;
               break;
             }
@@ -1028,12 +1090,26 @@ export function GameCanvas({
       cx /= samples.length;
       cy /= samples.length;
       
-      const segments = getAllBoundarySegments(region);
+      // Get non-cut segments for reachability check
+      const nonCutSegments: { p1: Vector2; p2: Vector2 }[] = [];
+      const { vertices } = region.polygon;
+      for (let i = 0; i < vertices.length; i++) {
+        const j = (i + 1) % vertices.length;
+        nonCutSegments.push({ p1: vertices[i], p2: vertices[j] });
+      }
+      for (const obstacle of game.obstacles) {
+        for (let i = 0; i < obstacle.vertices.length; i++) {
+          const j = (i + 1) % obstacle.vertices.length;
+          nonCutSegments.push({ p1: obstacle.vertices[i], p2: obstacle.vertices[j] });
+        }
+      }
+      
+      const allSegments = getAllBoundarySegments(region);
       const boundaryPoints: Vector2[] = [];
       
       // Collect all boundary segment endpoints that are reachable from centroid
       const allEndpoints: Vector2[] = [];
-      for (const seg of segments) {
+      for (const seg of allSegments) {
         allEndpoints.push(seg.p1, seg.p2);
       }
       
@@ -1047,8 +1123,8 @@ export function GameCanvas({
         // Check if this point is reachable from any sample
         let reachable = false;
         for (const sample of samples) {
-          if (!lineIntersectsBoundary({ x: cx, y: cy }, pt, segments) ||
-              !lineIntersectsBoundary(sample, pt, segments)) {
+          if (!lineIntersectsBoundary({ x: cx, y: cy }, pt, nonCutSegments, game.completedCuts) ||
+              !lineIntersectsBoundary(sample, pt, nonCutSegments, game.completedCuts)) {
             reachable = true;
             break;
           }
@@ -1086,7 +1162,13 @@ export function GameCanvas({
       
       const subRegions = findSubRegionsGrid(region);
       
-      if (subRegions.length <= 1) return false;
+      console.log('[FLOOD] Found', subRegions.length, 'sub-regions:',
+        subRegions.map(r => ({ samples: r.samples.length, hasBalls: r.hasBalls })));
+      
+      if (subRegions.length <= 1) {
+        console.log('[FLOOD] Only 1 or fewer sub-regions, no split needed');
+        return false;
+      }
       
       const regionsWithBalls = subRegions.filter(r => r.hasBalls);
       const regionsWithoutBalls = subRegions.filter(r => !r.hasBalls);
@@ -1102,14 +1184,10 @@ export function GameCanvas({
           const newId = generateRegionId();
           newRegions.push({ id: newId, polygon: subPoly });
           
-          // Update ball region IDs
-          const segments = getAllBoundarySegments(region);
+          // Update ball region IDs - use simple point-in-polygon check
           for (const ball of balls) {
-            for (const sample of subRegion.samples) {
-              if (!lineIntersectsBoundary(ball.position, sample, segments)) {
-                ball.regionId = newId;
-                break;
-              }
+            if (pointInPolygon(ball.position, subPoly)) {
+              ball.regionId = newId;
             }
           }
         }
@@ -1175,6 +1253,8 @@ export function GameCanvas({
         thickness: wall.thickness + 14,
       });
 
+      console.log('[CUT] Added cut:', { start: wall.startPoint, end: wall.endPoint, totalCuts: game.completedCuts.length });
+
       // Re-partition all regions using flood-fill
       // This handles ALL cases uniformly:
       // - Wall-to-wall cuts
@@ -1183,7 +1263,9 @@ export function GameCanvas({
       // - Obstacle-to-obstacle cuts
       // - Any combination that creates enclosed areas
       for (const region of [...game.regions]) {
-        tryRemoveEnclosedAreas(region);
+        console.log('[CUT] Checking region:', region.id, 'for sub-regions...');
+        const result = tryRemoveEnclosedAreas(region);
+        console.log('[CUT] Result:', result, 'Total regions now:', game.regions.length);
       }
 
       game.activeWall = null;
