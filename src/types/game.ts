@@ -15,6 +15,7 @@ export interface Bounds {
 export interface Region {
   id: string;
   polygon: Polygon;
+  estimatedArea?: number; // Grid-based area estimate for accurate calculations after cuts
 }
 
 export interface Ball {
