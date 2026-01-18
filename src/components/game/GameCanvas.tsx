@@ -633,16 +633,37 @@ export function GameCanvas({
       const { balls } = game;
       const splitResult = splitPolygon(region.polygon, cutStart, cutEnd);
 
+      console.log('[DEBUG] trySplitRegion called:', {
+        regionId: region.id,
+        cutStart,
+        cutEnd,
+        splitResult: splitResult ? 'success' : 'failed'
+      });
+
       if (!splitResult) return false;
 
       const [poly1, poly2] = splitResult;
+      const area1 = polygonArea(poly1);
+      const area2 = polygonArea(poly2);
+      
+      console.log('[DEBUG] Split result:', {
+        poly1Vertices: poly1.vertices.length,
+        poly2Vertices: poly2.vertices.length,
+        area1,
+        area2
+      });
       
       // Check if both polygons are valid (have meaningful area)
-      if (polygonArea(poly1) < 100 || polygonArea(poly2) < 100) return false;
+      if (area1 < 100 || area2 < 100) {
+        console.log('[DEBUG] Rejecting split - area too small');
+        return false;
+      }
 
       // Determine which child regions have balls
       const child1HasBalls = regionContainsBalls(poly1, balls);
       const child2HasBalls = regionContainsBalls(poly2, balls);
+      
+      console.log('[DEBUG] Ball containment:', { child1HasBalls, child2HasBalls });
 
       // Build new regions list
       const newRegions = game.regions.filter((r) => r.id !== region.id);
@@ -651,6 +672,7 @@ export function GameCanvas({
       if (child1HasBalls) {
         const newId = generateRegionId();
         newRegions.push({ id: newId, polygon: poly1 });
+        console.log('[DEBUG] Added region for poly1:', newId);
         // Update ball region IDs
         for (const ball of balls) {
           if (pointInPolygon(ball.position, poly1)) {
@@ -658,12 +680,14 @@ export function GameCanvas({
           }
         }
       } else {
+        console.log('[DEBUG] Discarding poly1 (no balls)');
         areaRemoved = true;
       }
 
       if (child2HasBalls) {
         const newId = generateRegionId();
         newRegions.push({ id: newId, polygon: poly2 });
+        console.log('[DEBUG] Added region for poly2:', newId);
         // Update ball region IDs
         for (const ball of balls) {
           if (pointInPolygon(ball.position, poly2)) {
@@ -671,10 +695,12 @@ export function GameCanvas({
           }
         }
       } else {
+        console.log('[DEBUG] Discarding poly2 (no balls)');
         areaRemoved = true;
       }
 
       game.regions = newRegions;
+      console.log('[DEBUG] New region count:', newRegions.length);
 
       // Speed up balls if area was removed
       if (areaRemoved) {
