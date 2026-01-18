@@ -671,13 +671,49 @@ export function MapCanvas({
     setDragMode({ type: 'none' });
   }, []);
 
+  // Update cursor based on what's under the pointer
+  const [cursorStyle, setCursorStyle] = useState<string>('crosshair');
+  
+  const handlePointerMoveWithCursor = useCallback((e: React.PointerEvent) => {
+    handlePointerMove(e);
+    
+    // Update cursor when not dragging
+    if (dragMode.type === 'none') {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const hit = hitTest(sx, sy);
+      
+      if (hit) {
+        if (hit.type === 'handle') {
+          if (hit.handleType === 'radius' || hit.handleType === 'rect') {
+            setCursorStyle('nwse-resize');
+          } else if (hit.handleType === 'point') {
+            setCursorStyle('move');
+          } else if (hit.handleType === 'edge') {
+            setCursorStyle('grab');
+          }
+        } else if (hit.type === 'entity' || hit.type === 'ball') {
+          setCursorStyle('move');
+        }
+      } else {
+        setCursorStyle('crosshair');
+      }
+    } else {
+      setCursorStyle('grabbing');
+    }
+  }, [handlePointerMove, dragMode, hitTest]);
+
   return (
     <div ref={containerRef} className="w-full h-full min-h-[400px] bg-black/50 rounded-lg overflow-hidden">
       <canvas
         ref={canvasRef}
-        className="w-full h-full cursor-crosshair"
+        className="w-full h-full"
+        style={{ cursor: cursorStyle }}
         onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
+        onPointerMove={handlePointerMoveWithCursor}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerUp}
       />
