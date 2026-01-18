@@ -16,6 +16,7 @@ export interface Region {
   id: string;
   polygon: Polygon;
   estimatedArea?: number; // Grid-based area estimate for accurate calculations after cuts
+  samplePoints?: Vector2[]; // Grid sample points for accurate rendering
 }
 
 export interface Ball {
