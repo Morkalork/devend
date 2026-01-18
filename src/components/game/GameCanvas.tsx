@@ -627,95 +627,116 @@ export function GameCanvas({
       return false;
     };
 
-    // Helper: Try to split all regions with the new cut line
-    // Returns true if any region was successfully split
-    const trySplitRegionsWithCut = (cutStart: Vector2, cutEnd: Vector2): boolean => {
-      const { regions, balls } = game;
-      let anySplit = false;
+    // Helper: Try to split a region with a cut line
+    // Returns true if the region was successfully split
+    const trySplitRegion = (region: Region, cutStart: Vector2, cutEnd: Vector2): boolean => {
+      const { balls } = game;
+      const splitResult = splitPolygon(region.polygon, cutStart, cutEnd);
+
+      if (!splitResult) return false;
+
+      const [poly1, poly2] = splitResult;
+      
+      // Check if both polygons are valid (have meaningful area)
+      if (polygonArea(poly1) < 100 || polygonArea(poly2) < 100) return false;
+
+      // Determine which child regions have balls
+      const child1HasBalls = regionContainsBalls(poly1, balls);
+      const child2HasBalls = regionContainsBalls(poly2, balls);
+
+      // Build new regions list
+      const newRegions = game.regions.filter((r) => r.id !== region.id);
       let areaRemoved = false;
 
-      // Try to split each region
-      for (let regionIdx = 0; regionIdx < regions.length; regionIdx++) {
-        const region = regions[regionIdx];
-        const splitResult = splitPolygon(region.polygon, cutStart, cutEnd);
-
-        if (!splitResult) continue;
-
-        const [poly1, poly2] = splitResult;
-        
-        // Check if both polygons are valid (have area)
-        if (polygonArea(poly1) < 1 || polygonArea(poly2) < 1) continue;
-
-        anySplit = true;
-
-        // Determine which child regions have balls
-        const child1HasBalls = regionContainsBalls(poly1, balls);
-        const child2HasBalls = regionContainsBalls(poly2, balls);
-
-        // Build new regions list
-        const newRegions = regions.filter((r) => r.id !== region.id);
-
-        if (child1HasBalls) {
-          const newId = generateRegionId();
-          newRegions.push({ id: newId, polygon: poly1 });
-          // Update ball region IDs
-          for (const ball of balls) {
-            if (pointInPolygon(ball.position, poly1)) {
-              ball.regionId = newId;
-            }
-          }
-        } else {
-          areaRemoved = true;
-        }
-
-        if (child2HasBalls) {
-          const newId = generateRegionId();
-          newRegions.push({ id: newId, polygon: poly2 });
-          // Update ball region IDs
-          for (const ball of balls) {
-            if (pointInPolygon(ball.position, poly2)) {
-              ball.regionId = newId;
-            }
-          }
-        } else {
-          areaRemoved = true;
-        }
-
-        game.regions = newRegions;
-
-        // Speed up balls if area was removed
-        if (areaRemoved) {
-          for (const ball of balls) {
-            const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
-            const ratio = newSpeed / ball.speed;
-            ball.speed = newSpeed;
-            ball.velocity.x *= ratio;
-            ball.velocity.y *= ratio;
-          }
-
-          if (activeModifiers.highlightFastestBall) {
-            let fastestSpeed = 0;
-            let fastestId = game.balls[0]?.id || null;
-            for (const ball of game.balls) {
-              const speed = vec2Length(ball.velocity);
-              if (speed > fastestSpeed) {
-                fastestSpeed = speed;
-                fastestId = ball.id;
-              }
-            }
-            game.fastestBallId = fastestId;
+      if (child1HasBalls) {
+        const newId = generateRegionId();
+        newRegions.push({ id: newId, polygon: poly1 });
+        // Update ball region IDs
+        for (const ball of balls) {
+          if (pointInPolygon(ball.position, poly1)) {
+            ball.regionId = newId;
           }
         }
-
-        // Recursively try to split with all existing cuts (to handle enclosed areas)
-        for (const existingCut of game.completedCuts) {
-          trySplitRegionsWithCut(existingCut.start, existingCut.end);
-        }
-
-        break; // Process one split at a time, then re-check
+      } else {
+        areaRemoved = true;
       }
 
-      return anySplit;
+      if (child2HasBalls) {
+        const newId = generateRegionId();
+        newRegions.push({ id: newId, polygon: poly2 });
+        // Update ball region IDs
+        for (const ball of balls) {
+          if (pointInPolygon(ball.position, poly2)) {
+            ball.regionId = newId;
+          }
+        }
+      } else {
+        areaRemoved = true;
+      }
+
+      game.regions = newRegions;
+
+      // Speed up balls if area was removed
+      if (areaRemoved) {
+        for (const ball of balls) {
+          const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
+          const ratio = newSpeed / ball.speed;
+          ball.speed = newSpeed;
+          ball.velocity.x *= ratio;
+          ball.velocity.y *= ratio;
+        }
+
+        if (activeModifiers.highlightFastestBall) {
+          let fastestSpeed = 0;
+          let fastestId = game.balls[0]?.id || null;
+          for (const ball of game.balls) {
+            const speed = vec2Length(ball.velocity);
+            if (speed > fastestSpeed) {
+              fastestSpeed = speed;
+              fastestId = ball.id;
+            }
+          }
+          game.fastestBallId = fastestId;
+        }
+      }
+
+      return true;
+    };
+
+    // Check if a cut ends at an obstacle (returns true if either endpoint is on an obstacle edge)
+    const cutEndsAtObstacle = (cutStart: Vector2, cutEnd: Vector2): boolean => {
+      const threshold = 5; // Distance threshold for "touching" an obstacle
+      
+      for (const obstacle of game.obstacles) {
+        const { vertices } = obstacle;
+        for (let i = 0; i < vertices.length; i++) {
+          const j = (i + 1) % vertices.length;
+          const distStart = pointToSegmentDistance(cutStart, vertices[i], vertices[j]);
+          const distEnd = pointToSegmentDistance(cutEnd, vertices[i], vertices[j]);
+          
+          if (distStart < threshold || distEnd < threshold) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
+    // Check if a cut ends at another completed cut
+    const cutEndsAtCompletedCut = (cutStart: Vector2, cutEnd: Vector2, excludeIndex: number = -1): boolean => {
+      const threshold = 5;
+      
+      for (let i = 0; i < game.completedCuts.length; i++) {
+        if (i === excludeIndex) continue;
+        const cut = game.completedCuts[i];
+        const distStart = pointToSegmentDistance(cutStart, cut.start, cut.end);
+        const distEnd = pointToSegmentDistance(cutEnd, cut.start, cut.end);
+        
+        if (distStart < threshold || distEnd < threshold) {
+          return true;
+        }
+      }
+      return false;
     };
 
     const applyCut = (wall: GrowingWall) => {
@@ -729,29 +750,48 @@ export function GameCanvas({
         }
       }
 
-      // Add the cut to completed cuts (it's now a wall)
+      // Add the cut to completed cuts (it's now a wall that balls bounce off)
+      const newCutIndex = game.completedCuts.length;
       game.completedCuts.push({
         start: { ...wall.startPoint },
         end: { ...wall.endPoint },
         thickness: wall.thickness + 14,
       });
 
-      // Try to split regions with this new cut
-      trySplitRegionsWithCut(wall.startPoint, wall.endPoint);
+      // First, try to split with the new cut directly (wall-to-wall cuts)
+      let anyAreaRemoved = false;
+      for (const region of [...game.regions]) {
+        if (trySplitRegion(region, wall.startPoint, wall.endPoint)) {
+          anyAreaRemoved = true;
+        }
+      }
 
-      // Also try splitting with all existing cuts in case new enclosed areas formed
-      let splitOccurred = true;
-      let iterations = 0;
-      const maxIterations = 20; // Prevent infinite loops
+      // If the cut ended at an obstacle or another cut, we need to check if 
+      // multiple cuts now form an enclosed area
+      const endsAtObstacle = cutEndsAtObstacle(wall.startPoint, wall.endPoint);
+      const endsAtCut = cutEndsAtCompletedCut(wall.startPoint, wall.endPoint, newCutIndex);
       
-      while (splitOccurred && iterations < maxIterations) {
-        splitOccurred = false;
-        iterations++;
+      if (endsAtObstacle || endsAtCut) {
+        // Try combining all cuts to find enclosed areas
+        // This is complex - for now, we iterate and try all cut combinations
+        let foundEnclosed = true;
+        let iterations = 0;
+        const maxIterations = 50;
         
-        for (const cut of game.completedCuts) {
-          if (trySplitRegionsWithCut(cut.start, cut.end)) {
-            splitOccurred = true;
-            break; // Restart the loop after a successful split
+        while (foundEnclosed && iterations < maxIterations) {
+          foundEnclosed = false;
+          iterations++;
+          
+          // Try each cut against each region
+          for (const cut of game.completedCuts) {
+            for (const region of [...game.regions]) {
+              if (trySplitRegion(region, cut.start, cut.end)) {
+                foundEnclosed = true;
+                anyAreaRemoved = true;
+                break;
+              }
+            }
+            if (foundEnclosed) break;
           }
         }
       }
