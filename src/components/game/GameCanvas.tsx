@@ -765,6 +765,26 @@ export function GameCanvas({
       return false;
     };
 
+    // Check if BOTH endpoints of a cut are on polygon edges (wall-to-wall cut)
+    const isCutWallToWall = (cutStart: Vector2, cutEnd: Vector2, region: Region): boolean => {
+      const threshold = 5;
+      const { vertices } = region.polygon;
+      
+      let startOnWall = false;
+      let endOnWall = false;
+      
+      for (let i = 0; i < vertices.length; i++) {
+        const j = (i + 1) % vertices.length;
+        const distStart = pointToSegmentDistance(cutStart, vertices[i], vertices[j]);
+        const distEnd = pointToSegmentDistance(cutEnd, vertices[i], vertices[j]);
+        
+        if (distStart < threshold) startOnWall = true;
+        if (distEnd < threshold) endOnWall = true;
+      }
+      
+      return startOnWall && endOnWall;
+    };
+
     const applyCut = (wall: GrowingWall) => {
       const { balls } = game;
 
@@ -777,48 +797,20 @@ export function GameCanvas({
       }
 
       // Add the cut to completed cuts (it's now a wall that balls bounce off)
-      const newCutIndex = game.completedCuts.length;
       game.completedCuts.push({
         start: { ...wall.startPoint },
         end: { ...wall.endPoint },
         thickness: wall.thickness + 14,
       });
 
-      // First, try to split with the new cut directly (wall-to-wall cuts)
-      let anyAreaRemoved = false;
+      // Check if this is a wall-to-wall cut (both endpoints on region polygon edges)
+      // ONLY wall-to-wall cuts can split the polygon and remove area
       for (const region of [...game.regions]) {
-        if (trySplitRegion(region, wall.startPoint, wall.endPoint)) {
-          anyAreaRemoved = true;
-        }
-      }
-
-      // If the cut ended at an obstacle or another cut, we need to check if 
-      // multiple cuts now form an enclosed area
-      const endsAtObstacle = cutEndsAtObstacle(wall.startPoint, wall.endPoint);
-      const endsAtCut = cutEndsAtCompletedCut(wall.startPoint, wall.endPoint, newCutIndex);
-      
-      if (endsAtObstacle || endsAtCut) {
-        // Try combining all cuts to find enclosed areas
-        // This is complex - for now, we iterate and try all cut combinations
-        let foundEnclosed = true;
-        let iterations = 0;
-        const maxIterations = 50;
-        
-        while (foundEnclosed && iterations < maxIterations) {
-          foundEnclosed = false;
-          iterations++;
-          
-          // Try each cut against each region
-          for (const cut of game.completedCuts) {
-            for (const region of [...game.regions]) {
-              if (trySplitRegion(region, cut.start, cut.end)) {
-                foundEnclosed = true;
-                anyAreaRemoved = true;
-                break;
-              }
-            }
-            if (foundEnclosed) break;
-          }
+        if (isCutWallToWall(wall.startPoint, wall.endPoint, region)) {
+          console.log('[DEBUG] Wall-to-wall cut detected, attempting split');
+          trySplitRegion(region, wall.startPoint, wall.endPoint);
+        } else {
+          console.log('[DEBUG] Cut ends at obstacle/cut, just adding as wall (no split)');
         }
       }
 
