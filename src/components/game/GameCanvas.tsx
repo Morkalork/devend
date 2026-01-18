@@ -686,12 +686,29 @@ export function GameCanvas({
         const inChild1 = pointInPolygon(ball.position, poly1);
         const inChild2 = pointInPolygon(ball.position, poly2);
 
-        if (inChild1) {
+        if (inChild1 && !inChild2) {
           ball.regionId = child1Id;
           ballsInChild1.push(ball);
-        } else if (inChild2) {
+        } else if (inChild2 && !inChild1) {
           ball.regionId = child2Id;
           ballsInChild2.push(ball);
+        } else if (inChild1 && inChild2) {
+          // Ball on boundary - assign to first region
+          ball.regionId = child1Id;
+          ballsInChild1.push(ball);
+        } else {
+          // Ball not in either - find closest region centroid
+          const c1 = polygonCentroid(poly1);
+          const c2 = polygonCentroid(poly2);
+          const d1 = vec2Distance(ball.position, c1);
+          const d2 = vec2Distance(ball.position, c2);
+          if (d1 <= d2) {
+            ball.regionId = child1Id;
+            ballsInChild1.push(ball);
+          } else {
+            ball.regionId = child2Id;
+            ballsInChild2.push(ball);
+          }
         }
       }
 
