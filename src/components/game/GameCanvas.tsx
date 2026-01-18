@@ -33,7 +33,6 @@ import {
   BOARD_ASPECT,
   TOP_UI_PERCENT,
   BOARD_BAND_PERCENT,
-  MAX_HEIGHT_PERCENT,
   BoardRect,
   computeBoardRect,
   screenToWorld,

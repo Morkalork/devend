@@ -16,7 +16,8 @@ export const BOTTOM_UI_PERCENT = 0.15;
 // Board sizing constraints
 export const MAX_WIDTH_PERCENT_MOBILE = 1.0;  // Full width on mobile
 export const MAX_WIDTH_PERCENT_DESKTOP = 0.5; // 50vw on desktop
-export const MAX_HEIGHT_PERCENT = 0.70;
+export const MAX_HEIGHT_PERCENT_MOBILE = 0.85; // More vertical space on mobile
+export const MAX_HEIGHT_PERCENT_DESKTOP = 0.70;
 export const MOBILE_BREAKPOINT = 768; // px
 
 export interface BoardRect {
@@ -36,9 +37,10 @@ export function computeBoardRect(screenWidth: number, screenHeight: number): Boa
   // Determine if mobile based on screen width
   const isMobile = screenWidth < MOBILE_BREAKPOINT;
   const maxWidthPercent = isMobile ? MAX_WIDTH_PERCENT_MOBILE : MAX_WIDTH_PERCENT_DESKTOP;
+  const maxHeightPercent = isMobile ? MAX_HEIGHT_PERCENT_MOBILE : MAX_HEIGHT_PERCENT_DESKTOP;
   
   const availableWidth = screenWidth * maxWidthPercent;
-  const availableHeight = screenHeight * MAX_HEIGHT_PERCENT;
+  const availableHeight = screenHeight * maxHeightPercent;
   
   // Determine the largest rectangle with BOARD_ASPECT that fits
   let boardWidth = Math.min(availableWidth, availableHeight * BOARD_ASPECT);
