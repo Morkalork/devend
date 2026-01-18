@@ -448,6 +448,56 @@ export function GameCanvas({
       initGame();
     };
 
+    // Resolve ball collision with a line segment (for completed cuts)
+    const resolveBallLineCollision = (
+      ballPos: Vector2,
+      ballVel: Vector2,
+      ballRadius: number,
+      lineStart: Vector2,
+      lineEnd: Vector2,
+      lineThickness: number
+    ): { position: Vector2; velocity: Vector2 } => {
+      const dist = pointToSegmentDistance(ballPos, lineStart, lineEnd);
+      const collisionDist = ballRadius + lineThickness / 2;
+      
+      if (dist < collisionDist) {
+        // Get closest point on line
+        const edge = vec2Sub(lineEnd, lineStart);
+        const edgeLengthSq = edge.x * edge.x + edge.y * edge.y;
+        let closestPoint: Vector2;
+        
+        if (edgeLengthSq === 0) {
+          closestPoint = { ...lineStart };
+        } else {
+          const t = Math.max(0, Math.min(1, vec2Dot(vec2Sub(ballPos, lineStart), edge) / edgeLengthSq));
+          closestPoint = vec2Add(lineStart, vec2Scale(edge, t));
+        }
+        
+        // Normal points from line toward ball
+        const toBall = vec2Sub(ballPos, closestPoint);
+        let normal = vec2Normalize(toBall);
+        if (vec2Length(toBall) < 0.001) {
+          // Ball exactly on line, use perpendicular
+          normal = vec2Normalize({ x: -edge.y, y: edge.x });
+        }
+        
+        // Reflect velocity if moving toward line
+        const velDotNormal = vec2Dot(ballVel, normal);
+        let newVel = { ...ballVel };
+        if (velDotNormal < 0) {
+          newVel = vec2Sub(ballVel, vec2Scale(normal, 2 * velDotNormal));
+        }
+        
+        // Push ball out
+        const penetration = collisionDist - dist;
+        const newPos = vec2Add(ballPos, vec2Scale(normal, penetration + 0.5));
+        
+        return { position: newPos, velocity: newVel };
+      }
+      
+      return { position: ballPos, velocity: ballVel };
+    };
+
     // Update ball position and bounce off polygon edges and obstacles (all in world coordinates)
     const updateBall = (ball: Ball, dt: number) => {
       const region = game.regions.find((r) => r.id === ball.regionId);
@@ -467,6 +517,20 @@ export function GameCanvas({
         const obstacleResult = resolveBallPolygonCollisionOutward(ball.position, ball.velocity, ball.radius, obstacle);
         ball.position = obstacleResult.position;
         ball.velocity = obstacleResult.velocity;
+      }
+
+      // Resolve collisions with completed cuts (visual lines that didn't split a region)
+      for (const cut of game.completedCuts) {
+        const cutResult = resolveBallLineCollision(
+          ball.position,
+          ball.velocity,
+          ball.radius,
+          cut.start,
+          cut.end,
+          WALL_THICKNESS
+        );
+        ball.position = cutResult.position;
+        ball.velocity = cutResult.velocity;
       }
     };
 
@@ -583,15 +647,13 @@ export function GameCanvas({
         })
       );
       
-      // Always record the cut visually
-      game.completedCuts.push({
-        start: { ...wall.startPoint },
-        end: { ...wall.endPoint },
-        thickness: wall.thickness + 14, // Visual thickness
-      });
-
-      // If cut terminates at a wall, skip the split
+      // If cut terminates at a wall, record it visually (for collision) but skip the split
       if (isStartAtWall || isEndAtWall) {
+        game.completedCuts.push({
+          start: { ...wall.startPoint },
+          end: { ...wall.endPoint },
+          thickness: wall.thickness + 14, // Visual thickness
+        });
         game.activeWall = null;
         return;
       }
@@ -600,7 +662,12 @@ export function GameCanvas({
       const splitResult = splitPolygon(activeRegion.polygon, wall.startPoint, wall.endPoint);
 
       if (!splitResult) {
-        // No valid split
+        // No valid split - record cut visually for collision detection
+        game.completedCuts.push({
+          start: { ...wall.startPoint },
+          end: { ...wall.endPoint },
+          thickness: wall.thickness + 14,
+        });
         game.activeWall = null;
         return;
       }
