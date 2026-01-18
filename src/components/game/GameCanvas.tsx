@@ -785,6 +785,217 @@ export function GameCanvas({
       return startOnWall && endOnWall;
     };
 
+    // Find which obstacle a point touches (returns obstacle index and edge info, or null)
+    const findObstacleAtPoint = (point: Vector2, threshold: number = 5): { obstacleIndex: number; edgeIndex: number; point: Vector2 } | null => {
+      for (let oi = 0; oi < game.obstacles.length; oi++) {
+        const obstacle = game.obstacles[oi];
+        for (let ei = 0; ei < obstacle.vertices.length; ei++) {
+          const ej = (ei + 1) % obstacle.vertices.length;
+          const dist = pointToSegmentDistance(point, obstacle.vertices[ei], obstacle.vertices[ej]);
+          if (dist < threshold) {
+            return { obstacleIndex: oi, edgeIndex: ei, point };
+          }
+        }
+      }
+      return null;
+    };
+
+    // Find which region polygon edge a point touches
+    const findPolygonEdgeAtPoint = (point: Vector2, region: Region, threshold: number = 5): { edgeIndex: number; t: number } | null => {
+      const { vertices } = region.polygon;
+      for (let i = 0; i < vertices.length; i++) {
+        const j = (i + 1) % vertices.length;
+        const dist = pointToSegmentDistance(point, vertices[i], vertices[j]);
+        if (dist < threshold) {
+          const edge = vec2Sub(vertices[j], vertices[i]);
+          const edgeLen = vec2Length(edge);
+          if (edgeLen < 0.001) continue;
+          const toPoint = vec2Sub(point, vertices[i]);
+          const t = vec2Dot(toPoint, edge) / (edgeLen * edgeLen);
+          return { edgeIndex: i, t: Math.max(0, Math.min(1, t)) };
+        }
+      }
+      return null;
+    };
+
+    // Try to find and remove enclosed areas formed by cuts + obstacles
+    const tryRemoveEnclosedAreas = (region: Region) => {
+      const { balls } = game;
+      const threshold = 8;
+      
+      // Find all cuts that have one end on the region polygon and one end on an obstacle
+      const cutsToObstacles: { cut: { start: Vector2; end: Vector2; thickness: number }; wallEnd: Vector2; obstacleEnd: Vector2; obstacleIndex: number }[] = [];
+      
+      for (const cut of game.completedCuts) {
+        const startOnWall = findPolygonEdgeAtPoint(cut.start, region, threshold);
+        const endOnWall = findPolygonEdgeAtPoint(cut.end, region, threshold);
+        const startOnObstacle = findObstacleAtPoint(cut.start, threshold);
+        const endOnObstacle = findObstacleAtPoint(cut.end, threshold);
+        
+        if (startOnWall && endOnObstacle) {
+          cutsToObstacles.push({ cut, wallEnd: cut.start, obstacleEnd: cut.end, obstacleIndex: endOnObstacle.obstacleIndex });
+        } else if (endOnWall && startOnObstacle) {
+          cutsToObstacles.push({ cut, wallEnd: cut.end, obstacleEnd: cut.start, obstacleIndex: startOnObstacle.obstacleIndex });
+        }
+      }
+      
+      console.log('[DEBUG] Cuts to obstacles:', cutsToObstacles.length);
+      
+      // For each pair of cuts that touch the same obstacle, try to form an enclosed area
+      for (let i = 0; i < cutsToObstacles.length; i++) {
+        for (let j = i + 1; j < cutsToObstacles.length; j++) {
+          const cutA = cutsToObstacles[i];
+          const cutB = cutsToObstacles[j];
+          
+          // Both cuts must touch the same obstacle
+          if (cutA.obstacleIndex !== cutB.obstacleIndex) continue;
+          
+          console.log('[DEBUG] Found pair of cuts on same obstacle');
+          
+          // Build a polygon: wallEndA → obstacleEndA → (obstacle edges) → obstacleEndB → wallEndB → (polygon edges back to wallEndA)
+          const obstacle = game.obstacles[cutA.obstacleIndex];
+          const polyVerts = region.polygon.vertices;
+          
+          // Find where cuts touch the polygon
+          const wallEdgeA = findPolygonEdgeAtPoint(cutA.wallEnd, region, threshold);
+          const wallEdgeB = findPolygonEdgeAtPoint(cutB.wallEnd, region, threshold);
+          if (!wallEdgeA || !wallEdgeB) continue;
+          
+          // Build enclosed polygon vertices
+          const enclosedVerts: Vector2[] = [];
+          
+          // Start at wallEndA
+          enclosedVerts.push({ ...cutA.wallEnd });
+          
+          // Go to obstacleEndA
+          enclosedVerts.push({ ...cutA.obstacleEnd });
+          
+          // Walk around obstacle to obstacleEndB (take shorter path)
+          // For simplicity, just add obstacle corners between the two points
+          const obsVerts = obstacle.vertices;
+          const distA = vec2Distance(cutA.obstacleEnd, cutB.obstacleEnd);
+          
+          // Find closest obstacle vertices to each cut endpoint
+          let closestToA = 0, closestToB = 0;
+          let minDistA = Infinity, minDistB = Infinity;
+          for (let k = 0; k < obsVerts.length; k++) {
+            const dA = vec2Distance(obsVerts[k], cutA.obstacleEnd);
+            const dB = vec2Distance(obsVerts[k], cutB.obstacleEnd);
+            if (dA < minDistA) { minDistA = dA; closestToA = k; }
+            if (dB < minDistB) { minDistB = dB; closestToB = k; }
+          }
+          
+          // Add obstacle vertices between the two cut points (shorter path)
+          if (closestToA !== closestToB) {
+            // Try both directions, pick shorter
+            const path1: Vector2[] = [];
+            const path2: Vector2[] = [];
+            
+            for (let k = closestToA; k !== closestToB; k = (k + 1) % obsVerts.length) {
+              path1.push({ ...obsVerts[(k + 1) % obsVerts.length] });
+            }
+            for (let k = closestToA; k !== closestToB; k = (k - 1 + obsVerts.length) % obsVerts.length) {
+              path2.push({ ...obsVerts[(k - 1 + obsVerts.length) % obsVerts.length] });
+            }
+            
+            const shorterPath = path1.length <= path2.length ? path1 : path2;
+            for (const v of shorterPath) {
+              if (enclosedVerts.length === 0 || vec2Distance(v, enclosedVerts[enclosedVerts.length - 1]) > 1) {
+                enclosedVerts.push(v);
+              }
+            }
+          }
+          
+          // Go to obstacleEndB
+          enclosedVerts.push({ ...cutB.obstacleEnd });
+          
+          // Go to wallEndB
+          enclosedVerts.push({ ...cutB.wallEnd });
+          
+          // Walk along polygon edges back to wallEndA
+          // Determine direction (shorter path along polygon)
+          const startEdge = wallEdgeB.edgeIndex;
+          const endEdge = wallEdgeA.edgeIndex;
+          
+          if (startEdge !== endEdge) {
+            // Walk from startEdge to endEdge
+            for (let k = (startEdge + 1) % polyVerts.length; k !== (endEdge + 1) % polyVerts.length; k = (k + 1) % polyVerts.length) {
+              enclosedVerts.push({ ...polyVerts[k] });
+            }
+          }
+          
+          if (enclosedVerts.length < 3) continue;
+          
+          const enclosedPoly: Polygon = { vertices: enclosedVerts };
+          const area = polygonArea(enclosedPoly);
+          
+          console.log('[DEBUG] Enclosed polygon area:', area, 'vertices:', enclosedVerts.length);
+          
+          if (area < 100) continue;
+          
+          // Check if this enclosed area contains any balls
+          const hasBalls = regionContainsBalls(enclosedPoly, balls);
+          
+          console.log('[DEBUG] Enclosed area has balls:', hasBalls);
+          
+          if (!hasBalls) {
+            // Remove this enclosed area from the region by subtracting it
+            // For now, we'll modify the region polygon to exclude this area
+            // This is complex - simpler approach: just mark that area was removed and update percentage
+            
+            // Create new polygon by cutting out the enclosed area
+            // Use the two wall endpoints as split points
+            const splitResult = splitPolygon(region.polygon, cutA.wallEnd, cutB.wallEnd);
+            if (splitResult) {
+              const [poly1, poly2] = splitResult;
+              const poly1HasBalls = regionContainsBalls(poly1, balls);
+              const poly2HasBalls = regionContainsBalls(poly2, balls);
+              
+              console.log('[DEBUG] Split result - poly1 has balls:', poly1HasBalls, 'poly2 has balls:', poly2HasBalls);
+              
+              const newRegions = game.regions.filter(r => r.id !== region.id);
+              
+              if (poly1HasBalls) {
+                const newId = generateRegionId();
+                newRegions.push({ id: newId, polygon: poly1 });
+                for (const ball of balls) {
+                  if (pointInPolygon(ball.position, poly1)) {
+                    ball.regionId = newId;
+                  }
+                }
+              }
+              
+              if (poly2HasBalls) {
+                const newId = generateRegionId();
+                newRegions.push({ id: newId, polygon: poly2 });
+                for (const ball of balls) {
+                  if (pointInPolygon(ball.position, poly2)) {
+                    ball.regionId = newId;
+                  }
+                }
+              }
+              
+              game.regions = newRegions;
+              
+              // Speed up balls
+              for (const ball of balls) {
+                const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
+                const ratio = newSpeed / ball.speed;
+                ball.speed = newSpeed;
+                ball.velocity.x *= ratio;
+                ball.velocity.y *= ratio;
+              }
+              
+              console.log('[DEBUG] Removed enclosed area! New region count:', newRegions.length);
+              return true;
+            }
+          }
+        }
+      }
+      
+      return false;
+    };
+
     const applyCut = (wall: GrowingWall) => {
       const { balls } = game;
 
@@ -804,13 +1015,15 @@ export function GameCanvas({
       });
 
       // Check if this is a wall-to-wall cut (both endpoints on region polygon edges)
-      // ONLY wall-to-wall cuts can split the polygon and remove area
+      // ONLY wall-to-wall cuts can directly split the polygon
       for (const region of [...game.regions]) {
         if (isCutWallToWall(wall.startPoint, wall.endPoint, region)) {
           console.log('[DEBUG] Wall-to-wall cut detected, attempting split');
           trySplitRegion(region, wall.startPoint, wall.endPoint);
         } else {
-          console.log('[DEBUG] Cut ends at obstacle/cut, just adding as wall (no split)');
+          console.log('[DEBUG] Cut ends at obstacle/cut, checking for enclosed areas');
+          // Check if this cut combined with others forms an enclosed area
+          tryRemoveEnclosedAreas(region);
         }
       }
 
