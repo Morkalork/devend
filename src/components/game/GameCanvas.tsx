@@ -1267,13 +1267,16 @@ export function GameCanvas({
       
       const gridSize = 15; // SAMPLE_GRID_SIZE - must match
       const halfGrid = gridSize / 2;
+      // Add slight overlap for smoother edges (anti-aliasing effect)
+      const cellPadding = 1.5;
       
       for (const region of regions) {
         if (region.samplePoints && region.samplePoints.length > 0) {
           // Use sample-based rendering for accurate cut visualization
+          // Draw cells with slight overlap to reduce pixelation
           for (const sample of region.samplePoints) {
-            const topLeft = worldToScreen(sample.x - halfGrid, sample.y - halfGrid);
-            const size = gridSize * scale;
+            const topLeft = worldToScreen(sample.x - halfGrid - cellPadding, sample.y - halfGrid - cellPadding);
+            const size = (gridSize + cellPadding * 2) * scale;
             ctx.fillRect(topLeft.x, topLeft.y, size, size);
           }
         } else {
@@ -1317,12 +1320,15 @@ export function GameCanvas({
       }
 
       // Draw completed cuts - actually cut through the filled regions using destination-out
+      // Add extra width to ensure clean separation over the overlapping cells
       ctx.save();
       ctx.globalCompositeOperation = 'destination-out';
       ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
       ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       for (const cut of game.completedCuts) {
-        ctx.lineWidth = cut.thickness * scale;
+        // Add extra thickness to cleanly cut through overlapping cells
+        ctx.lineWidth = (cut.thickness + 4) * scale;
         const startScreen = worldToScreen(cut.start.x, cut.start.y);
         const endScreen = worldToScreen(cut.end.x, cut.end.y);
         ctx.beginPath();
