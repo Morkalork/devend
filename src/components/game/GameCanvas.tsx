@@ -27,6 +27,7 @@ import {
   polygonBounds,
   createPolygonFromShape,
   pointToSegmentDistance,
+  lineSegmentIntersection,
 } from "@/lib/polygon";
 import {
   BOARD_WIDTH,
@@ -1293,6 +1294,39 @@ export function GameCanvas({
         if (wallIntNeg && wallIntNeg.distance > 0.1 && wallIntNeg.distance < targetStartDist) {
           targetStart = wallIntNeg.point;
           targetStartDist = wallIntNeg.distance;
+        }
+      }
+
+      // Also check for completed cuts (previously drawn lines) - terminate at them too
+      for (const cut of game.completedCuts) {
+        // Check positive direction intersection with cut line
+        const cutIntPos = lineSegmentIntersection(
+          game.swipeStart,
+          vec2Add(game.swipeStart, vec2Scale(direction, 10000)),
+          cut.start,
+          cut.end
+        );
+        if (cutIntPos) {
+          const dist = vec2Distance(game.swipeStart, cutIntPos);
+          if (dist > 0.1 && dist < targetEndDist) {
+            targetEnd = cutIntPos;
+            targetEndDist = dist;
+          }
+        }
+
+        // Check negative direction intersection
+        const cutIntNeg = lineSegmentIntersection(
+          game.swipeStart,
+          vec2Add(game.swipeStart, vec2Scale(direction, -10000)),
+          cut.start,
+          cut.end
+        );
+        if (cutIntNeg) {
+          const dist = vec2Distance(game.swipeStart, cutIntNeg);
+          if (dist > 0.1 && dist < targetStartDist) {
+            targetStart = cutIntNeg;
+            targetStartDist = dist;
+          }
         }
       }
 
