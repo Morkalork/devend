@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { LevelConfig, LevelEntity, BallConfig, ObstacleCircleEntity, ObstaclePolygonEntity, ObstacleRectEntity } from '@/types/level';
+import { LevelConfig, LevelEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
 import { BOARD_WIDTH, BOARD_HEIGHT, computeBoardRect, BoardRect } from '@/lib/boardConstants';
 
 interface MapCanvasProps {
@@ -167,7 +167,7 @@ export function MapCanvas({
       const isSelected = entity.id === selectedEntityId;
       
       if (entity.shape === 'circle') {
-        const circleEntity = entity as ObstacleCircleEntity;
+        const circleEntity = entity as WallCircleEntity;
         const center = worldToScreen(circleEntity.cx, circleEntity.cy);
         const radius = circleEntity.radius * boardRect.scale;
         
@@ -197,8 +197,8 @@ export function MapCanvas({
           });
         }
       } else if (entity.shape === 'rect') {
-        // Handle rect obstacles
-        const rectEntity = entity as ObstacleRectEntity;
+        // Handle rect walls
+        const rectEntity = entity as WallRectEntity;
         const topLeft = worldToScreen(rectEntity.x, rectEntity.y);
         const width = rectEntity.width * boardRect.scale;
         const height = rectEntity.height * boardRect.scale;
@@ -234,7 +234,7 @@ export function MapCanvas({
           });
         }
       } else if (entity.shape === 'polygon') {
-        const polyEntity = entity as ObstaclePolygonEntity;
+        const polyEntity = entity as WallPolygonEntity;
         const points = polyEntity.points.map(([x, y]) => worldToScreen(x, y));
         
         ctx.fillStyle = isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)';
@@ -325,7 +325,7 @@ export function MapCanvas({
       const entity = (level.entities || []).find(e => e.id === selectedEntityId);
       if (entity) {
         if (entity.shape === 'circle') {
-          const circleEntity = entity as ObstacleCircleEntity;
+          const circleEntity = entity as WallCircleEntity;
           const center = worldToScreen(circleEntity.cx, circleEntity.cy);
           const radius = circleEntity.radius * boardRect.scale;
           
@@ -342,7 +342,7 @@ export function MapCanvas({
             }
           }
         } else if (entity.shape === 'rect') {
-          const rectEntity = entity as ObstacleRectEntity;
+          const rectEntity = entity as WallRectEntity;
           const topLeft = worldToScreen(rectEntity.x, rectEntity.y);
           const width = rectEntity.width * boardRect.scale;
           const height = rectEntity.height * boardRect.scale;
@@ -365,7 +365,7 @@ export function MapCanvas({
             }
           }
         } else if (entity.shape === 'polygon') {
-          const polyEntity = entity as ObstaclePolygonEntity;
+          const polyEntity = entity as WallPolygonEntity;
           
           for (let i = 0; i < polyEntity.points.length; i++) {
             const pointPos = worldToScreen(polyEntity.points[i][0], polyEntity.points[i][1]);
@@ -400,19 +400,19 @@ export function MapCanvas({
     // Check entities (click to select)
     for (const entity of (level.entities || []).slice().reverse()) {
       if (entity.shape === 'circle') {
-        const circleEntity = entity as ObstacleCircleEntity;
+        const circleEntity = entity as WallCircleEntity;
         const dist = Math.hypot(world.x - circleEntity.cx, world.y - circleEntity.cy);
         if (dist < circleEntity.radius) {
           return { type: 'entity', id: entity.id };
         }
       } else if (entity.shape === 'rect') {
-        const rectEntity = entity as ObstacleRectEntity;
+        const rectEntity = entity as WallRectEntity;
         if (world.x >= rectEntity.x && world.x <= rectEntity.x + rectEntity.width &&
             world.y >= rectEntity.y && world.y <= rectEntity.y + rectEntity.height) {
           return { type: 'entity', id: entity.id };
         }
       } else if (entity.shape === 'polygon') {
-        const polyEntity = entity as ObstaclePolygonEntity;
+        const polyEntity = entity as WallPolygonEntity;
         if (pointInPolygon(world.x, world.y, polyEntity.points)) {
           return { type: 'entity', id: entity.id };
         }
@@ -443,7 +443,7 @@ export function MapCanvas({
     
     if (hit.type === 'handle') {
       if (hit.handleType === 'radius') {
-        const entity = (level.entities || []).find(e => e.id === hit.id) as ObstacleCircleEntity;
+        const entity = (level.entities || []).find(e => e.id === hit.id) as WallCircleEntity;
         if (entity) {
           const dist = Math.hypot(world.x - entity.cx, world.y - entity.cy);
           setDragMode({
@@ -454,7 +454,7 @@ export function MapCanvas({
           });
         }
       } else if (hit.handleType === 'rect' && hit.rectHandle) {
-        const entity = (level.entities || []).find(e => e.id === hit.id) as ObstacleRectEntity;
+        const entity = (level.entities || []).find(e => e.id === hit.id) as WallRectEntity;
         if (entity) {
           setDragMode({
             type: 'rect-resize',
@@ -474,7 +474,7 @@ export function MapCanvas({
           startY: world.y,
         });
       } else if (hit.handleType === 'edge' && hit.edgeIndex !== undefined) {
-        const entity = (level.entities || []).find(e => e.id === hit.id) as ObstaclePolygonEntity;
+        const entity = (level.entities || []).find(e => e.id === hit.id) as WallPolygonEntity;
         if (entity) {
           setDragMode({
             type: 'polygon-edge',
@@ -534,19 +534,19 @@ export function MapCanvas({
       const original = dragMode.originalEntity;
       
       if (original.shape === 'circle') {
-        const circleOriginal = original as ObstacleCircleEntity;
+        const circleOriginal = original as WallCircleEntity;
         onUpdateEntity(dragMode.id, {
           cx: circleOriginal.cx + dx,
           cy: circleOriginal.cy + dy,
         });
       } else if (original.shape === 'rect') {
-        const rectOriginal = original as ObstacleRectEntity;
+        const rectOriginal = original as WallRectEntity;
         onUpdateEntity(dragMode.id, {
           x: rectOriginal.x + dx,
           y: rectOriginal.y + dy,
         });
       } else if (original.shape === 'polygon') {
-        const polyOriginal = original as ObstaclePolygonEntity;
+        const polyOriginal = original as WallPolygonEntity;
         onUpdateEntity(dragMode.id, {
           points: polyOriginal.points.map(([x, y]) => [x + dx, y + dy] as [number, number]),
         });
@@ -562,7 +562,7 @@ export function MapCanvas({
         },
       }));
     } else if (dragMode.type === 'circle-radius') {
-      const entity = (level.entities || []).find(e => e.id === dragMode.id) as ObstacleCircleEntity;
+      const entity = (level.entities || []).find(e => e.id === dragMode.id) as WallCircleEntity;
       if (entity) {
         const newRadius = Math.max(20, Math.hypot(world.x - entity.cx, world.y - entity.cy));
         onUpdateEntity(dragMode.id, { radius: Math.round(newRadius) });
@@ -625,7 +625,7 @@ export function MapCanvas({
         height: Math.round(newHeight),
       });
     } else if (dragMode.type === 'polygon-point') {
-      const entity = (level.entities || []).find(e => e.id === dragMode.id) as ObstaclePolygonEntity;
+      const entity = (level.entities || []).find(e => e.id === dragMode.id) as WallPolygonEntity;
       if (entity) {
         const newPoints = [...entity.points];
         newPoints[dragMode.pointIndex] = [Math.round(world.x), Math.round(world.y)];

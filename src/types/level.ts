@@ -36,16 +36,16 @@ export interface BaseEntity {
   shape: "rect" | "polygon" | "circle";
 }
 
-// Obstacle entity - carves away playable space
-export interface ObstacleEntity extends BaseEntity {
-  kind: "obstacle";
+// Wall entity - carves away playable space (subtracted from regions like cuts)
+export interface WallEntity extends BaseEntity {
+  kind: "wall";
 }
 
 // Combined entity type with shape
-export type ObstacleRectEntity = ObstacleEntity & RectShape;
-export type ObstaclePolygonEntity = ObstacleEntity & PolygonShape;
-export type ObstacleCircleEntity = ObstacleEntity & CircleShape;
-export type LevelEntity = ObstacleRectEntity | ObstaclePolygonEntity | ObstacleCircleEntity;
+export type WallRectEntity = WallEntity & RectShape;
+export type WallPolygonEntity = WallEntity & PolygonShape;
+export type WallCircleEntity = WallEntity & CircleShape;
+export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity;
 
 export interface LevelConfig {
   id: string;

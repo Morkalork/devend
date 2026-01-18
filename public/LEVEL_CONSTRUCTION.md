@@ -6,7 +6,7 @@ This document describes how to construct levels for Ball Breaker using the `map.
 
 Levels are defined in `/public/map.yml` using YAML syntax. The game board has fixed dimensions:
 - **BOARD_WIDTH**: 900 world units
-- **BOARD_HEIGHT**: 1600 world units
+- **BOARD_HEIGHT**: 900 world units (square aspect ratio)
 
 All coordinates and sizes in the level configuration use these world units.
 
@@ -28,11 +28,11 @@ levels:
         topSpeed: 600
         color: "00d4ff"
     entities:
-      - id: "obs-1"
-        kind: "obstacle"
+      - id: "wall-1"
+        kind: "wall"
         shape: "rect"
         x: 350
-        y: 600
+        y: 350
         width: 200
         height: 200
 ```
@@ -50,7 +50,7 @@ levels:
 | `expectedCuts` | number | ✅ | Expected number of cuts to complete the level (used for scoring) |
 | `points` | number | ✅ | Base points awarded for completing the level |
 | `balls` | array | ✅ | Array of ball configurations (see Ball Properties) |
-| `entities` | array | ❌ | Optional array of entities like obstacles (see Entity Properties) |
+| `entities` | array | ❌ | Optional array of entities like walls (see Entity Properties) |
 
 ### Validation Rules
 - `expectedCuts` must be less than `points`
@@ -79,26 +79,26 @@ Each ball in the `balls` array has the following properties:
 
 ## Entity Properties
 
-Entities allow you to add obstacles and other elements to levels. Currently supported:
+Entities allow you to add walls and other elements to levels. Currently supported:
 
 ### Base Entity Properties
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `id` | string | ✅ | Unique identifier for the entity |
-| `kind` | string | ✅ | Entity type: `"obstacle"` (more kinds planned) |
+| `kind` | string | ✅ | Entity type: `"wall"` (more kinds planned) |
 | `shape` | string | ✅ | Shape type: `"rect"` or `"polygon"` |
 
-### Obstacle Entity (`kind: "obstacle"`)
+### Wall Entity (`kind: "wall"`)
 
-Obstacles carve away playable space from the board. Players cannot cut through obstacles, and balls bounce off obstacle boundaries.
+Walls are rendered as "cut-out" areas—they appear the same as areas removed by player cuts. Balls bounce off wall boundaries, and cuts cannot extend through walls.
 
 #### Rectangle Shape (`shape: "rect"`)
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
 | `x` | number | ✅ | Left edge X coordinate in world units (0-900) |
-| `y` | number | ✅ | Top edge Y coordinate in world units (0-1600) |
+| `y` | number | ✅ | Top edge Y coordinate in world units (0-900) |
 | `width` | number | ✅ | Width in world units |
 | `height` | number | ✅ | Height in world units |
 
@@ -106,12 +106,12 @@ Example:
 ```yaml
 entities:
   - id: "wall-1"
-    kind: "obstacle"
+    kind: "wall"
     shape: "rect"
     x: 100
-    y: 400
+    y: 300
     width: 150
-    height: 300
+    height: 150
 ```
 
 #### Polygon Shape (`shape: "polygon"`)
@@ -124,19 +124,19 @@ Example:
 ```yaml
 entities:
   - id: "triangle-1"
-    kind: "obstacle"
+    kind: "wall"
     shape: "polygon"
     points:
-      - [450, 700]
-      - [550, 750]
-      - [500, 900]
+      - [450, 400]
+      - [550, 450]
+      - [500, 550]
 ```
 
-### Obstacle Behavior
-- Obstacles are rendered in red with a darker red stroke
-- The initial playable area is calculated AFTER subtracting obstacle areas
-- Win percentage is based on the playable area (not including obstacle space)
-- Obstacles should be placed within the playable arena (roughly 45-855 X, 80-1520 Y considering margins)
+### Wall Behavior
+- Walls are rendered as transparent "cut-out" areas (same visual as player cuts)
+- The initial playable area is calculated AFTER subtracting wall areas
+- Win percentage is based on the playable area (not including wall space)
+- Walls should be placed within the playable arena (roughly 45-855 X, 45-855 Y considering margins)
 
 ---
 
@@ -155,7 +155,7 @@ entities:
   │    │                     │       │
   │    └─────────────────────┘       │
   │                                  │
-(0,1600) ────────────────────── (900,1600)
+(0,900) ────────────────────── (900,900)
 ```
 
 - Origin (0,0) is top-left
@@ -168,8 +168,8 @@ entities:
 ## Difficulty Progression Tips
 
 1. **Early levels (1-2)**: 1-2 balls, higher thresholds (35-40%), fewer expected cuts
-2. **Mid levels (3-4)**: 2-3 balls, add simple obstacles, lower thresholds (30-35%)
-3. **Late levels (5+)**: 3+ balls, complex obstacle patterns, low thresholds (20-30%)
+2. **Mid levels (3-4)**: 2-3 balls, add simple walls, lower thresholds (30-35%)
+3. **Late levels (5+)**: 3+ balls, complex wall patterns, low thresholds (20-30%)
 
 ### Speed Guidelines
 - Level 1: initialSpeed ~300, topSpeed ~600
@@ -211,18 +211,18 @@ The entity system is extensible. Potential future kinds:
       topSpeed: 760
       color: "c792ea"
   entities:
-    - id: "obs-1"
-      kind: "obstacle"
+    - id: "wall-1"
+      kind: "wall"
       shape: "rect"
       x: 100
-      y: 400
+      y: 200
       width: 150
-      height: 300
-    - id: "obs-2"
-      kind: "obstacle"
+      height: 150
+    - id: "wall-2"
+      kind: "wall"
       shape: "rect"
       x: 650
-      y: 900
+      y: 550
       width: 150
-      height: 300
+      height: 150
 ```

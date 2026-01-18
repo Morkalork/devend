@@ -84,8 +84,6 @@ const COLORS = {
   cutPreview: "rgba(255, 255, 255, 0.3)",
   fastestBallHighlight: "#00ffff",
   debugOutline: "#ff00ff",
-  obstacle: "#ff4444", // Distinct color for obstacles
-  obstacleStroke: "#aa2222",
 };
 
 let regionIdCounter = 0;
@@ -264,24 +262,24 @@ export function GameCanvas({
 
       const initialPolygon = createRectPolygon(left, top, right, bottom);
 
-      // Process entities - currently only obstacles
-      game.obstacles = [];
-      let totalObstacleArea = 0;
+      // Process entities - walls are subtracted from regions (just like cuts)
+      // We no longer store walls separately; instead we subtract them from the initial region
+      const wallPolygons: Polygon[] = [];
 
       if (level.entities && level.entities.length > 0) {
         for (const entity of level.entities) {
-          if (entity.kind === "obstacle") {
+          if (entity.kind === "wall") {
             // Create polygon from entity shape
-            let obstaclePolygon: Polygon;
+            let wallPolygon: Polygon;
             if (entity.shape === "rect") {
-              obstaclePolygon = createPolygonFromShape("rect", {
+              wallPolygon = createPolygonFromShape("rect", {
                 x: entity.x,
                 y: entity.y,
                 width: entity.width,
                 height: entity.height,
               });
             } else if (entity.shape === "polygon") {
-              obstaclePolygon = createPolygonFromShape("polygon", {
+              wallPolygon = createPolygonFromShape("polygon", {
                 points: entity.points,
               });
             } else if (entity.shape === "circle") {
@@ -295,19 +293,21 @@ export function GameCanvas({
                   y: entity.cy + Math.sin(angle) * entity.radius,
                 });
               }
-              obstaclePolygon = { vertices };
+              wallPolygon = { vertices };
             } else {
               continue;
             }
 
-            // Store obstacle for rendering and collision
-            game.obstacles.push(obstaclePolygon);
-            
-            // Calculate obstacle area to subtract from playable area
-            totalObstacleArea += Math.abs(polygonArea(obstaclePolygon));
+            wallPolygons.push(wallPolygon);
           }
         }
       }
+
+      // Store wall polygons for collision detection (balls bounce off walls)
+      game.obstacles = wallPolygons;
+
+      // Calculate total wall area for percentage calculation
+      const totalWallArea = wallPolygons.reduce((sum, wall) => sum + Math.abs(polygonArea(wall)), 0);
 
       game.regions = [
         {
@@ -316,10 +316,10 @@ export function GameCanvas({
         },
       ];
 
-      // Base playable area is the region area minus obstacle areas
+      // Base playable area is the region area minus wall areas
       // This is what we use for win percentage calculation
       const regionArea = polygonArea(initialPolygon);
-      game.basePlayableArea = regionArea - totalObstacleArea;
+      game.basePlayableArea = regionArea - totalWallArea;
 
       // Original area is the same as base playable area
       game.originalArea = game.basePlayableArea;
@@ -850,9 +850,9 @@ export function GameCanvas({
       }
       ctx.restore();
 
-      // Render obstacles as "cut out" regions - they look like the background
-      for (const obstacle of obstacles) {
-        const { vertices } = obstacle;
+      // Render walls as "cut out" regions - they look like the background (same as cuts)
+      for (const wall of obstacles) {
+        const { vertices } = wall;
         if (vertices.length < 3) continue;
 
         ctx.save();
@@ -865,8 +865,9 @@ export function GameCanvas({
         }
         ctx.closePath();
 
-        // Fill with background color to look like cut-out region
-        ctx.fillStyle = backgroundColor;
+        // Clear the wall area (transparent) so CRT background shows through - same as cut areas
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
         ctx.fill();
         ctx.restore();
       }

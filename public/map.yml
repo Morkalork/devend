@@ -22,15 +22,15 @@ levels:
         topSpeed: 680
         color: 4ecdc4
     entities:
-      - id: obs-1768672946807
-        kind: obstacle
+      - id: wall-1
+        kind: wall
         shape: rect
         x: -41
         "y": -41
         width: 500
         height: 180
-      - id: obs-1768672962970
-        kind: obstacle
+      - id: wall-2
+        kind: wall
         shape: rect
         x: 350
         "y": 720
@@ -50,8 +50,8 @@ levels:
         topSpeed: 720
         color: 6bcb77
     entities:
-      - id: obs-1
-        kind: obstacle
+      - id: wall-1
+        kind: wall
         shape: rect
         x: 350
         "y": 350
@@ -75,15 +75,15 @@ levels:
         topSpeed: 760
         color: c792ea
     entities:
-      - id: obs-1
-        kind: obstacle
+      - id: wall-1
+        kind: wall
         shape: rect
         x: 100
         "y": 200
         width: 150
         height: 200
-      - id: obs-2
-        kind: obstacle
+      - id: wall-2
+        kind: wall
         shape: rect
         x: 650
         "y": 500
@@ -107,8 +107,8 @@ levels:
         topSpeed: 810
         color: 00aaff
     entities:
-      - id: obs-1
-        kind: obstacle
+      - id: wall-1
+        kind: wall
         shape: polygon
         points:
           - - 450
@@ -133,8 +133,8 @@ levels:
         topSpeed: 430
         color: 00ff88
     entities:
-      - id: obs-1
-        kind: obstacle
+      - id: wall-1
+        kind: wall
         shape: polygon
         points:
           - - 450
@@ -149,8 +149,8 @@ levels:
             - 350
           - - 370
             - 250
-      - id: obs-2
-        kind: obstacle
+      - id: wall-2
+        kind: wall
         shape: polygon
         points:
           - - 450
