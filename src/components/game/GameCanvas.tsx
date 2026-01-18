@@ -570,7 +570,16 @@ export function GameCanvas({
       // Split the polygon along the cut
       const splitResult = splitPolygon(activeRegion.polygon, wall.startPoint, wall.endPoint);
 
+      // Always record the cut visually, even if no split happens
+      game.completedCuts.push({
+        start: { ...wall.startPoint },
+        end: { ...wall.endPoint },
+        thickness: wall.thickness + 14, // Visual thickness
+      });
+
       if (!splitResult) {
+        // No valid split (e.g., cut terminated at a wall obstacle)
+        // The cut is drawn but no region is split
         game.activeWall = null;
         return;
       }
@@ -609,13 +618,6 @@ export function GameCanvas({
       }
 
       game.regions = newRegions;
-
-      // Store the completed cut (world coords)
-      game.completedCuts.push({
-        start: { ...wall.startPoint },
-        end: { ...wall.endPoint },
-        thickness: wall.thickness + 14, // Visual thickness
-      });
 
       game.activeWall = null;
 
