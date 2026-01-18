@@ -818,95 +818,156 @@ export function GameCanvas({
       return null;
     };
 
-    // Check if a line segment intersects any obstacle or completed cut
-    const lineBlockedByWall = (p1: Vector2, p2: Vector2): boolean => {
-      // Check obstacles
+    // Get all boundary segments in the game (outer walls + obstacle edges + completed cuts)
+    const getAllBoundarySegments = (region: Region): { p1: Vector2; p2: Vector2 }[] => {
+      const segments: { p1: Vector2; p2: Vector2 }[] = [];
+      
+      // Add region polygon edges
+      const { vertices } = region.polygon;
+      for (let i = 0; i < vertices.length; i++) {
+        const j = (i + 1) % vertices.length;
+        segments.push({ p1: vertices[i], p2: vertices[j] });
+      }
+      
+      // Add obstacle edges
       for (const obstacle of game.obstacles) {
         for (let i = 0; i < obstacle.vertices.length; i++) {
           const j = (i + 1) % obstacle.vertices.length;
-          if (lineSegmentIntersection(p1, p2, obstacle.vertices[i], obstacle.vertices[j])) {
-            return true;
-          }
+          segments.push({ p1: obstacle.vertices[i], p2: obstacle.vertices[j] });
         }
       }
-      // Check completed cuts
+      
+      // Add completed cuts
       for (const cut of game.completedCuts) {
-        if (lineSegmentIntersection(p1, p2, cut.start, cut.end)) {
+        segments.push({ p1: cut.start, p2: cut.end });
+      }
+      
+      return segments;
+    };
+
+    // Check if a line segment intersects any boundary
+    const lineIntersectsBoundary = (p1: Vector2, p2: Vector2, segments: { p1: Vector2; p2: Vector2 }[]): boolean => {
+      // Shrink the line slightly to avoid false positives at endpoints
+      const dir = vec2Normalize(vec2Sub(p2, p1));
+      const shrink = 2;
+      const shrunkP1 = vec2Add(p1, vec2Scale(dir, shrink));
+      const shrunkP2 = vec2Sub(p2, vec2Scale(dir, shrink));
+      
+      for (const seg of segments) {
+        if (lineSegmentIntersection(shrunkP1, shrunkP2, seg.p1, seg.p2)) {
           return true;
         }
       }
       return false;
     };
 
-    // Find all distinct sub-regions within a region by flood-fill sampling
-    // Returns array of sample points, grouped by which sub-region they're in
-    const findSubRegions = (region: Region): Vector2[][] => {
+    // Find all distinct sub-regions using flood-fill on a grid
+    const findSubRegionsGrid = (region: Region): { samples: Vector2[]; hasBalls: boolean }[] => {
+      const { balls } = game;
       const bounds = polygonBounds(region.polygon);
-      const gridSize = 30; // Sample every 30 pixels
-      const samplePoints: Vector2[] = [];
+      const gridSize = 25; // Sample every 25 pixels
+      const segments = getAllBoundarySegments(region);
       
-      // Generate sample points within the polygon
+      // Generate valid sample points
+      const samplePoints: Vector2[] = [];
+      const pointIndices: Map<string, number> = new Map();
+      
       for (let x = bounds.minX + gridSize/2; x < bounds.maxX; x += gridSize) {
         for (let y = bounds.minY + gridSize/2; y < bounds.maxY; y += gridSize) {
           const point = { x, y };
-          if (pointInPolygon(point, region.polygon)) {
-            // Also check point is not inside any obstacle
-            let insideObstacle = false;
-            for (const obstacle of game.obstacles) {
-              if (pointInPolygon(point, obstacle)) {
-                insideObstacle = true;
-                break;
-              }
-            }
-            if (!insideObstacle) {
-              samplePoints.push(point);
+          
+          // Must be inside the region polygon
+          if (!pointInPolygon(point, region.polygon)) continue;
+          
+          // Must not be inside any obstacle
+          let insideObstacle = false;
+          for (const obstacle of game.obstacles) {
+            if (pointInPolygon(point, obstacle)) {
+              insideObstacle = true;
+              break;
             }
           }
+          if (insideObstacle) continue;
+          
+          const key = `${Math.round(x)},${Math.round(y)}`;
+          pointIndices.set(key, samplePoints.length);
+          samplePoints.push(point);
         }
       }
       
       if (samplePoints.length === 0) return [];
       
-      // Group points by connectivity (can reach each other without crossing walls)
-      const groups: Vector2[][] = [];
-      const assigned = new Set<number>();
+      // Build adjacency: two points are connected if no boundary crosses between them
+      const adjacency: Set<number>[] = samplePoints.map(() => new Set());
       
       for (let i = 0; i < samplePoints.length; i++) {
-        if (assigned.has(i)) continue;
+        const pi = samplePoints[i];
         
-        const group: Vector2[] = [samplePoints[i]];
-        assigned.add(i);
+        // Check neighbors (adjacent grid cells)
+        const neighbors = [
+          { x: pi.x + gridSize, y: pi.y },
+          { x: pi.x, y: pi.y + gridSize },
+          { x: pi.x + gridSize, y: pi.y + gridSize },
+          { x: pi.x - gridSize, y: pi.y + gridSize },
+        ];
         
-        // BFS to find all connected points
+        for (const n of neighbors) {
+          const key = `${Math.round(n.x)},${Math.round(n.y)}`;
+          const j = pointIndices.get(key);
+          if (j !== undefined && !lineIntersectsBoundary(pi, samplePoints[j], segments)) {
+            adjacency[i].add(j);
+            adjacency[j].add(i);
+          }
+        }
+      }
+      
+      // Flood-fill to find connected components
+      const visited = new Set<number>();
+      const components: { samples: Vector2[]; hasBalls: boolean }[] = [];
+      
+      for (let i = 0; i < samplePoints.length; i++) {
+        if (visited.has(i)) continue;
+        
+        const component: Vector2[] = [];
         const queue = [i];
+        visited.add(i);
+        
         while (queue.length > 0) {
-          const current = queue.shift()!;
-          const currentPoint = samplePoints[current];
+          const curr = queue.shift()!;
+          component.push(samplePoints[curr]);
           
-          for (let j = 0; j < samplePoints.length; j++) {
-            if (assigned.has(j)) continue;
-            
-            const otherPoint = samplePoints[j];
-            // Check if we can reach this point without crossing walls
-            if (!lineBlockedByWall(currentPoint, otherPoint)) {
-              group.push(otherPoint);
-              assigned.add(j);
-              queue.push(j);
+          for (const neighbor of adjacency[curr]) {
+            if (!visited.has(neighbor)) {
+              visited.add(neighbor);
+              queue.push(neighbor);
             }
           }
         }
         
-        groups.push(group);
+        // Check if any ball is in this component
+        let hasBalls = false;
+        for (const ball of balls) {
+          // Check if ball can reach any sample in this component without crossing boundaries
+          for (const sample of component) {
+            if (!lineIntersectsBoundary(ball.position, sample, segments)) {
+              hasBalls = true;
+              break;
+            }
+          }
+          if (hasBalls) break;
+        }
+        
+        components.push({ samples: component, hasBalls });
       }
       
-      return groups;
+      return components;
     };
 
-    // Build a polygon from a group of sample points (convex hull approximation)
-    const buildSubRegionPolygon = (samples: Vector2[], region: Region): Polygon | null => {
-      if (samples.length < 3) return null;
+    // Build a polygon from sample points by finding the convex hull of reachable boundary points
+    const buildPolygonFromSamples = (samples: Vector2[], region: Region): Polygon | null => {
+      if (samples.length < 1) return null;
       
-      // Find the centroid of samples
+      // Find centroid of samples
       let cx = 0, cy = 0;
       for (const s of samples) {
         cx += s.x;
@@ -915,50 +976,49 @@ export function GameCanvas({
       cx /= samples.length;
       cy /= samples.length;
       
-      // For each sample, find the closest polygon edge point
-      // This gives us a rough boundary of the sub-region
+      const segments = getAllBoundarySegments(region);
       const boundaryPoints: Vector2[] = [];
-      const { vertices } = region.polygon;
       
-      // Add polygon vertices that are "reachable" from the centroid
-      for (const v of vertices) {
-        if (!lineBlockedByWall({ x: cx, y: cy }, v)) {
-          boundaryPoints.push({ ...v });
-        }
+      // Collect all boundary segment endpoints that are reachable from centroid
+      const allEndpoints: Vector2[] = [];
+      for (const seg of segments) {
+        allEndpoints.push(seg.p1, seg.p2);
       }
       
-      // Add cut endpoints that are reachable
-      for (const cut of game.completedCuts) {
-        if (!lineBlockedByWall({ x: cx, y: cy }, cut.start)) {
-          boundaryPoints.push({ ...cut.start });
-        }
-        if (!lineBlockedByWall({ x: cx, y: cy }, cut.end)) {
-          boundaryPoints.push({ ...cut.end });
-        }
-      }
-      
-      // Add obstacle vertices that are reachable
-      for (const obstacle of game.obstacles) {
-        for (const v of obstacle.vertices) {
-          if (!lineBlockedByWall({ x: cx, y: cy }, v)) {
-            boundaryPoints.push({ ...v });
+      // Add unique endpoints
+      const seen = new Set<string>();
+      for (const pt of allEndpoints) {
+        const key = `${Math.round(pt.x)},${Math.round(pt.y)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        
+        // Check if this point is reachable from any sample
+        let reachable = false;
+        for (const sample of samples) {
+          if (!lineIntersectsBoundary({ x: cx, y: cy }, pt, segments) ||
+              !lineIntersectsBoundary(sample, pt, segments)) {
+            reachable = true;
+            break;
           }
+        }
+        if (reachable) {
+          boundaryPoints.push({ ...pt });
         }
       }
       
       if (boundaryPoints.length < 3) return null;
       
-      // Sort points by angle from centroid to form a polygon
+      // Sort by angle from centroid
       boundaryPoints.sort((a, b) => {
         const angleA = Math.atan2(a.y - cy, a.x - cx);
         const angleB = Math.atan2(b.y - cy, b.x - cx);
         return angleA - angleB;
       });
       
-      // Remove duplicate/very close points
+      // Remove duplicates
       const filtered: Vector2[] = [boundaryPoints[0]];
       for (let i = 1; i < boundaryPoints.length; i++) {
-        if (vec2Distance(boundaryPoints[i], filtered[filtered.length - 1]) > 5) {
+        if (vec2Distance(boundaryPoints[i], filtered[filtered.length - 1]) > 3) {
           filtered.push(boundaryPoints[i]);
         }
       }
@@ -968,65 +1028,37 @@ export function GameCanvas({
       return { vertices: filtered };
     };
 
-    // Try to find and remove enclosed areas formed by cuts + obstacles
+    // Try to remove enclosed areas and update regions
     const tryRemoveEnclosedAreas = (region: Region): boolean => {
       const { balls } = game;
       
-      // Find all distinct sub-regions
-      const subRegions = findSubRegions(region);
+      const subRegions = findSubRegionsGrid(region);
       
-      console.log('[DEBUG] Found sub-regions:', subRegions.length);
+      console.log('[DEBUG] Found sub-regions:', subRegions.length, 
+        'with balls:', subRegions.filter(r => r.hasBalls).length,
+        'without balls:', subRegions.filter(r => !r.hasBalls).length);
       
-      if (subRegions.length <= 1) {
-        // No splits detected
-        return false;
-      }
+      if (subRegions.length <= 1) return false;
       
-      // Check which sub-regions contain balls
-      const subRegionsWithBalls: Vector2[][] = [];
-      const subRegionsWithoutBalls: Vector2[][] = [];
+      const regionsWithBalls = subRegions.filter(r => r.hasBalls);
+      const regionsWithoutBalls = subRegions.filter(r => !r.hasBalls);
       
-      for (const subRegion of subRegions) {
-        // Check if any ball is in this sub-region (can reach sample points without crossing walls)
-        let hasBall = false;
-        for (const ball of balls) {
-          // Check if ball can reach any sample point in this sub-region
-          for (const sample of subRegion) {
-            if (!lineBlockedByWall(ball.position, sample)) {
-              hasBall = true;
-              break;
-            }
-          }
-          if (hasBall) break;
-        }
-        
-        if (hasBall) {
-          subRegionsWithBalls.push(subRegion);
-        } else {
-          subRegionsWithoutBalls.push(subRegion);
-        }
-      }
+      if (regionsWithoutBalls.length === 0) return false;
       
-      console.log('[DEBUG] Sub-regions with balls:', subRegionsWithBalls.length);
-      console.log('[DEBUG] Sub-regions without balls:', subRegionsWithoutBalls.length);
-      
-      if (subRegionsWithoutBalls.length === 0) {
-        return false;
-      }
-      
-      // Build new region polygons for sub-regions that have balls
+      // Build new regions for areas with balls
       const newRegions: Region[] = game.regions.filter(r => r.id !== region.id);
       
-      for (const subRegion of subRegionsWithBalls) {
-        const subPoly = buildSubRegionPolygon(subRegion, region);
+      for (const subRegion of regionsWithBalls) {
+        const subPoly = buildPolygonFromSamples(subRegion.samples, region);
         if (subPoly && polygonArea(subPoly) > 100) {
           const newId = generateRegionId();
           newRegions.push({ id: newId, polygon: subPoly });
           
           // Update ball region IDs
+          const segments = getAllBoundarySegments(region);
           for (const ball of balls) {
-            for (const sample of subRegion) {
-              if (!lineBlockedByWall(ball.position, sample)) {
+            for (const sample of subRegion.samples) {
+              if (!lineIntersectsBoundary(ball.position, sample, segments)) {
                 ball.regionId = newId;
                 break;
               }
@@ -1035,20 +1067,33 @@ export function GameCanvas({
         }
       }
       
-      if (newRegions.length === game.regions.length - 1 && subRegionsWithBalls.length > 0) {
-        // No valid polygons were created, keep original
+      if (newRegions.length === 0) {
+        // Failed to build valid polygons, keep original
         return false;
       }
       
       game.regions = newRegions;
       
-      // Speed up balls since area was removed
+      // Speed up balls
       for (const ball of balls) {
         const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
         const ratio = newSpeed / ball.speed;
         ball.speed = newSpeed;
         ball.velocity.x *= ratio;
         ball.velocity.y *= ratio;
+      }
+      
+      if (activeModifiers.highlightFastestBall) {
+        let fastestSpeed = 0;
+        let fastestId = game.balls[0]?.id || null;
+        for (const ball of game.balls) {
+          const speed = vec2Length(ball.velocity);
+          if (speed > fastestSpeed) {
+            fastestSpeed = speed;
+            fastestId = ball.id;
+          }
+        }
+        game.fastestBallId = fastestId;
       }
       
       console.log('[DEBUG] Removed enclosed areas! New region count:', newRegions.length);
@@ -1073,17 +1118,22 @@ export function GameCanvas({
         thickness: wall.thickness + 14,
       });
 
-      // Check if this is a wall-to-wall cut (both endpoints on region polygon edges)
-      // ONLY wall-to-wall cuts can directly split the polygon
+      // After adding a cut, check all regions for enclosed areas
+      // The flood-fill algorithm will detect any areas separated by:
+      // - Outer polygon edges
+      // - Obstacle edges  
+      // - Player-drawn walls (completed cuts)
+      // Areas without balls will be removed
       for (const region of [...game.regions]) {
+        // First try direct polygon split for wall-to-wall cuts
         if (isCutWallToWall(wall.startPoint, wall.endPoint, region)) {
           console.log('[DEBUG] Wall-to-wall cut detected, attempting split');
           trySplitRegion(region, wall.startPoint, wall.endPoint);
-        } else {
-          console.log('[DEBUG] Cut ends at obstacle/cut, checking for enclosed areas');
-          // Check if this cut combined with others forms an enclosed area
-          tryRemoveEnclosedAreas(region);
         }
+        
+        // Always check for enclosed areas (handles obstacle/cut combinations)
+        console.log('[DEBUG] Checking for enclosed areas...');
+        tryRemoveEnclosedAreas(region);
       }
 
       game.activeWall = null;
