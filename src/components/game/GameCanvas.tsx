@@ -1004,6 +1004,46 @@ export function GameCanvas({
       }
       ctx.restore();
 
+      // DEBUG: Draw red borders around each region polygon
+      ctx.save();
+      ctx.strokeStyle = 'red';
+      ctx.lineWidth = 3;
+      for (const region of regions) {
+        const { vertices } = region.polygon;
+        if (vertices.length < 3) continue;
+
+        ctx.beginPath();
+        const start = worldToScreen(vertices[0].x, vertices[0].y);
+        ctx.moveTo(start.x, start.y);
+        for (let i = 1; i < vertices.length; i++) {
+          const pt = worldToScreen(vertices[i].x, vertices[i].y);
+          ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // DEBUG: Draw blue borders around obstacles
+      ctx.save();
+      ctx.strokeStyle = 'blue';
+      ctx.lineWidth = 2;
+      for (const obstacle of obstacles) {
+        const { vertices } = obstacle;
+        if (vertices.length < 3) continue;
+
+        ctx.beginPath();
+        const start = worldToScreen(vertices[0].x, vertices[0].y);
+        ctx.moveTo(start.x, start.y);
+        for (let i = 1; i < vertices.length; i++) {
+          const pt = worldToScreen(vertices[i].x, vertices[i].y);
+          ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.restore();
+
       // Render walls as "cut out" regions - they look like the background (same as cuts)
       for (const wall of obstacles) {
         const { vertices } = wall;
