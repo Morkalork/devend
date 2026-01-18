@@ -27,15 +27,15 @@ levels:
         shape: rect
         x: -41
         "y": -41
-        width: 972
-        height: 313
+        width: 500
+        height: 180
       - id: obs-1768672962970
         kind: obstacle
         shape: rect
-        x: 348
-        "y": 1416
+        x: 350
+        "y": 720
         width: 200
-        height: 249
+        height: 180
   - id: level-3
     sizeThreshold: 35
     expectedCuts: 6
@@ -54,7 +54,7 @@ levels:
         kind: obstacle
         shape: rect
         x: 350
-        "y": 600
+        "y": 350
         width: 200
         height: 200
   - id: level-4
@@ -79,16 +79,16 @@ levels:
         kind: obstacle
         shape: rect
         x: 100
-        "y": 400
+        "y": 200
         width: 150
-        height: 300
+        height: 200
       - id: obs-2
         kind: obstacle
         shape: rect
         x: 650
-        "y": 900
+        "y": 500
         width: 150
-        height: 300
+        height: 200
   - id: level-5
     sizeThreshold: 25
     expectedCuts: 10
@@ -112,13 +112,13 @@ levels:
         shape: polygon
         points:
           - - 450
-            - 700
+            - 400
           - - 550
-            - 750
+            - 450
           - - 500
-            - 900
+            - 550
           - - 400
-            - 850
+            - 500
   - id: level-6
     sizeThreshold: 15
     expectedCuts: 10
@@ -138,30 +138,30 @@ levels:
         shape: polygon
         points:
           - - 450
+            - 200
+          - - 530
+            - 250
+          - - 530
             - 350
-          - - 579.9
-            - 425
-          - - 579.9
-            - 575
           - - 450
-            - 650
-          - - 320.1
-            - 575
-          - - 320.1
-            - 425
+            - 400
+          - - 370
+            - 350
+          - - 370
+            - 250
       - id: obs-2
         kind: obstacle
         shape: polygon
         points:
           - - 450
-            - 900
-          - - 623.2
-            - 1000
-          - - 623.2
-            - 1200
+            - 550
+          - - 560
+            - 610
+          - - 560
+            - 730
           - - 450
-            - 1300
-          - - 276.8
-            - 1200
-          - - 276.8
-            - 1000
+            - 790
+          - - 340
+            - 730
+          - - 340
+            - 610
