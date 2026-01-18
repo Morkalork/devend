@@ -1,22 +1,22 @@
 // Fixed-aspect-ratio game board constants
 // All gameplay simulation runs in world coordinates
 
-// Target board aspect ratio (portrait)
-export const BOARD_ASPECT = 9 / 16;
+// Target board aspect ratio (square)
+export const BOARD_ASPECT = 1;
 
 // Logical world dimensions - all gameplay uses these coordinates
 export const BOARD_WIDTH = 900;
-export const BOARD_HEIGHT = 1600;
+export const BOARD_HEIGHT = 900;
 
 // Layout percentages
-export const TOP_UI_PERCENT = 0.15;
-export const BOARD_BAND_PERCENT = 0.70;
-export const BOTTOM_UI_PERCENT = 0.15;
+export const TOP_UI_PERCENT = 0.08;
+export const BOARD_BAND_PERCENT = 0.84;
+export const BOTTOM_UI_PERCENT = 0.08;
 
 // Board sizing constraints
-export const MAX_WIDTH_PERCENT_MOBILE = 1.0;  // Full width on mobile
+export const MAX_WIDTH_PERCENT_MOBILE = 0.98;  // Nearly full width on mobile
 export const MAX_WIDTH_PERCENT_DESKTOP = 0.5; // 50vw on desktop
-export const MAX_HEIGHT_PERCENT_MOBILE = 0.85; // More vertical space on mobile
+export const MAX_HEIGHT_PERCENT_MOBILE = 0.80; // Allow room for HUD
 export const MAX_HEIGHT_PERCENT_DESKTOP = 0.70;
 export const MOBILE_BREAKPOINT = 768; // px
 
