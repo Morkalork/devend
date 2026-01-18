@@ -617,113 +617,144 @@ export function GameCanvas({
       });
     };
 
-    const applyCut = (wall: GrowingWall) => {
+    // Helper: Check if a region contains any balls
+    const regionContainsBalls = (polygon: Polygon, balls: Ball[]): boolean => {
+      for (const ball of balls) {
+        if (pointInPolygon(ball.position, polygon)) {
+          return true;
+        }
+      }
+      return false;
+    };
+
+    // Helper: Try to split all regions with the new cut line
+    // Returns true if any region was successfully split
+    const trySplitRegionsWithCut = (cutStart: Vector2, cutEnd: Vector2): boolean => {
       const { regions, balls } = game;
+      let anySplit = false;
+      let areaRemoved = false;
 
-      const activeRegionIndex = regions.findIndex((r) => r.id === wall.activeRegionId);
-      if (activeRegionIndex === -1) return;
+      // Try to split each region
+      for (let regionIdx = 0; regionIdx < regions.length; regionIdx++) {
+        const region = regions[regionIdx];
+        const splitResult = splitPolygon(region.polygon, cutStart, cutEnd);
 
-      const activeRegion = regions[activeRegionIndex];
+        if (!splitResult) continue;
+
+        const [poly1, poly2] = splitResult;
+        
+        // Check if both polygons are valid (have area)
+        if (polygonArea(poly1) < 1 || polygonArea(poly2) < 1) continue;
+
+        anySplit = true;
+
+        // Determine which child regions have balls
+        const child1HasBalls = regionContainsBalls(poly1, balls);
+        const child2HasBalls = regionContainsBalls(poly2, balls);
+
+        // Build new regions list
+        const newRegions = regions.filter((r) => r.id !== region.id);
+
+        if (child1HasBalls) {
+          const newId = generateRegionId();
+          newRegions.push({ id: newId, polygon: poly1 });
+          // Update ball region IDs
+          for (const ball of balls) {
+            if (pointInPolygon(ball.position, poly1)) {
+              ball.regionId = newId;
+            }
+          }
+        } else {
+          areaRemoved = true;
+        }
+
+        if (child2HasBalls) {
+          const newId = generateRegionId();
+          newRegions.push({ id: newId, polygon: poly2 });
+          // Update ball region IDs
+          for (const ball of balls) {
+            if (pointInPolygon(ball.position, poly2)) {
+              ball.regionId = newId;
+            }
+          }
+        } else {
+          areaRemoved = true;
+        }
+
+        game.regions = newRegions;
+
+        // Speed up balls if area was removed
+        if (areaRemoved) {
+          for (const ball of balls) {
+            const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
+            const ratio = newSpeed / ball.speed;
+            ball.speed = newSpeed;
+            ball.velocity.x *= ratio;
+            ball.velocity.y *= ratio;
+          }
+
+          if (activeModifiers.highlightFastestBall) {
+            let fastestSpeed = 0;
+            let fastestId = game.balls[0]?.id || null;
+            for (const ball of game.balls) {
+              const speed = vec2Length(ball.velocity);
+              if (speed > fastestSpeed) {
+                fastestSpeed = speed;
+                fastestId = ball.id;
+              }
+            }
+            game.fastestBallId = fastestId;
+          }
+        }
+
+        // Recursively try to split with all existing cuts (to handle enclosed areas)
+        for (const existingCut of game.completedCuts) {
+          trySplitRegionsWithCut(existingCut.start, existingCut.end);
+        }
+
+        break; // Process one split at a time, then re-check
+      }
+
+      return anySplit;
+    };
+
+    const applyCut = (wall: GrowingWall) => {
+      const { balls } = game;
 
       // Check if any ball is exactly on the cut line - instant game over
       for (const ball of balls) {
-        if (ball.regionId === activeRegion.id && isBallOnCutLine(ball, wall)) {
+        if (isBallOnCutLine(ball, wall)) {
           handleGameOver();
           return;
         }
       }
 
-      // Check if either endpoint terminates at a wall obstacle (not on region boundary)
-      // If so, don't split - just draw the cut visually
-      const isStartAtWall = game.obstacles.some(obstacle => 
-        obstacle.vertices.some((v, idx) => {
-          const next = obstacle.vertices[(idx + 1) % obstacle.vertices.length];
-          return pointToSegmentDistance(wall.startPoint, v, next) < 5;
-        })
-      );
-      const isEndAtWall = game.obstacles.some(obstacle => 
-        obstacle.vertices.some((v, idx) => {
-          const next = obstacle.vertices[(idx + 1) % obstacle.vertices.length];
-          return pointToSegmentDistance(wall.endPoint, v, next) < 5;
-        })
-      );
+      // Add the cut to completed cuts (it's now a wall)
+      game.completedCuts.push({
+        start: { ...wall.startPoint },
+        end: { ...wall.endPoint },
+        thickness: wall.thickness + 14,
+      });
+
+      // Try to split regions with this new cut
+      trySplitRegionsWithCut(wall.startPoint, wall.endPoint);
+
+      // Also try splitting with all existing cuts in case new enclosed areas formed
+      let splitOccurred = true;
+      let iterations = 0;
+      const maxIterations = 20; // Prevent infinite loops
       
-      // If cut terminates at a wall, record it visually (for collision) but skip the split
-      if (isStartAtWall || isEndAtWall) {
-        game.completedCuts.push({
-          start: { ...wall.startPoint },
-          end: { ...wall.endPoint },
-          thickness: wall.thickness + 14, // Visual thickness
-        });
-        game.activeWall = null;
-        return;
-      }
-
-      // Split the polygon along the cut
-      const splitResult = splitPolygon(activeRegion.polygon, wall.startPoint, wall.endPoint);
-
-      if (!splitResult) {
-        // No valid split - record cut visually for collision detection
-        game.completedCuts.push({
-          start: { ...wall.startPoint },
-          end: { ...wall.endPoint },
-          thickness: wall.thickness + 14,
-        });
-        game.activeWall = null;
-        return;
-      }
-
-      const [poly1, poly2] = splitResult;
-      const child1Id = generateRegionId();
-      const child2Id = generateRegionId();
-
-      // Assign balls to child regions
-      const ballsInChild1: Ball[] = [];
-      const ballsInChild2: Ball[] = [];
-
-      for (const ball of balls) {
-        if (ball.regionId !== activeRegion.id) continue;
-
-        const inChild1 = pointInPolygon(ball.position, poly1);
-        const inChild2 = pointInPolygon(ball.position, poly2);
-
-        if (inChild1 && !inChild2) {
-          ball.regionId = child1Id;
-          ballsInChild1.push(ball);
-        } else if (inChild2 && !inChild1) {
-          ball.regionId = child2Id;
-          ballsInChild2.push(ball);
-        } else if (inChild1 && inChild2) {
-          // Ball on boundary - assign to first region
-          ball.regionId = child1Id;
-          ballsInChild1.push(ball);
-        } else {
-          // Ball not in either - find closest region centroid
-          const c1 = polygonCentroid(poly1);
-          const c2 = polygonCentroid(poly2);
-          const d1 = vec2Distance(ball.position, c1);
-          const d2 = vec2Distance(ball.position, c2);
-          if (d1 <= d2) {
-            ball.regionId = child1Id;
-            ballsInChild1.push(ball);
-          } else {
-            ball.regionId = child2Id;
-            ballsInChild2.push(ball);
+      while (splitOccurred && iterations < maxIterations) {
+        splitOccurred = false;
+        iterations++;
+        
+        for (const cut of game.completedCuts) {
+          if (trySplitRegionsWithCut(cut.start, cut.end)) {
+            splitOccurred = true;
+            break; // Restart the loop after a successful split
           }
         }
       }
-
-      // Remove the active region and add child regions (only those with balls)
-      const newRegions = regions.filter((r) => r.id !== activeRegion.id);
-
-      if (ballsInChild1.length > 0) {
-        newRegions.push({ id: child1Id, polygon: poly1 });
-      }
-      if (ballsInChild2.length > 0) {
-        newRegions.push({ id: child2Id, polygon: poly2 });
-      }
-
-      game.regions = newRegions;
 
       game.activeWall = null;
 
@@ -752,31 +783,6 @@ export function GameCanvas({
         setClearedPercent(percent);
         game.bestRemainingPercent = percent;
         return;
-      }
-
-      // Speed up all balls if area was removed
-      if (ballsInChild1.length === 0 || ballsInChild2.length === 0) {
-        for (const ball of balls) {
-          const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
-          const ratio = newSpeed / ball.speed;
-          ball.speed = newSpeed;
-          ball.velocity.x *= ratio;
-          ball.velocity.y *= ratio;
-        }
-
-        // Update fastest ball tracking
-        if (activeModifiers.highlightFastestBall) {
-          let fastestSpeed = 0;
-          let fastestId = game.balls[0]?.id || null;
-          for (const ball of game.balls) {
-            const speed = vec2Length(ball.velocity);
-            if (speed > fastestSpeed) {
-              fastestSpeed = speed;
-              fastestId = ball.id;
-            }
-          }
-          game.fastestBallId = fastestId;
-        }
       }
     };
 
