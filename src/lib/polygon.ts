@@ -192,6 +192,8 @@ export function circleCapsuleCollision(
 }
 
 // Split a polygon along a line defined by two points
+// IMPORTANT: Uses the ACTUAL cut endpoints, not extended lines.
+// This allows cuts that end on obstacles to work correctly.
 export function splitPolygon(
   poly: Polygon,
   cutStart: Vector2,
@@ -200,30 +202,39 @@ export function splitPolygon(
   const { vertices } = poly;
   if (vertices.length < 3) return null;
   
-  const cutDir = vec2Sub(cutEnd, cutStart);
-  
-  // Find all intersection points with polygon edges
+  // Find intersection points between cut segment and polygon edges
   const intersections: { point: Vector2; edgeIndex: number; t: number }[] = [];
   
-  // Extend the cut line far in both directions to ensure we find intersections
-  const lineP1 = vec2Sub(cutStart, vec2Scale(cutDir, 1000));
-  const lineP2 = vec2Add(cutEnd, vec2Scale(cutDir, 1000));
+  // Check if cutStart is on a polygon edge
+  const startOnEdge = findPointOnPolygonEdge(cutStart, poly);
+  // Check if cutEnd is on a polygon edge
+  const endOnEdge = findPointOnPolygonEdge(cutEnd, poly);
   
-  for (let i = 0; i < vertices.length; i++) {
-    const j = (i + 1) % vertices.length;
-    const intersection = lineSegmentIntersection(
-      lineP1, lineP2,
-      vertices[i], vertices[j]
-    );
+  // If both endpoints are on polygon edges, use them directly
+  if (startOnEdge !== null && endOnEdge !== null) {
+    intersections.push({ point: { ...cutStart }, edgeIndex: startOnEdge.edgeIndex, t: startOnEdge.t });
+    intersections.push({ point: { ...cutEnd }, edgeIndex: endOnEdge.edgeIndex, t: endOnEdge.t });
+  } else {
+    // Fall back to line intersection for cuts that go through the polygon
+    const cutDir = vec2Sub(cutEnd, cutStart);
+    const lineP1 = vec2Sub(cutStart, vec2Scale(cutDir, 1000));
+    const lineP2 = vec2Add(cutEnd, vec2Scale(cutDir, 1000));
     
-    if (intersection) {
-      // Calculate t along edge for ordering
-      const edge = vec2Sub(vertices[j], vertices[i]);
-      const edgeLen = vec2Length(edge);
-      const toInt = vec2Sub(intersection, vertices[i]);
-      const t = edgeLen > 0 ? vec2Length(toInt) / edgeLen : 0;
+    for (let i = 0; i < vertices.length; i++) {
+      const j = (i + 1) % vertices.length;
+      const intersection = lineSegmentIntersection(
+        lineP1, lineP2,
+        vertices[i], vertices[j]
+      );
       
-      intersections.push({ point: intersection, edgeIndex: i, t });
+      if (intersection) {
+        const edge = vec2Sub(vertices[j], vertices[i]);
+        const edgeLen = vec2Length(edge);
+        const toInt = vec2Sub(intersection, vertices[i]);
+        const t = edgeLen > 0 ? vec2Length(toInt) / edgeLen : 0;
+        
+        intersections.push({ point: intersection, edgeIndex: i, t });
+      }
     }
   }
   
@@ -269,6 +280,36 @@ export function splitPolygon(
     { vertices: poly1Vertices },
     { vertices: poly2Vertices }
   ];
+}
+
+// Helper: Find if a point lies on a polygon edge, returns edge index and t value
+function findPointOnPolygonEdge(
+  point: Vector2,
+  poly: Polygon,
+  tolerance: number = 5
+): { edgeIndex: number; t: number } | null {
+  const { vertices } = poly;
+  
+  for (let i = 0; i < vertices.length; i++) {
+    const j = (i + 1) % vertices.length;
+    const dist = pointToSegmentDistance(point, vertices[i], vertices[j]);
+    
+    if (dist <= tolerance) {
+      const edge = vec2Sub(vertices[j], vertices[i]);
+      const edgeLen = vec2Length(edge);
+      if (edgeLen < 0.001) continue;
+      
+      const toPoint = vec2Sub(point, vertices[i]);
+      const t = vec2Dot(toPoint, edge) / (edgeLen * edgeLen);
+      
+      // Only valid if t is within [0, 1] (point is on the segment)
+      if (t >= -0.01 && t <= 1.01) {
+        return { edgeIndex: i, t: Math.max(0, Math.min(1, t)) };
+      }
+    }
+  }
+  
+  return null;
 }
 
 // Get bounding box of polygon
