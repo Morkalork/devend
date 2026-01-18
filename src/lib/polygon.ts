@@ -206,6 +206,10 @@ export function splitPolygon(
   // Both must be on the boundary for a valid split
   const intersections: { point: Vector2; edgeIndex: number; t: number }[] = [];
   
+  // Tolerance for checking if a point is on an edge (world units)
+  // Generous tolerance to handle floating point imprecision from ray intersections
+  const EDGE_TOLERANCE = 10;
+  
   for (let i = 0; i < vertices.length; i++) {
     const j = (i + 1) % vertices.length;
     const p1 = vertices[i];
@@ -215,13 +219,13 @@ export function splitPolygon(
     
     // Check if cutStart is on this edge
     const distStart = pointToSegmentDistance(cutStart, p1, p2);
-    if (distStart < 3) {
+    if (distStart < EDGE_TOLERANCE) {
       const toPoint = vec2Sub(cutStart, p1);
       const t = edgeLen > 0 ? vec2Dot(toPoint, vec2Normalize(edge)) / edgeLen : 0;
-      if (t >= -0.02 && t <= 1.02) {
+      if (t >= -0.05 && t <= 1.05) {
         // Check if we already have this point
         const alreadyHasStart = intersections.some(
-          int => vec2Distance(int.point, cutStart) < 5
+          int => vec2Distance(int.point, cutStart) < EDGE_TOLERANCE
         );
         if (!alreadyHasStart) {
           intersections.push({ 
@@ -235,13 +239,13 @@ export function splitPolygon(
     
     // Check if cutEnd is on this edge
     const distEnd = pointToSegmentDistance(cutEnd, p1, p2);
-    if (distEnd < 3) {
+    if (distEnd < EDGE_TOLERANCE) {
       const toPoint = vec2Sub(cutEnd, p1);
       const t = edgeLen > 0 ? vec2Dot(toPoint, vec2Normalize(edge)) / edgeLen : 0;
-      if (t >= -0.02 && t <= 1.02) {
+      if (t >= -0.05 && t <= 1.05) {
         // Check if we already have this point
         const alreadyHasEnd = intersections.some(
-          int => vec2Distance(int.point, cutEnd) < 5
+          int => vec2Distance(int.point, cutEnd) < EDGE_TOLERANCE
         );
         if (!alreadyHasEnd) {
           intersections.push({ 
@@ -249,6 +253,50 @@ export function splitPolygon(
             edgeIndex: i, 
             t: Math.max(0, Math.min(1, t)) 
           });
+        }
+      }
+    }
+  }
+  
+  // If we still don't have 2 intersections, try segment-segment intersection as fallback
+  // Extend the segment slightly beyond endpoints to catch floating point edge cases
+  // BUT only accept intersections that are close to the original cut endpoints
+  if (intersections.length < 2) {
+    const cutDir = vec2Sub(cutEnd, cutStart);
+    const cutLen = vec2Length(cutDir);
+    if (cutLen > 0) {
+      const normalizedDir = vec2Scale(cutDir, 1 / cutLen);
+      // Extend slightly beyond each endpoint for intersection detection
+      const extendedStart = vec2Sub(cutStart, vec2Scale(normalizedDir, 15));
+      const extendedEnd = vec2Add(cutEnd, vec2Scale(normalizedDir, 15));
+      
+      for (let i = 0; i < vertices.length; i++) {
+        const j = (i + 1) % vertices.length;
+        const intersection = lineSegmentIntersection(
+          extendedStart, extendedEnd,
+          vertices[i], vertices[j]
+        );
+        
+        if (intersection) {
+          // Only accept if intersection is near one of the original endpoints
+          const distToStart = vec2Distance(intersection, cutStart);
+          const distToEnd = vec2Distance(intersection, cutEnd);
+          const nearEndpoint = distToStart < EDGE_TOLERANCE * 2 || distToEnd < EDGE_TOLERANCE * 2;
+          
+          if (nearEndpoint) {
+            const edge = vec2Sub(vertices[j], vertices[i]);
+            const edgeLen = vec2Length(edge);
+            const toInt = vec2Sub(intersection, vertices[i]);
+            const t = edgeLen > 0 ? vec2Length(toInt) / edgeLen : 0;
+            
+            // Check if we already have a nearby point
+            const alreadyHas = intersections.some(
+              int => vec2Distance(int.point, intersection) < EDGE_TOLERANCE
+            );
+            if (!alreadyHas) {
+              intersections.push({ point: intersection, edgeIndex: i, t });
+            }
+          }
         }
       }
     }
