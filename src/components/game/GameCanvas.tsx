@@ -1077,83 +1077,91 @@ export function GameCanvas({
       return components;
     };
 
-    // Build a polygon from sample points by finding the convex hull of reachable boundary points
+    // Build a polygon from sample points - simplified approach using convex hull
     const buildPolygonFromSamples = (samples: Vector2[], region: Region): Polygon | null => {
-      if (samples.length < 1) return null;
+      if (samples.length < 3) return null;
       
-      // Find centroid of samples
-      let cx = 0, cy = 0;
-      for (const s of samples) {
-        cx += s.x;
-        cy += s.y;
-      }
-      cx /= samples.length;
-      cy /= samples.length;
+      // For now, return the original region polygon since we just need to track
+      // which areas have balls. The cut lines will handle the visual separation.
+      // This is a simplification - in a full implementation we'd compute the exact sub-polygon.
       
-      // Get non-cut segments for reachability check
-      const nonCutSegments: { p1: Vector2; p2: Vector2 }[] = [];
-      const { vertices } = region.polygon;
-      for (let i = 0; i < vertices.length; i++) {
-        const j = (i + 1) % vertices.length;
-        nonCutSegments.push({ p1: vertices[i], p2: vertices[j] });
+      // Find the bounding vertices from samples - use outermost samples as approximation
+      const sortedX = [...samples].sort((a, b) => a.x - b.x);
+      const sortedY = [...samples].sort((a, b) => a.y - b.y);
+      
+      // Get extreme points
+      const extremePoints = [
+        sortedX[0],                          // leftmost
+        sortedX[sortedX.length - 1],         // rightmost
+        sortedY[0],                          // topmost
+        sortedY[sortedY.length - 1],         // bottommost
+      ];
+      
+      // Build convex hull from samples using gift wrapping
+      const convexHull = computeConvexHull(samples);
+      
+      if (convexHull.length < 3) {
+        // Fallback to bounding box
+        const minX = sortedX[0].x - 10;
+        const maxX = sortedX[sortedX.length - 1].x + 10;
+        const minY = sortedY[0].y - 10;
+        const maxY = sortedY[sortedY.length - 1].y + 10;
+        
+        return {
+          vertices: [
+            { x: minX, y: minY },
+            { x: maxX, y: minY },
+            { x: maxX, y: maxY },
+            { x: minX, y: maxY },
+          ]
+        };
       }
-      for (const obstacle of game.obstacles) {
-        for (let i = 0; i < obstacle.vertices.length; i++) {
-          const j = (i + 1) % obstacle.vertices.length;
-          nonCutSegments.push({ p1: obstacle.vertices[i], p2: obstacle.vertices[j] });
+      
+      return { vertices: convexHull };
+    };
+    
+    // Compute convex hull using gift wrapping algorithm
+    const computeConvexHull = (points: Vector2[]): Vector2[] => {
+      if (points.length < 3) return points;
+      
+      // Find leftmost point
+      let start = 0;
+      for (let i = 1; i < points.length; i++) {
+        if (points[i].x < points[start].x) {
+          start = i;
         }
       }
       
-      const allSegments = getAllBoundarySegments(region);
-      const boundaryPoints: Vector2[] = [];
+      const hull: Vector2[] = [];
+      let current = start;
       
-      // Collect all boundary segment endpoints that are reachable from centroid
-      const allEndpoints: Vector2[] = [];
-      for (const seg of allSegments) {
-        allEndpoints.push(seg.p1, seg.p2);
-      }
-      
-      // Add unique endpoints
-      const seen = new Set<string>();
-      for (const pt of allEndpoints) {
-        const key = `${Math.round(pt.x)},${Math.round(pt.y)}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
+      do {
+        hull.push({ ...points[current] });
+        let next = 0;
         
-        // Check if this point is reachable from any sample
-        let reachable = false;
-        for (const sample of samples) {
-          if (!lineIntersectsBoundary({ x: cx, y: cy }, pt, nonCutSegments, game.completedCuts) ||
-              !lineIntersectsBoundary(sample, pt, nonCutSegments, game.completedCuts)) {
-            reachable = true;
-            break;
+        for (let i = 1; i < points.length; i++) {
+          if (next === current) {
+            next = i;
+            continue;
+          }
+          
+          // Cross product to determine turn direction
+          const cross = (points[i].x - points[current].x) * (points[next].y - points[current].y) -
+                       (points[i].y - points[current].y) * (points[next].x - points[current].x);
+          
+          if (cross > 0) {
+            next = i;
           }
         }
-        if (reachable) {
-          boundaryPoints.push({ ...pt });
-        }
-      }
+        
+        current = next;
+        
+        // Safety check to prevent infinite loop
+        if (hull.length > points.length) break;
+        
+      } while (current !== start);
       
-      if (boundaryPoints.length < 3) return null;
-      
-      // Sort by angle from centroid
-      boundaryPoints.sort((a, b) => {
-        const angleA = Math.atan2(a.y - cy, a.x - cx);
-        const angleB = Math.atan2(b.y - cy, b.x - cx);
-        return angleA - angleB;
-      });
-      
-      // Remove duplicates
-      const filtered: Vector2[] = [boundaryPoints[0]];
-      for (let i = 1; i < boundaryPoints.length; i++) {
-        if (vec2Distance(boundaryPoints[i], filtered[filtered.length - 1]) > 3) {
-          filtered.push(boundaryPoints[i]);
-        }
-      }
-      
-      if (filtered.length < 3) return null;
-      
-      return { vertices: filtered };
+      return hull;
     };
 
     // Try to remove enclosed areas and update regions using flood-fill
@@ -1177,12 +1185,17 @@ export function GameCanvas({
       
       // Build new regions for areas with balls
       const newRegions: Region[] = game.regions.filter(r => r.id !== region.id);
+      console.log('[FLOOD] Building polygons for', regionsWithBalls.length, 'regions with balls');
       
       for (const subRegion of regionsWithBalls) {
+        console.log('[FLOOD] Building polygon from', subRegion.samples.length, 'samples');
         const subPoly = buildPolygonFromSamples(subRegion.samples, region);
+        console.log('[FLOOD] Built polygon:', subPoly ? `${subPoly.vertices.length} vertices, area ${polygonArea(subPoly)}` : 'null');
+        
         if (subPoly && polygonArea(subPoly) > 100) {
           const newId = generateRegionId();
           newRegions.push({ id: newId, polygon: subPoly });
+          console.log('[FLOOD] Added new region:', newId);
           
           // Update ball region IDs - use simple point-in-polygon check
           for (const ball of balls) {
@@ -1190,11 +1203,16 @@ export function GameCanvas({
               ball.regionId = newId;
             }
           }
+        } else {
+          console.log('[FLOOD] Polygon rejected - too small or null');
         }
       }
       
+      console.log('[FLOOD] New regions count:', newRegions.length);
+      
       if (newRegions.length === 0) {
         // Failed to build valid polygons, keep original
+        console.log('[FLOOD] No valid regions built, keeping original');
         return false;
       }
       
