@@ -325,7 +325,7 @@ export function GameCanvas({
       const regionWidth = bounds.maxX - bounds.minX;
       const regionHeight = bounds.maxY - bounds.minY;
       const centroid = polygonCentroid(boardPolygon);
-      
+
       const ballSpeedLevelMult = getBallSpeedLevelMultiplier(levelNumber);
       const baseSpeedMultiplier = 2.0;
 
@@ -379,7 +379,7 @@ export function GameCanvas({
 
       // Initialize completed cuts (used for cut-to-cut and cut-to-obstacle termination)
       game.completedCuts = [];
-      
+
       // Store the board polygon for ball collision (never changes after init)
       game.boardPolygon = boardPolygon;
 
@@ -449,24 +449,24 @@ export function GameCanvas({
       ballRadius: number,
       lineStart: Vector2,
       lineEnd: Vector2,
-      lineThickness: number
+      lineThickness: number,
     ): { position: Vector2; velocity: Vector2 } => {
       const dist = pointToSegmentDistance(ballPos, lineStart, lineEnd);
       const collisionDist = ballRadius + lineThickness / 2;
-      
+
       if (dist < collisionDist) {
         // Get closest point on line
         const edge = vec2Sub(lineEnd, lineStart);
         const edgeLengthSq = edge.x * edge.x + edge.y * edge.y;
         let closestPoint: Vector2;
-        
+
         if (edgeLengthSq === 0) {
           closestPoint = { ...lineStart };
         } else {
           const t = Math.max(0, Math.min(1, vec2Dot(vec2Sub(ballPos, lineStart), edge) / edgeLengthSq));
           closestPoint = vec2Add(lineStart, vec2Scale(edge, t));
         }
-        
+
         // Normal points from line toward ball
         const toBall = vec2Sub(ballPos, closestPoint);
         let normal = vec2Normalize(toBall);
@@ -474,21 +474,21 @@ export function GameCanvas({
           // Ball exactly on line, use perpendicular
           normal = vec2Normalize({ x: -edge.y, y: edge.x });
         }
-        
+
         // Reflect velocity if moving toward line
         const velDotNormal = vec2Dot(ballVel, normal);
         let newVel = { ...ballVel };
         if (velDotNormal < 0) {
           newVel = vec2Sub(ballVel, vec2Scale(normal, 2 * velDotNormal));
         }
-        
+
         // Push ball out
         const penetration = collisionDist - dist;
         const newPos = vec2Add(ballPos, vec2Scale(normal, penetration + 0.5));
-        
+
         return { position: newPos, velocity: newVel };
       }
-      
+
       return { position: ballPos, velocity: ballVel };
     };
 
@@ -520,7 +520,7 @@ export function GameCanvas({
           ball.radius,
           cut.start,
           cut.end,
-          WALL_THICKNESS
+          WALL_THICKNESS,
         );
         ball.position = cutResult.position;
         ball.velocity = cutResult.velocity;
@@ -616,14 +616,14 @@ export function GameCanvas({
     // Get all boundary segments in the game (outer walls + obstacle edges + completed cuts)
     const getAllBoundarySegments = (region: Region): { p1: Vector2; p2: Vector2 }[] => {
       const segments: { p1: Vector2; p2: Vector2 }[] = [];
-      
+
       // Add region polygon edges
       const { vertices } = region.polygon;
       for (let i = 0; i < vertices.length; i++) {
         const j = (i + 1) % vertices.length;
         segments.push({ p1: vertices[i], p2: vertices[j] });
       }
-      
+
       // Add obstacle edges
       for (const obstacle of game.obstacles) {
         for (let i = 0; i < obstacle.vertices.length; i++) {
@@ -631,24 +631,29 @@ export function GameCanvas({
           segments.push({ p1: obstacle.vertices[i], p2: obstacle.vertices[j] });
         }
       }
-      
+
       // Add completed cuts
       for (const cut of game.completedCuts) {
         segments.push({ p1: cut.start, p2: cut.end });
       }
-      
+
       return segments;
     };
 
     // Check if a line segment intersects or passes through any boundary
-    const lineIntersectsBoundary = (p1: Vector2, p2: Vector2, segments: { p1: Vector2; p2: Vector2 }[], cuts: { start: Vector2; end: Vector2; thickness: number }[]): boolean => {
+    const lineIntersectsBoundary = (
+      p1: Vector2,
+      p2: Vector2,
+      segments: { p1: Vector2; p2: Vector2 }[],
+      cuts: { start: Vector2; end: Vector2; thickness: number }[],
+    ): boolean => {
       // Check regular segments (polygon edges, obstacle edges)
       for (const seg of segments) {
         if (lineSegmentIntersection(p1, p2, seg.p1, seg.p2)) {
           return true;
         }
       }
-      
+
       // For cuts, check if the line segment crosses the cut or passes too close to it
       // This handles both perpendicular and parallel crossings
       for (const cut of cuts) {
@@ -656,17 +661,17 @@ export function GameCanvas({
         if (lineSegmentIntersection(p1, p2, cut.start, cut.end)) {
           return true;
         }
-        
+
         // Check if either endpoint of our test line is within cut thickness of the cut line
         const dist1 = pointToSegmentDistance(p1, cut.start, cut.end);
         const dist2 = pointToSegmentDistance(p2, cut.start, cut.end);
         const halfThickness = cut.thickness / 2 + 2;
-        
+
         // If both points are on opposite sides of the cut, they're blocked
         // Check by seeing if the midpoint is close to the cut
         const midPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
         const distMid = pointToSegmentDistance(midPoint, cut.start, cut.end);
-        
+
         // If midpoint is within cut thickness and we span across the cut, we're blocked
         if (distMid < halfThickness) {
           // Check if the cut actually spans between p1 and p2 by projecting onto cut direction
@@ -674,7 +679,7 @@ export function GameCanvas({
           const perpDir = { x: -cutDir.y, y: cutDir.x };
           const proj1 = vec2Dot(vec2Sub(p1, cut.start), perpDir);
           const proj2 = vec2Dot(vec2Sub(p2, cut.start), perpDir);
-          
+
           // If p1 and p2 are on opposite sides of the cut line, they're blocked
           if ((proj1 > 0 && proj2 < 0) || (proj1 < 0 && proj2 > 0)) {
             // Also verify we're within the cut segment's length
@@ -686,7 +691,7 @@ export function GameCanvas({
           }
         }
       }
-      
+
       return false;
     };
 
@@ -695,7 +700,7 @@ export function GameCanvas({
       const { balls } = game;
       const bounds = polygonBounds(region.polygon);
       const gridSize = 15; // Finer grid for better cut detection
-      
+
       // Get non-cut segments (polygon edges + obstacles)
       const nonCutSegments: { p1: Vector2; p2: Vector2 }[] = [];
       const { vertices } = region.polygon;
@@ -709,18 +714,18 @@ export function GameCanvas({
           nonCutSegments.push({ p1: obstacle.vertices[i], p2: obstacle.vertices[j] });
         }
       }
-      
+
       // Generate valid sample points
       const samplePoints: Vector2[] = [];
       const pointIndices: Map<string, number> = new Map();
-      
-      for (let x = bounds.minX + gridSize/2; x < bounds.maxX; x += gridSize) {
-        for (let y = bounds.minY + gridSize/2; y < bounds.maxY; y += gridSize) {
+
+      for (let x = bounds.minX + gridSize / 2; x < bounds.maxX; x += gridSize) {
+        for (let y = bounds.minY + gridSize / 2; y < bounds.maxY; y += gridSize) {
           const point = { x, y };
-          
+
           // Must be inside the region polygon
           if (!pointInPolygon(point, region.polygon)) continue;
-          
+
           // Must not be inside any obstacle
           let insideObstacle = false;
           for (const obstacle of game.obstacles) {
@@ -730,7 +735,7 @@ export function GameCanvas({
             }
           }
           if (insideObstacle) continue;
-          
+
           // Must not be too close to any cut line
           let onCut = false;
           for (const cut of game.completedCuts) {
@@ -741,58 +746,62 @@ export function GameCanvas({
             }
           }
           if (onCut) continue;
-          
+
           const key = `${Math.round(x)},${Math.round(y)}`;
           pointIndices.set(key, samplePoints.length);
           samplePoints.push(point);
         }
       }
-      
+
       if (samplePoints.length === 0) return [];
-      
+
       // Build adjacency: two points are connected if no boundary crosses between them
       const adjacency: Set<number>[] = samplePoints.map(() => new Set());
-      
+
       for (let i = 0; i < samplePoints.length; i++) {
         const pi = samplePoints[i];
-        
+
         // Check all 8 neighbors (cardinal + diagonal)
         const neighbors = [
-          { x: pi.x + gridSize, y: pi.y },           // right
-          { x: pi.x - gridSize, y: pi.y },           // left
-          { x: pi.x, y: pi.y + gridSize },           // down
-          { x: pi.x, y: pi.y - gridSize },           // up
+          { x: pi.x + gridSize, y: pi.y }, // right
+          { x: pi.x - gridSize, y: pi.y }, // left
+          { x: pi.x, y: pi.y + gridSize }, // down
+          { x: pi.x, y: pi.y - gridSize }, // up
           { x: pi.x + gridSize, y: pi.y + gridSize }, // down-right
           { x: pi.x - gridSize, y: pi.y + gridSize }, // down-left
           { x: pi.x + gridSize, y: pi.y - gridSize }, // up-right
           { x: pi.x - gridSize, y: pi.y - gridSize }, // up-left
         ];
-        
+
         for (const n of neighbors) {
           const key = `${Math.round(n.x)},${Math.round(n.y)}`;
           const j = pointIndices.get(key);
-          if (j !== undefined && j > i && !lineIntersectsBoundary(pi, samplePoints[j], nonCutSegments, game.completedCuts)) {
+          if (
+            j !== undefined &&
+            j > i &&
+            !lineIntersectsBoundary(pi, samplePoints[j], nonCutSegments, game.completedCuts)
+          ) {
             adjacency[i].add(j);
             adjacency[j].add(i);
           }
         }
       }
-      
+
       // Flood-fill to find connected components
       const visited = new Set<number>();
       const components: { samples: Vector2[]; hasBalls: boolean }[] = [];
-      
+
       for (let i = 0; i < samplePoints.length; i++) {
         if (visited.has(i)) continue;
-        
+
         const component: Vector2[] = [];
         const queue = [i];
         visited.add(i);
-        
+
         while (queue.length > 0) {
           const curr = queue.shift()!;
           component.push(samplePoints[curr]);
-          
+
           for (const neighbor of adjacency[curr]) {
             if (!visited.has(neighbor)) {
               visited.add(neighbor);
@@ -800,7 +809,7 @@ export function GameCanvas({
             }
           }
         }
-        
+
         // Check if any ball is in this component
         let hasBalls = false;
         for (const ball of balls) {
@@ -813,35 +822,39 @@ export function GameCanvas({
           }
           if (hasBalls) break;
         }
-        
+
         components.push({ samples: component, hasBalls });
       }
-      
+
       return components;
     };
 
     // Grid size used for sampling - must match findSubRegionsGrid
     const SAMPLE_GRID_SIZE = 15;
-    
+
     // Build a polygon from sample points - returns samples for grid-based rendering
-    const buildPolygonFromSamples = (samples: Vector2[], region: Region, sampleCount: number): { polygon: Polygon; estimatedArea: number; samplePoints: Vector2[] } | null => {
+    const buildPolygonFromSamples = (
+      samples: Vector2[],
+      region: Region,
+      sampleCount: number,
+    ): { polygon: Polygon; estimatedArea: number; samplePoints: Vector2[] } | null => {
       if (samples.length < 3) return null;
-      
+
       // Calculate estimated area from sample count
       // Each sample represents a grid cell of gridSize x gridSize
       const cellArea = SAMPLE_GRID_SIZE * SAMPLE_GRID_SIZE;
       const estimatedArea = sampleCount * cellArea;
-      
+
       // For the polygon, use bounding box with small padding (for ball containment checks)
       const sortedX = [...samples].sort((a, b) => a.x - b.x);
       const sortedY = [...samples].sort((a, b) => a.y - b.y);
-      
+
       const padding = SAMPLE_GRID_SIZE / 2;
       const minX = sortedX[0].x - padding;
       const maxX = sortedX[sortedX.length - 1].x + padding;
       const minY = sortedY[0].y - padding;
       const maxY = sortedY[sortedY.length - 1].y + padding;
-      
+
       return {
         polygon: {
           vertices: [
@@ -849,17 +862,17 @@ export function GameCanvas({
             { x: maxX, y: minY },
             { x: maxX, y: maxY },
             { x: minX, y: maxY },
-          ]
+          ],
         },
         estimatedArea,
-        samplePoints: samples // Store for grid-based rendering
+        samplePoints: samples, // Store for grid-based rendering
       };
     };
-    
+
     // Compute convex hull using gift wrapping algorithm
     const computeConvexHull = (points: Vector2[]): Vector2[] => {
       if (points.length < 3) return points;
-      
+
       // Find leftmost point
       let start = 0;
       for (let i = 1; i < points.length; i++) {
@@ -867,72 +880,79 @@ export function GameCanvas({
           start = i;
         }
       }
-      
+
       const hull: Vector2[] = [];
       let current = start;
-      
+
       do {
         hull.push({ ...points[current] });
         let next = 0;
-        
+
         for (let i = 1; i < points.length; i++) {
           if (next === current) {
             next = i;
             continue;
           }
-          
+
           // Cross product to determine turn direction
-          const cross = (points[i].x - points[current].x) * (points[next].y - points[current].y) -
-                       (points[i].y - points[current].y) * (points[next].x - points[current].x);
-          
+          const cross =
+            (points[i].x - points[current].x) * (points[next].y - points[current].y) -
+            (points[i].y - points[current].y) * (points[next].x - points[current].x);
+
           if (cross > 0) {
             next = i;
           }
         }
-        
+
         current = next;
-        
+
         // Safety check to prevent infinite loop
         if (hull.length > points.length) break;
-        
       } while (current !== start);
-      
+
       return hull;
     };
 
     // Try to remove enclosed areas and update regions using flood-fill
     const tryRemoveEnclosedAreas = (region: Region): boolean => {
       const { balls } = game;
-      
+
       const subRegions = findSubRegionsGrid(region);
-      
-      console.log('[FLOOD] Found', subRegions.length, 'sub-regions:',
-        subRegions.map(r => ({ samples: r.samples.length, hasBalls: r.hasBalls })));
-      
+
+      console.log(
+        "[FLOOD] Found",
+        subRegions.length,
+        "sub-regions:",
+        subRegions.map((r) => ({ samples: r.samples.length, hasBalls: r.hasBalls })),
+      );
+
       if (subRegions.length <= 1) {
-        console.log('[FLOOD] Only 1 or fewer sub-regions, no split needed');
+        console.log("[FLOOD] Only 1 or fewer sub-regions, no split needed");
         return false;
       }
-      
-      const regionsWithBalls = subRegions.filter(r => r.hasBalls);
-      const regionsWithoutBalls = subRegions.filter(r => !r.hasBalls);
-      
+
+      const regionsWithBalls = subRegions.filter((r) => r.hasBalls);
+      const regionsWithoutBalls = subRegions.filter((r) => !r.hasBalls);
+
       if (regionsWithoutBalls.length === 0) return false;
-      
+
       // Build new regions for areas with balls
-      const newRegions: Region[] = game.regions.filter(r => r.id !== region.id);
-      console.log('[FLOOD] Building polygons for', regionsWithBalls.length, 'regions with balls');
-      
+      const newRegions: Region[] = game.regions.filter((r) => r.id !== region.id);
+      console.log("[FLOOD] Building polygons for", regionsWithBalls.length, "regions with balls");
+
       for (const subRegion of regionsWithBalls) {
-        console.log('[FLOOD] Building polygon from', subRegion.samples.length, 'samples');
+        console.log("[FLOOD] Building polygon from", subRegion.samples.length, "samples");
         const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
-        console.log('[FLOOD] Built polygon:', result ? `${result.polygon.vertices.length} vertices, estimatedArea ${result.estimatedArea}` : 'null');
-        
+        console.log(
+          "[FLOOD] Built polygon:",
+          result ? `${result.polygon.vertices.length} vertices, estimatedArea ${result.estimatedArea}` : "null",
+        );
+
         if (result && result.estimatedArea > 100) {
           const newId = generateRegionId();
           newRegions.push({ id: newId, polygon: result.polygon, estimatedArea: result.estimatedArea });
-          console.log('[FLOOD] Added new region:', newId, 'with estimatedArea:', result.estimatedArea);
-          
+          console.log("[FLOOD] Added new region:", newId, "with estimatedArea:", result.estimatedArea);
+
           // Update ball region IDs - use simple point-in-polygon check
           for (const ball of balls) {
             if (pointInPolygon(ball.position, result.polygon)) {
@@ -940,20 +960,20 @@ export function GameCanvas({
             }
           }
         } else {
-          console.log('[FLOOD] Polygon rejected - too small or null');
+          console.log("[FLOOD] Polygon rejected - too small or null");
         }
       }
-      
-      console.log('[FLOOD] New regions count:', newRegions.length);
-      
+
+      console.log("[FLOOD] New regions count:", newRegions.length);
+
       if (newRegions.length === 0) {
         // Failed to build valid polygons, keep original
-        console.log('[FLOOD] No valid regions built, keeping original');
+        console.log("[FLOOD] No valid regions built, keeping original");
         return false;
       }
-      
+
       game.regions = newRegions;
-      
+
       // Speed up balls
       for (const ball of balls) {
         const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
@@ -962,7 +982,7 @@ export function GameCanvas({
         ball.velocity.x *= ratio;
         ball.velocity.y *= ratio;
       }
-      
+
       if (activeModifiers.highlightFastestBall) {
         let fastestSpeed = 0;
         let fastestId = game.balls[0]?.id || null;
@@ -975,7 +995,7 @@ export function GameCanvas({
         }
         game.fastestBallId = fastestId;
       }
-      
+
       return true;
     };
 
@@ -1007,25 +1027,29 @@ export function GameCanvas({
         thickness: wall.thickness + 14,
       });
 
-      console.log('[CUT] Added cut:', { start: wall.startPoint, end: wall.endPoint, totalCuts: game.completedCuts.length });
+      console.log("[CUT] Added cut:", {
+        start: wall.startPoint,
+        end: wall.endPoint,
+        totalCuts: game.completedCuts.length,
+      });
 
       // Re-partition all regions using flood-fill
       // This handles ALL cases uniformly:
       // - Wall-to-wall cuts
-      // - Wall-to-obstacle cuts  
+      // - Wall-to-obstacle cuts
       // - Wall-to-previousCut cuts
       // - Obstacle-to-obstacle cuts
       // - Any combination that creates enclosed areas
-      
+
       // Process each region independently, then collect results
       const updatedRegions: Region[] = [];
-      
+
       for (const region of [...game.regions]) {
-        console.log('[CUT] Checking region:', region.id, 'for sub-regions...');
-        
+        console.log("[CUT] Checking region:", region.id, "for sub-regions...");
+
         const subRegions = findSubRegionsGrid(region);
-        console.log('[CUT] Found', subRegions.length, 'sub-regions');
-        
+        console.log("[CUT] Found", subRegions.length, "sub-regions");
+
         if (subRegions.length <= 1) {
           // No split, but still verify this region has balls
           const hasBallsInRegion = subRegions.length === 1 && subRegions[0].hasBalls;
@@ -1033,31 +1057,38 @@ export function GameCanvas({
             // Keep original region (with updated area estimate if available)
             const totalSamples = subRegions[0].samples.length;
             const cellArea = 15 * 15; // SAMPLE_GRID_SIZE squared
-            updatedRegions.push({ 
-              ...region, 
-              estimatedArea: totalSamples * cellArea 
+            updatedRegions.push({
+              ...region,
+              estimatedArea: totalSamples * cellArea,
             });
           }
-          console.log('[CUT] Region', region.id, hasBallsInRegion ? 'kept (has balls)' : 'removed (no balls)');
+          console.log("[CUT] Region", region.id, hasBallsInRegion ? "kept (has balls)" : "removed (no balls)");
           continue;
         }
-        
+
         // Multiple sub-regions - keep only those with balls
-        const regionsWithBalls = subRegions.filter(r => r.hasBalls);
-        console.log('[CUT] Regions with balls:', regionsWithBalls.length);
-        
+        const regionsWithBalls = subRegions.filter((r) => r.hasBalls);
+        console.log("[CUT] Regions with balls:", regionsWithBalls.length);
+
         for (const subRegion of regionsWithBalls) {
           const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
           if (result && result.estimatedArea > 100) {
             const newId = generateRegionId();
-            updatedRegions.push({ 
-              id: newId, 
-              polygon: result.polygon, 
+            updatedRegions.push({
+              id: newId,
+              polygon: result.polygon,
               estimatedArea: result.estimatedArea,
-              samplePoints: result.samplePoints // Store samples for accurate rendering
+              samplePoints: result.samplePoints, // Store samples for accurate rendering
             });
-            console.log('[CUT] Added new region:', newId, 'with estimatedArea:', result.estimatedArea, 'samples:', result.samplePoints.length);
-            
+            console.log(
+              "[CUT] Added new region:",
+              newId,
+              "with estimatedArea:",
+              result.estimatedArea,
+              "samples:",
+              result.samplePoints.length,
+            );
+
             // Update ball region IDs
             for (const ball of balls) {
               if (pointInPolygon(ball.position, result.polygon)) {
@@ -1067,10 +1098,10 @@ export function GameCanvas({
           }
         }
       }
-      
+
       // Replace all regions with the updated set
       game.regions = updatedRegions;
-      console.log('[CUT] Final region count:', game.regions.length);
+      console.log("[CUT] Final region count:", game.regions.length);
 
       game.activeWall = null;
 
@@ -1264,12 +1295,12 @@ export function GameCanvas({
       ctx.save();
       ctx.globalAlpha = canvasOpacity;
       ctx.fillStyle = regionColor;
-      
+
       const gridSize = 15; // SAMPLE_GRID_SIZE - must match
       const halfGrid = gridSize / 2;
       // Larger overlap for smoother edges
       const cellPadding = 3;
-      
+
       for (const region of regions) {
         if (region.samplePoints && region.samplePoints.length > 0) {
           // First pass: Draw filled cells with overlap
@@ -1278,12 +1309,12 @@ export function GameCanvas({
             const size = (gridSize + cellPadding * 2) * scale;
             ctx.fillRect(topLeft.x, topLeft.y, size, size);
           }
-          
+
           // Second pass: Draw a smooth border around the edge cells to anti-alias
           // Find edge cells (cells that don't have all 4 neighbors)
-          const sampleSet = new Set(region.samplePoints.map(s => `${s.x},${s.y}`));
+          const sampleSet = new Set(region.samplePoints.map((s) => `${s.x},${s.y}`));
           const edgeCells: Vector2[] = [];
-          
+
           for (const sample of region.samplePoints) {
             const neighbors = [
               `${sample.x - gridSize},${sample.y}`,
@@ -1291,12 +1322,12 @@ export function GameCanvas({
               `${sample.x},${sample.y - gridSize}`,
               `${sample.x},${sample.y + gridSize}`,
             ];
-            const isEdge = neighbors.some(n => !sampleSet.has(n));
+            const isEdge = neighbors.some((n) => !sampleSet.has(n));
             if (isEdge) {
               edgeCells.push(sample);
             }
           }
-          
+
           // Draw smooth rounded rectangles on edge cells for anti-aliasing
           ctx.save();
           ctx.globalAlpha = canvasOpacity * 0.6;
@@ -1305,7 +1336,7 @@ export function GameCanvas({
             const topLeft = worldToScreen(sample.x - halfGrid - edgePadding, sample.y - halfGrid - edgePadding);
             const size = (gridSize + edgePadding * 2) * scale;
             const radius = 4 * scale;
-            
+
             ctx.beginPath();
             ctx.roundRect(topLeft.x, topLeft.y, size, size, radius);
             ctx.fill();
@@ -1345,8 +1376,8 @@ export function GameCanvas({
         ctx.closePath();
 
         // Clear the wall area (transparent) so CRT background shows through - same as cut areas
-        ctx.globalCompositeOperation = 'destination-out';
-        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fillStyle = "rgba(0, 0, 0, 1)";
         ctx.fill();
         ctx.restore();
       }
@@ -1354,8 +1385,8 @@ export function GameCanvas({
       // Draw completed cuts - actually cut through the filled regions using destination-out
       // Extra width to ensure clean separation over the overlapping/anti-aliased cells
       ctx.save();
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.strokeStyle = 'rgba(0, 0, 0, 1)';
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "rgba(0, 0, 0, 1)";
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       for (const cut of game.completedCuts) {
@@ -1412,7 +1443,7 @@ export function GameCanvas({
                   swipeStart,
                   vec2Add(swipeStart, vec2Scale(direction, 10000)),
                   cut.start,
-                  cut.end
+                  cut.end,
                 );
                 if (cutIntPos) {
                   const cutDist = vec2Distance(swipeStart, cutIntPos);
@@ -1425,7 +1456,7 @@ export function GameCanvas({
                   swipeStart,
                   vec2Add(swipeStart, vec2Scale(direction, -10000)),
                   cut.start,
-                  cut.end
+                  cut.end,
                 );
                 if (cutIntNeg) {
                   const cutDist = vec2Distance(swipeStart, cutIntNeg);
@@ -1436,10 +1467,10 @@ export function GameCanvas({
                 }
               }
 
-              // Draw preview line - 25% opacity for clearly ghosted appearance
+              // Draw preview line - 15% opacity for clearly ghosted appearance
               ctx.save();
-              ctx.globalAlpha = 0.25;
-              
+              ctx.globalAlpha = 0.15;
+
               // Draw white outline for visibility
               ctx.strokeStyle = "#ffffff";
               ctx.lineWidth = (WALL_THICKNESS + 8) * scale;
@@ -1458,7 +1489,7 @@ export function GameCanvas({
               ctx.moveTo(negScreen.x, negScreen.y);
               ctx.lineTo(posScreen.x, posScreen.y);
               ctx.stroke();
-              
+
               ctx.restore();
             }
           }
@@ -1535,7 +1566,7 @@ export function GameCanvas({
         // Draw accent-colored center (uses config accent color)
         ctx.strokeStyle = accentColor;
         ctx.lineWidth = (wall.thickness + 4) * scale;
-        ctx.shadowColor = accentColor + '80'; // 50% alpha glow
+        ctx.shadowColor = accentColor + "80"; // 50% alpha glow
         ctx.shadowBlur = 25 * scale;
         ctx.beginPath();
         ctx.moveTo(startScreen.x, startScreen.y);
@@ -1647,7 +1678,7 @@ export function GameCanvas({
       if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete) return;
 
       const { screenX, screenY } = getCanvasCoords(e);
-      
+
       // Cancel swipe if pointer moves outside the board
       if (!isPointInBoard(screenX, screenY, game.boardRect)) {
         game.swipeStart = null;
@@ -1656,9 +1687,9 @@ export function GameCanvas({
         setIsPlayerDragging(false);
         return;
       }
-      
+
       const worldPos = screenToWorld(screenX, screenY, game.boardRect);
-      
+
       // Also ensure world position is within bounds
       if (!isPointInWorldBounds(worldPos.x, worldPos.y)) {
         game.swipeStart = null;
@@ -1667,14 +1698,23 @@ export function GameCanvas({
         setIsPlayerDragging(false);
         return;
       }
-      
+
       // Just update the current position - wall creation happens on pointer up
       game.currentSwipePos = worldPos;
     };
 
     const handlePointerUp = () => {
       // Only create wall if we have a valid swipe
-      if (game.swipeStart && game.swipeRegionId && game.currentSwipePos && !game.activeWall && !game.gameOver && !game.levelComplete && !game.isRecovering && game.pushMode !== "prompt") {
+      if (
+        game.swipeStart &&
+        game.swipeRegionId &&
+        game.currentSwipePos &&
+        !game.activeWall &&
+        !game.gameOver &&
+        !game.levelComplete &&
+        !game.isRecovering &&
+        game.pushMode !== "prompt"
+      ) {
         const delta = vec2Sub(game.currentSwipePos, game.swipeStart);
         const dist = vec2Length(delta);
 
@@ -1697,7 +1737,7 @@ export function GameCanvas({
               // Check intersections with obstacles (static walls in the level)
               for (let i = 0; i < game.obstacles.length; i++) {
                 const obstacle = game.obstacles[i];
-                
+
                 const obstacleIntPos = rayPolygonIntersection(game.swipeStart, direction, obstacle);
                 if (obstacleIntPos && obstacleIntPos.distance > 0.1 && obstacleIntPos.distance < targetEndDist) {
                   targetEnd = obstacleIntPos.point;
@@ -1717,7 +1757,7 @@ export function GameCanvas({
                   game.swipeStart,
                   vec2Add(game.swipeStart, vec2Scale(direction, 10000)),
                   cut.start,
-                  cut.end
+                  cut.end,
                 );
                 if (cutIntPos) {
                   const cutDist = vec2Distance(game.swipeStart, cutIntPos);
@@ -1731,7 +1771,7 @@ export function GameCanvas({
                   game.swipeStart,
                   vec2Add(game.swipeStart, vec2Scale(direction, -10000)),
                   cut.start,
-                  cut.end
+                  cut.end,
                 );
                 if (cutIntNeg) {
                   const cutDist = vec2Distance(game.swipeStart, cutIntNeg);
