@@ -441,22 +441,11 @@ export function MapCanvas({
       return;
     }
     
-    // If clicking on an entity that's not currently selected, select it first
-    // The handles will be available on the next click
+    // If clicking on an entity that's not currently selected, just select it (show handles)
+    // Don't start dragging - let the user click again to drag or use handles
     if (hit.type === 'entity' && hit.id !== selectedEntityId) {
       onSelectEntity(hit.id);
       onSelectBall(null);
-      // Start dragging the entity immediately
-      const entity = (level.entities || []).find(en => en.id === hit.id);
-      if (entity) {
-        setDragMode({
-          type: 'entity',
-          id: hit.id,
-          startX: world.x,
-          startY: world.y,
-          originalEntity: { ...entity },
-        });
-      }
       return;
     }
     
