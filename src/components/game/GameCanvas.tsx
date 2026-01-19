@@ -1370,27 +1370,29 @@ export function GameCanvas({
       }
       ctx.restore();
 
-      // Render cut preview if enabled and swiping
-      if (activeModifiers.cutPreview && swipeStart && swipeRegionId && currentSwipePos && !wall) {
+      // Render cut preview line during drag (always shown, not just with cutPreview modifier)
+      // This shows the user where their cut will go before they commit to it
+      if (swipeStart && swipeRegionId && currentSwipePos && !wall) {
         const region = regions.find((r) => r.id === swipeRegionId);
         if (region) {
           const delta = vec2Sub(currentSwipePos, swipeStart);
           const dist = vec2Length(delta);
 
-          if (dist >= effectiveSwipeMinDistance) {
+          // Show preview once there's any significant drag distance
+          if (dist >= 5) {
             const direction = vec2Normalize(delta);
 
             const intPos = rayPolygonIntersection(swipeStart, direction, region.polygon);
             const intNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), region.polygon);
 
             if (intPos && intNeg) {
-              // Check wall intersections for preview (walls act as cut boundaries)
+              // Calculate preview endpoints using the same rules as actual cuts
               let previewEnd = intPos.point;
               let previewStart = intNeg.point;
               let previewEndDist = intPos.distance;
               let previewStartDist = intNeg.distance;
 
-              // Check obstacle intersections for preview
+              // Check obstacle intersections - cuts terminate at obstacles
               for (const obstacle of obstacles) {
                 const obstacleIntPos = rayPolygonIntersection(swipeStart, direction, obstacle);
                 if (obstacleIntPos && obstacleIntPos.distance > 0.1 && obstacleIntPos.distance < previewEndDist) {
@@ -1404,7 +1406,7 @@ export function GameCanvas({
                 }
               }
 
-              // Also check completed cuts for preview
+              // Check completed cuts - cuts terminate at existing cuts
               for (const cut of game.completedCuts) {
                 const cutIntPos = lineSegmentIntersection(
                   swipeStart,
@@ -1413,10 +1415,10 @@ export function GameCanvas({
                   cut.end
                 );
                 if (cutIntPos) {
-                  const dist = vec2Distance(swipeStart, cutIntPos);
-                  if (dist > 0.1 && dist < previewEndDist) {
+                  const cutDist = vec2Distance(swipeStart, cutIntPos);
+                  if (cutDist > 0.1 && cutDist < previewEndDist) {
                     previewEnd = cutIntPos;
-                    previewEndDist = dist;
+                    previewEndDist = cutDist;
                   }
                 }
                 const cutIntNeg = lineSegmentIntersection(
@@ -1426,24 +1428,37 @@ export function GameCanvas({
                   cut.end
                 );
                 if (cutIntNeg) {
-                  const dist = vec2Distance(swipeStart, cutIntNeg);
-                  if (dist > 0.1 && dist < previewStartDist) {
+                  const cutDist = vec2Distance(swipeStart, cutIntNeg);
+                  if (cutDist > 0.1 && cutDist < previewStartDist) {
                     previewStart = cutIntNeg;
-                    previewStartDist = dist;
+                    previewStartDist = cutDist;
                   }
                 }
               }
 
+              // Draw preview line - 50% opacity, solid line (not dashed)
               ctx.save();
-              ctx.strokeStyle = COLORS.cutPreview;
-              ctx.lineWidth = WALL_THICKNESS * scale;
-              ctx.setLineDash([10 * scale, 10 * scale]);
+              ctx.globalAlpha = 0.5;
+              
+              // Draw white outline for visibility
+              ctx.strokeStyle = "#ffffff";
+              ctx.lineWidth = (WALL_THICKNESS + 8) * scale;
+              ctx.lineCap = "round";
               const negScreen = worldToScreen(previewStart.x, previewStart.y);
               const posScreen = worldToScreen(previewEnd.x, previewEnd.y);
               ctx.beginPath();
               ctx.moveTo(negScreen.x, negScreen.y);
               ctx.lineTo(posScreen.x, posScreen.y);
               ctx.stroke();
+
+              // Draw accent-colored center (same style as active wall)
+              ctx.strokeStyle = accentColor;
+              ctx.lineWidth = (WALL_THICKNESS + 4) * scale;
+              ctx.beginPath();
+              ctx.moveTo(negScreen.x, negScreen.y);
+              ctx.lineTo(posScreen.x, posScreen.y);
+              ctx.stroke();
+              
               ctx.restore();
             }
           }
