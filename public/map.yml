@@ -107,18 +107,12 @@ levels:
         topSpeed: 810
         color: 00aaff
     entities:
-      - id: wall-1
+      - id: wall-1768817147296
         kind: wall
-        shape: polygon
-        points:
-          - - 450
-            - 400
-          - - 550
-            - 450
-          - - 500
-            - 550
-          - - 400
-            - 500
+        shape: circle
+        cx: 462.8382352941177
+        cy: 435.7648351332721
+        radius: 224
   - id: level-6
     sizeThreshold: 15
     expectedCuts: 10
@@ -165,3 +159,15 @@ levels:
             - 730
           - - 340
             - 610
+      - id: wall-1768817234179
+        kind: wall
+        shape: circle
+        cx: 733.8310762293199
+        cy: 458.35285500919116
+        radius: 35
+      - id: wall-1768817240403
+        kind: wall
+        shape: circle
+        cx: 155.0735078699449
+        cy: 468.2352510340074
+        radius: 41
