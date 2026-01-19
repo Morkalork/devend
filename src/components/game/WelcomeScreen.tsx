@@ -134,7 +134,7 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
           >
             Highscores
           </motion.button>
-          {import.meta.env.DEV && onAdmin && (
+          {onAdmin && (
             <motion.button
               className="arcade-button-secondary rounded-lg opacity-70"
               onClick={onAdmin}
