@@ -441,13 +441,8 @@ export function MapCanvas({
       return;
     }
     
-    // If clicking on an entity that's not currently selected, just select it (show handles)
-    // Don't start dragging - let the user click again to drag or use handles
-    if (hit.type === 'entity' && hit.id !== selectedEntityId) {
-      onSelectEntity(hit.id);
-      onSelectBall(null);
-      return;
-    }
+    // Removed early return - let entity click fall through to normal handling below
+    // This allows both selection AND drag to work on first click
     
     if (hit.type === 'handle') {
       if (hit.handleType === 'radius') {
