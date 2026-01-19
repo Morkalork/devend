@@ -1436,9 +1436,9 @@ export function GameCanvas({
                 }
               }
 
-              // Draw preview line - 50% opacity, solid line (not dashed)
+              // Draw preview line - 25% opacity for clearly ghosted appearance
               ctx.save();
-              ctx.globalAlpha = 0.5;
+              ctx.globalAlpha = 0.25;
               
               // Draw white outline for visibility
               ctx.strokeStyle = "#ffffff";
@@ -1668,115 +1668,99 @@ export function GameCanvas({
         return;
       }
       
+      // Just update the current position - wall creation happens on pointer up
       game.currentSwipePos = worldPos;
-
-      if (game.activeWall) return;
-
-      const delta = vec2Sub(worldPos, game.swipeStart);
-      const dist = vec2Length(delta);
-
-      if (dist < effectiveSwipeMinDistance) return;
-
-      const direction = vec2Normalize(delta);
-
-      const region = game.regions.find((r) => r.id === game.swipeRegionId);
-      if (!region) {
-        game.swipeStart = null;
-        game.swipeRegionId = null;
-        game.currentSwipePos = null;
-        return;
-      }
-
-      // Find intersection points with polygon boundary (world coords)
-      const intPos = rayPolygonIntersection(game.swipeStart, direction, region.polygon);
-      const intNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), region.polygon);
-
-      if (!intPos || !intNeg) {
-        game.swipeStart = null;
-        game.swipeRegionId = null;
-        game.currentSwipePos = null;
-        return;
-      }
-
-      // Also check for wall intersections - cuts terminate at walls
-      let targetEnd = intPos.point;
-      let targetStart = intNeg.point;
-      let targetEndDist = intPos.distance;
-      let targetStartDist = intNeg.distance;
-
-      // Check intersections with obstacles (static walls in the level)
-      for (let i = 0; i < game.obstacles.length; i++) {
-        const obstacle = game.obstacles[i];
-        
-        // Check positive direction - find where the ray enters the obstacle
-        const obstacleIntPos = rayPolygonIntersection(game.swipeStart, direction, obstacle);
-        if (obstacleIntPos && obstacleIntPos.distance > 0.1 && obstacleIntPos.distance < targetEndDist) {
-          targetEnd = obstacleIntPos.point;
-          targetEndDist = obstacleIntPos.distance;
-        }
-
-        // Check negative direction
-        const obstacleIntNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), obstacle);
-        if (obstacleIntNeg && obstacleIntNeg.distance > 0.1 && obstacleIntNeg.distance < targetStartDist) {
-          targetStart = obstacleIntNeg.point;
-          targetStartDist = obstacleIntNeg.distance;
-        }
-      }
-
-      // Also check for completed cuts (previously drawn lines) - terminate at them too
-      for (const cut of game.completedCuts) {
-        // Check positive direction intersection with cut line
-        const cutIntPos = lineSegmentIntersection(
-          game.swipeStart,
-          vec2Add(game.swipeStart, vec2Scale(direction, 10000)),
-          cut.start,
-          cut.end
-        );
-        if (cutIntPos) {
-          const dist = vec2Distance(game.swipeStart, cutIntPos);
-          if (dist > 0.1 && dist < targetEndDist) {
-            targetEnd = cutIntPos;
-            targetEndDist = dist;
-          }
-        }
-
-        // Check negative direction intersection
-        const cutIntNeg = lineSegmentIntersection(
-          game.swipeStart,
-          vec2Add(game.swipeStart, vec2Scale(direction, -10000)),
-          cut.start,
-          cut.end
-        );
-        if (cutIntNeg) {
-          const dist = vec2Distance(game.swipeStart, cutIntNeg);
-          if (dist > 0.1 && dist < targetStartDist) {
-            targetStart = cutIntNeg;
-            targetStartDist = dist;
-          }
-        }
-      }
-
-      game.activeWall = {
-        origin: { ...game.swipeStart },
-        direction,
-        startPoint: { ...game.swipeStart },
-        endPoint: { ...game.swipeStart },
-        targetStart,
-        targetEnd,
-        thickness: WALL_THICKNESS,
-        isComplete: false,
-        activeRegionId: game.swipeRegionId,
-      };
-
-      game.cutCount += 1;
-      setCutCount(game.cutCount);
-
-      game.swipeStart = null;
-      game.swipeRegionId = null;
-      game.currentSwipePos = null;
     };
 
     const handlePointerUp = () => {
+      // Only create wall if we have a valid swipe
+      if (game.swipeStart && game.swipeRegionId && game.currentSwipePos && !game.activeWall && !game.gameOver && !game.levelComplete && !game.isRecovering && game.pushMode !== "prompt") {
+        const delta = vec2Sub(game.currentSwipePos, game.swipeStart);
+        const dist = vec2Length(delta);
+
+        if (dist >= effectiveSwipeMinDistance) {
+          const direction = vec2Normalize(delta);
+
+          const region = game.regions.find((r) => r.id === game.swipeRegionId);
+          if (region) {
+            // Find intersection points with polygon boundary (world coords)
+            const intPos = rayPolygonIntersection(game.swipeStart, direction, region.polygon);
+            const intNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), region.polygon);
+
+            if (intPos && intNeg) {
+              // Calculate target endpoints using same logic as preview
+              let targetEnd = intPos.point;
+              let targetStart = intNeg.point;
+              let targetEndDist = intPos.distance;
+              let targetStartDist = intNeg.distance;
+
+              // Check intersections with obstacles (static walls in the level)
+              for (let i = 0; i < game.obstacles.length; i++) {
+                const obstacle = game.obstacles[i];
+                
+                const obstacleIntPos = rayPolygonIntersection(game.swipeStart, direction, obstacle);
+                if (obstacleIntPos && obstacleIntPos.distance > 0.1 && obstacleIntPos.distance < targetEndDist) {
+                  targetEnd = obstacleIntPos.point;
+                  targetEndDist = obstacleIntPos.distance;
+                }
+
+                const obstacleIntNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), obstacle);
+                if (obstacleIntNeg && obstacleIntNeg.distance > 0.1 && obstacleIntNeg.distance < targetStartDist) {
+                  targetStart = obstacleIntNeg.point;
+                  targetStartDist = obstacleIntNeg.distance;
+                }
+              }
+
+              // Check for completed cuts - terminate at them too
+              for (const cut of game.completedCuts) {
+                const cutIntPos = lineSegmentIntersection(
+                  game.swipeStart,
+                  vec2Add(game.swipeStart, vec2Scale(direction, 10000)),
+                  cut.start,
+                  cut.end
+                );
+                if (cutIntPos) {
+                  const cutDist = vec2Distance(game.swipeStart, cutIntPos);
+                  if (cutDist > 0.1 && cutDist < targetEndDist) {
+                    targetEnd = cutIntPos;
+                    targetEndDist = cutDist;
+                  }
+                }
+
+                const cutIntNeg = lineSegmentIntersection(
+                  game.swipeStart,
+                  vec2Add(game.swipeStart, vec2Scale(direction, -10000)),
+                  cut.start,
+                  cut.end
+                );
+                if (cutIntNeg) {
+                  const cutDist = vec2Distance(game.swipeStart, cutIntNeg);
+                  if (cutDist > 0.1 && cutDist < targetStartDist) {
+                    targetStart = cutIntNeg;
+                    targetStartDist = cutDist;
+                  }
+                }
+              }
+
+              game.activeWall = {
+                origin: { ...game.swipeStart },
+                direction,
+                startPoint: { ...game.swipeStart },
+                endPoint: { ...game.swipeStart },
+                targetStart,
+                targetEnd,
+                thickness: WALL_THICKNESS,
+                isComplete: false,
+                activeRegionId: game.swipeRegionId,
+              };
+
+              game.cutCount += 1;
+              setCutCount(game.cutCount);
+            }
+          }
+        }
+      }
+
       game.swipeStart = null;
       game.swipeRegionId = null;
       game.currentSwipePos = null;
