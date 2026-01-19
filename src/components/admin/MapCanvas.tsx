@@ -441,6 +441,25 @@ export function MapCanvas({
       return;
     }
     
+    // If clicking on an entity that's not currently selected, select it first
+    // The handles will be available on the next click
+    if (hit.type === 'entity' && hit.id !== selectedEntityId) {
+      onSelectEntity(hit.id);
+      onSelectBall(null);
+      // Start dragging the entity immediately
+      const entity = (level.entities || []).find(en => en.id === hit.id);
+      if (entity) {
+        setDragMode({
+          type: 'entity',
+          id: hit.id,
+          startX: world.x,
+          startY: world.y,
+          originalEntity: { ...entity },
+        });
+      }
+      return;
+    }
+    
     if (hit.type === 'handle') {
       if (hit.handleType === 'radius') {
         const entity = (level.entities || []).find(e => e.id === hit.id) as WallCircleEntity;
