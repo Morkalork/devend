@@ -164,7 +164,9 @@ export function MapCanvas({
 
     // Draw entities
     (level.entities || []).forEach(entity => {
-      const isSelected = entity.id === selectedEntityId;
+      // Consider entity selected if it matches selectedEntityId OR if we're dragging it
+      const isDraggingThisEntity = dragMode.type !== 'none' && 'id' in dragMode && dragMode.id === entity.id;
+      const isSelected = entity.id === selectedEntityId || isDraggingThisEntity;
       
       if (entity.shape === 'circle') {
         const circleEntity = entity as WallCircleEntity;
