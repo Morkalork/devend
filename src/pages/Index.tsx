@@ -227,7 +227,7 @@ const Index = () => {
           onTutorial={goToTutorial}
           onOptions={goToOptions}
           onHighscores={handleHighscoresFromWelcome}
-          onAdmin={import.meta.env.DEV ? goToAdmin : undefined}
+          onAdmin={import.meta.env.DEV || new URLSearchParams(window.location.search).get('admin') === 'true' ? goToAdmin : undefined}
           isLoading={isLoading}
           error={error}
         />
