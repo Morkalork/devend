@@ -183,6 +183,16 @@ export function MapCanvas({
         ctx.stroke();
         
         if (isSelected) {
+          // Draw center move handle
+          ctx.fillStyle = '#4488ff';
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, HANDLE_SIZE / 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#2255cc';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
+          // Draw radius handles
           const handlePositions = [
             { x: center.x + radius, y: center.y },
             { x: center.x - radius, y: center.y },
@@ -214,6 +224,18 @@ export function MapCanvas({
         
         // Draw resize handles when selected
         if (isSelected) {
+          const centerX = topLeft.x + width / 2;
+          const centerY = topLeft.y + height / 2;
+          
+          // Draw center move handle
+          ctx.fillStyle = '#4488ff';
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, HANDLE_SIZE / 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#2255cc';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
           const handles = [
             { x: topLeft.x, y: topLeft.y }, // tl
             { x: topLeft.x + width, y: topLeft.y }, // tr
@@ -251,6 +273,20 @@ export function MapCanvas({
         ctx.stroke();
         
         if (isSelected) {
+          // Calculate polygon center for move handle
+          const avgX = polyEntity.points.reduce((sum, p) => sum + p[0], 0) / polyEntity.points.length;
+          const avgY = polyEntity.points.reduce((sum, p) => sum + p[1], 0) / polyEntity.points.length;
+          const centerScreen = worldToScreen(avgX, avgY);
+          
+          // Draw center move handle
+          ctx.fillStyle = '#4488ff';
+          ctx.beginPath();
+          ctx.arc(centerScreen.x, centerScreen.y, HANDLE_SIZE / 2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#2255cc';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+          
           const edges = getEdgeInfo(polyEntity.points);
           edges.forEach(edge => {
             const screenMid = worldToScreen(edge.midpoint.x, edge.midpoint.y);
@@ -331,6 +367,11 @@ export function MapCanvas({
           const center = worldToScreen(circleEntity.cx, circleEntity.cy);
           const radius = circleEntity.radius * boardRect.scale;
           
+          // Check center move handle first
+          if (Math.abs(sx - center.x) < HANDLE_SIZE && Math.abs(sy - center.y) < HANDLE_SIZE) {
+            return { type: 'handle', id: entity.id, handleType: 'move' };
+          }
+          
           const handlePositions = [
             { x: center.x + radius, y: center.y },
             { x: center.x - radius, y: center.y },
@@ -348,6 +389,12 @@ export function MapCanvas({
           const topLeft = worldToScreen(rectEntity.x, rectEntity.y);
           const width = rectEntity.width * boardRect.scale;
           const height = rectEntity.height * boardRect.scale;
+          const center = { x: topLeft.x + width / 2, y: topLeft.y + height / 2 };
+          
+          // Check center move handle first
+          if (Math.abs(sx - center.x) < HANDLE_SIZE && Math.abs(sy - center.y) < HANDLE_SIZE) {
+            return { type: 'handle', id: entity.id, handleType: 'move' };
+          }
           
           const handles: { pos: { x: number; y: number }; name: string }[] = [
             { pos: { x: topLeft.x, y: topLeft.y }, name: 'tl' },
@@ -368,6 +415,16 @@ export function MapCanvas({
           }
         } else if (entity.shape === 'polygon') {
           const polyEntity = entity as WallPolygonEntity;
+          
+          // Calculate polygon center for move handle
+          const avgX = polyEntity.points.reduce((sum, p) => sum + p[0], 0) / polyEntity.points.length;
+          const avgY = polyEntity.points.reduce((sum, p) => sum + p[1], 0) / polyEntity.points.length;
+          const centerScreen = worldToScreen(avgX, avgY);
+          
+          // Check center move handle first
+          if (Math.abs(sx - centerScreen.x) < HANDLE_SIZE && Math.abs(sy - centerScreen.y) < HANDLE_SIZE) {
+            return { type: 'handle', id: entity.id, handleType: 'move' };
+          }
           
           for (let i = 0; i < polyEntity.points.length; i++) {
             const pointPos = worldToScreen(polyEntity.points[i][0], polyEntity.points[i][1]);
@@ -447,7 +504,19 @@ export function MapCanvas({
     // This allows both selection AND drag to work on first click
     
     if (hit.type === 'handle') {
-      if (hit.handleType === 'radius') {
+      if (hit.handleType === 'move') {
+        // Move handle - start dragging the entity
+        const entity = (level.entities || []).find(e => e.id === hit.id);
+        if (entity) {
+          setDragMode({
+            type: 'entity',
+            id: hit.id,
+            startX: world.x,
+            startY: world.y,
+            originalEntity: JSON.parse(JSON.stringify(entity)) as LevelEntity,
+          });
+        }
+      } else if (hit.handleType === 'radius') {
         const entity = (level.entities || []).find(e => e.id === hit.id) as WallCircleEntity;
         if (entity) {
           const dist = Math.hypot(world.x - entity.cx, world.y - entity.cy);
@@ -492,19 +561,9 @@ export function MapCanvas({
         }
       }
     } else if (hit.type === 'entity') {
+      // Clicking on entity body just selects it - use center move handle to drag
       onSelectEntity(hit.id);
       onSelectBall(null);
-      
-      const entity = (level.entities || []).find(e => e.id === hit.id);
-      if (entity) {
-        setDragMode({
-          type: 'entity',
-          id: hit.id,
-          startX: world.x,
-          startY: world.y,
-          originalEntity: JSON.parse(JSON.stringify(entity)) as LevelEntity,
-        });
-      }
     } else if (hit.type === 'ball') {
       onSelectBall(hit.id);
       onSelectEntity(null);
