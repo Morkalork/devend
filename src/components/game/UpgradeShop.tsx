@@ -76,14 +76,14 @@ export function UpgradeShop({
   const [pressedId, setPressedId] = useState<string | null>(null);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
 
-  // Get active modifiers from owned upgrades
+  // Get active modifiers from owned upgrades (excluding purchases made this session for shop slots calculation)
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
   
   // Calculate shop slots (base 3 + shopSlots modifier)
   const shopSlotCount = 3 + activeModifiers.shopSlots;
 
-  // Compute eligible upgrades and select using weighted random
-  const offers = useMemo<UpgradeOffer[]>(() => {
+  // Compute offers ONCE when shop opens - use useState with initializer to prevent re-randomizing
+  const [offers] = useState<UpgradeOffer[]>(() => {
     const eligible = upgrades.filter(upgrade => {
       const isAvailable = levelNumber >= upgrade.levelAvailability;
       const isNotRemoved = upgrade.levelRemoved === undefined || levelNumber <= upgrade.levelRemoved;
@@ -103,7 +103,7 @@ export function UpgradeShop({
         price: finalPrice,
       };
     });
-  }, [upgrades, levelNumber, ownedUpgradeIds, shopSlotCount, activeModifiers.priceMultiplier]);
+  });
 
   const handlePurchase = useCallback((offer: UpgradeOffer) => {
     if (purchasedThisSession.includes(offer.upgrade.id)) {
