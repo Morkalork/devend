@@ -1546,10 +1546,11 @@ export function GameCanvas({
         ctx.translate(screenPos.x, screenPos.y);
         ctx.rotate(ball.rotation);
         
-        const gridSpacing = screenRadius * 0.5;
+        const gridSpacing = screenRadius * 0.45;
         const gridSize = screenRadius * 2;
-        ctx.strokeStyle = hexToRgba(ball.color.slice(1), 0.3);
-        ctx.lineWidth = 1.5 * scale;
+        // Use white with decent opacity for visibility against any ball color
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.lineWidth = 2 * scale;
         
         // Draw grid lines
         for (let i = -3; i <= 3; i++) {
