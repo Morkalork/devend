@@ -83,8 +83,8 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
               className="absolute inset-0"
               style={{
                 backgroundImage: `
-                  linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)
+                  linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px)
                 `,
                 backgroundSize: '12px 12px',
               }}
