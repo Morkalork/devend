@@ -78,18 +78,29 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
               boxShadow: '0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)',
             }}
           >
-            {/* Grid pattern overlay */}
-            <div 
-              className="absolute inset-0"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(0,0,0,0.5) 1px, transparent 1px),
-                  linear-gradient(90deg, rgba(0,0,0,0.5) 1px, transparent 1px)
-                `,
-                backgroundSize: '12px 12px',
-              }}
-            />
+            {/* Basketball seam lines */}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 64 64">
+              {/* Horizontal line */}
+              <line x1="0" y1="32" x2="64" y2="32" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
+              {/* Vertical line */}
+              <line x1="32" y1="0" x2="32" y2="64" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
+              {/* Left curve */}
+              <ellipse cx="22" cy="32" rx="14" ry="28" fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
+              {/* Right curve */}
+              <ellipse cx="42" cy="32" rx="14" ry="28" fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
+            </svg>
           </motion.div>
+          {/* Glare/shine effect */}
+          <div 
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              width: '60%',
+              height: '40%',
+              top: '8%',
+              left: '15%',
+              background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.15) 50%, transparent 70%)',
+            }}
+          />
         </motion.div>
 
         {/* Error state */}
