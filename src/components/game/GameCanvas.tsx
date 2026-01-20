@@ -504,7 +504,7 @@ export function GameCanvas({
 
       // Update rotation based on speed (medium spin rate)
       const speed = vec2Length(ball.velocity);
-      const rotationSpeed = speed * 0.008; // Radians per world unit traveled
+      const rotationSpeed = speed * 0.015; // Radians per second based on speed
       ball.rotation += rotationSpeed * dt;
 
       // Resolve collisions with board boundary (always use original board, not region bounding box)

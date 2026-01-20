@@ -64,13 +64,33 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
           </motion.p>
         </motion.div>
 
-        {/* Animated ball preview */}
+        {/* Animated spinning ball preview */}
         <motion.div
-          className="w-16 h-16 rounded-full bg-primary animate-float"
-          style={{
-            boxShadow: '0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)',
-          }}
-        />
+          className="relative w-16 h-16"
+          animate={{ y: [0, -10, 0] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <motion.div
+            className="absolute inset-0 rounded-full bg-primary overflow-hidden"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            style={{
+              boxShadow: '0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)',
+            }}
+          >
+            {/* Grid pattern overlay */}
+            <div 
+              className="absolute inset-0"
+              style={{
+                backgroundImage: `
+                  linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px),
+                  linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)
+                `,
+                backgroundSize: '12px 12px',
+              }}
+            />
+          </motion.div>
+        </motion.div>
 
         {/* Error state */}
         {error && (
