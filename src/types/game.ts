@@ -28,6 +28,7 @@ export interface Ball {
   topSpeed: number;
   color: string; // hex color with #
   regionId: string; // which region this ball is in
+  rotation: number; // current rotation angle in radians for spinning effect
 }
 
 // Diagonal growing wall - extends from origin in +/- direction
