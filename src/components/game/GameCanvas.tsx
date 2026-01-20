@@ -377,6 +377,7 @@ export function GameCanvas({
           topSpeed: modifiedTopSpeed,
           color: `#${ballConfig.color}`,
           regionId: "", // Will be assigned after regions are created
+          rotation: Math.random() * Math.PI * 2, // Start with random rotation
         };
       });
 
@@ -500,6 +501,11 @@ export function GameCanvas({
       // Move ball (world units)
       ball.position.x += ball.velocity.x * dt;
       ball.position.y += ball.velocity.y * dt;
+
+      // Update rotation based on speed (medium spin rate)
+      const speed = vec2Length(ball.velocity);
+      const rotationSpeed = speed * 0.008; // Radians per world unit traveled
+      ball.rotation += rotationSpeed * dt;
 
       // Resolve collisions with board boundary (always use original board, not region bounding box)
       if (game.boardPolygon) {
@@ -1524,7 +1530,7 @@ export function GameCanvas({
         ctx.fillStyle = hexToRgba(ball.color.slice(1), 0.4);
         ctx.fill();
 
-        // Ball
+        // Ball base
         ctx.save();
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
@@ -1532,6 +1538,34 @@ export function GameCanvas({
         ctx.shadowColor = ball.color;
         ctx.shadowBlur = 15 * scale;
         ctx.fill();
+        
+        // Clip to ball circle for grid pattern
+        ctx.clip();
+        
+        // Draw spinning grid pattern
+        ctx.translate(screenPos.x, screenPos.y);
+        ctx.rotate(ball.rotation);
+        
+        const gridSpacing = screenRadius * 0.5;
+        const gridSize = screenRadius * 2;
+        ctx.strokeStyle = hexToRgba(ball.color.slice(1), 0.3);
+        ctx.lineWidth = 1.5 * scale;
+        
+        // Draw grid lines
+        for (let i = -3; i <= 3; i++) {
+          const offset = i * gridSpacing;
+          // Vertical lines
+          ctx.beginPath();
+          ctx.moveTo(offset, -gridSize);
+          ctx.lineTo(offset, gridSize);
+          ctx.stroke();
+          // Horizontal lines
+          ctx.beginPath();
+          ctx.moveTo(-gridSize, offset);
+          ctx.lineTo(gridSize, offset);
+          ctx.stroke();
+        }
+        
         ctx.restore();
       }
 
