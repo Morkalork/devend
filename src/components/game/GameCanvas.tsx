@@ -333,9 +333,10 @@ export function GameCanvas({
       const isInsideObstacle = (pos: Vector2, radius: number): boolean => {
         for (const obstacle of obstaclePolygons) {
           if (pointInPolygon(pos, obstacle)) return true;
-          // Check perimeter
-          for (let i = 0; i < 8; i++) {
-            const angle = (i / 8) * Math.PI * 2;
+          // Check perimeter with more points for larger balls
+          const numChecks = Math.max(8, Math.ceil(radius / 5));
+          for (let i = 0; i < numChecks; i++) {
+            const angle = (i / numChecks) * Math.PI * 2;
             const checkPos = { x: pos.x + Math.cos(angle) * radius, y: pos.y + Math.sin(angle) * radius };
             if (pointInPolygon(checkPos, obstacle)) return true;
           }
@@ -343,17 +344,30 @@ export function GameCanvas({
         return false;
       };
 
-      // Helper: find valid spawn position
-      const findValidSpawnPosition = (): Vector2 => {
-        for (let attempt = 0; attempt < 100; attempt++) {
+      // Helper: find valid spawn position for a ball with specific radius
+      const findValidSpawnPosition = (ballRadius: number): Vector2 => {
+        // Try to spawn away from obstacles with extra margin for the ball size
+        const safeMargin = ballRadius * 1.5;
+        for (let attempt = 0; attempt < 200; attempt++) {
           const pos = {
-            x: centroid.x + (Math.random() - 0.5) * regionWidth * 0.6,
-            y: centroid.y + (Math.random() - 0.5) * regionHeight * 0.6,
+            x: centroid.x + (Math.random() - 0.5) * regionWidth * 0.5,
+            y: centroid.y + (Math.random() - 0.5) * regionHeight * 0.5,
           };
-          if (pointInPolygon(pos, boardPolygon) && !isInsideObstacle(pos, effectiveBallRadius)) {
-            return pos;
+          // Check that the ball is fully inside the board and not overlapping any obstacles
+          if (pointInPolygon(pos, boardPolygon) && !isInsideObstacle(pos, ballRadius + safeMargin)) {
+            // Also verify ball edges are inside the board
+            const edgeMargin = ballRadius + 5;
+            const edgesInside = 
+              pos.x - edgeMargin > left &&
+              pos.x + edgeMargin < right &&
+              pos.y - edgeMargin > top &&
+              pos.y + edgeMargin < bottom;
+            if (edgesInside) {
+              return pos;
+            }
           }
         }
+        // Fallback: spawn at centroid (may cause issues but better than crashing)
         return { ...centroid };
       };
 
@@ -370,7 +384,7 @@ export function GameCanvas({
         
         return {
           id: ballConfig.id,
-          position: findValidSpawnPosition(),
+          position: findValidSpawnPosition(ballRadius), // Pass ball-specific radius
           velocity: { x: dir.x * modifiedSpeed, y: dir.y * modifiedSpeed },
           radius: ballRadius,
           speed: modifiedSpeed,

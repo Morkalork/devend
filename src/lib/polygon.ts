@@ -505,6 +505,42 @@ export function resolveBallPolygonCollisionOutward(
   let newVel = { ...ballVel };
   let collided = false;
   
+  // First check if ball center is inside the obstacle (shouldn't happen, but handle it)
+  if (pointInPolygon(newPos, poly)) {
+    // Ball is inside obstacle - push it out toward the nearest edge
+    let minDist = Infinity;
+    let nearestEdgeNormal: Vector2 = { x: 0, y: -1 };
+    let nearestClosestPoint: Vector2 = newPos;
+    
+    for (let i = 0; i < vertices.length; i++) {
+      const j = (i + 1) % vertices.length;
+      const p1 = vertices[i];
+      const p2 = vertices[j];
+      const closest = closestPointOnSegment(newPos, p1, p2);
+      const dist = vec2Distance(newPos, closest);
+      
+      if (dist < minDist) {
+        minDist = dist;
+        nearestClosestPoint = closest;
+        const edge = vec2Sub(p2, p1);
+        // Normal pointing outward from polygon
+        nearestEdgeNormal = vec2Normalize({ x: -edge.y, y: edge.x });
+      }
+    }
+    
+    // Push ball completely outside
+    newPos = vec2Add(nearestClosestPoint, vec2Scale(nearestEdgeNormal, ballRadius + 2));
+    
+    // Reflect velocity
+    const velDotNormal = vec2Dot(newVel, nearestEdgeNormal);
+    if (velDotNormal < 0) {
+      newVel = vec2Sub(newVel, vec2Scale(nearestEdgeNormal, 2 * velDotNormal));
+    }
+    
+    return { position: newPos, velocity: newVel, collided: true };
+  }
+  
+  // Normal edge collision detection
   for (let i = 0; i < vertices.length; i++) {
     const j = (i + 1) % vertices.length;
     const p1 = vertices[i];
@@ -533,9 +569,9 @@ export function resolveBallPolygonCollisionOutward(
         newVel = vec2Sub(newVel, vec2Scale(normal, 2 * velDotNormal));
       }
       
-      // Push ball out of obstacle
+      // Push ball out of obstacle with extra margin
       const penetration = ballRadius - dist;
-      newPos = vec2Add(newPos, vec2Scale(normal, penetration + 0.5));
+      newPos = vec2Add(newPos, vec2Scale(normal, penetration + 2));
     }
   }
   
