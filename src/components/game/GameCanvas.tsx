@@ -365,11 +365,14 @@ export function GameCanvas({
         const modifiedTopSpeed = ballConfig.topSpeed * baseSpeedMultiplier * activeModifiers.ballSpeedMultiplier;
         const modifiedSpeed = Math.min(levelScaledSpeed, modifiedTopSpeed);
 
+        // Use ball-specific radius if defined, otherwise fall back to default
+        const ballRadius = (ballConfig.radius ?? BASE_BALL_RADIUS) * activeModifiers.ballSizeMultiplier;
+        
         return {
           id: ballConfig.id,
           position: findValidSpawnPosition(),
           velocity: { x: dir.x * modifiedSpeed, y: dir.y * modifiedSpeed },
-          radius: effectiveBallRadius,
+          radius: ballRadius,
           speed: modifiedSpeed,
           topSpeed: modifiedTopSpeed,
           color: `#${ballConfig.color}`,

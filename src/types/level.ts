@@ -3,6 +3,7 @@ export interface BallConfig {
   initialSpeed: number;
   topSpeed: number;
   color: string; // 6-char hex without #
+  radius?: number; // optional radius in world units, defaults to BASE_BALL_RADIUS
 }
 
 // Entity shape types
