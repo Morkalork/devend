@@ -1553,34 +1553,59 @@ export function GameCanvas({
         ctx.shadowBlur = 15 * scale;
         ctx.fill();
         
-        // Clip to ball circle for grid pattern
+        // Clip to ball circle for basketball pattern
         ctx.clip();
         
-        // Draw spinning grid pattern
+        // Draw spinning basketball pattern
         ctx.translate(screenPos.x, screenPos.y);
         ctx.rotate(ball.rotation);
         
-        const gridSpacing = screenRadius * 0.45;
-        const gridSize = screenRadius * 2;
-        // Use black for visibility against bright ball colors
         ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
         ctx.lineWidth = 2 * scale;
         
-        // Draw grid lines
-        for (let i = -3; i <= 3; i++) {
-          const offset = i * gridSpacing;
-          // Vertical lines
-          ctx.beginPath();
-          ctx.moveTo(offset, -gridSize);
-          ctx.lineTo(offset, gridSize);
-          ctx.stroke();
-          // Horizontal lines
-          ctx.beginPath();
-          ctx.moveTo(-gridSize, offset);
-          ctx.lineTo(gridSize, offset);
-          ctx.stroke();
-        }
+        // Horizontal center line
+        ctx.beginPath();
+        ctx.moveTo(-screenRadius, 0);
+        ctx.lineTo(screenRadius, 0);
+        ctx.stroke();
         
+        // Vertical center line
+        ctx.beginPath();
+        ctx.moveTo(0, -screenRadius);
+        ctx.lineTo(0, screenRadius);
+        ctx.stroke();
+        
+        // Left curved seam
+        ctx.beginPath();
+        ctx.ellipse(-screenRadius * 0.15, 0, screenRadius * 0.5, screenRadius * 0.9, 0, -Math.PI / 2, Math.PI / 2);
+        ctx.stroke();
+        
+        // Right curved seam
+        ctx.beginPath();
+        ctx.ellipse(screenRadius * 0.15, 0, screenRadius * 0.5, screenRadius * 0.9, 0, Math.PI / 2, -Math.PI / 2);
+        ctx.stroke();
+        
+        ctx.restore();
+        
+        // Add glare/shine effect at top
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
+        ctx.clip();
+        
+        const glareGradient = ctx.createRadialGradient(
+          screenPos.x - screenRadius * 0.3, 
+          screenPos.y - screenRadius * 0.4, 
+          0,
+          screenPos.x - screenRadius * 0.3, 
+          screenPos.y - screenRadius * 0.4, 
+          screenRadius * 0.7
+        );
+        glareGradient.addColorStop(0, "rgba(255, 255, 255, 0.5)");
+        glareGradient.addColorStop(0.5, "rgba(255, 255, 255, 0.15)");
+        glareGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.fillStyle = glareGradient;
+        ctx.fillRect(screenPos.x - screenRadius, screenPos.y - screenRadius, screenRadius * 2, screenRadius * 2);
         ctx.restore();
       }
 
