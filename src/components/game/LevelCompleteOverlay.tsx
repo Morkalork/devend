@@ -1,4 +1,4 @@
-import { Trophy, ArrowRight, Sparkles } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 
 interface LevelCompleteOverlayProps {
@@ -8,11 +8,28 @@ interface LevelCompleteOverlayProps {
 }
 
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: LevelCompleteOverlayProps) {
-  const { levelNumber, levelId, cutCount, expectedCuts, basePoints, levelScore, remainingPercent, overcutBonus = 0, pushFailed = false } = scoreData;
+  const { 
+    levelNumber, 
+    levelId, 
+    cutCount, 
+    expectedCuts, 
+    basePoints, 
+    levelScore, 
+    remainingPercent, 
+    overcutBonus = 0, 
+    pushFailed = false,
+    fenceBonus = 0,
+    spaceBonus = 0,
+    spaceBonusRaw = 0,
+    penaltyMultiplier = 1,
+    fencesUnderPar = 0,
+    fencesOverPar = 0,
+    extraPercent = 0,
+  } = scoreData;
   
-  const bonusOrPenalty = cutCount <= expectedCuts 
-    ? expectedCuts - cutCount 
-    : -(cutCount - expectedCuts);
+  const hasNewScoring = fenceBonus !== undefined || spaceBonus !== undefined;
+  const isPenalized = penaltyMultiplier < 1 && penaltyMultiplier > 0;
+  const isSpaceDisabled = penaltyMultiplier === 0;
 
   return (
     <>
@@ -36,10 +53,10 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
               bottom: auto !important;
               left: 50% !important;
               right: auto !important;
-              width: 384px !important;
+              width: 420px !important;
               max-height: 90vh !important;
-              margin-left: -192px !important;
-              margin-top: -280px !important;
+              margin-left: -210px !important;
+              margin-top: -320px !important;
             }
           }
         `}</style>
@@ -58,8 +75,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
 
           {/* Push Failed Warning */}
           {pushFailed && (
-            <div className="mb-4 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-center">
-              <p className="text-amber-400 text-sm font-medium">Push failed! No overcut bonus earned.</p>
+            <div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg text-center">
+              <p className="text-warning text-sm font-medium">Push failed! No overcut bonus earned.</p>
             </div>
           )}
 
@@ -75,37 +92,84 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: Leve
               <span className="font-bold text-foreground">{remainingPercent}%</span>
             </div>
             
-            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-              <span className="text-muted-foreground">Cuts Made</span>
-              <span className="font-bold text-foreground">{cutCount}</span>
+            {/* Fence Efficiency Section */}
+            <div className="py-2 border-b border-border">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Target className="w-3 h-3" />
+                  Fences Used
+                </span>
+                <span className="font-bold text-foreground">
+                  {cutCount} / {expectedCuts}
+                </span>
+              </div>
+              
+              {fencesUnderPar > 0 && (
+                <div className="flex justify-between items-center text-sm mt-1">
+                  <span className="text-success flex items-center gap-1">
+                    <TrendingUp className="w-3 h-3" />
+                    {fencesUnderPar} under par
+                  </span>
+                  <span className="font-bold text-success">+{fenceBonus}</span>
+                </div>
+              )}
+              
+              {fencesOverPar > 0 && (
+                <div className="flex justify-between items-center text-sm mt-1">
+                  <span className="text-destructive flex items-center gap-1">
+                    <TrendingDown className="w-3 h-3" />
+                    {fencesOverPar} over par
+                  </span>
+                  <span className="text-destructive text-xs">
+                    {isSpaceDisabled ? 'Space bonus disabled' : `Space ×${penaltyMultiplier}`}
+                  </span>
+                </div>
+              )}
             </div>
             
-            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-              <span className="text-muted-foreground">Expected Cuts</span>
-              <span className="font-bold text-foreground">{expectedCuts}</span>
-            </div>
+            {/* Space Optimization Section */}
+            {extraPercent > 0 && (
+              <div className="py-2 border-b border-border">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Extra Space Removed
+                  </span>
+                  <span className="font-bold text-foreground">+{(extraPercent * 100).toFixed(0)}%</span>
+                </div>
+                
+                <div className="flex justify-between items-center text-sm">
+                  <span className={isPenalized ? 'text-warning' : 'text-primary'}>
+                    Space Bonus
+                    {isPenalized && ` (×${penaltyMultiplier})`}
+                  </span>
+                  <span className={`font-bold ${isSpaceDisabled ? 'text-destructive line-through' : isPenalized ? 'text-warning' : 'text-primary'}`}>
+                    {isSpaceDisabled ? spaceBonusRaw : spaceBonus > 0 ? `+${spaceBonus}` : '—'}
+                  </span>
+                </div>
+              </div>
+            )}
             
             <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground">Base Points</span>
               <span className="font-bold text-foreground">{basePoints}</span>
             </div>
             
-            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-              <span className="text-muted-foreground">
-                {bonusOrPenalty >= 0 ? 'Par Bonus' : 'Par Penalty'}
-              </span>
-              <span className={`font-bold ${bonusOrPenalty >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {bonusOrPenalty >= 0 ? '+' : ''}{bonusOrPenalty}
-              </span>
-            </div>
-            
             {overcutBonus > 0 && (
-              <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2">
-                <span className="text-amber-400 flex items-center gap-1">
+              <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-warning/30 bg-warning/10 rounded px-2">
+                <span className="text-warning flex items-center gap-1">
                   <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
                   Overcut Bonus
                 </span>
-                <span className="font-bold text-amber-400">+{overcutBonus}</span>
+                <span className="font-bold text-warning">+{overcutBonus}</span>
+              </div>
+            )}
+            
+            {/* Total Bonus Summary */}
+            {(fenceBonus > 0 || spaceBonus > 0) && (
+              <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
+                <span className="font-semibold text-foreground">Total Bonus</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{fenceBonus + spaceBonus}</span>
               </div>
             )}
             
