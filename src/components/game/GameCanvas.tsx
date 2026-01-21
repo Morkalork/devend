@@ -2178,53 +2178,12 @@ export function GameCanvas({
       {/* Screen flash overlay for damage feedback */}
       {screenFlash === "red" && <div className="absolute inset-0 z-50 pointer-events-none bg-red-500/40" />}
 
-      {/* HUD Section - Top UI band (~15% height) */}
-      <div className="flex-shrink-0 px-4 py-3 flex justify-between items-start gap-3" style={{ minHeight: "15%" }}>
-        {/* Left side: Cuts, Lives, Shields */}
-        <div className="flex gap-3">
-          <div className="hud-display">
-            <span className="text-muted-foreground text-xs uppercase tracking-wider">Cuts</span>
-            <div className="text-2xl font-display font-bold text-foreground">{cutCount}</div>
-          </div>
-          {/* Lives display */}
-          <div className={`hud-display ${isRecovering ? "animate-pulse" : ""}`}>
-            <span className="text-muted-foreground text-xs uppercase tracking-wider">Lives</span>
-            <div className="text-2xl font-display font-bold text-red-400 flex items-center gap-1">
-              {Array.from({ length: displayLives }).map((_, i) => (
-                <span key={i}>❤️</span>
-              ))}
-              {displayLives === 0 && <span>0</span>}
-            </div>
-          </div>
-          {wallShieldCount > 0 && (
-            <div className="hud-display">
-              <span className="text-muted-foreground text-xs uppercase tracking-wider">Shields</span>
-              <div className="text-2xl font-display font-bold text-cyan-400">{wallShieldCount}</div>
-            </div>
-          )}
+      {/* Debug info in dev mode - minimal display */}
+      {process.env.NODE_ENV === "development" && (
+        <div className="absolute top-2 right-2 text-xs text-muted-foreground/50 font-mono z-10">
+          {debugInfo.boardWidth}×{debugInfo.boardHeight} @ {debugInfo.scale}x
         </div>
-
-        {/* Right side: Remaining percentage + debug info */}
-        <div className="flex flex-col items-end gap-1">
-          <div className="hud-display">
-            <span className="text-muted-foreground text-xs uppercase tracking-wider">Remaining</span>
-            <div
-              className={`text-2xl font-display font-bold ${pushMode === "pushing" ? "text-amber-400" : "text-primary"}`}
-            >
-              {remainingPercent}%
-            </div>
-            <span className="text-muted-foreground text-xs">
-              {pushMode === "pushing" ? "Push Mode!" : `Target: <${level.sizeThreshold}%`}
-            </span>
-          </div>
-          {/* Debug info in dev mode */}
-          {process.env.NODE_ENV === "development" && (
-            <div className="text-xs text-muted-foreground font-mono">
-              {debugInfo.boardWidth}×{debugInfo.boardHeight} @ {debugInfo.scale}x
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Canvas container - Board band (~70% height) */}
       <div ref={containerRef} className="flex-1 min-h-0 relative" style={{ height: "70%" }}>
