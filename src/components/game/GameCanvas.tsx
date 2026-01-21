@@ -406,7 +406,40 @@ export function GameCanvas({
       // that balls bounce off, but they don't pre-partition the board.
       // Partitioning only happens when player makes cuts.
       const initialRegionId = generateRegionId();
-      game.regions = [{ id: initialRegionId, polygon: boardPolygon }];
+      
+      // Generate initial samplePoints so the border renders correctly from the start
+      // This ensures obstacles are reflected in the border immediately
+      const initBounds = polygonBounds(boardPolygon);
+      const initGridSize = 15;
+      const initSamplePoints: Vector2[] = [];
+      
+      for (let x = initBounds.minX + initGridSize / 2; x < initBounds.maxX; x += initGridSize) {
+        for (let y = initBounds.minY + initGridSize / 2; y < initBounds.maxY; y += initGridSize) {
+          const point = { x, y };
+          
+          // Must be inside the board polygon
+          if (!pointInPolygon(point, boardPolygon)) continue;
+          
+          // Must not be inside any obstacle
+          let insideObstacle = false;
+          for (const obstacle of obstaclePolygons) {
+            if (pointInPolygon(point, obstacle)) {
+              insideObstacle = true;
+              break;
+            }
+          }
+          if (insideObstacle) continue;
+          
+          initSamplePoints.push(point);
+        }
+      }
+      
+      game.regions = [{ 
+        id: initialRegionId, 
+        polygon: boardPolygon,
+        samplePoints: initSamplePoints,
+        estimatedArea: initSamplePoints.length * initGridSize * initGridSize
+      }];
 
       // Assign all balls to the initial region
       for (const ball of game.balls) {
