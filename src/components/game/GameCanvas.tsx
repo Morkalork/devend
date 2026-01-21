@@ -174,6 +174,7 @@ export function GameCanvas({
   accentColor = "#00ff88",
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const blurCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
@@ -243,6 +244,7 @@ export function GameCanvas({
     wallCompleteTime: 0,
     isRecovering: false,
     recoveryEndTime: 0,
+    initialSamplePoints: [] as Vector2[], // Track initial board area for blur effect
   });
 
   useEffect(() => {
@@ -466,6 +468,9 @@ export function GameCanvas({
         }
       }
       
+      // Store initial sample points for blur effect (tracks full board area)
+      game.initialSamplePoints = [...initSamplePoints];
+      
       game.regions = [{ 
         id: initialRegionId, 
         polygon: boardPolygon,
@@ -511,6 +516,15 @@ export function GameCanvas({
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
       game.screenSize = { width, height };
+      
+      // Also resize blur canvas
+      const blurCanvas = blurCanvasRef.current;
+      if (blurCanvas) {
+        blurCanvas.width = width;
+        blurCanvas.height = height;
+        blurCanvas.style.width = `${width}px`;
+        blurCanvas.style.height = `${height}px`;
+      }
 
       // Compute the board rectangle
       game.boardRect = computeBoardRect(width, height);
@@ -1392,12 +1406,50 @@ export function GameCanvas({
         swipeStart,
         swipeRegionId,
         currentSwipePos,
+        initialSamplePoints,
       } = game;
       const { width: screenWidth, height: screenHeight } = screenSize;
       const { scale } = boardRect;
 
       // Clear the canvas (transparent to show CRT background through)
       ctx.clearRect(0, 0, screenWidth, screenHeight);
+
+      // ===== Render blur layer for removed areas =====
+      const blurCanvas = blurCanvasRef.current;
+      const blurCtx = blurCanvas?.getContext("2d");
+      if (blurCtx && blurCanvas) {
+        blurCtx.clearRect(0, 0, screenWidth, screenHeight);
+        
+        // Collect all current sample points from active regions
+        const activeSampleSet = new Set<string>();
+        for (const region of regions) {
+          if (region.samplePoints) {
+            for (const sample of region.samplePoints) {
+              activeSampleSet.add(`${sample.x},${sample.y}`);
+            }
+          }
+        }
+        
+        // Draw removed areas (initial points that are no longer active)
+        const gridSize = 15;
+        const halfGrid = gridSize / 2;
+        const cellPadding = 3;
+        
+        blurCtx.save();
+        blurCtx.fillStyle = regionColor;
+        blurCtx.globalAlpha = 0.7;
+        
+        for (const sample of initialSamplePoints) {
+          const key = `${sample.x},${sample.y}`;
+          if (!activeSampleSet.has(key)) {
+            // This sample was removed - draw it on blur canvas
+            const topLeft = worldToScreen(sample.x - halfGrid - cellPadding, sample.y - halfGrid - cellPadding);
+            const size = (gridSize + cellPadding * 2) * scale;
+            blurCtx.fillRect(topLeft.x, topLeft.y, size, size);
+          }
+        }
+        blurCtx.restore();
+      }
 
       // NOTE: Don't fill the entire screen - let CRT show through
       // The regions themselves define the playable area and will be drawn below
@@ -2216,7 +2268,17 @@ export function GameCanvas({
 
       {/* Canvas container - Board band (~70% height) */}
       <div ref={containerRef} className="flex-1 min-h-0 relative" style={{ height: "70%" }}>
-        <canvas ref={canvasRef} className="touch-none cursor-crosshair" />
+        {/* Blur canvas - renders removed areas with blur effect */}
+        <canvas 
+          ref={blurCanvasRef} 
+          className="absolute inset-0 pointer-events-none"
+          style={{ 
+            filter: 'blur(8px)',
+            opacity: 0.6,
+          }}
+        />
+        {/* Main game canvas */}
+        <canvas ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" />
       </div>
 
       {/* Bottom section - Bottom UI band (~15% height) */}
