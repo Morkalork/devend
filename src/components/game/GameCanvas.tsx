@@ -30,6 +30,7 @@ import {
   lineSegmentIntersection,
 } from "@/lib/polygon";
 import { extractContours } from "@/lib/contour";
+import { Wall, WALL_THICKNESS, WALL_COLOR, createWallsFromPolygon, findWallTermination } from "@/lib/wallGeometry";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -64,12 +65,11 @@ interface GameCanvasProps {
 
 // Game constants - all in WORLD units
 const BASE_BALL_RADIUS = 18; // World units (was ~10 in ~450px canvas, now in 900px world)
-const BALL_SPEED_INCREASE = 1.03; // Post-cut speed ramp
-const WALL_THICKNESS = 10; // World units
+const BALL_SPEED_INCREASE = 1.03; // Post-wall speed ramp
 const BASE_SWIPE_MIN_DISTANCE = 35; // World units
 const ARENA_MARGIN = 0.05; // 5% margin from board edges
 const MINIMUM_WALL_TIME = 0.35; // seconds
-const RECOVERY_WINDOW_MS = 700; // Recovery time after failed cut
+const RECOVERY_WINDOW_MS = 700; // Recovery time after failed wall
 
 // Difficulty curve: wall speed decreases per level (slower = harder)
 function getWallSpeedBase(levelIndex: number): number {
@@ -92,6 +92,11 @@ const COLORS = {
 let regionIdCounter = 0;
 function generateRegionId(): string {
   return `region-${++regionIdCounter}`;
+}
+
+let wallIdCounter = 0;
+function generateWallId(): string {
+  return `wall-${++wallIdCounter}`;
 }
 
 function getRandomDirection(): Vector2 {
@@ -188,7 +193,8 @@ export function GameCanvas({
 
   const gameRef = useRef({
     regions: [] as Region[],
-    obstacles: [] as Polygon[], // Obstacle polygons for rendering
+    // UNIFIED WALL MODEL: All walls are identical in behavior and appearance
+    walls: [] as Wall[], // All walls: board edges, obstacles, user-drawn
     boardPolygon: null as Polygon | null, // Original board boundary for ball collision
     originalArea: 0,
     basePlayableArea: 0, // Initial playable area after subtracting obstacles
@@ -205,14 +211,13 @@ export function GameCanvas({
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10", // Will be overridden by config
     regionColor: "#1a3020", // Will be overridden by config
-    cutCount: 0,
+    wallCount: 0, // Track user-added walls for scoring
     wallShieldsRemaining: 0,
     fastestBallId: null as string | null,
     pushMode: "none" as "none" | "prompt" | "pushing",
     bestRemainingPercent: 100,
     gameLoopFn: null as ((timestamp: number) => void) | null,
     wallCompleteTime: 0,
-    completedCuts: [] as { start: Vector2; end: Vector2; thickness: number }[],
     isRecovering: false,
     recoveryEndTime: 0,
   });
@@ -238,19 +243,23 @@ export function GameCanvas({
 
     const initGame = () => {
       // ============================================================
-      // CUTTING MODEL INITIALIZATION
+      // UNIFIED WALL MODEL INITIALIZATION
       // ============================================================
-      // The game board is a "piece of material" that can be cut.
-      // Obstacles are PRE-EXISTING cuts that partition the board.
-      // Only regions containing balls are active. Empty regions are discarded.
+      // The game board is defined entirely by walls.
+      // - Board edges are walls
+      // - Obstacles are walls
+      // - User-drawn lines become walls
+      // All walls have identical appearance and behavior.
+      // The playable area is enclosed spaces that contain balls.
       // ============================================================
 
       const margin = Math.min(BOARD_WIDTH, BOARD_HEIGHT) * ARENA_MARGIN;
       const arenaWidth = BOARD_WIDTH - margin * 2;
       const arenaHeight = BOARD_HEIGHT - margin * 2;
 
-      // Reset region counter for new level
+      // Reset counters for new level
       regionIdCounter = 0;
+      wallIdCounter = 0;
 
       // Calculate starting percentage based on reducedSize modifier
       const targetRemaining = Math.max(20, 100 - activeModifiers.reducedSizePercent);
@@ -271,7 +280,10 @@ export function GameCanvas({
 
       const boardPolygon = createRectPolygon(left, top, right, bottom);
 
-      // Collect obstacle polygons from level entities
+      // Initialize walls array with board edges
+      const allWalls: Wall[] = createWallsFromPolygon(boardPolygon, "board");
+
+      // Collect obstacle polygons and create walls from them
       const obstaclePolygons: Polygon[] = [];
 
       if (level.entities && level.entities.length > 0) {
@@ -305,15 +317,15 @@ export function GameCanvas({
             }
 
             obstaclePolygons.push(obstaclePolygon);
+            // Add obstacle edges as walls
+            const obstacleWalls = createWallsFromPolygon(obstaclePolygon, `obstacle-${entity.id}`);
+            allWalls.push(...obstacleWalls);
           }
         }
       }
 
-      // Store obstacle polygons for:
-      // 1. Ball collision (balls bounce off obstacles)
-      // 2. Cut termination (cuts stop at obstacle edges)
-      // 3. Rendering (obstacles are drawn as "cut out" areas)
-      game.obstacles = obstaclePolygons;
+      // Store all walls in unified model
+      game.walls = allWalls;
 
       // Calculate the original playable area (board minus obstacles)
       const boardArea = polygonArea(boardPolygon);
@@ -396,20 +408,14 @@ export function GameCanvas({
         };
       });
 
-      // Initialize completed cuts (used for cut-to-cut and cut-to-obstacle termination)
-      game.completedCuts = [];
-
       // Store the board polygon for ball collision (never changes after init)
       game.boardPolygon = boardPolygon;
 
-      // For initialization, we use a simpler approach:
-      // Start with the board as a single region. Obstacles are collision geometry
-      // that balls bounce off, but they don't pre-partition the board.
-      // Partitioning only happens when player makes cuts.
+      // Initialize single region with sample points
+      // Sample points define the playable area (inside board, outside obstacles)
       const initialRegionId = generateRegionId();
       
       // Generate initial samplePoints so the border renders correctly from the start
-      // This ensures obstacles are reflected in the border immediately
       const initBounds = polygonBounds(boardPolygon);
       const initGridSize = 15;
       const initSamplePoints: Vector2[] = [];
@@ -468,7 +474,7 @@ export function GameCanvas({
       game.swipeRegionId = null;
       game.currentSwipePos = null;
       game.lastTime = 0;
-      game.cutCount = 0;
+      game.wallCount = 0;
       setCutCount(0);
       setRemainingPercent(Math.round(targetRemaining));
     };
@@ -544,7 +550,7 @@ export function GameCanvas({
       return { position: ballPos, velocity: ballVel };
     };
 
-    // Update ball position and bounce off polygon edges and obstacles (all in world coordinates)
+    // Update ball position and bounce off all walls (all in world coordinates)
     const updateBall = (ball: Ball, dt: number) => {
       // Move ball (world units)
       ball.position.x += ball.velocity.x * dt;
@@ -562,38 +568,32 @@ export function GameCanvas({
         ball.velocity = boardResult.velocity;
       }
 
-      // Resolve collisions with obstacle edges (balls bounce OFF obstacles, so we flip the normal)
-      for (const obstacle of game.obstacles) {
-        const obstacleResult = resolveBallPolygonCollisionOutward(ball.position, ball.velocity, ball.radius, obstacle);
-        ball.position = obstacleResult.position;
-        ball.velocity = obstacleResult.velocity;
-      }
-
-      // Resolve collisions with completed cuts (these are internal barriers)
-      for (const cut of game.completedCuts) {
-        const cutResult = resolveBallLineCollision(
+      // UNIFIED WALL MODEL: Balls bounce off all walls (board edges, obstacles, user walls)
+      // User-drawn walls are stored in game.walls with id starting with "user-"
+      for (const wall of game.walls) {
+        // Skip board edge walls (already handled by boardPolygon collision above)
+        if (wall.id.startsWith("board-")) continue;
+        
+        const wallResult = resolveBallLineCollision(
           ball.position,
           ball.velocity,
           ball.radius,
-          cut.start,
-          cut.end,
-          WALL_THICKNESS,
+          wall.start,
+          wall.end,
+          wall.thickness,
         );
-        ball.position = cutResult.position;
-        ball.velocity = cutResult.velocity;
+        ball.position = wallResult.position;
+        ball.velocity = wallResult.velocity;
       }
     };
 
     // Calculate combined area of all regions (using estimatedArea when available for accuracy)
     const getCombinedArea = (): number => {
-      const regionsArea = game.regions.reduce((sum, region) => {
-        // Use estimatedArea from grid sampling if available (more accurate after cuts)
+      return game.regions.reduce((sum, region) => {
+        // Use estimatedArea from grid sampling if available (more accurate after walls)
         // Otherwise fall back to polygon area calculation
         return sum + (region.estimatedArea ?? polygonArea(region.polygon));
       }, 0);
-      // Subtract obstacle areas (obstacles are fixed dead zones)
-      const obstaclesArea = game.obstacles.reduce((sum, obs) => sum + Math.abs(polygonArea(obs)), 0);
-      return Math.max(0, regionsArea - obstaclesArea);
     };
 
     // Check if a ball's center is on the cut line
@@ -610,13 +610,13 @@ export function GameCanvas({
       // If in push mode, level is still cleared - just forfeit overcut bonus
       if (game.pushMode === "pushing") {
         const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
-        let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
+        let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.wallCount);
         levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
 
         onLevelComplete({
           levelNumber,
           levelId: level.id,
-          cutCount: game.cutCount,
+          cutCount: game.wallCount,
           expectedCuts: level.expectedCuts,
           basePoints: level.points,
           levelScore,
@@ -640,7 +640,7 @@ export function GameCanvas({
           remainingPercent: percent,
           levelId: level.id,
           levelNumber,
-          cutCount: game.cutCount,
+          cutCount: game.wallCount,
           expectedCuts: level.expectedCuts,
           basePoints: level.points,
         });
@@ -653,13 +653,13 @@ export function GameCanvas({
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
 
       const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
-      let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
+      let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.wallCount);
       levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
 
       onLevelComplete({
         levelNumber,
         levelId: level.id,
-        cutCount: game.cutCount,
+        cutCount: game.wallCount,
         expectedCuts: level.expectedCuts,
         basePoints: level.points,
         levelScore,
@@ -670,28 +670,13 @@ export function GameCanvas({
       });
     };
 
-    // Get all boundary segments in the game (outer walls + obstacle edges + completed cuts)
+    // Get all boundary segments from the unified wall model
     const getAllBoundarySegments = (region: Region): { p1: Vector2; p2: Vector2 }[] => {
       const segments: { p1: Vector2; p2: Vector2 }[] = [];
 
-      // Add region polygon edges
-      const { vertices } = region.polygon;
-      for (let i = 0; i < vertices.length; i++) {
-        const j = (i + 1) % vertices.length;
-        segments.push({ p1: vertices[i], p2: vertices[j] });
-      }
-
-      // Add obstacle edges
-      for (const obstacle of game.obstacles) {
-        for (let i = 0; i < obstacle.vertices.length; i++) {
-          const j = (i + 1) % obstacle.vertices.length;
-          segments.push({ p1: obstacle.vertices[i], p2: obstacle.vertices[j] });
-        }
-      }
-
-      // Add completed cuts
-      for (const cut of game.completedCuts) {
-        segments.push({ p1: cut.start, p2: cut.end });
+      // UNIFIED WALL MODEL: All walls define boundaries
+      for (const wall of game.walls) {
+        segments.push({ p1: wall.start, p2: wall.end });
       }
 
       return segments;
@@ -758,18 +743,10 @@ export function GameCanvas({
       const bounds = polygonBounds(region.polygon);
       const gridSize = 15; // Finer grid for better cut detection
 
-      // Get non-cut segments (polygon edges + obstacles)
-      const nonCutSegments: { p1: Vector2; p2: Vector2 }[] = [];
-      const { vertices } = region.polygon;
-      for (let i = 0; i < vertices.length; i++) {
-        const j = (i + 1) % vertices.length;
-        nonCutSegments.push({ p1: vertices[i], p2: vertices[j] });
-      }
-      for (const obstacle of game.obstacles) {
-        for (let i = 0; i < obstacle.vertices.length; i++) {
-          const j = (i + 1) % obstacle.vertices.length;
-          nonCutSegments.push({ p1: obstacle.vertices[i], p2: obstacle.vertices[j] });
-        }
+      // UNIFIED WALL MODEL: Build wall segments from all walls
+      const wallSegments: { p1: Vector2; p2: Vector2; wallId: string }[] = [];
+      for (const wall of game.walls) {
+        wallSegments.push({ p1: wall.start, p2: wall.end, wallId: wall.id });
       }
 
       // Generate valid sample points
@@ -783,26 +760,19 @@ export function GameCanvas({
           // Must be inside the region polygon
           if (!pointInPolygon(point, region.polygon)) continue;
 
-          // Must not be inside any obstacle
-          let insideObstacle = false;
-          for (const obstacle of game.obstacles) {
-            if (pointInPolygon(point, obstacle)) {
-              insideObstacle = true;
+          // UNIFIED WALL MODEL: Check distance to all walls (obstacles and user walls)
+          let tooCloseToWall = false;
+          for (const wall of game.walls) {
+            // Skip board edge walls for "inside" check
+            if (wall.id.startsWith("board-")) continue;
+            
+            const dist = pointToSegmentDistance(point, wall.start, wall.end);
+            if (dist < wall.thickness) {
+              tooCloseToWall = true;
               break;
             }
           }
-          if (insideObstacle) continue;
-
-          // Must not be too close to any cut line
-          let onCut = false;
-          for (const cut of game.completedCuts) {
-            const dist = pointToSegmentDistance(point, cut.start, cut.end);
-            if (dist < cut.thickness / 2) {
-              onCut = true;
-              break;
-            }
-          }
-          if (onCut) continue;
+          if (tooCloseToWall) continue;
 
           const key = `${Math.round(x)},${Math.round(y)}`;
           pointIndices.set(key, samplePoints.length);
@@ -812,7 +782,7 @@ export function GameCanvas({
 
       if (samplePoints.length === 0) return [];
 
-      // Build adjacency: two points are connected if no boundary crosses between them
+      // Build adjacency: two points are connected if no wall crosses between them
       const adjacency: Set<number>[] = samplePoints.map(() => new Set());
 
       for (let i = 0; i < samplePoints.length; i++) {
@@ -833,13 +803,19 @@ export function GameCanvas({
         for (const n of neighbors) {
           const key = `${Math.round(n.x)},${Math.round(n.y)}`;
           const j = pointIndices.get(key);
-          if (
-            j !== undefined &&
-            j > i &&
-            !lineIntersectsBoundary(pi, samplePoints[j], nonCutSegments, game.completedCuts)
-          ) {
-            adjacency[i].add(j);
-            adjacency[j].add(i);
+          if (j !== undefined && j > i) {
+            // Check if any wall blocks this connection
+            let blocked = false;
+            for (const seg of wallSegments) {
+              if (lineSegmentIntersection(pi, samplePoints[j], seg.p1, seg.p2)) {
+                blocked = true;
+                break;
+              }
+            }
+            if (!blocked) {
+              adjacency[i].add(j);
+              adjacency[j].add(i);
+            }
           }
         }
       }
@@ -870,9 +846,16 @@ export function GameCanvas({
         // Check if any ball is in this component
         let hasBalls = false;
         for (const ball of balls) {
-          // Check if ball can reach any sample in this component without crossing boundaries
+          // Check if ball can reach any sample in this component without crossing walls
           for (const sample of component) {
-            if (!lineIntersectsBoundary(ball.position, sample, nonCutSegments, game.completedCuts)) {
+            let ballBlocked = false;
+            for (const seg of wallSegments) {
+              if (lineSegmentIntersection(ball.position, sample, seg.p1, seg.p2)) {
+                ballBlocked = true;
+                break;
+              }
+            }
+            if (!ballBlocked) {
               hasBalls = true;
               break;
             }
@@ -882,6 +865,7 @@ export function GameCanvas({
 
         components.push({ samples: component, hasBalls });
       }
+
 
       return components;
     };
@@ -1069,7 +1053,7 @@ export function GameCanvas({
 
       const { balls } = game;
 
-      // Check if any ball is exactly on the cut line - instant game over
+      // Check if any ball is exactly on the wall line - instant game over
       for (const ball of balls) {
         if (isBallOnCutLine(ball, wall)) {
           handleGameOver();
@@ -1077,17 +1061,20 @@ export function GameCanvas({
         }
       }
 
-      // Add the cut to completed cuts (it's now a boundary that balls bounce off)
-      game.completedCuts.push({
+      // UNIFIED WALL MODEL: Add the new wall to the walls array
+      const newWall: Wall = {
+        id: generateWallId(),
         start: { ...wall.startPoint },
         end: { ...wall.endPoint },
-        thickness: wall.thickness + 14,
-      });
+        thickness: WALL_THICKNESS,
+      };
+      game.walls.push(newWall);
 
-      console.log("[CUT] Added cut:", {
-        start: wall.startPoint,
-        end: wall.endPoint,
-        totalCuts: game.completedCuts.length,
+      console.log("[WALL] Added new wall:", {
+        id: newWall.id,
+        start: newWall.start,
+        end: newWall.end,
+        totalWalls: game.walls.length,
       });
 
       // Re-partition all regions using flood-fill
@@ -1328,7 +1315,7 @@ export function GameCanvas({
     const render = () => {
       const {
         regions,
-        obstacles,
+        walls,
         balls,
         activeWall: wall,
         screenSize,
@@ -1472,20 +1459,7 @@ export function GameCanvas({
       }
       ctx.restore();
 
-      // Render walls as "cut out" regions - they look like the background (same as cuts)
-      for (const wall of obstacles) {
-        const { vertices } = wall;
-        if (vertices.length < 3) continue;
-
-        ctx.save();
-        ctx.beginPath();
-        const start = worldToScreen(vertices[0].x, vertices[0].y);
-        ctx.moveTo(start.x, start.y);
-        for (let i = 1; i < vertices.length; i++) {
-          const pt = worldToScreen(vertices[i].x, vertices[i].y);
-          ctx.lineTo(pt.x, pt.y);
-        }
-        ctx.closePath();
+      // Note: Obstacle rendering is now handled via the wall model - walls cut through the fill
 
         // Clear the wall area (transparent) so CRT background shows through - same as cut areas
         ctx.globalCompositeOperation = "destination-out";
@@ -1494,18 +1468,21 @@ export function GameCanvas({
         ctx.restore();
       }
 
-      // Draw completed cuts - actually cut through the filled regions using destination-out
-      // Extra width to ensure clean separation over the overlapping/anti-aliased cells
+      // UNIFIED WALL MODEL: Draw all user-drawn walls to cut through the filled regions
+      // Using destination-out to create visual gaps where walls exist
       ctx.save();
       ctx.globalCompositeOperation = "destination-out";
       ctx.strokeStyle = "rgba(0, 0, 0, 1)";
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      for (const cut of game.completedCuts) {
+      for (const w of walls) {
+        // Only erase for user-drawn walls (not board edges or obstacle outlines)
+        if (!w.id.startsWith("user-") && !w.id.startsWith("wall-")) continue;
+        
         // Extra thickness to cleanly cut through all the overlapping edge cells
-        ctx.lineWidth = (cut.thickness + 8) * scale;
-        const startScreen = worldToScreen(cut.start.x, cut.start.y);
-        const endScreen = worldToScreen(cut.end.x, cut.end.y);
+        ctx.lineWidth = (w.thickness + 8) * scale;
+        const startScreen = worldToScreen(w.start.x, w.start.y);
+        const endScreen = worldToScreen(w.end.x, w.end.y);
         ctx.beginPath();
         ctx.moveTo(startScreen.x, startScreen.y);
         ctx.lineTo(endScreen.x, endScreen.y);
@@ -1529,52 +1506,38 @@ export function GameCanvas({
             const intNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), region.polygon);
 
             if (intPos && intNeg) {
-              // Calculate preview endpoints using the same rules as actual cuts
+              // Calculate preview endpoints - walls terminate at other walls
               let previewEnd = intPos.point;
               let previewStart = intNeg.point;
               let previewEndDist = intPos.distance;
               let previewStartDist = intNeg.distance;
 
-              // Check obstacle intersections - cuts terminate at obstacles
-              for (const obstacle of obstacles) {
-                const obstacleIntPos = rayPolygonIntersection(swipeStart, direction, obstacle);
-                if (obstacleIntPos && obstacleIntPos.distance > 0.1 && obstacleIntPos.distance < previewEndDist) {
-                  previewEnd = obstacleIntPos.point;
-                  previewEndDist = obstacleIntPos.distance;
-                }
-                const obstacleIntNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), obstacle);
-                if (obstacleIntNeg && obstacleIntNeg.distance > 0.1 && obstacleIntNeg.distance < previewStartDist) {
-                  previewStart = obstacleIntNeg.point;
-                  previewStartDist = obstacleIntNeg.distance;
-                }
-              }
-
-              // Check completed cuts - cuts terminate at existing cuts
-              for (const cut of game.completedCuts) {
-                const cutIntPos = lineSegmentIntersection(
+              // UNIFIED WALL MODEL: Check all walls for intersection
+              for (const w of walls) {
+                const wallIntPos = lineSegmentIntersection(
                   swipeStart,
                   vec2Add(swipeStart, vec2Scale(direction, 10000)),
-                  cut.start,
-                  cut.end,
+                  w.start,
+                  w.end,
                 );
-                if (cutIntPos) {
-                  const cutDist = vec2Distance(swipeStart, cutIntPos);
-                  if (cutDist > 0.1 && cutDist < previewEndDist) {
-                    previewEnd = cutIntPos;
-                    previewEndDist = cutDist;
+                if (wallIntPos) {
+                  const wallDist = vec2Distance(swipeStart, wallIntPos);
+                  if (wallDist > 0.1 && wallDist < previewEndDist) {
+                    previewEnd = wallIntPos;
+                    previewEndDist = wallDist;
                   }
                 }
-                const cutIntNeg = lineSegmentIntersection(
+                const wallIntNeg = lineSegmentIntersection(
                   swipeStart,
                   vec2Add(swipeStart, vec2Scale(direction, -10000)),
-                  cut.start,
-                  cut.end,
+                  w.start,
+                  w.end,
                 );
-                if (cutIntNeg) {
-                  const cutDist = vec2Distance(swipeStart, cutIntNeg);
-                  if (cutDist > 0.1 && cutDist < previewStartDist) {
-                    previewStart = cutIntNeg;
-                    previewStartDist = cutDist;
+                if (wallIntNeg) {
+                  const wallDist = vec2Distance(swipeStart, wallIntNeg);
+                  if (wallDist > 0.1 && wallDist < previewStartDist) {
+                    previewStart = wallIntNeg;
+                    previewStartDist = wallDist;
                   }
                 }
               }
@@ -1887,10 +1850,11 @@ export function GameCanvas({
       const region = findRegionContainingPoint(game.regions, worldPos.x, worldPos.y);
       if (!region) return; // Clicked in darkness - ignore
 
-      // Prevent starting swipes from inside wall areas
-      for (const wall of game.obstacles) {
-        if (pointInPolygon(worldPos, wall)) {
-          return; // Clicked inside a wall - ignore
+      // Prevent starting swipes from too close to existing walls
+      for (const w of game.walls) {
+        const dist = pointToSegmentDistance(worldPos, w.start, w.end);
+        if (dist < w.thickness * 2) {
+          return; // Too close to a wall - ignore
         }
       }
 
@@ -1954,56 +1918,39 @@ export function GameCanvas({
             const intNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), region.polygon);
 
             if (intPos && intNeg) {
-              // Calculate target endpoints using same logic as preview
+              // Calculate target endpoints - walls terminate at other walls
               let targetEnd = intPos.point;
               let targetStart = intNeg.point;
               let targetEndDist = intPos.distance;
               let targetStartDist = intNeg.distance;
 
-              // Check intersections with obstacles (static walls in the level)
-              for (let i = 0; i < game.obstacles.length; i++) {
-                const obstacle = game.obstacles[i];
-
-                const obstacleIntPos = rayPolygonIntersection(game.swipeStart, direction, obstacle);
-                if (obstacleIntPos && obstacleIntPos.distance > 0.1 && obstacleIntPos.distance < targetEndDist) {
-                  targetEnd = obstacleIntPos.point;
-                  targetEndDist = obstacleIntPos.distance;
-                }
-
-                const obstacleIntNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), obstacle);
-                if (obstacleIntNeg && obstacleIntNeg.distance > 0.1 && obstacleIntNeg.distance < targetStartDist) {
-                  targetStart = obstacleIntNeg.point;
-                  targetStartDist = obstacleIntNeg.distance;
-                }
-              }
-
-              // Check for completed cuts - terminate at them too
-              for (const cut of game.completedCuts) {
-                const cutIntPos = lineSegmentIntersection(
+              // UNIFIED WALL MODEL: Check all walls for intersection
+              for (const w of game.walls) {
+                const wallIntPos = lineSegmentIntersection(
                   game.swipeStart,
                   vec2Add(game.swipeStart, vec2Scale(direction, 10000)),
-                  cut.start,
-                  cut.end,
+                  w.start,
+                  w.end,
                 );
-                if (cutIntPos) {
-                  const cutDist = vec2Distance(game.swipeStart, cutIntPos);
-                  if (cutDist > 0.1 && cutDist < targetEndDist) {
-                    targetEnd = cutIntPos;
-                    targetEndDist = cutDist;
+                if (wallIntPos) {
+                  const wallDist = vec2Distance(game.swipeStart, wallIntPos);
+                  if (wallDist > 0.1 && wallDist < targetEndDist) {
+                    targetEnd = wallIntPos;
+                    targetEndDist = wallDist;
                   }
                 }
 
-                const cutIntNeg = lineSegmentIntersection(
+                const wallIntNeg = lineSegmentIntersection(
                   game.swipeStart,
                   vec2Add(game.swipeStart, vec2Scale(direction, -10000)),
-                  cut.start,
-                  cut.end,
+                  w.start,
+                  w.end,
                 );
-                if (cutIntNeg) {
-                  const cutDist = vec2Distance(game.swipeStart, cutIntNeg);
-                  if (cutDist > 0.1 && cutDist < targetStartDist) {
-                    targetStart = cutIntNeg;
-                    targetStartDist = cutDist;
+                if (wallIntNeg) {
+                  const wallDist = vec2Distance(game.swipeStart, wallIntNeg);
+                  if (wallDist > 0.1 && wallDist < targetStartDist) {
+                    targetStart = wallIntNeg;
+                    targetStartDist = wallDist;
                   }
                 }
               }
@@ -2020,8 +1967,8 @@ export function GameCanvas({
                 activeRegionId: game.swipeRegionId,
               };
 
-              game.cutCount += 1;
-              setCutCount(game.cutCount);
+              game.wallCount += 1;
+              setCutCount(game.wallCount);
             }
           }
         }
@@ -2059,7 +2006,7 @@ export function GameCanvas({
     game.levelComplete = true;
 
     const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
-    let baseScore = computeLevelScore(level.points, effectiveExpectedCuts, game.cutCount);
+    let baseScore = computeLevelScore(level.points, effectiveExpectedCuts, game.wallCount);
     baseScore = Math.round(baseScore * activeModifiers.scoreMultiplier);
 
     const overcutBonus = computeOvercutBonus(level.sizeThreshold, game.bestRemainingPercent, level.points);
@@ -2069,7 +2016,7 @@ export function GameCanvas({
       onLevelComplete({
         levelNumber,
         levelId: level.id,
-        cutCount: game.cutCount,
+        cutCount: game.wallCount,
         expectedCuts: level.expectedCuts,
         basePoints: level.points,
         levelScore,
