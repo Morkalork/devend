@@ -71,26 +71,26 @@ export function GameTopBar({
   const hasUpgrades = ownedUpgrades.length > 0;
 
   return (
-    <div className="flex-shrink-0 flex flex-col gap-0.5">
+    <div className="flex-shrink-0 flex flex-col gap-1">
       {/* Row 1: Game Status Bar - Always Visible */}
       <div 
-        className="px-2 py-1 flex items-center justify-between gap-1"
+        className="px-3 py-2 flex items-center justify-between gap-2"
         style={{ 
-          backgroundColor: 'rgba(0, 10, 5, 0.85)',
-          borderBottom: `1px solid ${accentColor}33`,
+          backgroundColor: 'rgba(0, 10, 5, 0.9)',
+          borderBottom: `2px solid ${accentColor}44`,
         }}
       >
         {/* Cuts / Par */}
-        <div className="flex items-center gap-1 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           <Scissors 
-            className="w-3.5 h-3.5 flex-shrink-0" 
+            className="w-5 h-5 flex-shrink-0" 
             style={{ color: accentColor }}
           />
           <span 
-            className="font-display text-xs font-bold tabular-nums"
+            className="font-display text-base font-bold tabular-nums"
             style={{ 
               color: cutsUsed > parCuts ? '#ff6b6b' : accentColor,
-              textShadow: `0 0 8px ${cutsUsed > parCuts ? '#ff6b6b' : accentColor}66`,
+              textShadow: `0 0 10px ${cutsUsed > parCuts ? '#ff6b6b' : accentColor}88`,
             }}
           >
             {cutsUsed}/{parCuts}
@@ -98,15 +98,15 @@ export function GameTopBar({
         </div>
 
         {/* Lives - Hearts with pulse animation */}
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-1">
           {Array.from({ length: lives }).map((_, i) => (
             <Heart
               key={i}
-              className="w-3.5 h-3.5 animate-pulse-heart"
+              className="w-5 h-5 animate-pulse-heart"
               style={{ 
                 color: accentColor,
                 fill: accentColor,
-                filter: `drop-shadow(0 0 4px ${accentColor}88)`,
+                filter: `drop-shadow(0 0 6px ${accentColor}aa)`,
                 animationDelay: `${i * 0.15}s`,
               }}
             />
@@ -114,17 +114,17 @@ export function GameTopBar({
         </div>
 
         {/* Space Remaining / Required */}
-        <div className="flex items-center gap-1 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           <Target 
-            className="w-3.5 h-3.5 flex-shrink-0" 
+            className="w-5 h-5 flex-shrink-0" 
             style={{ color: accentColor }}
           />
           <span 
-            className="font-display text-xs font-bold tabular-nums"
+            className="font-display text-base font-bold tabular-nums"
             style={{ 
               color: spaceRemaining <= spaceRequired ? accentColor : 'hsl(var(--foreground))',
               textShadow: spaceRemaining <= spaceRequired 
-                ? `0 0 8px ${accentColor}66` 
+                ? `0 0 10px ${accentColor}88` 
                 : 'none',
             }}
           >
@@ -133,13 +133,13 @@ export function GameTopBar({
         </div>
 
         {/* Locked Balls */}
-        <div className="flex items-center gap-1 min-w-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           <Lock 
-            className="w-3.5 h-3.5 flex-shrink-0" 
+            className="w-5 h-5 flex-shrink-0" 
             style={{ color: accentColor, opacity: 0.6 }}
           />
           <span 
-            className="font-display text-xs font-bold tabular-nums"
+            className="font-display text-base font-bold tabular-nums"
             style={{ 
               color: accentColor,
               opacity: 0.6,
@@ -153,16 +153,16 @@ export function GameTopBar({
       {/* Row 2: Upgrades Bar - Conditional */}
       {hasUpgrades && (
         <div 
-          className="px-2 py-1"
+          className="px-3 py-1.5"
           style={{ 
-            backgroundColor: 'rgba(0, 10, 5, 0.75)',
-            borderBottom: `1px solid ${accentColor}22`,
+            backgroundColor: 'rgba(0, 10, 5, 0.8)',
+            borderBottom: `1px solid ${accentColor}33`,
           }}
         >
           <TooltipProvider delayDuration={0}>
             <div
               ref={upgradesContainerRef}
-              className={`flex items-center gap-1.5 ${
+              className={`flex items-center gap-2 ${
                 needsCarousel 
                   ? 'overflow-x-auto scrollbar-hide touch-pan-x' 
                   : 'justify-center'
@@ -186,12 +186,12 @@ export function GameTopBar({
                     <button
                       data-upgrade-icon
                       onClick={(e) => handleUpgradeClick(upgrade.id, e)}
-                      className="flex-shrink-0 w-6 h-6 rounded p-0.5 flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-1"
+                      className="flex-shrink-0 w-8 h-8 rounded-md p-1 flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-1"
                       style={{ 
-                        backgroundColor: `${accentColor}15`,
-                        border: `1px solid ${accentColor}44`,
+                        backgroundColor: `${accentColor}18`,
+                        border: `1px solid ${accentColor}55`,
                         boxShadow: openTooltipId === upgrade.id 
-                          ? `0 0 8px ${accentColor}66` 
+                          ? `0 0 12px ${accentColor}88` 
                           : 'none',
                         color: accentColor,
                       }}
@@ -206,24 +206,24 @@ export function GameTopBar({
                   </TooltipTrigger>
                   <TooltipContent
                     side="bottom"
-                    sideOffset={8}
-                    className="max-w-[200px] z-50"
+                    sideOffset={10}
+                    className="max-w-[220px] z-50"
                     style={{
                       backgroundColor: 'rgba(0, 20, 10, 0.95)',
-                      border: `1px solid ${accentColor}66`,
-                      boxShadow: `0 0 20px ${accentColor}33`,
+                      border: `1px solid ${accentColor}77`,
+                      boxShadow: `0 0 24px ${accentColor}44`,
                     }}
                   >
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <p 
-                        className="font-display font-bold text-sm"
+                        className="font-display font-bold text-base"
                         style={{ color: accentColor }}
                       >
                         {upgrade.name}
                       </p>
                       <p 
-                        className="text-xs leading-relaxed"
-                        style={{ color: 'hsl(var(--foreground) / 0.8)' }}
+                        className="text-sm leading-relaxed"
+                        style={{ color: 'hsl(var(--foreground) / 0.85)' }}
                       >
                         {upgrade.description}
                       </p>
