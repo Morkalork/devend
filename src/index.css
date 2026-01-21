@@ -96,6 +96,94 @@
   .crt-code-layer {
     animation-duration: 300s; /* Much slower, essentially static */
   }
+  .crt-background.crt-glitch-tear,
+  .crt-background.crt-glitch-flicker,
+  .crt-background.crt-glitch-corrupt {
+    /* Disable glitch effects for reduced motion */
+  }
+}
+
+/* ===== GLITCH EFFECTS ===== */
+
+/* Flicker - brief brightness/opacity flash */
+.crt-background.crt-glitch-flicker .crt-code {
+  animation: crt-flicker 80ms ease-out;
+}
+
+@keyframes crt-flicker {
+  0%, 100% { opacity: var(--crt-text-opacity, 0.85); }
+  25% { opacity: 0.3; }
+  50% { opacity: 1; filter: brightness(1.4); }
+  75% { opacity: 0.5; }
+}
+
+/* Corrupt - text distortion via skew and color shift */
+.crt-background.crt-glitch-corrupt .crt-code {
+  animation: crt-corrupt 200ms steps(3);
+}
+
+@keyframes crt-corrupt {
+  0%, 100% { 
+    transform: none;
+    text-shadow: 
+      0 0 4px var(--crt-glow-color),
+      0 0 12px var(--crt-glow-color);
+  }
+  33% {
+    transform: skewX(-2deg);
+    text-shadow: 
+      -2px 0 #ff0000,
+      2px 0 #00ffff,
+      0 0 4px var(--crt-glow-color);
+  }
+  66% {
+    transform: skewX(1deg);
+    text-shadow: 
+      1px 0 #ff0000,
+      -1px 0 #00ffff,
+      0 0 4px var(--crt-glow-color);
+  }
+}
+
+/* Tear - horizontal slice displacement */
+.crt-glitch-tear {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--crt-glitch-offset, 50%);
+  height: 8px;
+  background: inherit;
+  pointer-events: none;
+  z-index: 3;
+  animation: crt-tear 150ms steps(2);
+  overflow: hidden;
+}
+
+.crt-glitch-tear::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--crt-text-color, #00ff88);
+  opacity: 0.15;
+}
+
+@keyframes crt-tear {
+  0%, 100% { 
+    transform: translateX(0); 
+    opacity: 0;
+  }
+  25% { 
+    transform: translateX(12px); 
+    opacity: 1;
+  }
+  50% { 
+    transform: translateX(-8px); 
+    opacity: 1;
+  }
+  75% { 
+    transform: translateX(4px); 
+    opacity: 0.7;
+  }
 }
 
 @layer base {

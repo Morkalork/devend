@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 
 /**
  * CRT Terminal Background
@@ -10,6 +10,11 @@ import { useEffect, useRef, useMemo } from 'react';
  * - Adjust CSS variables in the component for scroll speed, colors, opacity
  * - Modify CODE_SNIPPETS array for different code content
  * - Tweak scanline and vignette opacity for different intensity
+ * 
+ * GLITCH EFFECTS:
+ * - Occasional text corruption, line tears, and flickers
+ * - Triggered randomly every few seconds
+ * - Lightweight CSS-based animations
  */
 
 // TypeScript-like code snippets that feel like real game/engine code
@@ -152,8 +157,13 @@ interface CRTBackgroundProps {
   accentColor?: string; // hex color with #
 }
 
+// Glitch effect types
+type GlitchType = 'tear' | 'flicker' | 'corrupt' | null;
+
 export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
   const codeContainerRef = useRef<HTMLDivElement>(null);
+  const [activeGlitch, setActiveGlitch] = useState<GlitchType>(null);
+  const [glitchOffset, setGlitchOffset] = useState(0);
   
   // Generate a shuffled, repeated code block for seamless looping
   const codeContent = useMemo(() => {
@@ -163,12 +173,40 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
     return repeated.join('\n\n');
   }, []);
 
-  // Rotate content periodically to prevent staleness (optional enhancement)
+  // Trigger a random glitch effect
+  const triggerGlitch = useCallback(() => {
+    const glitchTypes: GlitchType[] = ['tear', 'flicker', 'corrupt'];
+    const type = glitchTypes[Math.floor(Math.random() * glitchTypes.length)];
+    const offset = 20 + Math.random() * 60; // Random vertical position (20-80%)
+    
+    setGlitchOffset(offset);
+    setActiveGlitch(type);
+    
+    // Duration varies by type
+    const duration = type === 'flicker' ? 80 : type === 'tear' ? 150 : 200;
+    setTimeout(() => setActiveGlitch(null), duration);
+  }, []);
+
+  // Random glitch interval
+  useEffect(() => {
+    const scheduleNextGlitch = () => {
+      // Random interval: 3-8 seconds
+      const delay = 3000 + Math.random() * 5000;
+      return setTimeout(() => {
+        triggerGlitch();
+        scheduleNextGlitch();
+      }, delay);
+    };
+    
+    const timeout = scheduleNextGlitch();
+    return () => clearTimeout(timeout);
+  }, [triggerGlitch]);
+
+  // Clone content for seamless loop
   useEffect(() => {
     const container = codeContainerRef.current;
     if (!container) return;
 
-    // Clone content for seamless loop
     const pre = container.querySelector('pre');
     if (pre && !container.querySelector('.crt-clone')) {
       const clone = pre.cloneNode(true) as HTMLElement;
@@ -182,7 +220,7 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
 
   return (
     <div 
-      className="crt-background"
+      className={`crt-background ${activeGlitch ? `crt-glitch-${activeGlitch}` : ''}`}
       aria-hidden="true"
       style={{
         // CSS Custom Properties for easy tweaking
@@ -193,6 +231,7 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
         '--crt-text-opacity': '0.85',
         '--crt-scanline-opacity': '0.08',
         '--crt-vignette-opacity': '0.6',
+        '--crt-glitch-offset': `${glitchOffset}%`,
       } as React.CSSProperties}
     >
       {/* Layer 1: Scrolling Code */}
@@ -200,10 +239,15 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
         <pre className="crt-code">{codeContent}</pre>
       </div>
 
-      {/* Layer 2: Scanline Overlay */}
+      {/* Layer 2: Glitch tear overlay - horizontal slice displacement */}
+      {activeGlitch === 'tear' && (
+        <div className="crt-glitch-tear" />
+      )}
+
+      {/* Layer 3: Scanline Overlay */}
       <div className="crt-scanlines" />
 
-      {/* Layer 3: Vignette Overlay */}
+      {/* Layer 4: Vignette Overlay */}
       <div className="crt-vignette" />
     </div>
   );
