@@ -368,45 +368,94 @@ export function GameCanvas({
       const ballSpeedLevelMult = getBallSpeedLevelMultiplier(levelNumber);
       const baseSpeedMultiplier = 2.0;
 
-      // Helper: check if position overlaps any obstacle
-      const isInsideObstacle = (pos: Vector2, radius: number): boolean => {
+      // Helper: check if a ball at given position fully fits inside playable area
+      const isBallPositionValid = (pos: Vector2, radius: number): boolean => {
+        const safeRadius = radius + 5; // Extra margin for safety
+        
+        // 1. Check ball center and perimeter are inside board polygon
+        if (!pointInPolygon(pos, boardPolygon)) return false;
+        
+        // Check multiple points around ball perimeter
+        const numPerimeterChecks = 16;
+        for (let i = 0; i < numPerimeterChecks; i++) {
+          const angle = (i / numPerimeterChecks) * Math.PI * 2;
+          const perimeterPoint = { 
+            x: pos.x + Math.cos(angle) * safeRadius, 
+            y: pos.y + Math.sin(angle) * safeRadius 
+          };
+          if (!pointInPolygon(perimeterPoint, boardPolygon)) return false;
+        }
+        
+        // 2. Check ball doesn't overlap any obstacle
         for (const obstacle of obstaclePolygons) {
-          if (pointInPolygon(pos, obstacle)) return true;
-          // Check perimeter with more points for larger balls
-          const numChecks = Math.max(8, Math.ceil(radius / 5));
-          for (let i = 0; i < numChecks; i++) {
-            const angle = (i / numChecks) * Math.PI * 2;
-            const checkPos = { x: pos.x + Math.cos(angle) * radius, y: pos.y + Math.sin(angle) * radius };
-            if (pointInPolygon(checkPos, obstacle)) return true;
+          // Check if center is inside obstacle
+          if (pointInPolygon(pos, obstacle)) return false;
+          
+          // Check if any perimeter point is inside obstacle
+          for (let i = 0; i < numPerimeterChecks; i++) {
+            const angle = (i / numPerimeterChecks) * Math.PI * 2;
+            const perimeterPoint = { 
+              x: pos.x + Math.cos(angle) * safeRadius, 
+              y: pos.y + Math.sin(angle) * safeRadius 
+            };
+            if (pointInPolygon(perimeterPoint, obstacle)) return false;
+          }
+          
+          // Check distance to obstacle edges (for edge-grazing cases)
+          const obsBounds = polygonBounds(obstacle);
+          // Quick bounding box check first
+          if (pos.x + safeRadius > obsBounds.minX && 
+              pos.x - safeRadius < obsBounds.maxX &&
+              pos.y + safeRadius > obsBounds.minY && 
+              pos.y - safeRadius < obsBounds.maxY) {
+            // Detailed edge distance check
+            for (let i = 0; i < obstacle.vertices.length; i++) {
+              const v1 = obstacle.vertices[i];
+              const v2 = obstacle.vertices[(i + 1) % obstacle.vertices.length];
+              const dist = pointToSegmentDistance(pos, v1, v2);
+              if (dist < safeRadius) return false;
+            }
           }
         }
-        return false;
+        
+        // 3. Check ball edges are fully inside board bounds
+        if (pos.x - safeRadius < left || pos.x + safeRadius > right ||
+            pos.y - safeRadius < top || pos.y + safeRadius > bottom) {
+          return false;
+        }
+        
+        return true;
       };
 
       // Helper: find valid spawn position for a ball with specific radius
       const findValidSpawnPosition = (ballRadius: number): Vector2 => {
-        // Try to spawn away from obstacles with extra margin for the ball size
-        const safeMargin = ballRadius * 1.5;
-        for (let attempt = 0; attempt < 200; attempt++) {
+        // Try random positions, preferring center area first
+        for (let attempt = 0; attempt < 300; attempt++) {
+          // Gradually expand search area as attempts increase
+          const spreadFactor = Math.min(0.8, 0.3 + (attempt / 300) * 0.5);
           const pos = {
-            x: centroid.x + (Math.random() - 0.5) * regionWidth * 0.5,
-            y: centroid.y + (Math.random() - 0.5) * regionHeight * 0.5,
+            x: centroid.x + (Math.random() - 0.5) * regionWidth * spreadFactor,
+            y: centroid.y + (Math.random() - 0.5) * regionHeight * spreadFactor,
           };
-          // Check that the ball is fully inside the board and not overlapping any obstacles
-          if (pointInPolygon(pos, boardPolygon) && !isInsideObstacle(pos, ballRadius + safeMargin)) {
-            // Also verify ball edges are inside the board
-            const edgeMargin = ballRadius + 5;
-            const edgesInside = 
-              pos.x - edgeMargin > left &&
-              pos.x + edgeMargin < right &&
-              pos.y - edgeMargin > top &&
-              pos.y + edgeMargin < bottom;
-            if (edgesInside) {
+          
+          if (isBallPositionValid(pos, ballRadius)) {
+            return pos;
+          }
+        }
+        
+        // Grid search fallback: systematically check positions
+        const gridStep = ballRadius * 2;
+        for (let x = left + ballRadius + 10; x < right - ballRadius - 10; x += gridStep) {
+          for (let y = top + ballRadius + 10; y < bottom - ballRadius - 10; y += gridStep) {
+            const pos = { x, y };
+            if (isBallPositionValid(pos, ballRadius)) {
               return pos;
             }
           }
         }
-        // Fallback: spawn at centroid (may cause issues but better than crashing)
+        
+        // Last resort: spawn at centroid (may still cause issues on very constrained maps)
+        console.warn("Could not find valid spawn position for ball, using centroid as fallback");
         return { ...centroid };
       };
 
