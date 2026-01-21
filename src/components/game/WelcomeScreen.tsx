@@ -64,41 +64,106 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
           </motion.p>
         </motion.div>
 
-        {/* Animated spinning ball preview */}
+        {/* Animated spinning ball preview with multi-axis illusion */}
         <motion.div
-          className="relative w-16 h-16"
-          animate={{ y: [0, -10, 0] }}
+          className="relative w-20 h-20"
+          animate={{ y: [0, -8, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         >
-          <motion.div
-            className="absolute inset-0 rounded-full bg-primary overflow-hidden"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          {/* Outer glow */}
+          <div 
+            className="absolute inset-[-8px] rounded-full"
             style={{
-              boxShadow: '0 0 40px hsl(var(--primary) / 0.6), 0 0 80px hsl(var(--primary) / 0.3)',
+              background: 'radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, hsl(var(--primary) / 0.15) 50%, transparent 70%)',
+            }}
+          />
+          
+          {/* Ball base with 3D gradient */}
+          <div 
+            className="absolute inset-0 rounded-full overflow-hidden"
+            style={{
+              background: 'radial-gradient(ellipse at 30% 30%, hsl(var(--primary) / 1.2) 0%, hsl(var(--primary)) 35%, hsl(var(--primary) / 0.7) 70%, hsl(var(--primary) / 0.5) 100%)',
+              boxShadow: '0 0 30px hsl(var(--primary) / 0.5), inset -8px -8px 20px rgba(0,0,0,0.3)',
             }}
           >
-            {/* Basketball seam lines */}
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 64 64">
-              {/* Horizontal line */}
-              <line x1="0" y1="32" x2="64" y2="32" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
-              {/* Vertical line */}
-              <line x1="32" y1="0" x2="32" y2="64" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
-              {/* Left curve */}
-              <ellipse cx="22" cy="32" rx="14" ry="28" fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
-              {/* Right curve */}
-              <ellipse cx="42" cy="32" rx="14" ry="28" fill="none" stroke="rgba(0,0,0,0.5)" strokeWidth="2" />
-            </svg>
-          </motion.div>
-          {/* Glare/shine effect */}
+            {/* Layer 1: Latitude bands - tilting rotation */}
+            <motion.div
+              className="absolute inset-0"
+              animate={{ rotateX: [0, 20, 0, -20, 0] }}
+              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 80 80">
+                <ellipse cx="40" cy="20" rx="30" ry="6" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="1.5" />
+                <ellipse cx="40" cy="35" rx="36" ry="8" fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
+                <ellipse cx="40" cy="50" rx="36" ry="8" fill="none" stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
+                <ellipse cx="40" cy="65" rx="30" ry="6" fill="none" stroke="rgba(0,0,0,0.2)" strokeWidth="1.5" />
+              </svg>
+            </motion.div>
+            
+            {/* Layer 2: Meridian lines - primary spin */}
+            <motion.div
+              className="absolute inset-0"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+            >
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 80 80">
+                {/* Vertical meridians with perspective */}
+                <ellipse cx="25" cy="40" rx="8" ry="35" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="1.5" />
+                <ellipse cx="40" cy="40" rx="3" ry="38" fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth="2" />
+                <ellipse cx="55" cy="40" rx="8" ry="35" fill="none" stroke="rgba(0,0,0,0.3)" strokeWidth="1.5" />
+              </svg>
+            </motion.div>
+            
+            {/* Layer 3: Equatorial band with markers - fast spin */}
+            <motion.div
+              className="absolute inset-0"
+              animate={{ rotate: -360 }}
+              transition={{ duration: 1.8, repeat: Infinity, ease: "linear" }}
+            >
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 80 80">
+                {/* Thick equator */}
+                <line x1="2" y1="40" x2="78" y2="40" stroke="rgba(0,0,0,0.45)" strokeWidth="2.5" strokeLinecap="round" />
+                {/* Segment markers */}
+                <circle cx="12" cy="40" r="3" fill="rgba(0,0,0,0.35)" />
+                <circle cx="28" cy="38" r="2.5" fill="rgba(0,0,0,0.3)" />
+                <circle cx="52" cy="38" r="2.5" fill="rgba(0,0,0,0.3)" />
+                <circle cx="68" cy="40" r="3" fill="rgba(0,0,0,0.35)" />
+              </svg>
+            </motion.div>
+            
+            {/* Layer 4: Polar caps - subtle tilt */}
+            <motion.div
+              className="absolute inset-0"
+              animate={{ rotateY: [0, 15, 0, -15, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 80 80">
+                <ellipse cx="40" cy="12" rx="14" ry="5" fill="rgba(0,0,0,0.1)" />
+                <ellipse cx="40" cy="68" rx="14" ry="5" fill="rgba(0,0,0,0.1)" />
+              </svg>
+            </motion.div>
+          </div>
+          
+          {/* Fixed highlight/glare overlay */}
           <div 
             className="absolute rounded-full pointer-events-none"
             style={{
-              width: '60%',
-              height: '40%',
-              top: '8%',
+              width: '50%',
+              height: '35%',
+              top: '10%',
               left: '15%',
-              background: 'radial-gradient(ellipse at center, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.15) 50%, transparent 70%)',
+              background: 'radial-gradient(ellipse at 40% 40%, rgba(255,255,255,0.6) 0%, rgba(255,255,255,0.25) 40%, transparent 70%)',
+            }}
+          />
+          {/* Sharp specular highlight */}
+          <div 
+            className="absolute rounded-full pointer-events-none"
+            style={{
+              width: '12%',
+              height: '12%',
+              top: '18%',
+              left: '22%',
+              background: 'rgba(255,255,255,0.7)',
             }}
           />
         </motion.div>
