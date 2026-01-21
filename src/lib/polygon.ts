@@ -577,3 +577,129 @@ export function resolveBallPolygonCollisionOutward(
   
   return { position: newPos, velocity: newVel, collided };
 }
+
+/**
+ * Clips a line segment against multiple polygons, returning only the portions
+ * that are OUTSIDE all polygons. Used to avoid rendering fences inside obstacles.
+ */
+export function clipLineAgainstPolygons(
+  start: Vector2,
+  end: Vector2,
+  polygons: Polygon[]
+): { start: Vector2; end: Vector2 }[] {
+  // Collect all intersection t-values along the line
+  type Event = { t: number; entering: boolean; polyIndex: number };
+  const events: Event[] = [];
+  
+  const dir = vec2Sub(end, start);
+  const lineLen = vec2Length(dir);
+  if (lineLen < 0.01) return []; // Degenerate line
+  
+  // Check start and end points
+  for (let pi = 0; pi < polygons.length; pi++) {
+    const poly = polygons[pi];
+    const startInside = pointInPolygon(start, poly);
+    const endInside = pointInPolygon(end, poly);
+    
+    // Find all intersections with this polygon
+    const { vertices } = poly;
+    const intersections: { t: number; entering: boolean }[] = [];
+    
+    for (let i = 0; i < vertices.length; i++) {
+      const j = (i + 1) % vertices.length;
+      const intersection = lineSegmentIntersection(start, end, vertices[i], vertices[j]);
+      if (intersection) {
+        // Calculate t parameter (0 to 1 along the line)
+        const t = vec2Distance(start, intersection) / lineLen;
+        if (t > 0.001 && t < 0.999) {
+          // Determine if entering or exiting based on edge normal
+          const edgeDir = vec2Sub(vertices[j], vertices[i]);
+          const edgeNormal = { x: -edgeDir.y, y: edgeDir.x };
+          const entering = vec2Dot(dir, edgeNormal) > 0;
+          intersections.push({ t, entering });
+        }
+      }
+    }
+    
+    // Sort intersections by t
+    intersections.sort((a, b) => a.t - b.t);
+    
+    // Add events for this polygon
+    if (startInside) {
+      events.push({ t: 0, entering: true, polyIndex: pi });
+    }
+    for (const int of intersections) {
+      events.push({ t: int.t, entering: int.entering, polyIndex: pi });
+    }
+  }
+  
+  // Sort all events by t
+  events.sort((a, b) => a.t - b.t);
+  
+  // Track which polygons we're inside
+  const insideCount = new Map<number, number>();
+  for (let pi = 0; pi < polygons.length; pi++) {
+    if (pointInPolygon(start, polygons[pi])) {
+      insideCount.set(pi, 1);
+    } else {
+      insideCount.set(pi, 0);
+    }
+  }
+  
+  const isInsideAny = () => {
+    for (const count of insideCount.values()) {
+      if (count > 0) return true;
+    }
+    return false;
+  };
+  
+  // Build result segments
+  const segments: { start: Vector2; end: Vector2 }[] = [];
+  let segmentStart: number | null = isInsideAny() ? null : 0;
+  
+  for (const event of events) {
+    const wasInside = isInsideAny();
+    
+    // Update state
+    const current = insideCount.get(event.polyIndex) || 0;
+    if (event.entering) {
+      insideCount.set(event.polyIndex, current + 1);
+    } else {
+      insideCount.set(event.polyIndex, Math.max(0, current - 1));
+    }
+    
+    const nowInside = isInsideAny();
+    
+    if (!wasInside && nowInside && segmentStart !== null) {
+      // Entered an obstacle - end current segment
+      const segEnd = {
+        x: start.x + dir.x * event.t,
+        y: start.y + dir.y * event.t,
+      };
+      const segStart = {
+        x: start.x + dir.x * segmentStart,
+        y: start.y + dir.y * segmentStart,
+      };
+      if (vec2Distance(segStart, segEnd) > 1) {
+        segments.push({ start: segStart, end: segEnd });
+      }
+      segmentStart = null;
+    } else if (wasInside && !nowInside) {
+      // Exited all obstacles - start new segment
+      segmentStart = event.t;
+    }
+  }
+  
+  // Close final segment if we ended outside
+  if (segmentStart !== null) {
+    const segStart = {
+      x: start.x + dir.x * segmentStart,
+      y: start.y + dir.y * segmentStart,
+    };
+    if (vec2Distance(segStart, end) > 1) {
+      segments.push({ start: segStart, end });
+    }
+  }
+  
+  return segments;
+}

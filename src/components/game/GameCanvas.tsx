@@ -28,6 +28,7 @@ import {
   createPolygonFromShape,
   pointToSegmentDistance,
   lineSegmentIntersection,
+  clipLineAgainstPolygons,
 } from "@/lib/polygon";
 import { extractContours } from "@/lib/contour";
 import { Wall, WALL_THICKNESS, WALL_COLOR, createWallsFromPolygon, findWallTermination } from "@/lib/wallGeometry";
@@ -195,6 +196,7 @@ export function GameCanvas({
     regions: [] as Region[],
     // UNIFIED WALL MODEL: All walls are identical in behavior and appearance
     walls: [] as Wall[], // All walls: board edges, obstacles, user-drawn
+    obstaclePolygons: [] as Polygon[], // Obstacles for clipping user-drawn walls
     boardPolygon: null as Polygon | null, // Original board boundary for ball collision
     originalArea: 0,
     basePlayableArea: 0, // Initial playable area after subtracting obstacles
@@ -324,8 +326,9 @@ export function GameCanvas({
         }
       }
 
-      // Store all walls in unified model
+      // Store all walls and obstacles in unified model
       game.walls = allWalls;
+      game.obstaclePolygons = obstaclePolygons;
 
       // Calculate the original playable area (board minus obstacles)
       const boardArea = polygonArea(boardPolygon);
@@ -1410,6 +1413,7 @@ export function GameCanvas({
 
       // UNIFIED WALL MODEL: Draw ALL walls as visible CRT-green borders
       // Walls are "fences" - they are drawn ON TOP, not used to erase space
+      // User-drawn walls are clipped against obstacles (no fences inside obstacles)
       ctx.save();
       ctx.strokeStyle = WALL_COLOR; // CRT green from wallGeometry.ts
       ctx.lineWidth = WALL_THICKNESS * scale;
@@ -1418,13 +1422,30 @@ export function GameCanvas({
       ctx.shadowColor = WALL_COLOR;
       ctx.shadowBlur = 6 * scale;
       
+      const obstacles = game.obstaclePolygons;
+      
       for (const w of walls) {
-        const startScreen = worldToScreen(w.start.x, w.start.y);
-        const endScreen = worldToScreen(w.end.x, w.end.y);
-        ctx.beginPath();
-        ctx.moveTo(startScreen.x, startScreen.y);
-        ctx.lineTo(endScreen.x, endScreen.y);
-        ctx.stroke();
+        // Only clip user-drawn walls (starting with "wall-")
+        // Board edges and obstacle edges render as-is
+        if (w.id.startsWith("wall-") && obstacles.length > 0) {
+          // Clip wall segment against all obstacles
+          const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
+          for (const seg of segments) {
+            const startScreen = worldToScreen(seg.start.x, seg.start.y);
+            const endScreen = worldToScreen(seg.end.x, seg.end.y);
+            ctx.beginPath();
+            ctx.moveTo(startScreen.x, startScreen.y);
+            ctx.lineTo(endScreen.x, endScreen.y);
+            ctx.stroke();
+          }
+        } else {
+          const startScreen = worldToScreen(w.start.x, w.start.y);
+          const endScreen = worldToScreen(w.end.x, w.end.y);
+          ctx.beginPath();
+          ctx.moveTo(startScreen.x, startScreen.y);
+          ctx.lineTo(endScreen.x, endScreen.y);
+          ctx.stroke();
+        }
       }
       ctx.restore();
 
