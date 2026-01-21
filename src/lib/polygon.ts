@@ -587,117 +587,81 @@ export function clipLineAgainstPolygons(
   end: Vector2,
   polygons: Polygon[]
 ): { start: Vector2; end: Vector2 }[] {
-  // Collect all intersection t-values along the line
-  type Event = { t: number; entering: boolean; polyIndex: number };
-  const events: Event[] = [];
-  
   const dir = vec2Sub(end, start);
   const lineLen = vec2Length(dir);
   if (lineLen < 0.01) return []; // Degenerate line
   
-  // Check start and end points
-  for (let pi = 0; pi < polygons.length; pi++) {
-    const poly = polygons[pi];
-    const startInside = pointInPolygon(start, poly);
-    const endInside = pointInPolygon(end, poly);
-    
-    // Find all intersections with this polygon
+  // Collect all intersection t-values along the line
+  const intersectionTs: number[] = [];
+  
+  for (const poly of polygons) {
     const { vertices } = poly;
-    const intersections: { t: number; entering: boolean }[] = [];
-    
     for (let i = 0; i < vertices.length; i++) {
       const j = (i + 1) % vertices.length;
       const intersection = lineSegmentIntersection(start, end, vertices[i], vertices[j]);
       if (intersection) {
-        // Calculate t parameter (0 to 1 along the line)
         const t = vec2Distance(start, intersection) / lineLen;
-        if (t > 0.001 && t < 0.999) {
-          // Determine if entering or exiting based on edge normal
-          const edgeDir = vec2Sub(vertices[j], vertices[i]);
-          const edgeNormal = { x: -edgeDir.y, y: edgeDir.x };
-          const entering = vec2Dot(dir, edgeNormal) > 0;
-          intersections.push({ t, entering });
+        if (t > 0.0001 && t < 0.9999) {
+          intersectionTs.push(t);
         }
       }
     }
-    
-    // Sort intersections by t
-    intersections.sort((a, b) => a.t - b.t);
-    
-    // Add events for this polygon
-    if (startInside) {
-      events.push({ t: 0, entering: true, polyIndex: pi });
-    }
-    for (const int of intersections) {
-      events.push({ t: int.t, entering: int.entering, polyIndex: pi });
-    }
   }
   
-  // Sort all events by t
-  events.sort((a, b) => a.t - b.t);
-  
-  // Track which polygons we're inside
-  const insideCount = new Map<number, number>();
-  for (let pi = 0; pi < polygons.length; pi++) {
-    if (pointInPolygon(start, polygons[pi])) {
-      insideCount.set(pi, 1);
-    } else {
-      insideCount.set(pi, 0);
+  // Sort and deduplicate
+  intersectionTs.sort((a, b) => a - b);
+  const uniqueTs: number[] = [0];
+  for (const t of intersectionTs) {
+    if (t - uniqueTs[uniqueTs.length - 1] > 0.0001) {
+      uniqueTs.push(t);
     }
   }
+  uniqueTs.push(1);
   
-  const isInsideAny = () => {
-    for (const count of insideCount.values()) {
-      if (count > 0) return true;
-    }
-    return false;
-  };
-  
-  // Build result segments
+  // Check each segment between intersection points
   const segments: { start: Vector2; end: Vector2 }[] = [];
-  let segmentStart: number | null = isInsideAny() ? null : 0;
   
-  for (const event of events) {
-    const wasInside = isInsideAny();
+  for (let i = 0; i < uniqueTs.length - 1; i++) {
+    const t1 = uniqueTs[i];
+    const t2 = uniqueTs[i + 1];
     
-    // Update state
-    const current = insideCount.get(event.polyIndex) || 0;
-    if (event.entering) {
-      insideCount.set(event.polyIndex, current + 1);
-    } else {
-      insideCount.set(event.polyIndex, Math.max(0, current - 1));
+    // Check midpoint to see if this segment is inside any polygon
+    const midT = (t1 + t2) / 2;
+    const midPoint = {
+      x: start.x + dir.x * midT,
+      y: start.y + dir.y * midT,
+    };
+    
+    let insideAny = false;
+    for (const poly of polygons) {
+      if (pointInPolygon(midPoint, poly)) {
+        insideAny = true;
+        break;
+      }
     }
     
-    const nowInside = isInsideAny();
-    
-    if (!wasInside && nowInside && segmentStart !== null) {
-      // Entered an obstacle - end current segment
-      const segEnd = {
-        x: start.x + dir.x * event.t,
-        y: start.y + dir.y * event.t,
-      };
+    if (!insideAny) {
       const segStart = {
-        x: start.x + dir.x * segmentStart,
-        y: start.y + dir.y * segmentStart,
+        x: start.x + dir.x * t1,
+        y: start.y + dir.y * t1,
       };
-      if (vec2Distance(segStart, segEnd) > 1) {
+      const segEnd = {
+        x: start.x + dir.x * t2,
+        y: start.y + dir.y * t2,
+      };
+      
+      // Merge with previous segment if contiguous
+      if (segments.length > 0) {
+        const lastSeg = segments[segments.length - 1];
+        if (vec2Distance(lastSeg.end, segStart) < 1) {
+          lastSeg.end = segEnd;
+          continue;
+        }
+      }
+      
+      if (vec2Distance(segStart, segEnd) > 0.5) {
         segments.push({ start: segStart, end: segEnd });
       }
-      segmentStart = null;
-    } else if (wasInside && !nowInside) {
-      // Exited all obstacles - start new segment
-      segmentStart = event.t;
-    }
-  }
-  
-  // Close final segment if we ended outside
-  if (segmentStart !== null) {
-    const segStart = {
-      x: start.x + dir.x * segmentStart,
-      y: start.y + dir.y * segmentStart,
-    };
-    if (vec2Distance(segStart, end) > 1) {
-      segments.push({ start: segStart, end });
     }
   }
   
