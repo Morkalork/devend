@@ -1626,15 +1626,15 @@ export function GameCanvas({
         if (ball.flashIntensity > 0) {
           ctx.save();
           ctx.beginPath();
-          ctx.arc(screenPos.x, screenPos.y, screenRadius + 18 * scale, 0, Math.PI * 2);
+          ctx.arc(screenPos.x, screenPos.y, screenRadius + 30 * scale, 0, Math.PI * 2);
           const flashGlow = ctx.createRadialGradient(
-            screenPos.x, screenPos.y, screenRadius * 0.5,
-            screenPos.x, screenPos.y, screenRadius + 18 * scale
+            screenPos.x, screenPos.y, screenRadius * 0.3,
+            screenPos.x, screenPos.y, screenRadius + 30 * scale
           );
-          const flashAlpha = ball.flashIntensity * 0.6;
-          flashGlow.addColorStop(0, `rgba(0, 255, 136, ${flashAlpha})`);
-          flashGlow.addColorStop(0.4, `rgba(0, 255, 136, ${flashAlpha * 0.5})`);
-          flashGlow.addColorStop(0.7, `rgba(0, 255, 136, ${flashAlpha * 0.2})`);
+          const flashAlpha = ball.flashIntensity;
+          flashGlow.addColorStop(0, `rgba(0, 255, 136, ${flashAlpha * 0.95})`);
+          flashGlow.addColorStop(0.3, `rgba(0, 255, 136, ${flashAlpha * 0.7})`);
+          flashGlow.addColorStop(0.6, `rgba(0, 255, 136, ${flashAlpha * 0.35})`);
           flashGlow.addColorStop(1, "transparent");
           ctx.fillStyle = flashGlow;
           ctx.fill();
