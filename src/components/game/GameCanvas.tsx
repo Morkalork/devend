@@ -1534,11 +1534,17 @@ export function GameCanvas({
         }
       }
 
-      // Render all balls
+      // Render all balls with multi-axis spin illusion
       for (const ball of balls) {
         const screenPos = worldToScreen(ball.position.x, ball.position.y);
         const screenRadius = ball.radius * scale;
         const isFastest = activeModifiers.highlightFastestBall && ball.id === game.fastestBallId;
+
+        // Calculate spin phases based on ball rotation and unique offsets per ball
+        const ballIdHash = ball.id.charCodeAt(ball.id.length - 1) || 0;
+        const primaryPhase = ball.rotation;
+        const secondaryPhase = ball.rotation * 0.7 + ballIdHash * 0.5;
+        const tertiaryPhase = ball.rotation * 1.3 + ballIdHash * 0.3;
 
         // Fastest ball highlight ring
         if (isFastest) {
@@ -1555,129 +1561,194 @@ export function GameCanvas({
 
         // Outer glow (ambient light effect)
         ctx.beginPath();
-        ctx.arc(screenPos.x, screenPos.y, screenRadius + 12 * scale, 0, Math.PI * 2);
+        ctx.arc(screenPos.x, screenPos.y, screenRadius + 10 * scale, 0, Math.PI * 2);
         const outerGlow = ctx.createRadialGradient(
-          screenPos.x, screenPos.y, screenRadius * 0.8,
-          screenPos.x, screenPos.y, screenRadius + 12 * scale
+          screenPos.x, screenPos.y, screenRadius * 0.7,
+          screenPos.x, screenPos.y, screenRadius + 10 * scale
         );
-        outerGlow.addColorStop(0, hexToRgba(ball.color.slice(1), 0.5));
-        outerGlow.addColorStop(0.5, hexToRgba(ball.color.slice(1), 0.2));
+        outerGlow.addColorStop(0, hexToRgba(ball.color.slice(1), 0.4));
+        outerGlow.addColorStop(0.6, hexToRgba(ball.color.slice(1), 0.15));
         outerGlow.addColorStop(1, "transparent");
         ctx.fillStyle = outerGlow;
         ctx.fill();
 
-        // Ball base with gradient for depth
+        // Ball base with gradient for 3D depth
         ctx.save();
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
         
-        // Create a 3D-looking gradient from top-left to bottom-right
-        const baseGradient = ctx.createRadialGradient(
-          screenPos.x - screenRadius * 0.35,
-          screenPos.y - screenRadius * 0.35,
-          0,
-          screenPos.x + screenRadius * 0.2,
-          screenPos.y + screenRadius * 0.2,
-          screenRadius * 1.4
-        );
-        // Parse the ball color to create lighter and darker variants
         const r = parseInt(ball.color.slice(1, 3), 16);
         const g = parseInt(ball.color.slice(3, 5), 16);
         const b = parseInt(ball.color.slice(5, 7), 16);
-        const lighterColor = `rgb(${Math.min(255, r + 60)}, ${Math.min(255, g + 60)}, ${Math.min(255, b + 60)})`;
-        const darkerColor = `rgb(${Math.max(0, r - 80)}, ${Math.max(0, g - 80)}, ${Math.max(0, b - 80)})`;
+        const lighterColor = `rgb(${Math.min(255, r + 50)}, ${Math.min(255, g + 50)}, ${Math.min(255, b + 50)})`;
+        const darkerColor = `rgb(${Math.max(0, r - 60)}, ${Math.max(0, g - 60)}, ${Math.max(0, b - 60)})`;
+        const darkestColor = `rgb(${Math.max(0, r - 100)}, ${Math.max(0, g - 100)}, ${Math.max(0, b - 100)})`;
         
+        const baseGradient = ctx.createRadialGradient(
+          screenPos.x - screenRadius * 0.3,
+          screenPos.y - screenRadius * 0.3,
+          0,
+          screenPos.x + screenRadius * 0.15,
+          screenPos.y + screenRadius * 0.15,
+          screenRadius * 1.3
+        );
         baseGradient.addColorStop(0, lighterColor);
-        baseGradient.addColorStop(0.4, ball.color);
-        baseGradient.addColorStop(1, darkerColor);
+        baseGradient.addColorStop(0.35, ball.color);
+        baseGradient.addColorStop(0.75, darkerColor);
+        baseGradient.addColorStop(1, darkestColor);
         
         ctx.fillStyle = baseGradient;
         ctx.shadowColor = ball.color;
-        ctx.shadowBlur = 20 * scale;
+        ctx.shadowBlur = 15 * scale;
         ctx.fill();
-        
-        // Clip to ball circle for basketball pattern
         ctx.clip();
-        
-        // Draw spinning basketball pattern with better styling
+
+        // ===== LAYER 1: Latitude bands (suggest Y-axis tilt) =====
+        // Oscillating latitude lines that compress/expand to suggest tilted rotation
+        ctx.save();
         ctx.translate(screenPos.x, screenPos.y);
-        ctx.rotate(ball.rotation);
         
-        // Create gradient for seam lines (darker in center, fades at edges)
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
-        ctx.lineWidth = 2.5 * scale;
+        const tiltAngle = Math.sin(secondaryPhase) * 0.4; // Tilt oscillation
+        ctx.rotate(tiltAngle);
+        
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.25)";
+        ctx.lineWidth = 1.8 * scale;
         ctx.lineCap = "round";
         
-        // Horizontal center line
+        // Draw 5 latitude bands that appear to wrap around sphere
+        for (let i = -2; i <= 2; i++) {
+          const baseY = i * screenRadius * 0.35;
+          // Apply perspective compression based on phase
+          const compression = 0.6 + 0.4 * Math.cos(primaryPhase + i * 0.3);
+          const yOffset = baseY * compression;
+          
+          // Only draw if visible (within ball bounds)
+          if (Math.abs(yOffset) < screenRadius * 0.95) {
+            const xExtent = Math.sqrt(Math.max(0, screenRadius * screenRadius - yOffset * yOffset));
+            ctx.beginPath();
+            // Draw as arc for subtle curvature
+            ctx.ellipse(0, yOffset, xExtent, screenRadius * 0.08, 0, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+
+        // ===== LAYER 2: Longitude meridians (suggest X-axis spin) =====
+        ctx.save();
+        ctx.translate(screenPos.x, screenPos.y);
+        ctx.rotate(primaryPhase); // Primary rotation
+        
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+        ctx.lineWidth = 2 * scale;
+        
+        // Draw 4 meridian lines that curve around the sphere
+        for (let i = 0; i < 4; i++) {
+          const angle = (i / 4) * Math.PI * 2;
+          const xOffset = Math.sin(angle) * screenRadius * 0.9;
+          
+          // Calculate apparent width based on foreshortening
+          const foreShorten = Math.abs(Math.cos(angle));
+          if (foreShorten > 0.15) {
+            ctx.beginPath();
+            // Draw curved meridian
+            ctx.ellipse(xOffset * 0.5, 0, Math.max(1, screenRadius * 0.15 * foreShorten), screenRadius * 0.85, 0, -Math.PI / 2, Math.PI / 2);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+
+        // ===== LAYER 3: Equatorial band with stripes (main spin indicator) =====
+        ctx.save();
+        ctx.translate(screenPos.x, screenPos.y);
+        ctx.rotate(tertiaryPhase);
+        
+        // Draw thick equatorial band
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
+        ctx.lineWidth = 3 * scale;
         ctx.beginPath();
         ctx.moveTo(-screenRadius, 0);
         ctx.lineTo(screenRadius, 0);
         ctx.stroke();
         
-        // Vertical center line
-        ctx.beginPath();
-        ctx.moveTo(0, -screenRadius);
-        ctx.lineTo(0, screenRadius);
-        ctx.stroke();
-        
-        // Left curved seam
-        ctx.beginPath();
-        ctx.ellipse(-screenRadius * 0.15, 0, screenRadius * 0.5, screenRadius * 0.9, 0, -Math.PI / 2, Math.PI / 2);
-        ctx.stroke();
-        
-        // Right curved seam
-        ctx.beginPath();
-        ctx.ellipse(screenRadius * 0.15, 0, screenRadius * 0.5, screenRadius * 0.9, 0, Math.PI / 2, -Math.PI / 2);
-        ctx.stroke();
-        
-        // Add subtle texture dots for leather-like appearance
-        ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
-        const dotCount = 24;
-        for (let i = 0; i < dotCount; i++) {
-          const angle = (i / dotCount) * Math.PI * 2;
-          const radiusOffset = 0.3 + Math.random() * 0.5;
-          const dotX = Math.cos(angle) * screenRadius * radiusOffset;
-          const dotY = Math.sin(angle) * screenRadius * radiusOffset;
-          ctx.beginPath();
-          ctx.arc(dotX, dotY, 1.5 * scale, 0, Math.PI * 2);
-          ctx.fill();
+        // Draw segment markers on equator for clear spin visibility
+        ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+        const segmentCount = 8;
+        for (let i = 0; i < segmentCount; i++) {
+          const segAngle = (i / segmentCount) * Math.PI * 2;
+          const xPos = Math.cos(segAngle) * screenRadius * 0.65;
+          const yPos = Math.sin(segAngle) * screenRadius * 0.15; // Flattened for equator
+          
+          // Only draw segments on visible side
+          const visibility = Math.cos(segAngle);
+          if (visibility > -0.3) {
+            const segSize = (2.5 + visibility * 1.5) * scale;
+            ctx.beginPath();
+            ctx.arc(xPos, yPos, segSize, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
-        
         ctx.restore();
+
+        // ===== LAYER 4: Polar caps (enhance 3D depth) =====
+        ctx.save();
+        ctx.translate(screenPos.x, screenPos.y);
         
-        // Add highlight/glare effect at top-left
+        // Top polar region - slightly offset based on tilt
+        const tiltX = Math.sin(secondaryPhase) * screenRadius * 0.1;
+        const tiltY = Math.cos(secondaryPhase) * screenRadius * 0.1;
+        
+        ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
+        ctx.beginPath();
+        ctx.ellipse(tiltX, -screenRadius * 0.7 + tiltY, screenRadius * 0.35, screenRadius * 0.15, secondaryPhase * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Bottom polar region
+        ctx.beginPath();
+        ctx.ellipse(-tiltX, screenRadius * 0.7 - tiltY, screenRadius * 0.35, screenRadius * 0.15, -secondaryPhase * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.restore(); // End clipping
+
+        // ===== Highlight/glare overlay (fixed, not rotating) =====
         ctx.save();
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
         ctx.clip();
         
-        // Primary highlight
+        // Primary highlight at top-left
         const glareGradient = ctx.createRadialGradient(
           screenPos.x - screenRadius * 0.4, 
-          screenPos.y - screenRadius * 0.45, 
+          screenPos.y - screenRadius * 0.4, 
           0,
           screenPos.x - screenRadius * 0.4, 
-          screenPos.y - screenRadius * 0.45, 
-          screenRadius * 0.65
+          screenPos.y - screenRadius * 0.4, 
+          screenRadius * 0.6
         );
-        glareGradient.addColorStop(0, "rgba(255, 255, 255, 0.7)");
-        glareGradient.addColorStop(0.3, "rgba(255, 255, 255, 0.35)");
-        glareGradient.addColorStop(0.7, "rgba(255, 255, 255, 0.08)");
-        glareGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+        glareGradient.addColorStop(0, "rgba(255, 255, 255, 0.65)");
+        glareGradient.addColorStop(0.25, "rgba(255, 255, 255, 0.3)");
+        glareGradient.addColorStop(0.6, "rgba(255, 255, 255, 0.05)");
+        glareGradient.addColorStop(1, "transparent");
         ctx.fillStyle = glareGradient;
         ctx.fillRect(screenPos.x - screenRadius, screenPos.y - screenRadius, screenRadius * 2, screenRadius * 2);
         
-        // Secondary rim highlight at bottom
+        // Small sharp specular highlight
+        ctx.beginPath();
+        ctx.arc(screenPos.x - screenRadius * 0.35, screenPos.y - screenRadius * 0.35, screenRadius * 0.12, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+        ctx.fill();
+        
+        // Rim light at bottom-right
         const rimGradient = ctx.createRadialGradient(
-          screenPos.x + screenRadius * 0.3,
-          screenPos.y + screenRadius * 0.5,
+          screenPos.x + screenRadius * 0.35,
+          screenPos.y + screenRadius * 0.45,
           0,
-          screenPos.x + screenRadius * 0.3,
-          screenPos.y + screenRadius * 0.5,
-          screenRadius * 0.4
+          screenPos.x + screenRadius * 0.35,
+          screenPos.y + screenRadius * 0.45,
+          screenRadius * 0.35
         );
-        rimGradient.addColorStop(0, "rgba(255, 255, 255, 0.15)");
-        rimGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+        rimGradient.addColorStop(0, "rgba(255, 255, 255, 0.2)");
+        rimGradient.addColorStop(1, "transparent");
         ctx.fillStyle = rimGradient;
         ctx.fillRect(screenPos.x - screenRadius, screenPos.y - screenRadius, screenRadius * 2, screenRadius * 2);
         
