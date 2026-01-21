@@ -5,8 +5,8 @@ levels:
     points: 100
     balls:
       - id: ball-1
-        initialSpeed: 300
-        topSpeed: 600
+        initialSpeed: 240
+        topSpeed: 480
         color: 00d4ff
   - id: level-2
     sizeThreshold: 40
@@ -14,12 +14,12 @@ levels:
     points: 150
     balls:
       - id: ball-1
-        initialSpeed: 350
-        topSpeed: 700
+        initialSpeed: 280
+        topSpeed: 560
         color: ff6b6b
       - id: ball-2
-        initialSpeed: 320
-        topSpeed: 680
+        initialSpeed: 256
+        topSpeed: 544
         color: 4ecdc4
     entities:
       - id: wall-1
@@ -42,12 +42,12 @@ levels:
     points: 200
     balls:
       - id: ball-1
-        initialSpeed: 380
-        topSpeed: 750
+        initialSpeed: 304
+        topSpeed: 600
         color: ffd93d
       - id: ball-2
-        initialSpeed: 360
-        topSpeed: 720
+        initialSpeed: 288
+        topSpeed: 576
         color: 6bcb77
     entities:
       - id: wall-1
@@ -63,16 +63,16 @@ levels:
     points: 250
     balls:
       - id: ball-1
-        initialSpeed: 400
-        topSpeed: 800
+        initialSpeed: 320
+        topSpeed: 640
         color: ff8c42
       - id: ball-2
-        initialSpeed: 380
-        topSpeed: 780
+        initialSpeed: 304
+        topSpeed: 624
         color: 98d8c8
       - id: ball-3
-        initialSpeed: 360
-        topSpeed: 760
+        initialSpeed: 288
+        topSpeed: 608
         color: c792ea
     entities:
       - id: wall-1
@@ -95,16 +95,16 @@ levels:
     points: 300
     balls:
       - id: ball-1
-        initialSpeed: 420
-        topSpeed: 850
+        initialSpeed: 336
+        topSpeed: 680
         color: ff0055
       - id: ball-2
-        initialSpeed: 400
-        topSpeed: 830
+        initialSpeed: 320
+        topSpeed: 664
         color: 00ff88
       - id: ball-3
-        initialSpeed: 380
-        topSpeed: 810
+        initialSpeed: 304
+        topSpeed: 648
         color: 00aaff
         radius: 80
     entities:
@@ -120,12 +120,12 @@ levels:
     points: 300
     balls:
       - id: ball-1
-        initialSpeed: 420
-        topSpeed: 850
+        initialSpeed: 336
+        topSpeed: 680
         color: ff0055
       - id: ball-2
-        initialSpeed: 200
-        topSpeed: 430
+        initialSpeed: 160
+        topSpeed: 344
         color: 00ff88
     entities:
       - id: wall-1

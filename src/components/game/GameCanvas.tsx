@@ -1538,30 +1538,60 @@ export function GameCanvas({
           ctx.restore();
         }
 
-        // Ball glow
+        // Outer glow (ambient light effect)
         ctx.beginPath();
-        ctx.arc(screenPos.x, screenPos.y, screenRadius + 10 * scale, 0, Math.PI * 2);
-        ctx.fillStyle = hexToRgba(ball.color.slice(1), 0.4);
+        ctx.arc(screenPos.x, screenPos.y, screenRadius + 12 * scale, 0, Math.PI * 2);
+        const outerGlow = ctx.createRadialGradient(
+          screenPos.x, screenPos.y, screenRadius * 0.8,
+          screenPos.x, screenPos.y, screenRadius + 12 * scale
+        );
+        outerGlow.addColorStop(0, hexToRgba(ball.color.slice(1), 0.5));
+        outerGlow.addColorStop(0.5, hexToRgba(ball.color.slice(1), 0.2));
+        outerGlow.addColorStop(1, "transparent");
+        ctx.fillStyle = outerGlow;
         ctx.fill();
 
-        // Ball base
+        // Ball base with gradient for depth
         ctx.save();
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
-        ctx.fillStyle = ball.color;
+        
+        // Create a 3D-looking gradient from top-left to bottom-right
+        const baseGradient = ctx.createRadialGradient(
+          screenPos.x - screenRadius * 0.35,
+          screenPos.y - screenRadius * 0.35,
+          0,
+          screenPos.x + screenRadius * 0.2,
+          screenPos.y + screenRadius * 0.2,
+          screenRadius * 1.4
+        );
+        // Parse the ball color to create lighter and darker variants
+        const r = parseInt(ball.color.slice(1, 3), 16);
+        const g = parseInt(ball.color.slice(3, 5), 16);
+        const b = parseInt(ball.color.slice(5, 7), 16);
+        const lighterColor = `rgb(${Math.min(255, r + 60)}, ${Math.min(255, g + 60)}, ${Math.min(255, b + 60)})`;
+        const darkerColor = `rgb(${Math.max(0, r - 80)}, ${Math.max(0, g - 80)}, ${Math.max(0, b - 80)})`;
+        
+        baseGradient.addColorStop(0, lighterColor);
+        baseGradient.addColorStop(0.4, ball.color);
+        baseGradient.addColorStop(1, darkerColor);
+        
+        ctx.fillStyle = baseGradient;
         ctx.shadowColor = ball.color;
-        ctx.shadowBlur = 15 * scale;
+        ctx.shadowBlur = 20 * scale;
         ctx.fill();
         
         // Clip to ball circle for basketball pattern
         ctx.clip();
         
-        // Draw spinning basketball pattern
+        // Draw spinning basketball pattern with better styling
         ctx.translate(screenPos.x, screenPos.y);
         ctx.rotate(ball.rotation);
         
-        ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.lineWidth = 2 * scale;
+        // Create gradient for seam lines (darker in center, fades at edges)
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.55)";
+        ctx.lineWidth = 2.5 * scale;
+        ctx.lineCap = "round";
         
         // Horizontal center line
         ctx.beginPath();
@@ -1585,27 +1615,57 @@ export function GameCanvas({
         ctx.ellipse(screenRadius * 0.15, 0, screenRadius * 0.5, screenRadius * 0.9, 0, Math.PI / 2, -Math.PI / 2);
         ctx.stroke();
         
+        // Add subtle texture dots for leather-like appearance
+        ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+        const dotCount = 24;
+        for (let i = 0; i < dotCount; i++) {
+          const angle = (i / dotCount) * Math.PI * 2;
+          const radiusOffset = 0.3 + Math.random() * 0.5;
+          const dotX = Math.cos(angle) * screenRadius * radiusOffset;
+          const dotY = Math.sin(angle) * screenRadius * radiusOffset;
+          ctx.beginPath();
+          ctx.arc(dotX, dotY, 1.5 * scale, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        
         ctx.restore();
         
-        // Add glare/shine effect at top
+        // Add highlight/glare effect at top-left
         ctx.save();
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
         ctx.clip();
         
+        // Primary highlight
         const glareGradient = ctx.createRadialGradient(
-          screenPos.x - screenRadius * 0.3, 
-          screenPos.y - screenRadius * 0.4, 
+          screenPos.x - screenRadius * 0.4, 
+          screenPos.y - screenRadius * 0.45, 
           0,
-          screenPos.x - screenRadius * 0.3, 
-          screenPos.y - screenRadius * 0.4, 
-          screenRadius * 0.7
+          screenPos.x - screenRadius * 0.4, 
+          screenPos.y - screenRadius * 0.45, 
+          screenRadius * 0.65
         );
-        glareGradient.addColorStop(0, "rgba(255, 255, 255, 0.5)");
-        glareGradient.addColorStop(0.5, "rgba(255, 255, 255, 0.15)");
+        glareGradient.addColorStop(0, "rgba(255, 255, 255, 0.7)");
+        glareGradient.addColorStop(0.3, "rgba(255, 255, 255, 0.35)");
+        glareGradient.addColorStop(0.7, "rgba(255, 255, 255, 0.08)");
         glareGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
         ctx.fillStyle = glareGradient;
         ctx.fillRect(screenPos.x - screenRadius, screenPos.y - screenRadius, screenRadius * 2, screenRadius * 2);
+        
+        // Secondary rim highlight at bottom
+        const rimGradient = ctx.createRadialGradient(
+          screenPos.x + screenRadius * 0.3,
+          screenPos.y + screenRadius * 0.5,
+          0,
+          screenPos.x + screenRadius * 0.3,
+          screenPos.y + screenRadius * 0.5,
+          screenRadius * 0.4
+        );
+        rimGradient.addColorStop(0, "rgba(255, 255, 255, 0.15)");
+        rimGradient.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.fillStyle = rimGradient;
+        ctx.fillRect(screenPos.x - screenRadius, screenPos.y - screenRadius, screenRadius * 2, screenRadius * 2);
+        
         ctx.restore();
       }
 
