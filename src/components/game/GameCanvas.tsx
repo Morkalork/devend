@@ -1461,13 +1461,6 @@ export function GameCanvas({
 
       // Note: Obstacle rendering is now handled via the wall model - walls cut through the fill
 
-        // Clear the wall area (transparent) so CRT background shows through - same as cut areas
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.fillStyle = "rgba(0, 0, 0, 1)";
-        ctx.fill();
-        ctx.restore();
-      }
-
       // UNIFIED WALL MODEL: Draw all user-drawn walls to cut through the filled regions
       // Using destination-out to create visual gaps where walls exist
       ctx.save();
