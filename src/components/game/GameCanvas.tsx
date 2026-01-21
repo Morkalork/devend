@@ -1384,6 +1384,7 @@ export function GameCanvas({
       ctx.restore();
 
       // Draw green border around active regions (playable area boundary)
+      // This border must match the actual playable area which uses samplePoints after cuts
       ctx.save();
       ctx.strokeStyle = "#00ff44"; // CRT-style green
       ctx.lineWidth = 3 * scale;
@@ -1393,18 +1394,73 @@ export function GameCanvas({
       ctx.lineJoin = "round";
 
       for (const region of regions) {
-        const { vertices } = region.polygon;
-        if (vertices.length < 3) continue;
+        if (region.samplePoints && region.samplePoints.length > 0) {
+          // After cuts: draw border around edge cells (matches the rendered fill)
+          const sampleSet = new Set(region.samplePoints.map((s) => `${s.x},${s.y}`));
+          
+          // Find edge cells and draw their outer edges
+          for (const sample of region.samplePoints) {
+            const neighbors = {
+              left: `${sample.x - gridSize},${sample.y}`,
+              right: `${sample.x + gridSize},${sample.y}`,
+              top: `${sample.x},${sample.y - gridSize}`,
+              bottom: `${sample.x},${sample.y + gridSize}`,
+            };
+            
+            // Draw border segments for missing neighbors
+            const cellLeft = sample.x - halfGrid;
+            const cellRight = sample.x + halfGrid;
+            const cellTop = sample.y - halfGrid;
+            const cellBottom = sample.y + halfGrid;
+            
+            if (!sampleSet.has(neighbors.left)) {
+              const p1 = worldToScreen(cellLeft, cellTop);
+              const p2 = worldToScreen(cellLeft, cellBottom);
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+            if (!sampleSet.has(neighbors.right)) {
+              const p1 = worldToScreen(cellRight, cellTop);
+              const p2 = worldToScreen(cellRight, cellBottom);
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+            if (!sampleSet.has(neighbors.top)) {
+              const p1 = worldToScreen(cellLeft, cellTop);
+              const p2 = worldToScreen(cellRight, cellTop);
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+            if (!sampleSet.has(neighbors.bottom)) {
+              const p1 = worldToScreen(cellLeft, cellBottom);
+              const p2 = worldToScreen(cellRight, cellBottom);
+              ctx.beginPath();
+              ctx.moveTo(p1.x, p1.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.stroke();
+            }
+          }
+        } else {
+          // Initial state: use polygon vertices
+          const { vertices } = region.polygon;
+          if (vertices.length < 3) continue;
 
-        ctx.beginPath();
-        const start = worldToScreen(vertices[0].x, vertices[0].y);
-        ctx.moveTo(start.x, start.y);
-        for (let i = 1; i < vertices.length; i++) {
-          const pt = worldToScreen(vertices[i].x, vertices[i].y);
-          ctx.lineTo(pt.x, pt.y);
+          ctx.beginPath();
+          const start = worldToScreen(vertices[0].x, vertices[0].y);
+          ctx.moveTo(start.x, start.y);
+          for (let i = 1; i < vertices.length; i++) {
+            const pt = worldToScreen(vertices[i].x, vertices[i].y);
+            ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.closePath();
+          ctx.stroke();
         }
-        ctx.closePath();
-        ctx.stroke();
       }
       ctx.restore();
 
