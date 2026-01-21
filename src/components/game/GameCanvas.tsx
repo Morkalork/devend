@@ -29,6 +29,7 @@ import {
   pointToSegmentDistance,
   lineSegmentIntersection,
 } from "@/lib/polygon";
+import { extractContours } from "@/lib/contour";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -1417,67 +1418,41 @@ export function GameCanvas({
       ctx.restore();
 
       // Draw green border around active regions (playable area boundary)
-      // This border must match the actual playable area which uses samplePoints after cuts
+      // Uses contour extraction to ensure uniform thickness everywhere
       ctx.save();
       ctx.strokeStyle = "#00ff44"; // CRT-style green
       ctx.lineWidth = 3 * scale;
       ctx.shadowColor = "#00ff44";
       ctx.shadowBlur = 8 * scale;
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
+      ctx.lineCap = "square"; // Square caps for clean grid alignment
+      ctx.lineJoin = "miter"; // Sharp corners for grid-based contours
 
       for (const region of regions) {
         if (region.samplePoints && region.samplePoints.length > 0) {
-          // After cuts: draw border around edge cells (matches the rendered fill)
-          const sampleSet = new Set(region.samplePoints.map((s) => `${s.x},${s.y}`));
+          // Extract continuous contours from sample points
+          const contours = extractContours(region.samplePoints, gridSize);
           
-          // Find edge cells and draw their outer edges
-          for (const sample of region.samplePoints) {
-            const neighbors = {
-              left: `${sample.x - gridSize},${sample.y}`,
-              right: `${sample.x + gridSize},${sample.y}`,
-              top: `${sample.x},${sample.y - gridSize}`,
-              bottom: `${sample.x},${sample.y + gridSize}`,
-            };
+          // Draw each contour as a single continuous path
+          for (const contour of contours) {
+            if (contour.length < 2) continue;
             
-            // Draw border segments for missing neighbors
-            const cellLeft = sample.x - halfGrid;
-            const cellRight = sample.x + halfGrid;
-            const cellTop = sample.y - halfGrid;
-            const cellBottom = sample.y + halfGrid;
+            ctx.beginPath();
+            const start = worldToScreen(contour[0].x, contour[0].y);
+            ctx.moveTo(start.x, start.y);
             
-            if (!sampleSet.has(neighbors.left)) {
-              const p1 = worldToScreen(cellLeft, cellTop);
-              const p2 = worldToScreen(cellLeft, cellBottom);
-              ctx.beginPath();
-              ctx.moveTo(p1.x, p1.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.stroke();
+            for (let i = 1; i < contour.length; i++) {
+              const pt = worldToScreen(contour[i].x, contour[i].y);
+              ctx.lineTo(pt.x, pt.y);
             }
-            if (!sampleSet.has(neighbors.right)) {
-              const p1 = worldToScreen(cellRight, cellTop);
-              const p2 = worldToScreen(cellRight, cellBottom);
-              ctx.beginPath();
-              ctx.moveTo(p1.x, p1.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.stroke();
+            
+            // Close the path if start and end are close
+            const last = contour[contour.length - 1];
+            const first = contour[0];
+            if (Math.abs(last.x - first.x) < 1 && Math.abs(last.y - first.y) < 1) {
+              ctx.closePath();
             }
-            if (!sampleSet.has(neighbors.top)) {
-              const p1 = worldToScreen(cellLeft, cellTop);
-              const p2 = worldToScreen(cellRight, cellTop);
-              ctx.beginPath();
-              ctx.moveTo(p1.x, p1.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.stroke();
-            }
-            if (!sampleSet.has(neighbors.bottom)) {
-              const p1 = worldToScreen(cellLeft, cellBottom);
-              const p2 = worldToScreen(cellRight, cellBottom);
-              ctx.beginPath();
-              ctx.moveTo(p1.x, p1.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.stroke();
-            }
+            
+            ctx.stroke();
           }
         } else {
           // Initial state: use polygon vertices
