@@ -1425,9 +1425,12 @@ export function GameCanvas({
       const obstacles = game.obstaclePolygons;
       
       for (const w of walls) {
-        // Only clip user-drawn walls (starting with "wall-")
-        // Board edges and obstacle edges render as-is
-        if (w.id.startsWith("wall-") && obstacles.length > 0) {
+        // Clip user-drawn walls AND board edges against obstacles
+        // Only obstacle edges themselves should render as-is (they define the obstacle boundary)
+        const shouldClip = obstacles.length > 0 && 
+          (w.id.startsWith("wall-") || w.id.startsWith("board-"));
+        
+        if (shouldClip) {
           // Clip wall segment against all obstacles
           const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
           for (const seg of segments) {
@@ -1439,6 +1442,7 @@ export function GameCanvas({
             ctx.stroke();
           }
         } else {
+          // Obstacle edges render as-is
           const startScreen = worldToScreen(w.start.x, w.start.y);
           const endScreen = worldToScreen(w.end.x, w.end.y);
           ctx.beginPath();
