@@ -3,6 +3,7 @@ import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "
 import { LevelConfig, LevelEntity } from "@/types/level";
 import { UpgradeConfig } from "@/types/upgrade";
 import { useActiveModifiers } from "@/hooks/useActiveModifiers";
+import { calculateScore, ensureScoringConfigLoaded } from "@/hooks/useScoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
 import { TutorialStep } from "@/hooks/useInteractiveTutorial";
@@ -125,6 +126,7 @@ function findRegionContainingPoint(regions: Region[], x: number, y: number): Reg
   return null;
 }
 
+// Legacy scoring - kept for compatibility but primary scoring now uses configurable system
 function computeLevelScore(basePoints: number, expectedCuts: number, actualCuts: number): number {
   let score: number;
   if (actualCuts <= expectedCuts) {
@@ -135,7 +137,7 @@ function computeLevelScore(basePoints: number, expectedCuts: number, actualCuts:
   return Math.max(0, score);
 }
 
-// Calculate overcut bonus
+// Calculate overcut bonus - legacy function, now integrated into space optimization
 function computeOvercutBonus(threshold: number, remaining: number, basePoints: number): number {
   const overshoot = Math.max(0, threshold - remaining);
   if (overshoot <= 0) return 0;
@@ -610,11 +612,22 @@ export function GameCanvas({
       game.gameOver = true;
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
 
-      // If in push mode, level is still cleared - just forfeit overcut bonus
+      // If in push mode, level is still cleared - just forfeit space bonus (penalty for failing push)
       if (game.pushMode === "pushing") {
         const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
-        let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.wallCount);
-        levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
+        
+        // Use new scoring system - but no space bonus since push failed
+        const { levelScore, breakdown } = calculateScore(
+          game.wallCount,
+          effectiveExpectedCuts,
+          percent,
+          level.sizeThreshold,
+          level.points,
+          activeModifiers.scoreMultiplier
+        );
+        
+        // Remove space bonus since push failed
+        const adjustedLevelScore = levelScore - breakdown.spaceBonus;
 
         onLevelComplete({
           levelNumber,
@@ -622,10 +635,17 @@ export function GameCanvas({
           cutCount: game.wallCount,
           expectedCuts: level.expectedCuts,
           basePoints: level.points,
-          levelScore,
+          levelScore: adjustedLevelScore,
           remainingPercent: percent,
           overcutBonus: 0,
           thresholdPercent: level.sizeThreshold,
+          fenceBonus: breakdown.fenceBonus,
+          spaceBonus: 0,
+          spaceBonusRaw: breakdown.spaceBonusRaw,
+          penaltyMultiplier: 0,
+          fencesUnderPar: breakdown.fencesUnderPar,
+          fencesOverPar: breakdown.fencesOverPar,
+          extraPercent: breakdown.extraPercent,
         });
         return;
       }
@@ -656,8 +676,19 @@ export function GameCanvas({
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
 
       const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
-      let levelScore = computeLevelScore(level.points, effectiveExpectedCuts, game.wallCount);
-      levelScore = Math.round(levelScore * activeModifiers.scoreMultiplier);
+      
+      // Use new scoring system - but no space bonus since push failed
+      const { levelScore, breakdown } = calculateScore(
+        game.wallCount,
+        effectiveExpectedCuts,
+        percent,
+        level.sizeThreshold,
+        level.points,
+        activeModifiers.scoreMultiplier
+      );
+      
+      // Remove space bonus since push failed
+      const adjustedLevelScore = levelScore - breakdown.spaceBonus;
 
       onLevelComplete({
         levelNumber,
@@ -665,11 +696,18 @@ export function GameCanvas({
         cutCount: game.wallCount,
         expectedCuts: level.expectedCuts,
         basePoints: level.points,
-        levelScore,
+        levelScore: adjustedLevelScore,
         remainingPercent: percent,
         overcutBonus: 0,
         thresholdPercent: level.sizeThreshold,
         pushFailed: true,
+        fenceBonus: breakdown.fenceBonus,
+        spaceBonus: 0,
+        spaceBonusRaw: breakdown.spaceBonusRaw,
+        penaltyMultiplier: 0,
+        fencesUnderPar: breakdown.fencesUnderPar,
+        fencesOverPar: breakdown.fencesOverPar,
+        extraPercent: breakdown.extraPercent,
       });
     };
 
@@ -2040,11 +2078,16 @@ export function GameCanvas({
     game.levelComplete = true;
 
     const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
-    let baseScore = computeLevelScore(level.points, effectiveExpectedCuts, game.wallCount);
-    baseScore = Math.round(baseScore * activeModifiers.scoreMultiplier);
-
-    const overcutBonus = computeOvercutBonus(level.sizeThreshold, game.bestRemainingPercent, level.points);
-    const levelScore = baseScore + overcutBonus;
+    
+    // Use new configurable scoring system
+    const { levelScore, breakdown } = calculateScore(
+      game.wallCount,
+      effectiveExpectedCuts,
+      game.bestRemainingPercent,
+      level.sizeThreshold,
+      level.points,
+      activeModifiers.scoreMultiplier
+    );
 
     setTimeout(() => {
       onLevelComplete({
@@ -2055,8 +2098,15 @@ export function GameCanvas({
         basePoints: level.points,
         levelScore,
         remainingPercent: game.bestRemainingPercent,
-        overcutBonus,
+        overcutBonus: 0, // Legacy field - now handled by spaceBonus
         thresholdPercent: level.sizeThreshold,
+        fenceBonus: breakdown.fenceBonus,
+        spaceBonus: breakdown.spaceBonus,
+        spaceBonusRaw: breakdown.spaceBonusRaw,
+        penaltyMultiplier: breakdown.penaltyMultiplier,
+        fencesUnderPar: breakdown.fencesUnderPar,
+        fencesOverPar: breakdown.fencesOverPar,
+        extraPercent: breakdown.extraPercent,
       });
     }, 300);
   }, [level, levelNumber, activeModifiers, onLevelComplete]);

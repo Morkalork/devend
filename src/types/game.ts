@@ -85,4 +85,12 @@ export interface LevelScoreData {
   overcutBonus?: number;
   thresholdPercent?: number;
   pushFailed?: boolean; // true if player failed during push-your-luck mode
+  // New scoring system fields
+  fenceBonus?: number;
+  spaceBonus?: number;
+  spaceBonusRaw?: number;
+  penaltyMultiplier?: number;
+  fencesUnderPar?: number;
+  fencesOverPar?: number;
+  extraPercent?: number;
 }
