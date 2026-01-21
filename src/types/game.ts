@@ -29,6 +29,7 @@ export interface Ball {
   color: string; // hex color with #
   regionId: string; // which region this ball is in
   rotation: number; // current rotation angle in radians for spinning effect
+  flashIntensity: number; // 0-1, for collision flash effect (decays over time)
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

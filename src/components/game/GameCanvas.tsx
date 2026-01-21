@@ -429,6 +429,7 @@ export function GameCanvas({
           color: `#${ballConfig.color}`,
           regionId: "", // Will be assigned after regions are created
           rotation: Math.random() * Math.PI * 2, // Start with random rotation
+          flashIntensity: 0, // No flash initially
         };
       });
 
@@ -584,6 +585,11 @@ export function GameCanvas({
       const speed = vec2Length(ball.velocity);
       const rotationSpeed = speed * 0.015; // Radians per second based on speed
       ball.rotation += rotationSpeed * dt;
+      
+      // Decay collision flash (fades over ~150ms)
+      if (ball.flashIntensity > 0) {
+        ball.flashIntensity = Math.max(0, ball.flashIntensity - dt * 7);
+      }
 
       // Resolve collisions with board boundary (always use original board, not region bounding box)
       if (game.boardPolygon) {
@@ -1616,6 +1622,25 @@ export function GameCanvas({
           ctx.restore();
         }
 
+        // ===== Collision flash glow (CRT green, fades out) =====
+        if (ball.flashIntensity > 0) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(screenPos.x, screenPos.y, screenRadius + 18 * scale, 0, Math.PI * 2);
+          const flashGlow = ctx.createRadialGradient(
+            screenPos.x, screenPos.y, screenRadius * 0.5,
+            screenPos.x, screenPos.y, screenRadius + 18 * scale
+          );
+          const flashAlpha = ball.flashIntensity * 0.6;
+          flashGlow.addColorStop(0, `rgba(0, 255, 136, ${flashAlpha})`);
+          flashGlow.addColorStop(0.4, `rgba(0, 255, 136, ${flashAlpha * 0.5})`);
+          flashGlow.addColorStop(0.7, `rgba(0, 255, 136, ${flashAlpha * 0.2})`);
+          flashGlow.addColorStop(1, "transparent");
+          ctx.fillStyle = flashGlow;
+          ctx.fill();
+          ctx.restore();
+        }
+
         // Outer glow (ambient light effect)
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius + 10 * scale, 0, Math.PI * 2);
@@ -1886,6 +1911,10 @@ export function GameCanvas({
               const separation = vec2Scale(normal, overlap / 2);
               ball1.position = vec2Sub(ball1.position, separation);
               ball2.position = vec2Add(ball2.position, separation);
+              
+              // Trigger collision flash on both balls
+              ball1.flashIntensity = 1.0;
+              ball2.flashIntensity = 1.0;
             }
           }
         }
