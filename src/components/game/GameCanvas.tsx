@@ -1383,6 +1383,31 @@ export function GameCanvas({
       }
       ctx.restore();
 
+      // Draw green border around active regions (playable area boundary)
+      ctx.save();
+      ctx.strokeStyle = "#00ff44"; // CRT-style green
+      ctx.lineWidth = 3 * scale;
+      ctx.shadowColor = "#00ff44";
+      ctx.shadowBlur = 8 * scale;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      for (const region of regions) {
+        const { vertices } = region.polygon;
+        if (vertices.length < 3) continue;
+
+        ctx.beginPath();
+        const start = worldToScreen(vertices[0].x, vertices[0].y);
+        ctx.moveTo(start.x, start.y);
+        for (let i = 1; i < vertices.length; i++) {
+          const pt = worldToScreen(vertices[i].x, vertices[i].y);
+          ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+      ctx.restore();
+
       // Render walls as "cut out" regions - they look like the background (same as cuts)
       for (const wall of obstacles) {
         const { vertices } = wall;
