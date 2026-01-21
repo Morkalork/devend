@@ -1404,76 +1404,20 @@ export function GameCanvas({
       }
       ctx.restore();
 
-      // Draw green border around active regions (playable area boundary)
-      // Uses contour extraction to ensure uniform thickness everywhere
+      // Note: Green border is now drawn via the unified wall model below
+      // All walls (board edges, obstacles, user-drawn) are rendered identically
+
+      // UNIFIED WALL MODEL: Draw ALL walls as visible CRT-green borders
+      // Walls are "fences" - they are drawn ON TOP, not used to erase space
       ctx.save();
-      ctx.strokeStyle = "#00ff44"; // CRT-style green
-      ctx.lineWidth = 3 * scale;
-      ctx.shadowColor = "#00ff44";
-      ctx.shadowBlur = 8 * scale;
-      ctx.lineCap = "square"; // Square caps for clean grid alignment
-      ctx.lineJoin = "miter"; // Sharp corners for grid-based contours
-
-      for (const region of regions) {
-        if (region.samplePoints && region.samplePoints.length > 0) {
-          // Extract continuous contours from sample points
-          const contours = extractContours(region.samplePoints, gridSize);
-          
-          // Draw each contour as a single continuous path
-          for (const contour of contours) {
-            if (contour.length < 2) continue;
-            
-            ctx.beginPath();
-            const start = worldToScreen(contour[0].x, contour[0].y);
-            ctx.moveTo(start.x, start.y);
-            
-            for (let i = 1; i < contour.length; i++) {
-              const pt = worldToScreen(contour[i].x, contour[i].y);
-              ctx.lineTo(pt.x, pt.y);
-            }
-            
-            // Close the path if start and end are close
-            const last = contour[contour.length - 1];
-            const first = contour[0];
-            if (Math.abs(last.x - first.x) < 1 && Math.abs(last.y - first.y) < 1) {
-              ctx.closePath();
-            }
-            
-            ctx.stroke();
-          }
-        } else {
-          // Initial state: use polygon vertices
-          const { vertices } = region.polygon;
-          if (vertices.length < 3) continue;
-
-          ctx.beginPath();
-          const start = worldToScreen(vertices[0].x, vertices[0].y);
-          ctx.moveTo(start.x, start.y);
-          for (let i = 1; i < vertices.length; i++) {
-            const pt = worldToScreen(vertices[i].x, vertices[i].y);
-            ctx.lineTo(pt.x, pt.y);
-          }
-          ctx.closePath();
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-
-      // Note: Obstacle rendering is now handled via the wall model - walls cut through the fill
-
-      // UNIFIED WALL MODEL: Draw all user-drawn walls to cut through the filled regions
-      // Using destination-out to create visual gaps where walls exist
-      ctx.save();
-      ctx.globalCompositeOperation = "destination-out";
-      ctx.strokeStyle = "rgba(0, 0, 0, 1)";
+      ctx.strokeStyle = WALL_COLOR; // CRT green from wallGeometry.ts
+      ctx.lineWidth = WALL_THICKNESS * scale;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      ctx.shadowColor = WALL_COLOR;
+      ctx.shadowBlur = 6 * scale;
+      
       for (const w of walls) {
-        // Only erase for user-drawn walls (not board edges or obstacle outlines)
-        if (!w.id.startsWith("user-") && !w.id.startsWith("wall-")) continue;
-        
-        // Extra thickness to cleanly cut through all the overlapping edge cells
-        ctx.lineWidth = (w.thickness + 8) * scale;
         const startScreen = worldToScreen(w.start.x, w.start.y);
         const endScreen = worldToScreen(w.end.x, w.end.y);
         ctx.beginPath();
