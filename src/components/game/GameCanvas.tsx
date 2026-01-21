@@ -1098,15 +1098,16 @@ export function GameCanvas({
           // No split, but still verify this region has balls
           const hasBallsInRegion = subRegions.length === 1 && subRegions[0].hasBalls;
           if (hasBallsInRegion) {
-            // Keep original region (with updated area estimate if available)
+            // Keep region with UPDATED sample points (reflecting new walls)
             const totalSamples = subRegions[0].samples.length;
             const cellArea = 15 * 15; // SAMPLE_GRID_SIZE squared
             updatedRegions.push({
               ...region,
+              samplePoints: subRegions[0].samples, // Use updated samples!
               estimatedArea: totalSamples * cellArea,
             });
           }
-          console.log("[CUT] Region", region.id, hasBallsInRegion ? "kept (has balls)" : "removed (no balls)");
+          console.log("[WALL] Region", region.id, hasBallsInRegion ? "kept (has balls)" : "removed (no balls)");
           continue;
         }
 
