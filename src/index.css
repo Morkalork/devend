@@ -274,4 +274,25 @@
       transform: translateX(8px);
     }
   }
+
+  /* Heart pulse animation for lives display */
+  .animate-pulse-heart {
+    animation: pulse-heart 1.2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-heart {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 0.85;
+    }
+  }
+
+  /* Hide scrollbar for carousel */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

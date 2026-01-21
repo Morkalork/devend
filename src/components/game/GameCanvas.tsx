@@ -46,6 +46,12 @@ import {
   isPointInWorldBounds,
 } from "@/lib/boardConstants";
 
+export interface GameStateInfo {
+  cutsUsed: number;
+  spaceRemaining: number;
+  lockedBalls: number;
+}
+
 interface GameCanvasProps {
   level: LevelConfig;
   levelNumber: number;
@@ -57,6 +63,7 @@ interface GameCanvasProps {
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
+  onGameStateChange?: (state: GameStateInfo) => void;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
@@ -158,6 +165,7 @@ export function GameCanvas({
   onLivesChange,
   onGameEnd,
   onLevelComplete,
+  onGameStateChange,
   tutorialMode = false,
   tutorialStep = "completed",
   onTutorialCutSuccess,
@@ -193,6 +201,17 @@ export function GameCanvas({
 
   // Calculate active modifiers from owned upgrades
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
+
+  // Notify parent of game state changes for top bar display
+  useEffect(() => {
+    if (onGameStateChange) {
+      onGameStateChange({
+        cutsUsed: cutCount,
+        spaceRemaining: remainingPercent,
+        lockedBalls: 0, // Not implemented yet
+      });
+    }
+  }, [cutCount, remainingPercent, onGameStateChange]);
 
   const gameRef = useRef({
     regions: [] as Region[],
