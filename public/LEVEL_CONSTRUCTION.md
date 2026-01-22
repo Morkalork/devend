@@ -68,12 +68,16 @@ Each ball in the `balls` array has the following properties:
 | `initialSpeed` | number | ✅ | Starting speed in world units per second (typical range: 300-450) |
 | `topSpeed` | number | ✅ | Maximum speed the ball can reach after cuts (typical range: 600-900) |
 | `color` | string | ✅ | 6-character hex color without `#` for the ball |
+| `startX` | number | ❌ | Starting X position in world units (0-900). If omitted, spawns at safe position |
+| `startY` | number | ❌ | Starting Y position in world units (0-900). If omitted, spawns at safe position |
+| `radius` | number | ❌ | Custom ball radius in world units (default: 25) |
 
 ### Ball Behavior
-- Balls spawn near the center of the playable region
+- Balls spawn at their configured `startX`/`startY` position, or find a safe spawn point if not specified
 - After each successful cut that removes area, all balls speed up by 3%
 - Ball speed is capped at `topSpeed`
 - Higher level numbers apply a speed multiplier (6% increase per level)
+- Use the Map Builder to visually position balls and avoid spawning inside obstacles
 
 ---
 

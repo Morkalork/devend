@@ -8,6 +8,8 @@ levels:
         initialSpeed: 240
         topSpeed: 480
         color: 00d4ff
+        startX: 450
+        startY: 450
   - id: level-2
     sizeThreshold: 40
     expectedCuts: 5
@@ -17,10 +19,14 @@ levels:
         initialSpeed: 280
         topSpeed: 560
         color: ff6b6b
+        startX: 300
+        startY: 450
       - id: ball-2
         initialSpeed: 256
         topSpeed: 544
         color: 4ecdc4
+        startX: 600
+        startY: 450
     entities:
       - id: wall-1
         kind: wall
@@ -45,10 +51,14 @@ levels:
         initialSpeed: 304
         topSpeed: 600
         color: ffd93d
+        startX: 250
+        startY: 450
       - id: ball-2
         initialSpeed: 288
         topSpeed: 576
         color: 6bcb77
+        startX: 650
+        startY: 450
     entities:
       - id: wall-1
         kind: wall
@@ -66,14 +76,20 @@ levels:
         initialSpeed: 320
         topSpeed: 640
         color: ff8c42
+        startX: 450
+        startY: 350
       - id: ball-2
         initialSpeed: 304
         topSpeed: 624
         color: 98d8c8
+        startX: 350
+        startY: 550
       - id: ball-3
         initialSpeed: 288
         topSpeed: 608
         color: c792ea
+        startX: 550
+        startY: 550
     entities:
       - id: wall-1
         kind: wall
@@ -98,15 +114,21 @@ levels:
         initialSpeed: 336
         topSpeed: 680
         color: ff0055
+        startX: 250
+        startY: 250
       - id: ball-2
         initialSpeed: 320
         topSpeed: 664
         color: 00ff88
+        startX: 650
+        startY: 250
       - id: ball-3
         initialSpeed: 304
         topSpeed: 648
         color: 00aaff
         radius: 80
+        startX: 450
+        startY: 700
     entities:
       - id: wall-1768817147296
         kind: wall
@@ -123,10 +145,14 @@ levels:
         initialSpeed: 336
         topSpeed: 680
         color: ff0055
+        startX: 200
+        startY: 450
       - id: ball-2
         initialSpeed: 160
         topSpeed: 344
         color: 00ff88
+        startX: 700
+        startY: 450
     entities:
       - id: wall-1
         kind: wall

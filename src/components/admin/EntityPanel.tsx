@@ -350,6 +350,26 @@ function BallEditor({ ball, onUpdate }: { ball: BallConfig; onUpdate: (updates: 
   return (
     <div className="grid grid-cols-2 gap-2 text-xs">
       <label className="space-y-1">
+        <span className="text-muted-foreground">Start X</span>
+        <input
+          type="number"
+          value={ball.startX ?? ''}
+          placeholder="auto"
+          onChange={(e) => onUpdate({ startX: e.target.value ? Number(e.target.value) : undefined })}
+          className="w-full px-2 py-1 rounded bg-background border border-border"
+        />
+      </label>
+      <label className="space-y-1">
+        <span className="text-muted-foreground">Start Y</span>
+        <input
+          type="number"
+          value={ball.startY ?? ''}
+          placeholder="auto"
+          onChange={(e) => onUpdate({ startY: e.target.value ? Number(e.target.value) : undefined })}
+          className="w-full px-2 py-1 rounded bg-background border border-border"
+        />
+      </label>
+      <label className="space-y-1">
         <span className="text-muted-foreground">Initial Speed</span>
         <input
           type="number"
