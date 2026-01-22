@@ -40,24 +40,14 @@ export function MapCanvas({
   const [boardRect, setBoardRect] = useState<BoardRect | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>({ type: 'none' });
   
-  // Ball positions (stored in editor state, not in level config)
-  const [ballPositions, setBallPositions] = useState<Record<string, { x: number; y: number }>>({});
-
-  // Initialize ball positions
-  useEffect(() => {
-    const positions: Record<string, { x: number; y: number }> = {};
-    level.balls.forEach((ball, index) => {
-      if (!ballPositions[ball.id]) {
-        positions[ball.id] = {
-          x: BOARD_WIDTH / 2 + (index - (level.balls.length - 1) / 2) * 80,
-          y: BOARD_HEIGHT / 2,
-        };
-      } else {
-        positions[ball.id] = ballPositions[ball.id];
-      }
-    });
-    setBallPositions(positions);
-  }, [level.balls]);
+  // Ball positions derived from level config (startX/startY) or default
+  const ballPositions: Record<string, { x: number; y: number }> = {};
+  level.balls.forEach((ball, index) => {
+    ballPositions[ball.id] = {
+      x: ball.startX ?? BOARD_WIDTH / 2 + (index - (level.balls.length - 1) / 2) * 80,
+      y: ball.startY ?? BOARD_HEIGHT / 2,
+    };
+  });
 
   // Resize handling
   useEffect(() => {
@@ -632,13 +622,13 @@ export function MapCanvas({
     } else if (dragMode.type === 'ball') {
       const dx = world.x - dragMode.startX;
       const dy = world.y - dragMode.startY;
-      setBallPositions(prev => ({
-        ...prev,
-        [dragMode.id]: {
-          x: Math.max(BALL_RADIUS, Math.min(BOARD_WIDTH - BALL_RADIUS, dragMode.originalX + dx)),
-          y: Math.max(BALL_RADIUS, Math.min(BOARD_HEIGHT - BALL_RADIUS, dragMode.originalY + dy)),
-        },
-      }));
+      const newX = Math.max(BALL_RADIUS, Math.min(BOARD_WIDTH - BALL_RADIUS, dragMode.originalX + dx));
+      const newY = Math.max(BALL_RADIUS, Math.min(BOARD_HEIGHT - BALL_RADIUS, dragMode.originalY + dy));
+      // Update ball position in level config
+      onUpdateBall(dragMode.id, { 
+        startX: Math.round(newX), 
+        startY: Math.round(newY) 
+      });
     } else if (dragMode.type === 'circle-radius') {
       const entity = (level.entities || []).find(e => e.id === dragMode.id) as WallCircleEntity;
       if (entity) {

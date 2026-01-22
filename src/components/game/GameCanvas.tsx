@@ -467,7 +467,7 @@ export function GameCanvas({
       };
 
       // Create all balls with positions
-      game.balls = level.balls.map((ballConfig) => {
+      game.balls = level.balls.map((ballConfig, index) => {
         const dir = getRandomDirection();
         const levelScaledSpeed =
           ballConfig.initialSpeed * baseSpeedMultiplier * ballSpeedLevelMult * activeModifiers.ballSpeedMultiplier;
@@ -477,9 +477,25 @@ export function GameCanvas({
         // Use ball-specific radius if defined, otherwise fall back to default
         const ballRadius = (ballConfig.radius ?? BASE_BALL_RADIUS) * activeModifiers.ballSizeMultiplier;
         
+        // Use configured start position if provided, otherwise fallback to safe spawn
+        let position: Vector2;
+        if (ballConfig.startX !== undefined && ballConfig.startY !== undefined) {
+          // Use configured position, but validate it's safe
+          const configuredPos = { x: ballConfig.startX, y: ballConfig.startY };
+          if (isBallPositionValid(configuredPos, ballRadius)) {
+            position = configuredPos;
+          } else {
+            console.warn(`Ball ${ballConfig.id} configured position is invalid, finding alternative`);
+            position = findValidSpawnPosition(ballRadius);
+          }
+        } else {
+          // No configured position, find a safe spawn
+          position = findValidSpawnPosition(ballRadius);
+        }
+        
         return {
           id: ballConfig.id,
-          position: findValidSpawnPosition(ballRadius), // Pass ball-specific radius
+          position,
           velocity: { x: dir.x * modifiedSpeed, y: dir.y * modifiedSpeed },
           radius: ballRadius,
           speed: modifiedSpeed,
