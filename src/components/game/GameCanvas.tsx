@@ -39,6 +39,7 @@ import {
   renderWallWithEffects, 
   clearWallImpacts 
 } from "@/lib/wallImpactEffects";
+import { playWallHitSound, playBallCollideSound, initAudio } from "@/lib/gameAudio";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -677,6 +678,8 @@ export function GameCanvas({
             boardResult.impactEdge.point,
             impactStrength
           );
+          // Play wall hit sound
+          playWallHitSound(impactStrength);
         }
       }
 
@@ -702,6 +705,8 @@ export function GameCanvas({
           const speed = vec2Length(ball.velocity);
           const impactStrength = Math.min(1, speed / 400);
           registerWallImpact(wall.start, wall.end, wallResult.impactPoint, impactStrength);
+          // Play wall hit sound
+          playWallHitSound(impactStrength);
         }
       }
     };
@@ -2055,6 +2060,10 @@ export function GameCanvas({
               // Trigger collision flash on both balls
               ball1.flashIntensity = 1.0;
               ball2.flashIntensity = 1.0;
+              
+              // Play ball collision sound
+              const collisionIntensity = Math.min(1, Math.abs(relVelNormal) / 300);
+              playBallCollideSound(collisionIntensity);
             }
           }
         }
@@ -2099,6 +2108,9 @@ export function GameCanvas({
     };
 
     const handlePointerDown = (e: PointerEvent) => {
+      // Initialize audio on first interaction (browser requirement)
+      initAudio();
+      
       if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === "prompt" || game.isRecovering)
         return;
 
