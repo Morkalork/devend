@@ -8,7 +8,9 @@ let isMuted = false;
 // Volume settings
 const VOLUME = {
   wallHit: 0.15,
-  ballCollide: 0.2,
+  ballCollide: 0.18,
+  fenceBreak: 0.25,
+  death: 0.3,
 };
 
 /**
@@ -95,8 +97,8 @@ export function playWallHitSound(intensity: number = 0.5): void {
 }
 
 /**
- * Play a "kling" sound for ball-to-ball collisions
- * Higher pitched metallic/glass-like ping
+ * Play a triangle-instrument-like "pling" for ball-to-ball collisions
+ * Bright, metallic, sustaining ring with inharmonic partials
  */
 export function playBallCollideSound(intensity: number = 0.5): void {
   const ctx = ensureAudioContext();
@@ -105,58 +107,218 @@ export function playBallCollideSound(intensity: number = 0.5): void {
   const now = ctx.currentTime;
   const volume = VOLUME.ballCollide * Math.min(1, Math.max(0.3, intensity));
   
-  // Primary tone - higher frequency ping
-  const osc1 = ctx.createOscillator();
-  const gain1 = ctx.createGain();
+  // Triangle instruments have inharmonic partials (not exact integer ratios)
+  // Fundamental around 880Hz (A5) with characteristic triangle overtones
+  const fundamentalFreq = 880 + (Math.random() - 0.5) * 40; // Slight variation
   
-  osc1.type = 'sine';
-  osc1.frequency.setValueAtTime(880, now); // A5
-  osc1.frequency.exponentialRampToValueAtTime(660, now + 0.1);
+  // Triangle partial ratios (inharmonic for that metallic quality)
+  const partials = [
+    { ratio: 1.0, amp: 1.0, decay: 0.8 },      // Fundamental
+    { ratio: 2.76, amp: 0.5, decay: 0.6 },     // Inharmonic 2nd
+    { ratio: 5.4, amp: 0.25, decay: 0.4 },     // Inharmonic 3rd
+    { ratio: 8.93, amp: 0.12, decay: 0.25 },   // Inharmonic 4th
+  ];
   
-  osc1.connect(gain1);
-  gain1.connect(masterGain);
+  partials.forEach((partial) => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const highpass = ctx.createBiquadFilter();
+    
+    // High-pass to remove low rumble, keeping it bright
+    highpass.type = 'highpass';
+    highpass.frequency.value = 400;
+    
+    osc.type = 'sine';
+    osc.frequency.value = fundamentalFreq * partial.ratio;
+    
+    osc.connect(highpass);
+    highpass.connect(gain);
+    gain.connect(masterGain);
+    
+    const partialVolume = volume * partial.amp;
+    const decayTime = partial.decay;
+    
+    // Sharp attack, long sustaining decay (triangle characteristic)
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(partialVolume, now + 0.001);
+    gain.gain.setValueAtTime(partialVolume, now + 0.002);
+    gain.gain.exponentialRampToValueAtTime(partialVolume * 0.3, now + decayTime * 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + decayTime);
+    
+    osc.start(now);
+    osc.stop(now + decayTime + 0.05);
+  });
   
-  gain1.gain.setValueAtTime(0, now);
-  gain1.gain.linearRampToValueAtTime(volume, now + 0.002);
-  gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  // Add subtle shimmer/beating with slightly detuned pair
+  const shimmer1 = ctx.createOscillator();
+  const shimmer2 = ctx.createOscillator();
+  const shimmerGain = ctx.createGain();
   
-  osc1.start(now);
-  osc1.stop(now + 0.2);
+  shimmer1.type = 'sine';
+  shimmer2.type = 'sine';
+  shimmer1.frequency.value = fundamentalFreq * 2.76;
+  shimmer2.frequency.value = fundamentalFreq * 2.76 + 3; // Slight detune for beating
   
-  // Harmonic overtone for metallic quality
-  const osc2 = ctx.createOscillator();
-  const gain2 = ctx.createGain();
+  shimmer1.connect(shimmerGain);
+  shimmer2.connect(shimmerGain);
+  shimmerGain.connect(masterGain);
   
-  osc2.type = 'sine';
-  osc2.frequency.setValueAtTime(1760, now); // A6 (octave above)
-  osc2.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+  shimmerGain.gain.setValueAtTime(0, now);
+  shimmerGain.gain.linearRampToValueAtTime(volume * 0.08, now + 0.001);
+  shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
   
-  osc2.connect(gain2);
-  gain2.connect(masterGain);
+  shimmer1.start(now);
+  shimmer2.start(now);
+  shimmer1.stop(now + 0.55);
+  shimmer2.stop(now + 0.55);
+}
+
+/**
+ * Play a breaking/shattering sound when fence is destroyed by ball
+ * Harsh, percussive crack with falling debris
+ */
+export function playFenceBreakSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
   
-  gain2.gain.setValueAtTime(0, now);
-  gain2.gain.linearRampToValueAtTime(volume * 0.4, now + 0.001);
-  gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+  const now = ctx.currentTime;
+  const volume = VOLUME.fenceBreak;
   
-  osc2.start(now);
-  osc2.stop(now + 0.15);
+  // Initial crack - short noise burst
+  const crackBuffer = createNoiseBuffer(ctx, 0.1);
+  const crackSource = ctx.createBufferSource();
+  const crackGain = ctx.createGain();
+  const crackFilter = ctx.createBiquadFilter();
   
-  // Third harmonic for shimmer
-  const osc3 = ctx.createOscillator();
-  const gain3 = ctx.createGain();
+  crackSource.buffer = crackBuffer;
+  crackFilter.type = 'bandpass';
+  crackFilter.frequency.value = 2000;
+  crackFilter.Q.value = 1;
   
-  osc3.type = 'sine';
-  osc3.frequency.setValueAtTime(2640, now); // E7
+  crackSource.connect(crackFilter);
+  crackFilter.connect(crackGain);
+  crackGain.connect(masterGain);
   
-  osc3.connect(gain3);
-  gain3.connect(masterGain);
+  crackGain.gain.setValueAtTime(volume, now);
+  crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
   
-  gain3.gain.setValueAtTime(0, now);
-  gain3.gain.linearRampToValueAtTime(volume * 0.15, now + 0.001);
-  gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+  crackSource.start(now);
+  crackSource.stop(now + 0.1);
   
-  osc3.start(now);
-  osc3.stop(now + 0.1);
+  // Low thump for impact
+  const thump = ctx.createOscillator();
+  const thumpGain = ctx.createGain();
+  
+  thump.type = 'sine';
+  thump.frequency.setValueAtTime(150, now);
+  thump.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+  
+  thump.connect(thumpGain);
+  thumpGain.connect(masterGain);
+  
+  thumpGain.gain.setValueAtTime(0, now);
+  thumpGain.gain.linearRampToValueAtTime(volume * 0.6, now + 0.005);
+  thumpGain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  
+  thump.start(now);
+  thump.stop(now + 0.2);
+  
+  // Debris/shatter tail - filtered noise
+  const debrisBuffer = createNoiseBuffer(ctx, 0.25);
+  const debrisSource = ctx.createBufferSource();
+  const debrisGain = ctx.createGain();
+  const debrisFilter = ctx.createBiquadFilter();
+  
+  debrisSource.buffer = debrisBuffer;
+  debrisFilter.type = 'highpass';
+  debrisFilter.frequency.value = 1500;
+  
+  debrisSource.connect(debrisFilter);
+  debrisFilter.connect(debrisGain);
+  debrisGain.connect(masterGain);
+  
+  debrisGain.gain.setValueAtTime(0, now);
+  debrisGain.gain.linearRampToValueAtTime(volume * 0.3, now + 0.02);
+  debrisGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+  
+  debrisSource.start(now);
+  debrisSource.stop(now + 0.25);
+}
+
+/**
+ * Play a dramatic death/game over sound
+ * Descending tones with impact
+ */
+export function playDeathSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  
+  const now = ctx.currentTime;
+  const volume = VOLUME.death;
+  
+  // Descending tone - ominous drop
+  const drop = ctx.createOscillator();
+  const dropGain = ctx.createGain();
+  const dropFilter = ctx.createBiquadFilter();
+  
+  dropFilter.type = 'lowpass';
+  dropFilter.frequency.value = 800;
+  
+  drop.type = 'sawtooth';
+  drop.frequency.setValueAtTime(400, now);
+  drop.frequency.exponentialRampToValueAtTime(80, now + 0.4);
+  
+  drop.connect(dropFilter);
+  dropFilter.connect(dropGain);
+  dropGain.connect(masterGain);
+  
+  dropGain.gain.setValueAtTime(0, now);
+  dropGain.gain.linearRampToValueAtTime(volume * 0.5, now + 0.01);
+  dropGain.gain.setValueAtTime(volume * 0.5, now + 0.3);
+  dropGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+  
+  drop.start(now);
+  drop.stop(now + 0.65);
+  
+  // Impact boom
+  const boom = ctx.createOscillator();
+  const boomGain = ctx.createGain();
+  
+  boom.type = 'sine';
+  boom.frequency.setValueAtTime(80, now + 0.05);
+  boom.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+  
+  boom.connect(boomGain);
+  boomGain.connect(masterGain);
+  
+  boomGain.gain.setValueAtTime(0, now);
+  boomGain.gain.linearRampToValueAtTime(volume * 0.7, now + 0.06);
+  boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+  
+  boom.start(now);
+  boom.stop(now + 0.55);
+  
+  // Noise crash
+  const crashBuffer = createNoiseBuffer(ctx, 0.3);
+  const crashSource = ctx.createBufferSource();
+  const crashGain = ctx.createGain();
+  const crashFilter = ctx.createBiquadFilter();
+  
+  crashSource.buffer = crashBuffer;
+  crashFilter.type = 'lowpass';
+  crashFilter.frequency.setValueAtTime(3000, now);
+  crashFilter.frequency.exponentialRampToValueAtTime(200, now + 0.4);
+  
+  crashSource.connect(crashFilter);
+  crashFilter.connect(crashGain);
+  crashGain.connect(masterGain);
+  
+  crashGain.gain.setValueAtTime(0, now);
+  crashGain.gain.linearRampToValueAtTime(volume * 0.4, now + 0.02);
+  crashGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+  
+  crashSource.start(now);
+  crashSource.stop(now + 0.4);
 }
 
 /**

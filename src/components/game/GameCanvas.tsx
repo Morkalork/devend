@@ -39,7 +39,7 @@ import {
   renderWallWithEffects, 
   clearWallImpacts 
 } from "@/lib/wallImpactEffects";
-import { playWallHitSound, playBallCollideSound, initAudio } from "@/lib/gameAudio";
+import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playDeathSound, initAudio } from "@/lib/gameAudio";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -729,6 +729,7 @@ export function GameCanvas({
 
     const handleGameOver = () => {
       game.gameOver = true;
+      playDeathSound();
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
 
       // If in push mode, level is still cleared - just forfeit space bonus (penalty for failing push)
@@ -1433,6 +1434,7 @@ export function GameCanvas({
             }
 
             // Failed cut - lose a life
+            playFenceBreakSound();
             const newLives = livesRef.current - 1;
             livesRef.current = newLives;
             setDisplayLives(newLives);
