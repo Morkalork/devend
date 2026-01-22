@@ -65,6 +65,7 @@ export function GameScreen({
       <div className="fixed inset-0 flex flex-col z-10">
         {/* Game Top Bar - Two rows */}
         <GameTopBar
+          levelNumber={levelNumber}
           cutsUsed={gameState.cutsUsed}
           parCuts={level.expectedCuts}
           lives={lives}
