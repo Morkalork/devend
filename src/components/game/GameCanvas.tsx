@@ -33,6 +33,12 @@ import {
 } from "@/lib/polygon";
 import { extractContours } from "@/lib/contour";
 import { Wall, WALL_THICKNESS, WALL_COLOR, createWallsFromPolygon, findWallTermination } from "@/lib/wallGeometry";
+import { 
+  registerWallImpact, 
+  updateWallImpacts, 
+  renderWallWithEffects, 
+  clearWallImpacts 
+} from "@/lib/wallImpactEffects";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -554,6 +560,7 @@ export function GameCanvas({
       game.currentSwipePos = null;
       game.lastTime = 0;
       game.wallCount = 0;
+      clearWallImpacts(); // Clear any lingering visual effects
       setCutCount(0);
       setRemainingPercent(Math.round(targetRemaining));
     };
@@ -596,7 +603,7 @@ export function GameCanvas({
       lineStart: Vector2,
       lineEnd: Vector2,
       lineThickness: number,
-    ): { position: Vector2; velocity: Vector2 } => {
+    ): { position: Vector2; velocity: Vector2; collided: boolean; impactPoint?: Vector2 } => {
       const dist = pointToSegmentDistance(ballPos, lineStart, lineEnd);
       const collisionDist = ballRadius + lineThickness / 2;
 
@@ -632,10 +639,10 @@ export function GameCanvas({
         const penetration = collisionDist - dist;
         const newPos = vec2Add(ballPos, vec2Scale(normal, penetration + 0.5));
 
-        return { position: newPos, velocity: newVel };
+        return { position: newPos, velocity: newVel, collided: true, impactPoint: closestPoint };
       }
 
-      return { position: ballPos, velocity: ballVel };
+      return { position: ballPos, velocity: ballVel, collided: false };
     };
 
     // Update ball position and bounce off all walls (all in world coordinates)
@@ -659,6 +666,18 @@ export function GameCanvas({
         const boardResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, game.boardPolygon);
         ball.position = boardResult.position;
         ball.velocity = boardResult.velocity;
+        
+        // Register wall impact for visual effect
+        if (boardResult.collided && boardResult.impactEdge) {
+          const speed = vec2Length(ball.velocity);
+          const impactStrength = Math.min(1, speed / 400); // Normalize based on typical ball speed
+          registerWallImpact(
+            boardResult.impactEdge.start,
+            boardResult.impactEdge.end,
+            boardResult.impactEdge.point,
+            impactStrength
+          );
+        }
       }
 
       // UNIFIED WALL MODEL: Balls bounce off all walls (board edges, obstacles, user walls)
@@ -677,6 +696,13 @@ export function GameCanvas({
         );
         ball.position = wallResult.position;
         ball.velocity = wallResult.velocity;
+        
+        // Register wall impact for visual effect
+        if (wallResult.collided && wallResult.impactPoint) {
+          const speed = vec2Length(ball.velocity);
+          const impactStrength = Math.min(1, speed / 400);
+          registerWallImpact(wall.start, wall.end, wallResult.impactPoint, impactStrength);
+        }
       }
     };
 
@@ -1600,19 +1626,32 @@ export function GameCanvas({
           for (const seg of segments) {
             const startScreen = worldToScreen(seg.start.x, seg.start.y);
             const endScreen = worldToScreen(seg.end.x, seg.end.y);
-            ctx.beginPath();
-            ctx.moveTo(startScreen.x, startScreen.y);
-            ctx.lineTo(endScreen.x, endScreen.y);
-            ctx.stroke();
+            // Use impact-aware rendering for clipped segments
+            renderWallWithEffects(
+              ctx,
+              startScreen,
+              endScreen,
+              seg.start,
+              seg.end,
+              scale,
+              WALL_COLOR,
+              WALL_THICKNESS * scale
+            );
           }
         } else {
-          // Obstacle edges render as-is
+          // Obstacle edges render as-is with impact effects
           const startScreen = worldToScreen(w.start.x, w.start.y);
           const endScreen = worldToScreen(w.end.x, w.end.y);
-          ctx.beginPath();
-          ctx.moveTo(startScreen.x, startScreen.y);
-          ctx.lineTo(endScreen.x, endScreen.y);
-          ctx.stroke();
+          renderWallWithEffects(
+            ctx,
+            startScreen,
+            endScreen,
+            w.start,
+            w.end,
+            scale,
+            WALL_COLOR,
+            WALL_THICKNESS * scale
+          );
         }
       }
       ctx.restore();
@@ -2034,6 +2073,10 @@ export function GameCanvas({
       }
       handleBallCollisions();
       updateWall(cappedDt);
+      
+      // Update wall impact visual effects (time-based)
+      updateWallImpacts();
+      
       render();
 
       // Apply completed wall cut immediately

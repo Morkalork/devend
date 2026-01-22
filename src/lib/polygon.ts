@@ -449,11 +449,12 @@ export function resolveBallPolygonCollision(
   ballVel: Vector2,
   ballRadius: number,
   poly: Polygon
-): { position: Vector2; velocity: Vector2; collided: boolean } {
+): { position: Vector2; velocity: Vector2; collided: boolean; impactEdge?: { start: Vector2; end: Vector2; point: Vector2 } } {
   const { vertices } = poly;
   let newPos = { ...ballPos };
   let newVel = { ...ballVel };
   let collided = false;
+  let impactEdge: { start: Vector2; end: Vector2; point: Vector2 } | undefined;
   
   for (let i = 0; i < vertices.length; i++) {
     const j = (i + 1) % vertices.length;
@@ -486,10 +487,13 @@ export function resolveBallPolygonCollision(
       // Push ball out
       const penetration = ballRadius - dist;
       newPos = vec2Add(newPos, vec2Scale(normal, penetration + 0.5));
+      
+      // Record impact edge for visual effects
+      impactEdge = { start: { ...p1 }, end: { ...p2 }, point: { ...closestPoint } };
     }
   }
   
-  return { position: newPos, velocity: newVel, collided };
+  return { position: newPos, velocity: newVel, collided, impactEdge };
 }
 
 // Ball collision with polygon edges (ball OUTSIDE polygon, bounces off obstacle)
