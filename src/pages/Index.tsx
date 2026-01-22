@@ -19,7 +19,7 @@ import { GameResult, LevelScoreData } from '@/types/game';
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
 
-const BASE_LIVES = 2;
+const BASE_LIVES = 3;
 
 const Index = () => {
   const { 
