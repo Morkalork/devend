@@ -8,7 +8,7 @@ let isMuted = false;
 // Volume settings
 const VOLUME = {
   wallHit: 0.15,
-  ballCollide: 0.18,
+  ballCollide: 0.09,
   fenceBreak: 0.25,
   death: 0.3,
 };
