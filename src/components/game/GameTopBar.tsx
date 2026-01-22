@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/tooltip';
 
 interface GameTopBarProps {
+  levelNumber: number;
   cutsUsed: number;
   parCuts: number;
   lives: number;
@@ -21,6 +22,7 @@ interface GameTopBarProps {
 }
 
 export function GameTopBar({
+  levelNumber,
   cutsUsed,
   parCuts,
   lives,
@@ -80,6 +82,21 @@ export function GameTopBar({
           borderBottom: `2px solid ${accentColor}44`,
         }}
       >
+        {/* Level Number */}
+        <div 
+          className="flex items-center gap-1 min-w-0"
+          style={{ color: accentColor }}
+        >
+          <span 
+            className="font-display text-base font-bold"
+            style={{ 
+              textShadow: `0 0 10px ${accentColor}88`,
+            }}
+          >
+            LV{levelNumber}
+          </span>
+        </div>
+
         {/* Cuts / Par */}
         <div className="flex items-center gap-1.5 min-w-0">
           <Scissors 
