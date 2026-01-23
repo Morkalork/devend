@@ -5,8 +5,8 @@ levels:
     points: 100
     balls:
       - id: ball-1
-        initialSpeed: 240
-        topSpeed: 480
+        initialSpeed: 192
+        topSpeed: 384
         color: 00d4ff
         startX: 450
         startY: 450
@@ -16,14 +16,14 @@ levels:
     points: 150
     balls:
       - id: ball-1
-        initialSpeed: 280
-        topSpeed: 560
+        initialSpeed: 224
+        topSpeed: 448
         color: ff6b6b
         startX: 300
         startY: 450
       - id: ball-2
-        initialSpeed: 256
-        topSpeed: 544
+        initialSpeed: 205
+        topSpeed: 435
         color: 4ecdc4
         startX: 600
         startY: 450
@@ -48,14 +48,14 @@ levels:
     points: 200
     balls:
       - id: ball-1
-        initialSpeed: 304
-        topSpeed: 600
+        initialSpeed: 243
+        topSpeed: 480
         color: ffd93d
         startX: 250
         startY: 450
       - id: ball-2
-        initialSpeed: 288
-        topSpeed: 576
+        initialSpeed: 230
+        topSpeed: 461
         color: 6bcb77
         startX: 650
         startY: 450
@@ -73,20 +73,20 @@ levels:
     points: 250
     balls:
       - id: ball-1
-        initialSpeed: 320
-        topSpeed: 640
+        initialSpeed: 256
+        topSpeed: 512
         color: ff8c42
         startX: 450
         startY: 350
       - id: ball-2
-        initialSpeed: 304
-        topSpeed: 624
+        initialSpeed: 243
+        topSpeed: 499
         color: 98d8c8
         startX: 350
         startY: 550
       - id: ball-3
-        initialSpeed: 288
-        topSpeed: 608
+        initialSpeed: 230
+        topSpeed: 486
         color: c792ea
         startX: 550
         startY: 550
@@ -111,20 +111,20 @@ levels:
     points: 300
     balls:
       - id: ball-1
-        initialSpeed: 336
-        topSpeed: 680
+        initialSpeed: 269
+        topSpeed: 544
         color: ff0055
         startX: 250
         startY: 250
       - id: ball-2
-        initialSpeed: 320
-        topSpeed: 664
+        initialSpeed: 256
+        topSpeed: 531
         color: 00ff88
         startX: 650
         startY: 250
       - id: ball-3
-        initialSpeed: 304
-        topSpeed: 648
+        initialSpeed: 243
+        topSpeed: 518
         color: 00aaff
         radius: 80
         startX: 450
@@ -142,14 +142,14 @@ levels:
     points: 300
     balls:
       - id: ball-1
-        initialSpeed: 336
-        topSpeed: 680
+        initialSpeed: 269
+        topSpeed: 544
         color: ff0055
         startX: 200
         startY: 450
       - id: ball-2
-        initialSpeed: 160
-        topSpeed: 344
+        initialSpeed: 128
+        topSpeed: 275
         color: 00ff88
         startX: 700
         startY: 450
