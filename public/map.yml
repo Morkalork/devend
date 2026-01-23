@@ -145,14 +145,14 @@ levels:
         initialSpeed: 269
         topSpeed: 544
         color: ff0055
-        startX: 200
-        startY: 450
+        startX: 250
+        startY: 150
       - id: ball-2
         initialSpeed: 128
         topSpeed: 275
         color: 00ff88
-        startX: 700
-        startY: 450
+        startX: 650
+        startY: 150
     entities:
       - id: wall-1
         kind: wall
