@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { LevelConfig, LevelEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
-import { BOARD_WIDTH, BOARD_HEIGHT, computeBoardRect, BoardRect } from '@/lib/boardConstants';
+import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from '@/lib/boardConstants';
 
 interface MapCanvasProps {
   level: LevelConfig;
@@ -25,6 +25,33 @@ type DragMode =
   | { type: 'polygon-point'; id: string; pointIndex: number; startX: number; startY: number }
   | { type: 'polygon-edge'; id: string; edgeIndex: number; startX: number; startY: number; originalPoints: [number, number][] }
   | { type: 'rect-resize'; id: string; handle: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } };
+
+/**
+ * Compute board rect for the Map Builder (no top UI offset like the game)
+ */
+function computeEditorBoardRect(containerWidth: number, containerHeight: number): BoardRect {
+  const padding = 20;
+  const availableWidth = containerWidth - padding * 2;
+  const availableHeight = containerHeight - padding * 2;
+  
+  // Determine the largest square that fits
+  const boardSize = Math.min(availableWidth, availableHeight);
+  
+  // Center in container
+  const left = (containerWidth - boardSize) / 2;
+  const top = (containerHeight - boardSize) / 2;
+  
+  // Scale factor: world units to screen pixels
+  const scale = boardSize / BOARD_WIDTH;
+  
+  return {
+    left,
+    top,
+    width: boardSize,
+    height: boardSize,
+    scale,
+  };
+}
 
 export function MapCanvas({
   level,
@@ -55,7 +82,7 @@ export function MapCanvas({
       if (!containerRef.current || !canvasRef.current) return;
       
       const container = containerRef.current;
-      const rect = computeBoardRect(container.clientWidth, container.clientHeight);
+      const rect = computeEditorBoardRect(container.clientWidth, container.clientHeight);
       setBoardRect(rect);
       
       canvasRef.current.width = container.clientWidth;
