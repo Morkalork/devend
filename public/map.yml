@@ -192,3 +192,484 @@ levels:
         cx: 155.0735078699449
         cy: 468.2352510340074
         radius: 41
+
+  - id: level-7
+    sizeThreshold: 20
+    expectedCuts: 12
+    points: 400
+    balls:
+      - id: ball-1
+        initialSpeed: 280
+        topSpeed: 560
+        color: ff3366
+        startX: 200
+        startY: 200
+      - id: ball-2
+        initialSpeed: 270
+        topSpeed: 550
+        color: 33ff99
+        startX: 700
+        startY: 200
+      - id: ball-3
+        initialSpeed: 260
+        topSpeed: 540
+        color: 6633ff
+        startX: 450
+        startY: 700
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: rect
+        x: 350
+        "y": 100
+        width: 200
+        height: 100
+      - id: wall-2
+        kind: wall
+        shape: rect
+        x: 350
+        "y": 700
+        width: 200
+        height: 100
+
+  - id: level-8
+    sizeThreshold: 18
+    expectedCuts: 14
+    points: 500
+    balls:
+      - id: ball-1
+        initialSpeed: 290
+        topSpeed: 580
+        color: ff9900
+        startX: 150
+        startY: 450
+      - id: ball-2
+        initialSpeed: 280
+        topSpeed: 570
+        color: 0099ff
+        startX: 750
+        startY: 450
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 300
+        radius: 100
+      - id: wall-2
+        kind: wall
+        shape: circle
+        cx: 600
+        cy: 600
+        radius: 100
+
+  - id: level-9
+    sizeThreshold: 15
+    expectedCuts: 16
+    points: 600
+    balls:
+      - id: ball-1
+        initialSpeed: 300
+        topSpeed: 600
+        color: ff0066
+        startX: 450
+        startY: 150
+      - id: ball-2
+        initialSpeed: 290
+        topSpeed: 590
+        color: 66ff00
+        startX: 200
+        startY: 600
+      - id: ball-3
+        initialSpeed: 280
+        topSpeed: 580
+        color: 0066ff
+        startX: 700
+        startY: 600
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: polygon
+        points:
+          - - 400
+            - 400
+          - - 500
+            - 400
+          - - 500
+            - 500
+          - - 400
+            - 500
+      - id: wall-2
+        kind: wall
+        shape: rect
+        x: 100
+        "y": 100
+        width: 150
+        height: 150
+      - id: wall-3
+        kind: wall
+        shape: rect
+        x: 650
+        "y": 100
+        width: 150
+        height: 150
+
+  - id: level-10
+    sizeThreshold: 12
+    expectedCuts: 18
+    points: 750
+    balls:
+      - id: ball-1
+        initialSpeed: 310
+        topSpeed: 620
+        color: cc00ff
+        startX: 250
+        startY: 250
+      - id: ball-2
+        initialSpeed: 300
+        topSpeed: 610
+        color: 00ffcc
+        startX: 650
+        startY: 250
+      - id: ball-3
+        initialSpeed: 290
+        topSpeed: 600
+        color: ffcc00
+        startX: 450
+        startY: 650
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 450
+        radius: 150
+
+  - id: level-11
+    sizeThreshold: 10
+    expectedCuts: 20
+    points: 900
+    balls:
+      - id: ball-1
+        initialSpeed: 320
+        topSpeed: 640
+        color: ff4444
+        startX: 150
+        startY: 150
+      - id: ball-2
+        initialSpeed: 310
+        topSpeed: 630
+        color: 44ff44
+        startX: 750
+        startY: 150
+      - id: ball-3
+        initialSpeed: 300
+        topSpeed: 620
+        color: 4444ff
+        startX: 150
+        startY: 750
+      - id: ball-4
+        initialSpeed: 290
+        topSpeed: 610
+        color: ffff44
+        startX: 750
+        startY: 750
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: rect
+        x: 350
+        "y": 350
+        width: 200
+        height: 200
+
+  - id: level-12
+    sizeThreshold: 10
+    expectedCuts: 22
+    points: 1000
+    balls:
+      - id: ball-1
+        initialSpeed: 330
+        topSpeed: 660
+        color: ff6699
+        startX: 450
+        startY: 200
+      - id: ball-2
+        initialSpeed: 320
+        topSpeed: 650
+        color: 99ff66
+        startX: 200
+        startY: 500
+      - id: ball-3
+        initialSpeed: 310
+        topSpeed: 640
+        color: 6699ff
+        startX: 700
+        startY: 500
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: circle
+        cx: 250
+        cy: 250
+        radius: 80
+      - id: wall-2
+        kind: wall
+        shape: circle
+        cx: 650
+        cy: 250
+        radius: 80
+      - id: wall-3
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 650
+        radius: 80
+
+  - id: level-13
+    sizeThreshold: 8
+    expectedCuts: 24
+    points: 1200
+    balls:
+      - id: ball-1
+        initialSpeed: 340
+        topSpeed: 680
+        color: ff0099
+        startX: 200
+        startY: 200
+      - id: ball-2
+        initialSpeed: 330
+        topSpeed: 670
+        color: 99ff00
+        startX: 700
+        startY: 200
+      - id: ball-3
+        initialSpeed: 320
+        topSpeed: 660
+        color: 0099ff
+        startX: 200
+        startY: 700
+      - id: ball-4
+        initialSpeed: 310
+        topSpeed: 650
+        color: ff9900
+        startX: 700
+        startY: 700
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: polygon
+        points:
+          - - 450
+            - 300
+          - - 550
+            - 450
+          - - 450
+            - 600
+          - - 350
+            - 450
+      - id: wall-2
+        kind: wall
+        shape: rect
+        x: 50
+        "y": 400
+        width: 100
+        height: 100
+      - id: wall-3
+        kind: wall
+        shape: rect
+        x: 750
+        "y": 400
+        width: 100
+        height: 100
+
+  - id: level-14
+    sizeThreshold: 8
+    expectedCuts: 26
+    points: 1400
+    balls:
+      - id: ball-1
+        initialSpeed: 350
+        topSpeed: 700
+        color: dd44ff
+        startX: 300
+        startY: 300
+      - id: ball-2
+        initialSpeed: 340
+        topSpeed: 690
+        color: 44ffdd
+        startX: 600
+        startY: 300
+      - id: ball-3
+        initialSpeed: 330
+        topSpeed: 680
+        color: ffdd44
+        startX: 300
+        startY: 600
+      - id: ball-4
+        initialSpeed: 320
+        topSpeed: 670
+        color: 44ddff
+        startX: 600
+        startY: 600
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 200
+        radius: 100
+      - id: wall-2
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 700
+        radius: 100
+      - id: wall-3
+        kind: wall
+        shape: rect
+        x: 200
+        "y": 400
+        width: 100
+        height: 100
+      - id: wall-4
+        kind: wall
+        shape: rect
+        x: 600
+        "y": 400
+        width: 100
+        height: 100
+
+  - id: level-15
+    sizeThreshold: 5
+    expectedCuts: 28
+    points: 1600
+    balls:
+      - id: ball-1
+        initialSpeed: 360
+        topSpeed: 720
+        color: ff2288
+        startX: 450
+        startY: 150
+      - id: ball-2
+        initialSpeed: 350
+        topSpeed: 710
+        color: 22ff88
+        startX: 150
+        startY: 450
+      - id: ball-3
+        initialSpeed: 340
+        topSpeed: 700
+        color: 8822ff
+        startX: 750
+        startY: 450
+      - id: ball-4
+        initialSpeed: 330
+        topSpeed: 690
+        color: 88ff22
+        startX: 450
+        startY: 750
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 450
+        radius: 120
+      - id: wall-2
+        kind: wall
+        shape: circle
+        cx: 250
+        cy: 250
+        radius: 60
+      - id: wall-3
+        kind: wall
+        shape: circle
+        cx: 650
+        cy: 250
+        radius: 60
+      - id: wall-4
+        kind: wall
+        shape: circle
+        cx: 250
+        cy: 650
+        radius: 60
+      - id: wall-5
+        kind: wall
+        shape: circle
+        cx: 650
+        cy: 650
+        radius: 60
+
+  - id: level-16
+    sizeThreshold: 5
+    expectedCuts: 30
+    points: 2000
+    balls:
+      - id: ball-1
+        initialSpeed: 380
+        topSpeed: 760
+        color: ff0000
+        startX: 200
+        startY: 200
+      - id: ball-2
+        initialSpeed: 370
+        topSpeed: 750
+        color: 00ff00
+        startX: 700
+        startY: 200
+      - id: ball-3
+        initialSpeed: 360
+        topSpeed: 740
+        color: 0000ff
+        startX: 200
+        startY: 700
+      - id: ball-4
+        initialSpeed: 350
+        topSpeed: 730
+        color: ffff00
+        startX: 700
+        startY: 700
+      - id: ball-5
+        initialSpeed: 340
+        topSpeed: 720
+        color: ff00ff
+        startX: 450
+        startY: 450
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: polygon
+        points:
+          - - 350
+            - 100
+          - - 550
+            - 100
+          - - 550
+            - 250
+          - - 350
+            - 250
+      - id: wall-2
+        kind: wall
+        shape: polygon
+        points:
+          - - 350
+            - 650
+          - - 550
+            - 650
+          - - 550
+            - 800
+          - - 350
+            - 800
+      - id: wall-3
+        kind: wall
+        shape: circle
+        cx: 150
+        cy: 450
+        radius: 70
+      - id: wall-4
+        kind: wall
+        shape: circle
+        cx: 750
+        cy: 450
+        radius: 70

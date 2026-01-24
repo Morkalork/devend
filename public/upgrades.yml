@@ -288,3 +288,104 @@ upgrades:
     priceMax: 2500
     modifiers:
       wallShield: 2
+
+  - id: "featherweight"
+    name: "Featherweight"
+    grade: "common"
+    icon: "/icons/shrink.svg"
+    description: "Balls are 15% smaller"
+    levelAvailability: 1
+    levelRemoved: 4
+    priceMin: 35
+    priceMax: 70
+    modifiers:
+      ballSize: 0.85
+
+  - id: "quick_reflexes"
+    name: "Quick Reflexes"
+    grade: "common"
+    icon: "/icons/fast.svg"
+    description: "Walls generate 10% faster"
+    levelAvailability: 2
+    levelRemoved: 5
+    priceMin: 45
+    priceMax: 95
+    modifiers:
+      wallGenerationSpeed: 1.1
+
+  - id: "double_life"
+    name: "Double Life"
+    grade: "rare"
+    icon: "/icons/heart_plus.svg"
+    description: "Gain +2 lives"
+    levelAvailability: 5
+    priceMin: 400
+    priceMax: 700
+    modifiers:
+      lives: 2
+
+  - id: "mega_shop"
+    name: "Mega Shop"
+    grade: "rare"
+    icon: "/icons/shop.svg"
+    description: "Shop shows 5 upgrades instead of 3"
+    levelAvailability: 6
+    priceMin: 280
+    priceMax: 480
+    modifiers:
+      shopSlots: 2
+
+  - id: "precision_cut"
+    name: "Precision Cut"
+    grade: "uncommon"
+    icon: "/icons/precision.svg"
+    description: "Swipe sensitivity increased by 15%"
+    levelAvailability: 3
+    priceMin: 90
+    priceMax: 170
+    modifiers:
+      swipeSensitivity: 1.15
+
+  - id: "turtle_mode"
+    name: "Turtle Mode"
+    grade: "uncommon"
+    icon: "/icons/slow.svg"
+    description: "Ball speed reduced by 10%"
+    levelAvailability: 2
+    priceMin: 65
+    priceMax: 130
+    modifiers:
+      ballSpeed: 0.9
+
+  - id: "wall_fortress"
+    name: "Wall Fortress"
+    grade: "legendary"
+    icon: "/icons/net.svg"
+    description: "Wall grace period increased significantly"
+    levelAvailability: 9
+    priceMin: 600
+    priceMax: 1000
+    modifiers:
+      wallGrace: 0.25
+
+  - id: "coin_magnet"
+    name: "Coin Magnet"
+    grade: "rare"
+    icon: "/icons/bonus.svg"
+    description: "Gain +15% points from level completion"
+    levelAvailability: 5
+    priceMin: 200
+    priceMax: 380
+    modifiers:
+      scoreMultiplier: 1.15
+
+  - id: "atomic_balls"
+    name: "Atomic Balls"
+    grade: "legendary"
+    icon: "/icons/micro.svg"
+    description: "Makes balls 50% smaller"
+    levelAvailability: 9
+    priceMin: 550
+    priceMax: 950
+    modifiers:
+      ballSize: 0.5
