@@ -57,6 +57,8 @@ export interface GameStateInfo {
   cutsUsed: number;
   spaceRemaining: number;
   lockedBalls: number;
+  pushMode: "none" | "prompt" | "pushing";
+  onBankAndContinue?: () => void;
 }
 
 interface GameCanvasProps {
@@ -210,16 +212,7 @@ export function GameCanvas({
   // Calculate active modifiers from owned upgrades
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
 
-  // Notify parent of game state changes for top bar display
-  useEffect(() => {
-    if (onGameStateChange) {
-      onGameStateChange({
-        cutsUsed: cutCount,
-        spaceRemaining: remainingPercent,
-        lockedBalls: 0, // Not implemented yet
-      });
-    }
-  }, [cutCount, remainingPercent, onGameStateChange]);
+  // Game state notification moved to after handleBankAndContinue definition
 
   const gameRef = useRef({
     regions: [] as Region[],
@@ -2333,6 +2326,19 @@ export function GameCanvas({
     }, 300);
   }, [level, levelNumber, activeModifiers, onLevelComplete]);
 
+  // Notify parent of game state changes for top bar display
+  useEffect(() => {
+    if (onGameStateChange) {
+      onGameStateChange({
+        cutsUsed: cutCount,
+        spaceRemaining: remainingPercent,
+        lockedBalls: 0, // Not implemented yet
+        pushMode: pushMode,
+        onBankAndContinue: handleBankAndContinue,
+      });
+    }
+  }, [cutCount, remainingPercent, pushMode, handleBankAndContinue, onGameStateChange]);
+
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;
     game.pushMode = "pushing";
@@ -2403,29 +2409,11 @@ export function GameCanvas({
         <canvas ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" />
       </div>
 
-      {/* Bottom section - Bottom UI band (~15% height) */}
+      {/* Bottom section - Bottom UI band (~15% height) - empty now, button moved to GameScreen */}
       <div 
         className="flex-shrink-0 px-4 py-3 flex justify-center items-center" 
-        style={{ minHeight: "15%", backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+        style={{ minHeight: "15%" }}
       >
-        {/* Bank button during push mode */}
-        {pushMode === "pushing" && (
-          <button
-            onClick={handleBankAndContinue}
-            className="px-6 py-3 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2"
-            style={{
-              backgroundColor: '#f97316',
-              color: '#000000',
-              boxShadow: '0 0 20px rgba(249, 115, 22, 0.6)',
-              opacity: 1,
-            }}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            Bank & Continue
-          </button>
-        )}
       </div>
 
       {/* Push Your Luck Overlay */}
