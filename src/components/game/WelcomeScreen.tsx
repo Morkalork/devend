@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, Clock, Zap } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 
 interface WelcomeScreenProps {
@@ -11,9 +12,51 @@ interface WelcomeScreenProps {
   isLoading?: boolean;
   error?: string | null;
   accentColor?: string;
+  checkpointLevel?: number;
+  checkpointRemainingMs?: number;
 }
 
-export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores, onAdmin, isLoading, error, accentColor }: WelcomeScreenProps) {
+function formatTime(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+export function WelcomeScreen({ 
+  onStartGame, 
+  onTutorial, 
+  onOptions, 
+  onHighscores, 
+  onAdmin, 
+  isLoading, 
+  error, 
+  accentColor,
+  checkpointLevel,
+  checkpointRemainingMs,
+}: WelcomeScreenProps) {
+  const [remainingTime, setRemainingTime] = useState(checkpointRemainingMs || 0);
+  
+  // Update countdown timer
+  useEffect(() => {
+    if (!checkpointRemainingMs || checkpointRemainingMs <= 0) {
+      setRemainingTime(0);
+      return;
+    }
+    
+    setRemainingTime(checkpointRemainingMs);
+    
+    const interval = setInterval(() => {
+      setRemainingTime(prev => {
+        const newTime = prev - 1000;
+        return newTime > 0 ? newTime : 0;
+      });
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [checkpointRemainingMs]);
+  
+  const hasActiveCheckpoint = checkpointLevel && checkpointLevel > 1 && remainingTime > 0;
   return (
     <>
       <CRTBackground accentColor={accentColor} />
@@ -181,6 +224,32 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
           </motion.div>
         )}
 
+        {/* Checkpoint Banner */}
+        {hasActiveCheckpoint && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.3 }}
+            className="w-full max-w-xs p-3 bg-primary/15 border border-primary/30 rounded-lg"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4 text-primary" />
+                <span className="text-sm font-medium text-foreground">
+                  Start at Level {checkpointLevel}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                <span>{formatTime(remainingTime)}</span>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Checkpoint expires in {formatTime(remainingTime)}
+            </p>
+          </motion.div>
+        )}
+
         {/* Buttons */}
         <motion.div
           className="flex flex-col gap-4 w-full max-w-xs"
@@ -200,6 +269,8 @@ export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores
                 <Loader2 className="w-5 h-5 animate-spin" />
                 Loading...
               </>
+            ) : hasActiveCheckpoint ? (
+              `Continue from Level ${checkpointLevel}`
             ) : (
               'Start Game'
             )}

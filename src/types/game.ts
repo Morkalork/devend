@@ -94,4 +94,6 @@ export interface LevelScoreData {
   fencesUnderPar?: number;
   fencesOverPar?: number;
   extraPercent?: number;
+  // Tier multiplier for score boost display
+  tierMultiplier?: number;
 }

@@ -1,10 +1,11 @@
-import { useCallback, useState, lazy, Suspense } from 'react';
+import { useCallback, useState, lazy, Suspense, useEffect } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useHighscores } from '@/hooks/useHighscores';
 import { useInteractiveTutorial } from '@/hooks/useInteractiveTutorial';
+import { useCheckpoint, getTierScoreMultiplier } from '@/hooks/useCheckpoint';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
@@ -48,6 +49,7 @@ const Index = () => {
     loadLevels,
     advanceToNextLevel,
     resetToFirstLevel,
+    setLevelIndex,
   } = useLevelManager();
 
   const {
@@ -86,6 +88,16 @@ const Index = () => {
     exitTutorial,
   } = useInteractiveTutorial();
 
+  // Checkpoint system for 10-minute tier restart
+  const {
+    hasActiveCheckpoint,
+    isLoaded: checkpointLoaded,
+    saveCheckpoint,
+    clearCheckpoint,
+    getStartingLevel,
+    getRemainingTimeMs,
+  } = useCheckpoint();
+
   // Calculate modifiers to track bonus lives
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
 
@@ -103,24 +115,44 @@ const Index = () => {
       setOwnedUpgradeIds([]);
       setCurrentLives(BASE_LIVES); // Reset lives at start of new run
       
+      // Check for active checkpoint and start from checkpoint level
+      const startingLevel = getStartingLevel();
+      if (startingLevel > 1) {
+        // Start from checkpoint (convert 1-indexed level to 0-indexed)
+        setLevelIndex(startingLevel - 1);
+      } else {
+        resetToFirstLevel();
+      }
+      
       // Check if we need to start interactive tutorial
       if (forceInteractiveTutorial) {
         replayTutorial();
       } else {
-        startTutorialIfNeeded();
+        // Only start tutorial if starting from level 1
+        if (startingLevel === 1) {
+          startTutorialIfNeeded();
+        }
       }
       
       startGame();
     }
-  }, [loadLevels, loadUpgrades, startGame, startTutorialIfNeeded, replayTutorial]);
+  }, [loadLevels, loadUpgrades, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
+    // Save checkpoint if player made it past level 5
+    if (!result.isWin) {
+      saveCheckpoint(result.levelNumber);
+    } else if (result.completedAllLevels) {
+      // Clear checkpoint on full game completion
+      clearCheckpoint();
+    }
+    
     // For game over, include current total score and remaining lives
     endGame({
       ...result,
       totalScore,
     });
-  }, [endGame, totalScore]);
+  }, [endGame, totalScore, saveCheckpoint, clearCheckpoint]);
 
   const handleLivesChange = useCallback((newLives: number) => {
     setCurrentLives(newLives);
@@ -128,12 +160,21 @@ const Index = () => {
   }, []);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
-    // Accumulate score
-    const newTotalScore = totalScore + scoreData.levelScore;
+    // Apply tier score multiplier (10% boost per tier beyond first)
+    const currentLevelNum = currentLevelIndex + 1;
+    const tierMultiplier = getTierScoreMultiplier(currentLevelNum);
+    const boostedLevelScore = Math.floor(scoreData.levelScore * tierMultiplier);
+    
+    // Accumulate score with tier boost applied
+    const newTotalScore = totalScore + boostedLevelScore;
     setTotalScore(newTotalScore);
-    setPendingLevelScore(scoreData);
+    setPendingLevelScore({
+      ...scoreData,
+      levelScore: boostedLevelScore,
+      tierMultiplier, // Pass for display purposes
+    });
     setShowLevelComplete(true);
-  }, [totalScore]);
+  }, [totalScore, currentLevelIndex]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -220,6 +261,10 @@ const Index = () => {
     clearHighscores();
   }, [clearHighscores]);
 
+  // Get checkpoint info for welcome screen
+  const checkpointStartLevel = getStartingLevel();
+  const checkpointRemaining = getRemainingTimeMs();
+
   return (
     <AccentColorProvider currentLevel={currentLevelIndex + 1}>
       <IndexContent
@@ -259,6 +304,8 @@ const Index = () => {
         goToAdmin={goToAdmin}
         goToMapBuilder={goToMapBuilder}
         markTutorialComplete={markTutorialComplete}
+        checkpointLevel={checkpointStartLevel}
+        checkpointRemainingMs={checkpointRemaining}
       />
     </AccentColorProvider>
   );
@@ -302,6 +349,8 @@ interface IndexContentProps {
   goToAdmin: () => void;
   goToMapBuilder: () => void;
   markTutorialComplete: () => void;
+  checkpointLevel?: number;
+  checkpointRemainingMs?: number;
 }
 
 function IndexContent({
@@ -341,6 +390,8 @@ function IndexContent({
   goToAdmin,
   goToMapBuilder,
   markTutorialComplete,
+  checkpointLevel,
+  checkpointRemainingMs,
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
 
@@ -356,6 +407,8 @@ function IndexContent({
           isLoading={isLoading}
           error={error}
           accentColor={accentHex}
+          checkpointLevel={checkpointLevel}
+          checkpointRemainingMs={checkpointRemainingMs}
         />
       )}
       {currentScreen === 'tutorial' && (

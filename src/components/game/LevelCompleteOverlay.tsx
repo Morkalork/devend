@@ -26,11 +26,13 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     fencesUnderPar = 0,
     fencesOverPar = 0,
     extraPercent = 0,
+    tierMultiplier = 1,
   } = scoreData;
   
   const hasNewScoring = fenceBonus !== undefined || spaceBonus !== undefined;
   const isPenalized = penaltyMultiplier < 1 && penaltyMultiplier > 0;
   const isSpaceDisabled = penaltyMultiplier === 0;
+  const hasTierBoost = tierMultiplier > 1;
 
   return (
     <>
@@ -171,6 +173,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
                 <span className="font-semibold text-foreground">Total Bonus</span>
                 <span className="text-lg sm:text-xl font-bold text-success">+{fenceBonus + spaceBonus}</span>
+              </div>
+            )}
+            
+            {/* Tier Boost Display */}
+            {hasTierBoost && (
+              <div className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
+                <span className="text-primary flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                  Tier Boost
+                </span>
+                <span className="font-bold text-primary">×{tierMultiplier.toFixed(1)}</span>
               </div>
             )}
             
