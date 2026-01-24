@@ -43,7 +43,7 @@ export function PushYourLuckOverlay({
           }
           @media (max-width: 639px) {
             .push-luck-modal {
-              bottom: 5rem !important;
+              bottom: 3.5rem !important;
             }
           }
         `}</style>
