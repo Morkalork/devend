@@ -265,8 +265,14 @@ const Index = () => {
   const checkpointStartLevel = getStartingLevel();
   const checkpointRemaining = getRemainingTimeMs();
 
+  // Use checkpoint level for accent color when not actively playing
+  // This ensures menus reflect the player's progression tier
+  const displayLevel = currentScreen === 'game' 
+    ? currentLevelIndex + 1 
+    : checkpointStartLevel;
+
   return (
-    <AccentColorProvider currentLevel={currentLevelIndex + 1}>
+    <AccentColorProvider currentLevel={displayLevel}>
       <IndexContent
         currentScreen={currentScreen}
         currentLevel={currentLevel}
