@@ -2416,7 +2416,8 @@ export function GameCanvas({
             style={{
               backgroundColor: '#f97316',
               color: '#000000',
-              boxShadow: '0 0 20px rgba(249, 115, 22, 0.6)'
+              boxShadow: '0 0 20px rgba(249, 115, 22, 0.6)',
+              opacity: 1,
             }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
