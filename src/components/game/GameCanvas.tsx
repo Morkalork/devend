@@ -2404,7 +2404,10 @@ export function GameCanvas({
       </div>
 
       {/* Bottom section - Bottom UI band (~15% height) */}
-      <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: "15%" }}>
+      <div 
+        className="flex-shrink-0 px-4 py-3 flex justify-center items-center" 
+        style={{ minHeight: "15%", backgroundColor: 'rgba(0, 0, 0, 0.9)' }}
+      >
         {/* Bank button during push mode */}
         {pushMode === "pushing" && (
           <button
