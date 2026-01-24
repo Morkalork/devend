@@ -127,9 +127,11 @@ function getRandomDirection(): Vector2 {
 }
 
 function hexToRgba(hex: string, alpha: number = 1): string {
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
+  // Remove # prefix if present
+  const cleanHex = hex.startsWith('#') ? hex.slice(1) : hex;
+  const r = parseInt(cleanHex.substring(0, 2), 16);
+  const g = parseInt(cleanHex.substring(2, 4), 16);
+  const b = parseInt(cleanHex.substring(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
@@ -1617,15 +1619,15 @@ export function GameCanvas({
       // Note: Green border is now drawn via the unified wall model below
       // All walls (board edges, obstacles, user-drawn) are rendered identically
 
-      // UNIFIED WALL MODEL: Draw ALL walls as visible CRT-green borders
+      // UNIFIED WALL MODEL: Draw ALL walls as visible borders using accent color
       // Walls are "fences" - they are drawn ON TOP, not used to erase space
       // User-drawn walls are clipped against obstacles (no fences inside obstacles)
       ctx.save();
-      ctx.strokeStyle = WALL_COLOR; // CRT green from wallGeometry.ts
+      ctx.strokeStyle = accentColor; // Dynamic accent color
       ctx.lineWidth = WALL_THICKNESS * scale;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.shadowColor = WALL_COLOR;
+      ctx.shadowColor = accentColor;
       ctx.shadowBlur = 6 * scale;
       
       const obstacles = game.obstaclePolygons;
@@ -1650,7 +1652,7 @@ export function GameCanvas({
               seg.start,
               seg.end,
               scale,
-              WALL_COLOR,
+              accentColor,
               WALL_THICKNESS * scale
             );
           }
@@ -1665,7 +1667,7 @@ export function GameCanvas({
             w.start,
             w.end,
             scale,
-            WALL_COLOR,
+            accentColor,
             WALL_THICKNESS * scale
           );
         }
@@ -1778,7 +1780,7 @@ export function GameCanvas({
           ctx.restore();
         }
 
-        // ===== Collision flash glow (CRT green, fades out) =====
+        // ===== Collision flash glow (uses accent color, fades out) =====
         if (ball.flashIntensity > 0) {
           ctx.save();
           ctx.beginPath();
@@ -1788,9 +1790,9 @@ export function GameCanvas({
             screenPos.x, screenPos.y, screenRadius + 30 * scale
           );
           const flashAlpha = ball.flashIntensity;
-          flashGlow.addColorStop(0, `rgba(0, 255, 136, ${flashAlpha * 0.95})`);
-          flashGlow.addColorStop(0.3, `rgba(0, 255, 136, ${flashAlpha * 0.7})`);
-          flashGlow.addColorStop(0.6, `rgba(0, 255, 136, ${flashAlpha * 0.35})`);
+          flashGlow.addColorStop(0, hexToRgba(accentColor, flashAlpha * 0.95));
+          flashGlow.addColorStop(0.3, hexToRgba(accentColor, flashAlpha * 0.7));
+          flashGlow.addColorStop(0.6, hexToRgba(accentColor, flashAlpha * 0.35));
           flashGlow.addColorStop(1, "transparent");
           ctx.fillStyle = flashGlow;
           ctx.fill();
