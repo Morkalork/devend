@@ -10,12 +10,13 @@ interface WelcomeScreenProps {
   onAdmin?: () => void;
   isLoading?: boolean;
   error?: string | null;
+  accentColor?: string;
 }
 
-export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores, onAdmin, isLoading, error }: WelcomeScreenProps) {
+export function WelcomeScreen({ onStartGame, onTutorial, onOptions, onHighscores, onAdmin, isLoading, error, accentColor }: WelcomeScreenProps) {
   return (
     <>
-      <CRTBackground />
+      <CRTBackground accentColor={accentColor} />
       <div className="min-h-screen flex flex-col items-center justify-center p-6 relative z-10" style={{ backgroundColor: 'hsl(var(--background) / 0.85)' }}>
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div

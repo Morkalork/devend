@@ -5,9 +5,10 @@ interface LevelCompleteOverlayProps {
   scoreData: LevelScoreData;
   totalScore: number;
   onContinue: () => void;
+  accentColor?: string;
 }
 
-export function LevelCompleteOverlay({ scoreData, totalScore, onContinue }: LevelCompleteOverlayProps) {
+export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor }: LevelCompleteOverlayProps) {
   const { 
     levelNumber, 
     levelId, 

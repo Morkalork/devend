@@ -1,19 +1,22 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Settings, RefreshCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { CRTBackground } from './CRTBackground';
 
 interface OptionsScreenProps {
   onBack: () => void;
   onReplayTutorial: () => void;
   onClearHighscores: () => void;
   hasHighscores: boolean;
+  accentColor?: string;
 }
 
 export function OptionsScreen({ 
   onBack, 
   onReplayTutorial, 
   onClearHighscores,
-  hasHighscores 
+  hasHighscores,
+  accentColor,
 }: OptionsScreenProps) {
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -31,7 +34,9 @@ export function OptionsScreen({
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+    <>
+      <CRTBackground accentColor={accentColor} />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background/90 p-6 relative z-10">
       {/* Background effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -148,5 +153,6 @@ export function OptionsScreen({
         </motion.div>
       )}
     </div>
+    </>
   );
 }

@@ -23,6 +23,7 @@ interface GameScreenProps {
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
+  accentColor?: string;
 }
 
 export function GameScreen({ 
@@ -39,6 +40,7 @@ export function GameScreen({
   tutorialMode = false,
   tutorialStep = 'completed',
   onTutorialCutSuccess,
+  accentColor: externalAccentColor,
 }: GameScreenProps) {
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
   
@@ -56,7 +58,7 @@ export function GameScreen({
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
 
-  const accentColor = getAccentColor();
+  const accentColor = externalAccentColor || getAccentColor();
 
   return (
     <>
