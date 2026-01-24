@@ -694,6 +694,27 @@ export function GameCanvas({
         }
       }
 
+      // CRITICAL: Check obstacle polygon penetration FIRST before edge collisions
+      // This catches cases where fast balls tunnel through edges between frames
+      // or slip through vertex gaps in polygonal approximations of circles
+      for (const obstacle of game.obstaclePolygons) {
+        const obstacleResult = resolveBallPolygonCollisionOutward(
+          ball.position,
+          ball.velocity,
+          ball.radius,
+          obstacle
+        );
+        if (obstacleResult.collided) {
+          ball.position = obstacleResult.position;
+          ball.velocity = obstacleResult.velocity;
+          
+          // Play wall hit sound for obstacle collision
+          const speed = vec2Length(ball.velocity);
+          const impactStrength = Math.min(1, speed / 400);
+          playWallHitSound(impactStrength);
+        }
+      }
+
       // UNIFIED WALL MODEL: Balls bounce off all walls (board edges, obstacles, user walls)
       // User-drawn walls are stored in game.walls with id starting with "user-"
       for (const wall of game.walls) {
