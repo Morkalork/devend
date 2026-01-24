@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
+import { GameStatsPanel } from './GameStatsPanel';
 import { CRTBackground } from './CRTBackground';
 import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
@@ -98,6 +99,13 @@ export function GameScreen({
             accentColor={accentColor}
           />
         </div>
+
+        {/* Stats Panel at bottom */}
+        <GameStatsPanel
+          ownedUpgradeIds={ownedUpgradeIds}
+          upgrades={upgrades}
+          accentColor={accentColor}
+        />
       </div>
     </>
   );
