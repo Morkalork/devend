@@ -72,15 +72,24 @@ export function PushYourLuckOverlay({
           <div className="flex gap-3">
             <button
               onClick={onBank}
-              className="flex-1 px-4 py-3 rounded-lg bg-success/20 text-success font-medium flex items-center justify-center gap-2 border border-success/50 hover:bg-success/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              className="flex-1 px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 border hover:scale-[1.02] active:scale-[0.98] transition-all"
+              style={{ 
+                backgroundColor: '#22c55e',
+                color: '#000000',
+                borderColor: '#16a34a'
+              }}
             >
               <Coins className="w-4 h-4" />
               Bank & Continue
             </button>
             <button
               onClick={onPush}
-              className="flex-1 px-4 py-3 rounded-lg bg-primary text-primary-foreground font-bold flex items-center justify-center gap-2 shadow-lg hover:bg-primary/90 hover:scale-[1.02] active:scale-[0.98] transition-all"
-              style={{ boxShadow: '0 0 20px hsl(var(--primary) / 0.4)' }}
+              className="flex-1 px-4 py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+              style={{ 
+                backgroundColor: '#f97316',
+                color: '#000000',
+                boxShadow: '0 0 20px rgba(249, 115, 22, 0.6)'
+              }}
             >
               <Zap className="w-4 h-4" />
               Push Your Luck
