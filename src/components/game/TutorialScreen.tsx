@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Move, Scissors, Target, AlertTriangle } from 'lucide-react';
+import { CRTBackground } from './CRTBackground';
 
 interface TutorialScreenProps {
   onBack: () => void;
+  accentColor?: string;
 }
 
 const tutorialSteps = [
@@ -28,9 +30,11 @@ const tutorialSteps = [
   },
 ];
 
-export function TutorialScreen({ onBack }: TutorialScreenProps) {
+export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-background p-6">
+    <>
+      <CRTBackground accentColor={accentColor} />
+      <div className="min-h-screen flex flex-col bg-background/90 p-6 relative z-10">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, x: -20 }}
@@ -118,5 +122,6 @@ export function TutorialScreen({ onBack }: TutorialScreenProps) {
         </button>
       </motion.div>
     </div>
+    </>
   );
 }

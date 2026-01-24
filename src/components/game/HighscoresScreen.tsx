@@ -2,11 +2,13 @@ import { motion } from 'framer-motion';
 import { Trophy, ArrowLeft, Trash2 } from 'lucide-react';
 import { Highscore } from '@/types/highscore';
 import { useState } from 'react';
+import { CRTBackground } from './CRTBackground';
 
 interface HighscoresScreenProps {
   highscores: Highscore[];
   onBack: () => void;
   onClear: () => void;
+  accentColor?: string;
 }
 
 function formatDate(isoString: string): string {
@@ -22,7 +24,7 @@ function formatDate(isoString: string): string {
   }
 }
 
-export function HighscoresScreen({ highscores, onBack, onClear }: HighscoresScreenProps) {
+export function HighscoresScreen({ highscores, onBack, onClear, accentColor }: HighscoresScreenProps) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleClearClick = () => {
@@ -39,7 +41,9 @@ export function HighscoresScreen({ highscores, onBack, onClear }: HighscoresScre
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-background p-4 sm:p-6">
+    <>
+      <CRTBackground accentColor={accentColor} />
+      <div className="min-h-screen flex flex-col items-center bg-background/90 p-4 sm:p-6 relative z-10">
       {/* Background effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -198,5 +202,6 @@ export function HighscoresScreen({ highscores, onBack, onClear }: HighscoresScre
         </motion.div>
       )}
     </div>
+    </>
   );
 }

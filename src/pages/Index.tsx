@@ -5,6 +5,7 @@ import { useUpgradeManager } from '@/hooks/useUpgradeManager';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useHighscores } from '@/hooks/useHighscores';
 import { useInteractiveTutorial } from '@/hooks/useInteractiveTutorial';
+import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
 import { OptionsScreen } from '@/components/game/OptionsScreen';
@@ -220,6 +221,130 @@ const Index = () => {
   }, [clearHighscores]);
 
   return (
+    <AccentColorProvider currentLevel={currentLevelIndex + 1}>
+      <IndexContent
+        currentScreen={currentScreen}
+        currentLevel={currentLevel}
+        currentLevelIndex={currentLevelIndex}
+        totalLevels={totalLevels}
+        totalScore={totalScore}
+        currentLives={currentLives}
+        ownedUpgradeIds={ownedUpgradeIds}
+        upgrades={upgrades}
+        isLoading={isLoading}
+        error={error}
+        highscores={highscores}
+        tutorialMode={tutorialMode}
+        tutorialStep={tutorialStep}
+        lastResult={lastResult}
+        showLevelComplete={showLevelComplete}
+        pendingLevelScore={pendingLevelScore}
+        handleStartGame={handleStartGame}
+        handleGameEnd={handleGameEnd}
+        handleLivesChange={handleLivesChange}
+        handleLevelComplete={handleLevelComplete}
+        handleContinueFromOverlay={handleContinueFromOverlay}
+        handlePurchaseUpgrade={handlePurchaseUpgrade}
+        handleContinueFromShop={handleContinueFromShop}
+        handlePlayAgain={handlePlayAgain}
+        handleBackToWelcome={handleBackToWelcome}
+        handleSaveHighscore={handleSaveHighscore}
+        handleHighscoresFromWelcome={handleHighscoresFromWelcome}
+        handleReplayInteractiveTutorial={handleReplayInteractiveTutorial}
+        clearHighscores={clearHighscores}
+        goToWelcome={goToWelcome}
+        goToTutorial={goToTutorial}
+        goToOptions={goToOptions}
+        goToHighscores={goToHighscores}
+        goToAdmin={goToAdmin}
+        goToMapBuilder={goToMapBuilder}
+        markTutorialComplete={markTutorialComplete}
+      />
+    </AccentColorProvider>
+  );
+};
+
+// Separate component to access accent color context
+interface IndexContentProps {
+  currentScreen: string;
+  currentLevel: any;
+  currentLevelIndex: number;
+  totalLevels: number;
+  totalScore: number;
+  currentLives: number;
+  ownedUpgradeIds: string[];
+  upgrades: any[];
+  isLoading: boolean;
+  error: string | null;
+  highscores: any[];
+  tutorialMode: boolean;
+  tutorialStep: any;
+  lastResult: any;
+  showLevelComplete: boolean;
+  pendingLevelScore: LevelScoreData | null;
+  handleStartGame: (force?: boolean) => void;
+  handleGameEnd: (result: GameResult) => void;
+  handleLivesChange: (lives: number) => void;
+  handleLevelComplete: (scoreData: LevelScoreData) => void;
+  handleContinueFromOverlay: () => void;
+  handlePurchaseUpgrade: (id: string, price: number) => void;
+  handleContinueFromShop: () => void;
+  handlePlayAgain: () => void;
+  handleBackToWelcome: () => void;
+  handleSaveHighscore: (name: string) => void;
+  handleHighscoresFromWelcome: () => void;
+  handleReplayInteractiveTutorial: () => void;
+  clearHighscores: () => void;
+  goToWelcome: () => void;
+  goToTutorial: () => void;
+  goToOptions: () => void;
+  goToHighscores: () => void;
+  goToAdmin: () => void;
+  goToMapBuilder: () => void;
+  markTutorialComplete: () => void;
+}
+
+function IndexContent({
+  currentScreen,
+  currentLevel,
+  currentLevelIndex,
+  totalLevels,
+  totalScore,
+  currentLives,
+  ownedUpgradeIds,
+  upgrades,
+  isLoading,
+  error,
+  highscores,
+  tutorialMode,
+  tutorialStep,
+  lastResult,
+  showLevelComplete,
+  pendingLevelScore,
+  handleStartGame,
+  handleGameEnd,
+  handleLivesChange,
+  handleLevelComplete,
+  handleContinueFromOverlay,
+  handlePurchaseUpgrade,
+  handleContinueFromShop,
+  handlePlayAgain,
+  handleBackToWelcome,
+  handleSaveHighscore,
+  handleHighscoresFromWelcome,
+  handleReplayInteractiveTutorial,
+  clearHighscores,
+  goToWelcome,
+  goToTutorial,
+  goToOptions,
+  goToHighscores,
+  goToAdmin,
+  goToMapBuilder,
+  markTutorialComplete,
+}: IndexContentProps) {
+  const { accentHex } = useAccentColor();
+
+  return (
     <>
       {currentScreen === 'welcome' && (
         <WelcomeScreen 
@@ -230,17 +355,19 @@ const Index = () => {
           onAdmin={import.meta.env.DEV || new URLSearchParams(window.location.search).get('admin') === 'true' ? goToAdmin : undefined}
           isLoading={isLoading}
           error={error}
+          accentColor={accentHex}
         />
       )}
       {currentScreen === 'tutorial' && (
-        <TutorialScreen onBack={goToWelcome} />
+        <TutorialScreen onBack={goToWelcome} accentColor={accentHex} />
       )}
       {currentScreen === 'options' && (
         <OptionsScreen
           onBack={goToWelcome}
           onReplayTutorial={handleReplayInteractiveTutorial}
-          onClearHighscores={handleClearHighscoresFromOptions}
+          onClearHighscores={clearHighscores}
           hasHighscores={highscores.length > 0}
+          accentColor={accentHex}
         />
       )}
       {currentScreen === 'game' && currentLevel && (
@@ -258,6 +385,7 @@ const Index = () => {
           tutorialMode={tutorialMode && currentLevelIndex === 0}
           tutorialStep={tutorialStep}
           onTutorialCutSuccess={markTutorialComplete}
+          accentColor={accentHex}
         />
       )}
       {currentScreen === 'upgradeShop' && (
@@ -268,6 +396,7 @@ const Index = () => {
           ownedUpgradeIds={ownedUpgradeIds}
           onPurchase={handlePurchaseUpgrade}
           onContinue={handleContinueFromShop}
+          accentColor={accentHex}
         />
       )}
       {currentScreen === 'result' && lastResult && (
@@ -277,6 +406,7 @@ const Index = () => {
           onBackToWelcome={handleBackToWelcome}
           onSaveHighscore={handleSaveHighscore}
           onViewHighscores={goToHighscores}
+          accentColor={accentHex}
         />
       )}
       {currentScreen === 'highscores' && (
@@ -284,6 +414,7 @@ const Index = () => {
           highscores={highscores}
           onBack={goToWelcome}
           onClear={clearHighscores}
+          accentColor={accentHex}
         />
       )}
       
@@ -305,10 +436,11 @@ const Index = () => {
           scoreData={pendingLevelScore}
           totalScore={totalScore}
           onContinue={handleContinueFromOverlay}
+          accentColor={accentHex}
         />
       )}
     </>
   );
-};
+}
 
 export default Index;

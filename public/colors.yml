@@ -1,0 +1,28 @@
+# Color Progression Configuration
+# Colors cycle based on completed levels (every 5 levels)
+# Format: hex colors without #
+
+progression:
+  - name: "Neon Green"
+    hex: "00ff88"
+    levels: 5  # Active for levels 1-5
+    
+  - name: "Electric Blue"
+    hex: "00d4ff"
+    levels: 5  # Active for levels 6-10
+    
+  - name: "Hot Pink"
+    hex: "ff00aa"
+    levels: 5  # Active for levels 11-15
+    
+  - name: "Golden Yellow"
+    hex: "ffdd00"
+    levels: 5  # Active for levels 16-20
+    
+  - name: "Crimson Red"
+    hex: "ff3344"
+    levels: 5  # Active for levels 21-25
+    
+  - name: "Pure White"
+    hex: "ffffff"
+    levels: 5  # Active for levels 26-30 (then cycles back)

@@ -5,6 +5,7 @@ import { Coins, ArrowRight, Info, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { SvgIcon } from '@/components/ui/SvgIcon';
+import { CRTBackground } from './CRTBackground';
 
 interface UpgradeOffer {
   upgrade: UpgradeConfig;
@@ -18,6 +19,7 @@ interface UpgradeShopProps {
   ownedUpgradeIds: string[];
   onPurchase: (upgradeId: string, price: number) => void;
   onContinue: () => void;
+  accentColor?: string;
 }
 
 function computeBasePrice(upgrade: UpgradeConfig, levelNumber: number): number {
@@ -70,6 +72,7 @@ export function UpgradeShop({
   ownedUpgradeIds,
   onPurchase,
   onContinue,
+  accentColor,
 }: UpgradeShopProps) {
   const { toast } = useToast();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -132,12 +135,14 @@ export function UpgradeShop({
   }, []);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-50"
-    >
+    <>
+      <CRTBackground accentColor={accentColor} />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-50"
+      >
       {/* Header */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
@@ -303,5 +308,6 @@ export function UpgradeShop({
         <ArrowRight className="w-5 h-5" />
       </motion.button>
     </motion.div>
+    </>
   );
 }

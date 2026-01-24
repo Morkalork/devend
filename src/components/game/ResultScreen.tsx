@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Trophy, Skull, RotateCcw, Home, Medal } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { NameEntryDialog } from './NameEntryDialog';
+import { CRTBackground } from './CRTBackground';
 
 interface ResultScreenProps {
   result: GameResult;
@@ -10,6 +11,7 @@ interface ResultScreenProps {
   onBackToWelcome: () => void;
   onSaveHighscore: (name: string) => void;
   onViewHighscores: () => void;
+  accentColor?: string;
 }
 
 export function ResultScreen({ 
@@ -18,6 +20,7 @@ export function ResultScreen({
   onBackToWelcome,
   onSaveHighscore,
   onViewHighscores,
+  accentColor,
 }: ResultScreenProps) {
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
   
@@ -31,7 +34,9 @@ export function ResultScreen({
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+    <>
+      <CRTBackground accentColor={accentColor} />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background/90 p-6 relative z-10">
       {/* Background effect */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
@@ -182,6 +187,9 @@ export function ResultScreen({
       </motion.div>
 
       {/* Name Entry Dialog */}
+      </div>
+
+      {/* Name Entry Dialog */}
       {showNameEntry && (
         <NameEntryDialog
           onSubmit={handleNameSubmit}
@@ -190,6 +198,6 @@ export function ResultScreen({
           totalScore={totalScore ?? 0}
         />
       )}
-    </div>
+    </>
   );
 }
