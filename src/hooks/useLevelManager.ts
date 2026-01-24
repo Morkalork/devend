@@ -106,6 +106,14 @@ export function useLevelManager() {
     setState(prev => ({ ...prev, currentLevelIndex: 0 }));
   }, []);
 
+  // Set to a specific level (0-indexed)
+  const setLevelIndex = useCallback((index: number) => {
+    setState(prev => {
+      const clampedIndex = Math.max(0, Math.min(index, prev.levels.length - 1));
+      return { ...prev, currentLevelIndex: clampedIndex };
+    });
+  }, []);
+
   const currentLevel = state.levels[state.currentLevelIndex] || null;
   const totalLevels = state.levels.length;
   const isLastLevel = state.currentLevelIndex >= state.levels.length - 1;
@@ -121,5 +129,6 @@ export function useLevelManager() {
     loadLevels,
     advanceToNextLevel,
     resetToFirstLevel,
+    setLevelIndex,
   };
 }
