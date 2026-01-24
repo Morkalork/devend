@@ -2409,7 +2409,12 @@ export function GameCanvas({
         {pushMode === "pushing" && (
           <button
             onClick={handleBankAndContinue}
-            className="px-6 py-3 rounded-lg bg-success/20 text-success font-bold shadow-lg border border-success/50 hover:bg-success/30 transition-colors flex items-center gap-2"
+            className="px-6 py-3 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2"
+            style={{
+              backgroundColor: '#f97316',
+              color: '#000000',
+              boxShadow: '0 0 20px rgba(249, 115, 22, 0.6)'
+            }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
