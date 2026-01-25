@@ -30,6 +30,7 @@ import {
   pointToSegmentDistance,
   lineSegmentIntersection,
   clipLineAgainstPolygons,
+  closestPointOnSegment,
 } from "@/lib/polygon";
 import { extractContours } from "@/lib/contour";
 import { Wall, WALL_THICKNESS, WALL_COLOR, createWallsFromPolygon, findWallTermination } from "@/lib/wallGeometry";
@@ -673,6 +674,47 @@ export function GameCanvas({
         ball.flashIntensity = Math.max(0, ball.flashIntensity - dt * 7);
       }
 
+      // CRITICAL: First check if ball has escaped the board entirely
+      // This is a safety recovery for high-speed tunneling through boundaries
+      if (game.boardPolygon && !pointInPolygon(ball.position, game.boardPolygon)) {
+        // Ball escaped! Find the nearest edge and push it back inside
+        const boardVerts = game.boardPolygon.vertices;
+        let minDist = Infinity;
+        let nearestPoint: Vector2 = ball.position;
+        let nearestNormal: Vector2 = { x: 0, y: -1 };
+        
+        for (let i = 0; i < boardVerts.length; i++) {
+          const j = (i + 1) % boardVerts.length;
+          const p1 = boardVerts[i];
+          const p2 = boardVerts[j];
+          const closest = closestPointOnSegment(ball.position, p1, p2);
+          const dist = vec2Distance(ball.position, closest);
+          
+          if (dist < minDist) {
+            minDist = dist;
+            nearestPoint = closest;
+            // Normal pointing into the board (toward centroid)
+            const edge = vec2Sub(p2, p1);
+            const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
+            const boardCentroid = polygonCentroid(game.boardPolygon);
+            const toCenter = vec2Sub(boardCentroid, closest);
+            // Choose direction pointing toward board center (inward)
+            nearestNormal = vec2Dot(perpendicular, toCenter) > 0 ? perpendicular : vec2Scale(perpendicular, -1);
+          }
+        }
+        
+        // Push ball back inside with margin
+        ball.position = vec2Add(nearestPoint, vec2Scale(nearestNormal, ball.radius + 5));
+        
+        // Reflect velocity
+        const velDotNormal = vec2Dot(ball.velocity, nearestNormal);
+        if (velDotNormal < 0) {
+          ball.velocity = vec2Sub(ball.velocity, vec2Scale(nearestNormal, 2 * velDotNormal));
+        }
+        
+        console.warn("[PHYSICS] Ball escaped board, recovered to:", ball.position);
+      }
+
       // Resolve collisions with board boundary (always use original board, not region bounding box)
       if (game.boardPolygon) {
         const boardResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, game.boardPolygon);
@@ -694,7 +736,7 @@ export function GameCanvas({
         }
       }
 
-      // CRITICAL: Check obstacle polygon penetration FIRST before edge collisions
+      // CRITICAL: Check obstacle polygon penetration before edge collisions
       // This catches cases where fast balls tunnel through edges between frames
       // or slip through vertex gaps in polygonal approximations of circles
       for (const obstacle of game.obstaclePolygons) {
@@ -707,6 +749,9 @@ export function GameCanvas({
         if (obstacleResult.collided) {
           ball.position = obstacleResult.position;
           ball.velocity = obstacleResult.velocity;
+          
+          // Trigger flash effect on collision
+          ball.flashIntensity = 1.0;
           
           // Play wall hit sound for obstacle collision
           const speed = vec2Length(ball.velocity);

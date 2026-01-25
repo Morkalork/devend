@@ -498,6 +498,7 @@ export function resolveBallPolygonCollision(
 
 // Ball collision with polygon edges (ball OUTSIDE polygon, bounces off obstacle)
 // Used for obstacles where balls are on the outside and bounce off
+// ROBUST VERSION: Handles tunneling, proper normal direction, and deep penetration
 export function resolveBallPolygonCollisionOutward(
   ballPos: Vector2,
   ballVel: Vector2,
@@ -513,8 +514,8 @@ export function resolveBallPolygonCollisionOutward(
   if (pointInPolygon(newPos, poly)) {
     // Ball is inside obstacle - push it out toward the nearest edge
     let minDist = Infinity;
-    let nearestEdgeNormal: Vector2 = { x: 0, y: -1 };
     let nearestClosestPoint: Vector2 = newPos;
+    let nearestEdgeIdx = 0;
     
     for (let i = 0; i < vertices.length; i++) {
       const j = (i + 1) % vertices.length;
@@ -526,25 +527,48 @@ export function resolveBallPolygonCollisionOutward(
       if (dist < minDist) {
         minDist = dist;
         nearestClosestPoint = closest;
-        const edge = vec2Sub(p2, p1);
-        // Normal pointing outward from polygon
-        nearestEdgeNormal = vec2Normalize({ x: -edge.y, y: edge.x });
+        nearestEdgeIdx = i;
       }
     }
     
-    // Push ball completely outside
-    newPos = vec2Add(nearestClosestPoint, vec2Scale(nearestEdgeNormal, ballRadius + 2));
+    // Calculate outward normal (away from polygon centroid)
+    const centroid = polygonCentroid(poly);
+    const toCenter = vec2Sub(centroid, nearestClosestPoint);
+    // Normal should point AWAY from centroid (outward from the obstacle)
+    let outwardNormal = vec2Normalize(vec2Sub(newPos, nearestClosestPoint));
     
-    // Reflect velocity
-    const velDotNormal = vec2Dot(newVel, nearestEdgeNormal);
+    // If ball is exactly at the closest point, use edge perpendicular pointing away from centroid
+    if (vec2Length(vec2Sub(newPos, nearestClosestPoint)) < 0.001) {
+      const p1 = vertices[nearestEdgeIdx];
+      const p2 = vertices[(nearestEdgeIdx + 1) % vertices.length];
+      const edge = vec2Sub(p2, p1);
+      const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
+      // Choose the direction pointing away from centroid
+      if (vec2Dot(perpendicular, toCenter) > 0) {
+        outwardNormal = vec2Scale(perpendicular, -1);
+      } else {
+        outwardNormal = perpendicular;
+      }
+    }
+    
+    // Fallback: if outward normal still points toward centroid, flip it
+    if (vec2Dot(outwardNormal, toCenter) > 0) {
+      outwardNormal = vec2Scale(outwardNormal, -1);
+    }
+    
+    // Push ball completely outside with generous margin
+    newPos = vec2Add(nearestClosestPoint, vec2Scale(outwardNormal, ballRadius + 5));
+    
+    // Reflect velocity off the outward normal
+    const velDotNormal = vec2Dot(newVel, outwardNormal);
     if (velDotNormal < 0) {
-      newVel = vec2Sub(newVel, vec2Scale(nearestEdgeNormal, 2 * velDotNormal));
+      newVel = vec2Sub(newVel, vec2Scale(outwardNormal, 2 * velDotNormal));
     }
     
     return { position: newPos, velocity: newVel, collided: true };
   }
   
-  // Normal edge collision detection
+  // Normal edge collision detection with improved margin
   for (let i = 0; i < vertices.length; i++) {
     const j = (i + 1) % vertices.length;
     const p1 = vertices[i];
@@ -562,9 +586,17 @@ export function resolveBallPolygonCollisionOutward(
       // Normal points from obstacle edge toward ball (outward)
       let normal = vec2Normalize(toBall);
       if (vec2Length(toBall) < 0.001) {
-        // Ball exactly on edge, use edge perpendicular
+        // Ball exactly on edge, use centroid to determine outward direction
+        const centroid = polygonCentroid(poly);
         const edge = vec2Sub(p2, p1);
-        normal = vec2Normalize({ x: -edge.y, y: edge.x });
+        const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
+        const toCenter = vec2Sub(centroid, closestPoint);
+        // Choose direction pointing away from centroid
+        if (vec2Dot(perpendicular, toCenter) > 0) {
+          normal = vec2Scale(perpendicular, -1);
+        } else {
+          normal = perpendicular;
+        }
       }
       
       // Reflect velocity if moving toward obstacle
@@ -573,9 +605,9 @@ export function resolveBallPolygonCollisionOutward(
         newVel = vec2Sub(newVel, vec2Scale(normal, 2 * velDotNormal));
       }
       
-      // Push ball out of obstacle with extra margin
+      // Push ball out of obstacle with generous margin
       const penetration = ballRadius - dist;
-      newPos = vec2Add(newPos, vec2Scale(normal, penetration + 2));
+      newPos = vec2Add(newPos, vec2Scale(normal, penetration + 3));
     }
   }
   
