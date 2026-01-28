@@ -218,14 +218,22 @@ const Index = () => {
   }, [advanceToNextLevel, goToGame]);
 
   const handlePlayAgain = useCallback(() => {
-    resetToFirstLevel();
     setTotalScore(0);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
     setCurrentLives(BASE_LIVES);
+    
+    // Respect checkpoint system - start from checkpoint level if available
+    const startingLevel = getStartingLevel();
+    if (startingLevel > 1) {
+      setLevelIndex(startingLevel - 1);
+    } else {
+      resetToFirstLevel();
+    }
+    
     startGame();
-  }, [resetToFirstLevel, startGame]);
+  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
