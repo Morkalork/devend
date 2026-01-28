@@ -625,6 +625,7 @@ export function GameCanvas({
     };
 
     // Resolve ball collision with a line segment (for completed cuts)
+    // ROBUST: Uses larger collision margin and push-out distance to prevent tunneling
     const resolveBallLineCollision = (
       ballPos: Vector2,
       ballVel: Vector2,
@@ -634,7 +635,8 @@ export function GameCanvas({
       lineThickness: number,
     ): { position: Vector2; velocity: Vector2; collided: boolean; impactPoint?: Vector2 } => {
       const dist = pointToSegmentDistance(ballPos, lineStart, lineEnd);
-      const collisionDist = ballRadius + lineThickness / 2;
+      // Use a slightly larger collision zone for detection (helps with fast-moving balls)
+      const collisionDist = ballRadius + lineThickness / 2 + 2;
 
       if (dist < collisionDist) {
         // Get closest point on line
@@ -664,9 +666,10 @@ export function GameCanvas({
           newVel = vec2Sub(ballVel, vec2Scale(normal, 2 * velDotNormal));
         }
 
-        // Push ball out
-        const penetration = collisionDist - dist;
-        const newPos = vec2Add(ballPos, vec2Scale(normal, penetration + 0.5));
+        // Push ball out with generous margin to prevent re-penetration
+        const minSafeDist = ballRadius + lineThickness / 2 + 3;
+        const pushDist = Math.max(0, minSafeDist - dist);
+        const newPos = vec2Add(ballPos, vec2Scale(normal, pushDist + 2));
 
         return { position: newPos, velocity: newVel, collided: true, impactPoint: closestPoint };
       }
@@ -801,6 +804,48 @@ export function GameCanvas({
           // Play wall hit sound
           playWallHitSound(impactStrength);
         }
+      }
+      
+      // CRITICAL: Region containment check
+      // After all collisions, verify ball is still within its assigned region
+      // This catches edge cases where fast balls tunnel through thin fences
+      const ballRegion = game.regions.find(r => r.id === ball.regionId);
+      if (ballRegion && !pointInPolygon(ball.position, ballRegion.polygon)) {
+        // Ball escaped its region! Find nearest point on region boundary
+        const regionVerts = ballRegion.polygon.vertices;
+        let minDist = Infinity;
+        let nearestPoint: Vector2 = ball.position;
+        let nearestNormal: Vector2 = { x: 0, y: -1 };
+        
+        for (let i = 0; i < regionVerts.length; i++) {
+          const j = (i + 1) % regionVerts.length;
+          const p1 = regionVerts[i];
+          const p2 = regionVerts[j];
+          const closest = closestPointOnSegment(ball.position, p1, p2);
+          const dist = vec2Distance(ball.position, closest);
+          
+          if (dist < minDist) {
+            minDist = dist;
+            nearestPoint = closest;
+            // Normal pointing into the region (toward centroid)
+            const edge = vec2Sub(p2, p1);
+            const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
+            const regionCentroid = polygonCentroid(ballRegion.polygon);
+            const toCenter = vec2Sub(regionCentroid, closest);
+            nearestNormal = vec2Dot(perpendicular, toCenter) > 0 ? perpendicular : vec2Scale(perpendicular, -1);
+          }
+        }
+        
+        // Push ball back inside region with margin
+        ball.position = vec2Add(nearestPoint, vec2Scale(nearestNormal, ball.radius + 5));
+        
+        // Reflect velocity off the boundary
+        const velDotNormal = vec2Dot(ball.velocity, nearestNormal);
+        if (velDotNormal < 0) {
+          ball.velocity = vec2Sub(ball.velocity, vec2Scale(nearestNormal, 2 * velDotNormal));
+        }
+        
+        console.warn("[PHYSICS] Ball escaped region, recovered to:", ball.position);
       }
     };
 
