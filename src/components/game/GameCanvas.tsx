@@ -1,7 +1,8 @@
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
 import { LevelConfig, LevelEntity } from "@/types/level";
 import { UpgradeConfig } from "@/types/upgrade";
+import { generateRandomObstacles } from "@/lib/randomObstacles";
 import { useActiveModifiers } from "@/hooks/useActiveModifiers";
 import { calculateScore, ensureScoringConfigLoaded } from "@/hooks/useScoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
@@ -314,8 +315,16 @@ export function GameCanvas({
       // Collect obstacle polygons and create walls from them
       const obstaclePolygons: Polygon[] = [];
 
-      if (level.entities && level.entities.length > 0) {
-        for (const entity of level.entities) {
+      // Generate random obstacles for this level (adds variety)
+      const randomObstacles = generateRandomObstacles(
+        levelNumber,
+        level.entities || [],
+        level.balls
+      );
+      const allEntities = [...(level.entities || []), ...randomObstacles];
+
+      if (allEntities.length > 0) {
+        for (const entity of allEntities) {
           if (entity.kind === "wall") {
             let obstaclePolygon: Polygon;
             if (entity.shape === "rect") {
