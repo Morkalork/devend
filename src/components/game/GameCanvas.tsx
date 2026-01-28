@@ -3,6 +3,7 @@ import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "
 import { LevelConfig, LevelEntity } from "@/types/level";
 import { UpgradeConfig } from "@/types/upgrade";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
+import { decoratePolygon, getDecorationConfig } from "@/lib/obstacleDecorations";
 import { useActiveModifiers } from "@/hooks/useActiveModifiers";
 import { calculateScore, ensureScoringConfigLoaded } from "@/hooks/useScoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
@@ -324,18 +325,19 @@ export function GameCanvas({
       const allEntities = [...(level.entities || []), ...randomObstacles];
 
       if (allEntities.length > 0) {
+        let obstacleIndex = 0;
         for (const entity of allEntities) {
           if (entity.kind === "wall") {
-            let obstaclePolygon: Polygon;
+            let basePolygon: Polygon;
             if (entity.shape === "rect") {
-              obstaclePolygon = createPolygonFromShape("rect", {
+              basePolygon = createPolygonFromShape("rect", {
                 x: entity.x,
                 y: entity.y,
                 width: entity.width,
                 height: entity.height,
               });
             } else if (entity.shape === "polygon") {
-              obstaclePolygon = createPolygonFromShape("polygon", {
+              basePolygon = createPolygonFromShape("polygon", {
                 points: entity.points,
               });
             } else if (entity.shape === "circle") {
@@ -348,10 +350,15 @@ export function GameCanvas({
                   y: entity.cy + Math.sin(angle) * entity.radius,
                 });
               }
-              obstaclePolygon = { vertices };
+              basePolygon = { vertices };
             } else {
               continue;
             }
+
+            // Add visual decorations (bumps, spikes, etc.) to obstacle edges
+            const decorationConfig = getDecorationConfig(levelNumber, obstacleIndex, entity.id);
+            const obstaclePolygon = decoratePolygon(basePolygon, decorationConfig);
+            obstacleIndex++;
 
             obstaclePolygons.push(obstaclePolygon);
             // Add obstacle edges as walls
