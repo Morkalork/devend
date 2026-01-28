@@ -105,33 +105,31 @@ export function GameScreen({
         </div>
 
         {/* Stats Panel at bottom */}
-        <div className="relative">
-          <GameStatsPanel
-            ownedUpgradeIds={ownedUpgradeIds}
-            upgrades={upgrades}
-            accentColor={accentColor}
-          />
-          
-          {/* Bank button during push mode - overlays stats panel */}
-          {gameState.pushMode === "pushing" && gameState.onBankAndContinue && (
-            <div className="absolute inset-0 flex justify-center items-center z-30">
-              <button
-                onClick={gameState.onBankAndContinue}
-                className="px-6 py-3 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2"
-                style={{
-                  backgroundColor: '#f97316',
-                  color: '#000000',
-                  boxShadow: '0 0 20px rgba(249, 115, 22, 0.6)',
-                }}
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Bank & Continue
-              </button>
-            </div>
-          )}
-        </div>
+        <GameStatsPanel
+          ownedUpgradeIds={ownedUpgradeIds}
+          upgrades={upgrades}
+          accentColor={accentColor}
+        />
+        
+        {/* Bank button during push mode - fixed overlay at bottom */}
+        {gameState.pushMode === "pushing" && gameState.onBankAndContinue && (
+          <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center items-center py-4 pointer-events-none">
+            <button
+              onClick={gameState.onBankAndContinue}
+              className="px-6 py-3 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2 pointer-events-auto"
+              style={{
+                backgroundColor: '#f97316',
+                color: '#000000',
+                boxShadow: '0 0 20px rgba(249, 115, 22, 0.6)',
+              }}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              Bank & Continue
+            </button>
+          </div>
+        )}
       </div>
     </>
   );
