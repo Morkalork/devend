@@ -99,38 +99,9 @@ levels:
         "y": 500
         width: 150
         height: 200
+
+  # Was level 6 - Two hexagons (now level 5)
   - id: level-5
-    sizeThreshold: 25
-    expectedCuts: 10
-    points: 300
-    balls:
-      - id: ball-1
-        initialSpeed: 269
-        topSpeed: 544
-        color: ff0055
-        startX: 187
-        startY: 171
-      - id: ball-2
-        initialSpeed: 256
-        topSpeed: 531
-        color: 00ff88
-        startX: 738
-        startY: 170
-      - id: ball-3
-        initialSpeed: 243
-        topSpeed: 518
-        color: 00aaff
-        radius: 80
-        startX: 213
-        startY: 726
-    entities:
-      - id: wall-1768817147296
-        kind: wall
-        shape: circle
-        cx: 462.8382352941177
-        cy: 435.7648351332721
-        radius: 224
-  - id: level-6
     sizeThreshold: 15
     expectedCuts: 10
     points: 300
@@ -180,20 +151,21 @@ levels:
             - 730
           - - 340
             - 610
-      - id: wall-1768817234179
+      - id: wall-3
         kind: wall
         shape: circle
-        cx: 733.8310762293199
-        cy: 458.35285500919116
+        cx: 733.83
+        cy: 458.35
         radius: 35
-      - id: wall-1768817240403
+      - id: wall-4
         kind: wall
         shape: circle
-        cx: 155.0735078699449
-        cy: 468.2352510340074
+        cx: 155.07
+        cy: 468.24
         radius: 41
 
-  - id: level-7
+  # Was level 7 - Two rects top/bottom (now level 6)
+  - id: level-6
     sizeThreshold: 20
     expectedCuts: 12
     points: 400
@@ -232,7 +204,8 @@ levels:
         width: 200
         height: 100
 
-  - id: level-8
+  # Was level 8 - Two large circles (now level 7)
+  - id: level-7
     sizeThreshold: 18
     expectedCuts: 14
     points: 500
@@ -262,6 +235,39 @@ levels:
         cx: 600
         cy: 600
         radius: 100
+
+  # Was level 5 - Big circle center with large ball (now level 8)
+  - id: level-8
+    sizeThreshold: 25
+    expectedCuts: 10
+    points: 300
+    balls:
+      - id: ball-1
+        initialSpeed: 269
+        topSpeed: 544
+        color: ff0055
+        startX: 187
+        startY: 171
+      - id: ball-2
+        initialSpeed: 256
+        topSpeed: 531
+        color: 00ff88
+        startX: 738
+        startY: 170
+      - id: ball-3
+        initialSpeed: 243
+        topSpeed: 518
+        color: 00aaff
+        radius: 80
+        startX: 213
+        startY: 726
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: circle
+        cx: 462.84
+        cy: 435.76
+        radius: 224
 
   - id: level-9
     sizeThreshold: 15
