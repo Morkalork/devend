@@ -18,9 +18,20 @@ export interface ActiveModifiers {
   priceMultiplier: number;
   bonusLives: number; // Extra lives from upgrades
   
+  // Dead balls: min and max spawned at level start
+  minDeadBalls: number;
+  maxDeadBalls: number;
+  
+  // Ball collision speed increase (bouncer effect)
+  ballCollissionSpeedIncrease: number;
+  
+  // Yin Yang: random ball speed modifier
+  randomBallSpeedModifier: number;
+  
   // Boolean modifiers (OR of all values)
   cutPreview: boolean;
   highlightFastestBall: boolean;
+  nonLinearLines: boolean;
 }
 
 export function useActiveModifiers(
@@ -43,10 +54,15 @@ export function useActiveModifiers(
     let shopSlots = 0;
     let wallShield = 0;
     let bonusLives = 0;
+    let minDeadBalls = 0;
+    let maxDeadBalls = 0;
+    let ballCollissionSpeedIncrease = 0;
+    let randomBallSpeedModifier = 0;
     
     // Initialize boolean modifiers to false
     let cutPreview = false;
     let highlightFastestBall = false;
+    let nonLinearLines = false;
     
     for (const upgradeId of ownedUpgradeIds) {
       const upgrade = upgrades.find(u => u.id === upgradeId);
@@ -94,12 +110,33 @@ export function useActiveModifiers(
         bonusLives += m.lives;
       }
       
+      // Dead balls modifiers (take maximum values for range)
+      if (m.minDeadBalls !== undefined) {
+        minDeadBalls = Math.max(minDeadBalls, m.minDeadBalls);
+      }
+      if (m.maxDeadBalls !== undefined) {
+        maxDeadBalls = Math.max(maxDeadBalls, m.maxDeadBalls);
+      }
+      
+      // Ball collision speed increase (additive)
+      if (m.ballCollissionSpeedIncrease !== undefined) {
+        ballCollissionSpeedIncrease += m.ballCollissionSpeedIncrease;
+      }
+      
+      // Random ball speed modifier (additive - can be negative for Yin Yang)
+      if (m.randomBallSpeed !== undefined) {
+        randomBallSpeedModifier += m.randomBallSpeed;
+      }
+      
       // Boolean modifiers
       if (m.cutPreview) {
         cutPreview = true;
       }
       if (m.highlightFastestBall) {
         highlightFastestBall = true;
+      }
+      if (m.nonLinearLines) {
+        nonLinearLines = true;
       }
     }
     
@@ -116,8 +153,13 @@ export function useActiveModifiers(
       wallShield,
       priceMultiplier,
       bonusLives,
+      minDeadBalls,
+      maxDeadBalls,
+      ballCollissionSpeedIncrease,
+      randomBallSpeedModifier,
       cutPreview,
       highlightFastestBall,
+      nonLinearLines,
     };
   }, [ownedUpgradeIds, upgrades]);
 }

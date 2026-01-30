@@ -85,13 +85,23 @@ export function UpgradeShop({
   // Calculate shop slots (base 3 + shopSlots modifier)
   const shopSlotCount = 3 + activeModifiers.shopSlots;
 
+  // Count how many of each upgrade the player owns
+  const getOwnedCount = useCallback((upgradeId: string) => {
+    return ownedUpgradeIds.filter(id => id === upgradeId).length;
+  }, [ownedUpgradeIds]);
+
   // Compute offers ONCE when shop opens - use useState with initializer to prevent re-randomizing
   const [offers] = useState<UpgradeOffer[]>(() => {
     const eligible = upgrades.filter(upgrade => {
       const isAvailable = levelNumber >= upgrade.levelAvailability;
       const isNotRemoved = upgrade.levelRemoved === undefined || levelNumber <= upgrade.levelRemoved;
-      const isNotOwned = !ownedUpgradeIds.includes(upgrade.id);
-      return isAvailable && isNotRemoved && isNotOwned;
+      
+      // Check if player can still buy more copies (maxCount defaults to 1)
+      const maxCount = upgrade.maxCount ?? 1;
+      const ownedCount = ownedUpgradeIds.filter(id => id === upgrade.id).length;
+      const canBuyMore = ownedCount < maxCount;
+      
+      return isAvailable && isNotRemoved && canBuyMore;
     });
 
     // Use weighted random selection based on grade
@@ -109,8 +119,18 @@ export function UpgradeShop({
   });
 
   const handlePurchase = useCallback((offer: UpgradeOffer) => {
+    // Check if already purchased this session
     if (purchasedThisSession.includes(offer.upgrade.id)) {
-      return; // Already purchased this session
+      return;
+    }
+    
+    // Check if player has reached maxCount for this upgrade (including session purchases)
+    const maxCount = offer.upgrade.maxCount ?? 1;
+    const currentOwned = getOwnedCount(offer.upgrade.id);
+    const sessionPurchases = purchasedThisSession.filter(id => id === offer.upgrade.id).length;
+    
+    if (currentOwned + sessionPurchases >= maxCount) {
+      return; // Already at max count
     }
     
     if (playerPoints >= offer.price) {
@@ -123,7 +143,7 @@ export function UpgradeShop({
         variant: "destructive",
       });
     }
-  }, [playerPoints, onPurchase, purchasedThisSession, toast]);
+  }, [playerPoints, onPurchase, purchasedThisSession, toast, getOwnedCount]);
 
   // Mobile long-press handling
   const handleTouchStart = useCallback((id: string) => {
@@ -176,8 +196,12 @@ export function UpgradeShop({
             </motion.p>
           ) : (
             offers.map((offer, index) => {
-              const isOwned = purchasedThisSession.includes(offer.upgrade.id);
-              const canAfford = playerPoints >= offer.price && !isOwned;
+              const isPurchasedThisSession = purchasedThisSession.includes(offer.upgrade.id);
+              const maxCount = offer.upgrade.maxCount ?? 1;
+              const totalOwned = getOwnedCount(offer.upgrade.id) + 
+                purchasedThisSession.filter(id => id === offer.upgrade.id).length;
+              const isMaxed = totalOwned >= maxCount;
+              const canAfford = playerPoints >= offer.price && !isMaxed;
               const isHovered = hoveredId === offer.upgrade.id;
               const isPressed = pressedId === offer.upgrade.id;
               const showDescription = isHovered || isPressed;
@@ -198,12 +222,12 @@ export function UpgradeShop({
                 >
                   <motion.button
                     onClick={() => handlePurchase(offer)}
-                    disabled={isOwned}
-                    whileHover={{ scale: !isOwned ? 1.02 : 1 }}
-                    whileTap={{ scale: !isOwned ? 0.98 : 1 }}
+                    disabled={isMaxed}
+                    whileHover={{ scale: !isMaxed ? 1.02 : 1 }}
+                    whileTap={{ scale: !isMaxed ? 0.98 : 1 }}
                     className={`
                       relative w-48 h-56 p-4 rounded-xl border-2 transition-all duration-200 flex flex-col
-                      ${isOwned
+                      ${isMaxed
                         ? 'bg-green-500/20 border-green-500/50 cursor-default'
                         : canAfford 
                           ? `bg-card ${gradeColors.border} hover:border-primary cursor-pointer` 
@@ -216,8 +240,15 @@ export function UpgradeShop({
                       {capitalizeFirst(offer.upgrade.grade)}
                     </div>
 
-                    {/* Owned overlay */}
-                    {isOwned && (
+                    {/* Owned count badge for stackable upgrades */}
+                    {maxCount > 1 && totalOwned > 0 && (
+                      <div className="absolute top-2 right-8 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                        {totalOwned}/{maxCount}
+                      </div>
+                    )}
+
+                    {/* Maxed overlay */}
+                    {isMaxed && (
                       <div className="absolute inset-0 rounded-xl bg-green-500/10 flex items-center justify-center z-10">
                         <div className="bg-green-500 rounded-full p-2">
                           <Check className="w-6 h-6 text-white" />
@@ -226,7 +257,7 @@ export function UpgradeShop({
                     )}
 
                     {/* Icon */}
-                    <div className={`w-16 h-16 mx-auto mb-3 mt-4 rounded-lg bg-white flex items-center justify-center flex-shrink-0 ${isOwned ? 'opacity-50' : ''}`}>
+                    <div className={`w-16 h-16 mx-auto mb-3 mt-4 rounded-lg bg-white flex items-center justify-center flex-shrink-0 ${isMaxed ? 'opacity-50' : ''}`}>
                       <SvgIcon 
                         src={offer.upgrade.icon} 
                         alt={offer.upgrade.name}
@@ -235,20 +266,20 @@ export function UpgradeShop({
                     </div>
 
                     {/* Name */}
-                    <h3 className={`font-semibold text-foreground text-center mb-1 flex-shrink-0 ${isOwned ? 'opacity-50' : ''}`}>
+                    <h3 className={`font-semibold text-foreground text-center mb-1 flex-shrink-0 ${isMaxed ? 'opacity-50' : ''}`}>
                       {offer.upgrade.name}
                     </h3>
 
                     {/* Description */}
-                    <p className={`text-xs italic text-muted-foreground text-center mb-2 line-clamp-2 flex-grow ${isOwned ? 'opacity-50' : ''}`}>
+                    <p className={`text-xs italic text-muted-foreground text-center mb-2 line-clamp-2 flex-grow ${isMaxed ? 'opacity-50' : ''}`}>
                       {offer.upgrade.description}
                     </p>
 
-                    {/* Price or Owned label */}
+                    {/* Price or Maxed label */}
                     <div className="flex-shrink-0">
-                      {isOwned ? (
+                      {isMaxed ? (
                         <div className="flex items-center justify-center gap-1 text-lg font-bold text-green-500">
-                          Owned
+                          {maxCount > 1 ? 'Maxed' : 'Owned'}
                         </div>
                       ) : (
                         <div className={`
@@ -262,7 +293,7 @@ export function UpgradeShop({
                     </div>
 
                     {/* Info hint */}
-                    {!isOwned && (
+                    {!isMaxed && (
                       <div className="absolute top-2 right-2 text-muted-foreground">
                         <Info className="w-4 h-4" />
                       </div>

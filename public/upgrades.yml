@@ -258,7 +258,7 @@ upgrades:
     priceMax: 2500
     modifiers:
       minDeadBalls: 0
-	  maxDeadBalls: 3
+      maxDeadBalls: 3
 
   - id: "bouncer"
     name: "Bouncer"
@@ -338,7 +338,7 @@ upgrades:
     priceMax: 1000
     modifiers:
       ballSpeed: 1.1
-	  randomBallSpeed: -0.1
+      randomBallSpeed: -0.1
 
   - id: "coin_magnet"
     name: "Coin Magnet"
