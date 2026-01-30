@@ -7,6 +7,7 @@ upgrades:
     levelAvailability: 1
     priceMin: 50
     priceMax: 100
+    maxCount: 1
     modifiers:
       ballSpeed: 0.8
 
