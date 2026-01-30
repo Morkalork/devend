@@ -45,18 +45,6 @@ upgrades:
     modifiers:
       reducedSize: 0.05
 
-  - id: "training_wheels"
-    name: "Training Wheels"
-    grade: "common"
-    icon: "/icons/training.svg"
-    description: "Lose condition is slightly more forgiving on growing walls"
-    levelAvailability: 1
-    levelRemoved: 3
-    priceMin: 40
-    priceMax: 90
-    modifiers:
-      wallGrace: 0.15
-
   - id: "extra_time"
     name: "Steady Hands"
     grade: "common"
@@ -101,6 +89,7 @@ upgrades:
     levelAvailability: 3
     priceMin: 220
     priceMax: 380
+    maxCount: 3
     modifiers:
       lives: 1
 
@@ -120,7 +109,7 @@ upgrades:
     name: "Focus Ball"
     grade: "rare"
     icon: "/icons/focus.svg"
-    description: "Randomly highlights the fastest ball for easier tracking"
+    description: "Highlights the fastest ball for easier tracking"
     levelAvailability: 4
     priceMin: 180
     priceMax: 320
@@ -175,12 +164,23 @@ upgrades:
     name: "Guardian Angel"
     grade: "rare"
     icon: "/icons/angel.svg"
-    description: "Gain +1 life (and a brief recovery window feels longer)"
+    description: "Gain +2 life"
     levelAvailability: 6
     priceMin: 450
     priceMax: 750
     modifiers:
       lives: 1
+
+  - id: "regression"
+    name: "Regression"
+    grade: "rare"
+    icon: "/icons/regression.svg"
+    description: "Each time a ball hits an obstacle, it reduces its size"
+    levelAvailability: 6
+    priceMin: 350
+    priceMax: 650
+    modifiers:
+      reducedSize: 0.01
 
   - id: "double_offer"
     name: "Bigger Shop"
@@ -226,16 +226,16 @@ upgrades:
     modifiers:
       scoreMultiplier: 1.25
 
-  - id: "perfect_par"
-    name: "Perfect Par"
+  - id: "asymetric_geometry"
+    name: "Asymetric Geometry"
     grade: "legendary"
-    icon: "/icons/perfect.svg"
-    description: "Expected cuts effectively increase by 2 (scoring only)"
+    icon: "/icons/asymetric_geometry.svg"
+    description: "Allow drawing of non-linear lines"
     levelAvailability: 8
     priceMin: 700
     priceMax: 1200
     modifiers:
-      expectedCutsBonus: 2
+      nonLinearLines: true
 
   - id: "time_dilation"
     name: "Time Dilation"
@@ -248,28 +248,29 @@ upgrades:
     modifiers:
       ballSpeed: 0.65
 
-  - id: "divine_mercy"
-    name: "Divine Mercy"
+  - id: "dead_balls"
+    name: "Dead balls"
     grade: "godlike"
-    icon: "/icons/divine.svg"
-    description: "Survive two collisions with a growing wall (consumed)"
+    icon: "/icons/dead_balls.svg"
+    description: "Each level start with a number of 'dead' ball-obstacles"
     levelAvailability: 10
     priceMin: 1500
     priceMax: 2500
     modifiers:
-      wallShield: 2
+      minDeadBalls: 0
+	  maxDeadBalls: 3
 
-  - id: "featherweight"
-    name: "Featherweight"
+  - id: "bouncer"
+    name: "Bouncer"
     grade: "common"
-    icon: "/icons/shrink.svg"
-    description: "Balls are 15% smaller"
+    icon: "/icons/bouncer.svg"
+    description: "Balls increase their speed permanently after hitting another ball"
     levelAvailability: 1
-    levelRemoved: 4
+    levelRemoved: 6
     priceMin: 35
     priceMax: 70
     modifiers:
-      ballSize: 0.85
+      ballCollissionSpeedIncrease: 0.1
 
   - id: "quick_reflexes"
     name: "Quick Reflexes"
@@ -327,16 +328,17 @@ upgrades:
     modifiers:
       ballSpeed: 0.9
 
-  - id: "wall_fortress"
-    name: "Wall Fortress"
+  - id: "yin_yang"
+    name: "Yin Yang"
     grade: "legendary"
-    icon: "/icons/net.svg"
-    description: "Wall grace period increased significantly"
+    icon: "/icons/yin_yang.svg"
+    description: "Wall bouncing increases ball speed, but slows a random other ball by equal amount"
     levelAvailability: 9
     priceMin: 600
     priceMax: 1000
     modifiers:
-      wallGrace: 0.25
+      ballSpeed: 1.1
+	  randomBallSpeed: -0.1
 
   - id: "coin_magnet"
     name: "Coin Magnet"
