@@ -45,18 +45,6 @@ upgrades:
     modifiers:
       reducedSize: 0.05
 
-  - id: "training_wheels"
-    name: "Training Wheels"
-    grade: "common"
-    icon: "/icons/training.svg"
-    description: "Lose condition is slightly more forgiving on growing walls"
-    levelAvailability: 1
-    levelRemoved: 3
-    priceMin: 40
-    priceMax: 90
-    modifiers:
-      wallGrace: 0.15
-
   - id: "extra_time"
     name: "Steady Hands"
     grade: "common"
@@ -120,7 +108,7 @@ upgrades:
     name: "Focus Ball"
     grade: "rare"
     icon: "/icons/focus.svg"
-    description: "Randomly highlights the fastest ball for easier tracking"
+    description: "Highlights the fastest ball for easier tracking"
     levelAvailability: 4
     priceMin: 180
     priceMax: 320
@@ -142,7 +130,7 @@ upgrades:
     name: "Laser Cutter"
     grade: "rare"
     icon: "/icons/laser.svg"
-    description: "Walls generate 60% faster"
+    description: "Walls generate 50% faster"
     levelAvailability: 5
     priceMin: 240
     priceMax: 450
@@ -175,23 +163,12 @@ upgrades:
     name: "Guardian Angel"
     grade: "rare"
     icon: "/icons/angel.svg"
-    description: "Gain +1 life (and a brief recovery window feels longer)"
+    description: "Gain +1 life"
     levelAvailability: 6
     priceMin: 450
     priceMax: 750
     modifiers:
       lives: 1
-
-  - id: "wall_safety_net"
-    name: "Safety Net"
-    grade: "rare"
-    icon: "/icons/net.svg"
-    description: "Survive one collision with a growing wall (consumed)"
-    levelAvailability: 6
-    priceMin: 350
-    priceMax: 650
-    modifiers:
-      wallShield: 1
 
   - id: "double_offer"
     name: "Bigger Shop"
@@ -212,6 +189,7 @@ upgrades:
     levelAvailability: 4
     priceMin: 220
     priceMax: 420
+    maxCount: 3
     modifiers:
       priceMultiplier: 0.9
 
@@ -252,23 +230,12 @@ upgrades:
     name: "Time Dilation"
     grade: "legendary"
     icon: "/icons/time.svg"
-    description: "Ball speed reduced by 35%"
+    description: "Ball speed reduced by 1% every time it hits an obstacle"
     levelAvailability: 8
     priceMin: 750
     priceMax: 1300
     modifiers:
-      ballSpeed: 0.65
-
-  - id: "divine_mercy"
-    name: "Divine Mercy"
-    grade: "godlike"
-    icon: "/icons/divine.svg"
-    description: "Survive two collisions with a growing wall (consumed)"
-    levelAvailability: 10
-    priceMin: 1500
-    priceMax: 2500
-    modifiers:
-      wallShield: 2
+      obstacleSpeedReduction: 0.01 #Everytime a ball bounces against an obstacle surface, reduce its speed by 1%
 
   - id: "featherweight"
     name: "Featherweight"
@@ -315,17 +282,6 @@ upgrades:
     priceMax: 480
     modifiers:
       shopSlots: 2
-
-  - id: "precision_cut"
-    name: "Precision Cut"
-    grade: "uncommon"
-    icon: "/icons/precision.svg"
-    description: "Swipe sensitivity increased by 15%"
-    levelAvailability: 3
-    priceMin: 90
-    priceMax: 170
-    modifiers:
-      swipeSensitivity: 1.15
 
   - id: "turtle_mode"
     name: "Turtle Mode"
