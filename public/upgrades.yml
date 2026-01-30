@@ -7,7 +7,6 @@ upgrades:
     levelAvailability: 1
     priceMin: 50
     priceMax: 100
-    maxCount: 1
     modifiers:
       ballSpeed: 0.8
 
@@ -19,7 +18,6 @@ upgrades:
     levelAvailability: 2
     priceMin: 75
     priceMax: 150
-    maxCount: 1
     modifiers:
       ballSize: 0.75
 
@@ -31,7 +29,6 @@ upgrades:
     levelAvailability: 3
     priceMin: 100
     priceMax: 200
-    maxCount: 1
     modifiers:
       wallGenerationSpeed: 1.3
 
@@ -57,7 +54,6 @@ upgrades:
     levelRemoved: 3
     priceMin: 40
     priceMax: 90
-    maxCount: 1
     modifiers:
       wallGrace: 0.15
 
@@ -65,24 +61,13 @@ upgrades:
     name: "Steady Hands"
     grade: "common"
     icon: "/icons/steady.svg"
-    description: "Walls generate 15% faster (more reaction time)"
+    description: "Walls generate 15% faster"
     levelAvailability: 1
     levelRemoved: 4
     priceMin: 30
     priceMax: 80
     modifiers:
       wallGenerationSpeed: 1.15
-
-  - id: "snappy_cuts"
-    name: "Snappy Cuts"
-    grade: "uncommon"
-    icon: "/icons/snap.svg"
-    description: "Cuts start instantly with less input distance"
-    levelAvailability: 2
-    priceMin: 60
-    priceMax: 140
-    modifiers:
-      swipeSensitivity: 1.3
 
   - id: "ball_bumper"
     name: "Bumper Ball"
@@ -96,17 +81,6 @@ upgrades:
     modifiers:
       ballSize: 1.1
 
-  - id: "precision_edges"
-    name: "Precision Edges"
-    grade: "uncommon"
-    icon: "/icons/precision.svg"
-    description: "Shows a faint preview of the cut line before committing"
-    levelAvailability: 2
-    priceMin: 80
-    priceMax: 160
-    modifiers:
-      cutPreview: true
-
   - id: "coin_boost"
     name: "Bonus Points"
     grade: "uncommon"
@@ -115,6 +89,7 @@ upgrades:
     levelAvailability: 3
     priceMin: 120
     priceMax: 240
+    maxCount: 3
     modifiers:
       scoreMultiplier: 1.1
 
@@ -137,6 +112,7 @@ upgrades:
     levelAvailability: 3
     priceMin: 110
     priceMax: 220
+    maxCount: 2
     modifiers:
       expectedCutsBonus: 1
 
