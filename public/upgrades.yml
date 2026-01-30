@@ -18,6 +18,7 @@ upgrades:
     levelAvailability: 2
     priceMin: 75
     priceMax: 150
+    maxCount: 1
     modifiers:
       ballSize: 0.75
 
@@ -29,6 +30,7 @@ upgrades:
     levelAvailability: 3
     priceMin: 100
     priceMax: 200
+    maxCount: 1
     modifiers:
       wallGenerationSpeed: 1.3
 
