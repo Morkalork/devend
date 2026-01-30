@@ -1840,80 +1840,73 @@ export function GameCanvas({
       // Render cut preview line during drag (always shown, not just with cutPreview modifier)
       // This shows the user where their cut will go before they commit to it
       if (swipeStart && swipeRegionId && currentSwipePos && !wall) {
-        const region = regions.find((r) => r.id === swipeRegionId);
-        if (region) {
-          const delta = vec2Sub(currentSwipePos, swipeStart);
-          const dist = vec2Length(delta);
+        const delta = vec2Sub(currentSwipePos, swipeStart);
+        const dist = vec2Length(delta);
 
-          // Show preview once there's any significant drag distance
-          if (dist >= 5) {
-            const direction = vec2Normalize(delta);
+        // Show preview once there's any significant drag distance
+        if (dist >= 5) {
+          const direction = vec2Normalize(delta);
 
-            const intPos = rayPolygonIntersection(swipeStart, direction, region.polygon);
-            const intNeg = rayPolygonIntersection(swipeStart, vec2Scale(direction, -1), region.polygon);
+          // UNIFIED WALL MODEL: Find wall intersections in both directions for preview
+          let previewEnd: Vector2 | null = null;
+          let previewStart: Vector2 | null = null;
+          let previewEndDist = Infinity;
+          let previewStartDist = Infinity;
 
-            if (intPos && intNeg) {
-              // Calculate preview endpoints - walls terminate at other walls
-              let previewEnd = intPos.point;
-              let previewStart = intNeg.point;
-              let previewEndDist = intPos.distance;
-              let previewStartDist = intNeg.distance;
-
-              // UNIFIED WALL MODEL: Check all walls for intersection
-              for (const w of walls) {
-                const wallIntPos = lineSegmentIntersection(
-                  swipeStart,
-                  vec2Add(swipeStart, vec2Scale(direction, 10000)),
-                  w.start,
-                  w.end,
-                );
-                if (wallIntPos) {
-                  const wallDist = vec2Distance(swipeStart, wallIntPos);
-                  if (wallDist > 0.1 && wallDist < previewEndDist) {
-                    previewEnd = wallIntPos;
-                    previewEndDist = wallDist;
-                  }
-                }
-                const wallIntNeg = lineSegmentIntersection(
-                  swipeStart,
-                  vec2Add(swipeStart, vec2Scale(direction, -10000)),
-                  w.start,
-                  w.end,
-                );
-                if (wallIntNeg) {
-                  const wallDist = vec2Distance(swipeStart, wallIntNeg);
-                  if (wallDist > 0.1 && wallDist < previewStartDist) {
-                    previewStart = wallIntNeg;
-                    previewStartDist = wallDist;
-                  }
-                }
+          for (const w of walls) {
+            const wallIntPos = lineSegmentIntersection(
+              swipeStart,
+              vec2Add(swipeStart, vec2Scale(direction, 10000)),
+              w.start,
+              w.end,
+            );
+            if (wallIntPos) {
+              const wallDist = vec2Distance(swipeStart, wallIntPos);
+              if (wallDist > 0.1 && wallDist < previewEndDist) {
+                previewEnd = wallIntPos;
+                previewEndDist = wallDist;
               }
-
-              // Draw preview line - 15% opacity for clearly ghosted appearance
-              ctx.save();
-              ctx.globalAlpha = 0.15;
-
-              // Draw white outline for visibility
-              ctx.strokeStyle = "#ffffff";
-              ctx.lineWidth = (WALL_THICKNESS + 8) * scale;
-              ctx.lineCap = "round";
-              const negScreen = worldToScreen(previewStart.x, previewStart.y);
-              const posScreen = worldToScreen(previewEnd.x, previewEnd.y);
-              ctx.beginPath();
-              ctx.moveTo(negScreen.x, negScreen.y);
-              ctx.lineTo(posScreen.x, posScreen.y);
-              ctx.stroke();
-
-              // Draw accent-colored center (same style as active wall)
-              ctx.strokeStyle = accentColor;
-              ctx.lineWidth = (WALL_THICKNESS + 4) * scale;
-              ctx.beginPath();
-              ctx.moveTo(negScreen.x, negScreen.y);
-              ctx.lineTo(posScreen.x, posScreen.y);
-              ctx.stroke();
-
-              ctx.restore();
             }
+            const wallIntNeg = lineSegmentIntersection(
+              swipeStart,
+              vec2Add(swipeStart, vec2Scale(direction, -10000)),
+              w.start,
+              w.end,
+            );
+            if (wallIntNeg) {
+              const wallDist = vec2Distance(swipeStart, wallIntNeg);
+              if (wallDist > 0.1 && wallDist < previewStartDist) {
+                previewStart = wallIntNeg;
+                previewStartDist = wallDist;
+              }
+            }
+          }
+
+          // Draw preview line if we found valid intersections
+          if (previewEnd && previewStart) {
+            ctx.save();
+            ctx.globalAlpha = 0.15;
+
+            // Draw white outline for visibility
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = (WALL_THICKNESS + 8) * scale;
+            ctx.lineCap = "round";
+            const negScreen = worldToScreen(previewStart.x, previewStart.y);
+            const posScreen = worldToScreen(previewEnd.x, previewEnd.y);
+            ctx.beginPath();
+            ctx.moveTo(negScreen.x, negScreen.y);
+            ctx.lineTo(posScreen.x, posScreen.y);
+            ctx.stroke();
+
+            // Draw accent-colored center (same style as active wall)
+            ctx.strokeStyle = accentColor;
+            ctx.lineWidth = (WALL_THICKNESS + 4) * scale;
+            ctx.beginPath();
+            ctx.moveTo(negScreen.x, negScreen.y);
+            ctx.lineTo(posScreen.x, posScreen.y);
+            ctx.stroke();
+
+            ctx.restore();
           }
         }
       }
@@ -2403,65 +2396,62 @@ export function GameCanvas({
         if (dist >= effectiveSwipeMinDistance) {
           const direction = vec2Normalize(delta);
 
-          const region = game.regions.find((r) => r.id === game.swipeRegionId);
-          if (region) {
-            // Find intersection points with polygon boundary (world coords)
-            const intPos = rayPolygonIntersection(game.swipeStart, direction, region.polygon);
-            const intNeg = rayPolygonIntersection(game.swipeStart, vec2Scale(direction, -1), region.polygon);
+          // UNIFIED WALL MODEL: Find wall intersections in both directions
+          // This ensures fences ALWAYS grow to the nearest wall/fence, regardless of drag distance
+          let targetEnd: Vector2 | null = null;
+          let targetStart: Vector2 | null = null;
+          let targetEndDist = Infinity;
+          let targetStartDist = Infinity;
 
-            if (intPos && intNeg) {
-              // Calculate target endpoints - walls terminate at other walls
-              let targetEnd = intPos.point;
-              let targetStart = intNeg.point;
-              let targetEndDist = intPos.distance;
-              let targetStartDist = intNeg.distance;
-
-              // UNIFIED WALL MODEL: Check all walls for intersection
-              for (const w of game.walls) {
-                const wallIntPos = lineSegmentIntersection(
-                  game.swipeStart,
-                  vec2Add(game.swipeStart, vec2Scale(direction, 10000)),
-                  w.start,
-                  w.end,
-                );
-                if (wallIntPos) {
-                  const wallDist = vec2Distance(game.swipeStart, wallIntPos);
-                  if (wallDist > 0.1 && wallDist < targetEndDist) {
-                    targetEnd = wallIntPos;
-                    targetEndDist = wallDist;
-                  }
-                }
-
-                const wallIntNeg = lineSegmentIntersection(
-                  game.swipeStart,
-                  vec2Add(game.swipeStart, vec2Scale(direction, -10000)),
-                  w.start,
-                  w.end,
-                );
-                if (wallIntNeg) {
-                  const wallDist = vec2Distance(game.swipeStart, wallIntNeg);
-                  if (wallDist > 0.1 && wallDist < targetStartDist) {
-                    targetStart = wallIntNeg;
-                    targetStartDist = wallDist;
-                  }
-                }
+          // Cast rays in both directions and find closest wall intersection
+          for (const w of game.walls) {
+            // Check positive direction
+            const wallIntPos = lineSegmentIntersection(
+              game.swipeStart,
+              vec2Add(game.swipeStart, vec2Scale(direction, 10000)),
+              w.start,
+              w.end,
+            );
+            if (wallIntPos) {
+              const wallDist = vec2Distance(game.swipeStart, wallIntPos);
+              if (wallDist > 0.1 && wallDist < targetEndDist) {
+                targetEnd = wallIntPos;
+                targetEndDist = wallDist;
               }
-
-              game.activeWall = {
-                origin: { ...game.swipeStart },
-                direction,
-                startPoint: { ...game.swipeStart },
-                endPoint: { ...game.swipeStart },
-                targetStart,
-                targetEnd,
-                thickness: WALL_THICKNESS,
-                isComplete: false,
-                activeRegionId: game.swipeRegionId,
-              };
-
-              game.wallCount += 1;
-              setCutCount(game.wallCount);
             }
+
+            // Check negative direction
+            const wallIntNeg = lineSegmentIntersection(
+              game.swipeStart,
+              vec2Add(game.swipeStart, vec2Scale(direction, -10000)),
+              w.start,
+              w.end,
+            );
+            if (wallIntNeg) {
+              const wallDist = vec2Distance(game.swipeStart, wallIntNeg);
+              if (wallDist > 0.1 && wallDist < targetStartDist) {
+                targetStart = wallIntNeg;
+                targetStartDist = wallDist;
+              }
+            }
+          }
+
+          // Only create wall if we found valid intersections in both directions
+          if (targetEnd && targetStart) {
+            game.activeWall = {
+              origin: { ...game.swipeStart },
+              direction,
+              startPoint: { ...game.swipeStart },
+              endPoint: { ...game.swipeStart },
+              targetStart,
+              targetEnd,
+              thickness: WALL_THICKNESS,
+              isComplete: false,
+              activeRegionId: game.swipeRegionId!,
+            };
+
+            game.wallCount += 1;
+            setCutCount(game.wallCount);
           }
         }
       }
