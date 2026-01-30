@@ -519,6 +519,42 @@ export function GameCanvas({
         };
       });
 
+      // Spawn dead balls (stationary ball-obstacles) based on modifier
+      if (activeModifiers.maxDeadBalls > 0) {
+        const deadBallCount = activeModifiers.minDeadBalls + 
+          Math.floor(Math.random() * (activeModifiers.maxDeadBalls - activeModifiers.minDeadBalls + 1));
+        
+        for (let i = 0; i < deadBallCount; i++) {
+          const deadBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier * 0.8; // Slightly smaller
+          const position = findValidSpawnPosition(deadBallRadius);
+          
+          // Check this position doesn't overlap with existing balls
+          let overlapsExisting = false;
+          for (const existingBall of game.balls) {
+            const dist = vec2Distance(position, existingBall.position);
+            if (dist < deadBallRadius + existingBall.radius + 10) {
+              overlapsExisting = true;
+              break;
+            }
+          }
+          
+          if (!overlapsExisting) {
+            game.balls.push({
+              id: `dead-ball-${i}`,
+              position,
+              velocity: { x: 0, y: 0 }, // Stationary
+              radius: deadBallRadius,
+              speed: 0,
+              topSpeed: 0,
+              color: '#444444', // Dark gray for dead balls
+              regionId: "", // Will be assigned later
+              rotation: 0,
+              flashIntensity: 0,
+            });
+          }
+        }
+      }
+
       // Store the board polygon for ball collision (never changes after init)
       game.boardPolygon = boardPolygon;
 
@@ -2204,6 +2240,46 @@ export function GameCanvas({
               // Play ball collision sound
               const collisionIntensity = Math.min(1, Math.abs(relVelNormal) / 300);
               playBallCollideSound(collisionIntensity);
+              
+              // Apply ball collision speed increase (Bouncer upgrade)
+              if (activeModifiers.ballCollissionSpeedIncrease > 0) {
+                // Only apply to moving balls (not dead balls)
+                if (ball1.speed > 0) {
+                  const speed1 = vec2Length(ball1.velocity);
+                  if (speed1 > 0) {
+                    const newSpeed1 = Math.min(ball1.topSpeed, speed1 * (1 + activeModifiers.ballCollissionSpeedIncrease));
+                    ball1.velocity = vec2Scale(vec2Normalize(ball1.velocity), newSpeed1);
+                  }
+                }
+                if (ball2.speed > 0) {
+                  const speed2 = vec2Length(ball2.velocity);
+                  if (speed2 > 0) {
+                    const newSpeed2 = Math.min(ball2.topSpeed, speed2 * (1 + activeModifiers.ballCollissionSpeedIncrease));
+                    ball2.velocity = vec2Scale(vec2Normalize(ball2.velocity), newSpeed2);
+                  }
+                }
+              }
+              
+              // Apply Yin Yang effect: random ball speed modifier affects a random OTHER ball
+              if (activeModifiers.randomBallSpeedModifier !== 0) {
+                // Find other moving balls that weren't involved in this collision
+                const otherBalls = balls.filter(b => 
+                  b.id !== ball1.id && 
+                  b.id !== ball2.id && 
+                  b.speed > 0 && // Only affect moving balls
+                  !b.id.startsWith('dead-ball-')
+                );
+                
+                if (otherBalls.length > 0) {
+                  const randomBall = otherBalls[Math.floor(Math.random() * otherBalls.length)];
+                  const currentSpeed = vec2Length(randomBall.velocity);
+                  if (currentSpeed > 0) {
+                    // Apply speed modifier (can be negative for slowing)
+                    const newSpeed = Math.max(50, Math.min(randomBall.topSpeed, currentSpeed * (1 + activeModifiers.randomBallSpeedModifier)));
+                    randomBall.velocity = vec2Scale(vec2Normalize(randomBall.velocity), newSpeed);
+                  }
+                }
+              }
             }
           }
         }

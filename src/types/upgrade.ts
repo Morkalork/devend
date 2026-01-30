@@ -20,6 +20,19 @@ export interface UpgradeModifiers {
   shopSlots?: number;
   priceMultiplier?: number;
   lives?: number; // Adds to max lives and current lives when purchased
+  
+  // Non-linear line drawing (allows curved cuts)
+  nonLinearLines?: boolean;
+  
+  // Dead balls: stationary ball-obstacles that spawn at level start
+  minDeadBalls?: number;
+  maxDeadBalls?: number;
+  
+  // Ball collision speed modifier (bouncer effect)
+  ballCollissionSpeedIncrease?: number;
+  
+  // Yin Yang: affect random other ball speed (negative = slow down)
+  randomBallSpeed?: number;
 }
 
 export interface UpgradeConfig {
@@ -32,6 +45,7 @@ export interface UpgradeConfig {
   levelRemoved?: number;
   priceMin: number;
   priceMax: number;
+  maxCount?: number; // Maximum copies of this upgrade player can own (default: 1)
   modifiers: UpgradeModifiers;
 }
 
