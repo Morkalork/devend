@@ -44,6 +44,7 @@ upgrades:
     levelRemoved: 8
     priceMin: 150
     priceMax: 300
+    maxCount: 4
     modifiers:
       reducedSize: 0.05
 
@@ -56,6 +57,7 @@ upgrades:
     levelRemoved: 3
     priceMin: 40
     priceMax: 90
+    maxCount: 1
     modifiers:
       wallGrace: 0.15
 
