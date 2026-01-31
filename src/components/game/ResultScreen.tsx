@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Skull, RotateCcw, Home, Medal } from 'lucide-react';
+import { Trophy, Skull, RotateCcw, Home, Medal, Zap } from 'lucide-react';
 import { GameResult } from '@/types/game';
+import { ActiveSuperUpgrade } from '@/types/superUpgrade';
 import { NameEntryDialog } from './NameEntryDialog';
 import { CRTBackground } from './CRTBackground';
 
@@ -12,6 +13,7 @@ interface ResultScreenProps {
   onSaveHighscore: (name: string) => void;
   onViewHighscores: () => void;
   accentColor?: string;
+  activeSuperUpgrade?: ActiveSuperUpgrade | null;
 }
 
 export function ResultScreen({ 
@@ -21,6 +23,7 @@ export function ResultScreen({
   onSaveHighscore,
   onViewHighscores,
   accentColor,
+  activeSuperUpgrade,
 }: ResultScreenProps) {
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
   
@@ -144,6 +147,27 @@ export function ResultScreen({
                 {totalScore}
               </p>
             </div>
+          )}
+
+          {/* Active Super Upgrade indicator */}
+          {activeSuperUpgrade && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45 }}
+              className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/30"
+              style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.2)' }}
+            >
+              <div className="flex items-center gap-2 text-primary">
+                <Zap className="w-4 h-4" />
+                <span className="text-sm font-display font-bold">
+                  {activeSuperUpgrade.upgrade.name} Active
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {activeSuperUpgrade.upgrade.description}
+              </p>
+            </motion.div>
           )}
         </motion.div>
 
