@@ -3,7 +3,14 @@ import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "
 import { LevelConfig, LevelEntity } from "@/types/level";
 import { UpgradeConfig } from "@/types/upgrade";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
-import { decoratePolygon, getDecorationConfig } from "@/lib/obstacleDecorations";
+import { decoratePolygon } from "@/lib/obstacleDecorations";
+import { 
+  getVarietyDecorationConfig, 
+  applyRectVariation, 
+  applyCircleVariation, 
+  applyPolygonVariation,
+  resetRunSeed 
+} from "@/lib/varietySystem";
 import { useActiveModifiers } from "@/hooks/useActiveModifiers";
 import { calculateScore, ensureScoringConfigLoaded } from "@/hooks/useScoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
@@ -316,6 +323,12 @@ export function GameCanvas({
       // Collect obstacle polygons and create walls from them
       const obstaclePolygons: Polygon[] = [];
 
+      // Reset run seed for new game/level to get consistent variety per run
+      resetRunSeed();
+      
+      // Get variety value from level config (default 0 = no variation)
+      const variety = level.variety ?? 0;
+
       // Generate random obstacles for this level (adds variety)
       const randomObstacles = generateRandomObstacles(
         levelNumber,
@@ -329,25 +342,38 @@ export function GameCanvas({
         for (const entity of allEntities) {
           if (entity.kind === "wall") {
             let basePolygon: Polygon;
+            
             if (entity.shape === "rect") {
+              // Apply size variation to rect based on variety
+              const varied = applyRectVariation(
+                entity.x, entity.y, entity.width, entity.height,
+                variety, level.id, entity.id
+              );
               basePolygon = createPolygonFromShape("rect", {
-                x: entity.x,
-                y: entity.y,
-                width: entity.width,
-                height: entity.height,
+                x: varied.x,
+                y: varied.y,
+                width: varied.width,
+                height: varied.height,
               });
             } else if (entity.shape === "polygon") {
-              basePolygon = createPolygonFromShape("polygon", {
-                points: entity.points,
-              });
+              // Apply vertex offset variation to polygon based on variety
+              const variedVertices = applyPolygonVariation(
+                entity.points.map(([x, y]) => ({ x, y })),
+                variety, level.id, entity.id
+              );
+              basePolygon = { vertices: variedVertices };
             } else if (entity.shape === "circle") {
+              // Apply radius variation to circle based on variety
+              const variedRadius = applyCircleVariation(
+                entity.radius, variety, level.id, entity.id
+              );
               const numSides = 24;
               const vertices: { x: number; y: number }[] = [];
               for (let i = 0; i < numSides; i++) {
                 const angle = (i / numSides) * Math.PI * 2;
                 vertices.push({
-                  x: entity.cx + Math.cos(angle) * entity.radius,
-                  y: entity.cy + Math.sin(angle) * entity.radius,
+                  x: entity.cx + Math.cos(angle) * variedRadius,
+                  y: entity.cy + Math.sin(angle) * variedRadius,
                 });
               }
               basePolygon = { vertices };
@@ -355,9 +381,13 @@ export function GameCanvas({
               continue;
             }
 
-            // Add visual decorations (bumps, spikes, etc.) to obstacle edges
-            const decorationConfig = getDecorationConfig(levelNumber, obstacleIndex, entity.id);
-            const obstaclePolygon = decoratePolygon(basePolygon, decorationConfig);
+            // Add visual decorations (bumps, spikes, etc.) based on variety
+            const decorationConfig = getVarietyDecorationConfig(
+              variety, level.id, entity.id, obstacleIndex
+            );
+            const obstaclePolygon = variety > 0 
+              ? decoratePolygon(basePolygon, decorationConfig)
+              : basePolygon; // Skip decoration if variety is 0
             obstacleIndex++;
 
             obstaclePolygons.push(obstaclePolygon);

@@ -55,6 +55,7 @@ export interface LevelConfig {
   sizeThreshold: number; // percentage
   expectedCuts: number; // expected number of cuts to complete the level
   points: number; // base points for the level
+  variety?: number; // 0-100: controlled randomness for organic variation (default 0)
   balls: BallConfig[];
   entities?: LevelEntity[]; // optional array of entities (obstacles, etc.)
 }
