@@ -1,3 +1,5 @@
+import { UnlockCondition } from './metaProgression';
+
 export interface SuperUpgradeEffect {
   type: 
     | 'ballSpeedMultiplier'
@@ -20,6 +22,10 @@ export interface SuperUpgrade {
   cost: number;
   icon?: string;
   effect: SuperUpgradeEffect;
+  /** If true, this upgrade must be unlocked before it can be purchased */
+  locked?: boolean;
+  /** The condition that must be met to unlock this upgrade */
+  unlockCondition?: UnlockCondition;
 }
 
 export interface SuperUpgradeConfig {

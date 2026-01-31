@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, X, Check, Sparkles, Lock } from 'lucide-react';
 import { SuperUpgrade } from '@/types/superUpgrade';
+import { MetaProgressionStats } from '@/types/metaProgression';
 import { CRTBackground } from './CRTBackground';
 import { SvgIcon } from '@/components/ui/SvgIcon';
+import { Progress } from '@/components/ui/progress';
 
 interface SuperUpgradeOfferProps {
   superUpgrades: SuperUpgrade[];
@@ -11,6 +13,10 @@ interface SuperUpgradeOfferProps {
   onPurchase: (upgrade: SuperUpgrade, newScore: number) => void;
   onSkip: () => void;
   accentColor?: string;
+  /** Meta progression stats for showing unlock progress */
+  metaStats: MetaProgressionStats;
+  /** IDs of upgrades that have been unlocked */
+  unlockedIds: string[];
 }
 
 export function SuperUpgradeOffer({
@@ -19,11 +25,35 @@ export function SuperUpgradeOffer({
   onPurchase,
   onSkip,
   accentColor,
+  metaStats,
+  unlockedIds,
 }: SuperUpgradeOfferProps) {
   const [selectedUpgrade, setSelectedUpgrade] = useState<SuperUpgrade | null>(null);
   const [confirming, setConfirming] = useState(false);
 
+  /**
+   * Check if an upgrade is available for purchase (unlocked or not locked)
+   */
+  const isUpgradeAvailable = (upgrade: SuperUpgrade): boolean => {
+    if (!upgrade.locked) return true;
+    return unlockedIds.includes(upgrade.id);
+  };
+
+  /**
+   * Get unlock progress for a locked upgrade
+   */
+  const getUnlockProgress = (upgrade: SuperUpgrade): { current: number; threshold: number; description: string } | null => {
+    if (!upgrade.locked || !upgrade.unlockCondition) return null;
+    const current = metaStats[upgrade.unlockCondition.type];
+    return {
+      current,
+      threshold: upgrade.unlockCondition.threshold,
+      description: upgrade.unlockCondition.description,
+    };
+  };
+
   const handleSelect = (upgrade: SuperUpgrade) => {
+    if (!isUpgradeAvailable(upgrade)) return;
     if (upgrade.cost > currentScore) return;
     setSelectedUpgrade(upgrade);
     setConfirming(true);
@@ -95,8 +125,12 @@ export function SuperUpgradeOffer({
             className="flex flex-col gap-3 max-h-[40vh] overflow-y-auto pr-1"
           >
             {superUpgrades.map((upgrade, index) => {
+              const isAvailable = isUpgradeAvailable(upgrade);
               const canAfford = upgrade.cost <= currentScore;
+              const canPurchase = isAvailable && canAfford;
               const isSelected = selectedUpgrade?.id === upgrade.id;
+              const unlockProgress = getUnlockProgress(upgrade);
+              const isLocked = upgrade.locked && !isAvailable;
               
               return (
                 <motion.button
@@ -105,17 +139,19 @@ export function SuperUpgradeOffer({
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.35 + index * 0.05 }}
                   onClick={() => handleSelect(upgrade)}
-                  disabled={!canAfford}
+                  disabled={!canPurchase}
                   className={`
                     relative p-4 rounded-lg border-2 text-left transition-all
-                    ${canAfford 
-                      ? 'border-primary/30 bg-primary/5 hover:border-primary hover:bg-primary/10 cursor-pointer' 
-                      : 'border-muted/20 bg-muted/5 opacity-50 cursor-not-allowed'
+                    ${isLocked
+                      ? 'border-muted/30 bg-muted/5 opacity-60 cursor-not-allowed'
+                      : canPurchase 
+                        ? 'border-primary/30 bg-primary/5 hover:border-primary hover:bg-primary/10 cursor-pointer' 
+                        : 'border-muted/20 bg-muted/5 opacity-50 cursor-not-allowed'
                     }
                     ${isSelected ? 'border-primary bg-primary/15 ring-2 ring-primary/30' : ''}
                   `}
                   style={{
-                    boxShadow: canAfford ? '0 0 15px hsl(var(--primary) / 0.1)' : 'none',
+                    boxShadow: canPurchase ? '0 0 15px hsl(var(--primary) / 0.1)' : 'none',
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -124,26 +160,53 @@ export function SuperUpgradeOffer({
                         {upgrade.icon ? (
                           <SvgIcon 
                             src={upgrade.icon} 
-                            className={`w-5 h-5 ${canAfford ? 'text-primary' : 'text-muted-foreground'}`}
+                            className={`w-5 h-5 ${isLocked ? 'text-muted-foreground/50' : canPurchase ? 'text-primary' : 'text-muted-foreground'}`}
                           />
                         ) : (
-                          <Zap className={`w-4 h-4 ${canAfford ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <Zap className={`w-4 h-4 ${isLocked ? 'text-muted-foreground/50' : canPurchase ? 'text-primary' : 'text-muted-foreground'}`} />
                         )}
-                        <span className={`font-display font-bold text-lg ${canAfford ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        <span className={`font-display font-bold text-lg ${isLocked ? 'text-muted-foreground/70' : canPurchase ? 'text-foreground' : 'text-muted-foreground'}`}>
                           {upgrade.name}
                         </span>
+                        {isLocked && (
+                          <Lock className="w-4 h-4 text-muted-foreground/50" />
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground leading-snug">
                         {upgrade.description}
                       </p>
+                      
+                      {/* Unlock progress for locked upgrades */}
+                      {isLocked && unlockProgress && (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                            <span>{unlockProgress.description}</span>
+                            <span>{unlockProgress.current} / {unlockProgress.threshold}</span>
+                          </div>
+                          <Progress 
+                            value={(unlockProgress.current / unlockProgress.threshold) * 100} 
+                            className="h-1.5 bg-muted/30"
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col items-end shrink-0">
-                      <span className={`text-lg font-display font-bold ${canAfford ? 'text-primary' : 'text-muted-foreground'}`}>
-                        {upgrade.cost}
-                      </span>
-                      <span className="text-xs text-muted-foreground">pts</span>
-                      {!canAfford && (
-                        <Lock className="w-4 h-4 text-muted-foreground mt-1" />
+                      {!isLocked && (
+                        <>
+                          <span className={`text-lg font-display font-bold ${canPurchase ? 'text-primary' : 'text-muted-foreground'}`}>
+                            {upgrade.cost}
+                          </span>
+                          <span className="text-xs text-muted-foreground">pts</span>
+                          {!canAfford && (
+                            <Lock className="w-4 h-4 text-muted-foreground mt-1" />
+                          )}
+                        </>
+                      )}
+                      {isLocked && (
+                        <div className="text-xs text-muted-foreground/60 text-right">
+                          <span className="text-sm font-bold">{upgrade.cost}</span>
+                          <span className="block">pts</span>
+                        </div>
                       )}
                     </div>
                   </div>
