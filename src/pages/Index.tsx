@@ -7,6 +7,7 @@ import { useHighscores } from '@/hooks/useHighscores';
 import { useInteractiveTutorial } from '@/hooks/useInteractiveTutorial';
 import { useCheckpoint, getTierScoreMultiplier } from '@/hooks/useCheckpoint';
 import { useSuperUpgradeManager } from '@/hooks/useSuperUpgradeManager';
+import { useMetaProgression } from '@/hooks/useMetaProgression';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
@@ -19,6 +20,7 @@ import { HighscoresScreen } from '@/components/game/HighscoresScreen';
 import { SuperUpgradeOffer } from '@/components/game/SuperUpgradeOffer';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { SuperUpgrade, ActiveSuperUpgrade } from '@/types/superUpgrade';
+import { MetaProgressionStats } from '@/types/metaProgression';
 
 // Lazy load admin components (dev-only)
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
@@ -110,9 +112,23 @@ const Index = () => {
     clearActiveSuperUpgrade,
   } = useSuperUpgradeManager();
 
+  // Meta progression system for tracking unlocks
+  const {
+    stats: metaStats,
+    unlockedIds,
+    recordLevelReached,
+    recordFencesDrawn,
+    recordPerfectLevel,
+    recordLivesLost,
+    checkAndUnlock,
+  } = useMetaProgression();
+
   // Super upgrade offer state
   const [showSuperUpgradeOffer, setShowSuperUpgradeOffer] = useState(false);
   const [pendingResultScore, setPendingResultScore] = useState<number | null>(null);
+  
+  // Track lives at start of level for perfect level detection
+  const [livesAtLevelStart, setLivesAtLevelStart] = useState(BASE_LIVES);
 
   // Calculate modifiers to track bonus lives
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
@@ -137,6 +153,7 @@ const Index = () => {
         startingLives += activeSuperUpgrade.upgrade.effect.value;
       }
       setCurrentLives(startingLives);
+      setLivesAtLevelStart(startingLives);
       
       // Check for active checkpoint and start from checkpoint level
       const startingLevel = getStartingLevel();
@@ -186,13 +203,29 @@ const Index = () => {
   }, [endGame, totalScore, saveCheckpoint, clearCheckpoint, clearActiveSuperUpgrade]);
 
   const handleLivesChange = useCallback((newLives: number) => {
+    const livesLost = currentLives - newLives;
+    if (livesLost > 0) {
+      recordLivesLost(livesLost);
+    }
     setCurrentLives(newLives);
     // Game over handling is done in GameCanvas with a delay for visual feedback
-  }, []);
+  }, [currentLives, recordLivesLost]);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
-    // Apply tier score multiplier (10% boost per tier beyond first)
+    // Track meta progression stats
     const currentLevelNum = currentLevelIndex + 1;
+    recordLevelReached(currentLevelNum);
+    recordFencesDrawn(scoreData.cutCount || 0);
+    
+    // Check if level was completed without losing a life
+    if (currentLives >= livesAtLevelStart) {
+      recordPerfectLevel();
+    }
+    
+    // Check and unlock any newly available super upgrades
+    checkAndUnlock(superUpgrades);
+    
+    // Apply tier score multiplier (10% boost per tier beyond first)
     const tierMultiplier = getTierScoreMultiplier(currentLevelNum);
     const boostedLevelScore = Math.floor(scoreData.levelScore * tierMultiplier);
     
@@ -205,7 +238,10 @@ const Index = () => {
       tierMultiplier, // Pass for display purposes
     });
     setShowLevelComplete(true);
-  }, [totalScore, currentLevelIndex]);
+    
+    // Reset lives at level start for next level
+    setLivesAtLevelStart(currentLives);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, superUpgrades, currentLives, livesAtLevelStart]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -276,6 +312,7 @@ const Index = () => {
       startingLives += activeSuperUpgrade.upgrade.effect.value;
     }
     setCurrentLives(startingLives);
+    setLivesAtLevelStart(startingLives);
     
     // Respect checkpoint system - start from checkpoint level if available
     const startingLevel = getStartingLevel();
@@ -384,6 +421,8 @@ const Index = () => {
         onSuperUpgradePurchase={handleSuperUpgradePurchase}
         onSuperUpgradeSkip={handleSuperUpgradeSkip}
         activeSuperUpgrade={activeSuperUpgrade}
+        metaStats={metaStats}
+        unlockedIds={unlockedIds}
       />
     </AccentColorProvider>
   );
@@ -435,6 +474,8 @@ interface IndexContentProps {
   onSuperUpgradePurchase: (upgrade: SuperUpgrade, newScore: number) => void;
   onSuperUpgradeSkip: () => void;
   activeSuperUpgrade: ActiveSuperUpgrade | null;
+  metaStats: MetaProgressionStats;
+  unlockedIds: string[];
 }
 
 function IndexContent({
@@ -482,6 +523,8 @@ function IndexContent({
   onSuperUpgradePurchase,
   onSuperUpgradeSkip,
   activeSuperUpgrade,
+  metaStats,
+  unlockedIds,
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
 
@@ -495,6 +538,8 @@ function IndexContent({
           onPurchase={onSuperUpgradePurchase}
           onSkip={onSuperUpgradeSkip}
           accentColor={accentHex}
+          metaStats={metaStats}
+          unlockedIds={unlockedIds}
         />
       )}
     
