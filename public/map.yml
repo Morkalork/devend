@@ -14,13 +14,19 @@ levels:
     sizeThreshold: 40
     expectedCuts: 5
     points: 150
-    variety: 5
+	variety: 5
     balls:
       - id: ball-1
         initialSpeed: 168
         topSpeed: 336
         color: ff6b6b
         startX: 300
+        startY: 450
+      - id: ball-2
+        initialSpeed: 154
+        topSpeed: 326
+        color: 4ecdc4
+        startX: 600
         startY: 450
     entities:
       - id: wall-1
@@ -41,8 +47,14 @@ levels:
     sizeThreshold: 35
     expectedCuts: 6
     points: 200
-    variety: 5
+	variety: 5
     balls:
+      - id: ball-1
+        initialSpeed: 182
+        topSpeed: 360
+        color: ffd93d
+        startX: 250
+        startY: 450
       - id: ball-2
         initialSpeed: 173
         topSpeed: 346
@@ -61,8 +73,14 @@ levels:
     sizeThreshold: 30
     expectedCuts: 8
     points: 250
-    variety: 10
+	variety: 5
     balls:
+      - id: ball-1
+        initialSpeed: 192
+        topSpeed: 384
+        color: ff8c42
+        startX: 450
+        startY: 350
       - id: ball-2
         initialSpeed: 182
         topSpeed: 374
@@ -84,11 +102,13 @@ levels:
         "y": 500
         width: 150
         height: 200
+
+  # Was level 6 - Two hexagons (now level 5)
   - id: level-5
     sizeThreshold: 15
     expectedCuts: 10
     points: 300
-    variety: 25
+	variety: 10
     balls:
       - id: ball-1
         initialSpeed: 202
@@ -147,11 +167,13 @@ levels:
         cx: 155.07
         cy: 468.24
         radius: 41
+
+  # Was level 7 - Two rects top/bottom (now level 6)
   - id: level-6
     sizeThreshold: 20
     expectedCuts: 12
     points: 400
-    variety: 10
+	variety: 10
     balls:
       - id: ball-1
         initialSpeed: 210
@@ -186,11 +208,13 @@ levels:
         "y": 700
         width: 200
         height: 100
+
+  # Was level 8 - Two large circles (now level 7)
   - id: level-7
     sizeThreshold: 18
     expectedCuts: 14
     points: 500
-    variety: 10
+	variety: 10
     balls:
       - id: ball-1
         initialSpeed: 218
@@ -217,11 +241,13 @@ levels:
         cx: 600
         cy: 600
         radius: 100
+
+  # Was level 5 - Big circle center with large ball (now level 8)
   - id: level-8
     sizeThreshold: 25
     expectedCuts: 10
     points: 300
-    variety: 15
+	variety: 10
     balls:
       - id: ball-1
         initialSpeed: 202
@@ -249,11 +275,12 @@ levels:
         cx: 462.84
         cy: 435.76
         radius: 224
+
   - id: level-9
     sizeThreshold: 15
     expectedCuts: 16
     points: 600
-    variety: 10
+	variety: 30
     balls:
       - id: ball-1
         initialSpeed: 225
@@ -300,11 +327,12 @@ levels:
         "y": 100
         width: 150
         height: 150
+
   - id: level-10
     sizeThreshold: 12
     expectedCuts: 18
     points: 750
-    variety: 15
+	variety: 15
     balls:
       - id: ball-1
         initialSpeed: 233
@@ -331,11 +359,12 @@ levels:
         cx: 450
         cy: 450
         radius: 150
+
   - id: level-11
     sizeThreshold: 10
     expectedCuts: 20
     points: 900
-    variety: 15
+	variety: 15
     balls:
       - id: ball-1
         initialSpeed: 240
@@ -369,11 +398,12 @@ levels:
         "y": 350
         width: 200
         height: 200
+
   - id: level-12
     sizeThreshold: 10
     expectedCuts: 22
     points: 1000
-    variety: 15
+	variety: 15
     balls:
       - id: ball-1
         initialSpeed: 248
@@ -412,10 +442,12 @@ levels:
         cx: 450
         cy: 650
         radius: 80
+
   - id: level-13
     sizeThreshold: 8
     expectedCuts: 24
     points: 1200
+	variety: 35
     balls:
       - id: ball-1
         initialSpeed: 255
@@ -468,10 +500,12 @@ levels:
         "y": 400
         width: 100
         height: 100
+
   - id: level-14
     sizeThreshold: 8
     expectedCuts: 26
     points: 1400
+	variety: 15
     balls:
       - id: ball-1
         initialSpeed: 263
@@ -524,10 +558,12 @@ levels:
         "y": 400
         width: 100
         height: 100
+
   - id: level-15
     sizeThreshold: 5
     expectedCuts: 28
     points: 1600
+	variety: 15
     balls:
       - id: ball-1
         initialSpeed: 270
@@ -584,6 +620,7 @@ levels:
         cx: 650
         cy: 650
         radius: 60
+
   - id: level-16
     sizeThreshold: 5
     expectedCuts: 30
