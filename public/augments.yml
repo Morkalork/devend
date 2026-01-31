@@ -1,4 +1,4 @@
-superUpgrades:
+augments:
   - id: slower-balls
     name: Slower Balls
     description: Reduces base ball speed by 10%, making movement more manageable.

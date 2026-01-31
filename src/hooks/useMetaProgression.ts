@@ -7,7 +7,7 @@ import {
   META_STATS_STORAGE_KEY,
   UNLOCK_STATE_STORAGE_KEY,
 } from '@/types/metaProgression';
-import { SuperUpgrade } from '@/types/superUpgrade';
+import { Augment } from '@/types/augment';
 
 /**
  * Load meta stats from localStorage
@@ -146,19 +146,19 @@ export function useMetaProgression() {
   }, [updateStats]);
 
   /**
-   * Check and unlock any newly available super upgrades
+   * Check and unlock any newly available augments
    */
-  const checkAndUnlock = useCallback((superUpgrades: SuperUpgrade[]): string[] => {
+  const checkAndUnlock = useCallback((augments: Augment[]): string[] => {
     const newlyUnlocked: string[] = [];
     
-    superUpgrades.forEach(upgrade => {
-      // Skip if already unlocked or not a locked upgrade
-      if (unlockedIds.includes(upgrade.id)) return;
-      if (!upgrade.locked || !upgrade.unlockCondition) return;
+    augments.forEach(augment => {
+      // Skip if already unlocked or not a locked augment
+      if (unlockedIds.includes(augment.id)) return;
+      if (!augment.locked || !augment.unlockCondition) return;
       
       // Check if condition is now met
-      if (isConditionMet(upgrade.unlockCondition, stats)) {
-        newlyUnlocked.push(upgrade.id);
+      if (isConditionMet(augment.unlockCondition, stats)) {
+        newlyUnlocked.push(augment.id);
       }
     });
     
@@ -172,24 +172,24 @@ export function useMetaProgression() {
   }, [stats, unlockedIds]);
 
   /**
-   * Check if a specific upgrade is unlocked
+   * Check if a specific augment is unlocked
    */
-  const isUpgradeUnlocked = useCallback((upgradeId: string, upgrade: SuperUpgrade): boolean => {
-    // If not a locked upgrade, it's always "unlocked"
-    if (!upgrade.locked) return true;
+  const isAugmentUnlocked = useCallback((augmentId: string, augment: Augment): boolean => {
+    // If not a locked augment, it's always "unlocked"
+    if (!augment.locked) return true;
     
-    return unlockedIds.includes(upgradeId);
+    return unlockedIds.includes(augmentId);
   }, [unlockedIds]);
 
   /**
-   * Get progress for a specific upgrade's unlock condition
+   * Get progress for a specific augment's unlock condition
    */
-  const getUpgradeProgress = useCallback((upgrade: SuperUpgrade): { current: number; threshold: number } | null => {
-    if (!upgrade.locked || !upgrade.unlockCondition) return null;
+  const getAugmentProgress = useCallback((augment: Augment): { current: number; threshold: number } | null => {
+    if (!augment.locked || !augment.unlockCondition) return null;
     
     return {
-      current: getConditionProgress(upgrade.unlockCondition, stats),
-      threshold: upgrade.unlockCondition.threshold,
+      current: getConditionProgress(augment.unlockCondition, stats),
+      threshold: augment.unlockCondition.threshold,
     };
   }, [stats]);
 
@@ -213,8 +213,8 @@ export function useMetaProgression() {
     recordPerfectLevel,
     recordLivesLost,
     checkAndUnlock,
-    isUpgradeUnlocked,
-    getUpgradeProgress,
+    isAugmentUnlocked,
+    getAugmentProgress,
     resetProgression,
   };
 }

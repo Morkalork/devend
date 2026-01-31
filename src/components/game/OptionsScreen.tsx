@@ -6,30 +6,30 @@ import { CRTBackground } from './CRTBackground';
 interface OptionsScreenProps {
   onBack: () => void;
   onReplayTutorial: () => void;
-  onClearHighscores: () => void;
-  hasHighscores: boolean;
+  onResetAugments: () => void;
+  hasAugments: boolean;
   accentColor?: string;
 }
 
 export function OptionsScreen({ 
   onBack, 
   onReplayTutorial, 
-  onClearHighscores,
-  hasHighscores,
+  onResetAugments,
+  hasAugments,
   accentColor,
 }: OptionsScreenProps) {
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleClearClick = () => {
+  const handleResetClick = () => {
     setShowConfirm(true);
   };
 
-  const handleConfirmClear = () => {
-    onClearHighscores();
+  const handleConfirmReset = () => {
+    onResetAugments();
     setShowConfirm(false);
   };
 
-  const handleCancelClear = () => {
+  const handleCancelReset = () => {
     setShowConfirm(false);
   };
 
@@ -91,16 +91,16 @@ export function OptionsScreen({
             Replay Interactive Tutorial
           </motion.button>
 
-          {/* Clear Highscores */}
-          {hasHighscores && (
+          {/* Reset Augments */}
+          {hasAugments && (
             <motion.button
               className="arcade-button-danger rounded-lg flex items-center justify-center gap-2"
-              onClick={handleClearClick}
+              onClick={handleResetClick}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
               <Trash2 className="w-5 h-5" />
-              Clear Highscores
+              Reset Augments & Score
             </motion.button>
           )}
 
@@ -130,23 +130,23 @@ export function OptionsScreen({
             className="bg-card border border-border rounded-xl p-6 max-w-sm w-full shadow-xl"
           >
             <h2 className="text-xl font-display font-bold text-foreground mb-4">
-              Clear All Highscores?
+              Reset All Progress?
             </h2>
             <p className="text-muted-foreground mb-6">
-              This will permanently delete all saved highscores. This action cannot be undone.
+              This will reset your score balance and all owned augments. This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
                 className="flex-1 arcade-button-secondary rounded-lg py-2"
-                onClick={handleCancelClear}
+                onClick={handleCancelReset}
               >
                 Cancel
               </button>
               <button
                 className="flex-1 arcade-button-danger rounded-lg py-2"
-                onClick={handleConfirmClear}
+                onClick={handleConfirmReset}
               >
-                Clear
+                Reset
               </button>
             </div>
           </motion.div>
