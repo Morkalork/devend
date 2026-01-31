@@ -5,7 +5,7 @@ import { Polygon, Vector2, vec2Add, vec2Sub, vec2Scale, vec2Normalize, vec2Lengt
 
 export type DecorationType = 'bump' | 'spike' | 'tooth' | 'wave';
 
-interface DecorationConfig {
+export interface DecorationConfig {
   type: DecorationType;
   density: number; // Average number of decorations per 100 world units of edge
   minSize: number; // Minimum decoration size in world units

@@ -3,6 +3,7 @@ levels:
     sizeThreshold: 40
     expectedCuts: 3
     points: 100
+    variety: 0
     balls:
       - id: ball-1
         initialSpeed: 144
@@ -10,11 +11,12 @@ levels:
         color: 00d4ff
         startX: 450
         startY: 450
+
   - id: level-2
     sizeThreshold: 40
     expectedCuts: 5
     points: 150
-	variety: 5
+    variety: 3
     balls:
       - id: ball-1
         initialSpeed: 168
@@ -33,21 +35,22 @@ levels:
         kind: wall
         shape: rect
         x: -41
-        "y": -41
+        y: -41
         width: 500
         height: 180
       - id: wall-2
         kind: wall
         shape: rect
         x: 350
-        "y": 720
+        y: 720
         width: 200
         height: 180
+
   - id: level-3
     sizeThreshold: 35
     expectedCuts: 6
     points: 200
-	variety: 5
+    variety: 5
     balls:
       - id: ball-1
         initialSpeed: 182
@@ -66,14 +69,15 @@ levels:
         kind: wall
         shape: rect
         x: 350
-        "y": 350
+        y: 350
         width: 200
         height: 200
+
   - id: level-4
     sizeThreshold: 30
     expectedCuts: 8
     points: 250
-	variety: 5
+    variety: 5
     balls:
       - id: ball-1
         initialSpeed: 192
@@ -92,23 +96,22 @@ levels:
         kind: wall
         shape: rect
         x: 100
-        "y": 200
+        y: 200
         width: 150
         height: 200
       - id: wall-2
         kind: wall
         shape: rect
         x: 650
-        "y": 500
+        y: 500
         width: 150
         height: 200
 
-  # Was level 6 - Two hexagons (now level 5)
   - id: level-5
     sizeThreshold: 15
     expectedCuts: 10
     points: 300
-	variety: 10
+    variety: 8
     balls:
       - id: ball-1
         initialSpeed: 202
@@ -168,12 +171,11 @@ levels:
         cy: 468.24
         radius: 41
 
-  # Was level 7 - Two rects top/bottom (now level 6)
   - id: level-6
     sizeThreshold: 20
     expectedCuts: 12
     points: 400
-	variety: 10
+    variety: 10
     balls:
       - id: ball-1
         initialSpeed: 210
@@ -198,23 +200,22 @@ levels:
         kind: wall
         shape: rect
         x: 350
-        "y": 100
+        y: 100
         width: 200
         height: 100
       - id: wall-2
         kind: wall
         shape: rect
         x: 350
-        "y": 700
+        y: 700
         width: 200
         height: 100
 
-  # Was level 8 - Two large circles (now level 7)
   - id: level-7
     sizeThreshold: 18
     expectedCuts: 14
     points: 500
-	variety: 10
+    variety: 10
     balls:
       - id: ball-1
         initialSpeed: 218
@@ -242,12 +243,11 @@ levels:
         cy: 600
         radius: 100
 
-  # Was level 5 - Big circle center with large ball (now level 8)
   - id: level-8
     sizeThreshold: 25
     expectedCuts: 10
     points: 300
-	variety: 10
+    variety: 12
     balls:
       - id: ball-1
         initialSpeed: 202
@@ -280,7 +280,7 @@ levels:
     sizeThreshold: 15
     expectedCuts: 16
     points: 600
-	variety: 30
+    variety: 15
     balls:
       - id: ball-1
         initialSpeed: 225
@@ -317,14 +317,14 @@ levels:
         kind: wall
         shape: rect
         x: 100
-        "y": 100
+        y: 100
         width: 150
         height: 150
       - id: wall-3
         kind: wall
         shape: rect
         x: 650
-        "y": 100
+        y: 100
         width: 150
         height: 150
 
@@ -332,7 +332,7 @@ levels:
     sizeThreshold: 12
     expectedCuts: 18
     points: 750
-	variety: 15
+    variety: 15
     balls:
       - id: ball-1
         initialSpeed: 233
@@ -364,7 +364,7 @@ levels:
     sizeThreshold: 10
     expectedCuts: 20
     points: 900
-	variety: 15
+    variety: 18
     balls:
       - id: ball-1
         initialSpeed: 240
@@ -395,7 +395,7 @@ levels:
         kind: wall
         shape: rect
         x: 350
-        "y": 350
+        y: 350
         width: 200
         height: 200
 
@@ -403,7 +403,7 @@ levels:
     sizeThreshold: 10
     expectedCuts: 22
     points: 1000
-	variety: 15
+    variety: 20
     balls:
       - id: ball-1
         initialSpeed: 248
@@ -447,7 +447,7 @@ levels:
     sizeThreshold: 8
     expectedCuts: 24
     points: 1200
-	variety: 35
+    variety: 25
     balls:
       - id: ball-1
         initialSpeed: 255
@@ -490,14 +490,14 @@ levels:
         kind: wall
         shape: rect
         x: 50
-        "y": 400
+        y: 400
         width: 100
         height: 100
       - id: wall-3
         kind: wall
         shape: rect
         x: 750
-        "y": 400
+        y: 400
         width: 100
         height: 100
 
@@ -505,7 +505,7 @@ levels:
     sizeThreshold: 8
     expectedCuts: 26
     points: 1400
-	variety: 15
+    variety: 25
     balls:
       - id: ball-1
         initialSpeed: 263
@@ -548,14 +548,14 @@ levels:
         kind: wall
         shape: rect
         x: 200
-        "y": 400
+        y: 400
         width: 100
         height: 100
       - id: wall-4
         kind: wall
         shape: rect
         x: 600
-        "y": 400
+        y: 400
         width: 100
         height: 100
 
@@ -563,7 +563,7 @@ levels:
     sizeThreshold: 5
     expectedCuts: 28
     points: 1600
-	variety: 15
+    variety: 30
     balls:
       - id: ball-1
         initialSpeed: 270
@@ -625,6 +625,7 @@ levels:
     sizeThreshold: 5
     expectedCuts: 30
     points: 2000
+    variety: 35
     balls:
       - id: ball-1
         initialSpeed: 285
