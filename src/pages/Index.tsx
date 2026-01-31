@@ -1,12 +1,11 @@
-import { useCallback, useState, lazy, Suspense, useEffect } from 'react';
+import { useCallback, useState, lazy, Suspense, useEffect, useRef } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
-import { useHighscores } from '@/hooks/useHighscores';
 import { useInteractiveTutorial } from '@/hooks/useInteractiveTutorial';
 import { useCheckpoint, getTierScoreMultiplier } from '@/hooks/useCheckpoint';
-import { useSuperUpgradeManager } from '@/hooks/useSuperUpgradeManager';
+import { useAugmentManager } from '@/hooks/useAugmentManager';
 import { useMetaProgression } from '@/hooks/useMetaProgression';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
@@ -16,10 +15,9 @@ import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
-import { HighscoresScreen } from '@/components/game/HighscoresScreen';
-import { SuperUpgradeOffer } from '@/components/game/SuperUpgradeOffer';
+import { AugmentStore } from '@/components/game/AugmentStore';
 import { GameResult, LevelScoreData } from '@/types/game';
-import { SuperUpgrade, ActiveSuperUpgrade } from '@/types/superUpgrade';
+import { Augment } from '@/types/augment';
 import { MetaProgressionStats } from '@/types/metaProgression';
 
 // Lazy load admin components (dev-only)
@@ -38,7 +36,7 @@ const Index = () => {
     goToTutorial,
     goToUpgradeShop,
     goToGame,
-    goToHighscores,
+    goToAugmentStore,
     goToOptions,
     goToAdmin,
     goToMapBuilder,
@@ -73,14 +71,23 @@ const Index = () => {
   const [pendingLevelScore, setPendingLevelScore] = useState<LevelScoreData | null>(null);
   const [showLevelComplete, setShowLevelComplete] = useState(false);
   
-  // Owned upgrades tracking
+  // Owned upgrades tracking (per-run upgrades from shop)
   const [ownedUpgradeIds, setOwnedUpgradeIds] = useState<string[]>([]);
   
   // Lives tracking (persists across levels in a run)
   const [currentLives, setCurrentLives] = useState(BASE_LIVES);
 
-  // Highscores management
-  const { highscores, add: addHighscore, clear: clearHighscores, refresh: refreshHighscores } = useHighscores();
+  // Augment system (persistent meta-progression)
+  const {
+    augments,
+    totalScoreBalance,
+    ownedAugmentIds,
+    loadAugments,
+    addScoreFromRun,
+    purchaseAugment,
+    getOwnedAugments,
+    resetAllData: resetAugmentData,
+  } = useAugmentManager();
 
   // Interactive tutorial management
   const {
@@ -89,28 +96,15 @@ const Index = () => {
     startTutorialIfNeeded,
     replayTutorial,
     markTutorialComplete,
-    advanceToWaitingForCut,
-    exitTutorial,
   } = useInteractiveTutorial();
 
   // Checkpoint system for 10-minute tier restart
   const {
-    hasActiveCheckpoint,
-    isLoaded: checkpointLoaded,
     saveCheckpoint,
     clearCheckpoint,
     getStartingLevel,
     getRemainingTimeMs,
   } = useCheckpoint();
-
-  // Super upgrade system
-  const {
-    superUpgrades,
-    activeSuperUpgrade,
-    loadSuperUpgrades,
-    purchaseSuperUpgrade,
-    clearActiveSuperUpgrade,
-  } = useSuperUpgradeManager();
 
   // Meta progression system for tracking unlocks
   const {
@@ -121,11 +115,11 @@ const Index = () => {
     recordPerfectLevel,
     recordLivesLost,
     checkAndUnlock,
+    resetProgression,
   } = useMetaProgression();
 
-  // Super upgrade offer state
-  const [showSuperUpgradeOffer, setShowSuperUpgradeOffer] = useState(false);
-  const [pendingResultScore, setPendingResultScore] = useState<number | null>(null);
+  // Track score added this run for display
+  const [runScoreAdded, setRunScoreAdded] = useState<number | null>(null);
   
   // Track lives at start of level for perfect level detection
   const [livesAtLevelStart, setLivesAtLevelStart] = useState(BASE_LIVES);
@@ -133,12 +127,15 @@ const Index = () => {
   // Calculate modifiers to track bonus lives
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
 
+  // Get owned augments for applying effects
+  const ownedAugments = getOwnedAugments();
+
   const handleStartGame = useCallback(async (forceInteractiveTutorial = false) => {
-    // Load levels, upgrades, and super upgrades in parallel
+    // Load levels, upgrades, and augments in parallel
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
       loadLevels(),
       loadUpgrades(),
-      loadSuperUpgrades(),
+      loadAugments(),
     ]);
     
     if (levelsSuccess && upgradesSuccess) {
@@ -146,12 +143,15 @@ const Index = () => {
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
+      setRunScoreAdded(null);
       
-      // Apply super upgrade bonus lives if active
+      // Calculate starting lives from owned augments
       let startingLives = BASE_LIVES;
-      if (activeSuperUpgrade?.upgrade.effect.type === 'startingLivesBonus') {
-        startingLives += activeSuperUpgrade.upgrade.effect.value;
-      }
+      ownedAugments.forEach(aug => {
+        if (aug.effect.type === 'startingLivesBonus') {
+          startingLives += aug.effect.value;
+        }
+      });
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
       
@@ -176,7 +176,7 @@ const Index = () => {
       
       startGame();
     }
-  }, [loadLevels, loadUpgrades, loadSuperUpgrades, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, activeSuperUpgrade]);
+  }, [loadLevels, loadUpgrades, loadAugments, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, ownedAugments]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // Save checkpoint if player made it past level 5
@@ -187,20 +187,17 @@ const Index = () => {
       clearCheckpoint();
     }
     
-    // Clear any active super upgrade since run is ending
-    clearActiveSuperUpgrade();
+    // Add run score to persistent balance
+    const runScore = totalScore;
+    addScoreFromRun(runScore);
+    setRunScoreAdded(runScore);
     
-    // Store the score and show super upgrade offer before result screen
-    const finalScore = totalScore;
-    setPendingResultScore(finalScore);
-    setShowSuperUpgradeOffer(true);
-    
-    // For game over, include current total score and remaining lives
+    // For game over, include current total score
     endGame({
       ...result,
-      totalScore: finalScore,
+      totalScore: runScore,
     });
-  }, [endGame, totalScore, saveCheckpoint, clearCheckpoint, clearActiveSuperUpgrade]);
+  }, [endGame, totalScore, saveCheckpoint, clearCheckpoint, addScoreFromRun]);
 
   const handleLivesChange = useCallback((newLives: number) => {
     const livesLost = currentLives - newLives;
@@ -208,7 +205,6 @@ const Index = () => {
       recordLivesLost(livesLost);
     }
     setCurrentLives(newLives);
-    // Game over handling is done in GameCanvas with a delay for visual feedback
   }, [currentLives, recordLivesLost]);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
@@ -222,8 +218,8 @@ const Index = () => {
       recordPerfectLevel();
     }
     
-    // Check and unlock any newly available super upgrades
-    checkAndUnlock(superUpgrades);
+    // Check and unlock any newly available augments
+    checkAndUnlock(augments);
     
     // Apply tier score multiplier (10% boost per tier beyond first)
     const tierMultiplier = getTierScoreMultiplier(currentLevelNum);
@@ -235,13 +231,13 @@ const Index = () => {
     setPendingLevelScore({
       ...scoreData,
       levelScore: boostedLevelScore,
-      tierMultiplier, // Pass for display purposes
+      tierMultiplier,
     });
     setShowLevelComplete(true);
     
     // Reset lives at level start for next level
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, superUpgrades, currentLives, livesAtLevelStart]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, augments, currentLives, livesAtLevelStart]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -284,33 +280,24 @@ const Index = () => {
     goToGame();
   }, [advanceToNextLevel, goToGame]);
 
-  const handleSuperUpgradePurchase = useCallback((upgrade: SuperUpgrade, newScore: number) => {
-    // Purchase the super upgrade
-    purchaseSuperUpgrade(upgrade);
-    
-    // Update the pending result score (this will be used for highscore)
-    setPendingResultScore(newScore);
-    
-    // Close the offer
-    setShowSuperUpgradeOffer(false);
-  }, [purchaseSuperUpgrade]);
-
-  const handleSuperUpgradeSkip = useCallback(() => {
-    setShowSuperUpgradeOffer(false);
-  }, []);
+  const handlePurchaseAugment = useCallback((augment: Augment) => {
+    purchaseAugment(augment);
+  }, [purchaseAugment]);
 
   const handlePlayAgain = useCallback(() => {
     setTotalScore(0);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
-    setPendingResultScore(null);
+    setRunScoreAdded(null);
     
-    // Apply super upgrade bonus lives if active
+    // Calculate starting lives from owned augments
     let startingLives = BASE_LIVES;
-    if (activeSuperUpgrade?.upgrade.effect.type === 'startingLivesBonus') {
-      startingLives += activeSuperUpgrade.upgrade.effect.value;
-    }
+    ownedAugments.forEach(aug => {
+      if (aug.effect.type === 'startingLivesBonus') {
+        startingLives += aug.effect.value;
+      }
+    });
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     
@@ -323,7 +310,7 @@ const Index = () => {
     }
     
     startGame();
-  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, activeSuperUpgrade]);
+  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, ownedAugments]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
@@ -332,44 +319,29 @@ const Index = () => {
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
     setCurrentLives(BASE_LIVES);
-    setPendingResultScore(null);
-    clearActiveSuperUpgrade(); // Clear super upgrade when going to menu
+    setRunScoreAdded(null);
     goToWelcome();
-  }, [resetToFirstLevel, goToWelcome, clearActiveSuperUpgrade]);
+  }, [resetToFirstLevel, goToWelcome]);
 
-  const handleSaveHighscore = useCallback((name: string) => {
-    if (!lastResult) return;
-    
-    addHighscore({
-      name,
-      level: lastResult.levelNumber,
-      totalScore: lastResult.totalScore ?? 0,
-      dateTime: new Date().toISOString(),
-    });
-  }, [lastResult, addHighscore]);
-
-  const handleHighscoresFromWelcome = useCallback(() => {
-    refreshHighscores();
-    goToHighscores();
-  }, [refreshHighscores, goToHighscores]);
+  const handleAugmentsFromWelcome = useCallback(async () => {
+    await loadAugments();
+    goToAugmentStore();
+  }, [loadAugments, goToAugmentStore]);
 
   const handleReplayInteractiveTutorial = useCallback(() => {
-    handleStartGame(true); // Force tutorial mode
+    handleStartGame(true);
   }, [handleStartGame]);
 
-  const handleClearHighscoresFromOptions = useCallback(() => {
-    clearHighscores();
-  }, [clearHighscores]);
+  const handleResetAugments = useCallback(() => {
+    resetAugmentData();
+    resetProgression();
+  }, [resetAugmentData, resetProgression]);
 
   // Get checkpoint info for welcome screen
   const checkpointStartLevel = getStartingLevel();
   const checkpointRemaining = getRemainingTimeMs();
-  
-  // Get the effective score for display (after super upgrade purchase if any)
-  const effectiveResultScore = pendingResultScore ?? lastResult?.totalScore ?? 0;
 
   // Use checkpoint level for accent color when not actively playing
-  // This ensures menus reflect the player's progression tier
   const displayLevel = currentScreen === 'game' 
     ? currentLevelIndex + 1 
     : checkpointStartLevel;
@@ -387,7 +359,6 @@ const Index = () => {
         upgrades={upgrades}
         isLoading={isLoading}
         error={error}
-        highscores={highscores}
         tutorialMode={tutorialMode}
         tutorialStep={tutorialStep}
         lastResult={lastResult}
@@ -402,27 +373,25 @@ const Index = () => {
         handleContinueFromShop={handleContinueFromShop}
         handlePlayAgain={handlePlayAgain}
         handleBackToWelcome={handleBackToWelcome}
-        handleSaveHighscore={handleSaveHighscore}
-        handleHighscoresFromWelcome={handleHighscoresFromWelcome}
+        handleAugmentsFromWelcome={handleAugmentsFromWelcome}
         handleReplayInteractiveTutorial={handleReplayInteractiveTutorial}
-        clearHighscores={clearHighscores}
+        handleResetAugments={handleResetAugments}
+        handlePurchaseAugment={handlePurchaseAugment}
         goToWelcome={goToWelcome}
         goToTutorial={goToTutorial}
         goToOptions={goToOptions}
-        goToHighscores={goToHighscores}
         goToAdmin={goToAdmin}
         goToMapBuilder={goToMapBuilder}
         markTutorialComplete={markTutorialComplete}
         checkpointLevel={checkpointStartLevel}
         checkpointRemainingMs={checkpointRemaining}
-        showSuperUpgradeOffer={showSuperUpgradeOffer}
-        superUpgrades={superUpgrades}
-        effectiveResultScore={effectiveResultScore}
-        onSuperUpgradePurchase={handleSuperUpgradePurchase}
-        onSuperUpgradeSkip={handleSuperUpgradeSkip}
-        activeSuperUpgrade={activeSuperUpgrade}
+        augments={augments}
+        totalScoreBalance={totalScoreBalance}
+        ownedAugmentIds={ownedAugmentIds}
+        ownedAugments={ownedAugments}
         metaStats={metaStats}
         unlockedIds={unlockedIds}
+        runScoreAdded={runScoreAdded}
       />
     </AccentColorProvider>
   );
@@ -440,7 +409,6 @@ interface IndexContentProps {
   upgrades: any[];
   isLoading: boolean;
   error: string | null;
-  highscores: any[];
   tutorialMode: boolean;
   tutorialStep: any;
   lastResult: any;
@@ -455,27 +423,25 @@ interface IndexContentProps {
   handleContinueFromShop: () => void;
   handlePlayAgain: () => void;
   handleBackToWelcome: () => void;
-  handleSaveHighscore: (name: string) => void;
-  handleHighscoresFromWelcome: () => void;
+  handleAugmentsFromWelcome: () => void;
   handleReplayInteractiveTutorial: () => void;
-  clearHighscores: () => void;
+  handleResetAugments: () => void;
+  handlePurchaseAugment: (augment: Augment) => void;
   goToWelcome: () => void;
   goToTutorial: () => void;
   goToOptions: () => void;
-  goToHighscores: () => void;
   goToAdmin: () => void;
   goToMapBuilder: () => void;
   markTutorialComplete: () => void;
   checkpointLevel?: number;
   checkpointRemainingMs?: number;
-  showSuperUpgradeOffer: boolean;
-  superUpgrades: SuperUpgrade[];
-  effectiveResultScore: number;
-  onSuperUpgradePurchase: (upgrade: SuperUpgrade, newScore: number) => void;
-  onSuperUpgradeSkip: () => void;
-  activeSuperUpgrade: ActiveSuperUpgrade | null;
+  augments: Augment[];
+  totalScoreBalance: number;
+  ownedAugmentIds: string[];
+  ownedAugments: Augment[];
   metaStats: MetaProgressionStats;
   unlockedIds: string[];
+  runScoreAdded: number | null;
 }
 
 function IndexContent({
@@ -489,7 +455,6 @@ function IndexContent({
   upgrades,
   isLoading,
   error,
-  highscores,
   tutorialMode,
   tutorialStep,
   lastResult,
@@ -504,57 +469,43 @@ function IndexContent({
   handleContinueFromShop,
   handlePlayAgain,
   handleBackToWelcome,
-  handleSaveHighscore,
-  handleHighscoresFromWelcome,
+  handleAugmentsFromWelcome,
   handleReplayInteractiveTutorial,
-  clearHighscores,
+  handleResetAugments,
+  handlePurchaseAugment,
   goToWelcome,
   goToTutorial,
   goToOptions,
-  goToHighscores,
   goToAdmin,
   goToMapBuilder,
   markTutorialComplete,
   checkpointLevel,
   checkpointRemainingMs,
-  showSuperUpgradeOffer,
-  superUpgrades,
-  effectiveResultScore,
-  onSuperUpgradePurchase,
-  onSuperUpgradeSkip,
-  activeSuperUpgrade,
+  augments,
+  totalScoreBalance,
+  ownedAugmentIds,
+  ownedAugments,
   metaStats,
   unlockedIds,
+  runScoreAdded,
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
 
   return (
     <>
-      {/* Super Upgrade Offer - shown before result screen actions */}
-      {showSuperUpgradeOffer && superUpgrades.length > 0 && (
-        <SuperUpgradeOffer
-          superUpgrades={superUpgrades}
-          currentScore={effectiveResultScore}
-          onPurchase={onSuperUpgradePurchase}
-          onSkip={onSuperUpgradeSkip}
-          accentColor={accentHex}
-          metaStats={metaStats}
-          unlockedIds={unlockedIds}
-        />
-      )}
-    
       {currentScreen === 'welcome' && (
         <WelcomeScreen 
           onStartGame={() => handleStartGame(false)} 
           onTutorial={goToTutorial}
           onOptions={goToOptions}
-          onHighscores={handleHighscoresFromWelcome}
+          onAugments={handleAugmentsFromWelcome}
           onAdmin={import.meta.env.DEV || new URLSearchParams(window.location.search).get('admin') === 'true' ? goToAdmin : undefined}
           isLoading={isLoading}
           error={error}
           accentColor={accentHex}
           checkpointLevel={checkpointLevel}
           checkpointRemainingMs={checkpointRemainingMs}
+          totalScoreBalance={totalScoreBalance}
         />
       )}
       {currentScreen === 'tutorial' && (
@@ -564,8 +515,8 @@ function IndexContent({
         <OptionsScreen
           onBack={goToWelcome}
           onReplayTutorial={handleReplayInteractiveTutorial}
-          onClearHighscores={clearHighscores}
-          hasHighscores={highscores.length > 0}
+          onResetAugments={handleResetAugments}
+          hasAugments={ownedAugmentIds.length > 0 || totalScoreBalance > 0}
           accentColor={accentHex}
         />
       )}
@@ -598,25 +549,25 @@ function IndexContent({
           accentColor={accentHex}
         />
       )}
-      {currentScreen === 'result' && lastResult && !showSuperUpgradeOffer && (
+      {currentScreen === 'result' && lastResult && (
         <ResultScreen
-          result={{
-            ...lastResult,
-            totalScore: effectiveResultScore, // Use the effective score after super upgrade
-          }}
+          result={lastResult}
           onPlayAgain={handlePlayAgain}
           onBackToWelcome={handleBackToWelcome}
-          onSaveHighscore={handleSaveHighscore}
-          onViewHighscores={goToHighscores}
           accentColor={accentHex}
-          activeSuperUpgrade={activeSuperUpgrade}
+          ownedAugments={ownedAugments}
+          runScoreAdded={runScoreAdded ?? undefined}
         />
       )}
-      {currentScreen === 'highscores' && (
-        <HighscoresScreen
-          highscores={highscores}
+      {currentScreen === 'augmentStore' && (
+        <AugmentStore
+          augments={augments}
+          totalScoreBalance={totalScoreBalance}
+          ownedAugmentIds={ownedAugmentIds}
+          unlockedIds={unlockedIds}
+          metaStats={metaStats}
+          onPurchase={handlePurchaseAugment}
           onBack={goToWelcome}
-          onClear={clearHighscores}
           accentColor={accentHex}
         />
       )}

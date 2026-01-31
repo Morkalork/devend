@@ -1,40 +1,27 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Skull, RotateCcw, Home, Medal, Zap } from 'lucide-react';
+import { Trophy, Skull, RotateCcw, Home, Sparkles } from 'lucide-react';
 import { GameResult } from '@/types/game';
-import { ActiveSuperUpgrade } from '@/types/superUpgrade';
-import { NameEntryDialog } from './NameEntryDialog';
+import { Augment } from '@/types/augment';
 import { CRTBackground } from './CRTBackground';
 
 interface ResultScreenProps {
   result: GameResult;
   onPlayAgain: () => void;
   onBackToWelcome: () => void;
-  onSaveHighscore: (name: string) => void;
-  onViewHighscores: () => void;
   accentColor?: string;
-  activeSuperUpgrade?: ActiveSuperUpgrade | null;
+  ownedAugments?: Augment[];
+  runScoreAdded?: number;
 }
 
 export function ResultScreen({ 
   result, 
   onPlayAgain, 
   onBackToWelcome,
-  onSaveHighscore,
-  onViewHighscores,
   accentColor,
-  activeSuperUpgrade,
+  ownedAugments = [],
+  runScoreAdded,
 }: ResultScreenProps) {
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
-  
-  const [showNameEntry, setShowNameEntry] = useState(true);
-  const [hasSaved, setHasSaved] = useState(false);
-
-  const handleNameSubmit = (name: string) => {
-    onSaveHighscore(name);
-    setShowNameEntry(false);
-    setHasSaved(true);
-  };
 
   return (
     <>
@@ -137,36 +124,50 @@ export function ResultScreen({
             </p>
           </div>
 
-          {/* Total Score */}
+          {/* Run Score Added to Balance */}
           {totalScore !== undefined && (
-            <div className="mt-4 pt-4 border-t border-border">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.45 }}
+              className="mt-4 pt-4 border-t border-border"
+            >
               <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
-                Total Score
+                Score Added to Balance
               </p>
               <p className="text-5xl font-display font-bold text-primary">
-                {totalScore}
+                +{(runScoreAdded ?? totalScore).toLocaleString()}
               </p>
-            </div>
+            </motion.div>
           )}
 
-          {/* Active Super Upgrade indicator */}
-          {activeSuperUpgrade && (
+          {/* Active Augments indicator */}
+          {ownedAugments.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.45 }}
+              transition={{ delay: 0.5 }}
               className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/30"
               style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.2)' }}
             >
-              <div className="flex items-center gap-2 text-primary">
-                <Zap className="w-4 h-4" />
+              <div className="flex items-center gap-2 text-primary mb-2">
+                <Sparkles className="w-4 h-4" />
                 <span className="text-sm font-display font-bold">
-                  {activeSuperUpgrade.upgrade.name} Active
+                  {ownedAugments.length} Augment{ownedAugments.length > 1 ? 's' : ''} Active
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {activeSuperUpgrade.upgrade.description}
-              </p>
+              <div className="flex flex-wrap gap-1">
+                {ownedAugments.slice(0, 3).map(aug => (
+                  <span key={aug.id} className="text-xs text-muted-foreground bg-primary/5 px-2 py-0.5 rounded">
+                    {aug.name}
+                  </span>
+                ))}
+                {ownedAugments.length > 3 && (
+                  <span className="text-xs text-muted-foreground">
+                    +{ownedAugments.length - 3} more
+                  </span>
+                )}
+              </div>
             </motion.div>
           )}
         </motion.div>
@@ -175,7 +176,7 @@ export function ResultScreen({
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.55 }}
           className="flex flex-col sm:flex-row gap-4 mt-4"
         >
           <motion.button
@@ -187,17 +188,6 @@ export function ResultScreen({
             <RotateCcw className="w-5 h-5" />
             Play Again
           </motion.button>
-          {hasSaved && (
-            <motion.button
-              className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
-              onClick={onViewHighscores}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Medal className="w-5 h-5" />
-              View Highscores
-            </motion.button>
-          )}
           <motion.button
             className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
             onClick={onBackToWelcome}
@@ -209,19 +199,7 @@ export function ResultScreen({
           </motion.button>
         </motion.div>
       </motion.div>
-
-      {/* Name Entry Dialog */}
       </div>
-
-      {/* Name Entry Dialog */}
-      {showNameEntry && (
-        <NameEntryDialog
-          onSubmit={handleNameSubmit}
-          onSkip={() => setShowNameEntry(false)}
-          levelReached={levelNumber}
-          totalScore={totalScore ?? 0}
-        />
-      )}
     </>
   );
 }
