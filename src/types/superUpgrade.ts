@@ -1,11 +1,15 @@
 export interface SuperUpgradeEffect {
   type: 
-    | 'bonus_lives'
-    | 'score_multiplier'
-    | 'ball_speed_modifier'
-    | 'fence_speed_modifier'
-    | 'starting_area_bonus'
-    | 'immunity_charge';
+    | 'ballSpeedMultiplier'
+    | 'fenceSpeedMultiplier'
+    | 'parFenceBonus'
+    | 'requiredAreaMultiplier'
+    | 'scoreInterest'
+    | 'bounceDamping'
+    | 'wallThicknessMultiplier'
+    | 'previewSpeedMultiplier'
+    | 'startingLivesBonus'
+    | 'varietyMultiplier';
   value: number;
 }
 
@@ -14,11 +18,12 @@ export interface SuperUpgrade {
   name: string;
   description: string;
   cost: number;
+  icon?: string;
   effect: SuperUpgradeEffect;
 }
 
 export interface SuperUpgradeConfig {
-  super_upgrades: SuperUpgrade[];
+  superUpgrades: SuperUpgrade[];
 }
 
 export interface ActiveSuperUpgrade {

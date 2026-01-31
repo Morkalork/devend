@@ -133,7 +133,7 @@ const Index = () => {
       
       // Apply super upgrade bonus lives if active
       let startingLives = BASE_LIVES;
-      if (activeSuperUpgrade?.upgrade.effect.type === 'bonus_lives') {
+      if (activeSuperUpgrade?.upgrade.effect.type === 'startingLivesBonus') {
         startingLives += activeSuperUpgrade.upgrade.effect.value;
       }
       setCurrentLives(startingLives);
@@ -272,7 +272,7 @@ const Index = () => {
     
     // Apply super upgrade bonus lives if active
     let startingLives = BASE_LIVES;
-    if (activeSuperUpgrade?.upgrade.effect.type === 'bonus_lives') {
+    if (activeSuperUpgrade?.upgrade.effect.type === 'startingLivesBonus') {
       startingLives += activeSuperUpgrade.upgrade.effect.value;
     }
     setCurrentLives(startingLives);
