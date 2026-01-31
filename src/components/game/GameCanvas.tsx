@@ -1375,15 +1375,87 @@ export function GameCanvas({
       return true;
     };
 
+    // Pre-validate that a wall won't trap any ball in a region without valid sample points
+    const wouldWallTrapBall = (wallStart: Vector2, wallEnd: Vector2): boolean => {
+      const { balls } = game;
+      const SAMPLE_GRID = 15;
+      
+      // For each ball, check if it would end up in a valid region after the wall is placed
+      for (const ball of balls) {
+        // Skip dead balls (speed === 0)
+        if (ball.speed === 0) continue;
+        
+        // Check if the ball is very close to where the wall will be placed
+        const distToWall = pointToSegmentDistance(ball.position, wallStart, wallEnd);
+        
+        // If ball is within a dangerous distance of the wall, check if it would be trapped
+        if (distToWall < ball.radius + SAMPLE_GRID * 2) {
+          // Determine which side of the wall the ball is on
+          const wallDir = vec2Normalize(vec2Sub(wallEnd, wallStart));
+          const wallPerp = { x: -wallDir.y, y: wallDir.x };
+          const ballSide = vec2Dot(vec2Sub(ball.position, wallStart), wallPerp);
+          
+          // Check if there's enough playable space on the ball's side
+          // by verifying the ball can reach at least one sample point without crossing:
+          // 1. The new wall
+          // 2. Any existing wall
+          let canReachAnySample = false;
+          
+          // Generate sample points around the ball's position
+          const ballRegion = game.regions.find(r => r.id === ball.regionId);
+          if (ballRegion && ballRegion.samplePoints) {
+            for (const sample of ballRegion.samplePoints) {
+              // Check if sample is on the same side of the new wall as the ball
+              const sampleSide = vec2Dot(vec2Sub(sample, wallStart), wallPerp);
+              if ((ballSide > 0 && sampleSide < 0) || (ballSide < 0 && sampleSide > 0)) {
+                continue; // Sample is on opposite side of wall
+              }
+              
+              // Check if path from ball to sample crosses any wall
+              let pathBlocked = false;
+              
+              // Check new wall
+              if (lineSegmentIntersection(ball.position, sample, wallStart, wallEnd)) {
+                pathBlocked = true;
+              }
+              
+              // Check existing walls
+              if (!pathBlocked) {
+                for (const w of game.walls) {
+                  if (lineSegmentIntersection(ball.position, sample, w.start, w.end)) {
+                    pathBlocked = true;
+                    break;
+                  }
+                }
+              }
+              
+              if (!pathBlocked) {
+                canReachAnySample = true;
+                break;
+              }
+            }
+          }
+          
+          if (!canReachAnySample) {
+            console.warn("[TRAP] Wall would trap ball", ball.id, "at", ball.position);
+            return true;
+          }
+        }
+      }
+      
+      return false;
+    };
+
     const applyCut = (wall: GrowingWall) => {
       // ============================================================
       // UNIFIED CUTTING MODEL
       // ============================================================
       // Every cut is treated the same way:
-      // 1. Add the cut as a boundary segment
-      // 2. Use flood-fill to find all connected areas
-      // 3. Discard areas without balls
-      // 4. Keep only areas with balls as active regions
+      // 1. Validate the cut won't trap any balls
+      // 2. Add the cut as a boundary segment
+      // 3. Use flood-fill to find all connected areas
+      // 4. Discard areas without balls
+      // 5. Keep only areas with balls as active regions
       // ============================================================
 
       const { balls } = game;
@@ -1394,6 +1466,14 @@ export function GameCanvas({
           handleGameOver();
           return;
         }
+      }
+
+      // CRITICAL: Check if this wall would trap any ball in an area too small to play
+      // If so, abort the cut (the wall simply doesn't complete)
+      if (wouldWallTrapBall(wall.startPoint, wall.endPoint)) {
+        console.log("[CUT] Aborted - wall would trap a ball");
+        // Wall fails silently - no life lost, just doesn't complete
+        return;
       }
 
       // UNIFIED WALL MODEL: Add the new wall to the walls array
