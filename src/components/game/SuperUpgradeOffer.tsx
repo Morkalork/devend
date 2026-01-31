@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Zap, X, Check, Sparkles, Lock } from 'lucide-react';
 import { SuperUpgrade } from '@/types/superUpgrade';
 import { CRTBackground } from './CRTBackground';
+import { SvgIcon } from '@/components/ui/SvgIcon';
 
 interface SuperUpgradeOfferProps {
   superUpgrades: SuperUpgrade[];
@@ -120,7 +121,14 @@ export function SuperUpgradeOffer({
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <Zap className={`w-4 h-4 ${canAfford ? 'text-primary' : 'text-muted-foreground'}`} />
+                        {upgrade.icon ? (
+                          <SvgIcon 
+                            src={upgrade.icon} 
+                            className={`w-5 h-5 ${canAfford ? 'text-primary' : 'text-muted-foreground'}`}
+                          />
+                        ) : (
+                          <Zap className={`w-4 h-4 ${canAfford ? 'text-primary' : 'text-muted-foreground'}`} />
+                        )}
                         <span className={`font-display font-bold text-lg ${canAfford ? 'text-foreground' : 'text-muted-foreground'}`}>
                           {upgrade.name}
                         </span>
@@ -181,7 +189,11 @@ export function SuperUpgradeOffer({
                 
                 <div className="bg-primary/10 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Zap className="w-5 h-5 text-primary" />
+                    {selectedUpgrade.icon ? (
+                      <SvgIcon src={selectedUpgrade.icon} className="w-5 h-5 text-primary" />
+                    ) : (
+                      <Zap className="w-5 h-5 text-primary" />
+                    )}
                     <span className="font-display font-bold text-foreground">{selectedUpgrade.name}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">{selectedUpgrade.description}</p>

@@ -21,11 +21,11 @@ export function useSuperUpgradeManager() {
       const yamlText = await response.text();
       const config = yaml.load(yamlText) as SuperUpgradeConfig;
       
-      if (!config?.super_upgrades || !Array.isArray(config.super_upgrades)) {
+      if (!config?.superUpgrades || !Array.isArray(config.superUpgrades)) {
         throw new Error('Invalid super upgrades configuration');
       }
       
-      setSuperUpgrades(config.super_upgrades);
+      setSuperUpgrades(config.superUpgrades);
       setIsLoading(false);
       return true;
     } catch (err) {
