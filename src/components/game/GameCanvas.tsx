@@ -1700,6 +1700,7 @@ export function GameCanvas({
             game.frozenBallPosition = { ...ball.position };
             game.frozenBallVelocity = { ...ball.velocity };
             ball.velocity = { x: 0, y: 0 };
+            console.log("[FREEZE] Ball frozen at position:", ball.position, "stored:", game.frozenBallPosition);
             
             // Check if we have wall shields first
             if (game.wallShieldsRemaining > 0) {
@@ -2452,7 +2453,14 @@ export function GameCanvas({
 
       for (const ball of game.balls) {
         // Skip updating frozen ball - it stays in place during shake animation
-        if (game.frozenBallId && ball.id === game.frozenBallId) continue;
+        if (game.frozenBallId && ball.id === game.frozenBallId) {
+          // Debug: log if position changed unexpectedly
+          if (game.frozenBallPosition && (ball.position.x !== game.frozenBallPosition.x || ball.position.y !== game.frozenBallPosition.y)) {
+            console.error("[FREEZE] Ball position changed during freeze! Current:", ball.position, "Should be:", game.frozenBallPosition);
+            ball.position = { ...game.frozenBallPosition }; // Force restore
+          }
+          continue;
+        }
         updateBall(ball, cappedDt);
       }
       handleBallCollisions();
