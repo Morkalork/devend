@@ -209,6 +209,9 @@ export function GameCanvas({
   const [canvasOffsetLeft, setCanvasOffsetLeft] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
+  
+  // Track if game has been initialized to prevent re-init on resize events (e.g., shake animation)
+  const gameInitializedRef = useRef(false);
 
   // Ref to track current lives value for use in closures
   const livesRef = useRef(lives);
@@ -266,6 +269,9 @@ export function GameCanvas({
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
+
+    // Reset game initialized flag so new level can initialize properly
+    gameInitializedRef.current = false;
 
     const game = gameRef.current;
     game.regionColor = regionColorProp;
@@ -663,9 +669,6 @@ export function GameCanvas({
       setRemainingPercent(Math.round(targetRemaining));
     };
 
-    // Track if game has been initialized to prevent re-init on resize
-    let gameInitialized = false;
-
     const resizeCanvas = () => {
       const { width, height } = container.getBoundingClientRect();
       canvas.width = width;
@@ -694,8 +697,8 @@ export function GameCanvas({
       });
 
       // Only initialize game on first resize, not on subsequent ones (e.g., shake animation)
-      if (!gameInitialized) {
-        gameInitialized = true;
+      if (!gameInitializedRef.current) {
+        gameInitializedRef.current = true;
         initGame();
       }
     };
