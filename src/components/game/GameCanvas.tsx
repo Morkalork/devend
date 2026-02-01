@@ -257,6 +257,8 @@ export function GameCanvas({
     isRecovering: false,
     recoveryEndTime: 0,
     initialSamplePoints: [] as Vector2[], // Track initial board area for blur effect
+    frozenBallId: null as string | null, // Ball frozen after fence collision
+    frozenBallVelocity: null as Vector2 | null, // Stored velocity to restore after freeze
   });
 
   useEffect(() => {
@@ -1689,6 +1691,11 @@ export function GameCanvas({
               wall.thickness / 2,
             )
           ) {
+            // Freeze the ball that hit the fence - store velocity and stop it
+            game.frozenBallId = ball.id;
+            game.frozenBallVelocity = { ...ball.velocity };
+            ball.velocity = { x: 0, y: 0 };
+            
             // Check if we have wall shields first
             if (game.wallShieldsRemaining > 0) {
               game.wallShieldsRemaining--;
@@ -1698,7 +1705,18 @@ export function GameCanvas({
               game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
               setIsRecovering(true);
               setScreenFlash("red");
+              setIsShaking(true);
               setTimeout(() => setScreenFlash("none"), 150);
+              setTimeout(() => {
+                setIsShaking(false);
+                // Unfreeze the ball after shake completes
+                const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
+                if (frozenBall && game.frozenBallVelocity) {
+                  frozenBall.velocity = game.frozenBallVelocity;
+                }
+                game.frozenBallId = null;
+                game.frozenBallVelocity = null;
+              }, 400);
               setTimeout(() => {
                 game.isRecovering = false;
                 setIsRecovering(false);
@@ -1712,7 +1730,16 @@ export function GameCanvas({
               setScreenFlash("red");
               setIsShaking(true);
               setTimeout(() => setScreenFlash("none"), 200);
-              setTimeout(() => setIsShaking(false), 400);
+              setTimeout(() => {
+                setIsShaking(false);
+                // Unfreeze the ball after shake completes
+                const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
+                if (frozenBall && game.frozenBallVelocity) {
+                  frozenBall.velocity = game.frozenBallVelocity;
+                }
+                game.frozenBallId = null;
+                game.frozenBallVelocity = null;
+              }, 400);
               handlePushFailed();
               return;
             }
@@ -1727,6 +1754,9 @@ export function GameCanvas({
             game.activeWall = null;
 
             if (newLives <= 0) {
+              // Unfreeze before game over (game will end anyway)
+              game.frozenBallId = null;
+              game.frozenBallVelocity = null;
               handleGameOver();
               return;
             }
@@ -1738,7 +1768,16 @@ export function GameCanvas({
             setScreenFlash("red");
             setIsShaking(true);
             setTimeout(() => setScreenFlash("none"), 200);
-            setTimeout(() => setIsShaking(false), 400);
+            setTimeout(() => {
+              setIsShaking(false);
+              // Unfreeze the ball after shake completes
+              const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
+              if (frozenBall && game.frozenBallVelocity) {
+                frozenBall.velocity = game.frozenBallVelocity;
+              }
+              game.frozenBallId = null;
+              game.frozenBallVelocity = null;
+            }, 400);
             setTimeout(() => {
               game.isRecovering = false;
               setIsRecovering(false);
@@ -2397,6 +2436,8 @@ export function GameCanvas({
       const cappedDt = Math.min(dt, 0.05);
 
       for (const ball of game.balls) {
+        // Skip updating frozen ball - it stays in place during shake animation
+        if (game.frozenBallId && ball.id === game.frozenBallId) continue;
         updateBall(ball, cappedDt);
       }
       handleBallCollisions();
