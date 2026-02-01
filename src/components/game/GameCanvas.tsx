@@ -2367,6 +2367,9 @@ export function GameCanvas({
           const ball1 = balls[i];
           const ball2 = balls[j];
 
+          // Skip collisions involving frozen ball - it should stay perfectly still
+          if (game.frozenBallId && (ball1.id === game.frozenBallId || ball2.id === game.frozenBallId)) continue;
+
           if (ball1.regionId !== ball2.regionId) continue;
 
           const delta = vec2Sub(ball2.position, ball1.position);
