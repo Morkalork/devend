@@ -663,6 +663,9 @@ export function GameCanvas({
       setRemainingPercent(Math.round(targetRemaining));
     };
 
+    // Track if game has been initialized to prevent re-init on resize
+    let gameInitialized = false;
+
     const resizeCanvas = () => {
       const { width, height } = container.getBoundingClientRect();
       canvas.width = width;
@@ -690,7 +693,11 @@ export function GameCanvas({
         scale: Math.round(game.boardRect.scale * 1000) / 1000,
       });
 
-      initGame();
+      // Only initialize game on first resize, not on subsequent ones (e.g., shake animation)
+      if (!gameInitialized) {
+        gameInitialized = true;
+        initGame();
+      }
     };
 
     // Resolve ball collision with a line segment (for completed cuts)
