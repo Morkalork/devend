@@ -259,6 +259,7 @@ export function GameCanvas({
     initialSamplePoints: [] as Vector2[], // Track initial board area for blur effect
     frozenBallId: null as string | null, // Ball frozen after fence collision
     frozenBallVelocity: null as Vector2 | null, // Stored velocity to restore after freeze
+    frozenBallPosition: null as Vector2 | null, // Stored position to restore after freeze
   });
 
   useEffect(() => {
@@ -877,6 +878,9 @@ export function GameCanvas({
       // CRITICAL: Region containment check
       // After all collisions, verify ball is still within its assigned region
       // This catches edge cases where fast balls tunnel through thin fences
+      // SKIP for frozen balls - they should not be moved during freeze
+      if (game.frozenBallId && ball.id === game.frozenBallId) return;
+      
       const ballRegion = game.regions.find(r => r.id === ball.regionId);
       if (ballRegion && !pointInPolygon(ball.position, ballRegion.polygon)) {
         // Ball escaped its region! Find nearest point on region boundary
@@ -1691,8 +1695,9 @@ export function GameCanvas({
               wall.thickness / 2,
             )
           ) {
-            // Freeze the ball that hit the fence - store velocity and stop it
+            // Freeze the ball that hit the fence - store position and velocity, then stop it
             game.frozenBallId = ball.id;
+            game.frozenBallPosition = { ...ball.position };
             game.frozenBallVelocity = { ...ball.velocity };
             ball.velocity = { x: 0, y: 0 };
             
@@ -1709,12 +1714,14 @@ export function GameCanvas({
               setTimeout(() => setScreenFlash("none"), 150);
               setTimeout(() => {
                 setIsShaking(false);
-                // Unfreeze the ball after shake completes
+                // Unfreeze the ball after shake completes - restore position and velocity
                 const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
-                if (frozenBall && game.frozenBallVelocity) {
-                  frozenBall.velocity = game.frozenBallVelocity;
+                if (frozenBall) {
+                  if (game.frozenBallPosition) frozenBall.position = game.frozenBallPosition;
+                  if (game.frozenBallVelocity) frozenBall.velocity = game.frozenBallVelocity;
                 }
                 game.frozenBallId = null;
+                game.frozenBallPosition = null;
                 game.frozenBallVelocity = null;
               }, 400);
               setTimeout(() => {
@@ -1732,12 +1739,14 @@ export function GameCanvas({
               setTimeout(() => setScreenFlash("none"), 200);
               setTimeout(() => {
                 setIsShaking(false);
-                // Unfreeze the ball after shake completes
+                // Unfreeze the ball after shake completes - restore position and velocity
                 const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
-                if (frozenBall && game.frozenBallVelocity) {
-                  frozenBall.velocity = game.frozenBallVelocity;
+                if (frozenBall) {
+                  if (game.frozenBallPosition) frozenBall.position = game.frozenBallPosition;
+                  if (game.frozenBallVelocity) frozenBall.velocity = game.frozenBallVelocity;
                 }
                 game.frozenBallId = null;
+                game.frozenBallPosition = null;
                 game.frozenBallVelocity = null;
               }, 400);
               handlePushFailed();
@@ -1756,6 +1765,7 @@ export function GameCanvas({
             if (newLives <= 0) {
               // Unfreeze before game over (game will end anyway)
               game.frozenBallId = null;
+              game.frozenBallPosition = null;
               game.frozenBallVelocity = null;
               handleGameOver();
               return;
@@ -1770,12 +1780,14 @@ export function GameCanvas({
             setTimeout(() => setScreenFlash("none"), 200);
             setTimeout(() => {
               setIsShaking(false);
-              // Unfreeze the ball after shake completes
+              // Unfreeze the ball after shake completes - restore position and velocity
               const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
-              if (frozenBall && game.frozenBallVelocity) {
-                frozenBall.velocity = game.frozenBallVelocity;
+              if (frozenBall) {
+                if (game.frozenBallPosition) frozenBall.position = game.frozenBallPosition;
+                if (game.frozenBallVelocity) frozenBall.velocity = game.frozenBallVelocity;
               }
               game.frozenBallId = null;
+              game.frozenBallPosition = null;
               game.frozenBallVelocity = null;
             }, 400);
             setTimeout(() => {
