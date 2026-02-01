@@ -1701,12 +1701,14 @@ export function GameCanvas({
             game.frozenBallVelocity = { ...ball.velocity };
             ball.velocity = { x: 0, y: 0 };
             console.log("[FREEZE] Ball frozen at position:", ball.position, "stored:", game.frozenBallPosition);
+            console.log("[FREEZE] Current walls count:", game.walls.length, "regions count:", game.regions.length);
             
             // Check if we have wall shields first
             if (game.wallShieldsRemaining > 0) {
               game.wallShieldsRemaining--;
               setWallShieldCount(game.wallShieldsRemaining);
               game.activeWall = null;
+              console.log("[FREEZE] Active wall nullified (shield). Walls:", game.walls.length, "Regions:", game.regions.length);
               game.isRecovering = true;
               game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
               setIsRecovering(true);
@@ -1762,6 +1764,7 @@ export function GameCanvas({
             onLivesChange(newLives);
 
             game.activeWall = null;
+            console.log("[FREEZE] Active wall nullified (life lost). Walls:", game.walls.length, "Regions:", game.regions.length);
 
             if (newLives <= 0) {
               // Unfreeze before game over (game will end anyway)
