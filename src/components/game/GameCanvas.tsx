@@ -212,6 +212,8 @@ export function GameCanvas({
   
   // Track if game has been initialized to prevent re-init on resize events (e.g., shake animation)
   const gameInitializedRef = useRef(false);
+  // Track which level the game was initialized for - only reset when level actually changes
+  const initializedLevelRef = useRef<string | null>(null);
 
   // Ref to track current lives value for use in closures
   const livesRef = useRef(lives);
@@ -270,8 +272,12 @@ export function GameCanvas({
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
 
-    // Reset game initialized flag so new level can initialize properly
-    gameInitializedRef.current = false;
+    // Only reset game initialized flag when the level ACTUALLY changes
+    // This prevents re-init when other useEffect dependencies change (e.g., callbacks recreated on render)
+    if (initializedLevelRef.current !== level.id) {
+      gameInitializedRef.current = false;
+      initializedLevelRef.current = level.id;
+    }
 
     const game = gameRef.current;
     game.regionColor = regionColorProp;
