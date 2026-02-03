@@ -822,6 +822,31 @@ export function GameCanvas({
           ball.velocity = vec2Sub(ball.velocity, vec2Scale(nearestNormal, 2 * velDotNormal));
         }
         
+        // CRITICAL: Reassign ball to the correct region after board escape recovery
+        // The ball may have ended up in a different region than it was originally in
+        let foundRegion = false;
+        for (const region of game.regions) {
+          // Check if ball is near any sample point in this region
+          if (region.samplePoints) {
+            for (const sample of region.samplePoints) {
+              if (vec2Distance(ball.position, sample) < SAMPLE_GRID_SIZE * 1.5) {
+                ball.regionId = region.id;
+                foundRegion = true;
+                console.warn("[PHYSICS] Ball escaped board, reassigned to region:", region.id);
+                break;
+              }
+            }
+          }
+          if (foundRegion) break;
+          
+          // Fallback: check polygon containment
+          if (!foundRegion && pointInPolygon(ball.position, region.polygon)) {
+            ball.regionId = region.id;
+            foundRegion = true;
+            console.warn("[PHYSICS] Ball escaped board, reassigned to region (polygon):", region.id);
+          }
+        }
+        
         console.warn("[PHYSICS] Ball escaped board, recovered to:", ball.position);
       }
 
