@@ -153,6 +153,17 @@ export function AugmentStore({
             </p>
           </motion.div>
 
+          {/* Info message when can't afford anything */}
+          {totalAugmentPoints > 0 && !sortedAugments.some(a => isAugmentUnlocked(a) && !isMaxed(a) && canAfford(a)) && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="bg-muted/20 border border-muted/30 rounded-lg p-3 text-center text-sm text-muted-foreground"
+            >
+              You need more Augment Points to purchase. The cheapest augment costs 2 points.
+            </motion.div>
+          )}
+
           {/* Augment Grid */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -263,11 +274,18 @@ export function AugmentStore({
                           <span className="text-xs font-bold">MAXED</span>
                         </div>
                       ) : unlocked ? (
-                        <div className="flex items-center gap-1">
-                          <Hexagon className="w-4 h-4 text-white fill-white/20" />
-                          <span className={`text-lg font-display font-bold ${canPurchase ? 'text-white' : 'text-muted-foreground'}`}>
-                            {augment.costPerStack}
-                          </span>
+                        <div className="flex flex-col items-end gap-0.5">
+                          <div className="flex items-center gap-1">
+                            <Hexagon className="w-4 h-4 text-white fill-white/20" />
+                            <span className={`text-lg font-display font-bold ${canPurchase ? 'text-white' : 'text-muted-foreground'}`}>
+                              {augment.costPerStack}
+                            </span>
+                          </div>
+                          {!affordable && (
+                            <span className="text-[10px] text-danger/80 font-medium">
+                              Need {augment.costPerStack - totalAugmentPoints} more
+                            </span>
+                          )}
                         </div>
                       ) : null}
                     </div>
