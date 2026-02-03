@@ -49,6 +49,16 @@ import {
   renderWallWithEffects, 
   clearWallImpacts 
 } from "@/lib/wallImpactEffects";
+import {
+  REGION_SAMPLE_GRID_SIZE,
+  CONTAINMENT_MARGIN,
+  validateAllBallOwnership,
+  reassignBallsToRegions,
+  isBallInRegion,
+  findContainingRegion,
+  constrainBallToRegion,
+  wouldWallOrphanBall
+} from "@/lib/regionOwnership";
 import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playDeathSound, initAudio } from "@/lib/gameAudio";
 import {
   BOARD_WIDTH,
@@ -829,7 +839,7 @@ export function GameCanvas({
           // Check if ball is near any sample point in this region
           if (region.samplePoints) {
             for (const sample of region.samplePoints) {
-              if (vec2Distance(ball.position, sample) < SAMPLE_GRID_SIZE * 1.5) {
+              if (vec2Distance(ball.position, sample) < REGION_SAMPLE_GRID_SIZE * 1.5) {
                 ball.regionId = region.id;
                 foundRegion = true;
                 console.warn("[PHYSICS] Ball escaped board, reassigned to region:", region.id);
@@ -922,111 +932,38 @@ export function GameCanvas({
         }
       }
       
-      // CRITICAL: Region containment check
+      // CRITICAL: Region containment check using strict ownership system
       // After all collisions, verify ball is still within its assigned region
-      // This catches edge cases where fast balls tunnel through thin fences
       // SKIP for frozen balls - they should not be moved during freeze
       if (game.frozenBallId && ball.id === game.frozenBallId) return;
       
       const ballRegion = game.regions.find(r => r.id === ball.regionId);
       if (!ballRegion) return;
       
-      // Use sample-point-based containment check (more accurate than bounding-box polygon)
-      // Ball is "contained" if it's within a generous margin of any sample point
-      const isNearSample = (pos: Vector2, samples: Vector2[], maxDist: number): boolean => {
-        for (const sample of samples) {
-          if (vec2Distance(pos, sample) < maxDist) return true;
-        }
-        return false;
-      };
+      // Use strict region ownership validation
+      const isInAssigned = isBallInRegion(ball.position, ballRegion, game.walls);
       
-      // Check containment in ANY region (not just the assigned one)
-      // This handles cases where a ball moves between regions due to physics
-      const containmentMargin = SAMPLE_GRID_SIZE * 2; // Generous margin
+      if (isInAssigned) return; // Ball is valid in its assigned region
       
-      // First, check if ball is contained in its assigned region
-      const isInAssignedRegion = ballRegion.samplePoints && ballRegion.samplePoints.length > 0
-        ? isNearSample(ball.position, ballRegion.samplePoints, containmentMargin)
-        : pointInPolygon(ball.position, ballRegion.polygon);
+      // Ball escaped - try to find which region it's actually in
+      const actualRegion = findContainingRegion(ball.position, game.regions, game.walls);
       
-      if (isInAssignedRegion) return; // Ball is fine
-      
-      // Ball is not in its assigned region - check if it's in ANY region
-      for (const region of game.regions) {
-        if (region.id === ball.regionId) continue; // Already checked
-        
-        const isInThisRegion = region.samplePoints && region.samplePoints.length > 0
-          ? isNearSample(ball.position, region.samplePoints, containmentMargin)
-          : pointInPolygon(ball.position, region.polygon);
-        
-        if (isInThisRegion) {
-          // Ball moved to a different region - just reassign it
-          ball.regionId = region.id;
-          console.log("[PHYSICS] Ball moved to different region:", region.id);
-          return;
-        }
+      if (actualRegion) {
+        // Ball moved to a different region - reassign it
+        console.log("[OWNERSHIP] Ball", ball.id, "moved from", ball.regionId, "to", actualRegion.id);
+        ball.regionId = actualRegion.id;
+        return;
       }
       
-      // Ball is not in ANY region - it truly escaped, need to recover
-      // Find the nearest sample point across ALL regions
-      let minDist = Infinity;
-      let nearestSample: Vector2 | null = null;
-      let nearestRegionId: string | null = null;
+      // Ball is not in ANY region - use constraint system to recover
+      const constraint = constrainBallToRegion(ball, ballRegion, game.walls);
       
-      for (const region of game.regions) {
-        const samples = region.samplePoints || [];
-        for (const sample of samples) {
-          const dist = vec2Distance(ball.position, sample);
-          if (dist < minDist) {
-            minDist = dist;
-            nearestSample = sample;
-            nearestRegionId = region.id;
-          }
+      if (constraint.corrected) {
+        ball.position = constraint.position;
+        if (constraint.newVelocity) {
+          ball.velocity = constraint.newVelocity;
         }
-      }
-      
-      if (nearestSample && nearestRegionId) {
-        // Move ball directly to the sample point center (not offset)
-        ball.position = { ...nearestSample };
-        ball.regionId = nearestRegionId;
-        
-        // Reverse velocity to bounce back
-        ball.velocity = vec2Scale(ball.velocity, -0.8);
-        
-        console.warn("[PHYSICS] Ball escaped all regions, recovered to:", ball.position, "region:", nearestRegionId);
-      } else {
-        // Ultimate fallback: use polygon-based recovery
-        const regionVerts = ballRegion.polygon.vertices;
-        let nearestPoint: Vector2 = ball.position;
-        let nearestNormal: Vector2 = { x: 0, y: -1 };
-        minDist = Infinity;
-        
-        for (let i = 0; i < regionVerts.length; i++) {
-          const j = (i + 1) % regionVerts.length;
-          const p1 = regionVerts[i];
-          const p2 = regionVerts[j];
-          const closest = closestPointOnSegment(ball.position, p1, p2);
-          const dist = vec2Distance(ball.position, closest);
-          
-          if (dist < minDist) {
-            minDist = dist;
-            nearestPoint = closest;
-            const edge = vec2Sub(p2, p1);
-            const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
-            const regionCentroid = polygonCentroid(ballRegion.polygon);
-            const toCenter = vec2Sub(regionCentroid, closest);
-            nearestNormal = vec2Dot(perpendicular, toCenter) > 0 ? perpendicular : vec2Scale(perpendicular, -1);
-          }
-        }
-        
-        ball.position = vec2Add(nearestPoint, vec2Scale(nearestNormal, ball.radius + 5));
-        
-        const velDotNormal = vec2Dot(ball.velocity, nearestNormal);
-        if (velDotNormal < 0) {
-          ball.velocity = vec2Sub(ball.velocity, vec2Scale(nearestNormal, 2 * velDotNormal));
-        }
-        
-        console.warn("[PHYSICS] Ball escaped (polygon fallback), recovered to:", ball.position);
+        console.warn("[OWNERSHIP] Ball", ball.id, "escaped, recovered to region", ball.regionId);
       }
     };
 
@@ -1480,12 +1417,7 @@ export function GameCanvas({
           });
           console.log("[FLOOD] Added new region:", newId, "with estimatedArea:", result.estimatedArea, "samplePoints:", result.samplePoints.length);
 
-          // Update ball region IDs - use simple point-in-polygon check
-          for (const ball of balls) {
-            if (pointInPolygon(ball.position, result.polygon)) {
-              ball.regionId = newId;
-            }
-          }
+          // Ball region assignment handled by mandatory validation below
         } else {
           console.log("[FLOOD] Polygon rejected - too small or null");
         }
@@ -1500,6 +1432,10 @@ export function GameCanvas({
       }
 
       game.regions = newRegions;
+
+      // MANDATORY VALIDATION: Reassign all balls to their correct regions
+      reassignBallsToRegions(game.balls, game.regions, game.walls);
+      validateAllBallOwnership(game.balls, game.regions, game.walls);
 
       // Speed up balls
       for (const ball of balls) {
@@ -1527,74 +1463,9 @@ export function GameCanvas({
     };
 
     // Pre-validate that a wall won't trap any ball in a region without valid sample points
-    const wouldWallTrapBall = (wallStart: Vector2, wallEnd: Vector2): boolean => {
-      const { balls } = game;
-      const SAMPLE_GRID = 15;
-      
-      // For each ball, check if it would end up in a valid region after the wall is placed
-      for (const ball of balls) {
-        // Skip dead balls (speed === 0)
-        if (ball.speed === 0) continue;
-        
-        // Check if the ball is very close to where the wall will be placed
-        const distToWall = pointToSegmentDistance(ball.position, wallStart, wallEnd);
-        
-        // If ball is within a dangerous distance of the wall, check if it would be trapped
-        if (distToWall < ball.radius + SAMPLE_GRID * 2) {
-          // Determine which side of the wall the ball is on
-          const wallDir = vec2Normalize(vec2Sub(wallEnd, wallStart));
-          const wallPerp = { x: -wallDir.y, y: wallDir.x };
-          const ballSide = vec2Dot(vec2Sub(ball.position, wallStart), wallPerp);
-          
-          // Check if there's enough playable space on the ball's side
-          // by verifying the ball can reach at least one sample point without crossing:
-          // 1. The new wall
-          // 2. Any existing wall
-          let canReachAnySample = false;
-          
-          // Generate sample points around the ball's position
-          const ballRegion = game.regions.find(r => r.id === ball.regionId);
-          if (ballRegion && ballRegion.samplePoints) {
-            for (const sample of ballRegion.samplePoints) {
-              // Check if sample is on the same side of the new wall as the ball
-              const sampleSide = vec2Dot(vec2Sub(sample, wallStart), wallPerp);
-              if ((ballSide > 0 && sampleSide < 0) || (ballSide < 0 && sampleSide > 0)) {
-                continue; // Sample is on opposite side of wall
-              }
-              
-              // Check if path from ball to sample crosses any wall
-              let pathBlocked = false;
-              
-              // Check new wall
-              if (lineSegmentIntersection(ball.position, sample, wallStart, wallEnd)) {
-                pathBlocked = true;
-              }
-              
-              // Check existing walls
-              if (!pathBlocked) {
-                for (const w of game.walls) {
-                  if (lineSegmentIntersection(ball.position, sample, w.start, w.end)) {
-                    pathBlocked = true;
-                    break;
-                  }
-                }
-              }
-              
-              if (!pathBlocked) {
-                canReachAnySample = true;
-                break;
-              }
-            }
-          }
-          
-          if (!canReachAnySample) {
-            console.warn("[TRAP] Wall would trap ball", ball.id, "at", ball.position);
-            return true;
-          }
-        }
-      }
-      
-      return false;
+    // Uses the region ownership module for consistent validation
+    const wouldWallTrapBallCheck = (wallStart: Vector2, wallEnd: Vector2): boolean => {
+      return wouldWallOrphanBall(wallStart, wallEnd, game.balls, game.regions, game.walls);
     };
 
     const applyCut = (wall: GrowingWall) => {
@@ -1621,7 +1492,7 @@ export function GameCanvas({
 
       // CRITICAL: Check if this wall would trap any ball in an area too small to play
       // If so, abort the cut (the wall simply doesn't complete)
-      if (wouldWallTrapBall(wall.startPoint, wall.endPoint)) {
+      if (wouldWallTrapBallCheck(wall.startPoint, wall.endPoint)) {
         console.log("[CUT] Aborted - wall would trap a ball");
         // Wall fails silently - no life lost, just doesn't complete
         return;
@@ -1700,12 +1571,7 @@ export function GameCanvas({
               result.samplePoints.length,
             );
 
-            // Update ball region IDs
-            for (const ball of balls) {
-              if (pointInPolygon(ball.position, result.polygon)) {
-                ball.regionId = newId;
-              }
-            }
+            // Ball region assignment will be done below via mandatory validation
           }
         }
       }
@@ -1713,6 +1579,19 @@ export function GameCanvas({
       // Replace all regions with the updated set
       game.regions = updatedRegions;
       console.log("[CUT] Final region count:", game.regions.length);
+
+      // ============================================================
+      // MANDATORY VALIDATION STEP
+      // ============================================================
+      // After any structural change, validate and correct all ball ownership.
+      // This ensures every ball is in exactly one valid playable region.
+      // ============================================================
+      reassignBallsToRegions(game.balls, game.regions, game.walls);
+      const { allValid, corrections } = validateAllBallOwnership(game.balls, game.regions, game.walls);
+      
+      if (!allValid) {
+        console.warn("[CUT] Ball ownership corrections applied:", corrections.length);
+      }
 
       game.activeWall = null;
 
