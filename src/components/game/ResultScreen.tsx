@@ -148,11 +148,6 @@ export function ResultScreen({
                   </p>
                 </div>
               )}
-              {runPointsAwarded === 0 && runLevelsCompleted > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  {5 - (runLevelsCompleted % 5)} more levels for next point
-                </p>
-              )}
             </motion.div>
           )}
 

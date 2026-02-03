@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Heart, Lock, Scissors, Target } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
 import { SvgIcon } from '@/components/ui/SvgIcon';
 import {
@@ -8,6 +8,14 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+
+interface AugmentProgress {
+  levelsCompleted: number;
+  levelsToNextPoint: number;
+  progressInCurrentPoint: number;
+  pointsEarned: number;
+  levelsPerPoint: number;
+}
 
 interface GameTopBarProps {
   levelNumber: number;
@@ -19,6 +27,7 @@ interface GameTopBarProps {
   lockedBalls: number;
   ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
+  augmentProgress?: AugmentProgress;
 }
 
 export function GameTopBar({
@@ -31,6 +40,7 @@ export function GameTopBar({
   lockedBalls,
   ownedUpgrades,
   accentColor = '#00ff88',
+  augmentProgress,
 }: GameTopBarProps) {
   const upgradesContainerRef = useRef<HTMLDivElement>(null);
   const [needsCarousel, setNeedsCarousel] = useState(false);
@@ -165,6 +175,28 @@ export function GameTopBar({
             {lockedBalls}
           </span>
         </div>
+
+        {/* Augment Progress */}
+        {augmentProgress && (
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Hexagon 
+              className="w-5 h-5 flex-shrink-0" 
+              style={{ 
+                color: '#ffffff',
+                fill: augmentProgress.pointsEarned > 0 ? 'rgba(255,255,255,0.3)' : 'transparent',
+              }}
+            />
+            <span 
+              className="font-display text-base font-bold tabular-nums"
+              style={{ 
+                color: '#ffffff',
+                textShadow: augmentProgress.pointsEarned > 0 ? '0 0 8px rgba(255,255,255,0.6)' : 'none',
+              }}
+            >
+              {augmentProgress.progressInCurrentPoint}/{augmentProgress.levelsPerPoint}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Row 2: Upgrades Bar - Conditional */}
