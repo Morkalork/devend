@@ -932,7 +932,7 @@ export function GameCanvas({
       if (!ballRegion) return;
       
       // Use sample-point-based containment check (more accurate than bounding-box polygon)
-      // Ball is "contained" if it's within gridSize distance of any sample point
+      // Ball is "contained" if it's within a generous margin of any sample point
       const isNearSample = (pos: Vector2, samples: Vector2[], maxDist: number): boolean => {
         for (const sample of samples) {
           if (vec2Distance(pos, sample) < maxDist) return true;
@@ -940,72 +940,93 @@ export function GameCanvas({
         return false;
       };
       
-      // Check containment: use sample points if available, otherwise fall back to polygon
-      const containmentMargin = SAMPLE_GRID_SIZE * 1.5; // Allow ball to be near sample points
-      const isContained = ballRegion.samplePoints && ballRegion.samplePoints.length > 0
+      // Check containment in ANY region (not just the assigned one)
+      // This handles cases where a ball moves between regions due to physics
+      const containmentMargin = SAMPLE_GRID_SIZE * 2; // Generous margin
+      
+      // First, check if ball is contained in its assigned region
+      const isInAssignedRegion = ballRegion.samplePoints && ballRegion.samplePoints.length > 0
         ? isNearSample(ball.position, ballRegion.samplePoints, containmentMargin)
         : pointInPolygon(ball.position, ballRegion.polygon);
       
-      if (!isContained) {
-        // Ball escaped its region! Find nearest sample point to recover to
-        let minDist = Infinity;
-        let nearestSample: Vector2 | null = null;
+      if (isInAssignedRegion) return; // Ball is fine
+      
+      // Ball is not in its assigned region - check if it's in ANY region
+      for (const region of game.regions) {
+        if (region.id === ball.regionId) continue; // Already checked
         
-        const samples = ballRegion.samplePoints || [];
+        const isInThisRegion = region.samplePoints && region.samplePoints.length > 0
+          ? isNearSample(ball.position, region.samplePoints, containmentMargin)
+          : pointInPolygon(ball.position, region.polygon);
+        
+        if (isInThisRegion) {
+          // Ball moved to a different region - just reassign it
+          ball.regionId = region.id;
+          console.log("[PHYSICS] Ball moved to different region:", region.id);
+          return;
+        }
+      }
+      
+      // Ball is not in ANY region - it truly escaped, need to recover
+      // Find the nearest sample point across ALL regions
+      let minDist = Infinity;
+      let nearestSample: Vector2 | null = null;
+      let nearestRegionId: string | null = null;
+      
+      for (const region of game.regions) {
+        const samples = region.samplePoints || [];
         for (const sample of samples) {
           const dist = vec2Distance(ball.position, sample);
           if (dist < minDist) {
             minDist = dist;
             nearestSample = sample;
+            nearestRegionId = region.id;
+          }
+        }
+      }
+      
+      if (nearestSample && nearestRegionId) {
+        // Move ball directly to the sample point center (not offset)
+        ball.position = { ...nearestSample };
+        ball.regionId = nearestRegionId;
+        
+        // Reverse velocity to bounce back
+        ball.velocity = vec2Scale(ball.velocity, -0.8);
+        
+        console.warn("[PHYSICS] Ball escaped all regions, recovered to:", ball.position, "region:", nearestRegionId);
+      } else {
+        // Ultimate fallback: use polygon-based recovery
+        const regionVerts = ballRegion.polygon.vertices;
+        let nearestPoint: Vector2 = ball.position;
+        let nearestNormal: Vector2 = { x: 0, y: -1 };
+        minDist = Infinity;
+        
+        for (let i = 0; i < regionVerts.length; i++) {
+          const j = (i + 1) % regionVerts.length;
+          const p1 = regionVerts[i];
+          const p2 = regionVerts[j];
+          const closest = closestPointOnSegment(ball.position, p1, p2);
+          const dist = vec2Distance(ball.position, closest);
+          
+          if (dist < minDist) {
+            minDist = dist;
+            nearestPoint = closest;
+            const edge = vec2Sub(p2, p1);
+            const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
+            const regionCentroid = polygonCentroid(ballRegion.polygon);
+            const toCenter = vec2Sub(regionCentroid, closest);
+            nearestNormal = vec2Dot(perpendicular, toCenter) > 0 ? perpendicular : vec2Scale(perpendicular, -1);
           }
         }
         
-        if (nearestSample) {
-          // Move ball to the nearest sample point
-          const toSample = vec2Normalize(vec2Sub(nearestSample, ball.position));
-          ball.position = vec2Add(nearestSample, vec2Scale(toSample, -ball.radius));
-          
-          // Reflect velocity (bounce back)
-          const velDotDir = vec2Dot(ball.velocity, toSample);
-          if (velDotDir > 0) {
-            ball.velocity = vec2Sub(ball.velocity, vec2Scale(toSample, 2 * velDotDir));
-          }
-          
-          console.warn("[PHYSICS] Ball escaped region, recovered to sample:", ball.position);
-        } else {
-          // Fallback: use polygon-based recovery (original logic)
-          const regionVerts = ballRegion.polygon.vertices;
-          let nearestPoint: Vector2 = ball.position;
-          let nearestNormal: Vector2 = { x: 0, y: -1 };
-          minDist = Infinity;
-          
-          for (let i = 0; i < regionVerts.length; i++) {
-            const j = (i + 1) % regionVerts.length;
-            const p1 = regionVerts[i];
-            const p2 = regionVerts[j];
-            const closest = closestPointOnSegment(ball.position, p1, p2);
-            const dist = vec2Distance(ball.position, closest);
-            
-            if (dist < minDist) {
-              minDist = dist;
-              nearestPoint = closest;
-              const edge = vec2Sub(p2, p1);
-              const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
-              const regionCentroid = polygonCentroid(ballRegion.polygon);
-              const toCenter = vec2Sub(regionCentroid, closest);
-              nearestNormal = vec2Dot(perpendicular, toCenter) > 0 ? perpendicular : vec2Scale(perpendicular, -1);
-            }
-          }
-          
-          ball.position = vec2Add(nearestPoint, vec2Scale(nearestNormal, ball.radius + 5));
-          
-          const velDotNormal = vec2Dot(ball.velocity, nearestNormal);
-          if (velDotNormal < 0) {
-            ball.velocity = vec2Sub(ball.velocity, vec2Scale(nearestNormal, 2 * velDotNormal));
-          }
-          
-          console.warn("[PHYSICS] Ball escaped region (fallback), recovered to:", ball.position);
+        ball.position = vec2Add(nearestPoint, vec2Scale(nearestNormal, ball.radius + 5));
+        
+        const velDotNormal = vec2Dot(ball.velocity, nearestNormal);
+        if (velDotNormal < 0) {
+          ball.velocity = vec2Sub(ball.velocity, vec2Scale(nearestNormal, 2 * velDotNormal));
         }
+        
+        console.warn("[PHYSICS] Ball escaped (polygon fallback), recovered to:", ball.position);
       }
     };
 
