@@ -1384,8 +1384,14 @@ export function GameCanvas({
 
         if (result && result.estimatedArea > 100) {
           const newId = generateRegionId();
-          newRegions.push({ id: newId, polygon: result.polygon, estimatedArea: result.estimatedArea });
-          console.log("[FLOOD] Added new region:", newId, "with estimatedArea:", result.estimatedArea);
+          // CRITICAL: Store samplePoints in the new region for accurate area tracking
+          newRegions.push({ 
+            id: newId, 
+            polygon: result.polygon, 
+            estimatedArea: result.estimatedArea,
+            samplePoints: result.samplePoints 
+          });
+          console.log("[FLOOD] Added new region:", newId, "with estimatedArea:", result.estimatedArea, "samplePoints:", result.samplePoints.length);
 
           // Update ball region IDs - use simple point-in-polygon check
           for (const ball of balls) {
