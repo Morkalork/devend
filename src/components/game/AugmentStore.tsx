@@ -181,10 +181,15 @@ export function AugmentStore({
                     delay: 0.25 + index * 0.03,
                     scale: { duration: 0.3 }
                   }}
-                  onClick={() => handleSelect(augment)}
+                  whileTap={canPurchase ? { scale: 0.98 } : undefined}
+                  whileHover={canPurchase ? { scale: 1.01 } : undefined}
+                  onClick={() => {
+                    console.log('[AugmentStore] Clicked:', augment.name, { canPurchase, unlocked, maxed, affordable });
+                    handleSelect(augment);
+                  }}
                   disabled={!canPurchase}
                   className={`
-                    relative p-4 rounded-lg border-2 text-left transition-all
+                    relative p-4 rounded-lg border-2 text-left transition-all outline-none
                     ${justPurchased === augment.id
                       ? 'border-white bg-white/20'
                       : maxed
@@ -192,7 +197,7 @@ export function AugmentStore({
                         : !unlocked
                           ? 'border-muted/30 bg-muted/5 opacity-60 cursor-not-allowed'
                           : canPurchase 
-                            ? 'border-white/30 bg-white/5 hover:border-white hover:bg-white/10 cursor-pointer' 
+                            ? 'border-white/30 bg-white/5 hover:border-white hover:bg-white/10 cursor-pointer active:bg-white/15 focus:ring-2 focus:ring-white/50' 
                             : 'border-muted/20 bg-muted/5 opacity-50 cursor-not-allowed'
                     }
                   `}
