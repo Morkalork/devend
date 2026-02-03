@@ -47,13 +47,26 @@ export function useAugmentManager(options: AugmentManagerOptions = {}) {
   
   // In-run tracking (ephemeral, not persisted)
   const [runLevelsCompleted, setRunLevelsCompleted] = useState(0);
-  const [runPointsEarned, setRunPointsEarned] = useState(0);
+  
+  // Derived value - no need for separate state
+  const runPointsEarned = Math.floor(runLevelsCompleted / LEVELS_PER_POINT);
+  
+  // Track previous points to detect when a new point is earned
+  const prevPointsRef = useRef(0);
   
   // Store callback in ref to avoid stale closures
   const onPointEarnedRef = useRef(options.onPointEarned);
   useEffect(() => {
     onPointEarnedRef.current = options.onPointEarned;
   }, [options.onPointEarned]);
+  
+  // Trigger callback when points increase
+  useEffect(() => {
+    if (runPointsEarned > prevPointsRef.current) {
+      onPointEarnedRef.current?.();
+    }
+    prevPointsRef.current = runPointsEarned;
+  }, [runPointsEarned]);
 
   // Load persistence on mount
   useEffect(() => {
@@ -98,7 +111,7 @@ export function useAugmentManager(options: AugmentManagerOptions = {}) {
    */
   const resetRunProgress = useCallback(() => {
     setRunLevelsCompleted(0);
-    setRunPointsEarned(0);
+    prevPointsRef.current = 0;
   }, []);
 
   /**
@@ -106,21 +119,7 @@ export function useAugmentManager(options: AugmentManagerOptions = {}) {
    * Tracks progress and triggers callback when a point is earned
    */
   const incrementRunLevel = useCallback(() => {
-    setRunLevelsCompleted(prev => {
-      const newCount = prev + 1;
-      
-      // Check if we just earned a point
-      const prevPoints = Math.floor(prev / LEVELS_PER_POINT);
-      const newPoints = Math.floor(newCount / LEVELS_PER_POINT);
-      
-      if (newPoints > prevPoints) {
-        setRunPointsEarned(newPoints);
-        // Trigger callback for visual feedback
-        onPointEarnedRef.current?.();
-      }
-      
-      return newCount;
-    });
+    setRunLevelsCompleted(prev => prev + 1);
   }, []);
 
   /**
@@ -145,7 +144,7 @@ export function useAugmentManager(options: AugmentManagerOptions = {}) {
     
     // Reset run tracking
     setRunLevelsCompleted(0);
-    setRunPointsEarned(0);
+    prevPointsRef.current = 0;
     
     return pointsAwarded;
   }, [runLevelsCompleted]);
