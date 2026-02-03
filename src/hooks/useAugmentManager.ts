@@ -3,47 +3,38 @@ import yaml from 'js-yaml';
 import { 
   Augment, 
   AugmentConfig, 
-  AUGMENT_STORAGE_KEY, 
-  SCORE_BALANCE_STORAGE_KEY 
+  AugmentPersistence,
+  AUGMENT_STORAGE_KEY,
+  DEFAULT_AUGMENT_PERSISTENCE,
 } from '@/types/augment';
 
-interface AugmentPersistenceState {
-  totalScoreBalance: number;
-  ownedAugmentIds: string[];
-}
-
-const DEFAULT_PERSISTENCE: AugmentPersistenceState = {
-  totalScoreBalance: 0,
-  ownedAugmentIds: [],
-};
-
-function loadPersistence(): AugmentPersistenceState {
+function loadPersistence(): AugmentPersistence {
   try {
-    const balanceStr = localStorage.getItem(SCORE_BALANCE_STORAGE_KEY);
-    const ownedStr = localStorage.getItem(AUGMENT_STORAGE_KEY);
+    const stored = localStorage.getItem(AUGMENT_STORAGE_KEY);
+    if (!stored) return { ...DEFAULT_AUGMENT_PERSISTENCE };
     
-    const totalScoreBalance = balanceStr ? parseInt(balanceStr, 10) : 0;
-    const ownedAugmentIds = ownedStr ? JSON.parse(ownedStr) : [];
-    
+    const parsed = JSON.parse(stored);
     return {
-      totalScoreBalance: isNaN(totalScoreBalance) ? 0 : totalScoreBalance,
-      ownedAugmentIds: Array.isArray(ownedAugmentIds) ? ownedAugmentIds : [],
+      totalAugmentPoints: typeof parsed.totalAugmentPoints === 'number' ? parsed.totalAugmentPoints : 0,
+      augmentsOwned: typeof parsed.augmentsOwned === 'object' && parsed.augmentsOwned !== null 
+        ? parsed.augmentsOwned 
+        : {},
+      totalLevelsCompleted: typeof parsed.totalLevelsCompleted === 'number' ? parsed.totalLevelsCompleted : 0,
     };
   } catch {
-    return DEFAULT_PERSISTENCE;
+    return { ...DEFAULT_AUGMENT_PERSISTENCE };
   }
 }
 
-function savePersistence(state: AugmentPersistenceState): void {
-  localStorage.setItem(SCORE_BALANCE_STORAGE_KEY, state.totalScoreBalance.toString());
-  localStorage.setItem(AUGMENT_STORAGE_KEY, JSON.stringify(state.ownedAugmentIds));
+function savePersistence(state: AugmentPersistence): void {
+  localStorage.setItem(AUGMENT_STORAGE_KEY, JSON.stringify(state));
 }
 
 export function useAugmentManager() {
   const [augments, setAugments] = useState<Augment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [persistence, setPersistence] = useState<AugmentPersistenceState>(DEFAULT_PERSISTENCE);
+  const [persistence, setPersistence] = useState<AugmentPersistence>(DEFAULT_AUGMENT_PERSISTENCE);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Load persistence on mount
@@ -66,8 +57,7 @@ export function useAugmentManager() {
       const yamlText = await response.text();
       const config = yaml.load(yamlText) as AugmentConfig;
       
-      // Support both 'augments' and 'superUpgrades' keys for backwards compat
-      const augmentList = config?.augments || (config as any)?.superUpgrades;
+      const augmentList = config?.augments;
       
       if (!augmentList || !Array.isArray(augmentList)) {
         throw new Error('Invalid augments configuration');
@@ -86,38 +76,58 @@ export function useAugmentManager() {
   }, []);
 
   /**
-   * Add score from a completed run to the persistent balance
+   * Record levels completed and award Augment Points
+   * Awards 1 point per 5 levels completed
    */
-  const addScoreFromRun = useCallback((runScore: number): void => {
+  const recordLevelsCompleted = useCallback((levelsCompleted: number): number => {
+    let pointsAwarded = 0;
+    
     setPersistence(prev => {
+      const prevTotal = prev.totalLevelsCompleted;
+      const newTotal = prevTotal + levelsCompleted;
+      
+      // Calculate points: 1 point per 5 levels
+      const prevPoints = Math.floor(prevTotal / 5);
+      const newPoints = Math.floor(newTotal / 5);
+      pointsAwarded = newPoints - prevPoints;
+      
       const newState = {
         ...prev,
-        totalScoreBalance: prev.totalScoreBalance + runScore,
+        totalLevelsCompleted: newTotal,
+        totalAugmentPoints: prev.totalAugmentPoints + pointsAwarded,
       };
       savePersistence(newState);
       return newState;
     });
+    
+    return pointsAwarded;
   }, []);
 
   /**
-   * Purchase an augment permanently
-   * Returns true if successful, false if insufficient balance
+   * Purchase a stack of an augment
+   * Returns true if successful, false if cannot afford or at max stacks
    */
-  const purchaseAugment = useCallback((augment: Augment): boolean => {
-    // Check if already owned
-    if (persistence.ownedAugmentIds.includes(augment.id)) {
+  const purchaseAugmentStack = useCallback((augment: Augment): boolean => {
+    const currentStacks = persistence.augmentsOwned[augment.id] || 0;
+    
+    // Check if at max stacks
+    if (currentStacks >= augment.maxStacks) {
       return false;
     }
     
     // Check if can afford
-    if (persistence.totalScoreBalance < augment.cost) {
+    if (persistence.totalAugmentPoints < augment.costPerStack) {
       return false;
     }
     
     setPersistence(prev => {
       const newState = {
-        totalScoreBalance: prev.totalScoreBalance - augment.cost,
-        ownedAugmentIds: [...prev.ownedAugmentIds, augment.id],
+        ...prev,
+        totalAugmentPoints: prev.totalAugmentPoints - augment.costPerStack,
+        augmentsOwned: {
+          ...prev.augmentsOwned,
+          [augment.id]: (prev.augmentsOwned[augment.id] || 0) + 1,
+        },
       };
       savePersistence(newState);
       return newState;
@@ -127,38 +137,56 @@ export function useAugmentManager() {
   }, [persistence]);
 
   /**
-   * Check if an augment is owned
+   * Get stack count for an augment
+   */
+  const getAugmentStacks = useCallback((augmentId: string): number => {
+    return persistence.augmentsOwned[augmentId] || 0;
+  }, [persistence.augmentsOwned]);
+
+  /**
+   * Check if an augment has any stacks owned
    */
   const isAugmentOwned = useCallback((augmentId: string): boolean => {
-    return persistence.ownedAugmentIds.includes(augmentId);
-  }, [persistence.ownedAugmentIds]);
+    return (persistence.augmentsOwned[augmentId] || 0) > 0;
+  }, [persistence.augmentsOwned]);
 
   /**
-   * Get all owned augments
+   * Get all owned augments with their stack counts
    */
-  const getOwnedAugments = useCallback((): Augment[] => {
-    return augments.filter(a => persistence.ownedAugmentIds.includes(a.id));
-  }, [augments, persistence.ownedAugmentIds]);
+  const getOwnedAugments = useCallback((): { augment: Augment; stacks: number }[] => {
+    return augments
+      .filter(a => (persistence.augmentsOwned[a.id] || 0) > 0)
+      .map(a => ({
+        augment: a,
+        stacks: persistence.augmentsOwned[a.id] || 0,
+      }));
+  }, [augments, persistence.augmentsOwned]);
 
   /**
-   * Get affordable augments (not owned, can afford, unlocked)
+   * Calculate total effect value for an augment (accounting for stacks)
+   * For multipliers, applies the effect multiplicatively per stack
+   * For additive bonuses, adds linearly per stack
    */
-  const getAffordableAugments = useCallback((unlockedIds: string[]): Augment[] => {
-    return augments.filter(a => {
-      // Must not be owned
-      if (persistence.ownedAugmentIds.includes(a.id)) return false;
-      // Must be unlocked (or not locked)
-      if (a.locked && !unlockedIds.includes(a.id)) return false;
-      // Must be affordable
-      return a.cost <= persistence.totalScoreBalance;
-    });
-  }, [augments, persistence]);
+  const getAugmentEffectValue = useCallback((augment: Augment): number => {
+    const stacks = persistence.augmentsOwned[augment.id] || 0;
+    if (stacks === 0) return augment.effect.type.includes('Multiplier') ? 1 : 0;
+    
+    const { type, value } = augment.effect;
+    
+    // For multipliers, apply multiplicatively
+    if (type.includes('Multiplier')) {
+      return Math.pow(value, stacks);
+    }
+    
+    // For additive bonuses, stack linearly
+    return value * stacks;
+  }, [persistence.augmentsOwned]);
 
   /**
    * Reset all augment data (for dev/testing)
    */
   const resetAllData = useCallback((): void => {
-    const newState = { ...DEFAULT_PERSISTENCE };
+    const newState = { ...DEFAULT_AUGMENT_PERSISTENCE };
     setPersistence(newState);
     savePersistence(newState);
   }, []);
@@ -168,14 +196,16 @@ export function useAugmentManager() {
     isLoading,
     error,
     isLoaded,
-    totalScoreBalance: persistence.totalScoreBalance,
-    ownedAugmentIds: persistence.ownedAugmentIds,
+    totalAugmentPoints: persistence.totalAugmentPoints,
+    augmentsOwned: persistence.augmentsOwned,
+    totalLevelsCompleted: persistence.totalLevelsCompleted,
     loadAugments,
-    addScoreFromRun,
-    purchaseAugment,
+    recordLevelsCompleted,
+    purchaseAugmentStack,
+    getAugmentStacks,
     isAugmentOwned,
     getOwnedAugments,
-    getAffordableAugments,
+    getAugmentEffectValue,
     resetAllData,
   };
 }

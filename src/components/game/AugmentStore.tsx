@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, ArrowLeft, Check, Lock, Crown } from 'lucide-react';
+import { Sparkles, ArrowLeft, Check, Lock, Plus, Hexagon } from 'lucide-react';
 import { Augment } from '@/types/augment';
 import { MetaProgressionStats } from '@/types/metaProgression';
 import { CRTBackground } from './CRTBackground';
@@ -9,8 +9,8 @@ import { Progress } from '@/components/ui/progress';
 
 interface AugmentStoreProps {
   augments: Augment[];
-  totalScoreBalance: number;
-  ownedAugmentIds: string[];
+  totalAugmentPoints: number;
+  augmentsOwned: Record<string, number>;
   unlockedIds: string[];
   metaStats: MetaProgressionStats;
   onPurchase: (augment: Augment) => void;
@@ -20,8 +20,8 @@ interface AugmentStoreProps {
 
 export function AugmentStore({
   augments,
-  totalScoreBalance,
-  ownedAugmentIds,
+  totalAugmentPoints,
+  augmentsOwned,
   unlockedIds,
   metaStats,
   onPurchase,
@@ -31,9 +31,10 @@ export function AugmentStore({
   const [selectedAugment, setSelectedAugment] = useState<Augment | null>(null);
   const [confirming, setConfirming] = useState(false);
 
-  const isAugmentOwned = (id: string) => ownedAugmentIds.includes(id);
+  const getStacks = (id: string) => augmentsOwned[id] || 0;
   const isAugmentUnlocked = (augment: Augment) => !augment.locked || unlockedIds.includes(augment.id);
-  const canAfford = (augment: Augment) => totalScoreBalance >= augment.cost;
+  const canAfford = (augment: Augment) => totalAugmentPoints >= augment.costPerStack;
+  const isMaxed = (augment: Augment) => getStacks(augment.id) >= augment.maxStacks;
 
   const getUnlockProgress = (augment: Augment) => {
     if (!augment.locked || !augment.unlockCondition) return null;
@@ -46,8 +47,8 @@ export function AugmentStore({
   };
 
   const handleSelect = (augment: Augment) => {
-    if (isAugmentOwned(augment.id)) return;
     if (!isAugmentUnlocked(augment)) return;
+    if (isMaxed(augment)) return;
     if (!canAfford(augment)) return;
     setSelectedAugment(augment);
     setConfirming(true);
@@ -65,17 +66,26 @@ export function AugmentStore({
     setSelectedAugment(null);
   };
 
-  // Sort: owned first, then unlocked, then locked
+  // Sort: partially owned first, then unlocked, then locked
   const sortedAugments = [...augments].sort((a, b) => {
-    const aOwned = isAugmentOwned(a.id);
-    const bOwned = isAugmentOwned(b.id);
-    if (aOwned !== bOwned) return aOwned ? -1 : 1;
+    const aStacks = getStacks(a.id);
+    const bStacks = getStacks(b.id);
+    const aMaxed = aStacks >= a.maxStacks;
+    const bMaxed = bStacks >= b.maxStacks;
+    
+    // Maxed items go to bottom
+    if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
+    
+    // Partially owned (but not maxed) go to top
+    const aPartial = aStacks > 0 && !aMaxed;
+    const bPartial = bStacks > 0 && !bMaxed;
+    if (aPartial !== bPartial) return aPartial ? -1 : 1;
     
     const aUnlocked = isAugmentUnlocked(a);
     const bUnlocked = isAugmentUnlocked(b);
     if (aUnlocked !== bUnlocked) return aUnlocked ? -1 : 1;
     
-    return a.cost - b.cost;
+    return a.costPerStack - b.costPerStack;
   });
 
   return (
@@ -103,25 +113,31 @@ export function AugmentStore({
         >
           {/* Header */}
           <div className="flex items-center gap-3">
-            <Sparkles className="w-8 h-8 text-primary" />
+            <Sparkles className="w-8 h-8 text-white" />
             <h1 className="text-3xl sm:text-4xl font-display font-black tracking-wider text-foreground">
               AUGMENTS
             </h1>
           </div>
 
-          {/* Score Balance */}
+          {/* Augment Points Balance */}
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="bg-primary/10 border border-primary/30 rounded-xl px-6 py-3 text-center"
-            style={{ boxShadow: '0 0 20px hsl(var(--primary) / 0.2)' }}
+            className="bg-white/10 border border-white/30 rounded-xl px-6 py-3 text-center"
+            style={{ boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}
           >
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-              Total Score Balance
+              Augment Points
             </p>
-            <p className="text-4xl font-display font-bold text-primary">
-              {totalScoreBalance.toLocaleString()}
+            <div className="flex items-center justify-center gap-2">
+              <Hexagon className="w-6 h-6 text-white fill-white/20" />
+              <p className="text-4xl font-display font-bold text-white">
+                {totalAugmentPoints}
+              </p>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Earn 1 point every 5 levels
             </p>
           </motion.div>
 
@@ -133,10 +149,11 @@ export function AugmentStore({
             className="w-full flex flex-col gap-3 max-h-[55vh] overflow-y-auto pr-1"
           >
             {sortedAugments.map((augment, index) => {
-              const owned = isAugmentOwned(augment.id);
+              const stacks = getStacks(augment.id);
+              const maxed = isMaxed(augment);
               const unlocked = isAugmentUnlocked(augment);
               const affordable = canAfford(augment);
-              const canPurchase = !owned && unlocked && affordable;
+              const canPurchase = unlocked && !maxed && affordable;
               const unlockProgress = getUnlockProgress(augment);
 
               return (
@@ -149,17 +166,17 @@ export function AugmentStore({
                   disabled={!canPurchase}
                   className={`
                     relative p-4 rounded-lg border-2 text-left transition-all
-                    ${owned
-                      ? 'border-primary/50 bg-primary/15 cursor-default'
+                    ${maxed
+                      ? 'border-white/50 bg-white/15 cursor-default'
                       : !unlocked
                         ? 'border-muted/30 bg-muted/5 opacity-60 cursor-not-allowed'
                         : canPurchase 
-                          ? 'border-primary/30 bg-primary/5 hover:border-primary hover:bg-primary/10 cursor-pointer' 
+                          ? 'border-white/30 bg-white/5 hover:border-white hover:bg-white/10 cursor-pointer' 
                           : 'border-muted/20 bg-muted/5 opacity-50 cursor-not-allowed'
                     }
                   `}
                   style={{
-                    boxShadow: owned ? '0 0 20px hsl(var(--primary) / 0.15)' : canPurchase ? '0 0 15px hsl(var(--primary) / 0.1)' : 'none',
+                    boxShadow: maxed ? '0 0 20px rgba(255,255,255,0.15)' : canPurchase ? '0 0 15px rgba(255,255,255,0.1)' : 'none',
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -168,15 +185,14 @@ export function AugmentStore({
                         {augment.icon ? (
                           <SvgIcon 
                             src={augment.icon} 
-                            className={`w-5 h-5 ${owned ? 'text-primary' : !unlocked ? 'text-muted-foreground/50' : canPurchase ? 'text-primary' : 'text-muted-foreground'}`}
+                            className="w-5 h-5 text-white"
                           />
                         ) : (
-                          <Sparkles className={`w-4 h-4 ${owned ? 'text-primary' : !unlocked ? 'text-muted-foreground/50' : canPurchase ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <Sparkles className="w-4 h-4 text-white" />
                         )}
-                        <span className={`font-display font-bold text-lg ${owned ? 'text-primary' : !unlocked ? 'text-muted-foreground/70' : canPurchase ? 'text-foreground' : 'text-muted-foreground'}`}>
+                        <span className={`font-display font-bold text-lg ${!unlocked ? 'text-muted-foreground/70' : 'text-foreground'}`}>
                           {augment.name}
                         </span>
-                        {owned && <Crown className="w-4 h-4 text-primary" />}
                         {!unlocked && <Lock className="w-4 h-4 text-muted-foreground/50" />}
                       </div>
                       <p className="text-sm text-muted-foreground leading-snug">
@@ -198,20 +214,30 @@ export function AugmentStore({
                       )}
                     </div>
                     
-                    <div className="flex flex-col items-end shrink-0">
-                      {owned ? (
-                        <div className="flex items-center gap-1 text-primary">
-                          <Check className="w-5 h-5" />
-                          <span className="text-sm font-bold">OWNED</span>
+                    <div className="flex flex-col items-end shrink-0 gap-1">
+                      {/* Stack indicator */}
+                      <div className="flex items-center gap-1 text-sm">
+                        <span className={`font-display font-bold ${stacks > 0 ? 'text-white' : 'text-muted-foreground'}`}>
+                          {stacks}
+                        </span>
+                        <span className="text-muted-foreground">/</span>
+                        <span className="text-muted-foreground">{augment.maxStacks}</span>
+                      </div>
+                      
+                      {/* Cost or Maxed indicator */}
+                      {maxed ? (
+                        <div className="flex items-center gap-1 text-white">
+                          <Check className="w-4 h-4" />
+                          <span className="text-xs font-bold">MAXED</span>
                         </div>
-                      ) : (
-                        <>
-                          <span className={`text-lg font-display font-bold ${canPurchase ? 'text-primary' : 'text-muted-foreground'}`}>
-                            {augment.cost.toLocaleString()}
+                      ) : unlocked ? (
+                        <div className="flex items-center gap-1">
+                          <Hexagon className="w-4 h-4 text-white fill-white/20" />
+                          <span className={`text-lg font-display font-bold ${canPurchase ? 'text-white' : 'text-muted-foreground'}`}>
+                            {augment.costPerStack}
                           </span>
-                          <span className="text-xs text-muted-foreground">pts</span>
-                        </>
-                      )}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 </motion.button>
@@ -247,41 +273,50 @@ export function AugmentStore({
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="bg-background border-2 border-primary rounded-xl p-6 max-w-sm w-full"
-                style={{ boxShadow: '0 0 30px hsl(var(--primary) / 0.3)' }}
+                className="bg-background border-2 border-white/50 rounded-xl p-6 max-w-sm w-full"
+                style={{ boxShadow: '0 0 30px rgba(255,255,255,0.2)' }}
               >
-                <h2 className="text-xl font-display font-bold text-primary mb-4 text-center">
-                  Purchase Augment?
+                <h2 className="text-xl font-display font-bold text-white mb-4 text-center">
+                  Purchase Stack?
                 </h2>
                 
-                <div className="bg-primary/10 rounded-lg p-4 mb-4">
+                <div className="bg-white/10 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     {selectedAugment.icon ? (
-                      <SvgIcon src={selectedAugment.icon} className="w-5 h-5 text-primary" />
+                      <SvgIcon src={selectedAugment.icon} className="w-5 h-5 text-white" />
                     ) : (
-                      <Sparkles className="w-5 h-5 text-primary" />
+                      <Sparkles className="w-5 h-5 text-white" />
                     )}
                     <span className="font-display font-bold text-foreground">{selectedAugment.name}</span>
                   </div>
                   <p className="text-sm text-muted-foreground">{selectedAugment.description}</p>
+                  <div className="mt-2 text-sm text-white">
+                    Stack: {getStacks(selectedAugment.id)} → {getStacks(selectedAugment.id) + 1} / {selectedAugment.maxStacks}
+                  </div>
                 </div>
 
                 <div className="flex justify-between items-center mb-6 px-2">
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground uppercase">Cost</p>
-                    <p className="text-xl font-display font-bold text-danger">-{selectedAugment.cost.toLocaleString()}</p>
+                    <div className="flex items-center gap-1 justify-center">
+                      <Hexagon className="w-4 h-4 text-danger fill-danger/20" />
+                      <p className="text-xl font-display font-bold text-danger">-{selectedAugment.costPerStack}</p>
+                    </div>
                   </div>
                   <div className="text-2xl text-muted-foreground">→</div>
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground uppercase">New Balance</p>
-                    <p className="text-xl font-display font-bold text-foreground">
-                      {(totalScoreBalance - selectedAugment.cost).toLocaleString()}
-                    </p>
+                    <div className="flex items-center gap-1 justify-center">
+                      <Hexagon className="w-4 h-4 text-white fill-white/20" />
+                      <p className="text-xl font-display font-bold text-foreground">
+                        {totalAugmentPoints - selectedAugment.costPerStack}
+                      </p>
+                    </div>
                   </div>
                 </div>
 
                 <p className="text-xs text-muted-foreground text-center mb-4">
-                  This augment will apply to <strong className="text-foreground">all future runs</strong> permanently.
+                  This augment stack is <strong className="text-foreground">permanent</strong> and applies to all future runs.
                 </p>
 
                 <div className="flex gap-3">
@@ -295,8 +330,8 @@ export function AugmentStore({
                     onClick={handleConfirmPurchase}
                     className="arcade-button-primary rounded-lg flex-1 flex items-center justify-center gap-2"
                   >
-                    <Check className="w-4 h-4" />
-                    Buy
+                    <Plus className="w-4 h-4" />
+                    Buy Stack
                   </button>
                 </div>
               </motion.div>

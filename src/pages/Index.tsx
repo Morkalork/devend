@@ -77,15 +77,17 @@ const Index = () => {
   // Lives tracking (persists across levels in a run)
   const [currentLives, setCurrentLives] = useState(BASE_LIVES);
 
-  // Augment system (persistent meta-progression)
+  // Augment system (persistent meta-progression with Augment Points)
   const {
     augments,
-    totalScoreBalance,
-    ownedAugmentIds,
+    totalAugmentPoints,
+    augmentsOwned,
+    totalLevelsCompleted,
     loadAugments,
-    addScoreFromRun,
-    purchaseAugment,
+    recordLevelsCompleted,
+    purchaseAugmentStack,
     getOwnedAugments,
+    getAugmentEffectValue,
     resetAllData: resetAugmentData,
   } = useAugmentManager();
 
@@ -118,8 +120,11 @@ const Index = () => {
     resetProgression,
   } = useMetaProgression();
 
-  // Track score added this run for display
-  const [runScoreAdded, setRunScoreAdded] = useState<number | null>(null);
+  // Track points awarded this run for display
+  const [runPointsAwarded, setRunPointsAwarded] = useState<number>(0);
+  
+  // Track levels completed this run for awarding points
+  const [runLevelsCompleted, setRunLevelsCompleted] = useState(0);
   
   // Track lives at start of level for perfect level detection
   const [livesAtLevelStart, setLivesAtLevelStart] = useState(BASE_LIVES);
@@ -128,7 +133,18 @@ const Index = () => {
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
 
   // Get owned augments for applying effects
-  const ownedAugments = getOwnedAugments();
+  const ownedAugmentsList = getOwnedAugments();
+
+  // Calculate starting lives from augments
+  const getStartingLivesFromAugments = useCallback(() => {
+    let bonusLives = 0;
+    ownedAugmentsList.forEach(({ augment, stacks }) => {
+      if (augment.effect.type === 'startingLivesBonus') {
+        bonusLives += augment.effect.value * stacks;
+      }
+    });
+    return BASE_LIVES + bonusLives;
+  }, [ownedAugmentsList]);
 
   const handleStartGame = useCallback(async (forceInteractiveTutorial = false) => {
     // Load levels, upgrades, and augments in parallel
@@ -143,15 +159,11 @@ const Index = () => {
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
-      setRunScoreAdded(null);
+      setRunPointsAwarded(0);
+      setRunLevelsCompleted(0);
       
       // Calculate starting lives from owned augments
-      let startingLives = BASE_LIVES;
-      ownedAugments.forEach(aug => {
-        if (aug.effect.type === 'startingLivesBonus') {
-          startingLives += aug.effect.value;
-        }
-      });
+      const startingLives = getStartingLivesFromAugments();
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
       
@@ -176,7 +188,7 @@ const Index = () => {
       
       startGame();
     }
-  }, [loadLevels, loadUpgrades, loadAugments, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, ownedAugments]);
+  }, [loadLevels, loadUpgrades, loadAugments, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, getStartingLivesFromAugments]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // Save checkpoint if player made it past level 5
@@ -187,17 +199,16 @@ const Index = () => {
       clearCheckpoint();
     }
     
-    // Add run score to persistent balance
-    const runScore = totalScore;
-    addScoreFromRun(runScore);
-    setRunScoreAdded(runScore);
+    // Award Augment Points for levels completed this run
+    const pointsAwarded = recordLevelsCompleted(runLevelsCompleted);
+    setRunPointsAwarded(pointsAwarded);
     
     // For game over, include current total score
     endGame({
       ...result,
-      totalScore: runScore,
+      totalScore: totalScore,
     });
-  }, [endGame, totalScore, saveCheckpoint, clearCheckpoint, addScoreFromRun]);
+  }, [endGame, totalScore, saveCheckpoint, clearCheckpoint, recordLevelsCompleted, runLevelsCompleted]);
 
   const handleLivesChange = useCallback((newLives: number) => {
     const livesLost = currentLives - newLives;
@@ -212,6 +223,9 @@ const Index = () => {
     const currentLevelNum = currentLevelIndex + 1;
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
+    
+    // Increment levels completed this run
+    setRunLevelsCompleted(prev => prev + 1);
     
     // Check if level was completed without losing a life
     if (currentLives >= livesAtLevelStart) {
@@ -281,23 +295,19 @@ const Index = () => {
   }, [advanceToNextLevel, goToGame]);
 
   const handlePurchaseAugment = useCallback((augment: Augment) => {
-    purchaseAugment(augment);
-  }, [purchaseAugment]);
+    purchaseAugmentStack(augment);
+  }, [purchaseAugmentStack]);
 
   const handlePlayAgain = useCallback(() => {
     setTotalScore(0);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
-    setRunScoreAdded(null);
+    setRunPointsAwarded(0);
+    setRunLevelsCompleted(0);
     
     // Calculate starting lives from owned augments
-    let startingLives = BASE_LIVES;
-    ownedAugments.forEach(aug => {
-      if (aug.effect.type === 'startingLivesBonus') {
-        startingLives += aug.effect.value;
-      }
-    });
+    const startingLives = getStartingLivesFromAugments();
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     
@@ -310,7 +320,7 @@ const Index = () => {
     }
     
     startGame();
-  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, ownedAugments]);
+  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, getStartingLivesFromAugments]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
@@ -319,7 +329,8 @@ const Index = () => {
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
     setCurrentLives(BASE_LIVES);
-    setRunScoreAdded(null);
+    setRunPointsAwarded(0);
+    setRunLevelsCompleted(0);
     goToWelcome();
   }, [resetToFirstLevel, goToWelcome]);
 
@@ -386,12 +397,14 @@ const Index = () => {
         checkpointLevel={checkpointStartLevel}
         checkpointRemainingMs={checkpointRemaining}
         augments={augments}
-        totalScoreBalance={totalScoreBalance}
-        ownedAugmentIds={ownedAugmentIds}
-        ownedAugments={ownedAugments}
+        totalAugmentPoints={totalAugmentPoints}
+        augmentsOwned={augmentsOwned}
+        ownedAugmentsList={ownedAugmentsList}
         metaStats={metaStats}
         unlockedIds={unlockedIds}
-        runScoreAdded={runScoreAdded}
+        runPointsAwarded={runPointsAwarded}
+        runLevelsCompleted={runLevelsCompleted}
+        totalLevelsCompleted={totalLevelsCompleted}
       />
     </AccentColorProvider>
   );
@@ -436,12 +449,14 @@ interface IndexContentProps {
   checkpointLevel?: number;
   checkpointRemainingMs?: number;
   augments: Augment[];
-  totalScoreBalance: number;
-  ownedAugmentIds: string[];
-  ownedAugments: Augment[];
+  totalAugmentPoints: number;
+  augmentsOwned: Record<string, number>;
+  ownedAugmentsList: { augment: Augment; stacks: number }[];
   metaStats: MetaProgressionStats;
   unlockedIds: string[];
-  runScoreAdded: number | null;
+  runPointsAwarded: number;
+  runLevelsCompleted: number;
+  totalLevelsCompleted: number;
 }
 
 function IndexContent({
@@ -482,12 +497,14 @@ function IndexContent({
   checkpointLevel,
   checkpointRemainingMs,
   augments,
-  totalScoreBalance,
-  ownedAugmentIds,
-  ownedAugments,
+  totalAugmentPoints,
+  augmentsOwned,
+  ownedAugmentsList,
   metaStats,
   unlockedIds,
-  runScoreAdded,
+  runPointsAwarded,
+  runLevelsCompleted,
+  totalLevelsCompleted,
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
 
@@ -505,7 +522,7 @@ function IndexContent({
           accentColor={accentHex}
           checkpointLevel={checkpointLevel}
           checkpointRemainingMs={checkpointRemainingMs}
-          totalScoreBalance={totalScoreBalance}
+          totalAugmentPoints={totalAugmentPoints}
         />
       )}
       {currentScreen === 'tutorial' && (
@@ -516,7 +533,7 @@ function IndexContent({
           onBack={goToWelcome}
           onReplayTutorial={handleReplayInteractiveTutorial}
           onResetAugments={handleResetAugments}
-          hasAugments={ownedAugmentIds.length > 0 || totalScoreBalance > 0}
+          hasAugments={Object.keys(augmentsOwned).length > 0 || totalAugmentPoints > 0}
           accentColor={accentHex}
         />
       )}
@@ -555,15 +572,16 @@ function IndexContent({
           onPlayAgain={handlePlayAgain}
           onBackToWelcome={handleBackToWelcome}
           accentColor={accentHex}
-          ownedAugments={ownedAugments}
-          runScoreAdded={runScoreAdded ?? undefined}
+          ownedAugments={ownedAugmentsList}
+          runPointsAwarded={runPointsAwarded}
+          runLevelsCompleted={runLevelsCompleted}
         />
       )}
       {currentScreen === 'augmentStore' && (
         <AugmentStore
           augments={augments}
-          totalScoreBalance={totalScoreBalance}
-          ownedAugmentIds={ownedAugmentIds}
+          totalAugmentPoints={totalAugmentPoints}
+          augmentsOwned={augmentsOwned}
           unlockedIds={unlockedIds}
           metaStats={metaStats}
           onPurchase={handlePurchaseAugment}

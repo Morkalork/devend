@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Loader2, Clock, Zap, Sparkles } from 'lucide-react';
+import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 
 interface WelcomeScreenProps {
@@ -14,7 +14,7 @@ interface WelcomeScreenProps {
   accentColor?: string;
   checkpointLevel?: number;
   checkpointRemainingMs?: number;
-  totalScoreBalance?: number;
+  totalAugmentPoints?: number;
 }
 
 function formatTime(ms: number): string {
@@ -35,7 +35,7 @@ export function WelcomeScreen({
   accentColor,
   checkpointLevel,
   checkpointRemainingMs,
-  totalScoreBalance,
+  totalAugmentPoints,
 }: WelcomeScreenProps) {
   const [remainingTime, setRemainingTime] = useState(checkpointRemainingMs || 0);
   
@@ -304,9 +304,10 @@ export function WelcomeScreen({
           >
             <Sparkles className="w-5 h-5" />
             Augments
-            {totalScoreBalance !== undefined && totalScoreBalance > 0 && (
-              <span className="ml-1 text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">
-                {totalScoreBalance.toLocaleString()}
+            {totalAugmentPoints !== undefined && totalAugmentPoints > 0 && (
+              <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                <Hexagon className="w-3 h-3" />
+                {totalAugmentPoints}
               </span>
             )}
           </motion.button>

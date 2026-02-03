@@ -1,8 +1,9 @@
 augments:
   - id: slower-balls
     name: Slower Balls
-    description: Reduces base ball speed by 10%, making movement more manageable.
-    cost: 120
+    description: Reduces base ball speed by 10% per stack.
+    maxStacks: 3
+    costPerStack: 2
     icon: /icons/super/slower-balls.svg
     effect:
       type: ballSpeedMultiplier
@@ -10,8 +11,9 @@ augments:
 
   - id: faster-fences
     name: Faster Fences
-    description: Increases base fence construction speed by 10%.
-    cost: 120
+    description: Increases base fence construction speed by 10% per stack.
+    maxStacks: 3
+    costPerStack: 2
     icon: /icons/super/faster-fences.svg
     effect:
       type: fenceSpeedMultiplier
@@ -19,8 +21,9 @@ augments:
 
   - id: extra-margin
     name: Extra Margin
-    description: Increases the par fence count by 1 for all levels in the next run.
-    cost: 150
+    description: Increases the par fence count by 1 per stack.
+    maxStacks: 3
+    costPerStack: 3
     icon: /icons/super/extra-margin.svg
     effect:
       type: parFenceBonus
@@ -28,8 +31,9 @@ augments:
 
   - id: reduced-area
     name: Reduced Requirement
-    description: Reduces the minimum required fenced-off area by 5%.
-    cost: 150
+    description: Reduces the minimum required fenced-off area by 5% per stack.
+    maxStacks: 3
+    costPerStack: 3
     icon: /icons/super/reduced-area.svg
     effect:
       type: requiredAreaMultiplier
@@ -37,8 +41,9 @@ augments:
 
   - id: score-interest
     name: Compound Score
-    description: Gain 5% interest on unused score between levels.
-    cost: 180
+    description: Gain 5% interest on unused score between levels per stack.
+    maxStacks: 3
+    costPerStack: 3
     icon: /icons/super/score-interest.svg
     effect:
       type: scoreInterest
@@ -46,8 +51,9 @@ augments:
 
   - id: softer-bounces
     name: Softer Bounces
-    description: Slightly reduces ball rebound energy for more predictable movement.
-    cost: 130
+    description: Slightly reduces ball rebound energy per stack.
+    maxStacks: 2
+    costPerStack: 2
     icon: /icons/super/softer-bounces.svg
     effect:
       type: bounceDamping
@@ -55,8 +61,9 @@ augments:
 
   - id: thicker-walls
     name: Thicker Walls
-    description: Slightly increases wall thickness, making collisions more forgiving.
-    cost: 140
+    description: Slightly increases wall thickness per stack.
+    maxStacks: 2
+    costPerStack: 2
     icon: /icons/super/thicker-walls.svg
     effect:
       type: wallThicknessMultiplier
@@ -64,8 +71,9 @@ augments:
 
   - id: longer-preview
     name: Extended Preview
-    description: Slows down wall preview growth, giving more time to aim cuts.
-    cost: 130
+    description: Slows down wall preview growth per stack.
+    maxStacks: 2
+    costPerStack: 2
     icon: /icons/super/longer-preview.svg
     effect:
       type: previewSpeedMultiplier
@@ -73,8 +81,9 @@ augments:
 
   - id: extra-life
     name: Extra Life
-    description: Start the next run with one additional life.
-    cost: 200
+    description: Start each run with one additional life per stack.
+    maxStacks: 3
+    costPerStack: 4
     icon: /icons/super/extra-life.svg
     effect:
       type: startingLivesBonus
@@ -82,20 +91,22 @@ augments:
 
   - id: early-stability
     name: Structural Stability
-    description: Reduces level variety, making maps more predictable.
-    cost: 110
+    description: Reduces level variety per stack, making maps more predictable.
+    maxStacks: 2
+    costPerStack: 2
     icon: /icons/super/early-stability.svg
     effect:
       type: varietyMultiplier
       value: 0.8
 
-  # ========== LOCKED SUPER UPGRADES ==========
+  # ========== LOCKED AUGMENTS ==========
   # These require meta progression to unlock
 
   - id: veteran-reflexes
     name: Veteran Reflexes
-    description: Further slows ball speed by 15%, rewarding experienced players.
-    cost: 200
+    description: Further slows ball speed by 15% per stack.
+    maxStacks: 2
+    costPerStack: 4
     icon: /icons/super/veteran-reflexes.svg
     effect:
       type: ballSpeedMultiplier
@@ -108,8 +119,9 @@ augments:
 
   - id: master-builder
     name: Master Builder
-    description: Increases fence construction speed by 20%.
-    cost: 220
+    description: Increases fence construction speed by 20% per stack.
+    maxStacks: 2
+    costPerStack: 4
     icon: /icons/super/master-builder.svg
     effect:
       type: fenceSpeedMultiplier
@@ -122,8 +134,9 @@ augments:
 
   - id: fence-mastery
     name: Fence Mastery
-    description: Start with +2 par fence bonus on all levels.
-    cost: 250
+    description: Start with +2 par fence bonus per stack.
+    maxStacks: 2
+    costPerStack: 5
     icon: /icons/super/fence-mastery.svg
     effect:
       type: parFenceBonus
@@ -136,8 +149,9 @@ augments:
 
   - id: perfect-form
     name: Perfect Form
-    description: Reduces required area by 10%, rewarding flawless play.
-    cost: 280
+    description: Reduces required area by 10% per stack.
+    maxStacks: 2
+    costPerStack: 5
     icon: /icons/super/perfect-form.svg
     effect:
       type: requiredAreaMultiplier
@@ -150,8 +164,9 @@ augments:
 
   - id: phoenix-rising
     name: Phoenix Rising
-    description: Start with +2 extra lives, earned through persistence.
-    cost: 300
+    description: Start with +2 extra lives per stack.
+    maxStacks: 2
+    costPerStack: 6
     icon: /icons/super/phoenix-rising.svg
     effect:
       type: startingLivesBonus
