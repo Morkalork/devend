@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import yaml from 'js-yaml';
 import { 
   Augment, 
@@ -7,6 +7,9 @@ import {
   AUGMENT_STORAGE_KEY,
   DEFAULT_AUGMENT_PERSISTENCE,
 } from '@/types/augment';
+
+/** Levels required for 1 Augment Point */
+const LEVELS_PER_POINT = 5;
 
 function loadPersistence(): AugmentPersistence {
   try {
@@ -30,12 +33,27 @@ function savePersistence(state: AugmentPersistence): void {
   localStorage.setItem(AUGMENT_STORAGE_KEY, JSON.stringify(state));
 }
 
-export function useAugmentManager() {
+export interface AugmentManagerOptions {
+  /** Callback when an Augment Point is earned during a run */
+  onPointEarned?: () => void;
+}
+
+export function useAugmentManager(options: AugmentManagerOptions = {}) {
   const [augments, setAugments] = useState<Augment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [persistence, setPersistence] = useState<AugmentPersistence>(DEFAULT_AUGMENT_PERSISTENCE);
   const [isLoaded, setIsLoaded] = useState(false);
+  
+  // In-run tracking (ephemeral, not persisted)
+  const [runLevelsCompleted, setRunLevelsCompleted] = useState(0);
+  const [runPointsEarned, setRunPointsEarned] = useState(0);
+  
+  // Store callback in ref to avoid stale closures
+  const onPointEarnedRef = useRef(options.onPointEarned);
+  useEffect(() => {
+    onPointEarnedRef.current = options.onPointEarned;
+  }, [options.onPointEarned]);
 
   // Load persistence on mount
   useEffect(() => {
@@ -76,25 +94,74 @@ export function useAugmentManager() {
   }, []);
 
   /**
-   * Record levels completed and award Augment Points
-   * Awards 1 point per 5 levels completed in this run (per-run, not cumulative)
+   * Reset in-run tracking (call at the start of a new run)
    */
-  const recordLevelsCompleted = useCallback((levelsCompleted: number): number => {
-    // Calculate points earned this run: 1 point per 5 levels completed this run
-    const pointsAwarded = Math.floor(levelsCompleted / 5);
-    
-    setPersistence(prev => {
-      const newState = {
-        ...prev,
-        totalLevelsCompleted: prev.totalLevelsCompleted + levelsCompleted,
-        totalAugmentPoints: prev.totalAugmentPoints + pointsAwarded,
-      };
-      savePersistence(newState);
-      return newState;
+  const resetRunProgress = useCallback(() => {
+    setRunLevelsCompleted(0);
+    setRunPointsEarned(0);
+  }, []);
+
+  /**
+   * Increment level completion during a run
+   * Tracks progress and triggers callback when a point is earned
+   */
+  const incrementRunLevel = useCallback(() => {
+    setRunLevelsCompleted(prev => {
+      const newCount = prev + 1;
+      
+      // Check if we just earned a point
+      const prevPoints = Math.floor(prev / LEVELS_PER_POINT);
+      const newPoints = Math.floor(newCount / LEVELS_PER_POINT);
+      
+      if (newPoints > prevPoints) {
+        setRunPointsEarned(newPoints);
+        // Trigger callback for visual feedback
+        onPointEarnedRef.current?.();
+      }
+      
+      return newCount;
     });
+  }, []);
+
+  /**
+   * Finalize run and award Augment Points
+   * Awards 1 point per 5 levels completed in this run (per-run, not cumulative)
+   * Partial progress is discarded
+   */
+  const finalizeRun = useCallback((): number => {
+    const pointsAwarded = Math.floor(runLevelsCompleted / LEVELS_PER_POINT);
+    
+    if (runLevelsCompleted > 0) {
+      setPersistence(prev => {
+        const newState = {
+          ...prev,
+          totalLevelsCompleted: prev.totalLevelsCompleted + runLevelsCompleted,
+          totalAugmentPoints: prev.totalAugmentPoints + pointsAwarded,
+        };
+        savePersistence(newState);
+        return newState;
+      });
+    }
+    
+    // Reset run tracking
+    setRunLevelsCompleted(0);
+    setRunPointsEarned(0);
     
     return pointsAwarded;
-  }, []);
+  }, [runLevelsCompleted]);
+
+  /**
+   * Get progress toward next Augment Point (for in-run display)
+   */
+  const getRunProgress = useCallback(() => {
+    return {
+      levelsCompleted: runLevelsCompleted,
+      levelsToNextPoint: LEVELS_PER_POINT - (runLevelsCompleted % LEVELS_PER_POINT),
+      progressInCurrentPoint: runLevelsCompleted % LEVELS_PER_POINT,
+      pointsEarned: runPointsEarned,
+      levelsPerPoint: LEVELS_PER_POINT,
+    };
+  }, [runLevelsCompleted, runPointsEarned]);
 
   /**
    * Purchase a stack of an augment
@@ -192,8 +259,15 @@ export function useAugmentManager() {
     totalAugmentPoints: persistence.totalAugmentPoints,
     augmentsOwned: persistence.augmentsOwned,
     totalLevelsCompleted: persistence.totalLevelsCompleted,
+    // Run tracking
+    runLevelsCompleted,
+    runPointsEarned,
+    // Methods
     loadAugments,
-    recordLevelsCompleted,
+    resetRunProgress,
+    incrementRunLevel,
+    finalizeRun,
+    getRunProgress,
     purchaseAugmentStack,
     getAugmentStacks,
     isAugmentOwned,

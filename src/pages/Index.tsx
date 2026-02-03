@@ -78,18 +78,30 @@ const Index = () => {
   const [currentLives, setCurrentLives] = useState(BASE_LIVES);
 
   // Augment system (persistent meta-progression with Augment Points)
+  // Point earned callback for visual feedback
+  const [showPointEarnedFlash, setShowPointEarnedFlash] = useState(false);
+  const handleAugmentPointEarned = useCallback(() => {
+    setShowPointEarnedFlash(true);
+    setTimeout(() => setShowPointEarnedFlash(false), 1500);
+  }, []);
+
   const {
     augments,
     totalAugmentPoints,
     augmentsOwned,
     totalLevelsCompleted,
+    runLevelsCompleted,
+    runPointsEarned,
     loadAugments,
-    recordLevelsCompleted,
+    resetRunProgress,
+    incrementRunLevel,
+    finalizeRun,
+    getRunProgress,
     purchaseAugmentStack,
     getOwnedAugments,
     getAugmentEffectValue,
     resetAllData: resetAugmentData,
-  } = useAugmentManager();
+  } = useAugmentManager({ onPointEarned: handleAugmentPointEarned });
 
   // Interactive tutorial management
   const {
@@ -120,11 +132,8 @@ const Index = () => {
     resetProgression,
   } = useMetaProgression();
 
-  // Track points awarded this run for display
-  const [runPointsAwarded, setRunPointsAwarded] = useState<number>(0);
-  
-  // Track levels completed this run for awarding points
-  const [runLevelsCompleted, setRunLevelsCompleted] = useState(0);
+  // Track points awarded this run for display (computed from hook)
+  const runPointsAwarded = runPointsEarned;
   
   // Track lives at start of level for perfect level detection
   const [livesAtLevelStart, setLivesAtLevelStart] = useState(BASE_LIVES);
@@ -159,8 +168,7 @@ const Index = () => {
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
-      setRunPointsAwarded(0);
-      setRunLevelsCompleted(0);
+      resetRunProgress(); // Reset in-run augment tracking
       
       // Calculate starting lives from owned augments
       const startingLives = getStartingLivesFromAugments();
@@ -188,7 +196,7 @@ const Index = () => {
       
       startGame();
     }
-  }, [loadLevels, loadUpgrades, loadAugments, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, getStartingLivesFromAugments]);
+  }, [loadLevels, loadUpgrades, loadAugments, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, getStartingLivesFromAugments, resetRunProgress]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // Save checkpoint if player made it past level 5
@@ -199,16 +207,15 @@ const Index = () => {
       clearCheckpoint();
     }
     
-    // Award Augment Points for levels completed this run
-    const pointsAwarded = recordLevelsCompleted(runLevelsCompleted);
-    setRunPointsAwarded(pointsAwarded);
+    // Finalize run and award Augment Points
+    finalizeRun();
     
     // For game over, include current total score
     endGame({
       ...result,
       totalScore: totalScore,
     });
-  }, [endGame, totalScore, saveCheckpoint, clearCheckpoint, recordLevelsCompleted, runLevelsCompleted]);
+  }, [endGame, totalScore, saveCheckpoint, clearCheckpoint, finalizeRun]);
 
   const handleLivesChange = useCallback((newLives: number) => {
     const livesLost = currentLives - newLives;
@@ -224,8 +231,8 @@ const Index = () => {
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
     
-    // Increment levels completed this run
-    setRunLevelsCompleted(prev => prev + 1);
+    // Increment levels completed this run (tracked in augment manager)
+    incrementRunLevel();
     
     // Check if level was completed without losing a life
     if (currentLives >= livesAtLevelStart) {
@@ -251,7 +258,7 @@ const Index = () => {
     
     // Reset lives at level start for next level
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, augments, currentLives, livesAtLevelStart]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, augments, currentLives, livesAtLevelStart, incrementRunLevel]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -303,8 +310,7 @@ const Index = () => {
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
-    setRunPointsAwarded(0);
-    setRunLevelsCompleted(0);
+    resetRunProgress(); // Reset in-run augment tracking
     
     // Calculate starting lives from owned augments
     const startingLives = getStartingLivesFromAugments();
@@ -320,7 +326,7 @@ const Index = () => {
     }
     
     startGame();
-  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, getStartingLivesFromAugments]);
+  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, getStartingLivesFromAugments, resetRunProgress]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
@@ -329,10 +335,9 @@ const Index = () => {
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
     setCurrentLives(BASE_LIVES);
-    setRunPointsAwarded(0);
-    setRunLevelsCompleted(0);
+    resetRunProgress(); // Reset in-run augment tracking
     goToWelcome();
-  }, [resetToFirstLevel, goToWelcome]);
+  }, [resetToFirstLevel, goToWelcome, resetRunProgress]);
 
   const handleAugmentsFromWelcome = useCallback(async () => {
     await loadAugments();
@@ -405,12 +410,21 @@ const Index = () => {
         runPointsAwarded={runPointsAwarded}
         runLevelsCompleted={runLevelsCompleted}
         totalLevelsCompleted={totalLevelsCompleted}
+        augmentProgress={getRunProgress()}
       />
     </AccentColorProvider>
   );
 };
 
 // Separate component to access accent color context
+interface AugmentProgress {
+  levelsCompleted: number;
+  levelsToNextPoint: number;
+  progressInCurrentPoint: number;
+  pointsEarned: number;
+  levelsPerPoint: number;
+}
+
 interface IndexContentProps {
   currentScreen: string;
   currentLevel: any;
@@ -457,6 +471,7 @@ interface IndexContentProps {
   runPointsAwarded: number;
   runLevelsCompleted: number;
   totalLevelsCompleted: number;
+  augmentProgress: AugmentProgress;
 }
 
 function IndexContent({
@@ -505,6 +520,7 @@ function IndexContent({
   runPointsAwarded,
   runLevelsCompleted,
   totalLevelsCompleted,
+  augmentProgress,
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
 
@@ -553,6 +569,7 @@ function IndexContent({
           tutorialStep={tutorialStep}
           onTutorialCutSuccess={markTutorialComplete}
           accentColor={accentHex}
+          augmentProgress={augmentProgress}
         />
       )}
       {currentScreen === 'upgradeShop' && (

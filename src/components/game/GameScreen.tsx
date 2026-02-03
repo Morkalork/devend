@@ -9,6 +9,14 @@ import { UpgradeConfig } from '@/types/upgrade';
 import { TutorialStep } from '@/hooks/useInteractiveTutorial';
 import { useGameConfig } from '@/hooks/useGameConfig';
 
+interface AugmentProgress {
+  levelsCompleted: number;
+  levelsToNextPoint: number;
+  progressInCurrentPoint: number;
+  pointsEarned: number;
+  levelsPerPoint: number;
+}
+
 interface GameScreenProps {
   level: LevelConfig;
   levelNumber: number;
@@ -24,6 +32,7 @@ interface GameScreenProps {
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
   accentColor?: string;
+  augmentProgress?: AugmentProgress;
 }
 
 export function GameScreen({ 
@@ -41,6 +50,7 @@ export function GameScreen({
   tutorialStep = 'completed',
   onTutorialCutSuccess,
   accentColor: externalAccentColor,
+  augmentProgress,
 }: GameScreenProps) {
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
   
@@ -79,6 +89,7 @@ export function GameScreen({
           lockedBalls={gameState.lockedBalls}
           ownedUpgrades={ownedUpgrades}
           accentColor={accentColor}
+          augmentProgress={augmentProgress}
         />
 
         {/* Game Canvas Area */}
