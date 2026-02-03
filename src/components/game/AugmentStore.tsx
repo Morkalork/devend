@@ -6,6 +6,7 @@ import { MetaProgressionStats } from '@/types/metaProgression';
 import { CRTBackground } from './CRTBackground';
 import { SvgIcon } from '@/components/ui/SvgIcon';
 import { Progress } from '@/components/ui/progress';
+import { toast } from '@/hooks/use-toast';
 
 interface AugmentStoreProps {
   augments: Augment[];
@@ -30,6 +31,7 @@ export function AugmentStore({
 }: AugmentStoreProps) {
   const [selectedAugment, setSelectedAugment] = useState<Augment | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const [justPurchased, setJustPurchased] = useState<string | null>(null);
 
   const getStacks = (id: string) => augmentsOwned[id] || 0;
   const isAugmentUnlocked = (augment: Augment) => !augment.locked || unlockedIds.includes(augment.id);
@@ -57,6 +59,16 @@ export function AugmentStore({
   const handleConfirmPurchase = () => {
     if (!selectedAugment) return;
     onPurchase(selectedAugment);
+    
+    // Show visual confirmation
+    setJustPurchased(selectedAugment.id);
+    setTimeout(() => setJustPurchased(null), 1500);
+    
+    toast({
+      title: `${selectedAugment.name} upgraded!`,
+      description: `Stack ${getStacks(selectedAugment.id) + 1}/${selectedAugment.maxStacks}`,
+    });
+    
     setConfirming(false);
     setSelectedAugment(null);
   };
@@ -160,23 +172,38 @@ export function AugmentStore({
                 <motion.button
                   key={augment.id}
                   initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.25 + index * 0.03 }}
+                  animate={{ 
+                    opacity: 1, 
+                    x: 0,
+                    scale: justPurchased === augment.id ? [1, 1.02, 1] : 1,
+                  }}
+                  transition={{ 
+                    delay: 0.25 + index * 0.03,
+                    scale: { duration: 0.3 }
+                  }}
                   onClick={() => handleSelect(augment)}
                   disabled={!canPurchase}
                   className={`
                     relative p-4 rounded-lg border-2 text-left transition-all
-                    ${maxed
-                      ? 'border-white/50 bg-white/15 cursor-default'
-                      : !unlocked
-                        ? 'border-muted/30 bg-muted/5 opacity-60 cursor-not-allowed'
-                        : canPurchase 
-                          ? 'border-white/30 bg-white/5 hover:border-white hover:bg-white/10 cursor-pointer' 
-                          : 'border-muted/20 bg-muted/5 opacity-50 cursor-not-allowed'
+                    ${justPurchased === augment.id
+                      ? 'border-white bg-white/20'
+                      : maxed
+                        ? 'border-white/50 bg-white/15 cursor-default'
+                        : !unlocked
+                          ? 'border-muted/30 bg-muted/5 opacity-60 cursor-not-allowed'
+                          : canPurchase 
+                            ? 'border-white/30 bg-white/5 hover:border-white hover:bg-white/10 cursor-pointer' 
+                            : 'border-muted/20 bg-muted/5 opacity-50 cursor-not-allowed'
                     }
                   `}
                   style={{
-                    boxShadow: maxed ? '0 0 20px rgba(255,255,255,0.15)' : canPurchase ? '0 0 15px rgba(255,255,255,0.1)' : 'none',
+                    boxShadow: justPurchased === augment.id 
+                      ? '0 0 30px rgba(255,255,255,0.4)' 
+                      : maxed 
+                        ? '0 0 20px rgba(255,255,255,0.15)' 
+                        : canPurchase 
+                          ? '0 0 15px rgba(255,255,255,0.1)' 
+                          : 'none',
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">
