@@ -172,7 +172,7 @@ levels:
         radius: 41
 
   - id: level-6
-    sizeThreshold: 20
+    sizeThreshold: 30
     expectedCuts: 12
     points: 400
     variety: 10
