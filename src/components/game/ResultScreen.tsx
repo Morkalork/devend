@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Trophy, Skull, RotateCcw, Home, Sparkles } from 'lucide-react';
+import { Trophy, Skull, RotateCcw, Home, Sparkles, Hexagon } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { Augment } from '@/types/augment';
 import { CRTBackground } from './CRTBackground';
@@ -9,8 +9,9 @@ interface ResultScreenProps {
   onPlayAgain: () => void;
   onBackToWelcome: () => void;
   accentColor?: string;
-  ownedAugments?: Augment[];
-  runScoreAdded?: number;
+  ownedAugments?: { augment: Augment; stacks: number }[];
+  runPointsAwarded?: number;
+  runLevelsCompleted?: number;
 }
 
 export function ResultScreen({ 
@@ -19,7 +20,8 @@ export function ResultScreen({
   onBackToWelcome,
   accentColor,
   ownedAugments = [],
-  runScoreAdded,
+  runPointsAwarded = 0,
+  runLevelsCompleted = 0,
 }: ResultScreenProps) {
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
 
@@ -124,8 +126,8 @@ export function ResultScreen({
             </p>
           </div>
 
-          {/* Run Score Added to Balance */}
-          {totalScore !== undefined && (
+          {/* Augment Points Earned */}
+          {runLevelsCompleted > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -133,11 +135,24 @@ export function ResultScreen({
               className="mt-4 pt-4 border-t border-border"
             >
               <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
-                Score Added to Balance
+                Levels Completed
               </p>
-              <p className="text-5xl font-display font-bold text-primary">
-                +{(runScoreAdded ?? totalScore).toLocaleString()}
+              <p className="text-3xl font-display font-bold text-foreground mb-2">
+                {runLevelsCompleted}
               </p>
+              {runPointsAwarded > 0 && (
+                <div className="flex items-center justify-center gap-2">
+                  <Hexagon className="w-6 h-6 text-white fill-white/20" />
+                  <p className="text-2xl font-display font-bold text-white">
+                    +{runPointsAwarded} Augment Point{runPointsAwarded > 1 ? 's' : ''}
+                  </p>
+                </div>
+              )}
+              {runPointsAwarded === 0 && runLevelsCompleted > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  {5 - (runLevelsCompleted % 5)} more levels for next point
+                </p>
+              )}
             </motion.div>
           )}
 
@@ -147,19 +162,19 @@ export function ResultScreen({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5 }}
-              className="mt-4 p-3 rounded-lg bg-primary/10 border border-primary/30"
-              style={{ boxShadow: '0 0 15px hsl(var(--primary) / 0.2)' }}
+              className="mt-4 p-3 rounded-lg bg-white/10 border border-white/30"
+              style={{ boxShadow: '0 0 15px rgba(255,255,255,0.1)' }}
             >
-              <div className="flex items-center gap-2 text-primary mb-2">
+              <div className="flex items-center gap-2 text-white mb-2">
                 <Sparkles className="w-4 h-4" />
                 <span className="text-sm font-display font-bold">
                   {ownedAugments.length} Augment{ownedAugments.length > 1 ? 's' : ''} Active
                 </span>
               </div>
               <div className="flex flex-wrap gap-1">
-                {ownedAugments.slice(0, 3).map(aug => (
-                  <span key={aug.id} className="text-xs text-muted-foreground bg-primary/5 px-2 py-0.5 rounded">
-                    {aug.name}
+                {ownedAugments.slice(0, 3).map(({ augment, stacks }) => (
+                  <span key={augment.id} className="text-xs text-muted-foreground bg-white/5 px-2 py-0.5 rounded">
+                    {augment.name} x{stacks}
                   </span>
                 ))}
                 {ownedAugments.length > 3 && (

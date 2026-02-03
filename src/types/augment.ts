@@ -12,6 +12,7 @@ export interface AugmentEffect {
     | 'previewSpeedMultiplier'
     | 'startingLivesBonus'
     | 'varietyMultiplier';
+  /** The effect value PER STACK (effects stack linearly) */
   value: number;
 }
 
@@ -19,7 +20,10 @@ export interface Augment {
   id: string;
   name: string;
   description: string;
-  cost: number;
+  /** Maximum number of stacks that can be purchased */
+  maxStacks: number;
+  /** Augment Point cost per stack */
+  costPerStack: number;
   icon?: string;
   effect: AugmentEffect;
   /** If true, this augment must be unlocked before it can be purchased */
@@ -34,11 +38,19 @@ export interface AugmentConfig {
 
 /** Persistent state for the augment system */
 export interface AugmentPersistence {
-  /** Total accumulated score balance across all runs */
-  totalScoreBalance: number;
-  /** IDs of augments that have been permanently purchased */
-  ownedAugmentIds: string[];
+  /** Total accumulated Augment Points balance */
+  totalAugmentPoints: number;
+  /** Map of augment ID to owned stack count */
+  augmentsOwned: Record<string, number>;
+  /** Total levels completed (used to calculate earned points) */
+  totalLevelsCompleted: number;
 }
 
-export const AUGMENT_STORAGE_KEY = 'jezzball_augments';
-export const SCORE_BALANCE_STORAGE_KEY = 'jezzball_score_balance';
+export const AUGMENT_STORAGE_KEY = 'jezzball_augments_v2';
+
+/** Default persistence state */
+export const DEFAULT_AUGMENT_PERSISTENCE: AugmentPersistence = {
+  totalAugmentPoints: 0,
+  augmentsOwned: {},
+  totalLevelsCompleted: 0,
+};
