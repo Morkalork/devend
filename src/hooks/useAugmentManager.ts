@@ -77,23 +77,16 @@ export function useAugmentManager() {
 
   /**
    * Record levels completed and award Augment Points
-   * Awards 1 point per 5 levels completed
+   * Awards 1 point per 5 levels completed in this run (per-run, not cumulative)
    */
   const recordLevelsCompleted = useCallback((levelsCompleted: number): number => {
-    let pointsAwarded = 0;
+    // Calculate points earned this run: 1 point per 5 levels completed this run
+    const pointsAwarded = Math.floor(levelsCompleted / 5);
     
     setPersistence(prev => {
-      const prevTotal = prev.totalLevelsCompleted;
-      const newTotal = prevTotal + levelsCompleted;
-      
-      // Calculate points: 1 point per 5 levels
-      const prevPoints = Math.floor(prevTotal / 5);
-      const newPoints = Math.floor(newTotal / 5);
-      pointsAwarded = newPoints - prevPoints;
-      
       const newState = {
         ...prev,
-        totalLevelsCompleted: newTotal,
+        totalLevelsCompleted: prev.totalLevelsCompleted + levelsCompleted,
         totalAugmentPoints: prev.totalAugmentPoints + pointsAwarded,
       };
       savePersistence(newState);
