@@ -417,11 +417,10 @@ export function GameCanvas({
       game.walls = allWalls;
       game.obstaclePolygons = obstaclePolygons;
 
-      // Calculate the original playable area (board minus obstacles)
-      const boardArea = polygonArea(boardPolygon);
-      const totalObstacleArea = obstaclePolygons.reduce((sum, obs) => sum + Math.abs(polygonArea(obs)), 0);
-      game.originalArea = boardArea - totalObstacleArea;
-      game.basePlayableArea = game.originalArea;
+      // NOTE: originalArea will be set later after sample points are generated
+      // to ensure consistency with estimatedArea calculations
+      game.originalArea = 0;
+      game.basePlayableArea = 0;
 
       // Create balls first (we need their positions to determine which regions to keep)
       const bounds = polygonBounds(boardPolygon);
@@ -636,11 +635,18 @@ export function GameCanvas({
       // Store initial sample points for blur effect (tracks full board area)
       game.initialSamplePoints = [...initSamplePoints];
       
+      // Calculate initial estimated area from sample points (consistent with getCombinedArea)
+      const initialEstimatedArea = initSamplePoints.length * initGridSize * initGridSize;
+      
+      // Set originalArea to match the sample-based calculation for consistent percentages
+      game.originalArea = initialEstimatedArea;
+      game.basePlayableArea = initialEstimatedArea;
+      
       game.regions = [{ 
         id: initialRegionId, 
         polygon: boardPolygon,
         samplePoints: initSamplePoints,
-        estimatedArea: initSamplePoints.length * initGridSize * initGridSize
+        estimatedArea: initialEstimatedArea
       }];
 
       // Assign all balls to the initial region
