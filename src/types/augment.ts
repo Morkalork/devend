@@ -31,6 +31,8 @@ export interface Augment {
   locked?: boolean;
   /** The condition that must be met to unlock this augment */
   unlockCondition?: UnlockCondition;
+  /** If true, this is a special golden augment with unique styling */
+  special?: boolean;
 }
 
 export interface AugmentConfig {

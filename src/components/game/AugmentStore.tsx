@@ -201,25 +201,41 @@ export function AugmentStore({
                   disabled={!canPurchase}
                   className={`
                     relative p-4 rounded-lg border-2 text-left transition-all outline-none
-                    ${justPurchased === augment.id
-                      ? 'border-white bg-white/20'
-                      : maxed
-                        ? 'border-white/50 bg-white/15 cursor-default'
-                        : !unlocked
-                          ? 'border-muted/30 bg-muted/5 opacity-60 cursor-not-allowed'
+                    ${augment.special 
+                      ? justPurchased === augment.id
+                        ? 'border-yellow-400 bg-yellow-500/30'
+                        : maxed
+                          ? 'border-yellow-500/60 bg-gradient-to-r from-yellow-500/25 via-amber-500/20 to-yellow-500/25 cursor-default'
                           : canPurchase 
-                            ? 'border-white/30 bg-white/5 hover:border-white hover:bg-white/10 cursor-pointer active:bg-white/15 focus:ring-2 focus:ring-white/50' 
-                            : 'border-muted/20 bg-muted/5 opacity-50 cursor-not-allowed'
+                            ? 'border-yellow-500/50 bg-gradient-to-r from-yellow-500/15 via-amber-500/10 to-yellow-500/15 hover:border-yellow-400 hover:bg-yellow-500/20 cursor-pointer active:bg-yellow-500/25 focus:ring-2 focus:ring-yellow-400/50' 
+                            : 'border-yellow-500/20 bg-yellow-500/5 opacity-60 cursor-not-allowed'
+                      : justPurchased === augment.id
+                        ? 'border-white bg-white/20'
+                        : maxed
+                          ? 'border-white/50 bg-white/15 cursor-default'
+                          : !unlocked
+                            ? 'border-muted/30 bg-muted/5 opacity-60 cursor-not-allowed'
+                            : canPurchase 
+                              ? 'border-white/30 bg-white/5 hover:border-white hover:bg-white/10 cursor-pointer active:bg-white/15 focus:ring-2 focus:ring-white/50' 
+                              : 'border-muted/20 bg-muted/5 opacity-50 cursor-not-allowed'
                     }
                   `}
                   style={{
-                    boxShadow: justPurchased === augment.id 
-                      ? '0 0 30px rgba(255,255,255,0.4)' 
-                      : maxed 
-                        ? '0 0 20px rgba(255,255,255,0.15)' 
-                        : canPurchase 
-                          ? '0 0 15px rgba(255,255,255,0.1)' 
-                          : 'none',
+                    boxShadow: augment.special
+                      ? justPurchased === augment.id 
+                        ? '0 0 40px rgba(234, 179, 8, 0.5), inset 0 0 20px rgba(234, 179, 8, 0.1)' 
+                        : maxed 
+                          ? '0 0 25px rgba(234, 179, 8, 0.3), inset 0 0 15px rgba(234, 179, 8, 0.05)' 
+                          : canPurchase 
+                            ? '0 0 20px rgba(234, 179, 8, 0.2)' 
+                            : 'none'
+                      : justPurchased === augment.id 
+                        ? '0 0 30px rgba(255,255,255,0.4)' 
+                        : maxed 
+                          ? '0 0 20px rgba(255,255,255,0.15)' 
+                          : canPurchase 
+                            ? '0 0 15px rgba(255,255,255,0.1)' 
+                            : 'none',
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -228,14 +244,25 @@ export function AugmentStore({
                         {augment.icon ? (
                           <SvgIcon 
                             src={augment.icon} 
-                            className="w-5 h-5 text-white"
+                            className={`w-5 h-5 ${augment.special ? 'text-yellow-400' : 'text-white'}`}
                           />
                         ) : (
-                          <Sparkles className="w-4 h-4 text-white" />
+                          <Sparkles className={`w-4 h-4 ${augment.special ? 'text-yellow-400' : 'text-white'}`} />
                         )}
-                        <span className={`font-display font-bold text-lg ${!unlocked ? 'text-muted-foreground/70' : 'text-foreground'}`}>
+                        <span className={`font-display font-bold text-lg ${
+                          augment.special 
+                            ? 'text-yellow-400' 
+                            : !unlocked 
+                              ? 'text-muted-foreground/70' 
+                              : 'text-foreground'
+                        }`}>
                           {augment.name}
                         </span>
+                        {augment.special && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-yellow-500/20 text-yellow-400 rounded">
+                            Special
+                          </span>
+                        )}
                         {!unlocked && <Lock className="w-4 h-4 text-muted-foreground/50" />}
                       </div>
                       <p className="text-sm text-muted-foreground leading-snug">
@@ -260,29 +287,37 @@ export function AugmentStore({
                     <div className="flex flex-col items-end shrink-0 gap-1">
                       {/* Stack indicator */}
                       <div className="flex items-center gap-1 text-sm">
-                        <span className={`font-display font-bold ${stacks > 0 ? 'text-white' : 'text-muted-foreground'}`}>
+                        <span className={`font-display font-bold ${
+                          augment.special 
+                            ? stacks > 0 ? 'text-yellow-400' : 'text-yellow-400/50'
+                            : stacks > 0 ? 'text-white' : 'text-muted-foreground'
+                        }`}>
                           {stacks}
                         </span>
-                        <span className="text-muted-foreground">/</span>
-                        <span className="text-muted-foreground">{augment.maxStacks}</span>
+                        <span className={augment.special ? 'text-yellow-400/50' : 'text-muted-foreground'}>/</span>
+                        <span className={augment.special ? 'text-yellow-400/50' : 'text-muted-foreground'}>{augment.maxStacks}</span>
                       </div>
                       
                       {/* Cost or Maxed indicator */}
                       {maxed ? (
-                        <div className="flex items-center gap-1 text-white">
+                        <div className={`flex items-center gap-1 ${augment.special ? 'text-yellow-400' : 'text-white'}`}>
                           <Check className="w-4 h-4" />
-                          <span className="text-xs font-bold">MAXED</span>
+                          <span className="text-xs font-bold">{augment.maxStacks === 1 ? 'OWNED' : 'MAXED'}</span>
                         </div>
                       ) : unlocked ? (
                         <div className="flex flex-col items-end gap-0.5">
                           <div className="flex items-center gap-1">
-                            <Hexagon className="w-4 h-4 text-white fill-white/20" />
-                            <span className={`text-lg font-display font-bold ${canPurchase ? 'text-white' : 'text-muted-foreground'}`}>
+                            <Hexagon className={`w-4 h-4 ${augment.special ? 'text-yellow-400 fill-yellow-400/20' : 'text-white fill-white/20'}`} />
+                            <span className={`text-lg font-display font-bold ${
+                              augment.special 
+                                ? canPurchase ? 'text-yellow-400' : 'text-yellow-400/50'
+                                : canPurchase ? 'text-white' : 'text-muted-foreground'
+                            }`}>
                               {augment.costPerStack}
                             </span>
                           </div>
                           {!affordable && (
-                            <span className="text-[10px] text-danger/80 font-medium">
+                            <span className={`text-[10px] font-medium ${augment.special ? 'text-yellow-500/80' : 'text-danger/80'}`}>
                               Need {augment.costPerStack - totalAugmentPoints} more
                             </span>
                           )}
