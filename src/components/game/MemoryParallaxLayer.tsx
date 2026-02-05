@@ -37,7 +37,7 @@ const CONFIG = {
   parallaxRange: 0.15,
   baseOpacity: 0.08,
   maxOpacity: 0.18,
-  scrollSpeed: 0.015, // Half the speed of the code layer
+  scrollSpeed: 0.005, // Much slower than the code layer for depth
 };
 
 export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxLayerProps) {
