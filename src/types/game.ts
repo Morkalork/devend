@@ -1,4 +1,5 @@
 import { Vector2, Polygon } from '@/lib/polygon';
+import { BallEffectState } from '@/lib/ballEffects';
 
 export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'result' | 'augmentStore' | 'options' | 'admin' | 'mapBuilder';
 
@@ -29,7 +30,8 @@ export interface Ball {
   color: string; // hex color with #
   regionId: string; // which region this ball is in
   rotation: number; // current rotation angle in radians for spinning effect
-  flashIntensity: number; // 0-1, for collision flash effect (decays over time)
+  flashIntensity: number; // 0-1, LEGACY - kept for compatibility, use effects instead
+  effects: BallEffectState; // Visual effect state for pulse, wall hit, ball hit
 }
 
 // Diagonal growing wall - extends from origin in +/- direction
