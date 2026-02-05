@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
+import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
@@ -62,6 +63,7 @@ export function WelcomeScreen({
   return (
     <>
       <CRTBackground accentColor={accentColor} />
+      <MemoryParallaxLayer accentColor={accentColor} />
       <div className="min-h-screen flex flex-col items-center justify-center p-6 relative z-10" style={{ backgroundColor: 'hsl(var(--background) / 0.85)' }}>
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <motion.div
