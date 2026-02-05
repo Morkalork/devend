@@ -61,6 +61,13 @@ import {
 } from "@/lib/regionOwnership";
 import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playDeathSound, initAudio } from "@/lib/gameAudio";
 import {
+  createBallEffectState,
+  updateBallEffects,
+  triggerWallHit,
+  triggerBallHit,
+  renderBallEffects,
+} from "@/lib/ballEffects";
+import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
   BOARD_ASPECT,
@@ -569,7 +576,8 @@ export function GameCanvas({
           color: `#${ballConfig.color}`,
           regionId: "", // Will be assigned after regions are created
           rotation: Math.random() * Math.PI * 2, // Start with random rotation
-          flashIntensity: 0, // No flash initially
+          flashIntensity: 0, // Legacy - kept for compatibility
+          effects: createBallEffectState(), // Visual effects state
         };
       });
 
@@ -604,6 +612,7 @@ export function GameCanvas({
               regionId: "", // Will be assigned later
               rotation: 0,
               flashIntensity: 0,
+              effects: createBallEffectState(),
             });
           }
         }
@@ -789,7 +798,11 @@ export function GameCanvas({
       const rotationSpeed = speed * 0.015; // Radians per second based on speed
       ball.rotation += rotationSpeed * dt;
       
-      // Decay collision flash (fades over ~150ms)
+      // Update ball visual effects (pulse, wall hit, ball hit decays)
+      const now = performance.now();
+      updateBallEffects(ball.effects, dt, now);
+      
+      // Legacy flash decay (kept for compatibility)
       if (ball.flashIntensity > 0) {
         ball.flashIntensity = Math.max(0, ball.flashIntensity - dt * 7);
       }
@@ -876,6 +889,8 @@ export function GameCanvas({
             boardResult.impactEdge.point,
             impactStrength
           );
+          // Trigger wall hit effect on ball
+          triggerWallHit(ball.effects, performance.now());
           // Play wall hit sound
           playWallHitSound(impactStrength);
         }
@@ -895,8 +910,8 @@ export function GameCanvas({
           ball.position = obstacleResult.position;
           ball.velocity = obstacleResult.velocity;
           
-          // Trigger flash effect on collision
-          ball.flashIntensity = 1.0;
+          // Trigger wall hit effect on ball
+          triggerWallHit(ball.effects, performance.now());
           
           // Play wall hit sound for obstacle collision
           const speed = vec2Length(ball.velocity);
@@ -927,6 +942,8 @@ export function GameCanvas({
           const speed = vec2Length(ball.velocity);
           const impactStrength = Math.min(1, speed / 400);
           registerWallImpact(wall.start, wall.end, wallResult.impactPoint, impactStrength);
+          // Trigger wall hit effect on ball
+          triggerWallHit(ball.effects, performance.now());
           // Play wall hit sound
           playWallHitSound(impactStrength);
         }
@@ -2095,24 +2112,19 @@ export function GameCanvas({
           ctx.restore();
         }
 
-        // ===== Collision flash glow (uses accent color, fades out) =====
-        if (ball.flashIntensity > 0) {
-          ctx.save();
-          ctx.beginPath();
-          ctx.arc(screenPos.x, screenPos.y, screenRadius + 30 * scale, 0, Math.PI * 2);
-          const flashGlow = ctx.createRadialGradient(
-            screenPos.x, screenPos.y, screenRadius * 0.3,
-            screenPos.x, screenPos.y, screenRadius + 30 * scale
-          );
-          const flashAlpha = ball.flashIntensity;
-          flashGlow.addColorStop(0, hexToRgba(accentColor, flashAlpha * 0.95));
-          flashGlow.addColorStop(0.3, hexToRgba(accentColor, flashAlpha * 0.7));
-          flashGlow.addColorStop(0.6, hexToRgba(accentColor, flashAlpha * 0.35));
-          flashGlow.addColorStop(1, "transparent");
-          ctx.fillStyle = flashGlow;
-          ctx.fill();
-          ctx.restore();
-        }
+        // ===== NEW BALL EFFECTS SYSTEM =====
+        // Renders: baseline pulse (always), wall collision ring (medium), ball-to-ball glow (strongest)
+        renderBallEffects(
+          ctx,
+          ball.effects,
+          screenPos.x,
+          screenPos.y,
+          screenRadius,
+          accentColor,
+          ball.color,
+          performance.now(),
+          scale
+        );
 
         // Outer glow (ambient light effect)
         ctx.beginPath();
@@ -2388,9 +2400,10 @@ export function GameCanvas({
               ball1.position = vec2Sub(ball1.position, separation);
               ball2.position = vec2Add(ball2.position, separation);
               
-              // Trigger collision flash on both balls
-              ball1.flashIntensity = 1.0;
-              ball2.flashIntensity = 1.0;
+              // Trigger ball-to-ball collision effect (strongest visual)
+              const now = performance.now();
+              triggerBallHit(ball1.effects, now);
+              triggerBallHit(ball2.effects, now);
               
               // Play ball collision sound
               const collisionIntensity = Math.min(1, Math.abs(relVelNormal) / 300);
