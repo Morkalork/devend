@@ -21,21 +21,21 @@ export interface BallEffectState {
 const CONFIG = {
   // Baseline pulse
   pulseFrequency: 1.2, // Hz - slow, non-distracting
-  pulseGlowMin: 0.08, // Minimum glow alpha
-  pulseGlowMax: 0.18, // Maximum glow alpha
+  pulseGlowMin: 0.15, // Minimum glow alpha (increased for visibility)
+  pulseGlowMax: 0.35, // Maximum glow alpha (increased for visibility)
   pulseRadiusMin: 1.0, // Scale factor for radius
-  pulseRadiusMax: 1.04, // Slight radius increase at peak
+  pulseRadiusMax: 1.06, // Slight radius increase at peak
   
   // Wall collision effect
-  wallHitDuration: 200, // ms
-  wallHitGlowIntensity: 0.55, // Peak glow alpha
-  wallHitRingRadius: 1.35, // Ring extends to 35% beyond ball radius
-  wallHitRingWidth: 0.15, // Ring thickness as fraction of radius
+  wallHitDuration: 220, // ms
+  wallHitGlowIntensity: 0.7, // Peak glow alpha (increased)
+  wallHitRingRadius: 1.5, // Ring extends to 50% beyond ball radius
+  wallHitRingWidth: 0.2, // Ring thickness as fraction of radius
   
   // Ball-to-ball collision effect
-  ballHitDuration: 280, // ms - slightly longer
-  ballHitGlowIntensity: 0.85, // Brighter than wall hit
-  ballHitRingRadius: 1.6, // Larger ring
+  ballHitDuration: 300, // ms - slightly longer
+  ballHitGlowIntensity: 0.95, // Brighter than wall hit
+  ballHitRingRadius: 1.8, // Larger ring
   ballHitSecondaryPulse: true, // Optional spark-like secondary effect
 };
 
@@ -204,16 +204,18 @@ export function renderBallEffects(
   const pulse = getBaselinePulse(state);
   
   ctx.save();
+  ctx.globalCompositeOperation = 'lighter'; // Additive blending for glow
   ctx.beginPath();
-  const pulseRadius = screenRadius * pulse.radiusScale + 8 * scale;
+  const pulseRadius = screenRadius * pulse.radiusScale + 12 * scale;
   ctx.arc(screenX, screenY, pulseRadius, 0, Math.PI * 2);
   
   const pulseGlow = ctx.createRadialGradient(
-    screenX, screenY, screenRadius * 0.5,
+    screenX, screenY, screenRadius * 0.3,
     screenX, screenY, pulseRadius
   );
-  pulseGlow.addColorStop(0, `rgba(255, 255, 255, ${pulse.glowAlpha * 0.3})`);
-  pulseGlow.addColorStop(0.5, hexToRgba(accentColor, pulse.glowAlpha * 0.5));
+  pulseGlow.addColorStop(0, hexToRgba(accentColor, pulse.glowAlpha * 0.6));
+  pulseGlow.addColorStop(0.4, hexToRgba(accentColor, pulse.glowAlpha * 0.4));
+  pulseGlow.addColorStop(0.7, hexToRgba(accentColor, pulse.glowAlpha * 0.15));
   pulseGlow.addColorStop(1, 'transparent');
   ctx.fillStyle = pulseGlow;
   ctx.fill();
@@ -223,31 +225,31 @@ export function renderBallEffects(
   const wallHit = getWallHitEffect(state);
   if (wallHit.active) {
     ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     
     // Outer glow
     const wallRingOuterRadius = screenRadius * wallHit.ringRadius;
     const wallRingInnerRadius = screenRadius * (wallHit.ringRadius - wallHit.ringWidth);
     
     ctx.beginPath();
-    ctx.arc(screenX, screenY, wallRingOuterRadius, 0, Math.PI * 2);
+    ctx.arc(screenX, screenY, wallRingOuterRadius + 5 * scale, 0, Math.PI * 2);
     
     const wallGlow = ctx.createRadialGradient(
-      screenX, screenY, wallRingInnerRadius * 0.8,
-      screenX, screenY, wallRingOuterRadius * 1.2
+      screenX, screenY, screenRadius * 0.5,
+      screenX, screenY, wallRingOuterRadius + 10 * scale
     );
-    wallGlow.addColorStop(0, 'transparent');
-    wallGlow.addColorStop(0.4, hexToRgba(accentColor, wallHit.glowAlpha * 0.4));
-    wallGlow.addColorStop(0.7, hexToRgba(accentColor, wallHit.glowAlpha * 0.7));
-    wallGlow.addColorStop(0.85, hexToRgba(accentColor, wallHit.glowAlpha * 0.3));
+    wallGlow.addColorStop(0, hexToRgba(accentColor, wallHit.glowAlpha * 0.5));
+    wallGlow.addColorStop(0.5, hexToRgba(accentColor, wallHit.glowAlpha * 0.7));
+    wallGlow.addColorStop(0.8, hexToRgba(accentColor, wallHit.glowAlpha * 0.3));
     wallGlow.addColorStop(1, 'transparent');
     ctx.fillStyle = wallGlow;
     ctx.fill();
     
-    // Ring stroke
+    // Ring stroke - sharp edge for clarity
     ctx.beginPath();
     ctx.arc(screenX, screenY, (wallRingOuterRadius + wallRingInnerRadius) / 2, 0, Math.PI * 2);
-    ctx.strokeStyle = hexToRgba(accentColor, wallHit.glowAlpha);
-    ctx.lineWidth = (wallRingOuterRadius - wallRingInnerRadius) * 0.7;
+    ctx.strokeStyle = hexToRgba(accentColor, wallHit.glowAlpha * 0.9);
+    ctx.lineWidth = Math.max(2, (wallRingOuterRadius - wallRingInnerRadius) * 0.8);
     ctx.stroke();
     
     ctx.restore();
@@ -257,38 +259,39 @@ export function renderBallEffects(
   const ballHit = getBallHitEffect(state, now);
   if (ballHit.active) {
     ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
     
     const ballRingRadius = screenRadius * ballHit.ringRadius;
     
-    // Large bright glow
+    // Large bright glow - most intense effect
     ctx.beginPath();
-    ctx.arc(screenX, screenY, ballRingRadius + 15 * scale, 0, Math.PI * 2);
+    ctx.arc(screenX, screenY, ballRingRadius + 20 * scale, 0, Math.PI * 2);
     
     const ballGlow = ctx.createRadialGradient(
-      screenX, screenY, screenRadius * 0.3,
-      screenX, screenY, ballRingRadius + 15 * scale
+      screenX, screenY, screenRadius * 0.2,
+      screenX, screenY, ballRingRadius + 20 * scale
     );
-    ballGlow.addColorStop(0, hexToRgba(accentColor, ballHit.glowAlpha * 0.95));
-    ballGlow.addColorStop(0.25, hexToRgba(accentColor, ballHit.glowAlpha * 0.75));
-    ballGlow.addColorStop(0.5, hexToRgba(accentColor, ballHit.glowAlpha * 0.4));
-    ballGlow.addColorStop(0.75, hexToRgba(accentColor, ballHit.glowAlpha * 0.15));
+    ballGlow.addColorStop(0, hexToRgba(accentColor, ballHit.glowAlpha));
+    ballGlow.addColorStop(0.2, hexToRgba(accentColor, ballHit.glowAlpha * 0.85));
+    ballGlow.addColorStop(0.45, hexToRgba(accentColor, ballHit.glowAlpha * 0.5));
+    ballGlow.addColorStop(0.7, hexToRgba(accentColor, ballHit.glowAlpha * 0.2));
     ballGlow.addColorStop(1, 'transparent');
     ctx.fillStyle = ballGlow;
     ctx.fill();
     
-    // Bright inner ring for "energy transfer" feel
+    // Bright inner ring for "energy transfer" feel - white flash
     ctx.beginPath();
-    ctx.arc(screenX, screenY, screenRadius * 1.1, 0, Math.PI * 2);
-    ctx.strokeStyle = hexToRgba('#ffffff', ballHit.intensity * 0.6);
-    ctx.lineWidth = 3 * scale * ballHit.intensity;
+    ctx.arc(screenX, screenY, screenRadius * 1.15, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 255, 255, ${ballHit.intensity * 0.8})`;
+    ctx.lineWidth = 4 * scale * ballHit.intensity;
     ctx.stroke();
     
     // Secondary spark pulse (if active)
     if (ballHit.secondaryPulse > 0) {
       ctx.beginPath();
-      ctx.arc(screenX, screenY, screenRadius * (1.2 + ballHit.secondaryPulse * 0.3), 0, Math.PI * 2);
-      ctx.strokeStyle = hexToRgba(accentColor, ballHit.secondaryPulse * 0.8);
-      ctx.lineWidth = 2 * scale;
+      ctx.arc(screenX, screenY, screenRadius * (1.3 + ballHit.secondaryPulse * 0.4), 0, Math.PI * 2);
+      ctx.strokeStyle = hexToRgba(accentColor, ballHit.secondaryPulse);
+      ctx.lineWidth = 3 * scale;
       ctx.stroke();
     }
     
