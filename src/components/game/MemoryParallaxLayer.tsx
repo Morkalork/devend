@@ -29,14 +29,15 @@ interface MemoryParallaxLayerProps {
 }
 
 const CONFIG = {
-  maxBlocks: 20,
-  spawnInterval: 800,
-  minLifetime: 4000,
-  maxLifetime: 12000,
+  maxBlocks: 40,
+  spawnInterval: 400,
+  minLifetime: 6000,
+  maxLifetime: 15000,
   fadeSpeed: 0.02,
   parallaxRange: 0.15,
   baseOpacity: 0.08,
-  maxOpacity: 0.15,
+  maxOpacity: 0.18,
+  scrollSpeed: 0.015, // Half the speed of the code layer
 };
 
 export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxLayerProps) {
@@ -111,8 +112,8 @@ export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxL
     window.addEventListener('resize', handleResize);
     handleResize();
 
-    // Initial blocks
-    for (let i = 0; i < 8; i++) {
+    // Initial blocks - spawn more
+    for (let i = 0; i < 20; i++) {
       const block = createBlock();
       block.opacity = block.targetOpacity * 0.5;
       block.phase = 'stable';
@@ -137,6 +138,15 @@ export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxL
       // Update and render blocks
       blocksRef.current = blocksRef.current.filter(block => {
         block.lifetime += dt;
+
+        // Move upward (scroll effect at half speed of code layer)
+        block.y -= CONFIG.scrollSpeed * dt * 0.1;
+        
+        // Respawn at bottom when scrolled off top
+        if (block.y < -10) {
+          block.y = 110;
+          block.x = Math.random() * 100;
+        }
 
         // Phase transitions
         if (block.phase === 'allocating') {
