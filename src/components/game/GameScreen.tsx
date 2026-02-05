@@ -3,6 +3,7 @@ import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameStatsPanel } from './GameStatsPanel';
 import { CRTBackground } from './CRTBackground';
+import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -76,6 +77,9 @@ export function GameScreen({
     <>
       {/* CRT Terminal Background */}
       <CRTBackground accentColor={accentColor} />
+      
+      {/* Memory Parallax Layer - between CRT and game */}
+      <MemoryParallaxLayer accentColor={accentColor} />
       
       <div className="fixed inset-0 flex flex-col z-10">
         {/* Game Top Bar - Two rows */}
