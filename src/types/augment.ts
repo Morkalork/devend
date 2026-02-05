@@ -11,7 +11,8 @@ export interface AugmentEffect {
     | 'wallThicknessMultiplier'
     | 'previewSpeedMultiplier'
     | 'startingLivesBonus'
-    | 'varietyMultiplier';
+    | 'varietyMultiplier'
+    | 'startingLevelBonus';
   /** The effect value PER STACK (effects stack linearly) */
   value: number;
 }

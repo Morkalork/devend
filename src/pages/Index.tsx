@@ -155,6 +155,18 @@ const Index = () => {
     return BASE_LIVES + bonusLives;
   }, [ownedAugmentsList]);
 
+  // Calculate starting level from augments (takes highest value)
+  const getStartingLevelFromAugments = useCallback(() => {
+    let maxStartingLevel = 1;
+    ownedAugmentsList.forEach(({ augment, stacks }) => {
+      if (augment.effect.type === 'startingLevelBonus' && stacks > 0) {
+        // Take the highest starting level bonus
+        maxStartingLevel = Math.max(maxStartingLevel, augment.effect.value);
+      }
+    });
+    return maxStartingLevel;
+  }, [ownedAugmentsList]);
+
   const handleStartGame = useCallback(async (forceInteractiveTutorial = false) => {
     // Load levels, upgrades, and augments in parallel
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
@@ -175,10 +187,13 @@ const Index = () => {
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
       
-      // Check for active checkpoint and start from checkpoint level
-      const startingLevel = getStartingLevel();
+      // Determine starting level: max of checkpoint and augment bonus
+      const checkpointLevel = getStartingLevel();
+      const augmentStartLevel = getStartingLevelFromAugments();
+      const startingLevel = Math.max(checkpointLevel, augmentStartLevel);
+      
       if (startingLevel > 1) {
-        // Start from checkpoint (convert 1-indexed level to 0-indexed)
+        // Start from higher level (convert 1-indexed level to 0-indexed)
         setLevelIndex(startingLevel - 1);
       } else {
         resetToFirstLevel();
@@ -196,7 +211,7 @@ const Index = () => {
       
       startGame();
     }
-  }, [loadLevels, loadUpgrades, loadAugments, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, getStartingLivesFromAugments, resetRunProgress]);
+  }, [loadLevels, loadUpgrades, loadAugments, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, getStartingLivesFromAugments, getStartingLevelFromAugments, resetRunProgress]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // Save checkpoint if player made it past level 5
@@ -317,8 +332,11 @@ const Index = () => {
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     
-    // Respect checkpoint system - start from checkpoint level if available
-    const startingLevel = getStartingLevel();
+    // Determine starting level: max of checkpoint and augment bonus
+    const checkpointLevel = getStartingLevel();
+    const augmentStartLevel = getStartingLevelFromAugments();
+    const startingLevel = Math.max(checkpointLevel, augmentStartLevel);
+    
     if (startingLevel > 1) {
       setLevelIndex(startingLevel - 1);
     } else {
@@ -326,7 +344,7 @@ const Index = () => {
     }
     
     startGame();
-  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, getStartingLivesFromAugments, resetRunProgress]);
+  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, getStartingLivesFromAugments, getStartingLevelFromAugments, resetRunProgress]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
