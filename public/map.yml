@@ -206,7 +206,7 @@ levels:
         height: 100
 
   - id: level-7
-    sizeThreshold: 18
+    sizeThreshold: 20
     expectedCuts: 14
     points: 500
     variety: 10
