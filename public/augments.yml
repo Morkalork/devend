@@ -176,3 +176,26 @@ augments:
       type: totalLivesLost
       threshold: 100
       description: Lose 100 total lives
+
+  # ========== STARTING LEVEL AUGMENTS ==========
+  # These permanently unlock higher starting levels
+
+  - id: start-level-5
+    name: Head Start I
+    description: Always start runs from Level 5 instead of Level 1.
+    maxStacks: 1
+    costPerStack: 20
+    icon: /icons/headstart.svg
+    effect:
+      type: startingLevelBonus
+      value: 5
+
+  - id: start-level-10
+    name: Head Start II
+    description: Always start runs from Level 10 instead of Level 1.
+    maxStacks: 1
+    costPerStack: 40
+    icon: /icons/headstart_plus.svg
+    effect:
+      type: startingLevelBonus
+      value: 10
