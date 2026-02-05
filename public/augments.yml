@@ -177,7 +177,7 @@ augments:
       threshold: 100
       description: Lose 100 total lives
 
-  # ========== STARTING LEVEL AUGMENTS ==========
+  # ========== SPECIAL GOLDEN AUGMENTS ==========
   # These permanently unlock higher starting levels
 
   - id: start-level-5
@@ -186,6 +186,7 @@ augments:
     maxStacks: 1
     costPerStack: 20
     icon: /icons/headstart.svg
+    special: true
     effect:
       type: startingLevelBonus
       value: 5
@@ -196,6 +197,7 @@ augments:
     maxStacks: 1
     costPerStack: 40
     icon: /icons/headstart_plus.svg
+    special: true
     effect:
       type: startingLevelBonus
       value: 10
