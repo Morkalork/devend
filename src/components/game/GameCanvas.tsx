@@ -59,6 +59,21 @@ import {
   constrainBallToRegion,
   wouldWallOrphanBall
 } from "@/lib/regionOwnership";
+import {
+  SpaceGrid,
+  GridRegion,
+  createSpaceGrid,
+  rasterizeCutToGrid,
+  findGridRegions,
+  getRemainingPercent,
+  getRegionPercentage,
+  removeRegion,
+  getActiveCellPositions,
+  getRegionCellPositions,
+  isPositionActive,
+  worldToGridIndex,
+  gridIndexToWorld,
+} from "@/lib/spaceGrid";
 import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playDeathSound, initAudio } from "@/lib/gameAudio";
 import {
   createBallEffectState,
@@ -115,6 +130,8 @@ const BASE_SWIPE_MIN_DISTANCE = 35; // World units
 const ARENA_MARGIN = 0.05; // 5% margin from board edges
 const MINIMUM_WALL_TIME = 0.35; // seconds
 const RECOVERY_WINDOW_MS = 700; // Recovery time after failed wall
+const BALL_WON_REGION_THRESHOLD = 5; // Ball is WON if its region is <= this % of total area
+const WON_BALL_SPIN_SPEED = 8; // Radians per second for won ball spin
 
 // Difficulty curve: wall speed decreases per level (slower = harder)
 function getWallSpeedBase(levelIndex: number): number {
@@ -249,7 +266,13 @@ export function GameCanvas({
   // Game state notification moved to after handleBankAndContinue definition
 
   const gameRef = useRef({
-    regions: [] as Region[],
+    // ============================================================
+    // EXPLICIT SPACE MODEL: SpaceGrid is the authoritative source
+    // ============================================================
+    spaceGrid: null as SpaceGrid | null, // Authoritative 2D grid model
+    gridRegions: [] as GridRegion[], // Current connected regions from grid
+    
+    regions: [] as Region[], // Legacy - kept for rendering compatibility
     // UNIFIED WALL MODEL: All walls are identical in behavior and appearance
     walls: [] as Wall[], // All walls: board edges, obstacles, user-drawn
     obstaclePolygons: [] as Polygon[], // Obstacles for clipping user-drawn walls
@@ -578,6 +601,8 @@ export function GameCanvas({
           rotation: Math.random() * Math.PI * 2, // Start with random rotation
           flashIntensity: 0, // Legacy - kept for compatibility
           effects: createBallEffectState(), // Visual effects state
+          state: 'active' as const, // Ball starts in active state
+          wonSpinSpeed: 0, // Only used when in 'won' state
         };
       });
 
@@ -613,6 +638,8 @@ export function GameCanvas({
               rotation: 0,
               flashIntensity: 0,
               effects: createBallEffectState(),
+              state: 'active' as const,
+              wonSpinSpeed: 0,
             });
           }
         }
@@ -654,10 +681,19 @@ export function GameCanvas({
       // Store initial sample points for blur effect (tracks full board area)
       game.initialSamplePoints = [...initSamplePoints];
       
-      // Calculate initial estimated area from sample points (consistent with getCombinedArea)
-      const initialEstimatedArea = initSamplePoints.length * initGridSize * initGridSize;
+      // ============================================================
+      // EXPLICIT SPACE MODEL: Create authoritative SpaceGrid
+      // ============================================================
+      // The SpaceGrid is the single source of truth for space state.
+      // All area calculations and region detection derive from it.
+      // ============================================================
+      game.spaceGrid = createSpaceGrid(boardPolygon, obstaclePolygons, initGridSize);
+      game.gridRegions = findGridRegions(game.spaceGrid);
       
-      // Set originalArea to match the sample-based calculation for consistent percentages
+      // Calculate initial area from the authoritative grid (exact count)
+      const initialEstimatedArea = game.spaceGrid.initialActiveCount * initGridSize * initGridSize;
+      
+      // Set originalArea to match the grid-based calculation for consistent percentages
       game.originalArea = initialEstimatedArea;
       game.basePlayableArea = initialEstimatedArea;
       
@@ -668,9 +704,13 @@ export function GameCanvas({
         estimatedArea: initialEstimatedArea
       }];
 
-      // Assign all balls to the initial region
+      // Assign all balls to their grid regions
       for (const ball of game.balls) {
         ball.regionId = initialRegionId;
+        // Also validate ball is in active space
+        if (!isPositionActive(game.spaceGrid, ball.position)) {
+          console.warn(`[INIT] Ball ${ball.id} spawned in removed space, repositioning...`);
+        }
       }
 
       // Track fastest ball
@@ -789,6 +829,9 @@ export function GameCanvas({
 
     // Update ball position and bounce off all walls (all in world coordinates)
     const updateBall = (ball: Ball, dt: number) => {
+      // WON balls don't need physics updates - they just spin
+      if (ball.state === 'won') return;
+      
       // Move ball (world units)
       ball.position.x += ball.velocity.x * dt;
       ball.position.y += ball.velocity.y * dt;
@@ -984,13 +1027,95 @@ export function GameCanvas({
       }
     };
 
-    // Calculate combined area of all regions (using estimatedArea when available for accuracy)
+    // ============================================================
+    // EXPLICIT SPACE MODEL: Grid-based area calculation (authoritative)
+    // ============================================================
+    // The SpaceGrid is the single source of truth for area calculations.
+    // This eliminates any inference from physics or collision outcomes.
+    // ============================================================
     const getCombinedArea = (): number => {
+      if (game.spaceGrid) {
+        // Use authoritative grid count
+        let activeCount = 0;
+        for (let i = 0; i < game.spaceGrid.cells.length; i++) {
+          if (game.spaceGrid.cells[i] === 0) activeCount++; // CellState.ACTIVE = 0
+        }
+        return activeCount * game.spaceGrid.cellSize * game.spaceGrid.cellSize;
+      }
+      // Fallback to legacy calculation
       return game.regions.reduce((sum, region) => {
-        // Use estimatedArea from grid sampling if available (more accurate after walls)
-        // Otherwise fall back to polygon area calculation
         return sum + (region.estimatedArea ?? polygonArea(region.polygon));
       }, 0);
+    };
+
+    // Get remaining percentage from the authoritative grid
+    const getGridRemainingPercent = (): number => {
+      if (game.spaceGrid) {
+        return getRemainingPercent(game.spaceGrid);
+      }
+      return (getCombinedArea() / game.originalArea) * 100;
+    };
+
+    // ============================================================
+    // BALL WON STATE MANAGEMENT
+    // ============================================================
+    // A ball becomes WON when its region is <= BALL_WON_REGION_THRESHOLD% of total area.
+    // WON balls: physics disabled, centered in region, continuous spin animation.
+    // ============================================================
+    const checkAndUpdateBallWonStates = (): boolean => {
+      if (!game.spaceGrid) return false;
+      
+      let anyBallWon = false;
+      const gridRegions = findGridRegions(game.spaceGrid);
+      
+      for (const ball of game.balls) {
+        // Skip already won balls or dead balls
+        if (ball.state === 'won' || ball.speed === 0) continue;
+        
+        // Find which grid region this ball is in
+        const ballGridIndex = worldToGridIndex(game.spaceGrid, ball.position.x, ball.position.y);
+        if (ballGridIndex < 0) continue;
+        
+        // Find the region containing this ball
+        let ballRegion: GridRegion | null = null;
+        for (const region of gridRegions) {
+          if (region.cellIndices.includes(ballGridIndex)) {
+            ballRegion = region;
+            break;
+          }
+        }
+        
+        if (!ballRegion) continue;
+        
+        // Calculate region percentage
+        const regionPercent = getRegionPercentage(game.spaceGrid, ballRegion);
+        
+        // Check if ball should become WON
+        if (regionPercent <= BALL_WON_REGION_THRESHOLD) {
+          console.log(`[WON] Ball ${ball.id} captured! Region is ${regionPercent.toFixed(1)}% of total area`);
+          
+          // Transition to WON state
+          ball.state = 'won';
+          ball.wonSpinSpeed = WON_BALL_SPIN_SPEED;
+          ball.velocity = { x: 0, y: 0 }; // Stop physics
+          
+          // Move to center of region
+          ball.position = { ...ballRegion.centroid };
+          
+          anyBallWon = true;
+        }
+      }
+      
+      return anyBallWon;
+    };
+
+    // Check if all balls are in WON state (level win condition)
+    const areAllBallsWon = (): boolean => {
+      // Only check active balls (exclude dead balls)
+      const activeBalls = game.balls.filter(b => b.speed > 0 || b.state === 'won');
+      if (activeBalls.length === 0) return false;
+      
+      return activeBalls.every(ball => ball.state === 'won');
     };
 
     // Check if a ball's center is on the cut line
@@ -1487,20 +1612,21 @@ export function GameCanvas({
 
     const applyCut = (wall: GrowingWall) => {
       // ============================================================
-      // UNIFIED CUTTING MODEL
+      // EXPLICIT SPACE MODEL: Grid-based cut processing
       // ============================================================
-      // Every cut is treated the same way:
-      // 1. Validate the cut won't trap any balls
-      // 2. Add the cut as a boundary segment
-      // 3. Use flood-fill to find all connected areas
-      // 4. Discard areas without balls
-      // 5. Keep only areas with balls as active regions
+      // 1. Rasterize cut path to grid cells (mark as REMOVED)
+      // 2. Find all connected regions using flood-fill
+      // 3. Check which regions contain balls
+      // 4. Remove regions without balls
+      // 5. Check for ball WON states (region <= 5% of total)
+      // 6. If all balls WON, level is won
       // ============================================================
 
       const { balls } = game;
 
-      // Check if any ball is exactly on the wall line - instant game over
+      // Check if any ACTIVE ball is exactly on the wall line - instant game over
       for (const ball of balls) {
+        if (ball.state === 'won') continue; // WON balls are immune
         if (isBallOnCutLine(ball, wall)) {
           handleGameOver();
           return;
@@ -1511,11 +1637,10 @@ export function GameCanvas({
       // If so, abort the cut (the wall simply doesn't complete)
       if (wouldWallTrapBallCheck(wall.startPoint, wall.endPoint)) {
         console.log("[CUT] Aborted - wall would trap a ball");
-        // Wall fails silently - no life lost, just doesn't complete
         return;
       }
 
-      // UNIFIED WALL MODEL: Add the new wall to the walls array
+      // Add the new wall to the walls array
       const newWall: Wall = {
         id: generateWallId(),
         start: { ...wall.startPoint },
@@ -1531,44 +1656,86 @@ export function GameCanvas({
         totalWalls: game.walls.length,
       });
 
-      // Re-partition all regions using flood-fill
-      // This handles ALL cases uniformly:
-      // - Wall-to-wall cuts
-      // - Wall-to-obstacle cuts
-      // - Wall-to-previousCut cuts
-      // - Obstacle-to-obstacle cuts
-      // - Any combination that creates enclosed areas
+      // ============================================================
+      // STEP 1: Rasterize cut to grid (mark cells as REMOVED)
+      // ============================================================
+      if (game.spaceGrid) {
+        const removedCells = rasterizeCutToGrid(
+          game.spaceGrid, 
+          wall.startPoint, 
+          wall.endPoint, 
+          WALL_THICKNESS
+        );
+        console.log("[GRID] Cut rasterized, removed", removedCells.length, "cells");
 
-      // Process each region independently, then collect results
+        // ============================================================
+        // STEP 2: Find connected regions via flood-fill
+        // ============================================================
+        const gridRegions = findGridRegions(game.spaceGrid);
+        console.log("[GRID] Found", gridRegions.length, "connected regions");
+
+        // ============================================================
+        // STEP 3: Check which regions contain ACTIVE balls
+        // ============================================================
+        const regionsWithBalls: GridRegion[] = [];
+        const regionsWithoutBalls: GridRegion[] = [];
+
+        for (const region of gridRegions) {
+          let hasBall = false;
+          for (const ball of balls) {
+            if (ball.state === 'won') continue; // WON balls don't count
+            const ballIndex = worldToGridIndex(game.spaceGrid, ball.position.x, ball.position.y);
+            if (ballIndex >= 0 && region.cellIndices.includes(ballIndex)) {
+              hasBall = true;
+              break;
+            }
+          }
+          if (hasBall) {
+            regionsWithBalls.push(region);
+          } else {
+            regionsWithoutBalls.push(region);
+          }
+        }
+
+        console.log("[GRID] Regions with balls:", regionsWithBalls.length, 
+                    "Regions without:", regionsWithoutBalls.length);
+
+        // ============================================================
+        // STEP 4: Remove regions without balls
+        // ============================================================
+        for (const emptyRegion of regionsWithoutBalls) {
+          removeRegion(game.spaceGrid, emptyRegion);
+          console.log("[GRID] Removed region:", emptyRegion.id, 
+                      "with", emptyRegion.cellCount, "cells");
+        }
+
+        // Update gridRegions reference
+        game.gridRegions = regionsWithBalls;
+      }
+
+      // ============================================================
+      // LEGACY: Also update sample-based regions for rendering
+      // ============================================================
       const updatedRegions: Region[] = [];
-
+      
       for (const region of [...game.regions]) {
-        console.log("[CUT] Checking region:", region.id, "for sub-regions...");
-
         const subRegions = findSubRegionsGrid(region);
-        console.log("[CUT] Found", subRegions.length, "sub-regions");
-
+        
         if (subRegions.length <= 1) {
-          // No split, but still verify this region has balls
           const hasBallsInRegion = subRegions.length === 1 && subRegions[0].hasBalls;
           if (hasBallsInRegion) {
-            // Keep region with UPDATED sample points (reflecting new walls)
             const totalSamples = subRegions[0].samples.length;
-            const cellArea = 15 * 15; // SAMPLE_GRID_SIZE squared
+            const cellArea = 15 * 15;
             updatedRegions.push({
               ...region,
-              samplePoints: subRegions[0].samples, // Use updated samples!
+              samplePoints: subRegions[0].samples,
               estimatedArea: totalSamples * cellArea,
             });
           }
-          console.log("[WALL] Region", region.id, hasBallsInRegion ? "kept (has balls)" : "removed (no balls)");
           continue;
         }
 
-        // Multiple sub-regions - keep only those with balls
         const regionsWithBalls = subRegions.filter((r) => r.hasBalls);
-        console.log("[CUT] Regions with balls:", regionsWithBalls.length);
-
         for (const subRegion of regionsWithBalls) {
           const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
           if (result && result.estimatedArea > 100) {
@@ -1577,47 +1744,70 @@ export function GameCanvas({
               id: newId,
               polygon: result.polygon,
               estimatedArea: result.estimatedArea,
-              samplePoints: result.samplePoints, // Store samples for accurate rendering
+              samplePoints: result.samplePoints,
             });
-            console.log(
-              "[CUT] Added new region:",
-              newId,
-              "with estimatedArea:",
-              result.estimatedArea,
-              "samples:",
-              result.samplePoints.length,
-            );
-
-            // Ball region assignment will be done below via mandatory validation
           }
         }
       }
 
-      // Replace all regions with the updated set
       game.regions = updatedRegions;
-      console.log("[CUT] Final region count:", game.regions.length);
 
-      // ============================================================
-      // MANDATORY VALIDATION STEP
-      // ============================================================
-      // After any structural change, validate and correct all ball ownership.
-      // This ensures every ball is in exactly one valid playable region.
-      // ============================================================
+      // Reassign balls to regions
       reassignBallsToRegions(game.balls, game.regions, game.walls);
-      const { allValid, corrections } = validateAllBallOwnership(game.balls, game.regions, game.walls);
-      
-      if (!allValid) {
-        console.warn("[CUT] Ball ownership corrections applied:", corrections.length);
-      }
+      validateAllBallOwnership(game.balls, game.regions, game.walls);
 
       game.activeWall = null;
 
-      // Calculate combined remaining area
-      const combinedArea = getCombinedArea();
-      const percent = Math.round((combinedArea / game.originalArea) * 100);
+      // ============================================================
+      // STEP 5: Check for ball WON states
+      // ============================================================
+      checkAndUpdateBallWonStates();
+
+      // ============================================================
+      // STEP 6: Check if ALL balls are WON (level win condition)
+      // ============================================================
+      if (areAllBallsWon()) {
+        console.log("[WIN] All balls captured! Level complete.");
+        game.levelComplete = true;
+        
+        const percent = Math.round(getGridRemainingPercent());
+        setRemainingPercent(percent);
+        
+        const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+        const { levelScore, breakdown } = calculateScore(
+          game.wallCount,
+          effectiveExpectedCuts,
+          percent,
+          level.sizeThreshold,
+          level.points,
+          activeModifiers.scoreMultiplier
+        );
+        
+        onLevelComplete({
+          levelNumber,
+          levelId: level.id,
+          cutCount: game.wallCount,
+          expectedCuts: level.expectedCuts,
+          basePoints: level.points,
+          levelScore,
+          remainingPercent: percent,
+          thresholdPercent: level.sizeThreshold,
+          fenceBonus: breakdown.fenceBonus,
+          spaceBonus: breakdown.spaceBonus,
+          spaceBonusRaw: breakdown.spaceBonusRaw,
+          penaltyMultiplier: breakdown.penaltyMultiplier,
+          fencesUnderPar: breakdown.fencesUnderPar,
+          fencesOverPar: breakdown.fencesOverPar,
+          extraPercent: breakdown.extraPercent,
+        });
+        return;
+      }
+
+      // Calculate remaining percentage from authoritative grid
+      const percent = Math.round(getGridRemainingPercent());
       setRemainingPercent(percent);
 
-      // Check if a successful cut was made during tutorial
+      // Tutorial cut success
       if (tutorialMode && !tutorialCutMade && percent < 100) {
         setTutorialCutMade(true);
         onTutorialCutSuccess?.();
@@ -1628,10 +1818,9 @@ export function GameCanvas({
         game.bestRemainingPercent = percent;
       }
 
-      // Check if level just got cleared
+      // Check if level just got cleared (legacy threshold check)
       if (percent < level.sizeThreshold && game.pushMode === "none") {
         render();
-
         game.pushMode = "prompt";
         setPushMode("prompt");
         setClearedPercent(percent);
@@ -2379,6 +2568,9 @@ export function GameCanvas({
 
           // Skip collisions involving frozen ball - it should stay perfectly still
           if (game.frozenBallId && (ball1.id === game.frozenBallId || ball2.id === game.frozenBallId)) continue;
+          
+          // Skip collisions involving WON balls - they are stationary trophies
+          if (ball1.state === 'won' || ball2.state === 'won') continue;
 
           if (ball1.regionId !== ball2.regionId) continue;
 
@@ -2462,6 +2654,12 @@ export function GameCanvas({
       const cappedDt = Math.min(dt, 0.05);
 
       for (const ball of game.balls) {
+        // Handle WON balls - just spin, no physics
+        if (ball.state === 'won') {
+          ball.rotation += ball.wonSpinSpeed * cappedDt;
+          continue;
+        }
+        
         // Skip updating frozen ball - it stays in place during shake animation
         if (game.frozenBallId && ball.id === game.frozenBallId) {
           // Debug: log if position changed unexpectedly
