@@ -20,6 +20,8 @@ export interface Region {
   samplePoints?: Vector2[]; // Grid sample points for accurate rendering
 }
 
+export type BallState = 'active' | 'won';
+
 export interface Ball {
   id: string;
   position: Vector2;
@@ -32,6 +34,8 @@ export interface Ball {
   rotation: number; // current rotation angle in radians for spinning effect
   flashIntensity: number; // 0-1, LEGACY - kept for compatibility, use effects instead
   effects: BallEffectState; // Visual effect state for pulse, wall hit, ball hit
+  state: BallState; // 'active' = normal, 'won' = captured in small region
+  wonSpinSpeed: number; // Spin speed when in WON state
 }
 
 // Diagonal growing wall - extends from origin in +/- direction
