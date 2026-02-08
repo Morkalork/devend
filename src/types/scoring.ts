@@ -38,6 +38,7 @@ export interface ScoreBreakdown {
   fencesUnderPar: number;
   fencesOverPar: number;
   extraPercent: number;
+  lockBonus: number; // Bonus from locking balls (50 + 100 + 150...)
 }
 
 export interface ScoringPreviewScenario {

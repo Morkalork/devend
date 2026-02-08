@@ -102,4 +102,7 @@ export interface LevelScoreData {
   extraPercent?: number;
   // Tier multiplier for score boost display
   tierMultiplier?: number;
+  // Lock bonus from capturing balls
+  lockBonus?: number;
+  lockedBallsCount?: number;
 }

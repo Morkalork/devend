@@ -1,4 +1,4 @@
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 
 interface LevelCompleteOverlayProps {
@@ -27,12 +27,15 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     fencesOverPar = 0,
     extraPercent = 0,
     tierMultiplier = 1,
+    lockBonus = 0,
+    lockedBallsCount = 0,
   } = scoreData;
   
   const hasNewScoring = fenceBonus !== undefined || spaceBonus !== undefined;
   const isPenalized = penaltyMultiplier < 1 && penaltyMultiplier > 0;
   const isSpaceDisabled = penaltyMultiplier === 0;
   const hasTierBoost = tierMultiplier > 1;
+  const hasLockBonus = lockBonus > 0;
 
   return (
     <>
@@ -168,11 +171,22 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
             
+            {/* Lock Bonus Section */}
+            {hasLockBonus && (
+              <div className="flex justify-between items-center py-2 border-b border-cyan-500/30 bg-cyan-500/10 rounded px-2">
+                <span className="text-cyan-400 flex items-center gap-1">
+                  <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
+                  Balls Locked ({lockedBallsCount})
+                </span>
+                <span className="font-bold text-cyan-400">+{lockBonus}</span>
+              </div>
+            )}
+            
             {/* Total Bonus Summary */}
-            {(fenceBonus > 0 || spaceBonus > 0) && (
+            {(fenceBonus > 0 || spaceBonus > 0 || lockBonus > 0) && (
               <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
                 <span className="font-semibold text-foreground">Total Bonus</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{fenceBonus + spaceBonus}</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{fenceBonus + spaceBonus + lockBonus}</span>
               </div>
             )}
             

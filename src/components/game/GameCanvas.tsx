@@ -243,6 +243,7 @@ export function GameCanvas({
   const [canvasOffsetLeft, setCanvasOffsetLeft] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
+  const [lockedBallsCount, setLockedBallsCount] = useState(0);
   
   // Track if game has been initialized to prevent re-init on resize events (e.g., shake animation)
   const gameInitializedRef = useRef(false);
@@ -305,6 +306,9 @@ export function GameCanvas({
     frozenBallId: null as string | null, // Ball frozen after fence collision
     frozenBallVelocity: null as Vector2 | null, // Stored velocity to restore after freeze
     frozenBallPosition: null as Vector2 | null, // Stored position to restore after freeze
+    // Lock bonus tracking: each locked ball gives 50 * lockOrder (50, 100, 150...)
+    lockedBallsCount: 0,
+    lockBonus: 0,
   });
 
   useEffect(() => {
@@ -1102,6 +1106,15 @@ export function GameCanvas({
           // Move to center of region
           ball.position = { ...ballRegion.centroid };
           
+          // Award lock bonus: 50 * (lockedCount + 1) = 50, 100, 150...
+          game.lockedBallsCount += 1;
+          const thisLockBonus = 50 * game.lockedBallsCount;
+          game.lockBonus += thisLockBonus;
+          console.log(`[WON] Lock bonus: +${thisLockBonus} (total: ${game.lockBonus})`);
+          
+          // Update React state for UI display
+          setLockedBallsCount(game.lockedBallsCount);
+          
           anyBallWon = true;
         }
       }
@@ -1153,7 +1166,7 @@ export function GameCanvas({
           cutCount: game.wallCount,
           expectedCuts: level.expectedCuts,
           basePoints: level.points,
-          levelScore: adjustedLevelScore,
+          levelScore: adjustedLevelScore + game.lockBonus,
           remainingPercent: percent,
           overcutBonus: 0,
           thresholdPercent: level.sizeThreshold,
@@ -1164,6 +1177,8 @@ export function GameCanvas({
           fencesUnderPar: breakdown.fencesUnderPar,
           fencesOverPar: breakdown.fencesOverPar,
           extraPercent: breakdown.extraPercent,
+          lockBonus: game.lockBonus,
+          lockedBallsCount: game.lockedBallsCount,
         });
         return;
       }
@@ -1214,7 +1229,7 @@ export function GameCanvas({
         cutCount: game.wallCount,
         expectedCuts: level.expectedCuts,
         basePoints: level.points,
-        levelScore: adjustedLevelScore,
+        levelScore: adjustedLevelScore + game.lockBonus,
         remainingPercent: percent,
         overcutBonus: 0,
         thresholdPercent: level.sizeThreshold,
@@ -1226,6 +1241,8 @@ export function GameCanvas({
         fencesUnderPar: breakdown.fencesUnderPar,
         fencesOverPar: breakdown.fencesOverPar,
         extraPercent: breakdown.extraPercent,
+        lockBonus: game.lockBonus,
+        lockedBallsCount: game.lockedBallsCount,
       });
     };
 
@@ -1789,7 +1806,7 @@ export function GameCanvas({
           cutCount: game.wallCount,
           expectedCuts: level.expectedCuts,
           basePoints: level.points,
-          levelScore,
+          levelScore: levelScore + game.lockBonus,
           remainingPercent: percent,
           thresholdPercent: level.sizeThreshold,
           fenceBonus: breakdown.fenceBonus,
@@ -1799,6 +1816,8 @@ export function GameCanvas({
           fencesUnderPar: breakdown.fencesUnderPar,
           fencesOverPar: breakdown.fencesOverPar,
           extraPercent: breakdown.extraPercent,
+          lockBonus: game.lockBonus,
+          lockedBallsCount: game.lockedBallsCount,
         });
         return;
       }
@@ -2888,7 +2907,7 @@ export function GameCanvas({
         cutCount: game.wallCount,
         expectedCuts: level.expectedCuts,
         basePoints: level.points,
-        levelScore,
+        levelScore: levelScore + game.lockBonus,
         remainingPercent: game.bestRemainingPercent,
         overcutBonus: 0, // Legacy field - now handled by spaceBonus
         thresholdPercent: level.sizeThreshold,
@@ -2899,6 +2918,8 @@ export function GameCanvas({
         fencesUnderPar: breakdown.fencesUnderPar,
         fencesOverPar: breakdown.fencesOverPar,
         extraPercent: breakdown.extraPercent,
+        lockBonus: game.lockBonus,
+        lockedBallsCount: game.lockedBallsCount,
       });
     }, 300);
   }, [level, levelNumber, activeModifiers, onLevelComplete]);
@@ -2909,12 +2930,12 @@ export function GameCanvas({
       onGameStateChange({
         cutsUsed: cutCount,
         spaceRemaining: remainingPercent,
-        lockedBalls: 0, // Not implemented yet
+        lockedBalls: lockedBallsCount,
         pushMode: pushMode,
         onBankAndContinue: handleBankAndContinue,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, handleBankAndContinue, onGameStateChange]);
+  }, [cutCount, remainingPercent, pushMode, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;
