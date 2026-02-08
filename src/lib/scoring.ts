@@ -135,7 +135,10 @@ export function calculateScoreBreakdown(
   // Apply penalty multiplier to space bonus
   const spaceBonus = Math.floor(spaceBonusRaw * penaltyMultiplier);
 
-  const totalBonus = fenceBonus + spaceBonus;
+  // Lock bonus is calculated separately in game logic, initialized to 0 here
+  const lockBonus = 0;
+
+  const totalBonus = fenceBonus + spaceBonus + lockBonus;
 
   return {
     fenceBonus,
@@ -146,6 +149,7 @@ export function calculateScoreBreakdown(
     fencesUnderPar,
     fencesOverPar,
     extraPercent,
+    lockBonus,
   };
 }
 
