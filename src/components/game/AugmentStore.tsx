@@ -330,16 +330,16 @@ export function AugmentStore({
             })}
           </motion.div>
 
-          {/* Back Button */}
+          {/* Back Button - mt-3 matches the gap-3 between store items */}
           <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
             onClick={onBack}
-            className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+            className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2 mt-[-0.75rem]"
           >
             <ArrowLeft className="w-5 h-5" />
-            Back
+            Continue
           </motion.button>
         </motion.div>
 
