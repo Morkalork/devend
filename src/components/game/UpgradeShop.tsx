@@ -161,21 +161,33 @@ export function UpgradeShop({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 z-50"
+        className="fixed inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6 z-50"
       >
-      {/* Header */}
+      {/* Rotated corner title */}
+      <motion.div
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.1 }}
+        className="fixed top-8 left-8 origin-top-left"
+      >
+        <span 
+          className="text-2xl font-bold text-foreground/30 tracking-widest uppercase"
+          style={{ transform: 'rotate(-45deg)', display: 'inline-block' }}
+        >
+          Store
+        </span>
+      </motion.div>
+
+      {/* Points display */}
       <motion.div
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="text-center mb-8"
+        className="flex items-center justify-center gap-2 text-xl"
       >
-        <h2 className="text-3xl font-bold text-foreground mb-2">Upgrade Shop</h2>
-        <div className="flex items-center justify-center gap-2 text-xl">
-          <Coins className="w-6 h-6 text-yellow-500" />
-          <span className="font-semibold text-foreground">{playerPoints}</span>
-          <span className="text-muted-foreground">points</span>
-        </div>
+        <Coins className="w-6 h-6 text-yellow-500" />
+        <span className="font-semibold text-foreground">{playerPoints}</span>
+        <span className="text-muted-foreground">points</span>
       </motion.div>
 
       {/* Upgrade Cards - fixed min-height to prevent layout shift */}
@@ -183,7 +195,7 @@ export function UpgradeShop({
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="flex flex-wrap justify-center gap-4 mb-8 max-w-4xl min-h-[240px] items-start content-start"
+        className="flex flex-wrap justify-center gap-4 max-w-4xl min-h-[240px] items-start content-start"
       >
         <AnimatePresence mode="popLayout">
           {offers.length === 0 ? (
