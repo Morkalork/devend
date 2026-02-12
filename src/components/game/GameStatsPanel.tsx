@@ -1,4 +1,5 @@
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
+import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { UpgradeConfig } from '@/types/upgrade';
 
 interface GameStatsPanelProps {
@@ -8,32 +9,26 @@ interface GameStatsPanelProps {
 }
 
 export function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor }: GameStatsPanelProps) {
-  const modifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
+  const modifiers: GameModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
 
-  // Format percentage values
   const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
   const formatBonus = (value: number) => value > 0 ? `+${value}` : `${value}`;
+  const formatRate = (value: number) => `${Math.round(value * 100)}%`;
 
-  // Only show stats that differ from defaults or are interesting
   const stats = [
     { label: 'Ball Speed', value: formatPercent(modifiers.ballSpeedMultiplier), changed: modifiers.ballSpeedMultiplier !== 1 },
     { label: 'Ball Size', value: formatPercent(modifiers.ballSizeMultiplier), changed: modifiers.ballSizeMultiplier !== 1 },
-    { label: 'Fence Speed', value: formatPercent(modifiers.wallSpeedMultiplier), changed: modifiers.wallSpeedMultiplier !== 1 },
-    { label: 'Swipe Sens.', value: formatPercent(modifiers.swipeSensitivity), changed: modifiers.swipeSensitivity !== 1 },
+    { label: 'Fence Speed', value: formatPercent(modifiers.fenceGenerationSpeedMultiplier), changed: modifiers.fenceGenerationSpeedMultiplier !== 1 },
+    { label: 'Fence Width', value: formatPercent(modifiers.fenceWidthMultiplier), changed: modifiers.fenceWidthMultiplier !== 1 },
+    { label: 'Fence CD', value: formatPercent(modifiers.fenceCooldownMultiplier), changed: modifiers.fenceCooldownMultiplier !== 1 },
     { label: 'Score Mult.', value: formatPercent(modifiers.scoreMultiplier), changed: modifiers.scoreMultiplier !== 1 },
-    { label: 'Size Reduce', value: `${modifiers.reducedSizePercent}%`, changed: modifiers.reducedSizePercent !== 0 },
-    { label: 'Wall Grace', value: formatBonus(modifiers.wallGrace), changed: modifiers.wallGrace !== 0 },
-    { label: 'Par Bonus', value: formatBonus(modifiers.expectedCutsBonus), changed: modifiers.expectedCutsBonus !== 0 },
-    { label: 'Shop Slots', value: formatBonus(modifiers.shopSlots), changed: modifiers.shopSlots !== 0 },
-    { label: 'Wall Shield', value: `${modifiers.wallShield}`, changed: modifiers.wallShield !== 0 },
-    { label: 'Bonus Lives', value: formatBonus(modifiers.bonusLives), changed: modifiers.bonusLives !== 0 },
-    { label: 'Price Mult.', value: formatPercent(modifiers.priceMultiplier), changed: modifiers.priceMultiplier !== 1 },
-  ];
-
-  // Boolean modifiers
-  const booleanStats = [
-    { label: 'Cut Preview', active: modifiers.cutPreview },
-    { label: 'Highlight Fast', active: modifiers.highlightFastestBall },
+    { label: 'Instant Fences', value: formatBonus(modifiers.instantFencesPerMap), changed: modifiers.instantFencesPerMap !== 0 },
+    { label: 'Concurrent', value: formatBonus(modifiers.additionalConcurrentFences), changed: modifiers.additionalConcurrentFences !== 0 },
+    { label: 'Bonus Remove', value: `${formatRate(modifiers.bonusRemovalChance)} @ ${formatRate(modifiers.bonusRemovalAmount)}`, changed: modifiers.bonusRemovalChance > 0 },
+    { label: 'Extra Lives', value: formatBonus(modifiers.extraLives), changed: modifiers.extraLives !== 0 },
+    { label: 'Interest', value: formatRate(modifiers.scoreInterestRate), changed: modifiers.scoreInterestRate !== 0 },
+    { label: 'Map Reduce/Fence', value: formatRate(modifiers.mapReductionPerFenceBonus), changed: modifiers.mapReductionPerFenceBonus !== 0 },
+    { label: 'Shop Slots', value: formatBonus(modifiers.extraShopItems), changed: modifiers.extraShopItems !== 0 },
   ];
 
   return (
@@ -48,7 +43,6 @@ export function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor }: GameS
           borderTop: `1px solid ${accentColor}40`,
         }}
       >
-        {/* Stats Grid */}
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
           {stats.map((stat) => (
             <div 
@@ -61,21 +55,6 @@ export function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor }: GameS
             >
               <span className="opacity-70">{stat.label}:</span>
               <span className="font-bold">{stat.value}</span>
-            </div>
-          ))}
-          
-          {/* Boolean stats */}
-          {booleanStats.map((stat) => (
-            <div 
-              key={stat.label} 
-              className="flex items-center gap-1"
-              style={{ 
-                color: stat.active ? accentColor : `${accentColor}40`,
-                textShadow: stat.active ? `0 0 8px ${accentColor}` : 'none',
-              }}
-            >
-              <span className="opacity-70">{stat.label}:</span>
-              <span className="font-bold">{stat.active ? 'ON' : 'OFF'}</span>
             </div>
           ))}
         </div>

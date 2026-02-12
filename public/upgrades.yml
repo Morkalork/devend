@@ -1,363 +1,380 @@
 upgrades:
-  - id: "slow_balls"
-    name: "Slow Motion"
-    grade: "common"
-    icon: "/icons/slow.svg"
-    description: "Reduces ball speed by 20%"
-    levelAvailability: 1
-    priceMin: 50
-    priceMax: 100
-    modifiers:
-      ballSpeed: 0.8
 
-  - id: "shrink_balls"
-    name: "Shrink Ray"
-    grade: "common"
-    icon: "/icons/shrink.svg"
-    description: "Makes balls 25% smaller"
-    levelAvailability: 2
-    priceMin: 75
-    priceMax: 150
-    modifiers:
-      ballSize: 0.75
+  # ===============================
+  # RUNTIME OPTIMISATION (Ball Speed)
+  # ===============================
 
-  - id: "fast_walls"
-    name: "Quick Slice"
-    grade: "uncommon"
-    icon: "/icons/fast.svg"
-    description: "Walls generate 30% faster"
-    levelAvailability: 3
-    priceMin: 100
-    priceMax: 200
+  - id: runtime_optimisation_junior
+    name: Runtime Optimisation
+    tier: Junior
+    description: Reduce ball speed by 5%.
+    cost: 3
     modifiers:
-      wallGenerationSpeed: 1.3
+      ballSpeedMultiplier: 0.95
 
-  - id: "reduced_target"
-    name: "Easy Win"
-    grade: "rare"
-    icon: "/icons/easy.svg"
-    description: "Reduces win threshold by 5%"
-    levelAvailability: 4
-    levelRemoved: 8
-    priceMin: 150
-    priceMax: 300
-    maxCount: 4
+  - id: runtime_optimisation_senior
+    name: Runtime Optimisation
+    tier: Senior
+    description: Reduce ball speed by 10%.
+    cost: 6
+    prerequisites:
+      - runtime_optimisation_junior
     modifiers:
-      reducedSize: 0.05
+      ballSpeedMultiplier: 0.90
 
-  - id: "extra_time"
-    name: "Steady Hands"
-    grade: "common"
-    icon: "/icons/steady.svg"
-    description: "Walls generate 15% faster"
-    levelAvailability: 1
-    levelRemoved: 4
-    priceMin: 30
-    priceMax: 80
+  - id: runtime_optimisation_principal
+    name: Runtime Optimisation
+    tier: Principal
+    description: Reduce ball speed by 15%.
+    cost: 11
+    prerequisites:
+      - runtime_optimisation_senior
     modifiers:
-      wallGenerationSpeed: 1.15
+      ballSpeedMultiplier: 0.85
 
-  - id: "ball_bumper"
-    name: "Bumper Ball"
-    grade: "uncommon"
-    icon: "/icons/bumper.svg"
-    description: "Ball radius slightly increases, making bounces easier to read"
-    levelAvailability: 2
-    levelRemoved: 6
-    priceMin: 70
-    priceMax: 140
+
+  # ===============================
+  # MEMORY FOOTPRINT (Ball Size)
+  # ===============================
+
+  - id: memory_footprint_junior
+    name: Memory Footprint
+    tier: Junior
+    description: Reduce ball size by 5%.
+    cost: 3
     modifiers:
-      ballSize: 1.1
+      ballSizeMultiplier: 0.95
 
-  - id: "coin_boost"
-    name: "Bonus Points"
-    grade: "uncommon"
-    icon: "/icons/bonus.svg"
-    description: "Gain +10% points from level completion"
-    levelAvailability: 3
-    priceMin: 120
-    priceMax: 240
-    maxCount: 3
+  - id: memory_footprint_senior
+    name: Memory Footprint
+    tier: Senior
+    description: Reduce ball size by 10%.
+    cost: 6
+    prerequisites:
+      - memory_footprint_junior
     modifiers:
-      scoreMultiplier: 1.1
+      ballSizeMultiplier: 0.90
 
-  - id: "extra_life"
-    name: "Extra Life"
-    grade: "uncommon"
-    icon: "/icons/heart_plus.svg"
-    description: "Gain +1 life"
-    levelAvailability: 3
-    priceMin: 220
-    priceMax: 380
-    maxCount: 3
+  - id: memory_footprint_principal
+    name: Memory Footprint
+    tier: Principal
+    description: Reduce ball size by 15%.
+    cost: 11
+    prerequisites:
+      - memory_footprint_senior
     modifiers:
-      lives: 1
+      ballSizeMultiplier: 0.85
 
-  - id: "par_forgiveness"
-    name: "Par Forgiveness"
-    grade: "uncommon"
-    icon: "/icons/par.svg"
-    description: "Expected cuts effectively increase by 1 (scoring only)"
-    levelAvailability: 3
-    priceMin: 110
-    priceMax: 220
-    maxCount: 2
+
+  # ===============================
+  # FAST COMPILE (Fence Speed)
+  # ===============================
+
+  - id: fast_compile_junior
+    name: Fast Compile
+    tier: Junior
+    description: Increase fence generation speed by 10%.
+    cost: 3
     modifiers:
-      expectedCutsBonus: 1
+      fenceGenerationSpeedMultiplier: 1.10
 
-  - id: "ball_focus"
-    name: "Focus Ball"
-    grade: "rare"
-    icon: "/icons/focus.svg"
-    description: "Highlights the fastest ball for easier tracking"
-    levelAvailability: 4
-    priceMin: 180
-    priceMax: 320
+  - id: fast_compile_senior
+    name: Fast Compile
+    tier: Senior
+    description: Increase fence generation speed by 20%.
+    cost: 6
+    prerequisites:
+      - fast_compile_junior
     modifiers:
-      highlightFastestBall: true
+      fenceGenerationSpeedMultiplier: 1.20
 
-  - id: "micro_balls"
-    name: "Microscopic Balls"
-    grade: "rare"
-    icon: "/icons/micro.svg"
-    description: "Makes balls 40% smaller"
-    levelAvailability: 5
-    priceMin: 220
-    priceMax: 400
+  - id: fast_compile_principal
+    name: Fast Compile
+    tier: Principal
+    description: Increase fence generation speed by 30%.
+    cost: 11
+    prerequisites:
+      - fast_compile_senior
     modifiers:
-      ballSize: 0.6
+      fenceGenerationSpeedMultiplier: 1.30
 
-  - id: "hyper_walls"
-    name: "Laser Cutter"
-    grade: "rare"
-    icon: "/icons/laser.svg"
-    description: "Walls generate 60% faster"
-    levelAvailability: 5
-    priceMin: 240
-    priceMax: 450
+
+  # ===============================
+  # STRONG TYPING (Fence Width)
+  # ===============================
+
+  - id: strong_typing_junior
+    name: Strong Typing
+    tier: Junior
+    description: Increase fence width by 10%.
+    cost: 4
     modifiers:
-      wallGenerationSpeed: 1.6
+      fenceWidthMultiplier: 1.10
 
-  - id: "starting_shrink"
-    name: "Head Start"
-    grade: "uncommon"
-    icon: "/icons/headstart.svg"
-    description: "Start each level with 5% of area already removed"
-    levelAvailability: 3
-    priceMin: 140
-    priceMax: 260
+  - id: strong_typing_senior
+    name: Strong Typing
+    tier: Senior
+    description: Increase fence width by 20%.
+    cost: 8
+    prerequisites:
+      - strong_typing_junior
     modifiers:
-      reducedSize: 0.05
+      fenceWidthMultiplier: 1.20
 
-  - id: "starting_shrink_plus"
-    name: "Big Head Start"
-    grade: "rare"
-    icon: "/icons/headstart_plus.svg"
-    description: "Start each level with 10% of area already removed"
-    levelAvailability: 6
-    priceMin: 300
-    priceMax: 550
+  - id: strong_typing_principal
+    name: Strong Typing
+    tier: Principal
+    description: Increase fence width by 30%.
+    cost: 14
+    prerequisites:
+      - strong_typing_senior
     modifiers:
-      reducedSize: 0.1
+      fenceWidthMultiplier: 1.30
 
-  - id: "guardian_angel"
-    name: "Guardian Angel"
-    grade: "rare"
-    icon: "/icons/angel.svg"
-    description: "Gain +2 life"
-    levelAvailability: 6
-    priceMin: 450
-    priceMax: 750
+
+  # ===============================
+  # HOT START (Instant Fences)
+  # ===============================
+
+  - id: hot_start_junior
+    name: Hot Start
+    tier: Senior
+    description: First fence in each map generates instantly.
+    cost: 8
     modifiers:
-      lives: 1
+      instantFencesPerMap: 1
 
-  - id: "regression"
-    name: "Regression"
-    grade: "rare"
-    icon: "/icons/regression.svg"
-    description: "Each time a ball hits an obstacle, it reduces its size"
-    levelAvailability: 6
-    priceMin: 350
-    priceMax: 650
+  - id: hot_start_principal
+    name: Hot Start
+    tier: Principal
+    description: First two fences in each map generate instantly.
+    cost: 14
+    prerequisites:
+      - hot_start_junior
     modifiers:
-      reducedSize: 0.01
+      instantFencesPerMap: 2
 
-  - id: "double_offer"
-    name: "Bigger Shop"
-    grade: "uncommon"
-    icon: "/icons/shop.svg"
-    description: "Shop shows 4 upgrades instead of 3"
-    levelAvailability: 4
-    priceMin: 180
-    priceMax: 320
+  - id: hot_start_architect
+    name: Hot Start
+    tier: Architect
+    description: First three fences in each map generate instantly.
+    cost: 22
+    prerequisites:
+      - hot_start_principal
     modifiers:
-      shopSlots: 1
+      instantFencesPerMap: 3
 
-  - id: "discount"
-    name: "Haggler"
-    grade: "rare"
-    icon: "/icons/discount.svg"
-    description: "All shop prices are 10% cheaper"
-    levelAvailability: 4
-    priceMin: 220
-    priceMax: 420
+
+  # ===============================
+  # BUILD CACHE (Cooldown Reduction)
+  # ===============================
+
+  - id: build_cache_junior
+    name: Build Cache
+    tier: Junior
+    description: Reduce fence cooldown by 10%.
+    cost: 4
     modifiers:
-      priceMultiplier: 0.9
+      fenceCooldownMultiplier: 0.90
 
-  - id: "deep_discount"
-    name: "Master Haggler"
-    grade: "legendary"
-    icon: "/icons/discount_plus.svg"
-    description: "All shop prices are 20% cheaper"
-    levelAvailability: 7
-    priceMin: 500
-    priceMax: 900
+  - id: build_cache_senior
+    name: Build Cache
+    tier: Senior
+    description: Reduce fence cooldown by 20%.
+    cost: 8
+    prerequisites:
+      - build_cache_junior
     modifiers:
-      priceMultiplier: 0.8
+      fenceCooldownMultiplier: 0.80
 
-  - id: "score_surge"
-    name: "Score Surge"
-    grade: "legendary"
-    icon: "/icons/surge.svg"
-    description: "Gain +25% points from level completion"
-    levelAvailability: 7
-    priceMin: 650
-    priceMax: 1100
+  - id: build_cache_principal
+    name: Build Cache
+    tier: Principal
+    description: Reduce fence cooldown by 30%.
+    cost: 14
+    prerequisites:
+      - build_cache_senior
     modifiers:
-      scoreMultiplier: 1.25
+      fenceCooldownMultiplier: 0.70
 
-  - id: "asymetric_geometry"
-    name: "Asymetric Geometry"
-    grade: "legendary"
-    icon: "/icons/asymetric_geometry.svg"
-    description: "Allow drawing of non-linear lines"
-    levelAvailability: 8
-    priceMin: 700
-    priceMax: 1200
+
+  # ===============================
+  # MULTITHREADING (Parallel Fence)
+  # ===============================
+
+  - id: multithreading_principal
+    name: Multithreading
+    tier: Principal
+    description: Allow one additional fence to be in progress simultaneously.
+    cost: 18
+    prerequisites:
+      - fast_compile_senior
     modifiers:
-      nonLinearLines: true
+      additionalConcurrentFences: 1
 
-  - id: "time_dilation"
-    name: "Time Dilation"
-    grade: "legendary"
-    icon: "/icons/time.svg"
-    description: "Ball speed reduced by 35%"
-    levelAvailability: 8
-    priceMin: 750
-    priceMax: 1300
+
+  # ===============================
+  # GARBAGE COLLECTOR (Bonus Removal)
+  # ===============================
+
+  - id: garbage_collector_senior
+    name: Garbage Collector
+    tier: Senior
+    description: Each fence has a small chance to remove an additional 5% area.
+    cost: 9
     modifiers:
-      ballSpeed: 0.65
+      bonusRemovalChance: 0.10
+      bonusRemovalAmount: 0.05
 
-  - id: "dead_balls"
-    name: "Dead balls"
-    grade: "godlike"
-    icon: "/icons/dead_balls.svg"
-    description: "Each level start with a number of 'dead' ball-obstacles"
-    levelAvailability: 10
-    priceMin: 1500
-    priceMax: 2500
+
+  # ===============================
+  # FAULT TOLERANCE (Lives)
+  # ===============================
+
+  - id: fault_tolerance_junior
+    name: Fault Tolerance
+    tier: Junior
+    description: Gain 1 extra life.
+    cost: 4
     modifiers:
-      minDeadBalls: 0
-      maxDeadBalls: 3
+      extraLives: 1
 
-  - id: "bouncer"
-    name: "Bouncer"
-    grade: "common"
-    icon: "/icons/bouncer.svg"
-    description: "Balls increase their speed permanently after hitting another ball"
-    levelAvailability: 1
-    levelRemoved: 6
-    priceMin: 35
-    priceMax: 70
+  - id: fault_tolerance_senior
+    name: Fault Tolerance
+    tier: Senior
+    description: Gain 2 extra lives.
+    cost: 9
+    prerequisites:
+      - fault_tolerance_junior
     modifiers:
-      ballCollissionSpeedIncrease: 0.1
+      extraLives: 2
 
-  - id: "quick_reflexes"
-    name: "Quick Reflexes"
-    grade: "common"
-    icon: "/icons/fast.svg"
-    description: "Walls generate 10% faster"
-    levelAvailability: 2
-    levelRemoved: 5
-    priceMin: 45
-    priceMax: 95
+  - id: fault_tolerance_architect
+    name: Fault Tolerance
+    tier: Architect
+    description: Gain 3 extra lives.
+    cost: 18
+    prerequisites:
+      - fault_tolerance_senior
     modifiers:
-      wallGenerationSpeed: 1.1
+      extraLives: 3
 
-  - id: "double_life"
-    name: "Double Life"
-    grade: "rare"
-    icon: "/icons/heart_plus.svg"
-    description: "Gain +2 lives"
-    levelAvailability: 5
-    priceMin: 400
-    priceMax: 700
+
+  # ===============================
+  # PERFORMANCE BONUS (Score %)
+  # ===============================
+
+  - id: performance_bonus_junior
+    name: Performance Bonus
+    tier: Junior
+    description: Gain 5% more score per map.
+    cost: 4
     modifiers:
-      lives: 2
+      scoreMultiplier: 1.05
 
-  - id: "mega_shop"
-    name: "Mega Shop"
-    grade: "rare"
-    icon: "/icons/shop.svg"
-    description: "Shop shows 5 upgrades instead of 3"
-    levelAvailability: 6
-    priceMin: 280
-    priceMax: 480
+  - id: performance_bonus_senior
+    name: Performance Bonus
+    tier: Senior
+    description: Gain 10% more score per map.
+    cost: 9
+    prerequisites:
+      - performance_bonus_junior
     modifiers:
-      shopSlots: 2
+      scoreMultiplier: 1.10
 
-  - id: "precision_cut"
-    name: "Precision Cut"
-    grade: "uncommon"
-    icon: "/icons/precision.svg"
-    description: "Swipe sensitivity increased by 15%"
-    levelAvailability: 3
-    priceMin: 90
-    priceMax: 170
-    modifiers:
-      swipeSensitivity: 1.15
-
-  - id: "turtle_mode"
-    name: "Turtle Mode"
-    grade: "uncommon"
-    icon: "/icons/slow.svg"
-    description: "Ball speed reduced by 10%"
-    levelAvailability: 2
-    priceMin: 65
-    priceMax: 130
-    modifiers:
-      ballSpeed: 0.9
-
-  - id: "yin_yang"
-    name: "Yin Yang"
-    grade: "legendary"
-    icon: "/icons/yin_yang.svg"
-    description: "Wall bouncing increases ball speed, but slows a random other ball by equal amount"
-    levelAvailability: 9
-    priceMin: 600
-    priceMax: 1000
-    modifiers:
-      ballSpeed: 1.1
-      randomBallSpeed: -0.1
-
-  - id: "coin_magnet"
-    name: "Coin Magnet"
-    grade: "rare"
-    icon: "/icons/bonus.svg"
-    description: "Gain +15% points from level completion"
-    levelAvailability: 5
-    priceMin: 200
-    priceMax: 380
+  - id: performance_bonus_principal
+    name: Performance Bonus
+    tier: Principal
+    description: Gain 15% more score per map.
+    cost: 16
+    prerequisites:
+      - performance_bonus_senior
     modifiers:
       scoreMultiplier: 1.15
 
-  - id: "atomic_balls"
-    name: "Atomic Balls"
-    grade: "legendary"
-    icon: "/icons/micro.svg"
-    description: "Makes balls 50% smaller"
-    levelAvailability: 9
-    priceMin: 550
-    priceMax: 950
+
+  # ===============================
+  # VENTURE CAPITAL (Interest)
+  # ===============================
+
+  - id: venture_capital_senior
+    name: Venture Capital
+    tier: Senior
+    description: 5% interest on unused score between maps.
+    cost: 10
     modifiers:
-      ballSize: 0.5
+      scoreInterestRate: 0.05
+
+  - id: venture_capital_principal
+    name: Venture Capital
+    tier: Principal
+    description: 10% interest on unused score between maps.
+    cost: 18
+    prerequisites:
+      - venture_capital_senior
+    modifiers:
+      scoreInterestRate: 0.10
+
+  - id: venture_capital_architect
+    name: Venture Capital
+    tier: Architect
+    description: 15% interest on unused score between maps.
+    cost: 28
+    prerequisites:
+      - venture_capital_principal
+    modifiers:
+      scoreInterestRate: 0.15
+
+
+  # ===============================
+  # AGGRESSIVE REFACTOR (Map Reduction)
+  # ===============================
+
+  - id: aggressive_refactor_senior
+    name: Aggressive Refactor
+    tier: Senior
+    description: Each fence reduces an additional 5% of the map.
+    cost: 9
+    modifiers:
+      mapReductionPerFenceBonus: 0.05
+
+  - id: aggressive_refactor_principal
+    name: Aggressive Refactor
+    tier: Principal
+    description: Each fence reduces an additional 10% of the map.
+    cost: 16
+    prerequisites:
+      - aggressive_refactor_senior
+    modifiers:
+      mapReductionPerFenceBonus: 0.10
+
+  - id: aggressive_refactor_architect
+    name: Aggressive Refactor
+    tier: Architect
+    description: Each fence reduces an additional 15% of the map.
+    cost: 26
+    prerequisites:
+      - aggressive_refactor_principal
+    modifiers:
+      mapReductionPerFenceBonus: 0.15
+
+
+  # ===============================
+  # ARCHITECT & WIZARD
+  # ===============================
+
+  - id: system_architect
+    name: System Architect
+    tier: Architect
+    description: Gain one additional shop item slot.
+    cost: 20
+    modifiers:
+      extraShopItems: 1
+
+  - id: augmentation_wizard
+    name: Augmentation Wizard
+    tier: Wizard
+    description: Gain +1 augmentation point.
+    cost: 35
+    modifiers:
+      extraAugmentationPoints: 1

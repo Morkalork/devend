@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
-import { UpgradeConfig, UpgradeData, UpgradeGrade } from '@/types/upgrade';
+import { UpgradeConfig, UpgradeData, UpgradeTier } from '@/types/upgrade';
 
-const VALID_GRADES: UpgradeGrade[] = ['common', 'uncommon', 'rare', 'legendary', 'godlike'];
+const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
 interface UpgradeManagerState {
   upgrades: UpgradeConfig[];
+  upgradeLookup: Map<string, UpgradeConfig>;
   isLoading: boolean;
   error: string | null;
 }
@@ -13,6 +14,7 @@ interface UpgradeManagerState {
 export function useUpgradeManager() {
   const [state, setState] = useState<UpgradeManagerState>({
     upgrades: [],
+    upgradeLookup: new Map(),
     isLoading: false,
     error: null,
   });
@@ -33,49 +35,50 @@ export function useUpgradeManager() {
         throw new Error('Invalid upgrades.yml: no upgrades array found');
       }
 
+      const lookup = new Map<string, UpgradeConfig>();
+
       // Validate each upgrade
       for (const upgrade of data.upgrades) {
-        // Check required fields
-        if (!upgrade.id || !upgrade.name || !upgrade.icon || !upgrade.description) {
-          throw new Error(`Upgrade "${upgrade.id || 'unknown'}" is missing required fields (id, name, icon, description)`);
+        if (!upgrade.id || !upgrade.name || !upgrade.description) {
+          throw new Error(`Upgrade "${upgrade.id || 'unknown'}" is missing required fields (id, name, description)`);
         }
         
-        // Validate grade
-        if (!upgrade.grade || !VALID_GRADES.includes(upgrade.grade)) {
-          throw new Error(`Upgrade "${upgrade.id}" has invalid or missing grade. Must be one of: ${VALID_GRADES.join(', ')}`);
+        if (!upgrade.tier || !VALID_TIERS.includes(upgrade.tier)) {
+          throw new Error(`Upgrade "${upgrade.id}" has invalid tier. Must be one of: ${VALID_TIERS.join(', ')}`);
         }
         
-        if (typeof upgrade.levelAvailability !== 'number') {
-          throw new Error(`Upgrade "${upgrade.id}" is missing levelAvailability`);
+        if (typeof upgrade.cost !== 'number') {
+          throw new Error(`Upgrade "${upgrade.id}" is missing cost`);
         }
         
-        if (typeof upgrade.priceMin !== 'number' || typeof upgrade.priceMax !== 'number') {
-          throw new Error(`Upgrade "${upgrade.id}" is missing priceMin or priceMax`);
-        }
-        
-        // Validate priceMin <= priceMax
-        if (upgrade.priceMin > upgrade.priceMax) {
-          throw new Error(`Upgrade "${upgrade.id}" is invalid: priceMin (${upgrade.priceMin}) must be <= priceMax (${upgrade.priceMax})`);
-        }
-        
-        // Validate levelRemoved >= levelAvailability if present
-        if (upgrade.levelRemoved !== undefined) {
-          if (typeof upgrade.levelRemoved !== 'number') {
-            throw new Error(`Upgrade "${upgrade.id}" has invalid levelRemoved (must be a number)`);
-          }
-          if (upgrade.levelRemoved < upgrade.levelAvailability) {
-            throw new Error(`Upgrade "${upgrade.id}" is invalid: levelRemoved (${upgrade.levelRemoved}) must be >= levelAvailability (${upgrade.levelAvailability})`);
-          }
-        }
-        
-        // Validate modifiers object exists
         if (!upgrade.modifiers || typeof upgrade.modifiers !== 'object') {
           throw new Error(`Upgrade "${upgrade.id}" is missing modifiers object`);
+        }
+
+        // Validate prerequisites reference existing ids
+        if (upgrade.prerequisites) {
+          for (const prereqId of upgrade.prerequisites) {
+            // We'll validate after all are loaded
+          }
+        }
+
+        lookup.set(upgrade.id, upgrade);
+      }
+
+      // Validate all prerequisite references
+      for (const upgrade of data.upgrades) {
+        if (upgrade.prerequisites) {
+          for (const prereqId of upgrade.prerequisites) {
+            if (!lookup.has(prereqId)) {
+              throw new Error(`Upgrade "${upgrade.id}" references unknown prerequisite "${prereqId}"`);
+            }
+          }
         }
       }
       
       setState({
         upgrades: data.upgrades,
+        upgradeLookup: lookup,
         isLoading: false,
         error: null,
       });
@@ -92,19 +95,48 @@ export function useUpgradeManager() {
     }
   }, []);
 
-  const getAvailableUpgrades = useCallback((levelNumber: number): UpgradeConfig[] => {
-    return state.upgrades.filter(upgrade => {
-      const isAvailable = levelNumber >= upgrade.levelAvailability;
-      const isNotRemoved = upgrade.levelRemoved === undefined || levelNumber < upgrade.levelRemoved;
-      return isAvailable && isNotRemoved;
-    });
-  }, [state.upgrades]);
+  /**
+   * Check if an upgrade can be purchased.
+   * Conditions: player has enough score, all prerequisites owned, not already owned.
+   */
+  const canPurchase = useCallback((upgradeId: string, playerScore: number, ownedIds: string[]): boolean => {
+    const upgrade = state.upgradeLookup.get(upgradeId);
+    if (!upgrade) return false;
+
+    // Already owned
+    if (ownedIds.includes(upgradeId)) return false;
+
+    // Not enough score
+    if (playerScore < upgrade.cost) return false;
+
+    // Check prerequisites
+    if (upgrade.prerequisites) {
+      for (const prereqId of upgrade.prerequisites) {
+        if (!ownedIds.includes(prereqId)) return false;
+      }
+    }
+
+    return true;
+  }, [state.upgradeLookup]);
+
+  /**
+   * Check if an upgrade is locked (prerequisites not met, regardless of score).
+   */
+  const isLocked = useCallback((upgradeId: string, ownedIds: string[]): boolean => {
+    const upgrade = state.upgradeLookup.get(upgradeId);
+    if (!upgrade) return true;
+    if (ownedIds.includes(upgradeId)) return false;
+    if (!upgrade.prerequisites || upgrade.prerequisites.length === 0) return false;
+    return upgrade.prerequisites.some(prereqId => !ownedIds.includes(prereqId));
+  }, [state.upgradeLookup]);
 
   return {
     upgrades: state.upgrades,
+    upgradeLookup: state.upgradeLookup,
     isLoading: state.isLoading,
     error: state.error,
     loadUpgrades,
-    getAvailableUpgrades,
+    canPurchase,
+    isLocked,
   };
 }
