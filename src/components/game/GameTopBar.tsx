@@ -1,7 +1,6 @@
 import { useRef, useState, useEffect } from 'react';
 import { Heart, Lock, Scissors, Target, Hexagon } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
-import { SvgIcon } from '@/components/ui/SvgIcon';
 import {
   Tooltip,
   TooltipContent,
@@ -46,7 +45,6 @@ export function GameTopBar({
   const [needsCarousel, setNeedsCarousel] = useState(false);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
 
-  // Check if carousel is needed based on container width
   useEffect(() => {
     const checkOverflow = () => {
       const container = upgradesContainerRef.current;
@@ -54,13 +52,11 @@ export function GameTopBar({
         setNeedsCarousel(container.scrollWidth > container.clientWidth);
       }
     };
-
     checkOverflow();
     window.addEventListener('resize', checkOverflow);
     return () => window.removeEventListener('resize', checkOverflow);
   }, [ownedUpgrades]);
 
-  // Close tooltip when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (openTooltipId) {
@@ -70,7 +66,6 @@ export function GameTopBar({
         }
       }
     };
-
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [openTooltipId]);
@@ -84,7 +79,7 @@ export function GameTopBar({
 
   return (
     <div className="flex-shrink-0 flex flex-col gap-1">
-      {/* Row 1: Game Status Bar - Always Visible */}
+      {/* Row 1: Game Status Bar */}
       <div 
         className="px-3 py-2 flex items-center justify-between gap-2"
         style={{ 
@@ -93,26 +88,15 @@ export function GameTopBar({
         }}
       >
         {/* Level Number */}
-        <div 
-          className="flex items-center gap-1 min-w-0"
-          style={{ color: accentColor }}
-        >
-          <span 
-            className="font-display text-base font-bold"
-            style={{ 
-              textShadow: `0 0 10px ${accentColor}88`,
-            }}
-          >
+        <div className="flex items-center gap-1 min-w-0" style={{ color: accentColor }}>
+          <span className="font-display text-base font-bold" style={{ textShadow: `0 0 10px ${accentColor}88` }}>
             LV{levelNumber}
           </span>
         </div>
 
         {/* Cuts / Par */}
         <div className="flex items-center gap-1.5 min-w-0">
-          <Scissors 
-            className="w-5 h-5 flex-shrink-0" 
-            style={{ color: accentColor }}
-          />
+          <Scissors className="w-5 h-5 flex-shrink-0" style={{ color: accentColor }} />
           <span 
             className="font-display text-base font-bold tabular-nums"
             style={{ 
@@ -124,7 +108,7 @@ export function GameTopBar({
           </span>
         </div>
 
-        {/* Lives - Hearts with pulse animation */}
+        {/* Lives */}
         <div className="flex items-center gap-1">
           {Array.from({ length: lives }).map((_, i) => (
             <Heart
@@ -140,19 +124,14 @@ export function GameTopBar({
           ))}
         </div>
 
-        {/* Space Remaining / Required */}
+        {/* Space */}
         <div className="flex items-center gap-1.5 min-w-0">
-          <Target 
-            className="w-5 h-5 flex-shrink-0" 
-            style={{ color: accentColor }}
-          />
+          <Target className="w-5 h-5 flex-shrink-0" style={{ color: accentColor }} />
           <span 
             className="font-display text-base font-bold tabular-nums"
             style={{ 
               color: spaceRemaining <= spaceRequired ? accentColor : 'hsl(var(--foreground))',
-              textShadow: spaceRemaining <= spaceRequired 
-                ? `0 0 10px ${accentColor}88` 
-                : 'none',
+              textShadow: spaceRemaining <= spaceRequired ? `0 0 10px ${accentColor}88` : 'none',
             }}
           >
             {spaceRemaining}%/{spaceRequired}%
@@ -161,17 +140,8 @@ export function GameTopBar({
 
         {/* Locked Balls */}
         <div className="flex items-center gap-1.5 min-w-0">
-          <Lock 
-            className="w-5 h-5 flex-shrink-0" 
-            style={{ color: accentColor, opacity: 0.6 }}
-          />
-          <span 
-            className="font-display text-base font-bold tabular-nums"
-            style={{ 
-              color: accentColor,
-              opacity: 0.6,
-            }}
-          >
+          <Lock className="w-5 h-5 flex-shrink-0" style={{ color: accentColor, opacity: 0.6 }} />
+          <span className="font-display text-base font-bold tabular-nums" style={{ color: accentColor, opacity: 0.6 }}>
             {lockedBalls}
           </span>
         </div>
@@ -199,7 +169,7 @@ export function GameTopBar({
         )}
       </div>
 
-      {/* Row 2: Upgrades Bar - Conditional */}
+      {/* Row 2: Upgrades Bar */}
       {hasUpgrades && (
         <div 
           className="px-3 py-1.5"
@@ -212,45 +182,32 @@ export function GameTopBar({
             <div
               ref={upgradesContainerRef}
               className={`flex items-center gap-2 ${
-                needsCarousel 
-                  ? 'overflow-x-auto scrollbar-hide touch-pan-x' 
-                  : 'justify-center'
+                needsCarousel ? 'overflow-x-auto scrollbar-hide touch-pan-x' : 'justify-center'
               }`}
-              style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-              }}
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
               {ownedUpgrades.map((upgrade) => (
                 <Tooltip 
                   key={upgrade.id} 
                   open={openTooltipId === upgrade.id}
                   onOpenChange={(open) => {
-                    if (!open && openTooltipId === upgrade.id) {
-                      setOpenTooltipId(null);
-                    }
+                    if (!open && openTooltipId === upgrade.id) setOpenTooltipId(null);
                   }}
                 >
                   <TooltipTrigger asChild>
                     <button
                       data-upgrade-icon
                       onClick={(e) => handleUpgradeClick(upgrade.id, e)}
-                      className="flex-shrink-0 w-8 h-8 rounded-md p-1 flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-1"
+                      className="flex-shrink-0 h-8 px-2 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-1 text-[10px] font-bold"
                       style={{ 
                         backgroundColor: `${accentColor}18`,
                         border: `1px solid ${accentColor}55`,
-                        boxShadow: openTooltipId === upgrade.id 
-                          ? `0 0 12px ${accentColor}88` 
-                          : 'none',
+                        boxShadow: openTooltipId === upgrade.id ? `0 0 12px ${accentColor}88` : 'none',
                         color: accentColor,
                       }}
                       aria-label={upgrade.name}
                     >
-                      <SvgIcon
-                        src={upgrade.icon}
-                        className="w-full h-full [&>svg]:w-full [&>svg]:h-full"
-                        alt={upgrade.name}
-                      />
+                      {upgrade.name.substring(0, 3).toUpperCase()}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent
@@ -264,16 +221,10 @@ export function GameTopBar({
                     }}
                   >
                     <div className="space-y-1.5">
-                      <p 
-                        className="font-display font-bold text-base"
-                        style={{ color: accentColor }}
-                      >
-                        {upgrade.name}
+                      <p className="font-display font-bold text-base" style={{ color: accentColor }}>
+                        {upgrade.name} ({upgrade.tier})
                       </p>
-                      <p 
-                        className="text-sm leading-relaxed"
-                        style={{ color: 'hsl(var(--foreground) / 0.85)' }}
-                      >
+                      <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--foreground) / 0.85)' }}>
                         {upgrade.description}
                       </p>
                     </div>

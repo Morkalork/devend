@@ -325,8 +325,8 @@ export function GameCanvas({
 
     const game = gameRef.current;
     game.regionColor = regionColorProp;
-    game.wallShieldsRemaining = activeModifiers.wallShield;
-    setWallShieldCount(activeModifiers.wallShield);
+    game.wallShieldsRemaining = 0;
+    setWallShieldCount(0);
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -335,7 +335,7 @@ export function GameCanvas({
     const effectiveBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
 
     // Calculate effective swipe distance with modifier (world units)
-    const effectiveSwipeMinDistance = BASE_SWIPE_MIN_DISTANCE / activeModifiers.swipeSensitivity;
+    const effectiveSwipeMinDistance = BASE_SWIPE_MIN_DISTANCE;
 
     const initGame = () => {
       // ============================================================
@@ -357,8 +357,8 @@ export function GameCanvas({
       regionIdCounter = 0;
       wallIdCounter = 0;
 
-      // Calculate starting percentage based on reducedSize modifier
-      const targetRemaining = Math.max(20, 100 - activeModifiers.reducedSizePercent);
+      // No starting area reduction in new upgrade system
+      const targetRemaining = 100;
 
       // Scale factor to shrink the region
       const scaleFactor = Math.sqrt(targetRemaining / 100);
@@ -610,44 +610,7 @@ export function GameCanvas({
         };
       });
 
-      // Spawn dead balls (stationary ball-obstacles) based on modifier
-      if (activeModifiers.maxDeadBalls > 0) {
-        const deadBallCount = activeModifiers.minDeadBalls + 
-          Math.floor(Math.random() * (activeModifiers.maxDeadBalls - activeModifiers.minDeadBalls + 1));
-        
-        for (let i = 0; i < deadBallCount; i++) {
-          const deadBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier * 0.8; // Slightly smaller
-          const position = findValidSpawnPosition(deadBallRadius);
-          
-          // Check this position doesn't overlap with existing balls
-          let overlapsExisting = false;
-          for (const existingBall of game.balls) {
-            const dist = vec2Distance(position, existingBall.position);
-            if (dist < deadBallRadius + existingBall.radius + 10) {
-              overlapsExisting = true;
-              break;
-            }
-          }
-          
-          if (!overlapsExisting) {
-            game.balls.push({
-              id: `dead-ball-${i}`,
-              position,
-              velocity: { x: 0, y: 0 }, // Stationary
-              radius: deadBallRadius,
-              speed: 0,
-              topSpeed: 0,
-              color: '#444444', // Dark gray for dead balls
-              regionId: "", // Will be assigned later
-              rotation: 0,
-              flashIntensity: 0,
-              effects: createBallEffectState(),
-              state: 'active' as const,
-              wonSpinSpeed: 0,
-            });
-          }
-        }
-      }
+      // Dead balls feature removed in new upgrade system
 
       // Store the board polygon for ball collision (never changes after init)
       game.boardPolygon = boardPolygon;
@@ -717,8 +680,8 @@ export function GameCanvas({
         }
       }
 
-      // Track fastest ball
-      if (activeModifiers.highlightFastestBall && game.balls.length > 0) {
+      // Track fastest ball (always track for potential future use)
+      if (game.balls.length > 0) {
         let fastestSpeed = 0;
         let fastestId = game.balls[0].id;
         for (const ball of game.balls) {
@@ -1145,7 +1108,7 @@ export function GameCanvas({
 
       // If in push mode, level is still cleared - just forfeit space bonus (penalty for failing push)
       if (game.pushMode === "pushing") {
-        const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+        const effectiveExpectedCuts = level.expectedCuts;
         
         // Use new scoring system - but no space bonus since push failed
         const { levelScore, breakdown } = calculateScore(
@@ -1208,7 +1171,7 @@ export function GameCanvas({
       game.gameOver = true;
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
 
-      const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+      const effectiveExpectedCuts = level.expectedCuts;
       
       // Use new scoring system - but no space bonus since push failed
       const { levelScore, breakdown } = calculateScore(
@@ -1605,7 +1568,8 @@ export function GameCanvas({
         ball.velocity.y *= ratio;
       }
 
-      if (activeModifiers.highlightFastestBall) {
+      // Track fastest ball
+      {
         let fastestSpeed = 0;
         let fastestId = game.balls[0]?.id || null;
         for (const ball of game.balls) {
@@ -1790,7 +1754,7 @@ export function GameCanvas({
         const percent = Math.round(getGridRemainingPercent());
         setRemainingPercent(percent);
         
-        const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+        const effectiveExpectedCuts = level.expectedCuts;
         const { levelScore, breakdown } = calculateScore(
           game.wallCount,
           effectiveExpectedCuts,
@@ -1860,7 +1824,7 @@ export function GameCanvas({
 
       // Calculate wall speed (world units per second)
       const wallSpeedBase = getWallSpeedBase(levelNumber);
-      const wallSpeedEffective = wallSpeedBase * activeModifiers.wallSpeedMultiplier;
+      const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier;
 
       const maxSegmentLength = vec2Distance(wall.targetStart, wall.targetEnd);
       let distToStart = vec2Distance(wall.startPoint, wall.targetStart);
@@ -1902,8 +1866,7 @@ export function GameCanvas({
       // Collision check with any ball while growing
       if (!wall.isComplete && !game.isRecovering) {
         for (const ball of balls) {
-          const graceMultiplier = 1 - activeModifiers.wallGrace;
-          const effectiveCollisionRadius = ball.radius * graceMultiplier;
+          const effectiveCollisionRadius = ball.radius;
 
           if (
             circleCapsuleCollision(
@@ -2299,7 +2262,7 @@ export function GameCanvas({
       for (const ball of balls) {
         const screenPos = worldToScreen(ball.position.x, ball.position.y);
         const screenRadius = ball.radius * scale;
-        const isFastest = activeModifiers.highlightFastestBall && ball.id === game.fastestBallId;
+        const isFastest = false; // Highlight fastest ball removed in new upgrade system
 
         // Calculate spin phases based on ball rotation and unique offsets per ball
         const ballIdHash = ball.id.charCodeAt(ball.id.length - 1) || 0;
@@ -2620,45 +2583,7 @@ export function GameCanvas({
               const collisionIntensity = Math.min(1, Math.abs(relVelNormal) / 300);
               playBallCollideSound(collisionIntensity);
               
-              // Apply ball collision speed increase (Bouncer upgrade)
-              if (activeModifiers.ballCollissionSpeedIncrease > 0) {
-                // Only apply to moving balls (not dead balls)
-                if (ball1.speed > 0) {
-                  const speed1 = vec2Length(ball1.velocity);
-                  if (speed1 > 0) {
-                    const newSpeed1 = Math.min(ball1.topSpeed, speed1 * (1 + activeModifiers.ballCollissionSpeedIncrease));
-                    ball1.velocity = vec2Scale(vec2Normalize(ball1.velocity), newSpeed1);
-                  }
-                }
-                if (ball2.speed > 0) {
-                  const speed2 = vec2Length(ball2.velocity);
-                  if (speed2 > 0) {
-                    const newSpeed2 = Math.min(ball2.topSpeed, speed2 * (1 + activeModifiers.ballCollissionSpeedIncrease));
-                    ball2.velocity = vec2Scale(vec2Normalize(ball2.velocity), newSpeed2);
-                  }
-                }
-              }
-              
-              // Apply Yin Yang effect: random ball speed modifier affects a random OTHER ball
-              if (activeModifiers.randomBallSpeedModifier !== 0) {
-                // Find other moving balls that weren't involved in this collision
-                const otherBalls = balls.filter(b => 
-                  b.id !== ball1.id && 
-                  b.id !== ball2.id && 
-                  b.speed > 0 && // Only affect moving balls
-                  !b.id.startsWith('dead-ball-')
-                );
-                
-                if (otherBalls.length > 0) {
-                  const randomBall = otherBalls[Math.floor(Math.random() * otherBalls.length)];
-                  const currentSpeed = vec2Length(randomBall.velocity);
-                  if (currentSpeed > 0) {
-                    // Apply speed modifier (can be negative for slowing)
-                    const newSpeed = Math.max(50, Math.min(randomBall.topSpeed, currentSpeed * (1 + activeModifiers.randomBallSpeedModifier)));
-                    randomBall.velocity = vec2Scale(vec2Normalize(randomBall.velocity), newSpeed);
-                  }
-                }
-              }
+              // Legacy Bouncer and Yin Yang effects removed in new upgrade system
             }
           }
         }
@@ -2888,7 +2813,7 @@ export function GameCanvas({
     const game = gameRef.current;
     game.levelComplete = true;
 
-    const effectiveExpectedCuts = level.expectedCuts + activeModifiers.expectedCutsBonus;
+    const effectiveExpectedCuts = level.expectedCuts;
     
     // Use new configurable scoring system
     const { levelScore, breakdown } = calculateScore(

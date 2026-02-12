@@ -60,6 +60,8 @@ const Index = () => {
     isLoading: isLoadingUpgrades,
     error: upgradeError,
     loadUpgrades,
+    canPurchase: canPurchaseUpgrade,
+    isLocked: isUpgradeLocked,
   } = useUpgradeManager();
 
   // Combined loading and error states
@@ -303,10 +305,11 @@ const Index = () => {
     setTotalScore(prev => prev - price);
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
     
-    // Check if this upgrade grants lives
+    // Check if this upgrade grants extra lives
     const upgrade = upgrades.find(u => u.id === upgradeId);
-    if (upgrade?.modifiers?.lives) {
-      setCurrentLives(prev => prev + upgrade.modifiers.lives!);
+    const extraLives = upgrade?.modifiers?.extraLives;
+    if (extraLives && typeof extraLives === 'number') {
+      setCurrentLives(prev => prev + extraLives);
     }
   }, [upgrades]);
 
@@ -410,6 +413,8 @@ const Index = () => {
         handleAugmentsFromWelcome={handleAugmentsFromWelcome}
         handleReplayInteractiveTutorial={handleReplayInteractiveTutorial}
         handleResetAugments={handleResetAugments}
+        canPurchaseUpgrade={canPurchaseUpgrade}
+        isUpgradeLocked={isUpgradeLocked}
         handlePurchaseAugment={handlePurchaseAugment}
         goToWelcome={goToWelcome}
         goToTutorial={goToTutorial}
@@ -465,6 +470,8 @@ interface IndexContentProps {
   handleLevelComplete: (scoreData: LevelScoreData) => void;
   handleContinueFromOverlay: () => void;
   handlePurchaseUpgrade: (id: string, price: number) => void;
+  canPurchaseUpgrade: (upgradeId: string, playerScore: number, ownedIds: string[]) => boolean;
+  isUpgradeLocked: (upgradeId: string, ownedIds: string[]) => boolean;
   handleContinueFromShop: () => void;
   handlePlayAgain: () => void;
   handleBackToWelcome: () => void;
@@ -514,6 +521,8 @@ function IndexContent({
   handleLevelComplete,
   handleContinueFromOverlay,
   handlePurchaseUpgrade,
+  canPurchaseUpgrade,
+  isUpgradeLocked,
   handleContinueFromShop,
   handlePlayAgain,
   handleBackToWelcome,
@@ -593,9 +602,10 @@ function IndexContent({
       {currentScreen === 'upgradeShop' && (
         <UpgradeShop
           playerPoints={totalScore}
-          levelNumber={currentLevelIndex + 1}
           upgrades={upgrades}
           ownedUpgradeIds={ownedUpgradeIds}
+          canPurchase={canPurchaseUpgrade}
+          isLocked={isUpgradeLocked}
           onPurchase={handlePurchaseUpgrade}
           onContinue={handleContinueFromShop}
           accentColor={accentHex}
