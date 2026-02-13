@@ -434,6 +434,7 @@ const Index = () => {
         runLevelsCompleted={runLevelsCompleted}
         totalLevelsCompleted={totalLevelsCompleted}
         augmentProgress={getRunProgress()}
+        extraShopItems={activeModifiers.extraShopItems}
       />
     </AccentColorProvider>
   );
@@ -497,6 +498,7 @@ interface IndexContentProps {
   runLevelsCompleted: number;
   totalLevelsCompleted: number;
   augmentProgress: AugmentProgress;
+  extraShopItems: number;
 }
 
 function IndexContent({
@@ -548,6 +550,7 @@ function IndexContent({
   runLevelsCompleted,
   totalLevelsCompleted,
   augmentProgress,
+  extraShopItems,
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
 
@@ -609,6 +612,7 @@ function IndexContent({
           onPurchase={handlePurchaseUpgrade}
           onContinue={handleContinueFromShop}
           accentColor={accentHex}
+          extraShopItems={extraShopItems}
         />
       )}
       {currentScreen === 'result' && lastResult && (

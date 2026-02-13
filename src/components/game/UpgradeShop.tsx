@@ -14,6 +14,17 @@ interface UpgradeShopProps {
   onPurchase: (upgradeId: string, price: number) => void;
   onContinue: () => void;
   accentColor?: string;
+  extraShopItems?: number;
+}
+
+/** Shuffle array using Fisher-Yates */
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 export function UpgradeShop({
@@ -25,10 +36,20 @@ export function UpgradeShop({
   onPurchase,
   onContinue,
   accentColor,
+  extraShopItems = 0,
 }: UpgradeShopProps) {
   const { toast } = useToast();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
+
+  const shopSlots = 3 + extraShopItems;
+
+  // Pick random offers once on mount (restock only between levels)
+  const [offeredUpgrades] = useState<UpgradeConfig[]>(() => {
+    // Filter to upgrades not already owned
+    const available = upgrades.filter(u => !ownedUpgradeIds.includes(u.id));
+    return shuffle(available).slice(0, shopSlots);
+  });
 
   // Combine owned with session purchases
   const allOwnedIds = useMemo(() => 
@@ -45,21 +66,6 @@ export function UpgradeShop({
     }
     return playerPoints - spent;
   }, [playerPoints, purchasedThisSession, upgrades]);
-
-  // Group upgrades by name for tree display
-  const upgradeGroups = useMemo(() => {
-    const groups = new Map<string, UpgradeConfig[]>();
-    for (const u of upgrades) {
-      const group = groups.get(u.name) || [];
-      group.push(u);
-      groups.set(u.name, group);
-    }
-    // Sort within each group by cost
-    for (const group of groups.values()) {
-      group.sort((a, b) => a.cost - b.cost);
-    }
-    return Array.from(groups.entries());
-  }, [upgrades]);
 
   const handlePurchase = useCallback((upgrade: UpgradeConfig) => {
     if (allOwnedIds.includes(upgrade.id)) return;
@@ -128,88 +134,78 @@ export function UpgradeShop({
           transition={{ delay: 0.2 }}
           className="flex flex-wrap justify-center gap-4 max-w-5xl"
         >
-          {upgradeGroups.map(([groupName, groupUpgrades], groupIndex) => (
-            <motion.div
-              key={groupName}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: groupIndex * 0.05 }}
-              className="flex flex-col items-center gap-1"
-            >
-              {/* Group name */}
-              <span className="text-xs font-medium text-muted-foreground mb-1 truncate max-w-[120px]">
-                {groupName}
-              </span>
-              
-              {/* Tier cards in column */}
-              {groupUpgrades.map((upgrade, tierIndex) => {
+          {offeredUpgrades.map((upgrade, index) => {
                 const owned = allOwnedIds.includes(upgrade.id);
                 const locked = isLocked(upgrade.id, allOwnedIds);
                 const purchasable = canPurchase(upgrade.id, effectiveScore, allOwnedIds);
                 const cantAfford = !locked && !owned && effectiveScore < upgrade.cost;
                 const tierColors = TIER_COLORS[upgrade.tier];
 
-                return (
-                  <motion.button
-                    key={upgrade.id}
-                    onClick={() => handlePurchase(upgrade)}
-                    disabled={owned || locked}
-                    onMouseEnter={() => setHoveredId(upgrade.id)}
-                    onMouseLeave={() => setHoveredId(null)}
-                    whileHover={{ scale: purchasable ? 1.05 : 1 }}
-                    whileTap={{ scale: purchasable ? 0.95 : 1 }}
-                    className={`
-                      relative w-28 p-2 rounded-lg border-2 transition-all duration-200 text-center
-                      ${owned
-                        ? 'bg-green-500/20 border-green-500/50'
-                        : locked
-                          ? 'bg-muted/30 border-muted/30 opacity-40 cursor-not-allowed'
-                          : purchasable 
-                            ? `bg-card ${tierColors.border} hover:border-primary cursor-pointer` 
-                            : cantAfford
-                              ? `bg-card/50 ${tierColors.border} opacity-60 cursor-pointer`
-                              : 'bg-card/50 border-muted cursor-not-allowed opacity-40'
-                      }
-                    `}
-                  >
-                    {/* Tier badge */}
-                    <div className={`text-[10px] font-medium mb-1 ${tierColors.text}`}>
-                      {upgrade.tier}
-                    </div>
+            return (
+              <motion.button
+                key={upgrade.id}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() => handlePurchase(upgrade)}
+                disabled={owned || locked}
+                onMouseEnter={() => setHoveredId(upgrade.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                whileHover={{ scale: purchasable ? 1.05 : 1 }}
+                whileTap={{ scale: purchasable ? 0.95 : 1 }}
+                className={`
+                  relative w-36 p-3 rounded-lg border-2 transition-all duration-200 text-center
+                  ${owned
+                    ? 'bg-green-500/20 border-green-500/50'
+                    : locked
+                      ? 'bg-muted/30 border-muted/30 opacity-40 cursor-not-allowed'
+                      : purchasable 
+                        ? `bg-card ${tierColors.border} hover:border-primary cursor-pointer` 
+                        : cantAfford
+                          ? `bg-card/50 ${tierColors.border} opacity-60 cursor-pointer`
+                          : 'bg-card/50 border-muted cursor-not-allowed opacity-40'
+                  }
+                `}
+              >
+                {/* Tier badge */}
+                <div className={`text-[10px] font-medium mb-1 ${tierColors.text}`}>
+                  {upgrade.tier}
+                </div>
 
-                    {/* Status icon */}
-                    {owned && (
-                      <div className="absolute top-1 right-1">
-                        <Check className="w-3 h-3 text-green-500" />
-                      </div>
-                    )}
-                    {locked && !owned && (
-                      <div className="absolute top-1 right-1">
-                        <Lock className="w-3 h-3 text-muted-foreground" />
-                      </div>
-                    )}
+                {/* Name */}
+                <div className="text-xs font-semibold text-foreground mb-1 truncate">
+                  {upgrade.name}
+                </div>
 
-                    {/* Description on hover */}
-                    <p className="text-[10px] text-muted-foreground line-clamp-2 mb-1">
-                      {upgrade.description}
-                    </p>
+                {/* Status icon */}
+                {owned && (
+                  <div className="absolute top-1 right-1">
+                    <Check className="w-3 h-3 text-green-500" />
+                  </div>
+                )}
+                {locked && !owned && (
+                  <div className="absolute top-1 right-1">
+                    <Lock className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                )}
 
-                    {/* Cost */}
-                    {!owned && (
-                      <div className={`flex items-center justify-center gap-1 text-xs font-bold
-                        ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
-                      `}>
-                        <Coins className="w-3 h-3" />
-                        {upgrade.cost}
-                      </div>
-                    )}
-                  </motion.button>
-                );
-              })}
+                {/* Description */}
+                <p className="text-[10px] text-muted-foreground line-clamp-2 mb-1">
+                  {upgrade.description}
+                </p>
 
-              {/* Connecting lines between tiers */}
-            </motion.div>
-          ))}
+                {/* Cost */}
+                {!owned && (
+                  <div className={`flex items-center justify-center gap-1 text-xs font-bold
+                    ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
+                  `}>
+                    <Coins className="w-3 h-3" />
+                    {upgrade.cost}
+                  </div>
+                )}
+              </motion.button>
+            );
+          })}
         </motion.div>
 
         {/* Continue Button */}
