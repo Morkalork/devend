@@ -41,14 +41,27 @@ export function UpgradeShop({
   const { toast } = useToast();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
+  const [lockedInfoId, setLockedInfoId] = useState<string | null>(null);
 
   const shopSlots = 3 + extraShopItems;
 
   // Pick random offers once on mount (restock only between levels)
   const [offeredUpgrades] = useState<UpgradeConfig[]>(() => {
-    // Filter to upgrades not already owned
     const available = upgrades.filter(u => !ownedUpgradeIds.includes(u.id));
-    return shuffle(available).slice(0, shopSlots);
+    const unlocked = available.filter(u => {
+      if (!u.prerequisites || u.prerequisites.length === 0) return true;
+      return u.prerequisites.every(p => ownedUpgradeIds.includes(p));
+    });
+    const locked = available.filter(u => {
+      if (!u.prerequisites || u.prerequisites.length === 0) return false;
+      return u.prerequisites.some(p => !ownedUpgradeIds.includes(p));
+    });
+    const picked = shuffle(unlocked).slice(0, shopSlots);
+    // Add at most one locked item if there's room
+    if (picked.length < shopSlots && locked.length > 0) {
+      picked.push(shuffle(locked)[0]);
+    }
+    return picked;
   });
 
   // Combine owned with session purchases
@@ -184,8 +197,22 @@ export function UpgradeShop({
                   </div>
                 )}
                 {locked && !owned && (
-                  <div className="absolute top-1 right-1">
+                  <div
+                    className="absolute top-1 right-1 cursor-help"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLockedInfoId(prev => prev === upgrade.id ? null : upgrade.id);
+                    }}
+                  >
                     <Lock className="w-3 h-3 text-muted-foreground" />
+                  </div>
+                )}
+                {locked && !owned && lockedInfoId === upgrade.id && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full z-10 bg-popover border border-border rounded px-2 py-1 text-[10px] text-muted-foreground whitespace-nowrap shadow-md">
+                    Requires: {(upgrade.prerequisites || []).filter(p => !allOwnedIds.includes(p)).map(p => {
+                      const prereq = upgrades.find(u => u.id === p);
+                      return prereq ? prereq.name : p;
+                    }).join(', ')}
                   </div>
                 )}
 
