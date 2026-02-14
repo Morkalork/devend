@@ -2,7 +2,7 @@ levels:
   - id: level-1
     sizeThreshold: 40
     expectedCuts: 3
-    points: 100
+    points: 1
     variety: 0
     balls:
       - id: ball-1
@@ -15,7 +15,7 @@ levels:
   - id: level-2
     sizeThreshold: 40
     expectedCuts: 5
-    points: 150
+    points: 2
     variety: 3
     balls:
       - id: ball-1
@@ -49,7 +49,7 @@ levels:
   - id: level-3
     sizeThreshold: 35
     expectedCuts: 6
-    points: 200
+    points: 2
     variety: 5
     balls:
       - id: ball-1
@@ -76,7 +76,7 @@ levels:
   - id: level-4
     sizeThreshold: 30
     expectedCuts: 8
-    points: 250
+    points: 3
     variety: 5
     balls:
       - id: ball-1
@@ -110,7 +110,7 @@ levels:
   - id: level-5
     sizeThreshold: 15
     expectedCuts: 10
-    points: 300
+    points: 3
     variety: 8
     balls:
       - id: ball-1
@@ -174,7 +174,7 @@ levels:
   - id: level-6
     sizeThreshold: 30
     expectedCuts: 12
-    points: 400
+    points: 4
     variety: 10
     balls:
       - id: ball-1
@@ -208,7 +208,7 @@ levels:
   - id: level-7
     sizeThreshold: 20
     expectedCuts: 14
-    points: 500
+    points: 4
     variety: 10
     balls:
       - id: ball-1
@@ -240,7 +240,7 @@ levels:
   - id: level-8
     sizeThreshold: 25
     expectedCuts: 10
-    points: 300
+    points: 5
     variety: 12
     balls:
       - id: ball-1
@@ -273,7 +273,7 @@ levels:
   - id: level-9
     sizeThreshold: 15
     expectedCuts: 16
-    points: 600
+    points: 5
     variety: 15
     balls:
       - id: ball-1
@@ -325,7 +325,7 @@ levels:
   - id: level-10
     sizeThreshold: 12
     expectedCuts: 18
-    points: 750
+    points: 5
     variety: 15
     balls:
       - id: ball-1
@@ -357,7 +357,7 @@ levels:
   - id: level-11
     sizeThreshold: 10
     expectedCuts: 20
-    points: 900
+    points: 6
     variety: 18
     balls:
       - id: ball-1
@@ -396,7 +396,7 @@ levels:
   - id: level-12
     sizeThreshold: 10
     expectedCuts: 22
-    points: 1000
+    points: 6
     variety: 20
     balls:
       - id: ball-1
@@ -440,7 +440,7 @@ levels:
   - id: level-13
     sizeThreshold: 8
     expectedCuts: 24
-    points: 1200
+    points: 7
     variety: 25
     balls:
       - id: ball-1
@@ -498,7 +498,7 @@ levels:
   - id: level-14
     sizeThreshold: 8
     expectedCuts: 26
-    points: 1400
+    points: 7
     variety: 25
     balls:
       - id: ball-1
@@ -556,7 +556,7 @@ levels:
   - id: level-15
     sizeThreshold: 5
     expectedCuts: 28
-    points: 1600
+    points: 8
     variety: 30
     balls:
       - id: ball-1
@@ -618,7 +618,7 @@ levels:
   - id: level-16
     sizeThreshold: 5
     expectedCuts: 30
-    points: 2000
+    points: 8
     variety: 35
     balls:
       - id: ball-1

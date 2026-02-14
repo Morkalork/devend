@@ -4,7 +4,7 @@ import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useInteractiveTutorial } from '@/hooks/useInteractiveTutorial';
-import { useCheckpoint, getTierScoreMultiplier } from '@/hooks/useCheckpoint';
+import { useCheckpoint } from '@/hooks/useCheckpoint';
 import { useAugmentManager } from '@/hooks/useAugmentManager';
 import { useMetaProgression } from '@/hooks/useMetaProgression';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
@@ -259,23 +259,28 @@ const Index = () => {
     // Check and unlock any newly available augments
     checkAndUnlock(augments);
     
-    // Apply tier score multiplier (10% boost per tier beyond first)
-    const tierMultiplier = getTierScoreMultiplier(currentLevelNum);
-    const boostedLevelScore = Math.floor(scoreData.levelScore * tierMultiplier);
+    // No tier multiplier - overtime values are already tight
+    const levelOvertime = scoreData.levelScore;
     
-    // Accumulate score with tier boost applied
-    const newTotalScore = totalScore + boostedLevelScore;
+    // Apply interest on unused overtime (capped at 3h per map)
+    let interestGain = 0;
+    if (activeModifiers.scoreInterestRate > 0) {
+      interestGain = Math.min(3, Math.floor(totalScore * activeModifiers.scoreInterestRate));
+    }
+    
+    const newTotalScore = totalScore + levelOvertime + interestGain;
     setTotalScore(newTotalScore);
     setPendingLevelScore({
       ...scoreData,
-      levelScore: boostedLevelScore,
-      tierMultiplier,
+      levelScore: levelOvertime,
+      tierMultiplier: 1,
+      interestGain,
     });
     setShowLevelComplete(true);
     
     // Reset lives at level start for next level
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, augments, currentLives, livesAtLevelStart, incrementRunLevel]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, augments, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.scoreInterestRate]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);

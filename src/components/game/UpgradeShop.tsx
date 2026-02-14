@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
-import { Coins, ArrowRight, Lock, Check } from 'lucide-react';
+import { Clock, ArrowRight, Lock, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { CRTBackground } from './CRTBackground';
 
@@ -70,8 +70,8 @@ export function UpgradeShop({
     [ownedUpgradeIds, purchasedThisSession]
   );
 
-  // Effective score after session purchases
-  const effectiveScore = useMemo(() => {
+  // Effective overtime after session purchases
+  const effectiveOvertime = useMemo(() => {
     let spent = 0;
     for (const id of purchasedThisSession) {
       const u = upgrades.find(u => u.id === id);
@@ -83,11 +83,11 @@ export function UpgradeShop({
   const handlePurchase = useCallback((upgrade: UpgradeConfig) => {
     if (allOwnedIds.includes(upgrade.id)) return;
     
-    if (!canPurchase(upgrade.id, effectiveScore, allOwnedIds)) {
-      if (effectiveScore < upgrade.cost) {
+    if (!canPurchase(upgrade.id, effectiveOvertime, allOwnedIds)) {
+      if (effectiveOvertime < upgrade.cost) {
         toast({
-          title: "Not enough points",
-          description: `You need ${upgrade.cost - effectiveScore} more points.`,
+          title: "Not enough overtime",
+          description: `You need ${upgrade.cost - effectiveOvertime}h more.`,
           variant: "destructive",
         });
       } else {
@@ -102,7 +102,7 @@ export function UpgradeShop({
 
     onPurchase(upgrade.id, upgrade.cost);
     setPurchasedThisSession(prev => [...prev, upgrade.id]);
-  }, [allOwnedIds, canPurchase, effectiveScore, onPurchase, toast]);
+  }, [allOwnedIds, canPurchase, effectiveOvertime, onPurchase, toast]);
 
   return (
     <>
@@ -128,16 +128,16 @@ export function UpgradeShop({
           </span>
         </motion.div>
 
-        {/* Points display */}
+        {/* Overtime display */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
           className="flex items-center justify-center gap-2 text-xl"
         >
-          <Coins className="w-6 h-6 text-yellow-500" />
-          <span className="font-semibold text-foreground">{effectiveScore}</span>
-          <span className="text-muted-foreground">points</span>
+          <Clock className="w-6 h-6 text-yellow-500" />
+          <span className="font-semibold text-foreground">{effectiveOvertime}h</span>
+          <span className="text-muted-foreground">overtime</span>
         </motion.div>
 
         {/* Upgrade Tree */}
@@ -150,8 +150,8 @@ export function UpgradeShop({
           {offeredUpgrades.map((upgrade, index) => {
                 const owned = allOwnedIds.includes(upgrade.id);
                 const locked = isLocked(upgrade.id, allOwnedIds);
-                const purchasable = canPurchase(upgrade.id, effectiveScore, allOwnedIds);
-                const cantAfford = !locked && !owned && effectiveScore < upgrade.cost;
+                const purchasable = canPurchase(upgrade.id, effectiveOvertime, allOwnedIds);
+                const cantAfford = !locked && !owned && effectiveOvertime < upgrade.cost;
                 const tierColors = TIER_COLORS[upgrade.tier];
 
             return (
@@ -226,8 +226,8 @@ export function UpgradeShop({
                   <div className={`flex items-center justify-center gap-1 text-xs font-bold
                     ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
                   `}>
-                    <Coins className="w-3 h-3" />
-                    {upgrade.cost}
+                    <Clock className="w-3 h-3" />
+                    {upgrade.cost}h
                   </div>
                 )}
               </motion.button>

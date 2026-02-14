@@ -105,4 +105,6 @@ export interface LevelScoreData {
   // Lock bonus from capturing balls
   lockBonus?: number;
   lockedBallsCount?: number;
+  // Interest gain from Venture Capital
+  interestGain?: number;
 }

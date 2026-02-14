@@ -1,47 +1,27 @@
-# Ball Breaker Scoring Configuration
-# This file controls all scoring bonuses and penalties.
-# Modify values here without changing game logic.
+# Overtime Scoring Configuration
+# Values are in overtime hours (small integers).
 
 scoring:
   # Fence Efficiency Bonus
-  # Rewards players for using fewer fences than par
-  # Each step defines the cumulative bonus for being that many fences under par
+  # +1h if any fences under par
   fenceEfficiency:
-    maxBonus: 30
+    maxBonus: 1
     steps:
       - fencesUnder: 1
-        bonus: 5
-      - fencesUnder: 2
-        bonus: 7
-      - fencesUnder: 3
-        bonus: 8
-      - fencesUnder: 4
-        bonus: 10
+        bonus: 1
 
   # Space Optimization Bonus
-  # Rewards players for removing more area than required
-  # Uses diminishing returns via threshold-based bonuses
+  # +1h if removed 10%+ more than required
   spaceOptimization:
-    maxBonus: 20
-    # extraPercent = (actualRemoved - requiredRemoved) / requiredRemoved
-    # e.g., if required is 60% and actual is 75%, extraPercent = 0.25
+    maxBonus: 1
     thresholds:
-      - extraPercent: 0.05
-        bonus: 5
       - extraPercent: 0.10
-        bonus: 10
-      - extraPercent: 0.15
-        bonus: 14
-      - extraPercent: 0.20
-        bonus: 17
-      - extraPercent: 1.00
-        bonus: 20
+        bonus: 1
 
   # Fence Penalty Multiplier
   # Reduces space bonus when player exceeds par fences
-  # Key format: overParN where N is fences over par
   fencePenaltyMultiplier:
     overPar0: 1.0      # At or under par: full space bonus
-    overPar1: 0.75     # 1 over par: 75% space bonus
-    overPar2: 0.5      # 2 over par: 50% space bonus
+    overPar1: 0.5      # 1-2 over par: halved
+    overPar2: 0.5      # 1-2 over par: halved
     overPar3Plus: 0.0  # 3+ over par: no space bonus

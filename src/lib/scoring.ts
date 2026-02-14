@@ -1,111 +1,70 @@
 import { ScoringConfig, ScoreBreakdown } from '@/types/scoring';
 
 /**
- * Calculate the fence efficiency bonus based on fences under par.
- * Uses step-based cumulative bonus with a hard cap.
+ * Get the overtime reward cap for a given level number.
+ * Levels 1-3: max 5h, 4-6: max 7h, 7-10: max 9h, 11+: max 12h
+ */
+export function getOvertimeCap(levelNumber: number): number {
+  if (levelNumber <= 3) return 5;
+  if (levelNumber <= 6) return 7;
+  if (levelNumber <= 10) return 9;
+  return 12;
+}
+
+/**
+ * Calculate fence bonus: +1h if under par, 0 otherwise.
  */
 export function calculateFenceBonus(
   usedFences: number,
   parFences: number,
-  config: ScoringConfig
+  _config: ScoringConfig
 ): { bonus: number; fencesUnderPar: number } {
   const fencesUnderPar = Math.max(0, parFences - usedFences);
-  
-  if (fencesUnderPar === 0) {
-    return { bonus: 0, fencesUnderPar: 0 };
-  }
-
-  const { steps, maxBonus } = config.scoring.fenceEfficiency;
-  
-  // Sort steps by fencesUnder ascending
-  const sortedSteps = [...steps].sort((a, b) => a.fencesUnder - b.fencesUnder);
-  
-  // Sum up bonuses for each fence under par
-  let totalBonus = 0;
-  for (const step of sortedSteps) {
-    if (fencesUnderPar >= step.fencesUnder) {
-      totalBonus += step.bonus;
-    } else {
-      break;
-    }
-  }
-
   return {
-    bonus: Math.min(totalBonus, maxBonus),
+    bonus: fencesUnderPar > 0 ? 1 : 0,
     fencesUnderPar,
   };
 }
 
 /**
- * Calculate the penalty multiplier based on fences over par.
+ * Calculate penalty multiplier based on fences over par.
+ * 0 over: no penalty, 1-2 over: space bonus halved, 3+: space bonus disabled.
  */
 export function getPenaltyMultiplier(
   usedFences: number,
   parFences: number,
-  config: ScoringConfig
+  _config: ScoringConfig
 ): { multiplier: number; fencesOverPar: number } {
   const fencesOverPar = Math.max(0, usedFences - parFences);
-  const penalties = config.scoring.fencePenaltyMultiplier;
-
   let multiplier: number;
-  if (fencesOverPar === 0) {
-    multiplier = penalties.overPar0;
-  } else if (fencesOverPar === 1) {
-    multiplier = penalties.overPar1;
-  } else if (fencesOverPar === 2) {
-    multiplier = penalties.overPar2;
-  } else {
-    multiplier = penalties.overPar3Plus;
-  }
-
+  if (fencesOverPar === 0) multiplier = 1;
+  else if (fencesOverPar <= 2) multiplier = 0.5;
+  else multiplier = 0;
   return { multiplier, fencesOverPar };
 }
 
 /**
- * Calculate the space optimization bonus using threshold-based diminishing returns.
- * extraPercent = (actualRemovedRatio - requiredRemovedRatio) / requiredRemovedRatio
+ * Calculate space bonus: +1h if removed significantly more than required, 0 otherwise.
  */
 export function calculateSpaceBonus(
   actualRemovedRatio: number,
   requiredRemovedRatio: number,
-  config: ScoringConfig
+  _config: ScoringConfig
 ): { bonus: number; extraPercent: number } {
+  if (requiredRemovedRatio <= 0) return { bonus: 0, extraPercent: 0 };
+  
   const extraRemovedRatio = Math.max(0, actualRemovedRatio - requiredRemovedRatio);
-  
-  // Avoid division by zero
-  if (requiredRemovedRatio <= 0) {
-    return { bonus: 0, extraPercent: 0 };
-  }
-  
   const extraPercent = extraRemovedRatio / requiredRemovedRatio;
   
-  if (extraPercent <= 0) {
-    return { bonus: 0, extraPercent: 0 };
-  }
-
-  const { thresholds, maxBonus } = config.scoring.spaceOptimization;
+  // +1h if extra removal is >= 10% of required
+  const bonus = extraPercent >= 0.10 ? 1 : 0;
   
-  // Sort thresholds by extraPercent ascending
-  const sortedThresholds = [...thresholds].sort((a, b) => a.extraPercent - b.extraPercent);
-  
-  // Find the highest threshold that we've exceeded
-  let bonus = 0;
-  for (const threshold of sortedThresholds) {
-    if (extraPercent >= threshold.extraPercent) {
-      bonus = threshold.bonus;
-    } else {
-      break;
-    }
-  }
-
-  return {
-    bonus: Math.min(bonus, maxBonus),
-    extraPercent,
-  };
+  return { bonus, extraPercent };
 }
 
 /**
  * Calculate complete score breakdown for a level completion.
+ * All values are in Overtime hours (small integers).
  */
 export function calculateScoreBreakdown(
   usedFences: number,
@@ -114,30 +73,13 @@ export function calculateScoreBreakdown(
   requiredRemovedRatio: number,
   config: ScoringConfig
 ): ScoreBreakdown {
-  const { bonus: fenceBonus, fencesUnderPar } = calculateFenceBonus(
-    usedFences,
-    parFences,
-    config
-  );
+  const { bonus: fenceBonus, fencesUnderPar } = calculateFenceBonus(usedFences, parFences, config);
+  const { multiplier: penaltyMultiplier, fencesOverPar } = getPenaltyMultiplier(usedFences, parFences, config);
+  const { bonus: spaceBonusRaw, extraPercent } = calculateSpaceBonus(actualRemovedRatio, requiredRemovedRatio, config);
 
-  const { multiplier: penaltyMultiplier, fencesOverPar } = getPenaltyMultiplier(
-    usedFences,
-    parFences,
-    config
-  );
-
-  const { bonus: spaceBonusRaw, extraPercent } = calculateSpaceBonus(
-    actualRemovedRatio,
-    requiredRemovedRatio,
-    config
-  );
-
-  // Apply penalty multiplier to space bonus
-  const spaceBonus = Math.floor(spaceBonusRaw * penaltyMultiplier);
-
-  // Lock bonus is calculated separately in game logic, initialized to 0 here
-  const lockBonus = 0;
-
+  // Apply penalty to space bonus
+  const spaceBonus = penaltyMultiplier > 0 ? spaceBonusRaw : 0;
+  const lockBonus = 0; // Calculated separately in game logic
   const totalBonus = fenceBonus + spaceBonus + lockBonus;
 
   return {
@@ -166,7 +108,6 @@ export function generateScoringPreview(
   actualRemovedRatio: number;
   breakdown: ScoreBreakdown;
 }> {
-  // Simulate different scenarios with varying removed ratios
   const scenarios = [
     { label: 'Par -2, +20% extra', fenceOffset: -2, extraPercent: 0.20 },
     { label: 'Par -1, +15% extra', fenceOffset: -1, extraPercent: 0.15 },
@@ -178,20 +119,7 @@ export function generateScoringPreview(
   return scenarios.map((scenario) => {
     const usedFences = Math.max(1, parFences + scenario.fenceOffset);
     const actualRemovedRatio = requiredRemovedRatio * (1 + scenario.extraPercent);
-
-    const breakdown = calculateScoreBreakdown(
-      usedFences,
-      parFences,
-      actualRemovedRatio,
-      requiredRemovedRatio,
-      config
-    );
-
-    return {
-      label: scenario.label,
-      usedFences,
-      actualRemovedRatio,
-      breakdown,
-    };
+    const breakdown = calculateScoreBreakdown(usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, config);
+    return { label: scenario.label, usedFences, actualRemovedRatio, breakdown };
   });
 }

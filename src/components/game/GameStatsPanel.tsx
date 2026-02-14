@@ -21,7 +21,7 @@ export function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor }: GameS
     { label: 'Fence Speed', value: formatPercent(modifiers.fenceGenerationSpeedMultiplier), changed: modifiers.fenceGenerationSpeedMultiplier !== 1 },
     { label: 'Fence Width', value: formatPercent(modifiers.fenceWidthMultiplier), changed: modifiers.fenceWidthMultiplier !== 1 },
     { label: 'Fence CD', value: formatPercent(modifiers.fenceCooldownMultiplier), changed: modifiers.fenceCooldownMultiplier !== 1 },
-    { label: 'Score Mult.', value: formatPercent(modifiers.scoreMultiplier), changed: modifiers.scoreMultiplier !== 1 },
+    { label: 'OT Mult.', value: formatPercent(modifiers.scoreMultiplier), changed: modifiers.scoreMultiplier !== 1 },
     { label: 'Instant Fences', value: formatBonus(modifiers.instantFencesPerMap), changed: modifiers.instantFencesPerMap !== 0 },
     { label: 'Concurrent', value: formatBonus(modifiers.additionalConcurrentFences), changed: modifiers.additionalConcurrentFences !== 0 },
     { label: 'Bonus Remove', value: `${formatRate(modifiers.bonusRemovalChance)} @ ${formatRate(modifiers.bonusRemovalAmount)}`, changed: modifiers.bonusRemovalChance > 0 },

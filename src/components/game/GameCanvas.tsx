@@ -1069,11 +1069,11 @@ export function GameCanvas({
           // Move to center of region
           ball.position = { ...ballRegion.centroid };
           
-          // Award lock bonus: 50 * (lockedCount + 1) = 50, 100, 150...
-          game.lockedBallsCount += 1;
-          const thisLockBonus = 50 * game.lockedBallsCount;
-          game.lockBonus += thisLockBonus;
-          console.log(`[WON] Lock bonus: +${thisLockBonus} (total: ${game.lockBonus})`);
+           // Award lock bonus: +1h per locked ball, capped at 2h total
+           game.lockedBallsCount += 1;
+           const thisLockBonus = 1;
+           game.lockBonus = Math.min(2, game.lockBonus + thisLockBonus);
+           console.log(`[WON] Lock bonus: +${thisLockBonus} (total: ${game.lockBonus})`);
           
           // Update React state for UI display
           setLockedBallsCount(game.lockedBallsCount);
@@ -1117,7 +1117,8 @@ export function GameCanvas({
           percent,
           level.sizeThreshold,
           level.points,
-          activeModifiers.scoreMultiplier
+          activeModifiers.scoreMultiplier,
+          levelNumber
         );
         
         // Remove space bonus since push failed
@@ -1180,7 +1181,8 @@ export function GameCanvas({
         percent,
         level.sizeThreshold,
         level.points,
-        activeModifiers.scoreMultiplier
+        activeModifiers.scoreMultiplier,
+        levelNumber
       );
       
       // Remove space bonus since push failed
@@ -1761,7 +1763,8 @@ export function GameCanvas({
           percent,
           level.sizeThreshold,
           level.points,
-          activeModifiers.scoreMultiplier
+          activeModifiers.scoreMultiplier,
+          levelNumber
         );
         
         onLevelComplete({
@@ -2822,7 +2825,8 @@ export function GameCanvas({
       game.bestRemainingPercent,
       level.sizeThreshold,
       level.points,
-      activeModifiers.scoreMultiplier
+      activeModifiers.scoreMultiplier,
+      levelNumber
     );
 
     setTimeout(() => {

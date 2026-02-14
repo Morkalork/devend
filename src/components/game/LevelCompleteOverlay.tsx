@@ -1,4 +1,4 @@
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 
 interface LevelCompleteOverlayProps {
@@ -26,23 +26,22 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     fencesUnderPar = 0,
     fencesOverPar = 0,
     extraPercent = 0,
-    tierMultiplier = 1,
     lockBonus = 0,
     lockedBallsCount = 0,
+    interestGain = 0,
   } = scoreData;
   
-  const hasNewScoring = fenceBonus !== undefined || spaceBonus !== undefined;
   const isPenalized = penaltyMultiplier < 1 && penaltyMultiplier > 0;
   const isSpaceDisabled = penaltyMultiplier === 0;
-  const hasTierBoost = tierMultiplier > 1;
   const hasLockBonus = lockBonus > 0;
+  const hasInterest = interestGain > 0;
 
   return (
     <>
       {/* Backdrop */}
       <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm" />
       
-      {/* Modal container with inline styles for bulletproof centering */}
+      {/* Modal container */}
       <div 
         className="level-complete-modal fixed z-50 overflow-y-auto"
         style={{
@@ -82,7 +81,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
           {/* Push Failed Warning */}
           {pushFailed && (
             <div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg text-center">
-              <p className="text-warning text-sm font-medium">Push failed! No overcut bonus earned.</p>
+              <p className="text-warning text-sm font-medium">Push failed! No space bonus earned.</p>
             </div>
           )}
 
@@ -116,7 +115,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                     <TrendingUp className="w-3 h-3" />
                     {fencesUnderPar} under par
                   </span>
-                  <span className="font-bold text-success">+{fenceBonus}</span>
+                  <span className="font-bold text-success">+{fenceBonus}h</span>
                 </div>
               )}
               
@@ -150,26 +149,19 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                     {isPenalized && ` (×${penaltyMultiplier})`}
                   </span>
                   <span className={`font-bold ${isSpaceDisabled ? 'text-destructive line-through' : isPenalized ? 'text-warning' : 'text-primary'}`}>
-                    {isSpaceDisabled ? spaceBonusRaw : spaceBonus > 0 ? `+${spaceBonus}` : '—'}
+                    {isSpaceDisabled ? `${spaceBonusRaw}h` : spaceBonus > 0 ? `+${spaceBonus}h` : '—'}
                   </span>
                 </div>
               </div>
             )}
             
             <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-              <span className="text-muted-foreground">Base Points</span>
-              <span className="font-bold text-foreground">{basePoints}</span>
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                Base Overtime
+              </span>
+              <span className="font-bold text-foreground">{basePoints}h</span>
             </div>
-            
-            {overcutBonus > 0 && (
-              <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-warning/30 bg-warning/10 rounded px-2">
-                <span className="text-warning flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Overcut Bonus
-                </span>
-                <span className="font-bold text-warning">+{overcutBonus}</span>
-              </div>
-            )}
             
             {/* Lock Bonus Section */}
             {hasLockBonus && (
@@ -178,7 +170,18 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
                   Balls Locked ({lockedBallsCount})
                 </span>
-                <span className="font-bold text-cyan-400">+{lockBonus}</span>
+                <span className="font-bold text-cyan-400">+{lockBonus}h</span>
+              </div>
+            )}
+            
+            {/* Interest Gain */}
+            {hasInterest && (
+              <div className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
+                <span className="text-primary flex items-center gap-1">
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                  Interest
+                </span>
+                <span className="font-bold text-primary">+{interestGain}h</span>
               </div>
             )}
             
@@ -186,29 +189,18 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             {(fenceBonus > 0 || spaceBonus > 0 || lockBonus > 0) && (
               <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
                 <span className="font-semibold text-foreground">Total Bonus</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{fenceBonus + spaceBonus + lockBonus}</span>
-              </div>
-            )}
-            
-            {/* Tier Boost Display */}
-            {hasTierBoost && (
-              <div className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
-                <span className="text-primary flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Tier Boost
-                </span>
-                <span className="font-bold text-primary">×{tierMultiplier.toFixed(1)}</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{fenceBonus + spaceBonus + lockBonus}h</span>
               </div>
             )}
             
             <div className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
-              <span className="font-semibold text-foreground">Level Score</span>
-              <span className="text-xl sm:text-2xl font-bold text-primary">{levelScore}</span>
+              <span className="font-semibold text-foreground">Overtime Earned</span>
+              <span className="text-xl sm:text-2xl font-bold text-primary">{levelScore}h</span>
             </div>
             
             <div className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
-              <span className="font-semibold text-foreground">Total Score</span>
-              <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{totalScore}</span>
+              <span className="font-semibold text-foreground">Total Overtime</span>
+              <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{totalScore}h</span>
             </div>
           </div>
 

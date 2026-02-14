@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Trophy, Skull, RotateCcw, Home, Sparkles, Hexagon } from 'lucide-react';
+import { Trophy, Skull, RotateCcw, Home, Sparkles, Hexagon, Clock } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { Augment } from '@/types/augment';
 import { CRTBackground } from './CRTBackground';
