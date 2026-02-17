@@ -14,6 +14,11 @@ export interface GameConfig {
     max_speed: number;
     radius_percent: number;
   };
+  fence: {
+    speed_base: number;
+    speed_min: number;
+    speed_per_level: number;
+  };
   gameplay: {
     starting_lives: number;
     max_lives: number;
@@ -33,6 +38,11 @@ const defaultConfig: GameConfig = {
     default_speed: 4.5,
     max_speed: 12,
     radius_percent: 2.5,
+  },
+  fence: {
+    speed_base: 1200,
+    speed_min: 750,
+    speed_per_level: 50,
   },
   gameplay: {
     starting_lives: 3,
@@ -55,6 +65,7 @@ export function useGameConfig() {
           ...parsed,
           visuals: { ...defaultConfig.visuals, ...parsed?.visuals },
           ball: { ...defaultConfig.ball, ...parsed?.ball },
+          fence: { ...defaultConfig.fence, ...parsed?.fence },
           gameplay: { ...defaultConfig.gameplay, ...parsed?.gameplay },
         });
       })

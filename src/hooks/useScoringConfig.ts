@@ -5,29 +5,23 @@ import { ScoringConfig } from '@/types/scoring';
 const defaultConfig: ScoringConfig = {
   scoring: {
     fenceEfficiency: {
-      maxBonus: 30,
+      maxBonus: 1,
       steps: [
-        { fencesUnder: 1, bonus: 5 },
-        { fencesUnder: 2, bonus: 7 },
-        { fencesUnder: 3, bonus: 8 },
-        { fencesUnder: 4, bonus: 10 },
+        { fencesUnder: 1, bonus: 1 },
       ],
     },
     spaceOptimization: {
-      maxBonus: 20,
+      maxBonus: 1,
       thresholds: [
-        { extraPercent: 0.05, bonus: 5 },
-        { extraPercent: 0.10, bonus: 10 },
-        { extraPercent: 0.15, bonus: 14 },
-        { extraPercent: 0.20, bonus: 17 },
-        { extraPercent: 1.00, bonus: 20 },
+        { extraPercent: 0.10, bonus: 1 },
       ],
     },
-    fencePenaltyMultiplier: {
-      overPar0: 1.0,
+    performanceMultiplier: {
+      underPar: 1.0,
+      atPar: 1.0,
       overPar1: 0.75,
-      overPar2: 0.5,
-      overPar3Plus: 0.0,
+      overPar2: 0.6,
+      overPar3Plus: 0.4,
     },
   },
 };
@@ -52,9 +46,9 @@ export function useScoringConfig() {
                 ...defaultConfig.scoring.spaceOptimization,
                 ...parsed.scoring.spaceOptimization,
               },
-              fencePenaltyMultiplier: {
-                ...defaultConfig.scoring.fencePenaltyMultiplier,
-                ...parsed.scoring.fencePenaltyMultiplier,
+              performanceMultiplier: {
+                ...defaultConfig.scoring.performanceMultiplier,
+                ...parsed.scoring.performanceMultiplier,
               },
             },
           });

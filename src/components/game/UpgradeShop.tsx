@@ -9,6 +9,7 @@ interface UpgradeShopProps {
   playerPoints: number;
   upgrades: UpgradeConfig[];
   ownedUpgradeIds: string[];
+  completedLevel: number;
   canPurchase: (upgradeId: string, playerScore: number, ownedIds: string[]) => boolean;
   isLocked: (upgradeId: string, ownedIds: string[]) => boolean;
   onPurchase: (upgradeId: string, price: number) => void;
@@ -31,6 +32,7 @@ export function UpgradeShop({
   playerPoints,
   upgrades,
   ownedUpgradeIds,
+  completedLevel,
   canPurchase,
   isLocked,
   onPurchase,
@@ -47,7 +49,11 @@ export function UpgradeShop({
 
   // Pick random offers once on mount (restock only between levels)
   const [offeredUpgrades] = useState<UpgradeConfig[]>(() => {
-    const available = upgrades.filter(u => !ownedUpgradeIds.includes(u.id));
+    // Filter out owned and upgrades not yet unlocked by level progression
+    const available = upgrades.filter(u =>
+      !ownedUpgradeIds.includes(u.id) &&
+      completedLevel >= (u.unlockLevel ?? 1)
+    );
     const unlocked = available.filter(u => {
       if (!u.prerequisites || u.prerequisites.length === 0) return true;
       return u.prerequisites.every(p => ownedUpgradeIds.includes(p));
@@ -70,15 +76,8 @@ export function UpgradeShop({
     [ownedUpgradeIds, purchasedThisSession]
   );
 
-  // Effective overtime after session purchases
-  const effectiveOvertime = useMemo(() => {
-    let spent = 0;
-    for (const id of purchasedThisSession) {
-      const u = upgrades.find(u => u.id === id);
-      if (u) spent += u.cost;
-    }
-    return playerPoints - spent;
-  }, [playerPoints, purchasedThisSession, upgrades]);
+  // Effective overtime - playerPoints (totalScore) is already reduced by onPurchase
+  const effectiveOvertime = playerPoints;
 
   const handlePurchase = useCallback((upgrade: UpgradeConfig) => {
     if (allOwnedIds.includes(upgrade.id)) return;
@@ -128,6 +127,16 @@ export function UpgradeShop({
           </span>
         </motion.div>
 
+        {/* Level completed */}
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.05 }}
+          className="text-sm text-muted-foreground"
+        >
+          Level {completedLevel} complete
+        </motion.div>
+
         {/* Overtime display */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
@@ -158,8 +167,17 @@ export function UpgradeShop({
               <motion.button
                 key={upgrade.id}
                 initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: index * 0.05 }}
+                animate={purchasable
+                  ? { opacity: [0.8, 1, 0.8], scale: [1, 1.04, 1] }
+                  : { opacity: 1, scale: 1 }
+                }
+                transition={purchasable
+                  ? {
+                      opacity: { duration: 1.8 + index * 0.4, repeat: Infinity, ease: 'easeInOut' },
+                      scale: { duration: 2.2 + index * 0.5, repeat: Infinity, ease: 'easeInOut' },
+                    }
+                  : { delay: index * 0.05 }
+                }
                 onClick={() => handlePurchase(upgrade)}
                 disabled={owned || locked}
                 onMouseEnter={() => setHoveredId(upgrade.id)}
@@ -167,15 +185,16 @@ export function UpgradeShop({
                 whileHover={{ scale: purchasable ? 1.05 : 1 }}
                 whileTap={{ scale: purchasable ? 0.95 : 1 }}
                 className={`
-                  relative w-36 p-3 rounded-lg border-2 transition-all duration-200 text-center
+                  relative w-36 p-3 rounded-lg transition-all duration-200 text-center
+                  ${cantAfford ? 'border-dashed' : ''} border-2
                   ${owned
                     ? 'bg-green-500/20 border-green-500/50'
                     : locked
                       ? 'bg-muted/30 border-muted/30 opacity-40 cursor-not-allowed'
-                      : purchasable 
+                      : purchasable
                         ? `bg-card ${tierColors.border} hover:border-primary cursor-pointer` 
                         : cantAfford
-                          ? `bg-card/50 ${tierColors.border} opacity-60 cursor-pointer`
+                          ? 'bg-card/50 border-muted-foreground/30 opacity-60 cursor-pointer'
                           : 'bg-card/50 border-muted cursor-not-allowed opacity-40'
                   }
                 `}

@@ -8,7 +8,8 @@ upgrades:
     name: Runtime Optimisation
     tier: Junior
     description: Reduce ball speed by 5%.
-    cost: 3
+    cost: 8
+    unlockLevel: 1
     modifiers:
       ballSpeedMultiplier: 0.95
 
@@ -16,7 +17,8 @@ upgrades:
     name: Runtime Optimisation
     tier: Senior
     description: Reduce ball speed by 10%.
-    cost: 5
+    cost: 14
+    unlockLevel: 3
     prerequisites:
       - runtime_optimisation_junior
     modifiers:
@@ -26,7 +28,8 @@ upgrades:
     name: Runtime Optimisation
     tier: Principal
     description: Reduce ball speed by 15%.
-    cost: 9
+    cost: 24
+    unlockLevel: 5
     prerequisites:
       - runtime_optimisation_senior
     modifiers:
@@ -41,7 +44,8 @@ upgrades:
     name: Memory Footprint
     tier: Junior
     description: Reduce ball size by 5%.
-    cost: 3
+    cost: 8
+    unlockLevel: 1
     modifiers:
       ballSizeMultiplier: 0.95
 
@@ -49,7 +53,8 @@ upgrades:
     name: Memory Footprint
     tier: Senior
     description: Reduce ball size by 10%.
-    cost: 5
+    cost: 14
+    unlockLevel: 5
     prerequisites:
       - memory_footprint_junior
     modifiers:
@@ -59,7 +64,8 @@ upgrades:
     name: Memory Footprint
     tier: Principal
     description: Reduce ball size by 15%.
-    cost: 9
+    cost: 24
+    unlockLevel: 10
     prerequisites:
       - memory_footprint_senior
     modifiers:
@@ -74,7 +80,8 @@ upgrades:
     name: Fast Compile
     tier: Junior
     description: Increase fence generation speed by 10%.
-    cost: 3
+    cost: 8
+    unlockLevel: 1
     modifiers:
       fenceGenerationSpeedMultiplier: 1.10
 
@@ -82,7 +89,8 @@ upgrades:
     name: Fast Compile
     tier: Senior
     description: Increase fence generation speed by 20%.
-    cost: 5
+    cost: 14
+    unlockLevel: 5
     prerequisites:
       - fast_compile_junior
     modifiers:
@@ -92,7 +100,8 @@ upgrades:
     name: Fast Compile
     tier: Principal
     description: Increase fence generation speed by 30%.
-    cost: 9
+    cost: 24
+    unlockLevel: 10
     prerequisites:
       - fast_compile_senior
     modifiers:
@@ -107,7 +116,8 @@ upgrades:
     name: Strong Typing
     tier: Junior
     description: Increase fence width by 10%.
-    cost: 3
+    cost: 8
+    unlockLevel: 1
     modifiers:
       fenceWidthMultiplier: 1.10
 
@@ -115,7 +125,8 @@ upgrades:
     name: Strong Typing
     tier: Senior
     description: Increase fence width by 20%.
-    cost: 6
+    cost: 16
+    unlockLevel: 10
     prerequisites:
       - strong_typing_junior
     modifiers:
@@ -125,7 +136,8 @@ upgrades:
     name: Strong Typing
     tier: Principal
     description: Increase fence width by 30%.
-    cost: 10
+    cost: 26
+    unlockLevel: 20
     prerequisites:
       - strong_typing_senior
     modifiers:
@@ -140,7 +152,8 @@ upgrades:
     name: Hot Start
     tier: Senior
     description: First fence in each map generates instantly.
-    cost: 6
+    cost: 16
+    unlockLevel: 5
     modifiers:
       instantFencesPerMap: 1
 
@@ -148,7 +161,8 @@ upgrades:
     name: Hot Start
     tier: Principal
     description: First two fences in each map generate instantly.
-    cost: 10
+    cost: 26
+    unlockLevel: 10
     prerequisites:
       - hot_start_junior
     modifiers:
@@ -158,7 +172,8 @@ upgrades:
     name: Hot Start
     tier: Architect
     description: First three fences in each map generate instantly.
-    cost: 14
+    cost: 36
+    unlockLevel: 20
     prerequisites:
       - hot_start_principal
     modifiers:
@@ -173,7 +188,8 @@ upgrades:
     name: Build Cache
     tier: Junior
     description: Reduce fence cooldown by 10%.
-    cost: 3
+    cost: 8
+    unlockLevel: 3
     modifiers:
       fenceCooldownMultiplier: 0.90
 
@@ -181,7 +197,8 @@ upgrades:
     name: Build Cache
     tier: Senior
     description: Reduce fence cooldown by 20%.
-    cost: 6
+    cost: 16
+    unlockLevel: 8
     prerequisites:
       - build_cache_junior
     modifiers:
@@ -191,7 +208,8 @@ upgrades:
     name: Build Cache
     tier: Principal
     description: Reduce fence cooldown by 30%.
-    cost: 10
+    cost: 26
+    unlockLevel: 12
     prerequisites:
       - build_cache_senior
     modifiers:
@@ -206,7 +224,8 @@ upgrades:
     name: Multithreading
     tier: Principal
     description: Allow one additional fence to be in progress simultaneously.
-    cost: 11
+    cost: 28
+    unlockLevel: 10
     prerequisites:
       - fast_compile_senior
     modifiers:
@@ -221,7 +240,8 @@ upgrades:
     name: Garbage Collector
     tier: Senior
     description: Each fence has a small chance to remove an additional 5% area.
-    cost: 6
+    cost: 16
+    unlockLevel: 10
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.05
@@ -235,7 +255,8 @@ upgrades:
     name: Fault Tolerance
     tier: Junior
     description: Gain 1 extra life.
-    cost: 3
+    cost: 8
+    unlockLevel: 5
     modifiers:
       extraLives: 1
 
@@ -243,7 +264,8 @@ upgrades:
     name: Fault Tolerance
     tier: Senior
     description: Gain 2 extra lives.
-    cost: 7
+    cost: 18
+    unlockLevel: 10
     prerequisites:
       - fault_tolerance_junior
     modifiers:
@@ -253,7 +275,8 @@ upgrades:
     name: Fault Tolerance
     tier: Architect
     description: Gain 3 extra lives.
-    cost: 14
+    cost: 36
+    unlockLevel: 15
     prerequisites:
       - fault_tolerance_senior
     modifiers:
@@ -268,7 +291,8 @@ upgrades:
     name: Performance Bonus
     tier: Junior
     description: Gain 5% more overtime per map.
-    cost: 3
+    cost: 8
+    unlockLevel: 2
     modifiers:
       scoreMultiplier: 1.05
 
@@ -276,7 +300,8 @@ upgrades:
     name: Performance Bonus
     tier: Senior
     description: Gain 10% more overtime per map.
-    cost: 6
+    cost: 16
+    unlockLevel: 5
     prerequisites:
       - performance_bonus_junior
     modifiers:
@@ -286,7 +311,8 @@ upgrades:
     name: Performance Bonus
     tier: Principal
     description: Gain 15% more overtime per map.
-    cost: 10
+    cost: 26
+    unlockLevel: 8
     prerequisites:
       - performance_bonus_senior
     modifiers:
@@ -301,7 +327,8 @@ upgrades:
     name: Venture Capital
     tier: Senior
     description: 5% interest on unused overtime between maps.
-    cost: 7
+    cost: 18
+    unlockLevel: 6
     modifiers:
       scoreInterestRate: 0.05
 
@@ -309,7 +336,8 @@ upgrades:
     name: Venture Capital
     tier: Principal
     description: 10% interest on unused overtime between maps.
-    cost: 11
+    cost: 28
+    unlockLevel: 7
     prerequisites:
       - venture_capital_senior
     modifiers:
@@ -319,7 +347,8 @@ upgrades:
     name: Venture Capital
     tier: Architect
     description: 15% interest on unused overtime between maps.
-    cost: 16
+    cost: 40
+    unlockLevel: 11
     prerequisites:
       - venture_capital_principal
     modifiers:
@@ -334,7 +363,8 @@ upgrades:
     name: Aggressive Refactor
     tier: Senior
     description: Each fence reduces an additional 5% of the map.
-    cost: 6
+    cost: 16
+    unlockLevel: 4
     modifiers:
       mapReductionPerFenceBonus: 0.05
 
@@ -342,7 +372,8 @@ upgrades:
     name: Aggressive Refactor
     tier: Principal
     description: Each fence reduces an additional 10% of the map.
-    cost: 10
+    cost: 26
+    unlockLevel: 8
     prerequisites:
       - aggressive_refactor_senior
     modifiers:
@@ -352,7 +383,8 @@ upgrades:
     name: Aggressive Refactor
     tier: Architect
     description: Each fence reduces an additional 15% of the map.
-    cost: 15
+    cost: 38
+    unlockLevel: 13
     prerequisites:
       - aggressive_refactor_principal
     modifiers:
@@ -367,7 +399,8 @@ upgrades:
     name: System Architect
     tier: Architect
     description: Gain one additional shop item slot.
-    cost: 14
+    cost: 36
+    unlockLevel: 4
     modifiers:
       extraShopItems: 1
 
@@ -375,6 +408,7 @@ upgrades:
     name: Augmentation Wizard
     tier: Wizard
     description: Gain +1 augmentation point.
-    cost: 22
+    cost: 55
+    unlockLevel: 10
     modifiers:
       extraAugmentationPoints: 1

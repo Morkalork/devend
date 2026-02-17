@@ -9,20 +9,20 @@ interface LevelCompleteOverlayProps {
 }
 
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor }: LevelCompleteOverlayProps) {
-  const { 
-    levelNumber, 
-    levelId, 
-    cutCount, 
-    expectedCuts, 
-    basePoints, 
-    levelScore, 
-    remainingPercent, 
-    overcutBonus = 0, 
+  const {
+    levelNumber,
+    levelId,
+    cutCount,
+    expectedCuts,
+    basePoints,
+    levelScore,
+    remainingPercent,
+    overcutBonus = 0,
     pushFailed = false,
-    fenceBonus = 0,
+    underParBonus = 0,
     spaceBonus = 0,
     spaceBonusRaw = 0,
-    penaltyMultiplier = 1,
+    performanceMultiplier = 1,
     fencesUnderPar = 0,
     fencesOverPar = 0,
     extraPercent = 0,
@@ -30,19 +30,20 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     lockedBallsCount = 0,
     interestGain = 0,
   } = scoreData;
-  
-  const isPenalized = penaltyMultiplier < 1 && penaltyMultiplier > 0;
-  const isSpaceDisabled = penaltyMultiplier === 0;
+
+  const isOverPar = fencesOverPar > 0;
+  const isSpaceDisabled = fencesOverPar >= 3;
   const hasLockBonus = lockBonus > 0;
   const hasInterest = interestGain > 0;
+  const scaledBase = Math.floor(basePoints * performanceMultiplier);
 
   return (
     <>
       {/* Backdrop */}
       <div className="fixed inset-0 z-50 bg-background/90 backdrop-blur-sm" />
-      
+
       {/* Modal container */}
-      <div 
+      <div
         className="level-complete-modal fixed z-50 overflow-y-auto"
         style={{
           bottom: '1rem',
@@ -65,7 +66,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             }
           }
         `}</style>
-        
+
         <div className="bg-card border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
@@ -91,12 +92,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <span className="text-muted-foreground">Level</span>
               <span className="font-bold text-foreground">{levelNumber}</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground">Remaining</span>
               <span className="font-bold text-foreground">{remainingPercent}%</span>
             </div>
-            
+
             {/* Fence Efficiency Section */}
             <div className="py-2 border-b border-border">
               <div className="flex justify-between items-center mb-1">
@@ -108,17 +109,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   {cutCount} / {expectedCuts}
                 </span>
               </div>
-              
+
               {fencesUnderPar > 0 && (
                 <div className="flex justify-between items-center text-sm mt-1">
                   <span className="text-success flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" />
                     {fencesUnderPar} under par
                   </span>
-                  <span className="font-bold text-success">+{fenceBonus}h</span>
+                  <span className="font-bold text-success">+{underParBonus}h</span>
                 </div>
               )}
-              
+
               {fencesOverPar > 0 && (
                 <div className="flex justify-between items-center text-sm mt-1">
                   <span className="text-destructive flex items-center gap-1">
@@ -126,12 +127,13 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                     {fencesOverPar} over par
                   </span>
                   <span className="text-destructive text-xs">
-                    {isSpaceDisabled ? 'Space bonus disabled' : `Space ×${penaltyMultiplier}`}
+                    Base x{performanceMultiplier}
+                    {isSpaceDisabled && ' · No space bonus'}
                   </span>
                 </div>
               )}
             </div>
-            
+
             {/* Space Optimization Section */}
             {extraPercent > 0 && (
               <div className="py-2 border-b border-border">
@@ -142,27 +144,32 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   </span>
                   <span className="font-bold text-foreground">+{(extraPercent * 100).toFixed(0)}%</span>
                 </div>
-                
+
                 <div className="flex justify-between items-center text-sm">
-                  <span className={isPenalized ? 'text-warning' : 'text-primary'}>
+                  <span className={isSpaceDisabled ? 'text-destructive' : 'text-primary'}>
                     Space Bonus
-                    {isPenalized && ` (×${penaltyMultiplier})`}
                   </span>
-                  <span className={`font-bold ${isSpaceDisabled ? 'text-destructive line-through' : isPenalized ? 'text-warning' : 'text-primary'}`}>
+                  <span className={`font-bold ${isSpaceDisabled ? 'text-destructive line-through' : 'text-primary'}`}>
                     {isSpaceDisabled ? `${spaceBonusRaw}h` : spaceBonus > 0 ? `+${spaceBonus}h` : '—'}
                   </span>
                 </div>
               </div>
             )}
-            
+
+            {/* Base Overtime with performance multiplier */}
             <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 Base Overtime
+                {isOverPar && (
+                  <span className="text-destructive text-xs">(x{performanceMultiplier})</span>
+                )}
               </span>
-              <span className="font-bold text-foreground">{basePoints}h</span>
+              <span className={`font-bold ${isOverPar ? 'text-destructive' : 'text-foreground'}`}>
+                {scaledBase}h
+              </span>
             </div>
-            
+
             {/* Lock Bonus Section */}
             {hasLockBonus && (
               <div className="flex justify-between items-center py-2 border-b border-cyan-500/30 bg-cyan-500/10 rounded px-2">
@@ -173,7 +180,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <span className="font-bold text-cyan-400">+{lockBonus}h</span>
               </div>
             )}
-            
+
             {/* Interest Gain */}
             {hasInterest && (
               <div className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
@@ -184,20 +191,20 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <span className="font-bold text-primary">+{interestGain}h</span>
               </div>
             )}
-            
+
             {/* Total Bonus Summary */}
-            {(fenceBonus > 0 || spaceBonus > 0 || lockBonus > 0) && (
+            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0) && (
               <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
                 <span className="font-semibold text-foreground">Total Bonus</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{fenceBonus + spaceBonus + lockBonus}h</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus}h</span>
               </div>
             )}
-            
+
             <div className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">Overtime Earned</span>
               <span className="text-xl sm:text-2xl font-bold text-primary">{levelScore}h</span>
             </div>
-            
+
             <div className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">Total Overtime</span>
               <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{totalScore}h</span>

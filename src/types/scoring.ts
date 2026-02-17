@@ -20,8 +20,9 @@ export interface ScoringConfig {
       maxBonus: number;
       thresholds: SpaceThreshold[];
     };
-    fencePenaltyMultiplier: {
-      overPar0: number;
+    performanceMultiplier: {
+      underPar: number;
+      atPar: number;
       overPar1: number;
       overPar2: number;
       overPar3Plus: number;
@@ -30,15 +31,15 @@ export interface ScoringConfig {
 }
 
 export interface ScoreBreakdown {
-  fenceBonus: number;
+  underParBonus: number;
   spaceBonus: number;
-  spaceBonusRaw: number; // Before penalty multiplier
-  penaltyMultiplier: number;
+  spaceBonusRaw: number; // Before performance gating
+  performanceMultiplier: number;
   totalBonus: number;
   fencesUnderPar: number;
   fencesOverPar: number;
   extraPercent: number;
-  lockBonus: number; // Bonus from locking balls (50 + 100 + 150...)
+  lockBonus: number; // Bonus from locking balls
 }
 
 export interface ScoringPreviewScenario {

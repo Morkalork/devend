@@ -92,7 +92,6 @@ import {
   computeBoardRect,
   screenToWorld,
   isPointInBoard,
-  isPointInWorldBounds,
 } from "@/lib/boardConstants";
 
 export interface GameStateInfo {
@@ -119,6 +118,9 @@ interface GameCanvasProps {
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
   canvasOpacity?: number;
+  fenceSpeedBase?: number;
+  fenceSpeedMin?: number;
+  fenceSpeedPerLevel?: number;
   regionColor?: string; // hex color with #
   accentColor?: string; // hex color with #
 }
@@ -134,9 +136,9 @@ const BALL_WON_REGION_THRESHOLD = 5; // Ball is WON if its region is <= this % o
 const WON_BALL_SPIN_SPEED = 8; // Radians per second for won ball spin
 
 // Difficulty curve: wall speed decreases per level (slower = harder)
-function getWallSpeedBase(levelIndex: number): number {
+function getWallSpeedBase(levelIndex: number, base = 1200, min = 750, perLevel = 50): number {
   // World units per second
-  return Math.max(750, Math.min(1200, 1200 - (levelIndex - 1) * 50));
+  return Math.max(min, Math.min(base, base - (levelIndex - 1) * perLevel));
 }
 
 // Difficulty curve: ball speed increases per level (faster = harder)
@@ -225,6 +227,9 @@ export function GameCanvas({
   tutorialStep = "completed",
   onTutorialCutSuccess,
   canvasOpacity = 0.9,
+  fenceSpeedBase = 1200,
+  fenceSpeedMin = 750,
+  fenceSpeedPerLevel = 50,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
 }: GameCanvasProps) {
@@ -1122,7 +1127,7 @@ export function GameCanvas({
         );
         
         // Remove space bonus since push failed
-        const adjustedLevelScore = levelScore - breakdown.spaceBonus;
+        const adjustedLevelScore = Math.max(0, levelScore - breakdown.spaceBonus);
 
         onLevelComplete({
           levelNumber,
@@ -1134,10 +1139,10 @@ export function GameCanvas({
           remainingPercent: percent,
           overcutBonus: 0,
           thresholdPercent: level.sizeThreshold,
-          fenceBonus: breakdown.fenceBonus,
+          underParBonus: breakdown.underParBonus,
           spaceBonus: 0,
           spaceBonusRaw: breakdown.spaceBonusRaw,
-          penaltyMultiplier: 0,
+          performanceMultiplier: breakdown.performanceMultiplier,
           fencesUnderPar: breakdown.fencesUnderPar,
           fencesOverPar: breakdown.fencesOverPar,
           extraPercent: breakdown.extraPercent,
@@ -1199,10 +1204,10 @@ export function GameCanvas({
         overcutBonus: 0,
         thresholdPercent: level.sizeThreshold,
         pushFailed: true,
-        fenceBonus: breakdown.fenceBonus,
+        underParBonus: breakdown.underParBonus,
         spaceBonus: 0,
         spaceBonusRaw: breakdown.spaceBonusRaw,
-        penaltyMultiplier: 0,
+        performanceMultiplier: breakdown.performanceMultiplier,
         fencesUnderPar: breakdown.fencesUnderPar,
         fencesOverPar: breakdown.fencesOverPar,
         extraPercent: breakdown.extraPercent,
@@ -1628,7 +1633,7 @@ export function GameCanvas({
         id: generateWallId(),
         start: { ...wall.startPoint },
         end: { ...wall.endPoint },
-        thickness: WALL_THICKNESS,
+        thickness: wall.thickness,
       };
       game.walls.push(newWall);
 
@@ -1644,10 +1649,10 @@ export function GameCanvas({
       // ============================================================
       if (game.spaceGrid) {
         const removedCells = rasterizeCutToGrid(
-          game.spaceGrid, 
-          wall.startPoint, 
-          wall.endPoint, 
-          WALL_THICKNESS
+          game.spaceGrid,
+          wall.startPoint,
+          wall.endPoint,
+          wall.thickness
         );
         console.log("[GRID] Cut rasterized, removed", removedCells.length, "cells");
 
@@ -1776,10 +1781,10 @@ export function GameCanvas({
           levelScore: levelScore + game.lockBonus,
           remainingPercent: percent,
           thresholdPercent: level.sizeThreshold,
-          fenceBonus: breakdown.fenceBonus,
+          underParBonus: breakdown.underParBonus,
           spaceBonus: breakdown.spaceBonus,
           spaceBonusRaw: breakdown.spaceBonusRaw,
-          penaltyMultiplier: breakdown.penaltyMultiplier,
+          performanceMultiplier: breakdown.performanceMultiplier,
           fencesUnderPar: breakdown.fencesUnderPar,
           fencesOverPar: breakdown.fencesOverPar,
           extraPercent: breakdown.extraPercent,
@@ -1826,7 +1831,7 @@ export function GameCanvas({
       }
 
       // Calculate wall speed (world units per second)
-      const wallSpeedBase = getWallSpeedBase(levelNumber);
+      const wallSpeedBase = getWallSpeedBase(levelNumber, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel);
       const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier;
 
       const maxSegmentLength = vec2Distance(wall.targetStart, wall.targetEnd);
@@ -2137,27 +2142,28 @@ export function GameCanvas({
       // User-drawn walls are clipped against obstacles (no fences inside obstacles)
       ctx.save();
       ctx.strokeStyle = accentColor; // Dynamic accent color
-      ctx.lineWidth = WALL_THICKNESS * scale;
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
       ctx.shadowColor = accentColor;
       ctx.shadowBlur = 6 * scale;
-      
+
       const obstacles = game.obstaclePolygons;
-      
+
       for (const w of walls) {
+        const wallLineWidth = w.thickness * scale;
+        ctx.lineWidth = wallLineWidth;
+
         // Clip user-drawn walls AND board edges against obstacles
         // Only obstacle edges themselves should render as-is (they define the obstacle boundary)
-        const shouldClip = obstacles.length > 0 && 
+        const shouldClip = obstacles.length > 0 &&
           (w.id.startsWith("wall-") || w.id.startsWith("board-"));
-        
+
         if (shouldClip) {
           // Clip wall segment against all obstacles
           const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
           for (const seg of segments) {
             const startScreen = worldToScreen(seg.start.x, seg.start.y);
             const endScreen = worldToScreen(seg.end.x, seg.end.y);
-            // Use impact-aware rendering for clipped segments
             renderWallWithEffects(
               ctx,
               startScreen,
@@ -2166,7 +2172,7 @@ export function GameCanvas({
               seg.end,
               scale,
               accentColor,
-              WALL_THICKNESS * scale
+              wallLineWidth
             );
           }
         } else {
@@ -2181,7 +2187,7 @@ export function GameCanvas({
             w.end,
             scale,
             accentColor,
-            WALL_THICKNESS * scale
+            wallLineWidth
           );
         }
       }
@@ -2237,9 +2243,10 @@ export function GameCanvas({
             ctx.save();
             ctx.globalAlpha = 0.15;
 
+            const previewThickness = WALL_THICKNESS * activeModifiers.fenceWidthMultiplier;
             // Draw white outline for visibility
             ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = (WALL_THICKNESS + 8) * scale;
+            ctx.lineWidth = (previewThickness + 8) * scale;
             ctx.lineCap = "round";
             const negScreen = worldToScreen(previewStart.x, previewStart.y);
             const posScreen = worldToScreen(previewEnd.x, previewEnd.y);
@@ -2250,7 +2257,7 @@ export function GameCanvas({
 
             // Draw accent-colored center (same style as active wall)
             ctx.strokeStyle = accentColor;
-            ctx.lineWidth = (WALL_THICKNESS + 4) * scale;
+            ctx.lineWidth = (previewThickness + 4) * scale;
             ctx.beginPath();
             ctx.moveTo(negScreen.x, negScreen.y);
             ctx.lineTo(posScreen.x, posScreen.y);
@@ -2683,25 +2690,11 @@ export function GameCanvas({
 
       const { screenX, screenY } = getCanvasCoords(e);
 
-      // Cancel swipe if pointer moves outside the board
-      if (!isPointInBoard(screenX, screenY, game.boardRect)) {
-        game.swipeStart = null;
-        game.swipeRegionId = null;
-        game.currentSwipePos = null;
-        setIsPlayerDragging(false);
-        return;
-      }
-
+      // Convert to world coordinates, clamping to board bounds
+      // (don't cancel the swipe if the pointer drifts slightly outside)
       const worldPos = screenToWorld(screenX, screenY, game.boardRect);
-
-      // Also ensure world position is within bounds
-      if (!isPointInWorldBounds(worldPos.x, worldPos.y)) {
-        game.swipeStart = null;
-        game.swipeRegionId = null;
-        game.currentSwipePos = null;
-        setIsPlayerDragging(false);
-        return;
-      }
+      worldPos.x = Math.max(0, Math.min(BOARD_WIDTH, worldPos.x));
+      worldPos.y = Math.max(0, Math.min(BOARD_HEIGHT, worldPos.y));
 
       // Just update the current position - wall creation happens on pointer up
       game.currentSwipePos = worldPos;
@@ -2767,20 +2760,27 @@ export function GameCanvas({
 
           // Only create wall if we found valid intersections in both directions
           if (targetEnd && targetStart) {
+            game.wallCount += 1;
+            setCutCount(game.wallCount);
+
+            // Check if this fence should be instant (Hot Start upgrade)
+            const isInstant = game.wallCount <= activeModifiers.instantFencesPerMap;
+
             game.activeWall = {
               origin: { ...game.swipeStart },
               direction,
-              startPoint: { ...game.swipeStart },
-              endPoint: { ...game.swipeStart },
+              startPoint: isInstant ? { ...targetStart } : { ...game.swipeStart },
+              endPoint: isInstant ? { ...targetEnd } : { ...game.swipeStart },
               targetStart,
               targetEnd,
-              thickness: WALL_THICKNESS,
-              isComplete: false,
+              thickness: WALL_THICKNESS * activeModifiers.fenceWidthMultiplier,
+              isComplete: isInstant,
               activeRegionId: game.swipeRegionId!,
             };
 
-            game.wallCount += 1;
-            setCutCount(game.wallCount);
+            if (isInstant) {
+              game.wallCompleteTime = performance.now();
+            }
           }
         }
       }
@@ -2840,10 +2840,10 @@ export function GameCanvas({
         remainingPercent: game.bestRemainingPercent,
         overcutBonus: 0, // Legacy field - now handled by spaceBonus
         thresholdPercent: level.sizeThreshold,
-        fenceBonus: breakdown.fenceBonus,
+        underParBonus: breakdown.underParBonus,
         spaceBonus: breakdown.spaceBonus,
         spaceBonusRaw: breakdown.spaceBonusRaw,
-        penaltyMultiplier: breakdown.penaltyMultiplier,
+        performanceMultiplier: breakdown.performanceMultiplier,
         fencesUnderPar: breakdown.fencesUnderPar,
         fencesOverPar: breakdown.fencesOverPar,
         extraPercent: breakdown.extraPercent,

@@ -34,7 +34,6 @@ const CONFIG = {
   minLifetime: 6000,
   maxLifetime: 15000,
   fadeSpeed: 0.02,
-  parallaxRange: 0.15,
   baseOpacity: 0.08,
   maxOpacity: 0.18,
   scrollSpeed: 0.005, // Much slower than the code layer for depth
@@ -43,7 +42,6 @@ const CONFIG = {
 export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blocksRef = useRef<MemoryBlock[]>([]);
-  const mouseRef = useRef({ x: 0.5, y: 0.5 });
   const frameRef = useRef<number>(0);
   const lastSpawnRef = useRef<number>(0);
   const idCounterRef = useRef<number>(0);
@@ -96,19 +94,11 @@ export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxL
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseRef.current = {
-        x: e.clientX / window.innerWidth,
-        y: e.clientY / window.innerHeight,
-      };
-    };
-
     const handleResize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('resize', handleResize);
     handleResize();
 
@@ -139,8 +129,8 @@ export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxL
       blocksRef.current = blocksRef.current.filter(block => {
         block.lifetime += dt;
 
-        // Move upward (scroll effect at half speed of code layer)
-        block.y -= CONFIG.scrollSpeed * dt * 0.1;
+        // Move upward (scroll effect at half speed of code layer, varied by depth)
+        block.y -= CONFIG.scrollSpeed * dt * 0.1 * block.parallaxFactor;
         
         // Respawn at bottom when scrolled off top
         if (block.y < -10) {
@@ -166,12 +156,8 @@ export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxL
           }
         }
 
-        // Parallax offset
-        const parallaxX = (mouseRef.current.x - 0.5) * CONFIG.parallaxRange * block.parallaxFactor * canvas.width;
-        const parallaxY = (mouseRef.current.y - 0.5) * CONFIG.parallaxRange * block.parallaxFactor * canvas.height;
-
-        const screenX = (block.x / 100) * canvas.width + parallaxX;
-        const screenY = (block.y / 100) * canvas.height + parallaxY;
+        const screenX = (block.x / 100) * canvas.width;
+        const screenY = (block.y / 100) * canvas.height;
 
         // Render based on type
         ctx.globalAlpha = block.opacity;
@@ -226,7 +212,6 @@ export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxL
 
     return () => {
       cancelAnimationFrame(frameRef.current);
-      window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('resize', handleResize);
     };
   }, [accentColor, createBlock]);

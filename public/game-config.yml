@@ -24,6 +24,15 @@ ball:
   max_speed: 12
   radius_percent: 2.5  # As percentage of board size
 
+# Fence Settings
+fence:
+  # Base generation speed at level 1 (world units per second)
+  speed_base: 800
+  # Minimum generation speed at highest levels
+  speed_min: 750
+  # Speed reduction per level
+  speed_per_level: 50
+
 # Gameplay Settings
 gameplay:
   starting_lives: 3

@@ -262,10 +262,10 @@ const Index = () => {
     // No tier multiplier - overtime values are already tight
     const levelOvertime = scoreData.levelScore;
     
-    // Apply interest on unused overtime (capped at 3h per map)
+    // Apply interest on unused overtime (capped at 8h per map)
     let interestGain = 0;
     if (activeModifiers.scoreInterestRate > 0) {
-      interestGain = Math.min(3, Math.floor(totalScore * activeModifiers.scoreInterestRate));
+      interestGain = Math.min(8, Math.floor(totalScore * activeModifiers.scoreInterestRate));
     }
     
     const newTotalScore = totalScore + levelOvertime + interestGain;
@@ -612,6 +612,7 @@ function IndexContent({
           playerPoints={totalScore}
           upgrades={upgrades}
           ownedUpgradeIds={ownedUpgradeIds}
+          completedLevel={currentLevelIndex + 1}
           canPurchase={canPurchaseUpgrade}
           isLocked={isUpgradeLocked}
           onPurchase={handlePurchaseUpgrade}

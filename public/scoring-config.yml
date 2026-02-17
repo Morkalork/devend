@@ -1,8 +1,8 @@
 # Overtime Scoring Configuration
-# Values are in overtime hours (small integers).
+# Values are in overtime hours.
 
 scoring:
-  # Fence Efficiency Bonus
+  # Under-Par Bonus
   # +1h if any fences under par
   fenceEfficiency:
     maxBonus: 1
@@ -12,16 +12,18 @@ scoring:
 
   # Space Optimization Bonus
   # +1h if removed 10%+ more than required
+  # Disabled when 3+ over par
   spaceOptimization:
     maxBonus: 1
     thresholds:
       - extraPercent: 0.10
         bonus: 1
 
-  # Fence Penalty Multiplier
-  # Reduces space bonus when player exceeds par fences
-  fencePenaltyMultiplier:
-    overPar0: 1.0      # At or under par: full space bonus
-    overPar1: 0.5      # 1-2 over par: halved
-    overPar2: 0.5      # 1-2 over par: halved
-    overPar3Plus: 0.0  # 3+ over par: no space bonus
+  # Performance Multiplier
+  # Scales base points based on fences vs par
+  performanceMultiplier:
+    underPar: 1.0     # At or under par: full base
+    atPar: 1.0        # At par: full base
+    overPar1: 0.75    # 1 over par
+    overPar2: 0.6     # 2 over par
+    overPar3Plus: 0.4  # 3+ over par: also disables space bonus

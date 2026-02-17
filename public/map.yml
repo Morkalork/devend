@@ -2,7 +2,7 @@ levels:
   - id: level-1
     sizeThreshold: 40
     expectedCuts: 3
-    points: 1
+    points: 5
     variety: 0
     balls:
       - id: ball-1
@@ -15,7 +15,7 @@ levels:
   - id: level-2
     sizeThreshold: 40
     expectedCuts: 5
-    points: 2
+    points: 10
     variety: 3
     balls:
       - id: ball-1
@@ -49,7 +49,7 @@ levels:
   - id: level-3
     sizeThreshold: 35
     expectedCuts: 6
-    points: 2
+    points: 10
     variety: 5
     balls:
       - id: ball-1
@@ -76,7 +76,7 @@ levels:
   - id: level-4
     sizeThreshold: 30
     expectedCuts: 8
-    points: 3
+    points: 15
     variety: 5
     balls:
       - id: ball-1
@@ -110,7 +110,7 @@ levels:
   - id: level-5
     sizeThreshold: 15
     expectedCuts: 10
-    points: 3
+    points: 15
     variety: 8
     balls:
       - id: ball-1
@@ -174,17 +174,17 @@ levels:
   - id: level-6
     sizeThreshold: 30
     expectedCuts: 12
-    points: 4
+    points: 20
     variety: 10
     balls:
       - id: ball-1
-        initialSpeed: 210
+        initialSpeed: 150
         topSpeed: 420
         color: ff3366
         startX: 200
         startY: 200
       - id: ball-2
-        initialSpeed: 203
+        initialSpeed: 175
         topSpeed: 413
         color: 33ff99
         startX: 700
@@ -208,17 +208,17 @@ levels:
   - id: level-7
     sizeThreshold: 20
     expectedCuts: 14
-    points: 4
+    points: 20
     variety: 10
     balls:
       - id: ball-1
-        initialSpeed: 218
+        initialSpeed: 180
         topSpeed: 435
         color: ff9900
         startX: 150
         startY: 450
       - id: ball-2
-        initialSpeed: 210
+        initialSpeed: 185
         topSpeed: 428
         color: 0099ff
         startX: 750
@@ -240,22 +240,16 @@ levels:
   - id: level-8
     sizeThreshold: 25
     expectedCuts: 10
-    points: 5
+    points: 25
     variety: 12
     balls:
       - id: ball-1
-        initialSpeed: 202
+        initialSpeed: 180
         topSpeed: 408
         color: ff0055
         startX: 187
         startY: 171
       - id: ball-2
-        initialSpeed: 192
-        topSpeed: 398
-        color: 00ff88
-        startX: 738
-        startY: 170
-      - id: ball-3
         initialSpeed: 182
         topSpeed: 389
         color: 00aaff
@@ -273,17 +267,17 @@ levels:
   - id: level-9
     sizeThreshold: 15
     expectedCuts: 16
-    points: 5
+    points: 25
     variety: 15
     balls:
       - id: ball-1
-        initialSpeed: 225
+        initialSpeed: 200
         topSpeed: 450
         color: ff0066
         startX: 450
         startY: 150
       - id: ball-2
-        initialSpeed: 218
+        initialSpeed: 190
         topSpeed: 443
         color: 66ff00
         startX: 200
@@ -325,23 +319,23 @@ levels:
   - id: level-10
     sizeThreshold: 12
     expectedCuts: 18
-    points: 5
+    points: 25
     variety: 15
     balls:
       - id: ball-1
-        initialSpeed: 233
+        initialSpeed: 205
         topSpeed: 465
         color: cc00ff
         startX: 250
         startY: 250
       - id: ball-2
-        initialSpeed: 225
+        initialSpeed: 160
         topSpeed: 458
         color: 00ffcc
         startX: 650
         startY: 250
       - id: ball-3
-        initialSpeed: 218
+        initialSpeed: 120
         topSpeed: 450
         color: ffcc00
         startX: 450
@@ -357,7 +351,7 @@ levels:
   - id: level-11
     sizeThreshold: 10
     expectedCuts: 20
-    points: 6
+    points: 30
     variety: 18
     balls:
       - id: ball-1
@@ -396,7 +390,7 @@ levels:
   - id: level-12
     sizeThreshold: 10
     expectedCuts: 22
-    points: 6
+    points: 30
     variety: 20
     balls:
       - id: ball-1
@@ -440,7 +434,7 @@ levels:
   - id: level-13
     sizeThreshold: 8
     expectedCuts: 24
-    points: 7
+    points: 35
     variety: 25
     balls:
       - id: ball-1
@@ -498,7 +492,7 @@ levels:
   - id: level-14
     sizeThreshold: 8
     expectedCuts: 26
-    points: 7
+    points: 35
     variety: 25
     balls:
       - id: ball-1
@@ -556,7 +550,7 @@ levels:
   - id: level-15
     sizeThreshold: 5
     expectedCuts: 28
-    points: 8
+    points: 40
     variety: 30
     balls:
       - id: ball-1
@@ -618,7 +612,7 @@ levels:
   - id: level-16
     sizeThreshold: 5
     expectedCuts: 30
-    points: 8
+    points: 40
     variety: 35
     balls:
       - id: ball-1

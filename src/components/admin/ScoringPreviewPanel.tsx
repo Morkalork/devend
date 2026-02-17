@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { LevelConfig } from '@/types/level';
 import { useScoringConfig } from '@/hooks/useScoringConfig';
-import { generateScoringPreview, calculateScoreBreakdown } from '@/lib/scoring';
+import { generateScoringPreview } from '@/lib/scoring';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 
 interface ScoringPreviewPanelProps {
@@ -11,18 +11,13 @@ interface ScoringPreviewPanelProps {
 export function ScoringPreviewPanel({ level }: ScoringPreviewPanelProps) {
   const { config, loading } = useScoringConfig();
 
-  // Calculate required removed ratio from size threshold
-  // sizeThreshold is the % that must REMAIN, so required removed = (100 - sizeThreshold) / 100
   const requiredRemovedRatio = (100 - level.sizeThreshold) / 100;
   const parFences = level.expectedCuts;
+  const basePoints = level.points;
 
   const preview = useMemo(() => {
-    return generateScoringPreview(parFences, requiredRemovedRatio, config);
-  }, [parFences, requiredRemovedRatio, config]);
-
-  const maxFenceBonus = config.scoring.fenceEfficiency.maxBonus;
-  const maxSpaceBonus = config.scoring.spaceOptimization.maxBonus;
-  const maxTotal = maxFenceBonus + maxSpaceBonus;
+    return generateScoringPreview(parFences, requiredRemovedRatio, config, basePoints);
+  }, [parFences, requiredRemovedRatio, config, basePoints]);
 
   if (loading) {
     return (
@@ -39,35 +34,27 @@ export function ScoringPreviewPanel({ level }: ScoringPreviewPanelProps) {
       </h3>
 
       {/* Level Info */}
-      <div className="grid grid-cols-2 gap-2 text-xs mb-4 p-2 bg-muted/50 rounded">
+      <div className="grid grid-cols-3 gap-2 text-xs mb-4 p-2 bg-muted/50 rounded">
         <div>
-          <span className="text-muted-foreground">Par Fences:</span>
+          <span className="text-muted-foreground">Par:</span>
           <span className="ml-1 font-mono font-bold">{parFences}</span>
         </div>
         <div>
-          <span className="text-muted-foreground">Min Removed:</span>
+          <span className="text-muted-foreground">Base:</span>
+          <span className="ml-1 font-mono font-bold">{basePoints}h</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Remove:</span>
           <span className="ml-1 font-mono font-bold">{(requiredRemovedRatio * 100).toFixed(0)}%</span>
-        </div>
-      </div>
-
-      {/* Max Bonus Display */}
-      <div className="mb-3 p-2 bg-primary/10 rounded text-xs">
-        <div className="flex justify-between items-center">
-          <span className="text-muted-foreground">Max Possible Bonus:</span>
-          <span className="font-bold text-primary">{maxTotal}</span>
-        </div>
-        <div className="flex gap-2 mt-1 text-[10px]">
-          <span className="text-muted-foreground">Fence: {maxFenceBonus}</span>
-          <span className="text-muted-foreground">Space: {maxSpaceBonus}</span>
         </div>
       </div>
 
       {/* Scenario Table */}
       <div className="space-y-2">
         {preview.map((scenario, idx) => {
-          const { breakdown } = scenario;
-          const isPenalized = breakdown.penaltyMultiplier < 1;
-          const isDisabled = breakdown.penaltyMultiplier === 0;
+          const { breakdown, earnedScore } = scenario;
+          const isOverPar = breakdown.fencesOverPar > 0;
+          const isSpaceDisabled = breakdown.fencesOverPar >= 3;
 
           return (
             <div
@@ -90,70 +77,43 @@ export function ScoringPreviewPanel({ level }: ScoringPreviewPanelProps) {
                   <Minus className="w-3 h-3 text-muted-foreground" />
                 )}
                 <span>{scenario.label}</span>
+                <span className="ml-auto font-mono text-[10px] text-muted-foreground">
+                  {scenario.usedFences} fences
+                </span>
               </div>
 
-              {/* Bonus Bars */}
+              {/* Breakdown */}
               <div className="space-y-1">
-                {/* Fence Bonus Bar */}
-                <div className="flex items-center gap-2">
-                  <span className="w-12 text-muted-foreground shrink-0">Fence:</span>
-                  <div className="flex-1 h-3 bg-muted rounded overflow-hidden">
-                    <div
-                      className="h-full bg-success transition-all"
-                      style={{ width: `${(breakdown.fenceBonus / maxFenceBonus) * 100}%` }}
-                    />
-                  </div>
-                  <span className="w-6 text-right font-mono">{breakdown.fenceBonus}</span>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Base {isOverPar && `(x${breakdown.performanceMultiplier})`}
+                  </span>
+                  <span className={`font-mono ${isOverPar ? 'text-destructive' : ''}`}>
+                    {Math.floor(basePoints * breakdown.performanceMultiplier)}h
+                  </span>
                 </div>
 
-                {/* Space Bonus Bar */}
-                <div className="flex items-center gap-2">
-                  <span className="w-12 text-muted-foreground shrink-0">Space:</span>
-                  <div className="flex-1 h-3 bg-muted rounded overflow-hidden relative">
-                    {/* Raw bonus (faded) */}
-                    {isPenalized && !isDisabled && (
-                      <div
-                        className="absolute inset-y-0 left-0 bg-amber-500/30"
-                        style={{ width: `${(breakdown.spaceBonusRaw / maxSpaceBonus) * 100}%` }}
-                      />
-                    )}
-                    {/* Actual bonus */}
-                    <div
-                      className={`h-full transition-all relative ${
-                        isDisabled
-                          ? 'bg-destructive/50'
-                          : isPenalized
-                          ? 'bg-amber-500'
-                          : 'bg-primary'
-                      }`}
-                      style={{ width: `${(breakdown.spaceBonus / maxSpaceBonus) * 100}%` }}
-                    />
+                {breakdown.underParBonus > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-success">Under-par bonus</span>
+                    <span className="font-mono text-success">+{breakdown.underParBonus}h</span>
                   </div>
-                  <span className="w-6 text-right font-mono">
-                    {isDisabled ? (
-                      <span className="text-destructive">0</span>
-                    ) : isPenalized ? (
-                      <span className="text-amber-500">{breakdown.spaceBonus}</span>
-                    ) : (
-                      breakdown.spaceBonus
-                    )}
+                )}
+
+                <div className="flex justify-between">
+                  <span className={isSpaceDisabled ? 'text-destructive' : 'text-muted-foreground'}>
+                    Space bonus {isSpaceDisabled && '(disabled)'}
+                  </span>
+                  <span className={`font-mono ${isSpaceDisabled ? 'text-destructive line-through' : ''}`}>
+                    {breakdown.spaceBonus > 0 ? `+${breakdown.spaceBonus}h` : '0h'}
                   </span>
                 </div>
               </div>
 
-              {/* Penalty Indicator */}
-              {isPenalized && (
-                <div className="mt-1.5 text-[10px] text-amber-500">
-                  {isDisabled
-                    ? '⚠ Space bonus disabled (+3 over par)'
-                    : `⚠ Space ×${breakdown.penaltyMultiplier} (${breakdown.fencesOverPar} over par)`}
-                </div>
-              )}
-
               {/* Total */}
               <div className="mt-2 pt-1.5 border-t border-border/50 flex justify-between items-center">
-                <span className="text-muted-foreground">Total Bonus:</span>
-                <span className="font-bold text-lg">{breakdown.totalBonus}</span>
+                <span className="text-muted-foreground">Earned:</span>
+                <span className="font-bold text-lg">{earnedScore}h</span>
               </div>
             </div>
           );

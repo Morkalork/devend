@@ -114,6 +114,9 @@ export function GameScreen({
             tutorialStep={tutorialStep}
             onTutorialCutSuccess={onTutorialCutSuccess}
             canvasOpacity={config.visuals.canvas_opacity}
+            fenceSpeedBase={config.fence.speed_base}
+            fenceSpeedMin={config.fence.speed_min}
+            fenceSpeedPerLevel={config.fence.speed_per_level}
             regionColor={getRegionColor()}
             accentColor={accentColor}
           />
