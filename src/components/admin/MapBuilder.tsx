@@ -52,6 +52,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const createNewLevel = useCallback(() => {
     const newLevel: LevelConfig = {
       id: `level-${levels.length + 1}`,
+      level: levels.length + 1,
       sizeThreshold: 40,
       expectedCuts: 5,
       points: 100,

@@ -3,15 +3,34 @@ import yaml from 'js-yaml';
 import { LevelConfig, LevelData, LevelEntity } from '@/types/level';
 
 interface LevelManagerState {
-  levels: LevelConfig[];
+  allMaps: LevelConfig[]; // all maps from YAML
+  levelSequence: LevelConfig[]; // one randomly-chosen map per logical level
   currentLevelIndex: number;
   isLoading: boolean;
   error: string | null;
 }
 
+/** Group maps by their `level` field, then pick one random map per level */
+function buildLevelSequence(allMaps: LevelConfig[]): LevelConfig[] {
+  const groups = new Map<number, LevelConfig[]>();
+  for (const map of allMaps) {
+    const lvl = map.level;
+    if (!groups.has(lvl)) groups.set(lvl, []);
+    groups.get(lvl)!.push(map);
+  }
+
+  // Sort by level number, pick one random variant per level
+  const sortedLevels = [...groups.keys()].sort((a, b) => a - b);
+  return sortedLevels.map(lvl => {
+    const variants = groups.get(lvl)!;
+    return variants[Math.floor(Math.random() * variants.length)];
+  });
+}
+
 export function useLevelManager() {
   const [state, setState] = useState<LevelManagerState>({
-    levels: [],
+    allMaps: [],
+    levelSequence: [],
     currentLevelIndex: 0,
     isLoading: false,
     error: null,
@@ -39,17 +58,20 @@ export function useLevelManager() {
           throw new Error(`Invalid level configuration for: ${level.id || 'unknown'}`);
         }
         
-        // Validate expectedCuts and points exist
         if (typeof level.expectedCuts !== 'number' || typeof level.points !== 'number') {
           throw new Error(`Level "${level.id}" is missing expectedCuts or points`);
         }
         
-        // Validate expectedCuts < points
         if (level.expectedCuts >= level.points) {
           throw new Error(`Level "${level.id}" is invalid: expectedCuts (${level.expectedCuts}) must be less than points (${level.points})`);
         }
+
+        // Default level number from id if not specified
+        if (typeof level.level !== 'number') {
+          const match = level.id.match(/^level-(\d+)/);
+          level.level = match ? parseInt(match[1], 10) : 1;
+        }
         
-        // Validate entities if present
         if (level.entities && Array.isArray(level.entities)) {
           for (const entity of level.entities) {
             const ent = entity as LevelEntity;
@@ -57,7 +79,6 @@ export function useLevelManager() {
               throw new Error(`Invalid entity in level "${level.id}": missing id, kind, or shape`);
             }
             
-            // Validate shape-specific properties
             if (ent.shape === 'rect') {
               if (typeof ent.x !== 'number' || typeof ent.y !== 'number' ||
                   typeof ent.width !== 'number' || typeof ent.height !== 'number') {
@@ -71,9 +92,12 @@ export function useLevelManager() {
           }
         }
       }
+
+      const sequence = buildLevelSequence(data.levels);
       
       setState({
-        levels: data.levels,
+        allMaps: data.levels,
+        levelSequence: sequence,
         currentLevelIndex: 0,
         isLoading: false,
         error: null,
@@ -92,34 +116,38 @@ export function useLevelManager() {
   }, []);
 
   const advanceToNextLevel = useCallback((): boolean => {
-    if (state.currentLevelIndex < state.levels.length - 1) {
+    if (state.currentLevelIndex < state.levelSequence.length - 1) {
       setState(prev => ({
         ...prev,
         currentLevelIndex: prev.currentLevelIndex + 1,
       }));
       return true;
     }
-    return false; // No more levels
-  }, [state.currentLevelIndex, state.levels.length]);
+    return false;
+  }, [state.currentLevelIndex, state.levelSequence.length]);
 
   const resetToFirstLevel = useCallback(() => {
-    setState(prev => ({ ...prev, currentLevelIndex: 0 }));
+    // Re-randomize the sequence each run
+    setState(prev => ({
+      ...prev,
+      levelSequence: buildLevelSequence(prev.allMaps),
+      currentLevelIndex: 0,
+    }));
   }, []);
 
-  // Set to a specific level (0-indexed)
   const setLevelIndex = useCallback((index: number) => {
     setState(prev => {
-      const clampedIndex = Math.max(0, Math.min(index, prev.levels.length - 1));
+      const clampedIndex = Math.max(0, Math.min(index, prev.levelSequence.length - 1));
       return { ...prev, currentLevelIndex: clampedIndex };
     });
   }, []);
 
-  const currentLevel = state.levels[state.currentLevelIndex] || null;
-  const totalLevels = state.levels.length;
-  const isLastLevel = state.currentLevelIndex >= state.levels.length - 1;
+  const currentLevel = state.levelSequence[state.currentLevelIndex] || null;
+  const totalLevels = state.levelSequence.length;
+  const isLastLevel = state.currentLevelIndex >= state.levelSequence.length - 1;
 
   return {
-    levels: state.levels,
+    levels: state.levelSequence,
     currentLevel,
     currentLevelIndex: state.currentLevelIndex,
     totalLevels,
