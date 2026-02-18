@@ -1,32 +1,62 @@
 levels:
   - id: level-1
+    level: 1
     sizeThreshold: 40
     expectedCuts: 3
     points: 5
     variety: 0
     balls:
       - id: ball-1
-        initialSpeed: 144
-        topSpeed: 288
+        initialSpeed: 115
+        topSpeed: 230
         color: 00d4ff
         startX: 450
         startY: 450
 
+  - id: level-1b
+    level: 1
+    sizeThreshold: 40
+    expectedCuts: 3
+    points: 5
+    variety: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 115
+        topSpeed: 230
+        color: ff6b9d
+        startX: 250
+        startY: 700
+
+  - id: level-1c
+    level: 1
+    sizeThreshold: 40
+    expectedCuts: 3
+    points: 5
+    variety: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 115
+        topSpeed: 230
+        color: 6bcb77
+        startX: 700
+        startY: 250
+
   - id: level-2
+    level: 2
     sizeThreshold: 40
     expectedCuts: 5
     points: 10
     variety: 3
     balls:
       - id: ball-1
-        initialSpeed: 168
-        topSpeed: 336
+        initialSpeed: 134
+        topSpeed: 269
         color: ff6b6b
         startX: 300
         startY: 450
       - id: ball-2
-        initialSpeed: 154
-        topSpeed: 326
+        initialSpeed: 123
+        topSpeed: 261
         color: 4ecdc4
         startX: 600
         startY: 450
@@ -47,20 +77,21 @@ levels:
         height: 180
 
   - id: level-3
+    level: 3
     sizeThreshold: 35
     expectedCuts: 6
     points: 10
     variety: 5
     balls:
       - id: ball-1
-        initialSpeed: 182
-        topSpeed: 360
+        initialSpeed: 146
+        topSpeed: 288
         color: ffd93d
         startX: 250
         startY: 450
       - id: ball-2
-        initialSpeed: 173
-        topSpeed: 346
+        initialSpeed: 138
+        topSpeed: 277
         color: 6bcb77
         startX: 650
         startY: 450
@@ -74,20 +105,21 @@ levels:
         height: 200
 
   - id: level-4
+    level: 4
     sizeThreshold: 30
     expectedCuts: 8
     points: 15
     variety: 5
     balls:
       - id: ball-1
-        initialSpeed: 192
-        topSpeed: 384
+        initialSpeed: 154
+        topSpeed: 307
         color: ff8c42
         startX: 450
         startY: 350
       - id: ball-2
-        initialSpeed: 182
-        topSpeed: 374
+        initialSpeed: 146
+        topSpeed: 299
         color: 98d8c8
         startX: 350
         startY: 550
@@ -108,20 +140,21 @@ levels:
         height: 200
 
   - id: level-5
+    level: 5
     sizeThreshold: 15
     expectedCuts: 10
     points: 15
     variety: 8
     balls:
       - id: ball-1
-        initialSpeed: 202
-        topSpeed: 408
+        initialSpeed: 162
+        topSpeed: 326
         color: ff0055
         startX: 158
         startY: 168
       - id: ball-2
-        initialSpeed: 96
-        topSpeed: 206
+        initialSpeed: 77
+        topSpeed: 165
         color: 00ff88
         startX: 741
         startY: 742
@@ -172,20 +205,21 @@ levels:
         radius: 41
 
   - id: level-6
+    level: 6
     sizeThreshold: 30
     expectedCuts: 12
     points: 20
     variety: 10
     balls:
       - id: ball-1
-        initialSpeed: 150
-        topSpeed: 420
+        initialSpeed: 120
+        topSpeed: 336
         color: ff3366
         startX: 200
         startY: 200
       - id: ball-2
-        initialSpeed: 175
-        topSpeed: 413
+        initialSpeed: 140
+        topSpeed: 330
         color: 33ff99
         startX: 700
         startY: 200
@@ -206,20 +240,21 @@ levels:
         height: 100
 
   - id: level-7
+    level: 7
     sizeThreshold: 20
     expectedCuts: 14
     points: 20
     variety: 10
     balls:
       - id: ball-1
-        initialSpeed: 180
-        topSpeed: 435
+        initialSpeed: 144
+        topSpeed: 348
         color: ff9900
         startX: 150
         startY: 450
       - id: ball-2
-        initialSpeed: 185
-        topSpeed: 428
+        initialSpeed: 148
+        topSpeed: 342
         color: 0099ff
         startX: 750
         startY: 450
@@ -238,20 +273,21 @@ levels:
         radius: 100
 
   - id: level-8
+    level: 8
     sizeThreshold: 25
     expectedCuts: 10
     points: 25
     variety: 12
     balls:
       - id: ball-1
-        initialSpeed: 180
-        topSpeed: 408
+        initialSpeed: 144
+        topSpeed: 326
         color: ff0055
         startX: 187
         startY: 171
       - id: ball-2
-        initialSpeed: 182
-        topSpeed: 389
+        initialSpeed: 146
+        topSpeed: 311
         color: 00aaff
         radius: 80
         startX: 213
@@ -265,26 +301,27 @@ levels:
         radius: 224
 
   - id: level-9
+    level: 9
     sizeThreshold: 15
     expectedCuts: 16
     points: 25
     variety: 15
     balls:
       - id: ball-1
-        initialSpeed: 200
-        topSpeed: 450
+        initialSpeed: 160
+        topSpeed: 360
         color: ff0066
         startX: 450
         startY: 150
       - id: ball-2
-        initialSpeed: 190
-        topSpeed: 443
+        initialSpeed: 152
+        topSpeed: 354
         color: 66ff00
         startX: 200
         startY: 600
       - id: ball-3
-        initialSpeed: 210
-        topSpeed: 435
+        initialSpeed: 168
+        topSpeed: 348
         color: 0066ff
         startX: 700
         startY: 600
@@ -317,26 +354,27 @@ levels:
         height: 150
 
   - id: level-10
+    level: 10
     sizeThreshold: 12
     expectedCuts: 18
     points: 25
     variety: 15
     balls:
       - id: ball-1
-        initialSpeed: 205
-        topSpeed: 465
+        initialSpeed: 164
+        topSpeed: 372
         color: cc00ff
         startX: 250
         startY: 250
       - id: ball-2
-        initialSpeed: 160
-        topSpeed: 458
+        initialSpeed: 128
+        topSpeed: 366
         color: 00ffcc
         startX: 650
         startY: 250
       - id: ball-3
-        initialSpeed: 120
-        topSpeed: 450
+        initialSpeed: 96
+        topSpeed: 360
         color: ffcc00
         startX: 450
         startY: 650
@@ -349,32 +387,33 @@ levels:
         radius: 150
 
   - id: level-11
+    level: 11
     sizeThreshold: 10
     expectedCuts: 20
     points: 30
     variety: 18
     balls:
       - id: ball-1
-        initialSpeed: 240
-        topSpeed: 480
+        initialSpeed: 192
+        topSpeed: 384
         color: ff4444
         startX: 150
         startY: 150
       - id: ball-2
-        initialSpeed: 233
-        topSpeed: 473
+        initialSpeed: 186
+        topSpeed: 378
         color: 44ff44
         startX: 750
         startY: 150
       - id: ball-3
-        initialSpeed: 225
-        topSpeed: 465
+        initialSpeed: 180
+        topSpeed: 372
         color: 4444ff
         startX: 150
         startY: 750
       - id: ball-4
-        initialSpeed: 218
-        topSpeed: 458
+        initialSpeed: 174
+        topSpeed: 366
         color: ffff44
         startX: 750
         startY: 750
@@ -388,26 +427,27 @@ levels:
         height: 200
 
   - id: level-12
+    level: 12
     sizeThreshold: 10
     expectedCuts: 22
     points: 30
     variety: 20
     balls:
       - id: ball-1
-        initialSpeed: 248
-        topSpeed: 495
+        initialSpeed: 198
+        topSpeed: 396
         color: ff6699
         startX: 450
         startY: 200
       - id: ball-2
-        initialSpeed: 240
-        topSpeed: 488
+        initialSpeed: 192
+        topSpeed: 390
         color: 99ff66
         startX: 200
         startY: 500
       - id: ball-3
-        initialSpeed: 233
-        topSpeed: 480
+        initialSpeed: 186
+        topSpeed: 384
         color: 6699ff
         startX: 700
         startY: 500
@@ -432,32 +472,33 @@ levels:
         radius: 80
 
   - id: level-13
+    level: 13
     sizeThreshold: 8
     expectedCuts: 24
     points: 35
     variety: 25
     balls:
       - id: ball-1
-        initialSpeed: 255
-        topSpeed: 510
+        initialSpeed: 204
+        topSpeed: 408
         color: ff0099
         startX: 200
         startY: 200
       - id: ball-2
-        initialSpeed: 248
-        topSpeed: 503
+        initialSpeed: 198
+        topSpeed: 402
         color: 99ff00
         startX: 700
         startY: 200
       - id: ball-3
-        initialSpeed: 240
-        topSpeed: 495
+        initialSpeed: 192
+        topSpeed: 396
         color: 0099ff
         startX: 200
         startY: 700
       - id: ball-4
-        initialSpeed: 233
-        topSpeed: 488
+        initialSpeed: 186
+        topSpeed: 390
         color: ff9900
         startX: 700
         startY: 700
@@ -490,32 +531,33 @@ levels:
         height: 100
 
   - id: level-14
+    level: 14
     sizeThreshold: 8
     expectedCuts: 26
     points: 35
     variety: 25
     balls:
       - id: ball-1
-        initialSpeed: 263
-        topSpeed: 525
+        initialSpeed: 210
+        topSpeed: 420
         color: dd44ff
         startX: 300
         startY: 300
       - id: ball-2
-        initialSpeed: 255
-        topSpeed: 518
+        initialSpeed: 204
+        topSpeed: 414
         color: 44ffdd
         startX: 600
         startY: 300
       - id: ball-3
-        initialSpeed: 248
-        topSpeed: 510
+        initialSpeed: 198
+        topSpeed: 408
         color: ffdd44
         startX: 300
         startY: 600
       - id: ball-4
-        initialSpeed: 240
-        topSpeed: 503
+        initialSpeed: 192
+        topSpeed: 402
         color: 44ddff
         startX: 600
         startY: 600
@@ -548,32 +590,33 @@ levels:
         height: 100
 
   - id: level-15
+    level: 15
     sizeThreshold: 5
     expectedCuts: 28
     points: 40
     variety: 30
     balls:
       - id: ball-1
-        initialSpeed: 270
-        topSpeed: 540
+        initialSpeed: 216
+        topSpeed: 432
         color: ff2288
         startX: 450
         startY: 150
       - id: ball-2
-        initialSpeed: 263
-        topSpeed: 533
+        initialSpeed: 210
+        topSpeed: 426
         color: 22ff88
         startX: 150
         startY: 450
       - id: ball-3
-        initialSpeed: 255
-        topSpeed: 525
+        initialSpeed: 204
+        topSpeed: 420
         color: 8822ff
         startX: 750
         startY: 450
       - id: ball-4
-        initialSpeed: 248
-        topSpeed: 518
+        initialSpeed: 198
+        topSpeed: 414
         color: 88ff22
         startX: 450
         startY: 750
@@ -610,38 +653,39 @@ levels:
         radius: 60
 
   - id: level-16
+    level: 16
     sizeThreshold: 5
     expectedCuts: 30
     points: 40
     variety: 35
     balls:
       - id: ball-1
-        initialSpeed: 285
-        topSpeed: 570
+        initialSpeed: 228
+        topSpeed: 456
         color: ff0000
         startX: 200
         startY: 200
       - id: ball-2
-        initialSpeed: 278
-        topSpeed: 563
+        initialSpeed: 222
+        topSpeed: 450
         color: 00ff00
         startX: 700
         startY: 200
       - id: ball-3
-        initialSpeed: 270
-        topSpeed: 555
+        initialSpeed: 216
+        topSpeed: 444
         color: 0000ff
         startX: 200
         startY: 700
       - id: ball-4
-        initialSpeed: 263
-        topSpeed: 548
+        initialSpeed: 210
+        topSpeed: 438
         color: ffff00
         startX: 700
         startY: 700
       - id: ball-5
-        initialSpeed: 255
-        topSpeed: 540
+        initialSpeed: 204
+        topSpeed: 432
         color: ff00ff
         startX: 450
         startY: 450

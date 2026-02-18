@@ -52,6 +52,7 @@ export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity;
 
 export interface LevelConfig {
   id: string;
+  level: number; // logical level number (multiple maps can share the same level)
   sizeThreshold: number; // percentage
   expectedCuts: number; // expected number of cuts to complete the level
   points: number; // base points for the level
