@@ -303,6 +303,7 @@ export function GameCanvas({
     fastestBallId: null as string | null,
     pushMode: "none" as "none" | "prompt" | "pushing",
     bestRemainingPercent: 100,
+    pushStartPercent: 100,
     gameLoopFn: null as ((timestamp: number) => void) | null,
     wallCompleteTime: 0,
     isRecovering: false,
@@ -1111,23 +1112,27 @@ export function GameCanvas({
       playDeathSound();
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
 
-      // If in push mode, level is still cleared - just forfeit space bonus (penalty for failing push)
+      // If in push mode, level is still cleared - keep full score + push bonus earned so far
       if (game.pushMode === "pushing") {
         const effectiveExpectedCuts = level.expectedCuts;
         
-        // Use new scoring system - but no space bonus since push failed
+        // Use scoring at the moment push started (clearedPercent), not current percent
+        const pushStartPercent = game.bestRemainingPercent;
         const { levelScore, breakdown } = calculateScore(
           game.wallCount,
           effectiveExpectedCuts,
-          percent,
+          pushStartPercent,
           level.sizeThreshold,
           level.points,
           activeModifiers.scoreMultiplier,
           levelNumber
         );
-        
-        // Remove space bonus since push failed
-        const adjustedLevelScore = Math.max(0, levelScore - breakdown.spaceBonus);
+
+        // Calculate push bonus: +1 OT per 25% of original remaining area cleared
+        const areaAtPushStart = game.pushStartPercent ?? pushStartPercent;
+        const areaCleared = Math.max(0, areaAtPushStart - percent);
+        const chunkSize = areaAtPushStart * 0.25;
+        const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
 
         onLevelComplete({
           levelNumber,
@@ -1135,12 +1140,14 @@ export function GameCanvas({
           cutCount: game.wallCount,
           expectedCuts: level.expectedCuts,
           basePoints: level.points,
-          levelScore: adjustedLevelScore + game.lockBonus,
+          levelScore: levelScore + game.lockBonus + pushBonus,
           remainingPercent: percent,
           overcutBonus: 0,
           thresholdPercent: level.sizeThreshold,
+          pushFailed: true,
+          pushBonus,
           underParBonus: breakdown.underParBonus,
-          spaceBonus: 0,
+          spaceBonus: breakdown.spaceBonus,
           spaceBonusRaw: breakdown.spaceBonusRaw,
           performanceMultiplier: breakdown.performanceMultiplier,
           fencesUnderPar: breakdown.fencesUnderPar,
@@ -1172,26 +1179,29 @@ export function GameCanvas({
       }, 1000);
     };
 
-    // Handle push-your-luck failure - level still complete, no life lost
+    // Handle push-your-luck failure - level still complete, keep full score + push bonus
     const handlePushFailed = () => {
       game.gameOver = true;
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
 
       const effectiveExpectedCuts = level.expectedCuts;
       
-      // Use new scoring system - but no space bonus since push failed
+      // Score based on push start state - player keeps everything
       const { levelScore, breakdown } = calculateScore(
         game.wallCount,
         effectiveExpectedCuts,
-        percent,
+        game.pushStartPercent ?? percent,
         level.sizeThreshold,
         level.points,
         activeModifiers.scoreMultiplier,
         levelNumber
       );
-      
-      // Remove space bonus since push failed
-      const adjustedLevelScore = levelScore - breakdown.spaceBonus;
+
+      // Calculate push bonus: +1 OT per 25% of original remaining area cleared
+      const areaAtPushStart = game.pushStartPercent ?? percent;
+      const areaCleared = Math.max(0, areaAtPushStart - percent);
+      const chunkSize = areaAtPushStart * 0.25;
+      const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
 
       onLevelComplete({
         levelNumber,
@@ -1199,13 +1209,14 @@ export function GameCanvas({
         cutCount: game.wallCount,
         expectedCuts: level.expectedCuts,
         basePoints: level.points,
-        levelScore: adjustedLevelScore + game.lockBonus,
+        levelScore: levelScore + game.lockBonus + pushBonus,
         remainingPercent: percent,
         overcutBonus: 0,
         thresholdPercent: level.sizeThreshold,
         pushFailed: true,
+        pushBonus,
         underParBonus: breakdown.underParBonus,
-        spaceBonus: 0,
+        spaceBonus: breakdown.spaceBonus,
         spaceBonusRaw: breakdown.spaceBonusRaw,
         performanceMultiplier: breakdown.performanceMultiplier,
         fencesUnderPar: breakdown.fencesUnderPar,
@@ -1816,6 +1827,7 @@ export function GameCanvas({
         setPushMode("prompt");
         setClearedPercent(percent);
         game.bestRemainingPercent = percent;
+        game.pushStartPercent = percent;
         return;
       }
     };
@@ -2829,6 +2841,12 @@ export function GameCanvas({
       levelNumber
     );
 
+    // Calculate push bonus: +1 OT per 25% of original remaining area cleared during push
+    const areaAtPushStart = game.pushStartPercent;
+    const areaCleared = Math.max(0, areaAtPushStart - game.bestRemainingPercent);
+    const chunkSize = areaAtPushStart * 0.25;
+    const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
+
     setTimeout(() => {
       onLevelComplete({
         levelNumber,
@@ -2836,10 +2854,11 @@ export function GameCanvas({
         cutCount: game.wallCount,
         expectedCuts: level.expectedCuts,
         basePoints: level.points,
-        levelScore: levelScore + game.lockBonus,
+        levelScore: levelScore + game.lockBonus + pushBonus,
         remainingPercent: game.bestRemainingPercent,
-        overcutBonus: 0, // Legacy field - now handled by spaceBonus
+        overcutBonus: 0,
         thresholdPercent: level.sizeThreshold,
+        pushBonus,
         underParBonus: breakdown.underParBonus,
         spaceBonus: breakdown.spaceBonus,
         spaceBonusRaw: breakdown.spaceBonusRaw,

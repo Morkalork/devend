@@ -1,4 +1,4 @@
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 
 interface LevelCompleteOverlayProps {
@@ -29,12 +29,14 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     lockBonus = 0,
     lockedBallsCount = 0,
     interestGain = 0,
+    pushBonus = 0,
   } = scoreData;
 
   const isOverPar = fencesOverPar > 0;
   const isSpaceDisabled = fencesOverPar >= 3;
   const hasLockBonus = lockBonus > 0;
   const hasInterest = interestGain > 0;
+  const hasPushBonus = pushBonus > 0;
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
 
   return (
@@ -82,7 +84,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
           {/* Push Failed Warning */}
           {pushFailed && (
             <div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg text-center">
-              <p className="text-warning text-sm font-medium">Push failed! No space bonus earned.</p>
+              <p className="text-warning text-sm font-medium">
+                Push failed!{hasPushBonus ? ` But you earned +${pushBonus}h bonus.` : ' No extra bonus earned.'}
+              </p>
             </div>
           )}
 
@@ -192,11 +196,22 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
+            {/* Push Bonus Section */}
+            {hasPushBonus && (
+              <div className="flex justify-between items-center py-2 border-b border-orange-500/30 bg-orange-500/10 rounded px-2">
+                <span className="text-orange-400 flex items-center gap-1">
+                  <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+                  Push Bonus
+                </span>
+                <span className="font-bold text-orange-400">+{pushBonus}h</span>
+              </div>
+            )}
+
             {/* Total Bonus Summary */}
-            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0) && (
+            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0) && (
               <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
                 <span className="font-semibold text-foreground">Total Bonus</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus}h</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus}h</span>
               </div>
             )}
 
