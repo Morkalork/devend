@@ -15,6 +15,9 @@ export function PushYourLuckOverlay({
   onBank,
   onPush,
 }: PushYourLuckOverlayProps) {
+  // Each 25% of remaining area cleared = +1 OT
+  const chunkSize = remainingPercent * 0.25;
+
   return (
     <>
       {/* Backdrop */}
@@ -64,7 +67,9 @@ export function PushYourLuckOverlay({
               <span className="text-muted-foreground"> / {thresholdPercent}% target</span>
             </p>
             <p className="text-xs text-muted-foreground">
-              Cut more to earn an <span className="text-primary font-medium">Overcut Bonus</span>!
+              Keep cutting for <span className="text-primary font-medium">+1h per {chunkSize.toFixed(0)}% removed</span>.
+              <br />
+              <span className="text-success">No risk — you keep your score if you fail!</span>
             </p>
           </div>
 

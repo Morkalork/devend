@@ -92,6 +92,7 @@ export interface LevelScoreData {
   overcutBonus?: number;
   thresholdPercent?: number;
   pushFailed?: boolean; // true if player failed during push-your-luck mode
+  pushBonus?: number; // bonus OT earned from push-your-luck area removal
   // New scoring system fields
   underParBonus?: number;
   spaceBonus?: number;
