@@ -600,6 +600,8 @@ function IndexContent({
           onLivesChange={handleLivesChange}
           onGameEnd={handleGameEnd}
           onLevelComplete={handleLevelComplete}
+          onMainMenu={handleBackToWelcome}
+          onRestart={handlePlayAgain}
           tutorialMode={tutorialMode && currentLevelIndex === 0}
           tutorialStep={tutorialStep}
           onTutorialCutSuccess={markTutorialComplete}

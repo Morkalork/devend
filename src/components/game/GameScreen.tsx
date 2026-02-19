@@ -29,6 +29,8 @@ interface GameScreenProps {
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
+  onMainMenu: () => void;
+  onRestart: () => void;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
@@ -47,6 +49,8 @@ export function GameScreen({
   onLivesChange,
   onGameEnd, 
   onLevelComplete,
+  onMainMenu,
+  onRestart,
   tutorialMode = false,
   tutorialStep = 'completed',
   onTutorialCutSuccess,
@@ -94,6 +98,8 @@ export function GameScreen({
           ownedUpgrades={ownedUpgrades}
           accentColor={accentColor}
           augmentProgress={augmentProgress}
+          onMainMenu={onMainMenu}
+          onRestart={onRestart}
         />
 
         {/* Game Canvas Area */}
