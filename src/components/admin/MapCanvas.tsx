@@ -578,22 +578,18 @@ export function MapCanvas({
         }
       }
     } else if (hit.type === 'entity') {
-      // If clicking on an already-selected entity body, allow drag
-      // If clicking on a different entity, just select it
-      if (hit.id === selectedEntityId) {
-        const entity = (level.entities || []).find(e => e.id === hit.id);
-        if (entity) {
-          setDragMode({
-            type: 'entity',
-            id: hit.id,
-            startX: world.x,
-            startY: world.y,
-            originalEntity: JSON.parse(JSON.stringify(entity)) as LevelEntity,
-          });
-        }
-      } else {
-        onSelectEntity(hit.id);
-        onSelectBall(null);
+      // Select and immediately allow dragging on first click
+      onSelectEntity(hit.id);
+      onSelectBall(null);
+      const entity = (level.entities || []).find(e => e.id === hit.id);
+      if (entity) {
+        setDragMode({
+          type: 'entity',
+          id: hit.id,
+          startX: world.x,
+          startY: world.y,
+          originalEntity: JSON.parse(JSON.stringify(entity)) as LevelEntity,
+        });
       }
     } else if (hit.type === 'ball') {
       onSelectBall(hit.id);
