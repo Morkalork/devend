@@ -13,9 +13,10 @@ interface MapCanvasProps {
 }
 
 const BALL_RADIUS = 25;
-const HANDLE_SIZE = 12;
-const POINT_HANDLE_SIZE = 10;
-const EDGE_HANDLE_SIZE = 8;
+const HANDLE_SIZE = 16;
+const HANDLE_HIT_SIZE = 20; // Larger hit area for easier clicking
+const POINT_HANDLE_SIZE = 12;
+const EDGE_HANDLE_SIZE = 10;
 
 type DragMode = 
   | { type: 'none' }
@@ -76,22 +77,39 @@ export function MapCanvas({
     };
   });
 
-  // Resize handling
+  // Resize handling — use ResizeObserver for reliable sizing
   useEffect(() => {
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
+
     const updateSize = () => {
-      if (!containerRef.current || !canvasRef.current) return;
-      
-      const container = containerRef.current;
-      const rect = computeEditorBoardRect(container.clientWidth, container.clientHeight);
-      setBoardRect(rect);
-      
-      canvasRef.current.width = container.clientWidth;
-      canvasRef.current.height = container.clientHeight;
+      // Use the canvas element's own CSS display size for the buffer
+      const cssRect = canvas.getBoundingClientRect();
+      const w = Math.round(cssRect.width);
+      const h = Math.round(cssRect.height);
+      if (w === 0 || h === 0) return;
+
+      canvas.width = w;
+      canvas.height = h;
+      setBoardRect(computeEditorBoardRect(w, h));
     };
 
     updateSize();
-    window.addEventListener('resize', updateSize);
-    return () => window.removeEventListener('resize', updateSize);
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(container);
+    return () => ro.disconnect();
+  }, []);
+
+  // Convert pointer event to canvas-buffer coordinates (handles CSS/buffer mismatch)
+  const getCanvasCoords = useCallback((e: React.PointerEvent): { sx: number; sy: number } => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { sx: 0, sy: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return {
+      sx: (e.clientX - rect.left) * (canvas.width / rect.width),
+      sy: (e.clientY - rect.top) * (canvas.height / rect.height),
+    };
   }, []);
 
   // World <-> Screen coordinate conversion
@@ -367,7 +385,7 @@ export function MapCanvas({
       }
     });
 
-  }, [level, boardRect, selectedEntityId, selectedBallId, ballPositions, worldToScreen, getEdgeInfo]);
+  }, [level, boardRect, selectedEntityId, selectedBallId, ballPositions, worldToScreen, getEdgeInfo, dragMode]);
 
   // Hit testing
   const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle'; id: string; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: string } | null => {
@@ -385,19 +403,20 @@ export function MapCanvas({
           const radius = circleEntity.radius * boardRect.scale;
           
           // Check center move handle first
-          if (Math.abs(sx - center.x) < HANDLE_SIZE && Math.abs(sy - center.y) < HANDLE_SIZE) {
+          if (Math.abs(sx - center.x) < HANDLE_HIT_SIZE && Math.abs(sy - center.y) < HANDLE_HIT_SIZE) {
             return { type: 'handle', id: entity.id, handleType: 'move' };
           }
-          
+
+          // Check radius handles (at cardinal points on circle edge)
           const handlePositions = [
             { x: center.x + radius, y: center.y },
             { x: center.x - radius, y: center.y },
             { x: center.x, y: center.y - radius },
             { x: center.x, y: center.y + radius },
           ];
-          
+
           for (const pos of handlePositions) {
-            if (Math.abs(sx - pos.x) < HANDLE_SIZE && Math.abs(sy - pos.y) < HANDLE_SIZE) {
+            if (Math.abs(sx - pos.x) < HANDLE_HIT_SIZE && Math.abs(sy - pos.y) < HANDLE_HIT_SIZE) {
               return { type: 'handle', id: entity.id, handleType: 'radius' };
             }
           }
@@ -407,12 +426,13 @@ export function MapCanvas({
           const width = rectEntity.width * boardRect.scale;
           const height = rectEntity.height * boardRect.scale;
           const center = { x: topLeft.x + width / 2, y: topLeft.y + height / 2 };
-          
+
           // Check center move handle first
-          if (Math.abs(sx - center.x) < HANDLE_SIZE && Math.abs(sy - center.y) < HANDLE_SIZE) {
+          if (Math.abs(sx - center.x) < HANDLE_HIT_SIZE && Math.abs(sy - center.y) < HANDLE_HIT_SIZE) {
             return { type: 'handle', id: entity.id, handleType: 'move' };
           }
-          
+
+          // Check corner and edge handles
           const handles: { pos: { x: number; y: number }; name: string }[] = [
             { pos: { x: topLeft.x, y: topLeft.y }, name: 'tl' },
             { pos: { x: topLeft.x + width, y: topLeft.y }, name: 'tr' },
@@ -423,38 +443,40 @@ export function MapCanvas({
             { pos: { x: topLeft.x, y: topLeft.y + height / 2 }, name: 'l' },
             { pos: { x: topLeft.x + width, y: topLeft.y + height / 2 }, name: 'r' },
           ];
-          
+
           for (const handle of handles) {
-            const size = handle.name.length === 2 ? HANDLE_SIZE : EDGE_HANDLE_SIZE;
-            if (Math.abs(sx - handle.pos.x) < size && Math.abs(sy - handle.pos.y) < size) {
+            const hitSize = handle.name.length === 2 ? HANDLE_HIT_SIZE : HANDLE_HIT_SIZE - 4;
+            if (Math.abs(sx - handle.pos.x) < hitSize && Math.abs(sy - handle.pos.y) < hitSize) {
               return { type: 'handle', id: entity.id, handleType: 'rect', rectHandle: handle.name };
             }
           }
         } else if (entity.shape === 'polygon') {
           const polyEntity = entity as WallPolygonEntity;
-          
+
           // Calculate polygon center for move handle
           const avgX = polyEntity.points.reduce((sum, p) => sum + p[0], 0) / polyEntity.points.length;
           const avgY = polyEntity.points.reduce((sum, p) => sum + p[1], 0) / polyEntity.points.length;
           const centerScreen = worldToScreen(avgX, avgY);
-          
+
           // Check center move handle first
-          if (Math.abs(sx - centerScreen.x) < HANDLE_SIZE && Math.abs(sy - centerScreen.y) < HANDLE_SIZE) {
+          if (Math.abs(sx - centerScreen.x) < HANDLE_HIT_SIZE && Math.abs(sy - centerScreen.y) < HANDLE_HIT_SIZE) {
             return { type: 'handle', id: entity.id, handleType: 'move' };
           }
-          
+
+          // Check vertex handles
           for (let i = 0; i < polyEntity.points.length; i++) {
             const pointPos = worldToScreen(polyEntity.points[i][0], polyEntity.points[i][1]);
-            if (Math.hypot(sx - pointPos.x, sy - pointPos.y) < POINT_HANDLE_SIZE) {
+            if (Math.hypot(sx - pointPos.x, sy - pointPos.y) < HANDLE_HIT_SIZE) {
               return { type: 'handle', id: entity.id, handleType: 'point', pointIndex: i };
             }
           }
-          
+
+          // Check edge midpoint handles
           const edges = getEdgeInfo(polyEntity.points);
           for (let i = 0; i < edges.length; i++) {
             const edge = edges[i];
             const screenMid = worldToScreen(edge.midpoint.x, edge.midpoint.y);
-            if (Math.hypot(sx - screenMid.x, sy - screenMid.y) < EDGE_HANDLE_SIZE * 1.5) {
+            if (Math.hypot(sx - screenMid.x, sy - screenMid.y) < HANDLE_HIT_SIZE) {
               return { type: 'handle', id: entity.id, handleType: 'edge', edgeIndex: i };
             }
           }
@@ -501,12 +523,14 @@ export function MapCanvas({
   // Mouse handlers
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     if (!boardRect) return;
-    
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Capture pointer so drag events continue even if pointer leaves canvas
+    canvas.setPointerCapture(e.pointerId);
+
+    const { sx, sy } = getCanvasCoords(e);
     const world = screenToWorld(sx, sy);
     
     const hit = hitTest(sx, sy);
@@ -578,9 +602,9 @@ export function MapCanvas({
         }
       }
     } else if (hit.type === 'entity') {
-      // Select and immediately allow dragging on first click
+      // onSelectEntity already clears ball selection in parent
       onSelectEntity(hit.id);
-      onSelectBall(null);
+      // Always allow drag-to-move (body click = move, handles = resize)
       const entity = (level.entities || []).find(e => e.id === hit.id);
       if (entity) {
         setDragMode({
@@ -592,8 +616,8 @@ export function MapCanvas({
         });
       }
     } else if (hit.type === 'ball') {
+      // onSelectBall already clears entity selection in parent
       onSelectBall(hit.id);
-      onSelectEntity(null);
       
       const pos = ballPositions[hit.id];
       if (pos) {
@@ -607,16 +631,12 @@ export function MapCanvas({
         });
       }
     }
-  }, [boardRect, hitTest, level, ballPositions, screenToWorld, onSelectEntity, onSelectBall]);
+  }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, selectedEntityId]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (dragMode.type === 'none' || !boardRect) return;
-    
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    
-    const sx = e.clientX - rect.left;
-    const sy = e.clientY - rect.top;
+
+    const { sx, sy } = getCanvasCoords(e);
     const world = screenToWorld(sx, sy);
     
     if (dragMode.type === 'entity') {
@@ -756,9 +776,13 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     }
-  }, [dragMode, boardRect, level, screenToWorld, onUpdateEntity]);
+  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity]);
 
-  const handlePointerUp = useCallback(() => {
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    const canvas = canvasRef.current;
+    if (canvas && canvas.hasPointerCapture(e.pointerId)) {
+      canvas.releasePointerCapture(e.pointerId);
+    }
     setDragMode({ type: 'none' });
   }, []);
 
@@ -770,19 +794,17 @@ export function MapCanvas({
     
     // Update cursor when not dragging
     if (dragMode.type === 'none') {
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      
-      const sx = e.clientX - rect.left;
-      const sy = e.clientY - rect.top;
+      const { sx, sy } = getCanvasCoords(e);
       const hit = hitTest(sx, sy);
       
       if (hit) {
         if (hit.type === 'handle') {
-          if (hit.handleType === 'radius' || hit.handleType === 'rect') {
+          if (hit.handleType === 'move') {
+            setCursorStyle('move');
+          } else if (hit.handleType === 'radius' || hit.handleType === 'rect') {
             setCursorStyle('nwse-resize');
           } else if (hit.handleType === 'point') {
-            setCursorStyle('move');
+            setCursorStyle('crosshair');
           } else if (hit.handleType === 'edge') {
             setCursorStyle('grab');
           }
@@ -795,7 +817,7 @@ export function MapCanvas({
     } else {
       setCursorStyle('grabbing');
     }
-  }, [handlePointerMove, dragMode, hitTest]);
+  }, [handlePointerMove, dragMode, hitTest, getCanvasCoords]);
 
   return (
     <div ref={containerRef} className="w-full h-full min-h-[400px] bg-black/50 rounded-lg overflow-hidden">

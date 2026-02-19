@@ -12,7 +12,6 @@ levels:
         color: 00d4ff
         startX: 450
         startY: 450
-
   - id: level-2
     level: 2
     sizeThreshold: 40
@@ -37,17 +36,16 @@ levels:
         kind: wall
         shape: rect
         x: -41
-        y: -41
+        'y': -41
         width: 500
         height: 180
       - id: wall-2
         kind: wall
         shape: rect
         x: 350
-        y: 720
+        'y': 720
         width: 200
         height: 180
-
   - id: level-2b
     level: 2
     sizeThreshold: 40
@@ -72,17 +70,16 @@ levels:
         kind: wall
         shape: rect
         x: -11
-        y: -11
+        'y': -11
         width: 400
         height: 180
       - id: wall-2
         kind: wall
         shape: rect
         x: 350
-        y: 8000
+        'y': 8000
         width: 100
         height: 480
-
   - id: level-3
     level: 3
     sizeThreshold: 35
@@ -107,10 +104,35 @@ levels:
         kind: wall
         shape: rect
         x: 350
-        y: 350
+        'y': 350
         width: 200
         height: 200
-
+  - id: level-3b
+    level: 3
+    sizeThreshold: 35
+    expectedCuts: 6
+    points: 10
+    variety: 5
+    balls:
+      - id: ball-1
+        initialSpeed: 146
+        topSpeed: 288
+        color: ffd93d
+        startX: 250
+        startY: 450
+      - id: ball-2
+        initialSpeed: 138
+        topSpeed: 277
+        color: 6bcb77
+        startX: 650
+        startY: 450
+    entities:
+      - id: wall-1771491223262
+        kind: wall
+        shape: circle
+        cx: 454.3243573163007
+        cy: 451.3513513513513
+        radius: 176
   - id: level-4
     level: 4
     sizeThreshold: 30
@@ -135,17 +157,50 @@ levels:
         kind: wall
         shape: rect
         x: 100
-        y: 200
+        'y': 200
         width: 150
         height: 200
       - id: wall-2
         kind: wall
         shape: rect
         x: 650
-        y: 500
+        'y': 500
         width: 150
         height: 200
-
+  - id: level-4b
+    level: 4
+    sizeThreshold: 30
+    expectedCuts: 8
+    points: 15
+    variety: 5
+    balls:
+      - id: ball-1
+        initialSpeed: 154
+        topSpeed: 307
+        color: ff8c42
+        startX: 450
+        startY: 350
+      - id: ball-2
+        initialSpeed: 146
+        topSpeed: 299
+        color: 98d8c8
+        startX: 350
+        startY: 550
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: rect
+        x: 118.91890242293073
+        'y': 534.0540540540541
+        width: 150
+        height: 200
+      - id: wall-2
+        kind: wall
+        shape: rect
+        x: 635.9459129539696
+        'y': 196.75675675675677
+        width: 150
+        height: 200
   - id: level-5
     level: 5
     sizeThreshold: 15
@@ -210,7 +265,70 @@ levels:
         cx: 155.07
         cy: 468.24
         radius: 41
-
+  - id: level-5b
+    level: 5
+    sizeThreshold: 15
+    expectedCuts: 10
+    points: 15
+    variety: 8
+    balls:
+      - id: ball-1
+        initialSpeed: 162
+        topSpeed: 326
+        color: ff0055
+        startX: 158
+        startY: 168
+      - id: ball-2
+        initialSpeed: 77
+        topSpeed: 165
+        color: 00ff88
+        startX: 741
+        startY: 742
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: polygon
+        points:
+          - - 450
+            - 200
+          - - 530
+            - 250
+          - - 530
+            - 350
+          - - 450
+            - 400
+          - - 370
+            - 350
+          - - 370
+            - 250
+      - id: wall-2
+        kind: wall
+        shape: polygon
+        points:
+          - - 450
+            - 550
+          - - 560
+            - 610
+          - - 560
+            - 730
+          - - 450
+            - 790
+          - - 340
+            - 730
+          - - 340
+            - 610
+      - id: wall-3
+        kind: wall
+        shape: circle
+        cx: 519.2354383973818
+        cy: 483.75538890941726
+        radius: 42
+      - id: wall-4
+        kind: wall
+        shape: circle
+        cx: 373.9889189189189
+        cy: 481.75353000950173
+        radius: 41
   - id: level-6
     level: 6
     sizeThreshold: 30
@@ -235,17 +353,64 @@ levels:
         kind: wall
         shape: rect
         x: 350
-        y: 100
+        'y': 100
         width: 200
         height: 100
       - id: wall-2
         kind: wall
         shape: rect
         x: 350
-        y: 700
+        'y': 700
         width: 200
         height: 100
-
+  - id: level-6b
+    level: 6
+    sizeThreshold: 30
+    expectedCuts: 12
+    points: 20
+    variety: 10
+    balls:
+      - id: ball-1
+        initialSpeed: 120
+        topSpeed: 336
+        color: ff3366
+        startX: 200
+        startY: 200
+      - id: ball-2
+        initialSpeed: 140
+        topSpeed: 330
+        color: 33ff99
+        startX: 700
+        startY: 200
+    entities:
+      - id: wall-1
+        kind: wall
+        shape: rect
+        x: 350
+        'y': 172
+        width: 200
+        height: 28
+      - id: wall-2
+        kind: wall
+        shape: rect
+        x: 350
+        'y': 700
+        width: 200
+        height: 27
+      - id: wall-1771508073828
+        kind: wall
+        shape: rect
+        x: 98.10814110008445
+        'y': 331.3513843433277
+        width: 200
+        height: 200
+      - id: wall-1771509928574
+        kind: wall
+        shape: rect
+        x: 600.707686582251
+        'y': 330.8536687533262
+        width: 200
+        height: 200
   - id: level-7
     level: 7
     sizeThreshold: 20
@@ -278,7 +443,6 @@ levels:
         cx: 600
         cy: 600
         radius: 100
-
   - id: level-8
     level: 8
     sizeThreshold: 25
@@ -306,7 +470,6 @@ levels:
         cx: 462.84
         cy: 435.76
         radius: 224
-
   - id: level-9
     level: 9
     sizeThreshold: 15
@@ -349,17 +512,16 @@ levels:
         kind: wall
         shape: rect
         x: 100
-        y: 100
+        'y': 100
         width: 150
         height: 150
       - id: wall-3
         kind: wall
         shape: rect
         x: 650
-        y: 100
+        'y': 100
         width: 150
         height: 150
-
   - id: level-10
     level: 10
     sizeThreshold: 12
@@ -392,7 +554,6 @@ levels:
         cx: 450
         cy: 450
         radius: 150
-
   - id: level-11
     level: 11
     sizeThreshold: 10
@@ -429,10 +590,9 @@ levels:
         kind: wall
         shape: rect
         x: 350
-        y: 350
+        'y': 350
         width: 200
         height: 200
-
   - id: level-12
     level: 12
     sizeThreshold: 10
@@ -477,7 +637,6 @@ levels:
         cx: 450
         cy: 650
         radius: 80
-
   - id: level-13
     level: 13
     sizeThreshold: 8
@@ -526,17 +685,16 @@ levels:
         kind: wall
         shape: rect
         x: 50
-        y: 400
+        'y': 400
         width: 100
         height: 100
       - id: wall-3
         kind: wall
         shape: rect
         x: 750
-        y: 400
+        'y': 400
         width: 100
         height: 100
-
   - id: level-14
     level: 14
     sizeThreshold: 8
@@ -585,17 +743,16 @@ levels:
         kind: wall
         shape: rect
         x: 200
-        y: 400
+        'y': 400
         width: 100
         height: 100
       - id: wall-4
         kind: wall
         shape: rect
         x: 600
-        y: 400
+        'y': 400
         width: 100
         height: 100
-
   - id: level-15
     level: 15
     sizeThreshold: 5
@@ -658,7 +815,6 @@ levels:
         cx: 650
         cy: 650
         radius: 60
-
   - id: level-16
     level: 16
     sizeThreshold: 5

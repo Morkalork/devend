@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Plus, Save, Trash2, Download } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Download, Copy } from 'lucide-react';
 import { LevelConfig, BallConfig, LevelEntity } from '@/types/level';
 import { MapCanvas } from './MapCanvas';
 import { EntityPanel } from './EntityPanel';
@@ -74,6 +74,45 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     setLevels(prev => prev.filter((_, i) => i !== selectedLevelIndex));
     setSelectedLevelIndex(Math.max(0, selectedLevelIndex - 1));
   }, [levels.length, selectedLevelIndex]);
+
+  // Duplicate level with suffix (4 → 4b, 4b → 4c, etc.)
+  const duplicateLevel = useCallback((index: number) => {
+    const source = levels[index];
+    if (!source) return;
+
+    // Parse base id and find next available suffix
+    const baseMatch = source.id.match(/^(level-\d+)([a-z]?)$/);
+    const baseId = baseMatch ? baseMatch[1] : source.id;
+
+    // Collect existing suffixes for this base
+    const existingSuffixes = new Set(
+      levels
+        .map(l => {
+          const m = l.id.match(new RegExp(`^${baseId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([a-z]?)$`));
+          return m ? (m[1] || '') : null;
+        })
+        .filter((s): s is string => s !== null)
+    );
+
+    // Find next suffix: '' → 'b', 'b' → 'c', etc.
+    let nextSuffix = 'b';
+    while (existingSuffixes.has(nextSuffix)) {
+      nextSuffix = String.fromCharCode(nextSuffix.charCodeAt(0) + 1);
+    }
+
+    const newLevel: LevelConfig = JSON.parse(JSON.stringify(source));
+    newLevel.id = `${baseId}${nextSuffix}`;
+
+    // Insert right after the source level
+    setLevels(prev => [
+      ...prev.slice(0, index + 1),
+      newLevel,
+      ...prev.slice(index + 1),
+    ]);
+    setSelectedLevelIndex(index + 1);
+    setSelectedEntityId(null);
+    setSelectedBallId(null);
+  }, [levels]);
 
   // Add entity (obstacle)
   const addEntity = useCallback((type: 'circle' | 'polygon' | 'rect') => {
@@ -261,21 +300,31 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       <div className="flex-shrink-0 p-2 bg-muted/50 border-b border-border overflow-x-auto">
         <div className="flex gap-2 items-center min-w-max">
           {levels.map((level, index) => (
-            <button
-              key={level.id}
-              onClick={() => {
-                setSelectedLevelIndex(index);
-                setSelectedEntityId(null);
-                setSelectedBallId(null);
-              }}
-              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
-                index === selectedLevelIndex
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card hover:bg-card/80'
-              }`}
-            >
-              {level.id}
-            </button>
+            <div key={level.id} className="flex items-center gap-0.5">
+              <button
+                onClick={() => {
+                  setSelectedLevelIndex(index);
+                  setSelectedEntityId(null);
+                  setSelectedBallId(null);
+                }}
+                className={`px-3 py-1.5 rounded-l text-sm font-medium transition-colors ${
+                  index === selectedLevelIndex
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-card hover:bg-card/80'
+                }`}
+              >
+                {level.id}
+              </button>
+              {index === selectedLevelIndex && (
+                <button
+                  onClick={() => duplicateLevel(index)}
+                  className="px-1.5 py-1.5 rounded-r bg-primary/80 text-primary-foreground hover:bg-primary/60 transition-colors"
+                  title="Duplicate level"
+                >
+                  <Copy className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           ))}
           <button
             onClick={createNewLevel}
