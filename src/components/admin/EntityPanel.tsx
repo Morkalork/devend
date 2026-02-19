@@ -53,7 +53,7 @@ export function EntityPanel({
       {/* Walls Section */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-muted-foreground">Walls</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground">Obstacles</h3>
           <div className="flex gap-1">
             <button
               onClick={() => onAddEntity('rect')}
@@ -107,7 +107,7 @@ export function EntityPanel({
           ))}
           {(level.entities || []).length === 0 && (
             <div className="text-xs text-muted-foreground text-center py-2">
-              No walls
+              No obstacles
             </div>
           )}
         </div>
