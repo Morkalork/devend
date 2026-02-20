@@ -42,6 +42,7 @@ import {
   closestPointOnSegment,
 } from "@/lib/polygon";
 import { extractContours } from "@/lib/contour";
+import { AssimilationState, createAssimilation, updateAssimilation, renderAssimilation } from "@/lib/assimilationAnimation";
 import { Wall, WALL_THICKNESS, WALL_COLOR, createWallsFromPolygon, findWallTermination } from "@/lib/wallGeometry";
 import { 
   registerWallImpact, 
@@ -128,7 +129,7 @@ interface GameCanvasProps {
 // Game constants - all in WORLD units
 const BASE_BALL_RADIUS = 18; // World units (was ~10 in ~450px canvas, now in 900px world)
 const BALL_SPEED_INCREASE = 1.03; // Post-wall speed ramp
-const BASE_SWIPE_MIN_DISTANCE = 35; // World units
+const BASE_SWIPE_MIN_DISTANCE = 5; // World units
 const ARENA_MARGIN = 0.05; // 5% margin from board edges
 const MINIMUM_WALL_TIME = 0.35; // seconds
 const RECOVERY_WINDOW_MS = 700; // Recovery time after failed wall
@@ -315,6 +316,7 @@ export function GameCanvas({
     // Lock bonus tracking: each locked ball gives 50 * lockOrder (50, 100, 150...)
     lockedBallsCount: 0,
     lockBonus: 0,
+    assimilations: new Map<string, AssimilationState>(),
   });
 
   useEffect(() => {
@@ -362,6 +364,7 @@ export function GameCanvas({
       // Reset counters for new level
       regionIdCounter = 0;
       wallIdCounter = 0;
+      game.assimilations.clear();
 
       // No starting area reduction in new upgrade system
       const targetRemaining = 100;
@@ -613,6 +616,9 @@ export function GameCanvas({
           effects: createBallEffectState(), // Visual effects state
           state: 'active' as const, // Ball starts in active state
           wonSpinSpeed: 0, // Only used when in 'won' state
+          wonTime: 0,
+          assimScale: 1,
+          assimColorFade: 0,
         };
       });
 
@@ -1070,10 +1076,31 @@ export function GameCanvas({
           // Transition to WON state
           ball.state = 'won';
           ball.wonSpinSpeed = WON_BALL_SPIN_SPEED;
+          ball.wonTime = performance.now();
+          ball.assimScale = 1;
           ball.velocity = { x: 0, y: 0 }; // Stop physics
-          
+
           // Move to center of region
           ball.position = { ...ballRegion.centroid };
+
+          // Build boundary from the actual grid region cells (not the expanded polygon region)
+          if (game.spaceGrid) {
+            const grid = game.spaceGrid;
+            const cellCenters: Vector2[] = ballRegion.cellIndices.map(idx => {
+              const col = idx % grid.width;
+              const row = Math.floor(idx / grid.width);
+              return {
+                x: grid.originX + col * grid.cellSize + grid.cellSize / 2,
+                y: grid.originY + row * grid.cellSize + grid.cellSize / 2,
+              };
+            });
+            const contours = extractContours(cellCenters, grid.cellSize);
+            if (contours.length > 0) {
+              // Use the longest contour (the outer boundary)
+              const boundary = contours.reduce((a, b) => a.length > b.length ? a : b);
+              game.assimilations.set(ball.id, createAssimilation(ball, boundary, performance.now()));
+            }
+          }
           
            // Award lock bonus: +1h per locked ball, capped at 2h total
            game.lockedBallsCount += 1;
@@ -1823,11 +1850,14 @@ export function GameCanvas({
       // Check if level just got cleared (legacy threshold check)
       if (percent < level.sizeThreshold && game.pushMode === "none") {
         render();
-        game.pushMode = "prompt";
-        setPushMode("prompt");
-        setClearedPercent(percent);
+        // Delay prompt by 2s so player can see final board state (e.g. ball lock animations)
+        game.pushMode = "prompt"; // Block further cuts during delay
         game.bestRemainingPercent = percent;
         game.pushStartPercent = percent;
+        setTimeout(() => {
+          setPushMode("prompt");
+          setClearedPercent(percent);
+        }, 2000);
         return;
       }
     };
@@ -2283,7 +2313,8 @@ export function GameCanvas({
       // Render all balls with multi-axis spin illusion
       for (const ball of balls) {
         const screenPos = worldToScreen(ball.position.x, ball.position.y);
-        const screenRadius = ball.radius * scale;
+        const assimScale = ball.assimScale ?? 1;
+        const screenRadius = ball.radius * scale * assimScale;
         const isFastest = false; // Highlight fastest ball removed in new upgrade system
 
         // Calculate spin phases based on ball rotation and unique offsets per ball
@@ -2319,6 +2350,20 @@ export function GameCanvas({
           scale
         );
 
+        // Blend ball color toward accent color during assimilation fade
+        const fade = ball.assimColorFade ?? 0;
+        const r0 = parseInt(ball.color.slice(1, 3), 16);
+        const g0 = parseInt(ball.color.slice(3, 5), 16);
+        const b0 = parseInt(ball.color.slice(5, 7), 16);
+        const ar = parseInt(accentColor.slice(1, 3), 16);
+        const ag = parseInt(accentColor.slice(3, 5), 16);
+        const ab = parseInt(accentColor.slice(5, 7), 16);
+        const r = Math.round(r0 + (ar - r0) * fade);
+        const g = Math.round(g0 + (ag - g0) * fade);
+        const b = Math.round(b0 + (ab - b0) * fade);
+        const blendedColor = `rgb(${r}, ${g}, ${b})`;
+        const blendedHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+
         // Outer glow (ambient light effect)
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius + 10 * scale, 0, Math.PI * 2);
@@ -2326,8 +2371,8 @@ export function GameCanvas({
           screenPos.x, screenPos.y, screenRadius * 0.7,
           screenPos.x, screenPos.y, screenRadius + 10 * scale
         );
-        outerGlow.addColorStop(0, hexToRgba(ball.color.slice(1), 0.4));
-        outerGlow.addColorStop(0.6, hexToRgba(ball.color.slice(1), 0.15));
+        outerGlow.addColorStop(0, hexToRgba(blendedHex, 0.4));
+        outerGlow.addColorStop(0.6, hexToRgba(blendedHex, 0.15));
         outerGlow.addColorStop(1, "transparent");
         ctx.fillStyle = outerGlow;
         ctx.fill();
@@ -2336,14 +2381,10 @@ export function GameCanvas({
         ctx.save();
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
-        
-        const r = parseInt(ball.color.slice(1, 3), 16);
-        const g = parseInt(ball.color.slice(3, 5), 16);
-        const b = parseInt(ball.color.slice(5, 7), 16);
         const lighterColor = `rgb(${Math.min(255, r + 50)}, ${Math.min(255, g + 50)}, ${Math.min(255, b + 50)})`;
         const darkerColor = `rgb(${Math.max(0, r - 60)}, ${Math.max(0, g - 60)}, ${Math.max(0, b - 60)})`;
         const darkestColor = `rgb(${Math.max(0, r - 100)}, ${Math.max(0, g - 100)}, ${Math.max(0, b - 100)})`;
-        
+
         const baseGradient = ctx.createRadialGradient(
           screenPos.x - screenRadius * 0.3,
           screenPos.y - screenRadius * 0.3,
@@ -2353,12 +2394,12 @@ export function GameCanvas({
           screenRadius * 1.3
         );
         baseGradient.addColorStop(0, lighterColor);
-        baseGradient.addColorStop(0.35, ball.color);
+        baseGradient.addColorStop(0.35, blendedColor);
         baseGradient.addColorStop(0.75, darkerColor);
         baseGradient.addColorStop(1, darkestColor);
-        
+
         ctx.fillStyle = baseGradient;
-        ctx.shadowColor = ball.color;
+        ctx.shadowColor = blendedColor;
         ctx.shadowBlur = 15 * scale;
         ctx.fill();
         ctx.clip();
@@ -2515,6 +2556,13 @@ export function GameCanvas({
         ctx.restore();
       }
 
+      // Render assimilation tentacles on top of balls (clipped to not cover ball interior)
+      for (const [, anim] of game.assimilations) {
+        if (anim.phase !== 'waiting') {
+          renderAssimilation(ctx, anim, game.boardRect, scale, accentColor, performance.now());
+        }
+      }
+
       // Render wall - on top of everything, clipped to region
       if (wall) {
         const startScreen = worldToScreen(wall.startPoint.x, wall.startPoint.y);
@@ -2623,6 +2671,8 @@ export function GameCanvas({
         // Handle WON balls - just spin, no physics
         if (ball.state === 'won') {
           ball.rotation += ball.wonSpinSpeed * cappedDt;
+          const anim = game.assimilations.get(ball.id);
+          if (anim) updateAssimilation(anim, ball, cappedDt, timestamp);
           continue;
         }
         

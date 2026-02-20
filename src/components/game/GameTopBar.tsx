@@ -190,7 +190,7 @@ export function GameTopBar({
           </span>
         </div>
 
-        {/* Locked Balls */}
+        {/* Thread Locks */}
         <div className="flex items-center gap-1.5 min-w-0">
           <Lock className="w-5 h-5 flex-shrink-0" style={{ color: accentColor, opacity: 0.6 }} />
           <span className="font-display text-base font-bold tabular-nums" style={{ color: accentColor, opacity: 0.6 }}>

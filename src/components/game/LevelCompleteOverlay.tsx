@@ -174,12 +174,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </span>
             </div>
 
-            {/* Lock Bonus Section */}
+            {/* Thread Lock Bonus Section */}
             {hasLockBonus && (
               <div className="flex justify-between items-center py-2 border-b border-cyan-500/30 bg-cyan-500/10 rounded px-2">
                 <span className="text-cyan-400 flex items-center gap-1">
                   <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Balls Locked ({lockedBallsCount})
+                  Thread Locks ({lockedBallsCount})
                 </span>
                 <span className="font-bold text-cyan-400">+{lockBonus}h</span>
               </div>

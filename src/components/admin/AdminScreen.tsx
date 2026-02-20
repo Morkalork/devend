@@ -1,11 +1,12 @@
-import { ArrowLeft, Map } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles } from 'lucide-react';
 
 interface AdminScreenProps {
   onBack: () => void;
   onMapBuilder: () => void;
+  onAnimationTest: () => void;
 }
 
-export function AdminScreen({ onBack, onMapBuilder }: AdminScreenProps) {
+export function AdminScreen({ onBack, onMapBuilder, onAnimationTest }: AdminScreenProps) {
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="max-w-md mx-auto">
@@ -36,6 +37,21 @@ export function AdminScreen({ onBack, onMapBuilder }: AdminScreenProps) {
               <div className="font-semibold">Map Builder</div>
               <div className="text-sm text-muted-foreground">
                 Create and edit game levels
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={onAnimationTest}
+            className="w-full p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors flex items-center gap-4"
+          >
+            <div className="p-3 rounded-lg bg-primary/10">
+              <Sparkles className="w-6 h-6 text-primary" />
+            </div>
+            <div className="text-left">
+              <div className="font-semibold">Animations</div>
+              <div className="text-sm text-muted-foreground">
+                Test ball assimilation and lock animations
               </div>
             </div>
           </button>

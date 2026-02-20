@@ -1,7 +1,7 @@
 import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'result' | 'augmentStore' | 'options' | 'admin' | 'mapBuilder';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'result' | 'augmentStore' | 'options' | 'admin' | 'mapBuilder' | 'animationTest';
 
 export type { Vector2 };
 
@@ -36,6 +36,9 @@ export interface Ball {
   effects: BallEffectState; // Visual effect state for pulse, wall hit, ball hit
   state: BallState; // 'active' = normal, 'won' = captured in small region
   wonSpinSpeed: number; // Spin speed when in WON state
+  wonTime: number;      // timestamp when entering WON state
+  assimScale: number;   // visual scale factor for assimilation animation (default 1.0)
+  assimColorFade: number; // 0→1 fade from ball color to accent color (default 0)
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

@@ -51,6 +51,10 @@ export function useGameState() {
     setCurrentScreen('mapBuilder');
   }, []);
 
+  const goToAnimationTest = useCallback(() => {
+    setCurrentScreen('animationTest');
+  }, []);
+
   return {
     currentScreen,
     lastResult,
@@ -65,5 +69,6 @@ export function useGameState() {
     goToOptions,
     goToAdmin,
     goToMapBuilder,
+    goToAnimationTest,
   };
 }
