@@ -91,6 +91,48 @@
   z-index: 2;
 }
 
+/* Word highlight box — grows upward from a single bottom line */
+.crt-word-box {
+  animation: crt-word-box-grow var(--grow-duration, 1s) ease-out forwards;
+}
+
+@keyframes crt-word-box-grow {
+  0%   { clip-path: inset(calc(100% - 2px) 0 0 0); }
+  100% { clip-path: inset(0% 0 0 0); }
+}
+
+/* Connector line animations */
+.crt-line-horiz {
+  animation: crt-line-grow-horiz var(--line-duration, 0.4s) ease-out forwards;
+}
+@keyframes crt-line-grow-horiz {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.crt-line-vert {
+  animation: crt-line-grow-vert var(--line-duration, 0.4s) ease-out forwards;
+}
+@keyframes crt-line-grow-vert {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+/* Word highlight group — visible immediately, fades out at the end */
+.crt-highlight-group {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  animation: crt-word-highlight-appear var(--highlight-duration, 10s) ease-in forwards;
+}
+
+@keyframes crt-word-highlight-appear {
+  0%   { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Respect user preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .crt-code-layer {

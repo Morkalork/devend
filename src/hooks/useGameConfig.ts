@@ -24,6 +24,17 @@ export interface GameConfig {
     max_lives: number;
     cut_completion_threshold: number;
   };
+  crt_word_highlight: {
+    interval_min_seconds: number; // min delay between highlights appearing
+    interval_max_seconds: number; // max delay between highlights appearing
+    display_seconds: number;      // how long each highlight stays visible
+    grow_seconds: number;         // duration of the box grow-up animation
+    line_grow_seconds: number;    // duration of each connector line grow animation
+    color: string;                // hex without #
+    border_opacity: number;       // 0–1
+    background_opacity: number;   // 0–1
+    border_width: number;         // pixels
+  };
 }
 
 const defaultConfig: GameConfig = {
@@ -49,6 +60,17 @@ const defaultConfig: GameConfig = {
     max_lives: 5,
     cut_completion_threshold: 0.75,
   },
+  crt_word_highlight: {
+    interval_min_seconds: 8,
+    interval_max_seconds: 14,
+    display_seconds: 10,
+    grow_seconds: 1,
+    line_grow_seconds: 0.4,
+    color: "00ff88",
+    border_opacity: 0.85,
+    background_opacity: 0.2,
+    border_width: 2,
+  },
 };
 
 export function useGameConfig() {
@@ -60,13 +82,14 @@ export function useGameConfig() {
       .then((res) => res.text())
       .then((text) => {
         const parsed = yaml.load(text) as Partial<GameConfig>;
-        setConfig({ 
-          ...defaultConfig, 
+        setConfig({
+          ...defaultConfig,
           ...parsed,
           visuals: { ...defaultConfig.visuals, ...parsed?.visuals },
           ball: { ...defaultConfig.ball, ...parsed?.ball },
           fence: { ...defaultConfig.fence, ...parsed?.fence },
           gameplay: { ...defaultConfig.gameplay, ...parsed?.gameplay },
+          crt_word_highlight: { ...defaultConfig.crt_word_highlight, ...parsed?.crt_word_highlight },
         });
       })
       .catch((err) => {

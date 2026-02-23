@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
+import { useGameConfig } from '../../hooks/useGameConfig';
 
 /**
  * CRT Terminal Background
@@ -153,6 +154,30 @@ const DAMPING = 0.999;`,
 }`,
 ];
 
+// Nonsensical callout texts — flowing strings, word-wrapped by the box
+const CALLOUT_TEXTS = [
+  "Lorem ipsum dolor sit amet consectetur adipiscing void et nullam",
+  "null ptr ref at 0xDEADBEEF access violation process terminated",
+  "undefined is not a function call stack empty returning null ptr",
+  "heap corruption detected in sector 7-G memory dump follows pls",
+  "NaN propagated through entire call chain returning Infinity now",
+  "stack overflow at depth 9001 all frames corrupt goodbye world",
+  "use after free object at 0x00FF already deleted still haunting",
+  "type mismatch expected void got raw emotion implicit cast failed",
+  "ref count reached zero object deleted ghost pointer still lives",
+  "divide by zero in hot path result is pure chaos and IT IS FINE",
+  "infinite loop detected at line undefined still running send help",
+  "segmentation fault core dumped no survivors rip beloved process",
+  "race condition in scheduler execution order undefined coin flip",
+  "checksum mismatch byte 0x4F corrupt packet dropped sent anyway",
+  "out of memory allocation failed system halting please buy RAM",
+  "deadlock found thread alpha waits for thread alpha forever gg",
+  "missing semicolon somewhere on line infinity good luck finding",
+  "404 logic not found in this function please advise or reboot",
+  "assertion failed true does not equal true reality is broken now",
+  "buffer overflow wrote one byte past the end classic off by one",
+];
+
 interface CRTBackgroundProps {
   accentColor?: string; // hex color with #
 }
@@ -160,10 +185,32 @@ interface CRTBackgroundProps {
 // Glitch effect types
 type GlitchType = 'tear' | 'flicker' | 'corrupt' | null;
 
+interface WordHighlight {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  calloutX: number;
+  calloutY: number;
+  calloutW: number;
+  calloutH: number;
+  calloutText: string;
+  calloutToRight: boolean;
+}
+
 export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
   const codeContainerRef = useRef<HTMLDivElement>(null);
   const [activeGlitch, setActiveGlitch] = useState<GlitchType>(null);
   const [glitchOffset, setGlitchOffset] = useState(0);
+
+  // Word highlight state — array so multiple can show simultaneously
+  const { config } = useGameConfig();
+  const hlCfg = config.crt_word_highlight;
+  type Phase = 'box' | 'horiz' | 'vert' | 'callout';
+  const [highlights, setHighlights] = useState<Array<WordHighlight & { id: number; phase: Phase }>>([]);
+  const highlightIdRef = useRef(0);
+  const nextHighlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerRef = useRef<() => void>(() => {});
   
   // Generate a shuffled, repeated code block for seamless looping
   const codeContent = useMemo(() => {
@@ -171,6 +218,130 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
     const shuffled = [...CODE_SNIPPETS].sort(() => Math.random() - 0.5);
     const repeated = [...shuffled, ...shuffled]; // Duplicate for seamless loop
     return repeated.join('\n\n');
+  }, []);
+
+  // Parse declaration names as character offsets into codeContent
+  // (function/interface/let/const/type followed by an identifier)
+  const wordPositions = useMemo(() => {
+    const words: Array<{ charOffset: number; length: number }> = [];
+    const declRegex = /(?:function|interface|let|const|type)\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
+    let match;
+    while ((match = declRegex.exec(codeContent)) !== null) {
+      const name = match[1];
+      const charOffset = match.index + match[0].length - name.length;
+      words.push({ charOffset, length: name.length });
+    }
+    return words;
+  }, [codeContent]);
+
+  // Convert hex color string to "r, g, b" for use in rgba()
+  const hlColorRgb = useMemo(() => {
+    const hex = hlCfg.color.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return `${r}, ${g}, ${b}`;
+  }, [hlCfg.color]);
+
+  // Pick a random visible word using the Range API for pixel-accurate positioning
+  const triggerWordHighlight = useCallback(() => {
+    if (wordPositions.length === 0) return;
+    const container = codeContainerRef.current;
+    if (!container) return;
+
+    // All <pre> elements in the layer (original + clone)
+    const pres = Array.from(container.querySelectorAll('pre'));
+    const containerRect = container.getBoundingClientRect();
+    const vh = window.innerHeight;
+
+    interface Candidate { absX: number; absY: number; width: number; height: number; }
+    const candidates: Candidate[] = [];
+
+    for (const pre of pres) {
+      const textNode = pre.firstChild;
+      if (!textNode) continue;
+      for (const { charOffset, length } of wordPositions) {
+        try {
+          const range = document.createRange();
+          range.setStart(textNode, charOffset);
+          range.setEnd(textNode, charOffset + length);
+          const rect = range.getBoundingClientRect();
+          // Only pick words fully visible in the viewport with a small margin
+          if (rect.top >= vh * 0.25 && rect.bottom <= vh - 20 && rect.width > 0) {
+            candidates.push({
+              absX: rect.left - containerRect.left,
+              absY: rect.top  - containerRect.top,
+              width: rect.width,
+              height: rect.height,
+            });
+          }
+        } catch {
+          // charOffset out of range for this node — skip
+        }
+      }
+    }
+
+    if (candidates.length === 0) return;
+
+    const picked = candidates[Math.floor(Math.random() * candidates.length)];
+
+    // Decide callout placement: prefer right, fall back to left
+    const CALLOUT_W = 118;
+    const CALLOUT_H = 52;
+    const H_GAP = 88; // horizontal gap between word box edge and callout
+    const toRight = (picked.absX + picked.width + H_GAP + CALLOUT_W) < window.innerWidth - 16;
+    const calloutX = toRight
+      ? picked.absX + picked.width + H_GAP - 40
+      : picked.absX - H_GAP - CALLOUT_W - 40;
+    // Callout top is below the word's vertical midpoint (rounded to whole pixel)
+    const calloutY = Math.round(picked.absY + picked.height / 2 + 14);
+    const calloutText = CALLOUT_TEXTS[Math.floor(Math.random() * CALLOUT_TEXTS.length)];
+
+    const id = ++highlightIdRef.current;
+    setHighlights(prev => [...prev, {
+      id,
+      phase: 'box' as const,
+      x: picked.absX, y: picked.absY, width: picked.width, height: picked.height,
+      calloutX, calloutY, calloutW: CALLOUT_W, calloutH: CALLOUT_H,
+      calloutText, calloutToRight: toRight,
+    }]);
+
+    // Schedule the next highlight 8–14 s from now (via ref to avoid stale closure)
+    const minMs = hlCfg.interval_min_seconds * 1000;
+    const maxMs = hlCfg.interval_max_seconds * 1000;
+    const delay = minMs + Math.random() * (maxMs - minMs);
+    nextHighlightTimerRef.current = setTimeout(() => triggerRef.current(), delay);
+  }, [wordPositions, hlCfg.interval_min_seconds, hlCfg.interval_max_seconds]);
+
+  // Keep ref pointing at latest version of the trigger
+  useEffect(() => { triggerRef.current = triggerWordHighlight; }, [triggerWordHighlight]);
+
+  // Remove one highlight by id when its animation ends
+  const removeHighlight = useCallback((id: number) => {
+    setHighlights(prev => prev.filter(h => h.id !== id));
+  }, []);
+
+  // Advance a highlight to the next phase in the reveal sequence
+  const advancePhase = useCallback((id: number) => {
+    setHighlights(prev => prev.map(h => {
+      if (h.id !== id) return h;
+      const vertHeight = Math.max(0, h.calloutY - (h.y + h.height / 2));
+      const next: Record<string, Phase> = {
+        box:   'horiz',
+        horiz: vertHeight > 0 ? 'vert' : 'callout',
+        vert:  'callout',
+      };
+      return { ...h, phase: (next[h.phase] ?? h.phase) as Phase };
+    }));
+  }, []);
+
+  // Fire the first highlight shortly after mount; cleanup on unmount
+  useEffect(() => {
+    const id = setTimeout(() => triggerRef.current(), 600);
+    return () => {
+      clearTimeout(id);
+      if (nextHighlightTimerRef.current) clearTimeout(nextHighlightTimerRef.current);
+    };
   }, []);
 
   // Trigger a random glitch effect
@@ -190,8 +361,8 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
   // Random glitch interval
   useEffect(() => {
     const scheduleNextGlitch = () => {
-      // Random interval: 3-8 seconds
-      const delay = 3000 + Math.random() * 5000;
+      // Random interval: 3.75-10 seconds (25% longer = 20% fewer glitches)
+      const delay = 3750 + Math.random() * 6250;
       return setTimeout(() => {
         triggerGlitch();
         scheduleNextGlitch();
@@ -234,9 +405,102 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
         '--crt-glitch-offset': `${glitchOffset}%`,
       } as React.CSSProperties}
     >
-      {/* Layer 1: Scrolling Code */}
+      {/* Layer 1: Scrolling Code — highlight lives here so it moves with the text */}
       <div className="crt-code-layer" ref={codeContainerRef}>
         <pre className="crt-code">{codeContent}</pre>
+
+        {/* Word highlight groups — multiple can be visible simultaneously */}
+        {highlights.map(hl => {
+          const bw = hlCfg.border_width;
+          const borderColor = `rgba(${hlColorRgb}, ${hlCfg.border_opacity})`;
+          const bgColor     = `rgba(${hlColorRgb}, ${hlCfg.background_opacity})`;
+          const wordMidY    = Math.round(hl.y + hl.height / 2);
+          const elbowX      = hl.calloutToRight ? hl.calloutX : hl.calloutX + hl.calloutW;
+          const wordConnX   = hl.calloutToRight ? hl.x + hl.width + 4 : hl.x - 4;
+          const horizLeft   = Math.min(wordConnX, elbowX);
+          const horizWidth  = Math.abs(elbowX - wordConnX);
+          // +1 ensures the line overlaps the callout border by 1px, closing any sub-pixel gap
+          const vertHeight  = Math.max(0, Math.round(hl.calloutY) - wordMidY + 1);
+
+          return (
+            <div
+              key={hl.id}
+              className="crt-highlight-group"
+              aria-hidden="true"
+              onAnimationEnd={(e) => { if (e.target === e.currentTarget) removeHighlight(hl.id); }}
+              style={{ '--highlight-duration': `${hlCfg.display_seconds}s` } as React.CSSProperties}
+            >
+              {/* 1. Word box — grows bottom→top */}
+              <div
+                className="crt-word-box"
+                onAnimationEnd={() => advancePhase(hl.id)}
+                style={{
+                  position: 'absolute',
+                  left: `${hl.x - 4}px`, top: `${hl.y - 2}px`,
+                  width: `${hl.width + 8}px`, height: `${hl.height + 4}px`,
+                  border: `${bw}px solid ${borderColor}`,
+                  backgroundColor: bgColor,
+                  boxSizing: 'border-box',
+                  '--grow-duration': `${hlCfg.grow_seconds * 0.5}s`,
+                } as React.CSSProperties}
+              />
+
+              {/* 2. Horizontal connector — grows outward from the word box */}
+              {(hl.phase === 'horiz' || hl.phase === 'vert' || hl.phase === 'callout') && (
+                <div
+                  className="crt-line-horiz"
+                  onAnimationEnd={() => advancePhase(hl.id)}
+                  style={{
+                    position: 'absolute',
+                    left: `${horizLeft}px`, top: `${wordMidY - 1}px`,
+                    width: `${horizWidth + 1}px`, height: '2px',
+                    backgroundColor: borderColor,
+                    transformOrigin: hl.calloutToRight ? 'left center' : 'right center',
+                    '--line-duration': `${hlCfg.line_grow_seconds}s`,
+                  } as React.CSSProperties}
+                />
+              )}
+
+              {/* 3. Vertical connector — grows downward from the elbow */}
+              {(hl.phase === 'vert' || hl.phase === 'callout') && vertHeight > 0 && (
+                <div
+                  className="crt-line-vert"
+                  onAnimationEnd={() => advancePhase(hl.id)}
+                  style={{
+                    position: 'absolute',
+                    left: `${elbowX}px`, top: `${wordMidY}px`,
+                    width: '2px', height: `${vertHeight}px`,
+                    backgroundColor: borderColor,
+                    transformOrigin: 'top center',
+                    '--line-duration': `${hlCfg.line_grow_seconds}s`,
+                  } as React.CSSProperties}
+                />
+              )}
+
+              {/* 4. Callout box — appears after all lines have grown */}
+              {hl.phase === 'callout' && (
+                <div style={{
+                  position: 'absolute',
+                  left: `${hl.calloutX}px`, top: `${hl.calloutY}px`,
+                  width: `${hl.calloutW}px`, height: `${hl.calloutH}px`,
+                  border: `${bw}px solid ${borderColor}`,
+                  backgroundColor: 'rgba(18, 58, 38, 0.8)',
+                  boxSizing: 'border-box',
+                  padding: '3px 7px',
+                  fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+                  fontSize: '6.75px',
+                  lineHeight: '1.5',
+                  color: `rgba(${hlColorRgb}, 0.9)`,
+                  whiteSpace: 'normal',
+                  wordWrap: 'break-word',
+                  overflow: 'hidden',
+                }}>
+                  {hl.calloutText}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Layer 2: Glitch tear overlay - horizontal slice displacement */}
