@@ -20,36 +20,45 @@ export function PushYourLuckOverlay({
 
   return (
     <>
+      <style>{`
+        @keyframes pushLuckFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @media (min-width: 640px) {
+          .push-luck-modal {
+            top: 50% !important;
+            bottom: auto !important;
+            left: 50% !important;
+            right: auto !important;
+            width: 384px !important;
+            margin-left: -192px !important;
+            margin-top: -140px !important;
+          }
+        }
+        @media (max-width: 639px) {
+          .push-luck-modal {
+            bottom: 6rem !important;
+          }
+        }
+      `}</style>
+
       {/* Backdrop */}
-      <div className="absolute inset-0 z-40 bg-background/50" />
-      
+      <div
+        className="absolute inset-0 z-40 bg-background/50"
+        style={{ animation: 'pushLuckFadeIn 500ms ease-out' }}
+      />
+
       {/* Modal */}
-      <div 
+      <div
         className="push-luck-modal absolute z-50 overflow-y-auto"
         style={{
           bottom: '1rem',
           left: '1rem',
           right: '1rem',
+          animation: 'pushLuckFadeIn 500ms ease-out',
         }}
       >
-        <style>{`
-          @media (min-width: 640px) {
-            .push-luck-modal {
-              top: 50% !important;
-              bottom: auto !important;
-              left: 50% !important;
-              right: auto !important;
-              width: 384px !important;
-              margin-left: -192px !important;
-              margin-top: -140px !important;
-            }
-          }
-          @media (max-width: 639px) {
-            .push-luck-modal {
-              bottom: 6rem !important;
-            }
-          }
-        `}</style>
         
         <div className="bg-black border-2 border-success rounded-xl p-4 sm:p-6 shadow-2xl">
           {/* Header */}

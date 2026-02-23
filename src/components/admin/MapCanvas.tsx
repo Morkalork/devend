@@ -6,11 +6,14 @@ interface MapCanvasProps {
   level: LevelConfig;
   selectedEntityId: string | null;
   selectedBallId: string | null;
+  snapToGrid: boolean;
   onSelectEntity: (id: string | null) => void;
   onSelectBall: (id: string | null) => void;
   onUpdateEntity: (id: string, updates: Partial<LevelEntity>) => void;
   onUpdateBall: (id: string, updates: Partial<BallConfig>) => void;
 }
+
+const GRID_SIZE = 25;
 
 const BALL_RADIUS = 25;
 const HANDLE_SIZE = 16;
@@ -58,11 +61,13 @@ export function MapCanvas({
   level,
   selectedEntityId,
   selectedBallId,
+  snapToGrid,
   onSelectEntity,
   onSelectBall,
   onUpdateEntity,
   onUpdateBall,
 }: MapCanvasProps) {
+  const snap = useCallback((v: number) => snapToGrid ? Math.round(v / GRID_SIZE) * GRID_SIZE : Math.round(v), [snapToGrid]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [boardRect, setBoardRect] = useState<BoardRect | null>(null);
@@ -179,17 +184,19 @@ export function MapCanvas({
     ctx.strokeRect(playableLeft, playableTop, playableWidth, playableHeight);
 
     // Draw grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.lineWidth = 1;
-    const gridSize = 100;
-    for (let x = 0; x <= BOARD_WIDTH; x += gridSize) {
+    for (let x = 0; x <= BOARD_WIDTH; x += GRID_SIZE) {
+      const isMajor = x % 100 === 0;
+      ctx.strokeStyle = isMajor ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.04)';
       const sx = boardRect.left + x * boardRect.scale;
       ctx.beginPath();
       ctx.moveTo(sx, boardRect.top);
       ctx.lineTo(sx, boardRect.top + boardRect.height);
       ctx.stroke();
     }
-    for (let y = 0; y <= BOARD_HEIGHT; y += gridSize) {
+    for (let y = 0; y <= BOARD_HEIGHT; y += GRID_SIZE) {
+      const isMajor = y % 100 === 0;
+      ctx.strokeStyle = isMajor ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.04)';
       const sy = boardRect.top + y * boardRect.scale;
       ctx.beginPath();
       ctx.moveTo(boardRect.left, sy);
@@ -207,13 +214,18 @@ export function MapCanvas({
         const circleEntity = entity as WallCircleEntity;
         const center = worldToScreen(circleEntity.cx, circleEntity.cy);
         const radius = circleEntity.radius * boardRect.scale;
-        
-        ctx.fillStyle = isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)';
+        const isMirror = !!entity.mirror;
+
+        ctx.fillStyle = isMirror
+          ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
+          : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
         ctx.beginPath();
         ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
         ctx.fill();
-        
-        ctx.strokeStyle = isSelected ? '#ff6b6b' : '#cc5555';
+
+        ctx.strokeStyle = isMirror
+          ? (isSelected ? '#88ddff' : '#66bbdd')
+          : (isSelected ? '#ff6b6b' : '#cc5555');
         ctx.lineWidth = isSelected ? 3 : 2;
         ctx.stroke();
         
@@ -244,16 +256,21 @@ export function MapCanvas({
           });
         }
       } else if (entity.shape === 'rect') {
-        // Handle rect walls
+        // Handle rect walls and mirrors
         const rectEntity = entity as WallRectEntity;
         const topLeft = worldToScreen(rectEntity.x, rectEntity.y);
         const width = rectEntity.width * boardRect.scale;
         const height = rectEntity.height * boardRect.scale;
-        
-        ctx.fillStyle = isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)';
+
+        const isMirror = !!entity.mirror;
+        ctx.fillStyle = isMirror
+          ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
+          : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
         ctx.fillRect(topLeft.x, topLeft.y, width, height);
-        
-        ctx.strokeStyle = isSelected ? '#ff6b6b' : '#cc5555';
+
+        ctx.strokeStyle = isMirror
+          ? (isSelected ? '#88ddff' : '#66bbdd')
+          : (isSelected ? '#ff6b6b' : '#cc5555');
         ctx.lineWidth = isSelected ? 3 : 2;
         ctx.strokeRect(topLeft.x, topLeft.y, width, height);
         
@@ -295,15 +312,20 @@ export function MapCanvas({
       } else if (entity.shape === 'polygon') {
         const polyEntity = entity as WallPolygonEntity;
         const points = polyEntity.points.map(([x, y]) => worldToScreen(x, y));
-        
-        ctx.fillStyle = isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)';
+        const isMirror = !!entity.mirror;
+
+        ctx.fillStyle = isMirror
+          ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
+          : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
         points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
         ctx.closePath();
         ctx.fill();
-        
-        ctx.strokeStyle = isSelected ? '#ff6b6b' : '#cc5555';
+
+        ctx.strokeStyle = isMirror
+          ? (isSelected ? '#88ddff' : '#66bbdd')
+          : (isSelected ? '#ff6b6b' : '#cc5555');
         ctx.lineWidth = isSelected ? 3 : 2;
         ctx.stroke();
         
@@ -647,19 +669,19 @@ export function MapCanvas({
       if (original.shape === 'circle') {
         const circleOriginal = original as WallCircleEntity;
         onUpdateEntity(dragMode.id, {
-          cx: circleOriginal.cx + dx,
-          cy: circleOriginal.cy + dy,
+          cx: snap(circleOriginal.cx + dx),
+          cy: snap(circleOriginal.cy + dy),
         });
       } else if (original.shape === 'rect') {
         const rectOriginal = original as WallRectEntity;
         onUpdateEntity(dragMode.id, {
-          x: rectOriginal.x + dx,
-          y: rectOriginal.y + dy,
+          x: snap(rectOriginal.x + dx),
+          y: snap(rectOriginal.y + dy),
         });
       } else if (original.shape === 'polygon') {
         const polyOriginal = original as WallPolygonEntity;
         onUpdateEntity(dragMode.id, {
-          points: polyOriginal.points.map(([x, y]) => [x + dx, y + dy] as [number, number]),
+          points: polyOriginal.points.map(([x, y]) => [snap(x + dx), snap(y + dy)] as [number, number]),
         });
       }
     } else if (dragMode.type === 'ball') {
@@ -668,15 +690,15 @@ export function MapCanvas({
       const newX = Math.max(BALL_RADIUS, Math.min(BOARD_WIDTH - BALL_RADIUS, dragMode.originalX + dx));
       const newY = Math.max(BALL_RADIUS, Math.min(BOARD_HEIGHT - BALL_RADIUS, dragMode.originalY + dy));
       // Update ball position in level config
-      onUpdateBall(dragMode.id, { 
-        startX: Math.round(newX), 
-        startY: Math.round(newY) 
+      onUpdateBall(dragMode.id, {
+        startX: snap(newX),
+        startY: snap(newY)
       });
     } else if (dragMode.type === 'circle-radius') {
       const entity = (level.entities || []).find(e => e.id === dragMode.id) as WallCircleEntity;
       if (entity) {
         const newRadius = Math.max(20, Math.hypot(world.x - entity.cx, world.y - entity.cy));
-        onUpdateEntity(dragMode.id, { radius: Math.round(newRadius) });
+        onUpdateEntity(dragMode.id, { radius: snap(newRadius) });
       }
     } else if (dragMode.type === 'rect-resize') {
       const orig = dragMode.originalRect;
@@ -730,16 +752,16 @@ export function MapCanvas({
       }
       
       onUpdateEntity(dragMode.id, {
-        x: Math.round(newX),
-        y: Math.round(newY),
-        width: Math.round(newWidth),
-        height: Math.round(newHeight),
+        x: snap(newX),
+        y: snap(newY),
+        width: snap(newWidth),
+        height: snap(newHeight),
       });
     } else if (dragMode.type === 'polygon-point') {
       const entity = (level.entities || []).find(e => e.id === dragMode.id) as WallPolygonEntity;
       if (entity) {
         const newPoints = [...entity.points];
-        newPoints[dragMode.pointIndex] = [Math.round(world.x), Math.round(world.y)];
+        newPoints[dragMode.pointIndex] = [snap(world.x), snap(world.y)];
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     } else if (dragMode.type === 'polygon-edge') {
@@ -766,8 +788,8 @@ export function MapCanvas({
         const newPoints = originalPoints.map((p, i) => {
           if (i === p1Index || i === p2Index) {
             return [
-              Math.round(p[0] + normalX * moveAlongNormal),
-              Math.round(p[1] + normalY * moveAlongNormal),
+              snap(p[0] + normalX * moveAlongNormal),
+              snap(p[1] + normalY * moveAlongNormal),
             ] as [number, number];
           }
           return [...p] as [number, number];
@@ -776,7 +798,7 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     }
-  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity]);
+  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, snap]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const canvas = canvasRef.current;

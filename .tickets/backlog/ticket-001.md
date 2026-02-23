@@ -1,0 +1,20 @@
+# TICKET-000: Add User Authentication
+
+## Description
+Implement JWT-based authentication for the API
+
+## Requirements
+- [ ] Create /login endpoint
+- [ ] Create /register endpoint  
+- [ ] Add JWT middleware
+- [ ] Protect existing routes
+
+## Technical Notes
+- Use jsonwebtoken library
+- Store tokens in httpOnly cookies
+- Hash passwords with bcrypt
+
+## Acceptance Criteria
+- Users can register with email/password
+- Users can login and receive token
+- Protected routes require valid token

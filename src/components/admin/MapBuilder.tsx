@@ -17,6 +17,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const [selectedBallId, setSelectedBallId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [snapToGrid, setSnapToGrid] = useState(true);
 
   // Load levels from map.yml
   useEffect(() => {
@@ -117,9 +118,9 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   // Add entity (obstacle)
   const addEntity = useCallback((type: 'circle' | 'polygon' | 'rect') => {
     if (!currentLevel) return;
-    
+
     let newEntity: LevelEntity;
-    
+
     if (type === 'circle') {
       newEntity = {
         id: `wall-${Date.now()}`,
@@ -188,6 +189,33 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     }
   }, [currentLevel, updateLevel, selectedEntityId]);
 
+  // Duplicate entity (offset copy by 30px)
+  const duplicateEntity = useCallback((entityId: string) => {
+    if (!currentLevel) return;
+    const entity = (currentLevel.entities || []).find(e => e.id === entityId);
+    if (!entity) return;
+
+    const newEntity: LevelEntity = JSON.parse(JSON.stringify(entity));
+    newEntity.id = `wall-${Date.now()}`;
+    // Offset the copy so it's visually distinct
+    if (newEntity.shape === 'rect') {
+      (newEntity as any).x += 30;
+      (newEntity as any).y += 30;
+    } else if (newEntity.shape === 'circle') {
+      (newEntity as any).cx += 30;
+      (newEntity as any).cy += 30;
+    } else if (newEntity.shape === 'polygon') {
+      (newEntity as any).points = (newEntity as any).points.map(([x, y]: [number, number]) => [x + 30, y + 30]);
+    }
+
+    updateLevel({
+      ...currentLevel,
+      entities: [...(currentLevel.entities || []), newEntity],
+    });
+    setSelectedEntityId(newEntity.id);
+    setSelectedBallId(null);
+  }, [currentLevel, updateLevel]);
+
   // Delete ball (prevent if last one)
   const deleteBall = useCallback((ballId: string) => {
     if (!currentLevel || currentLevel.balls.length <= 1) return;
@@ -253,6 +281,25 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     alert('YAML copied to clipboard!');
   }, [levels]);
 
+  // Keyboard shortcuts: Delete/Backspace to remove selected entity or ball
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't handle if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        if (selectedEntityId) {
+          deleteEntity(selectedEntityId);
+        } else if (selectedBallId && currentLevel && currentLevel.balls.length > 1) {
+          deleteBall(selectedBallId);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEntityId, selectedBallId, deleteEntity, deleteBall, currentLevel]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -280,6 +327,17 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <h1 className="text-lg font-bold text-primary flex-1">Map Builder</h1>
+        <button
+          onClick={() => setSnapToGrid(s => !s)}
+          className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+            snapToGrid
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-muted text-muted-foreground hover:bg-muted/80'
+          }`}
+          title={snapToGrid ? 'Snap to grid (ON)' : 'Snap to grid (OFF)'}
+        >
+          Snap
+        </button>
         <button
           onClick={copyYaml}
           className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
@@ -354,6 +412,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
               level={currentLevel}
               selectedEntityId={selectedEntityId}
               selectedBallId={selectedBallId}
+              snapToGrid={snapToGrid}
               onSelectEntity={(id) => {
                 setSelectedEntityId(id);
                 setSelectedBallId(null);
@@ -391,6 +450,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
                 onAddEntity={addEntity}
                 onAddBall={addBall}
                 onDeleteEntity={deleteEntity}
+                onDuplicateEntity={duplicateEntity}
                 onDeleteBall={deleteBall}
                 onUpdateEntity={updateEntity}
                 onUpdateBall={updateBall}

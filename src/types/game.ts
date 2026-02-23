@@ -45,10 +45,15 @@ export interface Ball {
 export interface GrowingWall {
   origin: Vector2;           // Starting point of the cut
   direction: Vector2;        // Normalized direction of the cut
+  // Waypoint paths for mirror reflections: [origin, bounce1, ..., finalTarget]
+  startWaypoints: Vector2[];   // Path in -direction
+  endWaypoints: Vector2[];     // Path in +direction
+  startSegmentIndex: number;   // Current segment being grown in startWaypoints
+  endSegmentIndex: number;     // Current segment being grown in endWaypoints
   startPoint: Vector2;       // Current endpoint in -direction
   endPoint: Vector2;         // Current endpoint in +direction
-  targetStart: Vector2;      // Target intersection in -direction
-  targetEnd: Vector2;        // Target intersection in +direction
+  targetStart: Vector2;      // = last of startWaypoints
+  targetEnd: Vector2;        // = last of endWaypoints
   thickness: number;
   isComplete: boolean;
   activeRegionId: string;    // the region this wall is growing in

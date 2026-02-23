@@ -43,7 +43,7 @@ import {
 } from "@/lib/polygon";
 import { extractContours } from "@/lib/contour";
 import { AssimilationState, createAssimilation, updateAssimilation, renderAssimilation } from "@/lib/assimilationAnimation";
-import { Wall, WALL_THICKNESS, WALL_COLOR, createWallsFromPolygon, findWallTermination } from "@/lib/wallGeometry";
+import { Wall, WALL_THICKNESS, WALL_COLOR, createWallsFromPolygon, findWallTermination, castRayWithReflections } from "@/lib/wallGeometry";
 import { 
   registerWallImpact, 
   updateWallImpacts, 
@@ -283,6 +283,7 @@ export function GameCanvas({
     // UNIFIED WALL MODEL: All walls are identical in behavior and appearance
     walls: [] as Wall[], // All walls: board edges, obstacles, user-drawn
     obstaclePolygons: [] as Polygon[], // Obstacles for clipping user-drawn walls
+    mirrorPolygons: [] as Polygon[], // Mirror obstacles for distinct cyan rendering
     boardPolygon: null as Polygon | null, // Original board boundary for ball collision
     originalArea: 0,
     basePlayableArea: 0, // Initial playable area after subtracting obstacles
@@ -305,6 +306,7 @@ export function GameCanvas({
     pushMode: "none" as "none" | "prompt" | "pushing",
     bestRemainingPercent: 100,
     pushStartPercent: 100,
+    levelClearedTime: 0, // timestamp when level threshold was first met
     gameLoopFn: null as ((timestamp: number) => void) | null,
     wallCompleteTime: 0,
     isRecovering: false,
@@ -399,49 +401,62 @@ export function GameCanvas({
 
       // Generate random obstacles for this level (adds variety)
       const randomObstacles = generateRandomObstacles(
-        levelNumber,
+        level.randomShapes ?? 20,
         level.entities || [],
         level.balls
       );
       const allEntities = [...(level.entities || []), ...randomObstacles];
 
+      const mirrorPolygons: Polygon[] = [];
       if (allEntities.length > 0) {
         let obstacleIndex = 0;
         for (const entity of allEntities) {
           if (entity.kind === "wall") {
+            const isMirror = !!entity.mirror;
             let basePolygon: Polygon;
-            
+
             if (entity.shape === "rect") {
-              // Apply size variation to rect based on variety
-              const varied = applyRectVariation(
-                entity.x, entity.y, entity.width, entity.height,
-                variety, level.id, entity.id
-              );
-              basePolygon = createPolygonFromShape("rect", {
-                x: varied.x,
-                y: varied.y,
-                width: varied.width,
-                height: varied.height,
-              });
+              if (isMirror) {
+                // Mirror entities: clean rect, no variety/decorations
+                basePolygon = createPolygonFromShape("rect", {
+                  x: entity.x, y: entity.y,
+                  width: entity.width, height: entity.height,
+                });
+              } else {
+                // Apply size variation to rect based on variety
+                const varied = applyRectVariation(
+                  entity.x, entity.y, entity.width, entity.height,
+                  variety, level.id, entity.id
+                );
+                basePolygon = createPolygonFromShape("rect", {
+                  x: varied.x,
+                  y: varied.y,
+                  width: varied.width,
+                  height: varied.height,
+                });
+              }
             } else if (entity.shape === "polygon") {
-              // Apply vertex offset variation to polygon based on variety
-              const variedVertices = applyPolygonVariation(
-                entity.points.map(([x, y]) => ({ x, y })),
-                variety, level.id, entity.id
-              );
-              basePolygon = { vertices: variedVertices };
+              if (isMirror) {
+                basePolygon = { vertices: entity.points.map(([x, y]) => ({ x, y })) };
+              } else {
+                // Apply vertex offset variation to polygon based on variety
+                const variedVertices = applyPolygonVariation(
+                  entity.points.map(([x, y]) => ({ x, y })),
+                  variety, level.id, entity.id
+                );
+                basePolygon = { vertices: variedVertices };
+              }
             } else if (entity.shape === "circle") {
-              // Apply radius variation to circle based on variety
-              const variedRadius = applyCircleVariation(
-                entity.radius, variety, level.id, entity.id
-              );
+              const radius = isMirror
+                ? entity.radius
+                : applyCircleVariation(entity.radius, variety, level.id, entity.id);
               const numSides = 24;
               const vertices: { x: number; y: number }[] = [];
               for (let i = 0; i < numSides; i++) {
                 const angle = (i / numSides) * Math.PI * 2;
                 vertices.push({
-                  x: entity.cx + Math.cos(angle) * variedRadius,
-                  y: entity.cy + Math.sin(angle) * variedRadius,
+                  x: entity.cx + Math.cos(angle) * radius,
+                  y: entity.cy + Math.sin(angle) * radius,
                 });
               }
               basePolygon = { vertices };
@@ -449,18 +464,27 @@ export function GameCanvas({
               continue;
             }
 
-            // Add visual decorations (bumps, spikes, etc.) based on variety
-            const decorationConfig = getVarietyDecorationConfig(
-              variety, level.id, entity.id, obstacleIndex
-            );
-            const obstaclePolygon = variety > 0 
-              ? decoratePolygon(basePolygon, decorationConfig)
-              : basePolygon; // Skip decoration if variety is 0
+            let obstaclePolygon: Polygon;
+            if (isMirror) {
+              // Mirrors skip decorations
+              obstaclePolygon = basePolygon;
+            } else {
+              // Add visual decorations (bumps, spikes, etc.) based on variety
+              const decorationConfig = getVarietyDecorationConfig(
+                variety, level.id, entity.id, obstacleIndex
+              );
+              obstaclePolygon = variety > 0
+                ? decoratePolygon(basePolygon, decorationConfig)
+                : basePolygon;
+            }
             obstacleIndex++;
 
+            if (isMirror) {
+              mirrorPolygons.push(obstaclePolygon);
+            }
             obstaclePolygons.push(obstaclePolygon);
             // Add obstacle edges as walls
-            const obstacleWalls = createWallsFromPolygon(obstaclePolygon, `obstacle-${entity.id}`);
+            const obstacleWalls = createWallsFromPolygon(obstaclePolygon, `obstacle-${entity.id}`, isMirror);
             allWalls.push(...obstacleWalls);
           }
         }
@@ -469,6 +493,7 @@ export function GameCanvas({
       // Store all walls and obstacles in unified model
       game.walls = allWalls;
       game.obstaclePolygons = obstaclePolygons;
+      game.mirrorPolygons = mirrorPolygons;
 
       // NOTE: originalArea will be set later after sample points are generated
       // to ensure consistency with estimatedArea calculations
@@ -1129,9 +1154,15 @@ export function GameCanvas({
 
     // Check if a ball's center is on the cut line
     const isBallOnCutLine = (ball: Ball, wall: GrowingWall): boolean => {
-      const toOrigin = vec2Sub(ball.position, wall.origin);
-      const perpDist = Math.abs(toOrigin.x * -wall.direction.y + toOrigin.y * wall.direction.x);
-      return perpDist < 0.5;
+      // Check all segments in both waypoint paths
+      const checkWaypoints = (waypoints: Vector2[]): boolean => {
+        for (let i = 0; i < waypoints.length - 1; i++) {
+          const dist = pointToSegmentDistance(ball.position, waypoints[i], waypoints[i + 1]);
+          if (dist < 0.5) return true;
+        }
+        return false;
+      };
+      return checkWaypoints(wall.startWaypoints) || checkWaypoints(wall.endWaypoints);
     };
 
     const handleGameOver = () => {
@@ -1660,39 +1691,60 @@ export function GameCanvas({
       }
 
       // CRITICAL: Check if this wall would trap any ball in an area too small to play
-      // If so, abort the cut (the wall simply doesn't complete)
-      if (wouldWallTrapBallCheck(wall.startPoint, wall.endPoint)) {
-        console.log("[CUT] Aborted - wall would trap a ball");
-        return;
+      // Check all segments of both waypoint paths
+      {
+        const allSegs: { start: Vector2; end: Vector2 }[] = [];
+        for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
+          allSegs.push({ start: wall.startWaypoints[i], end: wall.startWaypoints[i + 1] });
+        }
+        for (let i = 0; i < wall.endWaypoints.length - 1; i++) {
+          allSegs.push({ start: wall.endWaypoints[i], end: wall.endWaypoints[i + 1] });
+        }
+        for (const seg of allSegs) {
+          if (wouldWallTrapBallCheck(seg.start, seg.end)) {
+            console.log("[CUT] Aborted - wall would trap a ball");
+            return;
+          }
+        }
       }
 
-      // Add the new wall to the walls array
-      const newWall: Wall = {
-        id: generateWallId(),
-        start: { ...wall.startPoint },
-        end: { ...wall.endPoint },
-        thickness: wall.thickness,
+      // Add walls for all segments of both waypoint paths
+      const addSegmentWalls = (waypoints: Vector2[]) => {
+        for (let i = 0; i < waypoints.length - 1; i++) {
+          const newWall: Wall = {
+            id: generateWallId(),
+            start: { ...waypoints[i] },
+            end: { ...waypoints[i + 1] },
+            thickness: wall.thickness,
+          };
+          game.walls.push(newWall);
+        }
       };
-      game.walls.push(newWall);
+      addSegmentWalls(wall.startWaypoints);
+      addSegmentWalls(wall.endWaypoints);
 
-      console.log("[WALL] Added new wall:", {
-        id: newWall.id,
-        start: newWall.start,
-        end: newWall.end,
-        totalWalls: game.walls.length,
-      });
+      console.log("[WALL] Added multi-segment walls, totalWalls:", game.walls.length);
 
       // ============================================================
       // STEP 1: Rasterize cut to grid (mark cells as REMOVED)
       // ============================================================
       if (game.spaceGrid) {
-        const removedCells = rasterizeCutToGrid(
-          game.spaceGrid,
-          wall.startPoint,
-          wall.endPoint,
-          wall.thickness
-        );
-        console.log("[GRID] Cut rasterized, removed", removedCells.length, "cells");
+        // Rasterize all segments of both waypoint paths
+        let totalRemoved = 0;
+        const rasterizeWaypoints = (waypoints: Vector2[]) => {
+          for (let i = 0; i < waypoints.length - 1; i++) {
+            const removedCells = rasterizeCutToGrid(
+              game.spaceGrid!,
+              waypoints[i],
+              waypoints[i + 1],
+              wall.thickness
+            );
+            totalRemoved += removedCells.length;
+          }
+        };
+        rasterizeWaypoints(wall.startWaypoints);
+        rasterizeWaypoints(wall.endWaypoints);
+        console.log("[GRID] Cut rasterized, removed", totalRemoved, "cells");
 
         // ============================================================
         // STEP 2: Find connected regions via flood-fill
@@ -1850,14 +1902,13 @@ export function GameCanvas({
       // Check if level just got cleared (legacy threshold check)
       if (percent < level.sizeThreshold && game.pushMode === "none") {
         render();
-        // Delay prompt by 2s so player can see final board state (e.g. ball lock animations)
-        game.pushMode = "prompt"; // Block further cuts during delay
+        render();
+        game.pushMode = "prompt";
+        game.levelClearedTime = performance.now();
+        setPushMode("prompt");
+        setClearedPercent(percent);
         game.bestRemainingPercent = percent;
         game.pushStartPercent = percent;
-        setTimeout(() => {
-          setPushMode("prompt");
-          setClearedPercent(percent);
-        }, 2000);
         return;
       }
     };
@@ -1876,35 +1927,62 @@ export function GameCanvas({
       const wallSpeedBase = getWallSpeedBase(levelNumber, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel);
       const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier;
 
-      const maxSegmentLength = vec2Distance(wall.targetStart, wall.targetEnd);
-      let distToStart = vec2Distance(wall.startPoint, wall.targetStart);
-      let distToEnd = vec2Distance(wall.endPoint, wall.targetEnd);
-      const longestHalf = Math.max(distToStart, distToEnd, maxSegmentLength / 2);
+      // Calculate total path length for speed calibration
+      let totalStartPath = 0;
+      for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
+        totalStartPath += vec2Distance(wall.startWaypoints[i], wall.startWaypoints[i + 1]);
+      }
+      let totalEndPath = 0;
+      for (let i = 0; i < wall.endWaypoints.length - 1; i++) {
+        totalEndPath += vec2Distance(wall.endWaypoints[i], wall.endWaypoints[i + 1]);
+      }
+      const longestHalf = Math.max(totalStartPath, totalEndPath);
       const maxSpeedForMinTime = longestHalf / MINIMUM_WALL_TIME;
       const wallSpeedFinal = Math.min(wallSpeedEffective, maxSpeedForMinTime);
 
-      const growth = wallSpeedFinal * dt;
+      let growth = wallSpeedFinal * dt;
 
-      // Grow toward targetStart
-      if (distToStart > 0.5) {
-        const moveStart = Math.min(growth, distToStart);
-        const dirToStart = vec2Normalize(vec2Sub(wall.targetStart, wall.startPoint));
-        wall.startPoint = vec2Add(wall.startPoint, vec2Scale(dirToStart, moveStart));
-      } else {
-        wall.startPoint = { ...wall.targetStart };
+      // Grow start side along waypoints
+      {
+        let remaining = growth;
+        while (remaining > 0.01 && wall.startSegmentIndex < wall.startWaypoints.length - 1) {
+          const segTarget = wall.startWaypoints[wall.startSegmentIndex + 1];
+          const dist = vec2Distance(wall.startPoint, segTarget);
+          if (dist <= remaining + 0.5) {
+            // Reached this waypoint, advance to next segment
+            wall.startPoint = { ...segTarget };
+            remaining -= dist;
+            wall.startSegmentIndex++;
+          } else {
+            const dir = vec2Normalize(vec2Sub(segTarget, wall.startPoint));
+            wall.startPoint = vec2Add(wall.startPoint, vec2Scale(dir, remaining));
+            remaining = 0;
+          }
+        }
       }
 
-      // Grow toward targetEnd
-      if (distToEnd > 0.5) {
-        const moveEnd = Math.min(growth, distToEnd);
-        const dirToEnd = vec2Normalize(vec2Sub(wall.targetEnd, wall.endPoint));
-        wall.endPoint = vec2Add(wall.endPoint, vec2Scale(dirToEnd, moveEnd));
-      } else {
-        wall.endPoint = { ...wall.targetEnd };
+      // Grow end side along waypoints
+      {
+        let remaining = growth;
+        while (remaining > 0.01 && wall.endSegmentIndex < wall.endWaypoints.length - 1) {
+          const segTarget = wall.endWaypoints[wall.endSegmentIndex + 1];
+          const dist = vec2Distance(wall.endPoint, segTarget);
+          if (dist <= remaining + 0.5) {
+            wall.endPoint = { ...segTarget };
+            remaining -= dist;
+            wall.endSegmentIndex++;
+          } else {
+            const dir = vec2Normalize(vec2Sub(segTarget, wall.endPoint));
+            wall.endPoint = vec2Add(wall.endPoint, vec2Scale(dir, remaining));
+            remaining = 0;
+          }
+        }
       }
 
-      // Check if complete
-      if (vec2Distance(wall.startPoint, wall.targetStart) < 1 && vec2Distance(wall.endPoint, wall.targetEnd) < 1) {
+      // Check if complete (both sides reached final waypoints)
+      const startDone = vec2Distance(wall.startPoint, wall.targetStart) < 1;
+      const endDone = vec2Distance(wall.endPoint, wall.targetEnd) < 1;
+      if (startDone && endDone) {
         wall.startPoint = { ...wall.targetStart };
         wall.endPoint = { ...wall.targetEnd };
         if (!wall.isComplete) {
@@ -1913,20 +1991,32 @@ export function GameCanvas({
         }
       }
 
-      // Collision check with any ball while growing
+      // Collision check with any ball while growing — check ALL segments
       if (!wall.isComplete && !game.isRecovering) {
+        // Build all renderable segments for collision
+        const allSegments: { start: Vector2; end: Vector2 }[] = [];
+        // Start side: completed segments + partial current
+        for (let i = 0; i < wall.startSegmentIndex; i++) {
+          allSegments.push({ start: wall.startWaypoints[i], end: wall.startWaypoints[i + 1] });
+        }
+        allSegments.push({ start: wall.startWaypoints[wall.startSegmentIndex], end: wall.startPoint });
+        // End side: completed segments + partial current
+        for (let i = 0; i < wall.endSegmentIndex; i++) {
+          allSegments.push({ start: wall.endWaypoints[i], end: wall.endWaypoints[i + 1] });
+        }
+        allSegments.push({ start: wall.endWaypoints[wall.endSegmentIndex], end: wall.endPoint });
+
         for (const ball of balls) {
           const effectiveCollisionRadius = ball.radius;
+          let hit = false;
+          for (const seg of allSegments) {
+            if (circleCapsuleCollision(ball.position, effectiveCollisionRadius, seg.start, seg.end, wall.thickness / 2)) {
+              hit = true;
+              break;
+            }
+          }
 
-          if (
-            circleCapsuleCollision(
-              ball.position,
-              effectiveCollisionRadius,
-              wall.startPoint,
-              wall.endPoint,
-              wall.thickness / 2,
-            )
-          ) {
+          if (hit) {
             // Freeze the ball that hit the fence - store position and velocity, then stop it
             game.frozenBallId = ball.id;
             game.frozenBallPosition = { ...ball.position };
@@ -2192,6 +2282,7 @@ export function GameCanvas({
       const obstacles = game.obstaclePolygons;
 
       for (const w of walls) {
+        if (w.isMirror) continue; // Mirror walls rendered separately below
         const wallLineWidth = w.thickness * scale;
         ctx.lineWidth = wallLineWidth;
 
@@ -2235,6 +2326,55 @@ export function GameCanvas({
       }
       ctx.restore();
 
+      // Render mirror polygon fills (semi-transparent cyan)
+      if (game.mirrorPolygons.length > 0) {
+        ctx.save();
+        ctx.fillStyle = "rgba(136, 221, 255, 0.15)";
+        for (const poly of game.mirrorPolygons) {
+          if (poly.vertices.length < 3) continue;
+          ctx.beginPath();
+          const first = worldToScreen(poly.vertices[0].x, poly.vertices[0].y);
+          ctx.moveTo(first.x, first.y);
+          for (let i = 1; i < poly.vertices.length; i++) {
+            const pt = worldToScreen(poly.vertices[i].x, poly.vertices[i].y);
+            ctx.lineTo(pt.x, pt.y);
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Render mirror walls with cyan color and glow
+      ctx.save();
+      for (const w of walls) {
+        if (!w.isMirror) continue;
+        const wallLineWidth = w.thickness * scale;
+        const startScreen = worldToScreen(w.start.x, w.start.y);
+        const endScreen = worldToScreen(w.end.x, w.end.y);
+
+        // Cyan wall
+        ctx.strokeStyle = "#88ddff";
+        ctx.lineWidth = wallLineWidth;
+        ctx.lineCap = "round";
+        ctx.shadowColor = "#88ddff";
+        ctx.shadowBlur = 8 * scale;
+        ctx.beginPath();
+        ctx.moveTo(startScreen.x, startScreen.y);
+        ctx.lineTo(endScreen.x, endScreen.y);
+        ctx.stroke();
+
+        // White highlight line down the center
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
+        ctx.lineWidth = 1 * scale;
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        ctx.moveTo(startScreen.x, startScreen.y);
+        ctx.lineTo(endScreen.x, endScreen.y);
+        ctx.stroke();
+      }
+      ctx.restore();
+
       // Render cut preview line during drag (always shown, not just with cutPreview modifier)
       // This shows the user where their cut will go before they commit to it
       if (swipeStart && swipeRegionId && currentSwipePos && !wall) {
@@ -2245,65 +2385,54 @@ export function GameCanvas({
         if (dist >= 5) {
           const direction = vec2Normalize(delta);
 
-          // UNIFIED WALL MODEL: Find wall intersections in both directions for preview
-          let previewEnd: Vector2 | null = null;
-          let previewStart: Vector2 | null = null;
-          let previewEndDist = Infinity;
-          let previewStartDist = Infinity;
+          // Cast rays with reflection support for preview
+          const negDir = { x: -direction.x, y: -direction.y };
+          const fwdPreview = castRayWithReflections(swipeStart, direction, walls);
+          const bwdPreview = castRayWithReflections(swipeStart, negDir, walls);
 
-          for (const w of walls) {
-            const wallIntPos = lineSegmentIntersection(
-              swipeStart,
-              vec2Add(swipeStart, vec2Scale(direction, 10000)),
-              w.start,
-              w.end,
-            );
-            if (wallIntPos) {
-              const wallDist = vec2Distance(swipeStart, wallIntPos);
-              if (wallDist > 0.1 && wallDist < previewEndDist) {
-                previewEnd = wallIntPos;
-                previewEndDist = wallDist;
-              }
-            }
-            const wallIntNeg = lineSegmentIntersection(
-              swipeStart,
-              vec2Add(swipeStart, vec2Scale(direction, -10000)),
-              w.start,
-              w.end,
-            );
-            if (wallIntNeg) {
-              const wallDist = vec2Distance(swipeStart, wallIntNeg);
-              if (wallDist > 0.1 && wallDist < previewStartDist) {
-                previewStart = wallIntNeg;
-                previewStartDist = wallDist;
-              }
-            }
-          }
-
-          // Draw preview line if we found valid intersections
-          if (previewEnd && previewStart) {
+          if (fwdPreview && bwdPreview) {
             ctx.save();
             ctx.globalAlpha = 0.15;
 
             const previewThickness = WALL_THICKNESS * activeModifiers.fenceWidthMultiplier;
-            // Draw white outline for visibility
-            ctx.strokeStyle = "#ffffff";
-            ctx.lineWidth = (previewThickness + 8) * scale;
             ctx.lineCap = "round";
-            const negScreen = worldToScreen(previewStart.x, previewStart.y);
-            const posScreen = worldToScreen(previewEnd.x, previewEnd.y);
-            ctx.beginPath();
-            ctx.moveTo(negScreen.x, negScreen.y);
-            ctx.lineTo(posScreen.x, posScreen.y);
-            ctx.stroke();
 
-            // Draw accent-colored center (same style as active wall)
-            ctx.strokeStyle = accentColor;
-            ctx.lineWidth = (previewThickness + 4) * scale;
-            ctx.beginPath();
-            ctx.moveTo(negScreen.x, negScreen.y);
-            ctx.lineTo(posScreen.x, posScreen.y);
-            ctx.stroke();
+            // Draw all segments from both waypoint paths
+            const allWaypoints = [fwdPreview.waypoints, bwdPreview.waypoints];
+            for (const waypoints of allWaypoints) {
+              for (let i = 0; i < waypoints.length - 1; i++) {
+                const s = worldToScreen(waypoints[i].x, waypoints[i].y);
+                const e = worldToScreen(waypoints[i + 1].x, waypoints[i + 1].y);
+
+                // White outline
+                ctx.strokeStyle = "#ffffff";
+                ctx.lineWidth = (previewThickness + 8) * scale;
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(e.x, e.y);
+                ctx.stroke();
+
+                // Accent center
+                ctx.strokeStyle = accentColor;
+                ctx.lineWidth = (previewThickness + 4) * scale;
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(e.x, e.y);
+                ctx.stroke();
+              }
+            }
+
+            // Draw small dots at bounce/reflection points
+            ctx.globalAlpha = 0.4;
+            for (const waypoints of allWaypoints) {
+              for (let i = 1; i < waypoints.length - 1; i++) {
+                const pt = worldToScreen(waypoints[i].x, waypoints[i].y);
+                ctx.fillStyle = "#88ddff";
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4 * scale, 0, Math.PI * 2);
+                ctx.fill();
+              }
+            }
 
             ctx.restore();
           }
@@ -2563,11 +2692,8 @@ export function GameCanvas({
         }
       }
 
-      // Render wall - on top of everything, clipped to region
+      // Render wall - on top of everything, clipped to region (multi-segment waypoint support)
       if (wall) {
-        const startScreen = worldToScreen(wall.startPoint.x, wall.startPoint.y);
-        const endScreen = worldToScreen(wall.endPoint.x, wall.endPoint.y);
-
         const activeRegion = regions.find((r) => r.id === wall.activeRegionId);
 
         ctx.save();
@@ -2585,29 +2711,49 @@ export function GameCanvas({
           ctx.clip();
         }
 
-        // Draw white outline
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = (wall.thickness + 8) * scale;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(startScreen.x, startScreen.y);
-        ctx.lineTo(endScreen.x, endScreen.y);
-        ctx.stroke();
+        // Build all renderable segments from waypoints
+        const renderableSegments: { start: Vector2; end: Vector2 }[] = [];
+        // Start side: completed segments + partial current
+        for (let i = 0; i < wall.startSegmentIndex; i++) {
+          renderableSegments.push({ start: wall.startWaypoints[i], end: wall.startWaypoints[i + 1] });
+        }
+        renderableSegments.push({ start: wall.startWaypoints[wall.startSegmentIndex], end: wall.startPoint });
+        // End side: completed segments + partial current
+        for (let i = 0; i < wall.endSegmentIndex; i++) {
+          renderableSegments.push({ start: wall.endWaypoints[i], end: wall.endWaypoints[i + 1] });
+        }
+        renderableSegments.push({ start: wall.endWaypoints[wall.endSegmentIndex], end: wall.endPoint });
 
-        // Draw accent-colored center (uses config accent color)
-        ctx.strokeStyle = accentColor;
-        ctx.lineWidth = (wall.thickness + 4) * scale;
-        ctx.shadowColor = accentColor + "80"; // 50% alpha glow
-        ctx.shadowBlur = 25 * scale;
-        ctx.beginPath();
-        ctx.moveTo(startScreen.x, startScreen.y);
-        ctx.lineTo(endScreen.x, endScreen.y);
-        ctx.stroke();
+        // Draw each segment with white outline + accent center
+        for (const seg of renderableSegments) {
+          const s = worldToScreen(seg.start.x, seg.start.y);
+          const e = worldToScreen(seg.end.x, seg.end.y);
+
+          // White outline
+          ctx.strokeStyle = "#ffffff";
+          ctx.lineWidth = (wall.thickness + 8) * scale;
+          ctx.lineCap = "round";
+          ctx.shadowColor = "transparent";
+          ctx.shadowBlur = 0;
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(e.x, e.y);
+          ctx.stroke();
+
+          // Accent center
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = (wall.thickness + 4) * scale;
+          ctx.shadowColor = accentColor + "80";
+          ctx.shadowBlur = 25 * scale;
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(e.x, e.y);
+          ctx.stroke();
+        }
 
         ctx.restore();
       }
 
-      // Debug board outline removed - was showing purple dashed border
     };
 
     // Handle ball-to-ball collisions
@@ -2780,48 +2926,18 @@ export function GameCanvas({
         if (dist >= effectiveSwipeMinDistance) {
           const direction = vec2Normalize(delta);
 
-          // UNIFIED WALL MODEL: Find wall intersections in both directions
-          // This ensures fences ALWAYS grow to the nearest wall/fence, regardless of drag distance
-          let targetEnd: Vector2 | null = null;
-          let targetStart: Vector2 | null = null;
-          let targetEndDist = Infinity;
-          let targetStartDist = Infinity;
-
-          // Cast rays in both directions and find closest wall intersection
-          for (const w of game.walls) {
-            // Check positive direction
-            const wallIntPos = lineSegmentIntersection(
-              game.swipeStart,
-              vec2Add(game.swipeStart, vec2Scale(direction, 10000)),
-              w.start,
-              w.end,
-            );
-            if (wallIntPos) {
-              const wallDist = vec2Distance(game.swipeStart, wallIntPos);
-              if (wallDist > 0.1 && wallDist < targetEndDist) {
-                targetEnd = wallIntPos;
-                targetEndDist = wallDist;
-              }
-            }
-
-            // Check negative direction
-            const wallIntNeg = lineSegmentIntersection(
-              game.swipeStart,
-              vec2Add(game.swipeStart, vec2Scale(direction, -10000)),
-              w.start,
-              w.end,
-            );
-            if (wallIntNeg) {
-              const wallDist = vec2Distance(game.swipeStart, wallIntNeg);
-              if (wallDist > 0.1 && wallDist < targetStartDist) {
-                targetStart = wallIntNeg;
-                targetStartDist = wallDist;
-              }
-            }
-          }
+          // UNIFIED WALL MODEL: Find wall intersections with mirror reflections
+          const negDir = { x: -direction.x, y: -direction.y };
+          const forwardResult = castRayWithReflections(game.swipeStart, direction, game.walls);
+          const backwardResult = castRayWithReflections(game.swipeStart, negDir, game.walls);
 
           // Only create wall if we found valid intersections in both directions
-          if (targetEnd && targetStart) {
+          if (forwardResult && backwardResult) {
+            const endWaypoints = forwardResult.waypoints;
+            const startWaypoints = backwardResult.waypoints;
+            const targetEnd = endWaypoints[endWaypoints.length - 1];
+            const targetStart = startWaypoints[startWaypoints.length - 1];
+
             game.wallCount += 1;
             setCutCount(game.wallCount);
 
@@ -2831,6 +2947,10 @@ export function GameCanvas({
             game.activeWall = {
               origin: { ...game.swipeStart },
               direction,
+              startWaypoints,
+              endWaypoints,
+              startSegmentIndex: isInstant ? startWaypoints.length - 2 : 0,
+              endSegmentIndex: isInstant ? endWaypoints.length - 2 : 0,
               startPoint: isInstant ? { ...targetStart } : { ...game.swipeStart },
               endPoint: isInstant ? { ...targetEnd } : { ...game.swipeStart },
               targetStart,

@@ -46,7 +46,7 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
             />
           </label>
           
-          <label className="space-y-1 col-span-2">
+          <label className="space-y-1">
             <span className="text-muted-foreground">Base Points</span>
             <input
               type="number"
@@ -54,6 +54,18 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
               onChange={(e) => onUpdateLevel({ ...level, points: Number(e.target.value) })}
               className="w-full px-2 py-1 rounded bg-background border border-border"
               min={1}
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-muted-foreground">Random Shapes %</span>
+            <input
+              type="number"
+              value={level.randomShapes ?? 20}
+              onChange={(e) => onUpdateLevel({ ...level, randomShapes: Number(e.target.value) })}
+              className="w-full px-2 py-1 rounded bg-background border border-border"
+              min={0}
+              max={100}
             />
           </label>
         </div>

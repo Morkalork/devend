@@ -2,13 +2,14 @@
 // Provides utilities for wall-based game board representation
 // All walls are identical in behavior and appearance
 
-import { Vector2, Polygon, pointInPolygon, vec2Sub, vec2Normalize, vec2Distance, lineSegmentIntersection, pointToSegmentDistance } from "./polygon";
+import { Vector2, Polygon, pointInPolygon, vec2Sub, vec2Add, vec2Scale, vec2Normalize, vec2Distance, vec2Dot, vec2Reflect, lineSegmentIntersection, pointToSegmentDistance } from "./polygon";
 
 export interface Wall {
   id: string;
   start: Vector2;
   end: Vector2;
   thickness: number;
+  isMirror?: boolean;
 }
 
 export interface WallVertex {
@@ -26,20 +27,22 @@ export const WALL_COLOR = "#00ff44";
 /**
  * Creates walls from a polygon's edges
  */
-export function createWallsFromPolygon(polygon: Polygon, idPrefix: string): Wall[] {
+export function createWallsFromPolygon(polygon: Polygon, idPrefix: string, isMirror?: boolean): Wall[] {
   const walls: Wall[] = [];
   const { vertices } = polygon;
-  
+
   for (let i = 0; i < vertices.length; i++) {
     const j = (i + 1) % vertices.length;
-    walls.push({
+    const wall: Wall = {
       id: `${idPrefix}-edge-${i}`,
       start: { ...vertices[i] },
       end: { ...vertices[j] },
       thickness: WALL_THICKNESS,
-    });
+    };
+    if (isMirror) wall.isMirror = true;
+    walls.push(wall);
   }
-  
+
   return walls;
 }
 
@@ -198,6 +201,49 @@ export function lineIntersectsWalls(
       }
     }
   }
-  
+
   return false;
+}
+
+/**
+ * Cast a ray from origin in direction, reflecting off mirror walls up to maxBounces times.
+ * Returns waypoints array [origin, bounce1, ..., finalHitPoint] and the final wall id.
+ */
+export function castRayWithReflections(
+  origin: Vector2,
+  direction: Vector2,
+  walls: Wall[],
+  maxBounces: number = 3
+): { waypoints: Vector2[]; finalWallId: string } | null {
+  const waypoints: Vector2[] = [{ ...origin }];
+  let currentOrigin = { ...origin };
+  let currentDir = { ...direction };
+  let bounces = 0;
+
+  for (;;) {
+    const hit = findWallTermination(currentOrigin, currentDir, walls);
+    if (!hit) return null;
+
+    waypoints.push({ ...hit.point });
+
+    // Find the wall we hit to check if it's a mirror
+    const hitWall = walls.find(w => w.id === hit.wallId);
+    if (!hitWall || !hitWall.isMirror || bounces >= maxBounces) {
+      // Terminal hit — return result
+      return { waypoints, finalWallId: hit.wallId };
+    }
+
+    // Reflect off mirror
+    bounces++;
+    const wallDir = vec2Normalize(vec2Sub(hitWall.end, hitWall.start));
+    const normal: Vector2 = { x: -wallDir.y, y: wallDir.x };
+
+    // Ensure normal faces toward incoming ray (dot product with incoming dir should be negative)
+    const dotCheck = vec2Dot(currentDir, normal);
+    const effectiveNormal = dotCheck > 0 ? { x: -normal.x, y: -normal.y } : normal;
+
+    currentDir = vec2Reflect(currentDir, effectiveNormal);
+    // Nudge origin past mirror surface to avoid re-hitting the same wall
+    currentOrigin = vec2Add(hit.point, vec2Scale(currentDir, 0.5));
+  }
 }

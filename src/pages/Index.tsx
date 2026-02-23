@@ -190,10 +190,11 @@ const Index = () => {
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
       
-      // Determine starting level: max of checkpoint and augment bonus
+      // Determine starting level: max of checkpoint, augment bonus, and ?level= query param
       const checkpointLevel = getStartingLevel();
       const augmentStartLevel = getStartingLevelFromAugments();
-      const startingLevel = Math.max(checkpointLevel, augmentStartLevel);
+      const queryLevel = parseInt(new URLSearchParams(window.location.search).get('level') || '0', 10);
+      const startingLevel = Math.max(checkpointLevel, augmentStartLevel, queryLevel || 0);
       
       if (startingLevel > 1) {
         // Start from higher level (convert 1-indexed level to 0-indexed)
@@ -379,6 +380,17 @@ const Index = () => {
     resetAugmentData();
     resetProgression();
   }, [resetAugmentData, resetProgression]);
+
+  // Auto-start game if ?level= query param is present
+  const levelQueryHandled = useRef(false);
+  useEffect(() => {
+    if (levelQueryHandled.current) return;
+    const levelParam = new URLSearchParams(window.location.search).get('level');
+    if (levelParam && parseInt(levelParam, 10) > 0) {
+      levelQueryHandled.current = true;
+      handleStartGame();
+    }
+  }, [handleStartGame]);
 
   // Get checkpoint info for welcome screen
   const checkpointStartLevel = getStartingLevel();

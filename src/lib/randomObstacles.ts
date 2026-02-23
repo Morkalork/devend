@@ -16,51 +16,24 @@ interface RandomObstacleConfig {
   maxSize: number;
 }
 
-// Get config based on level number
-function getObstacleConfig(levelNumber: number): RandomObstacleConfig | null {
-  // No random obstacles for first 3 levels
-  if (levelNumber <= 3) return null;
-  
-  // Level 4-6: light obstacles
-  if (levelNumber <= 6) {
-    return {
-      minCount: 1,
-      maxCount: 2,
-      types: ['bump', 'pebble'],
-      minSize: 15,
-      maxSize: 25,
-    };
-  }
-  
-  // Level 7-10: moderate obstacles
-  if (levelNumber <= 10) {
-    return {
-      minCount: 2,
-      maxCount: 4,
-      types: ['bump', 'pebble', 'spike'],
-      minSize: 18,
-      maxSize: 30,
-    };
-  }
-  
-  // Level 11-14: more variety
-  if (levelNumber <= 14) {
-    return {
-      minCount: 3,
-      maxCount: 5,
-      types: ['bump', 'pebble', 'spike', 'triangle'],
-      minSize: 20,
-      maxSize: 35,
-    };
-  }
-  
-  // Level 15+: maximum variety
+// Get config based on randomShapes percentage (0-100)
+function getObstacleConfig(randomShapes: number): RandomObstacleConfig | null {
+  if (randomShapes <= 0) return null;
+
+  // Scale count and size with the percentage
+  // At 20% (default): 1-3 obstacles, size 15-30
+  // At 100%: 5-10 obstacles, size 22-45
+  const t = randomShapes / 100;
   return {
-    minCount: 3,
-    maxCount: 6,
-    types: ['bump', 'pebble', 'spike', 'triangle'],
-    minSize: 22,
-    maxSize: 40,
+    minCount: Math.max(1, Math.round(t * 5)),
+    maxCount: Math.max(1, Math.round(t * 10)),
+    types: t < 0.3
+      ? ['bump', 'pebble']
+      : t < 0.6
+        ? ['bump', 'pebble', 'spike']
+        : ['bump', 'pebble', 'spike', 'triangle'],
+    minSize: 12 + t * 10,
+    maxSize: 22 + t * 23,
   };
 }
 
@@ -195,14 +168,14 @@ function tooCloseToSpawns(
 
 /**
  * Generate random small obstacles for a level at runtime.
- * Returns an array of new entities to add to the level.
+ * @param randomShapes 0-100 percentage controlling density (default 20)
  */
 export function generateRandomObstacles(
-  levelNumber: number,
+  randomShapes: number,
   existingEntities: LevelEntity[] = [],
   balls: { startX?: number; startY?: number }[] = []
 ): LevelEntity[] {
-  const config = getObstacleConfig(levelNumber);
+  const config = getObstacleConfig(randomShapes);
   if (!config) return [];
   
   const count = Math.floor(randomInRange(config.minCount, config.maxCount + 1));

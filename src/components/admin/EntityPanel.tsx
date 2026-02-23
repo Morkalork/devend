@@ -1,4 +1,4 @@
-import { Plus, Trash2, Circle, Pentagon, Square } from 'lucide-react';
+import { Plus, Trash2, Circle, Pentagon, Square, Copy } from 'lucide-react';
 import { LevelConfig, LevelEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
 
 interface EntityPanelProps {
@@ -10,6 +10,7 @@ interface EntityPanelProps {
   onAddEntity: (type: 'circle' | 'polygon' | 'rect') => void;
   onAddBall: () => void;
   onDeleteEntity: (id: string) => void;
+  onDuplicateEntity: (id: string) => void;
   onDeleteBall: (id: string) => void;
   onUpdateEntity: (id: string, updates: Partial<LevelEntity>) => void;
   onUpdateBall: (id: string, updates: Partial<BallConfig>) => void;
@@ -24,6 +25,7 @@ export function EntityPanel({
   onAddEntity,
   onAddBall,
   onDeleteEntity,
+  onDuplicateEntity,
   onDeleteBall,
   onUpdateEntity,
   onUpdateBall,
@@ -31,11 +33,12 @@ export function EntityPanel({
   const selectedEntity = (level.entities || []).find(e => e.id === selectedEntityId);
   const selectedBall = level.balls.find(b => b.id === selectedBallId);
 
-  const getShapeIcon = (shape: string) => {
-    switch (shape) {
-      case 'circle': return <Circle className="w-4 h-4 text-destructive" />;
-      case 'rect': return <Square className="w-4 h-4 text-destructive" />;
-      default: return <Pentagon className="w-4 h-4 text-destructive" />;
+  const getEntityIcon = (entity: LevelEntity) => {
+    const color = entity.mirror ? 'text-cyan-400' : 'text-destructive';
+    switch (entity.shape) {
+      case 'circle': return <Circle className={`w-4 h-4 ${color}`} />;
+      case 'rect': return <Square className={`w-4 h-4 ${color}`} />;
+      default: return <Pentagon className={`w-4 h-4 ${color}`} />;
     }
   };
 
@@ -91,18 +94,31 @@ export function EntityPanel({
               }`}
             >
               <div className="flex items-center gap-2">
-                {getShapeIcon(entity.shape)}
+                {getEntityIcon(entity)}
                 <span className="text-sm">{entity.id}</span>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteEntity(entity.id);
-                }}
-                className="p-1 rounded hover:bg-destructive/20 text-destructive transition-colors"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+              <div className="flex gap-0.5">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDuplicateEntity(entity.id);
+                  }}
+                  className="p-1 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                  title="Duplicate"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteEntity(entity.id);
+                  }}
+                  className="p-1 rounded hover:bg-destructive/20 text-destructive transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           ))}
           {(level.entities || []).length === 0 && (
@@ -119,21 +135,32 @@ export function EntityPanel({
           <h4 className="text-xs font-semibold text-muted-foreground">
             {getShapeLabel(selectedEntity.shape)} Properties
           </h4>
-          
+
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={!!selectedEntity.mirror}
+              onChange={(e) => onUpdateEntity(selectedEntity.id, { mirror: e.target.checked || undefined } as Partial<LevelEntity>)}
+              className="rounded"
+            />
+            <span className="text-cyan-400">Mirror</span>
+            <span className="text-muted-foreground">(reflects fences)</span>
+          </label>
+
           {selectedEntity.shape === 'circle' && (
             <CircleEditor
               entity={selectedEntity as WallCircleEntity}
               onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates)}
             />
           )}
-          
+
           {selectedEntity.shape === 'rect' && (
             <RectEditor
               entity={selectedEntity as WallRectEntity}
               onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates)}
             />
           )}
-          
+
           {selectedEntity.shape === 'polygon' && (
             <PolygonEditor
               entity={selectedEntity as WallPolygonEntity}
@@ -397,10 +424,18 @@ function BallEditor({ ball, onUpdate }: { ball: BallConfig; onUpdate: (updates: 
             className="flex-1 px-2 py-1 rounded bg-background border border-border"
             maxLength={6}
           />
-          <div
-            className="w-8 h-8 rounded border border-border"
-            style={{ backgroundColor: `#${ball.color}` }}
-          />
+          <div className="relative w-8 h-8">
+            <div
+              className="w-8 h-8 rounded border border-border cursor-pointer"
+              style={{ backgroundColor: `#${ball.color}` }}
+            />
+            <input
+              type="color"
+              value={`#${ball.color}`}
+              onChange={(e) => onUpdate({ color: e.target.value.slice(1) })}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+          </div>
         </div>
       </label>
     </div>
