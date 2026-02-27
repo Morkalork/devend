@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon } from 'lucide-react';
+import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 
@@ -9,6 +9,7 @@ interface WelcomeScreenProps {
   onTutorial: () => void;
   onOptions: () => void;
   onAugments: () => void;
+  onAchievements?: () => void;
   onAdmin?: () => void;
   isLoading?: boolean;
   error?: string | null;
@@ -16,6 +17,7 @@ interface WelcomeScreenProps {
   checkpointLevel?: number;
   checkpointRemainingMs?: number;
   totalAugmentPoints?: number;
+  completedAchievementCount?: number;
 }
 
 function formatTime(ms: number): string {
@@ -25,18 +27,20 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export function WelcomeScreen({ 
-  onStartGame, 
-  onTutorial, 
-  onOptions, 
-  onAugments, 
-  onAdmin, 
-  isLoading, 
-  error, 
+export function WelcomeScreen({
+  onStartGame,
+  onTutorial,
+  onOptions,
+  onAugments,
+  onAchievements,
+  onAdmin,
+  isLoading,
+  error,
   accentColor,
   checkpointLevel,
   checkpointRemainingMs,
   totalAugmentPoints,
+  completedAchievementCount,
 }: WelcomeScreenProps) {
   const [remainingTime, setRemainingTime] = useState(checkpointRemainingMs || 0);
   
@@ -313,6 +317,23 @@ export function WelcomeScreen({
               </span>
             )}
           </motion.button>
+          {onAchievements && (
+            <motion.button
+              className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+              onClick={onAchievements}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+            >
+              <Trophy className="w-5 h-5" />
+              Achievements
+              {completedAchievementCount !== undefined && completedAchievementCount > 0 && (
+                <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full">
+                  {completedAchievementCount}
+                </span>
+              )}
+            </motion.button>
+          )}
           {onAdmin && (
             <motion.button
               className="arcade-button-secondary rounded-lg opacity-70"

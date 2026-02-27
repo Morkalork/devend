@@ -1,3 +1,4 @@
+import React from 'react';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -6,10 +7,12 @@ interface GameStatsPanelProps {
   ownedUpgradeIds: string[];
   upgrades: UpgradeConfig[];
   accentColor: string;
+  achievementBonuses?: Partial<Record<string, number>>;
 }
 
-export function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor }: GameStatsPanelProps) {
-  const modifiers: GameModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
+export const GameStatsPanel = React.forwardRef<HTMLDivElement, GameStatsPanelProps>(
+function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor, achievementBonuses }, ref) {
+  const modifiers: GameModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, achievementBonuses);
 
   const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
   const formatBonus = (value: number) => value > 0 ? `+${value}` : `${value}`;
@@ -32,14 +35,15 @@ export function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor }: GameS
   ];
 
   return (
-    <div 
+    <div
+      ref={ref}
       className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none"
       style={{ fontFamily: "'JetBrains Mono', monospace" }}
     >
       <div 
         className="mx-auto max-w-4xl px-3 py-2"
         style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          backgroundColor: 'rgba(0, 0, 0, 0.9)',
           borderTop: `1px solid ${accentColor}40`,
         }}
       >
@@ -48,12 +52,12 @@ export function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor }: GameS
             <div 
               key={stat.label} 
               className="flex items-center gap-1"
-              style={{ 
-                color: stat.changed ? accentColor : `${accentColor}80`,
+              style={{
+                color: stat.changed ? accentColor : `${accentColor}bb`,
                 textShadow: stat.changed ? `0 0 8px ${accentColor}` : 'none',
               }}
             >
-              <span className="opacity-70">{stat.label}:</span>
+              <span className="opacity-80">{stat.label}:</span>
               <span className="font-bold">{stat.value}</span>
             </div>
           ))}
@@ -61,4 +65,4 @@ export function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor }: GameS
       </div>
     </div>
   );
-}
+});

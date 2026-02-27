@@ -1,7 +1,7 @@
 import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'result' | 'augmentStore' | 'options' | 'admin' | 'mapBuilder' | 'animationTest';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'result' | 'augmentStore' | 'options' | 'achievements' | 'admin' | 'mapBuilder' | 'animationTest';
 
 export type { Vector2 };
 

@@ -1,13 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameStatsPanel } from './GameStatsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
+import { TutorialOverlay } from './TutorialOverlay';
 import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
-import { TutorialStep } from '@/hooks/useInteractiveTutorial';
 import { useGameConfig } from '@/hooks/useGameConfig';
 
 interface AugmentProgress {
@@ -17,6 +17,8 @@ interface AugmentProgress {
   pointsEarned: number;
   levelsPerPoint: number;
 }
+
+type InGameStep = 'topBar' | 'bottomBar' | 'fence' | 'done';
 
 interface GameScreenProps {
   level: LevelConfig;
@@ -31,34 +33,43 @@ interface GameScreenProps {
   onLevelComplete: (scoreData: LevelScoreData) => void;
   onMainMenu: () => void;
   onRestart: () => void;
-  tutorialMode?: boolean;
-  tutorialStep?: TutorialStep;
-  onTutorialCutSuccess?: () => void;
+  showInGameTutorial?: boolean;
+  onTopBarSeen?: () => void;
+  onBottomBarSeen?: () => void;
+  onFenceSeen?: () => void;
   accentColor?: string;
   augmentProgress?: AugmentProgress;
+  achievementBonuses?: Partial<Record<string, number>>;
 }
 
-export function GameScreen({ 
-  level, 
-  levelNumber, 
-  totalLevels, 
-  totalScore, 
+export function GameScreen({
+  level,
+  levelNumber,
+  totalLevels,
+  totalScore,
   ownedUpgradeIds,
   upgrades,
   lives,
   onLivesChange,
-  onGameEnd, 
+  onGameEnd,
   onLevelComplete,
   onMainMenu,
   onRestart,
-  tutorialMode = false,
-  tutorialStep = 'completed',
-  onTutorialCutSuccess,
+  showInGameTutorial = false,
+  onTopBarSeen,
+  onBottomBarSeen,
+  onFenceSeen,
   accentColor: externalAccentColor,
   augmentProgress,
+  achievementBonuses,
 }: GameScreenProps) {
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
-  
+
+  // In-game tutorial step state
+  const [inGameStep, setInGameStep] = useState<InGameStep>(
+    showInGameTutorial ? 'topBar' : 'done'
+  );
+
   // Game state for top bar
   const [gameState, setGameState] = useState<GameStateInfo>({
     cutsUsed: 0,
@@ -77,6 +88,17 @@ export function GameScreen({
 
   const accentColor = externalAccentColor || getAccentColor();
 
+  // Measure bar heights for spotlight overlays
+  const topBarRef = useRef<HTMLDivElement>(null);
+  const statsPanelRef = useRef<HTMLDivElement>(null);
+  const [topBarHeight, setTopBarHeight] = useState(0);
+  const [statsPanelHeight, setStatsPanelHeight] = useState(0);
+
+  useEffect(() => {
+    if (topBarRef.current) setTopBarHeight(topBarRef.current.offsetHeight);
+    if (statsPanelRef.current) setStatsPanelHeight(statsPanelRef.current.offsetHeight);
+  }, []);
+
   return (
     <>
       {/* CRT Terminal Background */}
@@ -87,24 +109,27 @@ export function GameScreen({
       
       <div className="fixed inset-0 flex flex-col z-10">
         {/* Game Top Bar - Two rows */}
-        <GameTopBar
-          levelNumber={levelNumber}
-          cutsUsed={gameState.cutsUsed}
-          parCuts={level.expectedCuts}
-          lives={lives}
-          spaceRemaining={gameState.spaceRemaining}
-          spaceRequired={100 - level.sizeThreshold}
-          lockedBalls={gameState.lockedBalls}
-          ownedUpgrades={ownedUpgrades}
-          accentColor={accentColor}
-          augmentProgress={augmentProgress}
-          onMainMenu={onMainMenu}
-          onRestart={onRestart}
-        />
+        <div ref={topBarRef}>
+          <GameTopBar
+            levelNumber={levelNumber}
+            cutsUsed={gameState.cutsUsed}
+            parCuts={level.expectedCuts}
+            lives={lives}
+            spaceRemaining={gameState.spaceRemaining}
+            spaceRequired={100 - level.sizeThreshold}
+            lockedBalls={gameState.lockedBalls}
+            threadLockRequired={level.threadLockRequired}
+            ownedUpgrades={ownedUpgrades}
+            accentColor={accentColor}
+            augmentProgress={augmentProgress}
+            onMainMenu={onMainMenu}
+            onRestart={onRestart}
+          />
+        </div>
 
         {/* Game Canvas Area */}
         <div className="flex-1 min-h-0">
-          <GameCanvas 
+          <GameCanvas
             level={level}
             levelNumber={levelNumber}
             totalLevels={totalLevels}
@@ -116,25 +141,59 @@ export function GameScreen({
             onGameEnd={onGameEnd}
             onLevelComplete={onLevelComplete}
             onGameStateChange={handleGameStateChange}
-            tutorialMode={tutorialMode}
-            tutorialStep={tutorialStep}
-            onTutorialCutSuccess={onTutorialCutSuccess}
+            tutorialMode={inGameStep === 'fence'}
+            tutorialStep={inGameStep === 'fence' ? 'waitingForSuccessfulCut' : 'completed'}
+            onTutorialCutSuccess={() => {
+              setInGameStep('done');
+              onFenceSeen?.();
+            }}
             canvasOpacity={config.visuals.canvas_opacity}
             fenceSpeedBase={config.fence.speed_base}
             fenceSpeedMin={config.fence.speed_min}
             fenceSpeedPerLevel={config.fence.speed_per_level}
             regionColor={getRegionColor()}
             accentColor={accentColor}
+            achievementBonuses={achievementBonuses}
           />
         </div>
 
         {/* Stats Panel at bottom */}
         <GameStatsPanel
+          ref={statsPanelRef}
           ownedUpgradeIds={ownedUpgradeIds}
           upgrades={upgrades}
           accentColor={accentColor}
+          achievementBonuses={achievementBonuses}
         />
         
+        {/* In-game tutorial overlays */}
+        <TutorialOverlay
+          visible={inGameStep === 'topBar'}
+          arrowDirection="up"
+          spotlightArea="top"
+          spotlightHeightPx={topBarHeight}
+          accentColor={accentColor}
+          title="GAME STATUS"
+          body="The top bar shows your progress: level, cuts vs par, lives, board space cleared, and augment progress."
+          onDismiss={() => {
+            setInGameStep('bottomBar');
+            onTopBarSeen?.();
+          }}
+        />
+        <TutorialOverlay
+          visible={inGameStep === 'bottomBar'}
+          arrowDirection="down"
+          spotlightArea="bottom"
+          spotlightHeightPx={statsPanelHeight}
+          accentColor={accentColor}
+          title="YOUR UPGRADES"
+          body="The bottom bar shows all active modifiers from purchased upgrades. Highlighted values are boosted. Upgrades last until the run ends."
+          onDismiss={() => {
+            setInGameStep('fence');
+            onBottomBarSeen?.();
+          }}
+        />
+
         {/* Bank button during push mode - fixed overlay at bottom */}
         {gameState.pushMode === "pushing" && gameState.onBankAndContinue && (
           <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center items-center py-4 pointer-events-none">

@@ -2,8 +2,8 @@ import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
 import { Clock, ArrowRight, Lock, Check } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
 import { CRTBackground } from './CRTBackground';
+import { TutorialOverlay } from './TutorialOverlay';
 
 interface UpgradeShopProps {
   playerPoints: number;
@@ -16,6 +16,8 @@ interface UpgradeShopProps {
   onContinue: () => void;
   accentColor?: string;
   extraShopItems?: number;
+  showTutorial?: boolean;
+  onTutorialDismiss?: () => void;
 }
 
 /** Shuffle array using Fisher-Yates */
@@ -39,11 +41,13 @@ export function UpgradeShop({
   onContinue,
   accentColor,
   extraShopItems = 0,
+  showTutorial = false,
+  onTutorialDismiss,
 }: UpgradeShopProps) {
-  const { toast } = useToast();
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
   const [lockedInfoId, setLockedInfoId] = useState<string | null>(null);
+  const [shakingId, setShakingId] = useState<string | null>(null);
 
   const shopSlots = 3 + extraShopItems;
 
@@ -79,29 +83,43 @@ export function UpgradeShop({
   // Effective overtime - playerPoints (totalScore) is already reduced by onPurchase
   const effectiveOvertime = playerPoints;
 
-  const handlePurchase = useCallback((upgrade: UpgradeConfig) => {
+  // Budget remaining after currently selected items
+  const selectedTotalCost = selectedIds.reduce((sum, id) => {
+    const u = offeredUpgrades.find(u => u.id === id);
+    return sum + (u?.cost ?? 0);
+  }, 0);
+  const remainingBudget = effectiveOvertime - selectedTotalCost;
+
+  const handleItemClick = useCallback((upgrade: UpgradeConfig, alreadySelected: boolean, currentRemainingBudget: number) => {
     if (allOwnedIds.includes(upgrade.id)) return;
-    
-    if (!canPurchase(upgrade.id, effectiveOvertime, allOwnedIds)) {
-      if (effectiveOvertime < upgrade.cost) {
-        toast({
-          title: "Not enough overtime",
-          description: `You need ${upgrade.cost - effectiveOvertime}h more.`,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Prerequisites required",
-          description: `Complete prerequisite upgrades first.`,
-          variant: "destructive",
-        });
-      }
+    if (isLocked(upgrade.id, allOwnedIds)) return;
+
+    // Deselect if already selected
+    if (alreadySelected) {
+      setSelectedIds(prev => prev.filter(id => id !== upgrade.id));
       return;
     }
 
-    onPurchase(upgrade.id, upgrade.cost);
-    setPurchasedThisSession(prev => [...prev, upgrade.id]);
-  }, [allOwnedIds, canPurchase, effectiveOvertime, onPurchase, toast]);
+    // Can't afford — shake instead of toast
+    if (upgrade.cost > currentRemainingBudget) {
+      setShakingId(upgrade.id);
+      setTimeout(() => setShakingId(null), 600);
+      return;
+    }
+
+    setSelectedIds(prev => [...prev, upgrade.id]);
+  }, [allOwnedIds, isLocked]);
+
+  const handleContinue = useCallback(() => {
+    for (const id of selectedIds) {
+      const upgrade = offeredUpgrades.find(u => u.id === id);
+      if (upgrade) {
+        onPurchase(upgrade.id, upgrade.cost);
+        setPurchasedThisSession(prev => [...prev, upgrade.id]);
+      }
+    }
+    onContinue();
+  }, [selectedIds, offeredUpgrades, onPurchase, onContinue]);
 
   return (
     <>
@@ -159,40 +177,36 @@ export function UpgradeShop({
           {offeredUpgrades.map((upgrade, index) => {
                 const owned = allOwnedIds.includes(upgrade.id);
                 const locked = isLocked(upgrade.id, allOwnedIds);
+                const selected = selectedIds.includes(upgrade.id);
                 const purchasable = canPurchase(upgrade.id, effectiveOvertime, allOwnedIds);
-                const cantAfford = !locked && !owned && effectiveOvertime < upgrade.cost;
+                // Can't afford with remaining budget (unless already selected)
+                const cantAfford = !locked && !owned && !selected && upgrade.cost > remainingBudget;
                 const tierColors = TIER_COLORS[upgrade.tier];
 
             return (
-              <motion.button
+              <motion.div
                 key={upgrade.id}
+                animate={shakingId === upgrade.id ? { x: [-10, 10, -8, 8, -4, 4, 0] } : { x: 0 }}
+                transition={shakingId === upgrade.id ? { duration: 0.5, type: 'tween' } : { duration: 0 }}
+              >
+              <motion.button
                 initial={{ opacity: 0, scale: 0.9 }}
-                animate={purchasable
-                  ? { opacity: [0.8, 1, 0.8], scale: [1, 1.04, 1] }
-                  : { opacity: 1, scale: 1 }
-                }
-                transition={purchasable
-                  ? {
-                      opacity: { duration: 1.8 + index * 0.4, repeat: Infinity, ease: 'easeInOut' },
-                      scale: { duration: 2.2 + index * 0.5, repeat: Infinity, ease: 'easeInOut' },
-                    }
-                  : { delay: index * 0.05 }
-                }
-                onClick={() => handlePurchase(upgrade)}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.05 }}
+                onClick={() => handleItemClick(upgrade, selected, remainingBudget)}
                 disabled={owned || locked}
-                onMouseEnter={() => setHoveredId(upgrade.id)}
-                onMouseLeave={() => setHoveredId(null)}
                 whileHover={{ scale: purchasable ? 1.05 : 1 }}
                 whileTap={{ scale: purchasable ? 0.95 : 1 }}
                 className={`
-                  relative w-36 p-3 rounded-lg transition-all duration-200 text-center
+                  relative w-44 p-3 rounded-lg transition-all duration-200 text-center
                   ${cantAfford ? 'border-dashed' : ''} border-2
+                  ${selected ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black' : ''}
                   ${owned
                     ? 'bg-green-500/20 border-green-500/50'
                     : locked
                       ? 'bg-muted/30 border-muted/30 opacity-40 cursor-not-allowed'
                       : purchasable
-                        ? `bg-card ${tierColors.border} hover:border-primary cursor-pointer` 
+                        ? `bg-card ${tierColors.border} hover:border-primary cursor-pointer`
                         : cantAfford
                           ? 'bg-card/50 border-muted-foreground/30 opacity-60 cursor-pointer'
                           : 'bg-card/50 border-muted cursor-not-allowed opacity-40'
@@ -200,16 +214,21 @@ export function UpgradeShop({
                 `}
               >
                 {/* Tier badge */}
-                <div className={`text-[10px] font-medium mb-1 ${tierColors.text}`}>
+                <div className={`text-xs font-medium mb-1 ${tierColors.text}`}>
                   {upgrade.tier}
                 </div>
 
                 {/* Name */}
-                <div className="text-xs font-semibold text-foreground mb-1 truncate">
+                <div className="text-sm font-semibold text-foreground mb-1 truncate">
                   {upgrade.name}
                 </div>
 
                 {/* Status icon */}
+                {selected && (
+                  <div className="absolute top-1 right-1">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                )}
                 {owned && (
                   <div className="absolute top-1 right-1">
                     <Check className="w-3 h-3 text-green-500" />
@@ -236,20 +255,21 @@ export function UpgradeShop({
                 )}
 
                 {/* Description */}
-                <p className="text-[10px] text-muted-foreground line-clamp-2 mb-1">
+                <p className="text-xs text-muted-foreground line-clamp-2 mb-1">
                   {upgrade.description}
                 </p>
 
                 {/* Cost */}
                 {!owned && (
-                  <div className={`flex items-center justify-center gap-1 text-xs font-bold
+                  <div className={`flex items-center justify-center gap-1 text-sm font-bold
                     ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
                   `}>
-                    <Clock className="w-3 h-3" />
+                    <Clock className="w-4 h-4" />
                     {upgrade.cost}h
                   </div>
                 )}
               </motion.button>
+              </motion.div>
             );
           })}
         </motion.div>
@@ -259,15 +279,25 @@ export function UpgradeShop({
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.4 }}
-          onClick={onContinue}
+          onClick={handleContinue}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           className="arcade-button-primary rounded-lg flex items-center gap-2"
         >
-          Continue
+          {selectedIds.length > 0 ? `Buy ${selectedIds.length} & Continue (${selectedTotalCost}h)` : 'Continue'}
           <ArrowRight className="w-5 h-5" />
         </motion.button>
       </motion.div>
+
+      {showTutorial && (
+        <TutorialOverlay
+          visible
+          title="THE UPGRADE SHOP"
+          body="Spend overtime hours on upgrades after each map. Over Time upgrades multiply future earnings. Effects appear in the bottom bar on the next map."
+          arrowDirection="none"
+          onDismiss={() => onTutorialDismiss?.()}
+        />
+      )}
     </>
   );
 }

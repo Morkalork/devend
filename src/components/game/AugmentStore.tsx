@@ -7,6 +7,7 @@ import { CRTBackground } from './CRTBackground';
 import { SvgIcon } from '@/components/ui/SvgIcon';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/hooks/use-toast';
+import { TutorialOverlay } from './TutorialOverlay';
 
 interface AugmentStoreProps {
   augments: Augment[];
@@ -17,6 +18,8 @@ interface AugmentStoreProps {
   onPurchase: (augment: Augment) => void;
   onBack: () => void;
   accentColor?: string;
+  showTutorial?: boolean;
+  onTutorialDismiss?: () => void;
 }
 
 export function AugmentStore({
@@ -28,6 +31,8 @@ export function AugmentStore({
   onPurchase,
   onBack,
   accentColor,
+  showTutorial = false,
+  onTutorialDismiss,
 }: AugmentStoreProps) {
   const [selectedAugment, setSelectedAugment] = useState<Augment | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -424,6 +429,16 @@ export function AugmentStore({
           )}
         </AnimatePresence>
       </div>
+
+      {showTutorial && (
+        <TutorialOverlay
+          visible
+          title="AUGMENTATION WORKSHOP"
+          body="Spend Augment Points on permanent upgrades that persist across all runs. Points are earned by completing levels. Each stack compounds your power."
+          arrowDirection="none"
+          onDismiss={() => onTutorialDismiss?.()}
+        />
+      )}
     </>
   );
 }

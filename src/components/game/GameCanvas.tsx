@@ -124,6 +124,7 @@ interface GameCanvasProps {
   fenceSpeedPerLevel?: number;
   regionColor?: string; // hex color with #
   accentColor?: string; // hex color with #
+  achievementBonuses?: Partial<Record<string, number>>;
 }
 
 // Game constants - all in WORLD units
@@ -233,6 +234,7 @@ export function GameCanvas({
   fenceSpeedPerLevel = 50,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
+  achievementBonuses,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blurCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -267,8 +269,8 @@ export function GameCanvas({
   const [pushMode, setPushMode] = useState<"none" | "prompt" | "pushing">("none");
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
 
-  // Calculate active modifiers from owned upgrades
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
+  // Calculate active modifiers from owned upgrades + achievement bonuses
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, achievementBonuses);
 
   // Game state notification moved to after handleBankAndContinue definition
 
@@ -1899,8 +1901,9 @@ export function GameCanvas({
         game.bestRemainingPercent = percent;
       }
 
-      // Check if level just got cleared (legacy threshold check)
-      if (percent < level.sizeThreshold && game.pushMode === "none") {
+      // Check if level just got cleared (space threshold + optional thread-lock requirement)
+      const lockReq = level.threadLockRequired ?? 0;
+      if (percent < level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none") {
         render();
         render();
         game.pushMode = "prompt";
@@ -2874,6 +2877,9 @@ export function GameCanvas({
 
       // Convert to world coordinates
       const worldPos = screenToWorld(screenX, screenY, game.boardRect);
+
+      // Reject clicks in captured or out-of-bounds cells (SpaceGrid is authoritative)
+      if (!game.spaceGrid || !isPositionActive(game.spaceGrid, worldPos)) return;
 
       // Find which region contains this point (world coords)
       const region = findRegionContainingPoint(game.regions, worldPos.x, worldPos.y);

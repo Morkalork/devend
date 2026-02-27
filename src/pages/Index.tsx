@@ -3,10 +3,11 @@ import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
 import { useActiveModifiers } from '@/hooks/useActiveModifiers';
-import { useInteractiveTutorial } from '@/hooks/useInteractiveTutorial';
+import { useTutorialManager } from '@/hooks/useTutorialManager';
 import { useCheckpoint } from '@/hooks/useCheckpoint';
 import { useAugmentManager } from '@/hooks/useAugmentManager';
 import { useMetaProgression } from '@/hooks/useMetaProgression';
+import { useAchievementManager } from '@/hooks/useAchievementManager';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
@@ -16,6 +17,7 @@ import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { AugmentStore } from '@/components/game/AugmentStore';
+import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Augment } from '@/types/augment';
 import { MetaProgressionStats } from '@/types/metaProgression';
@@ -27,17 +29,18 @@ const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => 
 const BASE_LIVES = 3;
 
 const Index = () => {
-  const { 
-    currentScreen, 
-    lastResult, 
-    startGame, 
-    endGame, 
-    goToWelcome, 
+  const {
+    currentScreen,
+    lastResult,
+    startGame,
+    endGame,
+    goToWelcome,
     goToTutorial,
     goToUpgradeShop,
     goToGame,
     goToAugmentStore,
     goToOptions,
+    goToAchievements,
     goToAdmin,
     goToMapBuilder,
     goToAnimationTest,
@@ -106,14 +109,23 @@ const Index = () => {
     resetAllData: resetAugmentData,
   } = useAugmentManager({ onPointEarned: handleAugmentPointEarned });
 
-  // Interactive tutorial management
+  // Tutorial management
   const {
-    tutorialMode,
-    tutorialStep,
-    startTutorialIfNeeded,
-    replayTutorial,
-    markTutorialComplete,
-  } = useInteractiveTutorial();
+    shouldShowTopBar,
+    shouldShowBottomBar,
+    shouldShowFence,
+    shouldShowStore,
+    shouldShowAugment,
+    markTopBarSeen,
+    markBottomBarSeen,
+    markFenceSeen,
+    markStoreSeen,
+    markAugmentSeen,
+    resetAllTutorials,
+  } = useTutorialManager();
+
+  // Any unseen in-game tutorial step means we should show in-game tutorial
+  const showInGameTutorial = shouldShowTopBar || shouldShowBottomBar || shouldShowFence;
 
   // Checkpoint system for 10-minute tier restart
   const {
@@ -135,14 +147,23 @@ const Index = () => {
     resetProgression,
   } = useMetaProgression();
 
+  // Achievement system
+  const {
+    achievements,
+    completedIds: completedAchievementIds,
+    bonusModifiers: achievementBonuses,
+    checkAndComplete: checkAndCompleteAchievements,
+    getClosestAchievements,
+  } = useAchievementManager();
+
   // Track points awarded this run for display (computed from hook)
   const runPointsAwarded = runPointsEarned;
   
   // Track lives at start of level for perfect level detection
   const [livesAtLevelStart, setLivesAtLevelStart] = useState(BASE_LIVES);
 
-  // Calculate modifiers to track bonus lives
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades);
+  // Calculate modifiers to track bonus lives (including achievement bonuses)
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, achievementBonuses);
 
   // Get owned augments for applying effects
   const ownedAugmentsList = getOwnedAugments();
@@ -170,52 +191,42 @@ const Index = () => {
     return maxStartingLevel;
   }, [ownedAugmentsList]);
 
-  const handleStartGame = useCallback(async (forceInteractiveTutorial = false) => {
+  const handleStartGame = useCallback(async () => {
     // Load levels, upgrades, and augments in parallel
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
       loadLevels(),
       loadUpgrades(),
       loadAugments(),
     ]);
-    
+
     if (levelsSuccess && upgradesSuccess) {
       setTotalScore(0);
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
       resetRunProgress(); // Reset in-run augment tracking
-      
+
       // Calculate starting lives from owned augments
       const startingLives = getStartingLivesFromAugments();
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
-      
+
       // Determine starting level: max of checkpoint, augment bonus, and ?level= query param
       const checkpointLevel = getStartingLevel();
       const augmentStartLevel = getStartingLevelFromAugments();
       const queryLevel = parseInt(new URLSearchParams(window.location.search).get('level') || '0', 10);
       const startingLevel = Math.max(checkpointLevel, augmentStartLevel, queryLevel || 0);
-      
+
       if (startingLevel > 1) {
         // Start from higher level (convert 1-indexed level to 0-indexed)
         setLevelIndex(startingLevel - 1);
       } else {
         resetToFirstLevel();
       }
-      
-      // Check if we need to start interactive tutorial
-      if (forceInteractiveTutorial) {
-        replayTutorial();
-      } else {
-        // Only start tutorial if starting from level 1
-        if (startingLevel === 1) {
-          startTutorialIfNeeded();
-        }
-      }
-      
+
       startGame();
     }
-  }, [loadLevels, loadUpgrades, loadAugments, startGame, startTutorialIfNeeded, replayTutorial, getStartingLevel, setLevelIndex, resetToFirstLevel, getStartingLivesFromAugments, getStartingLevelFromAugments, resetRunProgress]);
+  }, [loadLevels, loadUpgrades, loadAugments, startGame, getStartingLevel, setLevelIndex, resetToFirstLevel, getStartingLivesFromAugments, getStartingLevelFromAugments, resetRunProgress]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // Save checkpoint if player made it past level 5
@@ -260,6 +271,19 @@ const Index = () => {
     
     // Check and unlock any newly available augments
     checkAndUnlock(augments);
+
+    // Check achievement progress against projected updated stats
+    // (metaStats state hasn't flushed yet, so compute expected values inline)
+    const projectedStats = {
+      highestLevelReached: Math.max(metaStats.highestLevelReached, currentLevelNum),
+      totalFencesDrawn: metaStats.totalFencesDrawn + (scoreData.cutCount || 0),
+      totalLevelsCompletedWithoutLoss:
+        currentLives >= livesAtLevelStart
+          ? metaStats.totalLevelsCompletedWithoutLoss + 1
+          : metaStats.totalLevelsCompletedWithoutLoss,
+      totalLivesLost: metaStats.totalLivesLost,
+    };
+    checkAndCompleteAchievements(projectedStats);
     
     // No tier multiplier - overtime values are already tight
     const levelOvertime = scoreData.levelScore;
@@ -282,7 +306,7 @@ const Index = () => {
     
     // Reset lives at level start for next level
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, augments, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.scoreInterestRate]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, augments, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -372,9 +396,13 @@ const Index = () => {
     goToAugmentStore();
   }, [loadAugments, goToAugmentStore]);
 
-  const handleReplayInteractiveTutorial = useCallback(() => {
-    handleStartGame(true);
-  }, [handleStartGame]);
+  const handleAchievementsFromWelcome = useCallback(() => {
+    goToAchievements();
+  }, [goToAchievements]);
+
+  const handleReEnableAllTutorials = useCallback(() => {
+    resetAllTutorials();
+  }, [resetAllTutorials]);
 
   const handleResetAugments = useCallback(() => {
     resetAugmentData();
@@ -414,8 +442,9 @@ const Index = () => {
         upgrades={upgrades}
         isLoading={isLoading}
         error={error}
-        tutorialMode={tutorialMode}
-        tutorialStep={tutorialStep}
+        showInGameTutorial={showInGameTutorial}
+        shouldShowStore={shouldShowStore}
+        shouldShowAugment={shouldShowAugment}
         lastResult={lastResult}
         showLevelComplete={showLevelComplete}
         pendingLevelScore={pendingLevelScore}
@@ -429,7 +458,7 @@ const Index = () => {
         handlePlayAgain={handlePlayAgain}
         handleBackToWelcome={handleBackToWelcome}
         handleAugmentsFromWelcome={handleAugmentsFromWelcome}
-        handleReplayInteractiveTutorial={handleReplayInteractiveTutorial}
+        handleReEnableAllTutorials={handleReEnableAllTutorials}
         handleResetAugments={handleResetAugments}
         canPurchaseUpgrade={canPurchaseUpgrade}
         isUpgradeLocked={isUpgradeLocked}
@@ -440,7 +469,11 @@ const Index = () => {
         goToAdmin={goToAdmin}
         goToMapBuilder={goToMapBuilder}
         goToAnimationTest={goToAnimationTest}
-        markTutorialComplete={markTutorialComplete}
+        onTopBarSeen={markTopBarSeen}
+        onBottomBarSeen={markBottomBarSeen}
+        onFenceSeen={markFenceSeen}
+        onStoreTutorialDismiss={markStoreSeen}
+        onAugmentTutorialDismiss={markAugmentSeen}
         checkpointLevel={checkpointStartLevel}
         checkpointRemainingMs={checkpointRemaining}
         augments={augments}
@@ -454,6 +487,12 @@ const Index = () => {
         totalLevelsCompleted={totalLevelsCompleted}
         augmentProgress={getRunProgress()}
         extraShopItems={activeModifiers.extraShopItems}
+        achievements={achievements}
+        completedAchievementIds={completedAchievementIds}
+        achievementBonuses={achievementBonuses}
+        getClosestAchievements={getClosestAchievements}
+        handleAchievementsFromWelcome={handleAchievementsFromWelcome}
+        goToWelcomeFromAchievements={goToWelcome}
       />
     </AccentColorProvider>
   );
@@ -479,12 +518,13 @@ interface IndexContentProps {
   upgrades: any[];
   isLoading: boolean;
   error: string | null;
-  tutorialMode: boolean;
-  tutorialStep: any;
+  showInGameTutorial: boolean;
+  shouldShowStore: boolean;
+  shouldShowAugment: boolean;
   lastResult: any;
   showLevelComplete: boolean;
   pendingLevelScore: LevelScoreData | null;
-  handleStartGame: (force?: boolean) => void;
+  handleStartGame: () => void;
   handleGameEnd: (result: GameResult) => void;
   handleLivesChange: (lives: number) => void;
   handleLevelComplete: (scoreData: LevelScoreData) => void;
@@ -496,7 +536,12 @@ interface IndexContentProps {
   handlePlayAgain: () => void;
   handleBackToWelcome: () => void;
   handleAugmentsFromWelcome: () => void;
-  handleReplayInteractiveTutorial: () => void;
+  handleReEnableAllTutorials: () => void;
+  onTopBarSeen: () => void;
+  onBottomBarSeen: () => void;
+  onFenceSeen: () => void;
+  onStoreTutorialDismiss: () => void;
+  onAugmentTutorialDismiss: () => void;
   handleResetAugments: () => void;
   handlePurchaseAugment: (augment: Augment) => void;
   goToWelcome: () => void;
@@ -505,7 +550,6 @@ interface IndexContentProps {
   goToAdmin: () => void;
   goToMapBuilder: () => void;
   goToAnimationTest: () => void;
-  markTutorialComplete: () => void;
   checkpointLevel?: number;
   checkpointRemainingMs?: number;
   augments: Augment[];
@@ -519,6 +563,12 @@ interface IndexContentProps {
   totalLevelsCompleted: number;
   augmentProgress: AugmentProgress;
   extraShopItems: number;
+  achievements: import('@/types/achievement').Achievement[];
+  completedAchievementIds: string[];
+  achievementBonuses: Partial<Record<string, number>>;
+  getClosestAchievements: (stats: MetaProgressionStats) => import('@/types/achievement').Achievement[];
+  handleAchievementsFromWelcome: () => void;
+  goToWelcomeFromAchievements: () => void;
 }
 
 function IndexContent({
@@ -532,8 +582,9 @@ function IndexContent({
   upgrades,
   isLoading,
   error,
-  tutorialMode,
-  tutorialStep,
+  showInGameTutorial,
+  shouldShowStore,
+  shouldShowAugment,
   lastResult,
   showLevelComplete,
   pendingLevelScore,
@@ -549,7 +600,7 @@ function IndexContent({
   handlePlayAgain,
   handleBackToWelcome,
   handleAugmentsFromWelcome,
-  handleReplayInteractiveTutorial,
+  handleReEnableAllTutorials,
   handleResetAugments,
   handlePurchaseAugment,
   goToWelcome,
@@ -558,7 +609,11 @@ function IndexContent({
   goToAdmin,
   goToMapBuilder,
   goToAnimationTest,
-  markTutorialComplete,
+  onTopBarSeen,
+  onBottomBarSeen,
+  onFenceSeen,
+  onStoreTutorialDismiss,
+  onAugmentTutorialDismiss,
   checkpointLevel,
   checkpointRemainingMs,
   augments,
@@ -572,6 +627,12 @@ function IndexContent({
   totalLevelsCompleted,
   augmentProgress,
   extraShopItems,
+  achievements,
+  completedAchievementIds,
+  achievementBonuses,
+  getClosestAchievements,
+  handleAchievementsFromWelcome,
+  goToWelcomeFromAchievements,
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
   const [animTestKey, setAnimTestKey] = useState(0);
@@ -579,11 +640,12 @@ function IndexContent({
   return (
     <>
       {currentScreen === 'welcome' && (
-        <WelcomeScreen 
-          onStartGame={() => handleStartGame(false)} 
+        <WelcomeScreen
+          onStartGame={() => handleStartGame()}
           onTutorial={goToTutorial}
           onOptions={goToOptions}
           onAugments={handleAugmentsFromWelcome}
+          onAchievements={handleAchievementsFromWelcome}
           onAdmin={import.meta.env.DEV || new URLSearchParams(window.location.search).get('admin') === 'true' ? goToAdmin : undefined}
           isLoading={isLoading}
           error={error}
@@ -591,6 +653,7 @@ function IndexContent({
           checkpointLevel={checkpointLevel}
           checkpointRemainingMs={checkpointRemainingMs}
           totalAugmentPoints={totalAugmentPoints}
+          completedAchievementCount={completedAchievementIds.length}
         />
       )}
       {currentScreen === 'tutorial' && (
@@ -599,14 +662,14 @@ function IndexContent({
       {currentScreen === 'options' && (
         <OptionsScreen
           onBack={goToWelcome}
-          onReplayTutorial={handleReplayInteractiveTutorial}
+          onReEnableTutorials={handleReEnableAllTutorials}
           onResetAugments={handleResetAugments}
           hasAugments={Object.keys(augmentsOwned).length > 0 || totalAugmentPoints > 0}
           accentColor={accentHex}
         />
       )}
       {currentScreen === 'game' && currentLevel && (
-        <GameScreen 
+        <GameScreen
           level={currentLevel}
           levelNumber={currentLevelIndex + 1}
           totalLevels={totalLevels}
@@ -619,11 +682,13 @@ function IndexContent({
           onLevelComplete={handleLevelComplete}
           onMainMenu={handleBackToWelcome}
           onRestart={handlePlayAgain}
-          tutorialMode={tutorialMode && currentLevelIndex === 0}
-          tutorialStep={tutorialStep}
-          onTutorialCutSuccess={markTutorialComplete}
+          showInGameTutorial={showInGameTutorial && currentLevelIndex === 0}
+          onTopBarSeen={onTopBarSeen}
+          onBottomBarSeen={onBottomBarSeen}
+          onFenceSeen={onFenceSeen}
           accentColor={accentHex}
           augmentProgress={augmentProgress}
+          achievementBonuses={achievementBonuses}
         />
       )}
       {currentScreen === 'upgradeShop' && (
@@ -638,6 +703,8 @@ function IndexContent({
           onContinue={handleContinueFromShop}
           accentColor={accentHex}
           extraShopItems={extraShopItems}
+          showTutorial={shouldShowStore}
+          onTutorialDismiss={onStoreTutorialDismiss}
         />
       )}
       {currentScreen === 'result' && lastResult && (
@@ -661,9 +728,20 @@ function IndexContent({
           onPurchase={handlePurchaseAugment}
           onBack={goToWelcome}
           accentColor={accentHex}
+          showTutorial={shouldShowAugment}
+          onTutorialDismiss={onAugmentTutorialDismiss}
         />
       )}
-      
+      {currentScreen === 'achievements' && (
+        <AchievementsScreen
+          achievements={achievements}
+          completedIds={completedAchievementIds}
+          metaStats={metaStats}
+          onBack={goToWelcomeFromAchievements}
+          accentColor={accentHex}
+        />
+      )}
+
       {/* Dev-only Admin screens */}
       {import.meta.env.DEV && currentScreen === 'admin' && (
         <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>

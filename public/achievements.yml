@@ -1,0 +1,132 @@
+achievements:
+  - id: fence-fighter
+    name: Fence Fighter
+    description: Draw your first 100 fences across all runs.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 100
+    bonus:
+      modifier: fenceGenerationSpeedMultiplier
+      value: 1.1
+      description: Fence generation speed +10%
+
+  - id: fence-expert
+    name: Fence Expert
+    description: Draw 500 fences across all runs.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 500
+    bonus:
+      modifier: fenceGenerationSpeedMultiplier
+      value: 1.1
+      description: Fence generation speed +10%
+
+  - id: fence-master
+    name: Fence Master
+    description: Draw 2000 fences across all runs.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 2000
+    bonus:
+      modifier: fenceWidthMultiplier
+      value: 1.1
+      description: Fence width +10%
+
+  - id: levelheaded
+    name: Levelheaded
+    description: Reach level 5 in a single run.
+    requirement:
+      stat: highestLevelReached
+      threshold: 5
+    bonus:
+      modifier: scoreMultiplier
+      value: 1.05
+      description: Overtime multiplier +5%
+
+  - id: veteran
+    name: Veteran
+    description: Reach level 15 in a single run.
+    requirement:
+      stat: highestLevelReached
+      threshold: 15
+    bonus:
+      modifier: scoreMultiplier
+      value: 1.05
+      description: Overtime multiplier +5%
+
+  - id: elite
+    name: Elite
+    description: Reach level 25 in a single run.
+    requirement:
+      stat: highestLevelReached
+      threshold: 25
+    bonus:
+      modifier: ballSpeedMultiplier
+      value: 0.95
+      description: Ball speed -5%
+
+  - id: flawless
+    name: Flawless
+    description: Complete 5 levels without losing a life.
+    requirement:
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 5
+    bonus:
+      modifier: extraLives
+      value: 1
+      description: +1 starting life per run
+
+  - id: perfect-run
+    name: Perfect Run
+    description: Complete 20 levels without losing a life.
+    requirement:
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 20
+    bonus:
+      modifier: fenceCooldownMultiplier
+      value: 0.9
+      description: Fence cooldown -10%
+
+  - id: resilient
+    name: Resilient
+    description: Lose 10 lives across all runs — experience is the best teacher.
+    requirement:
+      stat: totalLivesLost
+      threshold: 10
+    bonus:
+      modifier: fenceCooldownMultiplier
+      value: 0.95
+      description: Fence cooldown -5%
+
+  - id: battle-hardened
+    name: Battle-Hardened
+    description: Lose 50 lives across all runs.
+    requirement:
+      stat: totalLivesLost
+      threshold: 50
+    bonus:
+      modifier: ballSpeedMultiplier
+      value: 0.95
+      description: Ball speed -5%
+
+  - id: centurion
+    name: Centurion
+    description: Reach level 10 in a single run.
+    requirement:
+      stat: highestLevelReached
+      threshold: 10
+    bonus:
+      modifier: fenceGenerationSpeedMultiplier
+      value: 1.05
+      description: Fence generation speed +5%
+
+  - id: unstoppable
+    name: Unstoppable
+    description: Complete 50 levels without losing a life.
+    requirement:
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 50
+    bonus:
+      modifier: scoreMultiplier
+      value: 1.1
+      description: Overtime multiplier +10%

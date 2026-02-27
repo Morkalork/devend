@@ -5,15 +5,15 @@ import { CRTBackground } from './CRTBackground';
 
 interface OptionsScreenProps {
   onBack: () => void;
-  onReplayTutorial: () => void;
+  onReEnableTutorials: () => void;
   onResetAugments: () => void;
   hasAugments: boolean;
   accentColor?: string;
 }
 
-export function OptionsScreen({ 
-  onBack, 
-  onReplayTutorial, 
+export function OptionsScreen({
+  onBack,
+  onReEnableTutorials,
   onResetAugments,
   hasAugments,
   accentColor,
@@ -80,15 +80,15 @@ export function OptionsScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          {/* Replay Interactive Tutorial */}
+          {/* Re-enable All Tutorials */}
           <motion.button
             className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
-            onClick={onReplayTutorial}
+            onClick={onReEnableTutorials}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
             <RefreshCw className="w-5 h-5" />
-            Replay Interactive Tutorial
+            Re-enable All Tutorials
           </motion.button>
 
           {/* Reset Augments */}

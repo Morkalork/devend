@@ -55,6 +55,10 @@ export function useGameState() {
     setCurrentScreen('animationTest');
   }, []);
 
+  const goToAchievements = useCallback(() => {
+    setCurrentScreen('achievements');
+  }, []);
+
   return {
     currentScreen,
     lastResult,
@@ -67,6 +71,7 @@ export function useGameState() {
     goToGame,
     goToAugmentStore,
     goToOptions,
+    goToAchievements,
     goToAdmin,
     goToMapBuilder,
     goToAnimationTest,

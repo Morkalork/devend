@@ -24,6 +24,7 @@ interface GameTopBarProps {
   spaceRemaining: number;
   spaceRequired: number;
   lockedBalls: number;
+  threadLockRequired?: number;
   ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
   augmentProgress?: AugmentProgress;
@@ -39,6 +40,7 @@ export function GameTopBar({
   spaceRemaining,
   spaceRequired,
   lockedBalls,
+  threadLockRequired,
   ownedUpgrades,
   accentColor = '#00ff88',
   augmentProgress,
@@ -82,81 +84,73 @@ export function GameTopBar({
 
   const hasUpgrades = ownedUpgrades.length > 0;
 
+  const lockReq = threadLockRequired ?? 0;
+  const lockMet = lockedBalls >= lockReq;
+  const lockColor = lockReq > 0
+    ? (lockMet ? accentColor : 'hsl(var(--foreground))')
+    : `${accentColor}66`;
+
   return (
-    <div className="flex-shrink-0 flex flex-col gap-1">
-      {/* Row 1: Game Status Bar */}
-      <div 
+    <div className="flex-shrink-0 flex flex-col">
+      {/* Row 1: Navigation — menu, level, lives, augment progress */}
+      <div
         className="px-3 py-2 flex items-center justify-between gap-2"
-        style={{ 
+        style={{
           backgroundColor: 'rgba(0, 10, 5, 0.9)',
-          borderBottom: `2px solid ${accentColor}44`,
+          borderBottom: `1px solid ${accentColor}33`,
         }}
-        >
-          {/* Menu Button */}
-          <div className="relative">
-            <button
-              onClick={() => setMenuOpen(prev => !prev)}
-              className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-              style={{
-                backgroundColor: menuOpen ? `${accentColor}33` : 'transparent',
-                border: `1px solid ${accentColor}55`,
-                color: accentColor,
-              }}
-              aria-label="Game menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            {menuOpen && (
-              <div
-                className="absolute top-full left-0 mt-1 z-50 rounded-lg overflow-hidden min-w-[160px]"
-                style={{
-                  backgroundColor: 'rgba(0, 15, 8, 0.95)',
-                  border: `1px solid ${accentColor}55`,
-                  boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 15px ${accentColor}22`,
-                }}
-              >
-                <button
-                  onClick={() => { setMenuOpen(false); onRestart(); }}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors hover:brightness-125"
-                  style={{ color: accentColor, backgroundColor: 'transparent' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Restart Run
-                </button>
-                <button
-                  onClick={() => { setMenuOpen(false); onMainMenu(); }}
-                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors hover:brightness-125"
-                  style={{ color: accentColor, backgroundColor: 'transparent' }}
-                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                >
-                  <Home className="w-4 h-4" />
-                  Main Menu
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Level Number */}
-          <div className="flex items-center gap-1 min-w-0" style={{ color: accentColor }}>
-            <span className="font-display text-base font-bold" style={{ textShadow: `0 0 10px ${accentColor}88` }}>
-              LV{levelNumber}
-            </span>
-          </div>
-
-        {/* Cuts / Par */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Scissors className="w-5 h-5 flex-shrink-0" style={{ color: accentColor }} />
-          <span 
-            className="font-display text-base font-bold tabular-nums"
-            style={{ 
-              color: cutsUsed > parCuts ? '#ff6b6b' : accentColor,
-              textShadow: `0 0 10px ${cutsUsed > parCuts ? '#ff6b6b' : accentColor}88`,
+      >
+        {/* Menu Button */}
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen(prev => !prev)}
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+            style={{
+              backgroundColor: menuOpen ? `${accentColor}33` : 'transparent',
+              border: `1px solid ${accentColor}55`,
+              color: accentColor,
             }}
+            aria-label="Game menu"
           >
-            {cutsUsed}/{parCuts}
+            <Menu className="w-5 h-5" />
+          </button>
+          {menuOpen && (
+            <div
+              className="absolute top-full left-0 mt-1 z-50 rounded-lg overflow-hidden min-w-[160px]"
+              style={{
+                backgroundColor: 'rgba(0, 15, 8, 0.95)',
+                border: `1px solid ${accentColor}55`,
+                boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 15px ${accentColor}22`,
+              }}
+            >
+              <button
+                onClick={() => { setMenuOpen(false); onRestart(); }}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors hover:brightness-125"
+                style={{ color: accentColor, backgroundColor: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <RotateCcw className="w-4 h-4" />
+                Restart Run
+              </button>
+              <button
+                onClick={() => { setMenuOpen(false); onMainMenu(); }}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors hover:brightness-125"
+                style={{ color: accentColor, backgroundColor: 'transparent' }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Home className="w-4 h-4" />
+                Main Menu
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Level Number */}
+        <div className="flex items-center gap-1 min-w-0" style={{ color: accentColor }}>
+          <span className="font-display text-base font-bold" style={{ textShadow: `0 0 10px ${accentColor}88` }}>
+            LV{levelNumber}
           </span>
         </div>
 
@@ -166,7 +160,7 @@ export function GameTopBar({
             <Heart
               key={i}
               className="w-5 h-5 animate-pulse-heart"
-              style={{ 
+              style={{
                 color: accentColor,
                 fill: accentColor,
                 filter: `drop-shadow(0 0 6px ${accentColor}aa)`,
@@ -176,41 +170,19 @@ export function GameTopBar({
           ))}
         </div>
 
-        {/* Space */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Target className="w-5 h-5 flex-shrink-0" style={{ color: accentColor }} />
-          <span 
-            className="font-display text-base font-bold tabular-nums"
-            style={{ 
-              color: spaceRemaining <= spaceRequired ? accentColor : 'hsl(var(--foreground))',
-              textShadow: spaceRemaining <= spaceRequired ? `0 0 10px ${accentColor}88` : 'none',
-            }}
-          >
-            {spaceRemaining}%/{spaceRequired}%
-          </span>
-        </div>
-
-        {/* Thread Locks */}
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Lock className="w-5 h-5 flex-shrink-0" style={{ color: accentColor, opacity: 0.6 }} />
-          <span className="font-display text-base font-bold tabular-nums" style={{ color: accentColor, opacity: 0.6 }}>
-            {lockedBalls}
-          </span>
-        </div>
-
         {/* Augment Progress */}
         {augmentProgress && (
           <div className="flex items-center gap-1.5 min-w-0">
-            <Hexagon 
-              className="w-5 h-5 flex-shrink-0" 
-              style={{ 
+            <Hexagon
+              className="w-5 h-5 flex-shrink-0"
+              style={{
                 color: '#ffffff',
                 fill: augmentProgress.pointsEarned > 0 ? 'rgba(255,255,255,0.3)' : 'transparent',
               }}
             />
-            <span 
+            <span
               className="font-display text-base font-bold tabular-nums"
-              style={{ 
+              style={{
                 color: '#ffffff',
                 textShadow: augmentProgress.pointsEarned > 0 ? '0 0 8px rgba(255,255,255,0.6)' : 'none',
               }}
@@ -221,12 +193,66 @@ export function GameTopBar({
         )}
       </div>
 
+      {/* Row 2: Objectives — cuts/par, space, thread locks */}
+      <div
+        className="px-3 py-1.5 flex items-center justify-around gap-2"
+        style={{
+          backgroundColor: 'rgba(0, 10, 5, 0.9)',
+          borderBottom: `2px solid ${accentColor}44`,
+        }}
+      >
+        {/* Cuts / Par */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Scissors className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
+          <span
+            className="font-display text-sm font-bold tabular-nums"
+            style={{
+              color: cutsUsed > parCuts ? '#ff6b6b' : accentColor,
+              textShadow: `0 0 10px ${cutsUsed > parCuts ? '#ff6b6b' : accentColor}88`,
+            }}
+          >
+            {cutsUsed}/{parCuts}
+          </span>
+        </div>
+
+        {/* Space */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Target className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
+          <span
+            className="font-display text-sm font-bold tabular-nums"
+            style={{
+              color: spaceRemaining <= spaceRequired ? accentColor : 'hsl(var(--foreground))',
+              textShadow: spaceRemaining <= spaceRequired ? `0 0 10px ${accentColor}88` : 'none',
+            }}
+          >
+            {spaceRemaining}%/{spaceRequired}%
+          </span>
+        </div>
+
+        {/* Thread Locks */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Lock
+            className="w-4 h-4 flex-shrink-0"
+            style={{ color: lockColor, filter: lockMet && lockReq > 0 ? `drop-shadow(0 0 6px ${accentColor}aa)` : 'none' }}
+          />
+          <span
+            className="font-display text-sm font-bold tabular-nums"
+            style={{
+              color: lockColor,
+              textShadow: lockMet && lockReq > 0 ? `0 0 10px ${accentColor}88` : 'none',
+            }}
+          >
+            {lockReq > 0 ? `${lockedBalls}/${lockReq}` : lockedBalls}
+          </span>
+        </div>
+      </div>
+
       {/* Row 2: Upgrades Bar */}
       {hasUpgrades && (
         <div 
           className="px-3 py-1.5"
           style={{ 
-            backgroundColor: 'rgba(0, 10, 5, 0.8)',
+            backgroundColor: 'rgba(0, 10, 5, 0.9)',
             borderBottom: `1px solid ${accentColor}33`,
           }}
         >

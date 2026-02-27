@@ -55,13 +55,14 @@ const DEFAULT_MODIFIERS: GameModifiers = {
 };
 
 /**
- * Aggregate modifiers from all owned upgrades.
- * Multipliers multiply cumulatively; flat values sum.
- * Unknown modifier keys in YAML are silently ignored.
+ * Aggregate modifiers from all owned upgrades plus optional extra bonuses
+ * (e.g., from completed achievements). Multipliers multiply cumulatively;
+ * flat values sum. Unknown modifier keys in YAML are silently ignored.
  */
 export function computeGameModifiers(
   ownedUpgradeIds: string[],
   upgradeLookup: Map<string, UpgradeConfig>,
+  extraBonuses?: Partial<Record<keyof GameModifiers, number>>,
 ): GameModifiers {
   const result = { ...DEFAULT_MODIFIERS };
 
@@ -81,18 +82,35 @@ export function computeGameModifiers(
     }
   }
 
+  // Apply extra bonuses (e.g., from completed achievements)
+  if (extraBonuses) {
+    for (const [key, value] of Object.entries(extraBonuses)) {
+      if (!(key in result)) continue;
+      const k = key as keyof GameModifiers;
+      if (MULTIPLICATIVE_KEYS.includes(k)) {
+        (result as any)[k] *= value as number;
+      } else {
+        (result as any)[k] += value as number;
+      }
+    }
+  }
+
   return result;
 }
 
 /**
  * React hook wrapper around computeGameModifiers.
+ * Pass `extraBonuses` (e.g., from useAchievementManager.getBonusModifiers())
+ * to include achievement bonuses in the computed result.
  */
 export function useActiveModifiers(
   ownedUpgradeIds: string[],
   upgrades: UpgradeConfig[],
+  extraBonuses?: Partial<Record<keyof GameModifiers, number>>,
 ): GameModifiers {
   return useMemo(() => {
     const lookup = new Map(upgrades.map(u => [u.id, u]));
-    return computeGameModifiers(ownedUpgradeIds, lookup);
-  }, [ownedUpgradeIds, upgrades]);
+    return computeGameModifiers(ownedUpgradeIds, lookup, extraBonuses);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ownedUpgradeIds, upgrades, extraBonuses]);
 }

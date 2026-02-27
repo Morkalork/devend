@@ -44,6 +44,7 @@ export function InteractiveTutorialOverlay({
   const [showHand, setShowHand] = useState(true);
   const [loopCount, setLoopCount] = useState(0);
   const reshowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasDraggedRef = useRef(false);
   const animationRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
   
@@ -176,17 +177,18 @@ export function InteractiveTutorialOverlay({
     };
   }, [showHand, tutorialStep, calculateAnimState, loopCount]);
 
-  // Hide hand when player starts dragging
+  // Hide hand when player starts dragging; once they've dragged, never re-show
   useEffect(() => {
     if (isPlayerDragging) {
+      hasDraggedRef.current = true;
       setShowHand(false);
       // Clear any pending re-show timeout
       if (reshowTimeoutRef.current) {
         clearTimeout(reshowTimeoutRef.current);
         reshowTimeoutRef.current = null;
       }
-    } else if (!showHand) {
-      // Re-show after 2 seconds of inactivity if player stopped dragging
+    } else if (!showHand && !hasDraggedRef.current) {
+      // Re-show after 2 seconds only if the player hasn't attempted a drag yet
       reshowTimeoutRef.current = setTimeout(() => {
         setShowHand(true);
         startTimeRef.current = performance.now();
@@ -233,12 +235,25 @@ export function InteractiveTutorialOverlay({
         exit={{ opacity: 0, y: -20 }}
         className="absolute top-4 left-0 right-0 flex justify-center px-4"
       >
-        <div className="bg-card/90 backdrop-blur-sm border border-primary/30 rounded-xl px-6 py-4 max-w-md text-center shadow-lg">
-          <p className="text-foreground font-medium text-sm sm:text-base">
-            Drag anywhere inside the area to create a slicing wall.
+        <div
+          className="rounded-xl px-6 py-4 max-w-md text-center"
+          style={{
+            background: '#0a0f0a',
+            border: '2px solid #00ff88',
+            boxShadow: '0 0 24px rgba(0,255,136,0.15)',
+          }}
+        >
+          <p
+            className="text-sm sm:text-base font-black tracking-widest uppercase"
+            style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
+          >
+            DRAW A FENCE
           </p>
-          <p className="text-muted-foreground text-xs sm:text-sm mt-2">
-            Don't let the ball hit the wall while it's growing!
+          <p
+            className="text-xs sm:text-sm mt-2 leading-relaxed"
+            style={{ fontFamily: "'JetBrains Mono', monospace", color: '#c8ffd8' }}
+          >
+            Drag anywhere inside the area to create a slicing wall. Don't let the ball hit the wall while it's growing!
           </p>
         </div>
       </motion.div>
@@ -308,14 +323,22 @@ export function InteractiveTutorialOverlay({
         )}
       </AnimatePresence>
 
-      {/* Tutorial mode badge */}
+      {/* Footer badge */}
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         className="absolute bottom-4 left-1/2 -translate-x-1/2"
       >
-        <div className="bg-primary/20 border border-primary/40 rounded-full px-4 py-2 text-primary text-xs font-medium uppercase tracking-wider">
-          Tutorial Mode
+        <div
+          className="rounded-full px-4 py-2 text-xs font-black uppercase tracking-widest"
+          style={{
+            fontFamily: 'Orbitron, sans-serif',
+            background: 'rgba(0,255,136,0.08)',
+            border: '1px solid rgba(0,255,136,0.4)',
+            color: '#00ff88',
+          }}
+        >
+          DRAW A FENCE TO CONTINUE
         </div>
       </motion.div>
     </div>
