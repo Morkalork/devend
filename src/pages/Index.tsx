@@ -25,6 +25,7 @@ import { MetaProgressionStats } from '@/types/metaProgression';
 // Lazy load admin components (dev-only)
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
+const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
 
 const BASE_LIVES = 3;
 
@@ -635,7 +636,6 @@ function IndexContent({
   goToWelcomeFromAchievements,
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
-  const [animTestKey, setAnimTestKey] = useState(0);
 
   return (
     <>
@@ -754,41 +754,9 @@ function IndexContent({
         </Suspense>
       )}
       {import.meta.env.DEV && currentScreen === 'animationTest' && (
-        <>
-          <GameScreen
-            key={animTestKey}
-            level={{
-              id: 'animation-test',
-              level: 1,
-              sizeThreshold: 5,
-              expectedCuts: 10,
-              points: 100,
-              balls: [
-                { id: 'test-1', initialSpeed: 40, topSpeed: 40, color: 'ff4444' },
-                { id: 'test-2', initialSpeed: 35, topSpeed: 35, color: '4488ff' },
-                { id: 'test-3', initialSpeed: 30, topSpeed: 30, color: '44ff44' },
-              ],
-            }}
-            levelNumber={1}
-            totalLevels={1}
-            totalScore={0}
-            ownedUpgradeIds={[]}
-            upgrades={[]}
-            lives={99}
-            onLivesChange={() => {}}
-            onGameEnd={() => goToAdmin()}
-            onLevelComplete={() => {}}
-            onMainMenu={goToAdmin}
-            onRestart={() => setAnimTestKey(k => k + 1)}
-            accentColor={accentHex}
-          />
-          <button
-            onClick={() => setAnimTestKey(k => k + 1)}
-            className="fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg bg-destructive text-destructive-foreground font-semibold shadow-lg hover:opacity-90 transition-opacity"
-          >
-            Reset
-          </button>
-        </>
+        <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
+          <PlaygroundScreen onBack={goToAdmin} accentColor={accentHex} />
+        </Suspense>
       )}
       
       {/* Level Complete Overlay */}

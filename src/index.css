@@ -405,6 +405,25 @@
     }
   }
 
+  /* Bonus fence pulse — green shockwave that bursts from behind the board */
+  .animate-bonus-fence-pulse {
+    animation: bonus-fence-pulse 0.85s ease-out forwards;
+  }
+
+  @keyframes bonus-fence-pulse {
+    0% {
+      transform: scale(0.6);
+      opacity: 0.95;
+    }
+    60% {
+      opacity: 0.55;
+    }
+    100% {
+      transform: scale(1.7);
+      opacity: 0;
+    }
+  }
+
   /* Heart pulse animation for lives display */
   .animate-pulse-heart {
     animation: pulse-heart 1.2s ease-in-out infinite;

@@ -153,7 +153,6 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `ballSizeMultiplier` | `1.0` | Multiplies ball radius. | `0.90` = −10% size |
 | `fenceGenerationSpeedMultiplier` | `1.0` | Multiplies how fast fences grow. | `1.10` = +10% speed |
 | `fenceWidthMultiplier` | `1.0` | Multiplies fence thickness. | `1.20` = +20% width |
-| `fenceCooldownMultiplier` | `1.0` | Multiplies the cooldown between fences. Values below 1 reduce cooldown. | `0.80` = −20% cooldown |
 | `scoreMultiplier` | `1.0` | Multiplies overtime hours earned per map. | `1.15` = +15% overtime |
 
 ### Additive (stack by +)

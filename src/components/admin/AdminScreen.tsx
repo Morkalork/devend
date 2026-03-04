@@ -49,9 +49,9 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest }: AdminScre
               <Sparkles className="w-6 h-6 text-primary" />
             </div>
             <div className="text-left">
-              <div className="font-semibold">Animations</div>
+              <div className="font-semibold">Playground</div>
               <div className="text-sm text-muted-foreground">
-                Test ball assimilation and lock animations
+                Test animations and modifiers live
               </div>
             </div>
           </button>

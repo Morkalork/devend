@@ -23,7 +23,6 @@ function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor, achievementBon
     { label: 'Ball Size', value: formatPercent(modifiers.ballSizeMultiplier), changed: modifiers.ballSizeMultiplier !== 1 },
     { label: 'Fence Speed', value: formatPercent(modifiers.fenceGenerationSpeedMultiplier), changed: modifiers.fenceGenerationSpeedMultiplier !== 1 },
     { label: 'Fence Width', value: formatPercent(modifiers.fenceWidthMultiplier), changed: modifiers.fenceWidthMultiplier !== 1 },
-    { label: 'Fence CD', value: formatPercent(modifiers.fenceCooldownMultiplier), changed: modifiers.fenceCooldownMultiplier !== 1 },
     { label: 'OT Mult.', value: formatPercent(modifiers.scoreMultiplier), changed: modifiers.scoreMultiplier !== 1 },
     { label: 'Instant Fences', value: formatBonus(modifiers.instantFencesPerMap), changed: modifiers.instantFencesPerMap !== 0 },
     { label: 'Concurrent', value: formatBonus(modifiers.additionalConcurrentFences), changed: modifiers.additionalConcurrentFences !== 0 },

@@ -63,6 +63,7 @@ import {
 import {
   SpaceGrid,
   GridRegion,
+  CellState,
   createSpaceGrid,
   rasterizeCutToGrid,
   findGridRegions,
@@ -74,6 +75,7 @@ import {
   isPositionActive,
   worldToGridIndex,
   gridIndexToWorld,
+  indexToRowCol,
 } from "@/lib/spaceGrid";
 import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playDeathSound, initAudio } from "@/lib/gameAudio";
 import {
@@ -252,6 +254,7 @@ export function GameCanvas({
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
+  const [bonusPulseKey, setBonusPulseKey] = useState(0);
   
   // Track if game has been initialized to prevent re-init on resize events (e.g., shake animation)
   const gameInitializedRef = useRef(false);
@@ -310,7 +313,6 @@ export function GameCanvas({
     pushStartPercent: 100,
     levelClearedTime: 0, // timestamp when level threshold was first met
     gameLoopFn: null as ((timestamp: number) => void) | null,
-    wallCompleteTime: 0,
     isRecovering: false,
     recoveryEndTime: 0,
     initialSamplePoints: [] as Vector2[], // Track initial board area for blur effect
@@ -1669,6 +1671,214 @@ export function GameCanvas({
       return wouldWallOrphanBall(wallStart, wallEnd, game.balls, game.regions, game.walls);
     };
 
+    // ============================================================
+    // BONUS FENCE CUT (Garbage Collector modifier)
+    // Fires after a fence completes when bonusRemovalChance triggers.
+    // Draws an automatic fence from an edge of the playable area,
+    // cutting off ~bonusRemovalAmount of the total initial area.
+    // Only cuts ball-free strips so it never kills a ball.
+    // ============================================================
+    const applyBonusFenceCut = (amount: number) => {
+      if (!game.spaceGrid) return;
+      const grid = game.spaceGrid;
+      const { balls } = game;
+      // Find bounding rows/cols of all active cells (also counts them for the cap)
+      let minRow = grid.height, maxRow = -1, minCol = grid.width, maxCol = -1;
+      let totalActiveCells = 0;
+      for (let i = 0; i < grid.cells.length; i++) {
+        if (grid.cells[i] !== CellState.ACTIVE) continue;
+        totalActiveCells++;
+        const { row, col } = indexToRowCol(grid, i);
+        if (row < minRow) minRow = row;
+        if (row > maxRow) maxRow = row;
+        if (col < minCol) minCol = col;
+        if (col > maxCol) maxCol = col;
+      }
+      if (maxRow < 0 || totalActiveCells === 0) return;
+
+      // Cap target at 40% of current active cells so we never exhaust the board
+      const targetCells = Math.max(1, Math.min(
+        Math.round(amount * grid.initialActiveCount),
+        Math.round(0.40 * totalActiveCells)
+      ));
+
+      // Shuffle 4 edges for variety
+      type Edge = 'top' | 'bottom' | 'left' | 'right';
+      const edges: Edge[] = ['top', 'bottom', 'left', 'right'];
+      for (let i = edges.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [edges[i], edges[j]] = [edges[j], edges[i]];
+      }
+
+      for (const edge of edges) {
+        const stripIndices: number[] = [];
+        let fenceStart: Vector2 | null = null;
+        let fenceEnd: Vector2 | null = null;
+
+        if (edge === 'top') {
+          for (let row = minRow; row <= maxRow; row++) {
+            for (let col = 0; col < grid.width; col++) {
+              const idx = row * grid.width + col;
+              if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
+            }
+            if (stripIndices.length >= targetCells) {
+              let leftCol = grid.width, rightCol = -1;
+              for (const idx of stripIndices) {
+                const c = idx % grid.width;
+                if (c < leftCol) leftCol = c;
+                if (c > rightCol) rightCol = c;
+              }
+              const lineY = grid.originY + (row + 1) * grid.cellSize;
+              fenceStart = { x: grid.originX + leftCol * grid.cellSize, y: lineY };
+              fenceEnd = { x: grid.originX + (rightCol + 1) * grid.cellSize, y: lineY };
+              break;
+            }
+          }
+        } else if (edge === 'bottom') {
+          for (let row = maxRow; row >= minRow; row--) {
+            for (let col = 0; col < grid.width; col++) {
+              const idx = row * grid.width + col;
+              if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
+            }
+            if (stripIndices.length >= targetCells) {
+              let leftCol = grid.width, rightCol = -1;
+              for (const idx of stripIndices) {
+                const c = idx % grid.width;
+                if (c < leftCol) leftCol = c;
+                if (c > rightCol) rightCol = c;
+              }
+              const lineY = grid.originY + row * grid.cellSize;
+              fenceStart = { x: grid.originX + leftCol * grid.cellSize, y: lineY };
+              fenceEnd = { x: grid.originX + (rightCol + 1) * grid.cellSize, y: lineY };
+              break;
+            }
+          }
+        } else if (edge === 'left') {
+          for (let col = minCol; col <= maxCol; col++) {
+            for (let row = 0; row < grid.height; row++) {
+              const idx = row * grid.width + col;
+              if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
+            }
+            if (stripIndices.length >= targetCells) {
+              let topRow = grid.height, bottomRow = -1;
+              for (const idx of stripIndices) {
+                const r = Math.floor(idx / grid.width);
+                if (r < topRow) topRow = r;
+                if (r > bottomRow) bottomRow = r;
+              }
+              const lineX = grid.originX + (col + 1) * grid.cellSize;
+              fenceStart = { x: lineX, y: grid.originY + topRow * grid.cellSize };
+              fenceEnd = { x: lineX, y: grid.originY + (bottomRow + 1) * grid.cellSize };
+              break;
+            }
+          }
+        } else {
+          // right
+          for (let col = maxCol; col >= minCol; col--) {
+            for (let row = 0; row < grid.height; row++) {
+              const idx = row * grid.width + col;
+              if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
+            }
+            if (stripIndices.length >= targetCells) {
+              let topRow = grid.height, bottomRow = -1;
+              for (const idx of stripIndices) {
+                const r = Math.floor(idx / grid.width);
+                if (r < topRow) topRow = r;
+                if (r > bottomRow) bottomRow = r;
+              }
+              const lineX = grid.originX + col * grid.cellSize;
+              fenceStart = { x: lineX, y: grid.originY + topRow * grid.cellSize };
+              fenceEnd = { x: lineX, y: grid.originY + (bottomRow + 1) * grid.cellSize };
+              break;
+            }
+          }
+        }
+
+        if (!fenceStart || !fenceEnd || stripIndices.length === 0) continue;
+
+        // Reject if any active (non-won) ball is in the strip
+        let hasBall = false;
+        for (const ball of balls) {
+          if (ball.state === 'won') continue;
+          const bidx = worldToGridIndex(grid, ball.position.x, ball.position.y);
+          if (bidx >= 0 && stripIndices.includes(bidx)) { hasBall = true; break; }
+        }
+        if (hasBall) continue;
+
+        // ---- Apply the bonus cut ----
+
+        // Add a visual fence wall (renders as a fence line, balls bounce off it)
+        game.walls.push({
+          id: generateWallId(),
+          start: fenceStart,
+          end: fenceEnd,
+          thickness: WALL_THICKNESS,
+        });
+
+        // Remove the strip cells from the grid
+        for (const idx of stripIndices) {
+          grid.cells[idx] = CellState.REMOVED;
+        }
+
+        // Update grid regions: clear any newly isolated ball-free regions
+        const postGridRegions = findGridRegions(grid);
+        const postWithBalls: GridRegion[] = [];
+        for (const region of postGridRegions) {
+          let hasBallInRegion = false;
+          for (const ball of balls) {
+            if (ball.state === 'won') continue;
+            const bidx = worldToGridIndex(grid, ball.position.x, ball.position.y);
+            if (bidx >= 0 && region.cellIndices.includes(bidx)) { hasBallInRegion = true; break; }
+          }
+          if (hasBallInRegion) {
+            postWithBalls.push(region);
+          } else {
+            removeRegion(grid, region);
+          }
+        }
+        game.gridRegions = postWithBalls;
+
+        // Update legacy sample-based regions for rendering
+        const bonusUpdatedRegions: Region[] = [];
+        for (const region of [...game.regions]) {
+          const subRegions = findSubRegionsGrid(region);
+          if (subRegions.length <= 1) {
+            if (subRegions.length === 1 && subRegions[0].hasBalls) {
+              bonusUpdatedRegions.push({
+                ...region,
+                samplePoints: subRegions[0].samples,
+                estimatedArea: subRegions[0].samples.length * 15 * 15,
+              });
+            }
+            continue;
+          }
+          for (const subRegion of subRegions.filter(r => r.hasBalls)) {
+            const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
+            if (result && result.estimatedArea > 100) {
+              bonusUpdatedRegions.push({
+                id: generateRegionId(),
+                polygon: result.polygon,
+                estimatedArea: result.estimatedArea,
+                samplePoints: result.samplePoints,
+              });
+            }
+          }
+        }
+        game.regions = bonusUpdatedRegions;
+        reassignBallsToRegions(game.balls, game.regions, game.walls);
+        validateAllBallOwnership(game.balls, game.regions, game.walls);
+
+        // Update won states — bonus cut may capture a ball in a small region
+        checkAndUpdateBallWonStates();
+
+        setBonusPulseKey(k => k + 1);
+        console.log(`[BONUS] Garbage Collector: removed ${stripIndices.length} cells (${(stripIndices.length / grid.initialActiveCount * 100).toFixed(1)}%) from ${edge} edge`);
+        return;
+      }
+
+      console.log("[BONUS] Garbage Collector: no valid ball-free strip found");
+    };
+
     const applyCut = (wall: GrowingWall) => {
       // ============================================================
       // EXPLICIT SPACE MODEL: Grid-based cut processing
@@ -1844,6 +2054,24 @@ export function GameCanvas({
       checkAndUpdateBallWonStates();
 
       // ============================================================
+      // STEP 5b: Bonus fence cuts
+      // ============================================================
+      if (!game.gameOver) {
+        // Aggressive Refactor: guaranteed extra cut every fence
+        if (activeModifiers.mapReductionPerFenceBonus > 0) {
+          applyBonusFenceCut(activeModifiers.mapReductionPerFenceBonus);
+        }
+        // Garbage Collector: probabilistic extra cut
+        if (
+          activeModifiers.bonusRemovalChance > 0 &&
+          activeModifiers.bonusRemovalAmount > 0 &&
+          Math.random() < activeModifiers.bonusRemovalChance
+        ) {
+          applyBonusFenceCut(activeModifiers.bonusRemovalAmount);
+        }
+      }
+
+      // ============================================================
       // STEP 6: Check if ALL balls are WON (level win condition)
       // ============================================================
       if (areAllBallsWon()) {
@@ -1990,7 +2218,6 @@ export function GameCanvas({
         wall.endPoint = { ...wall.targetEnd };
         if (!wall.isComplete) {
           wall.isComplete = true;
-          game.wallCompleteTime = performance.now();
         }
       }
 
@@ -2277,7 +2504,7 @@ export function GameCanvas({
       // User-drawn walls are clipped against obstacles (no fences inside obstacles)
       ctx.save();
       ctx.strokeStyle = accentColor; // Dynamic accent color
-      ctx.lineCap = "round";
+      ctx.lineCap = "butt";
       ctx.lineJoin = "round";
       ctx.shadowColor = accentColor;
       ctx.shadowBlur = 6 * scale;
@@ -2735,7 +2962,7 @@ export function GameCanvas({
           // White outline
           ctx.strokeStyle = "#ffffff";
           ctx.lineWidth = (wall.thickness + 8) * scale;
-          ctx.lineCap = "round";
+          ctx.lineCap = "butt";
           ctx.shadowColor = "transparent";
           ctx.shadowBlur = 0;
           ctx.beginPath();
@@ -2966,9 +3193,6 @@ export function GameCanvas({
               activeRegionId: game.swipeRegionId!,
             };
 
-            if (isInstant) {
-              game.wallCompleteTime = performance.now();
-            }
           }
         }
       }
@@ -3117,18 +3341,32 @@ export function GameCanvas({
       )}
 
       {/* Canvas container - Board band (~70% height) */}
-      <div ref={containerRef} className="flex-1 min-h-0 relative" style={{ height: "70%" }}>
+      <div ref={containerRef} className="flex-1 min-h-0 relative overflow-visible" style={{ height: "70%" }}>
+        {/* Bonus fence pulse — green shockwave behind the board */}
+        {bonusPulseKey > 0 && (
+          <div
+            key={bonusPulseKey}
+            className="absolute inset-0 pointer-events-none animate-bonus-fence-pulse"
+            style={{
+              zIndex: 0,
+              background: `radial-gradient(circle, rgba(0,255,136,0.75) 0%, rgba(0,255,136,0.45) 35%, rgba(0,255,136,0.15) 65%, transparent 80%)`,
+              margin: '-25%',
+              borderRadius: '50%',
+            }}
+          />
+        )}
         {/* Blur canvas - renders removed areas with blur effect */}
-        <canvas 
-          ref={blurCanvasRef} 
+        <canvas
+          ref={blurCanvasRef}
           className="absolute inset-0 pointer-events-none"
-          style={{ 
+          style={{
             filter: 'blur(8px)',
             opacity: 0.6,
+            zIndex: 1,
           }}
         />
         {/* Main game canvas */}
-        <canvas ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" />
+        <canvas ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
       </div>
 
       {/* Bottom section - Bottom UI band (~15% height) - empty now, button moved to GameScreen */}

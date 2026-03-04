@@ -83,9 +83,9 @@ achievements:
       stat: totalLevelsCompletedWithoutLoss
       threshold: 20
     bonus:
-      modifier: fenceCooldownMultiplier
-      value: 0.9
-      description: Fence cooldown -10%
+      modifier: fenceGenerationSpeedMultiplier
+      value: 1.05
+      description: Fence generation speed +5%
 
   - id: resilient
     name: Resilient
@@ -94,9 +94,9 @@ achievements:
       stat: totalLivesLost
       threshold: 10
     bonus:
-      modifier: fenceCooldownMultiplier
-      value: 0.95
-      description: Fence cooldown -5%
+      modifier: extraLives
+      value: 1
+      description: +1 starting life per run
 
   - id: battle-hardened
     name: Battle-Hardened

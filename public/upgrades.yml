@@ -115,33 +115,33 @@ upgrades:
   - id: strong_typing_junior
     name: Strong Typing
     tier: Junior
-    description: Increase fence width by 10%.
+    description: Increase fence width by 100%.
     cost: 8
     unlockLevel: 1
     modifiers:
-      fenceWidthMultiplier: 1.10
+      fenceWidthMultiplier: 2
 
   - id: strong_typing_senior
     name: Strong Typing
     tier: Senior
-    description: Increase fence width by 20%.
+    description: Increase fence width by 200%.
     cost: 16
     unlockLevel: 10
     prerequisites:
       - strong_typing_junior
     modifiers:
-      fenceWidthMultiplier: 1.20
+      fenceWidthMultiplier: 3
 
   - id: strong_typing_principal
     name: Strong Typing
     tier: Principal
-    description: Increase fence width by 30%.
+    description: Increase fence width by 300%.
     cost: 26
     unlockLevel: 20
     prerequisites:
       - strong_typing_senior
     modifiers:
-      fenceWidthMultiplier: 1.30
+      fenceWidthMultiplier: 4
 
 
   # ===============================
@@ -181,42 +181,6 @@ upgrades:
 
 
   # ===============================
-  # BUILD CACHE (Cooldown Reduction)
-  # ===============================
-
-  - id: build_cache_junior
-    name: Build Cache
-    tier: Junior
-    description: Reduce fence cooldown by 10%.
-    cost: 8
-    unlockLevel: 3
-    modifiers:
-      fenceCooldownMultiplier: 0.90
-
-  - id: build_cache_senior
-    name: Build Cache
-    tier: Senior
-    description: Reduce fence cooldown by 20%.
-    cost: 16
-    unlockLevel: 8
-    prerequisites:
-      - build_cache_junior
-    modifiers:
-      fenceCooldownMultiplier: 0.80
-
-  - id: build_cache_principal
-    name: Build Cache
-    tier: Principal
-    description: Reduce fence cooldown by 30%.
-    cost: 26
-    unlockLevel: 12
-    prerequisites:
-      - build_cache_senior
-    modifiers:
-      fenceCooldownMultiplier: 0.70
-
-
-  # ===============================
   # MULTITHREADING (Parallel Fence)
   # ===============================
 
@@ -226,6 +190,17 @@ upgrades:
     description: Allow one additional fence to be in progress simultaneously.
     cost: 28
     unlockLevel: 10
+    prerequisites:
+      - fast_compile_senior
+    modifiers:
+      additionalConcurrentFences: 1
+
+  - id: ultrathreading_principal
+    name: Ultrathreading
+    tier: Principal
+    description: Allow one additional fence to be in progress simultaneously.
+    cost: 28
+    unlockLevel: 30
     prerequisites:
       - fast_compile_senior
     modifiers:
@@ -245,6 +220,16 @@ upgrades:
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.05
+
+  - id: garbage_collector_medior
+    name: Garbage Collector 2
+    tier: Principal
+    description: Each fence has a small chance to remove an additional 10% area.
+    cost: 16
+    unlockLevel: 20
+    modifiers:
+      bonusRemovalChance: 0.10
+      bonusRemovalAmount: 0.10
 
 
   # ===============================

@@ -11,7 +11,6 @@ export interface GameModifiers {
   ballSizeMultiplier: number;
   fenceGenerationSpeedMultiplier: number;
   fenceWidthMultiplier: number;
-  fenceCooldownMultiplier: number;
   scoreMultiplier: number;
 
   // Additive (sum)
@@ -32,7 +31,6 @@ const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'ballSizeMultiplier',
   'fenceGenerationSpeedMultiplier',
   'fenceWidthMultiplier',
-  'fenceCooldownMultiplier',
   'scoreMultiplier',
 ];
 
@@ -41,7 +39,6 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   ballSizeMultiplier: 1,
   fenceGenerationSpeedMultiplier: 1,
   fenceWidthMultiplier: 1,
-  fenceCooldownMultiplier: 1,
   scoreMultiplier: 1,
   instantFencesPerMap: 0,
   additionalConcurrentFences: 0,
