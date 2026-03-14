@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Trophy, Zap, Coins } from 'lucide-react';
 
 interface PushYourLuckOverlayProps {
@@ -15,6 +16,7 @@ export function PushYourLuckOverlay({
   onBank,
   onPush,
 }: PushYourLuckOverlayProps) {
+  const [chosen, setChosen] = useState(false);
   // Each 25% of remaining area cleared = +1 OT
   const chunkSize = remainingPercent * 0.25;
 
@@ -85,8 +87,9 @@ export function PushYourLuckOverlay({
           {/* Buttons */}
           <div className="flex gap-3">
             <button
-              onClick={onBank}
-              className="flex-1 px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 border hover:scale-[1.02] active:scale-[0.98] transition-all"
+              disabled={chosen}
+              onClick={() => { setChosen(true); onBank(); }}
+              className="flex-1 px-4 py-3 rounded-lg font-medium flex items-center justify-center gap-2 border hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
               style={{ 
                 backgroundColor: '#22c55e',
                 color: '#000000',
@@ -97,8 +100,9 @@ export function PushYourLuckOverlay({
               Bank & Continue
             </button>
             <button
-              onClick={onPush}
-              className="flex-1 px-4 py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all"
+              disabled={chosen}
+              onClick={() => { setChosen(true); onPush(); }}
+              className="flex-1 px-4 py-3 rounded-lg font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none"
               style={{ 
                 backgroundColor: '#f97316',
                 color: '#000000',
