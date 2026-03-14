@@ -16,6 +16,7 @@ export function PushYourLuckOverlay({
   onBank,
   onPush,
 }: PushYourLuckOverlayProps) {
+  const [chosen, setChosen] = useState(false);
   // Each 25% of remaining area cleared = +1 OT
   const chunkSize = remainingPercent * 0.25;
 
