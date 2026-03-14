@@ -62,7 +62,7 @@ export function PushYourLuckOverlay({
         }}
       >
         
-        <div className="bg-black border-2 border-success rounded-xl p-4 sm:p-6 shadow-2xl">
+        <div className="bg-black/60 backdrop-blur-md border-2 border-success rounded-xl p-4 sm:p-6 shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-center gap-2 mb-4">
             <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
