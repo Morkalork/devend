@@ -230,8 +230,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
           {/* Continue Button */}
           <button
-            className="arcade-button-primary w-full rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 hover:scale-[1.02] active:scale-[0.98] transition-transform"
-            onClick={onContinue}
+            disabled={chosen}
+            className="arcade-button-primary w-full rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 hover:scale-[1.02] active:scale-[0.98] transition-transform disabled:opacity-50 disabled:pointer-events-none"
+            onClick={() => { setChosen(true); onContinue(); }}
           >
             Next Level
             <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
