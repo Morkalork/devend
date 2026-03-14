@@ -44,7 +44,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-background/50 backdrop-blur-sm" />
+      <div className="fixed inset-0 z-50 bg-background/30 backdrop-blur-sm" />
 
       {/* Modal container */}
       <div
@@ -71,7 +71,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
           }
         `}</style>
 
-        <div className="bg-card/85 backdrop-blur-md border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
+        <div className="bg-card/60 backdrop-blur-md border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
           {/* Header */}
           <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-success/20 flex items-center justify-center">
