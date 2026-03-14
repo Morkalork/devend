@@ -5,7 +5,8 @@
       "Bash(npx vite build:*)",
       "Bash(echo:*)",
       "Bash(node:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

@@ -31,6 +31,7 @@ export interface AchievementConfig {
 
 export interface AchievementPersistence {
   completedIds: string[];
+  activatedIds: string[];
 }
 
 export const ACHIEVEMENT_STORAGE_KEY = 'jezzball_achievements_v1';

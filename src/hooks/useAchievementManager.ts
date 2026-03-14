@@ -21,13 +21,14 @@ const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
 function loadPersistence(): AchievementPersistence {
   try {
     const stored = localStorage.getItem(ACHIEVEMENT_STORAGE_KEY);
-    if (!stored) return { completedIds: [] };
+    if (!stored) return { completedIds: [], activatedIds: [] };
     const parsed = JSON.parse(stored);
     return {
       completedIds: Array.isArray(parsed.completedIds) ? parsed.completedIds : [],
+      activatedIds: Array.isArray(parsed.activatedIds) ? parsed.activatedIds : [],
     };
   } catch {
-    return { completedIds: [] };
+    return { completedIds: [], activatedIds: [] };
   }
 }
 
@@ -38,11 +39,13 @@ function savePersistence(state: AchievementPersistence): void {
 export function useAchievementManager() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
+  const [activatedIds, setActivatedIds] = useState<string[]>([]);
 
   // Load achievements.yml and persistence on mount
   useEffect(() => {
     const stored = loadPersistence();
     setCompletedIds(stored.completedIds);
+    setActivatedIds(stored.activatedIds);
 
     fetch('/achievements.yml')
       .then(r => r.text())
@@ -72,7 +75,9 @@ export function useAchievementManager() {
         }
       }
       if (changed) {
-        savePersistence({ completedIds: next });
+        // Save with current activatedIds (read from storage to avoid stale closure)
+        const stored = loadPersistence();
+        savePersistence({ completedIds: next, activatedIds: stored.activatedIds });
         return next;
       }
       return prev;
@@ -80,12 +85,27 @@ export function useAchievementManager() {
   }, [achievements]);
 
   /**
-   * Bonus modifiers from all completed achievements.
+   * Activate a completed achievement so its bonus takes effect.
+   */
+  const activateAchievement = useCallback((id: string) => {
+    setActivatedIds(prev => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      setCompletedIds(completed => {
+        savePersistence({ completedIds: completed, activatedIds: next });
+        return completed;
+      });
+      return next;
+    });
+  }, []);
+
+  /**
+   * Bonus modifiers from activated achievements only.
    * Multiplicative bonuses stack by multiplication; additive by addition.
    */
   const bonusModifiers = useMemo((): Partial<Record<keyof GameModifiers, number>> => {
     const result: Partial<Record<keyof GameModifiers, number>> = {};
-    for (const id of completedIds) {
+    for (const id of activatedIds) {
       const a = achievements.find(x => x.id === id);
       if (!a) continue;
       const k = a.bonus.modifier;
@@ -96,29 +116,28 @@ export function useAchievementManager() {
       }
     }
     return result;
-  }, [completedIds, achievements]);
+  }, [activatedIds, achievements]);
 
   /**
-   * The 10 incomplete achievements closest to completion (by progress ratio),
-   * followed by all completed achievements (sorted by id for stability).
-   * Returns at most 10 incomplete ones.
+   * The incomplete achievements sorted by progress ratio (closest first).
    */
   const getClosestAchievements = useCallback((stats: MetaProgressionStats): Achievement[] => {
-    const incomplete = achievements
+    return achievements
       .filter(a => !completedIds.includes(a.id))
       .sort((a, b) => {
         const ratioA = stats[a.requirement.stat] / a.requirement.threshold;
         const ratioB = stats[b.requirement.stat] / b.requirement.threshold;
-        return ratioB - ratioA; // closer to threshold = higher ratio = comes first
+        return ratioB - ratioA;
       });
-    return incomplete.slice(0, 10);
   }, [achievements, completedIds]);
 
   return {
     achievements,
     completedIds,
+    activatedIds,
     bonusModifiers,
     checkAndComplete,
+    activateAchievement,
     getClosestAchievements,
   };
 }

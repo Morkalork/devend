@@ -112,21 +112,16 @@ const Index = () => {
 
   // Tutorial management
   const {
-    shouldShowTopBar,
-    shouldShowBottomBar,
     shouldShowFence,
     shouldShowStore,
     shouldShowAugment,
-    markTopBarSeen,
-    markBottomBarSeen,
     markFenceSeen,
     markStoreSeen,
     markAugmentSeen,
     resetAllTutorials,
   } = useTutorialManager();
 
-  // Any unseen in-game tutorial step means we should show in-game tutorial
-  const showInGameTutorial = shouldShowTopBar || shouldShowBottomBar || shouldShowFence;
+  const showInGameTutorial = shouldShowFence;
 
   // Checkpoint system for 10-minute tier restart
   const {
@@ -152,8 +147,10 @@ const Index = () => {
   const {
     achievements,
     completedIds: completedAchievementIds,
+    activatedIds: activatedAchievementIds,
     bonusModifiers: achievementBonuses,
     checkAndComplete: checkAndCompleteAchievements,
+    activateAchievement,
     getClosestAchievements,
   } = useAchievementManager();
 
@@ -470,8 +467,6 @@ const Index = () => {
         goToAdmin={goToAdmin}
         goToMapBuilder={goToMapBuilder}
         goToAnimationTest={goToAnimationTest}
-        onTopBarSeen={markTopBarSeen}
-        onBottomBarSeen={markBottomBarSeen}
         onFenceSeen={markFenceSeen}
         onStoreTutorialDismiss={markStoreSeen}
         onAugmentTutorialDismiss={markAugmentSeen}
@@ -490,6 +485,8 @@ const Index = () => {
         extraShopItems={activeModifiers.extraShopItems}
         achievements={achievements}
         completedAchievementIds={completedAchievementIds}
+        activatedAchievementIds={activatedAchievementIds}
+        activateAchievement={activateAchievement}
         achievementBonuses={achievementBonuses}
         getClosestAchievements={getClosestAchievements}
         handleAchievementsFromWelcome={handleAchievementsFromWelcome}
@@ -538,8 +535,6 @@ interface IndexContentProps {
   handleBackToWelcome: () => void;
   handleAugmentsFromWelcome: () => void;
   handleReEnableAllTutorials: () => void;
-  onTopBarSeen: () => void;
-  onBottomBarSeen: () => void;
   onFenceSeen: () => void;
   onStoreTutorialDismiss: () => void;
   onAugmentTutorialDismiss: () => void;
@@ -566,6 +561,8 @@ interface IndexContentProps {
   extraShopItems: number;
   achievements: import('@/types/achievement').Achievement[];
   completedAchievementIds: string[];
+  activatedAchievementIds: string[];
+  activateAchievement: (id: string) => void;
   achievementBonuses: Partial<Record<string, number>>;
   getClosestAchievements: (stats: MetaProgressionStats) => import('@/types/achievement').Achievement[];
   handleAchievementsFromWelcome: () => void;
@@ -610,8 +607,6 @@ function IndexContent({
   goToAdmin,
   goToMapBuilder,
   goToAnimationTest,
-  onTopBarSeen,
-  onBottomBarSeen,
   onFenceSeen,
   onStoreTutorialDismiss,
   onAugmentTutorialDismiss,
@@ -630,6 +625,8 @@ function IndexContent({
   extraShopItems,
   achievements,
   completedAchievementIds,
+  activatedAchievementIds,
+  activateAchievement,
   achievementBonuses,
   getClosestAchievements,
   handleAchievementsFromWelcome,
@@ -683,8 +680,6 @@ function IndexContent({
           onMainMenu={handleBackToWelcome}
           onRestart={handlePlayAgain}
           showInGameTutorial={showInGameTutorial && currentLevelIndex === 0}
-          onTopBarSeen={onTopBarSeen}
-          onBottomBarSeen={onBottomBarSeen}
           onFenceSeen={onFenceSeen}
           accentColor={accentHex}
           augmentProgress={augmentProgress}
@@ -736,7 +731,9 @@ function IndexContent({
         <AchievementsScreen
           achievements={achievements}
           completedIds={completedAchievementIds}
+          activatedIds={activatedAchievementIds}
           metaStats={metaStats}
+          onActivate={activateAchievement}
           onBack={goToWelcomeFromAchievements}
           accentColor={accentHex}
         />

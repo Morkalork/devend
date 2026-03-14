@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Trophy, Check, ChevronLeft } from 'lucide-react';
+import { Trophy, Zap, ChevronLeft, Check } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { Achievement } from '@/types/achievement';
 import { MetaProgressionStats } from '@/types/metaProgression';
@@ -8,7 +8,9 @@ import { MetaProgressionStats } from '@/types/metaProgression';
 interface AchievementsScreenProps {
   achievements: Achievement[];
   completedIds: string[];
+  activatedIds: string[];
   metaStats: MetaProgressionStats;
+  onActivate: (id: string) => void;
   onBack: () => void;
   accentColor?: string;
 }
@@ -16,24 +18,26 @@ interface AchievementsScreenProps {
 export function AchievementsScreen({
   achievements,
   completedIds,
+  activatedIds,
   metaStats,
+  onActivate,
   onBack,
   accentColor = '#00ff88',
 }: AchievementsScreenProps) {
-  // Top 10 incomplete achievements closest to completion, then completed ones
-  const displayList = useMemo(() => {
-    const incomplete = achievements
+  const { available, active, remaining } = useMemo(() => {
+    const available = achievements.filter(
+      a => completedIds.includes(a.id) && !activatedIds.includes(a.id)
+    );
+    const active = achievements.filter(a => activatedIds.includes(a.id));
+    const remaining = achievements
       .filter(a => !completedIds.includes(a.id))
       .sort((a, b) => {
-        const ratioA = metaStats[a.requirement.stat] / a.requirement.threshold;
-        const ratioB = metaStats[b.requirement.stat] / b.requirement.threshold;
-        return ratioB - ratioA;
-      })
-      .slice(0, 10);
-
-    const completed = achievements.filter(a => completedIds.includes(a.id));
-    return [...incomplete, ...completed];
-  }, [achievements, completedIds, metaStats]);
+        const ra = metaStats[a.requirement.stat] / a.requirement.threshold;
+        const rb = metaStats[b.requirement.stat] / b.requirement.threshold;
+        return rb - ra;
+      });
+    return { available, active, remaining };
+  }, [achievements, completedIds, activatedIds, metaStats]);
 
   const statLabels: Record<string, string> = {
     totalFencesDrawn: 'Fences drawn',
@@ -41,6 +45,194 @@ export function AchievementsScreen({
     totalLevelsCompletedWithoutLoss: 'Flawless levels',
     totalLivesLost: 'Lives lost',
   };
+
+  function SectionHeader({ label, count }: { label: string; count: number }) {
+    return (
+      <div
+        className="flex items-center gap-2 px-1 mb-2 mt-1"
+        style={{ fontFamily: 'Orbitron, sans-serif' }}
+      >
+        <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: `${accentColor}88` }}>
+          {label}
+        </span>
+        <span
+          className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+          style={{ backgroundColor: `${accentColor}18`, color: `${accentColor}99` }}
+        >
+          {count}
+        </span>
+        <div className="flex-1 h-px" style={{ backgroundColor: `${accentColor}22` }} />
+      </div>
+    );
+  }
+
+  function AvailableCard({ achievement, index }: { achievement: Achievement; index: number }) {
+    return (
+      <motion.div
+        key={achievement.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.05 }}
+        className="rounded-lg p-4"
+        style={{
+          backgroundColor: 'rgba(10,15,10,0.9)',
+          border: `1px solid #f59e0b88`,
+          boxShadow: `0 0 12px #f59e0b22`,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <span
+              className="font-bold text-sm"
+              style={{ fontFamily: 'Orbitron, sans-serif', color: '#f59e0b' }}
+            >
+              {achievement.name}
+            </span>
+            <p
+              className="text-xs leading-relaxed mt-0.5 mb-2"
+              style={{ color: 'hsl(var(--muted-foreground))', fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              {achievement.description}
+            </p>
+            <div
+              className="text-[10px] font-semibold"
+              style={{ color: '#f59e0b99', fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              Bonus: {achievement.bonus.description}
+            </div>
+          </div>
+
+          {/* Pulsing Activate button */}
+          <motion.button
+            onClick={() => onActivate(achievement.id)}
+            animate={{ boxShadow: ['0 0 8px #f59e0b66', '0 0 20px #f59e0bcc', '0 0 8px #f59e0b66'] }}
+            transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            whileTap={{ scale: 0.93 }}
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold tracking-wider uppercase"
+            style={{
+              fontFamily: 'Orbitron, sans-serif',
+              backgroundColor: '#f59e0b22',
+              border: '1px solid #f59e0b',
+              color: '#f59e0b',
+            }}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            Activate
+          </motion.button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  function ActiveCard({ achievement, index }: { achievement: Achievement; index: number }) {
+    return (
+      <motion.div
+        key={achievement.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.04 }}
+        className="rounded-lg p-4"
+        style={{
+          backgroundColor: `${accentColor}0d`,
+          border: `1px solid ${accentColor}`,
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <Check className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+          <div className="flex-1 min-w-0">
+            <span
+              className="font-bold text-sm"
+              style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor }}
+            >
+              {achievement.name}
+            </span>
+            <p
+              className="text-xs leading-relaxed mt-0.5 mb-1"
+              style={{ color: `${accentColor}cc`, fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              {achievement.description}
+            </p>
+            <div
+              className="text-[10px] font-semibold"
+              style={{ color: accentColor, fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              Bonus: {achievement.bonus.description}
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  function RemainingCard({ achievement, index }: { achievement: Achievement; index: number }) {
+    const current = metaStats[achievement.requirement.stat];
+    const target = achievement.requirement.threshold;
+    const ratio = Math.min(1, current / target);
+    const pct = Math.round(ratio * 100);
+
+    return (
+      <motion.div
+        key={achievement.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: index * 0.03 }}
+        className="rounded-lg p-4"
+        style={{
+          backgroundColor: 'rgba(10,15,10,0.9)',
+          border: `1px solid ${accentColor}33`,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <span
+              className="font-bold text-sm"
+              style={{ fontFamily: 'Orbitron, sans-serif', color: 'hsl(var(--foreground))' }}
+            >
+              {achievement.name}
+            </span>
+            <p
+              className="text-xs leading-relaxed mt-0.5 mb-2"
+              style={{ color: 'hsl(var(--muted-foreground))', fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              {achievement.description}
+            </p>
+            <div
+              className="h-1.5 rounded-full overflow-hidden mb-1"
+              style={{ backgroundColor: `${accentColor}22` }}
+            >
+              <motion.div
+                className="h-full rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${pct}%` }}
+                transition={{ duration: 0.6, ease: 'easeOut', delay: index * 0.03 + 0.1 }}
+                style={{ backgroundColor: accentColor }}
+              />
+            </div>
+            <div
+              className="text-[10px]"
+              style={{ color: `${accentColor}88`, fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              {current} / {target} {statLabels[achievement.requirement.stat]}
+            </div>
+            <div
+              className="text-[10px] font-semibold mt-1"
+              style={{ color: `${accentColor}77`, fontFamily: "'JetBrains Mono', monospace" }}
+            >
+              Bonus: {achievement.bonus.description}
+            </div>
+          </div>
+          <div
+            className="flex-shrink-0 text-right tabular-nums"
+            style={{ color: `${accentColor}99`, fontFamily: "'JetBrains Mono', monospace" }}
+          >
+            <div className="text-lg font-bold leading-none">{pct}%</div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  const isEmpty = achievements.length === 0;
 
   return (
     <>
@@ -75,8 +267,8 @@ export function AchievementsScreen({
               Achievements
             </span>
           </div>
-          <div className="ml-auto text-xs" style={{ color: `${accentColor}99` }}>
-            {completedIds.length}/{achievements.length} unlocked
+          <div className="ml-auto text-xs" style={{ color: `${accentColor}99`, fontFamily: "'JetBrains Mono', monospace" }}>
+            {activatedIds.length} active / {completedIds.length} unlocked
           </div>
         </div>
 
@@ -101,7 +293,7 @@ export function AchievementsScreen({
 
         {/* Achievement List */}
         <div className="flex-1 overflow-y-auto px-4 py-4">
-          {displayList.length === 0 ? (
+          {isEmpty ? (
             <div
               className="text-center mt-16 text-sm"
               style={{ color: `${accentColor}66`, fontFamily: "'JetBrains Mono', monospace" }}
@@ -110,106 +302,31 @@ export function AchievementsScreen({
             </div>
           ) : (
             <div className="flex flex-col gap-3 max-w-xl mx-auto">
-              {displayList.map((achievement, index) => {
-                const isCompleted = completedIds.includes(achievement.id);
-                const current = metaStats[achievement.requirement.stat];
-                const target = achievement.requirement.threshold;
-                const ratio = Math.min(1, current / target);
-                const pct = Math.round(ratio * 100);
 
-                return (
-                  <motion.div
-                    key={achievement.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.04 }}
-                    className="rounded-lg p-4"
-                    style={{
-                      backgroundColor: isCompleted ? `${accentColor}12` : 'rgba(10,15,10,0.9)',
-                      border: `1px solid ${isCompleted ? accentColor : `${accentColor}33`}`,
-                    }}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        {/* Name + completed badge */}
-                        <div className="flex items-center gap-2 mb-0.5">
-                          {isCompleted && (
-                            <Check
-                              className="w-4 h-4 flex-shrink-0"
-                              style={{ color: accentColor }}
-                            />
-                          )}
-                          <span
-                            className="font-bold text-sm"
-                            style={{
-                              fontFamily: 'Orbitron, sans-serif',
-                              color: isCompleted ? accentColor : 'hsl(var(--foreground))',
-                            }}
-                          >
-                            {achievement.name}
-                          </span>
-                        </div>
+              {/* Available to activate */}
+              {available.length > 0 && (
+                <>
+                  <SectionHeader label="Available" count={available.length} />
+                  {available.map((a, i) => <AvailableCard key={a.id} achievement={a} index={i} />)}
+                </>
+              )}
 
-                        {/* Description */}
-                        <p
-                          className="text-xs leading-relaxed mb-2"
-                          style={{
-                            color: isCompleted ? `${accentColor}cc` : 'hsl(var(--muted-foreground))',
-                            fontFamily: "'JetBrains Mono', monospace",
-                          }}
-                        >
-                          {achievement.description}
-                        </p>
+              {/* Active */}
+              {active.length > 0 && (
+                <>
+                  <SectionHeader label="Active" count={active.length} />
+                  {active.map((a, i) => <ActiveCard key={a.id} achievement={a} index={i} />)}
+                </>
+              )}
 
-                        {/* Progress bar */}
-                        {!isCompleted && (
-                          <div className="mb-2">
-                            <div
-                              className="h-1.5 rounded-full overflow-hidden"
-                              style={{ backgroundColor: `${accentColor}22` }}
-                            >
-                              <motion.div
-                                className="h-full rounded-full"
-                                initial={{ width: 0 }}
-                                animate={{ width: `${pct}%` }}
-                                transition={{ duration: 0.6, ease: 'easeOut', delay: index * 0.04 + 0.1 }}
-                                style={{ backgroundColor: accentColor }}
-                              />
-                            </div>
-                            <div
-                              className="text-[10px] mt-0.5"
-                              style={{ color: `${accentColor}88`, fontFamily: "'JetBrains Mono', monospace" }}
-                            >
-                              {current} / {target} {statLabels[achievement.requirement.stat]} ({pct}%)
-                            </div>
-                          </div>
-                        )}
+              {/* In progress */}
+              {remaining.length > 0 && (
+                <>
+                  <SectionHeader label="In Progress" count={remaining.length} />
+                  {remaining.map((a, i) => <RemainingCard key={a.id} achievement={a} index={i} />)}
+                </>
+              )}
 
-                        {/* Bonus */}
-                        <div
-                          className="text-[10px] font-semibold"
-                          style={{
-                            color: isCompleted ? accentColor : `${accentColor}77`,
-                            fontFamily: "'JetBrains Mono', monospace",
-                          }}
-                        >
-                          Bonus: {achievement.bonus.description}
-                        </div>
-                      </div>
-
-                      {/* Progress % (right side, only if incomplete) */}
-                      {!isCompleted && (
-                        <div
-                          className="flex-shrink-0 text-right tabular-nums"
-                          style={{ color: `${accentColor}99`, fontFamily: "'JetBrains Mono', monospace" }}
-                        >
-                          <div className="text-lg font-bold leading-none">{pct}%</div>
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              })}
             </div>
           )}
         </div>

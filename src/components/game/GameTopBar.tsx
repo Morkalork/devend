@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { Heart, Lock, Scissors, Target, Hexagon, Menu, Home, RotateCcw } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
 import {
   Tooltip,
@@ -28,8 +28,6 @@ interface GameTopBarProps {
   ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
   augmentProgress?: AugmentProgress;
-  onMainMenu: () => void;
-  onRestart: () => void;
 }
 
 export function GameTopBar({
@@ -44,13 +42,10 @@ export function GameTopBar({
   ownedUpgrades,
   accentColor = '#00ff88',
   augmentProgress,
-  onMainMenu,
-  onRestart,
 }: GameTopBarProps) {
   const upgradesContainerRef = useRef<HTMLDivElement>(null);
   const [needsCarousel, setNeedsCarousel] = useState(false);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -100,53 +95,6 @@ export function GameTopBar({
           borderBottom: `1px solid ${accentColor}33`,
         }}
       >
-        {/* Menu Button */}
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen(prev => !prev)}
-            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-            style={{
-              backgroundColor: menuOpen ? `${accentColor}33` : 'transparent',
-              border: `1px solid ${accentColor}55`,
-              color: accentColor,
-            }}
-            aria-label="Game menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          {menuOpen && (
-            <div
-              className="absolute top-full left-0 mt-1 z-50 rounded-lg overflow-hidden min-w-[160px]"
-              style={{
-                backgroundColor: 'rgba(0, 15, 8, 0.95)',
-                border: `1px solid ${accentColor}55`,
-                boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 15px ${accentColor}22`,
-              }}
-            >
-              <button
-                onClick={() => { setMenuOpen(false); onRestart(); }}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors hover:brightness-125"
-                style={{ color: accentColor, backgroundColor: 'transparent' }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <RotateCcw className="w-4 h-4" />
-                Restart Run
-              </button>
-              <button
-                onClick={() => { setMenuOpen(false); onMainMenu(); }}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors hover:brightness-125"
-                style={{ color: accentColor, backgroundColor: 'transparent' }}
-                onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <Home className="w-4 h-4" />
-                Main Menu
-              </button>
-            </div>
-          )}
-        </div>
-
         {/* Level Number */}
         <div className="flex items-center gap-1 min-w-0" style={{ color: accentColor }}>
           <span className="font-display text-base font-bold" style={{ textShadow: `0 0 10px ${accentColor}88` }}>

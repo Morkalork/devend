@@ -338,6 +338,99 @@ function createNoiseBuffer(ctx: AudioContext, duration: number): AudioBuffer {
 }
 
 /**
+ * Play the ball-lock sequence: 3 rising pulses → electrical discharge flood → soft settle.
+ * Total duration ~1.3s, matching LOCK_PULSE + LOCK_FLOOD + LOCK_FADE.
+ */
+export function playBallLockSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+
+  const now = ctx.currentTime;
+  const vol = 0.28;
+
+  // --- Phase 1: 3 rising resonant pulses at 0 / 200 / 400 ms ---
+  [0, 0.2, 0.4].forEach((delay, i) => {
+    const t = now + delay;
+    const freq = 280 + i * 90; // 280 → 370 → 460 Hz
+
+    const osc = ctx.createOscillator();
+    const flt = ctx.createBiquadFilter();
+    const gn  = ctx.createGain();
+
+    flt.type = 'bandpass';
+    flt.frequency.value = freq;
+    flt.Q.value = 10;
+
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+
+    osc.connect(flt); flt.connect(gn); gn.connect(masterGain!);
+
+    gn.gain.setValueAtTime(0, t);
+    gn.gain.linearRampToValueAtTime(vol, t + 0.008);
+    gn.gain.exponentialRampToValueAtTime(0.001, t + 0.13);
+
+    osc.start(t);
+    osc.stop(t + 0.16);
+
+    // Subtle noise click behind each blip
+    const nb  = createNoiseBuffer(ctx, 0.05);
+    const ns  = ctx.createBufferSource();
+    const nf  = ctx.createBiquadFilter();
+    const ng  = ctx.createGain();
+    ns.buffer = nb;
+    nf.type = 'bandpass'; nf.frequency.value = freq * 1.5; nf.Q.value = 3;
+    ns.connect(nf); nf.connect(ng); ng.connect(masterGain!);
+    ng.gain.setValueAtTime(vol * 0.25, t);
+    ng.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    ns.start(t); ns.stop(t + 0.06);
+  });
+
+  // --- Phase 2: electrical discharge at 600 ms (flood fill) ---
+  const ft = now + 0.6;
+
+  // Sweeping noise burst
+  const nb2 = createNoiseBuffer(ctx, 0.42);
+  const ns2 = ctx.createBufferSource();
+  const nf2 = ctx.createBiquadFilter();
+  const ng2 = ctx.createGain();
+  ns2.buffer = nb2;
+  nf2.type = 'bandpass';
+  nf2.frequency.setValueAtTime(2200, ft);
+  nf2.frequency.exponentialRampToValueAtTime(260, ft + 0.38);
+  nf2.Q.value = 2;
+  ns2.connect(nf2); nf2.connect(ng2); ng2.connect(masterGain!);
+  ng2.gain.setValueAtTime(0, ft);
+  ng2.gain.linearRampToValueAtTime(vol * 0.9, ft + 0.015);
+  ng2.gain.exponentialRampToValueAtTime(0.001, ft + 0.38);
+  ns2.start(ft); ns2.stop(ft + 0.42);
+
+  // Descending tone sweep
+  const sw  = ctx.createOscillator();
+  const swg = ctx.createGain();
+  sw.type = 'sawtooth';
+  sw.frequency.setValueAtTime(520, ft);
+  sw.frequency.exponentialRampToValueAtTime(110, ft + 0.38);
+  sw.connect(swg); swg.connect(masterGain!);
+  swg.gain.setValueAtTime(0, ft);
+  swg.gain.linearRampToValueAtTime(vol * 0.35, ft + 0.01);
+  swg.gain.exponentialRampToValueAtTime(0.001, ft + 0.42);
+  sw.start(ft); sw.stop(ft + 0.45);
+
+  // --- Phase 3: soft resonant settle at 980 ms ---
+  const st = now + 0.98;
+  const sl  = ctx.createOscillator();
+  const slf = ctx.createBiquadFilter();
+  const slg = ctx.createGain();
+  slf.type = 'bandpass'; slf.frequency.value = 200; slf.Q.value = 8;
+  sl.type = 'sine'; sl.frequency.value = 200;
+  sl.connect(slf); slf.connect(slg); slg.connect(masterGain!);
+  slg.gain.setValueAtTime(vol * 0.45, st);
+  slg.gain.exponentialRampToValueAtTime(0.001, st + 0.3);
+  sl.start(st); sl.stop(st + 0.35);
+}
+
+/**
  * Set mute state
  */
 export function setAudioMuted(muted: boolean): void {

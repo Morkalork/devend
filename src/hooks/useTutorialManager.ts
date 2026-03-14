@@ -4,8 +4,6 @@ const STORAGE_KEY = 'tutorials_seen_v1';
 const OLD_STORAGE_KEY = 'ball_breaker_seen_interactive_tutorial';
 
 interface TutorialsSeen {
-  topBar: boolean;
-  bottomBar: boolean;
   fence: boolean;
   store: boolean;
   augment: boolean;
@@ -15,17 +13,18 @@ function loadSeen(): TutorialsSeen {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      return JSON.parse(raw) as TutorialsSeen;
+      const parsed = JSON.parse(raw);
+      return { fence: !!parsed.fence, store: !!parsed.store, augment: !!parsed.augment };
     }
-    // Migration: if old key is set, mark top/bottom/fence as seen
+    // Migration: if old key is set, mark fence as seen
     const old = localStorage.getItem(OLD_STORAGE_KEY);
     if (old === 'true') {
-      return { topBar: true, bottomBar: true, fence: true, store: false, augment: false };
+      return { fence: true, store: false, augment: false };
     }
   } catch {
     // ignore
   }
-  return { topBar: false, bottomBar: false, fence: false, store: false, augment: false };
+  return { fence: false, store: false, augment: false };
 }
 
 function saveSeen(seen: TutorialsSeen) {
@@ -38,22 +37,6 @@ function saveSeen(seen: TutorialsSeen) {
 
 export function useTutorialManager() {
   const [seen, setSeen] = useState<TutorialsSeen>(loadSeen);
-
-  const markTopBarSeen = useCallback(() => {
-    setSeen(prev => {
-      const next = { ...prev, topBar: true };
-      saveSeen(next);
-      return next;
-    });
-  }, []);
-
-  const markBottomBarSeen = useCallback(() => {
-    setSeen(prev => {
-      const next = { ...prev, bottomBar: true };
-      saveSeen(next);
-      return next;
-    });
-  }, []);
 
   const markFenceSeen = useCallback(() => {
     setSeen(prev => {
@@ -86,17 +69,13 @@ export function useTutorialManager() {
     } catch {
       // ignore
     }
-    setSeen({ topBar: false, bottomBar: false, fence: false, store: false, augment: false });
+    setSeen({ fence: false, store: false, augment: false });
   }, []);
 
   return {
-    shouldShowTopBar: !seen.topBar,
-    shouldShowBottomBar: !seen.bottomBar,
     shouldShowFence: !seen.fence,
     shouldShowStore: !seen.store,
     shouldShowAugment: !seen.augment,
-    markTopBarSeen,
-    markBottomBarSeen,
     markFenceSeen,
     markStoreSeen,
     markAugmentSeen,

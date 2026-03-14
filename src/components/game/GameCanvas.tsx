@@ -41,8 +41,42 @@ import {
   clipLineAgainstPolygons,
   closestPointOnSegment,
 } from "@/lib/polygon";
-import { extractContours } from "@/lib/contour";
-import { AssimilationState, createAssimilation, updateAssimilation, renderAssimilation } from "@/lib/assimilationAnimation";
+interface LockDustParticle {
+  angle: number;   // radians
+  speed: number;   // world units / sec
+  lifetime: number; // ms
+  size: number;    // world units at birth
+}
+interface LockFlashState {
+  ballId: string;
+  cellIndices: number[]; // space-grid cell indices (kept for centroid / dust origin)
+  polygon: Vector2[];    // exact boundary polygon built from wall intersections
+  centroid: Vector2;
+  startTime: number;
+  ballPos: Vector2;   // ball position at moment of lock
+  ballColor: string;  // ball colour for dust tint
+  particles: LockDustParticle[];
+}
+const LOCK_PULSE_DURATION  = 600;      // ms — 3 quick pulses
+const LOCK_FLOOD_DURATION  = 380;      // ms — fill explodes across region
+const LOCK_DUST_DURATION   = 900;      // ms — longest particle lifetime
+const LOCK_TOTAL_DURATION  = LOCK_PULSE_DURATION + LOCK_FLOOD_DURATION;
+const BALL_DISINTEGRATE_MS = 420;      // ms — ball shrinks to nothing
+const DISSOLVE_DURATION    = 2000;     // ms — board dissolve after level complete
+
+interface DissolveTile {
+  sx: number; sy: number; sw: number; sh: number; // source rect in captured canvas
+  cx: number; cy: number; // center position at start
+  vx: number; vy: number; // initial velocity (px/s)
+  rotSpeed: number;       // rad/s
+  delay: number;          // seconds before tile starts moving
+}
+interface DissolveState {
+  captured: HTMLCanvasElement;
+  tiles: DissolveTile[];
+  startTime: number;
+  onComplete: () => void;
+}
 import { Wall, WALL_THICKNESS, WALL_COLOR, createWallsFromPolygon, findWallTermination, castRayWithReflections } from "@/lib/wallGeometry";
 import { 
   registerWallImpact, 
@@ -77,7 +111,7 @@ import {
   gridIndexToWorld,
   indexToRowCol,
 } from "@/lib/spaceGrid";
-import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playDeathSound, initAudio } from "@/lib/gameAudio";
+import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playDeathSound, playBallLockSound, initAudio } from "@/lib/gameAudio";
 import {
   createBallEffectState,
   updateBallEffects,
@@ -241,6 +275,7 @@ export function GameCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blurCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
@@ -322,7 +357,8 @@ export function GameCanvas({
     // Lock bonus tracking: each locked ball gives 50 * lockOrder (50, 100, 150...)
     lockedBallsCount: 0,
     lockBonus: 0,
-    assimilations: new Map<string, AssimilationState>(),
+    assimilations: new Map<string, LockFlashState>(),
+    dissolve: null as DissolveState | null,
   });
 
   useEffect(() => {
@@ -837,9 +873,8 @@ export function GameCanvas({
 
     // Update ball position and bounce off all walls (all in world coordinates)
     const updateBall = (ball: Ball, dt: number) => {
-      // WON balls don't need physics updates - they just spin
-      if (ball.state === 'won') return;
-      
+      if (ball.state === 'won') return; // stopped and disintegrating
+
       // Move ball (world units)
       ball.position.x += ball.velocity.x * dt;
       ball.position.y += ball.velocity.y * dt;
@@ -1102,33 +1137,65 @@ export function GameCanvas({
         if (regionPercent <= BALL_WON_REGION_THRESHOLD) {
           console.log(`[WON] Ball ${ball.id} captured! Region is ${regionPercent.toFixed(1)}% of total area`);
           
-          // Transition to WON state
+          // Transition to WON state — stop the ball, then it disintegrates
           ball.state = 'won';
-          ball.wonSpinSpeed = WON_BALL_SPIN_SPEED;
           ball.wonTime = performance.now();
-          ball.assimScale = 1;
-          ball.velocity = { x: 0, y: 0 }; // Stop physics
+          ball.velocity = { x: 0, y: 0 };
+          ball.speed = 0;
 
-          // Move to center of region
-          ball.position = { ...ballRegion.centroid };
-
-          // Build boundary from the actual grid region cells (not the expanded polygon region)
-          if (game.spaceGrid) {
-            const grid = game.spaceGrid;
-            const cellCenters: Vector2[] = ballRegion.cellIndices.map(idx => {
-              const col = idx % grid.width;
-              const row = Math.floor(idx / grid.width);
-              return {
-                x: grid.originX + col * grid.cellSize + grid.cellSize / 2,
-                y: grid.originY + row * grid.cellSize + grid.cellSize / 2,
+          // Kick off the pulse-then-flood + dust disintegration animation.
+          if (ballRegion.cellIndices.length > 0) {
+            // Build exact boundary polygon by casting rays from centroid to all walls.
+            // Each ray finds the closest wall intersection — gives the true fence geometry.
+            const centroid = ballRegion.centroid;
+            const RAY_COUNT = 360;
+            const RAY_LEN = 4000;
+            const hitPoints: Array<{ angle: number; pt: Vector2 }> = [];
+            for (let ri = 0; ri < RAY_COUNT; ri++) {
+              const angle = (ri / RAY_COUNT) * Math.PI * 2;
+              const rayEnd = {
+                x: centroid.x + Math.cos(angle) * RAY_LEN,
+                y: centroid.y + Math.sin(angle) * RAY_LEN,
               };
-            });
-            const contours = extractContours(cellCenters, grid.cellSize);
-            if (contours.length > 0) {
-              // Use the longest contour (the outer boundary)
-              const boundary = contours.reduce((a, b) => a.length > b.length ? a : b);
-              game.assimilations.set(ball.id, createAssimilation(ball, boundary, performance.now()));
+              let closestDist = Infinity;
+              let closestPt: Vector2 | null = null;
+              for (const wall of game.walls) {
+                const hit = lineSegmentIntersection(centroid, rayEnd, wall.start, wall.end);
+                if (hit) {
+                  const d = (hit.x - centroid.x) ** 2 + (hit.y - centroid.y) ** 2;
+                  if (d < closestDist) { closestDist = d; closestPt = hit; }
+                }
+              }
+              if (closestPt) hitPoints.push({ angle, pt: closestPt });
             }
+            // Sort by angle and deduplicate adjacent near-identical points
+            hitPoints.sort((a, b) => a.angle - b.angle);
+            const polygon: Vector2[] = [];
+            for (const { pt } of hitPoints) {
+              const last = polygon[polygon.length - 1];
+              if (!last || Math.abs(pt.x - last.x) > 0.5 || Math.abs(pt.y - last.y) > 0.5) {
+                polygon.push(pt);
+              }
+            }
+
+            const PARTICLE_COUNT = 110;
+            const particles: LockDustParticle[] = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+              angle: (i / PARTICLE_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.25,
+              speed: 12 + Math.random() * 60,
+              lifetime: 350 + Math.random() * 550,
+              size: 0.6 + Math.random() * 2.0,
+            }));
+            game.assimilations.set(ball.id, {
+              ballId: ball.id,
+              cellIndices: [...ballRegion.cellIndices],
+              polygon,
+              centroid: { ...ballRegion.centroid },
+              startTime: performance.now(),
+              ballPos: { ...ball.position },
+              ballColor: ball.color,
+              particles,
+            });
+            playBallLockSound();
           }
           
            // Award lock bonus: +1h per locked ball, capped at 2h total
@@ -1177,7 +1244,7 @@ export function GameCanvas({
       // If in push mode, level is still cleared - keep full score + push bonus earned so far
       if (game.pushMode === "pushing") {
         const effectiveExpectedCuts = level.expectedCuts;
-        
+
         // Use scoring at the moment push started (clearedPercent), not current percent
         const pushStartPercent = game.bestRemainingPercent;
         const { levelScore, breakdown } = calculateScore(
@@ -1196,7 +1263,7 @@ export function GameCanvas({
         const chunkSize = areaAtPushStart * 0.25;
         const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
 
-        onLevelComplete({
+        const scoreData = {
           levelNumber,
           levelId: level.id,
           cutCount: game.wallCount,
@@ -1217,7 +1284,8 @@ export function GameCanvas({
           extraPercent: breakdown.extraPercent,
           lockBonus: game.lockBonus,
           lockedBallsCount: game.lockedBallsCount,
-        });
+        };
+        startDissolve(() => onLevelComplete(scoreData), 'rgba(160, 0, 0, 0.55)');
         return;
       }
 
@@ -1247,7 +1315,7 @@ export function GameCanvas({
       const percent = Math.round((getCombinedArea() / game.originalArea) * 100);
 
       const effectiveExpectedCuts = level.expectedCuts;
-      
+
       // Score based on push start state - player keeps everything
       const { levelScore, breakdown } = calculateScore(
         game.wallCount,
@@ -1265,7 +1333,7 @@ export function GameCanvas({
       const chunkSize = areaAtPushStart * 0.25;
       const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
 
-      onLevelComplete({
+      const scoreData = {
         levelNumber,
         levelId: level.id,
         cutCount: game.wallCount,
@@ -1286,7 +1354,8 @@ export function GameCanvas({
         extraPercent: breakdown.extraPercent,
         lockBonus: game.lockBonus,
         lockedBallsCount: game.lockedBallsCount,
-      });
+      };
+      startDissolve(() => onLevelComplete(scoreData), 'rgba(160, 0, 0, 0.55)');
     };
 
     // Get all boundary segments from the unified wall model
@@ -2052,6 +2121,8 @@ export function GameCanvas({
       // STEP 5: Check for ball WON states
       // ============================================================
       checkAndUpdateBallWonStates();
+      // Render immediately so the lock animation is visible even if the game ends this frame
+      render();
 
       // ============================================================
       // STEP 5b: Bonus fence cuts
@@ -2077,10 +2148,10 @@ export function GameCanvas({
       if (areAllBallsWon()) {
         console.log("[WIN] All balls captured! Level complete.");
         game.levelComplete = true;
-        
+
         const percent = Math.round(getGridRemainingPercent());
         setRemainingPercent(percent);
-        
+
         const effectiveExpectedCuts = level.expectedCuts;
         const { levelScore, breakdown } = calculateScore(
           game.wallCount,
@@ -2091,8 +2162,8 @@ export function GameCanvas({
           activeModifiers.scoreMultiplier,
           levelNumber
         );
-        
-        onLevelComplete({
+
+        const scoreData = {
           levelNumber,
           levelId: level.id,
           cutCount: game.wallCount,
@@ -2110,7 +2181,11 @@ export function GameCanvas({
           extraPercent: breakdown.extraPercent,
           lockBonus: game.lockBonus,
           lockedBallsCount: game.lockedBallsCount,
-        });
+        };
+
+        // Wait for lock animation then dissolve the board, then hand off
+        const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
+        setTimeout(() => startDissolve(() => onLevelComplete(scoreData)), lockDelay);
         return;
       }
 
@@ -2673,7 +2748,7 @@ export function GameCanvas({
       for (const ball of balls) {
         const screenPos = worldToScreen(ball.position.x, ball.position.y);
         const assimScale = ball.assimScale ?? 1;
-        const screenRadius = ball.radius * scale * assimScale;
+        const screenRadius = ball.radius * scale; // size unchanged — alpha fades instead
         const isFastest = false; // Highlight fastest ball removed in new upgrade system
 
         // Calculate spin phases based on ball rotation and unique offsets per ball
@@ -2722,6 +2797,10 @@ export function GameCanvas({
         const b = Math.round(b0 + (ab - b0) * fade);
         const blendedColor = `rgb(${r}, ${g}, ${b})`;
         const blendedHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+
+        // Fade out won balls — alpha disintegrates ball into the dust particles
+        ctx.save();
+        ctx.globalAlpha = assimScale;
 
         // Outer glow (ambient light effect)
         ctx.beginPath();
@@ -2912,13 +2991,97 @@ export function GameCanvas({
         ctx.fillStyle = rimGradient;
         ctx.fillRect(screenPos.x - screenRadius, screenPos.y - screenRadius, screenRadius * 2, screenRadius * 2);
         
-        ctx.restore();
+        ctx.restore(); // clip restore
+        ctx.restore(); // globalAlpha restore
       }
 
-      // Render assimilation tentacles on top of balls (clipped to not cover ball interior)
-      for (const [, anim] of game.assimilations) {
-        if (anim.phase !== 'waiting') {
-          renderAssimilation(ctx, anim, game.boardRect, scale, accentColor, performance.now());
+      // Render lock flash — pulse then flood region with accent color
+      if (game.assimilations.size > 0) {
+        const acR = parseInt(accentColor.slice(1, 3), 16);
+        const acG = parseInt(accentColor.slice(3, 5), 16);
+        const acB = parseInt(accentColor.slice(5, 7), 16);
+        const now = performance.now();
+
+        for (const [, flash] of game.assimilations) {
+          if (flash.polygon.length === 0) continue;
+          const elapsed = now - flash.startTime;
+
+          let fillAlpha = 0;
+          let glowAlpha = 0;
+
+          if (elapsed < LOCK_PULSE_DURATION) {
+            const t = elapsed / LOCK_PULSE_DURATION;
+            fillAlpha = Math.abs(Math.sin(t * Math.PI * 3)) * 0.5;
+            glowAlpha = fillAlpha * 0.7;
+          } else if (elapsed < LOCK_PULSE_DURATION + LOCK_FLOOD_DURATION) {
+            const ft = Math.min(1, (elapsed - LOCK_PULSE_DURATION) / LOCK_FLOOD_DURATION);
+            const ease = ft < 0.5 ? 2 * ft * ft : 1 - Math.pow(-2 * ft + 2, 2) / 2;
+            fillAlpha = 0.2 + ease * 0.65;
+            glowAlpha = (1 - ft) * 0.9;
+          } else {
+            // Settled — hold at full fill alpha permanently
+            fillAlpha = 0.85;
+            glowAlpha = 0;
+          }
+
+          // Fill the exact wall-intersection polygon — no grid approximation
+          ctx.save();
+          if (flash.polygon.length >= 3) {
+            ctx.beginPath();
+            const fp = worldToScreen(flash.polygon[0].x, flash.polygon[0].y);
+            ctx.moveTo(fp.x, fp.y);
+            for (let i = 1; i < flash.polygon.length; i++) {
+              const p = worldToScreen(flash.polygon[i].x, flash.polygon[i].y);
+              ctx.lineTo(p.x, p.y);
+            }
+            ctx.closePath();
+            ctx.fillStyle = `rgba(${acR}, ${acG}, ${acB}, ${fillAlpha})`;
+            ctx.fill();
+          }
+
+          // Radial burst glow from centroid during flood phase
+          if (elapsed >= LOCK_PULSE_DURATION && glowAlpha > 0) {
+            const ft = Math.min(1, (elapsed - LOCK_PULSE_DURATION) / LOCK_FLOOD_DURATION);
+            const c = worldToScreen(flash.centroid.x, flash.centroid.y);
+            const burstR = 120 * scale * (0.3 + ft * 1.8);
+            const grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, burstR);
+            grad.addColorStop(0, `rgba(${acR}, ${acG}, ${acB}, ${glowAlpha})`);
+            grad.addColorStop(0.5, `rgba(${acR}, ${acG}, ${acB}, ${glowAlpha * 0.4})`);
+            grad.addColorStop(1, `rgba(${acR}, ${acG}, ${acB}, 0)`);
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(c.x, c.y, burstR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+
+          // Dust particles — burst from ball's lock position, fade as fine dust
+          if (elapsed < LOCK_DUST_DURATION && flash.particles.length > 0) {
+            const pR = parseInt(flash.ballColor.slice(1, 3), 16);
+            const pG = parseInt(flash.ballColor.slice(3, 5), 16);
+            const pB = parseInt(flash.ballColor.slice(5, 7), 16);
+
+            ctx.save();
+            for (const p of flash.particles) {
+              if (elapsed > p.lifetime) continue;
+              const progress = elapsed / p.lifetime;
+              // Decelerate quickly — most movement in first third
+              const drag = Math.pow(1 - progress, 1.8);
+              const tSec = elapsed / 1000;
+              const wx = flash.ballPos.x + Math.cos(p.angle) * p.speed * tSec * drag;
+              const wy = flash.ballPos.y + Math.sin(p.angle) * p.speed * tSec * drag
+                       + 18 * tSec * tSec; // subtle gravity
+              const sp = worldToScreen(wx, wy);
+              const alpha = Math.pow(1 - progress, 1.4);
+              const dotR = Math.max(0.4, p.size * (1 - progress * 0.6) * scale);
+
+              ctx.beginPath();
+              ctx.arc(sp.x, sp.y, dotR, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(${pR}, ${pG}, ${pB}, ${alpha})`;
+              ctx.fill();
+            }
+            ctx.restore();
+          }
         }
       }
 
@@ -3036,20 +3199,122 @@ export function GameCanvas({
       }
     };
 
+    // Capture the current frame and shatter it into falling tiles.
+    // tint: optional CSS color to overlay on the snapshot (e.g. dark red for push failure).
+    const startDissolve = (onComplete: () => void, tint?: string) => {
+      const TILE = 28; // tile size in screen pixels
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Snapshot: composite blur layer + main canvas into a single offscreen image
+      const captured = document.createElement('canvas');
+      captured.width = W;
+      captured.height = H;
+      const cctx = captured.getContext('2d')!;
+      const blurCanvas = blurCanvasRef.current;
+      if (blurCanvas) cctx.drawImage(blurCanvas, 0, 0);
+      cctx.drawImage(canvas, 0, 0);
+      // Optional tint overlay (e.g. dark red for push-your-luck failure)
+      if (tint) {
+        cctx.fillStyle = tint;
+        cctx.fillRect(0, 0, W, H);
+      }
+
+      const cols = Math.ceil(W / TILE);
+      const rows = Math.ceil(H / TILE);
+      const tiles: DissolveTile[] = [];
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cx = c * TILE + TILE / 2;
+          const cy = r * TILE + TILE / 2;
+          const dx = cx - W / 2;
+          const dy = cy - H / 2;
+          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+          const speed = 60 + Math.random() * 180;
+          tiles.push({
+            sx: c * TILE, sy: r * TILE,
+            sw: Math.min(TILE, W - c * TILE),
+            sh: Math.min(TILE, H - r * TILE),
+            cx, cy,
+            vx: (dx / dist) * speed * 0.4 + (Math.random() - 0.5) * 60,
+            vy: (dy / dist) * speed * 0.15 + Math.random() * 40 - 10,
+            rotSpeed: (Math.random() - 0.5) * 4,
+            delay: Math.random() * 0.6,
+          });
+        }
+      }
+
+      game.dissolve = { captured, tiles, startTime: performance.now(), onComplete };
+      game.animationId = requestAnimationFrame(gameLoop);
+    };
+    startDissolveRef.current = startDissolve;
+
     const gameLoop = (timestamp: number) => {
-      if (game.gameOver || game.levelComplete || game.pushMode === "prompt") return;
+      // Dissolve animation always runs regardless of gameOver/levelComplete state
+      if (game.dissolve) {
+        const d = game.dissolve;
+        const elapsed = (performance.now() - d.startTime) / 1000; // seconds
+        const dur = DISSOLVE_DURATION / 1000;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (const tile of d.tiles) {
+          const t = Math.max(0, elapsed - tile.delay);
+          const tMax = dur - tile.delay;
+          const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
+          const alpha = Math.max(0, 1 - progress * 1.15);
+          const x = tile.cx + tile.vx * t;
+          const y = tile.cy + tile.vy * t + 200 * t * t; // gravity
+          const angle = tile.rotSpeed * t;
+
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.translate(x, y);
+          ctx.rotate(angle);
+          ctx.drawImage(d.captured, tile.sx, tile.sy, tile.sw, tile.sh,
+            -tile.sw / 2, -tile.sh / 2, tile.sw, tile.sh);
+          ctx.restore();
+        }
+
+        if (elapsed >= dur) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          game.dissolve = null;
+          d.onComplete();
+          return;
+        }
+
+        game.animationId = requestAnimationFrame(gameLoop);
+        return;
+      }
+
+      if (game.gameOver || game.pushMode === "prompt") return;
+
+      // After level complete, keep rendering until all lock animations finish
+      if (game.levelComplete) {
+        if (game.assimilations.size > 0) {
+          for (const ball of game.balls) {
+            if (ball.state === 'won') {
+              const elapsed = performance.now() - ball.wonTime;
+              ball.assimScale = Math.max(0, 1 - Math.max(0, elapsed - 50) / 180);
+            }
+          }
+          render();
+          game.animationId = requestAnimationFrame(gameLoop);
+        }
+        return;
+      }
 
       const dt = game.lastTime ? (timestamp - game.lastTime) / 1000 : 0;
       game.lastTime = timestamp;
       const cappedDt = Math.min(dt, 0.05);
 
       for (const ball of game.balls) {
-        // Handle WON balls - just spin, no physics
+        // WON balls keep full physics but visually disintegrate
         if (ball.state === 'won') {
-          ball.rotation += ball.wonSpinSpeed * cappedDt;
-          const anim = game.assimilations.get(ball.id);
-          if (anim) updateAssimilation(anim, ball, cappedDt, timestamp);
-          continue;
+          const elapsed = performance.now() - ball.wonTime;
+          // Hold full opacity for 50ms, then fade out over 180ms — looks like ball pops into dust
+          ball.assimScale = Math.max(0, 1 - Math.max(0, elapsed - 50) / 180);
         }
         
         // Skip updating frozen ball - it stays in place during shake animation
@@ -3071,8 +3336,8 @@ export function GameCanvas({
       
       render();
 
-      // Apply completed wall cut immediately
-      if (game.activeWall && game.activeWall.isComplete) {
+      // Apply completed wall cut immediately (skip if level already finishing)
+      if (!game.levelComplete && game.activeWall && game.activeWall.isComplete) {
         applyCut(game.activeWall);
       }
 
@@ -3247,29 +3512,31 @@ export function GameCanvas({
     const chunkSize = areaAtPushStart * 0.25;
     const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
 
+    const scoreData = {
+      levelNumber,
+      levelId: level.id,
+      cutCount: game.wallCount,
+      expectedCuts: level.expectedCuts,
+      basePoints: level.points,
+      levelScore: levelScore + game.lockBonus + pushBonus,
+      remainingPercent: game.bestRemainingPercent,
+      overcutBonus: 0,
+      thresholdPercent: level.sizeThreshold,
+      pushBonus,
+      underParBonus: breakdown.underParBonus,
+      spaceBonus: breakdown.spaceBonus,
+      spaceBonusRaw: breakdown.spaceBonusRaw,
+      performanceMultiplier: breakdown.performanceMultiplier,
+      fencesUnderPar: breakdown.fencesUnderPar,
+      fencesOverPar: breakdown.fencesOverPar,
+      extraPercent: breakdown.extraPercent,
+      lockBonus: game.lockBonus,
+      lockedBallsCount: game.lockedBallsCount,
+    };
+    // Brief pause to let the push-prompt UI close, then dissolve normally
     setTimeout(() => {
-      onLevelComplete({
-        levelNumber,
-        levelId: level.id,
-        cutCount: game.wallCount,
-        expectedCuts: level.expectedCuts,
-        basePoints: level.points,
-        levelScore: levelScore + game.lockBonus + pushBonus,
-        remainingPercent: game.bestRemainingPercent,
-        overcutBonus: 0,
-        thresholdPercent: level.sizeThreshold,
-        pushBonus,
-        underParBonus: breakdown.underParBonus,
-        spaceBonus: breakdown.spaceBonus,
-        spaceBonusRaw: breakdown.spaceBonusRaw,
-        performanceMultiplier: breakdown.performanceMultiplier,
-        fencesUnderPar: breakdown.fencesUnderPar,
-        fencesOverPar: breakdown.fencesOverPar,
-        extraPercent: breakdown.extraPercent,
-        lockBonus: game.lockBonus,
-        lockedBallsCount: game.lockedBallsCount,
-      });
-    }, 300);
+      startDissolveRef.current?.(() => onLevelComplete(scoreData));
+    }, 150);
   }, [level, levelNumber, activeModifiers, onLevelComplete]);
 
   // Notify parent of game state changes for top bar display

@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { Menu, Home, RotateCcw } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameStatsPanel } from './GameStatsPanel';
@@ -18,7 +19,7 @@ interface AugmentProgress {
   levelsPerPoint: number;
 }
 
-type InGameStep = 'topBar' | 'bottomBar' | 'fence' | 'done';
+type InGameStep = 'fence' | 'done';
 
 interface GameScreenProps {
   level: LevelConfig;
@@ -34,8 +35,6 @@ interface GameScreenProps {
   onMainMenu: () => void;
   onRestart: () => void;
   showInGameTutorial?: boolean;
-  onTopBarSeen?: () => void;
-  onBottomBarSeen?: () => void;
   onFenceSeen?: () => void;
   accentColor?: string;
   augmentProgress?: AugmentProgress;
@@ -56,8 +55,6 @@ export function GameScreen({
   onMainMenu,
   onRestart,
   showInGameTutorial = false,
-  onTopBarSeen,
-  onBottomBarSeen,
   onFenceSeen,
   accentColor: externalAccentColor,
   augmentProgress,
@@ -67,7 +64,7 @@ export function GameScreen({
 
   // In-game tutorial step state
   const [inGameStep, setInGameStep] = useState<InGameStep>(
-    showInGameTutorial ? 'topBar' : 'done'
+    showInGameTutorial ? 'fence' : 'done'
   );
 
   // Game state for top bar
@@ -88,16 +85,19 @@ export function GameScreen({
 
   const accentColor = externalAccentColor || getAccentColor();
 
-  // Measure bar heights for spotlight overlays
-  const topBarRef = useRef<HTMLDivElement>(null);
-  const statsPanelRef = useRef<HTMLDivElement>(null);
-  const [topBarHeight, setTopBarHeight] = useState(0);
-  const [statsPanelHeight, setStatsPanelHeight] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (topBarRef.current) setTopBarHeight(topBarRef.current.offsetHeight);
-    if (statsPanelRef.current) setStatsPanelHeight(statsPanelRef.current.offsetHeight);
-  }, []);
+    if (!menuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [menuOpen]);
 
   return (
     <>
@@ -109,7 +109,7 @@ export function GameScreen({
       
       <div className="fixed inset-0 flex flex-col z-10">
         {/* Game Top Bar - Two rows */}
-        <div ref={topBarRef}>
+        <div>
           <GameTopBar
             levelNumber={levelNumber}
             cutsUsed={gameState.cutsUsed}
@@ -122,8 +122,6 @@ export function GameScreen({
             ownedUpgrades={ownedUpgrades}
             accentColor={accentColor}
             augmentProgress={augmentProgress}
-            onMainMenu={onMainMenu}
-            onRestart={onRestart}
           />
         </div>
 
@@ -159,43 +157,15 @@ export function GameScreen({
 
         {/* Stats Panel at bottom */}
         <GameStatsPanel
-          ref={statsPanelRef}
           ownedUpgradeIds={ownedUpgradeIds}
           upgrades={upgrades}
           accentColor={accentColor}
           achievementBonuses={achievementBonuses}
         />
         
-        {/* In-game tutorial overlays */}
-        <TutorialOverlay
-          visible={inGameStep === 'topBar'}
-          arrowDirection="up"
-          spotlightArea="top"
-          spotlightHeightPx={topBarHeight}
-          accentColor={accentColor}
-          title="GAME STATUS"
-          body="The top bar shows your progress: level, cuts vs par, lives, board space cleared, and augment progress."
-          onDismiss={() => {
-            setInGameStep('bottomBar');
-            onTopBarSeen?.();
-          }}
-        />
-        <TutorialOverlay
-          visible={inGameStep === 'bottomBar'}
-          arrowDirection="down"
-          spotlightArea="bottom"
-          spotlightHeightPx={statsPanelHeight}
-          accentColor={accentColor}
-          title="YOUR UPGRADES"
-          body="The bottom bar shows all active modifiers from purchased upgrades. Highlighted values are boosted. Upgrades last until the run ends."
-          onDismiss={() => {
-            setInGameStep('fence');
-            onBottomBarSeen?.();
-          }}
-        />
 
         {/* Bank button during push mode - fixed overlay at bottom */}
-        {gameState.pushMode === "pushing" && gameState.onBankAndContinue && (
+        {false && gameState.pushMode === "pushing" && gameState.onBankAndContinue && (
           <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center items-center py-4 pointer-events-none">
             <button
               onClick={gameState.onBankAndContinue}
@@ -210,6 +180,53 @@ export function GameScreen({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
               Bank & Continue
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Always-visible menu — floats above all overlays */}
+      <div ref={menuRef} className="fixed top-2 left-2 z-[70]">
+        <button
+          onClick={() => setMenuOpen(prev => !prev)}
+          className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+          style={{
+            backgroundColor: menuOpen ? `${accentColor}33` : 'rgba(0,10,5,0.85)',
+            border: `1px solid ${accentColor}55`,
+            color: accentColor,
+          }}
+          aria-label="Game menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        {menuOpen && (
+          <div
+            className="absolute top-full left-0 mt-1 rounded-lg overflow-hidden min-w-[160px]"
+            style={{
+              backgroundColor: 'rgba(0, 15, 8, 0.95)',
+              border: `1px solid ${accentColor}55`,
+              boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 15px ${accentColor}22`,
+            }}
+          >
+            <button
+              onClick={() => { setMenuOpen(false); onRestart(); }}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
+              style={{ color: accentColor, backgroundColor: 'transparent' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <RotateCcw className="w-4 h-4" />
+              Restart Run
+            </button>
+            <button
+              onClick={() => { setMenuOpen(false); onMainMenu(); }}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
+              style={{ color: accentColor, backgroundColor: 'transparent' }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <Home className="w-4 h-4" />
+              Main Menu
             </button>
           </div>
         )}
