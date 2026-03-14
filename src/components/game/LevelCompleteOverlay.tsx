@@ -44,7 +44,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-background/50 backdrop-blur-sm" />
+      <div className="fixed inset-0 z-50 bg-background/30 backdrop-blur-sm" />
 
       {/* Modal container */}
       <div
