@@ -347,7 +347,7 @@ upgrades:
   - id: aggressive_refactor_senior
     name: Aggressive Refactor
     tier: Senior
-    description: Each fence reduces an additional 5% of the map.
+    description: Each fence removes an additional 5% of the remaining area.
     cost: 16
     unlockLevel: 4
     modifiers:
@@ -356,7 +356,7 @@ upgrades:
   - id: aggressive_refactor_principal
     name: Aggressive Refactor
     tier: Principal
-    description: Each fence reduces an additional 10% of the map.
+    description: Each fence removes an additional 10% of the remaining area.
     cost: 26
     unlockLevel: 8
     prerequisites:
@@ -367,7 +367,7 @@ upgrades:
   - id: aggressive_refactor_architect
     name: Aggressive Refactor
     tier: Architect
-    description: Each fence reduces an additional 15% of the map.
+    description: Each fence removes an additional 15% of the remaining area.
     cost: 38
     unlockLevel: 13
     prerequisites:
