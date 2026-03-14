@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 

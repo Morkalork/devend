@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Trophy, Zap, Coins } from 'lucide-react';
 
 interface PushYourLuckOverlayProps {
