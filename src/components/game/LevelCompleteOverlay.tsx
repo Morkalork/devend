@@ -10,6 +10,7 @@ interface LevelCompleteOverlayProps {
 }
 
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor }: LevelCompleteOverlayProps) {
+  const [chosen, setChosen] = useState(false);
   const {
     levelNumber,
     levelId,
