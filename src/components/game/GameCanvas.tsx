@@ -1765,9 +1765,9 @@ export function GameCanvas({
       }
       if (maxRow < 0 || totalActiveCells === 0) return;
 
-      // Cap target at 40% of current active cells so we never exhaust the board
+      // x% of remaining active area, capped at 40% so we never exhaust the board
       const targetCells = Math.max(1, Math.min(
-        Math.round(amount * grid.initialActiveCount),
+        Math.round(amount * totalActiveCells),
         Math.round(0.40 * totalActiveCells)
       ));
 
