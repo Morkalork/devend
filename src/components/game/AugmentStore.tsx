@@ -83,7 +83,7 @@ export function AugmentStore({
     setSelectedAugment(null);
   };
 
-  // Sort: partially owned first, then unlocked, then locked
+  // Sort: owned first, then affordable, then rest
   const sortedAugments = [...augments].sort((a, b) => {
     const aStacks = getStacks(a.id);
     const bStacks = getStacks(b.id);
@@ -93,11 +93,17 @@ export function AugmentStore({
     // Maxed items go to bottom
     if (aMaxed !== bMaxed) return aMaxed ? 1 : -1;
     
-    // Partially owned (but not maxed) go to top
-    const aPartial = aStacks > 0 && !aMaxed;
-    const bPartial = bStacks > 0 && !bMaxed;
-    if (aPartial !== bPartial) return aPartial ? -1 : 1;
+    // Owned (but not maxed) go to top
+    const aOwned = aStacks > 0 && !aMaxed;
+    const bOwned = bStacks > 0 && !bMaxed;
+    if (aOwned !== bOwned) return aOwned ? -1 : 1;
     
+    // Affordable & unlocked next
+    const aCanBuy = isAugmentUnlocked(a) && canAfford(a) && !aMaxed;
+    const bCanBuy = isAugmentUnlocked(b) && canAfford(b) && !bMaxed;
+    if (aCanBuy !== bCanBuy) return aCanBuy ? -1 : 1;
+    
+    // Unlocked but unaffordable before locked
     const aUnlocked = isAugmentUnlocked(a);
     const bUnlocked = isAugmentUnlocked(b);
     if (aUnlocked !== bUnlocked) return aUnlocked ? -1 : 1;
