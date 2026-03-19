@@ -167,6 +167,7 @@ export function GameScreen({
           upgrades={upgrades}
           accentColor={accentColor}
           achievementBonuses={achievementBonuses}
+          lockedBalls={gameState.lockedBalls}
         />
         
 

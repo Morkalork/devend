@@ -137,9 +137,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           expectedCuts: 10,
           points: 100,
           balls: [
-            { id: 'test-1', initialSpeed: 40, topSpeed: 40, color: 'ff4444' },
-            { id: 'test-2', initialSpeed: 35, topSpeed: 35, color: '4488ff' },
-            { id: 'test-3', initialSpeed: 30, topSpeed: 30, color: '44ff44' },
+            { id: 'test-1', initialSpeed: 80, topSpeed: 80, color: 'ff4444' },
+            { id: 'test-2', initialSpeed: 70, topSpeed: 70, color: '4488ff' },
+            { id: 'test-3', initialSpeed: 60, topSpeed: 60, color: '44ff44' },
           ],
         }}
         levelNumber={1}

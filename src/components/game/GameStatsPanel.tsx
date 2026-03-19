@@ -8,18 +8,24 @@ interface GameStatsPanelProps {
   upgrades: UpgradeConfig[];
   accentColor: string;
   achievementBonuses?: Partial<Record<string, number>>;
+  lockedBalls?: number;
 }
 
 export const GameStatsPanel = React.forwardRef<HTMLDivElement, GameStatsPanelProps>(
-function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor, achievementBonuses }, ref) {
+function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor, achievementBonuses, lockedBalls = 0 }, ref) {
   const modifiers: GameModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, achievementBonuses);
 
   const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
   const formatBonus = (value: number) => value > 0 ? `+${value}` : `${value}`;
   const formatRate = (value: number) => `${Math.round(value * 100)}%`;
 
+  const microManagerFactor = modifiers.microManagerPerLock > 0 && lockedBalls > 0
+    ? Math.max(0.50, Math.pow(1 - modifiers.microManagerPerLock, lockedBalls))
+    : 1;
+  const effectiveSpeedFactor = modifiers.ballSpeedMultiplier * microManagerFactor;
+
   const stats = [
-    { label: 'Ball Speed', value: formatPercent(modifiers.ballSpeedMultiplier), changed: modifiers.ballSpeedMultiplier !== 1 },
+    { label: 'Ball Speed', value: formatPercent(effectiveSpeedFactor), changed: effectiveSpeedFactor !== 1 },
     { label: 'Ball Size', value: formatPercent(modifiers.ballSizeMultiplier), changed: modifiers.ballSizeMultiplier !== 1 },
     { label: 'Fence Speed', value: formatPercent(modifiers.fenceGenerationSpeedMultiplier), changed: modifiers.fenceGenerationSpeedMultiplier !== 1 },
     { label: 'Fence Width', value: formatPercent(modifiers.fenceWidthMultiplier), changed: modifiers.fenceWidthMultiplier !== 1 },
@@ -31,7 +37,7 @@ function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor, achievementBon
     { label: 'Interest', value: formatRate(modifiers.scoreInterestRate), changed: modifiers.scoreInterestRate !== 0 },
     { label: 'Map Reduce/Fence', value: formatRate(modifiers.mapReductionPerFenceBonus), changed: modifiers.mapReductionPerFenceBonus !== 0 },
     { label: 'Shop Slots', value: formatBonus(modifiers.extraShopItems), changed: modifiers.extraShopItems !== 0 },
-    { label: 'MicroMgr/Lock', value: `${Math.round(modifiers.microManagerPerLock * 100)}%`, changed: modifiers.microManagerPerLock !== 0 },
+    { label: 'MicroMgr/Lock', value: `${Math.round(modifiers.microManagerPerLock * 100)}% (${Math.round((1 - microManagerFactor) * 100)}% now)`, changed: modifiers.microManagerPerLock !== 0 },
   ];
 
   return (

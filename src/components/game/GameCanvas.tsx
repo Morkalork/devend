@@ -1209,6 +1209,23 @@ export function GameCanvas({
            game.lockBonus = Math.min(2, game.lockBonus + thisLockBonus);
            console.log(`[WON] Lock bonus: +${thisLockBonus} (total: ${game.lockBonus})`);
 
+           // MicroManager: immediately cap speed of remaining active balls
+           if (activeModifiers.microManagerPerLock > 0) {
+             // Compounding: each locked ball multiplies speed by (1 - perLock), min 50%
+             const speedFactor = Math.max(0.50, Math.pow(1 - activeModifiers.microManagerPerLock, game.lockedBallsCount));
+             for (const otherBall of game.balls) {
+               if (otherBall.state === 'won' || otherBall.speed === 0) continue;
+               const actualSpeed = vec2Length(otherBall.velocity);
+               const cappedSpeed = otherBall.baseSpeed * speedFactor;
+               if (actualSpeed > cappedSpeed && cappedSpeed > 0) {
+                 const ratio = cappedSpeed / actualSpeed;
+                 otherBall.velocity.x *= ratio;
+                 otherBall.velocity.y *= ratio;
+                 otherBall.speed = cappedSpeed;
+               }
+             }
+           }
+
           // Update React state for UI display
           setLockedBallsCount(game.lockedBallsCount);
           
@@ -2160,12 +2177,14 @@ export function GameCanvas({
         ball.velocity.y *= ratio;
       }
       if (activeModifiers.microManagerPerLock > 0 && game.lockedBallsCount > 0) {
-        const totalReduction = Math.min(0.50, game.lockedBallsCount * activeModifiers.microManagerPerLock);
+        // Compounding: each locked ball multiplies speed by (1 - perLock), min 50%
+        const speedFactor = Math.max(0.50, Math.pow(1 - activeModifiers.microManagerPerLock, game.lockedBallsCount));
         for (const ball of balls) {
           if (ball.state === 'won' || ball.speed === 0) continue;
-          const cappedSpeed = ball.baseSpeed * (1 - totalReduction);
-          if (ball.speed > cappedSpeed) {
-            const ratio = cappedSpeed / ball.speed;
+          const actualSpeed = vec2Length(ball.velocity);
+          const cappedSpeed = ball.baseSpeed * speedFactor;
+          if (actualSpeed > cappedSpeed && cappedSpeed > 0) {
+            const ratio = cappedSpeed / actualSpeed;
             ball.velocity.x *= ratio;
             ball.velocity.y *= ratio;
             ball.speed = cappedSpeed;
