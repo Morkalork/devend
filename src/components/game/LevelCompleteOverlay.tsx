@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 
@@ -7,10 +7,19 @@ interface LevelCompleteOverlayProps {
   totalScore: number;
   onContinue: () => void;
   accentColor?: string;
+  /** ms to wait before enabling the Continue button (lets the dissolve animation finish) */
+  buttonDelay?: number;
 }
 
-export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor }: LevelCompleteOverlayProps) {
+export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900 }: LevelCompleteOverlayProps) {
   const [chosen, setChosen] = useState(false);
+  const [buttonReady, setButtonReady] = useState(buttonDelay === 0);
+
+  useEffect(() => {
+    if (buttonDelay <= 0) return;
+    const t = setTimeout(() => setButtonReady(true), buttonDelay);
+    return () => clearTimeout(t);
+  }, [buttonDelay]);
   const {
     levelNumber,
     levelId,
@@ -44,11 +53,11 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-background/30 backdrop-blur-sm" />
+      <div className="fixed inset-0 z-50 bg-background/30 backdrop-blur-sm animate-in fade-in duration-500" />
 
       {/* Modal container */}
       <div
-        className="level-complete-modal fixed z-50 overflow-y-auto"
+        className="level-complete-modal fixed z-50 overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500"
         style={{
           bottom: '1rem',
           left: '1rem',
@@ -230,7 +239,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
           {/* Continue Button */}
           <button
-            disabled={chosen}
+            disabled={chosen || !buttonReady}
             className="arcade-button-primary w-full rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 hover:scale-[1.02] active:scale-[0.98] transition-transform disabled:opacity-50 disabled:pointer-events-none"
             onClick={() => { setChosen(true); onContinue(); }}
           >

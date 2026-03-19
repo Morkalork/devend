@@ -31,6 +31,7 @@ function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor, achievementBon
     { label: 'Interest', value: formatRate(modifiers.scoreInterestRate), changed: modifiers.scoreInterestRate !== 0 },
     { label: 'Map Reduce/Fence', value: formatRate(modifiers.mapReductionPerFenceBonus), changed: modifiers.mapReductionPerFenceBonus !== 0 },
     { label: 'Shop Slots', value: formatBonus(modifiers.extraShopItems), changed: modifiers.extraShopItems !== 0 },
+    { label: 'MicroMgr/Lock', value: `${Math.round(modifiers.microManagerPerLock * 100)}%`, changed: modifiers.microManagerPerLock !== 0 },
   ];
 
   return (

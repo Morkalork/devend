@@ -6,7 +6,9 @@
       "Bash(echo:*)",
       "Bash(node:*)",
       "Bash(cd:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(ls tmpclaude* 2>/dev/null || echo \"none in cwd\")",
+      "Bash(grep -E '\\\\.\\(ts|tsx\\)$')"
     ]
   }
 }

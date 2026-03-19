@@ -23,6 +23,9 @@ export interface GameModifiers {
   mapReductionPerFenceBonus: number;
   extraShopItems: number;
   extraAugmentationPoints: number;
+
+  // Additive (sum) — dynamic: applied per locked ball in-game
+  microManagerPerLock: number;
 }
 
 // Keys that stack multiplicatively
@@ -49,6 +52,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   mapReductionPerFenceBonus: 0,
   extraShopItems: 0,
   extraAugmentationPoints: 0,
+  microManagerPerLock: 0,
 };
 
 /**

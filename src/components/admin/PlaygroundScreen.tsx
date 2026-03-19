@@ -35,6 +35,7 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   mapReductionPerFenceBonus:        { label: 'Map Reduction/Fence',    kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Extra area fraction removed per fence completion' },
   extraShopItems:                   { label: 'Extra Shop Slots',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional item slots in the upgrade shop' },
   extraAugmentationPoints:          { label: 'Extra Aug. Points',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Augment Points granted' },
+  microManagerPerLock:              { label: 'MicroManager/Lock',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Speed reduction per locked ball (0.01 = 1%, max 50%)' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

@@ -10,6 +10,7 @@ import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { useGameConfig } from '@/hooks/useGameConfig';
+import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 
 interface AugmentProgress {
   levelsCompleted: number;
@@ -83,6 +84,10 @@ export function GameScreen({
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
 
+  // Compute active modifiers (lightweight — used for top bar display only)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, achievementBonuses as any);
+
   const accentColor = externalAccentColor || getAccentColor();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -122,6 +127,7 @@ export function GameScreen({
             ownedUpgrades={ownedUpgrades}
             accentColor={accentColor}
             augmentProgress={augmentProgress}
+            microManagerPerLock={activeModifiers.microManagerPerLock}
           />
         </div>
 

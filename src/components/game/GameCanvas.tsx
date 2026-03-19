@@ -62,7 +62,7 @@ const LOCK_FLOOD_DURATION  = 380;      // ms — fill explodes across region
 const LOCK_DUST_DURATION   = 900;      // ms — longest particle lifetime
 const LOCK_TOTAL_DURATION  = LOCK_PULSE_DURATION + LOCK_FLOOD_DURATION;
 const BALL_DISINTEGRATE_MS = 420;      // ms — ball shrinks to nothing
-const DISSOLVE_DURATION    = 2000;     // ms — board dissolve after level complete
+const DISSOLVE_DURATION    = 1000;     // ms — board dissolve after level complete
 
 interface DissolveTile {
   sx: number; sy: number; sw: number; sh: number; // source rect in captured canvas
@@ -276,6 +276,8 @@ export function GameCanvas({
   const blurCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
+  const onLevelCompleteRef = useRef(onLevelComplete);
+  useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
@@ -334,6 +336,7 @@ export function GameCanvas({
     swipeStart: null as Vector2 | null, // World coords
     swipeRegionId: null as string | null,
     currentSwipePos: null as Vector2 | null, // World coords
+    swipePointerId: null as number | null, // Pointer ID that started the current swipe
     lastTime: 0,
     animationId: 0,
     screenSize: { width: 0, height: 0 },
@@ -673,6 +676,7 @@ export function GameCanvas({
           velocity: { x: dir.x * modifiedSpeed, y: dir.y * modifiedSpeed },
           radius: ballRadius,
           speed: modifiedSpeed,
+          baseSpeed: modifiedSpeed,
           topSpeed: modifiedTopSpeed,
           color: `#${ballConfig.color}`,
           regionId: "", // Will be assigned after regions are created
@@ -777,6 +781,7 @@ export function GameCanvas({
       game.swipeStart = null;
       game.swipeRegionId = null;
       game.currentSwipePos = null;
+      game.swipePointerId = null;
       game.lastTime = 0;
       game.wallCount = 0;
       clearWallImpacts(); // Clear any lingering visual effects
@@ -1203,7 +1208,7 @@ export function GameCanvas({
            const thisLockBonus = 1;
            game.lockBonus = Math.min(2, game.lockBonus + thisLockBonus);
            console.log(`[WON] Lock bonus: +${thisLockBonus} (total: ${game.lockBonus})`);
-          
+
           // Update React state for UI display
           setLockedBallsCount(game.lockedBallsCount);
           
@@ -1285,7 +1290,8 @@ export function GameCanvas({
           lockBonus: game.lockBonus,
           lockedBallsCount: game.lockedBallsCount,
         };
-        startDissolve(() => onLevelComplete(scoreData), 'rgba(160, 0, 0, 0.55)');
+        onLevelCompleteRef.current(scoreData);
+        startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
         return;
       }
 
@@ -1355,7 +1361,8 @@ export function GameCanvas({
         lockBonus: game.lockBonus,
         lockedBallsCount: game.lockedBallsCount,
       };
-      startDissolve(() => onLevelComplete(scoreData), 'rgba(160, 0, 0, 0.55)');
+      onLevelCompleteRef.current(scoreData);
+      startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
     };
 
     // Get all boundary segments from the unified wall model
@@ -1713,8 +1720,24 @@ export function GameCanvas({
         const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
         const ratio = newSpeed / ball.speed;
         ball.speed = newSpeed;
+        ball.baseSpeed = Math.min(ball.baseSpeed * BALL_SPEED_INCREASE, ball.topSpeed);
         ball.velocity.x *= ratio;
         ball.velocity.y *= ratio;
+      }
+
+      // MicroManager: cap speed of all active balls based on locked ball count
+      if (activeModifiers.microManagerPerLock > 0 && game.lockedBallsCount > 0) {
+        const totalReduction = Math.min(0.50, game.lockedBallsCount * activeModifiers.microManagerPerLock);
+        for (const ball of balls) {
+          if (ball.state === 'won' || ball.speed === 0) continue;
+          const cappedSpeed = ball.baseSpeed * (1 - totalReduction);
+          if (ball.speed > cappedSpeed) {
+            const ratio = cappedSpeed / ball.speed;
+            ball.velocity.x *= ratio;
+            ball.velocity.y *= ratio;
+            ball.speed = cappedSpeed;
+          }
+        }
       }
 
       // Track fastest ball
@@ -2125,6 +2148,32 @@ export function GameCanvas({
       render();
 
       // ============================================================
+      // STEP 5c: Speed up balls + MicroManager cap
+      // ============================================================
+      for (const ball of balls) {
+        if (ball.speed === 0) continue; // skip won/dead balls
+        const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
+        const ratio = newSpeed / ball.speed;
+        ball.speed = newSpeed;
+        ball.baseSpeed = Math.min(ball.baseSpeed * BALL_SPEED_INCREASE, ball.topSpeed);
+        ball.velocity.x *= ratio;
+        ball.velocity.y *= ratio;
+      }
+      if (activeModifiers.microManagerPerLock > 0 && game.lockedBallsCount > 0) {
+        const totalReduction = Math.min(0.50, game.lockedBallsCount * activeModifiers.microManagerPerLock);
+        for (const ball of balls) {
+          if (ball.state === 'won' || ball.speed === 0) continue;
+          const cappedSpeed = ball.baseSpeed * (1 - totalReduction);
+          if (ball.speed > cappedSpeed) {
+            const ratio = cappedSpeed / ball.speed;
+            ball.velocity.x *= ratio;
+            ball.velocity.y *= ratio;
+            ball.speed = cappedSpeed;
+          }
+        }
+      }
+
+      // ============================================================
       // STEP 5b: Bonus fence cuts
       // ============================================================
       if (!game.gameOver) {
@@ -2185,7 +2234,10 @@ export function GameCanvas({
 
         // Wait for lock animation then dissolve the board, then hand off
         const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
-        setTimeout(() => startDissolve(() => onLevelComplete(scoreData)), lockDelay);
+        setTimeout(() => {
+          onLevelCompleteRef.current(scoreData);
+          startDissolve(() => {});
+        }, lockDelay);
         return;
       }
 
@@ -3231,15 +3283,15 @@ export function GameCanvas({
           const dx = cx - W / 2;
           const dy = cy - H / 2;
           const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const speed = 60 + Math.random() * 180;
+          const speed = 120 + Math.random() * 360;
           tiles.push({
             sx: c * TILE, sy: r * TILE,
             sw: Math.min(TILE, W - c * TILE),
             sh: Math.min(TILE, H - r * TILE),
             cx, cy,
-            vx: (dx / dist) * speed * 0.4 + (Math.random() - 0.5) * 60,
-            vy: (dy / dist) * speed * 0.15 + Math.random() * 40 - 10,
-            rotSpeed: (Math.random() - 0.5) * 4,
+            vx: (dx / dist) * speed * 0.4 + (Math.random() - 0.5) * 120,
+            vy: (dy / dist) * speed * 0.15 + Math.random() * 80 - 20,
+            rotSpeed: (Math.random() - 0.5) * 8,
             delay: Math.random() * 0.6,
           });
         }
@@ -3265,7 +3317,7 @@ export function GameCanvas({
           const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
           const alpha = Math.max(0, 1 - progress * 1.15);
           const x = tile.cx + tile.vx * t;
-          const y = tile.cy + tile.vy * t + 200 * t * t; // gravity
+          const y = tile.cy + tile.vy * t + 400 * t * t; // gravity
           const angle = tile.rotSpeed * t;
 
           ctx.save();
@@ -3358,7 +3410,19 @@ export function GameCanvas({
     const handlePointerDown = (e: PointerEvent) => {
       // Initialize audio on first interaction (browser requirement)
       initAudio();
-      
+
+      // Second-finger cancel: if a swipe is in progress and a different pointer comes down, cancel it
+      if (game.swipeStart && game.swipePointerId !== null && e.pointerId !== game.swipePointerId) {
+        game.swipeStart = null;
+        game.swipeRegionId = null;
+        game.currentSwipePos = null;
+        game.swipePointerId = null;
+        setIsPlayerDragging(false);
+        // Brief haptic feedback on supported devices
+        if (navigator.vibrate) navigator.vibrate(30);
+        return;
+      }
+
       if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === "prompt" || game.isRecovering)
         return;
 
@@ -3388,11 +3452,13 @@ export function GameCanvas({
       game.swipeStart = worldPos;
       game.swipeRegionId = region.id;
       game.currentSwipePos = worldPos;
+      game.swipePointerId = e.pointerId;
       setIsPlayerDragging(true);
     };
 
     const handlePointerMove = (e: PointerEvent) => {
       if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete) return;
+      if (e.pointerId !== game.swipePointerId) return; // ignore other fingers
 
       const { screenX, screenY } = getCanvasCoords(e);
 
@@ -3465,6 +3531,7 @@ export function GameCanvas({
       game.swipeStart = null;
       game.swipeRegionId = null;
       game.currentSwipePos = null;
+      game.swipePointerId = null;
       setIsPlayerDragging(false);
     };
 
@@ -3486,7 +3553,7 @@ export function GameCanvas({
       canvas.removeEventListener("pointerleave", handlePointerUp);
       cancelAnimationFrame(game.animationId);
     };
-  }, [level, levelNumber, onGameEnd, onLevelComplete, activeModifiers]);
+  }, [level, levelNumber, onGameEnd, activeModifiers]);
 
   // Handlers for Push Your Luck overlay
   const handleBankAndContinue = useCallback(() => {
@@ -3535,9 +3602,10 @@ export function GameCanvas({
     };
     // Brief pause to let the push-prompt UI close, then dissolve normally
     setTimeout(() => {
-      startDissolveRef.current?.(() => onLevelComplete(scoreData));
+      onLevelCompleteRef.current(scoreData);
+      startDissolveRef.current?.(() => {});
     }, 150);
-  }, [level, levelNumber, activeModifiers, onLevelComplete]);
+  }, [level, levelNumber, activeModifiers]);
 
   // Notify parent of game state changes for top bar display
   useEffect(() => {

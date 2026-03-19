@@ -28,6 +28,7 @@ export interface Ball {
   velocity: Vector2;
   radius: number;
   speed: number;
+  baseSpeed: number; // original speed at init, used by MicroManager to compute proportional reduction
   topSpeed: number;
   color: string; // hex color with #
   regionId: string; // which region this ball is in

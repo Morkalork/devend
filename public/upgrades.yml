@@ -377,6 +377,42 @@ upgrades:
 
 
   # ===============================
+  # MICRO MANAGER (Per-Lock Speed)
+  # ===============================
+
+  - id: micro_manager_junior
+    name: MicroManager
+    tier: Junior
+    description: Each locked ball reduces all ball speeds by 1%, up to 50%.
+    cost: 12
+    unlockLevel: 3
+    modifiers:
+      microManagerPerLock: 0.01
+
+  - id: micro_manager_senior
+    name: MicroManager
+    tier: Senior
+    description: Each locked ball reduces all ball speeds by an additional 2%, up to 50% total.
+    cost: 22
+    unlockLevel: 8
+    prerequisites:
+      - micro_manager_junior
+    modifiers:
+      microManagerPerLock: 0.02
+
+  - id: micro_manager_principal
+    name: MicroManager
+    tier: Principal
+    description: Each locked ball reduces all ball speeds by an additional 3%, up to 50% total.
+    cost: 34
+    unlockLevel: 15
+    prerequisites:
+      - micro_manager_senior
+    modifiers:
+      microManagerPerLock: 0.03
+
+
+  # ===============================
   # ARCHITECT & WIZARD
   # ===============================
 

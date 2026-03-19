@@ -28,6 +28,7 @@ interface GameTopBarProps {
   ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
   augmentProgress?: AugmentProgress;
+  microManagerPerLock?: number;
 }
 
 export function GameTopBar({
@@ -42,6 +43,7 @@ export function GameTopBar({
   ownedUpgrades,
   accentColor = '#00ff88',
   augmentProgress,
+  microManagerPerLock = 0,
 }: GameTopBarProps) {
   const upgradesContainerRef = useRef<HTMLDivElement>(null);
   const [needsCarousel, setNeedsCarousel] = useState(false);
@@ -253,6 +255,11 @@ export function GameTopBar({
                       <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--foreground) / 0.85)' }}>
                         {upgrade.description}
                       </p>
+                      {upgrade.id.startsWith('micro_manager_') && microManagerPerLock > 0 && (
+                        <p className="text-sm font-bold tabular-nums" style={{ color: accentColor }}>
+                          Currently reducing by {Math.min(50, Math.round(lockedBalls * microManagerPerLock * 100))}%
+                        </p>
+                      )}
                     </div>
                   </TooltipContent>
                 </Tooltip>
