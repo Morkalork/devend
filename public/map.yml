@@ -21,13 +21,13 @@ levels:
     variety: 3
     balls:
       - id: ball-1
-        initialSpeed: 134
+        initialSpeed: 120
         topSpeed: 269
         color: ff6b6b
         startX: 300
         startY: 450
       - id: ball-2
-        initialSpeed: 123
+        initialSpeed: 111
         topSpeed: 261
         color: 4ecdc4
         startX: 600
@@ -581,19 +581,19 @@ levels:
     variety: 15
     balls:
       - id: ball-1
-        initialSpeed: 155
+        initialSpeed: 125
         topSpeed: 360
         color: cc00ff
         startX: 150
         startY: 150
       - id: ball-2
-        initialSpeed: 150
+        initialSpeed: 130
         topSpeed: 355
         color: 00ffcc
         startX: 750
         startY: 450
       - id: ball-3
-        initialSpeed: 145
+        initialSpeed: 115
         topSpeed: 350
         color: ffcc00
         startX: 450
@@ -653,25 +653,25 @@ levels:
     variety: 18
     balls:
       - id: ball-1
-        initialSpeed: 155
+        initialSpeed: 111
         topSpeed: 340
         color: ff4444
         startX: 150
         startY: 150
       - id: ball-2
-        initialSpeed: 150
+        initialSpeed: 100
         topSpeed: 335
         color: 44ff44
         startX: 750
         startY: 150
       - id: ball-3
-        initialSpeed: 145
+        initialSpeed: 90
         topSpeed: 330
         color: 4444ff
         startX: 150
         startY: 750
       - id: ball-4
-        initialSpeed: 140
+        initialSpeed: 50
         topSpeed: 325
         color: ffff44
         startX: 750
@@ -708,19 +708,19 @@ levels:
     variety: 20
     balls:
       - id: ball-1
-        initialSpeed: 160
+        initialSpeed: 70
         topSpeed: 345
         color: ff6699
         startX: 450
         startY: 200
       - id: ball-2
-        initialSpeed: 155
+        initialSpeed: 115
         topSpeed: 340
         color: 99ff66
         startX: 200
         startY: 500
       - id: ball-3
-        initialSpeed: 150
+        initialSpeed: 100
         topSpeed: 335
         color: 6699ff
         startX: 700
@@ -752,7 +752,7 @@ levels:
     variety: 25
     balls:
       - id: ball-1
-        initialSpeed: 165
+        initialSpeed: 105
         topSpeed: 355
         color: ff0099
         startX: 200
@@ -764,13 +764,13 @@ levels:
         startX: 700
         startY: 200
       - id: ball-3
-        initialSpeed: 155
+        initialSpeed: 45
         topSpeed: 345
         color: 0099ff
         startX: 200
         startY: 700
       - id: ball-4
-        initialSpeed: 150
+        initialSpeed: 100
         topSpeed: 340
         color: ff9900
         startX: 700
@@ -810,25 +810,25 @@ levels:
     variety: 25
     balls:
       - id: ball-1
-        initialSpeed: 170
+        initialSpeed: 110
         topSpeed: 360
         color: dd44ff
         startX: 300
         startY: 300
       - id: ball-2
-        initialSpeed: 165
+        initialSpeed: 145
         topSpeed: 355
         color: 44ffdd
         startX: 600
         startY: 300
       - id: ball-3
-        initialSpeed: 160
+        initialSpeed: 120
         topSpeed: 350
         color: ffdd44
         startX: 300
         startY: 600
       - id: ball-4
-        initialSpeed: 155
+        initialSpeed: 115
         topSpeed: 345
         color: 44ddff
         startX: 600
@@ -868,25 +868,25 @@ levels:
     variety: 30
     balls:
       - id: ball-1
-        initialSpeed: 175
+        initialSpeed: 125
         topSpeed: 370
         color: ff2288
         startX: 450
         startY: 150
       - id: ball-2
-        initialSpeed: 170
+        initialSpeed: 110
         topSpeed: 365
         color: 22ff88
         startX: 150
         startY: 450
       - id: ball-3
-        initialSpeed: 165
+        initialSpeed: 145
         topSpeed: 360
         color: 8822ff
         startX: 750
         startY: 450
       - id: ball-4
-        initialSpeed: 160
+        initialSpeed: 100
         topSpeed: 355
         color: 88ff22
         startX: 450
@@ -935,7 +935,7 @@ levels:
         startX: 125
         startY: 125
       - id: ball-1771838363439
-        initialSpeed: 175
+        initialSpeed: 105
         topSpeed: 370
         color: '232259'
         startX: 800

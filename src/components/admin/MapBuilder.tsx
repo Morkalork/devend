@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, Plus, Save, Trash2, Download, Copy } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle } from 'lucide-react';
 import { LevelConfig, BallConfig, LevelEntity } from '@/types/level';
 import { MapCanvas } from './MapCanvas';
 import { EntityPanel } from './EntityPanel';
@@ -18,6 +18,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // Load levels from map.yml
   useEffect(() => {
@@ -270,6 +271,23 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     URL.revokeObjectURL(url);
   }, [levels]);
 
+  // Save YAML to server (dev server must be running)
+  const saveToServer = useCallback(async () => {
+    setSaveStatus('saving');
+    const yamlContent = yaml.dump({ levels }, { indent: 2, lineWidth: -1, noRefs: true });
+    try {
+      const res = await fetch('/api/map', {
+        method: 'PUT',
+        body: yamlContent,
+        headers: { 'Content-Type': 'text/yaml' },
+      });
+      setSaveStatus(res.ok ? 'saved' : 'error');
+    } catch {
+      setSaveStatus('error');
+    }
+    setTimeout(() => setSaveStatus('idle'), 2500);
+  }, [levels]);
+
   // Copy YAML to clipboard
   const copyYaml = useCallback(() => {
     const yamlContent = yaml.dump({ levels }, {
@@ -341,16 +359,34 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         <button
           onClick={copyYaml}
           className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-          title="Copy YAML"
+          title="Copy YAML to clipboard"
         >
-          <Save className="w-4 h-4" />
+          <Copy className="w-4 h-4" />
         </button>
         <button
           onClick={exportYaml}
-          className="p-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
           title="Download YAML"
         >
           <Download className="w-4 h-4" />
+        </button>
+        <button
+          onClick={saveToServer}
+          disabled={saveStatus === 'saving'}
+          className={`p-2 rounded-lg transition-colors ${
+            saveStatus === 'saved'  ? 'bg-green-600 text-white' :
+            saveStatus === 'error'  ? 'bg-destructive text-white' :
+            'bg-primary text-primary-foreground hover:bg-primary/90'
+          }`}
+          title={
+            saveStatus === 'saved'  ? 'Saved!' :
+            saveStatus === 'error'  ? 'Save failed — dev server running?' :
+            'Save to disk (requires dev server)'
+          }
+        >
+          {saveStatus === 'saved'  ? <Check className="w-4 h-4" /> :
+           saveStatus === 'error'  ? <AlertCircle className="w-4 h-4" /> :
+           <Save className="w-4 h-4" />}
         </button>
       </div>
 

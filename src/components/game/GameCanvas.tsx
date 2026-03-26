@@ -25,6 +25,7 @@ import {
   vec2Length,
   vec2Distance,
   vec2Dot,
+  vec2Reflect,
   polygonArea,
   pointInPolygon,
   rayPolygonIntersection,
@@ -247,6 +248,72 @@ function computeOvercutBonus(threshold: number, remaining: number, basePoints: n
   const bonus = Math.round(basePoints * 0.6 * Math.sqrt(overcutRatio));
   const maxBonus = Math.floor(0.5 * basePoints);
   return Math.min(bonus, maxBonus);
+}
+
+/**
+ * Compute future ball path waypoints by ray-casting off solid walls.
+ * Returns an array of points starting at ball.position, with up to numBounces
+ * additional reflection points. Ignores in-progress fences (completed walls only).
+ *
+ * Uses its own ray-segment intersector with t > 0 (not a dist threshold) so it
+ * works correctly even when the origin is very close to a wall after a shallow bounce.
+ */
+function computeBallTrajectory(
+  ballPosition: { x: number; y: number },
+  ballVelocity: { x: number; y: number },
+  walls: Wall[],
+  numBounces: number,
+): { x: number; y: number }[] {
+  const points: { x: number; y: number }[] = [{ ...ballPosition }];
+  let origin = { ...ballPosition };
+  let dir = vec2Normalize(ballVelocity);
+  let excludeId: string | undefined;
+
+  for (let bounce = 0; bounce < numBounces; bounce++) {
+    // Find the nearest wall hit along the ray, skipping the wall we just bounced off.
+    let bestT = Infinity;
+    let bestNormal: { x: number; y: number } | null = null;
+    let bestId: string | undefined;
+
+    for (const wall of walls) {
+      if (wall.id === excludeId) continue;
+
+      const ex = wall.end.x - wall.start.x;
+      const ey = wall.end.y - wall.start.y;
+      const denom = dir.x * ey - dir.y * ex; // ray × wall direction
+      if (Math.abs(denom) < 1e-9) continue;  // parallel
+
+      const wx = wall.start.x - origin.x;
+      const wy = wall.start.y - origin.y;
+      const t = (wx * ey - wy * ex) / denom; // distance along the ray
+      const u = (wx * dir.y - wy * dir.x) / denom; // fraction along the wall [0,1]
+
+      if (t > 1e-4 && u >= 0 && u <= 1 && t < bestT) {
+        bestT = t;
+        bestId = wall.id;
+        // Compute wall normal facing toward the incoming ray
+        const len = Math.sqrt(ex * ex + ey * ey);
+        let nx = -ey / len;
+        let ny =  ex / len;
+        if (dir.x * nx + dir.y * ny > 0) { nx = -nx; ny = -ny; }
+        bestNormal = { x: nx, y: ny };
+      }
+    }
+
+    if (bestNormal === null) break;
+
+    const hitPoint = { x: origin.x + bestT * dir.x, y: origin.y + bestT * dir.y };
+    points.push(hitPoint);
+
+    // Reflect direction off the wall normal
+    const dot = dir.x * bestNormal.x + dir.y * bestNormal.y;
+    dir = { x: dir.x - 2 * dot * bestNormal.x, y: dir.y - 2 * dot * bestNormal.y };
+    // Nudge past the wall surface to avoid re-intersecting it
+    origin = { x: hitPoint.x + dir.x * 0.5, y: hitPoint.y + dir.y * 0.5 };
+    excludeId = bestId;
+  }
+
+  return points;
 }
 
 export function GameCanvas({
@@ -1058,7 +1125,6 @@ export function GameCanvas({
       
       if (actualRegion) {
         // Ball moved to a different region - reassign it
-        console.log("[OWNERSHIP] Ball", ball.id, "moved from", ball.regionId, "to", actualRegion.id);
         ball.regionId = actualRegion.id;
         return;
       }
@@ -1140,8 +1206,6 @@ export function GameCanvas({
         
         // Check if ball should become WON
         if (regionPercent <= BALL_WON_REGION_THRESHOLD) {
-          console.log(`[WON] Ball ${ball.id} captured! Region is ${regionPercent.toFixed(1)}% of total area`);
-          
           // Transition to WON state — stop the ball, then it disintegrates
           ball.state = 'won';
           ball.wonTime = performance.now();
@@ -1207,7 +1271,6 @@ export function GameCanvas({
            game.lockedBallsCount += 1;
            const thisLockBonus = 1;
            game.lockBonus = Math.min(2, game.lockBonus + thisLockBonus);
-           console.log(`[WON] Lock bonus: +${thisLockBonus} (total: ${game.lockBonus})`);
 
            // MicroManager: immediately cap speed of remaining active balls
            if (activeModifiers.microManagerPerLock > 0) {
@@ -1672,15 +1735,7 @@ export function GameCanvas({
 
       const subRegions = findSubRegionsGrid(region);
 
-      console.log(
-        "[FLOOD] Found",
-        subRegions.length,
-        "sub-regions:",
-        subRegions.map((r) => ({ samples: r.samples.length, hasBalls: r.hasBalls })),
-      );
-
       if (subRegions.length <= 1) {
-        console.log("[FLOOD] Only 1 or fewer sub-regions, no split needed");
         return false;
       }
 
@@ -1691,15 +1746,9 @@ export function GameCanvas({
 
       // Build new regions for areas with balls
       const newRegions: Region[] = game.regions.filter((r) => r.id !== region.id);
-      console.log("[FLOOD] Building polygons for", regionsWithBalls.length, "regions with balls");
 
       for (const subRegion of regionsWithBalls) {
-        console.log("[FLOOD] Building polygon from", subRegion.samples.length, "samples");
         const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
-        console.log(
-          "[FLOOD] Built polygon:",
-          result ? `${result.polygon.vertices.length} vertices, estimatedArea ${result.estimatedArea}` : "null",
-        );
 
         if (result && result.estimatedArea > 100) {
           const newId = generateRegionId();
@@ -1708,21 +1757,14 @@ export function GameCanvas({
             id: newId, 
             polygon: result.polygon, 
             estimatedArea: result.estimatedArea,
-            samplePoints: result.samplePoints 
+            samplePoints: result.samplePoints
           });
-          console.log("[FLOOD] Added new region:", newId, "with estimatedArea:", result.estimatedArea, "samplePoints:", result.samplePoints.length);
 
           // Ball region assignment handled by mandatory validation below
-        } else {
-          console.log("[FLOOD] Polygon rejected - too small or null");
         }
       }
 
-      console.log("[FLOOD] New regions count:", newRegions.length);
-
       if (newRegions.length === 0) {
-        // Failed to build valid polygons, keep original
-        console.log("[FLOOD] No valid regions built, keeping original");
         return false;
       }
 
@@ -1981,11 +2023,8 @@ export function GameCanvas({
         checkAndUpdateBallWonStates();
 
         setBonusPulseKey(k => k + 1);
-        console.log(`[BONUS] Garbage Collector: removed ${stripIndices.length} cells (${(stripIndices.length / grid.initialActiveCount * 100).toFixed(1)}%) from ${edge} edge`);
         return;
       }
-
-      console.log("[BONUS] Garbage Collector: no valid ball-free strip found");
     };
 
     const applyCut = (wall: GrowingWall) => {
@@ -2023,7 +2062,6 @@ export function GameCanvas({
         }
         for (const seg of allSegs) {
           if (wouldWallTrapBallCheck(seg.start, seg.end)) {
-            console.log("[CUT] Aborted - wall would trap a ball");
             return;
           }
         }
@@ -2044,8 +2082,6 @@ export function GameCanvas({
       addSegmentWalls(wall.startWaypoints);
       addSegmentWalls(wall.endWaypoints);
 
-      console.log("[WALL] Added multi-segment walls, totalWalls:", game.walls.length);
-
       // ============================================================
       // STEP 1: Rasterize cut to grid (mark cells as REMOVED)
       // ============================================================
@@ -2065,13 +2101,11 @@ export function GameCanvas({
         };
         rasterizeWaypoints(wall.startWaypoints);
         rasterizeWaypoints(wall.endWaypoints);
-        console.log("[GRID] Cut rasterized, removed", totalRemoved, "cells");
 
         // ============================================================
         // STEP 2: Find connected regions via flood-fill
         // ============================================================
         const gridRegions = findGridRegions(game.spaceGrid);
-        console.log("[GRID] Found", gridRegions.length, "connected regions");
 
         // ============================================================
         // STEP 3: Check which regions contain ACTIVE balls
@@ -2096,16 +2130,11 @@ export function GameCanvas({
           }
         }
 
-        console.log("[GRID] Regions with balls:", regionsWithBalls.length, 
-                    "Regions without:", regionsWithoutBalls.length);
-
         // ============================================================
         // STEP 4: Remove regions without balls
         // ============================================================
         for (const emptyRegion of regionsWithoutBalls) {
           removeRegion(game.spaceGrid, emptyRegion);
-          console.log("[GRID] Removed region:", emptyRegion.id, 
-                      "with", emptyRegion.cellCount, "cells");
         }
 
         // Update gridRegions reference
@@ -2214,7 +2243,6 @@ export function GameCanvas({
       // STEP 6: Check if ALL balls are WON (level win condition)
       // ============================================================
       if (areAllBallsWon()) {
-        console.log("[WIN] All balls captured! Level complete.");
         game.levelComplete = true;
 
         const percent = Math.round(getGridRemainingPercent());
@@ -2398,15 +2426,12 @@ export function GameCanvas({
             game.frozenBallPosition = { ...ball.position };
             game.frozenBallVelocity = { ...ball.velocity };
             ball.velocity = { x: 0, y: 0 };
-            console.log("[FREEZE] Ball frozen at position:", ball.position, "stored:", game.frozenBallPosition);
-            console.log("[FREEZE] Current walls count:", game.walls.length, "regions count:", game.regions.length);
-            
+
             // Check if we have wall shields first
             if (game.wallShieldsRemaining > 0) {
               game.wallShieldsRemaining--;
               setWallShieldCount(game.wallShieldsRemaining);
               game.activeWall = null;
-              console.log("[FREEZE] Active wall nullified (shield). Walls:", game.walls.length, "Regions:", game.regions.length);
               game.isRecovering = true;
               game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
               setIsRecovering(true);
@@ -2462,7 +2487,6 @@ export function GameCanvas({
             onLivesChange(newLives);
 
             game.activeWall = null;
-            console.log("[FREEZE] Active wall nullified (life lost). Walls:", game.walls.length, "Regions:", game.regions.length);
 
             if (newLives <= 0) {
               // Unfreeze before game over (game will end anyway)
@@ -2813,6 +2837,96 @@ export function GameCanvas({
             ctx.restore();
           }
         }
+      }
+
+      // SCRUM Master: ball trajectory preview
+      if (activeModifiers.ballPathPredictionBounces > 0 && activeModifiers.ballPathPredictionBalls > 0) {
+        const numBounces = activeModifiers.ballPathPredictionBounces;
+        const maxBalls = activeModifiers.ballPathPredictionBalls;
+
+        // Sort active balls by current speed descending; ≥100 means track all
+        const activeBalls = balls
+          .filter(b => b.state === 'active')
+          .sort((a, b) => b.speed - a.speed);
+        const trackedBalls = maxBalls >= 100 ? activeBalls : activeBalls.slice(0, maxBalls);
+
+        ctx.save();
+        for (const ball of trackedBalls) {
+          const waypoints = computeBallTrajectory(ball.position, ball.velocity, walls, numBounces);
+          if (waypoints.length < 2) continue;
+
+          const totalSegs = waypoints.length - 1;
+
+          // Draw path segments with linear opacity fade (bright near ball, dim at end)
+          ctx.lineCap = 'round';
+          ctx.setLineDash([6 * scale, 8 * scale]);
+          ctx.shadowColor = '#00ff88';
+          ctx.shadowBlur = 6 * scale;
+
+          // Compute cumulative world-space distances for each waypoint
+          const segLengths: number[] = [];
+          let totalLength = 0;
+          for (let i = 0; i < totalSegs; i++) {
+            const dx = waypoints[i + 1].x - waypoints[i].x;
+            const dy = waypoints[i + 1].y - waypoints[i].y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            segLengths.push(len);
+            totalLength += len;
+          }
+          // cumDist[i] = distance from start to waypoints[i]
+          const cumDist: number[] = [0];
+          for (let i = 0; i < totalSegs; i++) cumDist.push(cumDist[i] + segLengths[i]);
+
+          // Opacity at any distance along the total path (last third fades to 0)
+          const pathAlpha = (d: number) => {
+            const t = totalLength > 0 ? d / totalLength : 0;
+            const fadeStart = 2 / 3;
+            if (t <= fadeStart) return 0.55;
+            return 0.55 * (1 - (t - fadeStart) / (1 - fadeStart));
+          };
+
+          ctx.globalAlpha = 1;
+          for (let i = 0; i < totalSegs; i++) {
+            const a0 = pathAlpha(cumDist[i]);
+            const a1 = pathAlpha(cumDist[i + 1]);
+            if (a0 <= 0 && a1 <= 0) continue;
+
+            const s = worldToScreen(waypoints[i].x, waypoints[i].y);
+            const e = worldToScreen(waypoints[i + 1].x, waypoints[i + 1].y);
+
+            // Per-segment gradient so the fade is pixel-smooth across world distance
+            const grad = ctx.createLinearGradient(s.x, s.y, e.x, e.y);
+            grad.addColorStop(0, `rgba(0,255,136,${a0.toFixed(3)})`);
+            grad.addColorStop(1, `rgba(0,255,136,${a1.toFixed(3)})`);
+            ctx.strokeStyle = grad;
+            ctx.shadowColor = `rgba(0,255,136,${Math.max(a0, a1).toFixed(3)})`;
+            ctx.shadowBlur = 6 * scale;
+            ctx.lineWidth = 2 * scale;
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y);
+            ctx.lineTo(e.x, e.y);
+            ctx.stroke();
+          }
+
+          // Draw bounce point diamonds
+          ctx.setLineDash([]);
+          for (let i = 1; i < waypoints.length - 1; i++) {
+            const alpha = pathAlpha(cumDist[i]) * (0.75 / 0.55);
+            const pt = worldToScreen(waypoints[i].x, waypoints[i].y);
+            const r = 4 * scale;
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = '#00ff88';
+            ctx.beginPath();
+            ctx.moveTo(pt.x, pt.y - r);
+            ctx.lineTo(pt.x + r, pt.y);
+            ctx.lineTo(pt.x, pt.y + r);
+            ctx.lineTo(pt.x - r, pt.y);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+        ctx.setLineDash([]);
+        ctx.restore();
       }
 
       // Render all balls with multi-axis spin illusion

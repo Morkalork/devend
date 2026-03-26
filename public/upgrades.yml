@@ -433,3 +433,73 @@ upgrades:
     unlockLevel: 10
     modifiers:
       extraAugmentationPoints: 1
+
+
+  # ===============================
+  # SCRUM MASTER (Ball Path Preview)
+  # ===============================
+
+  - id: scrum_master_1
+    name: SCRUM Master
+    tier: Junior
+    description: Preview the next 2 bounces of the fastest ball's path.
+    cost: 12
+    unlockLevel: 4
+    modifiers:
+      ballPathPredictionBounces: 2
+      ballPathPredictionBalls: 1
+
+  - id: scrum_master_2
+    name: SCRUM Master
+    tier: Senior
+    description: Also preview the 2nd fastest ball's path.
+    cost: 18
+    unlockLevel: 7
+    prerequisites:
+      - scrum_master_1
+    modifiers:
+      ballPathPredictionBalls: 1
+
+  - id: scrum_master_3
+    name: SCRUM Master
+    tier: Senior
+    description: Also preview the 3rd fastest ball's path.
+    cost: 24
+    unlockLevel: 10
+    prerequisites:
+      - scrum_master_2
+    modifiers:
+      ballPathPredictionBalls: 1
+
+  - id: scrum_master_4
+    name: SCRUM Master
+    tier: Principal
+    description: Extend path preview to 3 bounces ahead for tracked balls.
+    cost: 32
+    unlockLevel: 13
+    prerequisites:
+      - scrum_master_3
+    modifiers:
+      ballPathPredictionBounces: 1
+
+  - id: scrum_master_5
+    name: SCRUM Master
+    tier: Principal
+    description: Extend path preview to 4 bounces ahead.
+    cost: 40
+    unlockLevel: 16
+    prerequisites:
+      - scrum_master_4
+    modifiers:
+      ballPathPredictionBounces: 1
+
+  - id: scrum_master_6
+    name: SCRUM Master
+    tier: Architect
+    description: Show path preview for all balls simultaneously.
+    cost: 52
+    unlockLevel: 19
+    prerequisites:
+      - scrum_master_5
+    modifiers:
+      ballPathPredictionBalls: 999

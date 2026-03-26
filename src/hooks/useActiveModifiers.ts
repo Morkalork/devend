@@ -26,6 +26,10 @@ export interface GameModifiers {
 
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
+
+  // Additive (sum) — SCRUM Master
+  ballPathPredictionBounces: number; // how many bounces ahead to show
+  ballPathPredictionBalls: number;   // how many balls to track (by speed desc; ≥100 = all)
 }
 
 // Keys that stack multiplicatively
@@ -53,6 +57,8 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   extraShopItems: 0,
   extraAugmentationPoints: 0,
   microManagerPerLock: 0,
+  ballPathPredictionBounces: 0,
+  ballPathPredictionBalls: 0,
 };
 
 /**

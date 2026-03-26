@@ -234,14 +234,23 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
     return words;
   }, [codeContent]);
 
-  // Convert hex color string to "r, g, b" for use in rgba()
+  // Convert accent hex color to "r, g, b" for use in rgba()
   const hlColorRgb = useMemo(() => {
-    const hex = hlCfg.color.replace('#', '');
+    const hex = accentColor.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
     return `${r}, ${g}, ${b}`;
-  }, [hlCfg.color]);
+  }, [accentColor]);
+
+  // Very dark tint of the accent for the callout box background
+  const hlBgRgb = useMemo(() => {
+    const hex = accentColor.replace('#', '');
+    const r = Math.round(parseInt(hex.substring(0, 2), 16) / 8);
+    const g = Math.round(parseInt(hex.substring(2, 4), 16) / 8);
+    const b = Math.round(parseInt(hex.substring(4, 6), 16) / 8);
+    return `${r}, ${g}, ${b}`;
+  }, [accentColor]);
 
   // Pick a random visible word using the Range API for pixel-accurate positioning
   const triggerWordHighlight = useCallback(() => {
@@ -484,7 +493,7 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
                   left: `${hl.calloutX}px`, top: `${hl.calloutY}px`,
                   width: `${hl.calloutW}px`, height: `${hl.calloutH}px`,
                   border: `${bw}px solid ${borderColor}`,
-                  backgroundColor: 'rgba(18, 58, 38, 0.8)',
+                  backgroundColor: `rgba(${hlBgRgb}, 0.85)`,
                   boxSizing: 'border-box',
                   padding: '3px 7px',
                   fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
