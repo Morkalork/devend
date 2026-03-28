@@ -1,11 +1,12 @@
-import { useCallback, useState, lazy, Suspense, useEffect, useRef } from 'react';
+import { useCallback, useState, lazy, Suspense, useEffect, useRef, useMemo } from 'react';
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
-import { useActiveModifiers } from '@/hooks/useActiveModifiers';
+import { useActiveModifiers, mergeBonuses } from '@/hooks/useActiveModifiers';
 import { useTutorialManager } from '@/hooks/useTutorialManager';
 import { useCheckpoint } from '@/hooks/useCheckpoint';
-import { useAugmentManager } from '@/hooks/useAugmentManager';
+import { useCheckpointManager } from '@/hooks/useCheckpointManager';
+import { useCertificateManager } from '@/hooks/useCertificateManager';
 import { useMetaProgression } from '@/hooks/useMetaProgression';
 import { useAchievementManager } from '@/hooks/useAchievementManager';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
@@ -19,8 +20,9 @@ import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { AugmentStore } from '@/components/game/AugmentStore';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 import { GameResult, LevelScoreData } from '@/types/game';
-import { Augment } from '@/types/augment';
-import { MetaProgressionStats } from '@/types/metaProgression';
+import { LevelConfig } from '@/types/level';
+import { UpgradeConfig } from '@/types/upgrade';
+import { Certificate } from '@/types/certificate';
 
 // Lazy load admin components (dev-only)
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
@@ -84,31 +86,38 @@ const Index = () => {
   // Lives tracking (persists across levels in a run)
   const [currentLives, setCurrentLives] = useState(BASE_LIVES);
 
-  // Augment system (persistent meta-progression with Augment Points)
+  // Cumulative locked balls across all maps in the current run (for MicroManager)
+  const [cumulativeLockedBalls, setCumulativeLockedBalls] = useState(0);
+
+  // Certificate system (persistent meta-progression)
   // Point earned callback for visual feedback
-  const [showPointEarnedFlash, setShowPointEarnedFlash] = useState(false);
+  const [_showPointEarnedFlash, setShowPointEarnedFlash] = useState(false);
   const handleAugmentPointEarned = useCallback(() => {
     setShowPointEarnedFlash(true);
     setTimeout(() => setShowPointEarnedFlash(false), 1500);
   }, []);
 
   const {
-    augments,
+    certificates,
     totalAugmentPoints,
-    augmentsOwned,
-    totalLevelsCompleted,
+    certLevelsOwned,
+    unlockedCertIds,
+    maxTierCounts,
     runLevelsCompleted,
-    runPointsEarned,
-    loadAugments,
+    runPointsEarned: runPointsAwarded,
+    loadCertificates,
     resetRunProgress,
     incrementRunLevel,
     finalizeRun,
     getRunProgress,
-    purchaseAugmentStack,
-    getOwnedAugments,
-    getAugmentEffectValue,
-    resetAllData: resetAugmentData,
-  } = useAugmentManager({ onPointEarned: handleAugmentPointEarned });
+    getCertBonuses,
+    getCertStartingLevel,
+    purchaseCertLevel,
+    recordMaxTierPurchase,
+    checkAchievementUnlocks,
+    takePendingUnlocks,
+    resetAllData: resetCertData,
+  } = useCertificateManager({ onPointEarned: handleAugmentPointEarned });
 
   // Tutorial management
   const {
@@ -131,15 +140,19 @@ const Index = () => {
     getRemainingTimeMs,
   } = useCheckpoint();
 
+  // Persistent run checkpoints (levels 5, 10, 15, …)
+  const {
+    saveCheckpoint: saveRunCheckpoint,
+    clearCheckpoints: clearRunCheckpoints,
+  } = useCheckpointManager();
+
   // Meta progression system for tracking unlocks
   const {
     stats: metaStats,
-    unlockedIds,
     recordLevelReached,
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
-    checkAndUnlock,
     resetProgression,
   } = useMetaProgression();
 
@@ -154,47 +167,29 @@ const Index = () => {
     getClosestAchievements,
   } = useAchievementManager();
 
-  // Track points awarded this run for display (computed from hook)
-  const runPointsAwarded = runPointsEarned;
-  
   // Track lives at start of level for perfect level detection
   const [livesAtLevelStart, setLivesAtLevelStart] = useState(BASE_LIVES);
 
-  // Calculate modifiers to track bonus lives (including achievement bonuses)
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, achievementBonuses);
+  // Merge cert bonuses with achievement bonuses for modifier pipeline
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const certBonuses = useMemo(() => getCertBonuses() as any, [getCertBonuses]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const mergedBonuses = useMemo(() => mergeBonuses(achievementBonuses as any, certBonuses), [achievementBonuses, certBonuses]);
 
-  // Get owned augments for applying effects
-  const ownedAugmentsList = getOwnedAugments();
+  // Calculate modifiers (including achievement + certificate bonuses)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses as any);
 
-  // Calculate starting lives from augments
-  const getStartingLivesFromAugments = useCallback(() => {
-    let bonusLives = 0;
-    ownedAugmentsList.forEach(({ augment, stacks }) => {
-      if (augment.effect.type === 'startingLivesBonus') {
-        bonusLives += augment.effect.value * stacks;
-      }
-    });
-    return BASE_LIVES + bonusLives;
-  }, [ownedAugmentsList]);
+  // State for cert unlocks shown in shop banner and next LevelCompleteOverlay
+  const [shopUnlockedCerts, setShopUnlockedCerts] = useState<Certificate[]>([]);
+  const [pendingCertUnlocks, setPendingCertUnlocks] = useState<Certificate[]>([]);
 
-  // Calculate starting level from augments (takes highest value)
-  const getStartingLevelFromAugments = useCallback(() => {
-    let maxStartingLevel = 1;
-    ownedAugmentsList.forEach(({ augment, stacks }) => {
-      if (augment.effect.type === 'startingLevelBonus' && stacks > 0) {
-        // Take the highest starting level bonus
-        maxStartingLevel = Math.max(maxStartingLevel, augment.effect.value);
-      }
-    });
-    return maxStartingLevel;
-  }, [ownedAugmentsList]);
-
-  const handleStartGame = useCallback(async () => {
-    // Load levels, upgrades, and augments in parallel
+  const handleStartGame = useCallback(async (forceLevel?: number) => {
+    // Load levels, upgrades, and certificates in parallel
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
       loadLevels(),
       loadUpgrades(),
-      loadAugments(),
+      loadCertificates(),
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
@@ -202,29 +197,36 @@ const Index = () => {
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
-      resetRunProgress(); // Reset in-run augment tracking
+      resetRunProgress(); // Reset in-run cert tracking
 
-      // Calculate starting lives from owned augments
-      const startingLives = getStartingLivesFromAugments();
+      // Starting lives: base + any extraLives bonus from certs
+      const certBonusLives = (getCertBonuses().extraLives as number | undefined) ?? 0;
+      const startingLives = BASE_LIVES + certBonusLives;
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
 
-      // Determine starting level: max of checkpoint, augment bonus, and ?level= query param
-      const checkpointLevel = getStartingLevel();
-      const augmentStartLevel = getStartingLevelFromAugments();
-      const queryLevel = parseInt(new URLSearchParams(window.location.search).get('level') || '0', 10);
-      const startingLevel = Math.max(checkpointLevel, augmentStartLevel, queryLevel || 0);
-
-      if (startingLevel > 1) {
-        // Start from higher level (convert 1-indexed level to 0-indexed)
-        setLevelIndex(startingLevel - 1);
+      if (forceLevel !== undefined) {
+        setLevelIndex(forceLevel - 1);
       } else {
-        resetToFirstLevel();
+        // Determine starting level: max of checkpoint, cert bonus, and ?level= query param
+        const checkpointLevel = getStartingLevel();
+        const certStartLevel = getCertStartingLevel();
+        const queryLevel = parseInt(new URLSearchParams(window.location.search).get('level') || '0', 10);
+        if (queryLevel > 0) {
+          window.history.replaceState(null, '', window.location.pathname);
+        }
+        const startingLevel = Math.max(checkpointLevel, certStartLevel, queryLevel || 0);
+
+        if (startingLevel > 1) {
+          setLevelIndex(startingLevel - 1);
+        } else {
+          resetToFirstLevel();
+        }
       }
 
       startGame();
     }
-  }, [loadLevels, loadUpgrades, loadAugments, startGame, getStartingLevel, setLevelIndex, resetToFirstLevel, getStartingLivesFromAugments, getStartingLevelFromAugments, resetRunProgress]);
+  }, [loadLevels, loadUpgrades, loadCertificates, startGame, getStartingLevel, setLevelIndex, resetToFirstLevel, getCertBonuses, getCertStartingLevel, resetRunProgress]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // Save checkpoint if player made it past level 5
@@ -235,7 +237,7 @@ const Index = () => {
       clearCheckpoint();
     }
     
-    // Finalize run and award Augment Points
+    // Finalize run and award Certificate Hours
     finalizeRun();
     
     // For game over, include current total score
@@ -259,16 +261,13 @@ const Index = () => {
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
     
-    // Increment levels completed this run (tracked in augment manager)
+    // Increment levels completed this run (tracked in cert manager)
     incrementRunLevel();
-    
+
     // Check if level was completed without losing a life
     if (currentLives >= livesAtLevelStart) {
       recordPerfectLevel();
     }
-    
-    // Check and unlock any newly available augments
-    checkAndUnlock(augments);
 
     // Check achievement progress against projected updated stats
     // (metaStats state hasn't flushed yet, so compute expected values inline)
@@ -301,14 +300,19 @@ const Index = () => {
       interestGain,
     });
     setShowLevelComplete(true);
-    
+
+    // Accumulate locked balls for MicroManager persistence across maps
+    if (scoreData.lockedBallsCount && scoreData.lockedBallsCount > 0) {
+      setCumulativeLockedBalls(prev => prev + scoreData.lockedBallsCount!);
+    }
+
     // Reset lives at level start for next level
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, checkAndUnlock, augments, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
-    
+    setPendingCertUnlocks([]);
     if (isLastLevel) {
       // All levels complete - show final win screen
       endGame({
@@ -330,53 +334,90 @@ const Index = () => {
     }
   }, [isLastLevel, endGame, currentLevel, currentLevelIndex, totalScore, pendingLevelScore, goToUpgradeShop]);
 
+  // Set of upgrade IDs that, when purchased, should trigger cert unlock tracking
+  const certSourceIds = useMemo(
+    () => new Set(certificates.map(c => c.sourceUpgradeId).filter((id): id is string => id != null)),
+    [certificates]
+  );
+
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
-    
+
     // Check if this upgrade grants extra lives
     const upgrade = upgrades.find(u => u.id === upgradeId);
     const extraLives = upgrade?.modifiers?.extraLives;
     if (extraLives && typeof extraLives === 'number') {
       setCurrentLives(prev => prev + extraLives);
     }
-  }, [upgrades]);
+
+    // Track max-tier cert unlock
+    if (certSourceIds.has(upgradeId)) {
+      const unlocks = recordMaxTierPurchase(upgradeId);
+      if (unlocks.length > 0) {
+        setShopUnlockedCerts(prev => [...prev, ...unlocks]);
+      }
+    }
+  }, [upgrades, certSourceIds, recordMaxTierPurchase]);
 
   const handleContinueFromShop = useCallback(() => {
+    const nextLevelNumber = currentLevelIndex + 2; // 1-based
+    if (nextLevelNumber % 5 === 0) {
+      saveRunCheckpoint({
+        level: nextLevelNumber,
+        totalScore,
+        ownedUpgradeIds,
+        lives: currentLives,
+        savedAt: Date.now(),
+      });
+    }
+    // Capture any cert unlocks from this shop session for next LevelCompleteOverlay
+    const pendingUnlocks = takePendingUnlocks();
+    if (pendingUnlocks.length > 0) {
+      setPendingCertUnlocks(pendingUnlocks);
+    }
+    setShopUnlockedCerts([]);
     setPendingLevelScore(null);
     advanceToNextLevel();
     goToGame();
-  }, [advanceToNextLevel, goToGame]);
+  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, saveRunCheckpoint, advanceToNextLevel, goToGame, takePendingUnlocks]);
 
-  const handlePurchaseAugment = useCallback((augment: Augment) => {
-    purchaseAugmentStack(augment);
-  }, [purchaseAugmentStack]);
+  const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
+    purchaseCertLevel(certId, targetLevel);
+  }, [purchaseCertLevel]);
 
-  const handlePlayAgain = useCallback(() => {
+  const handlePlayAgain = useCallback((startLevel?: number) => {
+    // Always do a full reset — score, upgrades, lives, locked balls
     setTotalScore(0);
+    setOwnedUpgradeIds([]);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
-    setOwnedUpgradeIds([]);
-    resetRunProgress(); // Reset in-run augment tracking
-    
-    // Calculate starting lives from owned augments
-    const startingLives = getStartingLivesFromAugments();
+    setCumulativeLockedBalls(0);
+    resetRunProgress();
+
+    const certBonusLives = (getCertBonuses().extraLives as number | undefined) ?? 0;
+    const startingLives = BASE_LIVES + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
-    
-    // Determine starting level: max of checkpoint and augment bonus
-    const checkpointLevel = getStartingLevel();
-    const augmentStartLevel = getStartingLevelFromAugments();
-    const startingLevel = Math.max(checkpointLevel, augmentStartLevel);
-    
-    if (startingLevel > 1) {
-      setLevelIndex(startingLevel - 1);
+
+    if (startLevel !== undefined) {
+      // Continue / Continue From… — fresh run starting at this level
+      setLevelIndex(startLevel - 1); // convert 1-based to 0-based
     } else {
-      resetToFirstLevel();
+      // New Game — clear checkpoints, apply 10-min checkpoint + cert bonus
+      clearRunCheckpoints();
+      const checkpointLevel = getStartingLevel();
+      const certStartLevel = getCertStartingLevel();
+      const level = Math.max(checkpointLevel, certStartLevel);
+      if (level > 1) {
+        setLevelIndex(level - 1);
+      } else {
+        resetToFirstLevel();
+      }
     }
-    
+
     startGame();
-  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, getStartingLivesFromAugments, getStartingLevelFromAugments, resetRunProgress]);
+  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, getCertBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
@@ -390,9 +431,9 @@ const Index = () => {
   }, [resetToFirstLevel, goToWelcome, resetRunProgress]);
 
   const handleAugmentsFromWelcome = useCallback(async () => {
-    await loadAugments();
+    await loadCertificates();
     goToAugmentStore();
-  }, [loadAugments, goToAugmentStore]);
+  }, [loadCertificates, goToAugmentStore]);
 
   const handleAchievementsFromWelcome = useCallback(() => {
     goToAchievements();
@@ -403,9 +444,16 @@ const Index = () => {
   }, [resetAllTutorials]);
 
   const handleResetAugments = useCallback(() => {
-    resetAugmentData();
+    resetCertData();
     resetProgression();
-  }, [resetAugmentData, resetProgression]);
+  }, [resetCertData, resetProgression]);
+
+  // Sync achievement unlocks to cert manager whenever completed achievements change
+  useEffect(() => {
+    if (completedAchievementIds.length > 0) {
+      checkAchievementUnlocks(completedAchievementIds);
+    }
+  }, [completedAchievementIds, checkAchievementUnlocks]);
 
   // Auto-start game if ?level= query param is present
   const levelQueryHandled = useRef(false);
@@ -460,7 +508,7 @@ const Index = () => {
         handleResetAugments={handleResetAugments}
         canPurchaseUpgrade={canPurchaseUpgrade}
         isUpgradeLocked={isUpgradeLocked}
-        handlePurchaseAugment={handlePurchaseAugment}
+        handlePurchaseCertLevel={handlePurchaseCertLevel}
         goToWelcome={goToWelcome}
         goToTutorial={goToTutorial}
         goToOptions={goToOptions}
@@ -472,15 +520,18 @@ const Index = () => {
         onAugmentTutorialDismiss={markAugmentSeen}
         checkpointLevel={checkpointStartLevel}
         checkpointRemainingMs={checkpointRemaining}
-        augments={augments}
+        certificates={certificates}
         totalAugmentPoints={totalAugmentPoints}
-        augmentsOwned={augmentsOwned}
-        ownedAugmentsList={ownedAugmentsList}
+        certLevelsOwned={certLevelsOwned}
+        unlockedCertIds={unlockedCertIds}
+        maxTierCounts={maxTierCounts}
         metaStats={metaStats}
-        unlockedIds={unlockedIds}
         runPointsAwarded={runPointsAwarded}
         runLevelsCompleted={runLevelsCompleted}
-        totalLevelsCompleted={totalLevelsCompleted}
+        shopUnlockedCerts={shopUnlockedCerts}
+        pendingCertUnlocks={pendingCertUnlocks}
+        certBonuses={certBonuses}
+
         augmentProgress={getRunProgress()}
         extraShopItems={activeModifiers.extraShopItems}
         achievements={achievements}
@@ -488,9 +539,11 @@ const Index = () => {
         activatedAchievementIds={activatedAchievementIds}
         activateAchievement={activateAchievement}
         achievementBonuses={achievementBonuses}
-        getClosestAchievements={getClosestAchievements}
+
         handleAchievementsFromWelcome={handleAchievementsFromWelcome}
         goToWelcomeFromAchievements={goToWelcome}
+
+        cumulativeLockedBalls={cumulativeLockedBalls}
       />
     </AccentColorProvider>
   );
@@ -507,22 +560,22 @@ interface AugmentProgress {
 
 interface IndexContentProps {
   currentScreen: string;
-  currentLevel: any;
+  currentLevel: LevelConfig | null;
   currentLevelIndex: number;
   totalLevels: number;
   totalScore: number;
   currentLives: number;
   ownedUpgradeIds: string[];
-  upgrades: any[];
+  upgrades: UpgradeConfig[];
   isLoading: boolean;
   error: string | null;
   showInGameTutorial: boolean;
   shouldShowStore: boolean;
   shouldShowAugment: boolean;
-  lastResult: any;
+  lastResult: GameResult | null;
   showLevelComplete: boolean;
   pendingLevelScore: LevelScoreData | null;
-  handleStartGame: () => void;
+  handleStartGame: (forceLevel?: number) => void;
   handleGameEnd: (result: GameResult) => void;
   handleLivesChange: (lives: number) => void;
   handleLevelComplete: (scoreData: LevelScoreData) => void;
@@ -531,7 +584,8 @@ interface IndexContentProps {
   canPurchaseUpgrade: (upgradeId: string, playerScore: number, ownedIds: string[]) => boolean;
   isUpgradeLocked: (upgradeId: string, ownedIds: string[]) => boolean;
   handleContinueFromShop: () => void;
-  handlePlayAgain: () => void;
+  handlePlayAgain: (startLevel?: number) => void;
+  cumulativeLockedBalls: number;
   handleBackToWelcome: () => void;
   handleAugmentsFromWelcome: () => void;
   handleReEnableAllTutorials: () => void;
@@ -539,7 +593,7 @@ interface IndexContentProps {
   onStoreTutorialDismiss: () => void;
   onAugmentTutorialDismiss: () => void;
   handleResetAugments: () => void;
-  handlePurchaseAugment: (augment: Augment) => void;
+  handlePurchaseCertLevel: (certId: string, targetLevel: number) => void;
   goToWelcome: () => void;
   goToTutorial: () => void;
   goToOptions: () => void;
@@ -548,15 +602,18 @@ interface IndexContentProps {
   goToAnimationTest: () => void;
   checkpointLevel?: number;
   checkpointRemainingMs?: number;
-  augments: Augment[];
+  certificates: Certificate[];
   totalAugmentPoints: number;
-  augmentsOwned: Record<string, number>;
-  ownedAugmentsList: { augment: Augment; stacks: number }[];
-  metaStats: MetaProgressionStats;
-  unlockedIds: string[];
+  certLevelsOwned: Record<string, number>;
+  unlockedCertIds: string[];
+  maxTierCounts: Record<string, number>;
+  metaStats: import('@/types/metaProgression').MetaProgressionStats;
   runPointsAwarded: number;
   runLevelsCompleted: number;
-  totalLevelsCompleted: number;
+  shopUnlockedCerts: Certificate[];
+  pendingCertUnlocks: Certificate[];
+  certBonuses: Partial<Record<string, number>>;
+
   augmentProgress: AugmentProgress;
   extraShopItems: number;
   achievements: import('@/types/achievement').Achievement[];
@@ -564,7 +621,6 @@ interface IndexContentProps {
   activatedAchievementIds: string[];
   activateAchievement: (id: string) => void;
   achievementBonuses: Partial<Record<string, number>>;
-  getClosestAchievements: (stats: MetaProgressionStats) => import('@/types/achievement').Achievement[];
   handleAchievementsFromWelcome: () => void;
   goToWelcomeFromAchievements: () => void;
 }
@@ -596,11 +652,12 @@ function IndexContent({
   isUpgradeLocked,
   handleContinueFromShop,
   handlePlayAgain,
+  cumulativeLockedBalls,
   handleBackToWelcome,
   handleAugmentsFromWelcome,
   handleReEnableAllTutorials,
   handleResetAugments,
-  handlePurchaseAugment,
+  handlePurchaseCertLevel,
   goToWelcome,
   goToTutorial,
   goToOptions,
@@ -612,15 +669,17 @@ function IndexContent({
   onAugmentTutorialDismiss,
   checkpointLevel,
   checkpointRemainingMs,
-  augments,
+  certificates,
   totalAugmentPoints,
-  augmentsOwned,
-  ownedAugmentsList,
+  certLevelsOwned,
+  unlockedCertIds,
+  maxTierCounts,
   metaStats,
-  unlockedIds,
   runPointsAwarded,
   runLevelsCompleted,
-  totalLevelsCompleted,
+  shopUnlockedCerts,
+  pendingCertUnlocks,
+  certBonuses,
   augmentProgress,
   extraShopItems,
   achievements,
@@ -628,7 +687,6 @@ function IndexContent({
   activatedAchievementIds,
   activateAchievement,
   achievementBonuses,
-  getClosestAchievements,
   handleAchievementsFromWelcome,
   goToWelcomeFromAchievements,
 }: IndexContentProps) {
@@ -639,9 +697,14 @@ function IndexContent({
       {currentScreen === 'welcome' && (
         <WelcomeScreen
           onStartGame={() => handleStartGame()}
+          onStartFromLevel={checkpointLevel && checkpointLevel > 1 && checkpointRemainingMs && checkpointRemainingMs > 0 ? (level) => handleStartGame(level) : undefined}
           onTutorial={goToTutorial}
           onOptions={goToOptions}
-          onAugments={handleAugmentsFromWelcome}
+          onAugments={
+            Object.values(maxTierCounts).some(c => c > 0) || unlockedCertIds.length > 0 || Object.keys(certLevelsOwned).length > 0
+              ? handleAugmentsFromWelcome
+              : undefined
+          }
           onAchievements={handleAchievementsFromWelcome}
           onAdmin={import.meta.env.DEV || new URLSearchParams(window.location.search).get('admin') === 'true' ? goToAdmin : undefined}
           isLoading={isLoading}
@@ -661,7 +724,7 @@ function IndexContent({
           onBack={goToWelcome}
           onReEnableTutorials={handleReEnableAllTutorials}
           onResetAugments={handleResetAugments}
-          hasAugments={Object.keys(augmentsOwned).length > 0 || totalAugmentPoints > 0}
+          hasAugments={Object.keys(certLevelsOwned).length > 0 || totalAugmentPoints > 0}
           accentColor={accentHex}
         />
       )}
@@ -684,6 +747,8 @@ function IndexContent({
           accentColor={accentHex}
           augmentProgress={augmentProgress}
           achievementBonuses={achievementBonuses}
+          certificateBonuses={certBonuses}
+          cumulativeLockedBalls={cumulativeLockedBalls}
         />
       )}
       {currentScreen === 'upgradeShop' && (
@@ -700,27 +765,26 @@ function IndexContent({
           extraShopItems={extraShopItems}
           showTutorial={shouldShowStore}
           onTutorialDismiss={onStoreTutorialDismiss}
+          newlyUnlockedCerts={shopUnlockedCerts}
         />
       )}
       {currentScreen === 'result' && lastResult && (
         <ResultScreen
           result={lastResult}
-          onPlayAgain={handlePlayAgain}
-          onBackToWelcome={handleBackToWelcome}
+          onMainMenu={goToWelcome}
           accentColor={accentHex}
-          ownedAugments={ownedAugmentsList}
           runPointsAwarded={runPointsAwarded}
           runLevelsCompleted={runLevelsCompleted}
         />
       )}
       {currentScreen === 'augmentStore' && (
         <AugmentStore
-          augments={augments}
+          certificates={certificates}
           totalAugmentPoints={totalAugmentPoints}
-          augmentsOwned={augmentsOwned}
-          unlockedIds={unlockedIds}
-          metaStats={metaStats}
-          onPurchase={handlePurchaseAugment}
+          certLevelsOwned={certLevelsOwned}
+          unlockedCertIds={unlockedCertIds}
+          maxTierCounts={maxTierCounts}
+          onPurchaseCertLevel={handlePurchaseCertLevel}
           onBack={goToWelcome}
           accentColor={accentHex}
           showTutorial={shouldShowAugment}
@@ -763,6 +827,7 @@ function IndexContent({
           totalScore={totalScore}
           onContinue={handleContinueFromOverlay}
           accentColor={accentHex}
+          newlyUnlockedCerts={pendingCertUnlocks}
         />
       )}
     </>

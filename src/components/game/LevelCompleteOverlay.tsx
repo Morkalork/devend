@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
+import { Certificate } from '@/types/certificate';
 
 interface LevelCompleteOverlayProps {
   scoreData: LevelScoreData;
@@ -9,9 +10,11 @@ interface LevelCompleteOverlayProps {
   accentColor?: string;
   /** ms to wait before enabling the Continue button (lets the dissolve animation finish) */
   buttonDelay?: number;
+  /** Certs newly unlocked this level — shown before the Continue button */
+  newlyUnlockedCerts?: Certificate[];
 }
 
-export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900 }: LevelCompleteOverlayProps) {
+export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts }: LevelCompleteOverlayProps) {
   const [chosen, setChosen] = useState(false);
   const [buttonReady, setButtonReady] = useState(buttonDelay === 0);
 
@@ -236,6 +239,24 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{totalScore}h</span>
             </div>
           </div>
+
+          {/* Newly unlocked certificates */}
+          {newlyUnlockedCerts && newlyUnlockedCerts.length > 0 && (
+            <div className="mb-4 space-y-2">
+              {newlyUnlockedCerts.map(cert => (
+                <div
+                  key={cert.id}
+                  className="flex items-center gap-2 p-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10"
+                >
+                  <Medal className="w-4 h-4 text-yellow-400 shrink-0" />
+                  <div>
+                    <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">Certificate Unlocked</p>
+                    <p className="text-sm text-foreground font-semibold">{cert.name}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Continue Button */}
           <button

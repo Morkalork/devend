@@ -7,7 +7,6 @@ import {
   META_STATS_STORAGE_KEY,
   UNLOCK_STATE_STORAGE_KEY,
 } from '@/types/metaProgression';
-import { Augment } from '@/types/augment';
 
 /**
  * Load meta stats from localStorage
@@ -146,54 +145,6 @@ export function useMetaProgression() {
   }, [updateStats]);
 
   /**
-   * Check and unlock any newly available augments
-   */
-  const checkAndUnlock = useCallback((augments: Augment[]): string[] => {
-    const newlyUnlocked: string[] = [];
-    
-    augments.forEach(augment => {
-      // Skip if already unlocked or not a locked augment
-      if (unlockedIds.includes(augment.id)) return;
-      if (!augment.locked || !augment.unlockCondition) return;
-      
-      // Check if condition is now met
-      if (isConditionMet(augment.unlockCondition, stats)) {
-        newlyUnlocked.push(augment.id);
-      }
-    });
-    
-    if (newlyUnlocked.length > 0) {
-      const updatedUnlocks = [...unlockedIds, ...newlyUnlocked];
-      setUnlockedIds(updatedUnlocks);
-      saveUnlockState({ unlockedIds: updatedUnlocks });
-    }
-    
-    return newlyUnlocked;
-  }, [stats, unlockedIds]);
-
-  /**
-   * Check if a specific augment is unlocked
-   */
-  const isAugmentUnlocked = useCallback((augmentId: string, augment: Augment): boolean => {
-    // If not a locked augment, it's always "unlocked"
-    if (!augment.locked) return true;
-    
-    return unlockedIds.includes(augmentId);
-  }, [unlockedIds]);
-
-  /**
-   * Get progress for a specific augment's unlock condition
-   */
-  const getAugmentProgress = useCallback((augment: Augment): { current: number; threshold: number } | null => {
-    if (!augment.locked || !augment.unlockCondition) return null;
-    
-    return {
-      current: getConditionProgress(augment.unlockCondition, stats),
-      threshold: augment.unlockCondition.threshold,
-    };
-  }, [stats]);
-
-  /**
    * Reset all progression (for debugging)
    */
   const resetProgression = useCallback(() => {
@@ -205,16 +156,12 @@ export function useMetaProgression() {
 
   return {
     stats,
-    unlockedIds,
     isLoaded,
     updateStats,
     recordLevelReached,
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
-    checkAndUnlock,
-    isAugmentUnlocked,
-    getAugmentProgress,
     resetProgression,
   };
 }

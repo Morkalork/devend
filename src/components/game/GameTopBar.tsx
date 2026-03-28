@@ -257,7 +257,7 @@ export function GameTopBar({
                       </p>
                       {upgrade.id.startsWith('micro_manager_') && microManagerPerLock > 0 && (
                         <p className="text-sm font-bold tabular-nums" style={{ color: accentColor }}>
-                          Currently reducing by {Math.min(50, Math.round(lockedBalls * microManagerPerLock * 100))}%
+                          Currently reducing by {Math.min(70, Math.round(lockedBalls * microManagerPerLock * 100))}%
                         </p>
                       )}
                     </div>

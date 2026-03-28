@@ -33,13 +33,36 @@ export interface GameModifiers {
 }
 
 // Keys that stack multiplicatively
-const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
+export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'ballSpeedMultiplier',
   'ballSizeMultiplier',
   'fenceGenerationSpeedMultiplier',
   'fenceWidthMultiplier',
   'scoreMultiplier',
 ];
+
+/**
+ * Merge two bonus maps (e.g., achievement bonuses + certificate bonuses).
+ * Multiplicative keys are multiplied together; additive keys are summed.
+ */
+export function mergeBonuses(
+  a?: Partial<Record<keyof GameModifiers, number>>,
+  b?: Partial<Record<keyof GameModifiers, number>>,
+): Partial<Record<keyof GameModifiers, number>> | undefined {
+  if (!a && !b) return undefined;
+  if (!a) return b;
+  if (!b) return a;
+  const result: Partial<Record<keyof GameModifiers, number>> = { ...a };
+  for (const [key, value] of Object.entries(b)) {
+    const k = key as keyof GameModifiers;
+    if (MULTIPLICATIVE_KEYS.includes(k)) {
+      result[k] = ((result[k] as number) ?? 1) * (value as number);
+    } else {
+      result[k] = ((result[k] as number) ?? 0) + (value as number);
+    }
+  }
+  return result;
+}
 
 const DEFAULT_MODIFIERS: GameModifiers = {
   ballSpeedMultiplier: 1,

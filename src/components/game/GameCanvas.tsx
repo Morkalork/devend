@@ -162,6 +162,7 @@ interface GameCanvasProps {
   regionColor?: string; // hex color with #
   accentColor?: string; // hex color with #
   achievementBonuses?: Partial<Record<string, number>>;
+  cumulativeLockedBalls?: number;
 }
 
 // Game constants - all in WORLD units
@@ -338,6 +339,7 @@ export function GameCanvas({
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
   achievementBonuses,
+  cumulativeLockedBalls = 0,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blurCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1274,8 +1276,9 @@ export function GameCanvas({
 
            // MicroManager: immediately cap speed of remaining active balls
            if (activeModifiers.microManagerPerLock > 0) {
-             // Compounding: each locked ball multiplies speed by (1 - perLock), min 50%
-             const speedFactor = Math.max(0.50, Math.pow(1 - activeModifiers.microManagerPerLock, game.lockedBallsCount));
+             // Compounding: each locked ball multiplies speed by (1 - perLock), min 30%
+             const totalLocked = cumulativeLockedBalls + game.lockedBallsCount;
+             const speedFactor = Math.max(0.30, Math.pow(1 - activeModifiers.microManagerPerLock, totalLocked));
              for (const otherBall of game.balls) {
                if (otherBall.state === 'won' || otherBall.speed === 0) continue;
                const actualSpeed = vec2Length(otherBall.velocity);
@@ -1785,8 +1788,9 @@ export function GameCanvas({
       }
 
       // MicroManager: cap speed of all active balls based on locked ball count
-      if (activeModifiers.microManagerPerLock > 0 && game.lockedBallsCount > 0) {
-        const totalReduction = Math.min(0.50, game.lockedBallsCount * activeModifiers.microManagerPerLock);
+      const totalLockedMM = cumulativeLockedBalls + game.lockedBallsCount;
+      if (activeModifiers.microManagerPerLock > 0 && totalLockedMM > 0) {
+        const totalReduction = Math.min(0.70, totalLockedMM * activeModifiers.microManagerPerLock);
         for (const ball of balls) {
           if (ball.state === 'won' || ball.speed === 0) continue;
           const cappedSpeed = ball.baseSpeed * (1 - totalReduction);
@@ -1873,11 +1877,14 @@ export function GameCanvas({
               if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
             }
             if (stripIndices.length >= targetCells) {
+              // Use only cells from this boundary row so the fence spans the
+              // exact active width at the cut line, not accumulated rows above.
               let leftCol = grid.width, rightCol = -1;
-              for (const idx of stripIndices) {
-                const c = idx % grid.width;
-                if (c < leftCol) leftCol = c;
-                if (c > rightCol) rightCol = c;
+              for (let col = 0; col < grid.width; col++) {
+                if (grid.cells[row * grid.width + col] === CellState.ACTIVE) {
+                  if (col < leftCol) leftCol = col;
+                  if (col > rightCol) rightCol = col;
+                }
               }
               const lineY = grid.originY + (row + 1) * grid.cellSize;
               fenceStart = { x: grid.originX + leftCol * grid.cellSize, y: lineY };
@@ -1892,11 +1899,13 @@ export function GameCanvas({
               if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
             }
             if (stripIndices.length >= targetCells) {
+              // Use only cells from this boundary row.
               let leftCol = grid.width, rightCol = -1;
-              for (const idx of stripIndices) {
-                const c = idx % grid.width;
-                if (c < leftCol) leftCol = c;
-                if (c > rightCol) rightCol = c;
+              for (let col = 0; col < grid.width; col++) {
+                if (grid.cells[row * grid.width + col] === CellState.ACTIVE) {
+                  if (col < leftCol) leftCol = col;
+                  if (col > rightCol) rightCol = col;
+                }
               }
               const lineY = grid.originY + row * grid.cellSize;
               fenceStart = { x: grid.originX + leftCol * grid.cellSize, y: lineY };
@@ -1911,11 +1920,13 @@ export function GameCanvas({
               if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
             }
             if (stripIndices.length >= targetCells) {
+              // Use only cells from this boundary col.
               let topRow = grid.height, bottomRow = -1;
-              for (const idx of stripIndices) {
-                const r = Math.floor(idx / grid.width);
-                if (r < topRow) topRow = r;
-                if (r > bottomRow) bottomRow = r;
+              for (let row = 0; row < grid.height; row++) {
+                if (grid.cells[row * grid.width + col] === CellState.ACTIVE) {
+                  if (row < topRow) topRow = row;
+                  if (row > bottomRow) bottomRow = row;
+                }
               }
               const lineX = grid.originX + (col + 1) * grid.cellSize;
               fenceStart = { x: lineX, y: grid.originY + topRow * grid.cellSize };
@@ -1931,11 +1942,13 @@ export function GameCanvas({
               if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
             }
             if (stripIndices.length >= targetCells) {
+              // Use only cells from this boundary col.
               let topRow = grid.height, bottomRow = -1;
-              for (const idx of stripIndices) {
-                const r = Math.floor(idx / grid.width);
-                if (r < topRow) topRow = r;
-                if (r > bottomRow) bottomRow = r;
+              for (let row = 0; row < grid.height; row++) {
+                if (grid.cells[row * grid.width + col] === CellState.ACTIVE) {
+                  if (row < topRow) topRow = row;
+                  if (row > bottomRow) bottomRow = row;
+                }
               }
               const lineX = grid.originX + col * grid.cellSize;
               fenceStart = { x: lineX, y: grid.originY + topRow * grid.cellSize };
@@ -1947,12 +1960,26 @@ export function GameCanvas({
 
         if (!fenceStart || !fenceEnd || stripIndices.length === 0) continue;
 
-        // Reject if any active (non-won) ball is in the strip
+        // Reject if any active ball is too close to the fence line.
+        // We check perpendicular world-space distance rather than grid cells because
+        // ball radius (18) > cell size (15), so a ball can be in a "safe" cell while
+        // its body still overlaps the fence line or the removed strip.
+        const isHorizontalFence = edge === 'top' || edge === 'bottom';
         let hasBall = false;
         for (const ball of balls) {
           if (ball.state === 'won') continue;
-          const bidx = worldToGridIndex(grid, ball.position.x, ball.position.y);
-          if (bidx >= 0 && stripIndices.includes(bidx)) { hasBall = true; break; }
+          const clearance = ball.radius + WALL_THICKNESS + grid.cellSize;
+          if (isHorizontalFence) {
+            const perpDist = Math.abs(ball.position.y - fenceStart.y);
+            const inLateral = ball.position.x >= fenceStart.x - ball.radius
+                           && ball.position.x <= fenceEnd.x   + ball.radius;
+            if (perpDist < clearance && inLateral) { hasBall = true; break; }
+          } else {
+            const perpDist = Math.abs(ball.position.x - fenceStart.x);
+            const inLateral = ball.position.y >= fenceStart.y - ball.radius
+                           && ball.position.y <= fenceEnd.y   + ball.radius;
+            if (perpDist < clearance && inLateral) { hasBall = true; break; }
+          }
         }
         if (hasBall) continue;
 
@@ -2205,9 +2232,10 @@ export function GameCanvas({
         ball.velocity.x *= ratio;
         ball.velocity.y *= ratio;
       }
-      if (activeModifiers.microManagerPerLock > 0 && game.lockedBallsCount > 0) {
-        // Compounding: each locked ball multiplies speed by (1 - perLock), min 50%
-        const speedFactor = Math.max(0.50, Math.pow(1 - activeModifiers.microManagerPerLock, game.lockedBallsCount));
+      const totalLockedMM2 = cumulativeLockedBalls + game.lockedBallsCount;
+      if (activeModifiers.microManagerPerLock > 0 && totalLockedMM2 > 0) {
+        // Compounding: each locked ball multiplies speed by (1 - perLock), min 30%
+        const speedFactor = Math.max(0.30, Math.pow(1 - activeModifiers.microManagerPerLock, totalLockedMM2));
         for (const ball of balls) {
           if (ball.state === 'won' || ball.speed === 0) continue;
           const actualSpeed = vec2Length(ball.velocity);

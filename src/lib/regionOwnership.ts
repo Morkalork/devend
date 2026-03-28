@@ -307,7 +307,6 @@ export function reassignBallsToRegions(
     
     if (containingRegion) {
       if (ball.regionId !== containingRegion.id) {
-        console.log(`[OWNERSHIP] Ball ${ball.id} reassigned: ${ball.regionId} -> ${containingRegion.id}`);
         ball.regionId = containingRegion.id;
       }
     } else {

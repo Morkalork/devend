@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy } from 'lucide-react';
+import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy, ChevronRight } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
+import { CheckpointPicker } from './CheckpointPicker';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
+  onStartFromLevel?: (level: number) => void;
   onTutorial: () => void;
   onOptions: () => void;
-  onAugments: () => void;
+  onAugments?: () => void;
   onAchievements?: () => void;
   onAdmin?: () => void;
   isLoading?: boolean;
@@ -29,6 +31,7 @@ function formatTime(ms: number): string {
 
 export function WelcomeScreen({
   onStartGame,
+  onStartFromLevel,
   onTutorial,
   onOptions,
   onAugments,
@@ -43,6 +46,7 @@ export function WelcomeScreen({
   completedAchievementCount,
 }: WelcomeScreenProps) {
   const [remainingTime, setRemainingTime] = useState(checkpointRemainingMs || 0);
+  const [showStartMapPicker, setShowStartMapPicker] = useState(false);
   
   // Update countdown timer
   useEffect(() => {
@@ -265,26 +269,46 @@ export function WelcomeScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
+          {hasActiveCheckpoint ? (
+            /* Split button: Continue (left) + level-picker arrow (right) */
+            <div
+              className="flex rounded-lg overflow-hidden border-2 border-primary bg-primary/10 animate-pulse-glow"
+              style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2), inset 0 0 20px hsl(var(--primary) / 0.1)' }}
+            >
+              <motion.button
+                className="flex-1 px-6 py-4 font-semibold text-lg uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2"
+                style={{ fontFamily: "'Orbitron', sans-serif" }}
+                onClick={onStartGame}
+                whileTap={{ scale: 0.98 }}
+                disabled={isLoading}
+              >
+                {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Loading...</> : `Continue from Level ${checkpointLevel}`}
+              </motion.button>
+              <div className="w-px bg-primary/30 my-3" />
+              <motion.button
+                className="px-4 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center"
+                onClick={() => setShowStartMapPicker(true)}
+                whileTap={{ scale: 0.95 }}
+                disabled={isLoading}
+                title="Choose start map"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </motion.button>
+            </div>
+          ) : (
+            <motion.button
+              className="arcade-button-primary animate-pulse-glow rounded-lg flex items-center justify-center gap-2"
+              onClick={onStartGame}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+              style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
+            >
+              {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Loading...</> : 'Start Game'}
+            </motion.button>
+          )}
           <motion.button
-            className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
-            onClick={onStartGame}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Loading...
-              </>
-            ) : hasActiveCheckpoint ? (
-              `Continue from Level ${checkpointLevel}`
-            ) : (
-              'Start Game'
-            )}
-          </motion.button>
-          <motion.button
-            className="arcade-button-secondary rounded-lg"
+            className="arcade-button-primary rounded-lg"
             onClick={onTutorial}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -293,7 +317,7 @@ export function WelcomeScreen({
             Tutorial
           </motion.button>
           <motion.button
-            className="arcade-button-secondary rounded-lg"
+            className="arcade-button-primary rounded-lg"
             onClick={onOptions}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -302,28 +326,28 @@ export function WelcomeScreen({
             Options
           </motion.button>
           <motion.button
-            className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+            className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
             onClick={onAugments}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            disabled={isLoading}
+            whileHover={onAugments ? { scale: 1.02 } : undefined}
+            whileTap={onAugments ? { scale: 0.98 } : undefined}
+            disabled={!onAugments || isLoading}
           >
             <Sparkles className="w-5 h-5" />
-            Augments
+            Certificates
             {totalAugmentPoints !== undefined && totalAugmentPoints > 0 && (
               <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Hexagon className="w-3 h-3" />
-                {totalAugmentPoints}
+                {totalAugmentPoints}h
               </span>
             )}
           </motion.button>
           {onAchievements && (
             <motion.button
-              className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+              className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
               onClick={onAchievements}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              disabled={isLoading}
+              whileHover={totalAugmentPoints ? { scale: 1.02 } : undefined}
+              whileTap={totalAugmentPoints ? { scale: 0.98 } : undefined}
+              disabled={!totalAugmentPoints || isLoading}
             >
               <Trophy className="w-5 h-5" />
               Achievements
@@ -347,6 +371,14 @@ export function WelcomeScreen({
         </motion.div>
       </motion.div>
     </div>
+    {showStartMapPicker && checkpointLevel && onStartFromLevel && (
+      <CheckpointPicker
+        maxLevel={checkpointLevel + 1}
+        onSelect={(level) => { setShowStartMapPicker(false); onStartFromLevel(level); }}
+        onClose={() => setShowStartMapPicker(false)}
+        accentColor={accentColor}
+      />
+    )}
     </>
   );
 }

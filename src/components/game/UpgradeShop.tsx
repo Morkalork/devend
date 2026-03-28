@@ -1,9 +1,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
-import { Clock, ArrowRight, Lock, Check } from 'lucide-react';
+import { Clock, ArrowRight, Lock, Check, Medal } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { TutorialOverlay } from './TutorialOverlay';
+import { Certificate } from '@/types/certificate';
 
 interface UpgradeShopProps {
   playerPoints: number;
@@ -18,6 +19,7 @@ interface UpgradeShopProps {
   extraShopItems?: number;
   showTutorial?: boolean;
   onTutorialDismiss?: () => void;
+  newlyUnlockedCerts?: Certificate[];
 }
 
 /** Shuffle array using Fisher-Yates */
@@ -43,6 +45,7 @@ export function UpgradeShop({
   extraShopItems = 0,
   showTutorial = false,
   onTutorialDismiss,
+  newlyUnlockedCerts = [],
 }: UpgradeShopProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
@@ -130,16 +133,15 @@ export function UpgradeShop({
         exit={{ opacity: 0 }}
         className="fixed inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6 z-50 overflow-y-auto"
       >
-        {/* Rotated corner title */}
+        {/* Store label — vertical mid-left on mobile, rotated corner on desktop */}
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
-          className="fixed top-8 left-8 origin-top-left"
+          className="fixed left-2 top-1/2 -translate-y-1/2 md:top-8 md:left-8 md:translate-y-0 md:origin-top-left"
         >
-          <span 
-            className="text-2xl font-bold text-foreground/30 tracking-widest uppercase"
-            style={{ transform: 'rotate(-45deg)', display: 'inline-block' }}
+          <span
+            className="inline-block text-2xl font-bold text-foreground/30 tracking-widest uppercase [transform:rotate(-90deg)] md:[transform:rotate(-45deg)]"
           >
             Store
           </span>
@@ -154,6 +156,53 @@ export function UpgradeShop({
         >
           Level {completedLevel} complete
         </motion.div>
+
+        {/* Waypoint banner — shown only on multiples of 5 */}
+        {completedLevel % 5 === 0 && (
+          <motion.div
+            initial={{ scale: 0.75, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.08, type: 'spring', stiffness: 260, damping: 18 }}
+            className="relative w-full max-w-sm flex flex-col items-center gap-1 rounded-xl px-6 py-4"
+            style={{
+              background: 'linear-gradient(135deg, #00ff8812 0%, #00ff8820 100%)',
+              border: '2px solid #00ff88',
+              boxShadow: '0 0 24px #00ff8866, 0 0 48px #00ff8833, inset 0 0 24px #00ff8808',
+            }}
+          >
+            {/* Pulsing glow ring */}
+            <motion.div
+              animate={{ boxShadow: ['0 0 0px #00ff8800', '0 0 32px #00ff8888', '0 0 0px #00ff8800'] }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              className="absolute inset-0 rounded-xl pointer-events-none"
+            />
+
+            <motion.p
+              animate={{ opacity: [1, 0.7, 1] }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              className="text-xs font-bold tracking-[0.3em] uppercase"
+              style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
+            >
+              ⚑ &nbsp;checkpoint reached&nbsp; ⚑
+            </motion.p>
+
+            <motion.p
+              animate={{ textShadow: ['0 0 8px #00ff8888', '0 0 24px #00ff88cc', '0 0 8px #00ff8888'] }}
+              transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+              className="text-4xl font-black tracking-widest"
+              style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
+            >
+              LEVEL {completedLevel}
+            </motion.p>
+
+            <p
+              className="text-xs tracking-widest uppercase"
+              style={{ fontFamily: "'JetBrains Mono', monospace", color: '#4a7a5a' }}
+            >
+              progress will be saved here
+            </p>
+          </motion.div>
+        )}
 
         {/* Overtime display */}
         <motion.div
@@ -274,6 +323,28 @@ export function UpgradeShop({
           })}
         </motion.div>
 
+        {/* Certificate unlock banner */}
+        {newlyUnlockedCerts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-2"
+          >
+            {newlyUnlockedCerts.map(cert => (
+              <div
+                key={cert.id}
+                className="flex items-center gap-2 p-3 rounded-lg border border-yellow-500/40 bg-yellow-500/10"
+              >
+                <Medal className="w-4 h-4 text-yellow-400 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">Certificate Unlocked!</p>
+                  <p className="text-sm text-foreground font-semibold">{cert.name}</p>
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        )}
+
         {/* Continue Button */}
         <motion.button
           initial={{ y: 20, opacity: 0 }}
@@ -293,7 +364,7 @@ export function UpgradeShop({
         <TutorialOverlay
           visible
           title="THE UPGRADE SHOP"
-          body="Spend overtime hours on upgrades after each map. Over Time upgrades multiply future earnings. Effects appear in the bottom bar on the next map."
+          body="Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map."
           arrowDirection="none"
           onDismiss={() => onTutorialDismiss?.()}
         />

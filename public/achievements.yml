@@ -89,10 +89,10 @@ achievements:
 
   - id: resilient
     name: Resilient
-    description: Lose 10 lives across all runs — experience is the best teacher.
+    description: Lose 100 lives across all runs — experience is the best teacher.
     requirement:
       stat: totalLivesLost
-      threshold: 10
+      threshold: 100
     bonus:
       modifier: extraLives
       value: 1

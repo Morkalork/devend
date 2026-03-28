@@ -20,7 +20,7 @@ function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor, achievementBon
   const formatRate = (value: number) => `${Math.round(value * 100)}%`;
 
   const microManagerFactor = modifiers.microManagerPerLock > 0 && lockedBalls > 0
-    ? Math.max(0.50, Math.pow(1 - modifiers.microManagerPerLock, lockedBalls))
+    ? Math.max(0.30, Math.pow(1 - modifiers.microManagerPerLock, lockedBalls))
     : 1;
   const effectiveSpeedFactor = modifiers.ballSpeedMultiplier * microManagerFactor;
 

@@ -1,0 +1,186 @@
+certificates:
+
+  # ═══════════════════════════════════════════════════
+  # UPGRADE-CHAIN CERTIFICATES
+  # Unlocked by buying the max-tier upgrade in a family
+  # across 3 separate runs.
+  # ═══════════════════════════════════════════════════
+
+  - id: runtime-augmentation
+    name: Runtime Augmentation
+    description: Perpetually reduced ball speeds — a permanent reward for mastering Runtime Optimisation.
+    unlockType: upgrade-chain
+    sourceUpgradeId: runtime_optimisation_principal
+    requiredRuns: 3
+    levels:
+      - cost: 3
+        effect: { type: ballSpeedMultiplier, value: 0.95 }
+      - cost: 5
+        effect: { type: ballSpeedMultiplier, value: 0.95 }
+      - cost: 8
+        effect: { type: ballSpeedMultiplier, value: 0.95 }
+
+  - id: memory-compression
+    name: Memory Compression
+    description: Perpetually smaller balls — a permanent reward for mastering Memory Footprint.
+    unlockType: upgrade-chain
+    sourceUpgradeId: memory_footprint_principal
+    requiredRuns: 3
+    levels:
+      - cost: 3
+        effect: { type: ballSizeMultiplier, value: 0.95 }
+      - cost: 5
+        effect: { type: ballSizeMultiplier, value: 0.95 }
+      - cost: 8
+        effect: { type: ballSizeMultiplier, value: 0.95 }
+
+  - id: compile-cache
+    name: Compile Cache
+    description: Perpetually faster fence generation — a permanent reward for mastering Fast Compile.
+    unlockType: upgrade-chain
+    sourceUpgradeId: fast_compile_principal
+    requiredRuns: 3
+    levels:
+      - cost: 3
+        effect: { type: fenceGenerationSpeedMultiplier, value: 1.05 }
+      - cost: 5
+        effect: { type: fenceGenerationSpeedMultiplier, value: 1.05 }
+      - cost: 8
+        effect: { type: fenceGenerationSpeedMultiplier, value: 1.05 }
+
+  - id: type-safety-protocol
+    name: Type Safety Protocol
+    description: Perpetually wider fences — a permanent reward for mastering Strong Typing.
+    unlockType: upgrade-chain
+    sourceUpgradeId: strong_typing_principal
+    requiredRuns: 3
+    levels:
+      - cost: 4
+        effect: { type: fenceWidthMultiplier, value: 1.1 }
+      - cost: 7
+        effect: { type: fenceWidthMultiplier, value: 1.1 }
+      - cost: 11
+        effect: { type: fenceWidthMultiplier, value: 1.1 }
+
+  - id: warm-deploy
+    name: Warm Deploy
+    description: Permanently gain one instant fence at map start — a reward for mastering Hot Start.
+    unlockType: upgrade-chain
+    sourceUpgradeId: hot_start_architect
+    requiredRuns: 3
+    levels:
+      - cost: 5
+        effect: { type: instantFencesPerMap, value: 1 }
+      - cost: 9
+        effect: { type: instantFencesPerMap, value: 1 }
+
+  - id: parallel-processing
+    name: Parallel Processing
+    description: Permanently one extra concurrent fence — a reward for mastering Multithreading.
+    unlockType: upgrade-chain
+    sourceUpgradeId: multithreading_principal
+    requiredRuns: 3
+    levels:
+      - cost: 8
+        effect: { type: additionalConcurrentFences, value: 1 }
+      - cost: 15
+        effect: { type: additionalConcurrentFences, value: 1 }
+
+  - id: resilience-protocol
+    name: Resilience Protocol
+    description: Permanently start with an extra life — a reward for mastering Fault Tolerance.
+    unlockType: upgrade-chain
+    sourceUpgradeId: fault_tolerance_architect
+    requiredRuns: 3
+    levels:
+      - cost: 4
+        effect: { type: extraLives, value: 1 }
+      - cost: 7
+        effect: { type: extraLives, value: 1 }
+      - cost: 11
+        effect: { type: extraLives, value: 1 }
+
+  - id: performance-suite
+    name: Performance Suite
+    description: Permanently higher score multiplier — a reward for mastering Performance Bonus.
+    unlockType: upgrade-chain
+    sourceUpgradeId: performance_bonus_principal
+    requiredRuns: 3
+    levels:
+      - cost: 3
+        effect: { type: scoreMultiplier, value: 1.05 }
+      - cost: 5
+        effect: { type: scoreMultiplier, value: 1.05 }
+      - cost: 8
+        effect: { type: scoreMultiplier, value: 1.05 }
+
+  - id: investment-strategy
+    name: Investment Strategy
+    description: Permanent interest bonus on your score — a reward for mastering Venture Capital.
+    unlockType: upgrade-chain
+    sourceUpgradeId: venture_capital_architect
+    requiredRuns: 3
+    levels:
+      - cost: 4
+        effect: { type: scoreInterestRate, value: 0.03 }
+      - cost: 7
+        effect: { type: scoreInterestRate, value: 0.03 }
+
+  - id: refactor-engine
+    name: Refactor Engine
+    description: Permanent extra area removed per fence — a reward for mastering Aggressive Refactor.
+    unlockType: upgrade-chain
+    sourceUpgradeId: aggressive_refactor_architect
+    requiredRuns: 3
+    levels:
+      - cost: 4
+        effect: { type: mapReductionPerFenceBonus, value: 0.03 }
+      - cost: 7
+        effect: { type: mapReductionPerFenceBonus, value: 0.03 }
+
+  - id: process-optimiser
+    name: Process Optimiser
+    description: Permanent per-lock speed reduction — a reward for mastering MicroManager.
+    unlockType: upgrade-chain
+    sourceUpgradeId: micro_manager_principal
+    requiredRuns: 3
+    levels:
+      - cost: 4
+        effect: { type: microManagerPerLock, value: 0.01 }
+      - cost: 7
+        effect: { type: microManagerPerLock, value: 0.01 }
+
+  - id: sprint-protocol
+    name: Sprint Protocol
+    description: Permanent extra bounce in path preview — a reward for mastering SCRUM Master.
+    unlockType: upgrade-chain
+    sourceUpgradeId: scrum_master_6
+    requiredRuns: 3
+    levels:
+      - cost: 5
+        effect: { type: ballPathPredictionBounces, value: 1 }
+      - cost: 9
+        effect: { type: ballPathPredictionBounces, value: 1 }
+
+  # ═══════════════════════════════════════════════════
+  # ACHIEVEMENT-LOCKED CERTIFICATES
+  # Unlocked by completing a specific achievement.
+  # ═══════════════════════════════════════════════════
+
+  - id: head-start-i
+    name: Head Start I
+    description: Begin every run at level 5. Awarded to those who have proven they can reach level 25.
+    unlockType: achievement
+    sourceAchievementId: elite
+    levels:
+      - cost: 15
+        effect: { type: startingLevelBonus, value: 5 }
+
+  - id: head-start-ii
+    name: Head Start II
+    description: Begin every run at level 10. Awarded for exceptional consistency across 50 perfect levels.
+    unlockType: achievement
+    sourceAchievementId: unstoppable
+    levels:
+      - cost: 30
+        effect: { type: startingLevelBonus, value: 10 }
