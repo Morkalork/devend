@@ -56,11 +56,11 @@ certificates:
     requiredRuns: 3
     levels:
       - cost: 4
-        effect: { type: fenceWidthMultiplier, value: 1.1 }
+        effect: { type: fenceWidthMultiplier, value: 1.5 }
       - cost: 7
-        effect: { type: fenceWidthMultiplier, value: 1.1 }
+        effect: { type: fenceWidthMultiplier, value: 1.5 }
       - cost: 11
-        effect: { type: fenceWidthMultiplier, value: 1.1 }
+        effect: { type: fenceWidthMultiplier, value: 1.5 }
 
   - id: warm-deploy
     name: Warm Deploy

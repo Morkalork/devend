@@ -276,7 +276,7 @@ export function WelcomeScreen({
               style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2), inset 0 0 20px hsl(var(--primary) / 0.1)' }}
             >
               <motion.button
-                className="flex-1 px-6 py-4 font-semibold text-lg uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2"
+              className="flex-1 px-[1.45rem] py-[0.72rem] font-semibold text-[0.8rem] uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2"
                 style={{ fontFamily: "'Orbitron', sans-serif" }}
                 onClick={onStartGame}
                 whileTap={{ scale: 0.98 }}
@@ -297,7 +297,7 @@ export function WelcomeScreen({
             </div>
           ) : (
             <motion.button
-              className="arcade-button-primary animate-pulse-glow rounded-lg flex items-center justify-center gap-2"
+              className="arcade-button-primary arcade-button-sm animate-pulse-glow rounded-lg flex items-center justify-center gap-2"
               onClick={onStartGame}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -308,7 +308,7 @@ export function WelcomeScreen({
             </motion.button>
           )}
           <motion.button
-            className="arcade-button-primary rounded-lg"
+            className="arcade-button-primary arcade-button-sm rounded-lg"
             onClick={onTutorial}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -317,7 +317,7 @@ export function WelcomeScreen({
             Tutorial
           </motion.button>
           <motion.button
-            className="arcade-button-primary rounded-lg"
+            className="arcade-button-primary arcade-button-sm rounded-lg"
             onClick={onOptions}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -326,7 +326,7 @@ export function WelcomeScreen({
             Options
           </motion.button>
           <motion.button
-            className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
+            className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
             onClick={onAugments}
             whileHover={onAugments ? { scale: 1.02 } : undefined}
             whileTap={onAugments ? { scale: 0.98 } : undefined}
@@ -343,7 +343,7 @@ export function WelcomeScreen({
           </motion.button>
           {onAchievements && (
             <motion.button
-              className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
+              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
               onClick={onAchievements}
               whileHover={totalAugmentPoints ? { scale: 1.02 } : undefined}
               whileTap={totalAugmentPoints ? { scale: 0.98 } : undefined}
@@ -360,7 +360,7 @@ export function WelcomeScreen({
           )}
           {onAdmin && (
             <motion.button
-              className="arcade-button-secondary rounded-lg opacity-70"
+              className="arcade-button-secondary arcade-button-sm rounded-lg opacity-70"
               onClick={onAdmin}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}

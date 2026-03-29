@@ -353,7 +353,7 @@ export function UpgradeShop({
           onClick={handleContinue}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="arcade-button-primary rounded-lg flex items-center gap-2"
+          className="arcade-button-primary rounded-lg flex items-center gap-2 text-sm whitespace-nowrap"
         >
           {selectedIds.length > 0 ? `Buy ${selectedIds.length} & Continue (${selectedTotalCost}h)` : 'Continue'}
           <ArrowRight className="w-5 h-5" />

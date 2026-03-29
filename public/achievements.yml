@@ -1,51 +1,149 @@
 achievements:
-  - id: fence-fighter
-    name: Fence Fighter
-    description: Draw your first 100 fences across all runs.
+  # ── VERY QUICK ─────────────────────────────────────────────────────────────
+  # Achievable within the first 10–30 minutes of play.
+
+  - id: hello-world
+    name: "Hello, World!"
+    description: Lose your first life — every arena throws a runtime error eventually.
     requirement:
-      stat: totalFencesDrawn
-      threshold: 100
+      stat: totalLivesLost
+      threshold: 1
     bonus:
       modifier: fenceGenerationSpeedMultiplier
-      value: 1.1
-      description: Fence generation speed +10%
+      value: 1.02
+      description: Fence generation speed +2%
 
-  - id: fence-expert
-    name: Fence Expert
-    description: Draw 500 fences across all runs.
+  - id: junior-dev
+    name: Junior Dev
+    description: Draw 50 fences. Still reading the onboarding docs.
     requirement:
       stat: totalFencesDrawn
-      threshold: 500
+      threshold: 50
+    bonus:
+      modifier: scoreMultiplier
+      value: 1.02
+      description: Overtime multiplier +4%
+
+  - id: shipped-it
+    name: Shipped It
+    description: Complete 5 levels without losing a life. No rollbacks, three times over.
+    requirement:
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 5
     bonus:
       modifier: fenceGenerationSpeedMultiplier
-      value: 1.1
-      description: Fence generation speed +10%
+      value: 1.03
+      description: Fence generation speed +3%
 
-  - id: fence-master
-    name: Fence Master
-    description: Draw 2000 fences across all runs.
-    requirement:
-      stat: totalFencesDrawn
-      threshold: 2000
-    bonus:
-      modifier: fenceWidthMultiplier
-      value: 1.1
-      description: Fence width +10%
-
-  - id: levelheaded
-    name: Levelheaded
-    description: Reach level 5 in a single run.
+  - id: passing-tests
+    name: Passing Tests
+    description: Reach level 5 in a single run. The green checkmarks never get old.
     requirement:
       stat: highestLevelReached
       threshold: 5
     bonus:
-      modifier: scoreMultiplier
-      value: 1.05
-      description: Overtime multiplier +5%
+      modifier: ballSpeedMultiplier
+      value: 0.98
+      description: Ball speed -2%
 
-  - id: veteran
-    name: Veteran
-    description: Reach level 15 in a single run.
+  # ── DAY 1 ──────────────────────────────────────────────────────────────────
+  # Achievable in a first solid session of 1–2 hours.
+
+  - id: stack-overflow
+    name: Stack Overflow
+    description: Draw 175 fences. You know which questions to search for now.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 175
+    bonus:
+      modifier: fenceWidthMultiplier
+      value: 2.0
+      description: Fence width +100%
+
+  - id: merge-conflict
+    name: Merge Conflict
+    description: Lose 35 lives across all runs. You resolve them, but they keep coming.
+    requirement:
+      stat: totalLivesLost
+      threshold: 35
+    bonus:
+      modifier: fenceGenerationSpeedMultiplier
+      value: 1.03
+      description: Fence generation speed +3%
+
+  - id: zero-regressions
+    name: Zero Regressions
+    description: Complete 8 levels without losing a life. Clean PRs, no rollbacks needed.
+    requirement:
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 8
+    bonus:
+      modifier: scoreMultiplier
+      value: 1.03
+      description: Overtime multiplier +3%
+
+  - id: code-review
+    name: Code Review
+    description: Reach level 10 in a single run. Your work is being scrutinised.
+    requirement:
+      stat: highestLevelReached
+      threshold: 10
+    bonus:
+      modifier: ballSpeedMultiplier
+      value: 0.97
+      description: Ball speed -3%
+
+  # ── DAY 1–2 ────────────────────────────────────────────────────────────────
+
+  - id: pull-request
+    name: Pull Request
+    description: Draw 400 fences. Your contributions are getting noticed.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 400
+    bonus:
+      modifier: fenceWidthMultiplier
+      value: 1.5
+      description: Fence width +50%
+
+  - id: rtfm
+    name: RTFM
+    description: Complete 15 levels without losing a life. You actually read the docs.
+    requirement:
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 15
+    bonus:
+      modifier: scoreInterestRate
+      value: 0.01
+      description: Overtime interest rate +1%
+
+  # ── FROM HERE, BONUSES START TO MATTER ─────────────────────────────────────
+
+  - id: technical-debt
+    name: Technical Debt
+    description: Lose 50 lives across all runs. You inherit it. You work around it.
+    requirement:
+      stat: totalLivesLost
+      threshold: 50
+    bonus:
+      modifier: fenceGenerationSpeedMultiplier
+      value: 1.05
+      description: Fence generation speed +5%
+
+  - id: full-stack
+    name: Full Stack
+    description: Draw 500 fences. Front end, back end, fence end.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 500
+    bonus:
+      modifier: ballSpeedMultiplier
+      value: 0.95
+      description: Ball speed -5%
+
+  - id: senior-dev
+    name: Senior Dev
+    description: Reach level 15 in a single run. You've stopped Googling the basics.
     requirement:
       stat: highestLevelReached
       threshold: 15
@@ -54,42 +152,9 @@ achievements:
       value: 1.05
       description: Overtime multiplier +5%
 
-  - id: elite
-    name: Elite
-    description: Reach level 25 in a single run.
-    requirement:
-      stat: highestLevelReached
-      threshold: 25
-    bonus:
-      modifier: ballSpeedMultiplier
-      value: 0.95
-      description: Ball speed -5%
-
-  - id: flawless
-    name: Flawless
-    description: Complete 5 levels without losing a life.
-    requirement:
-      stat: totalLevelsCompletedWithoutLoss
-      threshold: 5
-    bonus:
-      modifier: extraLives
-      value: 1
-      description: +1 starting life per run
-
-  - id: perfect-run
-    name: Perfect Run
-    description: Complete 20 levels without losing a life.
-    requirement:
-      stat: totalLevelsCompletedWithoutLoss
-      threshold: 20
-    bonus:
-      modifier: fenceGenerationSpeedMultiplier
-      value: 1.05
-      description: Fence generation speed +5%
-
-  - id: resilient
-    name: Resilient
-    description: Lose 100 lives across all runs — experience is the best teacher.
+  - id: on-call-veteran
+    name: On-Call Veteran
+    description: Lose 100 lives across all runs. You keep a charger by your bed.
     requirement:
       stat: totalLivesLost
       threshold: 100
@@ -98,31 +163,90 @@ achievements:
       value: 1
       description: +1 starting life per run
 
-  - id: battle-hardened
-    name: Battle-Hardened
-    description: Lose 50 lives across all runs.
+  - id: clean-architecture
+    name: Clean Architecture
+    description: Complete 20 levels without losing a life. No shortcuts, no shortcuts.
     requirement:
-      stat: totalLivesLost
-      threshold: 50
-    bonus:
-      modifier: ballSpeedMultiplier
-      value: 0.95
-      description: Ball speed -5%
-
-  - id: centurion
-    name: Centurion
-    description: Reach level 10 in a single run.
-    requirement:
-      stat: highestLevelReached
-      threshold: 10
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 20
     bonus:
       modifier: fenceGenerationSpeedMultiplier
       value: 1.05
       description: Fence generation speed +5%
 
-  - id: unstoppable
-    name: Unstoppable
-    description: Complete 50 levels without losing a life.
+  - id: commit-history
+    name: Commit History
+    description: Draw 1000 fences. git log reads like a memoir at this point.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 1000
+    bonus:
+      modifier: instantFencesPerMap
+      value: 1
+      description: +1 free fence per map
+
+  - id: tech-lead
+    name: Tech Lead
+    description: Reach level 20 in a single run. Others look to you for the answer now.
+    requirement:
+      stat: highestLevelReached
+      threshold: 20
+    bonus:
+      modifier: ballPathPredictionBalls
+      value: 1
+      description: "Ball path prediction: track 1 ball"
+
+  - id: five-am-page
+    name: 5am Page
+    description: Lose 200 lives across all runs. PagerDuty doesn't care what time it is.
+    requirement:
+      stat: totalLivesLost
+      threshold: 200
+    bonus:
+      modifier: ballPathPredictionBounces
+      value: 1
+      description: "Ball path prediction: +1 bounce ahead"
+
+  # ── DAY 3–4 ────────────────────────────────────────────────────────────────
+
+  - id: open-source
+    name: Open Source
+    description: Draw 2000 fences. Your contributions are now a matter of public record.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 2000
+    bonus:
+      modifier: fenceWidthMultiplier
+      value: 2.0
+      description: Fence width +100%
+
+  - id: full-coverage
+    name: Full Coverage
+    description: Complete 35 levels without losing a life. Every path, every branch, tested.
+    requirement:
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 35
+    bonus:
+      modifier: fenceGenerationSpeedMultiplier
+      value: 1.1
+      description: Fence generation speed +10%
+
+  - id: principal-engineer
+    name: Principal Engineer
+    description: Reach level 25 in a single run. Fewer meetings, deeper problems.
+    requirement:
+      stat: highestLevelReached
+      threshold: 25
+    bonus:
+      modifier: ballSpeedMultiplier
+      value: 0.95
+      description: Ball speed -5%
+
+  # ── DAY 4–5 ────────────────────────────────────────────────────────────────
+
+  - id: ci-cd-pipeline
+    name: CI/CD Pipeline
+    description: Complete 50 levels without losing a life. Merciless and automated.
     requirement:
       stat: totalLevelsCompletedWithoutLoss
       threshold: 50
@@ -130,3 +254,72 @@ achievements:
       modifier: scoreMultiplier
       value: 1.1
       description: Overtime multiplier +10%
+
+  - id: staff-engineer
+    name: Staff Engineer
+    description: Reach level 30 in a single run. You fix things before others notice they're broken.
+    requirement:
+      stat: highestLevelReached
+      threshold: 30
+    bonus:
+      modifier: extraLives
+      value: 1
+      description: +1 starting life per run
+
+  - id: ten-k-commits
+    name: 10k Commits
+    description: Draw 5000 fences. The blame log has your name on everything.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 5000
+    bonus:
+      modifier: instantFencesPerMap
+      value: 1
+      description: +1 free fence per map
+
+  # ── END OF WEEK ────────────────────────────────────────────────────────────
+  # For dedicated players who return daily across a full week.
+
+  - id: distinguished
+    name: Distinguished Engineer
+    description: Reach level 40 in a single run. Your ADRs outlive the projects they describe.
+    requirement:
+      stat: highestLevelReached
+      threshold: 40
+    bonus:
+      modifier: additionalConcurrentFences
+      value: 1
+      description: +1 concurrent fence
+
+  - id: sunday-deploy
+    name: Sunday Deploy
+    description: Lose 500 lives across all runs. You know the rollback procedure by heart.
+    requirement:
+      stat: totalLivesLost
+      threshold: 500
+    bonus:
+      modifier: ballSpeedMultiplier
+      value: 0.95
+      description: Ball speed -5%
+
+  - id: five-nines
+    name: Five Nines
+    description: Complete 100 levels without losing a life. 99.999% uptime, sustained.
+    requirement:
+      stat: totalLevelsCompletedWithoutLoss
+      threshold: 100
+    bonus:
+      modifier: scoreMultiplier
+      value: 1.1
+      description: Overtime multiplier +10%
+
+  - id: left-the-company
+    name: Left The Company
+    description: Draw 10000 fences. Your code still runs in production somewhere.
+    requirement:
+      stat: totalFencesDrawn
+      threshold: 10000
+    bonus:
+      modifier: additionalConcurrentFences
+      value: 1
+      description: +1 concurrent fence

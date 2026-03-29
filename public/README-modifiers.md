@@ -152,7 +152,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `ballSpeedMultiplier` | `1.0` | Multiplies ball movement speed. Values below 1 slow balls down. | `0.95` = −5% speed |
 | `ballSizeMultiplier` | `1.0` | Multiplies ball radius. | `0.90` = −10% size |
 | `fenceGenerationSpeedMultiplier` | `1.0` | Multiplies how fast fences grow. | `1.10` = +10% speed |
-| `fenceWidthMultiplier` | `1.0` | Multiplies fence thickness. | `1.20` = +20% width |
+| `fenceWidthMultiplier` | `1.0` | Multiplies fence thickness. Stacks multiplicatively — values well above 1.0 are needed to feel meaningful. | `2.0` = double width (+100%) |
 | `scoreMultiplier` | `1.0` | Multiplies overtime hours earned per map. | `1.15` = +15% overtime |
 
 ### Additive (stack by +)
