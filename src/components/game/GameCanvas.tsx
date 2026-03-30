@@ -11,6 +11,7 @@ import {
   resetRunSeed 
 } from "@/lib/varietySystem";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
+import { getBallBase, getBallSpecular, clearBallRenderCache } from "@/lib/ballRenderCache";
 import { calculateScore, ensureScoringConfigLoaded } from "@/hooks/useScoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
@@ -874,6 +875,9 @@ export function GameCanvas({
 
       // Compute the board rectangle
       game.boardRect = computeBoardRect(width, height);
+
+      // Ball render cache is keyed by screenRadius which changes with scale → invalidate
+      clearBallRenderCache();
 
       // Update debug info
       setDebugInfo({
@@ -3014,51 +3018,21 @@ export function GameCanvas({
         const r = Math.round(r0 + (ar - r0) * fade);
         const g = Math.round(g0 + (ag - g0) * fade);
         const b = Math.round(b0 + (ab - b0) * fade);
-        const blendedColor = `rgb(${r}, ${g}, ${b})`;
         const blendedHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 
         // Fade out won balls — alpha disintegrates ball into the dust particles
         ctx.save();
         ctx.globalAlpha = assimScale;
 
-        // Outer glow (ambient light effect)
-        ctx.beginPath();
-        ctx.arc(screenPos.x, screenPos.y, screenRadius + 10 * scale, 0, Math.PI * 2);
-        const outerGlow = ctx.createRadialGradient(
-          screenPos.x, screenPos.y, screenRadius * 0.7,
-          screenPos.x, screenPos.y, screenRadius + 10 * scale
-        );
-        outerGlow.addColorStop(0, hexToRgba(blendedHex, 0.4));
-        outerGlow.addColorStop(0.6, hexToRgba(blendedHex, 0.15));
-        outerGlow.addColorStop(1, "transparent");
-        ctx.fillStyle = outerGlow;
-        ctx.fill();
+        // Blit cached ball base (outer glow + 3D sphere gradient).
+        // Cache key: blendedHex + screenRadius — stable for the entire level on normal balls.
+        const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);
+        ctx.drawImage(baseCanvas, screenPos.x - baseHalf, screenPos.y - baseHalf);
 
-        // Ball base with gradient for 3D depth
+        // Set up clip for rotation layers (latitude bands, meridians, polar caps)
         ctx.save();
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
-        const lighterColor = `rgb(${Math.min(255, r + 50)}, ${Math.min(255, g + 50)}, ${Math.min(255, b + 50)})`;
-        const darkerColor = `rgb(${Math.max(0, r - 60)}, ${Math.max(0, g - 60)}, ${Math.max(0, b - 60)})`;
-        const darkestColor = `rgb(${Math.max(0, r - 100)}, ${Math.max(0, g - 100)}, ${Math.max(0, b - 100)})`;
-
-        const baseGradient = ctx.createRadialGradient(
-          screenPos.x - screenRadius * 0.3,
-          screenPos.y - screenRadius * 0.3,
-          0,
-          screenPos.x + screenRadius * 0.15,
-          screenPos.y + screenRadius * 0.15,
-          screenRadius * 1.3
-        );
-        baseGradient.addColorStop(0, lighterColor);
-        baseGradient.addColorStop(0.35, blendedColor);
-        baseGradient.addColorStop(0.75, darkerColor);
-        baseGradient.addColorStop(1, darkestColor);
-
-        ctx.fillStyle = baseGradient;
-        ctx.shadowColor = blendedColor;
-        ctx.shadowBlur = 15 * scale;
-        ctx.fill();
         ctx.clip();
 
         // ===== LAYER 1: Latitude bands (suggest Y-axis tilt) =====
@@ -3168,48 +3142,14 @@ export function GameCanvas({
 
         ctx.restore(); // End clipping
 
-        // ===== Highlight/glare overlay (fixed, not rotating) =====
+        // Blit cached specular overlay (colour-independent pure-white glare + rim).
+        // Eliminates 2 more gradient creations per ball per frame.
         ctx.save();
         ctx.beginPath();
         ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
         ctx.clip();
-        
-        // Primary highlight at top-left
-        const glareGradient = ctx.createRadialGradient(
-          screenPos.x - screenRadius * 0.4, 
-          screenPos.y - screenRadius * 0.4, 
-          0,
-          screenPos.x - screenRadius * 0.4, 
-          screenPos.y - screenRadius * 0.4, 
-          screenRadius * 0.6
-        );
-        glareGradient.addColorStop(0, "rgba(255, 255, 255, 0.65)");
-        glareGradient.addColorStop(0.25, "rgba(255, 255, 255, 0.3)");
-        glareGradient.addColorStop(0.6, "rgba(255, 255, 255, 0.05)");
-        glareGradient.addColorStop(1, "transparent");
-        ctx.fillStyle = glareGradient;
-        ctx.fillRect(screenPos.x - screenRadius, screenPos.y - screenRadius, screenRadius * 2, screenRadius * 2);
-        
-        // Small sharp specular highlight
-        ctx.beginPath();
-        ctx.arc(screenPos.x - screenRadius * 0.35, screenPos.y - screenRadius * 0.35, screenRadius * 0.12, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
-        ctx.fill();
-        
-        // Rim light at bottom-right
-        const rimGradient = ctx.createRadialGradient(
-          screenPos.x + screenRadius * 0.35,
-          screenPos.y + screenRadius * 0.45,
-          0,
-          screenPos.x + screenRadius * 0.35,
-          screenPos.y + screenRadius * 0.45,
-          screenRadius * 0.35
-        );
-        rimGradient.addColorStop(0, "rgba(255, 255, 255, 0.2)");
-        rimGradient.addColorStop(1, "transparent");
-        ctx.fillStyle = rimGradient;
-        ctx.fillRect(screenPos.x - screenRadius, screenPos.y - screenRadius, screenRadius * 2, screenRadius * 2);
-        
+        const specCanvas = getBallSpecular(screenRadius, scale);
+        ctx.drawImage(specCanvas, screenPos.x - screenRadius - 2, screenPos.y - screenRadius - 2);
         ctx.restore(); // clip restore
         ctx.restore(); // globalAlpha restore
       }
