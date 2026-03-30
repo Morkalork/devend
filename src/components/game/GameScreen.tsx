@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Menu, Home, RotateCcw } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
@@ -10,7 +10,7 @@ import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { useGameConfig } from '@/hooks/useGameConfig';
-import { useActiveModifiers, mergeBonuses } from '@/hooks/useActiveModifiers';
+import { GameModifiers } from '@/hooks/useActiveModifiers';
 
 interface AugmentProgress {
   levelsCompleted: number;
@@ -40,7 +40,7 @@ interface GameScreenProps {
   accentColor?: string;
   augmentProgress?: AugmentProgress;
   achievementBonuses?: Partial<Record<string, number>>;
-  certificateBonuses?: Partial<Record<string, number>>;
+  activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
 }
 
@@ -62,7 +62,7 @@ export function GameScreen({
   accentColor: externalAccentColor,
   augmentProgress,
   achievementBonuses,
-  certificateBonuses,
+  activeModifiers,
   cumulativeLockedBalls = 0,
 }: GameScreenProps) {
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
@@ -89,14 +89,6 @@ export function GameScreen({
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
-
-  // Merge achievement + certificate bonuses for modifier pipeline
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mergedBonuses = useMemo(() => mergeBonuses(achievementBonuses as any, certificateBonuses as any), [achievementBonuses, certificateBonuses]);
-
-  // Compute active modifiers (lightweight — used for top bar display only)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses as any);
 
   const accentColor = externalAccentColor || getAccentColor();
 
@@ -148,8 +140,6 @@ export function GameScreen({
             levelNumber={levelNumber}
             totalLevels={totalLevels}
             totalScore={totalScore}
-            ownedUpgradeIds={ownedUpgradeIds}
-            upgrades={upgrades}
             lives={lives}
             onLivesChange={onLivesChange}
             onGameEnd={onGameEnd}
@@ -167,17 +157,15 @@ export function GameScreen({
             fenceSpeedPerLevel={config.fence.speed_per_level}
             regionColor={getRegionColor()}
             accentColor={accentColor}
-            achievementBonuses={mergedBonuses as any}
+            activeModifiers={activeModifiers}
             cumulativeLockedBalls={cumulativeLockedBalls}
           />
         </div>
 
         {/* Stats Panel at bottom */}
         <GameStatsPanel
-          ownedUpgradeIds={ownedUpgradeIds}
-          upgrades={upgrades}
+          activeModifiers={activeModifiers}
           accentColor={accentColor}
-          achievementBonuses={mergedBonuses as any}
           lockedBalls={totalLockedBalls}
         />
         

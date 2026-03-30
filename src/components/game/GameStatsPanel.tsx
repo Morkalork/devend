@@ -1,19 +1,15 @@
 import React from 'react';
-import { useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
-import { UpgradeConfig } from '@/types/upgrade';
 
 interface GameStatsPanelProps {
-  ownedUpgradeIds: string[];
-  upgrades: UpgradeConfig[];
+  activeModifiers: GameModifiers;
   accentColor: string;
-  achievementBonuses?: Partial<Record<string, number>>;
   lockedBalls?: number;
 }
 
 export const GameStatsPanel = React.forwardRef<HTMLDivElement, GameStatsPanelProps>(
-function GameStatsPanel({ ownedUpgradeIds, upgrades, accentColor, achievementBonuses, lockedBalls = 0 }, ref) {
-  const modifiers: GameModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, achievementBonuses);
+function GameStatsPanel({ activeModifiers, accentColor, lockedBalls = 0 }, ref) {
+  const modifiers = activeModifiers;
 
   const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
   const formatBonus = (value: number) => value > 0 ? `+${value}` : `${value}`;

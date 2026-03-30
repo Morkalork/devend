@@ -36,6 +36,11 @@ function savePersistence(state: AchievementPersistence): void {
   localStorage.setItem(ACHIEVEMENT_STORAGE_KEY, JSON.stringify(state));
 }
 
+// Stable empty reference — returned when nothing is activated so that
+// the achievements YAML loading mid-game doesn't produce a new object
+// identity and accidentally bust the activeModifiers dep array.
+const EMPTY_BONUSES: Partial<Record<keyof GameModifiers, number>> = {};
+
 export function useAchievementManager() {
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [completedIds, setCompletedIds] = useState<string[]>([]);
@@ -104,6 +109,7 @@ export function useAchievementManager() {
    * Multiplicative bonuses stack by multiplication; additive by addition.
    */
   const bonusModifiers = useMemo((): Partial<Record<keyof GameModifiers, number>> => {
+    if (activatedIds.length === 0) return EMPTY_BONUSES;
     const result: Partial<Record<keyof GameModifiers, number>> = {};
     for (const id of activatedIds) {
       const a = achievements.find(x => x.id === id);

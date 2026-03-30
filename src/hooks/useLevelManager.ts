@@ -116,15 +116,14 @@ export function useLevelManager() {
   }, []);
 
   const advanceToNextLevel = useCallback((): boolean => {
-    if (state.currentLevelIndex < state.levelSequence.length - 1) {
-      setState(prev => ({
-        ...prev,
-        currentLevelIndex: prev.currentLevelIndex + 1,
-      }));
-      return true;
-    }
-    return false;
-  }, [state.currentLevelIndex, state.levelSequence.length]);
+    let advanced = false;
+    setState(prev => {
+      if (prev.currentLevelIndex >= prev.levelSequence.length - 1) return prev;
+      advanced = true;
+      return { ...prev, currentLevelIndex: prev.currentLevelIndex + 1 };
+    });
+    return advanced;
+  }, []);
 
   const resetToFirstLevel = useCallback(() => {
     // Re-randomize the sequence each run

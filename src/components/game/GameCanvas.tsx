@@ -1,7 +1,6 @@
 import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
 import { LevelConfig, LevelEntity } from "@/types/level";
-import { UpgradeConfig } from "@/types/upgrade";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import { 
@@ -11,7 +10,7 @@ import {
   applyPolygonVariation,
   resetRunSeed 
 } from "@/lib/varietySystem";
-import { useActiveModifiers } from "@/hooks/useActiveModifiers";
+import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { calculateScore, ensureScoringConfigLoaded } from "@/hooks/useScoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
@@ -145,8 +144,6 @@ interface GameCanvasProps {
   levelNumber: number;
   totalLevels: number;
   totalScore: number;
-  ownedUpgradeIds: string[];
-  upgrades: UpgradeConfig[];
   lives: number;
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
@@ -159,9 +156,9 @@ interface GameCanvasProps {
   fenceSpeedBase?: number;
   fenceSpeedMin?: number;
   fenceSpeedPerLevel?: number;
-  regionColor?: string; // hex color with #
-  accentColor?: string; // hex color with #
-  achievementBonuses?: Partial<Record<string, number>>;
+  regionColor?: string;
+  accentColor?: string;
+  activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
 }
 
@@ -322,8 +319,6 @@ export function GameCanvas({
   levelNumber,
   totalLevels,
   totalScore,
-  ownedUpgradeIds,
-  upgrades,
   lives,
   onLivesChange,
   onGameEnd,
@@ -338,7 +333,7 @@ export function GameCanvas({
   fenceSpeedPerLevel = 50,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
-  achievementBonuses,
+  activeModifiers,
   cumulativeLockedBalls = 0,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -347,6 +342,8 @@ export function GameCanvas({
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
   const onLevelCompleteRef = useRef(onLevelComplete);
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
+  const onGameEndRef = useRef(onGameEnd);
+  useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
@@ -377,9 +374,6 @@ export function GameCanvas({
   // Push Your Luck state
   const [pushMode, setPushMode] = useState<"none" | "prompt" | "pushing">("none");
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
-
-  // Calculate active modifiers from owned upgrades + achievement bonuses
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, achievementBonuses);
 
   // Game state notification moved to after handleBankAndContinue definition
 
@@ -1386,7 +1380,7 @@ export function GameCanvas({
         setScreenFlash("none");
         setIsShaking(false);
 
-        onGameEnd({
+        onGameEndRef.current({
           isWin: false,
           remainingPercent: percent,
           levelId: level.id,
@@ -3714,7 +3708,7 @@ export function GameCanvas({
       canvas.removeEventListener("pointerleave", handlePointerUp);
       cancelAnimationFrame(game.animationId);
     };
-  }, [level, levelNumber, onGameEnd, activeModifiers]);
+  }, [level, levelNumber, activeModifiers]);
 
   // Handlers for Push Your Luck overlay
   const handleBankAndContinue = useCallback(() => {

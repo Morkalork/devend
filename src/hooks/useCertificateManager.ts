@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import yaml from 'js-yaml';
 import {
   Certificate,
@@ -192,14 +192,14 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
    * Compute combined bonus modifiers from all owned cert levels.
    * Ready to be merged with achievementBonuses via mergeBonuses().
    */
-  const getCertBonuses = useCallback((): Partial<Record<keyof GameModifiers, number>> => {
+  const certBonuses = useMemo((): Partial<Record<keyof GameModifiers, number>> => {
     const result: Partial<Record<keyof GameModifiers, number>> = {};
     for (const cert of certificates) {
       const levelsOwned = persistence.certLevelsOwned[cert.id] || 0;
       if (levelsOwned === 0) continue;
       for (let i = 0; i < levelsOwned; i++) {
         const { type, value } = cert.levels[i].effect;
-        if (type === 'startingLevelBonus') continue; // handled by getCertStartingLevel
+        if (type === 'startingLevelBonus') continue;
         const k = type as keyof GameModifiers;
         if (MULTIPLICATIVE_KEYS.includes(k)) {
           result[k] = ((result[k] as number) ?? 1) * value;
@@ -253,7 +253,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     return pointsAwarded;
   }, [runLevelsCompleted]);
 
-  const getRunProgress = useCallback(() => ({
+  const runProgress = useMemo(() => ({
     levelsCompleted: runLevelsCompleted,
     levelsToNextPoint: LEVELS_PER_POINT - (runLevelsCompleted % LEVELS_PER_POINT),
     progressInCurrentPoint: runLevelsCompleted % LEVELS_PER_POINT,
@@ -279,17 +279,17 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     // Run tracking
     runLevelsCompleted,
     runPointsEarned,
+    runProgress,
+    certBonuses,
     // Methods
     loadCertificates,
     resetRunProgress,
     incrementRunLevel,
     finalizeRun,
-    getRunProgress,
     recordMaxTierPurchase,
     checkAchievementUnlocks,
     takePendingUnlocks,
     purchaseCertLevel,
-    getCertBonuses,
     getCertStartingLevel,
     resetAllData,
   };

@@ -138,9 +138,14 @@ export function useActiveModifiers(
   upgrades: UpgradeConfig[],
   extraBonuses?: Partial<Record<keyof GameModifiers, number>>,
 ): GameModifiers {
-  return useMemo(() => {
-    const lookup = new Map(upgrades.map(u => [u.id, u]));
-    return computeGameModifiers(ownedUpgradeIds, lookup, extraBonuses);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ownedUpgradeIds, upgrades, extraBonuses]);
+  // Rebuilds only when YAML reloads — not on every upgrade purchase
+  const upgradeLookup = useMemo(
+    () => new Map(upgrades.map(u => [u.id, u])),
+    [upgrades],
+  );
+  return useMemo(
+    () => computeGameModifiers(ownedUpgradeIds, upgradeLookup, extraBonuses),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ownedUpgradeIds, upgradeLookup, extraBonuses],
+  );
 }

@@ -2,7 +2,7 @@ import { useCallback, useState, lazy, Suspense, useEffect, useRef, useMemo } fro
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
-import { useActiveModifiers, mergeBonuses } from '@/hooks/useActiveModifiers';
+import { useActiveModifiers, mergeBonuses, GameModifiers } from '@/hooks/useActiveModifiers';
 import { useTutorialManager } from '@/hooks/useTutorialManager';
 import { useCheckpoint } from '@/hooks/useCheckpoint';
 import { useCheckpointManager } from '@/hooks/useCheckpointManager';
@@ -109,8 +109,8 @@ const Index = () => {
     resetRunProgress,
     incrementRunLevel,
     finalizeRun,
-    getRunProgress,
-    getCertBonuses,
+    runProgress,
+    certBonuses,
     getCertStartingLevel,
     purchaseCertLevel,
     recordMaxTierPurchase,
@@ -172,13 +172,13 @@ const Index = () => {
 
   // Merge cert bonuses with achievement bonuses for modifier pipeline
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const certBonuses = useMemo(() => getCertBonuses() as any, [getCertBonuses]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mergedBonuses = useMemo(() => mergeBonuses(achievementBonuses as any, certBonuses), [achievementBonuses, certBonuses]);
+  const mergedBonuses = useMemo(() => mergeBonuses(achievementBonuses as any, certBonuses as any), [achievementBonuses, certBonuses]);
 
   // Calculate modifiers (including achievement + certificate bonuses)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses as any);
+
+  const augmentProgress = runProgress;
 
   // State for cert unlocks shown in shop banner and next LevelCompleteOverlay
   const [shopUnlockedCerts, setShopUnlockedCerts] = useState<Certificate[]>([]);
@@ -200,7 +200,7 @@ const Index = () => {
       resetRunProgress(); // Reset in-run cert tracking
 
       // Starting lives: base + any extraLives bonus from certs
-      const certBonusLives = (getCertBonuses().extraLives as number | undefined) ?? 0;
+      const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
       const startingLives = BASE_LIVES + certBonusLives;
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
@@ -226,7 +226,7 @@ const Index = () => {
 
       startGame();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, startGame, getStartingLevel, setLevelIndex, resetToFirstLevel, getCertBonuses, getCertStartingLevel, resetRunProgress]);
+  }, [loadLevels, loadUpgrades, loadCertificates, startGame, getStartingLevel, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // Save checkpoint if player made it past level 5
@@ -395,7 +395,7 @@ const Index = () => {
     setCumulativeLockedBalls(0);
     resetRunProgress();
 
-    const certBonusLives = (getCertBonuses().extraLives as number | undefined) ?? 0;
+    const certBonusLives = (certBonuses as any).extraLives ?? 0;
     const startingLives = BASE_LIVES + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
@@ -417,7 +417,7 @@ const Index = () => {
     }
 
     startGame();
-  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, getCertBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints]);
+  }, [resetToFirstLevel, startGame, getStartingLevel, setLevelIndex, certBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
@@ -530,15 +530,15 @@ const Index = () => {
         runLevelsCompleted={runLevelsCompleted}
         shopUnlockedCerts={shopUnlockedCerts}
         pendingCertUnlocks={pendingCertUnlocks}
-        certBonuses={certBonuses}
 
-        augmentProgress={getRunProgress()}
+        augmentProgress={augmentProgress}
         extraShopItems={activeModifiers.extraShopItems}
         achievements={achievements}
         completedAchievementIds={completedAchievementIds}
         activatedAchievementIds={activatedAchievementIds}
         activateAchievement={activateAchievement}
-        achievementBonuses={achievementBonuses}
+        achievementBonuses={mergedBonuses}
+        activeModifiers={activeModifiers}
 
         handleAchievementsFromWelcome={handleAchievementsFromWelcome}
         goToWelcomeFromAchievements={goToWelcome}
@@ -612,7 +612,6 @@ interface IndexContentProps {
   runLevelsCompleted: number;
   shopUnlockedCerts: Certificate[];
   pendingCertUnlocks: Certificate[];
-  certBonuses: Partial<Record<string, number>>;
 
   augmentProgress: AugmentProgress;
   extraShopItems: number;
@@ -621,6 +620,7 @@ interface IndexContentProps {
   activatedAchievementIds: string[];
   activateAchievement: (id: string) => void;
   achievementBonuses: Partial<Record<string, number>>;
+  activeModifiers: GameModifiers;
   handleAchievementsFromWelcome: () => void;
   goToWelcomeFromAchievements: () => void;
 }
@@ -679,7 +679,6 @@ function IndexContent({
   runLevelsCompleted,
   shopUnlockedCerts,
   pendingCertUnlocks,
-  certBonuses,
   augmentProgress,
   extraShopItems,
   achievements,
@@ -687,6 +686,7 @@ function IndexContent({
   activatedAchievementIds,
   activateAchievement,
   achievementBonuses,
+  activeModifiers,
   handleAchievementsFromWelcome,
   goToWelcomeFromAchievements,
 }: IndexContentProps) {
@@ -747,7 +747,7 @@ function IndexContent({
           accentColor={accentHex}
           augmentProgress={augmentProgress}
           achievementBonuses={achievementBonuses}
-          certificateBonuses={certBonuses}
+          activeModifiers={activeModifiers}
           cumulativeLockedBalls={cumulativeLockedBalls}
         />
       )}
