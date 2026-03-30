@@ -506,6 +506,81 @@ export function GameCanvas({
     };
     // ─────────────────────────────────────────────────────────────────────────
 
+    // ── Region canvas helpers (repaint on cut, blit every frame) ─────────────
+    // Region fill shape only changes when a fence completes. Pre-rendering it to
+    // an OffscreenCanvas reduces the per-frame draw call count from O(samplePoints)
+    // to a single drawImage blit.
+    const regionCanvas = new OffscreenCanvas(canvas.width, canvas.height);
+
+    const repaintRegionCanvas = () => {
+      const rCtx = regionCanvas.getContext("2d");
+      if (!rCtx) return;
+      const { width: sw, height: sh } = game.screenSize;
+      if (regionCanvas.width !== sw || regionCanvas.height !== sh) {
+        regionCanvas.width  = sw;
+        regionCanvas.height = sh;
+      }
+      rCtx.clearRect(0, 0, regionCanvas.width, regionCanvas.height);
+      if (game.regions.length === 0) return;
+
+      const { boardRect, regionColor } = game;
+      const gridSize    = 15;
+      const halfGrid    = gridSize / 2;
+      const cellPadding = 3;
+
+      rCtx.save();
+      rCtx.globalAlpha = canvasOpacity;
+      rCtx.fillStyle   = regionColor;
+
+      for (const region of game.regions) {
+        if (region.samplePoints && region.samplePoints.length > 0) {
+          // First pass: all filled cells
+          for (const sample of region.samplePoints) {
+            const sx   = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
+            const sy   = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
+            const size = (gridSize + cellPadding * 2) * boardRect.scale;
+            rCtx.fillRect(sx, sy, size, size);
+          }
+          // Second pass: rounded corners on edge cells
+          const sampleSet = new Set(region.samplePoints.map(s => `${s.x},${s.y}`));
+          const edgePadding = 5;
+          rCtx.save();
+          rCtx.globalAlpha = canvasOpacity * 0.6;
+          for (const sample of region.samplePoints) {
+            const isEdge = [
+              `${sample.x - gridSize},${sample.y}`,
+              `${sample.x + gridSize},${sample.y}`,
+              `${sample.x},${sample.y - gridSize}`,
+              `${sample.x},${sample.y + gridSize}`,
+            ].some(n => !sampleSet.has(n));
+            if (isEdge) {
+              const sx     = boardRect.left + (sample.x - halfGrid - edgePadding) * boardRect.scale;
+              const sy     = boardRect.top  + (sample.y - halfGrid - edgePadding) * boardRect.scale;
+              const size   = (gridSize + edgePadding * 2) * boardRect.scale;
+              const radius = 4 * boardRect.scale;
+              rCtx.beginPath();
+              rCtx.roundRect(sx, sy, size, size, radius);
+              rCtx.fill();
+            }
+          }
+          rCtx.restore();
+        } else {
+          // Fallback: polygon outline (initial region before any cut)
+          const { vertices } = region.polygon;
+          if (vertices.length < 3) continue;
+          rCtx.beginPath();
+          rCtx.moveTo(boardRect.left + vertices[0].x * boardRect.scale, boardRect.top + vertices[0].y * boardRect.scale);
+          for (let i = 1; i < vertices.length; i++) {
+            rCtx.lineTo(boardRect.left + vertices[i].x * boardRect.scale, boardRect.top + vertices[i].y * boardRect.scale);
+          }
+          rCtx.closePath();
+          rCtx.fill();
+        }
+      }
+      rCtx.restore();
+    };
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Calculate effective ball radius with modifier (world units)
     const effectiveBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
 
@@ -872,12 +947,15 @@ export function GameCanvas({
       game.originalArea = initialEstimatedArea;
       game.basePlayableArea = initialEstimatedArea;
       
-      game.regions = [{ 
-        id: initialRegionId, 
+      game.regions = [{
+        id: initialRegionId,
         polygon: boardPolygon,
         samplePoints: initSamplePoints,
         estimatedArea: initialEstimatedArea
       }];
+
+      // Region canvas must be built after initial regions are established
+      repaintRegionCanvas();
 
       // Assign all balls to their grid regions
       for (const ball of game.balls) {
@@ -940,6 +1018,8 @@ export function GameCanvas({
       clearBallRenderCache();
       // Blur canvas pixels are in screen-space → repaint from stored world-space samples
       repaintBlurCanvas();
+      // Region canvas likewise needs scale-corrected coordinates
+      repaintRegionCanvas();
 
       // Update debug info
       setDebugInfo({
@@ -2111,6 +2191,8 @@ export function GameCanvas({
         game.regions = bonusUpdatedRegions;
         // Write cells removed by bonus cut to the blur canvas
         collectAndDrawRemovedSamples();
+        // Repaint region canvas
+        repaintRegionCanvas();
         reassignBallsToRegions(game.balls, game.regions, game.walls);
         validateAllBallOwnership(game.balls, game.regions, game.walls);
 
@@ -2277,6 +2359,8 @@ export function GameCanvas({
 
       // Write cells removed by this cut to the blur canvas (event-driven, not per-frame)
       collectAndDrawRemovedSamples();
+      // Repaint region canvas with updated shape
+      repaintRegionCanvas();
 
       // Reassign balls to regions
       reassignBallsToRegions(game.balls, game.regions, game.walls);
@@ -2665,74 +2749,8 @@ export function GameCanvas({
       // NOTE: Don't fill the entire screen - let CRT show through
       // The regions themselves define the playable area and will be drawn below
 
-      // Fill all regions - use sample points for accurate rendering if available
-      ctx.save();
-      ctx.globalAlpha = canvasOpacity;
-      ctx.fillStyle = regionColor;
-
-      const gridSize = 15; // SAMPLE_GRID_SIZE - must match
-      const halfGrid = gridSize / 2;
-      // Larger overlap for smoother edges
-      const cellPadding = 3;
-
-      for (const region of regions) {
-        if (region.samplePoints && region.samplePoints.length > 0) {
-          // First pass: Draw filled cells with overlap
-          for (const sample of region.samplePoints) {
-            const topLeft = worldToScreen(sample.x - halfGrid - cellPadding, sample.y - halfGrid - cellPadding);
-            const size = (gridSize + cellPadding * 2) * scale;
-            ctx.fillRect(topLeft.x, topLeft.y, size, size);
-          }
-
-          // Second pass: Draw a smooth border around the edge cells to anti-alias
-          // Find edge cells (cells that don't have all 4 neighbors)
-          const sampleSet = new Set(region.samplePoints.map((s) => `${s.x},${s.y}`));
-          const edgeCells: Vector2[] = [];
-
-          for (const sample of region.samplePoints) {
-            const neighbors = [
-              `${sample.x - gridSize},${sample.y}`,
-              `${sample.x + gridSize},${sample.y}`,
-              `${sample.x},${sample.y - gridSize}`,
-              `${sample.x},${sample.y + gridSize}`,
-            ];
-            const isEdge = neighbors.some((n) => !sampleSet.has(n));
-            if (isEdge) {
-              edgeCells.push(sample);
-            }
-          }
-
-          // Draw smooth rounded rectangles on edge cells for anti-aliasing
-          ctx.save();
-          ctx.globalAlpha = canvasOpacity * 0.6;
-          const edgePadding = 5;
-          for (const sample of edgeCells) {
-            const topLeft = worldToScreen(sample.x - halfGrid - edgePadding, sample.y - halfGrid - edgePadding);
-            const size = (gridSize + edgePadding * 2) * scale;
-            const radius = 4 * scale;
-
-            ctx.beginPath();
-            ctx.roundRect(topLeft.x, topLeft.y, size, size, radius);
-            ctx.fill();
-          }
-          ctx.restore();
-        } else {
-          // Fallback to polygon rendering (for initial region before any cuts)
-          const { vertices } = region.polygon;
-          if (vertices.length < 3) continue;
-
-          ctx.beginPath();
-          const start = worldToScreen(vertices[0].x, vertices[0].y);
-          ctx.moveTo(start.x, start.y);
-          for (let i = 1; i < vertices.length; i++) {
-            const pt = worldToScreen(vertices[i].x, vertices[i].y);
-            ctx.lineTo(pt.x, pt.y);
-          }
-          ctx.closePath();
-          ctx.fill();
-        }
-      }
-      ctx.restore();
+      // Single blit of pre-rendered region canvas (rebuilt only on each cut)
+      ctx.drawImage(regionCanvas, 0, 0);
 
       // Note: Green border is now drawn via the unified wall model below
       // All walls (board edges, obstacles, user-drawn) are rendered identically
