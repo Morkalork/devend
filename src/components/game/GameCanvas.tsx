@@ -451,6 +451,61 @@ export function GameCanvas({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // ── Blur canvas helpers (write-once accumulation) ─────────────────────────
+    // Removed cells are drawn to the blur canvas once at removal time.
+    // resizeCanvas repaints the whole set from scratch after scale changes.
+    let removedSamples: Vector2[] = [];
+    let removedSamplesSet: Set<string> = new Set();
+
+    const drawSamplesToBlur = (samples: Vector2[]) => {
+      const blurCanvas = blurCanvasRef.current;
+      const blurCtx = blurCanvas?.getContext("2d");
+      if (!blurCtx || !blurCanvas || samples.length === 0) return;
+      const { boardRect, regionColor } = game;
+      const gridSize = 15;
+      const halfGrid = gridSize / 2;
+      const cellPadding = 3;
+      const cellSize = (gridSize + cellPadding * 2) * boardRect.scale;
+      blurCtx.save();
+      blurCtx.fillStyle = regionColor;
+      blurCtx.globalAlpha = 0.7;
+      for (const sample of samples) {
+        const sx = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
+        const sy = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
+        blurCtx.fillRect(sx, sy, cellSize, cellSize);
+      }
+      blurCtx.restore();
+    };
+
+    const repaintBlurCanvas = () => {
+      const blurCanvas = blurCanvasRef.current;
+      const blurCtx = blurCanvas?.getContext("2d");
+      if (!blurCtx || !blurCanvas) return;
+      blurCtx.clearRect(0, 0, blurCanvas.width, blurCanvas.height);
+      drawSamplesToBlur(removedSamples);
+    };
+
+    /** After each cut, append newly-inactive sample points and draw them once. */
+    const collectAndDrawRemovedSamples = () => {
+      const activeSet = new Set<string>();
+      for (const r of game.regions) {
+        for (const s of (r.samplePoints ?? [])) activeSet.add(`${s.x},${s.y}`);
+      }
+      const newSamples: Vector2[] = [];
+      for (const s of game.initialSamplePoints) {
+        const key = `${s.x},${s.y}`;
+        if (!activeSet.has(key) && !removedSamplesSet.has(key)) {
+          newSamples.push(s);
+          removedSamplesSet.add(key);
+        }
+      }
+      if (newSamples.length > 0) {
+        removedSamples.push(...newSamples);
+        drawSamplesToBlur(newSamples);
+      }
+    };
+    // ─────────────────────────────────────────────────────────────────────────
+
     // Calculate effective ball radius with modifier (world units)
     const effectiveBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
 
@@ -795,6 +850,11 @@ export function GameCanvas({
       
       // Store initial sample points for blur effect (tracks full board area)
       game.initialSamplePoints = [...initSamplePoints];
+
+      // Reset blur accumulation state for new level
+      removedSamples = [];
+      removedSamplesSet = new Set();
+      repaintBlurCanvas();
       
       // ============================================================
       // EXPLICIT SPACE MODEL: Create authoritative SpaceGrid
@@ -878,6 +938,8 @@ export function GameCanvas({
 
       // Ball render cache is keyed by screenRadius which changes with scale → invalidate
       clearBallRenderCache();
+      // Blur canvas pixels are in screen-space → repaint from stored world-space samples
+      repaintBlurCanvas();
 
       // Update debug info
       setDebugInfo({
@@ -2047,6 +2109,8 @@ export function GameCanvas({
           }
         }
         game.regions = bonusUpdatedRegions;
+        // Write cells removed by bonus cut to the blur canvas
+        collectAndDrawRemovedSamples();
         reassignBallsToRegions(game.balls, game.regions, game.walls);
         validateAllBallOwnership(game.balls, game.regions, game.walls);
 
@@ -2210,6 +2274,9 @@ export function GameCanvas({
       }
 
       game.regions = updatedRegions;
+
+      // Write cells removed by this cut to the blur canvas (event-driven, not per-frame)
+      collectAndDrawRemovedSamples();
 
       // Reassign balls to regions
       reassignBallsToRegions(game.balls, game.regions, game.walls);
@@ -2594,43 +2661,6 @@ export function GameCanvas({
 
       // Clear the canvas (transparent to show CRT background through)
       ctx.clearRect(0, 0, screenWidth, screenHeight);
-
-      // ===== Render blur layer for removed areas =====
-      const blurCanvas = blurCanvasRef.current;
-      const blurCtx = blurCanvas?.getContext("2d");
-      if (blurCtx && blurCanvas) {
-        blurCtx.clearRect(0, 0, screenWidth, screenHeight);
-        
-        // Collect all current sample points from active regions
-        const activeSampleSet = new Set<string>();
-        for (const region of regions) {
-          if (region.samplePoints) {
-            for (const sample of region.samplePoints) {
-              activeSampleSet.add(`${sample.x},${sample.y}`);
-            }
-          }
-        }
-        
-        // Draw removed areas (initial points that are no longer active)
-        const gridSize = 15;
-        const halfGrid = gridSize / 2;
-        const cellPadding = 3;
-        
-        blurCtx.save();
-        blurCtx.fillStyle = regionColor;
-        blurCtx.globalAlpha = 0.7;
-        
-        for (const sample of initialSamplePoints) {
-          const key = `${sample.x},${sample.y}`;
-          if (!activeSampleSet.has(key)) {
-            // This sample was removed - draw it on blur canvas
-            const topLeft = worldToScreen(sample.x - halfGrid - cellPadding, sample.y - halfGrid - cellPadding);
-            const size = (gridSize + cellPadding * 2) * scale;
-            blurCtx.fillRect(topLeft.x, topLeft.y, size, size);
-          }
-        }
-        blurCtx.restore();
-      }
 
       // NOTE: Don't fill the entire screen - let CRT show through
       // The regions themselves define the playable area and will be drawn below
