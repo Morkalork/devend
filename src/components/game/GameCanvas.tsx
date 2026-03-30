@@ -358,6 +358,9 @@ export function GameCanvas({
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
   const [bonusPulseKey, setBonusPulseKey] = useState(0);
+  // Debounce refs — prevent overlapping flash/shake timeouts from rapid ball hits
+  const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Track if game has been initialized to prevent re-init on resize events (e.g., shake animation)
   const gameInitializedRef = useRef(false);
@@ -1373,10 +1376,13 @@ export function GameCanvas({
       }
 
       // Freeze and shake for 1 second before showing game over
+      if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+      if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current);
       setScreenFlash("red");
       setIsShaking(true);
 
-      setTimeout(() => {
+      shakeTimeoutRef.current = setTimeout(() => {
+        shakeTimeoutRef.current = null;
         setScreenFlash("none");
         setIsShaking(false);
 
@@ -2457,10 +2463,12 @@ export function GameCanvas({
               game.isRecovering = true;
               game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
               setIsRecovering(true);
+              if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+              if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current);
               setScreenFlash("red");
               setIsShaking(true);
-              setTimeout(() => setScreenFlash("none"), 150);
-              setTimeout(() => {
+              flashTimeoutRef.current = setTimeout(() => { setScreenFlash("none"); flashTimeoutRef.current = null; }, 150);
+              shakeTimeoutRef.current = setTimeout(() => {
                 setIsShaking(false);
                 // Unfreeze the ball after shake completes - restore position and velocity
                 const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
@@ -2482,10 +2490,12 @@ export function GameCanvas({
             // If in push mode, don't lose a life - just fail the push
             if (game.pushMode === "pushing") {
               game.activeWall = null;
+              if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+              if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current);
               setScreenFlash("red");
               setIsShaking(true);
-              setTimeout(() => setScreenFlash("none"), 200);
-              setTimeout(() => {
+              flashTimeoutRef.current = setTimeout(() => { setScreenFlash("none"); flashTimeoutRef.current = null; }, 200);
+              shakeTimeoutRef.current = setTimeout(() => {
                 setIsShaking(false);
                 // Unfreeze the ball after shake completes - restore position and velocity
                 const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
@@ -2523,10 +2533,12 @@ export function GameCanvas({
             game.isRecovering = true;
             game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
             setIsRecovering(true);
+            if (flashTimeoutRef.current) clearTimeout(flashTimeoutRef.current);
+            if (shakeTimeoutRef.current) clearTimeout(shakeTimeoutRef.current);
             setScreenFlash("red");
             setIsShaking(true);
-            setTimeout(() => setScreenFlash("none"), 200);
-            setTimeout(() => {
+            flashTimeoutRef.current = setTimeout(() => { setScreenFlash("none"); flashTimeoutRef.current = null; }, 200);
+            shakeTimeoutRef.current = setTimeout(() => {
               setIsShaking(false);
               // Unfreeze the ball after shake completes - restore position and velocity
               const frozenBall = game.balls.find(b => b.id === game.frozenBallId);
