@@ -94,6 +94,7 @@ export function GameScreen({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const memParallaxTickRef = useRef<((timestamp: number) => void) | null>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -112,7 +113,7 @@ export function GameScreen({
       <CRTBackground accentColor={accentColor} />
       
       {/* Memory Parallax Layer - between CRT and game */}
-      <MemoryParallaxLayer accentColor={accentColor} />
+      <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />
       
       <div className="fixed inset-0 flex flex-col z-10">
         {/* Game Top Bar - Two rows */}
@@ -159,6 +160,7 @@ export function GameScreen({
             accentColor={accentColor}
             activeModifiers={activeModifiers}
             cumulativeLockedBalls={cumulativeLockedBalls}
+            parallaxTickRef={memParallaxTickRef}
           />
         </div>
 

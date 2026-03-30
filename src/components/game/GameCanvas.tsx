@@ -161,6 +161,7 @@ interface GameCanvasProps {
   accentColor?: string;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
+  parallaxTickRef?: React.MutableRefObject<((timestamp: number) => void) | null>;
 }
 
 // Game constants - all in WORLD units
@@ -336,6 +337,7 @@ export function GameCanvas({
   accentColor = "#00ff88",
   activeModifiers,
   cumulativeLockedBalls = 0,
+  parallaxTickRef,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blurCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -3458,6 +3460,9 @@ export function GameCanvas({
     startDissolveRef.current = startDissolve;
 
     const gameLoop = (timestamp: number) => {
+      // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning one
+      parallaxTickRef?.current?.(timestamp);
+
       // Dissolve animation always runs regardless of gameOver/levelComplete state
       if (game.dissolve) {
         const d = game.dissolve;

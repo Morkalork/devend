@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, MutableRefObject } from 'react';
 
 /**
  * Memory Parallax Layer
@@ -26,6 +26,7 @@ interface MemoryBlock {
 
 interface MemoryParallaxLayerProps {
   accentColor?: string;
+  externalTickRef?: MutableRefObject<((timestamp: number) => void) | null>;
 }
 
 const CONFIG = {
@@ -39,7 +40,7 @@ const CONFIG = {
   scrollSpeed: 0.005, // Much slower than the code layer for depth
 };
 
-export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxLayerProps) {
+export function MemoryParallaxLayer({ accentColor = '#00ff88', externalTickRef }: MemoryParallaxLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blocksRef = useRef<MemoryBlock[]>([]);
   const frameRef = useRef<number>(0);
@@ -205,16 +206,28 @@ export function MemoryParallaxLayer({ accentColor = '#00ff88' }: MemoryParallaxL
         return true;
       });
 
-      frameRef.current = requestAnimationFrame(animate);
+      if (externalTickRef) {
+        externalTickRef.current = animate; // re-register for next game-loop tick
+      } else {
+        frameRef.current = requestAnimationFrame(animate);
+      }
     };
 
-    frameRef.current = requestAnimationFrame(animate);
+    if (externalTickRef) {
+      externalTickRef.current = animate;
+    } else {
+      frameRef.current = requestAnimationFrame(animate);
+    }
 
     return () => {
-      cancelAnimationFrame(frameRef.current);
+      if (externalTickRef) {
+        externalTickRef.current = null;
+      } else {
+        cancelAnimationFrame(frameRef.current);
+      }
       window.removeEventListener('resize', handleResize);
     };
-  }, [accentColor, createBlock]);
+  }, [accentColor, createBlock, externalTickRef]);
 
   return (
     <canvas
