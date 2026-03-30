@@ -175,6 +175,7 @@ const BALL_WON_REGION_THRESHOLD = 5; // Ball is WON if its region is <= this % o
 const WON_BALL_SPIN_SPEED = 8; // Radians per second for won ball spin
 
 // Difficulty curve: wall speed decreases per level (slower = harder)
+const PHYSICS_STEP = 1 / 120; // Fixed physics timestep: 120 ticks per second
 function getWallSpeedBase(levelIndex: number, base = 1200, min = 750, perLevel = 50): number {
   // World units per second
   return Math.max(min, Math.min(base, base - (levelIndex - 1) * perLevel));
@@ -407,6 +408,7 @@ export function GameCanvas({
     currentSwipePos: null as Vector2 | null, // World coords
     swipePointerId: null as number | null, // Pointer ID that started the current swipe
     lastTime: 0,
+    accumulator: 0,
     animationId: 0,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
@@ -990,6 +992,7 @@ export function GameCanvas({
       game.currentSwipePos = null;
       game.swipePointerId = null;
       game.lastTime = 0;
+      game.accumulator = 0;
       game.wallCount = 0;
       clearWallImpacts(); // Clear any lingering visual effects
       setCutCount(0);
@@ -3019,7 +3022,10 @@ export function GameCanvas({
 
       // Render all balls with multi-axis spin illusion
       for (const ball of balls) {
-        const screenPos = worldToScreen(ball.position.x, ball.position.y);
+        const screenPos = worldToScreen(
+          (ball.renderPosition ?? ball.position).x,
+          (ball.renderPosition ?? ball.position).y,
+        );
         const assimScale = ball.assimScale ?? 1;
         const screenRadius = ball.radius * scale; // size unchanged — alpha fades instead
         const isFastest = false; // Highlight fastest ball removed in new upgrade system
@@ -3519,29 +3525,47 @@ export function GameCanvas({
 
       const dt = game.lastTime ? (timestamp - game.lastTime) / 1000 : 0;
       game.lastTime = timestamp;
-      const cappedDt = Math.min(dt, 0.05);
+      game.accumulator += Math.min(dt, 0.05);
 
-      for (const ball of game.balls) {
-        // WON balls keep full physics but visually disintegrate
-        if (ball.state === 'won') {
-          const elapsed = performance.now() - ball.wonTime;
-          // Hold full opacity for 50ms, then fade out over 180ms — looks like ball pops into dust
-          ball.assimScale = Math.max(0, 1 - Math.max(0, elapsed - 50) / 180);
+      while (game.accumulator >= PHYSICS_STEP) {
+        // Snapshot positions before this step (used for render interpolation)
+        for (const ball of game.balls) {
+          ball.prevPosition = { ...ball.position };
         }
-        
-        // Skip updating frozen ball - it stays in place during shake animation
-        if (game.frozenBallId && ball.id === game.frozenBallId) {
-          // Debug: log if position changed unexpectedly
-          if (game.frozenBallPosition && (ball.position.x !== game.frozenBallPosition.x || ball.position.y !== game.frozenBallPosition.y)) {
-            console.error("[FREEZE] Ball position changed during freeze! Current:", ball.position, "Should be:", game.frozenBallPosition);
-            ball.position = { ...game.frozenBallPosition }; // Force restore
+
+        for (const ball of game.balls) {
+          // WON balls keep full physics but visually disintegrate
+          if (ball.state === 'won') {
+            const elapsed = performance.now() - ball.wonTime;
+            // Hold full opacity for 50ms, then fade out over 180ms — looks like ball pops into dust
+            ball.assimScale = Math.max(0, 1 - Math.max(0, elapsed - 50) / 180);
           }
-          continue;
+
+          // Skip updating frozen ball - it stays in place during shake animation
+          if (game.frozenBallId && ball.id === game.frozenBallId) {
+            // Debug: log if position changed unexpectedly
+            if (game.frozenBallPosition && (ball.position.x !== game.frozenBallPosition.x || ball.position.y !== game.frozenBallPosition.y)) {
+              console.error("[FREEZE] Ball position changed during freeze! Current:", ball.position, "Should be:", game.frozenBallPosition);
+              ball.position = { ...game.frozenBallPosition }; // Force restore
+            }
+            continue;
+          }
+          updateBall(ball, PHYSICS_STEP);
         }
-        updateBall(ball, cappedDt);
+        handleBallCollisions();
+        updateWall(PHYSICS_STEP);
+        game.accumulator -= PHYSICS_STEP;
       }
-      handleBallCollisions();
-      updateWall(cappedDt);
+
+      // Interpolate render positions between last two physics states
+      const alpha = game.accumulator / PHYSICS_STEP;
+      for (const ball of game.balls) {
+        const prev = ball.prevPosition ?? ball.position;
+        ball.renderPosition = {
+          x: prev.x + (ball.position.x - prev.x) * alpha,
+          y: prev.y + (ball.position.y - prev.y) * alpha,
+        };
+      }
       
       // Update wall impact visual effects (time-based)
       updateWallImpacts();
@@ -3792,11 +3816,13 @@ export function GameCanvas({
 
     const game = gameRef.current;
     game.lastTime = 0;
+    game.accumulator = 0;
 
     if (game.gameLoopFn) {
       cancelAnimationFrame(game.animationId);
       requestAnimationFrame(() => {
         game.lastTime = 0;
+        game.accumulator = 0;
         game.animationId = requestAnimationFrame(game.gameLoopFn!);
       });
     }

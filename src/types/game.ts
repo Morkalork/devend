@@ -40,6 +40,8 @@ export interface Ball {
   wonTime: number;      // timestamp when entering WON state
   assimScale: number;   // visual scale factor for assimilation animation (default 1.0)
   assimColorFade: number; // 0→1 fade from ball color to accent color (default 0)
+  prevPosition?: Vector2;    // position at start of last fixed physics step (for interpolation)
+  renderPosition?: Vector2;  // interpolated render position (set each frame, used by render only)
 }
 
 // Diagonal growing wall - extends from origin in +/- direction
