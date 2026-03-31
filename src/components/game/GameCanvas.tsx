@@ -3013,6 +3013,36 @@ export function GameCanvas({
       }
       ctx.restore();
 
+      // ---- Neon rim light: 3-layer glow border around playfield ----
+      {
+        const { left: rl, top: rt, width: rw, height: rh } = boardRect;
+        const pulse = 0.8 + 0.2 * Math.sin(performance.now() * 0.0014);
+        const cornerSz = 6 * scale;
+        const layers = [
+          { lw: 10 * scale, blur: 20 * scale, alpha: 0.10 * pulse },
+          { lw: 4  * scale, blur: 10 * scale, alpha: 0.30 * pulse },
+          { lw: 1.5 * scale, blur: 4 * scale, alpha: 0.85 * pulse },
+        ];
+        ctx.save();
+        ctx.strokeStyle = accentColor;
+        for (const { lw, blur, alpha } of layers) {
+          ctx.globalAlpha = alpha;
+          ctx.lineWidth = lw;
+          ctx.shadowColor = accentColor;
+          ctx.shadowBlur = blur;
+          ctx.strokeRect(rl, rt, rw, rh);
+        }
+        // Corner accent squares
+        ctx.globalAlpha = 0.9 * pulse;
+        ctx.shadowBlur = 8 * scale;
+        ctx.fillStyle = accentColor;
+        for (const [cx, cy] of [[rl, rt], [rl + rw, rt], [rl, rt + rh], [rl + rw, rt + rh]] as [number, number][]) {
+          ctx.fillRect(cx - cornerSz / 2, cy - cornerSz / 2, cornerSz, cornerSz);
+        }
+        ctx.restore();
+      }
+      // ---- End neon rim ----
+
       // Render mirror polygon fills (semi-transparent cyan)
       if (game.mirrorPolygons.length > 0) {
         ctx.save();
