@@ -115,33 +115,33 @@ upgrades:
   - id: strong_typing_junior
     name: Strong Typing
     tier: Junior
-    description: Increase fence width by 100%.
+    description: Multiply fence width by 5×. (5× total)
     cost: 8
     unlockLevel: 1
     modifiers:
-      fenceWidthMultiplier: 2
+      fenceWidthMultiplier: 5
 
   - id: strong_typing_senior
     name: Strong Typing
     tier: Senior
-    description: Increase fence width by 200%.
+    description: Multiply fence width by 5× again. (25× total)
     cost: 16
     unlockLevel: 10
     prerequisites:
       - strong_typing_junior
     modifiers:
-      fenceWidthMultiplier: 3
+      fenceWidthMultiplier: 5
 
   - id: strong_typing_principal
     name: Strong Typing
     tier: Principal
-    description: Increase fence width by 300%.
+    description: Multiply fence width by 5× again. (125× total)
     cost: 26
     unlockLevel: 20
     prerequisites:
       - strong_typing_senior
     modifiers:
-      fenceWidthMultiplier: 4
+      fenceWidthMultiplier: 5
 
 
   # ===============================
