@@ -724,7 +724,7 @@ function IndexContent({
             animate="center"
             exit="exit"
             transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-            style={{ willChange: 'transform', width: '100%', height: '100%' }}
+            style={{ willChange: 'transform', position: 'relative', width: '100%', height: '100dvh' }}
           >
       {currentScreen === 'welcome' && (
         <WelcomeScreen

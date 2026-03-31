@@ -238,7 +238,7 @@ export function AchievementsScreen({
     <>
       <CRTBackground accentColor={accentColor} />
       <div
-        className="fixed inset-0 z-50 flex flex-col"
+        className="absolute inset-0 z-50 flex flex-col"
         style={{ backgroundColor: 'rgba(0,0,0,0.92)' }}
       >
         {/* Header */}

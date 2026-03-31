@@ -115,7 +115,7 @@ export function GameScreen({
       {/* Memory Parallax Layer - between CRT and game */}
       <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />
       
-      <div className="fixed inset-0 flex flex-col z-10">
+      <div className="absolute inset-0 flex flex-col z-10">
         {/* Game Top Bar - Two rows */}
         <div>
           <GameTopBar
