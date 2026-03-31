@@ -665,6 +665,20 @@ export function GameCanvas({
       }
       clearingRegions.push({ samples: cleared, minX, minY, maxX, maxY, startTime: performance.now() });
     };
+    // Ambient data-rain particles — purely cosmetic background effect
+    interface RainParticle { x: number; y: number; symbol: string; alpha: number; speed: number; size: number; }
+    const RAIN_SYMBOLS = '01{}()=>;./#@*';
+    let rainParticles: RainParticle[] = [];
+    let rainLastTime = 0;
+    const spawnRainParticle = (startY?: number): RainParticle => ({
+      x: 15 + Math.random() * (BOARD_WIDTH - 30),
+      y: startY ?? -(10 + Math.random() * 80),
+      symbol: RAIN_SYMBOLS[Math.floor(Math.random() * RAIN_SYMBOLS.length)],
+      alpha: 0.03 + Math.random() * 0.04,
+      speed: 30 + Math.random() * 50,
+      size: 15 + Math.random() * 10,
+    });
+
     const effectiveBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
 
     // Calculate effective swipe distance with modifier (world units)
@@ -1077,6 +1091,12 @@ export function GameCanvas({
       clearWallImpacts(); // Clear any lingering visual effects
       setCutCount(0);
       setRemainingPercent(Math.round(targetRemaining));
+
+      // Seed rain particles staggered across the board
+      rainParticles = Array.from({ length: 40 }, (_, i) =>
+        spawnRainParticle(-10 - (i / 40) * BOARD_HEIGHT),
+      );
+      rainLastTime = 0;
     };
 
     const resizeCanvas = () => {
@@ -2861,6 +2881,32 @@ export function GameCanvas({
 
       // NOTE: Don't fill the entire screen - let CRT show through
       // The regions themselves define the playable area and will be drawn below
+
+      // ---- Ambient data rain (cosmetic layer drawn before region fill) ----
+      {
+        const now = performance.now();
+        const dtRain = rainLastTime ? Math.min((now - rainLastTime) / 1000, 0.05) : 0;
+        rainLastTime = now;
+        const { scale, left: bx, top: by } = game.boardRect;
+        ctx.save();
+        ctx.font = `${Math.round(14 * scale)}px 'JetBrains Mono', monospace`;
+        ctx.textBaseline = 'top';
+        for (const p of rainParticles) {
+          p.y += p.speed * dtRain;
+          if (p.y > BOARD_HEIGHT + 20) {
+            p.y = -(10 + Math.random() * 60);
+            p.x = 15 + Math.random() * (BOARD_WIDTH - 30);
+            p.symbol = RAIN_SYMBOLS[Math.floor(Math.random() * RAIN_SYMBOLS.length)];
+            p.alpha = 0.03 + Math.random() * 0.04;
+            p.speed = 30 + Math.random() * 50;
+          }
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = accentColor;
+          ctx.fillText(p.symbol, bx + p.x * scale, by + p.y * scale);
+        }
+        ctx.restore();
+      }
+      // ---- End ambient data rain ----
 
       // Single blit of pre-rendered region canvas (rebuilt only on each cut)
       ctx.drawImage(regionCanvas, 0, 0);
