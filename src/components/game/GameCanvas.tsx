@@ -343,6 +343,7 @@ export function GameCanvas({
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const blurCanvasRef = useRef<HTMLCanvasElement>(null);
+  const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
   const onLevelCompleteRef = useRef(onLevelComplete);
@@ -585,6 +586,37 @@ export function GameCanvas({
       rCtx.restore();
     };
     // ─────────────────────────────────────────────────────────────────────────
+
+    // CRT phosphor dot overlay — painted once on mount/resize, zero per-frame cost
+    const paintOverlayCanvas = () => {
+      const oc = overlayCanvasRef.current;
+      if (!oc) return;
+      const { width: w, height: h } = canvas;
+      oc.width  = w; oc.height = h;
+      oc.style.width  = `${w}px`;
+      oc.style.height = `${h}px`;
+      const oCtx = oc.getContext('2d');
+      if (!oCtx) return;
+      oCtx.clearRect(0, 0, w, h);
+      // Build 3×3 phosphor dot tile: 1px circle at centre on dark gap
+      const tile = new OffscreenCanvas(3, 3);
+      const tCtx = tile.getContext('2d')!;
+      tCtx.clearRect(0, 0, 3, 3);
+      tCtx.fillStyle = 'rgba(0,0,0,0.08)';
+      tCtx.beginPath();
+      tCtx.arc(1.5, 1.5, 0.6, 0, Math.PI * 2);
+      tCtx.fill();
+      const pattern = oCtx.createPattern(tile, 'repeat')!;
+      oCtx.fillStyle = pattern;
+      oCtx.fillRect(0, 0, w, h);
+      // Vignette: transparent centre → dark corners
+      const cx = w / 2, cy = h / 2;
+      const vign = oCtx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(w, h) * 0.72);
+      vign.addColorStop(0,   'rgba(0,0,0,0)');
+      vign.addColorStop(1,   'rgba(0,0,0,0.22)');
+      oCtx.fillStyle = vign;
+      oCtx.fillRect(0, 0, w, h);
+    };
 
     // Region-clear scan-line animation state (cells that just got captured)
     interface ClearingRegion {
@@ -1054,6 +1086,8 @@ export function GameCanvas({
       repaintBlurCanvas();
       // Region canvas likewise needs scale-corrected coordinates
       repaintRegionCanvas();
+      // CRT phosphor overlay is screen-size locked → repaint
+      paintOverlayCanvas();
 
       // Update debug info
       setDebugInfo({
@@ -4013,6 +4047,12 @@ export function GameCanvas({
         />
         {/* Main game canvas */}
         <canvas ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
+        {/* CRT phosphor dot overlay — drawn once on mount/resize, never cleared */}
+        <canvas
+          ref={overlayCanvasRef}
+          className="absolute inset-0 pointer-events-none"
+          style={{ zIndex: 3, opacity: 1 }}
+        />
       </div>
 
       {/* Bottom section - Bottom UI band (~15% height) - empty now, button moved to GameScreen */}
