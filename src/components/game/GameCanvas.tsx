@@ -1435,6 +1435,7 @@ export function GameCanvas({
       if (!game.spaceGrid) return false;
       
       let anyBallWon = false;
+      const prevLockedCount = game.lockedBallsCount;
       const gridRegions = findGridRegions(game.spaceGrid);
       
       for (const ball of game.balls) {
@@ -1534,10 +1535,7 @@ export function GameCanvas({
             playBallLockSound();
           }
           
-           // Award lock bonus: +1h per locked ball, capped at 2h total
            game.lockedBallsCount += 1;
-           const thisLockBonus = 1;
-           game.lockBonus = Math.min(2, game.lockBonus + thisLockBonus);
 
            // MicroManager: immediately cap speed of remaining active balls
            if (activeModifiers.microManagerPerLock > 0) {
@@ -1563,7 +1561,13 @@ export function GameCanvas({
           anyBallWon = true;
         }
       }
-      
+
+      // Multi-lock multiplier: N balls locked simultaneously = N × N bonus points
+      const newlyLocked = game.lockedBallsCount - prevLockedCount;
+      if (newlyLocked > 0) {
+        game.lockBonus += newlyLocked * newlyLocked;
+      }
+
       return anyBallWon;
     };
 

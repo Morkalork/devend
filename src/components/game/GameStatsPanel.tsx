@@ -45,7 +45,7 @@ function GameStatsPanel({ activeModifiers, accentColor, lockedBalls = 0 }, ref) 
       <div 
         className="mx-auto max-w-4xl px-3 py-2"
         style={{ 
-          backgroundColor: 'rgba(0, 0, 0, 0.9)',
+          backgroundColor: 'rgba(0, 0, 0, 0.80)',
           borderTop: `1px solid ${accentColor}40`,
         }}
       >
