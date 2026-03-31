@@ -714,7 +714,7 @@ function IndexContent({
 
   return (
     <>
-      <div style={{ position: 'relative', overflow: 'hidden', minHeight: '100dvh', width: '100%' }}>
+      <div style={{ position: 'relative', overflow: 'hidden', height: '100dvh', width: '100%' }}>
         <AnimatePresence mode="wait" custom={transitionDirRef.current}>
           <motion.div
             key={currentScreen}
@@ -724,7 +724,7 @@ function IndexContent({
             animate="center"
             exit="exit"
             transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-            style={{ willChange: 'transform', width: '100%' }}
+            style={{ willChange: 'transform', width: '100%', height: '100%' }}
           >
       {currentScreen === 'welcome' && (
         <WelcomeScreen
