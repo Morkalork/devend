@@ -2831,6 +2831,10 @@ export function GameCanvas({
       {
         const shadowW = 7 * scale;
         ctx.save();
+        // Clip to board rect so shadow quads don't bleed past board edges
+        ctx.beginPath();
+        ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
+        ctx.clip();
         for (const w of walls) {
           if (!w.id.startsWith('wall-')) continue;
           const s = worldToScreen(w.start.x, w.start.y);
@@ -2912,6 +2916,10 @@ export function GameCanvas({
       ctx.lineJoin = "round";
       ctx.shadowColor = accentColor;
       ctx.shadowBlur = 6 * scale;
+      // Clip to board rect so thick fences merge cleanly at walls/edges
+      ctx.beginPath();
+      ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
+      ctx.clip();
 
       const obstacles = game.obstaclePolygons;
 
@@ -3045,6 +3053,10 @@ export function GameCanvas({
           if (fwdPreview && bwdPreview) {
             ctx.save();
             ctx.globalAlpha = 0.15;
+            // Clip to board rect so preview doesn't bleed past edges
+            ctx.beginPath();
+            ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
+            ctx.clip();
 
             const previewThickness = WALL_THICKNESS * activeModifiers.fenceWidthMultiplier;
             ctx.lineCap = "round";
