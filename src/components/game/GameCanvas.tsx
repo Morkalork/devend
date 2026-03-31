@@ -679,6 +679,38 @@ export function GameCanvas({
       size: 15 + Math.random() * 10,
     });
 
+    // Circuit-board hex overlay cached per accent colour
+    const hexOverlayCache = new Map<string, OffscreenCanvas>();
+    const getHexOverlay = (color: string): OffscreenCanvas => {
+      if (hexOverlayCache.has(color)) return hexOverlayCache.get(color)!;
+      const SIZE = 128;
+      const oc = new OffscreenCanvas(SIZE, SIZE);
+      const hCtx = oc.getContext('2d')!;
+      const R = 10;                        // hex circumradius in 128px space
+      const s3 = Math.sqrt(3);
+      hCtx.strokeStyle = color;
+      hCtx.lineWidth = 0.7;
+      hCtx.globalAlpha = 1;                // full alpha; caller controls composite alpha
+      hCtx.lineCap = 'round';
+      for (let col = -1; col <= Math.ceil(SIZE / (R * 1.5)) + 1; col++) {
+        for (let row = -1; row <= Math.ceil(SIZE / (R * s3)) + 1; row++) {
+          const cx = col * 1.5 * R;
+          const cy = row * R * s3 + (col % 2 === 0 ? 0 : R * s3 / 2);
+          hCtx.beginPath();
+          for (let i = 0; i < 6; i++) {
+            const a = (Math.PI / 3) * i;
+            const px = cx + R * Math.cos(a);
+            const py = cy + R * Math.sin(a);
+            if (i === 0) hCtx.moveTo(px, py); else hCtx.lineTo(px, py);
+          }
+          hCtx.closePath();
+          hCtx.stroke();
+        }
+      }
+      hexOverlayCache.set(color, oc);
+      return oc;
+    };
+
     const effectiveBallRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
 
     // Calculate effective swipe distance with modifier (world units)
@@ -3479,6 +3511,18 @@ export function GameCanvas({
         ctx.ellipse(-tiltX, screenRadius * 0.7 - tiltY, screenRadius * 0.35, screenRadius * 0.15, -secondaryPhase * 0.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
+
+        // ===== LAYER 5: Circuit-board hex pattern (overlay blend) =====
+        {
+          const hexOC = getHexOverlay(accentColor);
+          ctx.save();
+          ctx.globalCompositeOperation = 'overlay';
+          ctx.globalAlpha = 0.18;
+          ctx.translate(screenPos.x, screenPos.y);
+          ctx.rotate(ball.rotation * 0.3); // slow co-rotation with ball spin
+          ctx.drawImage(hexOC, -screenRadius, -screenRadius, screenRadius * 2, screenRadius * 2);
+          ctx.restore();
+        }
 
         ctx.restore(); // End clipping
 
