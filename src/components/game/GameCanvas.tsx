@@ -2109,225 +2109,133 @@ export function GameCanvas({
       if (!game.spaceGrid) return;
       const grid = game.spaceGrid;
       const { balls } = game;
-      // Find bounding rows/cols of all active cells (also counts them for the cap)
-      let minRow = grid.height, maxRow = -1, minCol = grid.width, maxCol = -1;
+
+      // Count remaining active cells
       let totalActiveCells = 0;
       for (let i = 0; i < grid.cells.length; i++) {
-        if (grid.cells[i] !== CellState.ACTIVE) continue;
-        totalActiveCells++;
-        const { row, col } = indexToRowCol(grid, i);
-        if (row < minRow) minRow = row;
-        if (row > maxRow) maxRow = row;
-        if (col < minCol) minCol = col;
-        if (col > maxCol) maxCol = col;
+        if (grid.cells[i] === CellState.ACTIVE) totalActiveCells++;
       }
-      if (maxRow < 0 || totalActiveCells === 0) return;
+      if (totalActiveCells === 0) return;
 
-      // x% of remaining active area, capped at 40% so we never exhaust the board
-      const targetCells = Math.max(1, Math.min(
-        Math.round(amount * totalActiveCells),
-        Math.round(0.40 * totalActiveCells)
-      ));
+      // N squares to place, each covering 1% of remaining area
+      const N = Math.max(1, Math.floor(amount * 100));
+      const squareCellCount = Math.max(1, Math.floor(totalActiveCells / 100));
+      const squareSide = Math.max(1, Math.ceil(Math.sqrt(squareCellCount)));
 
-      // Shuffle 4 edges for variety
-      type Edge = 'top' | 'bottom' | 'left' | 'right';
-      const edges: Edge[] = ['top', 'bottom', 'left', 'right'];
-      for (let i = edges.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [edges[i], edges[j]] = [edges[j], edges[i]];
-      }
+      const liveBalls = balls.filter(b => b.state !== 'won' && b.speed > 0);
 
-      for (const edge of edges) {
-        const stripIndices: number[] = [];
-        let fenceStart: Vector2 | null = null;
-        let fenceEnd: Vector2 | null = null;
+      for (let sq = 0; sq < N; sq++) {
+        let bestScore = -Infinity;
+        let bestIndices: number[] = [];
 
-        if (edge === 'top') {
-          for (let row = minRow; row <= maxRow; row++) {
-            for (let col = 0; col < grid.width; col++) {
-              const idx = row * grid.width + col;
-              if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
-            }
-            if (stripIndices.length >= targetCells) {
-              // Use only cells from this boundary row so the fence spans the
-              // exact active width at the cut line, not accumulated rows above.
-              let leftCol = grid.width, rightCol = -1;
-              for (let col = 0; col < grid.width; col++) {
-                if (grid.cells[row * grid.width + col] === CellState.ACTIVE) {
-                  if (col < leftCol) leftCol = col;
-                  if (col > rightCol) rightCol = col;
+        for (let cr = 0; cr <= grid.height - squareSide; cr++) {
+          for (let cc = 0; cc <= grid.width - squareSide; cc++) {
+            // Collect active cells in this candidate block
+            const candidateIndices: number[] = [];
+            for (let dr = 0; dr < squareSide; dr++) {
+              for (let dc = 0; dc < squareSide; dc++) {
+                const idx = (cr + dr) * grid.width + (cc + dc);
+                if (idx < grid.cells.length && grid.cells[idx] === CellState.ACTIVE) {
+                  candidateIndices.push(idx);
                 }
               }
-              const lineY = grid.originY + (row + 1) * grid.cellSize;
-              fenceStart = { x: grid.originX + leftCol * grid.cellSize, y: lineY };
-              fenceEnd = { x: grid.originX + (rightCol + 1) * grid.cellSize, y: lineY };
-              break;
             }
-          }
-        } else if (edge === 'bottom') {
-          for (let row = maxRow; row >= minRow; row--) {
-            for (let col = 0; col < grid.width; col++) {
-              const idx = row * grid.width + col;
-              if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
+            if (candidateIndices.length === 0) continue;
+
+            // World-space centre of the candidate block
+            const cx = grid.originX + (cc + squareSide / 2) * grid.cellSize;
+            const cy = grid.originY + (cr + squareSide / 2) * grid.cellSize;
+
+            // Primary score: distance to the nearest live ball
+            let minDist = liveBalls.length === 0 ? 1 : Infinity;
+            for (const ball of liveBalls) {
+              const dx = cx - ball.position.x;
+              const dy = cy - ball.position.y;
+              const d = Math.sqrt(dx * dx + dy * dy);
+              if (d < minDist) minDist = d;
             }
-            if (stripIndices.length >= targetCells) {
-              // Use only cells from this boundary row.
-              let leftCol = grid.width, rightCol = -1;
-              for (let col = 0; col < grid.width; col++) {
-                if (grid.cells[row * grid.width + col] === CellState.ACTIVE) {
-                  if (col < leftCol) leftCol = col;
-                  if (col > rightCol) rightCol = col;
-                }
+
+            // "Behind the ball" bonus: for nearby balls prefer placing in their wake
+            let behindBonus = 0;
+            for (const ball of liveBalls) {
+              const dx = cx - ball.position.x;
+              const dy = cy - ball.position.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              const spd = Math.sqrt(ball.velocity.x ** 2 + ball.velocity.y ** 2);
+              if (spd > 0 && dist < squareSide * grid.cellSize * 6) {
+                // Positive when square is behind the ball (opposite to velocity)
+                const behind = (dx * (-ball.velocity.x) + dy * (-ball.velocity.y)) / spd;
+                behindBonus = Math.max(behindBonus, behind * 0.15);
               }
-              const lineY = grid.originY + row * grid.cellSize;
-              fenceStart = { x: grid.originX + leftCol * grid.cellSize, y: lineY };
-              fenceEnd = { x: grid.originX + (rightCol + 1) * grid.cellSize, y: lineY };
-              break;
             }
-          }
-        } else if (edge === 'left') {
-          for (let col = minCol; col <= maxCol; col++) {
-            for (let row = 0; row < grid.height; row++) {
-              const idx = row * grid.width + col;
-              if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
-            }
-            if (stripIndices.length >= targetCells) {
-              // Use only cells from this boundary col.
-              let topRow = grid.height, bottomRow = -1;
-              for (let row = 0; row < grid.height; row++) {
-                if (grid.cells[row * grid.width + col] === CellState.ACTIVE) {
-                  if (row < topRow) topRow = row;
-                  if (row > bottomRow) bottomRow = row;
-                }
-              }
-              const lineX = grid.originX + (col + 1) * grid.cellSize;
-              fenceStart = { x: lineX, y: grid.originY + topRow * grid.cellSize };
-              fenceEnd = { x: lineX, y: grid.originY + (bottomRow + 1) * grid.cellSize };
-              break;
-            }
-          }
-        } else {
-          // right
-          for (let col = maxCol; col >= minCol; col--) {
-            for (let row = 0; row < grid.height; row++) {
-              const idx = row * grid.width + col;
-              if (grid.cells[idx] === CellState.ACTIVE) stripIndices.push(idx);
-            }
-            if (stripIndices.length >= targetCells) {
-              // Use only cells from this boundary col.
-              let topRow = grid.height, bottomRow = -1;
-              for (let row = 0; row < grid.height; row++) {
-                if (grid.cells[row * grid.width + col] === CellState.ACTIVE) {
-                  if (row < topRow) topRow = row;
-                  if (row > bottomRow) bottomRow = row;
-                }
-              }
-              const lineX = grid.originX + col * grid.cellSize;
-              fenceStart = { x: lineX, y: grid.originY + topRow * grid.cellSize };
-              fenceEnd = { x: lineX, y: grid.originY + (bottomRow + 1) * grid.cellSize };
-              break;
+
+            const score = minDist + behindBonus;
+            if (score > bestScore) {
+              bestScore = score;
+              bestIndices = candidateIndices;
             }
           }
         }
 
-        if (!fenceStart || !fenceEnd || stripIndices.length === 0) continue;
+        if (bestIndices.length === 0) break;
 
-        // Reject if any active ball is too close to the fence line.
-        // We check perpendicular world-space distance rather than grid cells because
-        // ball radius (18) > cell size (15), so a ball can be in a "safe" cell while
-        // its body still overlaps the fence line or the removed strip.
-        const isHorizontalFence = edge === 'top' || edge === 'bottom';
-        let hasBall = false;
-        for (const ball of balls) {
-          if (ball.state === 'won') continue;
-          const clearance = ball.radius + WALL_THICKNESS + grid.cellSize;
-          if (isHorizontalFence) {
-            const perpDist = Math.abs(ball.position.y - fenceStart.y);
-            const inLateral = ball.position.x >= fenceStart.x - ball.radius
-                           && ball.position.x <= fenceEnd.x   + ball.radius;
-            if (perpDist < clearance && inLateral) { hasBall = true; break; }
-          } else {
-            const perpDist = Math.abs(ball.position.x - fenceStart.x);
-            const inLateral = ball.position.y >= fenceStart.y - ball.radius
-                           && ball.position.y <= fenceEnd.y   + ball.radius;
-            if (perpDist < clearance && inLateral) { hasBall = true; break; }
-          }
-        }
-        if (hasBall) continue;
-
-        // ---- Apply the bonus cut ----
-
-        // Add a visual fence wall (renders as a fence line, balls bounce off it)
-        game.walls.push({
-          id: generateWallId(),
-          start: fenceStart,
-          end: fenceEnd,
-          thickness: WALL_THICKNESS,
-        });
-
-        // Remove the strip cells from the grid
-        for (const idx of stripIndices) {
+        // Mark the chosen block's cells as removed
+        for (const idx of bestIndices) {
           grid.cells[idx] = CellState.REMOVED;
         }
-
-        // Update grid regions: clear any newly isolated ball-free regions
-        const postGridRegions = findGridRegions(grid);
-        const postWithBalls: GridRegion[] = [];
-        for (const region of postGridRegions) {
-          let hasBallInRegion = false;
-          for (const ball of balls) {
-            if (ball.state === 'won') continue;
-            const bidx = worldToGridIndex(grid, ball.position.x, ball.position.y);
-            if (bidx >= 0 && region.cellIndices.includes(bidx)) { hasBallInRegion = true; break; }
-          }
-          if (hasBallInRegion) {
-            postWithBalls.push(region);
-          } else {
-            removeRegion(grid, region);
-          }
-        }
-        game.gridRegions = postWithBalls;
-
-        // Update legacy sample-based regions for rendering
-        const bonusUpdatedRegions: Region[] = [];
-        for (const region of [...game.regions]) {
-          const subRegions = findSubRegionsGrid(region);
-          if (subRegions.length <= 1) {
-            if (subRegions.length === 1 && subRegions[0].hasBalls) {
-              bonusUpdatedRegions.push({
-                ...region,
-                samplePoints: subRegions[0].samples,
-                estimatedArea: subRegions[0].samples.length * 15 * 15,
-              });
-            }
-            continue;
-          }
-          for (const subRegion of subRegions.filter(r => r.hasBalls)) {
-            const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
-            if (result && result.estimatedArea > 100) {
-              bonusUpdatedRegions.push({
-                id: generateRegionId(),
-                polygon: result.polygon,
-                estimatedArea: result.estimatedArea,
-                samplePoints: result.samplePoints,
-              });
-            }
-          }
-        }
-        game.regions = bonusUpdatedRegions;
-        // Write cells removed by bonus cut to the blur canvas
-        collectAndDrawRemovedSamples();
-        // Repaint region canvas
-        repaintRegionCanvas();
-        reassignBallsToRegions(game.balls, game.regions, game.walls);
-        validateAllBallOwnership(game.balls, game.regions, game.walls);
-
-        // Update won states — bonus cut may capture a ball in a small region
-        checkAndUpdateBallWonStates();
-
-        setBonusPulseKey(k => k + 1);
-        return;
       }
+
+      // Batch cleanup: remove grid regions that no longer contain any live ball
+      const postGridRegions = findGridRegions(grid);
+      const postWithBalls: GridRegion[] = [];
+      for (const region of postGridRegions) {
+        let hasBallInRegion = false;
+        for (const ball of balls) {
+          if (ball.state === 'won') continue;
+          const bidx = worldToGridIndex(grid, ball.position.x, ball.position.y);
+          if (bidx >= 0 && region.cellIndices.includes(bidx)) { hasBallInRegion = true; break; }
+        }
+        if (hasBallInRegion) {
+          postWithBalls.push(region);
+        } else {
+          removeRegion(grid, region);
+        }
+      }
+      game.gridRegions = postWithBalls;
+
+      // Update sample-based regions for rendering
+      const bonusUpdatedRegions: Region[] = [];
+      for (const region of [...game.regions]) {
+        const subRegions = findSubRegionsGrid(region);
+        if (subRegions.length <= 1) {
+          if (subRegions.length === 1 && subRegions[0].hasBalls) {
+            bonusUpdatedRegions.push({
+              ...region,
+              samplePoints: subRegions[0].samples,
+              estimatedArea: subRegions[0].samples.length * 15 * 15,
+            });
+          }
+          continue;
+        }
+        for (const subRegion of subRegions.filter(r => r.hasBalls)) {
+          const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
+          if (result && result.estimatedArea > 100) {
+            bonusUpdatedRegions.push({
+              id: generateRegionId(),
+              polygon: result.polygon,
+              estimatedArea: result.estimatedArea,
+              samplePoints: result.samplePoints,
+            });
+          }
+        }
+      }
+      game.regions = bonusUpdatedRegions;
+      collectAndDrawRemovedSamples();
+      repaintRegionCanvas();
+      reassignBallsToRegions(game.balls, game.regions, game.walls);
+      validateAllBallOwnership(game.balls, game.regions, game.walls);
+      checkAndUpdateBallWonStates();
+      setBonusPulseKey(k => k + 1);
     };
 
     const applyCut = (wall: GrowingWall) => {
