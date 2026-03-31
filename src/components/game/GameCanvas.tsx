@@ -2956,6 +2956,42 @@ export function GameCanvas({
       // Note: Green border is now drawn via the unified wall model below
       // All walls (board edges, obstacles, user-drawn) are rendered identically
 
+      // ---- Wall inner shadow quads for user-drawn fences (depth cue) ----
+      {
+        const shadowW = 7 * scale;
+        ctx.save();
+        for (const w of walls) {
+          if (!w.id.startsWith('wall-')) continue;
+          const s = worldToScreen(w.start.x, w.start.y);
+          const e = worldToScreen(w.end.x, w.end.y);
+          const dxW = e.x - s.x;
+          const dyW = e.y - s.y;
+          const lenW = Math.sqrt(dxW * dxW + dyW * dyW);
+          if (lenW < 1) continue;
+          const nx = -dyW / lenW;
+          const ny =  dxW / lenW;
+          const midX = (s.x + e.x) / 2;
+          const midY = (s.y + e.y) / 2;
+          const grad = ctx.createLinearGradient(
+            midX + nx * shadowW, midY + ny * shadowW,
+            midX - nx * shadowW, midY - ny * shadowW,
+          );
+          grad.addColorStop(0,   'rgba(0,0,0,0)');
+          grad.addColorStop(0.5, 'rgba(0,0,0,0.22)');
+          grad.addColorStop(1,   'rgba(0,0,0,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.moveTo(s.x + nx * shadowW, s.y + ny * shadowW);
+          ctx.lineTo(e.x + nx * shadowW, e.y + ny * shadowW);
+          ctx.lineTo(e.x - nx * shadowW, e.y - ny * shadowW);
+          ctx.lineTo(s.x - nx * shadowW, s.y - ny * shadowW);
+          ctx.closePath();
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      // ---- End wall shadow quads ----
+
       // UNIFIED WALL MODEL: Draw ALL walls as visible borders using accent color
       // Walls are "fences" - they are drawn ON TOP, not used to erase space
       // User-drawn walls are clipped against obstacles (no fences inside obstacles)
