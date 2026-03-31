@@ -791,7 +791,7 @@ export function GameCanvas({
               const radius = isMirror
                 ? entity.radius
                 : applyCircleVariation(entity.radius, variety, level.id, entity.id);
-              const numSides = 24;
+              const numSides = 64;
               const vertices: { x: number; y: number }[] = [];
               for (let i = 0; i < numSides; i++) {
                 const angle = (i / numSides) * Math.PI * 2;
@@ -2951,6 +2951,46 @@ export function GameCanvas({
       }
       // ---- End wall shadow quads ----
 
+      // Catmull-Rom spline helper — builds a smooth closed path through world-space vertices
+      const buildSmoothPath = (verts: { x: number; y: number }[]) => {
+        const n = verts.length;
+        if (n < 3) return;
+        const sv = verts.map(v => worldToScreen(v.x, v.y));
+        ctx.beginPath();
+        for (let i = 0; i < n; i++) {
+          const p0 = sv[(i - 1 + n) % n];
+          const p1 = sv[i];
+          const p2 = sv[(i + 1) % n];
+          const p3 = sv[(i + 2) % n];
+          if (i === 0) ctx.moveTo(p1.x, p1.y);
+          ctx.bezierCurveTo(
+            p1.x + (p2.x - p0.x) / 6, p1.y + (p2.y - p0.y) / 6,
+            p2.x - (p3.x - p1.x) / 6, p2.y - (p3.y - p1.y) / 6,
+            p2.x, p2.y,
+          );
+        }
+        ctx.closePath();
+      };
+
+      // ---- Smooth obstacle outlines (non-mirror) ----
+      {
+        const mirrorSet = new Set(game.mirrorPolygons);
+        ctx.save();
+        ctx.strokeStyle = accentColor;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = WALL_THICKNESS * scale;
+        ctx.shadowColor = accentColor;
+        ctx.shadowBlur = 6 * scale;
+        for (const poly of game.obstaclePolygons) {
+          if (mirrorSet.has(poly)) continue;
+          buildSmoothPath(poly.vertices);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      // ---- End smooth obstacle outlines ----
+
       // UNIFIED WALL MODEL: Draw ALL walls as visible borders using accent color
       // Walls are "fences" - they are drawn ON TOP, not used to erase space
       // User-drawn walls are clipped against obstacles (no fences inside obstacles)
@@ -2965,6 +3005,7 @@ export function GameCanvas({
 
       for (const w of walls) {
         if (w.isMirror) continue; // Mirror walls rendered separately below
+        if (w.id.startsWith('obstacle-')) continue; // drawn as smooth splines above
         const wallLineWidth = w.thickness * scale;
         ctx.lineWidth = wallLineWidth;
 
@@ -3044,48 +3085,35 @@ export function GameCanvas({
         ctx.fillStyle = "rgba(136, 221, 255, 0.15)";
         for (const poly of game.mirrorPolygons) {
           if (poly.vertices.length < 3) continue;
-          ctx.beginPath();
-          const first = worldToScreen(poly.vertices[0].x, poly.vertices[0].y);
-          ctx.moveTo(first.x, first.y);
-          for (let i = 1; i < poly.vertices.length; i++) {
-            const pt = worldToScreen(poly.vertices[i].x, poly.vertices[i].y);
-            ctx.lineTo(pt.x, pt.y);
-          }
-          ctx.closePath();
+          buildSmoothPath(poly.vertices);
           ctx.fill();
         }
         ctx.restore();
       }
 
-      // Render mirror walls with cyan color and glow
-      ctx.save();
-      for (const w of walls) {
-        if (!w.isMirror) continue;
-        const wallLineWidth = w.thickness * scale;
-        const startScreen = worldToScreen(w.start.x, w.start.y);
-        const endScreen = worldToScreen(w.end.x, w.end.y);
-
-        // Cyan wall
+      // Render mirror polygon smooth outlines with cyan color and glow
+      if (game.mirrorPolygons.length > 0) {
+        ctx.save();
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = WALL_THICKNESS * scale;
         ctx.strokeStyle = "#88ddff";
-        ctx.lineWidth = wallLineWidth;
-        ctx.lineCap = "round";
         ctx.shadowColor = "#88ddff";
         ctx.shadowBlur = 8 * scale;
-        ctx.beginPath();
-        ctx.moveTo(startScreen.x, startScreen.y);
-        ctx.lineTo(endScreen.x, endScreen.y);
-        ctx.stroke();
-
-        // White highlight line down the center
+        for (const poly of game.mirrorPolygons) {
+          buildSmoothPath(poly.vertices);
+          ctx.stroke();
+        }
+        // White highlight
         ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
         ctx.lineWidth = 1 * scale;
         ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.moveTo(startScreen.x, startScreen.y);
-        ctx.lineTo(endScreen.x, endScreen.y);
-        ctx.stroke();
+        for (const poly of game.mirrorPolygons) {
+          buildSmoothPath(poly.vertices);
+          ctx.stroke();
+        }
+        ctx.restore();
       }
-      ctx.restore();
 
       // Render cut preview line during drag (always shown, not just with cutPreview modifier)
       // This shows the user where their cut will go before they commit to it
