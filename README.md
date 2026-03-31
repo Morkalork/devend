@@ -1,73 +1,81 @@
-# Welcome to your Lovable project
+# Balls of Fire and Ice
 
-## Project info
+A browser-based arcade game inspired by JezzBall. Draw fences to shrink the play area while avoiding bouncing balls.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Tech stack
 
-## How can I edit this code?
+- React + TypeScript + Vite
+- Tailwind CSS + framer-motion
+- Fonts: Orbitron, JetBrains Mono, Space Grotesk
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Local development
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Install dependencies
+npm install
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start dev server (localhost:5173)
 npm run dev
+
+# Type check
+npx tsc --noEmit
+
+# Production build
+npm run build
 ```
 
-**Edit a file directly in GitHub**
+## Deployment (Heroku)
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```sh
+npm run build
+npm start   # runs: serve -s dist -l $PORT
+```
 
-**Use GitHub Codespaces**
+Requires Node 20.x (`"engines": {"node": "20.x"}` in `package.json`).
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## Admin / Playground mode
 
-This project is built with:
+The Admin button appears on the welcome screen under two conditions:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Environment | How to access |
+|-------------|--------------|
+| **Dev** (`npm run dev`) | Admin button is always visible |
+| **Production** | Add `?admin=true` to the URL — e.g. `https://your-app.com/?admin=true` |
 
-## How can I deploy this project?
+> **Note:** The actual Admin and Playground screens are only rendered in dev builds (`import.meta.env.DEV`). The `?admin=true` param makes the button visible in production, but the screens themselves will not render in a production build.
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+From the Admin screen you can navigate to:
+- **Map Builder** — visual map editor
+- **Animation Test / Playground** — live modifier testing panel (all 15 `GameModifiers` adjustable in real time, apply and restart)
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## Starting at a specific level
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Append `?level=N` to the URL to start the game at level N:
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+```
+http://localhost:5173/?level=5
+```
+
+The game starts immediately on page load, then strips the param from the URL. The level number corresponds to the `level:` field in `public/map.yml`.
+
+When multiple map variants share the same level number (e.g. `level-2` and `level-2b`), one is picked at random each run. There is no URL param to force a specific map variant `id`.
+
+### In-game level picker
+
+After reaching a checkpoint, a `>` arrow appears next to the "Continue" button on the welcome screen. Clicking it opens a level picker that lets you start from any level up to your checkpoint.
+
+---
+
+## Map definitions
+
+Maps are defined in `public/map.yml`. Each entry has:
+
+- `id` — unique string (e.g. `level-3b`)
+- `level` — integer level number (multiple maps can share a number as variants)
+- Obstacle, ball, and modifier configuration
+
+See `public/README-modifiers.md` for a full reference of all modifier keys, certificate effects, achievement stats, and map fields.
