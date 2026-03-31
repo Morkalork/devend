@@ -1,172 +1,181 @@
 // Wall Impact Effects System
-// Provides lightweight, localized visual feedback for ball-wall collisions
-// Uses time-based damped spring physics for smooth wobble animation
+// Mass-spring chain physics for wall wobble: a ripple propagates outward
+// from the hit point and settles organically, replacing the old sinusoidal approximation.
 
 import { Vector2, pointToSegmentDistance } from './polygon';
 
-export interface WallImpact {
-  id: string;
-  // Impact position in world coordinates
-  impactPoint: Vector2;
-  // Impact properties
-  strength: number; // 0-1, based on collision velocity
-  startTime: number; // Performance.now() timestamp
-  // Effect parameters (updated each frame)
-  glowIntensity: number; // Current glow (decays over time)
-  wobblePhase: number; // Current wobble displacement
+const N_NODES = 16;          // spring nodes per impact
+const SPRING_K   = 180;      // spring restoring stiffness
+const DAMPING    = 0.85;     // per-frame velocity multiplier (0→instant stop, 1→no damping)
+const COUPLING_C = 0.4;      // neighbour displacement coupling strength
+const INITIAL_VEL_SCALE = 28; // maps impact strength (0-1) → initial node velocity
+const GLOW_DURATION   = 120; // ms
+const GLOW_MAX        = 0.85;
+const EFFECT_RADIUS   = 50;  // world units — spatial spread for glow lookup
+const MAX_IMPACTS     = 12;
+
+interface SpringNode {
+  d: number; // displacement (world units perpendicular to wall)
+  v: number; // velocity
 }
 
-// Effect configuration
-const CONFIG = {
-  // Glow effect
-  glowDuration: 120, // ms
-  glowMaxIntensity: 0.85, // additive glow strength
-  
-  // Wobble effect
-  wobbleDuration: 200, // ms
-  wobbleMaxDisplacement: 4, // pixels (screen space)
-  wobbleFrequency: 20, // Hz - creates elastic feel
-  wobbleDamping: 6, // decay rate
-  
-  // Spatial spread
-  effectRadius: 50, // world units - how far effect spreads along wall
-  
-  // Performance
-  maxActiveImpacts: 12, // limit concurrent effects
-};
+export interface WallImpact {
+  id: string;
+  impactPoint: Vector2;
+  strength: number;
+  startTime: number;
+  lastUpdateTime: number;
+  glowIntensity: number;
+  nodes: SpringNode[];
+  wallStart: Vector2;
+  wallEnd: Vector2;
+  wallLen: number;
+  // cached wall tangent/normal
+  tx: number; ty: number; // unit tangent
+  nx: number; ny: number; // unit normal (outward)
+}
 
-// Active impacts storage (module-level for efficiency)
 let activeImpacts: WallImpact[] = [];
 let impactIdCounter = 0;
 
-/**
- * Register a new wall impact
- * Called when a ball collides with a wall segment
- */
 export function registerWallImpact(
-  _wallStart: Vector2,
-  _wallEnd: Vector2,
+  wallStart: Vector2,
+  wallEnd: Vector2,
   impactPoint: Vector2,
-  impactStrength: number = 1
+  impactStrength = 1,
 ): void {
-  // Clamp strength
   const strength = Math.max(0.4, Math.min(1, impactStrength));
-  
-  // Create impact
+
+  const dx = wallEnd.x - wallStart.x;
+  const dy = wallEnd.y - wallStart.y;
+  const wallLen = Math.sqrt(dx * dx + dy * dy);
+  if (wallLen < 1) return;
+
+  const tx = dx / wallLen;
+  const ty = dy / wallLen;
+  const nx = -ty;
+  const ny =  tx;
+
+  // Find which node is nearest the impact point along the wall
+  const impactT = Math.max(0, Math.min(1,
+    ((impactPoint.x - wallStart.x) * tx + (impactPoint.y - wallStart.y) * ty) / wallLen,
+  ));
+  const nearestNode = Math.round(impactT * (N_NODES - 1));
+
+  const nodes: SpringNode[] = Array.from({ length: N_NODES }, () => ({ d: 0, v: 0 }));
+  nodes[nearestNode].v = INITIAL_VEL_SCALE * strength;
+
   const impact: WallImpact = {
     id: `impact-${++impactIdCounter}`,
     impactPoint: { ...impactPoint },
     strength,
     startTime: performance.now(),
-    glowIntensity: CONFIG.glowMaxIntensity * strength,
-    wobblePhase: CONFIG.wobbleMaxDisplacement * strength,
+    lastUpdateTime: performance.now(),
+    glowIntensity: GLOW_MAX * strength,
+    nodes,
+    wallStart: { ...wallStart },
+    wallEnd: { ...wallEnd },
+    wallLen,
+    tx, ty, nx, ny,
   };
-  
-  // Add to active list (limit max concurrent)
+
   activeImpacts.push(impact);
-  if (activeImpacts.length > CONFIG.maxActiveImpacts) {
-    activeImpacts.shift(); // Remove oldest
-  }
+  if (activeImpacts.length > MAX_IMPACTS) activeImpacts.shift();
 }
 
-/**
- * Update all active impacts (call each frame)
- * Returns true if any effects are active (for render optimization)
- */
 export function updateWallImpacts(): boolean {
   if (activeImpacts.length === 0) return false;
-  
+
   const now = performance.now();
-  
-  // Update each impact
+
   activeImpacts = activeImpacts.filter(impact => {
     const elapsed = now - impact.startTime;
-    
-    // Check if effect has expired
-    const maxDuration = Math.max(CONFIG.glowDuration, CONFIG.wobbleDuration);
-    if (elapsed > maxDuration) return false;
-    
-    // Update glow (fast attack, smooth decay)
-    if (elapsed < CONFIG.glowDuration) {
-      const glowProgress = elapsed / CONFIG.glowDuration;
-      // Ease-out curve for natural decay
-      impact.glowIntensity = CONFIG.glowMaxIntensity * impact.strength * (1 - glowProgress * glowProgress);
+    const dt = Math.min((now - impact.lastUpdateTime) / 1000, 0.05);
+    impact.lastUpdateTime = now;
+
+    // Glow decays quickly
+    if (elapsed < GLOW_DURATION) {
+      const p = elapsed / GLOW_DURATION;
+      impact.glowIntensity = GLOW_MAX * impact.strength * (1 - p * p);
     } else {
       impact.glowIntensity = 0;
     }
-    
-    // Update wobble (damped sine wave)
-    if (elapsed < CONFIG.wobbleDuration) {
-      const wobbleProgress = elapsed / CONFIG.wobbleDuration;
-      const damping = Math.exp(-CONFIG.wobbleDamping * wobbleProgress);
-      const oscillation = Math.sin(2 * Math.PI * CONFIG.wobbleFrequency * (elapsed / 1000));
-      impact.wobblePhase = CONFIG.wobbleMaxDisplacement * impact.strength * damping * oscillation;
-    } else {
-      impact.wobblePhase = 0;
+
+    // Spring-chain physics: Euler step
+    const { nodes } = impact;
+    const accel = new Float32Array(N_NODES);
+
+    for (let i = 0; i < N_NODES; i++) {
+      const restoring = -SPRING_K * nodes[i].d;
+      const leftCoupling  = i > 0          ? COUPLING_C * (nodes[i - 1].d - nodes[i].d) : 0;
+      const rightCoupling = i < N_NODES - 1 ? COUPLING_C * (nodes[i + 1].d - nodes[i].d) : 0;
+      accel[i] = restoring + leftCoupling + rightCoupling;
     }
-    
-    return true;
+
+    let maxActivity = 0;
+    for (let i = 0; i < N_NODES; i++) {
+      nodes[i].v = nodes[i].v * DAMPING + accel[i] * dt;
+      nodes[i].d += nodes[i].v * dt;
+      maxActivity = Math.max(maxActivity, Math.abs(nodes[i].v), Math.abs(nodes[i].d));
+    }
+
+    // Remove when all motion settles and glow is gone
+    return maxActivity > 0.01 || impact.glowIntensity > 0.01;
   });
-  
+
   return activeImpacts.length > 0;
 }
 
-/**
- * Get displacement and glow for any point near an impact
- */
 function getEffectsAtPoint(
   queryPoint: Vector2,
-  wallNormalX: number,
-  wallNormalY: number,
-  scale: number
+  scale: number,
 ): { dx: number; dy: number; glow: number } {
   let totalDx = 0;
   let totalDy = 0;
   let totalGlow = 0;
-  
+
   for (const impact of activeImpacts) {
-    // Distance from query point to impact point
+    // Squared distance for quick rejection
+    const qx = queryPoint.x - impact.wallStart.x;
+    const qy = queryPoint.y - impact.wallStart.y;
+    // Distance from query point to impact (approximate — use impact point for glow)
     const distToImpact = Math.sqrt(
-      (queryPoint.x - impact.impactPoint.x) ** 2 + 
-      (queryPoint.y - impact.impactPoint.y) ** 2
+      (queryPoint.x - impact.impactPoint.x) ** 2 +
+      (queryPoint.y - impact.impactPoint.y) ** 2,
     );
-    
-    // Skip if too far
-    if (distToImpact > CONFIG.effectRadius * 2) continue;
-    
-    // Spatial falloff (Gaussian-like)
-    const falloff = Math.exp(-(distToImpact * distToImpact) / (2 * CONFIG.effectRadius * CONFIG.effectRadius));
-    
-    if (falloff > 0.02) {
-      // Apply wobble displacement perpendicular to wall
-      const wobble = impact.wobblePhase * falloff * scale;
-      totalDx += wallNormalX * wobble;
-      totalDy += wallNormalY * wobble;
-      
-      // Accumulate glow (take max for overlapping effects)
-      totalGlow = Math.max(totalGlow, impact.glowIntensity * falloff);
-    }
+    if (distToImpact > EFFECT_RADIUS * 3) continue;
+
+    // Project query point onto wall to find its fractional position → node index
+    const tAlong = Math.max(0, Math.min(1,
+      (qx * impact.tx + qy * impact.ty) / impact.wallLen,
+    ));
+    const nodeF = tAlong * (N_NODES - 1);
+    const nodeA = Math.floor(nodeF);
+    const nodeB = Math.min(nodeA + 1, N_NODES - 1);
+    const blend = nodeF - nodeA;
+    const disp = impact.nodes[nodeA].d * (1 - blend) + impact.nodes[nodeB].d * blend;
+
+    // Apply displacement perpendicular to wall
+    totalDx += impact.nx * disp * scale;
+    totalDy += impact.ny * disp * scale;
+
+    // Glow spatial falloff
+    const falloff = Math.exp(-(distToImpact * distToImpact) / (2 * EFFECT_RADIUS * EFFECT_RADIUS));
+    totalGlow = Math.max(totalGlow, impact.glowIntensity * falloff);
   }
-  
+
   return { dx: totalDx, dy: totalDy, glow: totalGlow };
 }
 
-/**
- * Check if any impacts are near a wall segment
- */
 function hasNearbyImpacts(wallStart: Vector2, wallEnd: Vector2): boolean {
   for (const impact of activeImpacts) {
-    const dist = pointToSegmentDistance(impact.impactPoint, wallStart, wallEnd);
-    if (dist < CONFIG.effectRadius * 1.5) {
+    if (pointToSegmentDistance(impact.impactPoint, wallStart, wallEnd) < EFFECT_RADIUS * 1.5) {
       return true;
     }
   }
   return false;
 }
 
-/**
- * Render wall segment with impact effects applied
- */
 export function renderWallWithEffects(
   ctx: CanvasRenderingContext2D,
   startScreen: { x: number; y: number },
@@ -175,71 +184,38 @@ export function renderWallWithEffects(
   wallEnd: Vector2,
   scale: number,
   baseColor: string,
-  baseWidth: number
+  baseWidth: number,
 ): void {
-  // Check if any impacts are near this wall
   if (activeImpacts.length === 0 || !hasNearbyImpacts(wallStart, wallEnd)) {
-    // No effects - render normally
     ctx.beginPath();
     ctx.moveTo(startScreen.x, startScreen.y);
     ctx.lineTo(endScreen.x, endScreen.y);
     ctx.stroke();
     return;
   }
-  
-  // Calculate wall normal (perpendicular direction)
-  const wallDx = wallEnd.x - wallStart.x;
-  const wallDy = wallEnd.y - wallStart.y;
-  const wallLength = Math.sqrt(wallDx * wallDx + wallDy * wallDy);
-  
-  if (wallLength < 1) {
-    ctx.beginPath();
-    ctx.moveTo(startScreen.x, startScreen.y);
-    ctx.lineTo(endScreen.x, endScreen.y);
-    ctx.stroke();
-    return;
-  }
-  
-  const normalX = -wallDy / wallLength;
-  const normalY = wallDx / wallLength;
-  
-  // Find max glow for this wall segment
-  let maxGlow = 0;
-  const segments = 16;
+
+  const segments = N_NODES;
   const points: { x: number; y: number }[] = [];
-  
+  let maxGlow = 0;
+
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
-    
-    // World position
-    const worldX = wallStart.x + wallDx * t;
-    const worldY = wallStart.y + wallDy * t;
-    
-    // Screen position (base)
-    const screenX = startScreen.x + (endScreen.x - startScreen.x) * t;
-    const screenY = startScreen.y + (endScreen.y - startScreen.y) * t;
-    
-    // Get displacement and glow
-    const { dx, dy, glow } = getEffectsAtPoint(
-      { x: worldX, y: worldY },
-      normalX,
-      normalY,
-      scale
-    );
-    
-    points.push({ x: screenX + dx, y: screenY + dy });
+    const wx = wallStart.x + (wallEnd.x - wallStart.x) * t;
+    const wy = wallStart.y + (wallEnd.y - wallStart.y) * t;
+    const sx = startScreen.x + (endScreen.x - startScreen.x) * t;
+    const sy = startScreen.y + (endScreen.y - startScreen.y) * t;
+    const { dx, dy, glow } = getEffectsAtPoint({ x: wx, y: wy }, scale);
+    points.push({ x: sx + dx, y: sy + dy });
     maxGlow = Math.max(maxGlow, glow);
   }
-  
-  // Draw the wobbled wall
+
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i++) {
     ctx.lineTo(points[i].x, points[i].y);
   }
   ctx.stroke();
-  
-  // Draw glow overlay if significant
+
   if (maxGlow > 0.05) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
@@ -249,28 +225,20 @@ export function renderWallWithEffects(
     ctx.shadowBlur = 20 * maxGlow * scale;
     ctx.globalAlpha = maxGlow * 0.8;
     ctx.lineCap = 'round';
-    
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i = 1; i < points.length; i++) {
       ctx.lineTo(points[i].x, points[i].y);
     }
     ctx.stroke();
-    
     ctx.restore();
   }
 }
 
-/**
- * Clear all active impacts (call on level reset)
- */
 export function clearWallImpacts(): void {
   activeImpacts = [];
 }
 
-/**
- * Get current number of active impacts (for debugging)
- */
 export function getActiveImpactCount(): number {
   return activeImpacts.length;
 }
