@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SlidersHorizontal, RotateCcw, X, Layers, Pencil, Save, Check, AlertCircle } from 'lucide-react';
 import yaml from 'js-yaml';
 import { GameScreen } from '@/components/game/GameScreen';
-import { GameModifiers } from '@/hooks/useActiveModifiers';
+import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useColorProgression } from '@/hooks/useColorProgression';
 import { LevelConfig, LevelData, LevelEntity, BallConfig } from '@/types/level';
 import { LevelPanel } from './LevelPanel';
@@ -294,6 +294,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const appliedActiveCount = countActive(applied);
 
   const achievementBonuses = toBonuses(applied);
+  const activeModifiers = useActiveModifiers([], [], achievementBonuses);
   const activeLevel = selectedLevel ?? PLAYGROUND_LEVEL;
   const { accentHex: levelAccent } = useColorProgression(activeLevel.level);
   const accent = levelAccent;
@@ -319,6 +320,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           onRestart={hardReset}
           accentColor={accent}
           achievementBonuses={achievementBonuses}
+          activeModifiers={activeModifiers}
         />
 
         {/* Controls overlay — always visible over the game area */}
