@@ -46,7 +46,8 @@ interface LockDustParticle {
   angle: number;   // radians
   speed: number;   // world units / sec
   lifetime: number; // ms
-  size: number;    // world units at birth
+  size: number;    // world units at birth (unused for streaks but kept for compat)
+  lengthPx: number; // screen-space streak length in pixels
 }
 interface LockFlashState {
   ballId: string;
@@ -1398,12 +1399,24 @@ export function GameCanvas({
             }
 
             const PARTICLE_COUNT = 110;
-            const particles: LockDustParticle[] = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
-              angle: (i / PARTICLE_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.25,
-              speed: 12 + Math.random() * 60,
-              lifetime: 350 + Math.random() * 550,
-              size: 0.6 + Math.random() * 2.0,
-            }));
+            const particles: LockDustParticle[] = [
+              // Main burst — short streaks (4–14 px)
+              ...Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+                angle: (i / PARTICLE_COUNT) * Math.PI * 2 + (Math.random() - 0.5) * 0.25,
+                speed: 12 + Math.random() * 60,
+                lifetime: 350 + Math.random() * 550,
+                size: 0.6 + Math.random() * 2.0,
+                lengthPx: 4 + Math.random() * 10,
+              })),
+              // Needle streaks — longer, energetic spines
+              ...Array.from({ length: 20 }, (_, i) => ({
+                angle: (i / 20) * Math.PI * 2 + (Math.random() - 0.5) * 0.15,
+                speed: 40 + Math.random() * 80,
+                lifetime: 250 + Math.random() * 300,
+                size: 1.0,
+                lengthPx: 18 + Math.random() * 22,
+              })),
+            ];
             game.assimilations.set(ball.id, {
               ballId: ball.id,
               cellIndices: [...ballRegion.cellIndices],
@@ -3311,6 +3324,7 @@ export function GameCanvas({
             const pB = parseInt(flash.ballColor.slice(5, 7), 16);
 
             ctx.save();
+            ctx.lineCap = 'round';
             for (const p of flash.particles) {
               if (elapsed > p.lifetime) continue;
               const progress = elapsed / p.lifetime;
@@ -3322,12 +3336,16 @@ export function GameCanvas({
                        + 18 * tSec * tSec; // subtle gravity
               const sp = worldToScreen(wx, wy);
               const alpha = Math.pow(1 - progress, 1.4);
-              const dotR = Math.max(0.4, p.size * (1 - progress * 0.6) * scale);
-
+              // Streak: tip at current position, tail shrinks as particle ages
+              const tailLen = p.lengthPx * (1 - progress);
+              const tx = sp.x - Math.cos(p.angle) * tailLen;
+              const ty = sp.y - Math.sin(p.angle) * tailLen;
               ctx.beginPath();
-              ctx.arc(sp.x, sp.y, dotR, 0, Math.PI * 2);
-              ctx.fillStyle = `rgba(${pR}, ${pG}, ${pB}, ${alpha})`;
-              ctx.fill();
+              ctx.moveTo(tx, ty);
+              ctx.lineTo(sp.x, sp.y);
+              ctx.strokeStyle = `rgba(${pR}, ${pG}, ${pB}, ${alpha})`;
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
             }
             ctx.restore();
           }
