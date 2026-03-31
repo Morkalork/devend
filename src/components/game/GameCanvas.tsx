@@ -517,6 +517,14 @@ export function GameCanvas({
     // an OffscreenCanvas reduces the per-frame draw call count from O(samplePoints)
     // to a single drawImage blit.
     const regionCanvas = new OffscreenCanvas(canvas.width, canvas.height);
+    // Scanline pattern tile: 4 rows — 3px transparent + 1px dark line
+    const scanlineTile = new OffscreenCanvas(4, 4);
+    (() => {
+      const stCtx = scanlineTile.getContext('2d')!;
+      stCtx.clearRect(0, 0, 4, 4);
+      stCtx.fillStyle = 'rgba(0,0,0,0.18)';
+      stCtx.fillRect(0, 3, 4, 1);
+    })();
 
     const repaintRegionCanvas = () => {
       const rCtx = regionCanvas.getContext("2d");
@@ -535,23 +543,23 @@ export function GameCanvas({
       const cellPadding = 3;
 
       rCtx.save();
-      rCtx.globalAlpha = canvasOpacity;
+      rCtx.globalAlpha = canvasOpacity * 0.55; // reduced so scanline layer doesn't look heavy
       rCtx.fillStyle   = regionColor;
 
       for (const region of game.regions) {
         if (region.samplePoints && region.samplePoints.length > 0) {
-          // First pass: all filled cells
+          // First pass: all filled cells (base, reduced alpha)
           for (const sample of region.samplePoints) {
             const sx   = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
             const sy   = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
             const size = (gridSize + cellPadding * 2) * boardRect.scale;
             rCtx.fillRect(sx, sy, size, size);
           }
-          // Second pass: rounded corners on edge cells
+          // Second pass: edge cells at full alpha (boundary stays readable)
           const sampleSet = new Set(region.samplePoints.map(s => `${s.x},${s.y}`));
           const edgePadding = 5;
           rCtx.save();
-          rCtx.globalAlpha = canvasOpacity * 0.6;
+          rCtx.globalAlpha = canvasOpacity;
           for (const sample of region.samplePoints) {
             const isEdge = [
               `${sample.x - gridSize},${sample.y}`,
@@ -582,6 +590,17 @@ export function GameCanvas({
           rCtx.closePath();
           rCtx.fill();
         }
+      }
+
+      // Scanline overlay: repeating horizontal dark lines across all region cells
+      const scanPattern = rCtx.createPattern(scanlineTile, 'repeat');
+      if (scanPattern) {
+        rCtx.save();
+        rCtx.globalAlpha = 1;
+        rCtx.globalCompositeOperation = 'source-over';
+        rCtx.fillStyle = scanPattern;
+        rCtx.fillRect(0, 0, regionCanvas.width, regionCanvas.height);
+        rCtx.restore();
       }
       rCtx.restore();
     };
