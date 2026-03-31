@@ -637,34 +637,6 @@ export function GameCanvas({
       oCtx.fillRect(0, 0, w, h);
     };
 
-    // Region-clear scan-line animation state (cells that just got captured)
-    interface ClearingRegion {
-      samples: Vector2[];
-      minX: number; minY: number; maxX: number; maxY: number;
-      startTime: number;
-    }
-    let clearingRegions: ClearingRegion[] = [];
-
-    const captureClearingRegions = (before: Region[], after: Region[]) => {
-      const afterSet = new Set<string>(
-        after.flatMap(r => (r.samplePoints ?? []).map(p => `${p.x},${p.y}`))
-      );
-      const cleared: Vector2[] = [];
-      for (const region of before) {
-        for (const pt of region.samplePoints ?? []) {
-          if (!afterSet.has(`${pt.x},${pt.y}`)) cleared.push(pt);
-        }
-      }
-      if (cleared.length === 0) return;
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-      for (const pt of cleared) {
-        if (pt.x < minX) minX = pt.x;
-        if (pt.y < minY) minY = pt.y;
-        if (pt.x > maxX) maxX = pt.x;
-        if (pt.y > maxY) maxY = pt.y;
-      }
-      clearingRegions.push({ samples: cleared, minX, minY, maxX, maxY, startTime: performance.now() });
-    };
     // Ambient data-rain particles — purely cosmetic background effect
     interface RainParticle { x: number; y: number; symbol: string; alpha: number; speed: number; size: number; }
     const RAIN_SYMBOLS = '01{}()=>;./#@*';
@@ -1058,7 +1030,6 @@ export function GameCanvas({
       // Reset blur accumulation state for new level
       removedSamples = [];
       removedSamplesSet = new Set();
-      clearingRegions = [];
       repaintBlurCanvas();
       
       // ============================================================
@@ -2339,7 +2310,6 @@ export function GameCanvas({
             }
           }
         }
-        captureClearingRegions(game.regions, bonusUpdatedRegions);
         game.regions = bonusUpdatedRegions;
         // Write cells removed by bonus cut to the blur canvas
         collectAndDrawRemovedSamples();
@@ -2507,7 +2477,6 @@ export function GameCanvas({
         }
       }
 
-      captureClearingRegions(game.regions, updatedRegions);
       game.regions = updatedRegions;
 
       // Write cells removed by this cut to the blur canvas (event-driven, not per-frame)
@@ -2942,48 +2911,6 @@ export function GameCanvas({
 
       // Single blit of pre-rendered region canvas (rebuilt only on each cut)
       ctx.drawImage(regionCanvas, 0, 0);
-
-      // Region-clear scan-line sweep — show cleared cells disappearing over 350ms
-      if (clearingRegions.length > 0) {
-        const CLEAR_SCAN_DUR = 350;
-        const rcR = parseInt(game.regionColor.slice(1, 3), 16);
-        const rcG = parseInt(game.regionColor.slice(3, 5), 16);
-        const rcB = parseInt(game.regionColor.slice(5, 7), 16);
-        const cellHalf = REGION_SAMPLE_GRID_SIZE * scale * 0.6;
-        const acR = parseInt(accentColor.slice(1, 3), 16);
-        const acG = parseInt(accentColor.slice(3, 5), 16);
-        const acB = parseInt(accentColor.slice(5, 7), 16);
-        const nowScan = performance.now();
-        clearingRegions = clearingRegions.filter(cr => {
-          const elapsed = nowScan - cr.startTime;
-          if (elapsed >= CLEAR_SCAN_DUR) return false;
-          const progress = elapsed / CLEAR_SCAN_DUR;
-          const scanWorldY = cr.minY + (cr.maxY - cr.minY) * progress;
-          ctx.save();
-          for (const pt of cr.samples) {
-            const sp = worldToScreen(pt.x, pt.y);
-            const alpha = pt.y <= scanWorldY
-              ? Math.max(0, (pt.y - cr.minY) / Math.max(1, scanWorldY - cr.minY)) // fades top→scanline
-              : 1; // below scan line — full visible
-            if (alpha <= 0.01) continue;
-            ctx.fillStyle = `rgba(${rcR},${rcG},${rcB},${alpha * canvasOpacity})`;
-            ctx.fillRect(sp.x - cellHalf, sp.y - cellHalf, cellHalf * 2, cellHalf * 2);
-          }
-          // Accent scan line spanning the region's X extent
-          const scanLeft  = worldToScreen(cr.minX, scanWorldY);
-          const scanRight = worldToScreen(cr.maxX, scanWorldY);
-          ctx.strokeStyle = `rgba(${acR},${acG},${acB},0.9)`;
-          ctx.lineWidth = 2;
-          ctx.shadowColor = accentColor;
-          ctx.shadowBlur = 8 * scale;
-          ctx.beginPath();
-          ctx.moveTo(scanLeft.x,  scanLeft.y);
-          ctx.lineTo(scanRight.x, scanRight.y);
-          ctx.stroke();
-          ctx.restore();
-          return true;
-        });
-      }
 
       // Note: Green border is now drawn via the unified wall model below
       // All walls (board edges, obstacles, user-drawn) are rendered identically
