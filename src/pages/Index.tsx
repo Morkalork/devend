@@ -1,4 +1,5 @@
 import { useCallback, useState, lazy, Suspense, useEffect, useRef, useMemo } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useGameState } from '@/hooks/useGameState';
 import { useLevelManager } from '@/hooks/useLevelManager';
 import { useUpgradeManager } from '@/hooks/useUpgradeManager';
@@ -692,8 +693,39 @@ function IndexContent({
 }: IndexContentProps) {
   const { accentHex } = useAccentColor();
 
+  // Screen order for determining slide direction (higher = further forward in flow)
+  const SCREEN_ORDER: Record<string, number> = {
+    welcome: 0, tutorial: 1, options: 1, achievements: 1,
+    game: 2, upgradeShop: 3, augmentStore: 3, result: 4,
+  };
+  const prevScreenRef   = useRef(currentScreen);
+  const transitionDirRef = useRef(1);
+  if (prevScreenRef.current !== currentScreen) {
+    const prevOrder = SCREEN_ORDER[prevScreenRef.current] ?? 0;
+    const currOrder = SCREEN_ORDER[currentScreen] ?? 0;
+    transitionDirRef.current = currOrder >= prevOrder ? 1 : -1;
+    prevScreenRef.current = currentScreen;
+  }
+  const slideVariants = {
+    enter:  (d: number) => ({ x: d > 0 ? '100%' : '-100%' }),
+    center: { x: 0 },
+    exit:   (d: number) => ({ x: d < 0 ? '100%' : '-100%' }),
+  };
+
   return (
     <>
+      <div style={{ position: 'relative', overflow: 'hidden', minHeight: '100dvh', width: '100%' }}>
+        <AnimatePresence mode="wait" custom={transitionDirRef.current}>
+          <motion.div
+            key={currentScreen}
+            custom={transitionDirRef.current}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+            style={{ willChange: 'transform', width: '100%' }}
+          >
       {currentScreen === 'welcome' && (
         <WelcomeScreen
           onStartGame={() => handleStartGame()}
@@ -820,7 +852,11 @@ function IndexContent({
         </Suspense>
       )}
       
-      {/* Level Complete Overlay */}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* Level Complete Overlay — fixed layer, stays outside the slide container */}
       {showLevelComplete && pendingLevelScore && (
         <LevelCompleteOverlay
           scoreData={pendingLevelScore}
