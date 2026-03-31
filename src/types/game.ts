@@ -42,6 +42,7 @@ export interface Ball {
   assimColorFade: number; // 0→1 fade from ball color to accent color (default 0)
   prevPosition?: Vector2;    // position at start of last fixed physics step (for interpolation)
   renderPosition?: Vector2;  // interpolated render position (set each frame, used by render only)
+  trailPositions?: Vector2[]; // last N render positions for motion trail (screen-space world coords)
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

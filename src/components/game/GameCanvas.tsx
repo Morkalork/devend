@@ -3092,6 +3092,28 @@ export function GameCanvas({
         ctx.save();
         ctx.globalAlpha = assimScale;
 
+        // Motion trail — comet-like smear behind fast-moving balls
+        {
+          const trailPos = ball.renderPosition ?? ball.position;
+          if (!ball.trailPositions) ball.trailPositions = [];
+          ball.trailPositions.push({ x: trailPos.x, y: trailPos.y });
+          if (ball.trailPositions.length > 8) ball.trailPositions.shift();
+          const N = ball.trailPositions.length;
+          if (N > 1 && assimScale > 0.05) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (let ti = 0; ti < N - 1; ti++) {
+              const fraction = (ti + 1) / N;
+              const tp = worldToScreen(ball.trailPositions[ti].x, ball.trailPositions[ti].y);
+              ctx.beginPath();
+              ctx.arc(tp.x, tp.y, screenRadius * fraction * 0.5, 0, Math.PI * 2);
+              ctx.fillStyle = `rgba(${r0},${g0},${b0},${fraction * 0.35})`;
+              ctx.fill();
+            }
+            ctx.restore();
+          }
+        }
+
         // Blit cached ball base (outer glow + 3D sphere gradient).
         // Cache key: blendedHex + screenRadius — stable for the entire level on normal balls.
         const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);
