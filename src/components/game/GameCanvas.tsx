@@ -2533,7 +2533,19 @@ export function GameCanvas({
       const maxSpeedForMinTime = longestHalf / MINIMUM_WALL_TIME;
       const wallSpeedFinal = Math.min(wallSpeedEffective, maxSpeedForMinTime);
 
-      let growth = wallSpeedFinal * dt;
+      // Ease-in-out: fast start, smooth arrival — makes each cut feel deliberate
+      const easeInOut = (t: number) =>
+        t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      let growth: number;
+      if (wall.startTime) {
+        const elapsed = (performance.now() - wall.startTime) / 1000;
+        const expectedDuration = longestHalf / wallSpeedFinal;
+        const prevT = Math.max(0, Math.min(1, (elapsed - dt) / expectedDuration));
+        const currT = Math.max(0, Math.min(1, elapsed / expectedDuration));
+        growth = (easeInOut(currT) - easeInOut(prevT)) * longestHalf;
+      } else {
+        growth = wallSpeedFinal * dt; // instant fences — no easing needed
+      }
 
       // Grow start side along waypoints
       {
@@ -3706,6 +3718,7 @@ export function GameCanvas({
               thickness: WALL_THICKNESS * activeModifiers.fenceWidthMultiplier,
               isComplete: isInstant,
               activeRegionId: game.swipeRegionId!,
+              startTime: isInstant ? undefined : performance.now(),
             };
 
           }

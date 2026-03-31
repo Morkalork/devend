@@ -60,6 +60,7 @@ export interface GrowingWall {
   thickness: number;
   isComplete: boolean;
   activeRegionId: string;    // the region this wall is growing in
+  startTime?: number;        // performance.now() when growth began (for easing)
 }
 
 export interface GameState {
