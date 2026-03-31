@@ -3513,7 +3513,7 @@ export function GameCanvas({
         ctx.restore();
 
         // ===== LAYER 5: Circuit-board hex pattern (overlay blend) =====
-        {
+        if (screenRadius > 0) {
           const hexOC = getHexOverlay(accentColor);
           ctx.save();
           ctx.globalCompositeOperation = 'overlay';
