@@ -119,6 +119,10 @@ export function updateWallImpacts(): boolean {
       maxActivity = Math.max(maxActivity, Math.abs(nodes[i].v), Math.abs(nodes[i].d));
     }
 
+    // Pin endpoint nodes — wall ends are anchored to intersecting walls, not free to move
+    nodes[0].d = 0; nodes[0].v = 0;
+    nodes[N_NODES - 1].d = 0; nodes[N_NODES - 1].v = 0;
+
     // Remove when all motion settles and glow is gone
     return maxActivity > 0.01 || impact.glowIntensity > 0.01;
   });
@@ -221,8 +225,8 @@ export function renderWallWithEffects(
     ctx.globalCompositeOperation = 'lighter';
     ctx.strokeStyle = baseColor;
     ctx.lineWidth = baseWidth * (1 + maxGlow * 1.5);
-    ctx.shadowColor = baseColor;
-    ctx.shadowBlur = 20 * maxGlow * scale;
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
     ctx.globalAlpha = maxGlow * 0.8;
     ctx.lineCap = 'butt';
     ctx.beginPath();
