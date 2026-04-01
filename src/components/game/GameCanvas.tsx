@@ -2911,11 +2911,11 @@ export function GameCanvas({
       // Walls are "fences" - they are drawn ON TOP, not used to erase space
       // User-drawn walls are clipped against obstacles (no fences inside obstacles)
       ctx.save();
-      ctx.strokeStyle = accentColor; // Dynamic accent color
+      ctx.strokeStyle = accentColor;
       ctx.lineCap = "butt";
       ctx.lineJoin = "round";
-      ctx.shadowColor = accentColor;
-      ctx.shadowBlur = 6 * scale;
+      ctx.shadowBlur = 0;        // No canvas shadow — it bleeds past butt caps; glow is manual below
+      ctx.shadowColor = 'transparent';
       // Clip to board rect so thick fences merge cleanly at walls/edges
       ctx.beginPath();
       ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
@@ -2923,12 +2923,31 @@ export function GameCanvas({
 
       const obstacles = game.obstaclePolygons;
 
+      // Per-wall render helper: glow stroke (wide+transparent) then solid stroke with effects.
+      // Rendering both with lineCap="butt" prevents glow from bleeding past endpoints.
+      const strokeSegment = (
+        ss: { x: number; y: number }, es: { x: number; y: number },
+        ws: { x: number; y: number }, we: { x: number; y: number },
+        baseWidth: number,
+      ) => {
+        // Glow pass — wider, semi-transparent, butt-capped so it stops at the endpoint
+        ctx.lineWidth = baseWidth + 5 * scale;
+        ctx.globalAlpha = 0.28;
+        ctx.beginPath();
+        ctx.moveTo(ss.x, ss.y);
+        ctx.lineTo(es.x, es.y);
+        ctx.stroke();
+        // Solid pass — normal width, full opacity, with spring-chain wobble if needed
+        ctx.lineWidth = baseWidth;
+        ctx.globalAlpha = 1.0;
+        renderWallWithEffects(ctx, ss, es, ws, we, scale, accentColor, baseWidth);
+      };
+
       for (let wi = walls.length - 1; wi >= 0; wi--) {
         const w = walls[wi];
         if (w.isMirror) continue; // Mirror walls rendered separately below
         if (w.id.startsWith('obstacle-')) continue; // drawn as smooth splines above
         const wallLineWidth = w.thickness * scale;
-        ctx.lineWidth = wallLineWidth;
 
         // Clip user-drawn walls AND board edges against obstacles
         // Only obstacle edges themselves should render as-is (they define the obstacle boundary)
@@ -2941,31 +2960,13 @@ export function GameCanvas({
           for (const seg of segments) {
             const startScreen = worldToScreen(seg.start.x, seg.start.y);
             const endScreen = worldToScreen(seg.end.x, seg.end.y);
-            renderWallWithEffects(
-              ctx,
-              startScreen,
-              endScreen,
-              seg.start,
-              seg.end,
-              scale,
-              accentColor,
-              wallLineWidth
-            );
+            strokeSegment(startScreen, endScreen, seg.start, seg.end, wallLineWidth);
           }
         } else {
           // Obstacle edges render as-is with impact effects
           const startScreen = worldToScreen(w.start.x, w.start.y);
           const endScreen = worldToScreen(w.end.x, w.end.y);
-          renderWallWithEffects(
-            ctx,
-            startScreen,
-            endScreen,
-            w.start,
-            w.end,
-            scale,
-            accentColor,
-            wallLineWidth
-          );
+          strokeSegment(startScreen, endScreen, w.start, w.end, wallLineWidth);
         }
       }
       ctx.restore();

@@ -224,7 +224,7 @@ export function renderWallWithEffects(
     ctx.shadowColor = baseColor;
     ctx.shadowBlur = 20 * maxGlow * scale;
     ctx.globalAlpha = maxGlow * 0.8;
-    ctx.lineCap = 'round';
+    ctx.lineCap = 'butt';
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i = 1; i < points.length; i++) {
