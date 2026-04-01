@@ -2912,7 +2912,7 @@ export function GameCanvas({
       // User-drawn walls are clipped against obstacles (no fences inside obstacles)
       ctx.save();
       ctx.strokeStyle = accentColor; // Dynamic accent color
-      ctx.lineCap = "square";
+      ctx.lineCap = "butt";
       ctx.lineJoin = "round";
       ctx.shadowColor = accentColor;
       ctx.shadowBlur = 6 * scale;
@@ -3071,7 +3071,7 @@ export function GameCanvas({
             ctx.clip();
 
             const previewThickness = WALL_THICKNESS * activeModifiers.fenceWidthMultiplier;
-            ctx.lineCap = "square";
+            ctx.lineCap = "butt";
 
             // Draw all segments from both waypoint paths
             const allWaypoints = [fwdPreview.waypoints, bwdPreview.waypoints];
