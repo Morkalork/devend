@@ -3586,6 +3586,17 @@ export function GameCanvas({
         ctx.restore();
       }
 
+      // Final hard-clear: erase anything outside boardRect drawn by later passes
+      {
+        const { left: bl, top: bt, width: bw, height: bh } = game.boardRect;
+        const sw = game.screenSize.width;
+        const sh = game.screenSize.height;
+        ctx.clearRect(0,       0,        sw,             bt);
+        ctx.clearRect(0,       bt + bh,  sw,             sh - (bt + bh));
+        ctx.clearRect(0,       bt,       bl,             bh);
+        ctx.clearRect(bl + bw, bt,       sw - (bl + bw), bh);
+      }
+
     };
 
     // Handle ball-to-ball collisions
