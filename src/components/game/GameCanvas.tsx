@@ -2969,6 +2969,21 @@ export function GameCanvas({
       }
       ctx.restore();
 
+      // ---- Erase any paint that leaked outside boardRect (failsafe for thick fences / shadow bleed) ----
+      {
+        const { left: bl, top: bt, width: bw, height: bh } = game.boardRect;
+        const sw = game.screenSize.width;
+        const sh = game.screenSize.height;
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0,0,0,1)';
+        if (bt > 0)            ctx.fillRect(0,       0,        sw,             bt);
+        if (bt + bh < sh)      ctx.fillRect(0,       bt + bh,  sw,             sh - (bt + bh));
+        if (bl > 0)            ctx.fillRect(0,       bt,       bl,             bh);
+        if (bl + bw < sw)      ctx.fillRect(bl + bw, bt,       sw - (bl + bw), bh);
+        ctx.restore();
+      }
+
       // ---- Neon rim light: 3-layer glow border around playfield ----
       {
         const { left: rl, top: rt, width: rw, height: rh } = boardRect;
