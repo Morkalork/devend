@@ -2923,7 +2923,8 @@ export function GameCanvas({
 
       const obstacles = game.obstaclePolygons;
 
-      for (const w of walls) {
+      for (let wi = walls.length - 1; wi >= 0; wi--) {
+        const w = walls[wi];
         if (w.isMirror) continue; // Mirror walls rendered separately below
         if (w.id.startsWith('obstacle-')) continue; // drawn as smooth splines above
         const wallLineWidth = w.thickness * scale;
