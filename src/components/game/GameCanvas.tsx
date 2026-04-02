@@ -488,7 +488,7 @@ export function GameCanvas({
       const blurCtx = blurCanvas?.getContext("2d");
       if (!blurCtx || !blurCanvas) return;
       blurCtx.clearRect(0, 0, blurCanvas.width, blurCanvas.height);
-      drawSamplesToBlur(removedSamples);
+      // Captured cells are now rendered in repaintRegionCanvas; blur canvas is unused.
     };
 
     /** After each cut, append newly-inactive sample points and draw them once. */
@@ -507,16 +507,21 @@ export function GameCanvas({
       }
       if (newSamples.length > 0) {
         removedSamples.push(...newSamples);
-        drawSamplesToBlur(newSamples);
+        // repaintRegionCanvas will draw captured cells; no separate blur canvas draw needed.
       }
     };
     // ─────────────────────────────────────────────────────────────────────────
 
     // ── Region canvas helpers (repaint on cut, blit every frame) ─────────────
-    // Region fill shape only changes when a fence completes. Pre-rendering it to
-    // an OffscreenCanvas reduces the per-frame draw call count from O(samplePoints)
-    // to a single drawImage blit.
-    const regionCanvas = new OffscreenCanvas(canvas.width, canvas.height);
+    // Two offscreen canvases with separate responsibilities:
+    //   boardGridCanvas  — static grid background, painted once per level/resize
+    //                      from initialSamplePoints. Never changes during play.
+    //   regionCanvas     — captured (scored) area solid fill only, rebuilt on cut.
+    //                      Active areas are transparent holes so the grid shows through.
+    // Render order: boardGridCanvas → regionCanvas → walls/balls
+    const boardGridCanvas = new OffscreenCanvas(canvas.width, canvas.height);
+    const regionCanvas    = new OffscreenCanvas(canvas.width, canvas.height);
+
     // Scanline pattern tile: 4 rows — 3px transparent + 1px dark line
     const scanlineTile = new OffscreenCanvas(4, 4);
     (() => {
@@ -525,6 +530,35 @@ export function GameCanvas({
       stCtx.fillStyle = 'rgba(0,0,0,0.18)';
       stCtx.fillRect(0, 3, 4, 1);
     })();
+
+    // Paint the full-board grid once per level or resize.
+    // Uses initialSamplePoints so every cell is represented exactly once —
+    // no polygon clipping, no overlap artifacts, no double-grid.
+    const paintBoardGrid = () => {
+      const gCtx = boardGridCanvas.getContext("2d");
+      if (!gCtx) return;
+      const { width: sw, height: sh } = game.screenSize;
+      if (boardGridCanvas.width !== sw || boardGridCanvas.height !== sh) {
+        boardGridCanvas.width  = sw;
+        boardGridCanvas.height = sh;
+      }
+      gCtx.clearRect(0, 0, boardGridCanvas.width, boardGridCanvas.height);
+      if (game.initialSamplePoints.length === 0) return;
+      const { boardRect, regionColor } = game;
+      const gridSize    = 15;
+      const halfGrid    = gridSize / 2;
+      const cellPadding = 3;
+      gCtx.save();
+      gCtx.globalAlpha = canvasOpacity * 0.55;
+      gCtx.fillStyle   = regionColor;
+      for (const sample of game.initialSamplePoints) {
+        const sx   = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
+        const sy   = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
+        const size = (gridSize + cellPadding * 2) * boardRect.scale;
+        gCtx.fillRect(sx, sy, size, size);
+      }
+      gCtx.restore();
+    };
 
     const repaintRegionCanvas = () => {
       const rCtx = regionCanvas.getContext("2d");
@@ -535,51 +569,24 @@ export function GameCanvas({
         regionCanvas.height = sh;
       }
       rCtx.clearRect(0, 0, regionCanvas.width, regionCanvas.height);
-      if (game.regions.length === 0) return;
 
       const { boardRect, regionColor } = game;
-      const gridSize    = 15;
-      const halfGrid    = gridSize / 2;
-      const cellPadding = 3;
 
+      // ── Step 1: solid board fill — becomes the captured (scored) area ──────────
       rCtx.save();
-      rCtx.globalAlpha = canvasOpacity * 0.55; // reduced so scanline layer doesn't look heavy
+      rCtx.globalAlpha = canvasOpacity * 0.8;
       rCtx.fillStyle   = regionColor;
+      rCtx.fillRect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
+      rCtx.restore();
 
-      for (const region of game.regions) {
-        if (region.samplePoints && region.samplePoints.length > 0) {
-          // First pass: all filled cells (base, reduced alpha)
-          for (const sample of region.samplePoints) {
-            const sx   = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
-            const sy   = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
-            const size = (gridSize + cellPadding * 2) * boardRect.scale;
-            rCtx.fillRect(sx, sy, size, size);
-          }
-          // Second pass: edge cells at full alpha (boundary stays readable)
-          const sampleSet = new Set(region.samplePoints.map(s => `${s.x},${s.y}`));
-          const edgePadding = 5;
-          rCtx.save();
-          rCtx.globalAlpha = canvasOpacity;
-          for (const sample of region.samplePoints) {
-            const isEdge = [
-              `${sample.x - gridSize},${sample.y}`,
-              `${sample.x + gridSize},${sample.y}`,
-              `${sample.x},${sample.y - gridSize}`,
-              `${sample.x},${sample.y + gridSize}`,
-            ].some(n => !sampleSet.has(n));
-            if (isEdge) {
-              const sx     = boardRect.left + (sample.x - halfGrid - edgePadding) * boardRect.scale;
-              const sy     = boardRect.top  + (sample.y - halfGrid - edgePadding) * boardRect.scale;
-              const size   = (gridSize + edgePadding * 2) * boardRect.scale;
-              const radius = 4 * boardRect.scale;
-              rCtx.beginPath();
-              rCtx.roundRect(sx, sy, size, size, radius);
-              rCtx.fill();
-            }
-          }
-          rCtx.restore();
-        } else {
-          // Fallback: polygon outline (initial region before any cut)
+      // ── Step 2: punch out active region polygons ────────────────────────────────
+      // destination-out erases the solid fill wherever active play areas exist,
+      // leaving transparent holes through which boardGridCanvas shows.
+      if (game.regions.length > 0) {
+        rCtx.save();
+        rCtx.globalCompositeOperation = 'destination-out';
+        rCtx.globalAlpha = 1;
+        for (const region of game.regions) {
           const { vertices } = region.polygon;
           if (vertices.length < 3) continue;
           rCtx.beginPath();
@@ -590,19 +597,21 @@ export function GameCanvas({
           rCtx.closePath();
           rCtx.fill();
         }
+        rCtx.restore();
       }
 
-      // Scanline overlay: repeating horizontal dark lines across all region cells
+      // ── Step 3: scanline overlay ─────────────────────────────────────────────────
+      // source-atop only draws where the destination (captured fill) already exists,
+      // leaving the transparent active-area holes completely untouched.
       const scanPattern = rCtx.createPattern(scanlineTile, 'repeat');
       if (scanPattern) {
         rCtx.save();
         rCtx.globalAlpha = 1;
-        rCtx.globalCompositeOperation = 'source-over';
+        rCtx.globalCompositeOperation = 'source-atop';
         rCtx.fillStyle = scanPattern;
         rCtx.fillRect(0, 0, regionCanvas.width, regionCanvas.height);
         rCtx.restore();
       }
-      rCtx.restore();
     };
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -1057,6 +1066,7 @@ export function GameCanvas({
 
       // Region canvas must be built after initial regions are established
       repaintRegionCanvas();
+      paintBoardGrid();
 
       // Assign all balls to their grid regions
       for (const ball of game.balls) {
@@ -1128,6 +1138,8 @@ export function GameCanvas({
       repaintBlurCanvas();
       // Region canvas likewise needs scale-corrected coordinates
       repaintRegionCanvas();
+      // Board grid uses the same coordinate space — repaint after scale change
+      paintBoardGrid();
       // CRT phosphor overlay is screen-size locked → repaint
       paintOverlayCanvas();
 
@@ -1916,6 +1928,23 @@ export function GameCanvas({
         components.push({ samples: component, hasBalls });
       }
 
+      // Fallback: if multiple components exist but none detected any balls (floating-point
+      // edge case where line-of-sight to every sample falsely intersects the new wall),
+      // assign each active ball to its nearest component by sample distance.
+      if (components.length > 1 && !components.some(c => c.hasBalls)) {
+        const activeBalls = balls.filter(b => b.state !== 'won');
+        for (const ball of activeBalls) {
+          let nearestComp = components[0];
+          let nearestDist = Infinity;
+          for (const comp of components) {
+            for (const sample of comp.samples) {
+              const d = Math.hypot(sample.x - ball.position.x, sample.y - ball.position.y);
+              if (d < nearestDist) { nearestDist = d; nearestComp = comp; }
+            }
+          }
+          nearestComp.hasBalls = true;
+        }
+      }
 
       return components;
     };
@@ -2361,8 +2390,9 @@ export function GameCanvas({
         const subRegions = findSubRegionsGrid(region);
         
         if (subRegions.length <= 1) {
-          const hasBallsInRegion = subRegions.length === 1 && subRegions[0].hasBalls;
-          if (hasBallsInRegion) {
+          // If the fence didn't actually split the region (only 1 component), keep it
+          // unconditionally — regardless of hasBalls, nothing was captured.
+          if (subRegions.length === 1) {
             const totalSamples = subRegions[0].samples.length;
             const cellArea = 15 * 15;
             updatedRegions.push({
@@ -2821,6 +2851,8 @@ export function GameCanvas({
       }
       // ---- End ambient data rain ----
 
+      // Blit static board grid, then captured-area overlay on top
+      ctx.drawImage(boardGridCanvas, 0, 0);
       // Single blit of pre-rendered region canvas (rebuilt only on each cut)
       ctx.drawImage(regionCanvas, 0, 0);
 
@@ -2911,10 +2943,11 @@ export function GameCanvas({
       // Walls are "fences" - they are drawn ON TOP, not used to erase space
       // User-drawn walls are clipped against obstacles (no fences inside obstacles)
       ctx.save();
-      ctx.strokeStyle = accentColor;
+      ctx.fillStyle = accentColor;   // polygon fill (not stroke) — clips perfectly at boardRect
+      ctx.strokeStyle = accentColor; // kept for any stray ctx.stroke() calls inside effects
       ctx.lineCap = "butt";
       ctx.lineJoin = "round";
-      ctx.shadowBlur = 0;        // No canvas shadow — it bleeds past butt caps; glow is manual below
+      ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
       // Clip to board rect so thick fences merge cleanly at walls/edges
       ctx.beginPath();
@@ -2923,22 +2956,33 @@ export function GameCanvas({
 
       const obstacles = game.obstaclePolygons;
 
-      // Per-wall render helper: glow stroke (wide+transparent) then solid stroke with effects.
-      // Rendering both with lineCap="butt" prevents glow from bleeding past endpoints.
+      // Per-wall render helper: glow polygon (wide+transparent) then solid polygon with effects.
+      // Both passes use ctx.fill() with explicit rectangle paths — the boardRect ctx.clip() then
+      // cuts any fence cleanly at the wall surface regardless of approach angle.  No butt-cap
+      // corner nubs are possible because there is no implicit line-cap geometry.
       const strokeSegment = (
         ss: { x: number; y: number }, es: { x: number; y: number },
         ws: { x: number; y: number }, we: { x: number; y: number },
         baseWidth: number,
       ) => {
-        // Glow pass — wider, semi-transparent, butt-capped so it stops at the endpoint
-        ctx.lineWidth = baseWidth + 5 * scale;
+        const dx = es.x - ss.x, dy = es.y - ss.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 0.001) return;
+        const invLen = 1 / len;
+
+        // Glow pass — slightly wider polygon, semi-transparent
+        const hwGlow = baseWidth / 2 + 2.5 * scale;
+        const pgx = -dy * invLen * hwGlow, pgy = dx * invLen * hwGlow;
         ctx.globalAlpha = 0.28;
         ctx.beginPath();
-        ctx.moveTo(ss.x, ss.y);
-        ctx.lineTo(es.x, es.y);
-        ctx.stroke();
-        // Solid pass — normal width, full opacity, with spring-chain wobble if needed
-        ctx.lineWidth = baseWidth;
+        ctx.moveTo(ss.x + pgx, ss.y + pgy);
+        ctx.lineTo(es.x + pgx, es.y + pgy);
+        ctx.lineTo(es.x - pgx, es.y - pgy);
+        ctx.lineTo(ss.x - pgx, ss.y - pgy);
+        ctx.closePath();
+        ctx.fill();
+
+        // Solid pass — polygon fill with spring-chain wobble if needed
         ctx.globalAlpha = 1.0;
         renderWallWithEffects(ctx, ss, es, ws, we, scale, accentColor, baseWidth);
       };
@@ -3072,31 +3116,34 @@ export function GameCanvas({
             ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
             ctx.clip();
 
-            const previewThickness = WALL_THICKNESS * activeModifiers.fenceWidthMultiplier;
-            ctx.lineCap = "butt";
+            const previewThickness = WALL_THICKNESS;
 
-            // Draw all segments from both waypoint paths
+            // Draw all segments from both waypoint paths using polygon fill so boardRect clip
+            // cuts endpoints cleanly at any angle (no butt-cap corners).
             const allWaypoints = [fwdPreview.waypoints, bwdPreview.waypoints];
             for (const waypoints of allWaypoints) {
               for (let i = 0; i < waypoints.length - 1; i++) {
                 const s = worldToScreen(waypoints[i].x, waypoints[i].y);
                 const e = worldToScreen(waypoints[i + 1].x, waypoints[i + 1].y);
+                const dx = e.x - s.x, dy = e.y - s.y;
+                const len = Math.sqrt(dx * dx + dy * dy);
+                if (len < 0.001) continue;
+                const invLen = 1 / len;
 
-                // White outline
-                ctx.strokeStyle = "#ffffff";
-                ctx.lineWidth = (previewThickness + 8) * scale;
-                ctx.beginPath();
-                ctx.moveTo(s.x, s.y);
-                ctx.lineTo(e.x, e.y);
-                ctx.stroke();
+                const drawPoly = (hw: number, color: string) => {
+                  const px = -dy * invLen * hw, py = dx * invLen * hw;
+                  ctx.fillStyle = color;
+                  ctx.beginPath();
+                  ctx.moveTo(s.x + px, s.y + py);
+                  ctx.lineTo(e.x + px, e.y + py);
+                  ctx.lineTo(e.x - px, e.y - py);
+                  ctx.lineTo(s.x - px, s.y - py);
+                  ctx.closePath();
+                  ctx.fill();
+                };
 
-                // Accent center
-                ctx.strokeStyle = accentColor;
-                ctx.lineWidth = (previewThickness + 4) * scale;
-                ctx.beginPath();
-                ctx.moveTo(s.x, s.y);
-                ctx.lineTo(e.x, e.y);
-                ctx.stroke();
+                drawPoly((previewThickness + 8) * scale / 2, "#ffffff");
+                drawPoly((previewThickness + 4) * scale / 2, accentColor);
               }
             }
 
@@ -3214,6 +3261,8 @@ export function GameCanvas({
           (ball.renderPosition ?? ball.position).y,
         );
         const assimScale = ball.assimScale ?? 1;
+        if (assimScale <= 0) continue; // ball fully faded — skip all rendering
+
         const screenRadius = ball.radius * scale; // size unchanged — alpha fades instead
         const isFastest = false; // Highlight fastest ball removed in new upgrade system
 
@@ -3236,20 +3285,6 @@ export function GameCanvas({
           ctx.restore();
         }
 
-        // ===== NEW BALL EFFECTS SYSTEM =====
-        // Renders: baseline pulse (always), wall collision ring (medium), ball-to-ball glow (strongest)
-        renderBallEffects(
-          ctx,
-          ball.effects,
-          screenPos.x,
-          screenPos.y,
-          screenRadius,
-          accentColor,
-          ball.color,
-          performance.now(),
-          scale
-        );
-
         // Blend ball color toward accent color during assimilation fade
         const fade = ball.assimColorFade ?? 0;
         const r0 = parseInt(ball.color.slice(1, 3), 16);
@@ -3266,6 +3301,21 @@ export function GameCanvas({
         // Fade out won balls — alpha disintegrates ball into the dust particles
         ctx.save();
         ctx.globalAlpha = assimScale;
+
+        // ===== NEW BALL EFFECTS SYSTEM =====
+        // Renders: baseline pulse (always), wall collision ring (medium), ball-to-ball glow (strongest)
+        // Must be inside the assimScale wrapper so effects fade with the ball.
+        renderBallEffects(
+          ctx,
+          ball.effects,
+          screenPos.x,
+          screenPos.y,
+          screenRadius,
+          accentColor,
+          ball.color,
+          performance.now(),
+          scale
+        );
 
         // Motion trail — comet-like smear behind fast-moving balls
         {
@@ -3558,31 +3608,44 @@ export function GameCanvas({
         }
         renderableSegments.push({ start: wall.endWaypoints[wall.endSegmentIndex], end: wall.endPoint });
 
-        // Draw each segment with white outline + accent center
+        // Draw each segment as a filled polygon (not stroke) so the activeRegion clip cuts
+        // fence endpoints cleanly at wall surfaces regardless of approach angle.
+        const fillSegmentPoly = (
+          s: { x: number; y: number },
+          e: { x: number; y: number },
+          hw: number,
+        ) => {
+          const dx = e.x - s.x, dy = e.y - s.y;
+          const len = Math.sqrt(dx * dx + dy * dy);
+          if (len < 0.001) return;
+          const px = -dy / len * hw, py = dx / len * hw;
+          ctx.beginPath();
+          ctx.moveTo(s.x + px, s.y + py);
+          ctx.lineTo(e.x + px, e.y + py);
+          ctx.lineTo(e.x - px, e.y - py);
+          ctx.lineTo(s.x - px, s.y - py);
+          ctx.closePath();
+          ctx.fill();
+        };
+
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
+
         for (const seg of renderableSegments) {
           const s = worldToScreen(seg.start.x, seg.start.y);
           const e = worldToScreen(seg.end.x, seg.end.y);
 
-          // White outline
-          ctx.strokeStyle = "#ffffff";
-          ctx.lineWidth = (wall.thickness + 8) * scale;
-          ctx.lineCap = "butt";
-          ctx.shadowColor = "transparent";
-          ctx.shadowBlur = 0;
-          ctx.beginPath();
-          ctx.moveTo(s.x, s.y);
-          ctx.lineTo(e.x, e.y);
-          ctx.stroke();
+          // White outline polygon
+          ctx.fillStyle = "#ffffff";
+          fillSegmentPoly(s, e, (wall.thickness + 8) * scale / 2);
 
-          // Accent center
-          ctx.strokeStyle = accentColor;
-          ctx.lineWidth = (wall.thickness + 4) * scale;
+          // Accent center polygon with glow shadow
+          ctx.fillStyle = accentColor;
           ctx.shadowColor = accentColor + "80";
           ctx.shadowBlur = 25 * scale;
-          ctx.beginPath();
-          ctx.moveTo(s.x, s.y);
-          ctx.lineTo(e.x, e.y);
-          ctx.stroke();
+          fillSegmentPoly(s, e, (wall.thickness + 4) * scale / 2);
+          ctx.shadowBlur = 0;
+          ctx.shadowColor = "transparent";
         }
 
         ctx.restore();
@@ -3940,7 +4003,7 @@ export function GameCanvas({
               endPoint: isInstant ? { ...targetEnd } : { ...game.swipeStart },
               targetStart,
               targetEnd,
-              thickness: WALL_THICKNESS * activeModifiers.fenceWidthMultiplier,
+              thickness: WALL_THICKNESS,
               isComplete: isInstant,
               activeRegionId: game.swipeRegionId!,
               startTime: isInstant ? undefined : performance.now(),
@@ -4119,7 +4182,7 @@ export function GameCanvas({
           ref={blurCanvasRef}
           className="absolute inset-0 pointer-events-none"
           style={{
-            filter: 'blur(8px)',
+            filter: 'none',
             opacity: 0.6,
             zIndex: 1,
           }}

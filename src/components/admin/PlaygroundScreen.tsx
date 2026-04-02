@@ -29,7 +29,6 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   ballSpeedMultiplier:              { label: 'Ball Speed',             kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies ball movement speed (< 1 = slower)' },
   ballSizeMultiplier:               { label: 'Ball Size',              kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies ball radius (< 1 = smaller)' },
   fenceGenerationSpeedMultiplier:   { label: 'Fence Gen Speed',        kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies how fast fences grow (> 1 = faster)' },
-  fenceWidthMultiplier:             { label: 'Fence Width',            kind: 'multiplicative', step: 1,    min: 1,    defaultValue: 1,    description: 'Multiplies fence thickness (integer steps only)' },
   scoreMultiplier:                  { label: 'Score (OT) Mult.',       kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies overtime hours earned per map' },
   instantFencesPerMap:              { label: 'Instant Fences',         kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Fences that generate instantly at map start' },
   additionalConcurrentFences:       { label: 'Extra Concurrent',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional fences that can grow simultaneously' },

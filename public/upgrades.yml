@@ -109,42 +109,6 @@ upgrades:
 
 
   # ===============================
-  # STRONG TYPING (Fence Width)
-  # ===============================
-
-  - id: strong_typing_junior
-    name: Strong Typing
-    tier: Junior
-    description: Multiply fence width by 5×. (5× total)
-    cost: 8
-    unlockLevel: 1
-    modifiers:
-      fenceWidthMultiplier: 5
-
-  - id: strong_typing_senior
-    name: Strong Typing
-    tier: Senior
-    description: Multiply fence width by 5× again. (25× total)
-    cost: 16
-    unlockLevel: 10
-    prerequisites:
-      - strong_typing_junior
-    modifiers:
-      fenceWidthMultiplier: 5
-
-  - id: strong_typing_principal
-    name: Strong Typing
-    tier: Principal
-    description: Multiply fence width by 5× again. (125× total)
-    cost: 26
-    unlockLevel: 20
-    prerequisites:
-      - strong_typing_senior
-    modifiers:
-      fenceWidthMultiplier: 5
-
-
-  # ===============================
   # HOT START (Instant Fences)
   # ===============================
 

@@ -56,9 +56,9 @@ achievements:
       stat: totalFencesDrawn
       threshold: 175
     bonus:
-      modifier: fenceWidthMultiplier
-      value: 2.0
-      description: Fence width +100%
+      modifier: fenceGenerationSpeedMultiplier
+      value: 1.03
+      description: Fence generation speed +3%
 
   - id: merge-conflict
     name: Merge Conflict
@@ -102,9 +102,9 @@ achievements:
       stat: totalFencesDrawn
       threshold: 400
     bonus:
-      modifier: fenceWidthMultiplier
-      value: 1.5
-      description: Fence width +50%
+      modifier: scoreMultiplier
+      value: 1.02
+      description: Overtime multiplier +2%
 
   - id: rtfm
     name: RTFM
@@ -216,9 +216,9 @@ achievements:
       stat: totalFencesDrawn
       threshold: 2000
     bonus:
-      modifier: fenceWidthMultiplier
-      value: 2.0
-      description: Fence width +100%
+      modifier: ballSpeedMultiplier
+      value: 0.95
+      description: Ball speed -5%
 
   - id: full-coverage
     name: Full Coverage

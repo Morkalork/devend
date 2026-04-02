@@ -14,7 +14,6 @@ const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'ballSpeedMultiplier',
   'ballSizeMultiplier',
   'fenceGenerationSpeedMultiplier',
-  'fenceWidthMultiplier',
   'scoreMultiplier',
 ];
 

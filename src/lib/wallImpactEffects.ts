@@ -190,51 +190,65 @@ export function renderWallWithEffects(
   baseColor: string,
   baseWidth: number,
 ): void {
-  if (activeImpacts.length === 0 || !hasNearbyImpacts(wallStart, wallEnd)) {
+  // Render fence as a FILLED POLYGON (not a stroked line).
+  // This eliminates butt-cap corner nubs at wall junctions — the polygon clips
+  // perfectly at any angle against ctx.clip() (boardRect or region polygon).
+  const hw = baseWidth / 2;
+  const sdx = endScreen.x - startScreen.x;
+  const sdy = endScreen.y - startScreen.y;
+  const slen = Math.sqrt(sdx * sdx + sdy * sdy);
+  if (slen < 0.001) return;
+
+  // Perpendicular half-width vector (scaled)
+  const px = -sdy / slen * hw;
+  const py =  sdx / slen * hw;
+
+  // Local helper: fill a closed polygon from a centerline array + perp half-width vector
+  const fillPoly = (
+    centers: { x: number; y: number }[],
+    perpX: number, perpY: number,
+  ) => {
+    const n = centers.length;
     ctx.beginPath();
-    ctx.moveTo(startScreen.x, startScreen.y);
-    ctx.lineTo(endScreen.x, endScreen.y);
-    ctx.stroke();
+    ctx.moveTo(centers[0].x + perpX, centers[0].y + perpY);
+    for (let i = 1; i < n; i++) ctx.lineTo(centers[i].x + perpX, centers[i].y + perpY);
+    for (let i = n - 1; i >= 0; i--) ctx.lineTo(centers[i].x - perpX, centers[i].y - perpY);
+    ctx.closePath();
+    ctx.fill();
+  };
+
+  if (activeImpacts.length === 0 || !hasNearbyImpacts(wallStart, wallEnd)) {
+    // Static: fill a clean 4-corner rectangle — clips perfectly, zero nub at any angle
+    fillPoly([startScreen, endScreen], px, py);
     return;
   }
 
-  const segments = N_NODES;
-  const points: { x: number; y: number }[] = [];
+  // Wobbly: spring-chain nodes displace the fence centerline; build polygon from those
+  const centers: { x: number; y: number }[] = [];
   let maxGlow = 0;
 
-  for (let i = 0; i <= segments; i++) {
-    const t = i / segments;
+  for (let i = 0; i <= N_NODES; i++) {
+    const t = i / N_NODES;
     const wx = wallStart.x + (wallEnd.x - wallStart.x) * t;
     const wy = wallStart.y + (wallEnd.y - wallStart.y) * t;
-    const sx = startScreen.x + (endScreen.x - startScreen.x) * t;
-    const sy = startScreen.y + (endScreen.y - startScreen.y) * t;
+    const sx = startScreen.x + sdx * t;
+    const sy = startScreen.y + sdy * t;
     const { dx, dy, glow } = getEffectsAtPoint({ x: wx, y: wy }, scale);
-    points.push({ x: sx + dx, y: sy + dy });
+    centers.push({ x: sx + dx, y: sy + dy });
     maxGlow = Math.max(maxGlow, glow);
   }
 
-  ctx.beginPath();
-  ctx.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i++) {
-    ctx.lineTo(points[i].x, points[i].y);
-  }
-  ctx.stroke();
+  fillPoly(centers, px, py);
 
   if (maxGlow > 0.05) {
+    const hwGlow = baseWidth * (1 + maxGlow * 1.5) / 2;
+    const gx = -sdy / slen * hwGlow;
+    const gy =  sdx / slen * hwGlow;
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.strokeStyle = baseColor;
-    ctx.lineWidth = baseWidth * (1 + maxGlow * 1.5);
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
+    ctx.fillStyle = baseColor;
     ctx.globalAlpha = maxGlow * 0.8;
-    ctx.lineCap = 'butt';
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.stroke();
+    fillPoly(centers, gx, gy);
     ctx.restore();
   }
 }
