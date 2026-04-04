@@ -148,4 +148,41 @@ export function getBallSpecular(screenRadius: number, scale: number): OffscreenC
 export function clearBallRenderCache(): void {
   ballBaseCache.clear();
   ballSpecularCache.clear();
+  hexOverlayCache.clear();
+}
+
+// ── Circuit-board hex overlay ─────────────────────────────────────────────
+
+const hexOverlayCache = new Map<string, OffscreenCanvas>();
+
+/** Return (creating if needed) an OffscreenCanvas with a tileable circuit-board
+ *  hex pattern drawn in `color`. Caller controls opacity via globalAlpha. */
+export function getHexOverlay(color: string): OffscreenCanvas {
+  if (hexOverlayCache.has(color)) return hexOverlayCache.get(color)!;
+  const SIZE = 128;
+  const oc = new OffscreenCanvas(SIZE, SIZE);
+  const hCtx = oc.getContext('2d')!;
+  const R = 10;
+  const s3 = Math.sqrt(3);
+  hCtx.strokeStyle = color;
+  hCtx.lineWidth = 0.7;
+  hCtx.globalAlpha = 1;
+  hCtx.lineCap = 'round';
+  for (let col = -1; col <= Math.ceil(SIZE / (R * 1.5)) + 1; col++) {
+    for (let row = -1; row <= Math.ceil(SIZE / (R * s3)) + 1; row++) {
+      const cx = col * 1.5 * R;
+      const cy = row * R * s3 + (col % 2 === 0 ? 0 : R * s3 / 2);
+      hCtx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i;
+        const px = cx + R * Math.cos(a);
+        const py = cy + R * Math.sin(a);
+        if (i === 0) hCtx.moveTo(px, py); else hCtx.lineTo(px, py);
+      }
+      hCtx.closePath();
+      hCtx.stroke();
+    }
+  }
+  hexOverlayCache.set(color, oc);
+  return oc;
 }

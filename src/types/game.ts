@@ -94,6 +94,42 @@ export interface GameResult {
   basePoints?: number;
 }
 
+// ── Lock / dissolve animation types (used by GameCanvas rendering) ────────
+
+export interface LockDustParticle {
+  angle: number;    // radians
+  speed: number;    // world units / sec
+  lifetime: number; // ms
+  size: number;     // world units at birth (unused for streaks but kept for compat)
+  lengthPx: number; // screen-space streak length in pixels
+}
+
+export interface LockFlashState {
+  ballId: string;
+  cellIndices: number[]; // space-grid cell indices (kept for centroid / dust origin)
+  polygon: Vector2[];    // exact boundary polygon built from wall intersections
+  centroid: Vector2;
+  startTime: number;
+  ballPos: Vector2;      // ball position at moment of lock
+  ballColor: string;     // ball colour for dust tint
+  particles: LockDustParticle[];
+}
+
+export interface DissolveTile {
+  sx: number; sy: number; sw: number; sh: number; // source rect in captured canvas
+  cx: number; cy: number;   // centre position at start
+  vx: number; vy: number;   // initial velocity (px/s)
+  rotSpeed: number;          // rad/s
+  delay: number;             // seconds before tile starts moving
+}
+
+export interface DissolveState {
+  captured: HTMLCanvasElement;
+  tiles: DissolveTile[];
+  startTime: number;
+  onComplete: () => void;
+}
+
 export interface LevelScoreData {
   levelNumber: number;
   levelId: string;

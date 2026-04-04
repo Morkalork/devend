@@ -1,5 +1,6 @@
 // Assimilation animation: straight tentacle lines from region boundary to captured ball
 import { Vector2 } from './polygon';
+import { hexToRgba } from '@/lib/gameUtils';
 import { BoardRect } from './boardConstants';
 
 interface Tentacle {
@@ -205,14 +206,6 @@ export function updateAssimilation(
   const assimStart = anim.startTime + anim.delayMs + 6000;
   const fadeT = Math.min((timestamp - assimStart) / fadeDuration, 1);
   ball.assimColorFade = fadeT;
-}
-
-function hexToRgba(hex: string, alpha: number): string {
-  const clean = hex.startsWith('#') ? hex.slice(1) : hex;
-  const r = parseInt(clean.substring(0, 2), 16);
-  const g = parseInt(clean.substring(2, 4), 16);
-  const b = parseInt(clean.substring(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 // Draw all tentacles as straight tapered lines
