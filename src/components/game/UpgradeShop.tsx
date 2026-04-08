@@ -247,7 +247,7 @@ export function UpgradeShop({
                 whileHover={{ scale: purchasable ? 1.05 : 1 }}
                 whileTap={{ scale: purchasable ? 0.95 : 1 }}
                 className={`
-                  relative w-44 p-3 rounded-lg transition-all duration-200 text-center
+                  relative w-44 h-36 p-3 rounded-lg transition-all duration-200 text-center flex flex-col
                   ${cantAfford ? 'border-dashed' : ''} border-2
                   ${selected ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black' : ''}
                   ${owned
@@ -304,7 +304,7 @@ export function UpgradeShop({
                 )}
 
                 {/* Description */}
-                <p className="text-xs text-muted-foreground line-clamp-2 mb-1">
+                <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
                   {upgrade.description}
                 </p>
 
