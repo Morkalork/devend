@@ -364,6 +364,111 @@ upgrades:
 
 
   # ===============================
+  # TECHNICAL DEBT (Score + Speed tradeoff)
+  # ===============================
+
+  - id: technical_debt_senior
+    name: Technical Debt
+    tier: Senior
+    description: Earn 20% more overtime per map — but balls move 8% faster. Short-term gain, long-term pain.
+    cost: 14
+    unlockLevel: 4
+    modifiers:
+      scoreMultiplier: 1.20
+      ballSpeedMultiplier: 1.08
+
+  - id: technical_debt_principal
+    name: Technical Debt
+    tier: Principal
+    description: Earn 35% more overtime per map — but balls move 15% faster.
+    cost: 26
+    unlockLevel: 8
+    prerequisites:
+      - technical_debt_senior
+    modifiers:
+      scoreMultiplier: 1.35
+      ballSpeedMultiplier: 1.15
+
+  - id: technical_debt_architect
+    name: Technical Debt
+    tier: Architect
+    description: Earn 50% more overtime per map — but balls move 25% faster.
+    cost: 40
+    unlockLevel: 14
+    prerequisites:
+      - technical_debt_principal
+    modifiers:
+      scoreMultiplier: 1.50
+      ballSpeedMultiplier: 1.25
+
+
+  # ===============================
+  # PAIR PROGRAMMING (Concurrent + Speed tradeoff)
+  # ===============================
+
+  - id: pair_programming_principal
+    name: Pair Programming
+    tier: Principal
+    description: One extra concurrent fence — but each fence builds 12% slower. Two minds, divided attention.
+    cost: 30
+    unlockLevel: 8
+    modifiers:
+      additionalConcurrentFences: 1
+      fenceGenerationSpeedMultiplier: 0.88
+
+  - id: pair_programming_architect
+    name: Pair Programming
+    tier: Architect
+    description: One more concurrent fence — but fence speed drops another 12%.
+    cost: 44
+    unlockLevel: 16
+    prerequisites:
+      - pair_programming_principal
+    modifiers:
+      additionalConcurrentFences: 1
+      fenceGenerationSpeedMultiplier: 0.88
+
+
+  # ===============================
+  # DEFENSIVE PROGRAMMING (Lives + Ball Size)
+  # ===============================
+
+  - id: defensive_programming_junior
+    name: Defensive Programming
+    tier: Junior
+    description: Gain 1 extra life and shrink all balls by 8%. Safety first.
+    cost: 12
+    unlockLevel: 3
+    modifiers:
+      extraLives: 1
+      ballSizeMultiplier: 0.92
+
+  - id: defensive_programming_senior
+    name: Defensive Programming
+    tier: Senior
+    description: Gain 2 more extra lives and shrink all balls by an additional 8%.
+    cost: 22
+    unlockLevel: 7
+    prerequisites:
+      - defensive_programming_junior
+    modifiers:
+      extraLives: 2
+      ballSizeMultiplier: 0.92
+
+  - id: defensive_programming_principal
+    name: Defensive Programming
+    tier: Principal
+    description: Gain 3 more extra lives and shrink all balls by an additional 8%.
+    cost: 36
+    unlockLevel: 12
+    prerequisites:
+      - defensive_programming_senior
+    modifiers:
+      extraLives: 3
+      ballSizeMultiplier: 0.92
+
+
+  # ===============================
   # SCRUM MASTER (Ball Path Preview)
   # ===============================
 
