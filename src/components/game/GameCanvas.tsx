@@ -238,6 +238,7 @@ export function GameCanvas({
     lockBonus: 0,
     assimilations: new Map<string, LockFlashState>(),
     dissolve: null as DissolveState | null,
+    bonusCutCells: new Set<string>(),
   });
 
   // Attach pointer event listeners via dedicated hook
@@ -269,10 +270,12 @@ export function GameCanvas({
     let removedSamples: Vector2[] = [];
     let removedSamplesSet: Set<string> = new Set();
 
-    const drawSamplesToBlur = (samples: Vector2[]) => {
+    const drawSamplesToBlur = (_samples: Vector2[]) => {
+      // Dead areas are now transparent so the data-rain shows through — no fill needed.
+      return;
       const blurCanvas = blurCanvasRef.current;
       const blurCtx = blurCanvas?.getContext("2d");
-      if (!blurCtx || !blurCanvas || samples.length === 0) return;
+      if (!blurCtx || !blurCanvas) return;
       const { boardRect, regionColor } = game;
       const gridSize = 15;
       const halfGrid = gridSize / 2;
@@ -337,9 +340,9 @@ export function GameCanvas({
       stCtx.fillRect(0, 3, 4, 1);
     })();
 
-    // Paint the full-board grid once per level or resize.
-    // Uses initialSamplePoints so every cell is represented exactly once —
-    // no polygon clipping, no overlap artifacts, no double-grid.
+    // Paint the board grid onto boardGridCanvas from ALL initialSamplePoints.
+    // This canvas never changes during play — it is the static grid that shows
+    // through transparent holes punched by repaintRegionCanvas.
     const paintBoardGrid = () => {
       const gCtx = boardGridCanvas.getContext("2d");
       if (!gCtx) return;
@@ -354,19 +357,22 @@ export function GameCanvas({
       const gridSize    = 15;
       const halfGrid    = gridSize / 2;
       const cellPadding = 3;
+      const size = (gridSize + cellPadding * 2) * boardRect.scale;
       gCtx.save();
       gCtx.globalAlpha = canvasOpacity * 0.55;
       gCtx.fillStyle   = regionColor;
       for (const sample of game.initialSamplePoints) {
-        const sx   = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
-        const sy   = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
-        const size = (gridSize + cellPadding * 2) * boardRect.scale;
+        const sx = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
+        const sy = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
         gCtx.fillRect(sx, sy, size, size);
       }
       gCtx.restore();
     };
 
     const repaintRegionCanvas = () => {
+      // Sync boardGridCanvas (full initial grid, static background layer).
+      paintBoardGrid();
+
       const rCtx = regionCanvas.getContext("2d");
       if (!rCtx) return;
       const { width: sw, height: sh } = game.screenSize;
@@ -378,35 +384,28 @@ export function GameCanvas({
 
       const { boardRect, regionColor } = game;
 
-      // ── Step 1: solid board fill — becomes the captured (scored) area ──────────
+      // Step 1 — solid board fill = captured (scored) territory.
       rCtx.save();
       rCtx.globalAlpha = canvasOpacity * 0.8;
       rCtx.fillStyle   = regionColor;
       rCtx.fillRect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
       rCtx.restore();
 
-      // ── Step 2: clear active sample cells to reveal board grid ──────────────────
-      // Punch out EXACTLY the active grid cells (one clearRect per sample point).
-      // This is precise — no bounding-box over-extension past fence lines, and
-      // obstacle positions (which have no sample points) are never punched.
-      {
-        const gridSize    = 15;
-        const halfGrid    = gridSize / 2;
-        const cellPadding = 3;
-        const cellSize    = (gridSize + cellPadding * 2) * boardRect.scale;
-        for (const region of game.regions) {
-          const samplePoints = region.samplePoints ?? [];
-          for (const sample of samplePoints) {
-            const sx = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
-            const sy = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
-            rCtx.clearRect(sx, sy, cellSize, cellSize);
-          }
+      // Step 2 — punch transparent holes for active region cells (clearRect avoids
+      // the polygon over-extension that broke the old destination-out approach).
+      const gridSize    = 15;
+      const halfGrid    = gridSize / 2;
+      const cellPadding = 3;
+      const size = (gridSize + cellPadding * 2) * boardRect.scale;
+      for (const region of game.regions) {
+        for (const sample of (region.samplePoints ?? [])) {
+          const sx = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
+          const sy = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
+          rCtx.clearRect(sx, sy, size, size);
         }
       }
 
-      // ── Step 3: scanline overlay ─────────────────────────────────────────────────
-      // source-atop only draws where the destination (captured fill) already exists,
-      // leaving the transparent active-area holes completely untouched.
+      // Step 3 — scanline overlay on captured fill only (source-atop leaves holes untouched).
       const scanPattern = rCtx.createPattern(scanlineTile, 'repeat');
       if (scanPattern) {
         rCtx.save();
@@ -455,6 +454,7 @@ export function GameCanvas({
 
     const initGame = () => {
       game.assimilations.clear();
+      game.bonusCutCells.clear();
 
       // Build level geometry and initial physics state (pure computation)
       const data = createInitialGameData(level, levelNumber, activeModifiers);
@@ -477,8 +477,8 @@ export function GameCanvas({
       repaintBlurCanvas();
 
       // Repaint canvas layers that depend on world geometry
+      // (paintBoardGrid is called from within repaintRegionCanvas)
       repaintRegionCanvas();
-      paintBoardGrid();
 
       game.activeWall = null;
       game.gameOver = false;
@@ -523,10 +523,9 @@ export function GameCanvas({
       clearBallRenderCache();
       // Blur canvas pixels are in screen-space → repaint from stored world-space samples
       repaintBlurCanvas();
-      // Region canvas likewise needs scale-corrected coordinates
+      // Region canvas and board grid share the same coordinate space — repaintRegionCanvas
+      // rebuilds both (paintBoardGrid is called from within repaintRegionCanvas).
       repaintRegionCanvas();
-      // Board grid uses the same coordinate space — repaint after scale change
-      paintBoardGrid();
       // CRT phosphor overlay is screen-size locked → repaint
       paintOverlayCanvas();
 
@@ -1263,146 +1262,6 @@ export function GameCanvas({
       return wouldWallOrphanBall(wallStart, wallEnd, game.balls, game.regions, game.walls);
     };
 
-    // ============================================================
-    // BONUS FENCE CUT (Garbage Collector modifier)
-    // Fires after a fence completes when bonusRemovalChance triggers.
-    // Draws an automatic fence from an edge of the playable area,
-    // cutting off ~bonusRemovalAmount of the total initial area.
-    // Only cuts ball-free strips so it never kills a ball.
-    // ============================================================
-    const applyBonusFenceCut = (amount: number) => {
-      if (!game.spaceGrid) return;
-      const grid = game.spaceGrid;
-      const { balls } = game;
-
-      // Count remaining active cells
-      let totalActiveCells = 0;
-      for (let i = 0; i < grid.cells.length; i++) {
-        if (grid.cells[i] === CellState.ACTIVE) totalActiveCells++;
-      }
-      if (totalActiveCells === 0) return;
-
-      // N squares to place, each covering 1% of remaining area
-      const N = Math.max(1, Math.floor(amount * 100));
-      const squareCellCount = Math.max(1, Math.floor(totalActiveCells / 100));
-      const squareSide = Math.max(1, Math.ceil(Math.sqrt(squareCellCount)));
-
-      const liveBalls = balls.filter(b => b.state !== 'won' && b.speed > 0);
-
-      for (let sq = 0; sq < N; sq++) {
-        let bestScore = -Infinity;
-        let bestIndices: number[] = [];
-
-        for (let cr = 0; cr <= grid.height - squareSide; cr++) {
-          for (let cc = 0; cc <= grid.width - squareSide; cc++) {
-            // Collect active cells in this candidate block
-            const candidateIndices: number[] = [];
-            for (let dr = 0; dr < squareSide; dr++) {
-              for (let dc = 0; dc < squareSide; dc++) {
-                const idx = (cr + dr) * grid.width + (cc + dc);
-                if (idx < grid.cells.length && grid.cells[idx] === CellState.ACTIVE) {
-                  candidateIndices.push(idx);
-                }
-              }
-            }
-            if (candidateIndices.length === 0) continue;
-
-            // World-space centre of the candidate block
-            const cx = grid.originX + (cc + squareSide / 2) * grid.cellSize;
-            const cy = grid.originY + (cr + squareSide / 2) * grid.cellSize;
-
-            // Primary score: distance to the nearest live ball
-            let minDist = liveBalls.length === 0 ? 1 : Infinity;
-            for (const ball of liveBalls) {
-              const dx = cx - ball.position.x;
-              const dy = cy - ball.position.y;
-              const d = Math.sqrt(dx * dx + dy * dy);
-              if (d < minDist) minDist = d;
-            }
-
-            // "Behind the ball" bonus: for nearby balls prefer placing in their wake
-            let behindBonus = 0;
-            for (const ball of liveBalls) {
-              const dx = cx - ball.position.x;
-              const dy = cy - ball.position.y;
-              const dist = Math.sqrt(dx * dx + dy * dy);
-              const spd = Math.sqrt(ball.velocity.x ** 2 + ball.velocity.y ** 2);
-              if (spd > 0 && dist < squareSide * grid.cellSize * 6) {
-                // Positive when square is behind the ball (opposite to velocity)
-                const behind = (dx * (-ball.velocity.x) + dy * (-ball.velocity.y)) / spd;
-                behindBonus = Math.max(behindBonus, behind * 0.15);
-              }
-            }
-
-            const score = minDist + behindBonus;
-            if (score > bestScore) {
-              bestScore = score;
-              bestIndices = candidateIndices;
-            }
-          }
-        }
-
-        if (bestIndices.length === 0) break;
-
-        // Mark the chosen block's cells as removed
-        for (const idx of bestIndices) {
-          grid.cells[idx] = CellState.REMOVED;
-        }
-      }
-
-      // Batch cleanup: remove grid regions that no longer contain any live ball
-      const postGridRegions = findGridRegions(grid);
-      const postWithBalls: GridRegion[] = [];
-      for (const region of postGridRegions) {
-        let hasBallInRegion = false;
-        for (const ball of balls) {
-          if (ball.state === 'won') continue;
-          const bidx = worldToGridIndex(grid, ball.position.x, ball.position.y);
-          if (bidx >= 0 && region.cellIndices.includes(bidx)) { hasBallInRegion = true; break; }
-        }
-        if (hasBallInRegion) {
-          postWithBalls.push(region);
-        } else {
-          removeRegion(grid, region);
-        }
-      }
-      game.gridRegions = postWithBalls;
-
-      // Update sample-based regions for rendering
-      const bonusUpdatedRegions: Region[] = [];
-      for (const region of [...game.regions]) {
-        const subRegions = findSubRegionsGrid(region);
-        if (subRegions.length <= 1) {
-          if (subRegions.length === 1 && subRegions[0].hasBalls) {
-            bonusUpdatedRegions.push({
-              ...region,
-              samplePoints: subRegions[0].samples,
-              estimatedArea: subRegions[0].samples.length * 15 * 15,
-            });
-          }
-          continue;
-        }
-        for (const subRegion of subRegions.filter(r => r.hasBalls)) {
-          const result = buildPolygonFromSamples(subRegion.samples, region, subRegion.samples.length);
-          if (result && result.estimatedArea > 100) {
-            bonusUpdatedRegions.push({
-              id: generateRegionId(),
-              polygon: result.polygon,
-              estimatedArea: result.estimatedArea,
-              samplePoints: result.samplePoints,
-            });
-          }
-        }
-      }
-      game.regions = bonusUpdatedRegions;
-      collectAndDrawRemovedSamples();
-      repaintRegionCanvas();
-      reassignBallsToRegions(game.balls, game.regions, game.walls);
-      validateAllBallOwnership(game.balls, game.regions, game.walls);
-      checkAndUpdateBallWonStates();
-      setBonusPulseKey(k => k + 1);
-    };
-
     const applyCut = (wall: GrowingWall) => {
       // ============================================================
       // EXPLICIT SPACE MODEL: Grid-based cut processing
@@ -1606,20 +1465,15 @@ export function GameCanvas({
       }
 
       // ============================================================
-      // STEP 5b: Bonus fence cuts
+      // STEP 5b: Garbage Collector bonus fence cut (probabilistic)
       // ============================================================
       if (!game.gameOver) {
-        // Aggressive Refactor: guaranteed extra cut every fence
-        if (activeModifiers.mapReductionPerFenceBonus > 0) {
-          applyBonusFenceCut(activeModifiers.mapReductionPerFenceBonus);
-        }
-        // Garbage Collector: probabilistic extra cut
         if (
           activeModifiers.bonusRemovalChance > 0 &&
           activeModifiers.bonusRemovalAmount > 0 &&
           Math.random() < activeModifiers.bonusRemovalChance
         ) {
-          applyBonusFenceCut(activeModifiers.bonusRemovalAmount);
+          // TODO: implement Garbage Collector bonus fence cut
         }
       }
 
@@ -1736,8 +1590,22 @@ export function GameCanvas({
       if (wall.startTime) {
         const elapsed = (performance.now() - wall.startTime) / 1000;
         const expectedDuration = longestHalf / wallSpeedFinal;
-        const prevT = Math.max(0, Math.min(1, (elapsed - dt) / expectedDuration));
         const currT = Math.max(0, Math.min(1, elapsed / expectedDuration));
+
+        // When the easing clock has fully elapsed, force both ends to their targets
+        // and mark the wall complete immediately. Without this, a very small final
+        // growth step (< 0.01) can leave the fence permanently stuck just short of
+        // the target wall — causing it to stay glowing and lethal forever.
+        if (currT >= 1) {
+          wall.startPoint = { ...wall.targetStart };
+          wall.startSegmentIndex = Math.max(0, wall.startWaypoints.length - 2);
+          wall.endPoint = { ...wall.targetEnd };
+          wall.endSegmentIndex = Math.max(0, wall.endWaypoints.length - 2);
+          wall.isComplete = true;
+          return;
+        }
+
+        const prevT = Math.max(0, Math.min(1, (elapsed - dt) / expectedDuration));
         growth = (easeInOut(currT) - easeInOut(prevT)) * longestHalf;
       } else {
         growth = wallSpeedFinal * dt; // instant fences — no easing needed

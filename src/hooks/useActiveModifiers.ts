@@ -19,7 +19,6 @@ export interface GameModifiers {
   bonusRemovalAmount: number;
   extraLives: number;
   scoreInterestRate: number;
-  mapReductionPerFenceBonus: number;
   extraShopItems: number;
   extraAugmentationPoints: number;
 
@@ -73,7 +72,6 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   bonusRemovalAmount: 0,
   extraLives: 0,
   scoreInterestRate: 0,
-  mapReductionPerFenceBonus: 0,
   extraShopItems: 0,
   extraAugmentationPoints: 0,
   microManagerPerLock: 0,

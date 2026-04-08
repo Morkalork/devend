@@ -305,42 +305,6 @@ upgrades:
 
 
   # ===============================
-  # AGGRESSIVE REFACTOR (Map Reduction)
-  # ===============================
-
-  - id: aggressive_refactor_senior
-    name: Aggressive Refactor
-    tier: Senior
-    description: Each fence removes an additional 5% of the remaining area.
-    cost: 16
-    unlockLevel: 4
-    modifiers:
-      mapReductionPerFenceBonus: 0.05
-
-  - id: aggressive_refactor_principal
-    name: Aggressive Refactor
-    tier: Principal
-    description: Each fence removes an additional 10% of the remaining area.
-    cost: 26
-    unlockLevel: 8
-    prerequisites:
-      - aggressive_refactor_senior
-    modifiers:
-      mapReductionPerFenceBonus: 0.10
-
-  - id: aggressive_refactor_architect
-    name: Aggressive Refactor
-    tier: Architect
-    description: Each fence removes an additional 15% of the remaining area.
-    cost: 38
-    unlockLevel: 13
-    prerequisites:
-      - aggressive_refactor_principal
-    modifiers:
-      mapReductionPerFenceBonus: 0.15
-
-
-  # ===============================
   # MICRO MANAGER (Per-Lock Speed)
   # ===============================
 

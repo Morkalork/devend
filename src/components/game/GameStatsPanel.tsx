@@ -30,7 +30,6 @@ function GameStatsPanel({ activeModifiers, accentColor, lockedBalls = 0 }, ref) 
     { label: 'Bonus Remove', value: `${formatRate(modifiers.bonusRemovalChance)} @ ${formatRate(modifiers.bonusRemovalAmount)}`, changed: modifiers.bonusRemovalChance > 0 },
     { label: 'Extra Lives', value: formatBonus(modifiers.extraLives), changed: modifiers.extraLives !== 0 },
     { label: 'Interest', value: formatRate(modifiers.scoreInterestRate), changed: modifiers.scoreInterestRate !== 0 },
-    { label: 'Map Reduce/Fence', value: formatRate(modifiers.mapReductionPerFenceBonus), changed: modifiers.mapReductionPerFenceBonus !== 0 },
     { label: 'Shop Slots', value: formatBonus(modifiers.extraShopItems), changed: modifiers.extraShopItems !== 0 },
     { label: 'MicroMgr/Lock', value: `${Math.round(modifiers.microManagerPerLock * 100)}% (${Math.round((1 - microManagerFactor) * 100)}% now)`, changed: modifiers.microManagerPerLock !== 0 },
   ];

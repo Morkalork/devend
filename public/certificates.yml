@@ -112,18 +112,6 @@ certificates:
       - cost: 7
         effect: { type: scoreInterestRate, value: 0.03 }
 
-  - id: refactor-engine
-    name: Refactor Engine
-    description: Permanent extra area removed per fence — a reward for mastering Aggressive Refactor.
-    unlockType: upgrade-chain
-    sourceUpgradeId: aggressive_refactor_architect
-    requiredRuns: 3
-    levels:
-      - cost: 4
-        effect: { type: mapReductionPerFenceBonus, value: 0.03 }
-      - cost: 7
-        effect: { type: mapReductionPerFenceBonus, value: 0.03 }
-
   - id: process-optimiser
     name: Process Optimiser
     description: Permanent per-lock speed reduction — a reward for mastering MicroManager.

@@ -164,7 +164,6 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `bonusRemovalAmount` | `0` | Extra area (0–1 fraction) removed when a bonus removal triggers. | `0.05` = 5% extra |
 | `extraLives` | `0` | Extra lives granted when the upgrade is purchased during a run. | `1` |
 | `scoreInterestRate` | `0` | Fraction of current overtime balance added as interest between maps (capped at 8h). | `0.05` = 5% interest |
-| `mapReductionPerFenceBonus` | `0` | Additional area fraction removed by each fence completion. | `0.05` = +5% per fence |
 | `extraShopItems` | `0` | Extra item slots shown in the shop after each map. | `1` |
 | `extraAugmentationPoints` | `0` | Bonus Augment Points granted on purchase. | `1` |
 

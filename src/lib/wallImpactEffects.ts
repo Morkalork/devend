@@ -215,11 +215,23 @@ export function renderWallWithEffects(
     for (let i = n - 1; i >= 0; i--) ctx.lineTo(centers[i].x - perpX, centers[i].y - perpY);
     ctx.closePath();
     ctx.fill();
+    // Stroke over the filled edge to eliminate diagonal anti-aliasing staircase artifacts.
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   };
 
   if (activeImpacts.length === 0 || !hasNearbyImpacts(wallStart, wallEnd)) {
-    // Static: fill a clean 4-corner rectangle — clips perfectly, zero nub at any angle
-    fillPoly([startScreen, endScreen], px, py);
+    // Static: fill a square-capped rectangle — extend each end by hw in the
+    // tangential direction so adjacent perpendicular walls overlap at corners,
+    // eliminating the triangular notch that butt-ended rectangles leave.
+    const ecx = sdx / slen * hw, ecy = sdy / slen * hw;
+    fillPoly(
+      [
+        { x: startScreen.x - ecx, y: startScreen.y - ecy },
+        { x: endScreen.x   + ecx, y: endScreen.y   + ecy },
+      ],
+      px, py,
+    );
     return;
   }
 
@@ -237,6 +249,12 @@ export function renderWallWithEffects(
     centers.push({ x: sx + dx, y: sy + dy });
     maxGlow = Math.max(maxGlow, glow);
   }
+
+  // Square-cap extension for wobbly wall too (same tangential extension).
+  const ecx = sdx / slen * hw, ecy = sdy / slen * hw;
+  const first = centers[0], last = centers[centers.length - 1];
+  centers.unshift({ x: first.x - ecx, y: first.y - ecy });
+  centers.push   ({ x: last.x  + ecx, y: last.y  + ecy });
 
   fillPoly(centers, px, py);
 

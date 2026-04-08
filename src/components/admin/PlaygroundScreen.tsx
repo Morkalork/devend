@@ -36,7 +36,6 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   bonusRemovalAmount:               { label: 'Bonus Remove Amount',    kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Extra area removed when bonus triggers (fraction, 0–1)' },
   extraLives:                       { label: 'Extra Lives',            kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra lives granted immediately' },
   scoreInterestRate:                { label: 'Score Interest Rate',    kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Fraction of score added as interest between maps' },
-  mapReductionPerFenceBonus:        { label: 'Map Reduction/Fence',    kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Extra area fraction removed per fence completion' },
   extraShopItems:                   { label: 'Extra Shop Slots',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional item slots in the upgrade shop' },
   extraAugmentationPoints:          { label: 'Extra Aug. Points',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Augment Points granted' },
   microManagerPerLock:              { label: 'MicroManager/Lock',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Speed reduction per locked ball (0.01 = 1%, max 50%)' },

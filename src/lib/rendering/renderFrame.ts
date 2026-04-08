@@ -112,9 +112,20 @@ export function renderFrame(
   {
     const shadowW = 7 * scale;
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
-    ctx.clip();
+    // Clip to board polygon so shadow quads don't bleed into the margin.
+    if (game.boardPolygon) {
+      ctx.beginPath();
+      const sv = game.boardPolygon.vertices;
+      const sv0 = w2s(sv[0].x, sv[0].y);
+      ctx.moveTo(sv0.x, sv0.y);
+      for (let i = 1; i < sv.length; i++) { const svp = w2s(sv[i].x, sv[i].y); ctx.lineTo(svp.x, svp.y); }
+      ctx.closePath();
+      ctx.clip();
+    } else {
+      ctx.beginPath();
+      ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
+      ctx.clip();
+    }
     for (const w of walls) {
       if (!w.id.startsWith('wall-')) continue;
       const s = w2s(w.start.x, w.start.y);
@@ -211,12 +222,15 @@ export function renderFrame(
 
     const hwGlow = baseWidth / 2 + 2.5 * scale;
     const pgx = -dy * invLen * hwGlow, pgy = dx * invLen * hwGlow;
+    // Extend glow quad by hw in the tangential direction (square-cap) so that
+    // adjacent perpendicular walls' glow quads overlap and fill corner notches.
+    const tcx = dx * invLen * (baseWidth / 2), tcy = dy * invLen * (baseWidth / 2);
     ctx.globalAlpha = 0.28;
     ctx.beginPath();
-    ctx.moveTo(ss.x + pgx, ss.y + pgy);
-    ctx.lineTo(es.x + pgx, es.y + pgy);
-    ctx.lineTo(es.x - pgx, es.y - pgy);
-    ctx.lineTo(ss.x - pgx, ss.y - pgy);
+    ctx.moveTo(ss.x - tcx + pgx, ss.y - tcy + pgy);
+    ctx.lineTo(es.x + tcx + pgx, es.y + tcy + pgy);
+    ctx.lineTo(es.x + tcx - pgx, es.y + tcy - pgy);
+    ctx.lineTo(ss.x - tcx - pgx, ss.y - tcy - pgy);
     ctx.closePath();
     ctx.fill();
 
@@ -224,26 +238,52 @@ export function renderFrame(
     renderWallWithEffects(ctx, ss, es, ws, we, scale, accentColor, baseWidth);
   };
 
+  // ── Pass 1: user-drawn fence walls, clipped to the board polygon ──────────
+  // The square-cap extension in renderWallWithEffects pushes fence endpoints
+  // tangentially past the board wall centre line into the margin.  Clipping to
+  // the board polygon (not just boardRect) eliminates that protrusion.
+  if (game.boardPolygon) {
+    ctx.save();
+    ctx.beginPath();
+    const bpv = game.boardPolygon.vertices;
+    const bp0 = w2s(bpv[0].x, bpv[0].y);
+    ctx.moveTo(bp0.x, bp0.y);
+    for (let i = 1; i < bpv.length; i++) {
+      const bpt = w2s(bpv[i].x, bpv[i].y);
+      ctx.lineTo(bpt.x, bpt.y);
+    }
+    ctx.closePath();
+    ctx.clip();
+
+    for (let wi = walls.length - 1; wi >= 0; wi--) {
+      const w = walls[wi];
+      if (!w.id.startsWith("wall-")) continue;
+      const wallLineWidth = w.thickness * scale;
+      if (obstacles.length > 0) {
+        const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
+        for (const seg of segments) {
+          strokeSegment(w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, wallLineWidth);
+        }
+      } else {
+        strokeSegment(w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, wallLineWidth);
+      }
+    }
+    ctx.restore();
+  }
+
+  // ── Pass 2: board-edge walls, drawn on top (clipped to boardRect only) ────
   for (let wi = walls.length - 1; wi >= 0; wi--) {
     const w = walls[wi];
     if (w.isMirror) continue;
-    if (w.id.startsWith('obstacle-')) continue;
+    if (!w.id.startsWith("board-")) continue;
     const wallLineWidth = w.thickness * scale;
-
-    const shouldClip = obstacles.length > 0 &&
-      (w.id.startsWith("wall-") || w.id.startsWith("board-"));
-
-    if (shouldClip) {
+    if (obstacles.length > 0) {
       const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
       for (const seg of segments) {
-        const startScreen = w2s(seg.start.x, seg.start.y);
-        const endScreen = w2s(seg.end.x, seg.end.y);
-        strokeSegment(startScreen, endScreen, seg.start, seg.end, wallLineWidth);
+        strokeSegment(w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, wallLineWidth);
       }
     } else {
-      const startScreen = w2s(w.start.x, w.start.y);
-      const endScreen = w2s(w.end.x, w.end.y);
-      strokeSegment(startScreen, endScreen, w.start, w.end, wallLineWidth);
+      strokeSegment(w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, wallLineWidth);
     }
   }
   ctx.restore();
@@ -646,6 +686,7 @@ export function renderFrame(
     ctx.restore(); // globalAlpha
   }
 
+
   // ── Lock flash / assimilations ────────────────────────────────────────────
   if (game.assimilations.size > 0) {
     const acR = parseInt(accentColor.slice(1, 3), 16);
@@ -670,7 +711,8 @@ export function renderFrame(
         fillAlpha = 0.2 + ease * 0.65;
         glowAlpha = (1 - ft) * 0.9;
       } else {
-        fillAlpha = 0.85;
+        // Animation complete — hold a subtle permanent fill over the captured region.
+        fillAlpha = 0.22;
         glowAlpha = 0;
       }
 

@@ -92,4 +92,9 @@ export interface CanvasGameState {
   // ── Animations ─────────────────────────────────────────────────────────
   assimilations: Map<string, LockFlashState>;
   dissolve: DissolveState | null;
+
+  // ── Bonus cut tracking ─────────────────────────────────────────────────
+  /** Cells removed by previous bonus cuts — excluded from wall-adjacency checks
+   *  so new cuts don't treat old cut boundaries as real walls to push against. */
+  bonusCutCells: Set<string>;
 }
