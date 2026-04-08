@@ -275,33 +275,33 @@ upgrades:
   - id: venture_capital_senior
     name: Venture Capital
     tier: Senior
-    description: 5% interest on unused overtime between maps.
+    description: 10% interest on unused overtime between maps.
     cost: 18
     unlockLevel: 6
     modifiers:
-      scoreInterestRate: 0.05
+      scoreInterestRate: 0.10
 
   - id: venture_capital_principal
     name: Venture Capital
     tier: Principal
-    description: 10% interest on unused overtime between maps.
+    description: 20% interest on unused overtime between maps.
     cost: 28
     unlockLevel: 7
     prerequisites:
       - venture_capital_senior
     modifiers:
-      scoreInterestRate: 0.10
+      scoreInterestRate: 0.20
 
   - id: venture_capital_architect
     name: Venture Capital
     tier: Architect
-    description: 15% interest on unused overtime between maps.
+    description: 30% interest on unused overtime between maps.
     cost: 40
     unlockLevel: 11
     prerequisites:
       - venture_capital_principal
     modifiers:
-      scoreInterestRate: 0.15
+      scoreInterestRate: 0.30
 
 
   # ===============================
@@ -438,7 +438,7 @@ upgrades:
     tier: Junior
     description: Gain 1 extra life and shrink all balls by 8%. Safety first.
     cost: 12
-    unlockLevel: 3
+    unlockLevel: 5
     modifiers:
       extraLives: 1
       ballSizeMultiplier: 0.92
@@ -448,7 +448,7 @@ upgrades:
     tier: Senior
     description: Gain 2 more extra lives and shrink all balls by an additional 8%.
     cost: 22
-    unlockLevel: 7
+    unlockLevel: 10
     prerequisites:
       - defensive_programming_junior
     modifiers:
@@ -460,7 +460,7 @@ upgrades:
     tier: Principal
     description: Gain 3 more extra lives and shrink all balls by an additional 8%.
     cost: 36
-    unlockLevel: 12
+    unlockLevel: 20
     prerequisites:
       - defensive_programming_senior
     modifiers:

@@ -760,7 +760,7 @@ function IndexContent({
           accentColor={accentHex}
         />
       )}
-      {currentScreen === 'game' && currentLevel && (
+      {currentScreen === 'game' && currentLevel && !showLevelComplete && (
         <GameScreen
           level={currentLevel}
           levelNumber={currentLevelIndex + 1}
