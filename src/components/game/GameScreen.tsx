@@ -37,6 +37,8 @@ interface GameScreenProps {
   onRestart: () => void;
   showInGameTutorial?: boolean;
   onFenceSeen?: () => void;
+  showMoverTutorial?: boolean;
+  onMoverTutorialSeen?: () => void;
   accentColor?: string;
   augmentProgress?: AugmentProgress;
   achievementBonuses?: Partial<Record<string, number>>;
@@ -59,6 +61,8 @@ export function GameScreen({
   onRestart,
   showInGameTutorial = false,
   onFenceSeen,
+  showMoverTutorial = false,
+  onMoverTutorialSeen,
   accentColor: externalAccentColor,
   augmentProgress,
   achievementBonuses,
@@ -71,6 +75,10 @@ export function GameScreen({
   const [inGameStep, setInGameStep] = useState<InGameStep>(
     showInGameTutorial ? 'fence' : 'done'
   );
+
+  const levelHasMovers = (level.entities ?? []).some(e => e.kind === 'mover');
+  const [moverTutorialDismissed, setMoverTutorialDismissed] = useState(false);
+  const showMoverOverlay = showMoverTutorial && levelHasMovers && !moverTutorialDismissed;
 
   // Game state for top bar
   const [gameState, setGameState] = useState<GameStateInfo>({
@@ -239,6 +247,22 @@ export function GameScreen({
           </div>
         )}
       </div>
+
+      {/* Mover tutorial overlay — shown on first level with moving obstacles */}
+      <TutorialOverlay
+        visible={showMoverOverlay}
+        onDismiss={() => {
+          setMoverTutorialDismissed(true);
+          onMoverTutorialSeen?.();
+        }}
+        accentColor="#ff8800"
+        title="⚠ Moving Obstacles"
+        body={
+          "Orange obstacles move back and forth on a fixed track.\n\n" +
+          "Balls bounce off them — but if your growing fence touches one, you lose a life.\n\n" +
+          "Watch the track lines and time your fences carefully!"
+        }
+      />
     </>
   );
 }

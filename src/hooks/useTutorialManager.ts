@@ -7,6 +7,7 @@ interface TutorialsSeen {
   fence: boolean;
   store: boolean;
   augment: boolean;
+  mover: boolean;
 }
 
 function loadSeen(): TutorialsSeen {
@@ -14,17 +15,17 @@ function loadSeen(): TutorialsSeen {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { fence: !!parsed.fence, store: !!parsed.store, augment: !!parsed.augment };
+      return { fence: !!parsed.fence, store: !!parsed.store, augment: !!parsed.augment, mover: !!parsed.mover };
     }
     // Migration: if old key is set, mark fence as seen
     const old = localStorage.getItem(OLD_STORAGE_KEY);
     if (old === 'true') {
-      return { fence: true, store: false, augment: false };
+      return { fence: true, store: false, augment: false, mover: false };
     }
   } catch {
     // ignore
   }
-  return { fence: false, store: false, augment: false };
+  return { fence: false, store: false, augment: false, mover: false };
 }
 
 function saveSeen(seen: TutorialsSeen) {
@@ -62,6 +63,14 @@ export function useTutorialManager() {
     });
   }, []);
 
+  const markMoverSeen = useCallback(() => {
+    setSeen(prev => {
+      const next = { ...prev, mover: true };
+      saveSeen(next);
+      return next;
+    });
+  }, []);
+
   const resetAllTutorials = useCallback(() => {
     try {
       localStorage.removeItem(STORAGE_KEY);
@@ -69,16 +78,18 @@ export function useTutorialManager() {
     } catch {
       // ignore
     }
-    setSeen({ fence: false, store: false, augment: false });
+    setSeen({ fence: false, store: false, augment: false, mover: false });
   }, []);
 
   return {
     shouldShowFence: !seen.fence,
     shouldShowStore: !seen.store,
     shouldShowAugment: !seen.augment,
+    shouldShowMover: !seen.mover,
     markFenceSeen,
     markStoreSeen,
     markAugmentSeen,
+    markMoverSeen,
     resetAllTutorials,
   };
 }

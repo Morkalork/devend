@@ -16,6 +16,7 @@ import { GrowingWall } from "@/types/game";
 import { PHYSICS_STEP, DISSOLVE_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
+import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updateWallImpacts } from "@/lib/wallImpactEffects";
 
 export interface GameLoopCallbacks {
@@ -110,6 +111,8 @@ export function createGameLoop(
       for (const ball of game.balls) {
         ball.prevPosition = { ...ball.position };
       }
+
+      updateMoversFn(PHYSICS_STEP, game);
 
       for (const ball of game.balls) {
         // WON balls keep full physics but visually disintegrate

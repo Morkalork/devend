@@ -8,7 +8,8 @@
  * (canvas repaints, React state setters, etc.) that cannot live here.
  */
 
-import { LevelConfig } from "@/types/level";
+import { LevelConfig, LevelMoverEntity } from "@/types/level";
+import { MoverState, buildMoverPolygon } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2 } from "@/types/game";
 import { Polygon } from "@/lib/polygon";
@@ -63,6 +64,7 @@ export interface InitialGameData {
   originalArea: number;
   basePlayableArea: number;
   balls: Ball[];
+  movers: MoverState[];
   initialSamplePoints: Vector2[];
   spaceGrid: SpaceGrid;
   gridRegions: GridRegion[];
@@ -346,6 +348,34 @@ export function createInitialGameData(
     }
   }
 
+  // ── Build movers ──────────────────────────────────────────────────────
+
+  const movers: MoverState[] = [];
+  for (const entity of allEntities) {
+    if (entity.kind !== "mover") continue;
+    const e = entity as LevelMoverEntity;
+    const homeX = e.shape === "circle" ? e.cx : (e as any).x + (e as any).width  / 2;
+    const homeY = e.shape === "circle" ? e.cy : (e as any).y + (e as any).height / 2;
+    const phase  = e.phase ?? 0;
+    const offset = phase * e.range - e.range / 2;
+    const mover: MoverState = {
+      id:        e.id,
+      shape:     e.shape as "circle" | "rect",
+      homeX,
+      homeY,
+      axis:      e.axis,
+      range:     e.range,
+      speed:     e.speed,
+      offset,
+      direction: 1,
+      polygon:   { vertices: [] },
+      ...(e.shape === "circle" ? { radius: (e as any).radius } : {}),
+      ...(e.shape === "rect"   ? { width: (e as any).width, height: (e as any).height } : {}),
+    };
+    mover.polygon = buildMoverPolygon(mover);
+    movers.push(mover);
+  }
+
   // ── Fastest ball ──────────────────────────────────────────────────────
 
   let fastestBallId: string | null = null;
@@ -366,6 +396,7 @@ export function createInitialGameData(
     originalArea:        initialEstimatedArea,
     basePlayableArea:    initialEstimatedArea,
     balls,
+    movers,
     initialSamplePoints: initSamplePoints,
     spaceGrid,
     gridRegions,

@@ -200,6 +200,17 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     }
   }
 
+  // Bounce off moving obstacles
+  for (const mover of game.movers) {
+    const result = resolveBallPolygonCollisionOutward(ball.position, ball.velocity, ball.radius, mover.polygon);
+    if (result.collided) {
+      ball.position = result.position;
+      ball.velocity = result.velocity;
+      triggerWallHit(ball.effects, performance.now());
+      playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));
+    }
+  }
+
   // CRITICAL: Check obstacle polygon penetration before edge collisions
   for (const obstacle of game.obstaclePolygons) {
     const obstacleResult = resolveBallPolygonCollisionOutward(

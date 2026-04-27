@@ -178,6 +178,83 @@ export function renderFrame(
     ctx.closePath();
   };
 
+  // ── Moving obstacles ──────────────────────────────────────────────────────
+  if (game.movers.length > 0) {
+    const now = performance.now();
+    const pulse = 0.5 + 0.5 * Math.sin(now / 320);  // 0–1 pulse
+    const MOVER_COLOR = '#ff8800';
+    const TRACK_COLOR = 'rgba(255,136,0,0.18)';
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
+    ctx.clip();
+
+    for (const mover of game.movers) {
+      const dx = mover.axis === 'horizontal' ? mover.offset : 0;
+      const dy = mover.axis === 'vertical'   ? mover.offset : 0;
+      const cx = mover.homeX + dx;
+      const cy = mover.homeY + dy;
+      const sc = w2s(cx, cy);
+      const half = mover.range / 2;
+
+      // Track line
+      const trackA = mover.axis === 'horizontal'
+        ? w2s(mover.homeX - half, mover.homeY)
+        : w2s(mover.homeX, mover.homeY - half);
+      const trackB = mover.axis === 'horizontal'
+        ? w2s(mover.homeX + half, mover.homeY)
+        : w2s(mover.homeX, mover.homeY + half);
+      ctx.strokeStyle = TRACK_COLOR;
+      ctx.lineWidth   = 2 * scale;
+      ctx.setLineDash([6 * scale, 5 * scale]);
+      ctx.beginPath();
+      ctx.moveTo(trackA.x, trackA.y);
+      ctx.lineTo(trackB.x, trackB.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Body fill + glow
+      const verts = mover.polygon.vertices;
+      ctx.beginPath();
+      const p0s = w2s(verts[0].x, verts[0].y);
+      ctx.moveTo(p0s.x, p0s.y);
+      for (let vi = 1; vi < verts.length; vi++) {
+        const ps = w2s(verts[vi].x, verts[vi].y);
+        ctx.lineTo(ps.x, ps.y);
+      }
+      ctx.closePath();
+
+      ctx.fillStyle   = `rgba(255,${Math.round(80 + pulse * 30)},0,0.22)`;
+      ctx.fill();
+      ctx.strokeStyle = MOVER_COLOR;
+      ctx.lineWidth   = (1.5 + pulse * 1.5) * scale;
+      ctx.shadowColor = MOVER_COLOR;
+      ctx.shadowBlur  = (6 + pulse * 10) * scale;
+      ctx.stroke();
+      ctx.shadowBlur  = 0;
+
+      // Hazard arrow showing current direction of travel
+      const arrowSize = (mover.shape === 'circle' ? (mover.radius ?? 30) : Math.min(mover.width ?? 60, mover.height ?? 60) / 2) * 0.55 * scale;
+      const arrowDx = mover.axis === 'horizontal' ? mover.direction : 0;
+      const arrowDy = mover.axis === 'vertical'   ? mover.direction : 0;
+      const tip  = { x: sc.x + arrowDx * arrowSize, y: sc.y + arrowDy * arrowSize };
+      const base = { x: sc.x - arrowDx * arrowSize * 0.5, y: sc.y - arrowDy * arrowSize * 0.5 };
+      const perp = arrowSize * 0.45;
+      ctx.fillStyle   = MOVER_COLOR;
+      ctx.globalAlpha = 0.85;
+      ctx.beginPath();
+      ctx.moveTo(tip.x, tip.y);
+      ctx.lineTo(base.x - arrowDy * perp, base.y + arrowDx * perp);
+      ctx.lineTo(base.x + arrowDy * perp, base.y - arrowDx * perp);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+  }
+
   // ── Smooth obstacle outlines (non-mirror) ─────────────────────────────────
   {
     const mirrorSet = new Set(game.mirrorPolygons);
