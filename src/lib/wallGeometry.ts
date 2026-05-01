@@ -10,6 +10,7 @@ export interface Wall {
   end: Vector2;
   thickness: number;
   isMirror?: boolean;
+  isObstacleBoundary?: boolean;
 }
 
 export interface WallVertex {
@@ -38,6 +39,7 @@ export function createWallsFromPolygon(polygon: Polygon, idPrefix: string, isMir
       start: { ...vertices[i] },
       end: { ...vertices[j] },
       thickness: WALL_THICKNESS,
+      isObstacleBoundary: true,
     };
     if (isMirror) wall.isMirror = true;
     walls.push(wall);
@@ -228,7 +230,7 @@ export function castRayWithReflections(
 
     // Find the wall we hit to check if it's a mirror
     const hitWall = walls.find(w => w.id === hit.wallId);
-    if (!hitWall || !hitWall.isMirror || bounces >= maxBounces) {
+    if (!hitWall || !hitWall.isMirror || bounces >= maxBounces || hitWall.isObstacleBoundary) {
       // Terminal hit — return result
       return { waypoints, finalWallId: hit.wallId };
     }

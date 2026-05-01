@@ -4,7 +4,7 @@ import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import {
   findGridRegions,
-  getRegionPercentage,
+  countActiveCells,
   worldToGridIndex,
 } from "@/lib/spaceGrid";
 import { lineSegmentIntersection, vec2Length } from "@/lib/polygon";
@@ -36,7 +36,11 @@ export function checkAndUpdateBallWonStates(
     }
     if (!ballRegion) continue;
 
-    if (getRegionPercentage(game.spaceGrid, ballRegion) > BALL_WON_REGION_THRESHOLD) continue;
+    const currentActive = countActiveCells(game.spaceGrid);
+    const activeBalls = game.balls.filter(b => b.state !== 'won' && b.speed > 0).length;
+    const denominator = Math.max(currentActive, Math.floor(game.spaceGrid.initialActiveCount / Math.max(1, activeBalls)));
+    const percentage = (ballRegion.cellIndices.length / denominator) * 100;
+    if (percentage > BALL_WON_REGION_THRESHOLD) continue;
 
     ball.state = 'won';
     ball.wonTime = performance.now();

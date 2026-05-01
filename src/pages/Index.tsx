@@ -37,6 +37,7 @@ type Session = ReturnType<typeof useGameSession>;
 
 function IndexContent({ navigation, session }: { navigation: Navigation; session: Session }) {
   const { accentHex } = useAccentColor();
+  const isAdminEnabled = import.meta.env.DEV || new URLSearchParams(window.location.search).get('admin') === 'true';
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1,
@@ -88,11 +89,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                     : undefined
                 }
                 onAchievements={() => navigation.goToAchievements()}
-                onAdmin={
-                  import.meta.env.DEV || new URLSearchParams(window.location.search).get('admin') === 'true'
-                    ? navigation.goToAdmin
-                    : undefined
-                }
+                onAdmin={isAdminEnabled ? navigation.goToAdmin : undefined}
                 isLoading={session.isLoading}
                 error={session.error}
                 accentColor={accentHex}
@@ -191,17 +188,17 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               />
             )}
 
-            {import.meta.env.DEV && navigation.currentScreen === 'admin' && (
+            {isAdminEnabled && navigation.currentScreen === 'admin' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
                 <AdminScreen onBack={navigation.goToWelcome} onMapBuilder={navigation.goToMapBuilder} onAnimationTest={navigation.goToAnimationTest} />
               </Suspense>
             )}
-            {import.meta.env.DEV && navigation.currentScreen === 'mapBuilder' && (
+            {isAdminEnabled && navigation.currentScreen === 'mapBuilder' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
                 <MapBuilder onBack={navigation.goToAdmin} />
               </Suspense>
             )}
-            {import.meta.env.DEV && navigation.currentScreen === 'animationTest' && (
+            {isAdminEnabled && navigation.currentScreen === 'animationTest' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
                 <PlaygroundScreen onBack={navigation.goToAdmin} accentColor={accentHex} />
               </Suspense>
