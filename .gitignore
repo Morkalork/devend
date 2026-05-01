@@ -12,8 +12,9 @@ dist
 dist-ssr
 *.local
 
-# Claude Code temp files
+# Claude Code — temp files and local (per-developer) settings
 tmpclaude-*-cwd
+.claude/settings.local.json
 
 # Editor directories and files
 .vscode/*
