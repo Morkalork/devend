@@ -200,6 +200,7 @@ export function GameCanvas({
     lockBonus: 0,
     assimilations: new Map<string, LockFlashState>(),
     dissolve: null as DissolveState | null,
+    captureRings: [] as Array<{ wx: number; wy: number; startTime: number }>,
     bonusCutCells: new Set<string>(),
   });
 

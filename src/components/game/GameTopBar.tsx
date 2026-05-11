@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { Heart, Lock, Scissors, Target, Hexagon } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
 import {
@@ -48,6 +48,51 @@ export function GameTopBar({
   const upgradesContainerRef = useRef<HTMLDivElement>(null);
   const [needsCarousel, setNeedsCarousel] = useState(false);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+
+  // ── Animated capture-percentage count-up ─────────────────────────────────
+  const [displaySpace, setDisplaySpace] = useState(spaceRemaining);
+  const spaceAnimRef = useRef<number | undefined>(undefined);
+  const spaceFromRef = useRef(spaceRemaining);
+  useEffect(() => {
+    const from = spaceFromRef.current;
+    const to   = spaceRemaining;
+    if (from === to) return;
+    cancelAnimationFrame(spaceAnimRef.current!);
+    const t0  = performance.now();
+    const dur = 280;
+    const tick = (now: number) => {
+      const p     = Math.min(1, (now - t0) / dur);
+      const eased = 1 - (1 - p) ** 2;
+      setDisplaySpace(Math.round(from + (to - from) * eased));
+      if (p < 1) spaceAnimRef.current = requestAnimationFrame(tick);
+      else        spaceFromRef.current = to;
+    };
+    spaceAnimRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(spaceAnimRef.current!);
+  }, [spaceRemaining]);
+
+  // ── Per-stat flash keys (each increment forces a CSS animation restart) ──
+  const [spaceFlashKey,  setSpaceFlashKey]  = useState(0);
+  const [livesFlashKey,  setLivesFlashKey]  = useState(0);
+  const [locksFlashKey,  setLocksFlashKey]  = useState(0);
+  const prevSpaceRef = useRef(spaceRemaining);
+  const prevLivesRef = useRef(lives);
+  const prevLocksRef = useRef(lockedBalls);
+  // ignore the ESLint warning — useCallback is just a stable reference here
+  const flash = useCallback((set: React.Dispatch<React.SetStateAction<number>>) =>
+    set(k => k + 1), []);
+  useEffect(() => {
+    if (spaceRemaining < prevSpaceRef.current) flash(setSpaceFlashKey);
+    prevSpaceRef.current = spaceRemaining;
+  }, [spaceRemaining, flash]);
+  useEffect(() => {
+    if (lives < prevLivesRef.current) flash(setLivesFlashKey);
+    prevLivesRef.current = lives;
+  }, [lives, flash]);
+  useEffect(() => {
+    if (lockedBalls > prevLocksRef.current) flash(setLocksFlashKey);
+    prevLocksRef.current = lockedBalls;
+  }, [lockedBalls, flash]);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -105,7 +150,7 @@ export function GameTopBar({
         </div>
 
         {/* Lives */}
-        <div className="flex items-center gap-1">
+        <div key={livesFlashKey} className={`flex items-center gap-1 ${livesFlashKey > 0 ? 'animate-stat-flash' : ''}`}>
           {Array.from({ length: lives }).map((_, i) => (
             <Heart
               key={i}
@@ -169,13 +214,14 @@ export function GameTopBar({
         <div className="flex items-center gap-1.5 min-w-0">
           <Target className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
           <span
-            className="font-display text-sm font-bold tabular-nums"
+            key={spaceFlashKey}
+            className={`font-display text-sm font-bold tabular-nums${spaceFlashKey > 0 ? ' animate-stat-flash' : ''}`}
             style={{
               color: spaceRemaining <= spaceRequired ? accentColor : 'hsl(var(--foreground))',
               textShadow: spaceRemaining <= spaceRequired ? `0 0 10px ${accentColor}88` : 'none',
             }}
           >
-            {spaceRemaining}%/{spaceRequired}%
+            {displaySpace}%/{spaceRequired}%
           </span>
         </div>
 
@@ -186,7 +232,8 @@ export function GameTopBar({
             style={{ color: lockColor, filter: lockMet && lockReq > 0 ? `drop-shadow(0 0 6px ${accentColor}aa)` : 'none' }}
           />
           <span
-            className="font-display text-sm font-bold tabular-nums"
+            key={locksFlashKey}
+            className={`font-display text-sm font-bold tabular-nums${locksFlashKey > 0 ? ' animate-stat-flash' : ''}`}
             style={{
               color: lockColor,
               textShadow: lockMet && lockReq > 0 ? `0 0 10px ${accentColor}88` : 'none',

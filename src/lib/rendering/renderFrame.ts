@@ -848,6 +848,40 @@ export function renderFrame(
     }
   }
 
+  // ── Region capture shockwave rings ───────────────────────────────────────
+  if (game.captureRings.length > 0) {
+    const now = performance.now();
+    const RING_DUR = 480;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = accentColor;
+    game.captureRings = game.captureRings.filter(ring => {
+      const age = now - ring.startTime;
+      if (age > RING_DUR) return false;
+      const t  = age / RING_DUR;
+      const e  = 1 - (1 - t) ** 2;          // ease-out quad
+      const cs = w2s(ring.wx, ring.wy);
+      // Outer ring
+      ctx.lineWidth  = Math.max(0.5, (3.5 - t * 3)) * scale;
+      ctx.globalAlpha = (1 - t) * 0.7;
+      ctx.beginPath();
+      ctx.arc(cs.x, cs.y, e * 90 * scale, 0, Math.PI * 2);
+      ctx.stroke();
+      // Inner trailing ring (starts slightly later)
+      const t2 = Math.max(0, t - 0.12);
+      if (t2 > 0) {
+        const e2 = 1 - (1 - t2) ** 2;
+        ctx.lineWidth   = Math.max(0.5, (2 - t2 * 2)) * scale;
+        ctx.globalAlpha = (1 - t2) * 0.38;
+        ctx.beginPath();
+        ctx.arc(cs.x, cs.y, e2 * 58 * scale, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      return true;
+    });
+    ctx.restore();
+  }
+
   // ── Growing wall (active fence) ───────────────────────────────────────────
   if (wall) {
     const activeRegion = regions.find((r) => r.id === wall.activeRegionId);
