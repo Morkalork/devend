@@ -1014,8 +1014,12 @@ export function renderFrame(
     const barY = bt + bh + gap;
 
     ctx.save();
+
+    // Track background
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
     ctx.fillRect(bl, barY, bw, barH);
+
+    // Primary fill (left → right, accent/green)
     const fillW = bw * fillRatio;
     const isComplete = fillRatio >= 1;
     ctx.fillStyle = isComplete ? '#00ff44' : accentColor;
@@ -1023,6 +1027,21 @@ export function renderFrame(
     ctx.shadowColor = isComplete ? '#00ff44' : accentColor;
     ctx.shadowBlur = 3 * scale;
     ctx.fillRect(bl, barY, fillW, barH);
+
+    // Push overlay (right → left, orange) while player is pushing their luck
+    if (game.pushMode === 'pushing' && game.pushStartPercent > 0) {
+      const extraCaptured = game.pushStartPercent - remaining;
+      const pushRatio = Math.min(1, Math.max(0, extraCaptured / game.pushStartPercent));
+      if (pushRatio > 0) {
+        const pushW = bw * pushRatio;
+        ctx.fillStyle = '#ff8800';
+        ctx.globalAlpha = 0.85;
+        ctx.shadowColor = '#ff8800';
+        ctx.shadowBlur = 5 * scale;
+        ctx.fillRect(bl + bw - pushW, barY, pushW, barH);
+      }
+    }
+
     ctx.restore();
   }
 }
