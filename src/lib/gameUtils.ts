@@ -117,8 +117,9 @@ export function computeBallTrajectory(
 
     // ── Board-edge and fence walls ────────────────────────────────────────
     for (const wall of walls) {
-      // Obstacle boundary walls are handled per-polygon below
-      if (wall.isObstacleBoundary) continue;
+      // Obstacle walls (prefix "obstacle-") are handled per-polygon below.
+      // Board edges (prefix "board-") and user fences (prefix "wall-") stay.
+      if (wall.id.startsWith('obstacle-')) continue;
       if (wall.id === lastHitWallId) continue;
 
       const ex = wall.end.x - wall.start.x;
