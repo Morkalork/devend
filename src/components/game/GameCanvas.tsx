@@ -200,7 +200,6 @@ export function GameCanvas({
     lockBonus: 0,
     assimilations: new Map<string, LockFlashState>(),
     dissolve: null as DissolveState | null,
-    capturedFills: [] as Array<{ vertices: import('@/lib/polygon').Vector2[]; startTime: number }>,
     bonusCutCells: new Set<string>(),
   });
 

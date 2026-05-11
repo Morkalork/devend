@@ -153,14 +153,6 @@ export function applyCutFn(
         updatedRegions.push({ id: generateRegionId(), polygon: result.polygon, estimatedArea: result.estimatedArea, samplePoints: result.samplePoints });
       }
     }
-    for (const sub of subRegions.filter(r => !r.hasBalls)) {
-      if (sub.samples.length > 4) {
-        const result = buildPolygonFromSamples(sub.samples, sub.samples.length);
-        if (result && result.polygon.vertices.length >= 3) {
-          game.capturedFills.push({ vertices: result.polygon.vertices, startTime: performance.now() });
-        }
-      }
-    }
   }
   game.regions = updatedRegions;
 

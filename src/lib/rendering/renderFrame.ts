@@ -848,38 +848,6 @@ export function renderFrame(
     }
   }
 
-  // ── Captured region accent-color fade ────────────────────────────────────
-  if (game.capturedFills.length > 0) {
-    const now = performance.now();
-    const DURATION = 580;
-    const PEAK     = 0.18; // fraction of DURATION at which alpha peaks
-    game.capturedFills = game.capturedFills.filter(fill => {
-      const age = now - fill.startTime;
-      if (age > DURATION) return false;
-      const t = age / DURATION;
-      // Quick fade-in, then slow fade-out
-      const alpha = t < PEAK
-        ? (t / PEAK) * 0.52
-        : ((1 - t) / (1 - PEAK)) * 0.52;
-
-      if (fill.vertices.length < 3) return true;
-      const first = w2s(fill.vertices[0].x, fill.vertices[0].y);
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle   = accentColor;
-      ctx.beginPath();
-      ctx.moveTo(first.x, first.y);
-      for (let i = 1; i < fill.vertices.length; i++) {
-        const p = w2s(fill.vertices[i].x, fill.vertices[i].y);
-        ctx.lineTo(p.x, p.y);
-      }
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
-      return true;
-    });
-  }
-
   // ── Growing wall (active fence) ───────────────────────────────────────────
   if (wall) {
     const activeRegion = regions.find((r) => r.id === wall.activeRegionId);
