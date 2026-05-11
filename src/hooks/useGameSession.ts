@@ -118,10 +118,8 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     activateAchievement,
   } = useAchievementManager();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mergedBonuses = useMemo(() => mergeBonuses(achievementBonuses as any, certBonuses as any), [achievementBonuses, certBonuses]);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses as any);
+  const mergedBonuses = useMemo(() => mergeBonuses(achievementBonuses, certBonuses), [achievementBonuses, certBonuses]);
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
 
   const certSourceIds = useMemo(
     () => new Set(certificates.map(c => c.sourceUpgradeId).filter((id): id is string => id != null)),
@@ -282,8 +280,7 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     setCumulativeLockedBalls(0);
     resetRunProgress();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const certBonusLives = (certBonuses as any).extraLives ?? 0;
+    const certBonusLives = certBonuses.extraLives ?? 0;
     const startingLives = BASE_LIVES + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);

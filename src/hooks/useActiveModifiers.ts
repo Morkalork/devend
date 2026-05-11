@@ -140,7 +140,6 @@ export function useActiveModifiers(
   );
   return useMemo(
     () => computeGameModifiers(ownedUpgradeIds, upgradeLookup, extraBonuses),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [ownedUpgradeIds, upgradeLookup, extraBonuses],
   );
 }

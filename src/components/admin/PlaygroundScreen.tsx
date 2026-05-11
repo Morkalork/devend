@@ -129,7 +129,10 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     } else {
       setEditDraft(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Depend on the level ID, not the object reference: editDraft is mutated
+    // in place by the editor panels, and we only want to reset it when the
+    // user actually switches to a different level, not on every local edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLevel?.id]);
 
   const updateEditLevel = useCallback((updated: LevelConfig) => {

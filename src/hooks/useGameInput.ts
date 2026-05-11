@@ -174,6 +174,8 @@ export function useGameInput(
       canvas.removeEventListener("pointerup",    handlePointerUp);
       canvas.removeEventListener("pointerleave", handlePointerUp);
     };
+    // canvasRef.current is intentional: re-attach listeners if the canvas
+    // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasRef.current, activeModifiers.instantFencesPerMap]);
 }

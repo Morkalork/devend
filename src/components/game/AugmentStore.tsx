@@ -19,6 +19,15 @@ interface AugmentStoreProps {
   onTutorialDismiss?: () => void;
 }
 
+function getCostForSelection(
+  cert: Certificate,
+  targetLevel: number,
+  certLevelsOwned: Record<string, number>,
+): number {
+  const currentOwned = certLevelsOwned[cert.id] || 0;
+  return cert.levels.slice(currentOwned, targetLevel).reduce((sum, l) => sum + l.cost, 0);
+}
+
 export function AugmentStore({
   certificates,
   totalAugmentPoints,
@@ -89,13 +98,6 @@ export function AugmentStore({
     });
   };
 
-  const getCostForSelection = (cert: Certificate, targetLevel: number): number => {
-    const currentOwned = certLevelsOwned[cert.id] || 0;
-    return cert.levels
-      .slice(currentOwned, targetLevel)
-      .reduce((sum, l) => sum + l.cost, 0);
-  };
-
   const handleBuy = (cert: Certificate) => {
     const target = selectedLevels[cert.id];
     if (!target) return;
@@ -113,11 +115,10 @@ export function AugmentStore({
     for (const cert of certificates) {
       const target = selectedLevels[cert.id];
       if (target != null) {
-        balance -= getCostForSelection(cert, target);
+        balance -= getCostForSelection(cert, target, certLevelsOwned);
       }
     }
     return balance;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [totalAugmentPoints, selectedLevels, certificates, certLevelsOwned]);
 
   return (
@@ -169,7 +170,7 @@ export function AugmentStore({
                 {available.map((cert, i) => {
                   const levelsOwned = certLevelsOwned[cert.id] || 0;
                   const selectedTarget = selectedLevels[cert.id];
-                  const pendingCost = selectedTarget != null ? getCostForSelection(cert, selectedTarget) : 0;
+                  const pendingCost = selectedTarget != null ? getCostForSelection(cert, selectedTarget, certLevelsOwned) : 0;
                   const canAfford = pendingCost <= totalAugmentPoints && pendingCost > 0;
 
                   return (
