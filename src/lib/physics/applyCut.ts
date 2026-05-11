@@ -155,9 +155,10 @@ export function applyCutFn(
     }
     for (const sub of subRegions.filter(r => !r.hasBalls)) {
       if (sub.samples.length > 4) {
-        const cx = sub.samples.reduce((acc: number, p: { x: number }) => acc + p.x, 0) / sub.samples.length;
-        const cy = sub.samples.reduce((acc: number, p: { y: number }) => acc + p.y, 0) / sub.samples.length;
-        game.captureRings.push({ wx: cx, wy: cy, startTime: performance.now() });
+        const result = buildPolygonFromSamples(sub.samples, sub.samples.length);
+        if (result && result.polygon.vertices.length >= 3) {
+          game.capturedFills.push({ vertices: result.polygon.vertices, startTime: performance.now() });
+        }
       }
     }
   }

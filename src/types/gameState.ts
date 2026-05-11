@@ -94,8 +94,8 @@ export interface CanvasGameState {
   // ── Animations ─────────────────────────────────────────────────────────
   assimilations: Map<string, LockFlashState>;
   dissolve: DissolveState | null;
-  /** Expanding shockwave rings spawned on region capture. */
-  captureRings: Array<{ wx: number; wy: number; startTime: number }>;
+  /** Polygon fills that flash accent-color over captured regions, then fade out. */
+  capturedFills: Array<{ vertices: Vector2[]; startTime: number }>;
 
   // ── Bonus cut tracking ─────────────────────────────────────────────────
   /** Cells removed by previous bonus cuts — excluded from wall-adjacency checks
