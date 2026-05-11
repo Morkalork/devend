@@ -8,7 +8,7 @@
  * (canvas repaints, React state setters, etc.) that cannot live here.
  */
 
-import { LevelConfig, LevelMoverEntity } from "@/types/level";
+import { LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity } from "@/types/level";
 import { MoverState, buildMoverPolygon } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2 } from "@/types/game";
@@ -354,13 +354,26 @@ export function createInitialGameData(
   for (const entity of allEntities) {
     if (entity.kind !== "mover") continue;
     const e = entity as LevelMoverEntity;
-    const homeX = e.shape === "circle" ? e.cx : (e as any).x + (e as any).width  / 2;
-    const homeY = e.shape === "circle" ? e.cy : (e as any).y + (e as any).height / 2;
     const phase  = e.phase ?? 0;
     const offset = phase * e.range - e.range / 2;
+
+    let homeX: number, homeY: number;
+    let shapeProps: Pick<MoverState, 'radius' | 'width' | 'height'> = {};
+    if (e.shape === "circle") {
+      const ce = e as MoverCircleEntity;
+      homeX = ce.cx;
+      homeY = ce.cy;
+      shapeProps = { radius: ce.radius };
+    } else {
+      const re = e as MoverRectEntity;
+      homeX = re.x + re.width  / 2;
+      homeY = re.y + re.height / 2;
+      shapeProps = { width: re.width, height: re.height };
+    }
+
     const mover: MoverState = {
       id:        e.id,
-      shape:     e.shape as "circle" | "rect",
+      shape:     e.shape,
       homeX,
       homeY,
       axis:      e.axis,
@@ -369,8 +382,7 @@ export function createInitialGameData(
       offset,
       direction: 1,
       polygon:   { vertices: [] },
-      ...(e.shape === "circle" ? { radius: (e as any).radius } : {}),
-      ...(e.shape === "rect"   ? { width: (e as any).width, height: (e as any).height } : {}),
+      ...shapeProps,
     };
     mover.polygon = buildMoverPolygon(mover);
     movers.push(mover);

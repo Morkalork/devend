@@ -4,6 +4,7 @@ import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy, ChevronRig
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { CheckpointPicker } from './CheckpointPicker';
+import { version } from '@/lib/version';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
@@ -370,6 +371,10 @@ export function WelcomeScreen({
           )}
         </motion.div>
       </motion.div>
+      <div className="absolute bottom-3 right-4 text-xs font-mono opacity-30 pointer-events-none select-none"
+        style={{ color: '#00ff88' }}>
+        v{version}
+      </div>
     </div>
     {showStartMapPicker && checkpointLevel && onStartFromLevel && (
       <CheckpointPicker

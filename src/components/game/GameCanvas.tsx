@@ -119,7 +119,6 @@ export function GameCanvas({
   parallaxTickRef,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const blurCanvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
@@ -227,13 +226,6 @@ export function GameCanvas({
     // ── Blur canvas (legacy — now unused, kept for canvas element compatibility) ──
     let removedSamples: Vector2[] = [];
     let removedSamplesSet: Set<string> = new Set();
-
-    const repaintBlurCanvas = () => {
-      const blurCanvas = blurCanvasRef.current;
-      const blurCtx = blurCanvas?.getContext("2d");
-      if (!blurCtx || !blurCanvas) return;
-      blurCtx.clearRect(0, 0, blurCanvas.width, blurCanvas.height);
-    };
 
     const collectAndDrawRemovedSamples = () => {
       const activeSet = new Set<string>();
@@ -370,7 +362,6 @@ export function GameCanvas({
       game.fastestBallId      = data.fastestBallId;
       removedSamples = [];
       removedSamplesSet = new Set();
-      repaintBlurCanvas();
       repaintRegionCanvas();
       game.activeWall = null;
       game.gameOver = false;
@@ -394,14 +385,8 @@ export function GameCanvas({
       canvas.width = width; canvas.height = height;
       canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
       game.screenSize = { width, height };
-      const blurCanvas = blurCanvasRef.current;
-      if (blurCanvas) {
-        blurCanvas.width = width; blurCanvas.height = height;
-        blurCanvas.style.width = `${width}px`; blurCanvas.style.height = `${height}px`;
-      }
       game.boardRect = computeBoardRect(width, height);
       clearBallRenderCache();
-      repaintBlurCanvas();
       repaintRegionCanvas();
       paintOverlayCanvas();
       setDebugInfo({
@@ -424,8 +409,6 @@ export function GameCanvas({
       const captured = document.createElement('canvas');
       captured.width = W; captured.height = H;
       const cctx = captured.getContext('2d')!;
-      const blurCanvas = blurCanvasRef.current;
-      if (blurCanvas) cctx.drawImage(blurCanvas, 0, 0);
       cctx.drawImage(canvas, 0, 0);
       if (tint) { cctx.fillStyle = tint; cctx.fillRect(0, 0, W, H); }
 
@@ -605,11 +588,6 @@ export function GameCanvas({
             }}
           />
         )}
-        <canvas
-          ref={blurCanvasRef}
-          className="absolute inset-0 pointer-events-none"
-          style={{ filter: 'none', opacity: 0.6, zIndex: 1 }}
-        />
         <canvas ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
         <canvas
           ref={overlayCanvasRef}

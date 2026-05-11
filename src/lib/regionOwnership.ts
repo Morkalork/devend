@@ -26,9 +26,10 @@ import {
   polygonCentroid
 } from './polygon';
 import { Wall } from './wallGeometry';
+import { SAMPLE_GRID_SIZE } from './regionSplit';
 
-// Grid size for sample-based containment (must match GameCanvas)
-export const REGION_SAMPLE_GRID_SIZE = 15;
+// Re-export under the legacy name so existing callers don't need updating.
+export const REGION_SAMPLE_GRID_SIZE = SAMPLE_GRID_SIZE;
 
 // Margin for containment checks (2x grid size for safety)
 export const CONTAINMENT_MARGIN = REGION_SAMPLE_GRID_SIZE * 2;
@@ -280,11 +281,6 @@ export function validateAllBallOwnership(
         ball.position = { ...result.correctionPosition };
       }
       
-      console.log(
-        `[OWNERSHIP] Ball ${ball.id} corrected:`,
-        `region ${result.assignedRegionId} -> ${result.correctionRegionId}`,
-        result.correctionPosition ? `position corrected` : ''
-      );
     }
   }
   
@@ -317,7 +313,6 @@ export function reassignBallsToRegions(
       const recovery = findNearestValidPosition(ball.position, regions, walls);
       ball.position = recovery.position;
       ball.regionId = recovery.regionId;
-      console.log(`[OWNERSHIP] Ball ${ball.id} recovered to region ${recovery.regionId}`);
     }
   }
 }

@@ -255,7 +255,11 @@ export function renderFrame(
     ctx.restore();
   }
 
-  // ── Smooth obstacle outlines (non-mirror) ─────────────────────────────────
+  // ── Obstacle outlines (non-mirror) ───────────────────────────────────────
+  // Straight lineTo paths keep the visual boundary pixel-identical to the
+  // physics polygon. buildSmoothPath (Catmull-Rom) bows outward, making the
+  // visual oval larger than the physics rect — fences correctly stopped at
+  // the physics edge but visually appeared to enter the obstacle interior.
   {
     const mirrorSet = new Set(game.mirrorPolygons);
     ctx.save();
@@ -267,7 +271,11 @@ export function renderFrame(
     ctx.shadowBlur = 6 * scale;
     for (const poly of game.obstaclePolygons) {
       if (mirrorSet.has(poly)) continue;
-      buildSmoothPath(poly.vertices);
+      const sv = poly.vertices.map(v => w2s(v.x, v.y));
+      ctx.beginPath();
+      ctx.moveTo(sv[0].x, sv[0].y);
+      for (let i = 1; i < sv.length; i++) ctx.lineTo(sv[i].x, sv[i].y);
+      ctx.closePath();
       ctx.stroke();
     }
     ctx.restore();
@@ -330,7 +338,14 @@ export function renderFrame(
       ctx.lineTo(bpt.x, bpt.y);
     }
     ctx.closePath();
-    ctx.clip();
+    // Punch obstacle polygons as holes so thick stroke can't bleed inside them.
+    for (const poly of obstacles) {
+      const sv = poly.vertices.map(v => w2s(v.x, v.y));
+      ctx.moveTo(sv[0].x, sv[0].y);
+      for (let i = 1; i < sv.length; i++) ctx.lineTo(sv[i].x, sv[i].y);
+      ctx.closePath();
+    }
+    ctx.clip('evenodd');
 
     for (let wi = walls.length - 1; wi >= 0; wi--) {
       const w = walls[wi];
@@ -859,8 +874,13 @@ export function renderFrame(
 
     ctx.save();
 
+    // Clip to the active region with obstacle polygons punched out as holes.
+    // Even-odd rule means any area covered by an odd number of sub-paths is
+    // "inside" the clip — the obstacle sub-paths cancel the outer region,
+    // making them true holes. This blocks every pixel (including stroke
+    // bleed from thick fences) from ever landing inside an obstacle.
+    ctx.beginPath();
     if (activeRegion && activeRegion.polygon.vertices.length > 0) {
-      ctx.beginPath();
       const first = w2s(activeRegion.polygon.vertices[0].x, activeRegion.polygon.vertices[0].y);
       ctx.moveTo(first.x, first.y);
       for (let i = 1; i < activeRegion.polygon.vertices.length; i++) {
@@ -868,8 +888,17 @@ export function renderFrame(
         ctx.lineTo(pt.x, pt.y);
       }
       ctx.closePath();
-      ctx.clip();
+    } else {
+      const { left, top, width, height } = game.boardRect;
+      ctx.rect(left, top, width, height);
     }
+    for (const poly of obstacles) {
+      const sv = poly.vertices.map(v => w2s(v.x, v.y));
+      ctx.moveTo(sv[0].x, sv[0].y);
+      for (let i = 1; i < sv.length; i++) ctx.lineTo(sv[i].x, sv[i].y);
+      ctx.closePath();
+    }
+    ctx.clip('evenodd');
 
     const renderableSegments: { start: Vector2; end: Vector2 }[] = [];
     for (let i = 0; i < wall.startSegmentIndex; i++) {
