@@ -94,12 +94,14 @@ export function applyCutFn(
 
   // Commit fence segments to wall list
   const addSegmentWalls = (waypoints: Vector2[]) => {
+    const now = performance.now();
     for (let i = 0; i < waypoints.length - 1; i++) {
       game.walls.push({
         id: generateWallId(),
         start: { ...waypoints[i] },
         end: { ...waypoints[i + 1] },
         thickness: wall.thickness,
+        createdAt: now,
       } as Wall);
     }
   };

@@ -18,12 +18,31 @@ interface LevelCompleteOverlayProps {
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts }: LevelCompleteOverlayProps) {
   const [chosen, setChosen] = useState(false);
   const [buttonReady, setButtonReady] = useState(buttonDelay === 0);
+  const [displayLevelScore, setDisplayLevelScore] = useState(0);
+  const [displayTotalScore, setDisplayTotalScore] = useState(0);
 
   useEffect(() => {
     if (buttonDelay <= 0) return;
     const t = setTimeout(() => setButtonReady(true), buttonDelay);
     return () => clearTimeout(t);
   }, [buttonDelay]);
+
+  useEffect(() => {
+    const DELAY = 380;
+    const DURATION = 900;
+    const startTime = performance.now() + DELAY;
+    let rafId: number;
+    const animate = (now: number) => {
+      if (now < startTime) { rafId = requestAnimationFrame(animate); return; }
+      const t = Math.min(1, (now - startTime) / DURATION);
+      const ease = 1 - (1 - t) * (1 - t) * (1 - t);
+      setDisplayLevelScore(Math.round(scoreData.levelScore * ease));
+      setDisplayTotalScore(Math.round(totalScore * ease));
+      if (t < 1) rafId = requestAnimationFrame(animate);
+    };
+    rafId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafId);
+  }, [scoreData.levelScore, totalScore]);
   const {
     levelNumber,
     levelId,
@@ -250,12 +269,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
             <div className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">Overtime Earned</span>
-              <span className="text-xl sm:text-2xl font-bold text-primary">{levelScore}h</span>
+              <span className="text-xl sm:text-2xl font-bold text-primary">{displayLevelScore}h</span>
             </div>
 
             <div className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">Total Overtime</span>
-              <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{totalScore}h</span>
+              <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{displayTotalScore}h</span>
             </div>
           </motion.div>
 

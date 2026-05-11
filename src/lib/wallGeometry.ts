@@ -11,6 +11,8 @@ export interface Wall {
   thickness: number;
   isMirror?: boolean;
   isObstacleBoundary?: boolean;
+  /** ms timestamp when the fence segment was drawn; absent on board edges / obstacles */
+  createdAt?: number;
 }
 
 export interface WallVertex {

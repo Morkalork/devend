@@ -21,4 +21,6 @@ export interface RenderContext {
   boardGridCanvas: OffscreenCanvas;
   regionCanvas: OffscreenCanvas;
   rain: RainState;
+  /** Level threshold (% space remaining when level completes) — for progress bar. */
+  spaceThreshold: number;
 }

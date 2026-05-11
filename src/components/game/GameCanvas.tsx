@@ -403,7 +403,7 @@ export function GameCanvas({
       }
     };
 
-    const rctx: RenderContext = { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState };
+    const rctx: RenderContext = { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState, spaceThreshold: level.sizeThreshold };
     const render = () => renderFrame(ctx, game, rctx);
 
     const startDissolve = (onComplete: () => void, tint?: string) => {

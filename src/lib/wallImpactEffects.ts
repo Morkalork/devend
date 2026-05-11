@@ -189,6 +189,7 @@ export function renderWallWithEffects(
   scale: number,
   baseColor: string,
   baseWidth: number,
+  glowBoost = 0,
 ): void {
   const sdx = endScreen.x - startScreen.x;
   const sdy = endScreen.y - startScreen.y;
@@ -222,17 +223,29 @@ export function renderWallWithEffects(
     for (let i = 1; i < centers.length; i++) ctx.lineTo(centers[i].x, centers[i].y);
   };
 
-  // Outer glow via additive compositing
+  // Outer glow via additive compositing (amplified for freshly drawn walls)
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
   ctx.strokeStyle = baseColor;
-  buildPath(); ctx.lineWidth = baseWidth * 2.8; ctx.globalAlpha = 0.10; ctx.stroke();
-  buildPath(); ctx.lineWidth = baseWidth * 1.6; ctx.globalAlpha = 0.18; ctx.stroke();
+  buildPath(); ctx.lineWidth = baseWidth * (2.8 + glowBoost * 2.5); ctx.globalAlpha = 0.10 + glowBoost * 0.22; ctx.stroke();
+  buildPath(); ctx.lineWidth = baseWidth * (1.6 + glowBoost * 1.8); ctx.globalAlpha = 0.18 + glowBoost * 0.25; ctx.stroke();
   ctx.restore();
 
   // White-bright core + accent centerline
   buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 1; ctx.stroke();
   buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.stroke();
+
+  // Fresh-wall bloom
+  if (glowBoost > 0.05) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    buildPath();
+    ctx.lineWidth = baseWidth * (3.5 + glowBoost * 3);
+    ctx.strokeStyle = baseColor;
+    ctx.globalAlpha = glowBoost * 0.18;
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // Impact wobble extra glow
   if (maxGlow > 0.05) {

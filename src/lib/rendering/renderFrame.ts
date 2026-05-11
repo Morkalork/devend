@@ -27,6 +27,7 @@ import {
   LOCK_DUST_DURATION,
   COLORS,
 } from "@/lib/gameConstants";
+import { getRemainingPercent } from "@/lib/spaceGrid";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -299,8 +300,9 @@ export function renderFrame(
     ss: { x: number; y: number }, es: { x: number; y: number },
     ws: { x: number; y: number }, we: { x: number; y: number },
     baseWidth: number,
+    glowBoost = 0,
   ) => {
-    renderWallWithEffects(ctx, ss, es, ws, we, scale, accentColor, baseWidth);
+    renderWallWithEffects(ctx, ss, es, ws, we, scale, accentColor, baseWidth, glowBoost);
   };
 
   // ── Pass 1: user-drawn fence walls, clipped to the board polygon ──────────
@@ -327,17 +329,19 @@ export function renderFrame(
     }
     ctx.clip('evenodd');
 
+    const nowMs = performance.now();
     for (let wi = walls.length - 1; wi >= 0; wi--) {
       const w = walls[wi];
       if (!w.id.startsWith("wall-")) continue;
       const wallLineWidth = w.thickness * scale;
+      const freshness = w.createdAt ? Math.max(0, 1 - (nowMs - w.createdAt) / 2000) : 0;
       if (obstacles.length > 0) {
         const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
         for (const seg of segments) {
-          strokeSegment(w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, wallLineWidth);
+          strokeSegment(w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, wallLineWidth, freshness);
         }
       } else {
-        strokeSegment(w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, wallLineWidth);
+        strokeSegment(w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, wallLineWidth, freshness);
       }
     }
     ctx.restore();
@@ -396,6 +400,52 @@ export function renderFrame(
     for (const [cx, cy] of [[rl, rt], [rl + rw, rt], [rl, rt + rh], [rl + rw, rt + rh]] as [number, number][]) {
       ctx.fillRect(cx - cornerSz / 2, cy - cornerSz / 2, cornerSz, cornerSz);
     }
+    ctx.restore();
+  }
+
+  // ── Speed danger tint ─────────────────────────────────────────────────────
+  {
+    const activeBalls = balls.filter(b => b.speed > 0 && b.topSpeed > 0);
+    if (activeBalls.length > 0) {
+      const maxDanger = activeBalls.reduce((m, b) => Math.max(m, b.speed / b.topSpeed), 0);
+      if (maxDanger > 0.55) {
+        const { left: rl, top: rt, width: rw, height: rh } = boardRect;
+        const dangerT = Math.min(1, (maxDanger - 0.55) / 0.45);
+        const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.006 + Math.PI);
+        ctx.save();
+        ctx.globalAlpha = dangerT * 0.45 * (0.55 + 0.45 * pulse);
+        ctx.strokeStyle = '#ff2244';
+        ctx.shadowColor = '#ff2244';
+        ctx.shadowBlur = 18 * scale;
+        ctx.lineWidth = 5 * scale;
+        ctx.strokeRect(rl, rt, rw, rh);
+        ctx.restore();
+      }
+    }
+  }
+
+  // ── Space progress bar ────────────────────────────────────────────────────
+  if (game.spaceGrid) {
+    const remaining = getRemainingPercent(game.spaceGrid);
+    const threshold = rctx.spaceThreshold;
+    const captured = 100 - remaining;
+    const targetCaptured = 100 - threshold;
+    const fillRatio = Math.min(1, targetCaptured > 0 ? captured / targetCaptured : 1);
+
+    const { left: bl, top: bt, width: bw, height: bh } = boardRect;
+    const barH = 4 * scale;
+    const barY = bt + bh - barH;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(bl, barY, bw, barH);
+    const fillW = bw * fillRatio;
+    const isComplete = fillRatio >= 1;
+    ctx.fillStyle = isComplete ? '#00ff44' : accentColor;
+    ctx.globalAlpha = 0.75;
+    ctx.shadowColor = isComplete ? '#00ff44' : accentColor;
+    ctx.shadowBlur = 3 * scale;
+    ctx.fillRect(bl, barY, fillW, barH);
     ctx.restore();
   }
 
