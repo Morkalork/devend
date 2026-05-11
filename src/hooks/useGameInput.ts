@@ -42,7 +42,8 @@ export function useGameInput(
 
     const getCanvasCoords = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      return { screenX: e.clientX - rect.left, screenY: e.clientY - rect.top };
+      const dpr = Math.round(window.devicePixelRatio || 1);
+      return { screenX: (e.clientX - rect.left) * dpr, screenY: (e.clientY - rect.top) * dpr };
     };
 
     const handlePointerDown = (e: PointerEvent) => {

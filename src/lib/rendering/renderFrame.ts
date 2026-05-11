@@ -285,7 +285,7 @@ export function renderFrame(
   ctx.save();
   ctx.fillStyle = accentColor;
   ctx.strokeStyle = accentColor;
-  ctx.lineCap = "butt";
+  ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.shadowBlur = 0;
   ctx.shadowColor = 'transparent';
@@ -300,26 +300,6 @@ export function renderFrame(
     ws: { x: number; y: number }, we: { x: number; y: number },
     baseWidth: number,
   ) => {
-    const dx = es.x - ss.x, dy = es.y - ss.y;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    if (len < 0.001) return;
-    const invLen = 1 / len;
-
-    const hwGlow = baseWidth / 2 + 2.5 * scale;
-    const pgx = -dy * invLen * hwGlow, pgy = dx * invLen * hwGlow;
-    // Extend glow quad by hw in the tangential direction (square-cap) so that
-    // adjacent perpendicular walls' glow quads overlap and fill corner notches.
-    const tcx = dx * invLen * (baseWidth / 2), tcy = dy * invLen * (baseWidth / 2);
-    ctx.globalAlpha = 0.28;
-    ctx.beginPath();
-    ctx.moveTo(ss.x - tcx + pgx, ss.y - tcy + pgy);
-    ctx.lineTo(es.x + tcx + pgx, es.y + tcy + pgy);
-    ctx.lineTo(es.x + tcx - pgx, es.y + tcy - pgy);
-    ctx.lineTo(ss.x - tcx - pgx, ss.y - tcy - pgy);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.globalAlpha = 1.0;
     renderWallWithEffects(ctx, ss, es, ws, we, scale, accentColor, baseWidth);
   };
 
@@ -900,48 +880,85 @@ export function renderFrame(
     }
     ctx.clip('evenodd');
 
-    const renderableSegments: { start: Vector2; end: Vector2 }[] = [];
-    for (let i = 0; i < wall.startSegmentIndex; i++) {
-      renderableSegments.push({ start: wall.startWaypoints[i], end: wall.startWaypoints[i + 1] });
-    }
-    renderableSegments.push({ start: wall.startWaypoints[wall.startSegmentIndex], end: wall.startPoint });
-    for (let i = 0; i < wall.endSegmentIndex; i++) {
-      renderableSegments.push({ start: wall.endWaypoints[i], end: wall.endWaypoints[i + 1] });
-    }
-    renderableSegments.push({ start: wall.endWaypoints[wall.endSegmentIndex], end: wall.endPoint });
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
 
-    const fillSegmentPoly = (
-      s: { x: number; y: number },
-      e: { x: number; y: number },
-      hw: number,
-    ) => {
-      const dx = e.x - s.x, dy = e.y - s.y;
-      const len = Math.sqrt(dx * dx + dy * dy);
-      if (len < 0.001) return;
-      const px = -dy / len * hw, py = dx / len * hw;
+    // Build a connected path for one arm of the growing fence (origin → current tip).
+    const buildArmPath = (waypoints: Vector2[], segIdx: number, cur: Vector2) => {
+      const o = w2s(waypoints[0].x, waypoints[0].y);
       ctx.beginPath();
-      ctx.moveTo(s.x + px, s.y + py);
-      ctx.lineTo(e.x + px, e.y + py);
-      ctx.lineTo(e.x - px, e.y - py);
-      ctx.lineTo(s.x - px, s.y - py);
-      ctx.closePath();
-      ctx.fill();
+      ctx.moveTo(o.x, o.y);
+      for (let i = 0; i < segIdx; i++) {
+        const pt = w2s(waypoints[i + 1].x, waypoints[i + 1].y);
+        ctx.lineTo(pt.x, pt.y);
+      }
+      const tip = w2s(cur.x, cur.y);
+      ctx.lineTo(tip.x, tip.y);
     };
 
-    ctx.shadowColor = "transparent";
-    ctx.shadowBlur = 0;
+    const lw = wall.thickness * scale;
 
-    for (const seg of renderableSegments) {
-      const s = w2s(seg.start.x, seg.start.y);
-      const e = w2s(seg.end.x, seg.end.y);
-      ctx.fillStyle = "#ffffff";
-      fillSegmentPoly(s, e, (wall.thickness + 8) * scale / 2);
-      ctx.fillStyle = accentColor;
-      ctx.shadowColor = accentColor + "80";
-      ctx.shadowBlur = 25 * scale;
-      fillSegmentPoly(s, e, (wall.thickness + 4) * scale / 2);
+    // Outer glow via additive compositing (wide → narrow)
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.strokeStyle = accentColor;
+    buildArmPath(wall.startWaypoints, wall.startSegmentIndex, wall.startPoint);
+    ctx.lineWidth = lw * 3.5; ctx.globalAlpha = 0.10; ctx.stroke();
+    buildArmPath(wall.endWaypoints, wall.endSegmentIndex, wall.endPoint);
+    ctx.stroke();
+    buildArmPath(wall.startWaypoints, wall.startSegmentIndex, wall.startPoint);
+    ctx.lineWidth = lw * 2.0; ctx.globalAlpha = 0.20; ctx.stroke();
+    buildArmPath(wall.endWaypoints, wall.endSegmentIndex, wall.endPoint);
+    ctx.stroke();
+    ctx.restore();
+
+    // White-bright core + accent centerline
+    ctx.globalAlpha = 1;
+    buildArmPath(wall.startWaypoints, wall.startSegmentIndex, wall.startPoint);
+    ctx.lineWidth = lw * 1.5; ctx.strokeStyle = '#ffffff'; ctx.stroke();
+    buildArmPath(wall.endWaypoints, wall.endSegmentIndex, wall.endPoint);
+    ctx.stroke();
+    buildArmPath(wall.startWaypoints, wall.startSegmentIndex, wall.startPoint);
+    ctx.lineWidth = lw * 1.0; ctx.strokeStyle = accentColor; ctx.stroke();
+    buildArmPath(wall.endWaypoints, wall.endSegmentIndex, wall.endPoint);
+    ctx.stroke();
+
+    // ── Pulsating end-cap glows on the growing tips ──────────────────────────
+    if (!wall.isComplete) {
+      const now = performance.now();
+      const throb   = 0.5 + 0.5 * Math.sin(now * 0.009);  // slow 0→1 throb ~0.7 Hz
+      const shimmer = 0.5 + 0.5 * Math.sin(now * 0.023);  // faster shimmer
+
+      const coreR = wall.thickness * 0.65 * scale;
+
+      for (const tip of [wall.startPoint, wall.endPoint]) {
+        const ts = w2s(tip.x, tip.y);
+
+        // Outer bloom — pulsing radius and opacity
+        const bloomR = coreR * (3.5 + throb * 2.5);
+        const bloom = ctx.createRadialGradient(ts.x, ts.y, 0, ts.x, ts.y, bloomR);
+        bloom.addColorStop(0,   accentColor + 'bb');
+        bloom.addColorStop(0.3, accentColor + '44');
+        bloom.addColorStop(1,   accentColor + '00');
+        ctx.globalAlpha = 0.5 + 0.5 * throb;
+        ctx.fillStyle = bloom;
+        ctx.beginPath();
+        ctx.arc(ts.x, ts.y, bloomR, 0, Math.PI * 2);
+        ctx.fill();
+
+        // White-hot core with accent shadow
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = accentColor;
+        ctx.shadowBlur = (8 + shimmer * 12) * scale;
+        ctx.beginPath();
+        ctx.arc(ts.x, ts.y, coreR, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.globalAlpha = 1;
       ctx.shadowBlur = 0;
-      ctx.shadowColor = "transparent";
+      ctx.shadowColor = 'transparent';
     }
 
     ctx.restore();

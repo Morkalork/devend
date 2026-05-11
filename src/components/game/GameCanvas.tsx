@@ -382,10 +382,13 @@ export function GameCanvas({
 
     const resizeCanvas = () => {
       const { width, height } = container.getBoundingClientRect();
-      canvas.width = width; canvas.height = height;
+      const dpr = Math.round(window.devicePixelRatio || 1);
+      const physW = Math.round(width * dpr);
+      const physH = Math.round(height * dpr);
+      canvas.width = physW; canvas.height = physH;
       canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
-      game.screenSize = { width, height };
-      game.boardRect = computeBoardRect(width, height);
+      game.screenSize = { width: physW, height: physH };
+      game.boardRect = computeBoardRect(physW, physH);
       clearBallRenderCache();
       repaintRegionCanvas();
       paintOverlayCanvas();
