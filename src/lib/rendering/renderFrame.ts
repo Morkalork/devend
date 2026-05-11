@@ -424,31 +424,6 @@ export function renderFrame(
     }
   }
 
-  // ── Space progress bar ────────────────────────────────────────────────────
-  if (game.spaceGrid) {
-    const remaining = getRemainingPercent(game.spaceGrid);
-    const threshold = rctx.spaceThreshold;
-    const captured = 100 - remaining;
-    const targetCaptured = 100 - threshold;
-    const fillRatio = Math.min(1, targetCaptured > 0 ? captured / targetCaptured : 1);
-
-    const { left: bl, top: bt, width: bw, height: bh } = boardRect;
-    const barH = 4 * scale;
-    const barY = bt + bh - barH;
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-    ctx.fillRect(bl, barY, bw, barH);
-    const fillW = bw * fillRatio;
-    const isComplete = fillRatio >= 1;
-    ctx.fillStyle = isComplete ? '#00ff44' : accentColor;
-    ctx.globalAlpha = 0.75;
-    ctx.shadowColor = isComplete ? '#00ff44' : accentColor;
-    ctx.shadowBlur = 3 * scale;
-    ctx.fillRect(bl, barY, fillW, barH);
-    ctx.restore();
-  }
-
   // ── Mirror polygon fills + outlines ──────────────────────────────────────
   if (game.mirrorPolygons.length > 0) {
     ctx.save();
@@ -1023,5 +998,31 @@ export function renderFrame(
     ctx.clearRect(0,       bt + bh,  sw,             sh - (bt + bh));
     ctx.clearRect(0,       bt,       bl,             bh);
     ctx.clearRect(bl + bw, bt,       sw - (bl + bw), bh);
+  }
+
+  // ── Space progress bar (drawn after clear so it sits below the board) ────
+  if (game.spaceGrid) {
+    const remaining = getRemainingPercent(game.spaceGrid);
+    const threshold = rctx.spaceThreshold;
+    const captured = 100 - remaining;
+    const targetCaptured = 100 - threshold;
+    const fillRatio = Math.min(1, targetCaptured > 0 ? captured / targetCaptured : 1);
+
+    const { left: bl, top: bt, width: bw, height: bh } = boardRect;
+    const gap = 3 * scale;
+    const barH = 4 * scale;
+    const barY = bt + bh + gap;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.fillRect(bl, barY, bw, barH);
+    const fillW = bw * fillRatio;
+    const isComplete = fillRatio >= 1;
+    ctx.fillStyle = isComplete ? '#00ff44' : accentColor;
+    ctx.globalAlpha = 0.75;
+    ctx.shadowColor = isComplete ? '#00ff44' : accentColor;
+    ctx.shadowBlur = 3 * scale;
+    ctx.fillRect(bl, barY, fillW, barH);
+    ctx.restore();
   }
 }
