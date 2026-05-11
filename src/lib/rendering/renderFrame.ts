@@ -334,7 +334,7 @@ export function renderFrame(
       const w = walls[wi];
       if (!w.id.startsWith("wall-")) continue;
       const wallLineWidth = w.thickness * scale;
-      const freshness = w.createdAt ? Math.max(0, 1 - (nowMs - w.createdAt) / 2000) : 0;
+      const freshness = w.createdAt ? Math.max(0, 1 - (nowMs - w.createdAt) / 400) : 0;
       if (obstacles.length > 0) {
         const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
         for (const seg of segments) {
@@ -554,7 +554,7 @@ export function renderFrame(
 
     ctx.save();
     for (const ball of trackedBalls) {
-      const waypoints = computeBallTrajectory(ball.position, ball.velocity, walls, numBounces);
+      const waypoints = computeBallTrajectory(ball.position, ball.velocity, walls, numBounces, ball.radius, game.obstaclePolygons);
       if (waypoints.length < 2) continue;
 
       const totalSegs = waypoints.length - 1;
