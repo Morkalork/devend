@@ -1193,31 +1193,35 @@ levels:
         radius: 50
   - id: level-20
     level: 20
-    sizeThreshold: 35
-    expectedCuts: 8
+    sizeThreshold: 30
+    expectedCuts: 10
     points: 100
+    variety: 0
+    randomShapes: 0
     balls:
       - id: ball-1
-        initialSpeed: 180
-        topSpeed: 380
+        initialSpeed: 109
+        topSpeed: 245
         color: 00ff88
-        startX: 125
-        startY: 450
-      - id: ball-1771838363439
-        initialSpeed: 105
-        topSpeed: 370
-        color: '232259'
-        startX: 800
+        startX: 230
         startY: 450
     entities:
-      - id: wall-1771838325166
+      - id: wall-mirror-top
         kind: wall
+        mirror: true
         shape: rect
-        x: 200
-        'y': 50
-        width: 500
-        height: 800
-    randomShapes: 0
+        x: 50
+        'y': 95
+        width: 800
+        height: 25
+      - id: wall-mirror-bot
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 50
+        'y': 780
+        width: 800
+        height: 25
   - id: level-21
     level: 21
     sizeThreshold: 22
@@ -1227,13 +1231,13 @@ levels:
     randomShapes: 0
     balls:
       - id: ball-1
-        initialSpeed: 140
+        initialSpeed: 70
         topSpeed: 360
         color: 00d4ff
         startX: 180
         startY: 200
       - id: ball-2
-        initialSpeed: 130
+        initialSpeed: 110
         topSpeed: 340
         color: ff6b6b
         startX: 700
@@ -1249,16 +1253,6 @@ levels:
         range: 400
         speed: 140
         phase: 0
-      - id: mover-v
-        kind: mover
-        shape: circle
-        cx: 600
-        cy: 480
-        radius: 45
-        axis: vertical
-        range: 320
-        speed: 115
-        phase: 0.5
 
   - id: level-22
     level: 22
@@ -1269,14 +1263,14 @@ levels:
     randomShapes: 0
     balls:
       - id: ball-1
-        initialSpeed: 150
-        topSpeed: 370
+        initialSpeed: 77
+        topSpeed: 259
         color: 00ff88
         startX: 150
         startY: 150
       - id: ball-2
-        initialSpeed: 140
-        topSpeed: 355
+        initialSpeed: 70
+        topSpeed: 249
         color: ff6b00
         startX: 740
         startY: 700
@@ -1311,14 +1305,14 @@ levels:
     randomShapes: 0
     balls:
       - id: ball-1
-        initialSpeed: 150
-        topSpeed: 380
+        initialSpeed: 105
+        topSpeed: 266
         color: 00d4ff
         startX: 130
         startY: 450
       - id: ball-2
-        initialSpeed: 145
-        topSpeed: 365
+        initialSpeed: 102
+        topSpeed: 256
         color: ff4466
         startX: 770
         startY: 450
@@ -1363,20 +1357,20 @@ levels:
     randomShapes: 0
     balls:
       - id: ball-1
-        initialSpeed: 155
-        topSpeed: 390
+        initialSpeed: 109
+        topSpeed: 273
         color: 00ff88
         startX: 150
         startY: 200
       - id: ball-2
-        initialSpeed: 145
-        topSpeed: 375
+        initialSpeed: 102
+        topSpeed: 263
         color: ff8800
         startX: 750
         startY: 200
       - id: ball-3
-        initialSpeed: 130
-        topSpeed: 355
+        initialSpeed: 91
+        topSpeed: 249
         color: aa44ff
         startX: 450
         startY: 730
@@ -1418,20 +1412,20 @@ levels:
     randomShapes: 0
     balls:
       - id: ball-1
-        initialSpeed: 160
-        topSpeed: 400
+        initialSpeed: 112
+        topSpeed: 280
         color: 00d4ff
         startX: 150
         startY: 150
       - id: ball-2
-        initialSpeed: 155
-        topSpeed: 390
+        initialSpeed: 109
+        topSpeed: 273
         color: ff4466
         startX: 750
         startY: 150
       - id: ball-3
-        initialSpeed: 140
-        topSpeed: 370
+        initialSpeed: 38
+        topSpeed: 259
         color: ffcc00
         startX: 450
         startY: 740

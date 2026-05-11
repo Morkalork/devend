@@ -362,7 +362,7 @@ export function renderAssimilation(
       anim.cachedH = ch;
     }
 
-    ctx.drawImage(anim.cachedCanvas as any, anim.cachedX, anim.cachedY);
+    ctx.drawImage(anim.cachedCanvas as CanvasImageSource, anim.cachedX, anim.cachedY);
     return;
   }
 

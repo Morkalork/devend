@@ -91,31 +91,35 @@ export function computeGameModifiers(
 ): GameModifiers {
   const result = { ...DEFAULT_MODIFIERS };
 
+  // Cast once to an indexable record — all GameModifier values are numbers,
+  // so this is provably safe. Avoids `as any` on every individual key access.
+  const r = result as Record<keyof GameModifiers, number>;
+
   for (const id of ownedUpgradeIds) {
     const upgrade = upgradeLookup.get(id);
     if (!upgrade) continue;
 
     for (const [key, value] of Object.entries(upgrade.modifiers)) {
-      if (!(key in result)) continue; // ignore unknown keys gracefully
+      if (!(key in result)) continue; // ignore unknown keys from YAML gracefully
 
       const k = key as keyof GameModifiers;
       if (MULTIPLICATIVE_KEYS.includes(k)) {
-        (result as any)[k] *= value;
+        r[k] *= value;
       } else {
-        (result as any)[k] += value;
+        r[k] += value;
       }
     }
   }
 
-  // Apply extra bonuses (e.g., from completed achievements)
+  // Apply extra bonuses (e.g., from completed achievements or certificates)
   if (extraBonuses) {
     for (const [key, value] of Object.entries(extraBonuses)) {
       if (!(key in result)) continue;
       const k = key as keyof GameModifiers;
       if (MULTIPLICATIVE_KEYS.includes(k)) {
-        (result as any)[k] *= value as number;
+        r[k] *= value;
       } else {
-        (result as any)[k] += value as number;
+        r[k] += value;
       }
     }
   }

@@ -5,7 +5,7 @@ import yaml from 'js-yaml';
 import { GameScreen } from '@/components/game/GameScreen';
 import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useColorProgression } from '@/hooks/useColorProgression';
-import { LevelConfig, LevelData, LevelEntity, BallConfig } from '@/types/level';
+import { LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 
@@ -183,9 +183,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
       if (!entity) return prev;
       const copy: LevelEntity = JSON.parse(JSON.stringify(entity));
       copy.id = `wall-${Date.now()}`;
-      if (copy.shape === 'rect') { (copy as any).x += 30; (copy as any).y += 30; }
-      else if (copy.shape === 'circle') { (copy as any).cx += 30; (copy as any).cy += 30; }
-      else if (copy.shape === 'polygon') { (copy as any).points = (copy as any).points.map(([x,y]: [number,number]) => [x+30, y+30]); }
+      if (copy.shape === 'rect') { (copy as WallRectEntity).x += 30; (copy as WallRectEntity).y += 30; }
+      else if (copy.shape === 'circle') { (copy as WallCircleEntity).cx += 30; (copy as WallCircleEntity).cy += 30; }
+      else if (copy.shape === 'polygon') { (copy as WallPolygonEntity).points = (copy as WallPolygonEntity).points.map(([x, y]) => [x + 30, y + 30]); }
       setEditEntityId(copy.id);
       return { ...prev, entities: [...(prev.entities || []), copy] };
     });

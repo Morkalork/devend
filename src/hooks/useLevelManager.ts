@@ -40,7 +40,7 @@ export function useLevelManager() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const response = await fetch('/map.yml');
+      const response = await fetch('/map.yml', { cache: 'no-store' });
       if (!response.ok) {
         throw new Error(`Failed to load map.yml: ${response.status}`);
       }

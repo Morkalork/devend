@@ -39,7 +39,7 @@ export function createWallsFromPolygon(polygon: Polygon, idPrefix: string, isMir
       start: { ...vertices[i] },
       end: { ...vertices[j] },
       thickness: WALL_THICKNESS,
-      isObstacleBoundary: true,
+      isObstacleBoundary: !isMirror,
     };
     if (isMirror) wall.isMirror = true;
     walls.push(wall);

@@ -19,7 +19,10 @@ const VOLUME = {
 function ensureAudioContext(): AudioContext | null {
   if (!audioContext) {
     try {
-      audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioCtx: typeof AudioContext | undefined =
+        window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return null;
+      audioContext = new AudioCtx();
       masterGain = audioContext.createGain();
       masterGain.connect(audioContext.destination);
       masterGain.gain.value = isMuted ? 0 : 1;
