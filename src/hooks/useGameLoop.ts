@@ -107,9 +107,15 @@ export function createGameLoop(
     game.accumulator += Math.min(dt, 0.05);
 
     while (game.accumulator >= PHYSICS_STEP) {
-      // Snapshot positions before this step (used for render interpolation)
+      // Snapshot positions before this step (used for render interpolation).
+      // Mutate in-place to avoid allocating a new object every physics tick.
       for (const ball of game.balls) {
-        ball.prevPosition = { ...ball.position };
+        if (!ball.prevPosition) {
+          ball.prevPosition = { x: ball.position.x, y: ball.position.y };
+        } else {
+          ball.prevPosition.x = ball.position.x;
+          ball.prevPosition.y = ball.position.y;
+        }
       }
 
       updateMoversFn(PHYSICS_STEP, game);
@@ -138,14 +144,16 @@ export function createGameLoop(
       game.accumulator -= PHYSICS_STEP;
     }
 
-    // Interpolate render positions between last two physics states
+    // Interpolate render positions between last two physics states.
+    // Mutate in-place to avoid allocating a new object every display frame.
     const alpha = game.accumulator / PHYSICS_STEP;
     for (const ball of game.balls) {
       const prev = ball.prevPosition ?? ball.position;
-      ball.renderPosition = {
-        x: prev.x + (ball.position.x - prev.x) * alpha,
-        y: prev.y + (ball.position.y - prev.y) * alpha,
-      };
+      if (!ball.renderPosition) {
+        ball.renderPosition = { x: 0, y: 0 };
+      }
+      ball.renderPosition.x = prev.x + (ball.position.x - prev.x) * alpha;
+      ball.renderPosition.y = prev.y + (ball.position.y - prev.y) * alpha;
     }
 
     // Update wall impact visual effects (time-based)

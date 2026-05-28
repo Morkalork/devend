@@ -4,6 +4,7 @@ import { LevelConfig } from "@/types/level";
 
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { clearBallRenderCache } from "@/lib/ballRenderCache";
+import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFrame, createRainParticles } from "@/lib/rendering/renderFrame";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded } from "@/hooks/useScoring";
@@ -390,6 +391,7 @@ export function GameCanvas({
       game.screenSize = { width: physW, height: physH };
       game.boardRect = computeBoardRect(physW, physH);
       clearBallRenderCache();
+      clearBallEffectsCache();
       repaintRegionCanvas();
       paintOverlayCanvas();
       setDebugInfo({

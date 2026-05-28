@@ -31,6 +31,15 @@ import { getRemainingPercent } from "@/lib/spaceGrid";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
+// ── Wall shadow gradient cache ────────────────────────────────────────────────
+// Gradients are keyed by wall ID and invalidated when boardRect changes.
+const _shadowGradCache = new Map<string, CanvasGradient>();
+let _shadowGradBoardKey = '';
+
+// ── Rim light OffscreenCanvas cache ──────────────────────────────────────────
+let _rimOC: OffscreenCanvas | null = null;
+let _rimOCKey = '';
+
 export function createRainParticles(count: number): import("./types").RainParticle[] {
   return Array.from({ length: count }, (_, i) => ({
     x: 15 + Math.random() * (BOARD_WIDTH - 30),
@@ -112,6 +121,12 @@ export function renderFrame(
   // ── Wall shadow quads ─────────────────────────────────────────────────────
   {
     const shadowW = 7 * scale;
+    // Invalidate gradient cache when boardRect changes (resize or level start).
+    const curBoardKey = `${Math.round(scale * 10000)}_${Math.round(boardRect.left)}_${Math.round(boardRect.top)}`;
+    if (curBoardKey !== _shadowGradBoardKey) {
+      _shadowGradCache.clear();
+      _shadowGradBoardKey = curBoardKey;
+    }
     ctx.save();
     // Clip to board polygon so shadow quads don't bleed into the margin.
     if (game.boardPolygon) {
@@ -137,15 +152,20 @@ export function renderFrame(
       if (lenW < 1) continue;
       const nx = -dyW / lenW;
       const ny =  dxW / lenW;
-      const midX = (s.x + e.x) / 2;
-      const midY = (s.y + e.y) / 2;
-      const grad = ctx.createLinearGradient(
-        midX + nx * shadowW, midY + ny * shadowW,
-        midX - nx * shadowW, midY - ny * shadowW,
-      );
-      grad.addColorStop(0,   'rgba(0,0,0,0)');
-      grad.addColorStop(0.5, 'rgba(0,0,0,0.22)');
-      grad.addColorStop(1,   'rgba(0,0,0,0)');
+      // Reuse the cached gradient; create once per wall per boardRect configuration.
+      let grad = _shadowGradCache.get(w.id);
+      if (!grad) {
+        const midX = (s.x + e.x) / 2;
+        const midY = (s.y + e.y) / 2;
+        grad = ctx.createLinearGradient(
+          midX + nx * shadowW, midY + ny * shadowW,
+          midX - nx * shadowW, midY - ny * shadowW,
+        );
+        grad.addColorStop(0,   'rgba(0,0,0,0)');
+        grad.addColorStop(0.5, 'rgba(0,0,0,0.22)');
+        grad.addColorStop(1,   'rgba(0,0,0,0)');
+        _shadowGradCache.set(w.id, grad);
+      }
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.moveTo(s.x + nx * shadowW, s.y + ny * shadowW);
@@ -376,31 +396,43 @@ export function renderFrame(
   }
 
   // ── Neon rim light ────────────────────────────────────────────────────────
+  // Pre-rendered to an OffscreenCanvas and updated only when the slow pulse
+  // crosses a bucket boundary (~10 repaints/sec instead of 60).
   {
     const { left: rl, top: rt, width: rw, height: rh } = boardRect;
     const pulse = 0.8 + 0.2 * Math.sin(performance.now() * 0.0014);
-    const cornerSz = 6 * scale;
-    const layers = [
-      { lw: 10 * scale, blur: 20 * scale, alpha: 0.10 * pulse },
-      { lw: 4  * scale, blur: 10 * scale, alpha: 0.30 * pulse },
-      { lw: 1.5 * scale, blur: 4 * scale, alpha: 0.85 * pulse },
-    ];
-    ctx.save();
-    ctx.strokeStyle = accentColor;
-    for (const { lw, blur, alpha } of layers) {
-      ctx.globalAlpha = alpha;
-      ctx.lineWidth = lw;
-      ctx.shadowColor = accentColor;
-      ctx.shadowBlur = blur;
-      ctx.strokeRect(rl, rt, rw, rh);
+    // 40 buckets over the 0.8–1.0 pulse range → repaint at most ~20/sec
+    const pulseBucket = Math.round(pulse * 40);
+    const rimKey = `${accentColor}_${Math.round(rw)}_${Math.round(rh)}_${pulseBucket}_${Math.round(scale * 100)}`;
+    if (_rimOCKey !== rimKey) {
+      _rimOCKey = rimKey;
+      const margin = 25 * scale; // headroom for largest shadowBlur (20*scale)
+      const ocW = Math.ceil(rw + margin * 2);
+      const ocH = Math.ceil(rh + margin * 2);
+      _rimOC = new OffscreenCanvas(ocW, ocH);
+      const rCtx = _rimOC.getContext('2d')!;
+      const cornerSz = 6 * scale;
+      const layers = [
+        { lw: 10 * scale, blur: 20 * scale, alpha: 0.10 * pulse },
+        { lw: 4  * scale, blur: 10 * scale, alpha: 0.30 * pulse },
+        { lw: 1.5 * scale, blur: 4  * scale, alpha: 0.85 * pulse },
+      ];
+      rCtx.strokeStyle = accentColor;
+      for (const { lw, blur, alpha } of layers) {
+        rCtx.globalAlpha = alpha;
+        rCtx.lineWidth = lw;
+        rCtx.shadowColor = accentColor;
+        rCtx.shadowBlur = blur;
+        rCtx.strokeRect(margin, margin, rw, rh);
+      }
+      rCtx.globalAlpha = 0.9 * pulse;
+      rCtx.shadowBlur = 8 * scale;
+      rCtx.fillStyle = accentColor;
+      for (const [cx, cy] of [[margin, margin], [margin + rw, margin], [margin, margin + rh], [margin + rw, margin + rh]] as [number, number][]) {
+        rCtx.fillRect(cx - cornerSz / 2, cy - cornerSz / 2, cornerSz, cornerSz);
+      }
     }
-    ctx.globalAlpha = 0.9 * pulse;
-    ctx.shadowBlur = 8 * scale;
-    ctx.fillStyle = accentColor;
-    for (const [cx, cy] of [[rl, rt], [rl + rw, rt], [rl, rt + rh], [rl + rw, rt + rh]] as [number, number][]) {
-      ctx.fillRect(cx - cornerSz / 2, cy - cornerSz / 2, cornerSz, cornerSz);
-    }
-    ctx.restore();
+    ctx.drawImage(_rimOC!, rl - 25 * scale, rt - 25 * scale);
   }
 
   // ── Speed danger tint ─────────────────────────────────────────────────────

@@ -1,5 +1,43 @@
 import { hexToRgba } from "@/lib/gameUtils";
 
+// ── Pulse glow OffscreenCanvas cache ─────────────────────────────────────────
+// Pre-renders the always-active baseline glow at max intensity (alpha = 1).
+// Each frame the OC is blitted with globalAlpha = pulse.glowAlpha, eliminating
+// createRadialGradient() calls per ball per frame.
+interface PulseGlowEntry { oc: OffscreenCanvas; halfSize: number }
+const _pulseGlowCache = new Map<string, PulseGlowEntry>();
+
+function getPulseGlowOC(accentColor: string, screenRadius: number, scale: number): PulseGlowEntry {
+  const maxOuterRadius = screenRadius * 1.08 + 12 * scale;
+  const key = `${accentColor}:${Math.round(maxOuterRadius)}`;
+  const existing = _pulseGlowCache.get(key);
+  if (existing) return existing;
+  const halfSize = Math.ceil(maxOuterRadius) + 2;
+  const size = halfSize * 2;
+  const oc = new OffscreenCanvas(size, size);
+  const octx = oc.getContext('2d')!;
+  octx.beginPath();
+  octx.arc(halfSize, halfSize, maxOuterRadius, 0, Math.PI * 2);
+  const grad = octx.createRadialGradient(
+    halfSize, halfSize, screenRadius * 0.3,
+    halfSize, halfSize, maxOuterRadius,
+  );
+  grad.addColorStop(0,   hexToRgba(accentColor, 0.6));
+  grad.addColorStop(0.4, hexToRgba(accentColor, 0.4));
+  grad.addColorStop(0.7, hexToRgba(accentColor, 0.15));
+  grad.addColorStop(1,   'transparent');
+  octx.fillStyle = grad;
+  octx.fill();
+  const entry: PulseGlowEntry = { oc, halfSize };
+  _pulseGlowCache.set(key, entry);
+  return entry;
+}
+
+/** Drop cached glow surfaces — call on window resize (scale changes). */
+export function clearBallEffectsCache(): void {
+  _pulseGlowCache.clear();
+}
+
 // Ball Visual Effects System
 // Manages the visual hierarchy of ball effects:
 // 1. Baseline pulse (always active, subtle)
@@ -203,25 +241,17 @@ export function renderBallEffects(
   scale: number
 ): void {
   // ===== LAYER 1: Baseline pulse glow (always active) =====
+  // Blit a pre-rendered OC keyed by accentColor + screenRadius instead of
+  // creating a radial gradient per ball per frame.
   const pulse = getBaselinePulse(state);
-  
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter'; // Additive blending for glow
-  ctx.beginPath();
-  const pulseRadius = screenRadius * pulse.radiusScale + 12 * scale;
-  ctx.arc(screenX, screenY, pulseRadius, 0, Math.PI * 2);
-  
-  const pulseGlow = ctx.createRadialGradient(
-    screenX, screenY, screenRadius * 0.3,
-    screenX, screenY, pulseRadius
-  );
-  pulseGlow.addColorStop(0, hexToRgba(accentColor, pulse.glowAlpha * 0.6));
-  pulseGlow.addColorStop(0.4, hexToRgba(accentColor, pulse.glowAlpha * 0.4));
-  pulseGlow.addColorStop(0.7, hexToRgba(accentColor, pulse.glowAlpha * 0.15));
-  pulseGlow.addColorStop(1, 'transparent');
-  ctx.fillStyle = pulseGlow;
-  ctx.fill();
-  ctx.restore();
+  {
+    const { oc: pulseOC, halfSize: pulseHalf } = getPulseGlowOC(accentColor, screenRadius, scale);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = pulse.glowAlpha; // scales the pre-rendered max-intensity OC
+    ctx.drawImage(pulseOC, screenX - pulseHalf, screenY - pulseHalf);
+    ctx.restore();
+  }
   
   // ===== LAYER 2: Wall collision halo (medium intensity, LARGE expanding) =====
   const wallHit = getWallHitEffect(state);
