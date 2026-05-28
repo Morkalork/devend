@@ -249,7 +249,7 @@ export function renderBallEffects(
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = pulse.glowAlpha; // scales the pre-rendered max-intensity OC
-    ctx.drawImage(pulseOC, screenX - pulseHalf, screenY - pulseHalf);
+    ctx.drawImage(pulseOC, Math.round(screenX - pulseHalf), Math.round(screenY - pulseHalf));
     ctx.restore();
   }
   

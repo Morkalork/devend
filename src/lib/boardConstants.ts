@@ -65,12 +65,18 @@ export function computeBoardRect(screenWidth: number, screenHeight: number): Boa
   // Scale factor: world units to screen pixels
   const scale = boardWidth / BOARD_WIDTH;
   
+  // Round to integer pixels so every world→screen coordinate lands on a
+  // whole pixel boundary, preventing sub-pixel anti-aliasing on lines/walls.
+  const rLeft   = Math.round(left);
+  const rTop    = Math.round(top);
+  const rWidth  = Math.round(boardWidth);
+  const rHeight = Math.round(boardHeight);
   return {
-    left,
-    top,
-    width: boardWidth,
-    height: boardHeight,
-    scale,
+    left:   rLeft,
+    top:    rTop,
+    width:  rWidth,
+    height: rHeight,
+    scale:  rWidth / BOARD_WIDTH,
   };
 }
 

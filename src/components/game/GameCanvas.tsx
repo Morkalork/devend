@@ -223,6 +223,8 @@ export function GameCanvas({
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // ── Blur canvas (legacy — now unused, kept for canvas element compatibility) ──
     let removedSamples: Vector2[] = [];
@@ -383,7 +385,7 @@ export function GameCanvas({
 
     const resizeCanvas = () => {
       const { width, height } = container.getBoundingClientRect();
-      const dpr = Math.round(window.devicePixelRatio || 1);
+      const dpr = window.devicePixelRatio || 1;
       const physW = Math.round(width * dpr);
       const physH = Math.round(height * dpr);
       canvas.width = physW; canvas.height = physH;

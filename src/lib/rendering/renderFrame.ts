@@ -432,7 +432,7 @@ export function renderFrame(
         rCtx.fillRect(cx - cornerSz / 2, cy - cornerSz / 2, cornerSz, cornerSz);
       }
     }
-    ctx.drawImage(_rimOC!, rl - 25 * scale, rt - 25 * scale);
+    ctx.drawImage(_rimOC!, Math.round(rl - 25 * scale), Math.round(rt - 25 * scale));
   }
 
   // ── Speed danger tint ─────────────────────────────────────────────────────
@@ -705,7 +705,7 @@ export function renderFrame(
     }
 
     const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);
-    ctx.drawImage(baseCanvas, screenPos.x - baseHalf, screenPos.y - baseHalf);
+    ctx.drawImage(baseCanvas, Math.round(screenPos.x - baseHalf), Math.round(screenPos.y - baseHalf));
 
     ctx.save();
     ctx.beginPath();
@@ -797,7 +797,7 @@ export function renderFrame(
       ctx.save();
       ctx.globalCompositeOperation = 'overlay';
       ctx.globalAlpha = 0.18;
-      ctx.translate(screenPos.x, screenPos.y);
+      ctx.translate(Math.round(screenPos.x), Math.round(screenPos.y));
       ctx.rotate(ball.rotation * 0.3);
       ctx.drawImage(hexOC, -screenRadius, -screenRadius, screenRadius * 2, screenRadius * 2);
       ctx.restore();
@@ -810,7 +810,7 @@ export function renderFrame(
     ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
     ctx.clip();
     const specCanvas = getBallSpecular(screenRadius, scale);
-    ctx.drawImage(specCanvas, screenPos.x - screenRadius - 2, screenPos.y - screenRadius - 2);
+    ctx.drawImage(specCanvas, Math.round(screenPos.x - screenRadius - 2), Math.round(screenPos.y - screenRadius - 2));
     ctx.restore();
     ctx.restore(); // globalAlpha
   }
