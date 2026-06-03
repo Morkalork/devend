@@ -30,6 +30,7 @@ import {
 } from '@/lib/spaceGrid';
 import { reassignBallsToRegions, isBallInRegion } from '@/lib/regionOwnership';
 import { pointInPolygon } from '@/lib/polygon';
+import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playBallLockSound, initAudio } from '@/lib/gameAudio';
 
 // Matter collision categories
 const CAT_BALL = 0x0001;
@@ -121,6 +122,31 @@ export class GameScene extends Phaser.Scene {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPointerDown(pointer));
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer));
     this.input.on('pointerup', () => this.onPointerUp());
+
+    // Matter collision events for audio
+    this.matter.world.on('collisionstart', (event: any) => {
+      for (const pair of event.pairs) {
+        const bodyA = pair.bodyA;
+        const bodyB = pair.bodyB;
+
+        // Wall hit (ball → wall)
+        const isBallWall =
+          (bodyA.collisionFilter?.category === CAT_BALL && bodyB.collisionFilter?.category === CAT_WALL) ||
+          (bodyA.collisionFilter?.category === CAT_WALL && bodyB.collisionFilter?.category === CAT_BALL);
+
+        if (isBallWall) {
+          playWallHitSound(0.7);
+        }
+
+        // Ball collision (ball → ball)
+        const isBallBall =
+          bodyA.collisionFilter?.category === CAT_BALL && bodyB.collisionFilter?.category === CAT_BALL;
+
+        if (isBallBall) {
+          playBallCollideSound(0.5);
+        }
+      }
+    });
   }
 
   private addWallBody(wall: Wall): void {
@@ -256,6 +282,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private completeCut(): void {
+    // Initialize audio on first user interaction if not done yet
+    initAudio();
+
     // Use castRayWithReflections to get the final fence path
     const start = this.cut.points[0];
     const end = this.cut.points[this.cut.points.length - 1];
@@ -267,6 +296,9 @@ export class GameScene extends Phaser.Scene {
     const cutWall: Wall = { id: `cut-${Date.now()}`, start, end, thickness: 6 };
     this.walls.push(cutWall);
     this.addWallBody(cutWall);
+
+    // Play fence break sound
+    playFenceBreakSound();
 
     // Flood-fill to find new regions
     const gridRegions = findGridRegions(this.gameData.spaceGrid);
@@ -283,6 +315,8 @@ export class GameScene extends Phaser.Scene {
         kept.push(gr);
       } else {
         removeRegion(this.gameData.spaceGrid, gr);
+        // Play lock sound for each captured ball (fewer balls locked per cut)
+        playBallLockSound();
       }
     }
 
