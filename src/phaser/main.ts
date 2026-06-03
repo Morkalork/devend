@@ -17,6 +17,8 @@ import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { BootScene } from "./scenes/BootScene";
 import { MenuScene } from "./scenes/MenuScene";
 import { GameScene } from "./scenes/GameScene";
+import { ShopScene } from "./scenes/ShopScene";
+import { ResultScene } from "./scenes/ResultScene";
 import { SpikeScene } from "./scenes/SpikeScene";
 
 export function startPhaser(parentId = "phaser-root"): Phaser.Game {
@@ -46,6 +48,6 @@ export function startPhaser(parentId = "phaser-root"): Phaser.Game {
         velocityIterations: 8,
       },
     },
-    scene: [BootScene, MenuScene, GameScene, SpikeScene],
+    scene: [BootScene, MenuScene, GameScene, ShopScene, ResultScene, SpikeScene],
   });
 }
