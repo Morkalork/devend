@@ -402,8 +402,133 @@ export class UpgradeStore extends EventEmitterStore {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// GAME MODIFIERS STORE
+// ════════════════════════════════════════════════════════════════════════════
+
+import { UpgradeConfig } from '@/types/upgrade';
+
+export interface GameModifiers {
+  ballSpeedMultiplier: number;
+  ballSizeMultiplier: number;
+  fenceGenerationSpeedMultiplier: number;
+  scoreMultiplier: number;
+  instantFencesPerMap: number;
+  additionalConcurrentFences: number;
+  bonusRemovalChance: number;
+  bonusRemovalAmount: number;
+  extraLives: number;
+  scoreInterestRate: number;
+  extraShopItems: number;
+  extraAugmentationPoints: number;
+  microManagerPerLock: number;
+  ballPathPredictionBounces: number;
+  ballPathPredictionBalls: number;
+}
+
+const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
+  'ballSpeedMultiplier',
+  'ballSizeMultiplier',
+  'fenceGenerationSpeedMultiplier',
+  'scoreMultiplier',
+];
+
+const DEFAULT_MODIFIERS: GameModifiers = {
+  ballSpeedMultiplier: 1,
+  ballSizeMultiplier: 1,
+  fenceGenerationSpeedMultiplier: 1,
+  scoreMultiplier: 1,
+  instantFencesPerMap: 0,
+  additionalConcurrentFences: 0,
+  bonusRemovalChance: 0,
+  bonusRemovalAmount: 0,
+  extraLives: 0,
+  scoreInterestRate: 0,
+  extraShopItems: 0,
+  extraAugmentationPoints: 0,
+  microManagerPerLock: 0,
+  ballPathPredictionBounces: 0,
+  ballPathPredictionBalls: 0,
+};
+
+export class GameModifiersStore extends EventEmitterStore {
+  private modifiers: GameModifiers = { ...DEFAULT_MODIFIERS };
+  private ownedUpgradeIds: string[] = [];
+  private upgradeLookup: Map<string, UpgradeConfig> = new Map();
+
+  constructor() {
+    super();
+    this.loadOwnedUpgrades();
+  }
+
+  private loadOwnedUpgrades(): void {
+    try {
+      const stored = localStorage.getItem('devend-owned-upgrades');
+      if (stored) {
+        this.ownedUpgradeIds = JSON.parse(stored);
+      }
+    } catch (err) {
+      console.warn('Failed to load owned upgrades:', err);
+    }
+    this.computeModifiers();
+  }
+
+  setUpgradeLookup(lookup: Map<string, UpgradeConfig>): void {
+    this.upgradeLookup = lookup;
+    this.computeModifiers();
+  }
+
+  addUpgrade(id: string): void {
+    if (!this.ownedUpgradeIds.includes(id)) {
+      this.ownedUpgradeIds.push(id);
+      this.saveOwnedUpgrades();
+      this.computeModifiers();
+      this.emit('upgrade-added', id);
+    }
+  }
+
+  private computeModifiers(): void {
+    const result = { ...DEFAULT_MODIFIERS };
+
+    for (const id of this.ownedUpgradeIds) {
+      const upgrade = this.upgradeLookup.get(id);
+      if (!upgrade) continue;
+
+      for (const [key, value] of Object.entries(upgrade.modifiers || {})) {
+        if (!(key in result)) continue;
+        const k = key as keyof GameModifiers;
+        if (MULTIPLICATIVE_KEYS.includes(k)) {
+          result[k] = ((result[k] as number) ?? 1) * (value as number);
+        } else {
+          result[k] = ((result[k] as number) ?? 0) + (value as number);
+        }
+      }
+    }
+
+    this.modifiers = result;
+    this.emit('modifiers-changed', this.modifiers);
+  }
+
+  getModifiers(): GameModifiers {
+    return { ...this.modifiers };
+  }
+
+  private saveOwnedUpgrades(): void {
+    try {
+      localStorage.setItem('devend-owned-upgrades', JSON.stringify(this.ownedUpgradeIds));
+    } catch (err) {
+      console.warn('Failed to save owned upgrades:', err);
+    }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GLOBAL STORE INSTANCES
+// ════════════════════════════════════════════════════════════════════════════
+
 export const scoringStore = new ScoringStore();
 export const checkpointStore = new CheckpointStore();
 export const levelManagerStore = new LevelManagerStore();
 export const achievementStore = new AchievementStore();
 export const upgradeStore = new UpgradeStore();
+export const gameModifiersStore = new GameModifiersStore();

@@ -34,6 +34,15 @@ import {
 import { reassignBallsToRegions, isBallInRegion } from '@/lib/regionOwnership';
 import { pointInPolygon } from '@/lib/polygon';
 import { playWallHitSound, playBallCollideSound, playFenceBreakSound, playBallLockSound, initAudio } from '@/lib/gameAudio';
+import {
+  emitWallImpactParticles,
+  createBallTrail,
+  screenFlash,
+  animateWallGrowth,
+  playBallLockAnimation,
+  playLevelCompleteAnimation,
+} from '../utils/effects';
+import { applyCRTEffect } from '../utils/crt-pipeline';
 
 // Matter collision categories
 const CAT_BALL = 0x0001;
@@ -113,6 +122,9 @@ export class GameScene extends Phaser.Scene {
       .text(12, 12, '', { fontFamily: 'monospace', fontSize: '14px', color: '#00ff44' })
       .setDepth(1000);
 
+    // Apply CRT post-FX for aesthetic
+    applyCRTEffect(this);
+
     // Input for cut drawing
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPointerDown(pointer));
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer));
@@ -131,6 +143,9 @@ export class GameScene extends Phaser.Scene {
 
         if (isBallWall) {
           playWallHitSound(0.7);
+          screenFlash(this, 0x00ff88, 80, 0.3);
+          const ballBody = bodyA.collisionFilter?.category === CAT_BALL ? bodyA : bodyB;
+          emitWallImpactParticles(this, ballBody.position, 0x00ff88, 6);
         }
 
         // Ball collision (ball → ball)
@@ -139,6 +154,11 @@ export class GameScene extends Phaser.Scene {
 
         if (isBallBall) {
           playBallCollideSound(0.5);
+          const midpoint = {
+            x: (bodyA.position.x + bodyB.position.x) / 2,
+            y: (bodyA.position.y + bodyB.position.y) / 2,
+          };
+          emitWallImpactParticles(this, midpoint, 0xff88ff, 4);
         }
       }
     });
@@ -284,6 +304,12 @@ export class GameScene extends Phaser.Scene {
     const start = this.cut.points[0];
     const end = this.cut.points[this.cut.points.length - 1];
 
+    // Animate the wall growing
+    animateWallGrowth(this, start, end, 400, 0x00ff88);
+
+    // Play fence break sound
+    playFenceBreakSound();
+
     // Rasterize the cut into the grid
     rasterizeCutToGrid(this.gameData.spaceGrid, start, end, 6);
 
@@ -291,9 +317,6 @@ export class GameScene extends Phaser.Scene {
     const cutWall: Wall = { id: `cut-${Date.now()}`, start, end, thickness: 6 };
     this.walls.push(cutWall);
     this.addWallBody(cutWall);
-
-    // Play fence break sound
-    playFenceBreakSound();
 
     // Flood-fill to find new regions
     const gridRegions = findGridRegions(this.gameData.spaceGrid);
@@ -352,6 +375,12 @@ export class GameScene extends Phaser.Scene {
       v.ball.position = { x: v.body.position.x, y: v.body.position.y };
       v.ball.velocity = { x: v.body.velocity.x * 60, y: v.body.velocity.y * 60 };
       v.ball.rotation = v.body.angle;
+
+      // Create occasional motion trails
+      const speed = Math.hypot(v.body.velocity.x, v.body.velocity.y);
+      if (speed > 2 && Math.random() < 0.15) {
+        createBallTrail(this, v.ball.position, parseInt(v.ball.color, 16));
+      }
     }
 
     // Update HUD
@@ -368,7 +397,7 @@ export class GameScene extends Phaser.Scene {
 
     // Level complete transition
     if (this.levelWon) {
-      this.time.delayedCall(1000, () => {
+      playLevelCompleteAnimation(this, () => {
         // Advance to next level
         const nextLevel = levelManagerStore.nextLevel();
         if (nextLevel) {
