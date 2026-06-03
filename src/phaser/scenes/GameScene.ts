@@ -43,6 +43,7 @@ import {
   playLevelCompleteAnimation,
 } from '../utils/effects';
 import { applyCRTEffect } from '../utils/crt-pipeline';
+import { createDataRain, updateDataRain, destroyDataRain, type DataRainLine } from '../utils/data-rain';
 
 // Matter collision categories
 const CAT_BALL = 0x0001;
@@ -79,6 +80,7 @@ export class GameScene extends Phaser.Scene {
   private hudText: Phaser.GameObjects.Text | null = null;
   private regionsFilled = 0;
   private levelWon = false;
+  private dataRain: DataRainLine[] = [];
 
   constructor() {
     super({ key: 'GameScene' });
@@ -124,6 +126,9 @@ export class GameScene extends Phaser.Scene {
 
     // Apply CRT post-FX for aesthetic
     applyCRTEffect(this);
+
+    // Add ambient data-rain background effect
+    this.dataRain = createDataRain(this, 10);
 
     // Input for cut drawing
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPointerDown(pointer));
@@ -369,7 +374,10 @@ export class GameScene extends Phaser.Scene {
 
   // ── Physics sync ──────────────────────────────────────────────────────────
 
-  update(): void {
+  update(time: number, delta: number): void {
+    // Update data-rain animation
+    updateDataRain(this.dataRain, delta);
+
     // Sync ball state from Matter bodies
     for (const v of this.ballViews) {
       v.ball.position = { x: v.body.position.x, y: v.body.position.y };
