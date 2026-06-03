@@ -22,14 +22,23 @@ export class MenuScene extends Phaser.Scene {
       color: '#00ff88',
     }).setOrigin(0.5);
 
-    // Test button to go back to spike or forward to game
-    const gameBtn = this.add.text(450, 350, 'Start Spike Scene', {
+    // Test button to start game
+    const gameBtn = this.add.text(450, 280, 'Play Phase 2 (GameScene)', {
       fontFamily: 'monospace',
       fontSize: '16px',
       color: '#00ff88',
     }).setOrigin(0.5);
     gameBtn.setInteractive();
-    gameBtn.on('pointerdown', () => this.scene.start('SpikeScene'));
+    gameBtn.on('pointerdown', () => this.scene.start('GameScene'));
+
+    // Test button to verify Phase 0 spike
+    const spikeBtn = this.add.text(450, 350, 'Phase 0 Spike Test', {
+      fontFamily: 'monospace',
+      fontSize: '16px',
+      color: '#00ff88',
+    }).setOrigin(0.5);
+    spikeBtn.setInteractive();
+    spikeBtn.on('pointerdown', () => this.scene.start('SpikeScene'));
 
     this.add.text(450, 850, 'Press ESC to return to React build (?phaser=0)', {
       fontFamily: 'monospace',

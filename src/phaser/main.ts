@@ -1,5 +1,5 @@
 /**
- * Phaser bootstrap — Phase 0/1 scaffold.
+ * Phaser bootstrap — Phase 0/1/2 scaffold.
  *
  * Mounts a Phaser game using Phaser.AUTO (WebGL with Canvas fallback) and the
  * Matter physics engine, scaled to the existing logical world (BOARD_WIDTH x
@@ -7,6 +7,7 @@
  * map 1:1 into the scene.
  *
  * Phase 1 boots through BootScene (YAML loading + texture baking) → MenuScene,
+ * Phase 2 provides GameScene for core gameplay,
  * with SpikeScene available for verification.
  *
  * Runs in parallel with the React build behind `?phaser=1` (see src/main.tsx).
@@ -15,6 +16,7 @@ import Phaser from "phaser";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { BootScene } from "./scenes/BootScene";
 import { MenuScene } from "./scenes/MenuScene";
+import { GameScene } from "./scenes/GameScene";
 import { SpikeScene } from "./scenes/SpikeScene";
 
 export function startPhaser(parentId = "phaser-root"): Phaser.Game {
@@ -44,6 +46,6 @@ export function startPhaser(parentId = "phaser-root"): Phaser.Game {
         velocityIterations: 8,
       },
     },
-    scene: [BootScene, MenuScene, SpikeScene],
+    scene: [BootScene, MenuScene, GameScene, SpikeScene],
   });
 }
