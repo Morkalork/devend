@@ -275,6 +275,135 @@ export class LevelManagerStore extends EventEmitterStore {
 // GLOBAL STORE INSTANCES
 // ════════════════════════════════════════════════════════════════════════════
 
+export class AchievementStore extends EventEmitterStore {
+  private achievements: Map<string, { id: string; unlocked: boolean; unlockedAt?: number }> = new Map();
+
+  constructor() {
+    super();
+    this.loadAchievements();
+  }
+
+  private loadAchievements(): void {
+    try {
+      const stored = localStorage.getItem('devend-achievements');
+      if (stored) {
+        const data = JSON.parse(stored) as Record<string, any>;
+        for (const [id, info] of Object.entries(data)) {
+          this.achievements.set(id, info);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load achievements:', err);
+    }
+  }
+
+  unlock(id: string): void {
+    if (!this.achievements.has(id)) {
+      this.achievements.set(id, {
+        id,
+        unlocked: true,
+        unlockedAt: Date.now(),
+      });
+      this.saveToStorage();
+      this.emit('achievement-unlocked', id);
+    }
+  }
+
+  isUnlocked(id: string): boolean {
+    return this.achievements.get(id)?.unlocked || false;
+  }
+
+  getAll(): Array<{ id: string; unlocked: boolean; unlockedAt?: number }> {
+    return Array.from(this.achievements.values());
+  }
+
+  private saveToStorage(): void {
+    try {
+      const data: Record<string, any> = {};
+      for (const [id, info] of this.achievements) {
+        data[id] = info;
+      }
+      localStorage.setItem('devend-achievements', JSON.stringify(data));
+    } catch (err) {
+      console.warn('Failed to save achievements:', err);
+    }
+  }
+}
+
+export class UpgradeStore extends EventEmitterStore {
+  private upgrades: Map<string, { id: string; level: number; maxLevel: number }> = new Map();
+  private upgradePoints = 0;
+
+  constructor() {
+    super();
+    this.loadUpgrades();
+  }
+
+  private loadUpgrades(): void {
+    try {
+      const stored = localStorage.getItem('devend-upgrades');
+      if (stored) {
+        const data = JSON.parse(stored) as Record<string, any>;
+        this.upgradePoints = data._points || 0;
+        for (const [id, info] of Object.entries(data)) {
+          if (id !== '_points') {
+            this.upgrades.set(id, info);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load upgrades:', err);
+    }
+  }
+
+  addPoints(amount: number): void {
+    this.upgradePoints += amount;
+    this.saveToStorage();
+    this.emit('points-changed', this.upgradePoints);
+  }
+
+  spendPoints(amount: number): boolean {
+    if (this.upgradePoints >= amount) {
+      this.upgradePoints -= amount;
+      this.saveToStorage();
+      this.emit('points-changed', this.upgradePoints);
+      return true;
+    }
+    return false;
+  }
+
+  getPoints(): number {
+    return this.upgradePoints;
+  }
+
+  getUpgrade(id: string): { id: string; level: number; maxLevel: number } | null {
+    return this.upgrades.get(id) || null;
+  }
+
+  upgradeLevel(id: string): void {
+    const upgrade = this.upgrades.get(id);
+    if (upgrade && upgrade.level < upgrade.maxLevel) {
+      upgrade.level++;
+      this.saveToStorage();
+      this.emit('upgrade-changed', id, upgrade.level);
+    }
+  }
+
+  private saveToStorage(): void {
+    try {
+      const data: Record<string, any> = { _points: this.upgradePoints };
+      for (const [id, info] of this.upgrades) {
+        data[id] = info;
+      }
+      localStorage.setItem('devend-upgrades', JSON.stringify(data));
+    } catch (err) {
+      console.warn('Failed to save upgrades:', err);
+    }
+  }
+}
+
 export const scoringStore = new ScoringStore();
 export const checkpointStore = new CheckpointStore();
 export const levelManagerStore = new LevelManagerStore();
+export const achievementStore = new AchievementStore();
+export const upgradeStore = new UpgradeStore();
