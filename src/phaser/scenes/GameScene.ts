@@ -13,8 +13,11 @@
  *   - Manage WON state and level progression
  */
 import Phaser from 'phaser';
+import { levelManagerStore } from '../stores';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '@/lib/boardConstants';
 import { createInitialGameData, InitialGameData } from '@/lib/initGame';
+import { computeGameModifiers } from '@/hooks/useActiveModifiers';
+import { LevelConfig } from '@/types/level';
 import { computeGameModifiers } from '@/hooks/useActiveModifiers';
 import { LevelConfig } from '@/types/level';
 import { Ball, Region, Vector2 } from '@/types/game';
@@ -77,22 +80,14 @@ export class GameScene extends Phaser.Scene {
     const gameConfig = this.registry.get('gameConfig');
     const colors = this.registry.get('colors');
 
-    // TODO: Phase 2 will load actual level from LevelManager
-    // For now, use spike level as test
-    this.currentLevel = {
-      id: 'test-level',
-      level: 1,
-      sizeThreshold: 50,
-      expectedCuts: 4,
-      points: 100,
-      variety: 0,
-      randomShapes: 0,
-      balls: [
-        { id: 'b1', initialSpeed: 60, topSpeed: 90, color: 'ff4444', startX: 250, startY: 250 },
-        { id: 'b2', initialSpeed: 60, topSpeed: 90, color: '44ff44', startX: 650, startY: 300 },
-        { id: 'b3', initialSpeed: 60, topSpeed: 90, color: '4488ff', startX: 450, startY: 650 },
-      ],
-    };
+    // Get current level from level manager
+    const level = levelManagerStore.getCurrentLevel();
+    if (!level) {
+      console.error('No level loaded');
+      this.scene.start('MenuScene');
+      return;
+    }
+    this.currentLevel = level;
 
     // Initialize game state
     const modifiers = computeGameModifiers([], new Map());
@@ -374,7 +369,14 @@ export class GameScene extends Phaser.Scene {
     // Level complete transition
     if (this.levelWon) {
       this.time.delayedCall(1000, () => {
-        this.scene.restart();
+        // Advance to next level
+        const nextLevel = levelManagerStore.nextLevel();
+        if (nextLevel) {
+          this.scene.restart();
+        } else {
+          // Game complete
+          this.scene.start('MenuScene');
+        }
       });
     }
   }

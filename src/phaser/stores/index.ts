@@ -35,7 +35,12 @@ export class EventEmitterStore {
 
 import yaml from 'js-yaml';
 import { ScoringConfig, ScoreBreakdown } from '@/types/scoring';
+import { LevelConfig, LevelData } from '@/types/level';
 import { calculateScoreBreakdown, getOvertimeCap } from '@/lib/scoring';
+
+// ════════════════════════════════════════════════════════════════════════════
+// SCORING STORE
+// ════════════════════════════════════════════════════════════════════════════
 
 const defaultScoringConfig: ScoringConfig = {
   scoring: {
@@ -121,6 +126,10 @@ export class ScoringStore extends EventEmitterStore {
   }
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// CHECKPOINT STORE
+// ════════════════════════════════════════════════════════════════════════════
+
 export class CheckpointStore extends EventEmitterStore {
   private checkpoints: { id: string; level: number; timestamp: number }[] = [];
 
@@ -164,6 +173,108 @@ export class CheckpointStore extends EventEmitterStore {
   }
 }
 
-// Global store instances
+// ════════════════════════════════════════════════════════════════════════════
+// LEVEL MANAGER STORE
+// ════════════════════════════════════════════════════════════════════════════
+
+function buildLevelSequence(allMaps: LevelConfig[]): LevelConfig[] {
+  const groups = new Map<number, LevelConfig[]>();
+  for (const map of allMaps) {
+    const lvl = map.level || 1;
+    if (!groups.has(lvl)) groups.set(lvl, []);
+    groups.get(lvl)!.push(map);
+  }
+
+  const sortedLevels = [...groups.keys()].sort((a, b) => a - b);
+  return sortedLevels.map((lvl) => {
+    const variants = groups.get(lvl)!;
+    return variants[Math.floor(Math.random() * variants.length)];
+  });
+}
+
+export class LevelManagerStore extends EventEmitterStore {
+  private allMaps: LevelConfig[] = [];
+  private levelSequence: LevelConfig[] = [];
+  private currentLevelIndex = 0;
+  private isLoading = false;
+  private error: string | null = null;
+
+  constructor() {
+    super();
+    this.loadLevels();
+  }
+
+  private async loadLevels(): Promise<void> {
+    this.isLoading = true;
+    this.error = null;
+    this.emit('loading');
+
+    try {
+      const res = await fetch('/map.yml');
+      if (!res.ok) throw new Error(`Failed to load map.yml: ${res.status}`);
+
+      const text = await res.text();
+      const data = (yaml.load(text) as LevelData) || {};
+
+      if (!data.levels || !Array.isArray(data.levels) || data.levels.length === 0) {
+        throw new Error('Invalid map.yml: no levels found');
+      }
+
+      // Validate and set defaults
+      for (const level of data.levels) {
+        if (!level.level || typeof level.level !== 'number') {
+          const match = level.id.match(/^level-(\d+)/);
+          level.level = match ? parseInt(match[1], 10) : 1;
+        }
+      }
+
+      this.allMaps = data.levels;
+      this.levelSequence = buildLevelSequence(this.allMaps);
+      this.isLoading = false;
+      this.emit('ready', this.levelSequence);
+    } catch (err) {
+      this.error = String(err);
+      this.isLoading = false;
+      console.error('Failed to load levels:', err);
+      this.emit('error', this.error);
+    }
+  }
+
+  getCurrentLevel(): LevelConfig | null {
+    return this.levelSequence[this.currentLevelIndex] || null;
+  }
+
+  nextLevel(): LevelConfig | null {
+    this.currentLevelIndex++;
+    const next = this.getCurrentLevel();
+    if (next) {
+      this.emit('level-changed', next, this.currentLevelIndex);
+    }
+    return next;
+  }
+
+  getLevelSequence(): LevelConfig[] {
+    return [...this.levelSequence];
+  }
+
+  getCurrentLevelNumber(): number {
+    return this.currentLevelIndex + 1;
+  }
+
+  resetToLevel(index: number): void {
+    this.currentLevelIndex = Math.max(0, Math.min(index, this.levelSequence.length - 1));
+    this.emit('level-reset', this.getCurrentLevel());
+  }
+
+  isReady(): boolean {
+    return !this.isLoading && this.levelSequence.length > 0;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// GLOBAL STORE INSTANCES
+// ════════════════════════════════════════════════════════════════════════════
+
 export const scoringStore = new ScoringStore();
 export const checkpointStore = new CheckpointStore();
+export const levelManagerStore = new LevelManagerStore();

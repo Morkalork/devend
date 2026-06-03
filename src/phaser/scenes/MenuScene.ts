@@ -1,8 +1,11 @@
 /**
- * MenuScene — Phase 4 will port the full React WelcomeScreen here.
- * For Phase 1, this is a placeholder that proves the boot pipeline works.
+ * MenuScene — Phase 4: Main menu screen.
+ *
+ * Provides navigation to start game, view achievements, or adjust settings.
+ * Phase 4 will add full styling, animations, and rexUI containers.
  */
 import Phaser from 'phaser';
+import { levelManagerStore } from '../stores';
 
 export class MenuScene extends Phaser.Scene {
   constructor() {
@@ -10,32 +13,45 @@ export class MenuScene extends Phaser.Scene {
   }
 
   create(): void {
-    this.add.text(450, 100, 'MENU SCENE', {
+    this.add.text(450, 100, 'DEV/END', {
       fontFamily: 'monospace',
-      fontSize: '32px',
+      fontSize: '48px',
       color: '#00ff88',
     }).setOrigin(0.5);
 
-    this.add.text(450, 200, 'Phase 1: Boot complete', {
+    this.add.text(450, 170, 'Phaser Migration Phase 4', {
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      color: '#666666',
+    }).setOrigin(0.5);
+
+    // Play button - starts at augment selection (which leads to game)
+    const playBtn = this.add.text(450, 280, 'Play Game', {
+      fontFamily: 'monospace',
+      fontSize: '20px',
+      color: '#00ff88',
+    }).setOrigin(0.5);
+    playBtn.setInteractive();
+    playBtn.on('pointerdown', () => {
+      // Reset level manager to level 1
+      (levelManagerStore as any).resetToLevel?.(0);
+      this.scene.start('AugmentScene');
+    });
+
+    // Achievements button
+    const achievBtn = this.add.text(450, 340, 'Achievements', {
       fontFamily: 'monospace',
       fontSize: '16px',
       color: '#00ff88',
     }).setOrigin(0.5);
+    achievBtn.setInteractive();
+    achievBtn.on('pointerdown', () => this.scene.start('AchievementsScene'));
 
-    // Test button to start game
-    const gameBtn = this.add.text(450, 280, 'Play Phase 2 (GameScene)', {
+    // Phase 0 Spike Test button
+    const spikeBtn = this.add.text(450, 400, 'Phase 0 Spike Test', {
       fontFamily: 'monospace',
-      fontSize: '16px',
-      color: '#00ff88',
-    }).setOrigin(0.5);
-    gameBtn.setInteractive();
-    gameBtn.on('pointerdown', () => this.scene.start('GameScene'));
-
-    // Test button to verify Phase 0 spike
-    const spikeBtn = this.add.text(450, 350, 'Phase 0 Spike Test', {
-      fontFamily: 'monospace',
-      fontSize: '16px',
-      color: '#00ff88',
+      fontSize: '14px',
+      color: '#00ff44',
     }).setOrigin(0.5);
     spikeBtn.setInteractive();
     spikeBtn.on('pointerdown', () => this.scene.start('SpikeScene'));
@@ -47,7 +63,6 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     this.input.keyboard?.on('keydown-ESC', () => {
-      // Redirect to non-phaser build
       window.location.search = '';
     });
   }

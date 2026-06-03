@@ -18,7 +18,9 @@ import { BootScene } from "./scenes/BootScene";
 import { MenuScene } from "./scenes/MenuScene";
 import { GameScene } from "./scenes/GameScene";
 import { ShopScene } from "./scenes/ShopScene";
+import { AugmentScene } from "./scenes/AugmentScene";
 import { ResultScene } from "./scenes/ResultScene";
+import { AchievementsScene } from "./scenes/AchievementsScene";
 import { SpikeScene } from "./scenes/SpikeScene";
 
 export function startPhaser(parentId = "phaser-root"): Phaser.Game {
@@ -48,6 +50,6 @@ export function startPhaser(parentId = "phaser-root"): Phaser.Game {
         velocityIterations: 8,
       },
     },
-    scene: [BootScene, MenuScene, GameScene, ShopScene, ResultScene, SpikeScene],
+    scene: [BootScene, MenuScene, GameScene, ShopScene, AugmentScene, ResultScene, AchievementsScene, SpikeScene],
   });
 }
