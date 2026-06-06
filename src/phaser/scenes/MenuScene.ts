@@ -50,8 +50,18 @@ export class MenuScene extends Phaser.Scene {
       this.playButtonTransition(() => this.scene.start('AchievementsScene'));
     });
 
+    // Upgrade Lab button
+    const labBtn = this.createButton(450, 440, 'Upgrade Lab', () => {
+      this.playButtonTransition(() => this.scene.start('ShopScene'));
+    });
+
+    // Settings button
+    const settingsBtn = this.createButton(450, 520, 'Settings', () => {
+      this.playButtonTransition(() => this.scene.start('SettingsScene'));
+    });
+
     // Phase 0 Spike Test button
-    const spikeBtn = this.createButton(450, 440, 'Phase 0 Spike Test', () => {
+    const spikeBtn = this.createButton(450, 600, 'Phase 0 Spike Test', () => {
       this.playButtonTransition(() => this.scene.start('SpikeScene'));
     });
 

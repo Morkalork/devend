@@ -37,6 +37,7 @@ import yaml from 'js-yaml';
 import { ScoringConfig, ScoreBreakdown } from '@/types/scoring';
 import { LevelConfig, LevelData } from '@/types/level';
 import { calculateScoreBreakdown, getOvertimeCap } from '@/lib/scoring';
+import { setAudioMuted, setAudioVolume } from '@/lib/gameAudio';
 
 // ════════════════════════════════════════════════════════════════════════════
 // SCORING STORE
@@ -513,12 +514,112 @@ export class GameModifiersStore extends EventEmitterStore {
     return { ...this.modifiers };
   }
 
+  getOwnedUpgradeIds(): string[] {
+    return [...this.ownedUpgradeIds];
+  }
+
+  isOwned(id: string): boolean {
+    return this.ownedUpgradeIds.includes(id);
+  }
+
   private saveOwnedUpgrades(): void {
     try {
       localStorage.setItem('devend-owned-upgrades', JSON.stringify(this.ownedUpgradeIds));
     } catch (err) {
       console.warn('Failed to save owned upgrades:', err);
     }
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SETTINGS STORE
+// ════════════════════════════════════════════════════════════════════════════
+
+export type Difficulty = 'easy' | 'normal' | 'hard';
+
+export interface GameSettings {
+  masterVolume: number; // 0..1
+  muted: boolean;
+  difficulty: Difficulty;
+  crtEnabled: boolean;
+  dataRainEnabled: boolean;
+  particlesEnabled: boolean;
+  colorblindMode: boolean;
+  largeText: boolean;
+}
+
+const DEFAULT_SETTINGS: GameSettings = {
+  masterVolume: 0.8,
+  muted: false,
+  difficulty: 'normal',
+  crtEnabled: true,
+  dataRainEnabled: true,
+  particlesEnabled: true,
+  colorblindMode: false,
+  largeText: false,
+};
+
+/** Ball-speed multiplier applied per difficulty (compounds with upgrade modifiers). */
+const DIFFICULTY_BALL_SPEED: Record<Difficulty, number> = {
+  easy: 0.8,
+  normal: 1.0,
+  hard: 1.3,
+};
+
+export class SettingsStore extends EventEmitterStore {
+  private settings: GameSettings = { ...DEFAULT_SETTINGS };
+
+  constructor() {
+    super();
+    this.load();
+    // Apply audio settings up-front so they hold before the first GameScene.
+    setAudioVolume(this.settings.masterVolume);
+    setAudioMuted(this.settings.muted);
+  }
+
+  private load(): void {
+    try {
+      const stored = localStorage.getItem('devend-settings');
+      if (stored) {
+        this.settings = { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+      }
+    } catch (err) {
+      console.warn('Failed to load settings:', err);
+    }
+  }
+
+  private save(): void {
+    try {
+      localStorage.setItem('devend-settings', JSON.stringify(this.settings));
+    } catch (err) {
+      console.warn('Failed to save settings:', err);
+    }
+  }
+
+  get<K extends keyof GameSettings>(key: K): GameSettings[K] {
+    return this.settings[key];
+  }
+
+  getAll(): GameSettings {
+    return { ...this.settings };
+  }
+
+  set<K extends keyof GameSettings>(key: K, value: GameSettings[K]): void {
+    if (this.settings[key] === value) return;
+    this.settings[key] = value;
+    this.save();
+
+    // Audio settings take effect immediately.
+    if (key === 'masterVolume') setAudioVolume(value as number);
+    if (key === 'muted') setAudioMuted(value as boolean);
+
+    this.emit('changed', key, value);
+    this.emit(`changed:${key}`, value);
+  }
+
+  /** Difficulty-derived ball-speed multiplier for GameScene. */
+  getBallSpeedMultiplier(): number {
+    return DIFFICULTY_BALL_SPEED[this.settings.difficulty];
   }
 }
 
@@ -532,3 +633,4 @@ export const levelManagerStore = new LevelManagerStore();
 export const achievementStore = new AchievementStore();
 export const upgradeStore = new UpgradeStore();
 export const gameModifiersStore = new GameModifiersStore();
+export const settingsStore = new SettingsStore();

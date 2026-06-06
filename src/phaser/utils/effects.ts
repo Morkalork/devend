@@ -5,66 +5,85 @@
 import Phaser from 'phaser';
 import { Vector2 } from '@/types/game';
 
+const IMPACT_TEX = 'fx-impact-particle';
+const TRAIL_TEX = 'fx-trail-particle';
+
 /**
- * Particle burst on wall impact.
+ * Pooled particle emitters reused for the whole scene lifetime. Created once in
+ * scene `create()` (see {@link createEffectEmitters}) instead of allocating
+ * GameObjects + textures per collision/frame.
  */
-export function emitWallImpactParticles(
-  scene: Phaser.Scene,
-  position: Vector2,
-  color: number = 0x00ff88,
-  count: number = 8
-): void {
-  // Create a temporary graphics object for particle texture
-  const gfx = scene.make.graphics({ x: 0, y: 0, add: false });
-  gfx.fillStyle(color, 1);
-  gfx.fillCircle(4, 4, 3);
-  gfx.generateTexture('wall-impact-particle', 8, 8);
-  gfx.destroy();
+export interface EffectEmitters {
+  impact: Phaser.GameObjects.Particles.ParticleEmitter;
+  trail: Phaser.GameObjects.Particles.ParticleEmitter;
+}
 
-  // Emit particles in a burst
-  for (let i = 0; i < count; i++) {
-    const angle = (Math.PI * 2 * i) / count;
-    const vx = Math.cos(angle) * 200;
-    const vy = Math.sin(angle) * 200;
-
-    const particle = scene.add
-      .image(position.x, position.y, 'wall-impact-particle')
-      .setOrigin(0.5);
-
-    scene.tweens.add({
-      targets: particle,
-      x: position.x + Math.cos(angle) * 60,
-      y: position.y + Math.sin(angle) * 60,
-      alpha: 0,
-      duration: 400,
-      ease: 'Quad.easeOut',
-      onComplete: () => particle.destroy(),
-    });
+/** Bake the small particle textures once per scene (idempotent). */
+function ensureParticleTextures(scene: Phaser.Scene): void {
+  if (!scene.textures.exists(IMPACT_TEX)) {
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(4, 4, 3);
+    g.generateTexture(IMPACT_TEX, 8, 8);
+    g.destroy();
+  }
+  if (!scene.textures.exists(TRAIL_TEX)) {
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(6, 6, 6);
+    g.generateTexture(TRAIL_TEX, 12, 12);
+    g.destroy();
   }
 }
 
 /**
- * Motion trail effect following a ball.
+ * Create the reusable impact + trail emitters. Particles are white textures
+ * tinted per emit, so a single emitter serves every colour. Call once in
+ * `create()` and keep the returned handle for the scene's lifetime.
  */
-export function createBallTrail(
-  scene: Phaser.Scene,
+export function createEffectEmitters(scene: Phaser.Scene): EffectEmitters {
+  ensureParticleTextures(scene);
+
+  const impact = scene.add.particles(0, 0, IMPACT_TEX, {
+    lifespan: 400,
+    speed: { min: 60, max: 200 },
+    scale: { start: 1, end: 0 },
+    alpha: { start: 1, end: 0 },
+    emitting: false,
+  });
+  impact.setDepth(60);
+
+  const trail = scene.add.particles(0, 0, TRAIL_TEX, {
+    lifespan: 300,
+    speed: 0,
+    scale: { start: 1, end: 0.1 },
+    alpha: { start: 0.6, end: 0 },
+    emitting: false,
+  });
+  trail.setDepth(9);
+
+  return { impact, trail };
+}
+
+/** Burst of impact particles at a point, tinted to `color`. */
+export function emitImpact(
+  emitters: EffectEmitters,
   position: Vector2,
   color: number = 0x00ff88,
-  trailLength: number = 5
+  count: number = 8
 ): void {
-  const trail = scene.add
-    .circle(position.x, position.y, 6, color)
-    .setOrigin(0.5)
-    .setAlpha(0.6);
+  emitters.impact.setParticleTint(color);
+  emitters.impact.emitParticleAt(position.x, position.y, count);
+}
 
-  scene.tweens.add({
-    targets: trail,
-    alpha: 0,
-    scale: 0.1,
-    duration: 300,
-    ease: 'Quad.easeOut',
-    onComplete: () => trail.destroy(),
-  });
+/** Single fading motion-trail dot at a ball position, tinted to `color`. */
+export function emitTrail(
+  emitters: EffectEmitters,
+  position: Vector2,
+  color: number = 0x00ff88
+): void {
+  emitters.trail.setParticleTint(color);
+  emitters.trail.emitParticleAt(position.x, position.y, 1);
 }
 
 /**

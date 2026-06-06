@@ -21,6 +21,7 @@ import { ShopScene } from "./scenes/ShopScene";
 import { AugmentScene } from "./scenes/AugmentScene";
 import { ResultScene } from "./scenes/ResultScene";
 import { AchievementsScene } from "./scenes/AchievementsScene";
+import { SettingsScene } from "./scenes/SettingsScene";
 import { SpikeScene } from "./scenes/SpikeScene";
 
 export function startPhaser(parentId = "phaser-root"): Phaser.Game {
@@ -45,11 +46,14 @@ export function startPhaser(parentId = "phaser-root"): Phaser.Game {
       default: "matter",
       matter: {
         gravity: { x: 0, y: 0 },
-        debug: true,
-        positionIterations: 12,
-        velocityIterations: 8,
+        debug: false,
+        // Trimmed from 12/8: still above Phaser's 6/4 defaults for anti-tunneling
+        // margin, but ~33% less solver work per step. Verify no tunneling at top
+        // ball speed before lowering further.
+        positionIterations: 8,
+        velocityIterations: 6,
       },
     },
-    scene: [BootScene, MenuScene, GameScene, ShopScene, AugmentScene, ResultScene, AchievementsScene, SpikeScene],
+    scene: [BootScene, MenuScene, GameScene, ShopScene, AugmentScene, ResultScene, AchievementsScene, SettingsScene, SpikeScene],
   });
 }

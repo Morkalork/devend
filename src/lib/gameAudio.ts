@@ -4,6 +4,7 @@
 let audioContext: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let isMuted = false;
+let masterVolume = 1;
 
 // Volume settings
 const VOLUME = {
@@ -22,7 +23,7 @@ function ensureAudioContext(): AudioContext | null {
       audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       masterGain = audioContext.createGain();
       masterGain.connect(audioContext.destination);
-      masterGain.gain.value = isMuted ? 0 : 1;
+      masterGain.gain.value = isMuted ? 0 : masterVolume;
     } catch (e) {
       console.warn('Web Audio API not supported:', e);
       return null;
@@ -436,7 +437,7 @@ export function playBallLockSound(): void {
 export function setAudioMuted(muted: boolean): void {
   isMuted = muted;
   if (masterGain) {
-    masterGain.gain.value = muted ? 0 : 1;
+    masterGain.gain.value = muted ? 0 : masterVolume;
   }
 }
 
@@ -445,6 +446,23 @@ export function setAudioMuted(muted: boolean): void {
  */
 export function isAudioMuted(): boolean {
   return isMuted;
+}
+
+/**
+ * Set master volume (0..1). Takes effect immediately unless muted.
+ */
+export function setAudioVolume(volume: number): void {
+  masterVolume = Math.min(1, Math.max(0, volume));
+  if (masterGain && !isMuted) {
+    masterGain.gain.value = masterVolume;
+  }
+}
+
+/**
+ * Get current master volume (0..1).
+ */
+export function getAudioVolume(): number {
+  return masterVolume;
 }
 
 /**

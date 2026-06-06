@@ -12,9 +12,12 @@
  * with all assets the gameplay scenes need.
  */
 import Phaser from 'phaser';
+import yaml from 'js-yaml';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '@/lib/boardConstants';
 import { parseGameConfig, parseColorsYml, loadYamlFile, GameConfig } from '../utils/yaml-parser';
 import { bakeBallTextures, bakeHexOverlay } from '../utils/textures';
+import { gameModifiersStore } from '../stores';
+import { UpgradeConfig, UpgradeData } from '@/types/upgrade';
 
 export class BootScene extends Phaser.Scene {
   private progressBar: Phaser.GameObjects.Graphics | null = null;
@@ -67,6 +70,17 @@ export class BootScene extends Phaser.Scene {
       // Store in registry for other scenes to access
       this.registry.set('gameConfig', gameConfig);
       this.registry.set('colors', colors);
+
+      // Parse upgrades and wire the modifier lookup so owned upgrades actually
+      // take effect (the shop + HUD stats depend on this).
+      try {
+        const parsed = (yaml.load(this.cache.text.get('upgrades')) as UpgradeData) || { upgrades: [] };
+        const upgrades = parsed.upgrades || [];
+        this.registry.set('upgrades', upgrades);
+        gameModifiersStore.setUpgradeLookup(new Map<string, UpgradeConfig>(upgrades.map((u) => [u.id, u])));
+      } catch (e) {
+        console.warn('[BootScene] Failed to parse upgrades:', e);
+      }
 
       // Bake textures
       this.updateStatus('Baking textures...');

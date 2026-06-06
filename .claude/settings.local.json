@@ -1,18 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)",
-      "Bash(npx vite build:*)",
-      "Bash(echo:*)",
-      "Bash(node:*)",
-      "Bash(cd:*)",
-      "Bash(npm run:*)",
-      "Bash(ls tmpclaude* 2>/dev/null || echo \"none in cwd\")",
-      "Bash(grep -E '\\\\.\\(ts|tsx\\)$')",
-      "Bash(find c:/projects/cursor/balls-of-fire-and-ice -name server.* -o -name dev-server.*)",
-      "Bash(gh auth:*)",
-      "Bash(gh issue:*)",
-      "Bash(wc -l c:/projects/cursor/balls-of-fire-and-ice/src/**/*.tsx c:/projects/cursor/balls-of-fire-and-ice/src/**/*.ts)"
+      "Bash(*)"
     ]
   }
 }

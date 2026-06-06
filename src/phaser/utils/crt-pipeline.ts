@@ -40,20 +40,20 @@ varying vec2 outTexCoord;
 void main() {
   vec2 uv = outTexCoord;
 
-  // Phosphor bloom: shift RGB channels slightly for chromatic effect
+  // Sample the centre once and reuse it for the green channel + bloom glow;
+  // only the chromatic red/blue need offset samples (3 fetches total, not 5).
+  vec3 center = texture2D(uMainSampler, uv).rgb;
   float r = texture2D(uMainSampler, uv + vec2(0.002, 0.0)).r;
-  float g = texture2D(uMainSampler, uv).g;
   float b = texture2D(uMainSampler, uv - vec2(0.002, 0.0)).b;
 
-  vec3 bloom = vec3(r, g, b);
+  vec3 bloom = vec3(r, center.g, b);
 
   // Scanlines: horizontal stripes
   float scanline = sin(uv.y * 600.0) * 0.5 + 0.5;
   scanline = mix(1.0, scanline, 0.3);
 
-  // Apply bloom glow
-  vec3 glowSample = texture2D(uMainSampler, uv).rgb;
-  bloom += glowSample * 0.3;
+  // Apply bloom glow (reuse the centre sample)
+  bloom += center * 0.3;
   bloom = clamp(bloom, 0.0, 1.0);
 
   // Neon rim: edge highlight with slight glow
