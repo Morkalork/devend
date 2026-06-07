@@ -234,8 +234,10 @@ export function applyCutFn(
 
   const lockReq = level.threadLockRequired ?? 0;
   if (percent < level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none") {
-    callbacks.render();
-    callbacks.render();
+    // The frame is already drawn (loop render + the post-cut render above) and
+    // pushMode is still "none" here, so these would be pixel-identical repaints.
+    // The two redundant full renders spiked this frame to 4 redraws and caused a
+    // visible twitch right as the push-your-luck modal mounted.
     game.pushMode = "prompt";
     game.levelClearedTime = performance.now();
     callbacks.setPushMode("prompt");
