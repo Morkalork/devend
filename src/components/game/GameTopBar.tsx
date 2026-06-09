@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { Heart, Lock, Scissors, Target, Hexagon } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
 import {
   Tooltip,
@@ -29,6 +29,7 @@ interface GameTopBarProps {
   accentColor?: string;
   augmentProgress?: AugmentProgress;
   microManagerPerLock?: number;
+  onExpand?: () => void;
 }
 
 export function GameTopBar({
@@ -44,10 +45,21 @@ export function GameTopBar({
   accentColor = '#00ff88',
   augmentProgress,
   microManagerPerLock = 0,
+  onExpand,
 }: GameTopBarProps) {
   const upgradesContainerRef = useRef<HTMLDivElement>(null);
   const [needsCarousel, setNeedsCarousel] = useState(false);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
+  const swipeStartYRef = useRef<number | null>(null);
+
+  const handleSwipeTouchStart = (e: React.TouchEvent) => {
+    swipeStartYRef.current = e.touches[0].clientY;
+  };
+  const handleSwipeTouchEnd = (e: React.TouchEvent) => {
+    if (swipeStartYRef.current === null || !onExpand) return;
+    if (e.changedTouches[0].clientY - swipeStartYRef.current > 30) onExpand();
+    swipeStartYRef.current = null;
+  };
 
   // ── Animated capture-percentage count-up ─────────────────────────────────
   const [displaySpace, setDisplaySpace] = useState(spaceRemaining);
@@ -136,7 +148,10 @@ export function GameTopBar({
     <div className="flex-shrink-0 flex flex-col">
       {/* Row 1: Navigation — menu, level, lives, augment progress */}
       <div
-        className="px-3 py-2 flex items-center justify-between gap-2"
+        className={`px-3 py-2 flex items-center justify-between gap-2${onExpand ? ' cursor-pointer' : ''}`}
+        onClick={onExpand}
+        onTouchStart={handleSwipeTouchStart}
+        onTouchEnd={handleSwipeTouchEnd}
         style={{
           backgroundColor: 'rgba(0, 10, 5, 0.9)',
           borderBottom: `1px solid ${accentColor}33`,
@@ -186,11 +201,22 @@ export function GameTopBar({
             </span>
           </div>
         )}
+
+        {/* Expand indicator — only when onExpand is provided */}
+        {onExpand && (
+          <ChevronDown
+            className="w-4 h-4 flex-shrink-0 opacity-50"
+            style={{ color: accentColor }}
+          />
+        )}
       </div>
 
       {/* Row 2: Objectives — cuts/par, space, thread locks */}
       <div
-        className="px-3 py-1.5 flex items-center justify-around gap-2"
+        className={`px-3 py-1.5 flex items-center justify-around gap-2${onExpand ? ' cursor-pointer' : ''}`}
+        onClick={onExpand}
+        onTouchStart={handleSwipeTouchStart}
+        onTouchEnd={handleSwipeTouchEnd}
         style={{
           backgroundColor: 'rgba(0, 10, 5, 0.9)',
           borderBottom: `2px solid ${accentColor}44`,

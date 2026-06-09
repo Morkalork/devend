@@ -47,10 +47,10 @@ export function computeBoardRect(screenWidth: number, screenHeight: number): Boa
   // Calculate positions
   const topUIHeight = screenHeight * TOP_UI_PERCENT;
   const boardBandHeight = screenHeight * BOARD_BAND_PERCENT;
-  
+
   // Center horizontally in screen
   const left = (screenWidth - boardWidth) / 2;
-  
+
   // Center vertically within the board band
   const top = topUIHeight + (boardBandHeight - boardHeight) / 2;
 

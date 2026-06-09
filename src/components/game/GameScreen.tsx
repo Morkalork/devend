@@ -3,6 +3,8 @@ import { Menu, Home, RotateCcw } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameStatsPanel } from './GameStatsPanel';
+import { TopInfoPanel } from './TopInfoPanel';
+import { BottomStatsPanel } from './BottomStatsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -39,6 +41,8 @@ interface GameScreenProps {
   onFenceSeen?: () => void;
   showMoverTutorial?: boolean;
   onMoverTutorialSeen?: () => void;
+  showInfoPanelsTutorial?: boolean;
+  onInfoPanelsTutorialSeen?: () => void;
   accentColor?: string;
   augmentProgress?: AugmentProgress;
   achievementBonuses?: Partial<Record<string, number>>;
@@ -63,6 +67,8 @@ export function GameScreen({
   onFenceSeen,
   showMoverTutorial = false,
   onMoverTutorialSeen,
+  showInfoPanelsTutorial = false,
+  onInfoPanelsTutorialSeen,
   accentColor: externalAccentColor,
   augmentProgress,
   achievementBonuses,
@@ -99,6 +105,9 @@ export function GameScreen({
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
 
   const accentColor = externalAccentColor || getAccentColor();
+
+  const [topPanelOpen, setTopPanelOpen] = useState(false);
+  const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -139,6 +148,7 @@ export function GameScreen({
             accentColor={accentColor}
             augmentProgress={augmentProgress}
             microManagerPerLock={activeModifiers.microManagerPerLock}
+            onExpand={() => setTopPanelOpen(true)}
           />
         </div>
 
@@ -177,6 +187,7 @@ export function GameScreen({
           activeModifiers={activeModifiers}
           accentColor={accentColor}
           lockedBalls={totalLockedBalls}
+          onExpand={() => setBottomPanelOpen(true)}
         />
         
 
@@ -262,6 +273,46 @@ export function GameScreen({
           "Balls bounce off them — but if your growing fence touches one, you lose a life.\n\n" +
           "Watch the track lines and time your fences carefully!"
         }
+      />
+
+      {/* Info panels tutorial — shown after fence tutorial, first run only */}
+      <TutorialOverlay
+        visible={inGameStep === 'done' && showInfoPanelsTutorial && !showMoverOverlay}
+        onDismiss={onInfoPanelsTutorialSeen}
+        accentColor={accentColor}
+        title="Info Panels"
+        body={
+          "The status bars are expandable!\n\n" +
+          "Tap the TOP BAR to see full level details, all your active upgrades with descriptions, and augment progress.\n\n" +
+          "Tap the BOTTOM BAR to view every active modifier explained in plain language."
+        }
+      />
+
+      {/* Full-screen top info panel */}
+      <TopInfoPanel
+        visible={topPanelOpen}
+        onClose={() => setTopPanelOpen(false)}
+        levelNumber={levelNumber}
+        cutsUsed={gameState.cutsUsed}
+        parCuts={level.expectedCuts}
+        lives={lives}
+        spaceRemaining={gameState.spaceRemaining}
+        spaceRequired={100 - level.sizeThreshold}
+        lockedBalls={totalLockedBalls}
+        threadLockRequired={level.threadLockRequired}
+        ownedUpgrades={ownedUpgrades}
+        accentColor={accentColor}
+        augmentProgress={augmentProgress}
+        microManagerPerLock={activeModifiers.microManagerPerLock}
+      />
+
+      {/* Full-screen bottom stats panel */}
+      <BottomStatsPanel
+        visible={bottomPanelOpen}
+        onClose={() => setBottomPanelOpen(false)}
+        activeModifiers={activeModifiers}
+        accentColor={accentColor}
+        lockedBalls={totalLockedBalls}
       />
     </>
   );

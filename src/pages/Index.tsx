@@ -129,6 +129,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onFenceSeen={session.markFenceSeen}
                 showMoverTutorial={session.showMoverTutorial}
                 onMoverTutorialSeen={session.markMoverSeen}
+                showInfoPanelsTutorial={session.showInfoPanelsTutorial}
+                onInfoPanelsTutorialSeen={session.markInfoPanelsSeen}
                 accentColor={accentHex}
                 augmentProgress={session.augmentProgress}
                 achievementBonuses={session.achievementBonuses}

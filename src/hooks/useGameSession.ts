@@ -81,10 +81,12 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     shouldShowStore,
     shouldShowAugment,
     shouldShowMover,
+    shouldShowInfoPanels,
     markFenceSeen,
     markStoreSeen,
     markAugmentSeen,
     markMoverSeen,
+    markInfoPanelsSeen,
     resetAllTutorials,
   } = useTutorialManager();
 
@@ -369,10 +371,12 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     shouldShowStore,
     shouldShowAugment,
     showMoverTutorial: shouldShowMover,
+    showInfoPanelsTutorial: shouldShowInfoPanels,
     markFenceSeen,
     markStoreSeen,
     markAugmentSeen,
     markMoverSeen,
+    markInfoPanelsSeen,
     // Certificates
     certificates,
     totalAugmentPoints,

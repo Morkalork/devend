@@ -1,14 +1,25 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 
 interface GameStatsPanelProps {
   activeModifiers: GameModifiers;
   accentColor: string;
   lockedBalls?: number;
+  onExpand?: () => void;
 }
 
 export const GameStatsPanel = React.forwardRef<HTMLDivElement, GameStatsPanelProps>(
-function GameStatsPanel({ activeModifiers, accentColor, lockedBalls = 0 }, ref) {
+function GameStatsPanel({ activeModifiers, accentColor, lockedBalls = 0, onExpand }, ref) {
+  const swipeStartYRef = useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    swipeStartYRef.current = e.touches[0].clientY;
+  };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (swipeStartYRef.current === null || !onExpand) return;
+    if (swipeStartYRef.current - e.changedTouches[0].clientY > 30) onExpand();
+    swipeStartYRef.current = null;
+  };
   const modifiers = activeModifiers;
 
   const formatPercent = (value: number) => `${Math.round(value * 100)}%`;
@@ -37,20 +48,23 @@ function GameStatsPanel({ activeModifiers, accentColor, lockedBalls = 0 }, ref) 
   return (
     <div
       ref={ref}
-      className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none"
+      className={`fixed bottom-0 left-0 right-0 z-20${onExpand ? ' pointer-events-auto cursor-pointer' : ' pointer-events-none'}`}
       style={{ fontFamily: "'JetBrains Mono', monospace" }}
+      onClick={onExpand}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
-      <div 
+      <div
         className="mx-auto max-w-4xl px-3 py-2"
-        style={{ 
+        style={{
           backgroundColor: 'rgba(0, 0, 0, 0.80)',
           borderTop: `1px solid ${accentColor}40`,
         }}
       >
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
           {stats.map((stat) => (
-            <div 
-              key={stat.label} 
+            <div
+              key={stat.label}
               className="flex items-center gap-1"
               style={{
                 color: stat.changed ? accentColor : `${accentColor}bb`,
@@ -61,6 +75,11 @@ function GameStatsPanel({ activeModifiers, accentColor, lockedBalls = 0 }, ref) 
               <span className="font-bold">{stat.value}</span>
             </div>
           ))}
+          {onExpand && (
+            <div className="flex items-center gap-1 opacity-40">
+              <span style={{ color: accentColor, fontSize: '0.6rem' }}>▲ tap for details</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
