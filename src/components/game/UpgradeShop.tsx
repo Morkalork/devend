@@ -1,7 +1,23 @@
+/**
+ * UpgradeShop — the between-levels store.
+ *
+ * Shows a random selection of unlocked upgrades (3 + extraShopItems slots,
+ * plus at most one locked "teaser"). The player toggles items to buy, then
+ * "Buy & Continue" purchases the whole selection at once.
+ *
+ * Restocking (shopRestockCount modifier, Procurement upgrades): selecting an
+ * item counts as the purchase moment — for the first N selections per visit,
+ * a fresh offer is added to the shelf. Restock candidates are re-evaluated
+ * treating the current selection as owned, so buying a Junior tier can put
+ * its Senior tier on the shelf immediately. For the same reason, selections
+ * satisfy prerequisites of other shelf items; deselecting an item cascades
+ * to deselect anything that depended on it. Deselecting does not remove
+ * restocked offers or refund the restock.
+ */
 import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
-import { Clock, ArrowRight, Lock, Check, Medal } from 'lucide-react';
+import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { TutorialOverlay } from './TutorialOverlay';
 import { Certificate } from '@/types/certificate';
@@ -17,6 +33,7 @@ interface UpgradeShopProps {
   onContinue: () => void;
   accentColor?: string;
   extraShopItems?: number;
+  shopRestockCount?: number;
   showTutorial?: boolean;
   onTutorialDismiss?: () => void;
   newlyUnlockedCerts?: Certificate[];
@@ -32,6 +49,34 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/**
+ * Remove `id` from the selection, then keep removing any selected upgrades
+ * whose prerequisites are no longer satisfied (by owned or still-selected
+ * items) — deselecting a Junior tier also deselects a Senior tier that was
+ * picked up via restock on top of it.
+ */
+function deselectWithDependents(
+  selected: string[],
+  id: string,
+  ownedIds: string[],
+  upgrades: UpgradeConfig[],
+): string[] {
+  let next = selected.filter(s => s !== id);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const sid of next) {
+      const prereqs = upgrades.find(u => u.id === sid)?.prerequisites ?? [];
+      if (prereqs.some(p => !ownedIds.includes(p) && !next.includes(p))) {
+        next = next.filter(s => s !== sid);
+        changed = true;
+        break;
+      }
+    }
+  }
+  return next;
+}
+
 export function UpgradeShop({
   playerPoints,
   upgrades,
@@ -43,6 +88,7 @@ export function UpgradeShop({
   onContinue,
   accentColor,
   extraShopItems = 0,
+  shopRestockCount = 0,
   showTutorial = false,
   onTutorialDismiss,
   newlyUnlockedCerts = [],
@@ -54,8 +100,8 @@ export function UpgradeShop({
 
   const shopSlots = 3 + extraShopItems;
 
-  // Pick random offers once on mount (restock only between levels)
-  const [offeredUpgrades] = useState<UpgradeConfig[]>(() => {
+  // Pick random offers once on mount; restocks append to this list.
+  const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() => {
     // Filter out owned and upgrades not yet unlocked by level progression
     const available = upgrades.filter(u =>
       !ownedUpgradeIds.includes(u.id) &&
@@ -69,13 +115,16 @@ export function UpgradeShop({
       if (!u.prerequisites || u.prerequisites.length === 0) return false;
       return u.prerequisites.some(p => !ownedUpgradeIds.includes(p));
     });
-    const picked = shuffle(unlocked).slice(0, shopSlots);
+    const offers = shuffle(unlocked).slice(0, shopSlots);
     // Add at most one locked item if there's room
-    if (picked.length < shopSlots && locked.length > 0) {
-      picked.push(shuffle(locked)[0]);
+    if (offers.length < shopSlots && locked.length > 0) {
+      offers.push(shuffle(locked)[0]);
     }
-    return picked;
+    return offers;
   });
+
+  const [restocksUsed, setRestocksUsed] = useState(0);
+  const restocksLeft = Math.max(0, shopRestockCount - restocksUsed);
 
   // Combine owned with session purchases
   const allOwnedIds = useMemo(() => 
@@ -95,13 +144,16 @@ export function UpgradeShop({
 
   const handleItemClick = useCallback((upgrade: UpgradeConfig, alreadySelected: boolean, currentRemainingBudget: number) => {
     if (allOwnedIds.includes(upgrade.id)) return;
-    if (isLocked(upgrade.id, allOwnedIds)) return;
 
-    // Deselect if already selected
+    // Deselect if already selected — cascades to dependents (see helper)
     if (alreadySelected) {
-      setSelectedIds(prev => prev.filter(id => id !== upgrade.id));
+      setSelectedIds(prev => deselectWithDependents(prev, upgrade.id, allOwnedIds, upgrades));
       return;
     }
+
+    // Selections count toward prerequisites of other shelf items
+    const effectiveOwned = [...allOwnedIds, ...selectedIds];
+    if (isLocked(upgrade.id, effectiveOwned)) return;
 
     // Can't afford — shake instead of toast
     if (upgrade.cost > currentRemainingBudget) {
@@ -111,7 +163,25 @@ export function UpgradeShop({
     }
 
     setSelectedIds(prev => [...prev, upgrade.id]);
-  }, [allOwnedIds, isLocked]);
+
+    // Restock: the first N purchases per visit add a fresh offer to the shelf.
+    // Candidates are re-evaluated as if the selection were already owned, so
+    // the next tier of the item just bought can appear immediately.
+    if (restocksLeft > 0) {
+      const ownedAfterSelect = [...effectiveOwned, upgrade.id];
+      const candidates = upgrades.filter(u =>
+        !ownedAfterSelect.includes(u.id) &&
+        completedLevel >= (u.unlockLevel ?? 1) &&
+        !offeredUpgrades.some(o => o.id === u.id) &&
+        !isLocked(u.id, ownedAfterSelect)
+      );
+      if (candidates.length > 0) {
+        const restockedOffer = shuffle(candidates)[0];
+        setOfferedUpgrades(prev => [...prev, restockedOffer]);
+        setRestocksUsed(prev => prev + 1);
+      }
+    }
+  }, [allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades]);
 
   const handleContinue = useCallback(() => {
     for (const id of selectedIds) {
@@ -216,6 +286,23 @@ export function UpgradeShop({
           <span className="text-muted-foreground">overtime</span>
         </motion.div>
 
+        {/* Restock counter — only when the Procurement upgrades are owned */}
+        {shopRestockCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.15 }}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${restocksLeft > 0 ? 'text-cyan-400' : ''}`} />
+            <span>
+              {restocksLeft > 0
+                ? `Restocks left: ${restocksLeft} — buying an item adds a new offer`
+                : 'No restocks left this visit'}
+            </span>
+          </motion.div>
+        )}
+
         {/* Upgrade Tree */}
         <motion.div
           initial={{ y: 20, opacity: 0 }}
@@ -225,9 +312,12 @@ export function UpgradeShop({
         >
           {offeredUpgrades.map((upgrade, index) => {
                 const owned = allOwnedIds.includes(upgrade.id);
-                const locked = isLocked(upgrade.id, allOwnedIds);
                 const selected = selectedIds.includes(upgrade.id);
-                const purchasable = canPurchase(upgrade.id, effectiveOvertime, allOwnedIds);
+                // Other selected items count toward this card's prerequisites,
+                // so a restocked Senior tier unlocks while its Junior is selected
+                const effectiveOwned = [...allOwnedIds, ...selectedIds.filter(id => id !== upgrade.id)];
+                const locked = isLocked(upgrade.id, effectiveOwned);
+                const purchasable = canPurchase(upgrade.id, effectiveOvertime, effectiveOwned);
                 // Can't afford with remaining budget (unless already selected)
                 const cantAfford = !locked && !owned && !selected && upgrade.cost > remainingBudget;
                 const tierColors = TIER_COLORS[upgrade.tier];
@@ -296,7 +386,7 @@ export function UpgradeShop({
                 )}
                 {locked && !owned && lockedInfoId === upgrade.id && (
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full z-10 bg-popover border border-border rounded px-2 py-1 text-[10px] text-muted-foreground whitespace-nowrap shadow-md">
-                    Requires: {(upgrade.prerequisites || []).filter(p => !allOwnedIds.includes(p)).map(p => {
+                    Requires: {(upgrade.prerequisites || []).filter(p => !effectiveOwned.includes(p)).map(p => {
                       const prereq = upgrades.find(u => u.id === p);
                       return prereq ? prereq.name : p;
                     }).join(', ')}

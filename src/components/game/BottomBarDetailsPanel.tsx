@@ -126,6 +126,15 @@ export function BottomBarDetailsPanel({
           : 'Default shop size.',
     },
     {
+      label: 'Shop Restocks',
+      value: bonus(m.shopRestockCount),
+      changed: m.shopRestockCount !== 0,
+      description:
+        m.shopRestockCount > 0
+          ? `Your first ${m.shopRestockCount === 1 ? 'purchase' : `${m.shopRestockCount} purchases`} per shop visit each add a fresh offer to the shelf (Procurement).`
+          : 'No shop restocking.',
+    },
+    {
       label: 'MicroManager',
       value: m.microManagerPerLock > 0 ? `${Math.round(m.microManagerPerLock * 100)}% / lock` : 'Off',
       changed: m.microManagerPerLock > 0,

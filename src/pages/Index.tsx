@@ -160,6 +160,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onContinue={session.handleContinueFromShop}
                 accentColor={accentHex}
                 extraShopItems={session.activeModifiers.extraShopItems}
+                shopRestockCount={session.activeModifiers.shopRestockCount}
                 showTutorial={session.shouldShowStore}
                 onTutorialDismiss={session.markStoreSeen}
                 newlyUnlockedCerts={session.shopUnlockedCerts}

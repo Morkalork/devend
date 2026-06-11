@@ -166,6 +166,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `extraLives` | `0` | Extra lives granted when the upgrade is purchased during a run. | `1` |
 | `scoreInterestRate` | `0` | Fraction of current overtime balance added as interest between maps (capped at 8h). | `0.05` = 5% interest |
 | `extraShopItems` | `0` | Extra item slots shown in the shop after each map. | `1` |
+| `shopRestockCount` | `0` | Purchases per shop visit that refill their slot with a new offer (Procurement upgrades). | `1` |
 | `extraCertificateHours` | `0` | Bonus Certificate Hours. ⚠ Defined but **not yet consumed** by the run-end payout (`finalizeRun` in `useCertificateManager`) — the Certification Wizard upgrade currently has no effect. | `1` |
 
 ---
