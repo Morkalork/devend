@@ -1,15 +1,19 @@
+/**
+ * GameBottomBar — compact bar below the board summarising the active
+ * GameModifiers as icons. Tapping it opens BottomBarDetailsPanel.
+ */
 import React, { useRef } from 'react';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 
-interface GameStatsPanelProps {
+interface GameBottomBarProps {
   activeModifiers: GameModifiers;
   accentColor: string;
   lockedBalls?: number;
   onExpand?: () => void;
 }
 
-export const GameStatsPanel = React.forwardRef<HTMLDivElement, GameStatsPanelProps>(
-function GameStatsPanel({ activeModifiers, accentColor, lockedBalls = 0, onExpand }, ref) {
+export const GameBottomBar = React.forwardRef<HTMLDivElement, GameBottomBarProps>(
+function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand }, ref) {
   const swipeStartYRef = useRef<number | null>(null);
 
   const handleTouchStart = (e: React.TouchEvent) => {

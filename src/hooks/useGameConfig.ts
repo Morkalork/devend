@@ -1,3 +1,8 @@
+/**
+ * useGameConfig — global presentation/tuning values from public/game-config.yml
+ * (canvas opacity, background colours, fence speed curve, …).
+ * Falls back to the defaults below if the file fails to load.
+ */
 import { useState, useEffect } from 'react';
 import yaml from 'js-yaml';
 

@@ -1,3 +1,14 @@
+/**
+ * useContinueCheckpoint — the time-limited 'Continue' option on the welcome
+ * screen.
+ *
+ * When a run ends, the start of the current 5-level tier is saved with a
+ * 10-minute expiry. Within that window the welcome screen offers to resume
+ * from that tier instead of level 1; after it expires the player starts over.
+ *
+ * Not to be confused with useCheckpointSnapshots, which stores per-level
+ * snapshots for the in-game level picker.
+ */
 import { useState, useCallback, useEffect } from 'react';
 
 const CHECKPOINT_STORAGE_KEY = 'ballbreaker_checkpoint';
@@ -35,7 +46,7 @@ export function getTierScoreMultiplier(level: number): number {
   return 1 + (tier * 0.1);
 }
 
-export function useCheckpoint() {
+export function useContinueCheckpoint() {
   const [checkpointData, setCheckpointData] = useState<CheckpointData | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 

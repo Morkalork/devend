@@ -51,6 +51,11 @@ export type WallPolygonEntity = WallEntity & PolygonShape;
 export type WallCircleEntity = WallEntity & CircleShape;
 export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity | LevelMoverEntity;
 
+/** True when the entity is a wall with the mirror flag set. Movers can never be mirrors. */
+export function isMirrorEntity(entity: LevelEntity): boolean {
+  return entity.kind === "wall" && !!entity.mirror;
+}
+
 // ── Mover entities — obstacles that oscillate back and forth ──────────────
 export interface MoverEntityBase extends BaseEntity {
   kind: "mover";

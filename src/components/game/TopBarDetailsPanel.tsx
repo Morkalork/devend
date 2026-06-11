@@ -1,16 +1,20 @@
+/**
+ * TopBarDetailsPanel — full-screen expansion of GameTopBar: level details,
+ * each owned upgrade with its description, and certificate-hour progress.
+ */
 import { X } from 'lucide-react';
 import { Heart, Lock, Scissors, Target, Hexagon } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
 
-interface AugmentProgress {
+interface CertificateHourProgress {
   levelsCompleted: number;
-  levelsToNextPoint: number;
-  progressInCurrentPoint: number;
-  pointsEarned: number;
-  levelsPerPoint: number;
+  levelsToNextHour: number;
+  progressInCurrentHour: number;
+  hoursEarned: number;
+  levelsPerHour: number;
 }
 
-interface TopInfoPanelProps {
+interface TopBarDetailsPanelProps {
   visible: boolean;
   onClose: () => void;
   levelNumber: number;
@@ -23,11 +27,11 @@ interface TopInfoPanelProps {
   threadLockRequired?: number;
   ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
-  augmentProgress?: AugmentProgress;
+  certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
 }
 
-export function TopInfoPanel({
+export function TopBarDetailsPanel({
   visible,
   onClose,
   levelNumber,
@@ -40,9 +44,9 @@ export function TopInfoPanel({
   threadLockRequired,
   ownedUpgrades,
   accentColor = '#00ff88',
-  augmentProgress,
+  certificateProgress,
   microManagerPerLock = 0,
-}: TopInfoPanelProps) {
+}: TopBarDetailsPanelProps) {
   if (!visible) return null;
 
   const lockReq = threadLockRequired ?? 0;
@@ -209,8 +213,8 @@ export function TopInfoPanel({
               </p>
             </div>
 
-            {/* Augment progress */}
-            {augmentProgress && (
+            {/* Certificate-hour progress */}
+            {certificateProgress && (
               <div style={cardStyle}>
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-2">
@@ -218,12 +222,12 @@ export function TopInfoPanel({
                     <span className="font-bold text-sm" style={{ color: accentColor }}>Certificate Points</span>
                   </div>
                   <span className="font-bold text-base tabular-nums" style={{ color: '#ffffff' }}>
-                    {augmentProgress.progressInCurrentPoint} / {augmentProgress.levelsPerPoint}
+                    {certificateProgress.progressInCurrentHour} / {certificateProgress.levelsPerHour}
                   </span>
                 </div>
                 <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.6 }}>
-                  {augmentProgress.pointsEarned} point{augmentProgress.pointsEarned !== 1 ? 's' : ''} earned so far.
-                  {' '}Complete {augmentProgress.levelsPerPoint - augmentProgress.progressInCurrentPoint} more level{augmentProgress.levelsPerPoint - augmentProgress.progressInCurrentPoint !== 1 ? 's' : ''} to earn the next cert point and unlock upgrades in the Certificate Store.
+                  {certificateProgress.hoursEarned} point{certificateProgress.hoursEarned !== 1 ? 's' : ''} earned so far.
+                  {' '}Complete {certificateProgress.levelsPerHour - certificateProgress.progressInCurrentHour} more level{certificateProgress.levelsPerHour - certificateProgress.progressInCurrentHour !== 1 ? 's' : ''} to earn the next cert point and unlock upgrades in the Certificate Store.
                 </p>
               </div>
             )}

@@ -1,7 +1,11 @@
+/**
+ * BottomBarDetailsPanel — full-screen expansion of GameBottomBar: every
+ * active modifier explained in plain language.
+ */
 import { X } from 'lucide-react';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 
-interface BottomStatsPanelProps {
+interface BottomBarDetailsPanelProps {
   visible: boolean;
   onClose: () => void;
   activeModifiers: GameModifiers;
@@ -16,13 +20,13 @@ interface StatRow {
   description: string;
 }
 
-export function BottomStatsPanel({
+export function BottomBarDetailsPanel({
   visible,
   onClose,
   activeModifiers,
   accentColor = '#00ff88',
   lockedBalls = 0,
-}: BottomStatsPanelProps) {
+}: BottomBarDetailsPanelProps) {
   if (!visible) return null;
 
   const m = activeModifiers;

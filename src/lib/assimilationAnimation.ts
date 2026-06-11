@@ -325,7 +325,7 @@ export function renderAssimilation(
         offscreen.width = cw;
         offscreen.height = ch;
       }
-      const offCtx = offscreen.getContext('2d')!;
+      const offCtx = offscreen.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
       drawTentacles(
         offCtx, anim, toScreenX, toScreenY, boardRect.scale,

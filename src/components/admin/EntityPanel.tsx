@@ -1,5 +1,5 @@
 import { Plus, Trash2, Circle, Pentagon, Square, Copy } from 'lucide-react';
-import { LevelConfig, LevelEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
+import { LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
 
 interface EntityPanelProps {
   level: LevelConfig;
@@ -34,7 +34,7 @@ export function EntityPanel({
   const selectedBall = level.balls.find(b => b.id === selectedBallId);
 
   const getEntityIcon = (entity: LevelEntity) => {
-    const color = entity.mirror ? 'text-cyan-400' : 'text-destructive';
+    const color = isMirrorEntity(entity) ? 'text-cyan-400' : 'text-destructive';
     switch (entity.shape) {
       case 'circle': return <Circle className={`w-4 h-4 ${color}`} />;
       case 'rect': return <Square className={`w-4 h-4 ${color}`} />;
@@ -139,7 +139,7 @@ export function EntityPanel({
           <label className="flex items-center gap-2 text-xs">
             <input
               type="checkbox"
-              checked={!!selectedEntity.mirror}
+              checked={isMirrorEntity(selectedEntity)}
               onChange={(e) => onUpdateEntity(selectedEntity.id, { mirror: e.target.checked || undefined } as Partial<LevelEntity>)}
               className="rounded"
             />

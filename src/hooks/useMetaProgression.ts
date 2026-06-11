@@ -1,3 +1,10 @@
+/**
+ * useMetaProgression — lifetime player stats (fences drawn, highest level,
+ * lives lost, …) persisted in localStorage across runs.
+ *
+ * Stats feed achievement requirements and the unlock conditions of locked
+ * 'super' upgrades. See src/types/metaProgression.ts for the stat list.
+ */
 import { useState, useCallback, useEffect } from 'react';
 import {
   MetaProgressionStats,

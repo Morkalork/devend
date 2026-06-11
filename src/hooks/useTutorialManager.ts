@@ -1,4 +1,18 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
+
+/**
+ * Tracks which one-time tutorials the player has already seen, persisted in
+ * localStorage so they only appear on the first encounter.
+ *
+ * Flags:
+ * - `fence`      — interactive "draw your first fence" tutorial (level 1)
+ * - `store`      — upgrade shop intro (first shop visit)
+ * - `certStore`  — certificate store intro (first store visit)
+ * - `mover`      — moving-obstacle warning (first level with movers)
+ * - `infoPanels` — "the top/bottom bars are expandable" hint
+ *
+ * "Re-enable All Tutorials" in the options screen calls resetAllTutorials().
+ */
 
 const STORAGE_KEY = 'tutorials_seen_v1';
 const OLD_STORAGE_KEY = 'ball_breaker_seen_interactive_tutorial';
@@ -6,79 +20,68 @@ const OLD_STORAGE_KEY = 'ball_breaker_seen_interactive_tutorial';
 interface TutorialsSeen {
   fence: boolean;
   store: boolean;
-  augment: boolean;
+  certStore: boolean;
   mover: boolean;
   infoPanels: boolean;
 }
+
+const NONE_SEEN: TutorialsSeen = {
+  fence: false,
+  store: false,
+  certStore: false,
+  mover: false,
+  infoPanels: false,
+};
 
 function loadSeen(): TutorialsSeen {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { fence: !!parsed.fence, store: !!parsed.store, augment: !!parsed.augment, mover: !!parsed.mover, infoPanels: !!parsed.infoPanels };
+      return {
+        fence: !!parsed.fence,
+        store: !!parsed.store,
+        // `augment` is the legacy name for the certificate store flag.
+        certStore: !!(parsed.certStore ?? parsed.augment),
+        mover: !!parsed.mover,
+        infoPanels: !!parsed.infoPanels,
+      };
     }
-    // Migration: if old key is set, mark fence as seen
+    // Migration: very old installs stored a single boolean for the fence tutorial.
     const old = localStorage.getItem(OLD_STORAGE_KEY);
     if (old === 'true') {
-      return { fence: true, store: false, augment: false, mover: false };
+      return { ...NONE_SEEN, fence: true };
     }
   } catch {
-    // ignore
+    // ignore corrupt storage and fall through to defaults
   }
-  return { fence: false, store: false, augment: false, mover: false, infoPanels: false };
+  return { ...NONE_SEEN };
 }
 
 function saveSeen(seen: TutorialsSeen) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seen));
   } catch {
-    // ignore
+    // ignore (storage may be unavailable, e.g. private browsing)
   }
 }
 
 export function useTutorialManager() {
   const [seen, setSeen] = useState<TutorialsSeen>(loadSeen);
 
-  const markFenceSeen = useCallback(() => {
+  const markSeen = useCallback((flag: keyof TutorialsSeen) => {
     setSeen(prev => {
-      const next = { ...prev, fence: true };
+      const next = { ...prev, [flag]: true };
       saveSeen(next);
       return next;
     });
   }, []);
 
-  const markStoreSeen = useCallback(() => {
-    setSeen(prev => {
-      const next = { ...prev, store: true };
-      saveSeen(next);
-      return next;
-    });
-  }, []);
-
-  const markAugmentSeen = useCallback(() => {
-    setSeen(prev => {
-      const next = { ...prev, augment: true };
-      saveSeen(next);
-      return next;
-    });
-  }, []);
-
-  const markMoverSeen = useCallback(() => {
-    setSeen(prev => {
-      const next = { ...prev, mover: true };
-      saveSeen(next);
-      return next;
-    });
-  }, []);
-
-  const markInfoPanelsSeen = useCallback(() => {
-    setSeen(prev => {
-      const next = { ...prev, infoPanels: true };
-      saveSeen(next);
-      return next;
-    });
-  }, []);
+  const markFenceSeen = useCallback(() => markSeen('fence'), [markSeen]);
+  const markStoreSeen = useCallback(() => markSeen('store'), [markSeen]);
+  const markCertStoreSeen = useCallback(() => markSeen('certStore'), [markSeen]);
+  const markMoverSeen = useCallback(() => markSeen('mover'), [markSeen]);
+  const markInfoPanelsSeen = useCallback(() => markSeen('infoPanels'), [markSeen]);
 
   const resetAllTutorials = useCallback(() => {
     try {
@@ -87,18 +90,18 @@ export function useTutorialManager() {
     } catch {
       // ignore
     }
-    setSeen({ fence: false, store: false, augment: false, mover: false, infoPanels: false });
+    setSeen({ ...NONE_SEEN });
   }, []);
 
   return {
     shouldShowFence: !seen.fence,
     shouldShowStore: !seen.store,
-    shouldShowAugment: !seen.augment,
+    shouldShowCertStore: !seen.certStore,
     shouldShowMover: !seen.mover,
     shouldShowInfoPanels: !seen.infoPanels,
     markFenceSeen,
     markStoreSeen,
-    markAugmentSeen,
+    markCertStoreSeen,
     markMoverSeen,
     markInfoPanelsSeen,
     resetAllTutorials,

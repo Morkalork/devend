@@ -1,3 +1,8 @@
+/**
+ * GameTopBar — compact status bar above the board: level, cuts vs par,
+ * lives, space cleared, locked balls, owned upgrade icons and
+ * certificate-hour progress. Tapping it opens TopBarDetailsPanel.
+ */
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -8,12 +13,12 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-interface AugmentProgress {
+interface CertificateHourProgress {
   levelsCompleted: number;
-  levelsToNextPoint: number;
-  progressInCurrentPoint: number;
-  pointsEarned: number;
-  levelsPerPoint: number;
+  levelsToNextHour: number;
+  progressInCurrentHour: number;
+  hoursEarned: number;
+  levelsPerHour: number;
 }
 
 interface GameTopBarProps {
@@ -27,7 +32,7 @@ interface GameTopBarProps {
   threadLockRequired?: number;
   ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
-  augmentProgress?: AugmentProgress;
+  certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
   onExpand?: () => void;
 }
@@ -43,7 +48,7 @@ export function GameTopBar({
   threadLockRequired,
   ownedUpgrades,
   accentColor = '#00ff88',
-  augmentProgress,
+  certificateProgress,
   microManagerPerLock = 0,
   onExpand,
 }: GameTopBarProps) {
@@ -146,7 +151,7 @@ export function GameTopBar({
 
   return (
     <div className="flex-shrink-0 flex flex-col">
-      {/* Row 1: Navigation — menu, level, lives, augment progress */}
+      {/* Row 1: Navigation — menu, level, lives, certificate-hour progress */}
       <div
         className={`px-3 py-2 flex items-center justify-between gap-2${onExpand ? ' cursor-pointer' : ''}`}
         onClick={onExpand}
@@ -180,24 +185,24 @@ export function GameTopBar({
           ))}
         </div>
 
-        {/* Augment Progress */}
-        {augmentProgress && (
+        {/* Certificate-hour progress */}
+        {certificateProgress && (
           <div className="flex items-center gap-1.5 min-w-0">
             <Hexagon
               className="w-5 h-5 flex-shrink-0"
               style={{
                 color: '#ffffff',
-                fill: augmentProgress.pointsEarned > 0 ? 'rgba(255,255,255,0.3)' : 'transparent',
+                fill: certificateProgress.hoursEarned > 0 ? 'rgba(255,255,255,0.3)' : 'transparent',
               }}
             />
             <span
               className="font-display text-base font-bold tabular-nums"
               style={{
                 color: '#ffffff',
-                textShadow: augmentProgress.pointsEarned > 0 ? '0 0 8px rgba(255,255,255,0.6)' : 'none',
+                textShadow: certificateProgress.hoursEarned > 0 ? '0 0 8px rgba(255,255,255,0.6)' : 'none',
               }}
             >
-              {augmentProgress.progressInCurrentPoint}/{augmentProgress.levelsPerPoint}
+              {certificateProgress.progressInCurrentHour}/{certificateProgress.levelsPerHour}
             </span>
           </div>
         )}

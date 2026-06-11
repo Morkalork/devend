@@ -1,3 +1,13 @@
+/**
+ * useCheckpointSnapshots — saved per-level run snapshots (score, upgrades,
+ * lives) that power the level picker on the welcome screen.
+ *
+ * A snapshot is saved each time the player advances to a new level; the
+ * picker lets them restart from any saved level with the matching state.
+ *
+ * Not to be confused with useContinueCheckpoint, which is the single
+ * 10-minute 'Continue' checkpoint.
+ */
 import { useCallback, useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'jezzball_checkpoints_v2';
@@ -30,7 +40,7 @@ function saveToStorage(snapshots: CheckpointSnapshot[]): void {
   }
 }
 
-export function useCheckpointManager() {
+export function useCheckpointSnapshots() {
   const [checkpoints, setCheckpoints] = useState<CheckpointSnapshot[]>(() => loadFromStorage());
 
   // Sync state from storage on mount in case another tab wrote

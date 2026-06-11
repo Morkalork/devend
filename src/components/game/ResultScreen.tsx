@@ -7,7 +7,7 @@ interface ResultScreenProps {
   result: GameResult;
   onMainMenu: () => void;
   accentColor?: string;
-  runPointsAwarded?: number;
+  runHoursAwarded?: number;
   runLevelsCompleted?: number;
 }
 
@@ -15,7 +15,7 @@ export function ResultScreen({
   result,
   onMainMenu,
   accentColor,
-  runPointsAwarded = 0,
+  runHoursAwarded = 0,
   runLevelsCompleted = 0,
 }: ResultScreenProps) {
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
@@ -121,7 +121,7 @@ export function ResultScreen({
             </p>
           </div>
 
-          {/* Augment Points Earned */}
+          {/* Certificate hours earned */}
           {runLevelsCompleted > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -135,11 +135,11 @@ export function ResultScreen({
               <p className="text-3xl font-display font-bold text-foreground mb-2">
                 {runLevelsCompleted}
               </p>
-              {runPointsAwarded > 0 && (
+              {runHoursAwarded > 0 && (
                 <div className="flex items-center justify-center gap-2">
                   <Hexagon className="w-6 h-6 text-white fill-white/20" />
                   <p className="text-2xl font-display font-bold text-white">
-                    +{runPointsAwarded}h Certificate Hour{runPointsAwarded > 1 ? 's' : ''}
+                    +{runHoursAwarded}h Certificate Hour{runHoursAwarded > 1 ? 's' : ''}
                   </p>
                 </div>
               )}

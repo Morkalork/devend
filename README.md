@@ -2,11 +2,14 @@
 
 A browser-based arcade game inspired by JezzBall. Draw fences to shrink the play area while avoiding bouncing balls.
 
+**New to the codebase? Read [ARCHITECTURE.md](ARCHITECTURE.md) first** — it explains the screen flow, the hooks layer, the modifier pipeline and the canvas game loop, with a cookbook for common tasks (add a level, add an upgrade, tune scoring, …).
+
 ## Tech stack
 
 - React + TypeScript + Vite
 - Tailwind CSS + framer-motion
 - Fonts: Orbitron, JetBrains Mono, Space Grotesk
+- No backend: content is YAML in `public/`, persistence is localStorage
 
 ## Local development
 
@@ -14,11 +17,17 @@ A browser-based arcade game inspired by JezzBall. Draw fences to shrink the play
 # Install dependencies
 npm install
 
-# Start dev server (localhost:5173)
+# Start dev server (localhost:8080)
 npm run dev
 
-# Type check
-npx tsc --noEmit
+# Type check (note: must use -b; bare `tsc --noEmit` is a no-op with project references)
+npx tsc -b --noEmit
+
+# Lint
+npm run lint
+
+# Unit tests
+npm test
 
 # Production build
 npm run build
@@ -57,7 +66,7 @@ From the Admin screen you can navigate to:
 Append `?level=N` to the URL to start the game at level N:
 
 ```
-http://localhost:5173/?level=5
+http://localhost:8080/?level=5
 ```
 
 The game starts immediately on page load, then strips the param from the URL. The level number corresponds to the `level:` field in `public/map.yml`.
@@ -78,4 +87,4 @@ Maps are defined in `public/map.yml`. Each entry has:
 - `level` — integer level number (multiple maps can share a number as variants)
 - Obstacle, ball, and modifier configuration
 
-See `public/README-modifiers.md` for a full reference of all modifier keys, certificate effects, achievement stats, and map fields.
+See `public/README-modifiers.md` for a full reference of all modifier keys, certificate effects, achievement stats, and map fields, and `public/LEVEL_CONSTRUCTION.md` for level-design guidance.

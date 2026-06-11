@@ -1,3 +1,16 @@
+/**
+ * useCertificateManager — certificates and Certificate Hours (meta-progression).
+ *
+ * Certificates are permanent bonuses defined in public/certificates.yml.
+ * Most unlock by buying a specific upgrade's max tier in several separate
+ * runs; two unlock via achievements. Once unlocked, individual certificate
+ * levels are bought with Certificate Hours — earned at a rate of one per
+ * LEVELS_PER_HOUR completed levels, banked when the run ends.
+ *
+ * Persistence: localStorage key CERT_STORAGE_KEY (see src/types/certificate.ts).
+ * Owned-level effects are exposed via certBonuses, which useGameSession
+ * merges with achievement bonuses into the GameModifiers pipeline.
+ */
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import yaml from 'js-yaml';
 import {
@@ -9,15 +22,17 @@ import {
 } from '@/types/certificate';
 import { GameModifiers, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
 
-const LEVELS_PER_POINT = 5;
+const LEVELS_PER_HOUR = 5;
 
 function loadPersistence(): CertPersistence {
   try {
     const stored = localStorage.getItem(CERT_STORAGE_KEY);
     if (!stored) return { ...DEFAULT_CERT_PERSISTENCE };
     const parsed = JSON.parse(stored);
+    // `totalAugmentPoints` is the legacy storage name for certificate hours.
+    const storedHours = parsed.totalCertificateHours ?? parsed.totalAugmentPoints;
     return {
-      totalAugmentPoints: typeof parsed.totalAugmentPoints === 'number' ? parsed.totalAugmentPoints : 0,
+      totalCertificateHours: typeof storedHours === 'number' ? storedHours : 0,
       maxTierCounts: typeof parsed.maxTierCounts === 'object' && parsed.maxTierCounts !== null ? parsed.maxTierCounts : {},
       unlockedCertIds: Array.isArray(parsed.unlockedCertIds) ? parsed.unlockedCertIds : [],
       certLevelsOwned: typeof parsed.certLevelsOwned === 'object' && parsed.certLevelsOwned !== null ? parsed.certLevelsOwned : {},
@@ -32,7 +47,7 @@ function savePersistence(state: CertPersistence): void {
 }
 
 export interface CertManagerOptions {
-  onPointEarned?: () => void;
+  onHourEarned?: () => void;
 }
 
 export function useCertificateManager(options: CertManagerOptions = {}) {
@@ -44,18 +59,18 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
 
   // In-run tracking (ephemeral, not persisted)
   const [runLevelsCompleted, setRunLevelsCompleted] = useState(0);
-  const runPointsEarned = Math.floor(runLevelsCompleted / LEVELS_PER_POINT);
+  const runHoursEarned = Math.floor(runLevelsCompleted / LEVELS_PER_HOUR);
 
   // Synchronous pending-unlock accumulator (for reading across React batching boundaries)
   const pendingUnlocksRef = useRef<Certificate[]>([]);
 
-  const prevPointsRef = useRef(0);
-  const onPointEarnedRef = useRef(options.onPointEarned);
-  useEffect(() => { onPointEarnedRef.current = options.onPointEarned; }, [options.onPointEarned]);
+  const prevHoursRef = useRef(0);
+  const onHourEarnedRef = useRef(options.onHourEarned);
+  useEffect(() => { onHourEarnedRef.current = options.onHourEarned; }, [options.onHourEarned]);
   useEffect(() => {
-    if (runPointsEarned > prevPointsRef.current) onPointEarnedRef.current?.();
-    prevPointsRef.current = runPointsEarned;
-  }, [runPointsEarned]);
+    if (runHoursEarned > prevHoursRef.current) onHourEarnedRef.current?.();
+    prevHoursRef.current = runHoursEarned;
+  }, [runHoursEarned]);
 
   useEffect(() => {
     const loaded = loadPersistence();
@@ -174,12 +189,12 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
       .slice(currentLevel, targetLevel)
       .reduce((sum, l) => sum + l.cost, 0);
 
-    if (persistence.totalAugmentPoints < totalCost) return false;
+    if (persistence.totalCertificateHours < totalCost) return false;
 
     setPersistence(prev => {
       const newState = {
         ...prev,
-        totalAugmentPoints: prev.totalAugmentPoints - totalCost,
+        totalCertificateHours: prev.totalCertificateHours - totalCost,
         certLevelsOwned: { ...prev.certLevelsOwned, [certId]: targetLevel },
       };
       savePersistence(newState);
@@ -232,7 +247,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
 
   const resetRunProgress = useCallback(() => {
     setRunLevelsCompleted(0);
-    prevPointsRef.current = 0;
+    prevHoursRef.current = 0;
   }, []);
 
   const incrementRunLevel = useCallback(() => {
@@ -240,26 +255,26 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
   }, []);
 
   const finalizeRun = useCallback((): number => {
-    const pointsAwarded = Math.floor(runLevelsCompleted / LEVELS_PER_POINT);
+    const hoursAwarded = Math.floor(runLevelsCompleted / LEVELS_PER_HOUR);
     if (runLevelsCompleted > 0) {
       setPersistence(prev => {
-        const newState = { ...prev, totalAugmentPoints: prev.totalAugmentPoints + pointsAwarded };
+        const newState = { ...prev, totalCertificateHours: prev.totalCertificateHours + hoursAwarded };
         savePersistence(newState);
         return newState;
       });
     }
     setRunLevelsCompleted(0);
-    prevPointsRef.current = 0;
-    return pointsAwarded;
+    prevHoursRef.current = 0;
+    return hoursAwarded;
   }, [runLevelsCompleted]);
 
   const runProgress = useMemo(() => ({
     levelsCompleted: runLevelsCompleted,
-    levelsToNextPoint: LEVELS_PER_POINT - (runLevelsCompleted % LEVELS_PER_POINT),
-    progressInCurrentPoint: runLevelsCompleted % LEVELS_PER_POINT,
-    pointsEarned: runPointsEarned,
-    levelsPerPoint: LEVELS_PER_POINT,
-  }), [runLevelsCompleted, runPointsEarned]);
+    levelsToNextHour: LEVELS_PER_HOUR - (runLevelsCompleted % LEVELS_PER_HOUR),
+    progressInCurrentHour: runLevelsCompleted % LEVELS_PER_HOUR,
+    hoursEarned: runHoursEarned,
+    levelsPerHour: LEVELS_PER_HOUR,
+  }), [runLevelsCompleted, runHoursEarned]);
 
   const resetAllData = useCallback(() => {
     const newState = { ...DEFAULT_CERT_PERSISTENCE };
@@ -272,13 +287,13 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     isLoading,
     error,
     isLoaded,
-    totalAugmentPoints: persistence.totalAugmentPoints,
+    totalCertificateHours: persistence.totalCertificateHours,
     certLevelsOwned: persistence.certLevelsOwned,
     unlockedCertIds: persistence.unlockedCertIds,
     maxTierCounts: persistence.maxTierCounts,
     // Run tracking
     runLevelsCompleted,
-    runPointsEarned,
+    runHoursEarned,
     runProgress,
     certBonuses,
     // Methods

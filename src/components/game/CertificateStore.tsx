@@ -1,3 +1,11 @@
+/**
+ * CertificateStore — the between-runs meta-progression shop.
+ *
+ * Certificates (public/certificates.yml) unlock by mastering upgrade chains
+ * or completing achievements; their levels are bought here with Certificate
+ * Hours. State and purchase logic live in useCertificateManager — this
+ * component is purely presentational.
+ */
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Medal, ArrowLeft, Check, Lock, ChevronRight, Hexagon } from 'lucide-react';
@@ -6,9 +14,9 @@ import { CRTBackground } from './CRTBackground';
 import { Progress } from '@/components/ui/progress';
 import { TutorialOverlay } from './TutorialOverlay';
 
-interface AugmentStoreProps {
+interface CertificateStoreProps {
   certificates: Certificate[];
-  totalAugmentPoints: number;
+  totalCertificateHours: number;
   certLevelsOwned: Record<string, number>;
   unlockedCertIds: string[];
   maxTierCounts: Record<string, number>;
@@ -28,9 +36,9 @@ function getCostForSelection(
   return cert.levels.slice(currentOwned, targetLevel).reduce((sum, l) => sum + l.cost, 0);
 }
 
-export function AugmentStore({
+export function CertificateStore({
   certificates,
-  totalAugmentPoints,
+  totalCertificateHours,
   certLevelsOwned,
   unlockedCertIds,
   maxTierCounts,
@@ -39,7 +47,7 @@ export function AugmentStore({
   accentColor,
   showTutorial = false,
   onTutorialDismiss,
-}: AugmentStoreProps) {
+}: CertificateStoreProps) {
   // selectedLevel[certId] = target level (1-indexed) the player has tapped
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>({});
 
@@ -109,9 +117,9 @@ export function AugmentStore({
     });
   };
 
-  // Live projected balance: starting from totalAugmentPoints, deduct all pending selections
+  // Live projected balance: starting from totalCertificateHours, deduct all pending selections
   const projectedBalance = useMemo(() => {
-    let balance = totalAugmentPoints;
+    let balance = totalCertificateHours;
     for (const cert of certificates) {
       const target = selectedLevels[cert.id];
       if (target != null) {
@@ -119,7 +127,7 @@ export function AugmentStore({
       }
     }
     return balance;
-  }, [totalAugmentPoints, selectedLevels, certificates, certLevelsOwned]);
+  }, [totalCertificateHours, selectedLevels, certificates, certLevelsOwned]);
 
   return (
     <>
@@ -171,7 +179,7 @@ export function AugmentStore({
                   const levelsOwned = certLevelsOwned[cert.id] || 0;
                   const selectedTarget = selectedLevels[cert.id];
                   const pendingCost = selectedTarget != null ? getCostForSelection(cert, selectedTarget, certLevelsOwned) : 0;
-                  const canAfford = pendingCost <= totalAugmentPoints && pendingCost > 0;
+                  const canAfford = pendingCost <= totalCertificateHours && pendingCost > 0;
 
                   return (
                     <motion.div
@@ -233,7 +241,7 @@ export function AugmentStore({
                             </span>
                             {!canAfford && (
                               <span className="text-xs text-destructive/80 ml-1">
-                                (need {pendingCost - totalAugmentPoints}h more)
+                                (need {pendingCost - totalCertificateHours}h more)
                               </span>
                             )}
                           </div>

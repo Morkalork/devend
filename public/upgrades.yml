@@ -354,13 +354,13 @@ upgrades:
       extraShopItems: 1
 
   - id: augmentation_wizard
-    name: Augmentation Wizard
+    name: Certification Wizard
     tier: Wizard
-    description: Gain +1 augmentation point.
+    description: Gain +1 Certificate Hour.
     cost: 55
     unlockLevel: 10
     modifiers:
-      extraAugmentationPoints: 1
+      extraCertificateHours: 1
 
 
   # ===============================

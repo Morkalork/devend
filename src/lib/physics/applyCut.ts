@@ -25,7 +25,7 @@ import {
 } from "@/lib/regionOwnership";
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
-import { calculateScore } from "@/hooks/useScoring";
+import { calculateScore } from "@/lib/scoring";
 import { LOCK_TOTAL_DURATION, BALL_SPEED_INCREASE } from "@/lib/gameConstants";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {

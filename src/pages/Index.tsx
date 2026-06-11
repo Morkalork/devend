@@ -1,6 +1,16 @@
+/**
+ * Index — the app's only page; renders whichever screen is active.
+ *
+ * Two hooks drive everything:
+ *   - useScreenNavigation: which full-screen view is visible
+ *   - useGameSession:      all game/run state, passed to each screen as props
+ *
+ * Screens slide left/right with framer-motion based on SCREEN_ORDER.
+ * Admin screens are lazy-loaded and only available in dev (or ?admin=true).
+ */
 import { lazy, Suspense, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useGameState } from '@/hooks/useGameState';
+import { useScreenNavigation } from '@/hooks/useScreenNavigation';
 import { useGameSession } from '@/hooks/useGameSession';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
@@ -10,7 +20,7 @@ import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
-import { AugmentStore } from '@/components/game/AugmentStore';
+import { CertificateStore } from '@/components/game/CertificateStore';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
@@ -18,7 +28,7 @@ const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => 
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
 
 const Index = () => {
-  const navigation = useGameState();
+  const navigation = useScreenNavigation();
   const session = useGameSession(navigation);
 
   const displayLevel = navigation.currentScreen === 'game'
@@ -32,7 +42,7 @@ const Index = () => {
   );
 };
 
-type Navigation = ReturnType<typeof useGameState>;
+type Navigation = ReturnType<typeof useScreenNavigation>;
 type Session = ReturnType<typeof useGameSession>;
 
 function IndexContent({ navigation, session }: { navigation: Navigation; session: Session }) {
@@ -41,7 +51,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1,
-    game: 2, upgradeShop: 3, augmentStore: 3, result: 4,
+    game: 2, upgradeShop: 3, certificateStore: 3, result: 4,
   };
   const prevScreenRef = useRef(navigation.currentScreen);
   const transitionDirRef = useRef(1);
@@ -81,11 +91,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 }
                 onTutorial={navigation.goToTutorial}
                 onOptions={navigation.goToOptions}
-                onAugments={
+                onOpenCertificateStore={
                   Object.values(session.maxTierCounts).some(c => c > 0) ||
                   session.unlockedCertIds.length > 0 ||
                   Object.keys(session.certLevelsOwned).length > 0
-                    ? session.handleAugmentsFromWelcome
+                    ? session.handleOpenCertificateStore
                     : undefined
                 }
                 onAchievements={() => navigation.goToAchievements()}
@@ -95,7 +105,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 accentColor={accentHex}
                 checkpointLevel={session.checkpointStartLevel}
                 checkpointRemainingMs={session.checkpointRemaining}
-                totalAugmentPoints={session.totalAugmentPoints}
+                totalCertificateHours={session.totalCertificateHours}
                 completedAchievementCount={session.completedAchievementIds.length}
               />
             )}
@@ -106,8 +116,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               <OptionsScreen
                 onBack={navigation.goToWelcome}
                 onReEnableTutorials={session.handleReEnableAllTutorials}
-                onResetAugments={session.handleResetAugments}
-                hasAugments={Object.keys(session.certLevelsOwned).length > 0 || session.totalAugmentPoints > 0}
+                onResetCertificates={session.handleResetCertificates}
+                hasCertificates={Object.keys(session.certLevelsOwned).length > 0 || session.totalCertificateHours > 0}
                 accentColor={accentHex}
               />
             )}
@@ -132,7 +142,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 showInfoPanelsTutorial={session.showInfoPanelsTutorial}
                 onInfoPanelsTutorialSeen={session.markInfoPanelsSeen}
                 accentColor={accentHex}
-                augmentProgress={session.augmentProgress}
+                certificateProgress={session.certificateProgress}
                 achievementBonuses={session.achievementBonuses}
                 activeModifiers={session.activeModifiers}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
@@ -160,22 +170,22 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 result={navigation.lastResult}
                 onMainMenu={navigation.goToWelcome}
                 accentColor={accentHex}
-                runPointsAwarded={session.runPointsAwarded}
+                runHoursAwarded={session.runHoursAwarded}
                 runLevelsCompleted={session.runLevelsCompleted}
               />
             )}
-            {navigation.currentScreen === 'augmentStore' && (
-              <AugmentStore
+            {navigation.currentScreen === 'certificateStore' && (
+              <CertificateStore
                 certificates={session.certificates}
-                totalAugmentPoints={session.totalAugmentPoints}
+                totalCertificateHours={session.totalCertificateHours}
                 certLevelsOwned={session.certLevelsOwned}
                 unlockedCertIds={session.unlockedCertIds}
                 maxTierCounts={session.maxTierCounts}
                 onPurchaseCertLevel={session.handlePurchaseCertLevel}
                 onBack={navigation.goToWelcome}
                 accentColor={accentHex}
-                showTutorial={session.shouldShowAugment}
-                onTutorialDismiss={session.markAugmentSeen}
+                showTutorial={session.shouldShowCertStore}
+                onTutorialDismiss={session.markCertStoreSeen}
               />
             )}
             {navigation.currentScreen === 'achievements' && (

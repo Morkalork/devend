@@ -36,7 +36,7 @@ export interface CertConfig {
 
 export interface CertPersistence {
   /** Running total of Certificate Hours (earn rate: 1 per 5 levels) */
-  totalAugmentPoints: number;
+  totalCertificateHours: number;
   /** upgradeId → number of runs where that max-tier upgrade was purchased */
   maxTierCounts: Record<string, number>;
   /** cert IDs that have been unlocked (threshold reached) */
@@ -48,7 +48,7 @@ export interface CertPersistence {
 export const CERT_STORAGE_KEY = 'jezzball_certs_v1';
 
 export const DEFAULT_CERT_PERSISTENCE: CertPersistence = {
-  totalAugmentPoints: 0,
+  totalCertificateHours: 0,
   maxTierCounts: {},
   unlockedCertIds: [],
   certLevelsOwned: {},

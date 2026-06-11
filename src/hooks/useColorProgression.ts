@@ -1,3 +1,10 @@
+/**
+ * useColorProgression — maps a level number to the accent colour theme.
+ *
+ * Colour steps are defined in public/colors.yml (name, hex, how many levels
+ * the step lasts). AccentColorContext uses this to recolour the whole UI as
+ * the player climbs levels.
+ */
 import { useState, useEffect, useMemo } from 'react';
 import yaml from 'js-yaml';
 

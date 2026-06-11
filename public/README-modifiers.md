@@ -7,12 +7,11 @@ This document covers every modifier key, effect type, stat, and field that can b
 ## Table of Contents
 
 1. [upgrades.yml](#upgradesyml)
-2. [augments.yml](#augmentsyml)
+2. [certificates.yml](#certificatesyml)
 3. [achievements.yml](#achievementsyml)
 4. [map.yml](#mapyml)
 5. [GameModifiers — shared modifier keys](#gamemodifiers--shared-modifier-keys)
-6. [Augment effect types](#augment-effect-types)
-7. [Achievement stat types](#achievement-stat-types)
+6. [Achievement stat types](#achievement-stat-types)
 
 ---
 
@@ -45,9 +44,11 @@ In-run upgrades purchased in the shop after each map. Each upgrade applies one o
 
 ---
 
-## augments.yml
+## certificates.yml
 
-Persistent meta-upgrades purchased between runs with Augment Points. Effects stack per stack purchased.
+Permanent meta-progression bonuses bought between runs in the Certificate Store with **Certificate Hours** (earned at one hour per 5 completed levels, banked when the run ends).
+
+A certificate must first be **unlocked**, then its levels are bought one at a time. Each owned level applies its effect permanently to every run.
 
 ### Fields
 
@@ -55,17 +56,17 @@ Persistent meta-upgrades purchased between runs with Augment Points. Effects sta
 |---|---|---|---|
 | `id` | string | ✓ | Unique identifier |
 | `name` | string | ✓ | Display name |
-| `description` | string | ✓ | Shown in the augment store |
-| `maxStacks` | number | ✓ | Maximum number of stacks purchasable |
-| `costPerStack` | number | ✓ | Augment Points per stack |
-| `icon` | string | | Path to icon SVG, relative to `/public` |
-| `special` | boolean | | If `true`, renders as a golden special augment |
-| `effect.type` | string | ✓ | See **Augment effect types** below |
-| `effect.value` | number | ✓ | Value applied per stack |
-| `locked` | boolean | | If `true`, hidden until the unlock condition is met |
-| `unlockCondition.type` | string | | See **Achievement stat types** below |
-| `unlockCondition.threshold` | number | | Stat value required to unlock |
-| `unlockCondition.description` | string | | Short description shown in the UI |
+| `description` | string | ✓ | Shown in the certificate store |
+| `unlockType` | string | ✓ | `upgrade-chain` or `achievement` |
+| `sourceUpgradeId` | string | for `upgrade-chain` | Buying this upgrade (a max-tier one) in `requiredRuns` separate runs unlocks the certificate |
+| `requiredRuns` | number | | Number of separate runs required (default: 3) |
+| `sourceAchievementId` | string | for `achievement` | Completing this achievement unlocks the certificate |
+| `levels` | array | ✓ | Purchasable levels, each `{ cost, effect }` |
+| `levels[].cost` | number | ✓ | Certificate Hours for that level |
+| `levels[].effect.type` | string | ✓ | A **GameModifier key** (see below), or the special `startingLevelBonus` |
+| `levels[].effect.value` | number | ✓ | Value applied per owned level (multiplicative keys stack by ×, additive by +) |
+
+> `startingLevelBonus` is special: it is not a GameModifier. The highest owned value (not the sum) sets the level new runs start from. Handled by `getCertStartingLevel()` in `src/hooks/useCertificateManager.ts`.
 
 ---
 
@@ -165,35 +166,13 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `extraLives` | `0` | Extra lives granted when the upgrade is purchased during a run. | `1` |
 | `scoreInterestRate` | `0` | Fraction of current overtime balance added as interest between maps (capped at 8h). | `0.05` = 5% interest |
 | `extraShopItems` | `0` | Extra item slots shown in the shop after each map. | `1` |
-| `extraAugmentationPoints` | `0` | Bonus Augment Points granted on purchase. | `1` |
-
----
-
-## Augment effect types
-
-Used in `augments.yml → effect.type`. These are **separate** from the GameModifier keys above — augments have their own effect pipeline applied at the start of a run, not per-map.
-
-| Type | Stacking | Effect |
-|---|---|---|
-| `ballSpeedMultiplier` | × per stack | Reduces base ball speed |
-| `fenceSpeedMultiplier` | × per stack | Increases base fence construction speed |
-| `parFenceBonus` | + per stack | Adds to the par cut count |
-| `requiredAreaMultiplier` | × per stack | Multiplies the minimum required capture area |
-| `scoreInterest` | + per stack | Adds interest rate on unused overtime between maps |
-| `bounceDamping` | × per stack | Reduces ball rebound energy |
-| `wallThicknessMultiplier` | × per stack | Multiplies fence thickness at the run-start level |
-| `previewSpeedMultiplier` | × per stack | Slows down the wall preview growth |
-| `startingLivesBonus` | + per stack | Extra lives at run start |
-| `varietyMultiplier` | × per stack | Scales map variety (lower = more predictable maps) |
-| `startingLevelBonus` | max across stacks | Always start runs from this level or higher |
+| `extraCertificateHours` | `0` | Bonus Certificate Hours. ⚠ Defined but **not yet consumed** by the run-end payout (`finalizeRun` in `useCertificateManager`) — the Certification Wizard upgrade currently has no effect. | `1` |
 
 ---
 
 ## Achievement stat types
 
-Used in:
-- `achievements.yml → requirement.stat`
-- `augments.yml → unlockCondition.type`
+Used in `achievements.yml → requirement.stat`.
 
 These are **lifetime cumulative stats** persisted in localStorage.
 

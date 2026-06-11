@@ -1,20 +1,37 @@
+/**
+ * useGameSession — the single orchestrator for one player session.
+ *
+ * Index.tsx calls this once and passes the result down to every screen.
+ * It wires together all the smaller managers:
+ *   - useLevelManager        levels from public/map.yml, current level index
+ *   - useUpgradeManager      shop upgrades from public/upgrades.yml
+ *   - useCertificateManager  certificates + Certificate Hours (meta currency)
+ *   - useTutorialManager     one-time tutorial flags
+ *   - useContinueCheckpoint  the 10-minute 'Continue' checkpoint
+ *   - useCheckpointSnapshots saved per-level snapshots for the level picker
+ *   - useMetaProgression     lifetime stats (fences drawn, lives lost, …)
+ *   - useAchievementManager  achievements + their gameplay bonuses
+ *
+ * It also owns run-scoped state (score, lives, owned upgrades) and the
+ * handle* callbacks that screens invoke to advance the game flow.
+ */
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useLevelManager } from './useLevelManager';
 import { useUpgradeManager } from './useUpgradeManager';
 import { useActiveModifiers, mergeBonuses } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
-import { useCheckpoint } from './useCheckpoint';
-import { useCheckpointManager } from './useCheckpointManager';
+import { useContinueCheckpoint } from './useContinueCheckpoint';
+import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { useAchievementManager } from './useAchievementManager';
-import { useGameState } from './useGameState';
+import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 
 const BASE_LIVES = 3;
 
-export function useGameSession(nav: ReturnType<typeof useGameState>) {
+export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
     currentLevel,
     currentLevelIndex,
@@ -50,18 +67,18 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
   const [shopUnlockedCerts, setShopUnlockedCerts] = useState<Certificate[]>([]);
   const [pendingCertUnlocks, setPendingCertUnlocks] = useState<Certificate[]>([]);
 
-  const handleAugmentPointEarned = useCallback(() => {
+  const handleCertificateHourEarned = useCallback(() => {
     // Visual flash handled by consumer; cert manager calls this on point award
   }, []);
 
   const {
     certificates,
-    totalAugmentPoints,
+    totalCertificateHours,
     certLevelsOwned,
     unlockedCertIds,
     maxTierCounts,
     runLevelsCompleted,
-    runPointsEarned: runPointsAwarded,
+    runHoursEarned: runHoursAwarded,
     loadCertificates,
     resetRunProgress,
     incrementRunLevel,
@@ -74,17 +91,17 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     checkAchievementUnlocks,
     takePendingUnlocks,
     resetAllData: resetCertData,
-  } = useCertificateManager({ onPointEarned: handleAugmentPointEarned });
+  } = useCertificateManager({ onHourEarned: handleCertificateHourEarned });
 
   const {
     shouldShowFence,
     shouldShowStore,
-    shouldShowAugment,
+    shouldShowCertStore,
     shouldShowMover,
     shouldShowInfoPanels,
     markFenceSeen,
     markStoreSeen,
-    markAugmentSeen,
+    markCertStoreSeen,
     markMoverSeen,
     markInfoPanelsSeen,
     resetAllTutorials,
@@ -95,12 +112,12 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     clearCheckpoint,
     getStartingLevel,
     getRemainingTimeMs,
-  } = useCheckpoint();
+  } = useContinueCheckpoint();
 
   const {
     saveCheckpoint: saveRunCheckpoint,
     clearCheckpoints: clearRunCheckpoints,
-  } = useCheckpointManager();
+  } = useCheckpointSnapshots();
 
   const {
     stats: metaStats,
@@ -315,16 +332,16 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     nav.goToWelcome();
   }, [resetToFirstLevel, nav.goToWelcome, resetRunProgress]);
 
-  const handleAugmentsFromWelcome = useCallback(async () => {
+  const handleOpenCertificateStore = useCallback(async () => {
     await loadCertificates();
-    nav.goToAugmentStore();
-  }, [loadCertificates, nav.goToAugmentStore]);
+    nav.goToCertificateStore();
+  }, [loadCertificates, nav.goToCertificateStore]);
 
   const handleReEnableAllTutorials = useCallback(() => {
     resetAllTutorials();
   }, [resetAllTutorials]);
 
-  const handleResetAugments = useCallback(() => {
+  const handleResetCertificates = useCallback(() => {
     resetCertData();
     resetProgression();
   }, [resetCertData, resetProgression]);
@@ -369,17 +386,17 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     // Tutorial flags
     showInGameTutorial: shouldShowFence,
     shouldShowStore,
-    shouldShowAugment,
+    shouldShowCertStore,
     showMoverTutorial: shouldShowMover,
     showInfoPanelsTutorial: shouldShowInfoPanels,
     markFenceSeen,
     markStoreSeen,
-    markAugmentSeen,
+    markCertStoreSeen,
     markMoverSeen,
     markInfoPanelsSeen,
     // Certificates
     certificates,
-    totalAugmentPoints,
+    totalCertificateHours,
     certLevelsOwned,
     unlockedCertIds,
     maxTierCounts,
@@ -392,12 +409,12 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     activateAchievement,
     // Meta progression
     metaStats,
-    runPointsAwarded,
+    runHoursAwarded,
     runLevelsCompleted,
     // Modifiers / bonuses
     activeModifiers,
     achievementBonuses: mergedBonuses,
-    augmentProgress: runProgress,
+    certificateProgress: runProgress,
     // Checkpoint (for welcome screen display)
     checkpointStartLevel: getStartingLevel(),
     checkpointRemaining: getRemainingTimeMs(),
@@ -412,8 +429,8 @@ export function useGameSession(nav: ReturnType<typeof useGameState>) {
     handlePurchaseCertLevel,
     handlePlayAgain,
     handleBackToWelcome,
-    handleAugmentsFromWelcome,
+    handleOpenCertificateStore,
     handleReEnableAllTutorials,
-    handleResetAugments,
+    handleResetCertificates,
   };
 }

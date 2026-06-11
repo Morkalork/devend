@@ -2,7 +2,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
-import { calculateScore } from "@/hooks/useScoring";
+import { calculateScore } from "@/lib/scoring";
 import { playDeathSound } from "@/lib/gameAudio";
 import { polygonArea } from "@/lib/polygon";
 import { getRemainingPercent } from "@/lib/spaceGrid";

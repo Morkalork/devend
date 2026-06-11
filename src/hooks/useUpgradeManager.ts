@@ -1,3 +1,10 @@
+/**
+ * useUpgradeManager — loads the upgrade catalogue from public/upgrades.yml.
+ *
+ * Upgrades are bought in the between-levels shop with overtime hours (the
+ * run score). Tiers (Junior → Wizard) gate how upgrades chain; canPurchase/
+ * isLocked encode those rules. The owned set itself lives in useGameSession.
+ */
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
 import { UpgradeConfig, UpgradeData, UpgradeTier } from '@/types/upgrade';

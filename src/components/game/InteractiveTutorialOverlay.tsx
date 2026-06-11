@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { TutorialStep } from '@/hooks/useInteractiveTutorial';
+import { TutorialStep } from '@/types/game';
 
 interface InteractiveTutorialOverlayProps {
   tutorialStep: TutorialStep;

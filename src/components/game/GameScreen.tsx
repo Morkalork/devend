@@ -1,10 +1,18 @@
+/**
+ * GameScreen — the in-game layout: GameTopBar above, GameCanvas in the
+ * middle, GameBottomBar below, plus background layers, the in-game menu and
+ * tutorial overlays.
+ *
+ * Tapping the top/bottom bars opens their full-screen counterparts
+ * (TopBarDetailsPanel / BottomBarDetailsPanel).
+ */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Menu, Home, RotateCcw } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
-import { GameStatsPanel } from './GameStatsPanel';
-import { TopInfoPanel } from './TopInfoPanel';
-import { BottomStatsPanel } from './BottomStatsPanel';
+import { GameBottomBar } from './GameBottomBar';
+import { TopBarDetailsPanel } from './TopBarDetailsPanel';
+import { BottomBarDetailsPanel } from './BottomBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -14,12 +22,12 @@ import { UpgradeConfig } from '@/types/upgrade';
 import { useGameConfig } from '@/hooks/useGameConfig';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 
-interface AugmentProgress {
+interface CertificateHourProgress {
   levelsCompleted: number;
-  levelsToNextPoint: number;
-  progressInCurrentPoint: number;
-  pointsEarned: number;
-  levelsPerPoint: number;
+  levelsToNextHour: number;
+  progressInCurrentHour: number;
+  hoursEarned: number;
+  levelsPerHour: number;
 }
 
 type InGameStep = 'fence' | 'done';
@@ -44,7 +52,7 @@ interface GameScreenProps {
   showInfoPanelsTutorial?: boolean;
   onInfoPanelsTutorialSeen?: () => void;
   accentColor?: string;
-  augmentProgress?: AugmentProgress;
+  certificateProgress?: CertificateHourProgress;
   achievementBonuses?: Partial<Record<string, number>>;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
@@ -70,7 +78,7 @@ export function GameScreen({
   showInfoPanelsTutorial = false,
   onInfoPanelsTutorialSeen,
   accentColor: externalAccentColor,
-  augmentProgress,
+  certificateProgress,
   achievementBonuses,
   activeModifiers,
   cumulativeLockedBalls = 0,
@@ -146,7 +154,7 @@ export function GameScreen({
             threadLockRequired={level.threadLockRequired}
             ownedUpgrades={ownedUpgrades}
             accentColor={accentColor}
-            augmentProgress={augmentProgress}
+            certificateProgress={certificateProgress}
             microManagerPerLock={activeModifiers.microManagerPerLock}
             onExpand={() => setTopPanelOpen(true)}
           />
@@ -183,33 +191,12 @@ export function GameScreen({
         </div>
 
         {/* Stats Panel at bottom */}
-        <GameStatsPanel
+        <GameBottomBar
           activeModifiers={activeModifiers}
           accentColor={accentColor}
           lockedBalls={totalLockedBalls}
           onExpand={() => setBottomPanelOpen(true)}
         />
-        
-
-        {/* Bank button during push mode - fixed overlay at bottom */}
-        {false && gameState.pushMode === "pushing" && gameState.onBankAndContinue && (
-          <div className="fixed bottom-0 left-0 right-0 z-30 flex justify-center items-center py-4 pointer-events-none">
-            <button
-              onClick={gameState.onBankAndContinue}
-              className="px-6 py-3 rounded-lg font-bold shadow-lg transition-colors flex items-center gap-2 pointer-events-auto"
-              style={{
-                backgroundColor: '#f97316',
-                color: '#000000',
-                boxShadow: '0 0 20px rgba(249, 115, 22, 0.6)',
-              }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Bank & Continue
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Always-visible menu — floats above all overlays */}
@@ -283,13 +270,13 @@ export function GameScreen({
         title="Info Panels"
         body={
           "The status bars are expandable!\n\n" +
-          "Tap the TOP BAR to see full level details, all your active upgrades with descriptions, and augment progress.\n\n" +
+          "Tap the TOP BAR to see full level details, all your active upgrades with descriptions, and certificate-hour progress.\n\n" +
           "Tap the BOTTOM BAR to view every active modifier explained in plain language."
         }
       />
 
       {/* Full-screen top info panel */}
-      <TopInfoPanel
+      <TopBarDetailsPanel
         visible={topPanelOpen}
         onClose={() => setTopPanelOpen(false)}
         levelNumber={levelNumber}
@@ -302,12 +289,12 @@ export function GameScreen({
         threadLockRequired={level.threadLockRequired}
         ownedUpgrades={ownedUpgrades}
         accentColor={accentColor}
-        augmentProgress={augmentProgress}
+        certificateProgress={certificateProgress}
         microManagerPerLock={activeModifiers.microManagerPerLock}
       />
 
       {/* Full-screen bottom stats panel */}
-      <BottomStatsPanel
+      <BottomBarDetailsPanel
         visible={bottomPanelOpen}
         onClose={() => setBottomPanelOpen(false)}
         activeModifiers={activeModifiers}

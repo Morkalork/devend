@@ -1,7 +1,15 @@
+/**
+ * useScreenNavigation — which screen is currently visible.
+ *
+ * The app is a state-machine of full-screen views (see the GameScreen type
+ * in src/types/game.ts). This hook owns the current screen plus the last
+ * game result, and exposes one goToX() helper per screen. No game logic
+ * lives here — that is useGameSession's job.
+ */
 import { useState, useCallback } from 'react';
 import { GameScreen, GameResult } from '@/types/game';
 
-export function useGameState() {
+export function useScreenNavigation() {
   const [currentScreen, setCurrentScreen] = useState<GameScreen>('welcome');
   const [lastResult, setLastResult] = useState<GameResult | null>(null);
 
@@ -35,8 +43,8 @@ export function useGameState() {
     setCurrentScreen('game');
   }, []);
 
-  const goToAugmentStore = useCallback(() => {
-    setCurrentScreen('augmentStore');
+  const goToCertificateStore = useCallback(() => {
+    setCurrentScreen('certificateStore');
   }, []);
 
   const goToOptions = useCallback(() => {
@@ -69,7 +77,7 @@ export function useGameState() {
     goToTutorial,
     goToUpgradeShop,
     goToGame,
-    goToAugmentStore,
+    goToCertificateStore,
     goToOptions,
     goToAchievements,
     goToAdmin,

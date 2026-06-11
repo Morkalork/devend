@@ -1,3 +1,18 @@
+/**
+ * GameCanvas — the playable game board.
+ *
+ * Bridges React and the imperative game world: all per-frame state lives in
+ * a mutable CanvasGameState ref (src/types/gameState.ts), driven by a
+ * fixed-timestep loop (src/hooks/useGameLoop.ts) and drawn by
+ * src/lib/rendering/renderFrame.ts. React state here is only for UI-visible
+ * values (lives, cut count, flashes).
+ *
+ * Subsystem entry points:
+ *   - input:     src/hooks/useGameInput.ts (pointer → fence cuts)
+ *   - physics:   src/lib/physics/* (ball movement, fence growth, cuts)
+ *   - level init src/lib/initGame.ts (board, obstacles, balls, regions)
+ *   - rendering: src/lib/rendering/renderFrame.ts
+ */
 import { useRef, useEffect, useState, useCallback } from "react";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
 import { LevelConfig } from "@/types/level";
@@ -7,10 +22,10 @@ import { clearBallRenderCache } from "@/lib/ballRenderCache";
 import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFrame, createRainParticles } from "@/lib/rendering/renderFrame";
 import { RenderContext, RainState } from "@/lib/rendering/types";
-import { calculateScore, ensureScoringConfigLoaded } from "@/hooks/useScoring";
+import { calculateScore, ensureScoringConfigLoaded } from "@/lib/scoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
-import { TutorialStep } from "@/hooks/useInteractiveTutorial";
+import { TutorialStep } from "@/types/game";
 import {
   Polygon,
   polygonArea,

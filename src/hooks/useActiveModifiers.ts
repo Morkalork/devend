@@ -20,7 +20,7 @@ export interface GameModifiers {
   extraLives: number;
   scoreInterestRate: number;
   extraShopItems: number;
-  extraAugmentationPoints: number;
+  extraCertificateHours: number;
 
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
@@ -73,7 +73,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   extraLives: 0,
   scoreInterestRate: 0,
   extraShopItems: 0,
-  extraAugmentationPoints: 0,
+  extraCertificateHours: 0,
   microManagerPerLock: 0,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,

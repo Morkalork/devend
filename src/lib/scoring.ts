@@ -1,3 +1,15 @@
+/**
+ * Scoring system — computes the "overtime hours" reward when a level is
+ * completed (or partially, on game over).
+ *
+ * Tunable numbers live in public/scoring-config.yml and are fetched once at
+ * startup (see loadScoringConfig at the bottom of this file); the hard-coded
+ * defaults below are only a fallback if that file fails to load.
+ *
+ * Main entry point: calculateScore(). The admin scoring preview panel uses
+ * generateScoringPreview() via the useScoringConfig hook.
+ */
+import yaml from 'js-yaml';
 import { ScoringConfig, ScoreBreakdown } from '@/types/scoring';
 
 /**
@@ -136,4 +148,92 @@ export function generateScoringPreview(
     const earnedScore = Math.floor(basePoints * breakdown.performanceMultiplier) + breakdown.totalBonus;
     return { label: scenario.label, usedFences, actualRemovedRatio, breakdown, earnedScore };
   });
+}
+
+// ── Config loading ─────────────────────────────────────────────────────────
+
+export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
+  scoring: {
+    fenceEfficiency: {
+      maxBonus: 1,
+      steps: [{ fencesUnder: 1, bonus: 1 }],
+    },
+    spaceOptimization: {
+      maxBonus: 1,
+      thresholds: [{ extraPercent: 0.10, bonus: 1 }],
+    },
+    performanceMultiplier: {
+      underPar: 1.0,
+      atPar: 1.0,
+      overPar1: 0.75,
+      overPar2: 0.6,
+      overPar3Plus: 0.4,
+    },
+  },
+};
+
+let configPromise: Promise<ScoringConfig> | null = null;
+let loadedConfig: ScoringConfig = DEFAULT_SCORING_CONFIG;
+
+/** Fetch public/scoring-config.yml once; later calls reuse the same promise. */
+export function loadScoringConfig(): Promise<ScoringConfig> {
+  if (configPromise) return configPromise;
+  configPromise = fetch('/scoring-config.yml')
+    .then((res) => res.text())
+    .then((text) => {
+      const parsed = yaml.load(text) as ScoringConfig;
+      if (parsed?.scoring) {
+        loadedConfig = {
+          scoring: {
+            fenceEfficiency: { ...DEFAULT_SCORING_CONFIG.scoring.fenceEfficiency, ...parsed.scoring.fenceEfficiency },
+            spaceOptimization: { ...DEFAULT_SCORING_CONFIG.scoring.spaceOptimization, ...parsed.scoring.spaceOptimization },
+            performanceMultiplier: { ...DEFAULT_SCORING_CONFIG.scoring.performanceMultiplier, ...parsed.scoring.performanceMultiplier },
+          },
+        };
+      }
+      return loadedConfig;
+    })
+    .catch((err) => {
+      console.warn('Failed to load scoring config, using defaults:', err);
+      return DEFAULT_SCORING_CONFIG;
+    });
+  return configPromise;
+}
+
+/** Await this before calling calculateScore() to guarantee the YAML config is in. */
+export async function ensureScoringConfigLoaded(): Promise<void> {
+  await loadScoringConfig();
+}
+
+/**
+ * Calculate the overtime reward for a level, synchronously, using the
+ * preloaded config. Performance multiplier scales the base reward,
+ * scoreMultiplier (from upgrades) applies on top, and the result is capped
+ * per level tier (see getOvertimeCap).
+ */
+export function calculateScore(
+  usedFences: number,
+  parFences: number,
+  remainingPercent: number,
+  thresholdPercent: number,
+  basePoints: number,
+  scoreMultiplier: number = 1,
+  levelNumber: number = 1,
+): {
+  levelScore: number;
+  breakdown: ScoreBreakdown;
+} {
+  const requiredRemovedRatio = (100 - thresholdPercent) / 100;
+  const actualRemovedRatio = (100 - remainingPercent) / 100;
+
+  const breakdown = calculateScoreBreakdown(
+    usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig
+  );
+
+  const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * scoreMultiplier);
+  const rawScore = multipliedBase + breakdown.totalBonus;
+  const cap = getOvertimeCap(levelNumber);
+  const levelScore = Math.min(rawScore, cap);
+
+  return { levelScore, breakdown };
 }

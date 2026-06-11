@@ -6,16 +6,16 @@ import { CRTBackground } from './CRTBackground';
 interface OptionsScreenProps {
   onBack: () => void;
   onReEnableTutorials: () => void;
-  onResetAugments: () => void;
-  hasAugments: boolean;
+  onResetCertificates: () => void;
+  hasCertificates: boolean;
   accentColor?: string;
 }
 
 export function OptionsScreen({
   onBack,
   onReEnableTutorials,
-  onResetAugments,
-  hasAugments,
+  onResetCertificates,
+  hasCertificates,
   accentColor,
 }: OptionsScreenProps) {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -25,7 +25,7 @@ export function OptionsScreen({
   };
 
   const handleConfirmReset = () => {
-    onResetAugments();
+    onResetCertificates();
     setShowConfirm(false);
   };
 
@@ -91,8 +91,8 @@ export function OptionsScreen({
             Re-enable All Tutorials
           </motion.button>
 
-          {/* Reset Augments */}
-          {hasAugments && (
+          {/* Reset certificates */}
+          {hasCertificates && (
             <motion.button
               className="arcade-button-danger rounded-lg flex items-center justify-center gap-2"
               onClick={handleResetClick}
@@ -100,7 +100,7 @@ export function OptionsScreen({
               whileTap={{ scale: 0.98 }}
             >
               <Trash2 className="w-5 h-5" />
-              Reset Augments & Score
+              Reset Certificates & Score
             </motion.button>
           )}
 
@@ -133,7 +133,7 @@ export function OptionsScreen({
               Reset All Progress?
             </h2>
             <p className="text-muted-foreground mb-6">
-              This will reset your score balance and all owned augments. This action cannot be undone.
+              This will reset your score balance and all owned certificates. This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
