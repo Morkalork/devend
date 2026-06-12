@@ -34,6 +34,18 @@ export interface SpaceGrid {
   cells: Uint8Array;
   /** Total number of cells that were ACTIVE at level start (for percentage calc) */
   initialActiveCount: number;
+  /**
+   * Current number of ACTIVE cells, maintained incrementally by the mutators
+   * below so per-frame readers never have to scan the whole grid.
+   */
+  activeCount: number;
+  /**
+   * Region id of each ACTIVE cell (null = unpainted), repainted from the
+   * regions' sample points after every cut. Lets physics answer "is this ball
+   * still in its region?" with one array read instead of a sample-point scan.
+   * Only meaningful for cells that are ACTIVE — removed cells may hold stale ids.
+   */
+  cellRegionIds: (string | null)[];
 }
 
 export interface GridRegion {
@@ -111,6 +123,8 @@ export function createSpaceGrid(
     originY,
     cells,
     initialActiveCount,
+    activeCount: initialActiveCount,
+    cellRegionIds: new Array<string | null>(cells.length).fill(null),
   };
 }
 
@@ -165,6 +179,7 @@ export function isCellActive(grid: SpaceGrid, index: number): boolean {
  */
 export function markCellRemoved(grid: SpaceGrid, index: number): void {
   if (index >= 0 && index < grid.cells.length) {
+    if (grid.cells[index] === CellState.ACTIVE) grid.activeCount--;
     grid.cells[index] = CellState.REMOVED;
   }
 }
@@ -226,6 +241,7 @@ export function rasterizeCutToGrid(
       // This ensures we mark cells that the line passes through
       if (distToLine < halfThickness + grid.cellSize / 2) {
         grid.cells[index] = CellState.REMOVED;
+        grid.activeCount--;
         removedIndices.push(index);
       }
     }
@@ -236,13 +252,12 @@ export function rasterizeCutToGrid(
 
 /**
  * Count current ACTIVE cells.
+ * O(1): the count is maintained incrementally by markCellRemoved /
+ * rasterizeCutToGrid / removeRegion (the only cell mutators), so callers —
+ * including the per-frame progress bar — never scan the grid.
  */
 export function countActiveCells(grid: SpaceGrid): number {
-  let count = 0;
-  for (let i = 0; i < grid.cells.length; i++) {
-    if (grid.cells[i] === CellState.ACTIVE) count++;
-  }
-  return count;
+  return grid.activeCount;
 }
 
 /**
@@ -251,8 +266,7 @@ export function countActiveCells(grid: SpaceGrid): number {
  */
 export function getRemainingPercent(grid: SpaceGrid): number {
   if (grid.initialActiveCount === 0) return 0;
-  const active = countActiveCells(grid);
-  return (active / grid.initialActiveCount) * 100;
+  return (grid.activeCount / grid.initialActiveCount) * 100;
 }
 
 /**
@@ -358,6 +372,7 @@ export function getRegionPercentage(grid: SpaceGrid, region: GridRegion): number
  */
 export function removeRegion(grid: SpaceGrid, region: GridRegion): void {
   for (const index of region.cellIndices) {
+    if (grid.cells[index] === CellState.ACTIVE) grid.activeCount--;
     grid.cells[index] = CellState.REMOVED;
   }
 }

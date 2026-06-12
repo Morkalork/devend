@@ -1,5 +1,5 @@
 import { CanvasGameState } from "@/types/gameState";
-import { buildMoverPolygon } from "./moverState";
+import { updateMoverPolygon } from "./moverState";
 
 export function updateMoversFn(dt: number, game: CanvasGameState): void {
   for (const mover of game.movers) {
@@ -12,6 +12,6 @@ export function updateMoversFn(dt: number, game: CanvasGameState): void {
       mover.offset    = -half;
       mover.direction = 1;
     }
-    mover.polygon = buildMoverPolygon(mover);
+    updateMoverPolygon(mover);
   }
 }

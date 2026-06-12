@@ -40,6 +40,70 @@ let _shadowGradBoardKey = '';
 let _rimOC: OffscreenCanvas | null = null;
 let _rimOCKey = '';
 
+// ── Static glow layer caches ─────────────────────────────────────────────────
+// shadowBlur is the most expensive Canvas2D operation (a Gaussian blur per
+// draw). Obstacle outlines and mirror polygons are static for a whole level,
+// so their glow is prerendered to full-screen OffscreenCanvases and blitted
+// per frame. Keys include boardRect+colour; the polygon-array reference
+// detects level changes.
+let _obstacleGlowOC: OffscreenCanvas | null = null;
+let _obstacleGlowKey = '';
+let _obstacleGlowPolys: unknown = null;
+let _mirrorGlowOC: OffscreenCanvas | null = null;
+let _mirrorGlowKey = '';
+let _mirrorGlowPolys: unknown = null;
+
+// Danger frame: blur is constant, only alpha pulses — bake the glow once and
+// modulate with globalAlpha (pixel-identical, alpha is linear).
+let _dangerFrameOC: OffscreenCanvas | null = null;
+let _dangerFrameKey = '';
+
+// Pulse-bucketed sprites (mover bodies, fence tip cores) and radial glow
+// sprites (fence tip bloom, lock burst — replaces per-frame createRadialGradient).
+const _pulseSpriteCache = new Map<string, OffscreenCanvas>();
+const _radialSpriteCache = new Map<string, OffscreenCanvas>();
+
+// Fence-vs-obstacle clipping is static once a wall exists (walls and
+// obstacles never move within a level) — cache per wall object. Old-level
+// walls are garbage-collected along with their cache entries.
+const _wallClipSegs = new WeakMap<import("@/lib/wallGeometry").Wall, { start: Vector2; end: Vector2 }[]>();
+
+// Cached screen-space clip paths (board polygon + obstacle holes).
+const _fenceClipCache = { key: '', board: null as unknown, polys: null as unknown, path: null as Path2D | null };
+const _obstacleHolesCache = { key: '', polys: null as unknown, path: null as Path2D | null };
+
+/**
+ * Radial glow sprite: unit gradient circle rendered once per (colour, profile),
+ * drawn scaled with drawImage. `stops` alphas are baked at full strength;
+ * callers modulate with globalAlpha.
+ */
+const RADIAL_SPRITE_R = 64;
+function getRadialGlowSprite(colorHex: string, kind: 'tip' | 'burst'): OffscreenCanvas {
+  const key = `${kind}_${colorHex}`;
+  let oc = _radialSpriteCache.get(key);
+  if (!oc) {
+    oc = new OffscreenCanvas(RADIAL_SPRITE_R * 2, RADIAL_SPRITE_R * 2);
+    const c = oc.getContext('2d')!;
+    const r = parseInt(colorHex.slice(1, 3), 16);
+    const g = parseInt(colorHex.slice(3, 5), 16);
+    const b = parseInt(colorHex.slice(5, 7), 16);
+    const grad = c.createRadialGradient(RADIAL_SPRITE_R, RADIAL_SPRITE_R, 0, RADIAL_SPRITE_R, RADIAL_SPRITE_R, RADIAL_SPRITE_R);
+    if (kind === 'tip') {
+      grad.addColorStop(0,   `rgba(${r},${g},${b},${0xbb / 255})`);
+      grad.addColorStop(0.3, `rgba(${r},${g},${b},${0x44 / 255})`);
+      grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+    } else {
+      grad.addColorStop(0,   `rgba(${r},${g},${b},1)`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},0.4)`);
+      grad.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+    }
+    c.fillStyle = grad;
+    c.fillRect(0, 0, RADIAL_SPRITE_R * 2, RADIAL_SPRITE_R * 2);
+    _radialSpriteCache.set(key, oc);
+  }
+  return oc;
+}
+
 export function createRainParticles(count: number): import("./types").RainParticle[] {
   return Array.from({ length: count }, (_, i) => ({
     x: 15 + Math.random() * (BOARD_WIDTH - 30),
@@ -125,6 +189,7 @@ export function renderFrame(
     const curBoardKey = `${Math.round(scale * 10000)}_${Math.round(boardRect.left)}_${Math.round(boardRect.top)}`;
     if (curBoardKey !== _shadowGradBoardKey) {
       _shadowGradCache.clear();
+      _pulseSpriteCache.clear(); // sprite sizes depend on scale
       _shadowGradBoardKey = curBoardKey;
     }
     ctx.save();
@@ -178,24 +243,6 @@ export function renderFrame(
     ctx.restore();
   }
 
-  // ── buildExactPath helper ─────────────────────────────────────────────────
-  // Straight edges only. This used to be a Catmull-Rom spline, but the spline
-  // bows outward — on the thin level-29 mirror rects the rendered "lens" tip
-  // extended ~60 world units past the physics polygon, so fences passing
-  // legitimately above a mirror appeared to cut straight through it. Mirrors
-  // are reflective surfaces: the drawn boundary must match the physics edges
-  // exactly (same fix as the non-mirror obstacle outlines below). The thick
-  // round-joined stroke still softens the corners visually.
-  const buildExactPath = (verts: { x: number; y: number }[]) => {
-    const n = verts.length;
-    if (n < 3) return;
-    const sv = verts.map(v => w2s(v.x, v.y));
-    ctx.beginPath();
-    ctx.moveTo(sv[0].x, sv[0].y);
-    for (let i = 1; i < n; i++) ctx.lineTo(sv[i].x, sv[i].y);
-    ctx.closePath();
-  };
-
   // ── Moving obstacles ──────────────────────────────────────────────────────
   if (game.movers.length > 0) {
     const now = performance.now();
@@ -232,25 +279,43 @@ export function renderFrame(
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Body fill + glow
-      const verts = mover.polygon.vertices;
-      ctx.beginPath();
-      const p0s = w2s(verts[0].x, verts[0].y);
-      ctx.moveTo(p0s.x, p0s.y);
-      for (let vi = 1; vi < verts.length; vi++) {
-        const ps = w2s(verts[vi].x, verts[vi].y);
-        ctx.lineTo(ps.x, ps.y);
+      // Body fill + glow — pulse-bucketed sprite (glow stroke uses shadowBlur,
+      // far too expensive to repaint per frame; 9 buckets ≈ the rim-light trick).
+      {
+        const bucket = Math.round(pulse * 8); // 0..8
+        const dimKey = mover.shape === 'circle'
+          ? `c${mover.radius ?? 30}`
+          : `r${mover.width ?? 60}x${mover.height ?? 60}`;
+        const key = `mover_${dimKey}_${bucket}`;
+        let sprite = _pulseSpriteCache.get(key);
+        if (!sprite) {
+          const bp = bucket / 8;
+          const lw = (1.5 + bp * 1.5) * scale;
+          const blur = (6 + bp * 10) * scale;
+          const halfW = (mover.shape === 'circle' ? (mover.radius ?? 30) : (mover.width ?? 60) / 2) * scale;
+          const halfH = (mover.shape === 'circle' ? (mover.radius ?? 30) : (mover.height ?? 60) / 2) * scale;
+          const pad = Math.ceil(blur + lw + 2);
+          sprite = new OffscreenCanvas(Math.ceil(halfW * 2) + pad * 2, Math.ceil(halfH * 2) + pad * 2);
+          const c = sprite.getContext('2d')!;
+          const cxs = sprite.width / 2, cys = sprite.height / 2;
+          c.beginPath();
+          if (mover.shape === 'circle') {
+            c.arc(cxs, cys, halfW, 0, Math.PI * 2);
+          } else {
+            c.rect(cxs - halfW, cys - halfH, halfW * 2, halfH * 2);
+          }
+          c.closePath();
+          c.fillStyle   = `rgba(255,${Math.round(80 + bp * 30)},0,0.22)`;
+          c.fill();
+          c.strokeStyle = MOVER_COLOR;
+          c.lineWidth   = lw;
+          c.shadowColor = MOVER_COLOR;
+          c.shadowBlur  = blur;
+          c.stroke();
+          _pulseSpriteCache.set(key, sprite);
+        }
+        ctx.drawImage(sprite, Math.round(sc.x - sprite.width / 2), Math.round(sc.y - sprite.height / 2));
       }
-      ctx.closePath();
-
-      ctx.fillStyle   = `rgba(255,${Math.round(80 + pulse * 30)},0,0.22)`;
-      ctx.fill();
-      ctx.strokeStyle = MOVER_COLOR;
-      ctx.lineWidth   = (1.5 + pulse * 1.5) * scale;
-      ctx.shadowColor = MOVER_COLOR;
-      ctx.shadowBlur  = (6 + pulse * 10) * scale;
-      ctx.stroke();
-      ctx.shadowBlur  = 0;
 
       // Hazard arrow showing current direction of travel
       const arrowSize = (mover.shape === 'circle' ? (mover.radius ?? 30) : Math.min(mover.width ?? 60, mover.height ?? 60) / 2) * 0.55 * scale;
@@ -278,25 +343,33 @@ export function renderFrame(
   // physics polygon. buildSmoothPath (Catmull-Rom) bows outward, making the
   // visual oval larger than the physics rect — fences correctly stopped at
   // the physics edge but visually appeared to enter the obstacle interior.
+  // Static for the whole level → prerendered once to an OffscreenCanvas
+  // (the glow stroke uses shadowBlur, which is too expensive per frame).
   {
-    const mirrorSet = new Set(game.mirrorPolygons);
-    ctx.save();
-    ctx.strokeStyle = accentColor;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = WALL_THICKNESS * scale;
-    ctx.shadowColor = accentColor;
-    ctx.shadowBlur = 6 * scale;
-    for (const poly of game.obstaclePolygons) {
-      if (mirrorSet.has(poly)) continue;
-      const sv = poly.vertices.map(v => w2s(v.x, v.y));
-      ctx.beginPath();
-      ctx.moveTo(sv[0].x, sv[0].y);
-      for (let i = 1; i < sv.length; i++) ctx.lineTo(sv[i].x, sv[i].y);
-      ctx.closePath();
-      ctx.stroke();
+    const layerKey = `${accentColor}_${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}_${screenWidth}x${screenHeight}`;
+    if (_obstacleGlowKey !== layerKey || _obstacleGlowPolys !== game.obstaclePolygons) {
+      _obstacleGlowKey = layerKey;
+      _obstacleGlowPolys = game.obstaclePolygons;
+      _obstacleGlowOC = new OffscreenCanvas(Math.max(1, screenWidth), Math.max(1, screenHeight));
+      const c = _obstacleGlowOC.getContext('2d')!;
+      const mirrorSet = new Set(game.mirrorPolygons);
+      c.strokeStyle = accentColor;
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.lineWidth = WALL_THICKNESS * scale;
+      c.shadowColor = accentColor;
+      c.shadowBlur = 6 * scale;
+      for (const poly of game.obstaclePolygons) {
+        if (mirrorSet.has(poly)) continue;
+        const sv = poly.vertices.map(v => w2s(v.x, v.y));
+        c.beginPath();
+        c.moveTo(sv[0].x, sv[0].y);
+        for (let i = 1; i < sv.length; i++) c.lineTo(sv[i].x, sv[i].y);
+        c.closePath();
+        c.stroke();
+      }
     }
-    ctx.restore();
+    if (_obstacleGlowOC) ctx.drawImage(_obstacleGlowOC, 0, 0);
   }
 
   // ── Unified wall render loop ───────────────────────────────────────────────
@@ -326,25 +399,50 @@ export function renderFrame(
   // The square-cap extension in renderWallWithEffects pushes fence endpoints
   // tangentially past the board wall centre line into the margin.  Clipping to
   // the board polygon (not just boardRect) eliminates that protrusion.
+  // Walls and obstacles are immutable once created, so the obstacle clipping
+  // of each wall is computed once and cached per wall object (it previously
+  // re-clipped every wall against every obstacle polygon on every frame).
+  const getClippedSegs = (w: typeof walls[number]) => {
+    let segs = _wallClipSegs.get(w);
+    if (!segs) {
+      segs = clipLineAgainstPolygons(w.start, w.end, obstacles);
+      _wallClipSegs.set(w, segs);
+    }
+    return segs;
+  };
+
   if (game.boardPolygon) {
     ctx.save();
-    ctx.beginPath();
-    const bpv = game.boardPolygon.vertices;
-    const bp0 = w2s(bpv[0].x, bpv[0].y);
-    ctx.moveTo(bp0.x, bp0.y);
-    for (let i = 1; i < bpv.length; i++) {
-      const bpt = w2s(bpv[i].x, bpv[i].y);
-      ctx.lineTo(bpt.x, bpt.y);
+    // Board polygon with obstacle holes — static per level, cached as Path2D.
+    {
+      const clipKey = `${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}`;
+      if (_fenceClipCache.key !== clipKey || _fenceClipCache.board !== game.boardPolygon || _fenceClipCache.polys !== obstacles) {
+        _fenceClipCache.key = clipKey;
+        _fenceClipCache.board = game.boardPolygon;
+        _fenceClipCache.polys = obstacles;
+        const path = new Path2D();
+        const bpv = game.boardPolygon.vertices;
+        const bp0 = w2s(bpv[0].x, bpv[0].y);
+        path.moveTo(bp0.x, bp0.y);
+        for (let i = 1; i < bpv.length; i++) {
+          const bpt = w2s(bpv[i].x, bpv[i].y);
+          path.lineTo(bpt.x, bpt.y);
+        }
+        path.closePath();
+        // Punch obstacle polygons as holes so thick stroke can't bleed inside them.
+        for (const poly of obstacles) {
+          const sv0 = w2s(poly.vertices[0].x, poly.vertices[0].y);
+          path.moveTo(sv0.x, sv0.y);
+          for (let i = 1; i < poly.vertices.length; i++) {
+            const svp = w2s(poly.vertices[i].x, poly.vertices[i].y);
+            path.lineTo(svp.x, svp.y);
+          }
+          path.closePath();
+        }
+        _fenceClipCache.path = path;
+      }
+      ctx.clip(_fenceClipCache.path!, 'evenodd');
     }
-    ctx.closePath();
-    // Punch obstacle polygons as holes so thick stroke can't bleed inside them.
-    for (const poly of obstacles) {
-      const sv = poly.vertices.map(v => w2s(v.x, v.y));
-      ctx.moveTo(sv[0].x, sv[0].y);
-      for (let i = 1; i < sv.length; i++) ctx.lineTo(sv[i].x, sv[i].y);
-      ctx.closePath();
-    }
-    ctx.clip('evenodd');
 
     const nowMs = performance.now();
     for (let wi = walls.length - 1; wi >= 0; wi--) {
@@ -353,7 +451,7 @@ export function renderFrame(
       const wallLineWidth = w.thickness * scale;
       const freshness = w.createdAt ? Math.max(0, 1 - (nowMs - w.createdAt) / 400) : 0;
       if (obstacles.length > 0) {
-        const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
+        const segments = getClippedSegs(w);
         for (const seg of segments) {
           strokeSegment(w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, wallLineWidth, freshness);
         }
@@ -371,7 +469,7 @@ export function renderFrame(
     if (!w.id.startsWith("board-")) continue;
     const wallLineWidth = w.thickness * scale;
     if (obstacles.length > 0) {
-      const segments = clipLineAgainstPolygons(w.start, w.end, obstacles);
+      const segments = getClippedSegs(w);
       for (const seg of segments) {
         strokeSegment(w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, wallLineWidth);
       }
@@ -441,48 +539,79 @@ export function renderFrame(
         const { left: rl, top: rt, width: rw, height: rh } = boardRect;
         const dangerT = Math.min(1, (maxDanger - 0.55) / 0.45);
         const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.006 + Math.PI);
+        // Glow baked once (blur is constant); only alpha pulses, which
+        // globalAlpha reproduces exactly.
+        const margin = Math.ceil(18 * scale + 5 * scale);
+        const dangerKey = `${Math.round(rw)}x${Math.round(rh)}_${Math.round(scale * 100)}`;
+        if (_dangerFrameKey !== dangerKey) {
+          _dangerFrameKey = dangerKey;
+          _dangerFrameOC = new OffscreenCanvas(Math.ceil(rw) + margin * 2, Math.ceil(rh) + margin * 2);
+          const c = _dangerFrameOC.getContext('2d')!;
+          c.strokeStyle = '#ff2244';
+          c.shadowColor = '#ff2244';
+          c.shadowBlur = 18 * scale;
+          c.lineWidth = 5 * scale;
+          c.strokeRect(margin, margin, rw, rh);
+        }
         ctx.save();
         ctx.globalAlpha = dangerT * 0.45 * (0.55 + 0.45 * pulse);
-        ctx.strokeStyle = '#ff2244';
-        ctx.shadowColor = '#ff2244';
-        ctx.shadowBlur = 18 * scale;
-        ctx.lineWidth = 5 * scale;
-        ctx.strokeRect(rl, rt, rw, rh);
+        ctx.drawImage(_dangerFrameOC!, Math.round(rl - margin), Math.round(rt - margin));
         ctx.restore();
       }
     }
   }
 
   // ── Mirror polygon fills + outlines ──────────────────────────────────────
+  // Mirrors are static for the whole level; the glow stroke uses shadowBlur,
+  // so the whole layer is prerendered once and blitted per frame.
   if (game.mirrorPolygons.length > 0) {
-    ctx.save();
-    ctx.fillStyle = "rgba(136, 221, 255, 0.15)";
-    for (const poly of game.mirrorPolygons) {
-      if (poly.vertices.length < 3) continue;
-      buildExactPath(poly.vertices);
-      ctx.fill();
+    const layerKey = `${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}_${screenWidth}x${screenHeight}`;
+    if (_mirrorGlowKey !== layerKey || _mirrorGlowPolys !== game.mirrorPolygons) {
+      _mirrorGlowKey = layerKey;
+      _mirrorGlowPolys = game.mirrorPolygons;
+      _mirrorGlowOC = new OffscreenCanvas(Math.max(1, screenWidth), Math.max(1, screenHeight));
+      const c = _mirrorGlowOC.getContext('2d')!;
+      // Exact straight-edge path of the physics polygon. Never smooth this:
+      // a Catmull-Rom spline bows outward — on thin mirror rects the rendered
+      // "lens" tip extended ~60 world units past the physics polygon, making
+      // fences appear to pass through mirrors. The drawn boundary must match
+      // the physics edges exactly; the thick round-joined stroke softens the
+      // corners visually.
+      const tracePath = (verts: { x: number; y: number }[]) => {
+        c.beginPath();
+        const sv0 = w2s(verts[0].x, verts[0].y);
+        c.moveTo(sv0.x, sv0.y);
+        for (let i = 1; i < verts.length; i++) {
+          const svp = w2s(verts[i].x, verts[i].y);
+          c.lineTo(svp.x, svp.y);
+        }
+        c.closePath();
+      };
+      c.fillStyle = "rgba(136, 221, 255, 0.15)";
+      for (const poly of game.mirrorPolygons) {
+        if (poly.vertices.length < 3) continue;
+        tracePath(poly.vertices);
+        c.fill();
+      }
+      c.lineCap = 'round';
+      c.lineJoin = 'round';
+      c.lineWidth = WALL_THICKNESS * scale;
+      c.strokeStyle = "#88ddff";
+      c.shadowColor = "#88ddff";
+      c.shadowBlur = 8 * scale;
+      for (const poly of game.mirrorPolygons) {
+        tracePath(poly.vertices);
+        c.stroke();
+      }
+      c.strokeStyle = "rgba(255, 255, 255, 0.4)";
+      c.lineWidth = 1 * scale;
+      c.shadowBlur = 0;
+      for (const poly of game.mirrorPolygons) {
+        tracePath(poly.vertices);
+        c.stroke();
+      }
     }
-    ctx.restore();
-
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = WALL_THICKNESS * scale;
-    ctx.strokeStyle = "#88ddff";
-    ctx.shadowColor = "#88ddff";
-    ctx.shadowBlur = 8 * scale;
-    for (const poly of game.mirrorPolygons) {
-      buildExactPath(poly.vertices);
-      ctx.stroke();
-    }
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-    ctx.lineWidth = 1 * scale;
-    ctx.shadowBlur = 0;
-    for (const poly of game.mirrorPolygons) {
-      buildExactPath(poly.vertices);
-      ctx.stroke();
-    }
-    ctx.restore();
+    if (_mirrorGlowOC) ctx.drawImage(_mirrorGlowOC, 0, 0);
   }
 
   // ── Cut preview line during drag ──────────────────────────────────────────
@@ -860,14 +989,12 @@ export function renderFrame(
         const ft = Math.min(1, (elapsed - LOCK_PULSE_DURATION) / LOCK_FLOOD_DURATION);
         const c = w2s(flash.centroid.x, flash.centroid.y);
         const burstR = 120 * scale * (0.3 + ft * 1.8);
-        const grad = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, burstR);
-        grad.addColorStop(0, `rgba(${acR}, ${acG}, ${acB}, ${glowAlpha})`);
-        grad.addColorStop(0.5, `rgba(${acR}, ${acG}, ${acB}, ${glowAlpha * 0.4})`);
-        grad.addColorStop(1, `rgba(${acR}, ${acG}, ${acB}, 0)`);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, burstR, 0, Math.PI * 2);
-        ctx.fill();
+        // Cached unit gradient sprite; the stop alphas are all linear in
+        // glowAlpha, so globalAlpha reproduces the gradient exactly.
+        const sprite = getRadialGlowSprite(accentColor, 'burst');
+        ctx.globalAlpha = glowAlpha;
+        ctx.drawImage(sprite, c.x - burstR, c.y - burstR, burstR * 2, burstR * 2);
+        ctx.globalAlpha = 1;
       }
       ctx.restore();
 
@@ -913,26 +1040,41 @@ export function renderFrame(
     // "inside" the clip — the obstacle sub-paths cancel the outer region,
     // making them true holes. This blocks every pixel (including stroke
     // bleed from thick fences) from ever landing inside an obstacle.
-    ctx.beginPath();
+    const clipPath = new Path2D();
     if (activeRegion && activeRegion.polygon.vertices.length > 0) {
       const first = w2s(activeRegion.polygon.vertices[0].x, activeRegion.polygon.vertices[0].y);
-      ctx.moveTo(first.x, first.y);
+      clipPath.moveTo(first.x, first.y);
       for (let i = 1; i < activeRegion.polygon.vertices.length; i++) {
         const pt = w2s(activeRegion.polygon.vertices[i].x, activeRegion.polygon.vertices[i].y);
-        ctx.lineTo(pt.x, pt.y);
+        clipPath.lineTo(pt.x, pt.y);
       }
-      ctx.closePath();
+      clipPath.closePath();
     } else {
       const { left, top, width, height } = game.boardRect;
-      ctx.rect(left, top, width, height);
+      clipPath.rect(left, top, width, height);
     }
-    for (const poly of obstacles) {
-      const sv = poly.vertices.map(v => w2s(v.x, v.y));
-      ctx.moveTo(sv[0].x, sv[0].y);
-      for (let i = 1; i < sv.length; i++) ctx.lineTo(sv[i].x, sv[i].y);
-      ctx.closePath();
+    // Obstacle hole subpaths are static per level — cached as a Path2D
+    // instead of re-tracing every (64-gon) polygon on every growth frame.
+    {
+      const holesKey = `${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}`;
+      if (_obstacleHolesCache.key !== holesKey || _obstacleHolesCache.polys !== obstacles) {
+        _obstacleHolesCache.key = holesKey;
+        _obstacleHolesCache.polys = obstacles;
+        const holes = new Path2D();
+        for (const poly of obstacles) {
+          const sv0 = w2s(poly.vertices[0].x, poly.vertices[0].y);
+          holes.moveTo(sv0.x, sv0.y);
+          for (let i = 1; i < poly.vertices.length; i++) {
+            const svp = w2s(poly.vertices[i].x, poly.vertices[i].y);
+            holes.lineTo(svp.x, svp.y);
+          }
+          holes.closePath();
+        }
+        _obstacleHolesCache.path = holes;
+      }
+      clipPath.addPath(_obstacleHolesCache.path!);
     }
-    ctx.clip('evenodd');
+    ctx.clip(clipPath, 'evenodd');
 
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -988,31 +1130,37 @@ export function renderFrame(
       for (const tip of [wall.startPoint, wall.endPoint]) {
         const ts = w2s(tip.x, tip.y);
 
-        // Outer bloom — pulsing radius and opacity
+        // Outer bloom — pulsing radius and opacity, via cached gradient sprite
         const bloomR = coreR * (3.5 + throb * 2.5);
-        const bloom = ctx.createRadialGradient(ts.x, ts.y, 0, ts.x, ts.y, bloomR);
-        bloom.addColorStop(0,   accentColor + 'bb');
-        bloom.addColorStop(0.3, accentColor + '44');
-        bloom.addColorStop(1,   accentColor + '00');
+        const bloomSprite = getRadialGlowSprite(accentColor, 'tip');
         ctx.globalAlpha = 0.5 + 0.5 * throb;
-        ctx.fillStyle = bloom;
-        ctx.beginPath();
-        ctx.arc(ts.x, ts.y, bloomR, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.drawImage(bloomSprite, ts.x - bloomR, ts.y - bloomR, bloomR * 2, bloomR * 2);
 
-        // White-hot core with accent shadow
+        // White-hot core with accent shadow — shimmer bucketed into cached
+        // sprites (the shadowBlur repaint per frame was the expensive part)
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#ffffff';
-        ctx.shadowColor = accentColor;
-        ctx.shadowBlur = (8 + shimmer * 12) * scale;
-        ctx.beginPath();
-        ctx.arc(ts.x, ts.y, coreR, 0, Math.PI * 2);
-        ctx.fill();
+        {
+          const bucket = Math.round(shimmer * 8); // 0..8
+          const key = `tipcore_${accentColor}_${Math.round(coreR * 10)}_${bucket}`;
+          let core = _pulseSpriteCache.get(key);
+          if (!core) {
+            const blur = (8 + (bucket / 8) * 12) * scale;
+            const pad = Math.ceil(coreR + blur + 2);
+            core = new OffscreenCanvas(pad * 2, pad * 2);
+            const c = core.getContext('2d')!;
+            c.fillStyle = '#ffffff';
+            c.shadowColor = accentColor;
+            c.shadowBlur = blur;
+            c.beginPath();
+            c.arc(pad, pad, coreR, 0, Math.PI * 2);
+            c.fill();
+            _pulseSpriteCache.set(key, core);
+          }
+          ctx.drawImage(core, Math.round(ts.x - core.width / 2), Math.round(ts.y - core.height / 2));
+        }
       }
 
       ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
     }
 
     ctx.restore();

@@ -13,6 +13,13 @@ export interface Wall {
   isObstacleBoundary?: boolean;
   /** ms timestamp when the fence segment was drawn; absent on board edges / obstacles */
   createdAt?: number;
+  /** Cached `id.startsWith("board-")`, filled lazily by the physics hot loop. */
+  isBoardEdge?: boolean;
+  /** Cached segment AABB (endpoints only, uninflated), filled lazily by the physics hot loop. */
+  aabbMinX?: number;
+  aabbMinY?: number;
+  aabbMaxX?: number;
+  aabbMaxY?: number;
 }
 
 export interface WallVertex {

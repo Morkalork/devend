@@ -22,6 +22,7 @@ import {
   reassignBallsToRegions,
   validateAllBallOwnership,
   wouldWallOrphanBall,
+  paintCellRegionIds,
 } from "@/lib/regionOwnership";
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
@@ -157,6 +158,7 @@ export function applyCutFn(
     }
   }
   game.regions = updatedRegions;
+  if (game.spaceGrid) paintCellRegionIds(game.spaceGrid, game.regions);
 
   callbacks.collectAndDrawRemovedSamples();
   callbacks.repaintRegionCanvas();

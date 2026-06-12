@@ -50,6 +50,7 @@ import {
   REGION_SAMPLE_GRID_SIZE,
   validateAllBallOwnership,
   reassignBallsToRegions,
+  paintCellRegionIds,
 } from "@/lib/regionOwnership";
 import {
   SpaceGrid,
@@ -377,6 +378,7 @@ export function GameCanvas({
       game.spaceGrid          = data.spaceGrid;
       game.gridRegions        = data.gridRegions;
       game.regions            = data.regions;
+      if (game.spaceGrid) paintCellRegionIds(game.spaceGrid, game.regions);
       game.fastestBallId      = data.fastestBallId;
       removedSamples = [];
       removedSamplesSet = new Set();
