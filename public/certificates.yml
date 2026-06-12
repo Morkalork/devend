@@ -145,6 +145,7 @@ certificates:
     name: Head Start I
     description: Begin every run at level 5. Awarded to those who have proven they can reach level 25.
     unlockType: achievement
+    # NOTE: must match an existing id in achievements.yml ("reach level 25")
     sourceAchievementId: principal-engineer
     levels:
       - cost: 15
@@ -154,7 +155,68 @@ certificates:
     name: Head Start II
     description: Begin every run at level 10. Awarded for exceptional consistency across 50 perfect levels.
     unlockType: achievement
+    # NOTE: must match an existing id in achievements.yml ("50 flawless levels")
     sourceAchievementId: ci-cd-pipeline
     levels:
       - cost: 30
         effect: { type: startingLevelBonus, value: 10 }
+
+  # ═══════════════════════════════════════════════════
+  # HOURS-SPENT CERTIFICATES
+  # Unlocked by spending Certificate Hours in this store.
+  # ═══════════════════════════════════════════════════
+
+  - id: equity-grant
+    name: Equity Grant
+    description: Start every map with part of the board already captured. Vesting begins immediately.
+    unlockType: hours-spent
+    requiredHoursSpent: 25
+    levels:
+      - cost: 12
+        effect: { type: startingCapturePercent, value: 5 }
+      - cost: 18
+        effect: { type: startingCapturePercent, value: 3 }
+      - cost: 25
+        effect: { type: startingCapturePercent, value: 4 }
+
+  # ═══════════════════════════════════════════════════
+  # MORE ACHIEVEMENT-LOCKED CERTIFICATES
+  # ═══════════════════════════════════════════════════
+
+  - id: night-school-diploma
+    name: Night School Diploma
+    description: Bank extra Certificate Hours every run. Ascending accelerates everything.
+    unlockType: achievement
+    # "Beyond The Backlog" — ascend past the final level
+    sourceAchievementId: beyond-the-backlog
+    levels:
+      - cost: 10
+        effect: { type: extraCertificateHours, value: 1 }
+      - cost: 18
+        effect: { type: extraCertificateHours, value: 1 }
+
+  - id: bulk-licensing
+    name: Bulk Licensing
+    description: Permanent discount on all upgrade-shop prices. Procurement finally negotiated a framework agreement.
+    unlockType: achievement
+    # "Staff Engineer" — reach level 30
+    sourceAchievementId: staff-engineer
+    levels:
+      - cost: 10
+        effect: { type: shopDiscountMultiplier, value: 0.93 }
+      - cost: 16
+        effect: { type: shopDiscountMultiplier, value: 0.95 }
+      - cost: 22
+        effect: { type: shopDiscountMultiplier, value: 0.95 }
+
+  - id: risk-assessment-certified
+    name: Risk Assessment Certified
+    description: Push-Your-Luck bonuses pay out more. Audited, stamped, and underwritten.
+    unlockType: achievement
+    # "Calculated Risk" — bank 5 push bonuses
+    sourceAchievementId: calculated-risk
+    levels:
+      - cost: 8
+        effect: { type: pushBonusMultiplier, value: 1.5 }
+      - cost: 14
+        effect: { type: pushBonusMultiplier, value: 1.3 }

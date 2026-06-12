@@ -8,6 +8,8 @@ export interface UpgradeConfig {
   cost: number;
   unlockLevel?: number;
   prerequisites?: string[];
+  /** Only offered while ascended (Ascension mode, depth ≥ 1) */
+  ascensionOnly?: boolean;
   modifiers: Record<string, number>;
 }
 

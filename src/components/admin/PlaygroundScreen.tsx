@@ -38,10 +38,14 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   scoreInterestRate:                { label: 'Score Interest Rate',    kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Fraction of score added as interest between maps' },
   extraShopItems:                   { label: 'Extra Shop Slots',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional item slots in the upgrade shop' },
   shopRestockCount:                 { label: 'Shop Restocks',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Purchases per shop visit that refill their slot with a new offer' },
-  extraCertificateHours:          { label: 'Extra Cert. Hours',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Certificate Hours granted (defined but not yet consumed by the run-end payout)' },
+  extraCertificateHours:          { label: 'Extra Cert. Hours',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Certificate Hours banked when the run ends' },
   microManagerPerLock:              { label: 'MicroManager/Lock',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Speed reduction per locked ball (0.01 = 1%, max 50%)' },
   ballPathPredictionBounces:        { label: 'Path Preview Bounces',   kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'SCRUM Master: bounces ahead to preview (0 = off)' },
   ballPathPredictionBalls:          { label: 'Path Preview Balls',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'SCRUM Master: fastest N balls to track (≥100 = all, 0 = off)' },
+  shopDiscountMultiplier:           { label: 'Shop Discount',          kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies upgrade-shop prices (< 1 = cheaper)' },
+  pushBonusMultiplier:              { label: 'Push Bonus Mult.',       kind: 'multiplicative', step: 0.25, min: 0.25, defaultValue: 1,    description: 'Multiplies push-your-luck chunk payouts' },
+  startingCapturePercent:           { label: 'Starting Capture %',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Board starts with this % already captured (max 40)' },
+  fenceDurabilityBonus:             { label: 'Fence Durability +',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra ball hits Ascension fences survive (no effect outside Ascension)' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

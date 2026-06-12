@@ -11,6 +11,8 @@ export interface GameModifiers {
   ballSizeMultiplier: number;
   fenceGenerationSpeedMultiplier: number;
   scoreMultiplier: number;
+  shopDiscountMultiplier: number; // scales upgrade-shop prices (<1 = cheaper)
+  pushBonusMultiplier: number;    // scales push-your-luck chunk payouts
 
   // Additive (sum)
   instantFencesPerMap: number;
@@ -22,6 +24,8 @@ export interface GameModifiers {
   extraShopItems: number;
   shopRestockCount: number; // purchases per shop visit that refill their slot with a new offer
   extraCertificateHours: number;
+  startingCapturePercent: number; // board starts with this % already captured (Equity Grant)
+  fenceDurabilityBonus: number;   // extra ball hits Ascension fences survive
 
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
@@ -37,6 +41,8 @@ export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'ballSizeMultiplier',
   'fenceGenerationSpeedMultiplier',
   'scoreMultiplier',
+  'shopDiscountMultiplier',
+  'pushBonusMultiplier',
 ];
 
 /**
@@ -67,6 +73,8 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   ballSizeMultiplier: 1,
   fenceGenerationSpeedMultiplier: 1,
   scoreMultiplier: 1,
+  shopDiscountMultiplier: 1,
+  pushBonusMultiplier: 1,
   instantFencesPerMap: 0,
   additionalConcurrentFences: 0,
   bonusRemovalChance: 0,
@@ -76,6 +84,8 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   extraShopItems: 0,
   shopRestockCount: 0,
   extraCertificateHours: 0,
+  startingCapturePercent: 0,
+  fenceDurabilityBonus: 0,
   microManagerPerLock: 0,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,

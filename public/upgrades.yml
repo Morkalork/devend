@@ -574,3 +574,42 @@ upgrades:
       - scrum_master_5
     modifiers:
       ballPathPredictionBalls: 999
+
+  # ===============================
+  # DEFENSIVE PROGRAMMING (Ascension fence durability)
+  # Only offered while ascended — fences wear out past level 30.
+  # ===============================
+
+  - id: defensive_programming_junior
+    name: Defensive Programming
+    tier: Junior
+    description: Fences survive 1 extra ball hit before crumbling (Ascension).
+    cost: 10
+    unlockLevel: 1
+    ascensionOnly: true
+    modifiers:
+      fenceDurabilityBonus: 1
+
+  - id: defensive_programming_senior
+    name: Defensive Programming
+    tier: Senior
+    description: Fences survive 2 extra ball hits before crumbling (Ascension).
+    cost: 18
+    unlockLevel: 1
+    ascensionOnly: true
+    prerequisites:
+      - defensive_programming_junior
+    modifiers:
+      fenceDurabilityBonus: 1
+
+  - id: defensive_programming_principal
+    name: Defensive Programming
+    tier: Principal
+    description: Fences survive 3 extra ball hits before crumbling (Ascension).
+    cost: 30
+    unlockLevel: 1
+    ascensionOnly: true
+    prerequisites:
+      - defensive_programming_senior
+    modifiers:
+      fenceDurabilityBonus: 1
