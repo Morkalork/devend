@@ -322,6 +322,17 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       registerWallImpact(wall.start, wall.end, impactPoint, impactStrength);
       triggerWallHit(ball.effects, performance.now());
       playWallHitSound(impactStrength);
+
+      // Ascension fence durability: each (debounced) hit wears the fence down.
+      // Exhausted fences are queued and broken after the physics step.
+      if (wall.hitsLeft !== undefined) {
+        const now = performance.now();
+        if (wall.lastDamageAt === undefined || now - wall.lastDamageAt > 250) {
+          wall.lastDamageAt = now;
+          wall.hitsLeft--;
+          if (wall.hitsLeft <= 0) game.pendingWallBreaks.push(wall);
+        }
+      }
     }
   }
 

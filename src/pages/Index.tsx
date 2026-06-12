@@ -149,21 +149,22 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 ascensionDepth={session.ascensionDepth}
                 activeMutators={session.activeMutators}
+                fenceDurability={session.fenceDurability}
               />
             )}
             {navigation.currentScreen === 'upgradeShop' && (
               <UpgradeShop
                 playerPoints={session.totalScore}
-                upgrades={session.upgrades}
+                upgrades={session.upgrades.filter(u => !u.ascensionOnly || session.ascensionDepth > 0)}
                 ownedUpgradeIds={session.ownedUpgradeIds}
                 completedLevel={session.currentLevelIndex + 1}
-                canPurchase={session.canPurchaseUpgrade}
                 isLocked={session.isUpgradeLocked}
                 onPurchase={session.handlePurchaseUpgrade}
                 onContinue={session.handleContinueFromShop}
                 accentColor={accentHex}
                 extraShopItems={session.activeModifiers.extraShopItems}
                 shopRestockCount={session.activeModifiers.shopRestockCount}
+                shopDiscountMultiplier={session.activeModifiers.shopDiscountMultiplier}
                 showTutorial={session.shouldShowStore}
                 onTutorialDismiss={session.markStoreSeen}
                 newlyUnlockedCerts={session.shopUnlockedCerts}
@@ -203,6 +204,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 accentColor={accentHex}
                 showTutorial={session.shouldShowCertStore}
                 onTutorialDismiss={session.markCertStoreSeen}
+                upgrades={session.upgrades}
+                achievements={session.achievements}
+                metaStats={session.metaStats}
+                lifetimeHoursSpent={session.lifetimeHoursSpent}
               />
             )}
             {navigation.currentScreen === 'achievements' && (

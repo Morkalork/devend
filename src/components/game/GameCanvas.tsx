@@ -79,6 +79,7 @@ import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn } from "@/lib/physics/applyCut";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
+import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -109,6 +110,8 @@ interface GameCanvasProps {
   accentColor?: string;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
+  /** Ball hits a fence survives (Ascension mode); null/undefined = indestructible. */
+  fenceDurability?: number | null;
   parallaxTickRef?: React.MutableRefObject<((timestamp: number) => void) | null>;
 }
 
@@ -133,6 +136,7 @@ export function GameCanvas({
   accentColor = "#00ff88",
   activeModifiers,
   cumulativeLockedBalls = 0,
+  fenceDurability = null,
   parallaxTickRef,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -218,6 +222,8 @@ export function GameCanvas({
     assimilations: new Map<string, LockFlashState>(),
     dissolve: null as DissolveState | null,
     bonusCutCells: new Set<string>(),
+    fenceDurability: null as number | null,
+    pendingWallBreaks: [] as Wall[],
   });
 
   useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging);
@@ -365,6 +371,8 @@ export function GameCanvas({
     const initGame = () => {
       game.assimilations.clear();
       game.bonusCutCells.clear();
+      game.fenceDurability = fenceDurability;
+      game.pendingWallBreaks = [];
       const data = createInitialGameData(level, levelNumber, activeModifiers);
       game.walls              = data.walls;
       game.movers             = data.movers;
@@ -395,7 +403,8 @@ export function GameCanvas({
       game.wallCount = 0;
       clearWallImpacts();
       setCutCount(0);
-      setRemainingPercent(100);
+      // Not always 100: startingCapturePercent (Equity Grant) starts the run lower
+      setRemainingPercent(game.spaceGrid ? Math.round(getRemainingPercent(game.spaceGrid)) : 100);
       rainState.particles = createRainParticles(40);
       rainState.lastTime = 0;
     };
@@ -496,6 +505,12 @@ export function GameCanvas({
       updateWall: (dt: number) => updateWall(dt),
       applyCut: (wall) => applyCut(wall),
       render,
+      processWallBreaks: () =>
+        processWallBreaksFn(game, {
+          repaintRegionCanvas,
+          setRemainingPercent,
+          onFenceBroke: () => playFenceBreakSound(),
+        }),
     };
     const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks);
     game.gameLoopFn = gameLoop;
@@ -508,7 +523,7 @@ export function GameCanvas({
       window.removeEventListener("resize", resizeCanvas);
       cancelAnimationFrame(game.animationId);
     };
-  }, [level, levelNumber, activeModifiers]);
+  }, [level, levelNumber, activeModifiers, fenceDurability]);
 
   const handleBankAndContinue = useCallback(() => {
     const game = gameRef.current;
@@ -520,7 +535,9 @@ export function GameCanvas({
     const areaAtPushStart = game.pushStartPercent;
     const areaCleared = Math.max(0, areaAtPushStart - game.bestRemainingPercent);
     const chunkSize = areaAtPushStart * 0.25;
-    const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
+    const pushBonus = chunkSize > 0
+      ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
+      : 0;
 
     setTimeout(() => {
       onLevelCompleteRef.current({

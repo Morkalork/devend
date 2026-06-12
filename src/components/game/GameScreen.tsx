@@ -59,6 +59,8 @@ interface GameScreenProps {
   cumulativeLockedBalls?: number;
   ascensionDepth?: number;
   activeMutators?: MutatorConfig[];
+  /** Ball hits a fence survives (Ascension); null = indestructible. */
+  fenceDurability?: number | null;
 }
 
 export function GameScreen({
@@ -87,6 +89,7 @@ export function GameScreen({
   cumulativeLockedBalls = 0,
   ascensionDepth = 0,
   activeMutators = [],
+  fenceDurability = null,
 }: GameScreenProps) {
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
 
@@ -192,6 +195,7 @@ export function GameScreen({
             accentColor={accentColor}
             activeModifiers={activeModifiers}
             cumulativeLockedBalls={cumulativeLockedBalls}
+            fenceDurability={fenceDurability}
             parallaxTickRef={memParallaxTickRef}
           />
         </div>

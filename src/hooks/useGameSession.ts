@@ -95,6 +95,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     certLevelsOwned,
     unlockedCertIds,
     maxTierCounts,
+    lifetimeHoursSpent,
     runLevelsCompleted,
     runHoursEarned: runHoursAwarded,
     loadCertificates,
@@ -146,6 +147,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordPerfectLevel,
     recordLivesLost,
     recordAscensionDepth,
+    recordPushBonusBanked,
     resetProgression,
   } = useMetaProgression();
 
@@ -184,6 +186,20 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     () => draftedMutatorIds.map(id => mutatorLookup.get(id)).filter((m): m is NonNullable<typeof m> => m != null),
     [draftedMutatorIds, mutatorLookup]
   );
+
+  // Ascension rule: fences wear out after a number of ball hits — generous on
+  // early levels, brutal late, plus the Defensive Programming upgrade bonus.
+  // null at depth 0 = indestructible fences (the normal game).
+  const fenceDurability = useMemo(() => {
+    if (ascensionDepth === 0) return null;
+    const levelNumber = currentLevelIndex + 1;
+    const t = totalLevels > 1 ? Math.min(1, (levelNumber - 1) / (totalLevels - 1)) : 0;
+    const base = Math.round(
+      ascensionConfig.fenceDurabilityBase +
+      (ascensionConfig.fenceDurabilityAtFinal - ascensionConfig.fenceDurabilityBase) * t
+    );
+    return Math.max(1, base + activeModifiers.fenceDurabilityBonus);
+  }, [ascensionDepth, currentLevelIndex, totalLevels, ascensionConfig, activeModifiers.fenceDurabilityBonus]);
 
   const certSourceIds = useMemo(
     () => new Set(certificates.map(c => c.sourceUpgradeId).filter((id): id is string => id != null)),
@@ -269,6 +285,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     if (currentLives >= livesAtLevelStart) recordPerfectLevel();
 
+    // Survived a push-your-luck round and banked the bonus (failed pushes
+    // also carry a pushBonus, so check the flag too)
+    const bankedPush = (scoreData.pushBonus ?? 0) > 0 && !scoreData.pushFailed;
+    if (bankedPush) recordPushBonusBanked();
+
     const projectedStats = {
       highestLevelReached: Math.max(metaStats.highestLevelReached, currentLevelNum),
       totalFencesDrawn: metaStats.totalFencesDrawn + (scoreData.cutCount || 0),
@@ -278,6 +299,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
           : metaStats.totalLevelsCompletedWithoutLoss,
       totalLivesLost: metaStats.totalLivesLost,
       deepestAscension: Math.max(metaStats.deepestAscension, ascensionDepth),
+      pushBonusesBanked: metaStats.pushBonusesBanked + (bankedPush ? 1 : 0),
     };
     checkAndCompleteAchievements(projectedStats);
 
@@ -295,7 +317,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -433,9 +455,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [resetToFirstLevel, nav.goToWelcome, resetRunProgress]);
 
   const handleOpenCertificateStore = useCallback(async () => {
-    await loadCertificates();
+    // Upgrades too: locked-cert tooltips name the upgrade that unlocks them,
+    // and the catalogue isn't loaded yet when entering from the welcome screen.
+    await Promise.all([loadCertificates(), loadUpgrades()]);
     nav.goToCertificateStore();
-  }, [loadCertificates, nav.goToCertificateStore]);
+  }, [loadCertificates, loadUpgrades, nav.goToCertificateStore]);
 
   const handleReEnableAllTutorials = useCallback(() => {
     resetAllTutorials();
@@ -502,6 +526,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     certLevelsOwned,
     unlockedCertIds,
     maxTierCounts,
+    lifetimeHoursSpent,
     shopUnlockedCerts,
     pendingCertUnlocks,
     // Achievements
@@ -520,6 +545,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     mutators,
     draftedMutatorIds,
     activeMutators,
+    fenceDurability,
     // Modifiers / bonuses
     activeModifiers,
     achievementBonuses: mergedBonuses,
