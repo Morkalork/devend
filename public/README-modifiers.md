@@ -31,6 +31,7 @@ In-run upgrades purchased in the shop after each map. Each upgrade applies one o
 | `cost` | number | ✓ | Overtime hours required to purchase |
 | `unlockLevel` | number | | Minimum completed level before this appears in the shop (default: 1) |
 | `prerequisites` | string[] | | Other upgrade IDs that must be owned before this can appear |
+| `ascensionOnly` | boolean | | Only offered while ascended (e.g. Defensive Programming fence durability) |
 | `modifiers` | map | ✓ | One or more **GameModifier keys** and their values (see below) |
 
 ### Tiers
@@ -58,10 +59,11 @@ A certificate must first be **unlocked**, then its levels are bought one at a ti
 | `id` | string | ✓ | Unique identifier |
 | `name` | string | ✓ | Display name |
 | `description` | string | ✓ | Shown in the certificate store |
-| `unlockType` | string | ✓ | `upgrade-chain` or `achievement` |
+| `unlockType` | string | ✓ | `upgrade-chain`, `achievement`, or `hours-spent` |
 | `sourceUpgradeId` | string | for `upgrade-chain` | Buying this upgrade (a max-tier one) in `requiredRuns` separate runs unlocks the certificate |
 | `requiredRuns` | number | | Number of separate runs required (default: 3) |
 | `sourceAchievementId` | string | for `achievement` | Completing this achievement unlocks the certificate |
+| `requiredHoursSpent` | number | for `hours-spent` | Lifetime Certificate Hours spent in the store needed to unlock |
 | `levels` | array | ✓ | Purchasable levels, each `{ cost, effect }` |
 | `levels[].cost` | number | ✓ | Certificate Hours for that level |
 | `levels[].effect.type` | string | ✓ | A **GameModifier key** (see below), or the special `startingLevelBonus` |
@@ -109,6 +111,8 @@ The file also has a top-level `ascension` block:
 | Field | Type | Description |
 |---|---|---|
 | `ascension.speedRampPerDepth` | number | Baseline ball-speed multiplier applied per ascension depth on top of drafted mutators (default 1.08, compounds) |
+| `ascension.fenceDurabilityBase` | number | Ball hits an ascended fence survives on level 1 (default 6) |
+| `ascension.fenceDurabilityAtFinal` | number | …declining linearly to this on the final level (default 2). Fences bordering captured space never break. |
 
 > `extraLives` in a mutator is applied once, on draft, like buying an extra-lives upgrade. Levels completed at depth *d* count *(1 + d)*× toward Certificate Hours.
 
@@ -179,6 +183,8 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `ballSizeMultiplier` | `1.0` | Multiplies ball radius. | `0.90` = −10% size |
 | `fenceGenerationSpeedMultiplier` | `1.0` | Multiplies how fast fences grow. | `1.10` = +10% speed |
 | `scoreMultiplier` | `1.0` | Multiplies overtime hours earned per map. | `1.15` = +15% overtime |
+| `shopDiscountMultiplier` | `1.0` | Multiplies all upgrade-shop prices (Bulk Licensing certificate). | `0.93` = 7% off |
+| `pushBonusMultiplier` | `1.0` | Multiplies push-your-luck chunk payouts (Risk Assessment certificate). | `1.5` = +50% |
 
 ### Additive (stack by +)
 
@@ -192,7 +198,9 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `scoreInterestRate` | `0` | Fraction of current overtime balance added as interest between maps (capped at 8h). | `0.05` = 5% interest |
 | `extraShopItems` | `0` | Extra item slots shown in the shop after each map. | `1` |
 | `shopRestockCount` | `0` | Purchases per shop visit that refill their slot with a new offer (Procurement upgrades). | `1` |
-| `extraCertificateHours` | `0` | Bonus Certificate Hours. ⚠ Defined but **not yet consumed** by the run-end payout (`finalizeRun` in `useCertificateManager`) — the Certification Wizard upgrade currently has no effect. | `1` |
+| `extraCertificateHours` | `0` | Bonus Certificate Hours banked when the run ends (Certification Wizard, Night School Diploma). | `1` |
+| `startingCapturePercent` | `0` | Board starts with this % already captured — the arena shrinks and the run starts below 100% remaining (Equity Grant certificate; clamped to 40). | `5` |
+| `fenceDurabilityBonus` | `0` | Extra ball hits Ascension fences survive before crumbling. No effect outside Ascension. | `1` |
 
 ---
 
@@ -208,3 +216,5 @@ These are **lifetime cumulative stats** persisted in localStorage.
 | `highestLevelReached` | Highest level number reached in a single run |
 | `totalLevelsCompletedWithoutLoss` | Total levels completed without losing a life |
 | `totalLivesLost` | Total lives lost across all runs |
+| `deepestAscension` | Deepest Ascension depth ever reached |
+| `pushBonusesBanked` | Push-your-luck bonuses successfully banked (not failed) |

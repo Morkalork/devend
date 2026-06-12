@@ -4,7 +4,7 @@ This document explains how the game is put together. Read it once before touchin
 
 ## The game in one paragraph
 
-Balls of Fire and Ice is a JezzBall-style arcade game. Balls bounce around a square board; the player draws *fences* (growing walls) to cut the board into regions. Regions without balls are captured. Capture enough of the board and the level is won. Between levels the player spends *overtime hours* (the score) in an upgrade shop; across runs they earn *Certificate Hours* to buy permanent bonuses in the Certificate Store. Beating the final level offers **Ascension**: draft a curse-and-blessing *mutator* and loop back to level 1 at higher intensity, or retire and bank the run.
+Balls of Fire and Ice is a JezzBall-style arcade game. Balls bounce around a square board; the player draws *fences* (growing walls) to cut the board into regions. Regions without balls are captured. Capture enough of the board and the level is won. Between levels the player spends *overtime hours* (the score) in an upgrade shop; across runs they earn *Certificate Hours* to buy permanent bonuses in the Certificate Store. Beating the final level offers **Ascension**: draft a curse-and-blessing *mutator* and loop back to level 1 at higher intensity, or retire and bank the run. While ascended, fences *wear out*: each fence survives a limited number of ball hits (fewer on later levels) and then crumbles, re-merging the areas it separated — except fences bordering captured space, which never break (see [physics/breakFenceWall.ts](src/lib/physics/breakFenceWall.ts)).
 
 ## Tech stack
 
