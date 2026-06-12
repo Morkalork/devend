@@ -145,7 +145,7 @@ certificates:
     name: Head Start I
     description: Begin every run at level 5. Awarded to those who have proven they can reach level 25.
     unlockType: achievement
-    sourceAchievementId: elite
+    sourceAchievementId: principal-engineer
     levels:
       - cost: 15
         effect: { type: startingLevelBonus, value: 5 }
@@ -154,7 +154,7 @@ certificates:
     name: Head Start II
     description: Begin every run at level 10. Awarded for exceptional consistency across 50 perfect levels.
     unlockType: achievement
-    sourceAchievementId: unstoppable
+    sourceAchievementId: ci-cd-pipeline
     levels:
       - cost: 30
         effect: { type: startingLevelBonus, value: 10 }
