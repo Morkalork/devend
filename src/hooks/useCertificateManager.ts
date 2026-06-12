@@ -36,6 +36,7 @@ function loadPersistence(): CertPersistence {
       maxTierCounts: typeof parsed.maxTierCounts === 'object' && parsed.maxTierCounts !== null ? parsed.maxTierCounts : {},
       unlockedCertIds: Array.isArray(parsed.unlockedCertIds) ? parsed.unlockedCertIds : [],
       certLevelsOwned: typeof parsed.certLevelsOwned === 'object' && parsed.certLevelsOwned !== null ? parsed.certLevelsOwned : {},
+      lifetimeHoursSpent: typeof parsed.lifetimeHoursSpent === 'number' ? parsed.lifetimeHoursSpent : 0,
     };
   } catch {
     return { ...DEFAULT_CERT_PERSISTENCE };
@@ -192,10 +193,23 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     if (persistence.totalCertificateHours < totalCost) return false;
 
     setPersistence(prev => {
+      const lifetimeHoursSpent = prev.lifetimeHoursSpent + totalCost;
+
+      // Spending hours can itself unlock certs (hours-spent unlock type)
+      const newlyUnlocked = certificates.filter(cert =>
+        cert.unlockType === 'hours-spent' &&
+        !prev.unlockedCertIds.includes(cert.id) &&
+        lifetimeHoursSpent >= (cert.requiredHoursSpent ?? Infinity)
+      );
+
       const newState = {
         ...prev,
         totalCertificateHours: prev.totalCertificateHours - totalCost,
         certLevelsOwned: { ...prev.certLevelsOwned, [certId]: targetLevel },
+        lifetimeHoursSpent,
+        unlockedCertIds: newlyUnlocked.length > 0
+          ? [...prev.unlockedCertIds, ...newlyUnlocked.map(c => c.id)]
+          : prev.unlockedCertIds,
       };
       savePersistence(newState);
       return newState;
@@ -295,6 +309,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     certLevelsOwned: persistence.certLevelsOwned,
     unlockedCertIds: persistence.unlockedCertIds,
     maxTierCounts: persistence.maxTierCounts,
+    lifetimeHoursSpent: persistence.lifetimeHoursSpent,
     // Run tracking
     runLevelsCompleted,
     runHoursEarned,

@@ -83,8 +83,10 @@ export function createInitialGameData(
   const arenaWidth  = BOARD_WIDTH  - margin * 2;
   const arenaHeight = BOARD_HEIGHT - margin * 2;
 
-  // No starting-area reduction in new upgrade system
-  const targetRemaining = 100;
+  // startingCapturePercent (Equity Grant cert) shrinks the playable arena and
+  // counts the trimmed margin as already-captured: the run starts below 100%.
+  const startingCapture = Math.max(0, Math.min(40, activeModifiers.startingCapturePercent));
+  const targetRemaining = 100 - startingCapture;
   const scaleFactor  = Math.sqrt(targetRemaining / 100);
   const shrunkWidth  = arenaWidth  * scaleFactor;
   const shrunkHeight = arenaHeight * scaleFactor;
@@ -329,6 +331,12 @@ export function createInitialGameData(
 
   const spaceGrid   = createSpaceGrid(boardPolygon, obstaclePolygons, initGridSize);
   const gridRegions = findGridRegions(spaceGrid);
+
+  // Inflate the percentage baseline so the remaining% starts at targetRemaining
+  // instead of 100 — the shrunk-away margin counts as captured space.
+  if (targetRemaining < 100) {
+    spaceGrid.initialActiveCount = Math.round(spaceGrid.activeCount * 100 / targetRemaining);
+  }
 
   const initialEstimatedArea = spaceGrid.initialActiveCount * initGridSize * initGridSize;
   const initialRegionId      = generateRegionId();

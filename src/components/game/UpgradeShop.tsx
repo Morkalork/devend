@@ -27,13 +27,14 @@ interface UpgradeShopProps {
   upgrades: UpgradeConfig[];
   ownedUpgradeIds: string[];
   completedLevel: number;
-  canPurchase: (upgradeId: string, playerScore: number, ownedIds: string[]) => boolean;
   isLocked: (upgradeId: string, ownedIds: string[]) => boolean;
   onPurchase: (upgradeId: string, price: number) => void;
   onContinue: () => void;
   accentColor?: string;
   extraShopItems?: number;
   shopRestockCount?: number;
+  /** Scales all prices (<1 = cheaper; Bulk Licensing certificate) */
+  shopDiscountMultiplier?: number;
   showTutorial?: boolean;
   onTutorialDismiss?: () => void;
   newlyUnlockedCerts?: Certificate[];
@@ -82,13 +83,13 @@ export function UpgradeShop({
   upgrades,
   ownedUpgradeIds,
   completedLevel,
-  canPurchase,
   isLocked,
   onPurchase,
   onContinue,
   accentColor,
   extraShopItems = 0,
   shopRestockCount = 0,
+  shopDiscountMultiplier = 1,
   showTutorial = false,
   onTutorialDismiss,
   newlyUnlockedCerts = [],
@@ -135,10 +136,17 @@ export function UpgradeShop({
   // Effective overtime - playerPoints (totalScore) is already reduced by onPurchase
   const effectiveOvertime = playerPoints;
 
+  // All prices flow through the discount (Bulk Licensing certificate)
+  const priceFor = useCallback(
+    (u: UpgradeConfig) => Math.max(1, Math.round(u.cost * shopDiscountMultiplier)),
+    [shopDiscountMultiplier],
+  );
+  const hasDiscount = shopDiscountMultiplier < 1;
+
   // Budget remaining after currently selected items
   const selectedTotalCost = selectedIds.reduce((sum, id) => {
     const u = offeredUpgrades.find(u => u.id === id);
-    return sum + (u?.cost ?? 0);
+    return sum + (u ? priceFor(u) : 0);
   }, 0);
   const remainingBudget = effectiveOvertime - selectedTotalCost;
 
@@ -156,7 +164,7 @@ export function UpgradeShop({
     if (isLocked(upgrade.id, effectiveOwned)) return;
 
     // Can't afford — shake instead of toast
-    if (upgrade.cost > currentRemainingBudget) {
+    if (priceFor(upgrade) > currentRemainingBudget) {
       setShakingId(upgrade.id);
       setTimeout(() => setShakingId(null), 600);
       return;
@@ -181,18 +189,18 @@ export function UpgradeShop({
         setRestocksUsed(prev => prev + 1);
       }
     }
-  }, [allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades]);
+  }, [allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades, priceFor]);
 
   const handleContinue = useCallback(() => {
     for (const id of selectedIds) {
       const upgrade = offeredUpgrades.find(u => u.id === id);
       if (upgrade) {
-        onPurchase(upgrade.id, upgrade.cost);
+        onPurchase(upgrade.id, priceFor(upgrade));
         setPurchasedThisSession(prev => [...prev, upgrade.id]);
       }
     }
     onContinue();
-  }, [selectedIds, offeredUpgrades, onPurchase, onContinue]);
+  }, [selectedIds, offeredUpgrades, onPurchase, onContinue, priceFor]);
 
   return (
     <>
@@ -317,9 +325,9 @@ export function UpgradeShop({
                 // so a restocked Senior tier unlocks while its Junior is selected
                 const effectiveOwned = [...allOwnedIds, ...selectedIds.filter(id => id !== upgrade.id)];
                 const locked = isLocked(upgrade.id, effectiveOwned);
-                const purchasable = canPurchase(upgrade.id, effectiveOvertime, effectiveOwned);
+                const purchasable = !owned && !locked && priceFor(upgrade) <= effectiveOvertime;
                 // Can't afford with remaining budget (unless already selected)
-                const cantAfford = !locked && !owned && !selected && upgrade.cost > remainingBudget;
+                const cantAfford = !locked && !owned && !selected && priceFor(upgrade) > remainingBudget;
                 const tierColors = TIER_COLORS[upgrade.tier];
 
             return (
@@ -404,7 +412,10 @@ export function UpgradeShop({
                     ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
                   `}>
                     <Clock className="w-4 h-4" />
-                    {upgrade.cost}h
+                    {hasDiscount && (
+                      <span className="text-xs font-normal line-through opacity-50">{upgrade.cost}h</span>
+                    )}
+                    {priceFor(upgrade)}h
                   </div>
                 )}
               </motion.button>

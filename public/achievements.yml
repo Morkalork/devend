@@ -323,3 +323,28 @@ achievements:
       modifier: additionalConcurrentFences
       value: 1
       description: +1 concurrent fence
+
+  # ── NEW SYSTEMS ────────────────────────────────────────────────────────────
+  # Ascension mode and push-your-luck mastery.
+
+  - id: beyond-the-backlog
+    name: Beyond The Backlog
+    description: Ascend past the final level. The sprint never ends — it loops.
+    requirement:
+      stat: deepestAscension
+      threshold: 1
+    bonus:
+      modifier: scoreMultiplier
+      value: 1.05
+      description: Overtime multiplier +5%
+
+  - id: calculated-risk
+    name: Calculated Risk
+    description: Bank a Push-Your-Luck bonus 5 times. Fortune favours the well-hedged.
+    requirement:
+      stat: pushBonusesBanked
+      threshold: 5
+    bonus:
+      modifier: bonusRemovalChance
+      value: 0.05
+      description: +5% chance cuts clear extra space

@@ -38,7 +38,9 @@ export function handleGameOverFn(
     const areaAtPushStart = game.pushStartPercent ?? pushStartPercent;
     const areaCleared = Math.max(0, areaAtPushStart - percent);
     const chunkSize = areaAtPushStart * 0.25;
-    const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
+    const pushBonus = chunkSize > 0
+      ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
+      : 0;
 
     callbacks.onLevelComplete({
       levelNumber, levelId: level.id, cutCount: game.wallCount,
@@ -89,7 +91,9 @@ export function handlePushFailedFn(
   const areaAtPushStart = game.pushStartPercent ?? percent;
   const areaCleared = Math.max(0, areaAtPushStart - percent);
   const chunkSize = areaAtPushStart * 0.25;
-  const pushBonus = chunkSize > 0 ? Math.floor(areaCleared / chunkSize) : 0;
+  const pushBonus = chunkSize > 0
+    ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
+    : 0;
 
   callbacks.onLevelComplete({
     levelNumber, levelId: level.id, cutCount: game.wallCount,
