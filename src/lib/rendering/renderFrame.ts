@@ -178,24 +178,21 @@ export function renderFrame(
     ctx.restore();
   }
 
-  // ── buildSmoothPath helper (Catmull-Rom spline) ───────────────────────────
-  const buildSmoothPath = (verts: { x: number; y: number }[]) => {
+  // ── buildExactPath helper ─────────────────────────────────────────────────
+  // Straight edges only. This used to be a Catmull-Rom spline, but the spline
+  // bows outward — on the thin level-29 mirror rects the rendered "lens" tip
+  // extended ~60 world units past the physics polygon, so fences passing
+  // legitimately above a mirror appeared to cut straight through it. Mirrors
+  // are reflective surfaces: the drawn boundary must match the physics edges
+  // exactly (same fix as the non-mirror obstacle outlines below). The thick
+  // round-joined stroke still softens the corners visually.
+  const buildExactPath = (verts: { x: number; y: number }[]) => {
     const n = verts.length;
     if (n < 3) return;
     const sv = verts.map(v => w2s(v.x, v.y));
     ctx.beginPath();
-    for (let i = 0; i < n; i++) {
-      const p0 = sv[(i - 1 + n) % n];
-      const p1 = sv[i];
-      const p2 = sv[(i + 1) % n];
-      const p3 = sv[(i + 2) % n];
-      if (i === 0) ctx.moveTo(p1.x, p1.y);
-      ctx.bezierCurveTo(
-        p1.x + (p2.x - p0.x) / 6, p1.y + (p2.y - p0.y) / 6,
-        p2.x - (p3.x - p1.x) / 6, p2.y - (p3.y - p1.y) / 6,
-        p2.x, p2.y,
-      );
-    }
+    ctx.moveTo(sv[0].x, sv[0].y);
+    for (let i = 1; i < n; i++) ctx.lineTo(sv[i].x, sv[i].y);
     ctx.closePath();
   };
 
@@ -462,7 +459,7 @@ export function renderFrame(
     ctx.fillStyle = "rgba(136, 221, 255, 0.15)";
     for (const poly of game.mirrorPolygons) {
       if (poly.vertices.length < 3) continue;
-      buildSmoothPath(poly.vertices);
+      buildExactPath(poly.vertices);
       ctx.fill();
     }
     ctx.restore();
@@ -475,14 +472,14 @@ export function renderFrame(
     ctx.shadowColor = "#88ddff";
     ctx.shadowBlur = 8 * scale;
     for (const poly of game.mirrorPolygons) {
-      buildSmoothPath(poly.vertices);
+      buildExactPath(poly.vertices);
       ctx.stroke();
     }
     ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
     ctx.lineWidth = 1 * scale;
     ctx.shadowBlur = 0;
     for (const poly of game.mirrorPolygons) {
-      buildSmoothPath(poly.vertices);
+      buildExactPath(poly.vertices);
       ctx.stroke();
     }
     ctx.restore();

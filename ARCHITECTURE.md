@@ -4,7 +4,7 @@ This document explains how the game is put together. Read it once before touchin
 
 ## The game in one paragraph
 
-Balls of Fire and Ice is a JezzBall-style arcade game. Balls bounce around a square board; the player draws *fences* (growing walls) to cut the board into regions. Regions without balls are captured. Capture enough of the board and the level is won. Between levels the player spends *overtime hours* (the score) in an upgrade shop; across runs they earn *Certificate Hours* to buy permanent bonuses in the Certificate Store.
+Balls of Fire and Ice is a JezzBall-style arcade game. Balls bounce around a square board; the player draws *fences* (growing walls) to cut the board into regions. Regions without balls are captured. Capture enough of the board and the level is won. Between levels the player spends *overtime hours* (the score) in an upgrade shop; across runs they earn *Certificate Hours* to buy permanent bonuses in the Certificate Store. Beating the final level offers **Ascension**: draft a curse-and-blessing *mutator* and loop back to level 1 at higher intensity, or retire and bank the run.
 
 ## Tech stack
 
@@ -36,6 +36,7 @@ src/
 public/
 ├── map.yml                  All levels (see public/README-modifiers.md)
 ├── upgrades.yml             Shop upgrades
+├── mutators.yml             Ascension mutators (post-final-level loop)
 ├── certificates.yml         Meta-progression certificates
 ├── achievements.yml         Achievements
 ├── colors.yml               Accent colour per level range
@@ -50,7 +51,8 @@ public/
 
 ```
 welcome ──► game ──► (LevelCompleteOverlay) ──► upgradeShop ──► game … ──► result
-   │                                                                        │
+   │                       │ (final level)                                  │
+   │                       └──► ascensionDraft ──► game (loop) or result    │
    ├──► tutorial / options / achievements / certificateStore ◄──────────────┘
    └──► admin ──► mapBuilder / animationTest        (dev builds only)
 ```
@@ -67,6 +69,7 @@ Each hook owns one subsystem; most load a YAML file and/or persist to localStora
 | [useScreenNavigation](src/hooks/useScreenNavigation.ts) | visible screen | — | — |
 | [useLevelManager](src/hooks/useLevelManager.ts) | level sequence | `map.yml` | — |
 | [useUpgradeManager](src/hooks/useUpgradeManager.ts) | upgrade catalogue | `upgrades.yml` | — |
+| [useMutatorManager](src/hooks/useMutatorManager.ts) | Ascension mutator catalogue | `mutators.yml` | — |
 | [useActiveModifiers](src/hooks/useActiveModifiers.ts) | **GameModifiers pipeline** | — | — |
 | [useCertificateManager](src/hooks/useCertificateManager.ts) | certificates, Certificate Hours | `certificates.yml` | `jezzball_certs_v1` |
 | [useAchievementManager](src/hooks/useAchievementManager.ts) | achievements + bonuses | `achievements.yml` | `jezzball_achievements_v1` |
@@ -88,7 +91,8 @@ Everything that changes gameplay numbers flows through one structure: **`GameMod
 ```
 owned upgrades (this run)        → useActiveModifiers(upgrades, ownedIds, extraBonuses)
 achievement bonuses (permanent)  ─┐
-certificate bonuses (permanent)  ─┴→ mergeBonuses() → extraBonuses
+certificate bonuses (permanent)  ─┼→ mergeBonuses() → extraBonuses
+mutators + depth ramp (ascension)─┘
 ```
 
 The merged `GameModifiers` object is passed as a prop into `GameScreen` → `GameCanvas` and read by the physics code. Multiplicative keys (listed in `MULTIPLICATIVE_KEYS`) stack by multiplication, the rest by addition. The key names are a public contract: YAML files reference them as strings, so renaming a key means updating `upgrades.yml`, `certificates.yml`, `achievements.yml` and [public/README-modifiers.md](public/README-modifiers.md) together.
@@ -113,6 +117,8 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 **Add an upgrade** — add an entry to [public/upgrades.yml](public/upgrades.yml) using existing `GameModifiers` keys. No code needed unless you need a brand-new modifier key.
 
+**Add an Ascension mutator** — add an entry to [public/mutators.yml](public/mutators.yml) (`id`, `name`, `curse`, `blessing`, `modifiers` with existing `GameModifiers` keys; a curse is just an adverse value). The per-depth difficulty ramp is the `ascension.speedRampPerDepth` field in the same file.
+
 **Add a new modifier key** — add the field + default to `GameModifiers` and `DEFAULT_MODIFIERS` in [useActiveModifiers.ts](src/hooks/useActiveModifiers.ts) (and `MULTIPLICATIVE_KEYS` if it stacks by ×), consume it in the physics/scoring code, document it in `README-modifiers.md`, and add a slider entry in [PlaygroundScreen.tsx](src/components/admin/PlaygroundScreen.tsx) so it can be tested live.
 
 **Add an achievement or certificate** — edit the YAML; the managers pick it up. Certificates referencing achievements use `sourceAchievementId`.
@@ -123,6 +129,6 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 ## Known gaps
 
-- The `extraCertificateHours` modifier (Certification Wizard upgrade) is defined but not consumed by `finalizeRun()` in `useCertificateManager.ts` — the upgrade currently does nothing.
+- Ascension state (depth, drafted mutators) is not persisted: ascended runs are bank-or-bust — the Continue checkpoint and level-picker snapshots are only written at depth 0.
 - Test coverage is minimal (one placeholder test). The `lib/` modules are pure and React-free, so they are the natural place to start adding unit tests.
 - `eslint` reports 12 `react-hooks/exhaustive-deps` warnings that are intentional (adding the deps would re-trigger effects); review carefully before "fixing".

@@ -20,6 +20,7 @@ import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
+import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
 import { CertificateStore } from '@/components/game/CertificateStore';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 
@@ -51,7 +52,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1,
-    game: 2, upgradeShop: 3, certificateStore: 3, result: 4,
+    game: 2, upgradeShop: 3, certificateStore: 3, ascensionDraft: 3, result: 4,
   };
   const prevScreenRef = useRef(navigation.currentScreen);
   const transitionDirRef = useRef(1);
@@ -146,6 +147,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 achievementBonuses={session.achievementBonuses}
                 activeModifiers={session.activeModifiers}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
+                ascensionDepth={session.ascensionDepth}
+                activeMutators={session.activeMutators}
               />
             )}
             {navigation.currentScreen === 'upgradeShop' && (
@@ -166,13 +169,26 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 newlyUnlockedCerts={session.shopUnlockedCerts}
               />
             )}
+            {navigation.currentScreen === 'ascensionDraft' && (
+              <AscensionDraftScreen
+                mutators={session.mutators}
+                draftedMutatorIds={session.draftedMutatorIds}
+                ascensionDepth={session.ascensionDepth}
+                totalScore={session.totalScore}
+                onAscend={session.handleAscend}
+                onRetire={session.handleRetire}
+                accentColor={accentHex}
+                showTutorial={session.shouldShowAscension}
+                onTutorialDismiss={session.markAscensionSeen}
+              />
+            )}
             {navigation.currentScreen === 'result' && navigation.lastResult && (
               <ResultScreen
                 result={navigation.lastResult}
                 onMainMenu={navigation.goToWelcome}
                 accentColor={accentHex}
-                runHoursAwarded={session.runHoursAwarded}
-                runLevelsCompleted={session.runLevelsCompleted}
+                runHoursAwarded={session.lastRunHoursAwarded}
+                runLevelsCompleted={session.lastRunLevelsCompleted}
               />
             )}
             {navigation.currentScreen === 'certificateStore' && (

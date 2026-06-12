@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Trophy, Skull, Home, Hexagon } from 'lucide-react';
+import { Trophy, Skull, Home, Hexagon, ArrowUpCircle } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { CRTBackground } from './CRTBackground';
 
@@ -18,7 +18,7 @@ export function ResultScreen({
   runHoursAwarded = 0,
   runLevelsCompleted = 0,
 }: ResultScreenProps) {
-  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
+  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, mutatorNames } = result;
 
   return (
     <>
@@ -92,6 +92,31 @@ export function ResultScreen({
             className="text-2xl font-display text-primary"
           >
             🎉 Completed all levels! 🎉
+          </motion.div>
+        )}
+
+        {/* Ascension summary */}
+        {!!ascensionDepth && ascensionDepth > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-center"
+          >
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <ArrowUpCircle className="w-6 h-6" style={{ color: '#ffb347' }} />
+              <p
+                className="text-xl font-display font-bold"
+                style={{ color: '#ffb347', textShadow: '0 0 16px #ffb34788' }}
+              >
+                Ascension Depth {ascensionDepth}
+              </p>
+            </div>
+            {mutatorNames && mutatorNames.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Mutators braved: {mutatorNames.join(' · ')}
+              </p>
+            )}
           </motion.div>
         )}
 

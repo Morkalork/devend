@@ -34,6 +34,7 @@ interface GameTopBarProps {
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
+  ascensionDepth?: number;
   onExpand?: () => void;
 }
 
@@ -50,6 +51,7 @@ export function GameTopBar({
   accentColor = '#00ff88',
   certificateProgress,
   microManagerPerLock = 0,
+  ascensionDepth = 0,
   onExpand,
 }: GameTopBarProps) {
   const upgradesContainerRef = useRef<HTMLDivElement>(null);
@@ -162,11 +164,24 @@ export function GameTopBar({
           borderBottom: `1px solid ${accentColor}33`,
         }}
       >
-        {/* Level Number */}
-        <div className="flex items-center gap-1 min-w-0" style={{ color: accentColor }}>
+        {/* Level Number (+ ascension depth badge while ascended) */}
+        <div className="flex items-center gap-1.5 min-w-0" style={{ color: accentColor }}>
           <span className="font-display text-base font-bold" style={{ textShadow: `0 0 10px ${accentColor}88` }}>
             LV{levelNumber}
           </span>
+          {ascensionDepth > 0 && (
+            <span
+              className="font-display text-xs font-bold px-1.5 py-0.5 rounded flex-shrink-0"
+              style={{
+                color: '#ffb347',
+                border: '1px solid #ffb34788',
+                backgroundColor: '#ffb34718',
+                textShadow: '0 0 8px #ffb34788',
+              }}
+            >
+              A{ascensionDepth}
+            </span>
+          )}
         </div>
 
         {/* Lives */}

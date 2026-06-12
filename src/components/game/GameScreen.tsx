@@ -19,6 +19,7 @@ import { TutorialOverlay } from './TutorialOverlay';
 import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
+import { MutatorConfig } from '@/types/mutator';
 import { useGameConfig } from '@/hooks/useGameConfig';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 
@@ -56,6 +57,8 @@ interface GameScreenProps {
   achievementBonuses?: Partial<Record<string, number>>;
   activeModifiers: GameModifiers;
   cumulativeLockedBalls?: number;
+  ascensionDepth?: number;
+  activeMutators?: MutatorConfig[];
 }
 
 export function GameScreen({
@@ -82,6 +85,8 @@ export function GameScreen({
   achievementBonuses,
   activeModifiers,
   cumulativeLockedBalls = 0,
+  ascensionDepth = 0,
+  activeMutators = [],
 }: GameScreenProps) {
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
 
@@ -156,6 +161,7 @@ export function GameScreen({
             accentColor={accentColor}
             certificateProgress={certificateProgress}
             microManagerPerLock={activeModifiers.microManagerPerLock}
+            ascensionDepth={ascensionDepth}
             onExpand={() => setTopPanelOpen(true)}
           />
         </div>
@@ -291,6 +297,8 @@ export function GameScreen({
         accentColor={accentColor}
         certificateProgress={certificateProgress}
         microManagerPerLock={activeModifiers.microManagerPerLock}
+        ascensionDepth={ascensionDepth}
+        activeMutators={activeMutators}
       />
 
       {/* Full-screen bottom stats panel */}

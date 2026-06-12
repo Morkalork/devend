@@ -43,6 +43,10 @@ export function useScreenNavigation() {
     setCurrentScreen('game');
   }, []);
 
+  const goToAscensionDraft = useCallback(() => {
+    setCurrentScreen('ascensionDraft');
+  }, []);
+
   const goToCertificateStore = useCallback(() => {
     setCurrentScreen('certificateStore');
   }, []);
@@ -77,6 +81,7 @@ export function useScreenNavigation() {
     goToTutorial,
     goToUpgradeShop,
     goToGame,
+    goToAscensionDraft,
     goToCertificateStore,
     goToOptions,
     goToAchievements,

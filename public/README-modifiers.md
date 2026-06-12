@@ -9,9 +9,10 @@ This document covers every modifier key, effect type, stat, and field that can b
 1. [upgrades.yml](#upgradesyml)
 2. [certificates.yml](#certificatesyml)
 3. [achievements.yml](#achievementsyml)
-4. [map.yml](#mapyml)
-5. [GameModifiers — shared modifier keys](#gamemodifiers--shared-modifier-keys)
-6. [Achievement stat types](#achievement-stat-types)
+4. [mutators.yml](#mutatorsyml)
+5. [map.yml](#mapyml)
+6. [GameModifiers — shared modifier keys](#gamemodifiers--shared-modifier-keys)
+7. [Achievement stat types](#achievement-stat-types)
 
 ---
 
@@ -86,6 +87,30 @@ Permanent one-time rewards earned by reaching lifetime stat thresholds. Complete
 | `bonus.modifier` | string | ✓ | A **GameModifier key** (see below) |
 | `bonus.value` | number | ✓ | Value added to that modifier when the achievement is completed |
 | `bonus.description` | string | ✓ | Human-readable description of the bonus |
+
+---
+
+## mutators.yml
+
+Ascension mutators — curse + blessing bundles offered after beating the final level. The player drafts one per ascension and loops back to level 1; drafted mutators stack for the rest of the run. Loaded by `useMutatorManager`, drafted in `AscensionDraftScreen`, folded into the same GameModifiers pipeline as upgrades.
+
+### Fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | string | ✓ | Unique identifier |
+| `name` | string | ✓ | Display name on the draft card |
+| `curse` | string | ✓ | Downside text (shown in red) |
+| `blessing` | string | ✓ | Upside text (shown in accent colour) |
+| `modifiers` | map | ✓ | One or more **GameModifier keys** — a curse is simply an adverse value (e.g. `ballSpeedMultiplier: 1.25`) |
+
+The file also has a top-level `ascension` block:
+
+| Field | Type | Description |
+|---|---|---|
+| `ascension.speedRampPerDepth` | number | Baseline ball-speed multiplier applied per ascension depth on top of drafted mutators (default 1.08, compounds) |
+
+> `extraLives` in a mutator is applied once, on draft, like buying an extra-lives upgrade. Levels completed at depth *d* count *(1 + d)*× toward Certificate Hours.
 
 ---
 

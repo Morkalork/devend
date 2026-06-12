@@ -250,12 +250,16 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     prevHoursRef.current = 0;
   }, []);
 
-  const incrementRunLevel = useCallback(() => {
-    setRunLevelsCompleted(prev => prev + 1);
+  /** Ascension levels count more: pass weight = 1 + ascensionDepth. */
+  const incrementRunLevel = useCallback((weight: number = 1) => {
+    setRunLevelsCompleted(prev => prev + weight);
   }, []);
 
-  const finalizeRun = useCallback((): number => {
-    const hoursAwarded = Math.floor(runLevelsCompleted / LEVELS_PER_HOUR);
+  /** `extraHours` is the extraCertificateHours modifier (Certification Wizard). */
+  const finalizeRun = useCallback((extraHours: number = 0): number => {
+    const hoursAwarded =
+      Math.floor(runLevelsCompleted / LEVELS_PER_HOUR) +
+      (runLevelsCompleted > 0 ? Math.max(0, Math.round(extraHours)) : 0);
     if (runLevelsCompleted > 0) {
       setPersistence(prev => {
         const newState = { ...prev, totalCertificateHours: prev.totalCertificateHours + hoursAwarded };

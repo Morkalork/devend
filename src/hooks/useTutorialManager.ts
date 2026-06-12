@@ -10,6 +10,7 @@ import { useState, useCallback } from 'react';
  * - `certStore`  — certificate store intro (first store visit)
  * - `mover`      — moving-obstacle warning (first level with movers)
  * - `infoPanels` — "the top/bottom bars are expandable" hint
+ * - `ascension`  — Ascension mode intro (first arrival at the draft screen)
  *
  * "Re-enable All Tutorials" in the options screen calls resetAllTutorials().
  */
@@ -23,6 +24,7 @@ interface TutorialsSeen {
   certStore: boolean;
   mover: boolean;
   infoPanels: boolean;
+  ascension: boolean;
 }
 
 const NONE_SEEN: TutorialsSeen = {
@@ -31,6 +33,7 @@ const NONE_SEEN: TutorialsSeen = {
   certStore: false,
   mover: false,
   infoPanels: false,
+  ascension: false,
 };
 
 function loadSeen(): TutorialsSeen {
@@ -45,6 +48,7 @@ function loadSeen(): TutorialsSeen {
         certStore: !!(parsed.certStore ?? parsed.augment),
         mover: !!parsed.mover,
         infoPanels: !!parsed.infoPanels,
+        ascension: !!parsed.ascension,
       };
     }
     // Migration: very old installs stored a single boolean for the fence tutorial.
@@ -82,6 +86,7 @@ export function useTutorialManager() {
   const markCertStoreSeen = useCallback(() => markSeen('certStore'), [markSeen]);
   const markMoverSeen = useCallback(() => markSeen('mover'), [markSeen]);
   const markInfoPanelsSeen = useCallback(() => markSeen('infoPanels'), [markSeen]);
+  const markAscensionSeen = useCallback(() => markSeen('ascension'), [markSeen]);
 
   const resetAllTutorials = useCallback(() => {
     try {
@@ -99,11 +104,13 @@ export function useTutorialManager() {
     shouldShowCertStore: !seen.certStore,
     shouldShowMover: !seen.mover,
     shouldShowInfoPanels: !seen.infoPanels,
+    shouldShowAscension: !seen.ascension,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
     markMoverSeen,
     markInfoPanelsSeen,
+    markAscensionSeen,
     resetAllTutorials,
   };
 }

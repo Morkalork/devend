@@ -5,6 +5,7 @@
  * It wires together all the smaller managers:
  *   - useLevelManager        levels from public/map.yml, current level index
  *   - useUpgradeManager      shop upgrades from public/upgrades.yml
+ *   - useMutatorManager      Ascension mutators from public/mutators.yml
  *   - useCertificateManager  certificates + Certificate Hours (meta currency)
  *   - useTutorialManager     one-time tutorial flags
  *   - useContinueCheckpoint  the 10-minute 'Continue' checkpoint
@@ -18,7 +19,8 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useLevelManager } from './useLevelManager';
 import { useUpgradeManager } from './useUpgradeManager';
-import { useActiveModifiers, mergeBonuses } from './useActiveModifiers';
+import { useMutatorManager } from './useMutatorManager';
+import { useActiveModifiers, mergeBonuses, GameModifiers } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
 import { useContinueCheckpoint } from './useContinueCheckpoint';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
@@ -54,6 +56,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     isLocked: isUpgradeLocked,
   } = useUpgradeManager();
 
+  const {
+    mutators,
+    mutatorLookup,
+    ascensionConfig,
+    loadMutators,
+  } = useMutatorManager();
+
   const isLoading = isLoadingLevels || isLoadingUpgrades;
   const error = levelError || upgradeError;
 
@@ -66,6 +75,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [cumulativeLockedBalls, setCumulativeLockedBalls] = useState(0);
   const [shopUnlockedCerts, setShopUnlockedCerts] = useState<Certificate[]>([]);
   const [pendingCertUnlocks, setPendingCertUnlocks] = useState<Certificate[]>([]);
+
+  // Ascension mode: after the final level the player may loop back to level 1
+  // with a drafted mutator. Depth 0 = first pass through the levels.
+  const [ascensionDepth, setAscensionDepth] = useState(0);
+  const [draftedMutatorIds, setDraftedMutatorIds] = useState<string[]>([]);
+
+  // Snapshot of the just-finalized run for the result screen (finalizeRun
+  // resets the live counters, so the result screen can't read those).
+  const [lastRunSummary, setLastRunSummary] = useState<{ levelsCompleted: number; hoursAwarded: number } | null>(null);
 
   const handleCertificateHourEarned = useCallback(() => {
     // Visual flash handled by consumer; cert manager calls this on point award
@@ -99,11 +117,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     shouldShowCertStore,
     shouldShowMover,
     shouldShowInfoPanels,
+    shouldShowAscension,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
     markMoverSeen,
     markInfoPanelsSeen,
+    markAscensionSeen,
     resetAllTutorials,
   } = useTutorialManager();
 
@@ -125,6 +145,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
+    recordAscensionDepth,
     resetProgression,
   } = useMetaProgression();
 
@@ -137,8 +158,32 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
   } = useAchievementManager();
 
-  const mergedBonuses = useMemo(() => mergeBonuses(achievementBonuses, certBonuses), [achievementBonuses, certBonuses]);
+  // Drafted mutators + the baseline per-depth speed ramp, folded into the
+  // same bonus map the achievements/certificates use.
+  const mutatorBonuses = useMemo(() => {
+    let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
+    for (const id of draftedMutatorIds) {
+      const mutator = mutatorLookup.get(id);
+      if (mutator) bonuses = mergeBonuses(bonuses, mutator.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    }
+    if (ascensionDepth > 0) {
+      bonuses = mergeBonuses(bonuses, {
+        ballSpeedMultiplier: Math.pow(ascensionConfig.speedRampPerDepth, ascensionDepth),
+      });
+    }
+    return bonuses;
+  }, [draftedMutatorIds, mutatorLookup, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+
+  const mergedBonuses = useMemo(
+    () => mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), mutatorBonuses),
+    [achievementBonuses, certBonuses, mutatorBonuses]
+  );
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
+
+  const activeMutators = useMemo(
+    () => draftedMutatorIds.map(id => mutatorLookup.get(id)).filter((m): m is NonNullable<typeof m> => m != null),
+    [draftedMutatorIds, mutatorLookup]
+  );
 
   const certSourceIds = useMemo(
     () => new Set(certificates.map(c => c.sourceUpgradeId).filter((id): id is string => id != null)),
@@ -146,10 +191,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   );
 
   const handleStartGame = useCallback(async (forceLevel?: number) => {
+    // Mutators only matter past the final level, so their load result does
+    // not gate starting a run.
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
       loadLevels(),
       loadUpgrades(),
       loadCertificates(),
+      loadMutators(),
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
@@ -157,6 +205,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
+      setAscensionDepth(0);
+      setDraftedMutatorIds([]);
+      setLastRunSummary(null);
       resetRunProgress();
 
       const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
@@ -183,17 +234,25 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
       nav.startGame();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, nav.startGame, getStartingLevel, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadMutators, nav.startGame, getStartingLevel, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     if (!result.isWin) {
-      saveCheckpoint(result.levelNumber);
+      // Ascension runs are bank-or-bust: no Continue checkpoint past depth 0.
+      if (ascensionDepth === 0) saveCheckpoint(result.levelNumber);
     } else if (result.completedAllLevels) {
       clearCheckpoint();
     }
-    finalizeRun();
-    nav.endGame({ ...result, totalScore });
-  }, [nav.endGame, totalScore, saveCheckpoint, clearCheckpoint, finalizeRun]);
+    const levelsCompleted = runLevelsCompleted;
+    const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
+    setLastRunSummary({ levelsCompleted, hoursAwarded });
+    nav.endGame({
+      ...result,
+      totalScore,
+      ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
+      mutatorNames: ascensionDepth > 0 ? activeMutators.map(m => m.name) : undefined,
+    });
+  }, [nav.endGame, totalScore, saveCheckpoint, clearCheckpoint, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeMutators]);
 
   const handleLivesChange = useCallback((newLives: number) => {
     const livesLost = currentLives - newLives;
@@ -205,7 +264,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const currentLevelNum = currentLevelIndex + 1;
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
-    incrementRunLevel();
+    // Levels completed while ascended count more toward Certificate Hours
+    incrementRunLevel(1 + ascensionDepth);
 
     if (currentLives >= livesAtLevelStart) recordPerfectLevel();
 
@@ -217,6 +277,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
           ? metaStats.totalLevelsCompletedWithoutLoss + 1
           : metaStats.totalLevelsCompletedWithoutLoss,
       totalLivesLost: metaStats.totalLivesLost,
+      deepestAscension: Math.max(metaStats.deepestAscension, ascensionDepth),
     };
     checkAndCompleteAchievements(projectedStats);
 
@@ -234,29 +295,62 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, currentLives, livesAtLevelStart, incrementRunLevel, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
     if (isLastLevel) {
-      nav.endGame({
-        isWin: true,
-        remainingPercent: pendingLevelScore?.remainingPercent || 0,
-        levelId: currentLevel?.id || '',
-        levelNumber: currentLevelIndex + 1,
-        completedAllLevels: true,
-        totalScore,
-        levelScore: pendingLevelScore?.levelScore,
-        cutCount: pendingLevelScore?.cutCount,
-        expectedCuts: pendingLevelScore?.expectedCuts,
-        basePoints: pendingLevelScore?.basePoints,
-      });
-      setPendingLevelScore(null);
+      // Beat the final level: offer the ascend-or-retire choice. The pending
+      // level score is kept so handleRetire can put it on the result screen.
+      nav.goToAscensionDraft();
     } else {
       nav.goToUpgradeShop();
     }
-  }, [isLastLevel, nav.endGame, nav.goToUpgradeShop, currentLevel, currentLevelIndex, totalScore, pendingLevelScore]);
+  }, [isLastLevel, nav.goToAscensionDraft, nav.goToUpgradeShop]);
+
+  /** Ascend: draft a mutator and loop back to level 1 at depth + 1. */
+  const handleAscend = useCallback((mutatorId: string) => {
+    const newDepth = ascensionDepth + 1;
+    setDraftedMutatorIds(prev => [...prev, mutatorId]);
+    setAscensionDepth(newDepth);
+    recordAscensionDepth(newDepth);
+
+    // Refill lives to the run's starting value (never down), then apply the
+    // drafted mutator's life delta once — same as buying an extraLives upgrade.
+    const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
+    const livesDelta = mutatorLookup.get(mutatorId)?.modifiers.extraLives ?? 0;
+    const refilled = Math.max(1, Math.max(currentLives, startingLives) + livesDelta);
+    setCurrentLives(refilled);
+    setLivesAtLevelStart(refilled);
+
+    setPendingLevelScore(null);
+    resetToFirstLevel(); // also re-randomizes the level variants for the new loop
+    nav.goToGame();
+  }, [ascensionDepth, recordAscensionDepth, certBonuses, mutatorLookup, currentLives, resetToFirstLevel, nav.goToGame]);
+
+  /** Retire: bank the run and show the result screen. */
+  const handleRetire = useCallback(() => {
+    clearCheckpoint();
+    const levelsCompleted = runLevelsCompleted;
+    const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
+    setLastRunSummary({ levelsCompleted, hoursAwarded });
+    nav.endGame({
+      isWin: true,
+      remainingPercent: pendingLevelScore?.remainingPercent || 0,
+      levelId: currentLevel?.id || '',
+      levelNumber: currentLevelIndex + 1,
+      completedAllLevels: true,
+      totalScore,
+      levelScore: pendingLevelScore?.levelScore,
+      cutCount: pendingLevelScore?.cutCount,
+      expectedCuts: pendingLevelScore?.expectedCuts,
+      basePoints: pendingLevelScore?.basePoints,
+      ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
+      mutatorNames: ascensionDepth > 0 ? activeMutators.map(m => m.name) : undefined,
+    });
+    setPendingLevelScore(null);
+  }, [clearCheckpoint, runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeMutators]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
@@ -276,7 +370,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const handleContinueFromShop = useCallback(() => {
     const nextLevelNumber = currentLevelIndex + 2;
-    if (nextLevelNumber % 5 === 0) {
+    // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
+    if (nextLevelNumber % 5 === 0 && ascensionDepth === 0) {
       saveRunCheckpoint({ level: nextLevelNumber, totalScore, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
     }
     const pendingUnlocks = takePendingUnlocks();
@@ -285,7 +380,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingLevelScore(null);
     advanceToNextLevel();
     nav.goToGame();
-  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, saveRunCheckpoint, advanceToNextLevel, nav.goToGame, takePendingUnlocks]);
+  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, saveRunCheckpoint, advanceToNextLevel, nav.goToGame, takePendingUnlocks]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);
@@ -297,6 +392,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
+    setAscensionDepth(0);
+    setDraftedMutatorIds([]);
+    setLastRunSummary(null);
     resetRunProgress();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
@@ -328,6 +426,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
     setCurrentLives(BASE_LIVES);
+    setAscensionDepth(0);
+    setDraftedMutatorIds([]);
     resetRunProgress();
     nav.goToWelcome();
   }, [resetToFirstLevel, nav.goToWelcome, resetRunProgress]);
@@ -389,11 +489,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     shouldShowCertStore,
     showMoverTutorial: shouldShowMover,
     showInfoPanelsTutorial: shouldShowInfoPanels,
+    shouldShowAscension,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
     markMoverSeen,
     markInfoPanelsSeen,
+    markAscensionSeen,
     // Certificates
     certificates,
     totalCertificateHours,
@@ -411,6 +513,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     metaStats,
     runHoursAwarded,
     runLevelsCompleted,
+    lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,
+    lastRunLevelsCompleted: lastRunSummary?.levelsCompleted ?? 0,
+    // Ascension mode
+    ascensionDepth,
+    mutators,
+    draftedMutatorIds,
+    activeMutators,
     // Modifiers / bonuses
     activeModifiers,
     achievementBonuses: mergedBonuses,
@@ -424,6 +533,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleLivesChange,
     handleLevelComplete,
     handleContinueFromOverlay,
+    handleAscend,
+    handleRetire,
     handlePurchaseUpgrade,
     handleContinueFromShop,
     handlePurchaseCertLevel,

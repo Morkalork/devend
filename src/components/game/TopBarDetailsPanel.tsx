@@ -3,8 +3,9 @@
  * each owned upgrade with its description, and certificate-hour progress.
  */
 import { X } from 'lucide-react';
-import { Heart, Lock, Scissors, Target, Hexagon } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
+import { MutatorConfig } from '@/types/mutator';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -29,6 +30,8 @@ interface TopBarDetailsPanelProps {
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
+  ascensionDepth?: number;
+  activeMutators?: MutatorConfig[];
 }
 
 export function TopBarDetailsPanel({
@@ -46,6 +49,8 @@ export function TopBarDetailsPanel({
   accentColor = '#00ff88',
   certificateProgress,
   microManagerPerLock = 0,
+  ascensionDepth = 0,
+  activeMutators = [],
 }: TopBarDetailsPanelProps) {
   if (!visible) return null;
 
@@ -233,6 +238,34 @@ export function TopBarDetailsPanel({
             )}
           </div>
         </section>
+
+        {/* ── ASCENSION ── */}
+        {ascensionDepth > 0 && (
+          <section>
+            <p style={sectionHeadStyle}>Ascension — Depth {ascensionDepth}</p>
+            <div className="space-y-3">
+              <div style={{ ...cardStyle, border: '1px solid #ffb34755' }}>
+                <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.7 }}>
+                  You looped past the final level. Balls are faster, every drafted mutator below is
+                  active, and each completed level counts {ascensionDepth + 1}× toward Certificate Hours.
+                </p>
+              </div>
+              {activeMutators.map(mutator => (
+                <div key={mutator.id} style={cardStyle}>
+                  <p className="font-bold text-sm mb-2" style={{ color: '#ffb347' }}>{mutator.name}</p>
+                  <div className="flex items-start gap-2 mb-1.5">
+                    <Skull className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{mutator.curse}</p>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>{mutator.blessing}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── ACTIVE UPGRADES ── */}
         {ownedUpgrades.length > 0 && (

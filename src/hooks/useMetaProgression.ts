@@ -29,6 +29,7 @@ function loadMetaStats(): MetaProgressionStats {
       totalFencesDrawn: parsed.totalFencesDrawn ?? 0,
       totalLevelsCompletedWithoutLoss: parsed.totalLevelsCompletedWithoutLoss ?? 0,
       totalLivesLost: parsed.totalLivesLost ?? 0,
+      deepestAscension: parsed.deepestAscension ?? 0,
     };
   } catch {
     return { ...DEFAULT_META_STATS };
@@ -117,7 +118,12 @@ export function useMetaProgression() {
       if (updates.totalLivesLost !== undefined) {
         newStats.totalLivesLost = prev.totalLivesLost + updates.totalLivesLost;
       }
-      
+
+      // Like highestLevelReached, deepestAscension only ever increases
+      if (updates.deepestAscension !== undefined) {
+        newStats.deepestAscension = Math.max(prev.deepestAscension, updates.deepestAscension);
+      }
+
       saveMetaStats(newStats);
       return newStats;
     });
@@ -152,6 +158,13 @@ export function useMetaProgression() {
   }, [updateStats]);
 
   /**
+   * Record reaching an ascension depth (Ascension mode)
+   */
+  const recordAscensionDepth = useCallback((depth: number) => {
+    updateStats({ deepestAscension: depth });
+  }, [updateStats]);
+
+  /**
    * Reset all progression (for debugging)
    */
   const resetProgression = useCallback(() => {
@@ -169,6 +182,7 @@ export function useMetaProgression() {
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
+    recordAscensionDepth,
     resetProgression,
   };
 }
