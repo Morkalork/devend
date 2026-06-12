@@ -7,9 +7,12 @@
  * component is purely presentational.
  */
 import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
-import { Medal, ArrowLeft, Check, Lock, ChevronRight, Hexagon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Medal, ArrowLeft, Check, Lock, ChevronRight, ChevronDown, Hexagon, Info } from 'lucide-react';
 import { Certificate } from '@/types/certificate';
+import { Achievement, ACHIEVEMENT_STAT_LABELS } from '@/types/achievement';
+import { MetaProgressionStats } from '@/types/metaProgression';
+import { UpgradeConfig } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
 import { Progress } from '@/components/ui/progress';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -25,6 +28,20 @@ interface CertificateStoreProps {
   accentColor?: string;
   showTutorial?: boolean;
   onTutorialDismiss?: () => void;
+  /** For locked-cert unlock tooltips: upgrade names, achievement requirements, lifetime stats. */
+  upgrades?: UpgradeConfig[];
+  achievements?: Achievement[];
+  metaStats?: MetaProgressionStats;
+  /** Lifetime Certificate Hours spent in this store (drives hours-spent unlocks). */
+  lifetimeHoursSpent?: number;
+}
+
+/** What a locked certificate needs + how far along the player is. */
+interface UnlockInfo {
+  requirementText: string;
+  current: number;
+  required: number;
+  progressLabel: string;
 }
 
 function getCostForSelection(
@@ -47,9 +64,74 @@ export function CertificateStore({
   accentColor,
   showTutorial = false,
   onTutorialDismiss,
+  upgrades = [],
+  achievements = [],
+  metaStats,
+  lifetimeHoursSpent = 0,
 }: CertificateStoreProps) {
   // selectedLevel[certId] = target level (1-indexed) the player has tapped
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>({});
+
+  // ── Accordion state, shared by all sections ───────────────────────────────
+  // Every certificate card collapses to a compact header and expands inline on
+  // tap (locked: unlock requirement + progress; available: level buttons + buy
+  // row; complete: description). Inline expansion (not a popup) so nothing can
+  // clip against the scroll container — one card open at a time.
+  const [expandedCertId, setExpandedCertId] = useState<string | null>(null);
+
+  const toggleCard = (certId: string) => (e: React.MouseEvent<HTMLElement>) => {
+    const card = e.currentTarget;
+    const next = expandedCertId === certId ? null : certId;
+    setExpandedCertId(next);
+    // Bottom-of-list cards grow below the fold — reveal the expanded body
+    // once the height animation has finished.
+    if (next) {
+      setTimeout(() => card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 230);
+    }
+  };
+
+  /** Requirement text + live progress for a locked certificate. */
+  const getUnlockInfo = (cert: Certificate): UnlockInfo => {
+    if (cert.unlockType === 'upgrade-chain' && cert.sourceUpgradeId) {
+      const upgrade = upgrades.find(u => u.id === cert.sourceUpgradeId);
+      const upgradeName = upgrade ? `${upgrade.name} (${upgrade.tier})` : cert.sourceUpgradeId;
+      const required = cert.requiredRuns ?? 3;
+      return {
+        requirementText: `Buy the ${upgradeName} upgrade in ${required} different runs.`,
+        current: Math.min(maxTierCounts[cert.sourceUpgradeId] || 0, required),
+        required,
+        progressLabel: 'runs',
+      };
+    }
+    if (cert.unlockType === 'achievement' && cert.sourceAchievementId) {
+      const achievement = achievements.find(a => a.id === cert.sourceAchievementId);
+      if (achievement) {
+        const statValue = metaStats?.[achievement.requirement.stat] ?? 0;
+        return {
+          requirementText: `Complete the "${achievement.name}" achievement: ${achievement.description}`,
+          current: Math.min(statValue, achievement.requirement.threshold),
+          required: achievement.requirement.threshold,
+          progressLabel: ACHIEVEMENT_STAT_LABELS[achievement.requirement.stat].toLowerCase(),
+        };
+      }
+      return {
+        requirementText: 'Complete the linked achievement.',
+        current: 0,
+        required: 1,
+        progressLabel: '',
+      };
+    }
+    if (cert.unlockType === 'hours-spent') {
+      const required = cert.requiredHoursSpent ?? 1;
+      return {
+        requirementText: `Spend ${required} Certificate Hours in this store (on any certificates).`,
+        current: Math.min(lifetimeHoursSpent, required),
+        required,
+        progressLabel: 'hours spent',
+      };
+    }
+    return { requirementText: 'Keep playing to unlock.', current: 0, required: 1, progressLabel: '' };
+  };
 
   const getCertStatus = (cert: Certificate) => {
     const levelsOwned = certLevelsOwned[cert.id] || 0;
@@ -58,34 +140,22 @@ export function CertificateStore({
     return { levelsOwned, isUnlocked, isMaxed };
   };
 
-  const getRunProgress = (cert: Certificate) => {
-    if (cert.unlockType !== 'upgrade-chain' || !cert.sourceUpgradeId) return null;
-    const current = maxTierCounts[cert.sourceUpgradeId] || 0;
-    const required = cert.requiredRuns ?? 3;
-    return { current, required };
-  };
-
   const getSectionCerts = () => {
     const locked: Certificate[] = [];
     const available: Certificate[] = [];
     const maxed: Certificate[] = [];
 
     for (const cert of certificates) {
-      const { levelsOwned, isUnlocked, isMaxed } = getCertStatus(cert);
+      const { isUnlocked, isMaxed } = getCertStatus(cert);
       if (!isUnlocked) {
-        // Only show locked certs the player has made progress toward
-        const runProgress = getRunProgress(cert);
-        const isStarted =
-          cert.unlockType === 'upgrade-chain'
-            ? runProgress != null && runProgress.current > 0
-            : false; // achievement certs are hidden until unlocked
-        if (isStarted) locked.push(cert);
+        // Every certificate is visible; locked ones render disabled with an
+        // unlock-requirement tooltip (hover / long-press).
+        locked.push(cert);
       } else if (isMaxed) {
         maxed.push(cert);
       } else {
         available.push(cert);
       }
-      void levelsOwned;
     }
     return { locked, available, maxed };
   };
@@ -180,6 +250,7 @@ export function CertificateStore({
                   const selectedTarget = selectedLevels[cert.id];
                   const pendingCost = selectedTarget != null ? getCostForSelection(cert, selectedTarget, certLevelsOwned) : 0;
                   const canAfford = pendingCost <= totalCertificateHours && pendingCost > 0;
+                  const expanded = expandedCertId === cert.id;
 
                   return (
                     <motion.div
@@ -187,74 +258,99 @@ export function CertificateStore({
                       initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.15 + i * 0.04 }}
-                      className="p-4 rounded-lg border-2 border-white/30 bg-white/5"
+                      className="p-4 rounded-lg border-2 border-white/30 bg-white/5 cursor-pointer"
                       style={{ boxShadow: selectedTarget != null ? '0 0 16px rgba(255,255,255,0.12)' : undefined }}
+                      onClick={toggleCard(cert.id)}
                     >
-                      {/* Cert name + description */}
-                      <div className="mb-3">
-                        <p className="font-display font-bold text-base text-foreground">{cert.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{cert.description}</p>
-                      </div>
-
-                      {/* Level buttons */}
-                      <div className="flex flex-wrap gap-2 mb-3">
-                        {cert.levels.map((level, idx) => {
-                          const levelNum = idx + 1;
-                          const owned = levelNum <= levelsOwned;
-                          const selected = selectedTarget != null && levelNum <= selectedTarget && levelNum > levelsOwned;
-
-                          return (
-                            <button
-                              key={levelNum}
-                              disabled={owned}
-                              onClick={() => handleLevelTap(cert.id, levelNum)}
-                              className={`
-                                flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-display font-bold transition-all
-                                ${owned
-                                  ? 'border-white/40 bg-white/10 text-white/50 cursor-default'
-                                  : selected
-                                    ? 'border-white bg-white/20 text-white cursor-pointer'
-                                    : 'border-white/20 bg-transparent text-muted-foreground hover:border-white/50 hover:text-white cursor-pointer'
-                                }
-                              `}
-                            >
-                              {owned ? (
-                                <Check className="w-3.5 h-3.5" />
-                              ) : (
-                                <Hexagon className="w-3.5 h-3.5 fill-current opacity-50" />
-                              )}
-                              Lv {levelNum}
-                              {!owned && (
-                                <span className="text-xs font-normal opacity-70">({level.cost}h)</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {/* Buy row */}
-                      {selectedTarget != null && (
-                        <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
-                          <div className="text-sm text-muted-foreground">
-                            Cost: <span className={canAfford ? 'text-white font-bold' : 'text-destructive font-bold'}>
-                              {pendingCost}h
-                            </span>
-                            {!canAfford && (
-                              <span className="text-xs text-destructive/80 ml-1">
-                                (need {pendingCost - totalCertificateHours}h more)
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleBuy(cert)}
-                            disabled={!canAfford}
-                            className="arcade-button-primary rounded-lg px-4 py-1.5 text-sm flex items-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
-                          >
-                            Buy up to Lv {selectedTarget}
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
+                      {/* Header: name + description + owned summary + chevron */}
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-display font-bold text-base text-foreground">{cert.name}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{cert.description}</p>
                         </div>
-                      )}
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-display font-bold text-muted-foreground tabular-nums">
+                            Lv {levelsOwned}/{cert.levels.length}
+                          </span>
+                          <ChevronDown
+                            className={`w-5 h-5 text-muted-foreground transition-transform ${expanded ? 'rotate-180 text-white' : ''}`}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Accordion body: level buttons + buy row */}
+                      <AnimatePresence initial={false}>
+                        {expanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden"
+                          >
+                            {/* Purchases happen in here — don't let taps collapse the card */}
+                            <div className="mt-3 pt-3 border-t border-white/10" onClick={(e) => e.stopPropagation()}>
+                              <div className="flex flex-wrap gap-2 mb-3">
+                                {cert.levels.map((level, idx) => {
+                                  const levelNum = idx + 1;
+                                  const owned = levelNum <= levelsOwned;
+                                  const selected = selectedTarget != null && levelNum <= selectedTarget && levelNum > levelsOwned;
+
+                                  return (
+                                    <button
+                                      key={levelNum}
+                                      disabled={owned}
+                                      onClick={() => handleLevelTap(cert.id, levelNum)}
+                                      className={`
+                                        flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-display font-bold transition-all
+                                        ${owned
+                                          ? 'border-white/40 bg-white/10 text-white/50 cursor-default'
+                                          : selected
+                                            ? 'border-white bg-white/20 text-white cursor-pointer'
+                                            : 'border-white/20 bg-transparent text-muted-foreground hover:border-white/50 hover:text-white cursor-pointer'
+                                        }
+                                      `}
+                                    >
+                                      {owned ? (
+                                        <Check className="w-3.5 h-3.5" />
+                                      ) : (
+                                        <Hexagon className="w-3.5 h-3.5 fill-current opacity-50" />
+                                      )}
+                                      Lv {levelNum}
+                                      {!owned && (
+                                        <span className="text-xs font-normal opacity-70">({level.cost}h)</span>
+                                      )}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              {selectedTarget != null && (
+                                <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
+                                  <div className="text-sm text-muted-foreground">
+                                    Cost: <span className={canAfford ? 'text-white font-bold' : 'text-destructive font-bold'}>
+                                      {pendingCost}h
+                                    </span>
+                                    {!canAfford && (
+                                      <span className="text-xs text-destructive/80 ml-1">
+                                        (need {pendingCost - totalCertificateHours}h more)
+                                      </span>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={() => handleBuy(cert)}
+                                    disabled={!canAfford}
+                                    className="arcade-button-primary rounded-lg px-4 py-1.5 text-sm flex items-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
+                                  >
+                                    Buy up to Lv {selectedTarget}
+                                    <ChevronRight className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   );
                 })}
@@ -265,7 +361,8 @@ export function CertificateStore({
             {locked.length > 0 && (
               <Section title="Locked">
                 {locked.map((cert, i) => {
-                  const runProgress = getRunProgress(cert);
+                  const unlock = getUnlockInfo(cert);
+                  const expanded = expandedCertId === cert.id;
 
                   return (
                     <motion.div
@@ -273,34 +370,60 @@ export function CertificateStore({
                       initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.2 + i * 0.03 }}
-                      className="p-4 rounded-lg border border-muted/30 bg-muted/5 opacity-70"
+                      className="p-4 rounded-lg border border-muted/30 bg-muted/5 grayscale cursor-pointer"
+                      style={{ opacity: expanded ? 0.85 : 0.6 }}
+                      onClick={toggleCard(cert.id)}
                     >
                       <div className="flex items-start gap-3">
                         <Lock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <p className="font-display font-bold text-sm text-muted-foreground">{cert.name}</p>
                           <p className="text-xs text-muted-foreground/70 mt-0.5">{cert.description}</p>
-
-                          {runProgress && (
-                            <div className="mt-2">
-                              <div className="flex justify-between text-xs text-muted-foreground/80 mb-1">
-                                <span>Purchase max-tier upgrade</span>
-                                <span>{runProgress.current} / {runProgress.required} runs</span>
-                              </div>
-                              <Progress
-                                value={(runProgress.current / runProgress.required) * 100}
-                                className="h-1.5 bg-muted/30"
-                              />
-                            </div>
-                          )}
-
-                          {cert.unlockType === 'achievement' && (
-                            <p className="mt-2 text-xs text-muted-foreground/60 italic">
-                              Unlock by completing the linked achievement.
-                            </p>
+                          {unlock.required > 1 && (
+                            <Progress
+                              value={(unlock.current / unlock.required) * 100}
+                              className="h-1 mt-2 bg-muted/30"
+                            />
                           )}
                         </div>
+                        {/* Keyboard path: Enter/Space clicks the button, which bubbles to the card */}
+                        <button
+                          type="button"
+                          aria-expanded={expanded}
+                          aria-label={`How to unlock ${cert.name}`}
+                          className={`shrink-0 -m-2 p-2 rounded-lg transition-colors ${expanded ? 'text-white' : 'text-muted-foreground'}`}
+                        >
+                          <Info className="w-5 h-5" />
+                        </button>
                       </div>
+
+                      {/* Accordion body: unlock requirement + progress, inline */}
+                      <AnimatePresence initial={false}>
+                        {expanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5">
+                              <p className="font-display font-bold text-xs uppercase tracking-wider text-white">
+                                How to unlock
+                              </p>
+                              <p className="text-xs leading-relaxed text-foreground/85">{unlock.requirementText}</p>
+                              <p className="text-xs font-bold tabular-nums text-white">
+                                Progress: {unlock.current} / {unlock.required}
+                                {unlock.progressLabel ? ` ${unlock.progressLabel}` : ''}
+                              </p>
+                              <Progress
+                                value={(unlock.current / unlock.required) * 100}
+                                className="h-1.5 bg-muted/40"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </motion.div>
                   );
                 })}
@@ -310,23 +433,48 @@ export function CertificateStore({
             {/* ── Fully purchased ── */}
             {maxed.length > 0 && (
               <Section title="Complete">
-                {maxed.map((cert, i) => (
-                  <motion.div
-                    key={cert.id}
-                    initial={{ opacity: 0, x: -16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.25 + i * 0.03 }}
-                    className="p-4 rounded-lg border border-white/20 bg-white/5 opacity-60"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Check className="w-5 h-5 text-white shrink-0" />
-                      <div>
-                        <p className="font-display font-bold text-sm text-white">{cert.name}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{cert.description}</p>
+                {maxed.map((cert, i) => {
+                  const expanded = expandedCertId === cert.id;
+
+                  return (
+                    <motion.div
+                      key={cert.id}
+                      initial={{ opacity: 0, x: -16 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.25 + i * 0.03 }}
+                      className="p-4 rounded-lg border border-white/20 bg-white/5 cursor-pointer"
+                      style={{ opacity: expanded ? 0.85 : 0.6 }}
+                      onClick={toggleCard(cert.id)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Check className="w-5 h-5 text-white shrink-0" />
+                        <p className="flex-1 min-w-0 font-display font-bold text-sm text-white">{cert.name}</p>
+                        <span className="text-xs font-display font-bold text-muted-foreground tabular-nums shrink-0">
+                          Lv {cert.levels.length}/{cert.levels.length}
+                        </span>
+                        <ChevronDown
+                          className={`w-5 h-5 text-muted-foreground transition-transform shrink-0 ${expanded ? 'rotate-180 text-white' : ''}`}
+                        />
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+
+                      <AnimatePresence initial={false}>
+                        {expanded && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2, ease: 'easeOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="mt-3 pt-3 border-t border-white/10">
+                              <p className="text-xs text-muted-foreground">{cert.description}</p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
               </Section>
             )}
 
