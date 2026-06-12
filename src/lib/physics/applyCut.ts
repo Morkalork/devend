@@ -93,32 +93,34 @@ export function applyCutFn(
     }
   }
 
-  // Commit fence segments to wall list
+  // Commit fence segments to wall list and rasterize them into the grid.
+  // Each segment keeps the cell indices its rasterization removed, plus an
+  // Ascension durability budget — both needed if the fence later breaks
+  // (see breakFenceWall.ts).
   const addSegmentWalls = (waypoints: Vector2[]) => {
     const now = performance.now();
     for (let i = 0; i < waypoints.length - 1; i++) {
-      game.walls.push({
+      const segment: Wall = {
         id: generateWallId(),
         start: { ...waypoints[i] },
         end: { ...waypoints[i + 1] },
         thickness: wall.thickness,
         createdAt: now,
-      } as Wall);
+      };
+      if (game.spaceGrid) {
+        segment.rasterCells = rasterizeCutToGrid(game.spaceGrid, waypoints[i], waypoints[i + 1], wall.thickness);
+      }
+      if (game.fenceDurability != null) {
+        segment.maxHits = game.fenceDurability;
+        segment.hitsLeft = game.fenceDurability;
+      }
+      game.walls.push(segment);
     }
   };
   addSegmentWalls(wall.startWaypoints);
   addSegmentWalls(wall.endWaypoints);
 
-  // Rasterize cut to grid
   if (game.spaceGrid) {
-    const rasterizeWaypoints = (waypoints: Vector2[]) => {
-      for (let i = 0; i < waypoints.length - 1; i++) {
-        rasterizeCutToGrid(game.spaceGrid!, waypoints[i], waypoints[i + 1], wall.thickness);
-      }
-    };
-    rasterizeWaypoints(wall.startWaypoints);
-    rasterizeWaypoints(wall.endWaypoints);
-
     const gridRegions = findGridRegions(game.spaceGrid);
     const regionsWithBalls = [];
     const regionsWithoutBalls = [];

@@ -26,6 +26,8 @@ export interface GameLoopCallbacks {
   applyCut: (wall: GrowingWall) => void;
   /** Called once per frame to composite everything onto the canvas. */
   render: () => void;
+  /** Called when Ascension fences ran out of durability this frame. */
+  processWallBreaks?: () => void;
 }
 
 /**
@@ -142,6 +144,12 @@ export function createGameLoop(
       handleBallCollisions(game);
       callbacks.updateWall(PHYSICS_STEP);
       game.accumulator -= PHYSICS_STEP;
+    }
+
+    // Break any Ascension fences that ran out of durability (outside the
+    // fixed-step loop — breaking rebuilds regions, too heavy per step)
+    if (game.pendingWallBreaks.length > 0) {
+      callbacks.processWallBreaks?.();
     }
 
     // Interpolate render positions between last two physics states.

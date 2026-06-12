@@ -19,6 +19,10 @@ export interface MutatorConfig {
 export interface AscensionConfig {
   /** Baseline ballSpeedMultiplier applied per ascension depth (compounds). */
   speedRampPerDepth: number;
+  /** Ball hits an ascended fence survives on level 1 (durability eases in)… */
+  fenceDurabilityBase: number;
+  /** …declining linearly to this many hits on the final level. */
+  fenceDurabilityAtFinal: number;
 }
 
 export interface MutatorData {
@@ -28,4 +32,6 @@ export interface MutatorData {
 
 export const DEFAULT_ASCENSION_CONFIG: AscensionConfig = {
   speedRampPerDepth: 1.08,
+  fenceDurabilityBase: 6,
+  fenceDurabilityAtFinal: 2,
 };

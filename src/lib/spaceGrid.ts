@@ -185,6 +185,19 @@ export function markCellRemoved(grid: SpaceGrid, index: number): void {
 }
 
 /**
+ * Restore previously removed cells to ACTIVE (Ascension fence breaks).
+ * Only flips cells that are currently REMOVED, keeping activeCount exact.
+ */
+export function restoreCells(grid: SpaceGrid, indices: number[]): void {
+  for (const index of indices) {
+    if (index >= 0 && index < grid.cells.length && grid.cells[index] === CellState.REMOVED) {
+      grid.cells[index] = CellState.ACTIVE;
+      grid.activeCount++;
+    }
+  }
+}
+
+/**
  * Rasterize a line segment into the grid, marking all intersected cells as REMOVED.
  * This is used when a cut is completed.
  */

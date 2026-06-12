@@ -458,6 +458,31 @@ export function renderFrame(
       } else {
         strokeSegment(w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, wallLineWidth, freshness);
       }
+
+      // Ascension durability: crumble overlay — damaged fences darken and turn
+      // increasingly gap-toothed as their remaining hits run out.
+      const damage = w.maxHits && w.hitsLeft !== undefined ? 1 - w.hitsLeft / w.maxHits : 0;
+      if (damage > 0) {
+        ctx.save();
+        ctx.strokeStyle = `rgba(0, 0, 0, ${(0.25 + 0.45 * damage).toFixed(3)})`;
+        ctx.lineWidth = wallLineWidth * 0.9;
+        ctx.lineCap = 'round';
+        ctx.setLineDash([4 * scale, (2 + damage * 7) * scale]);
+        const overlaySeg = (a: Vector2, b: Vector2) => {
+          const s = w2s(a.x, a.y);
+          const e = w2s(b.x, b.y);
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(e.x, e.y);
+          ctx.stroke();
+        };
+        if (obstacles.length > 0) {
+          for (const seg of getClippedSegs(w)) overlaySeg(seg.start, seg.end);
+        } else {
+          overlaySeg(w.start, w.end);
+        }
+        ctx.restore();
+      }
     }
     ctx.restore();
   }

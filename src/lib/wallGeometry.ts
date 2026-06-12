@@ -20,6 +20,15 @@ export interface Wall {
   aabbMinY?: number;
   aabbMaxX?: number;
   aabbMaxY?: number;
+  // ── Ascension fence durability (set on fence segments while ascended) ──
+  /** Total ball hits this fence survives; undefined = indestructible. */
+  maxHits?: number;
+  /** Remaining hits before the fence breaks. */
+  hitsLeft?: number;
+  /** ms timestamp of the last damage tick (debounces grinding contacts). */
+  lastDamageAt?: number;
+  /** Grid cells this segment's rasterization removed — restored if it breaks. */
+  rasterCells?: number[];
 }
 
 export interface WallVertex {

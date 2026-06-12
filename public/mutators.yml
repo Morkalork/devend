@@ -10,6 +10,14 @@ ascension:
   # drafted mutators. Keeps blessing-heavy drafts from trivialising the loop.
   speedRampPerDepth: 1.08
 
+  # Fence durability: while ascended, fences crumble after this many ball
+  # hits — declining linearly from `fenceDurabilityBase` on level 1 to
+  # `fenceDurabilityAtFinal` on the final level. Fences bordering captured
+  # space never break (they hold back the void). The Defensive Programming
+  # shop upgrade adds to these numbers.
+  fenceDurabilityBase: 6
+  fenceDurabilityAtFinal: 2
+
 mutators:
 
   - id: crunch_time
