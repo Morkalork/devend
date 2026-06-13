@@ -267,7 +267,9 @@ export function GameTopBar({
               textShadow: spaceRemaining <= spaceRequired ? `0 0 10px ${accentColor}88` : 'none',
             }}
           >
-            {displaySpace}%/{spaceRequired}%
+            {spaceRemaining <= spaceRequired
+              ? 'CLEAR'
+              : `${displaySpace - spaceRequired}% to go`}
           </span>
         </div>
 

@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion';
-import { Trophy, Skull, Home, Hexagon, ArrowUpCircle } from 'lucide-react';
+import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { CRTBackground } from './CRTBackground';
 
 interface ResultScreenProps {
   result: GameResult;
   onMainMenu: () => void;
+  onPlayAgain?: () => void;
   accentColor?: string;
   runHoursAwarded?: number;
   runLevelsCompleted?: number;
@@ -14,6 +15,7 @@ interface ResultScreenProps {
 export function ResultScreen({
   result,
   onMainMenu,
+  onPlayAgain,
   accentColor,
   runHoursAwarded = 0,
   runLevelsCompleted = 0,
@@ -178,10 +180,21 @@ export function ResultScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.55 }}
-          className="mt-4"
+          className="mt-4 flex flex-col gap-3 w-full min-w-[200px]"
         >
+          {onPlayAgain && (
+            <motion.button
+              className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+              onClick={onPlayAgain}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <RotateCcw className="w-5 h-5" />
+              Play Again
+            </motion.button>
+          )}
           <motion.button
-            className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+            className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
             onClick={onMainMenu}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

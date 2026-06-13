@@ -7,7 +7,7 @@
  * (TopBarDetailsPanel / BottomBarDetailsPanel).
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Menu, Home, RotateCcw } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameBottomBar } from './GameBottomBar';
@@ -126,8 +126,23 @@ export function GameScreen({
   const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const memParallaxTickRef = useRef<((timestamp: number) => void) | null>(null);
+
+  // Close menu and unpause when the game ends so the overlays appear cleanly
+  const handleGameEnd = useCallback((result: GameResult) => {
+    setMenuOpen(false);
+    setIsPaused(false);
+    onGameEnd(result);
+  }, [onGameEnd]);
+
+  const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
+    setIsPaused(false);
+    onLevelComplete(scoreData);
+  }, [onLevelComplete]);
+
+  const canPause = gameState.pushMode === 'none';
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -178,9 +193,10 @@ export function GameScreen({
             totalScore={totalScore}
             lives={lives}
             onLivesChange={onLivesChange}
-            onGameEnd={onGameEnd}
-            onLevelComplete={onLevelComplete}
+            onGameEnd={handleGameEnd}
+            onLevelComplete={handleLevelComplete}
             onGameStateChange={handleGameStateChange}
+            paused={isPaused}
             tutorialMode={inGameStep === 'fence'}
             tutorialStep={inGameStep === 'fence' ? 'waitingForSuccessfulCut' : 'completed'}
             onTutorialCutSuccess={() => {
@@ -209,8 +225,30 @@ export function GameScreen({
         />
       </div>
 
+      {/* Pause overlay */}
+      {isPaused && (
+        <div
+          className="fixed inset-0 z-[65] flex flex-col items-center justify-center gap-6"
+          style={{ backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(3px)' }}
+        >
+          <p
+            className="font-display text-4xl font-bold tracking-widest"
+            style={{ color: accentColor, textShadow: `0 0 24px ${accentColor}` }}
+          >
+            PAUSED
+          </p>
+          <button
+            className="arcade-button-primary px-8 py-3 rounded-lg flex items-center gap-2 text-base font-bold"
+            onClick={() => setIsPaused(false)}
+          >
+            <Play className="w-5 h-5" />
+            Resume
+          </button>
+        </div>
+      )}
+
       {/* Always-visible menu — floats above all overlays */}
-      <div ref={menuRef} className="fixed top-2 left-2 z-[70]">
+      <div ref={menuRef} className="fixed top-2 left-2 z-[70] flex items-center gap-1">
         <button
           onClick={() => setMenuOpen(prev => !prev)}
           className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
@@ -223,6 +261,20 @@ export function GameScreen({
         >
           <Menu className="w-5 h-5" />
         </button>
+        {canPause && (
+          <button
+            onClick={() => { setMenuOpen(false); setIsPaused(prev => !prev); }}
+            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
+            style={{
+              backgroundColor: isPaused ? `${accentColor}33` : 'rgba(0,10,5,0.85)',
+              border: `1px solid ${accentColor}55`,
+              color: accentColor,
+            }}
+            aria-label={isPaused ? 'Resume' : 'Pause'}
+          >
+            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+          </button>
+        )}
         {menuOpen && (
           <div
             className="absolute top-full left-0 mt-1 rounded-lg overflow-hidden min-w-[160px]"

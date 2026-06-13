@@ -148,6 +148,9 @@ export function renderFrame(
   const { scale } = boardRect;
   const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain } = rctx;
 
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
   const w2s = (wx: number, wy: number) => worldToScreen(wx, wy, boardRect);
 
   // ── Clear ─────────────────────────────────────────────────────────────────
@@ -794,7 +797,7 @@ export function renderFrame(
     if (assimScale <= 0) continue;
 
     const screenRadius = ball.radius * scale;
-    const isFastest = false;
+    const isFastest = ball.id === game.fastestBallId;
 
     const ballIdHash = ball.id.charCodeAt(ball.id.length - 1) || 0;
     const primaryPhase = ball.rotation;

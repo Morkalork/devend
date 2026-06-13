@@ -63,6 +63,7 @@ import {
   worldToGridIndex,
 } from "@/lib/spaceGrid";
 import { playFenceBreakSound, playDeathSound, playBallLockSound } from "@/lib/gameAudio";
+import { vibrateFenceComplete, vibrateFenceBreak } from "@/lib/gameHaptics";
 
 import {
   BOARD_WIDTH,
@@ -113,6 +114,8 @@ interface GameCanvasProps {
   /** Ball hits a fence survives (Ascension mode); null/undefined = indestructible. */
   fenceDurability?: number | null;
   parallaxTickRef?: React.MutableRefObject<((timestamp: number) => void) | null>;
+  /** When true, freeze the game loop without ending the level. */
+  paused?: boolean;
 }
 
 export function GameCanvas({
@@ -138,6 +141,7 @@ export function GameCanvas({
   cumulativeLockedBalls = 0,
   fenceDurability = null,
   parallaxTickRef,
+  paused = false,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -147,6 +151,22 @@ export function GameCanvas({
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
+
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game.gameLoopFn || game.gameOver || game.levelComplete) return;
+    if (paused) {
+      cancelAnimationFrame(game.animationId);
+      // Drop any in-progress swipe so a drag can't resume mid-gesture
+      game.swipeStart = null;
+      game.swipeRegionId = null;
+      game.currentSwipePos = null;
+      game.swipePointerId = null;
+    } else {
+      game.lastTime = 0; // reset to avoid a dt spike on the first resumed frame
+      game.animationId = requestAnimationFrame(game.gameLoopFn);
+    }
+  }, [paused]);
 
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
@@ -291,13 +311,13 @@ export function GameCanvas({
       if (game.initialSamplePoints.length === 0) return;
       const { boardRect, regionColor } = game;
       const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
-      const size = (gridSize + cellPadding * 2) * boardRect.scale;
+      const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
       gCtx.save();
       gCtx.globalAlpha = canvasOpacity * 0.55;
       gCtx.fillStyle = regionColor;
       for (const s of game.initialSamplePoints) {
-        const sx = boardRect.left + (s.x - halfGrid - cellPadding) * boardRect.scale;
-        const sy = boardRect.top  + (s.y - halfGrid - cellPadding) * boardRect.scale;
+        const sx = Math.round(boardRect.left + (s.x - halfGrid - cellPadding) * boardRect.scale);
+        const sy = Math.round(boardRect.top  + (s.y - halfGrid - cellPadding) * boardRect.scale);
         gCtx.fillRect(sx, sy, size, size);
       }
       gCtx.restore();
@@ -321,11 +341,11 @@ export function GameCanvas({
       rCtx.restore();
       // Step 2: punch transparent holes for active region cells
       const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
-      const size = (gridSize + cellPadding * 2) * boardRect.scale;
+      const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
       for (const region of game.regions) {
         for (const sample of (region.samplePoints ?? [])) {
-          const sx = boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale;
-          const sy = boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale;
+          const sx = Math.round(boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale);
+          const sy = Math.round(boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale);
           rCtx.clearRect(sx, sy, size, size);
         }
       }
@@ -346,7 +366,9 @@ export function GameCanvas({
       if (!oc) return;
       const { width: w, height: h } = canvas;
       oc.width = w; oc.height = h;
-      oc.style.width = `${w}px`; oc.style.height = `${h}px`;
+      // Do NOT set oc.style.width/height — the canvas is `absolute inset-0` and
+      // fills its container at CSS pixel size. Setting it to canvas.width (physical
+      // pixels) would make it 2× too large on HiDPI screens, causing blur + overflow.
       const oCtx = oc.getContext('2d');
       if (!oCtx) return;
       oCtx.clearRect(0, 0, w, h);
@@ -495,8 +517,10 @@ export function GameCanvas({
       startDissolve,
     };
 
-    const applyCut = (wall: GrowingWall) =>
+    const applyCut = (wall: GrowingWall) => {
+      vibrateFenceComplete();
       applyCutFn(wall, game, level, levelNumber, activeModifiers, tutorialMode, tutorialCutMade, cumulativeLockedBalls, callbacks);
+    };
 
     const updateWall = (dt: number) =>
       updateFenceWallFn(dt, game, level, levelNumber, activeModifiers, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel, callbacks);
@@ -509,7 +533,7 @@ export function GameCanvas({
         processWallBreaksFn(game, {
           repaintRegionCanvas,
           setRemainingPercent,
-          onFenceBroke: () => playFenceBreakSound(),
+          onFenceBroke: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
     };
     const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks);
