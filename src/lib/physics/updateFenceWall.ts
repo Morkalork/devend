@@ -7,6 +7,7 @@ import { circleCapsuleCollision, lineSegmentIntersection, pointInPolygon, vec2Di
 import { getWallSpeedBase } from "@/lib/gameUtils";
 import { MINIMUM_WALL_TIME, RECOVERY_WINDOW_MS } from "@/lib/gameConstants";
 import { playFenceBreakSound } from "@/lib/gameAudio";
+import { vibrateFenceBreak } from "@/lib/gameHaptics";
 
 export function updateFenceWallFn(
   dt: number,
@@ -137,7 +138,7 @@ export function updateFenceWallFn(
     game.frozenBallId = null;
     game.frozenBallPosition = null;
     game.frozenBallVelocity = null;
-    playFenceBreakSound();
+    playFenceBreakSound(); vibrateFenceBreak();
     const newLives = callbacks.getLives() - 1;
     callbacks.setLivesRef(newLives);
     callbacks.setDisplayLives(newLives);
@@ -219,7 +220,7 @@ export function updateFenceWallFn(
     }
 
     // Lose a life
-    playFenceBreakSound();
+    playFenceBreakSound(); vibrateFenceBreak();
     const newLives = callbacks.getLives() - 1;
     callbacks.setLivesRef(newLives);
     callbacks.setDisplayLives(newLives);

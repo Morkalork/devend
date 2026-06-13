@@ -11,6 +11,7 @@ import { lineSegmentIntersection, vec2Length } from "@/lib/polygon";
 import { LockDustParticle } from "@/types/game";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
+import { vibrateBallLock } from "@/lib/gameHaptics";
 
 export function checkAndUpdateBallWonStates(
   game: CanvasGameState,
@@ -109,6 +110,7 @@ export function checkAndUpdateBallWonStates(
         particles,
       });
       playBallLockSound();
+      vibrateBallLock();
     }
 
     game.lockedBallsCount += 1;

@@ -4,6 +4,7 @@ import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import { calculateScore } from "@/lib/scoring";
 import { playDeathSound } from "@/lib/gameAudio";
+import { vibrateDeath } from "@/lib/gameHaptics";
 import { polygonArea } from "@/lib/polygon";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 
@@ -27,6 +28,7 @@ export function handleGameOverFn(
 ): void {
   game.gameOver = true;
   playDeathSound();
+  vibrateDeath();
   const percent = Math.round((getCombinedArea(game) / game.originalArea) * 100);
 
   if (game.pushMode === "pushing") {

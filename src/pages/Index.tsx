@@ -187,6 +187,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               <ResultScreen
                 result={navigation.lastResult}
                 onMainMenu={navigation.goToWelcome}
+                onPlayAgain={session.handlePlayAgain}
                 accentColor={accentHex}
                 runHoursAwarded={session.lastRunHoursAwarded}
                 runLevelsCompleted={session.lastRunLevelsCompleted}
