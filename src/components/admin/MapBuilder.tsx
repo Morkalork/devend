@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle } from 'lucide-react';
-import { LevelConfig, BallConfig, LevelEntity } from '@/types/level';
+import { LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { MapCanvas } from './MapCanvas';
 import { EntityPanel } from './EntityPanel';
 import { LevelPanel } from './LevelPanel';
@@ -24,7 +24,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   useEffect(() => {
     const loadLevels = async () => {
       try {
-        const response = await fetch('/map.yml');
+        const response = await fetch('/map.yml', { cache: 'no-store' });
         if (!response.ok) throw new Error('Failed to load map.yml');
         const text = await response.text();
         const data = yaml.load(text) as { levels: LevelConfig[] };
@@ -200,13 +200,15 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     newEntity.id = `wall-${Date.now()}`;
     // Offset the copy so it's visually distinct
     if (newEntity.shape === 'rect') {
-      (newEntity as any).x += 30;
-      (newEntity as any).y += 30;
+      (newEntity as WallRectEntity).x += 30;
+      (newEntity as WallRectEntity).y += 30;
     } else if (newEntity.shape === 'circle') {
-      (newEntity as any).cx += 30;
-      (newEntity as any).cy += 30;
+      (newEntity as WallCircleEntity).cx += 30;
+      (newEntity as WallCircleEntity).cy += 30;
     } else if (newEntity.shape === 'polygon') {
-      (newEntity as any).points = (newEntity as any).points.map(([x, y]: [number, number]) => [x + 30, y + 30]);
+      (newEntity as WallPolygonEntity).points = (newEntity as WallPolygonEntity).points.map(
+        ([x, y]) => [x + 30, y + 30],
+      );
     }
 
     updateLevel({

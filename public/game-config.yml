@@ -27,7 +27,7 @@ ball:
 # Fence Settings
 fence:
   # Base generation speed at level 1 (world units per second)
-  speed_base: 800
+  speed_base: 680
   # Minimum generation speed at highest levels
   speed_min: 750
   # Speed reduction per level

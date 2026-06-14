@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, Zap, ChevronLeft, Check } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
-import { Achievement } from '@/types/achievement';
+import { Achievement, ACHIEVEMENT_STAT_LABELS } from '@/types/achievement';
 import { MetaProgressionStats } from '@/types/metaProgression';
 
 interface AchievementsScreenProps {
@@ -39,12 +39,7 @@ export function AchievementsScreen({
     return { available, active, remaining };
   }, [achievements, completedIds, activatedIds, metaStats]);
 
-  const statLabels: Record<string, string> = {
-    totalFencesDrawn: 'Fences drawn',
-    highestLevelReached: 'Highest level',
-    totalLevelsCompletedWithoutLoss: 'Flawless levels',
-    totalLivesLost: 'Lives lost',
-  };
+  const statLabels: Record<string, string> = ACHIEVEMENT_STAT_LABELS;
 
   function SectionHeader({ label, count }: { label: string; count: number }) {
     return (

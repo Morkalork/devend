@@ -20,12 +20,14 @@ import {
   resolveBallPolygonCollisionOutward,
   polygonCentroid,
   closestPointOnSegment,
-  pointToSegmentDistance,
+  Polygon,
 } from "@/lib/polygon";
+import { Wall } from "@/lib/wallGeometry";
 import { registerWallImpact } from "@/lib/wallImpactEffects";
 import {
   REGION_SAMPLE_GRID_SIZE,
   isBallInRegion,
+  isBallCellInRegion,
   findContainingRegion,
   constrainBallToRegion,
 } from "@/lib/regionOwnership";
@@ -33,58 +35,104 @@ import { playWallHitSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
 
 // ---------------------------------------------------------------------------
-// Helper: resolve ball vs completed-cut line-segment
-// ROBUST: Uses larger collision margin and push-out distance to prevent tunneling
+// Hot-loop notes
 // ---------------------------------------------------------------------------
-function resolveBallLineCollision(
-  ballPos: Vector2,
-  ballVel: Vector2,
-  ballRadius: number,
-  lineStart: Vector2,
-  lineEnd: Vector2,
-  lineThickness: number,
-): { position: Vector2; velocity: Vector2; collided: boolean; impactPoint?: Vector2 } {
-  const dist = pointToSegmentDistance(ballPos, lineStart, lineEnd);
-  // Use a slightly larger collision zone for detection (helps with fast-moving balls)
-  const collisionDist = ballRadius + lineThickness / 2 + 2;
+// Everything below runs 120 times per second per ball against every wall
+// segment and obstacle polygon, so this file deliberately avoids the vec2*
+// helpers (each allocates a fresh object) in favour of inline scalar math,
+// and rejects far-away geometry with cached bounds before any segment math.
+// Allocations only happen on actual collisions, which are rare.
 
-  if (dist < collisionDist) {
-    // Get closest point on line
-    const edge = vec2Sub(lineEnd, lineStart);
-    const edgeLengthSq = edge.x * edge.x + edge.y * edge.y;
-    let closestPoint: Vector2;
+/** Cached AABBs for static obstacle polygons (mover polygons mutate, movers
+ *  use their bounding circle instead — see the mover loop below). */
+const _obstacleBounds = new WeakMap<Polygon, { minX: number; minY: number; maxX: number; maxY: number }>();
 
-    if (edgeLengthSq === 0) {
-      closestPoint = { ...lineStart };
-    } else {
-      const t = Math.max(0, Math.min(1, vec2Dot(vec2Sub(ballPos, lineStart), edge) / edgeLengthSq));
-      closestPoint = vec2Add(lineStart, vec2Scale(edge, t));
+function getObstacleBounds(poly: Polygon) {
+  let b = _obstacleBounds.get(poly);
+  if (!b) {
+    b = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+    for (const v of poly.vertices) {
+      if (v.x < b.minX) b.minX = v.x;
+      if (v.y < b.minY) b.minY = v.y;
+      if (v.x > b.maxX) b.maxX = v.x;
+      if (v.y > b.maxY) b.maxY = v.y;
     }
+    _obstacleBounds.set(poly, b);
+  }
+  return b;
+}
 
-    // Normal points from line toward ball
-    const toBall = vec2Sub(ballPos, closestPoint);
-    let normal = vec2Normalize(toBall);
-    if (vec2Length(toBall) < 0.001) {
-      // Ball exactly on line, use perpendicular
-      normal = vec2Normalize({ x: -edge.y, y: edge.x });
-    }
-
-    // Reflect velocity if moving toward line
-    const velDotNormal = vec2Dot(ballVel, normal);
-    let newVel = { ...ballVel };
-    if (velDotNormal < 0) {
-      newVel = vec2Sub(ballVel, vec2Scale(normal, 2 * velDotNormal));
-    }
-
-    // Push ball out with generous margin to prevent re-penetration
-    const minSafeDist = ballRadius + lineThickness / 2 + 3;
-    const pushDist = Math.max(0, minSafeDist - dist);
-    const newPos = vec2Add(ballPos, vec2Scale(normal, pushDist + 2));
-
-    return { position: newPos, velocity: newVel, collided: true, impactPoint: closestPoint };
+// ---------------------------------------------------------------------------
+// Helper: resolve ball vs completed-cut line-segment, in place.
+// ROBUST: Uses larger collision margin and push-out distance to prevent
+// tunneling. Mutates ball.position/ball.velocity directly; returns the impact
+// point on hit and null on miss (the miss path allocates nothing).
+// ---------------------------------------------------------------------------
+function collideBallWithWall(ball: Ball, wall: Wall): Vector2 | null {
+  // Lazily cache the segment AABB on the wall (walls never move once created)
+  if (wall.aabbMinX === undefined) {
+    wall.aabbMinX = Math.min(wall.start.x, wall.end.x);
+    wall.aabbMaxX = Math.max(wall.start.x, wall.end.x);
+    wall.aabbMinY = Math.min(wall.start.y, wall.end.y);
+    wall.aabbMaxY = Math.max(wall.start.y, wall.end.y);
   }
 
-  return { position: ballPos, velocity: ballVel, collided: false };
+  // Use a slightly larger collision zone for detection (helps with fast-moving balls)
+  const collisionDist = ball.radius + wall.thickness / 2 + 2;
+  const px = ball.position.x;
+  const py = ball.position.y;
+
+  // Cheap AABB rejection — the overwhelmingly common case
+  if (
+    px < wall.aabbMinX! - collisionDist || px > wall.aabbMaxX! + collisionDist ||
+    py < wall.aabbMinY! - collisionDist || py > wall.aabbMaxY! + collisionDist
+  ) {
+    return null;
+  }
+
+  // Closest point on the segment (scalar form of pointToSegmentDistance)
+  const sx = wall.start.x, sy = wall.start.y;
+  const edgeX = wall.end.x - sx, edgeY = wall.end.y - sy;
+  const edgeLengthSq = edgeX * edgeX + edgeY * edgeY;
+  let cx: number, cy: number;
+  if (edgeLengthSq === 0) {
+    cx = sx; cy = sy;
+  } else {
+    let t = ((px - sx) * edgeX + (py - sy) * edgeY) / edgeLengthSq;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    cx = sx + edgeX * t;
+    cy = sy + edgeY * t;
+  }
+  const toBallX = px - cx, toBallY = py - cy;
+  const dist = Math.sqrt(toBallX * toBallX + toBallY * toBallY);
+  if (dist >= collisionDist) return null;
+
+  // Normal points from line toward ball; ball exactly on line → use perpendicular
+  let nx: number, ny: number;
+  if (dist < 0.001) {
+    const edgeLen = Math.sqrt(edgeLengthSq);
+    if (edgeLen > 0) { nx = -edgeY / edgeLen; ny = edgeX / edgeLen; }
+    else { nx = 0; ny = 0; }
+  } else {
+    nx = toBallX / dist;
+    ny = toBallY / dist;
+  }
+
+  // Reflect velocity if moving toward line
+  const vx = ball.velocity.x, vy = ball.velocity.y;
+  const velDotNormal = vx * nx + vy * ny;
+  if (velDotNormal < 0) {
+    ball.velocity.x = vx - 2 * velDotNormal * nx;
+    ball.velocity.y = vy - 2 * velDotNormal * ny;
+  }
+
+  // Push ball out with generous margin to prevent re-penetration
+  const minSafeDist = ball.radius + wall.thickness / 2 + 3;
+  const pushDist = Math.max(0, minSafeDist - dist);
+  ball.position.x = px + nx * (pushDist + 2);
+  ball.position.y = py + ny * (pushDist + 2);
+
+  return { x: cx, y: cy };
 }
 
 // ---------------------------------------------------------------------------
@@ -200,8 +248,44 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     }
   }
 
-  // CRITICAL: Check obstacle polygon penetration before edge collisions
+  // Bounce off moving obstacles.
+  // Bounding-circle rejection first: the mover polygon is a 24-gon rebuilt in
+  // place each step, so full polygon collision on every step is wasted work
+  // unless the ball is actually near the mover.
+  for (const mover of game.movers) {
+    if (mover.boundRadius === undefined) {
+      mover.boundRadius = mover.shape === "circle"
+        ? (mover.radius ?? 0)
+        : Math.hypot(mover.width ?? 0, mover.height ?? 0) / 2;
+    }
+    const mdx = (mover.axis === "horizontal" ? mover.homeX + mover.offset : mover.homeX) - ball.position.x;
+    const mdy = (mover.axis === "vertical" ? mover.homeY + mover.offset : mover.homeY) - ball.position.y;
+    const reach = mover.boundRadius + ball.radius + 2;
+    if (mdx * mdx + mdy * mdy > reach * reach) continue;
+
+    const result = resolveBallPolygonCollisionOutward(ball.position, ball.velocity, ball.radius, mover.polygon);
+    if (result.collided) {
+      ball.position = result.position;
+      ball.velocity = result.velocity;
+      triggerWallHit(ball.effects, performance.now());
+      playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));
+    }
+  }
+
+  // CRITICAL: Check obstacle polygon penetration before edge collisions.
+  // Obstacles are static, so a cached AABB (inflated by the ball radius)
+  // rejects far-away polygons before the per-edge resolver runs — circle
+  // obstacles are 64-gons, so this skips 64 segment tests per miss.
   for (const obstacle of game.obstaclePolygons) {
+    const b = getObstacleBounds(obstacle);
+    const reach = ball.radius + 1;
+    if (
+      ball.position.x < b.minX - reach || ball.position.x > b.maxX + reach ||
+      ball.position.y < b.minY - reach || ball.position.y > b.maxY + reach
+    ) {
+      continue;
+    }
+
     const obstacleResult = resolveBallPolygonCollisionOutward(
       ball.position,
       ball.velocity,
@@ -224,27 +308,31 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
 
   // UNIFIED WALL MODEL: Balls bounce off all walls (board edges, obstacles, user walls)
   for (const wall of game.walls) {
-    // Skip board edge walls (already handled by boardPolygon collision above)
-    if (wall.id.startsWith("board-")) continue;
+    // Skip board edge walls (already handled by boardPolygon collision above).
+    // The prefix check is cached: a string scan per wall per ball per step adds up.
+    if (wall.isBoardEdge === undefined) wall.isBoardEdge = wall.id.startsWith("board-");
+    if (wall.isBoardEdge) continue;
 
-    const wallResult = resolveBallLineCollision(
-      ball.position,
-      ball.velocity,
-      ball.radius,
-      wall.start,
-      wall.end,
-      wall.thickness,
-    );
-    ball.position = wallResult.position;
-    ball.velocity = wallResult.velocity;
+    const impactPoint = collideBallWithWall(ball, wall);
 
     // Register wall impact for visual effect
-    if (wallResult.collided && wallResult.impactPoint) {
+    if (impactPoint) {
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
-      registerWallImpact(wall.start, wall.end, wallResult.impactPoint, impactStrength);
+      registerWallImpact(wall.start, wall.end, impactPoint, impactStrength);
       triggerWallHit(ball.effects, performance.now());
       playWallHitSound(impactStrength);
+
+      // Ascension fence durability: each (debounced) hit wears the fence down.
+      // Exhausted fences are queued and broken after the physics step.
+      if (wall.hitsLeft !== undefined) {
+        const now = performance.now();
+        if (wall.lastDamageAt === undefined || now - wall.lastDamageAt > 250) {
+          wall.lastDamageAt = now;
+          wall.hitsLeft--;
+          if (wall.hitsLeft <= 0) game.pendingWallBreaks.push(wall);
+        }
+      }
     }
   }
 
@@ -252,6 +340,13 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
   // After all collisions, verify ball is still within its assigned region
   // SKIP for frozen balls - they should not be moved during freeze
   if (game.frozenBallId && ball.id === game.frozenBallId) return;
+
+  // O(1) fast accept: ball sits in an ACTIVE grid cell painted with its own
+  // region id (painted at init and after every cut). This replaces a scan of
+  // up to ~3,000 sample points per ball per physics step. A miss is NOT an
+  // escape — cells near walls are unpainted — so fall through to the full
+  // sample-based validation below.
+  if (game.spaceGrid && isBallCellInRegion(game.spaceGrid, ball.position, ball.regionId)) return;
 
   const ballRegion = game.regions.find(r => r.id === ball.regionId);
   if (!ballRegion) return;

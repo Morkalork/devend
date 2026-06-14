@@ -10,6 +10,7 @@ import { Region, Ball, GrowingWall, LockFlashState, DissolveState } from "@/type
 import { Wall } from "@/lib/wallGeometry";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
+import { MoverState } from "@/lib/physics/moverState";
 
 export interface CanvasGameState {
   // ── Space model ────────────────────────────────────────────────────────
@@ -36,6 +37,7 @@ export interface CanvasGameState {
 
   // ── Entities ───────────────────────────────────────────────────────────
   balls: Ball[];
+  movers: MoverState[];
   activeWall: GrowingWall | null;
 
   // ── Game flags ─────────────────────────────────────────────────────────
@@ -97,4 +99,10 @@ export interface CanvasGameState {
   /** Cells removed by previous bonus cuts — excluded from wall-adjacency checks
    *  so new cuts don't treat old cut boundaries as real walls to push against. */
   bonusCutCells: Set<string>;
+
+  // ── Ascension fence durability ─────────────────────────────────────────
+  /** Ball hits a new fence survives this level; null = fences indestructible. */
+  fenceDurability: number | null;
+  /** Fences whose durability hit 0 this frame, broken after the physics step. */
+  pendingWallBreaks: Wall[];
 }

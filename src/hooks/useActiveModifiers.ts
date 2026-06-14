@@ -11,6 +11,8 @@ export interface GameModifiers {
   ballSizeMultiplier: number;
   fenceGenerationSpeedMultiplier: number;
   scoreMultiplier: number;
+  shopDiscountMultiplier: number; // scales upgrade-shop prices (<1 = cheaper)
+  pushBonusMultiplier: number;    // scales push-your-luck chunk payouts
 
   // Additive (sum)
   instantFencesPerMap: number;
@@ -20,7 +22,10 @@ export interface GameModifiers {
   extraLives: number;
   scoreInterestRate: number;
   extraShopItems: number;
-  extraAugmentationPoints: number;
+  shopRestockCount: number; // purchases per shop visit that refill their slot with a new offer
+  extraCertificateHours: number;
+  startingCapturePercent: number; // board starts with this % already captured (Equity Grant)
+  fenceDurabilityBonus: number;   // extra ball hits Ascension fences survive
 
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
@@ -36,6 +41,8 @@ export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'ballSizeMultiplier',
   'fenceGenerationSpeedMultiplier',
   'scoreMultiplier',
+  'shopDiscountMultiplier',
+  'pushBonusMultiplier',
 ];
 
 /**
@@ -66,6 +73,8 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   ballSizeMultiplier: 1,
   fenceGenerationSpeedMultiplier: 1,
   scoreMultiplier: 1,
+  shopDiscountMultiplier: 1,
+  pushBonusMultiplier: 1,
   instantFencesPerMap: 0,
   additionalConcurrentFences: 0,
   bonusRemovalChance: 0,
@@ -73,7 +82,10 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   extraLives: 0,
   scoreInterestRate: 0,
   extraShopItems: 0,
-  extraAugmentationPoints: 0,
+  shopRestockCount: 0,
+  extraCertificateHours: 0,
+  startingCapturePercent: 0,
+  fenceDurabilityBonus: 0,
   microManagerPerLock: 0,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,
@@ -91,31 +103,35 @@ export function computeGameModifiers(
 ): GameModifiers {
   const result = { ...DEFAULT_MODIFIERS };
 
+  // Cast once to an indexable record — all GameModifier values are numbers,
+  // so this is provably safe. Avoids `as any` on every individual key access.
+  const r = result as Record<keyof GameModifiers, number>;
+
   for (const id of ownedUpgradeIds) {
     const upgrade = upgradeLookup.get(id);
     if (!upgrade) continue;
 
     for (const [key, value] of Object.entries(upgrade.modifiers)) {
-      if (!(key in result)) continue; // ignore unknown keys gracefully
+      if (!(key in result)) continue; // ignore unknown keys from YAML gracefully
 
       const k = key as keyof GameModifiers;
       if (MULTIPLICATIVE_KEYS.includes(k)) {
-        (result as any)[k] *= value;
+        r[k] *= value;
       } else {
-        (result as any)[k] += value;
+        r[k] += value;
       }
     }
   }
 
-  // Apply extra bonuses (e.g., from completed achievements)
+  // Apply extra bonuses (e.g., from completed achievements or certificates)
   if (extraBonuses) {
     for (const [key, value] of Object.entries(extraBonuses)) {
       if (!(key in result)) continue;
       const k = key as keyof GameModifiers;
       if (MULTIPLICATIVE_KEYS.includes(k)) {
-        (result as any)[k] *= value as number;
+        r[k] *= value;
       } else {
-        (result as any)[k] += value as number;
+        r[k] += value;
       }
     }
   }
@@ -140,7 +156,6 @@ export function useActiveModifiers(
   );
   return useMemo(
     () => computeGameModifiers(ownedUpgradeIds, upgradeLookup, extraBonuses),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [ownedUpgradeIds, upgradeLookup, extraBonuses],
   );
 }

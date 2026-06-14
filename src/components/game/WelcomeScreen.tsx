@@ -4,13 +4,14 @@ import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy, ChevronRig
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { CheckpointPicker } from './CheckpointPicker';
+import { version } from '@/lib/version';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
   onStartFromLevel?: (level: number) => void;
   onTutorial: () => void;
   onOptions: () => void;
-  onAugments?: () => void;
+  onOpenCertificateStore?: () => void;
   onAchievements?: () => void;
   onAdmin?: () => void;
   isLoading?: boolean;
@@ -18,7 +19,7 @@ interface WelcomeScreenProps {
   accentColor?: string;
   checkpointLevel?: number;
   checkpointRemainingMs?: number;
-  totalAugmentPoints?: number;
+  totalCertificateHours?: number;
   completedAchievementCount?: number;
 }
 
@@ -34,7 +35,7 @@ export function WelcomeScreen({
   onStartFromLevel,
   onTutorial,
   onOptions,
-  onAugments,
+  onOpenCertificateStore,
   onAchievements,
   onAdmin,
   isLoading,
@@ -42,7 +43,7 @@ export function WelcomeScreen({
   accentColor,
   checkpointLevel,
   checkpointRemainingMs,
-  totalAugmentPoints,
+  totalCertificateHours,
   completedAchievementCount,
 }: WelcomeScreenProps) {
   const [remainingTime, setRemainingTime] = useState(checkpointRemainingMs || 0);
@@ -327,17 +328,17 @@ export function WelcomeScreen({
           </motion.button>
           <motion.button
             className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
-            onClick={onAugments}
-            whileHover={onAugments ? { scale: 1.02 } : undefined}
-            whileTap={onAugments ? { scale: 0.98 } : undefined}
-            disabled={!onAugments || isLoading}
+            onClick={onOpenCertificateStore}
+            whileHover={onOpenCertificateStore ? { scale: 1.02 } : undefined}
+            whileTap={onOpenCertificateStore ? { scale: 0.98 } : undefined}
+            disabled={!onOpenCertificateStore || isLoading}
           >
             <Sparkles className="w-5 h-5" />
             Certificates
-            {totalAugmentPoints !== undefined && totalAugmentPoints > 0 && (
+            {totalCertificateHours !== undefined && totalCertificateHours > 0 && (
               <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Hexagon className="w-3 h-3" />
-                {totalAugmentPoints}h
+                {totalCertificateHours}h
               </span>
             )}
           </motion.button>
@@ -345,9 +346,9 @@ export function WelcomeScreen({
             <motion.button
               className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
               onClick={onAchievements}
-              whileHover={totalAugmentPoints ? { scale: 1.02 } : undefined}
-              whileTap={totalAugmentPoints ? { scale: 0.98 } : undefined}
-              disabled={!totalAugmentPoints || isLoading}
+              whileHover={totalCertificateHours ? { scale: 1.02 } : undefined}
+              whileTap={totalCertificateHours ? { scale: 0.98 } : undefined}
+              disabled={!totalCertificateHours || isLoading}
             >
               <Trophy className="w-5 h-5" />
               Achievements
@@ -370,6 +371,10 @@ export function WelcomeScreen({
           )}
         </motion.div>
       </motion.div>
+      <div className="absolute bottom-3 right-4 text-xs font-mono opacity-30 pointer-events-none select-none"
+        style={{ color: '#00ff88' }}>
+        v{version}
+      </div>
     </div>
     {showStartMapPicker && checkpointLevel && onStartFromLevel && (
       <CheckpointPicker

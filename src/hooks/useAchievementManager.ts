@@ -1,3 +1,13 @@
+/**
+ * useAchievementManager — achievements defined in public/achievements.yml.
+ *
+ * Tracks lifetime stats against each achievement's requirement, marks them
+ * complete, and lets the player 'activate' completed achievements to enable
+ * their bonus modifiers (exposed as bonusModifiers, merged into the
+ * GameModifiers pipeline by useGameSession).
+ *
+ * Persistence: localStorage key ACHIEVEMENT_STORAGE_KEY (src/types/achievement.ts).
+ */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import yaml from 'js-yaml';
 import {

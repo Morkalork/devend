@@ -28,6 +28,8 @@ export interface MetaProgressionStats {
   totalFencesDrawn: number;
   totalLevelsCompletedWithoutLoss: number;
   totalLivesLost: number;
+  deepestAscension: number;
+  pushBonusesBanked: number;
 }
 
 /**
@@ -42,6 +44,8 @@ export const DEFAULT_META_STATS: MetaProgressionStats = {
   totalFencesDrawn: 0,
   totalLevelsCompletedWithoutLoss: 0,
   totalLivesLost: 0,
+  deepestAscension: 0,
+  pushBonusesBanked: 0,
 };
 
 export const META_STATS_STORAGE_KEY = 'jezzball_meta_stats';

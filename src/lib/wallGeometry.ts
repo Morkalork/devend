@@ -10,6 +10,25 @@ export interface Wall {
   end: Vector2;
   thickness: number;
   isMirror?: boolean;
+  isObstacleBoundary?: boolean;
+  /** ms timestamp when the fence segment was drawn; absent on board edges / obstacles */
+  createdAt?: number;
+  /** Cached `id.startsWith("board-")`, filled lazily by the physics hot loop. */
+  isBoardEdge?: boolean;
+  /** Cached segment AABB (endpoints only, uninflated), filled lazily by the physics hot loop. */
+  aabbMinX?: number;
+  aabbMinY?: number;
+  aabbMaxX?: number;
+  aabbMaxY?: number;
+  // ── Ascension fence durability (set on fence segments while ascended) ──
+  /** Total ball hits this fence survives; undefined = indestructible. */
+  maxHits?: number;
+  /** Remaining hits before the fence breaks. */
+  hitsLeft?: number;
+  /** ms timestamp of the last damage tick (debounces grinding contacts). */
+  lastDamageAt?: number;
+  /** Grid cells this segment's rasterization removed — restored if it breaks. */
+  rasterCells?: number[];
 }
 
 export interface WallVertex {
@@ -38,6 +57,7 @@ export function createWallsFromPolygon(polygon: Polygon, idPrefix: string, isMir
       start: { ...vertices[i] },
       end: { ...vertices[j] },
       thickness: WALL_THICKNESS,
+      isObstacleBoundary: !isMirror,
     };
     if (isMirror) wall.isMirror = true;
     walls.push(wall);
@@ -228,7 +248,7 @@ export function castRayWithReflections(
 
     // Find the wall we hit to check if it's a mirror
     const hitWall = walls.find(w => w.id === hit.wallId);
-    if (!hitWall || !hitWall.isMirror || bounces >= maxBounces) {
+    if (!hitWall || !hitWall.isMirror || bounces >= maxBounces || hitWall.isObstacleBoundary) {
       // Terminal hit — return result
       return { waypoints, finalWallId: hit.wallId };
     }

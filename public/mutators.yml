@@ -1,0 +1,121 @@
+# Ascension mutators — curse + blessing bundles drafted after beating the
+# final level. Each `modifiers` map uses the same GameModifiers keys as
+# upgrades.yml (see README-modifiers.md); a curse is simply an adverse value.
+#
+# Drafted mutators stack across ascensions, so keep individual effects
+# moderate — a deep run accumulates many of these.
+
+ascension:
+  # Baseline ball-speed multiplier applied per ascension depth, on top of any
+  # drafted mutators. Keeps blessing-heavy drafts from trivialising the loop.
+  speedRampPerDepth: 1.08
+
+  # Fence durability: while ascended, fences crumble after this many ball
+  # hits — declining linearly from `fenceDurabilityBase` on level 1 to
+  # `fenceDurabilityAtFinal` on the final level. Fences bordering captured
+  # space never break (they hold back the void). The Defensive Programming
+  # shop upgrade adds to these numbers.
+  fenceDurabilityBase: 6
+  fenceDurabilityAtFinal: 2
+
+mutators:
+
+  - id: crunch_time
+    name: Crunch Time
+    curse: Balls move 25% faster.
+    blessing: Earn 50% more overtime hours.
+    modifiers:
+      ballSpeedMultiplier: 1.25
+      scoreMultiplier: 1.5
+
+  - id: scope_creep
+    name: Scope Creep
+    curse: Balls are 30% bigger.
+    blessing: Fences grow 35% faster.
+    modifiers:
+      ballSizeMultiplier: 1.3
+      fenceGenerationSpeedMultiplier: 1.35
+
+  - id: death_march
+    name: Death March
+    curse: Lose one life immediately.
+    blessing: Earn 75% more overtime hours.
+    modifiers:
+      extraLives: -1
+      scoreMultiplier: 1.75
+
+  - id: hiring_freeze
+    name: Hiring Freeze
+    curse: The shop offers 2 fewer upgrades.
+    blessing: Earn 10% interest on banked overtime after every level.
+    modifiers:
+      extraShopItems: -2
+      scoreInterestRate: 0.10
+
+  - id: legacy_codebase
+    name: Legacy Codebase
+    curse: Fences grow 20% slower.
+    blessing: Start every map with 2 instant fences.
+    modifiers:
+      fenceGenerationSpeedMultiplier: 0.8
+      instantFencesPerMap: 2
+
+  - id: parallel_pipelines
+    name: Parallel Pipelines
+    curse: Balls move 15% faster.
+    blessing: Draw one extra fence at the same time.
+    modifiers:
+      ballSpeedMultiplier: 1.15
+      additionalConcurrentFences: 1
+
+  - id: tech_debt_audit
+    name: Tech Debt Audit
+    curse: Balls move 10% faster and are 10% bigger.
+    blessing: Cuts have a 25% chance to clear 5% extra space.
+    modifiers:
+      ballSpeedMultiplier: 1.1
+      ballSizeMultiplier: 1.1
+      bonusRemovalChance: 0.25
+      bonusRemovalAmount: 0.05
+
+  - id: night_school
+    name: Night School
+    curse: Balls move 20% faster.
+    blessing: Bank 1 extra Certificate Hour when the run ends.
+    modifiers:
+      ballSpeedMultiplier: 1.2
+      extraCertificateHours: 1
+
+  - id: micromanagement
+    name: Micromanagement
+    curse: Balls are 20% bigger.
+    blessing: Every locked ball slows the remaining balls by 2%.
+    modifiers:
+      ballSizeMultiplier: 1.2
+      microManagerPerLock: 0.02
+
+  - id: roadmap_clarity
+    name: Roadmap Clarity
+    curse: Balls move 15% faster.
+    blessing: See the predicted path of the two fastest balls.
+    modifiers:
+      ballSpeedMultiplier: 1.15
+      ballPathPredictionBounces: 2
+      ballPathPredictionBalls: 2
+
+  - id: golden_handcuffs
+    name: Golden Handcuffs
+    curse: Earn 25% less overtime.
+    blessing: Gain 2 extra lives immediately.
+    modifiers:
+      scoreMultiplier: 0.75
+      extraLives: 2
+
+  - id: agile_transformation
+    name: Agile Transformation
+    curse: Fences grow 15% slower.
+    blessing: The shop offers 1 extra upgrade and restocks twice per visit.
+    modifiers:
+      fenceGenerationSpeedMultiplier: 0.85
+      extraShopItems: 1
+      shopRestockCount: 2

@@ -1,3 +1,10 @@
+/**
+ * useLevelManager — loads public/map.yml and owns the level sequence.
+ *
+ * Multiple map entries may share one logical level number ('variants');
+ * loadLevels() picks one variant per level at random to build the run's
+ * sequence. Exposes the current level config plus advance/reset helpers.
+ */
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
 import { LevelConfig, LevelData, LevelEntity } from '@/types/level';
@@ -40,7 +47,7 @@ export function useLevelManager() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const response = await fetch('/map.yml');
+      const response = await fetch('/map.yml', { cache: 'no-store' });
       if (!response.ok) {
         throw new Error(`Failed to load map.yml: ${response.status}`);
       }

@@ -16,6 +16,7 @@ import { GrowingWall } from "@/types/game";
 import { PHYSICS_STEP, DISSOLVE_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
+import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updateWallImpacts } from "@/lib/wallImpactEffects";
 
 export interface GameLoopCallbacks {
@@ -25,6 +26,8 @@ export interface GameLoopCallbacks {
   applyCut: (wall: GrowingWall) => void;
   /** Called once per frame to composite everything onto the canvas. */
   render: () => void;
+  /** Called when Ascension fences ran out of durability this frame. */
+  processWallBreaks?: () => void;
 }
 
 /**
@@ -106,10 +109,18 @@ export function createGameLoop(
     game.accumulator += Math.min(dt, 0.05);
 
     while (game.accumulator >= PHYSICS_STEP) {
-      // Snapshot positions before this step (used for render interpolation)
+      // Snapshot positions before this step (used for render interpolation).
+      // Mutate in-place to avoid allocating a new object every physics tick.
       for (const ball of game.balls) {
-        ball.prevPosition = { ...ball.position };
+        if (!ball.prevPosition) {
+          ball.prevPosition = { x: ball.position.x, y: ball.position.y };
+        } else {
+          ball.prevPosition.x = ball.position.x;
+          ball.prevPosition.y = ball.position.y;
+        }
       }
+
+      updateMoversFn(PHYSICS_STEP, game);
 
       for (const ball of game.balls) {
         // WON balls keep full physics but visually disintegrate
@@ -135,14 +146,22 @@ export function createGameLoop(
       game.accumulator -= PHYSICS_STEP;
     }
 
-    // Interpolate render positions between last two physics states
+    // Break any Ascension fences that ran out of durability (outside the
+    // fixed-step loop — breaking rebuilds regions, too heavy per step)
+    if (game.pendingWallBreaks.length > 0) {
+      callbacks.processWallBreaks?.();
+    }
+
+    // Interpolate render positions between last two physics states.
+    // Mutate in-place to avoid allocating a new object every display frame.
     const alpha = game.accumulator / PHYSICS_STEP;
     for (const ball of game.balls) {
       const prev = ball.prevPosition ?? ball.position;
-      ball.renderPosition = {
-        x: prev.x + (ball.position.x - prev.x) * alpha,
-        y: prev.y + (ball.position.y - prev.y) * alpha,
-      };
+      if (!ball.renderPosition) {
+        ball.renderPosition = { x: 0, y: 0 };
+      }
+      ball.renderPosition.x = prev.x + (ball.position.x - prev.x) * alpha;
+      ball.renderPosition.y = prev.y + (ball.position.y - prev.y) * alpha;
     }
 
     // Update wall impact visual effects (time-based)

@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, RotateCcw, X, Layers, Pencil, Save, Check, AlertCircle } from 'lucide-react';
+import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight } from 'lucide-react';
 import yaml from 'js-yaml';
 import { GameScreen } from '@/components/game/GameScreen';
 import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useColorProgression } from '@/hooks/useColorProgression';
-import { LevelConfig, LevelData, LevelEntity, BallConfig } from '@/types/level';
+import { LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 
@@ -37,10 +37,15 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   extraLives:                       { label: 'Extra Lives',            kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra lives granted immediately' },
   scoreInterestRate:                { label: 'Score Interest Rate',    kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Fraction of score added as interest between maps' },
   extraShopItems:                   { label: 'Extra Shop Slots',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional item slots in the upgrade shop' },
-  extraAugmentationPoints:          { label: 'Extra Aug. Points',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Augment Points granted' },
+  shopRestockCount:                 { label: 'Shop Restocks',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Purchases per shop visit that refill their slot with a new offer' },
+  extraCertificateHours:          { label: 'Extra Cert. Hours',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Certificate Hours banked when the run ends' },
   microManagerPerLock:              { label: 'MicroManager/Lock',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Speed reduction per locked ball (0.01 = 1%, max 50%)' },
   ballPathPredictionBounces:        { label: 'Path Preview Bounces',   kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'SCRUM Master: bounces ahead to preview (0 = off)' },
   ballPathPredictionBalls:          { label: 'Path Preview Balls',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'SCRUM Master: fastest N balls to track (≥100 = all, 0 = off)' },
+  shopDiscountMultiplier:           { label: 'Shop Discount',          kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies upgrade-shop prices (< 1 = cheaper)' },
+  pushBonusMultiplier:              { label: 'Push Bonus Mult.',       kind: 'multiplicative', step: 0.25, min: 0.25, defaultValue: 1,    description: 'Multiplies push-your-luck chunk payouts' },
+  startingCapturePercent:           { label: 'Starting Capture %',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Board starts with this % already captured (max 40)' },
+  fenceDurabilityBonus:             { label: 'Fence Durability +',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra ball hits Ascension fences survive (no effect outside Ascension)' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)
@@ -129,7 +134,10 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     } else {
       setEditDraft(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Depend on the level ID, not the object reference: editDraft is mutated
+    // in place by the editor panels, and we only want to reset it when the
+    // user actually switches to a different level, not on every local edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLevel?.id]);
 
   const updateEditLevel = useCallback((updated: LevelConfig) => {
@@ -180,9 +188,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
       if (!entity) return prev;
       const copy: LevelEntity = JSON.parse(JSON.stringify(entity));
       copy.id = `wall-${Date.now()}`;
-      if (copy.shape === 'rect') { (copy as any).x += 30; (copy as any).y += 30; }
-      else if (copy.shape === 'circle') { (copy as any).cx += 30; (copy as any).cy += 30; }
-      else if (copy.shape === 'polygon') { (copy as any).points = (copy as any).points.map(([x,y]: [number,number]) => [x+30, y+30]); }
+      if (copy.shape === 'rect') { (copy as WallRectEntity).x += 30; (copy as WallRectEntity).y += 30; }
+      else if (copy.shape === 'circle') { (copy as WallCircleEntity).cx += 30; (copy as WallCircleEntity).cy += 30; }
+      else if (copy.shape === 'polygon') { (copy as WallPolygonEntity).points = (copy as WallPolygonEntity).points.map(([x, y]) => [x + 30, y + 30]); }
       setEditEntityId(copy.id);
       return { ...prev, entities: [...(prev.entities || []), copy] };
     });
@@ -270,6 +278,17 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     setGameKey(k => k + 1);
   }, []);
 
+  const goToNextLevel = useCallback(() => {
+    if (allLevels.length === 0) return;
+    if (!selectedLevel) {
+      setSelectedLevel(allLevels[0]);
+    } else {
+      const idx = allLevels.findIndex(l => l.id === selectedLevel.id);
+      setSelectedLevel(allLevels[(idx + 1) % allLevels.length]);
+    }
+    setGameKey(k => k + 1);
+  }, [allLevels, selectedLevel]);
+
   const getDraftValue = useCallback((key: keyof GameModifiers): number => {
     return draft[key] ?? MODIFIER_META[key].defaultValue;
   }, [draft]);
@@ -321,8 +340,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           activeModifiers={activeModifiers}
         />
 
-        {/* Controls overlay — always visible over the game area */}
-        <div style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 50, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Controls overlay — only visible when a level is selected (floating toolbar handles the no-level case) */}
+        {selectedLevel && <div style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 50, display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             onClick={hardReset}
             title="Reset game"
@@ -343,7 +362,15 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             <Layers className="w-4 h-4" />
             {selectedLevel ? `L${selectedLevel.level}: ${selectedLevel.id}` : 'Level'}
           </button>
-        </div>
+          <button
+            onClick={goToNextLevel}
+            title="Next level"
+            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>}
       </div>
 
       {/* ── Level sidebar (always visible when a real level is selected) ── */}
@@ -455,6 +482,14 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           >
             <Layers className="w-4 h-4" />
             Level
+          </button>
+          <button
+            onClick={goToNextLevel}
+            title="Next level"
+            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+          >
+            <ChevronRight className="w-4 h-4" />
           </button>
           <button
             onClick={openModal}

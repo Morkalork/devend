@@ -2,7 +2,6 @@ import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
-import { componentTagger } from "lovable-tagger";
 
 /** Dev-only plugin: exposes GET /api/map and PUT /api/map for saving map.yml from the admin UI */
 function mapApiPlugin(): Plugin {
@@ -48,7 +47,6 @@ export default defineConfig(({ mode }) => ({
   },
   plugins: [
     react(),
-    mode === "development" && componentTagger(),
     mode === "development" && mapApiPlugin(),
   ].filter(Boolean),
   resolve: {

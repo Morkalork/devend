@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { LevelConfig, LevelEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
+import { LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from '@/lib/boardConstants';
 
 interface MapCanvasProps {
@@ -214,7 +214,7 @@ export function MapCanvas({
         const circleEntity = entity as WallCircleEntity;
         const center = worldToScreen(circleEntity.cx, circleEntity.cy);
         const radius = circleEntity.radius * boardRect.scale;
-        const isMirror = !!entity.mirror;
+        const isMirror = isMirrorEntity(entity);
 
         ctx.fillStyle = isMirror
           ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
@@ -262,7 +262,7 @@ export function MapCanvas({
         const width = rectEntity.width * boardRect.scale;
         const height = rectEntity.height * boardRect.scale;
 
-        const isMirror = !!entity.mirror;
+        const isMirror = isMirrorEntity(entity);
         ctx.fillStyle = isMirror
           ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
           : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
@@ -312,7 +312,7 @@ export function MapCanvas({
       } else if (entity.shape === 'polygon') {
         const polyEntity = entity as WallPolygonEntity;
         const points = polyEntity.points.map(([x, y]) => worldToScreen(x, y));
-        const isMirror = !!entity.mirror;
+        const isMirror = isMirrorEntity(entity);
 
         ctx.fillStyle = isMirror
           ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')

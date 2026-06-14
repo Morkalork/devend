@@ -1,24 +1,30 @@
 import { motion } from 'framer-motion';
-import { Trophy, Skull, Home, Hexagon } from 'lucide-react';
+import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { CRTBackground } from './CRTBackground';
 
 interface ResultScreenProps {
   result: GameResult;
   onMainMenu: () => void;
+  onPlayAgain?: () => void;
+  onRestart?: () => void;
+  checkpointLevel?: number;
   accentColor?: string;
-  runPointsAwarded?: number;
+  runHoursAwarded?: number;
   runLevelsCompleted?: number;
 }
 
 export function ResultScreen({
   result,
   onMainMenu,
+  onPlayAgain,
+  onRestart,
+  checkpointLevel,
   accentColor,
-  runPointsAwarded = 0,
+  runHoursAwarded = 0,
   runLevelsCompleted = 0,
 }: ResultScreenProps) {
-  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, totalScore } = result;
+  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, mutatorNames } = result;
 
   return (
     <>
@@ -95,6 +101,31 @@ export function ResultScreen({
           </motion.div>
         )}
 
+        {/* Ascension summary */}
+        {!!ascensionDepth && ascensionDepth > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-center"
+          >
+            <div className="flex items-center justify-center gap-2 mb-1">
+              <ArrowUpCircle className="w-6 h-6" style={{ color: '#ffb347' }} />
+              <p
+                className="text-xl font-display font-bold"
+                style={{ color: '#ffb347', textShadow: '0 0 16px #ffb34788' }}
+              >
+                Ascension Depth {ascensionDepth}
+              </p>
+            </div>
+            {mutatorNames && mutatorNames.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Mutators braved: {mutatorNames.join(' · ')}
+              </p>
+            )}
+          </motion.div>
+        )}
+
         {/* Stats */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -121,7 +152,7 @@ export function ResultScreen({
             </p>
           </div>
 
-          {/* Augment Points Earned */}
+          {/* Certificate hours earned */}
           {runLevelsCompleted > 0 && (
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
@@ -135,11 +166,11 @@ export function ResultScreen({
               <p className="text-3xl font-display font-bold text-foreground mb-2">
                 {runLevelsCompleted}
               </p>
-              {runPointsAwarded > 0 && (
+              {runHoursAwarded > 0 && (
                 <div className="flex items-center justify-center gap-2">
                   <Hexagon className="w-6 h-6 text-white fill-white/20" />
                   <p className="text-2xl font-display font-bold text-white">
-                    +{runPointsAwarded}h Certificate Hour{runPointsAwarded > 1 ? 's' : ''}
+                    +{runHoursAwarded}h Certificate Hour{runHoursAwarded > 1 ? 's' : ''}
                   </p>
                 </div>
               )}
@@ -153,10 +184,48 @@ export function ResultScreen({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.55 }}
-          className="mt-4"
+          className="mt-4 flex flex-col gap-3 w-full min-w-[200px]"
         >
+          {checkpointLevel && checkpointLevel > 1 ? (
+            <>
+              {onPlayAgain && (
+                <motion.button
+                  className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+                  onClick={() => onPlayAgain()}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  Continue (Level {checkpointLevel})
+                </motion.button>
+              )}
+              {onRestart && (
+                <motion.button
+                  className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+                  onClick={() => onRestart()}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  Restart
+                </motion.button>
+              )}
+            </>
+          ) : (
+            onPlayAgain && (
+              <motion.button
+                className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+                onClick={() => onPlayAgain()}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <RotateCcw className="w-5 h-5" />
+                Play Again
+              </motion.button>
+            )
+          )}
           <motion.button
-            className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+            className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
             onClick={onMainMenu}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}

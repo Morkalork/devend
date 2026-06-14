@@ -189,86 +189,77 @@ export function renderWallWithEffects(
   scale: number,
   baseColor: string,
   baseWidth: number,
+  glowBoost = 0,
 ): void {
-  // Render fence as a FILLED POLYGON (not a stroked line).
-  // This eliminates butt-cap corner nubs at wall junctions — the polygon clips
-  // perfectly at any angle against ctx.clip() (boardRect or region polygon).
-  const hw = baseWidth / 2;
   const sdx = endScreen.x - startScreen.x;
   const sdy = endScreen.y - startScreen.y;
   const slen = Math.sqrt(sdx * sdx + sdy * sdy);
   if (slen < 0.001) return;
 
-  // Perpendicular half-width vector (scaled)
-  const px = -sdy / slen * hw;
-  const py =  sdx / slen * hw;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
-  // Local helper: fill a closed polygon from a centerline array + perp half-width vector
-  const fillPoly = (
-    centers: { x: number; y: number }[],
-    perpX: number, perpY: number,
-  ) => {
-    const n = centers.length;
-    ctx.beginPath();
-    ctx.moveTo(centers[0].x + perpX, centers[0].y + perpY);
-    for (let i = 1; i < n; i++) ctx.lineTo(centers[i].x + perpX, centers[i].y + perpY);
-    for (let i = n - 1; i >= 0; i--) ctx.lineTo(centers[i].x - perpX, centers[i].y - perpY);
-    ctx.closePath();
-    ctx.fill();
-    // Stroke over the filled edge to eliminate diagonal anti-aliasing staircase artifacts.
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-  };
-
-  if (activeImpacts.length === 0 || !hasNearbyImpacts(wallStart, wallEnd)) {
-    // Static: fill a square-capped rectangle — extend each end by hw in the
-    // tangential direction so adjacent perpendicular walls overlap at corners,
-    // eliminating the triangular notch that butt-ended rectangles leave.
-    const ecx = sdx / slen * hw, ecy = sdy / slen * hw;
-    fillPoly(
-      [
-        { x: startScreen.x - ecx, y: startScreen.y - ecy },
-        { x: endScreen.x   + ecx, y: endScreen.y   + ecy },
-      ],
-      px, py,
-    );
-    return;
-  }
-
-  // Wobbly: spring-chain nodes displace the fence centerline; build polygon from those
-  const centers: { x: number; y: number }[] = [];
+  let centers: { x: number; y: number }[];
   let maxGlow = 0;
 
-  for (let i = 0; i <= N_NODES; i++) {
-    const t = i / N_NODES;
-    const wx = wallStart.x + (wallEnd.x - wallStart.x) * t;
-    const wy = wallStart.y + (wallEnd.y - wallStart.y) * t;
-    const sx = startScreen.x + sdx * t;
-    const sy = startScreen.y + sdy * t;
-    const { dx, dy, glow } = getEffectsAtPoint({ x: wx, y: wy }, scale);
-    centers.push({ x: sx + dx, y: sy + dy });
-    maxGlow = Math.max(maxGlow, glow);
+  if (activeImpacts.length === 0 || !hasNearbyImpacts(wallStart, wallEnd)) {
+    centers = [startScreen, endScreen];
+  } else {
+    const pts: { x: number; y: number }[] = [];
+    for (let i = 0; i <= N_NODES; i++) {
+      const t = i / N_NODES;
+      const wx = wallStart.x + (wallEnd.x - wallStart.x) * t;
+      const wy = wallStart.y + (wallEnd.y - wallStart.y) * t;
+      const { dx, dy, glow } = getEffectsAtPoint({ x: wx, y: wy }, scale);
+      pts.push({ x: startScreen.x + sdx * t + dx, y: startScreen.y + sdy * t + dy });
+      maxGlow = Math.max(maxGlow, glow);
+    }
+    centers = pts;
   }
 
-  // Square-cap extension for wobbly wall too (same tangential extension).
-  const ecx = sdx / slen * hw, ecy = sdy / slen * hw;
-  const first = centers[0], last = centers[centers.length - 1];
-  centers.unshift({ x: first.x - ecx, y: first.y - ecy });
-  centers.push   ({ x: last.x  + ecx, y: last.y  + ecy });
+  const buildPath = () => {
+    ctx.beginPath();
+    ctx.moveTo(centers[0].x, centers[0].y);
+    for (let i = 1; i < centers.length; i++) ctx.lineTo(centers[i].x, centers[i].y);
+  };
 
-  fillPoly(centers, px, py);
+  // Outer glow via additive compositing (amplified for freshly drawn walls)
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = baseColor;
+  buildPath(); ctx.lineWidth = baseWidth * (2.8 + glowBoost * 2.5); ctx.globalAlpha = 0.10 + glowBoost * 0.22; ctx.stroke();
+  buildPath(); ctx.lineWidth = baseWidth * (1.6 + glowBoost * 1.8); ctx.globalAlpha = 0.18 + glowBoost * 0.25; ctx.stroke();
+  ctx.restore();
 
-  if (maxGlow > 0.05) {
-    const hwGlow = baseWidth * (1 + maxGlow * 1.5) / 2;
-    const gx = -sdy / slen * hwGlow;
-    const gy =  sdx / slen * hwGlow;
+  // White-bright core + accent centerline
+  buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 1; ctx.stroke();
+  buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.stroke();
+
+  // Fresh-wall bloom
+  if (glowBoost > 0.05) {
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = baseColor;
-    ctx.globalAlpha = maxGlow * 0.8;
-    fillPoly(centers, gx, gy);
+    buildPath();
+    ctx.lineWidth = baseWidth * (3.5 + glowBoost * 3);
+    ctx.strokeStyle = baseColor;
+    ctx.globalAlpha = glowBoost * 0.18;
+    ctx.stroke();
     ctx.restore();
   }
+
+  // Impact wobble extra glow
+  if (maxGlow > 0.05) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    buildPath();
+    ctx.lineWidth = baseWidth * (1 + maxGlow * 2);
+    ctx.strokeStyle = baseColor;
+    ctx.globalAlpha = maxGlow * 0.65;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.globalAlpha = 1;
 }
 
 export function clearWallImpacts(): void {

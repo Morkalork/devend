@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
@@ -17,12 +18,31 @@ interface LevelCompleteOverlayProps {
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts }: LevelCompleteOverlayProps) {
   const [chosen, setChosen] = useState(false);
   const [buttonReady, setButtonReady] = useState(buttonDelay === 0);
+  const [displayLevelScore, setDisplayLevelScore] = useState(0);
+  const [displayTotalScore, setDisplayTotalScore] = useState(0);
 
   useEffect(() => {
     if (buttonDelay <= 0) return;
     const t = setTimeout(() => setButtonReady(true), buttonDelay);
     return () => clearTimeout(t);
   }, [buttonDelay]);
+
+  useEffect(() => {
+    const DELAY = 380;
+    const DURATION = 900;
+    const startTime = performance.now() + DELAY;
+    let rafId: number;
+    const animate = (now: number) => {
+      if (now < startTime) { rafId = requestAnimationFrame(animate); return; }
+      const t = Math.min(1, (now - startTime) / DURATION);
+      const ease = 1 - (1 - t) * (1 - t) * (1 - t);
+      setDisplayLevelScore(Math.round(scoreData.levelScore * ease));
+      setDisplayTotalScore(Math.round(totalScore * ease));
+      if (t < 1) rafId = requestAnimationFrame(animate);
+    };
+    rafId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafId);
+  }, [scoreData.levelScore, totalScore]);
   const {
     levelNumber,
     levelId,
@@ -56,17 +76,25 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-50 bg-background/30 backdrop-blur-sm animate-in fade-in duration-500" />
+      <motion.div
+        className="fixed inset-0 z-50 bg-background/30 backdrop-blur-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.25 }}
+      />
 
       {/* Modal container */}
-      <div
-        className="level-complete-modal fixed z-50 overflow-y-auto animate-in fade-in slide-in-from-bottom-4 duration-500"
+      <motion.div
+        className="level-complete-modal fixed z-50 overflow-y-auto"
         style={{
           bottom: '1rem',
           left: '1rem',
           right: '1rem',
           maxHeight: 'calc(100vh - 2rem)',
         }}
+        initial={{ opacity: 0, y: 55, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 310, damping: 26, mass: 0.85 }}
       >
         <style>{`
           @media (min-width: 640px) {
@@ -85,7 +113,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
         <div className="bg-card/60 backdrop-blur-md border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <motion.div
+            className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12, duration: 0.22 }}
+          >
             <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-success/20 flex items-center justify-center">
               <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
             </div>
@@ -93,7 +126,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground">Level Complete!</h2>
               <p className="text-muted-foreground text-xs sm:text-sm">{levelId}</p>
             </div>
-          </div>
+          </motion.div>
 
           {/* Push Failed Warning */}
           {pushFailed && (
@@ -105,7 +138,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
           )}
 
           {/* Stats Grid */}
-          <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base">
+          <motion.div
+            className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2, duration: 0.28 }}
+          >
             <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground">Level</span>
               <span className="font-bold text-foreground">{levelNumber}</span>
@@ -231,18 +269,23 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
             <div className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">Overtime Earned</span>
-              <span className="text-xl sm:text-2xl font-bold text-primary">{levelScore}h</span>
+              <span className="text-xl sm:text-2xl font-bold text-primary">{displayLevelScore}h</span>
             </div>
 
             <div className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">Total Overtime</span>
-              <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{totalScore}h</span>
+              <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{displayTotalScore}h</span>
             </div>
-          </div>
+          </motion.div>
 
           {/* Newly unlocked certificates */}
           {newlyUnlockedCerts && newlyUnlockedCerts.length > 0 && (
-            <div className="mb-4 space-y-2">
+            <motion.div
+              className="mb-4 space-y-2"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.32, duration: 0.22 }}
+            >
               {newlyUnlockedCerts.map(cert => (
                 <div
                   key={cert.id}
@@ -255,20 +298,26 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   </div>
                 </div>
               ))}
-            </div>
+            </motion.div>
           )}
 
           {/* Continue Button */}
-          <button
-            disabled={chosen || !buttonReady}
-            className="arcade-button-primary w-full rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 hover:scale-[1.02] active:scale-[0.98] transition-transform disabled:opacity-50 disabled:pointer-events-none"
-            onClick={() => { setChosen(true); onContinue(); }}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.38, duration: 0.22 }}
           >
-            Next Level
-            <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
+            <button
+              disabled={chosen || !buttonReady}
+              className="arcade-button-primary w-full rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:pointer-events-none"
+              onClick={() => { setChosen(true); onContinue(); }}
+            >
+              Next Level
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
     </>
   );
 }

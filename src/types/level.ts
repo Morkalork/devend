@@ -49,7 +49,24 @@ export interface WallEntity extends BaseEntity {
 export type WallRectEntity = WallEntity & RectShape;
 export type WallPolygonEntity = WallEntity & PolygonShape;
 export type WallCircleEntity = WallEntity & CircleShape;
-export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity;
+export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity | LevelMoverEntity;
+
+/** True when the entity is a wall with the mirror flag set. Movers can never be mirrors. */
+export function isMirrorEntity(entity: LevelEntity): boolean {
+  return entity.kind === "wall" && !!entity.mirror;
+}
+
+// ── Mover entities — obstacles that oscillate back and forth ──────────────
+export interface MoverEntityBase extends BaseEntity {
+  kind: "mover";
+  axis: "horizontal" | "vertical";
+  range: number;   // total oscillation distance (moves ±range/2 from home center)
+  speed: number;   // world units per second
+  phase?: number;  // 0–1 starting phase: 0 = left/top extreme, 0.5 = center, 1 = right/bottom extreme
+}
+export type MoverRectEntity   = MoverEntityBase & RectShape;
+export type MoverCircleEntity = MoverEntityBase & CircleShape;
+export type LevelMoverEntity  = MoverRectEntity | MoverCircleEntity;
 
 export interface LevelConfig {
   id: string;

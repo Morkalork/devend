@@ -42,7 +42,8 @@ export function useGameInput(
 
     const getCanvasCoords = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      return { screenX: e.clientX - rect.left, screenY: e.clientY - rect.top };
+      const dpr = window.devicePixelRatio || 1;
+      return { screenX: (e.clientX - rect.left) * dpr, screenY: (e.clientY - rect.top) * dpr };
     };
 
     const handlePointerDown = (e: PointerEvent) => {
@@ -174,6 +175,8 @@ export function useGameInput(
       canvas.removeEventListener("pointerup",    handlePointerUp);
       canvas.removeEventListener("pointerleave", handlePointerUp);
     };
+    // canvasRef.current is intentional: re-attach listeners if the canvas
+    // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canvasRef.current, activeModifiers.instantFencesPerMap]);
 }

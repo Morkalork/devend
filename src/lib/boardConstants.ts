@@ -13,12 +13,11 @@ export const TOP_UI_PERCENT = 0.05;
 export const BOARD_BAND_PERCENT = 0.90;
 export const BOTTOM_UI_PERCENT = 0.05;
 
-// Board sizing constraints
-export const MAX_WIDTH_PERCENT_MOBILE = 1.0;  // Full width on mobile
-export const MAX_WIDTH_PERCENT_DESKTOP = 0.5; // 50vw on desktop
-export const MAX_HEIGHT_PERCENT_MOBILE = 0.92; // Maximize board space
-export const MAX_HEIGHT_PERCENT_DESKTOP = 0.70;
-export const MOBILE_BREAKPOINT = 768; // px
+// The square board spans this fraction of the shortest viewport side, so on a
+// portrait phone it nearly fills the width. Applied uniformly to every device:
+// computeBoardRect is fed physical (DPR-scaled) pixels, so the old CSS-pixel
+// mobile/desktop breakpoint misfired on high-DPR phones and capped them at 50%.
+export const BOARD_SIZE_PERCENT = 0.95;
 
 export interface BoardRect {
   left: number;
@@ -29,48 +28,44 @@ export interface BoardRect {
 }
 
 /**
- * Compute the board rectangle in screen pixels
- * The board aims to use 95% of screen width but must not exceed
- * 70% of screen height, while preserving BOARD_ASPECT
+ * Compute the board rectangle in screen pixels.
+ * The square board spans BOARD_SIZE_PERCENT (~95%) of the shortest viewport
+ * side, but is never taller than the board band reserved between the top/bottom
+ * UI strips, so it can't overlap the HUD on short/wide screens.
  */
 export function computeBoardRect(screenWidth: number, screenHeight: number): BoardRect {
-  // Determine if mobile based on screen width
-  const isMobile = screenWidth < MOBILE_BREAKPOINT;
-  const maxWidthPercent = isMobile ? MAX_WIDTH_PERCENT_MOBILE : MAX_WIDTH_PERCENT_DESKTOP;
-  const maxHeightPercent = isMobile ? MAX_HEIGHT_PERCENT_MOBILE : MAX_HEIGHT_PERCENT_DESKTOP;
-  
-  const availableWidth = screenWidth * maxWidthPercent;
-  const availableHeight = screenHeight * maxHeightPercent;
-  
-  // Determine the largest rectangle with BOARD_ASPECT that fits
-  let boardWidth = Math.min(availableWidth, availableHeight * BOARD_ASPECT);
-  let boardHeight = boardWidth / BOARD_ASPECT;
-  
-  // Ensure we don't exceed available height
-  if (boardHeight > availableHeight) {
-    boardHeight = availableHeight;
-    boardWidth = boardHeight * BOARD_ASPECT;
-  }
-  
+  // Target: 95% of the shortest side (width on a portrait phone).
+  const shortestSide = Math.min(screenWidth, screenHeight);
+  let boardWidth = shortestSide * BOARD_SIZE_PERCENT;
+
+  // Clamp so the board fits inside the vertical band reserved for it.
+  const availableHeight = screenHeight * BOARD_BAND_PERCENT;
+  boardWidth = Math.min(boardWidth, availableHeight * BOARD_ASPECT);
+
+  const boardHeight = boardWidth / BOARD_ASPECT;
+
   // Calculate positions
   const topUIHeight = screenHeight * TOP_UI_PERCENT;
   const boardBandHeight = screenHeight * BOARD_BAND_PERCENT;
-  
+
   // Center horizontally in screen
   const left = (screenWidth - boardWidth) / 2;
-  
+
   // Center vertically within the board band
   const top = topUIHeight + (boardBandHeight - boardHeight) / 2;
-  
-  // Scale factor: world units to screen pixels
-  const scale = boardWidth / BOARD_WIDTH;
-  
+
+  // Round to integer pixels so every world→screen coordinate lands on a
+  // whole pixel boundary, preventing sub-pixel anti-aliasing on lines/walls.
+  const rLeft   = Math.round(left);
+  const rTop    = Math.round(top);
+  const rWidth  = Math.round(boardWidth);
+  const rHeight = Math.round(boardHeight);
   return {
-    left,
-    top,
-    width: boardWidth,
-    height: boardHeight,
-    scale,
+    left:   rLeft,
+    top:    rTop,
+    width:  rWidth,
+    height: rHeight,
+    scale:  rWidth / BOARD_WIDTH,
   };
 }
 

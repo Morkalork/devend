@@ -341,6 +341,44 @@ upgrades:
 
 
   # ===============================
+  # PROCUREMENT (Shop Restocking)
+  # Each tier adds one restock: buying an item in the store
+  # refills its slot with a new offer, N times per visit.
+  # ===============================
+
+  - id: procurement_junior
+    name: Procurement
+    tier: Junior
+    description: Once per store visit, buying an item adds a new offer to the shelf.
+    cost: 12
+    unlockLevel: 3
+    modifiers:
+      shopRestockCount: 1
+
+  - id: procurement_senior
+    name: Procurement
+    tier: Senior
+    description: Your first two purchases per store visit each add a new offer to the shelf.
+    cost: 20
+    unlockLevel: 7
+    prerequisites:
+      - procurement_junior
+    modifiers:
+      shopRestockCount: 1
+
+  - id: procurement_principal
+    name: Procurement
+    tier: Principal
+    description: Your first three purchases per store visit each add a new offer to the shelf.
+    cost: 30
+    unlockLevel: 12
+    prerequisites:
+      - procurement_senior
+    modifiers:
+      shopRestockCount: 1
+
+
+  # ===============================
   # ARCHITECT & WIZARD
   # ===============================
 
@@ -354,13 +392,13 @@ upgrades:
       extraShopItems: 1
 
   - id: augmentation_wizard
-    name: Augmentation Wizard
+    name: Certification Wizard
     tier: Wizard
-    description: Gain +1 augmentation point.
+    description: Gain +1 Certificate Hour.
     cost: 55
     unlockLevel: 10
     modifiers:
-      extraAugmentationPoints: 1
+      extraCertificateHours: 1
 
 
   # ===============================
@@ -536,3 +574,42 @@ upgrades:
       - scrum_master_5
     modifiers:
       ballPathPredictionBalls: 999
+
+  # ===============================
+  # DEFENSIVE PROGRAMMING (Ascension fence durability)
+  # Only offered while ascended — fences wear out past level 30.
+  # ===============================
+
+  - id: defensive_programming_junior
+    name: Defensive Programming
+    tier: Junior
+    description: Fences survive 1 extra ball hit before crumbling (Ascension).
+    cost: 10
+    unlockLevel: 1
+    ascensionOnly: true
+    modifiers:
+      fenceDurabilityBonus: 1
+
+  - id: defensive_programming_senior
+    name: Defensive Programming
+    tier: Senior
+    description: Fences survive 2 extra ball hits before crumbling (Ascension).
+    cost: 18
+    unlockLevel: 1
+    ascensionOnly: true
+    prerequisites:
+      - defensive_programming_junior
+    modifiers:
+      fenceDurabilityBonus: 1
+
+  - id: defensive_programming_principal
+    name: Defensive Programming
+    tier: Principal
+    description: Fences survive 3 extra ball hits before crumbling (Ascension).
+    cost: 30
+    unlockLevel: 1
+    ascensionOnly: true
+    prerequisites:
+      - defensive_programming_senior
+    modifiers:
+      fenceDurabilityBonus: 1

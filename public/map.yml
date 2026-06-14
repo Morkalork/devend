@@ -922,31 +922,833 @@ levels:
         cx: 650
         cy: 650
         radius: 60
-  - id: level-21
-    level: 21
-    sizeThreshold: 40
-    expectedCuts: 5
-    points: 100
+  - id: level-16
+    level: 16
+    sizeThreshold: 7
+    expectedCuts: 30
+    points: 45
+    variety: 28
     balls:
       - id: ball-1
-        initialSpeed: 180
-        topSpeed: 380
-        color: 00ff88
-        startX: 125
-        startY: 125
-      - id: ball-1771838363439
-        initialSpeed: 105
-        topSpeed: 370
-        color: '232259'
-        startX: 800
+        initialSpeed: 135
+        topSpeed: 372
+        color: ff3399
+        startX: 200
+        startY: 200
+      - id: ball-2
+        initialSpeed: 128
+        topSpeed: 365
+        color: 33ccff
+        startX: 700
+        startY: 200
+      - id: ball-3
+        initialSpeed: 130
+        topSpeed: 368
+        color: ccff33
+        startX: 200
+        startY: 700
+      - id: ball-4
+        initialSpeed: 124
+        topSpeed: 360
+        color: ff9933
+        startX: 700
         startY: 700
     entities:
-      - id: wall-1771838325166
+      - id: wall-cross-h
         kind: wall
         shape: rect
-        x: 200
-        'y': 100
-        width: 500
-        height: 700
+        x: 50
+        'y': 415
+        width: 800
+        height: 35
+      - id: wall-cross-v
+        kind: wall
+        shape: rect
+        x: 415
+        'y': 50
+        width: 35
+        height: 800
+      - id: wall-c-tl
+        kind: wall
+        shape: circle
+        cx: 250
+        cy: 250
+        radius: 50
+      - id: wall-c-br
+        kind: wall
+        shape: circle
+        cx: 650
+        cy: 650
+        radius: 50
+  - id: level-17
+    level: 17
+    sizeThreshold: 7
+    expectedCuts: 32
+    points: 45
+    variety: 30
+    balls:
+      - id: ball-1
+        initialSpeed: 138
+        topSpeed: 375
+        color: ff6600
+        startX: 200
+        startY: 200
+      - id: ball-2
+        initialSpeed: 132
+        topSpeed: 368
+        color: 0066ff
+        startX: 700
+        startY: 200
+      - id: ball-3
+        initialSpeed: 135
+        topSpeed: 372
+        color: 00ff66
+        startX: 200
+        startY: 700
+      - id: ball-4
+        initialSpeed: 128
+        topSpeed: 365
+        color: ff0066
+        startX: 700
+        startY: 700
+    entities:
+      - id: wall-center
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 450
+        radius: 95
+      - id: wall-sat-top
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 175
+        radius: 45
+      - id: wall-sat-right
+        kind: wall
+        shape: circle
+        cx: 725
+        cy: 450
+        radius: 45
+      - id: wall-sat-bottom
+        kind: wall
+        shape: circle
+        cx: 450
+        cy: 725
+        radius: 45
+      - id: wall-sat-left
+        kind: wall
+        shape: circle
+        cx: 175
+        cy: 450
+        radius: 45
+  - id: level-18
+    level: 18
+    sizeThreshold: 6
+    expectedCuts: 35
+    points: 50
+    variety: 30
+    balls:
+      - id: ball-1
+        initialSpeed: 140
+        topSpeed: 378
+        color: ff44cc
+        startX: 220
+        startY: 260
+      - id: ball-2
+        initialSpeed: 135
+        topSpeed: 372
+        color: 44ccff
+        startX: 680
+        startY: 260
+      - id: ball-3
+        initialSpeed: 138
+        topSpeed: 375
+        color: ccff44
+        startX: 220
+        startY: 640
+      - id: ball-4
+        initialSpeed: 132
+        topSpeed: 368
+        color: ffcc44
+        startX: 680
+        startY: 640
+    entities:
+      - id: wall-mirror
+        kind: wall
         mirror: true
+        shape: rect
+        x: 50
+        'y': 420
+        width: 800
+        height: 28
+      - id: wall-c-tl
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 250
+        radius: 60
+      - id: wall-c-tr
+        kind: wall
+        shape: circle
+        cx: 600
+        cy: 250
+        radius: 60
+      - id: wall-c-bl
+        kind: wall
+        shape: circle
+        cx: 300
+        cy: 650
+        radius: 60
+      - id: wall-c-br
+        kind: wall
+        shape: circle
+        cx: 600
+        cy: 650
+        radius: 60
+  - id: level-19
+    level: 19
+    sizeThreshold: 5
+    expectedCuts: 38
+    points: 55
+    variety: 35
+    threadLockRequired: 1
+    balls:
+      - id: ball-1
+        initialSpeed: 145
+        topSpeed: 382
+        color: ff2200
+        startX: 450
+        startY: 180
+      - id: ball-2
+        initialSpeed: 140
+        topSpeed: 378
+        color: 0022ff
+        startX: 180
+        startY: 450
+      - id: ball-3
+        initialSpeed: 142
+        topSpeed: 380
+        color: 22ff00
+        startX: 720
+        startY: 450
+      - id: ball-4
+        initialSpeed: 138
+        topSpeed: 375
+        color: ffdd00
+        startX: 450
+        startY: 720
+    entities:
+      - id: wall-diamond
+        kind: wall
+        shape: polygon
+        points:
+          - - 450
+            - 310
+          - - 550
+            - 450
+          - - 450
+            - 590
+          - - 350
+            - 450
+      - id: wall-mirror-left
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 80
+        'y': 200
+        width: 25
+        height: 500
+      - id: wall-mirror-right
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 795
+        'y': 200
+        width: 25
+        height: 500
+      - id: wall-c1
+        kind: wall
+        shape: circle
+        cx: 260
+        cy: 260
+        radius: 50
+      - id: wall-c2
+        kind: wall
+        shape: circle
+        cx: 640
+        cy: 260
+        radius: 50
+      - id: wall-c3
+        kind: wall
+        shape: circle
+        cx: 260
+        cy: 640
+        radius: 50
+      - id: wall-c4
+        kind: wall
+        shape: circle
+        cx: 640
+        cy: 640
+        radius: 50
+  - id: level-20
+    level: 20
+    sizeThreshold: 30
+    expectedCuts: 10
+    points: 100
+    variety: 0
     randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 109
+        topSpeed: 245
+        color: 00ff88
+        startX: 230
+        startY: 450
+    entities:
+      - id: wall-mirror-top
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 50
+        'y': 95
+        width: 800
+        height: 25
+      - id: wall-mirror-bot
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 50
+        'y': 780
+        width: 800
+        height: 25
+  - id: level-21
+    level: 21
+    sizeThreshold: 22
+    expectedCuts: 10
+    points: 120
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 70
+        topSpeed: 360
+        color: 00d4ff
+        startX: 180
+        startY: 200
+      - id: ball-2
+        initialSpeed: 110
+        topSpeed: 340
+        color: ff6b6b
+        startX: 700
+        startY: 700
+    entities:
+      - id: mover-h
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 300
+        radius: 50
+        axis: horizontal
+        range: 400
+        speed: 140
+        phase: 0
+
+  - id: level-22
+    level: 22
+    sizeThreshold: 20
+    expectedCuts: 10
+    points: 130
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 77
+        topSpeed: 259
+        color: 00ff88
+        startX: 150
+        startY: 150
+      - id: ball-2
+        initialSpeed: 70
+        topSpeed: 249
+        color: ff6b00
+        startX: 740
+        startY: 700
+    entities:
+      - id: mover-h
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 350
+        radius: 50
+        axis: horizontal
+        range: 460
+        speed: 160
+        phase: 0
+      - id: mover-v
+        kind: mover
+        shape: circle
+        cx: 650
+        cy: 580
+        radius: 40
+        axis: vertical
+        range: 280
+        speed: 135
+        phase: 0.5
+
+  - id: level-23
+    level: 23
+    sizeThreshold: 18
+    expectedCuts: 11
+    points: 140
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 105
+        topSpeed: 266
+        color: 00d4ff
+        startX: 130
+        startY: 450
+      - id: ball-2
+        initialSpeed: 102
+        topSpeed: 256
+        color: ff4466
+        startX: 770
+        startY: 450
+    entities:
+      - id: mover-top
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 200
+        radius: 45
+        axis: horizontal
+        range: 400
+        speed: 150
+        phase: 0
+      - id: mover-mid
+        kind: mover
+        shape: circle
+        cx: 350
+        cy: 450
+        radius: 40
+        axis: vertical
+        range: 300
+        speed: 140
+        phase: 0.33
+      - id: mover-bot
+        kind: mover
+        shape: circle
+        cx: 550
+        cy: 700
+        radius: 45
+        axis: horizontal
+        range: 380
+        speed: 125
+        phase: 0.67
+
+  - id: level-24
+    level: 24
+    sizeThreshold: 16
+    expectedCuts: 12
+    points: 150
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 109
+        topSpeed: 273
+        color: 00ff88
+        startX: 150
+        startY: 200
+      - id: ball-2
+        initialSpeed: 102
+        topSpeed: 263
+        color: ff8800
+        startX: 750
+        startY: 200
+      - id: ball-3
+        initialSpeed: 91
+        topSpeed: 249
+        color: aa44ff
+        startX: 450
+        startY: 730
+    entities:
+      - id: wall-divider
+        kind: wall
+        shape: rect
+        x: 300
+        y: 320
+        width: 300
+        height: 80
+      - id: mover-left
+        kind: mover
+        shape: circle
+        cx: 220
+        cy: 600
+        radius: 45
+        axis: vertical
+        range: 220
+        speed: 125
+        phase: 0
+      - id: mover-right
+        kind: mover
+        shape: circle
+        cx: 680
+        cy: 600
+        radius: 45
+        axis: vertical
+        range: 220
+        speed: 135
+        phase: 0.5
+
+  - id: level-25
+    level: 25
+    sizeThreshold: 15
+    expectedCuts: 12
+    points: 160
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 112
+        topSpeed: 280
+        color: 00d4ff
+        startX: 150
+        startY: 150
+      - id: ball-2
+        initialSpeed: 109
+        topSpeed: 273
+        color: ff4466
+        startX: 750
+        startY: 150
+      - id: ball-3
+        initialSpeed: 38
+        topSpeed: 259
+        color: ffcc00
+        startX: 450
+        startY: 740
+    entities:
+      - id: mover-h-top
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 300
+        radius: 45
+        axis: horizontal
+        range: 420
+        speed: 170
+        phase: 0
+      - id: mover-v-mid
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 480
+        radius: 50
+        axis: vertical
+        range: 260
+        speed: 145
+        phase: 0.25
+      - id: mover-h-bot
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 660
+        radius: 45
+        axis: horizontal
+        range: 380
+        speed: 150
+        phase: 0.5
+
+  - id: level-26
+    level: 26
+    sizeThreshold: 14
+    expectedCuts: 13
+    points: 165
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 115
+        topSpeed: 283
+        color: 00d4ff
+        startX: 200
+        startY: 250
+      - id: ball-2
+        initialSpeed: 110
+        topSpeed: 276
+        color: ff6644
+        startX: 700
+        startY: 660
+    entities:
+      - id: mirror-center
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 80
+        y: 420
+        width: 740
+        height: 24
+      - id: mover-top
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 220
+        radius: 45
+        axis: horizontal
+        range: 380
+        speed: 155
+        phase: 0
+
+  - id: level-27
+    level: 27
+    sizeThreshold: 13
+    expectedCuts: 14
+    points: 170
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 118
+        topSpeed: 287
+        color: ffaa00
+        startX: 150
+        startY: 350
+      - id: ball-2
+        initialSpeed: 113
+        topSpeed: 279
+        color: 0088ff
+        startX: 750
+        startY: 550
+    entities:
+      - id: mirror-left
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 270
+        y: 200
+        width: 24
+        height: 500
+      - id: mirror-right
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 606
+        y: 200
+        width: 24
+        height: 500
+      - id: mover-corridor
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 430
+        radius: 48
+        axis: vertical
+        range: 320
+        speed: 150
+        phase: 0
+
+  - id: level-28
+    level: 28
+    sizeThreshold: 12
+    expectedCuts: 15
+    points: 175
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 120
+        topSpeed: 290
+        color: ff2288
+        startX: 180
+        startY: 180
+      - id: ball-2
+        initialSpeed: 115
+        topSpeed: 283
+        color: 22ff88
+        startX: 720
+        startY: 200
+      - id: ball-3
+        initialSpeed: 108
+        topSpeed: 276
+        color: aa44ff
+        startX: 450
+        startY: 730
+    entities:
+      - id: mirror-h-mid
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 180
+        y: 415
+        width: 540
+        height: 22
+      - id: mover-tl
+        kind: mover
+        shape: circle
+        cx: 200
+        cy: 220
+        radius: 44
+        axis: horizontal
+        range: 280
+        speed: 160
+        phase: 0
+      - id: mover-br
+        kind: mover
+        shape: circle
+        cx: 680
+        cy: 630
+        radius: 44
+        axis: vertical
+        range: 280
+        speed: 145
+        phase: 0.5
+
+  - id: level-29
+    level: 29
+    sizeThreshold: 11
+    expectedCuts: 16
+    points: 180
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 122
+        topSpeed: 294
+        color: 00d4ff
+        startX: 300
+        startY: 150
+      - id: ball-2
+        initialSpeed: 118
+        topSpeed: 287
+        color: ff4466
+        startX: 600
+        startY: 750
+      - id: ball-3
+        initialSpeed: 112
+        topSpeed: 280
+        color: ffcc00
+        startX: 180
+        startY: 600
+    entities:
+      - id: mirror-left
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 120
+        y: 200
+        width: 24
+        height: 500
+      - id: mirror-right
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 756
+        y: 200
+        width: 24
+        height: 500
+      - id: mover-top
+        kind: mover
+        shape: circle
+        cx: 400
+        cy: 180
+        radius: 42
+        axis: horizontal
+        range: 380
+        speed: 165
+        phase: 0
+      - id: mover-mid
+        kind: mover
+        shape: circle
+        cx: 450
+        cy: 450
+        radius: 46
+        axis: vertical
+        range: 280
+        speed: 150
+        phase: 0.33
+      - id: mover-bot
+        kind: mover
+        shape: circle
+        cx: 500
+        cy: 700
+        radius: 42
+        axis: horizontal
+        range: 360
+        speed: 155
+        phase: 0.67
+
+  - id: level-30
+    level: 30
+    sizeThreshold: 10
+    expectedCuts: 18
+    points: 190
+    variety: 0
+    randomShapes: 0
+    balls:
+      - id: ball-1
+        initialSpeed: 125
+        topSpeed: 297
+        color: ff3366
+        startX: 180
+        startY: 200
+      - id: ball-2
+        initialSpeed: 120
+        topSpeed: 290
+        color: 33ffcc
+        startX: 720
+        startY: 200
+      - id: ball-3
+        initialSpeed: 115
+        topSpeed: 283
+        color: ffcc33
+        startX: 450
+        startY: 720
+    entities:
+      - id: mirror-h-top
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 80
+        y: 310
+        width: 500
+        height: 22
+      - id: mirror-v-right
+        kind: wall
+        mirror: true
+        shape: rect
+        x: 680
+        y: 380
+        width: 22
+        height: 460
+      - id: mover-left
+        kind: mover
+        shape: circle
+        cx: 220
+        cy: 180
+        radius: 44
+        axis: horizontal
+        range: 300
+        speed: 158
+        phase: 0.5
+      - id: mover-center
+        kind: mover
+        shape: circle
+        cx: 380
+        cy: 560
+        radius: 46
+        axis: horizontal
+        range: 360
+        speed: 168
+        phase: 0
+      - id: mover-right
+        kind: mover
+        shape: circle
+        cx: 750
+        cy: 420
+        radius: 44
+        axis: vertical
+        range: 260
+        speed: 152
+        phase: 0.25

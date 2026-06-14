@@ -26,12 +26,52 @@ import {
   polygonCentroid
 } from './polygon';
 import { Wall } from './wallGeometry';
+import { SAMPLE_GRID_SIZE } from './regionSplit';
+import { SpaceGrid, CellState, worldToGridIndex } from './spaceGrid';
 
-// Grid size for sample-based containment (must match GameCanvas)
-export const REGION_SAMPLE_GRID_SIZE = 15;
+// Re-export under the legacy name so existing callers don't need updating.
+export const REGION_SAMPLE_GRID_SIZE = SAMPLE_GRID_SIZE;
 
 // Margin for containment checks (2x grid size for safety)
 export const CONTAINMENT_MARGIN = REGION_SAMPLE_GRID_SIZE * 2;
+
+/**
+ * Paint each region's id onto the space grid's cellRegionIds.
+ *
+ * Region sample points sit on the same 15-unit lattice as the grid's cell
+ * centers, so every sample maps to exactly one cell. Must be called whenever
+ * `game.regions` is (re)assigned — level init and after every cut — so the
+ * per-physics-step ownership check below stays in sync.
+ */
+export function paintCellRegionIds(grid: SpaceGrid, regions: Region[]): void {
+  grid.cellRegionIds.fill(null);
+  for (const region of regions) {
+    if (!region.samplePoints) continue;
+    for (const sample of region.samplePoints) {
+      const index = worldToGridIndex(grid, sample.x, sample.y);
+      if (index >= 0 && grid.cells[index] === CellState.ACTIVE) {
+        grid.cellRegionIds[index] = region.id;
+      }
+    }
+  }
+}
+
+/**
+ * O(1) fast-accept ownership check: true when the ball's position falls in an
+ * ACTIVE cell painted with its own region id. Fence cells are always REMOVED
+ * (rasterizeCutToGrid removes every cell a cut passes through), so an ACTIVE
+ * painted cell can never straddle a wall — no wall-crossing check is needed.
+ *
+ * A `false` result does NOT mean the ball escaped — cells near walls and
+ * region edges may be unpainted. Callers must fall back to the sample-scan
+ * validation (isBallInRegion) before correcting anything.
+ */
+export function isBallCellInRegion(grid: SpaceGrid, position: Vector2, regionId: string): boolean {
+  const index = worldToGridIndex(grid, position.x, position.y);
+  return index >= 0 &&
+    grid.cells[index] === CellState.ACTIVE &&
+    grid.cellRegionIds[index] === regionId;
+}
 
 /**
  * Result of a region ownership validation
@@ -280,11 +320,6 @@ export function validateAllBallOwnership(
         ball.position = { ...result.correctionPosition };
       }
       
-      console.log(
-        `[OWNERSHIP] Ball ${ball.id} corrected:`,
-        `region ${result.assignedRegionId} -> ${result.correctionRegionId}`,
-        result.correctionPosition ? `position corrected` : ''
-      );
     }
   }
   
@@ -317,7 +352,6 @@ export function reassignBallsToRegions(
       const recovery = findNearestValidPosition(ball.position, regions, walls);
       ball.position = recovery.position;
       ball.regionId = recovery.regionId;
-      console.log(`[OWNERSHIP] Ball ${ball.id} recovered to region ${recovery.regionId}`);
     }
   }
 }

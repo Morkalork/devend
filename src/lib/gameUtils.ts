@@ -1,5 +1,5 @@
 import { Region } from "@/types/game";
-import { Vector2, vec2Normalize, pointInPolygon } from "@/lib/polygon";
+import { Vector2, vec2Normalize, pointInPolygon, Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 
 // ── Colour helpers ────────────────────────────────────────────────────────
@@ -84,28 +84,43 @@ export function getBallSpeedLevelMultiplier(levelIndex: number): number {
 // ── Ball trajectory ───────────────────────────────────────────────────────
 
 /**
- * Compute future ball path waypoints by ray-casting off solid walls.
- * Returns an array of points starting at ballPosition, with up to numBounces
- * additional reflection points. Ignores in-progress fences (completed walls only).
+ * Compute future ball path waypoints by ray-casting off solid walls and
+ * obstacle polygons.  Handles each obstacle as a whole unit so adjacent
+ * polygon edges never cause false double-bounces, and uses outward-facing
+ * normals with back-face culling so interior faces are ignored.
+ *
+ * @param ballRadius - Ball radius in world units; used to offset the bounce
+ *   point so the preview lands where the ball surface first contacts the wall.
+ * @param obstaclePolygons - Obstacle polygon list from CanvasGameState.
+ *   Walls with isObstacleBoundary are skipped in the wall loop and handled
+ *   here at the polygon level instead.
  */
 export function computeBallTrajectory(
-  ballPosition: { x: number; y: number },
-  ballVelocity: { x: number; y: number },
+  ballPosition: Vector2,
+  ballVelocity: Vector2,
   walls: Wall[],
   numBounces: number,
-): { x: number; y: number }[] {
-  const points: { x: number; y: number }[] = [{ ...ballPosition }];
+  ballRadius = 0,
+  obstaclePolygons: Polygon[] = [],
+): Vector2[] {
+  const points: Vector2[] = [{ ...ballPosition }];
   let origin = { ...ballPosition };
   let dir = vec2Normalize(ballVelocity);
-  let excludeId: string | undefined;
+  let lastHitWallId: string | undefined;
+  let lastHitObstacleIdx = -1;
 
   for (let bounce = 0; bounce < numBounces; bounce++) {
     let bestT = Infinity;
-    let bestNormal: { x: number; y: number } | null = null;
-    let bestId: string | undefined;
+    let bestNormal: Vector2 | null = null;
+    let bestWallId: string | undefined;
+    let bestObstacleIdx = -1;
 
+    // ── Board-edge and fence walls ────────────────────────────────────────
     for (const wall of walls) {
-      if (wall.id === excludeId) continue;
+      // Obstacle walls (prefix "obstacle-") are handled per-polygon below.
+      // Board edges (prefix "board-") and user fences (prefix "wall-") stay.
+      if (wall.id.startsWith('obstacle-')) continue;
+      if (wall.id === lastHitWallId) continue;
 
       const ex = wall.end.x - wall.start.x;
       const ey = wall.end.y - wall.start.y;
@@ -119,7 +134,8 @@ export function computeBallTrajectory(
 
       if (t > 1e-4 && u >= 0 && u <= 1 && t < bestT) {
         bestT = t;
-        bestId = wall.id;
+        bestWallId = wall.id;
+        bestObstacleIdx = -1;
         const len = Math.sqrt(ex * ex + ey * ey);
         let nx = -ey / len;
         let ny =  ex / len;
@@ -128,15 +144,73 @@ export function computeBallTrajectory(
       }
     }
 
-    if (bestNormal === null) break;
+    // ── Obstacle polygons (ball is outside, bounces off outer surface) ────
+    for (let pi = 0; pi < obstaclePolygons.length; pi++) {
+      if (pi === lastHitObstacleIdx) continue;
+      const poly = obstaclePolygons[pi];
 
-    const hitPoint = { x: origin.x + bestT * dir.x, y: origin.y + bestT * dir.y };
+      for (let i = 0; i < poly.vertices.length; i++) {
+        const j = (i + 1) % poly.vertices.length;
+        const p1 = poly.vertices[i];
+        const p2 = poly.vertices[j];
+
+        const ex = p2.x - p1.x;
+        const ey = p2.y - p1.y;
+        const denom = dir.x * ey - dir.y * ex;
+        if (Math.abs(denom) < 1e-9) continue;
+
+        const wx = p1.x - origin.x;
+        const wy = p1.y - origin.y;
+        const t = (wx * ey - wy * ex) / denom;
+        const u = (wx * dir.y - wy * dir.x) / denom;
+
+        if (t <= 1e-4 || u < 0 || u > 1 || t >= bestT) continue;
+
+        // Compute normal and orient it to point away from the polygon
+        // (toward the side the ray originates from).
+        const len = Math.sqrt(ex * ex + ey * ey);
+        let nx = -ey / len;
+        let ny =  ex / len;
+        const midX = p1.x + ex * 0.5;
+        const midY = p1.y + ey * 0.5;
+        if (nx * (origin.x - midX) + ny * (origin.y - midY) < 0) { nx = -nx; ny = -ny; }
+
+        // Back-face cull: skip edges whose outward normal faces away from the ray
+        if (dir.x * nx + dir.y * ny > -1e-6) continue;
+
+        bestT = t;
+        bestWallId = undefined;
+        bestObstacleIdx = pi;
+        bestNormal = { x: nx, y: ny };
+      }
+    }
+
+    if (!bestNormal) break;
+
+    // Place the bounce point where the ball surface first contacts the surface
+    const tEffective = Math.max(1e-4, bestT - ballRadius);
+    const hitPoint: Vector2 = {
+      x: origin.x + tEffective * dir.x,
+      y: origin.y + tEffective * dir.y,
+    };
     points.push(hitPoint);
 
+    // Reflect direction
     const dot = dir.x * bestNormal.x + dir.y * bestNormal.y;
-    dir = { x: dir.x - 2 * dot * bestNormal.x, y: dir.y - 2 * dot * bestNormal.y };
-    origin = { x: hitPoint.x + dir.x * 0.5, y: hitPoint.y + dir.y * 0.5 };
-    excludeId = bestId;
+    dir = vec2Normalize({
+      x: dir.x - 2 * dot * bestNormal.x,
+      y: dir.y - 2 * dot * bestNormal.y,
+    });
+
+    // Nudge past the collision surface to avoid immediate re-intersection
+    const nudge = Math.max(ballRadius + 1, 3);
+    origin = {
+      x: hitPoint.x + dir.x * nudge,
+      y: hitPoint.y + dir.y * nudge,
+    };
+
+    lastHitWallId = bestWallId;
+    lastHitObstacleIdx = bestObstacleIdx;
   }
 
   return points;

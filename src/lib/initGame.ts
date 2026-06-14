@@ -8,7 +8,8 @@
  * (canvas repaints, React state setters, etc.) that cannot live here.
  */
 
-import { LevelConfig } from "@/types/level";
+import { LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity } from "@/types/level";
+import { MoverState, buildMoverPolygon } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2 } from "@/types/game";
 import { Polygon } from "@/lib/polygon";
@@ -63,6 +64,7 @@ export interface InitialGameData {
   originalArea: number;
   basePlayableArea: number;
   balls: Ball[];
+  movers: MoverState[];
   initialSamplePoints: Vector2[];
   spaceGrid: SpaceGrid;
   gridRegions: GridRegion[];
@@ -81,8 +83,10 @@ export function createInitialGameData(
   const arenaWidth  = BOARD_WIDTH  - margin * 2;
   const arenaHeight = BOARD_HEIGHT - margin * 2;
 
-  // No starting-area reduction in new upgrade system
-  const targetRemaining = 100;
+  // startingCapturePercent (Equity Grant cert) shrinks the playable arena and
+  // counts the trimmed margin as already-captured: the run starts below 100%.
+  const startingCapture = Math.max(0, Math.min(40, activeModifiers.startingCapturePercent));
+  const targetRemaining = 100 - startingCapture;
   const scaleFactor  = Math.sqrt(targetRemaining / 100);
   const shrunkWidth  = arenaWidth  * scaleFactor;
   const shrunkHeight = arenaHeight * scaleFactor;
@@ -328,6 +332,12 @@ export function createInitialGameData(
   const spaceGrid   = createSpaceGrid(boardPolygon, obstaclePolygons, initGridSize);
   const gridRegions = findGridRegions(spaceGrid);
 
+  // Inflate the percentage baseline so the remaining% starts at targetRemaining
+  // instead of 100 — the shrunk-away margin counts as captured space.
+  if (targetRemaining < 100) {
+    spaceGrid.initialActiveCount = Math.round(spaceGrid.activeCount * 100 / targetRemaining);
+  }
+
   const initialEstimatedArea = spaceGrid.initialActiveCount * initGridSize * initGridSize;
   const initialRegionId      = generateRegionId();
 
@@ -344,6 +354,46 @@ export function createInitialGameData(
     if (!isPositionActive(spaceGrid, ball.position)) {
       console.warn(`[INIT] Ball ${ball.id} spawned in removed space, repositioning...`);
     }
+  }
+
+  // ── Build movers ──────────────────────────────────────────────────────
+
+  const movers: MoverState[] = [];
+  for (const entity of allEntities) {
+    if (entity.kind !== "mover") continue;
+    const e = entity as LevelMoverEntity;
+    const phase  = e.phase ?? 0;
+    const offset = phase * e.range - e.range / 2;
+
+    let homeX: number, homeY: number;
+    let shapeProps: Pick<MoverState, 'radius' | 'width' | 'height'> = {};
+    if (e.shape === "circle") {
+      const ce = e as MoverCircleEntity;
+      homeX = ce.cx;
+      homeY = ce.cy;
+      shapeProps = { radius: ce.radius };
+    } else {
+      const re = e as MoverRectEntity;
+      homeX = re.x + re.width  / 2;
+      homeY = re.y + re.height / 2;
+      shapeProps = { width: re.width, height: re.height };
+    }
+
+    const mover: MoverState = {
+      id:        e.id,
+      shape:     e.shape,
+      homeX,
+      homeY,
+      axis:      e.axis,
+      range:     e.range,
+      speed:     e.speed,
+      offset,
+      direction: 1,
+      polygon:   { vertices: [] },
+      ...shapeProps,
+    };
+    mover.polygon = buildMoverPolygon(mover);
+    movers.push(mover);
   }
 
   // ── Fastest ball ──────────────────────────────────────────────────────
@@ -366,6 +416,7 @@ export function createInitialGameData(
     originalArea:        initialEstimatedArea,
     basePlayableArea:    initialEstimatedArea,
     balls,
+    movers,
     initialSamplePoints: initSamplePoints,
     spaceGrid,
     gridRegions,

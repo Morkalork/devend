@@ -1,3 +1,10 @@
+/**
+ * useMetaProgression — lifetime player stats (fences drawn, highest level,
+ * lives lost, …) persisted in localStorage across runs.
+ *
+ * Stats feed achievement requirements and the unlock conditions of locked
+ * 'super' upgrades. See src/types/metaProgression.ts for the stat list.
+ */
 import { useState, useCallback, useEffect } from 'react';
 import {
   MetaProgressionStats,
@@ -22,6 +29,8 @@ function loadMetaStats(): MetaProgressionStats {
       totalFencesDrawn: parsed.totalFencesDrawn ?? 0,
       totalLevelsCompletedWithoutLoss: parsed.totalLevelsCompletedWithoutLoss ?? 0,
       totalLivesLost: parsed.totalLivesLost ?? 0,
+      deepestAscension: parsed.deepestAscension ?? 0,
+      pushBonusesBanked: parsed.pushBonusesBanked ?? 0,
     };
   } catch {
     return { ...DEFAULT_META_STATS };
@@ -110,7 +119,16 @@ export function useMetaProgression() {
       if (updates.totalLivesLost !== undefined) {
         newStats.totalLivesLost = prev.totalLivesLost + updates.totalLivesLost;
       }
-      
+
+      // Like highestLevelReached, deepestAscension only ever increases
+      if (updates.deepestAscension !== undefined) {
+        newStats.deepestAscension = Math.max(prev.deepestAscension, updates.deepestAscension);
+      }
+
+      if (updates.pushBonusesBanked !== undefined) {
+        newStats.pushBonusesBanked = prev.pushBonusesBanked + updates.pushBonusesBanked;
+      }
+
       saveMetaStats(newStats);
       return newStats;
     });
@@ -145,6 +163,20 @@ export function useMetaProgression() {
   }, [updateStats]);
 
   /**
+   * Record reaching an ascension depth (Ascension mode)
+   */
+  const recordAscensionDepth = useCallback((depth: number) => {
+    updateStats({ deepestAscension: depth });
+  }, [updateStats]);
+
+  /**
+   * Record successfully banking a push-your-luck bonus
+   */
+  const recordPushBonusBanked = useCallback(() => {
+    updateStats({ pushBonusesBanked: 1 });
+  }, [updateStats]);
+
+  /**
    * Reset all progression (for debugging)
    */
   const resetProgression = useCallback(() => {
@@ -162,6 +194,8 @@ export function useMetaProgression() {
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
+    recordAscensionDepth,
+    recordPushBonusBanked,
     resetProgression,
   };
 }
