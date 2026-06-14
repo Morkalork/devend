@@ -441,6 +441,28 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     nav.startGame();
   }, [resetToFirstLevel, nav.startGame, getStartingLevel, setLevelIndex, certBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints]);
 
+  const handleRestartRun = useCallback(() => {
+    setTotalScore(0);
+    setOwnedUpgradeIds([]);
+    setPendingLevelScore(null);
+    setShowLevelComplete(false);
+    setCumulativeLockedBalls(0);
+    setAscensionDepth(0);
+    setDraftedMutatorIds([]);
+    setLastRunSummary(null);
+    resetRunProgress();
+    clearRunCheckpoints();
+    clearCheckpoint();
+
+    const certBonusLives = certBonuses.extraLives ?? 0;
+    const startingLives = BASE_LIVES + certBonusLives;
+    setCurrentLives(startingLives);
+    setLivesAtLevelStart(startingLives);
+
+    resetToFirstLevel();
+    nav.startGame();
+  }, [resetToFirstLevel, nav.startGame, certBonuses, resetRunProgress, clearRunCheckpoints, clearCheckpoint]);
+
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
     setTotalScore(0);
@@ -565,6 +587,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleContinueFromShop,
     handlePurchaseCertLevel,
     handlePlayAgain,
+    handleRestartRun,
     handleBackToWelcome,
     handleOpenCertificateStore,
     handleReEnableAllTutorials,

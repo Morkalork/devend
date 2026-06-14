@@ -188,6 +188,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 result={navigation.lastResult}
                 onMainMenu={navigation.goToWelcome}
                 onPlayAgain={session.handlePlayAgain}
+                onRestart={session.handleRestartRun}
+                checkpointLevel={session.checkpointStartLevel}
                 accentColor={accentHex}
                 runHoursAwarded={session.lastRunHoursAwarded}
                 runLevelsCompleted={session.lastRunLevelsCompleted}
