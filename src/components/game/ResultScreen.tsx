@@ -7,6 +7,8 @@ interface ResultScreenProps {
   result: GameResult;
   onMainMenu: () => void;
   onPlayAgain?: () => void;
+  onRestart?: () => void;
+  checkpointLevel?: number;
   accentColor?: string;
   runHoursAwarded?: number;
   runLevelsCompleted?: number;
@@ -16,6 +18,8 @@ export function ResultScreen({
   result,
   onMainMenu,
   onPlayAgain,
+  onRestart,
+  checkpointLevel,
   accentColor,
   runHoursAwarded = 0,
   runLevelsCompleted = 0,
@@ -182,16 +186,43 @@ export function ResultScreen({
           transition={{ delay: 0.55 }}
           className="mt-4 flex flex-col gap-3 w-full min-w-[200px]"
         >
-          {onPlayAgain && (
-            <motion.button
-              className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
-              onClick={onPlayAgain}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <RotateCcw className="w-5 h-5" />
-              Play Again
-            </motion.button>
+          {checkpointLevel && checkpointLevel > 1 ? (
+            <>
+              {onPlayAgain && (
+                <motion.button
+                  className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+                  onClick={() => onPlayAgain()}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  Continue (Level {checkpointLevel})
+                </motion.button>
+              )}
+              {onRestart && (
+                <motion.button
+                  className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+                  onClick={() => onRestart()}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  Restart
+                </motion.button>
+              )}
+            </>
+          ) : (
+            onPlayAgain && (
+              <motion.button
+                className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+                onClick={() => onPlayAgain()}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <RotateCcw className="w-5 h-5" />
+                Play Again
+              </motion.button>
+            )
           )}
           <motion.button
             className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
