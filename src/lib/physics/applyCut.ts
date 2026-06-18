@@ -16,7 +16,8 @@ import {
   findGridRegions,
   getRemainingPercent,
   removeRegion,
-  worldToGridIndex,
+  buildGridRegionMap,
+  findGridRegionForBall,
 } from "@/lib/spaceGrid";
 import {
   reassignBallsToRegions,
@@ -122,20 +123,19 @@ export function applyCutFn(
 
   if (game.spaceGrid) {
     const gridRegions = findGridRegions(game.spaceGrid);
-    const regionsWithBalls = [];
-    const regionsWithoutBalls = [];
-    for (const region of gridRegions) {
-      let hasBall = false;
-      for (const ball of balls) {
-        if (ball.state === 'won') continue;
-        const ballIndex = worldToGridIndex(game.spaceGrid, ball.position.x, ball.position.y);
-        if (ballIndex >= 0 && region.cellIndices.includes(ballIndex)) { hasBall = true; break; }
-      }
-      if (hasBall) regionsWithBalls.push(region);
-      else regionsWithoutBalls.push(region);
+    // Build index→region map once; use neighbour-search fallback so balls whose
+    // grid-cell centre falls inside a mirror polygon (REMOVED) are still located.
+    const gridRegionMap = buildGridRegionMap(gridRegions);
+    const regionsWithBalls = new Set<(typeof gridRegions)[number]>();
+    for (const ball of balls) {
+      if (ball.state === 'won') continue;
+      const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
+      if (ballRegion) regionsWithBalls.add(ballRegion);
     }
-    for (const empty of regionsWithoutBalls) removeRegion(game.spaceGrid, empty);
-    game.gridRegions = regionsWithBalls;
+    for (const region of gridRegions) {
+      if (!regionsWithBalls.has(region)) removeRegion(game.spaceGrid, region);
+    }
+    game.gridRegions = [...regionsWithBalls];
   }
 
   // Update sample-based regions for rendering
