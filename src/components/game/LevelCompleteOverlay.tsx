@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
+import { contentText } from '@/i18n/content';
 
 interface LevelCompleteOverlayProps {
   scoreData: LevelScoreData;
@@ -16,6 +18,7 @@ interface LevelCompleteOverlayProps {
 }
 
 export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts }: LevelCompleteOverlayProps) {
+  const { t } = useTranslation();
   const [chosen, setChosen] = useState(false);
   const [buttonReady, setButtonReady] = useState(buttonDelay === 0);
   const [displayLevelScore, setDisplayLevelScore] = useState(0);
@@ -23,8 +26,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
   useEffect(() => {
     if (buttonDelay <= 0) return;
-    const t = setTimeout(() => setButtonReady(true), buttonDelay);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setButtonReady(true), buttonDelay);
+    return () => clearTimeout(timer);
   }, [buttonDelay]);
 
   useEffect(() => {
@@ -34,11 +37,11 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     let rafId: number;
     const animate = (now: number) => {
       if (now < startTime) { rafId = requestAnimationFrame(animate); return; }
-      const t = Math.min(1, (now - startTime) / DURATION);
-      const ease = 1 - (1 - t) * (1 - t) * (1 - t);
+      const progress = Math.min(1, (now - startTime) / DURATION);
+      const ease = 1 - (1 - progress) * (1 - progress) * (1 - progress);
       setDisplayLevelScore(Math.round(scoreData.levelScore * ease));
       setDisplayTotalScore(Math.round(totalScore * ease));
-      if (t < 1) rafId = requestAnimationFrame(animate);
+      if (progress < 1) rafId = requestAnimationFrame(animate);
     };
     rafId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafId);
@@ -123,7 +126,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-success" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground">Level Complete!</h2>
+              <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground">{t('levelComplete.title')}</h2>
               <p className="text-muted-foreground text-xs sm:text-sm">{levelId}</p>
             </div>
           </motion.div>
@@ -132,7 +135,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
           {pushFailed && (
             <div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg text-center">
               <p className="text-warning text-sm font-medium">
-                Push failed!{hasPushBonus ? ` But you earned +${pushBonus}h bonus.` : ' No extra bonus earned.'}
+                {t('levelComplete.pushFailed')}{hasPushBonus ? t('levelComplete.pushFailedBonus', { bonus: pushBonus }) : t('levelComplete.pushFailedNoBonus')}
               </p>
             </div>
           )}
@@ -145,12 +148,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             transition={{ delay: 0.2, duration: 0.28 }}
           >
             <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-              <span className="text-muted-foreground">Level</span>
+              <span className="text-muted-foreground">{t('levelComplete.level')}</span>
               <span className="font-bold text-foreground">{levelNumber}</span>
             </div>
 
             <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-              <span className="text-muted-foreground">Remaining</span>
+              <span className="text-muted-foreground">{t('levelComplete.remaining')}</span>
               <span className="font-bold text-foreground">{remainingPercent}%</span>
             </div>
 
@@ -159,7 +162,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <div className="flex justify-between items-center mb-1">
                 <span className="text-muted-foreground flex items-center gap-1">
                   <Target className="w-3 h-3" />
-                  Fences Used
+                  {t('levelComplete.fencesUsed')}
                 </span>
                 <span className="font-bold text-foreground">
                   {cutCount} / {expectedCuts}
@@ -170,7 +173,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <div className="flex justify-between items-center text-sm mt-1">
                   <span className="text-success flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" />
-                    {fencesUnderPar} under par
+                    {t('levelComplete.underPar', { count: fencesUnderPar })}
                   </span>
                   <span className="font-bold text-success">+{underParBonus}h</span>
                 </div>
@@ -180,11 +183,11 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <div className="flex justify-between items-center text-sm mt-1">
                   <span className="text-destructive flex items-center gap-1">
                     <TrendingDown className="w-3 h-3" />
-                    {fencesOverPar} over par
+                    {t('levelComplete.overPar', { count: fencesOverPar })}
                   </span>
                   <span className="text-destructive text-xs">
-                    Base x{performanceMultiplier}
-                    {isSpaceDisabled && ' · No space bonus'}
+                    {t('levelComplete.baseMultiplier', { multiplier: performanceMultiplier })}
+                    {isSpaceDisabled && t('levelComplete.noSpaceBonus')}
                   </span>
                 </div>
               )}
@@ -196,14 +199,14 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
-                    Extra Space Removed
+                    {t('levelComplete.extraSpaceRemoved')}
                   </span>
                   <span className="font-bold text-foreground">+{(extraPercent * 100).toFixed(0)}%</span>
                 </div>
 
                 <div className="flex justify-between items-center text-sm">
                   <span className={isSpaceDisabled ? 'text-destructive' : 'text-primary'}>
-                    Space Bonus
+                    {t('levelComplete.spaceBonus')}
                   </span>
                   <span className={`font-bold ${isSpaceDisabled ? 'text-destructive line-through' : 'text-primary'}`}>
                     {isSpaceDisabled ? `${spaceBonusRaw}h` : spaceBonus > 0 ? `+${spaceBonus}h` : '—'}
@@ -216,9 +219,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                Base Overtime
+                {t('levelComplete.baseOvertime')}
                 {isOverPar && (
-                  <span className="text-destructive text-xs">(x{performanceMultiplier})</span>
+                  <span className="text-destructive text-xs">{t('levelComplete.multiplierParen', { multiplier: performanceMultiplier })}</span>
                 )}
               </span>
               <span className={`font-bold ${isOverPar ? 'text-destructive' : 'text-foreground'}`}>
@@ -231,7 +234,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <div className="flex justify-between items-center py-2 border-b border-cyan-500/30 bg-cyan-500/10 rounded px-2">
                 <span className="text-cyan-400 flex items-center gap-1">
                   <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Thread Locks ({lockedBallsCount})
+                  {t('levelComplete.threadLocks', { count: lockedBallsCount })}
                 </span>
                 <span className="font-bold text-cyan-400">+{lockBonus}h</span>
               </div>
@@ -242,7 +245,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <div className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
                 <span className="text-primary flex items-center gap-1">
                   <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Interest
+                  {t('levelComplete.interest')}
                 </span>
                 <span className="font-bold text-primary">+{interestGain}h</span>
               </div>
@@ -253,7 +256,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <div className="flex justify-between items-center py-2 border-b border-orange-500/30 bg-orange-500/10 rounded px-2">
                 <span className="text-orange-400 flex items-center gap-1">
                   <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
-                  Push Bonus
+                  {t('levelComplete.pushBonus')}
                 </span>
                 <span className="font-bold text-orange-400">+{pushBonus}h</span>
               </div>
@@ -262,18 +265,18 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             {/* Total Bonus Summary */}
             {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0) && (
               <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
-                <span className="font-semibold text-foreground">Total Bonus</span>
+                <span className="font-semibold text-foreground">{t('levelComplete.totalBonus')}</span>
                 <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus}h</span>
               </div>
             )}
 
             <div className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
-              <span className="font-semibold text-foreground">Overtime Earned</span>
+              <span className="font-semibold text-foreground">{t('levelComplete.overtimeEarned')}</span>
               <span className="text-xl sm:text-2xl font-bold text-primary">{displayLevelScore}h</span>
             </div>
 
             <div className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
-              <span className="font-semibold text-foreground">Total Overtime</span>
+              <span className="font-semibold text-foreground">{t('levelComplete.totalOvertime')}</span>
               <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{displayTotalScore}h</span>
             </div>
           </motion.div>
@@ -293,8 +296,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 >
                   <Medal className="w-4 h-4 text-yellow-400 shrink-0" />
                   <div>
-                    <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">Certificate Unlocked</p>
-                    <p className="text-sm text-foreground font-semibold">{cert.name}</p>
+                    <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">{t('levelComplete.certificateUnlocked')}</p>
+                    <p className="text-sm text-foreground font-semibold">{contentText.certName(t, cert)}</p>
                   </div>
                 </div>
               ))}
@@ -312,7 +315,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               className="arcade-button-primary w-full rounded-lg flex items-center justify-center gap-2 text-sm sm:text-base py-2 sm:py-3 hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:pointer-events-none"
               onClick={() => { setChosen(true); onContinue(); }}
             >
-              Next Level
+              {t('levelComplete.nextLevel')}
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </motion.div>

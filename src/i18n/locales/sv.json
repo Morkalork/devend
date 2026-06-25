@@ -1,0 +1,832 @@
+{
+  "achievements": {
+    "title": "Prestationer",
+    "back": "Tillbaka",
+    "activeUnlocked": "{{active}} aktiva / {{unlocked}} upplåsta",
+    "noneLoaded": "Inga prestationer laddade.",
+    "sectionAvailable": "Tillgängliga",
+    "sectionActive": "Aktiva",
+    "sectionInProgress": "Pågående",
+    "activate": "Aktivera",
+    "bonusLabel": "Bonus:",
+    "stat": {
+      "totalFencesDrawn": "Ritade stängsel",
+      "highestLevelReached": "Högsta nivå",
+      "totalLevelsCompletedWithoutLoss": "Felfria nivåer",
+      "totalLivesLost": "Förlorade liv",
+      "deepestAscension": "Djupaste uppstigning",
+      "pushBonusesBanked": "Säkrade pressbonusar"
+    }
+  },
+  "ascension": {
+    "allLevelsCleared": "Alla nivåer klara",
+    "ascensionComplete": "Uppstigning {{depth}} klar. ",
+    "retireOrAscend": "Dra dig tillbaka och säkra allt — eller välj en mutator och stig upp till djup {{depth}}.",
+    "ascendedLevelsInfo": "Uppstigna nivåer är snabbare och räknas {{multiplier}}× mot certifikattimmar. ",
+    "bankedOvertime": "Säkrad övertid: {{score}}h",
+    "noMutators": "Inga mutatorer tillgängliga — mutators.yml kunde inte laddas. Du kan ändå dra dig tillbaka nedan.",
+    "ascendToDepth": "Stig upp till djup {{depth}}",
+    "selectMutator": "Välj en mutator",
+    "retireBankRun": "Dra dig tillbaka — säkra denna omgång",
+    "ascensionUnlocked": "Uppstigning upplåst",
+    "tutorialIntro1": "Du klarade alla nivåer — men slitet tar aldrig slut. Stig upp för att börja om på nivå 1 med poäng, uppgraderingar och liv intakta, plus en ",
+    "tutorialMutatorWord": "mutator",
+    "tutorialIntro2": ": en förbannelse i kombination med en välsignelse. Mutatorer staplas vid varje uppstigning, nivåerna blir snabbare och varje avklarad nivå räknas mer mot certifikattimmar. Dra dig tillbaka när du vill för att säkra allt.",
+    "gotIt": "Uppfattat"
+  },
+  "bottomBar": {
+    "ballSpeed": "Bollhastighet",
+    "ballSize": "Bollstorlek",
+    "fenceSpeed": "Stängselhastighet",
+    "otMult": "ÖT-mult.",
+    "instantFences": "Direktstängsel",
+    "concurrent": "Samtidiga",
+    "bonusRemove": "Bonusborttagning",
+    "extraLives": "Extra liv",
+    "interest": "Ränta",
+    "shopSlots": "Butiksplatser",
+    "restocks": "Påfyllningar",
+    "microMgrPerLock": "MicroMgr/lås",
+    "tapForDetails": "▲ tryck för detaljer"
+  },
+  "bottomBarDetails": {
+    "ballSpeed": "Bollhastighet",
+    "ballSpeedDescBase": "Effektiv multiplikator på bollens hastighet. Bas: {{base}}",
+    "ballSpeedDescMicro_one": ". MicroManager ger ytterligare {{reduction}}% minskning från {{count}} låst boll",
+    "ballSpeedDescMicro_other": ". MicroManager ger ytterligare {{reduction}}% minskning från {{count}} låsta bollar",
+    "ballSpeedDescTail": ". Långsammare bollar ger dig mer reaktionstid när du ritar stängsel.",
+    "ballSize": "Bollstorlek",
+    "ballSizeDesc": "Radiemultiplikator som tillämpas på varje boll. Större bollar är svårare att väja för när du ritar ett stängsel — men täcker också mer av brädet för låsning.",
+    "fenceSpeed": "Stängselhastighet",
+    "fenceSpeedDesc": "Hur snabbt ditt stängsel växer efter att du börjat rita. Högre stängselhastighet förkortar tiden en boll har att kollidera med ditt pågående stängsel, vilket gör snitt säkrare.",
+    "scoreMultiplier": "Poängmultiplikator",
+    "scoreMultiplierDesc": "Global multiplikator som tillämpas på alla poäng du tjänar denna omgång. Staplas multiplikativt med par-bonusar per snitt.",
+    "instantFences": "Direktstängsel",
+    "instantFencesActive_one": "{{count}} stängsel slutförs automatiskt i början av varje nivå och erövrar område utan någon risk.",
+    "instantFencesActive_other": "{{count}} stängsel slutförs automatiskt i början av varje nivå och erövrar område utan någon risk.",
+    "instantFencesInactive": "Inga direktstängsel aktiva. Köp uppgraderingar för att få gratis stängsel varje nivå.",
+    "concurrentFences": "Samtidiga stängsel",
+    "concurrentFencesActive": "Du kan rita {{total}} stängsel samtidigt. Extra samtidiga stängsel låter dig skära från flera väggar på en gång.",
+    "concurrentFencesInactive": "Standard: 1 aktivt stängsel åt gången.",
+    "bonusRemoval": "Bonusborttagning",
+    "bonusRemovalActive": "Varje lyckat snitt har {{chance}} chans att ta bort {{amount}} av en bolls samlade hastighetsbonus, och för gradvis snabba bollar tillbaka mot sin grundhastighet.",
+    "bonusRemovalInactive": "Ingen bonusborttagning aktiv.",
+    "extraLives": "Extra liv",
+    "extraLivesActive_one": "+{{count}} extra startliv läggs till i början av varje omgång. Fler liv betyder fler chanser att återhämta sig från ett dåligt snitt.",
+    "extraLivesActive_other": "+{{count}} extra startliv läggs till i början av varje omgång. Fler liv betyder fler chanser att återhämta sig från ett dåligt snitt.",
+    "extraLivesInactive": "Inga extra startliv.",
+    "scoreInterest": "Poängränta",
+    "scoreInterestActive": "I slutet av varje nivå läggs {{rate}} av din nuvarande totalpoäng till som bonus. Högre samlad poäng växer snabbare.",
+    "scoreInterestInactive": "Ingen ränta aktiv.",
+    "extraShopSlots": "Extra butiksplatser",
+    "extraShopSlotsActive_one": "{{count}} extra vara visas i butiken mellan nivåerna och ger dig fler val vid varje besök.",
+    "extraShopSlotsActive_other": "{{count}} extra varor visas i butiken mellan nivåerna och ger dig fler val vid varje besök.",
+    "extraShopSlotsInactive": "Standardstorlek på butiken.",
+    "shopRestocks": "Butikspåfyllningar",
+    "shopRestocksActive_one": "Ditt första köp per butiksbesök lägger till ett nytt erbjudande på hyllan (Inköp).",
+    "shopRestocksActive_other": "Dina första {{count}} köp per butiksbesök lägger vart och ett till ett nytt erbjudande på hyllan (Inköp).",
+    "shopRestocksInactive": "Ingen butikspåfyllning.",
+    "microManager": "MicroManager",
+    "microManagerValue": "{{percent}}% / lås",
+    "microManagerActive_one": "Varje låst boll minskar bollhastigheten med {{percent}}% (staplas multiplikativt, max 70% totalt). Just nu {{count}} boll låst → effektiv hastighet {{speed}}.",
+    "microManagerActive_other": "Varje låst boll minskar bollhastigheten med {{percent}}% (staplas multiplikativt, max 70% totalt). Just nu {{count}} bollar låsta → effektiv hastighet {{speed}}.",
+    "microManagerInactive": "MicroManager inte aktiv.",
+    "off": "Av",
+    "ballPathPrediction": "Bollbaneprognos",
+    "bounceCount_one": "{{count}} studs",
+    "bounceCount_other": "{{count}} studsar",
+    "ballPathPredictionActive": "Ritar en förutsedd bana {{bounceText}} framåt för {{target}}. Hjälper dig att tajma stängsel för att undvika kollisioner.",
+    "ballPathPredictionInactive": "Ingen banförhandsvisning aktiv.",
+    "ballPathTargetAll": "de snabbaste bollarna",
+    "ballPathTargetTop_one": "den {{count}} snabbaste bollen",
+    "ballPathTargetTop_other": "de {{count}} snabbaste bollarna",
+    "activeModifiers": "Aktiva modifierare",
+    "closePanel": "Stäng panel",
+    "modifiedCount": "Modifierade ({{count}})",
+    "noModifiers": "Inga modifierare aktiva ännu. Köp uppgraderingar mellan nivåerna för att få förstärkningar till din omgång.",
+    "atDefault": "Standard"
+  },
+  "certificateStore": {
+    "unlockUpgradeChain": "Köp uppgraderingen {{upgradeName}} i {{required}} olika omgångar.",
+    "progressLabelRuns": "omgångar",
+    "unlockAchievement": "Slutför prestationen \"{{name}}\": {{description}}",
+    "unlockLinkedAchievement": "Slutför den kopplade prestationen.",
+    "unlockHoursSpent": "Spendera {{required}} certifikattimmar i denna butik (på valfria certifikat).",
+    "progressLabelHoursSpent": "spenderade timmar",
+    "unlockKeepPlaying": "Fortsätt spela för att låsa upp.",
+    "title": "CERTIFIKAT",
+    "certificateHours": "Certifikattimmar",
+    "earnRate": "Tjäna 1h för var 5:e avklarad nivå",
+    "sectionAvailable": "Tillgängliga",
+    "sectionLocked": "Låsta",
+    "sectionComplete": "Klara",
+    "levelFraction": "Nv {{owned}}/{{total}}",
+    "levelLabel": "Nv {{level}}",
+    "levelCost": "({{cost}}h)",
+    "cost": "Kostnad:",
+    "hoursValue": "{{hours}}h",
+    "needMore": "(behöver {{hours}}h till)",
+    "buyUpToLevel": "Köp upp till Nv {{level}}",
+    "howToUnlockAria": "Så låser du upp {{name}}",
+    "howToUnlock": "Så låser du upp",
+    "progress": "Framsteg: {{current}} / {{required}}{{label}}",
+    "loading": "Laddar certifikat…",
+    "continue": "Fortsätt",
+    "tutorialTitle": "CERTIFIKATVERKSTAD",
+    "tutorialBody": "Lås upp permanenta bonusar genom att bemästra uppgraderingsfamiljer över flera omgångar. Varje certifikat har nivåer som du kan köpa med certifikattimmar som tjänas under spelets gång."
+  },
+  "checkpointPicker": {
+    "startFrom": "Börja från…",
+    "level": "Nivå {{level}}"
+  },
+  "common": {
+    "loading": "Laddar..."
+  },
+  "game": {
+    "paused": "PAUSAD",
+    "resume": "Återuppta",
+    "pause": "Pausa",
+    "gameMenu": "Spelmeny",
+    "restartRun": "Starta om omgången",
+    "mainMenu": "Huvudmeny",
+    "moverTutorialTitle": "⚠ Rörliga hinder",
+    "moverTutorialBody": "Orangea hinder rör sig fram och tillbaka på ett fast spår.\n\nBollar studsar mot dem — men om ditt växande stängsel rör vid ett förlorar du ett liv.\n\nHåll koll på spårlinjerna och tajma dina stängsel noga!",
+    "infoPanelsTutorialTitle": "Infopaneler",
+    "infoPanelsTutorialBody": "Statuslisterna går att fälla ut!\n\nTryck på DEN ÖVRE LISTEN för att se fullständiga nivådetaljer, alla dina aktiva uppgraderingar med beskrivningar och framsteg för certifikattimmar.\n\nTryck på DEN NEDRE LISTEN för att se varje aktiv modifierare förklarad på vanlig svenska."
+  },
+  "interactiveTutorial": {
+    "drawAFence": "RITA ETT STÄNGSEL",
+    "dragInstruction": "Dra var som helst inom området för att skapa en skärande mur. Låt inte bollen träffa muren medan den växer!",
+    "drawAFenceToContinue": "RITA ETT STÄNGSEL FÖR ATT FORTSÄTTA"
+  },
+  "levelComplete": {
+    "title": "Nivå klar!",
+    "pushFailed": "Pressningen misslyckades!",
+    "pushFailedBonus": " Men du tjänade +{{bonus}}h bonus.",
+    "pushFailedNoBonus": " Ingen extra bonus intjänad.",
+    "level": "Nivå",
+    "remaining": "Kvar",
+    "fencesUsed": "Använda stängsel",
+    "underPar": "{{count}} under par",
+    "overPar": "{{count}} över par",
+    "baseMultiplier": "Bas x{{multiplier}}",
+    "noSpaceBonus": " · Ingen utrymmesbonus",
+    "extraSpaceRemoved": "Extra utrymme borttaget",
+    "spaceBonus": "Utrymmesbonus",
+    "baseOvertime": "Bas-övertid",
+    "multiplierParen": "(x{{multiplier}})",
+    "threadLocks": "Trådlås ({{count}})",
+    "interest": "Ränta",
+    "pushBonus": "Pressbonus",
+    "totalBonus": "Total bonus",
+    "overtimeEarned": "Intjänad övertid",
+    "totalOvertime": "Total övertid",
+    "certificateUnlocked": "Certifikat upplåst",
+    "nextLevel": "Nästa nivå"
+  },
+  "notFound": {
+    "message": "Hoppsan! Sidan hittades inte",
+    "returnHome": "Tillbaka till start"
+  },
+  "options": {
+    "title": "ALTERNATIV",
+    "language": "Språk",
+    "reEnableTutorials": "Återaktivera alla genomgångar",
+    "resetCertificates": "Nollställ certifikat & poäng",
+    "back": "Tillbaka",
+    "resetConfirmTitle": "Nollställa alla framsteg?",
+    "resetConfirmBody": "Detta nollställer ditt poängsaldo och alla ägda certifikat. Åtgärden kan inte ångras.",
+    "cancel": "Avbryt",
+    "reset": "Nollställ"
+  },
+  "pushYourLuck": {
+    "levelCleared": "Nivå klar!",
+    "remainingLabel": "Kvar:",
+    "targetSuffix": "/ {{threshold}}% mål",
+    "keepCuttingPrefix": "Fortsätt skära för",
+    "bonusPerRemoved": "+1h per {{percent}}% borttaget",
+    "noRisk": "Ingen risk — du behåller poängen om du misslyckas!",
+    "bankAndContinue": "Säkra & fortsätt",
+    "pushYourLuck": "Pressa lyckan"
+  },
+  "result": {
+    "youWin": "DU VANN!",
+    "gameOver": "SPELET SLUT",
+    "completedAllLevels": "🎉 Klarade alla nivåer! 🎉",
+    "ascensionDepth": "Uppstigningsdjup {{depth}}",
+    "mutatorsBraved": "Mutatorer trotsade: {{mutators}}",
+    "completedLevel": "Klarade nivå",
+    "failedAtLevel": "Föll på nivå",
+    "arenaRemaining": "Arena kvar",
+    "levelsCompleted": "Avklarade nivåer",
+    "certificateHours_one": "+{{count}}h certifikattimme",
+    "certificateHours_other": "+{{count}}h certifikattimmar",
+    "continueLevel": "Fortsätt (Nivå {{level}})",
+    "restart": "Starta om",
+    "playAgain": "Spela igen",
+    "mainMenu": "Huvudmeny"
+  },
+  "topBar": {
+    "clear": "KLART",
+    "percentToGo": "{{percent}}% kvar",
+    "currentlyReducingBy": "Minskar just nu med {{percent}}%"
+  },
+  "topBarDetails": {
+    "levelStatusTitle": "Status för nivå {{level}}",
+    "closePanel": "Stäng panel",
+    "objectives": "Mål",
+    "territoryCapture": "Områdeserövring",
+    "territoryGoalMet": "Mål uppnått! Du har erövrat {{remaining}}% (krävde {{required}}%).",
+    "territoryGoalPending": "Erövra minst {{required}}% av brädet. Just nu {{remaining}}% — behöver {{more}}% till.",
+    "fenceCuts": "Stängselsnitt",
+    "cutsParValue": "{{used}} / {{par}} par",
+    "cutsOverPar_one": "Över par med {{count}} snitt. Poängmultiplikatorn minskar när du överstiger par.",
+    "cutsOverPar_other": "Över par med {{count}} snitt. Poängmultiplikatorn minskar när du överstiger par.",
+    "cutsParInfo": "Par är {{par}} snitt. Att hålla dig inom par ger en poängbonus.",
+    "cutsRemaining_one": "{{count}} snitt kvar innan par. Bra jobbat!",
+    "cutsRemaining_other": "{{count}} snitt kvar innan par. Bra jobbat!",
+    "threadLocks": "Trådlås",
+    "lockObjectiveMet": "Låsmål uppnått! {{locked}} av {{required}} bollar låsta.",
+    "lockObjectivePending": "Lås {{required}} bollar genom att fånga dem med stängsel. {{more}} till behövs.",
+    "lockNoneRequiredWithLocks_one": "{{count}} boll låst. Inget låskrav på denna nivå.",
+    "lockNoneRequiredWithLocks_other": "{{count}} bollar låsta. Inget låskrav på denna nivå.",
+    "lockNoneRequired": "Inget trådlåskrav på denna nivå.",
+    "yourStatus": "Din status",
+    "livesRemaining": "Liv kvar",
+    "livesNone": "Inga!",
+    "livesDescription": "Du förlorar ett liv när en boll träffar ditt stängsel medan det växer. Får du slut på liv startar nivån om.",
+    "certificatePoints": "Certifikatpoäng",
+    "certPointsEarned_one": "{{count}} poäng intjänad hittills.",
+    "certPointsEarned_other": "{{count}} poäng intjänade hittills.",
+    "certPointsToGo_one": "Klara {{count}} nivå till för att tjäna nästa certifikatpoäng och låsa upp uppgraderingar i certifikatbutiken.",
+    "certPointsToGo_other": "Klara {{count}} nivåer till för att tjäna nästa certifikatpoäng och låsa upp uppgraderingar i certifikatbutiken.",
+    "ascensionDepth": "Uppstigning — Djup {{depth}}",
+    "ascensionDescription": "Du loopade förbi den sista nivån. Bollar är snabbare, varje vald mutator nedan är aktiv och varje avklarad nivå räknas {{multiplier}}× mot certifikattimmar.",
+    "activeUpgradesCount": "Aktiva uppgraderingar ({{count}})",
+    "currentlyReducingBallSpeed": "Minskar just nu bollhastigheten med {{percent}}%",
+    "activeUpgrades": "Aktiva uppgraderingar",
+    "noUpgrades": "Inga uppgraderingar köpta ännu. Besök butiken mellan nivåerna för att stärka din omgång."
+  },
+  "tutorial": {
+    "back": "Tillbaka",
+    "howToPlay": "Så spelar du",
+    "lifeCycle": "Livscykel",
+    "gotIt": "Uppfattat!",
+    "achievementsCertificatesTitle": "Prestationer & certifikat",
+    "achievementsCertificatesBody": "Spela mer för att låsa upp prestationer och certifikat. Prestationer belönar livstidsmilstolpar med permanenta omgångsbonusar. Certifikat tjänas genom att bemästra specifika uppgraderingar över flera omgångar och kan köpas i certifikatbutiken för bestående effekter.",
+    "controlsTitle": "Kontroller",
+    "controlTouchLabel": "PEKA",
+    "controlMouseLabel": "MUS",
+    "controlSwipeToCut": "Svep för att skära",
+    "controlSecondFinger": "Ett andra finger medan stängslet växer avbryter det",
+    "controlClickAndDrag": "Klicka och dra",
+    "steps": {
+      "swipeToCut": {
+        "title": "Svep för att skära",
+        "description": "Svep eller dra för att skapa en skärande mur. Horisontell eller vertikal beroende på din svepriktning."
+      },
+      "removeEmptySpace": {
+        "title": "Ta bort tomt utrymme",
+        "description": "När muren är klar tas sidan UTAN bollen bort och blir till mörker."
+      },
+      "avoidTheBall": {
+        "title": "Undvik bollen",
+        "description": "Låt inte bollen träffa muren medan den fortfarande växer — spelet är direkt slut!"
+      },
+      "winCondition": {
+        "title": "Vinstvillkor",
+        "description": "Minska arenan till under 25% av sin ursprungliga storlek för att vinna. Hastigheten ökar med varje snitt!"
+      },
+      "lives": {
+        "title": "Liv",
+        "description": "Du börjar varje omgång med ett bestämt antal liv. Förlora ett liv varje gång en boll träffar ditt växande stängsel. Får du slut på liv tar omgången slut."
+      },
+      "checkpoints": {
+        "title": "Kontrollpunkter",
+        "description": "Var 5:e nivå är en kontrollpunkt. När din omgång tar slut startar nästa omgång alltid om från den högsta kontrollpunkt du nått — du förlorar aldrig alla dina framsteg."
+      },
+      "headStartCertificates": {
+        "title": "Försprångscertifikat",
+        "description": "I certifikatbutiken kan du låsa upp försprångscertifikat som permanent höjer din startnivå — så att erfarna spelare aldrig behöver spela om tidiga nivåer."
+      }
+    }
+  },
+  "tutorialOverlay": {
+    "tapToContinue": "TRYCK VAR SOM HELST FÖR ATT FORTSÄTTA",
+    "replayFromOptions": "Genomgångar kan spelas upp igen från ALTERNATIV"
+  },
+  "upgradeShop": {
+    "storeLabel": "Butik",
+    "levelComplete": "Nivå {{level}} klar",
+    "checkpointReached": "kontrollpunkt nådd",
+    "levelBanner": "NIVÅ {{level}}",
+    "progressSavedHere": "framsteg sparas här",
+    "hoursValue": "{{hours}}h",
+    "overtime": "övertid",
+    "restocksLeft": "Påfyllningar kvar: {{count}} — att köpa en vara lägger till ett nytt erbjudande",
+    "noRestocksLeft": "Inga påfyllningar kvar detta besök",
+    "requires": "Kräver:",
+    "certificateUnlocked": "Certifikat upplåst!",
+    "buyAndContinue": "Köp {{count}} & fortsätt ({{cost}}h)",
+    "continue": "Fortsätt",
+    "tutorialTitle": "BUTIKEN",
+    "tutorialBody": "Spendera övertidstimmar på uppgraderingar efter varje bana. Övertidsuppgraderingar mångdubblar framtida intäkter. Effekterna visas i den nedre listen på nästa bana."
+  },
+  "welcome": {
+    "tagline": "Skär. Fånga. Överlev.",
+    "startAtLevel": "Börja på nivå {{level}}",
+    "checkpointExpires": "Kontrollpunkt löper ut om {{time}}",
+    "loading": "Laddar...",
+    "continueFromLevel": "Fortsätt från nivå {{level}}",
+    "startGame": "Starta spel",
+    "chooseStartMap": "Välj startbana",
+    "tutorial": "Genomgång",
+    "options": "Alternativ",
+    "certificates": "Certifikat",
+    "hoursSuffix": "{{hours}}h",
+    "achievements": "Prestationer",
+    "admin": "Admin"
+  },
+  "content": {
+    "upgrades": {
+      "runtime_optimisation_junior": {
+        "name": "Runtime-optimering",
+        "description": "Minska bollhastigheten med 5%."
+      },
+      "runtime_optimisation_senior": {
+        "name": "Runtime-optimering",
+        "description": "Minska bollhastigheten med 10%."
+      },
+      "runtime_optimisation_principal": {
+        "name": "Runtime-optimering",
+        "description": "Minska bollhastigheten med 15%."
+      },
+      "memory_footprint_junior": {
+        "name": "Minnesavtryck",
+        "description": "Minska bollstorleken med 5%."
+      },
+      "memory_footprint_senior": {
+        "name": "Minnesavtryck",
+        "description": "Minska bollstorleken med 10%."
+      },
+      "memory_footprint_principal": {
+        "name": "Minnesavtryck",
+        "description": "Minska bollstorleken med 15%."
+      },
+      "fast_compile_junior": {
+        "name": "Snabb kompilering",
+        "description": "Öka stängselgenereringens hastighet med 10%."
+      },
+      "fast_compile_senior": {
+        "name": "Snabb kompilering",
+        "description": "Öka stängselgenereringens hastighet med 20%."
+      },
+      "fast_compile_principal": {
+        "name": "Snabb kompilering",
+        "description": "Öka stängselgenereringens hastighet med 30%."
+      },
+      "hot_start_junior": {
+        "name": "Varmstart",
+        "description": "Det första stängslet på varje karta genereras omedelbart."
+      },
+      "hot_start_principal": {
+        "name": "Varmstart",
+        "description": "De första två stängslen på varje karta genereras omedelbart."
+      },
+      "hot_start_architect": {
+        "name": "Varmstart",
+        "description": "De första tre stängslen på varje karta genereras omedelbart."
+      },
+      "multithreading_principal": {
+        "name": "Multitrådning",
+        "description": "Tillåt att ytterligare ett stängsel byggs samtidigt."
+      },
+      "ultrathreading_principal": {
+        "name": "Ultratrådning",
+        "description": "Tillåt att ytterligare ett stängsel byggs samtidigt."
+      },
+      "garbage_collector_senior": {
+        "name": "Garbage Collector",
+        "description": "Varje stängsel har en liten chans att ta bort ytterligare 5% yta."
+      },
+      "garbage_collector_medior": {
+        "name": "Garbage Collector 2",
+        "description": "Varje stängsel har en liten chans att ta bort ytterligare 10% yta."
+      },
+      "fault_tolerance_junior": {
+        "name": "Feltolerans",
+        "description": "Få 1 extra liv."
+      },
+      "fault_tolerance_senior": {
+        "name": "Feltolerans",
+        "description": "Få 2 extra liv."
+      },
+      "fault_tolerance_architect": {
+        "name": "Feltolerans",
+        "description": "Få 3 extra liv."
+      },
+      "performance_bonus_junior": {
+        "name": "Prestationsbonus",
+        "description": "Få 5% mer övertid per karta."
+      },
+      "performance_bonus_senior": {
+        "name": "Prestationsbonus",
+        "description": "Få 10% mer övertid per karta."
+      },
+      "performance_bonus_principal": {
+        "name": "Prestationsbonus",
+        "description": "Få 15% mer övertid per karta."
+      },
+      "venture_capital_senior": {
+        "name": "Riskkapital",
+        "description": "10% ränta på oanvänd övertid mellan kartor."
+      },
+      "venture_capital_principal": {
+        "name": "Riskkapital",
+        "description": "20% ränta på oanvänd övertid mellan kartor."
+      },
+      "venture_capital_architect": {
+        "name": "Riskkapital",
+        "description": "30% ränta på oanvänd övertid mellan kartor."
+      },
+      "micro_manager_junior": {
+        "name": "MicroManager",
+        "description": "Varje låst boll minskar alla bollhastigheter med 1%, upp till 50%."
+      },
+      "micro_manager_senior": {
+        "name": "MicroManager",
+        "description": "Varje låst boll minskar alla bollhastigheter med ytterligare 2%, upp till 50% totalt."
+      },
+      "micro_manager_principal": {
+        "name": "MicroManager",
+        "description": "Varje låst boll minskar alla bollhastigheter med ytterligare 3%, upp till 50% totalt."
+      },
+      "procurement_junior": {
+        "name": "Inköp",
+        "description": "En gång per butiksbesök lägger ett köp till ett nytt erbjudande på hyllan."
+      },
+      "procurement_senior": {
+        "name": "Inköp",
+        "description": "Dina första två köp per butiksbesök lägger vardera till ett nytt erbjudande på hyllan."
+      },
+      "procurement_principal": {
+        "name": "Inköp",
+        "description": "Dina första tre köp per butiksbesök lägger vardera till ett nytt erbjudande på hyllan."
+      },
+      "system_architect": {
+        "name": "Systemarkitekt",
+        "description": "Få ytterligare en plats för butiksartiklar."
+      },
+      "augmentation_wizard": {
+        "name": "Certifieringstrollkarl",
+        "description": "Få +1 certifikattimme."
+      },
+      "technical_debt_senior": {
+        "name": "Teknisk skuld",
+        "description": "Tjäna 20% mer övertid per karta — men bollarna rör sig 8% snabbare. Kortsiktig vinst, långsiktig smärta."
+      },
+      "technical_debt_principal": {
+        "name": "Teknisk skuld",
+        "description": "Tjäna 35% mer övertid per karta — men bollarna rör sig 15% snabbare."
+      },
+      "technical_debt_architect": {
+        "name": "Teknisk skuld",
+        "description": "Tjäna 50% mer övertid per karta — men bollarna rör sig 25% snabbare."
+      },
+      "pair_programming_principal": {
+        "name": "Parprogrammering",
+        "description": "Ett extra samtidigt stängsel — men varje stängsel byggs 12% långsammare. Två sinnen, delad uppmärksamhet."
+      },
+      "pair_programming_architect": {
+        "name": "Parprogrammering",
+        "description": "Ytterligare ett samtidigt stängsel — men stängselhastigheten sjunker ytterligare 12%."
+      },
+      "defensive_programming_junior": {
+        "name": "Defensiv programmering",
+        "description": "Få 1 extra liv och krymp alla bollar med 8%. Säkerheten först.",
+        "descriptionAscension": "Stängsel överlever 1 extra bollträff innan de smular sönder (Uppstigning)."
+      },
+      "defensive_programming_senior": {
+        "name": "Defensiv programmering",
+        "description": "Få 2 extra liv till och krymp alla bollar med ytterligare 8%.",
+        "descriptionAscension": "Stängsel överlever 2 extra bollträffar innan de smular sönder (Uppstigning)."
+      },
+      "defensive_programming_principal": {
+        "name": "Defensiv programmering",
+        "description": "Få 3 extra liv till och krymp alla bollar med ytterligare 8%.",
+        "descriptionAscension": "Stängsel överlever 3 extra bollträffar innan de smular sönder (Uppstigning)."
+      },
+      "scrum_master_1": {
+        "name": "SCRUM Master",
+        "description": "Förhandsvisa de nästa 2 studsarna i den snabbaste bollens bana."
+      },
+      "scrum_master_2": {
+        "name": "SCRUM Master",
+        "description": "Förhandsvisa även den näst snabbaste bollens bana."
+      },
+      "scrum_master_3": {
+        "name": "SCRUM Master",
+        "description": "Förhandsvisa även den tredje snabbaste bollens bana."
+      },
+      "scrum_master_4": {
+        "name": "SCRUM Master",
+        "description": "Utöka banförhandsvisningen till 3 studsar framåt för spårade bollar."
+      },
+      "scrum_master_5": {
+        "name": "SCRUM Master",
+        "description": "Utöka banförhandsvisningen till 4 studsar framåt."
+      },
+      "scrum_master_6": {
+        "name": "SCRUM Master",
+        "description": "Visa banförhandsvisning för alla bollar samtidigt."
+      }
+    },
+    "tiers": {
+      "Junior": "Junior",
+      "Senior": "Senior",
+      "Principal": "Principal",
+      "Architect": "Arkitekt",
+      "Wizard": "Trollkarl"
+    },
+    "certificates": {
+      "runtime-augmentation": {
+        "name": "Runtime-förstärkning",
+        "description": "Permanent minskade bollhastigheter — en bestående belöning för att ha bemästrat Runtime-optimering."
+      },
+      "memory-compression": {
+        "name": "Minneskomprimering",
+        "description": "Permanent mindre bollar — en bestående belöning för att ha bemästrat Minnesavtryck."
+      },
+      "compile-cache": {
+        "name": "Kompileringscache",
+        "description": "Permanent snabbare stängselgenerering — en bestående belöning för att ha bemästrat Snabb kompilering."
+      },
+      "warm-deploy": {
+        "name": "Varm driftsättning",
+        "description": "Få permanent ett omedelbart stängsel vid kartstart — en belöning för att ha bemästrat Varmstart."
+      },
+      "parallel-processing": {
+        "name": "Parallellbearbetning",
+        "description": "Permanent ett extra samtidigt stängsel — en belöning för att ha bemästrat Multitrådning."
+      },
+      "resilience-protocol": {
+        "name": "Motståndskraftsprotokoll",
+        "description": "Börja permanent med ett extra liv — en belöning för att ha bemästrat Feltolerans."
+      },
+      "performance-suite": {
+        "name": "Prestandasvit",
+        "description": "Permanent högre poängmultiplikator — en belöning för att ha bemästrat Prestationsbonus."
+      },
+      "investment-strategy": {
+        "name": "Investeringsstrategi",
+        "description": "Permanent räntebonus på din poäng — en belöning för att ha bemästrat Riskkapital."
+      },
+      "process-optimiser": {
+        "name": "Processoptimerare",
+        "description": "Permanent hastighetsminskning per lås — en belöning för att ha bemästrat MicroManager."
+      },
+      "sprint-protocol": {
+        "name": "Sprintprotokoll",
+        "description": "Permanent extra studs i banförhandsvisningen — en belöning för att ha bemästrat SCRUM Master."
+      },
+      "head-start-i": {
+        "name": "Försprång I",
+        "description": "Börja varje omgång på nivå 5. Tilldelas dem som har bevisat att de kan nå nivå 25."
+      },
+      "head-start-ii": {
+        "name": "Försprång II",
+        "description": "Börja varje omgång på nivå 10. Tilldelas för exceptionell konsekvens över 50 perfekta nivåer."
+      },
+      "equity-grant": {
+        "name": "Aktietilldelning",
+        "description": "Börja varje karta med en del av brädet redan erövrat. Intjäningen börjar omedelbart."
+      },
+      "night-school-diploma": {
+        "name": "Kvällskursdiplom",
+        "description": "Lägg undan extra certifikattimmar varje omgång. Uppstigning accelererar allt."
+      },
+      "bulk-licensing": {
+        "name": "Volymlicensiering",
+        "description": "Permanent rabatt på alla priser i uppgraderingsbutiken. Inköp förhandlade äntligen fram ett ramavtal."
+      },
+      "risk-assessment-certified": {
+        "name": "Riskbedömningscertifierad",
+        "description": "Push-Your-Luck-bonusar betalar ut mer. Granskat, stämplat och garanterat."
+      }
+    },
+    "achievements": {
+      "hello-world": {
+        "name": "Hello, World!",
+        "description": "Förlora ditt första liv — varje arena kastar ett runtime-fel förr eller senare.",
+        "bonusDescription": "Stängselgenereringshastighet +2%"
+      },
+      "junior-dev": {
+        "name": "Juniorutvecklare",
+        "description": "Rita 50 stängsel. Läser fortfarande introduktionsdokumentationen.",
+        "bonusDescription": "Övertidsmultiplikator +4%"
+      },
+      "shipped-it": {
+        "name": "Levererat",
+        "description": "Klara 5 nivåer utan att förlora ett liv. Inga rollbacks, tre gånger om.",
+        "bonusDescription": "Stängselgenereringshastighet +3%"
+      },
+      "passing-tests": {
+        "name": "Godkända tester",
+        "description": "Nå nivå 5 i en enda omgång. De gröna bockarna blir aldrig tråkiga.",
+        "bonusDescription": "Bollhastighet -2%"
+      },
+      "stack-overflow": {
+        "name": "Stack Overflow",
+        "description": "Rita 175 stängsel. Du vet vilka frågor du ska söka efter nu.",
+        "bonusDescription": "Stängselgenereringshastighet +3%"
+      },
+      "merge-conflict": {
+        "name": "Merge-konflikt",
+        "description": "Förlora 35 liv över alla omgångar. Du löser dem, men de fortsätter komma.",
+        "bonusDescription": "Stängselgenereringshastighet +3%"
+      },
+      "zero-regressions": {
+        "name": "Noll regressioner",
+        "description": "Klara 8 nivåer utan att förlora ett liv. Rena PR:er, inga rollbacks behövs.",
+        "bonusDescription": "Övertidsmultiplikator +3%"
+      },
+      "code-review": {
+        "name": "Kodgranskning",
+        "description": "Nå nivå 10 i en enda omgång. Ditt arbete granskas i detalj.",
+        "bonusDescription": "Bollhastighet -3%"
+      },
+      "pull-request": {
+        "name": "Pull Request",
+        "description": "Rita 400 stängsel. Dina bidrag börjar uppmärksammas.",
+        "bonusDescription": "Övertidsmultiplikator +2%"
+      },
+      "rtfm": {
+        "name": "RTFM",
+        "description": "Klara 15 nivåer utan att förlora ett liv. Du läste faktiskt dokumentationen.",
+        "bonusDescription": "Övertidsränta +1%"
+      },
+      "technical-debt": {
+        "name": "Teknisk skuld",
+        "description": "Förlora 50 liv över alla omgångar. Du ärver den. Du jobbar runt den.",
+        "bonusDescription": "Stängselgenereringshastighet +5%"
+      },
+      "full-stack": {
+        "name": "Full Stack",
+        "description": "Rita 500 stängsel. Frontend, backend, stängselend.",
+        "bonusDescription": "Bollhastighet -5%"
+      },
+      "senior-dev": {
+        "name": "Seniorutvecklare",
+        "description": "Nå nivå 15 i en enda omgång. Du har slutat googla grunderna.",
+        "bonusDescription": "Övertidsmultiplikator +5%"
+      },
+      "on-call-veteran": {
+        "name": "Jourveteran",
+        "description": "Förlora 100 liv över alla omgångar. Du har en laddare vid sängen.",
+        "bonusDescription": "+1 startliv per omgång"
+      },
+      "clean-architecture": {
+        "name": "Ren arkitektur",
+        "description": "Klara 20 nivåer utan att förlora ett liv. Inga genvägar, inga genvägar.",
+        "bonusDescription": "Stängselgenereringshastighet +5%"
+      },
+      "commit-history": {
+        "name": "Commit-historik",
+        "description": "Rita 1000 stängsel. git log läser som en memoar vid det här laget.",
+        "bonusDescription": "+1 gratis stängsel per karta"
+      },
+      "tech-lead": {
+        "name": "Tech Lead",
+        "description": "Nå nivå 20 i en enda omgång. Andra vänder sig till dig för svaren nu.",
+        "bonusDescription": "Bollbaneförutsägelse: spåra 1 boll"
+      },
+      "five-am-page": {
+        "name": "Larm kl 05",
+        "description": "Förlora 200 liv över alla omgångar. PagerDuty bryr sig inte om vad klockan är.",
+        "bonusDescription": "Bollbaneförutsägelse: +1 studs framåt"
+      },
+      "open-source": {
+        "name": "Öppen källkod",
+        "description": "Rita 2000 stängsel. Dina bidrag är nu en offentlig handling.",
+        "bonusDescription": "Bollhastighet -5%"
+      },
+      "full-coverage": {
+        "name": "Full täckning",
+        "description": "Klara 35 nivåer utan att förlora ett liv. Varje väg, varje gren, testad.",
+        "bonusDescription": "Stängselgenereringshastighet +10%"
+      },
+      "principal-engineer": {
+        "name": "Principal Engineer",
+        "description": "Nå nivå 25 i en enda omgång. Färre möten, djupare problem.",
+        "bonusDescription": "Bollhastighet -5%"
+      },
+      "ci-cd-pipeline": {
+        "name": "CI/CD-pipeline",
+        "description": "Klara 50 nivåer utan att förlora ett liv. Skoningslös och automatiserad.",
+        "bonusDescription": "Övertidsmultiplikator +10%"
+      },
+      "staff-engineer": {
+        "name": "Staff Engineer",
+        "description": "Nå nivå 30 i en enda omgång. Du fixar saker innan andra märker att de är trasiga.",
+        "bonusDescription": "+1 startliv per omgång"
+      },
+      "ten-k-commits": {
+        "name": "10k commits",
+        "description": "Rita 5000 stängsel. Blame-loggen har ditt namn på allt.",
+        "bonusDescription": "+1 gratis stängsel per karta"
+      },
+      "distinguished": {
+        "name": "Distinguished Engineer",
+        "description": "Nå nivå 40 i en enda omgång. Dina ADR:er överlever projekten de beskriver.",
+        "bonusDescription": "+1 samtidigt stängsel"
+      },
+      "sunday-deploy": {
+        "name": "Söndagsdeploy",
+        "description": "Förlora 500 liv över alla omgångar. Du kan rollback-proceduren utantill.",
+        "bonusDescription": "Bollhastighet -5%"
+      },
+      "five-nines": {
+        "name": "Fem nior",
+        "description": "Klara 100 nivåer utan att förlora ett liv. 99,999% upptid, uthålligt.",
+        "bonusDescription": "Övertidsmultiplikator +10%"
+      },
+      "left-the-company": {
+        "name": "Slutade på företaget",
+        "description": "Rita 10000 stängsel. Din kod körs fortfarande i produktion någonstans.",
+        "bonusDescription": "+1 samtidigt stängsel"
+      },
+      "beyond-the-backlog": {
+        "name": "Bortom backloggen",
+        "description": "Stig upp förbi den sista nivån. Sprinten tar aldrig slut — den loopar.",
+        "bonusDescription": "Övertidsmultiplikator +5%"
+      },
+      "calculated-risk": {
+        "name": "Kalkylerad risk",
+        "description": "Säkra en Push-Your-Luck-bonus 5 gånger. Lyckan står den väl skyddade bi.",
+        "bonusDescription": "+5% chans att snitt rensar extra utrymme"
+      }
+    },
+    "mutators": {
+      "crunch_time": {
+        "name": "Crunch Time",
+        "curse": "Bollar rör sig 25% snabbare.",
+        "blessing": "Tjäna 50% mer övertidstimmar."
+      },
+      "scope_creep": {
+        "name": "Scope Creep",
+        "curse": "Bollar är 30% större.",
+        "blessing": "Stängsel växer 35% snabbare."
+      },
+      "death_march": {
+        "name": "Dödsmarsch",
+        "curse": "Förlora ett liv omedelbart.",
+        "blessing": "Tjäna 75% mer övertidstimmar."
+      },
+      "hiring_freeze": {
+        "name": "Anställningsstopp",
+        "curse": "Butiken erbjuder 2 färre uppgraderingar.",
+        "blessing": "Tjäna 10% ränta på sparad övertid efter varje nivå."
+      },
+      "legacy_codebase": {
+        "name": "Legacy-kodbas",
+        "curse": "Stängsel växer 20% långsammare.",
+        "blessing": "Börja varje karta med 2 omedelbara stängsel."
+      },
+      "parallel_pipelines": {
+        "name": "Parallella pipelines",
+        "curse": "Bollar rör sig 15% snabbare.",
+        "blessing": "Rita ett extra stängsel samtidigt."
+      },
+      "tech_debt_audit": {
+        "name": "Teknisk skuld-granskning",
+        "curse": "Bollar rör sig 10% snabbare och är 10% större.",
+        "blessing": "Snitt har 25% chans att rensa 5% extra utrymme."
+      },
+      "night_school": {
+        "name": "Kvällskurs",
+        "curse": "Bollar rör sig 20% snabbare.",
+        "blessing": "Säkra 1 extra certifikattimme när omgången slutar."
+      },
+      "micromanagement": {
+        "name": "Detaljstyrning",
+        "curse": "Bollar är 20% större.",
+        "blessing": "Varje låst boll saktar ner de återstående bollarna med 2%."
+      },
+      "roadmap_clarity": {
+        "name": "Tydlig roadmap",
+        "curse": "Bollar rör sig 15% snabbare.",
+        "blessing": "Se den förutsagda banan för de två snabbaste bollarna."
+      },
+      "golden_handcuffs": {
+        "name": "Gyllene handbojor",
+        "curse": "Tjäna 25% mindre övertid.",
+        "blessing": "Få 2 extra liv omedelbart."
+      },
+      "agile_transformation": {
+        "name": "Agil transformation",
+        "curse": "Stängsel växer 15% långsammare.",
+        "blessing": "Butiken erbjuder 1 extra uppgradering och fyller på två gånger per besök."
+      }
+    }
+  }
+}

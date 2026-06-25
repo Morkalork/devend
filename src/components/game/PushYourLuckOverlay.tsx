@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Trophy, Zap, Coins } from 'lucide-react';
 
 interface PushYourLuckOverlayProps {
@@ -16,6 +17,7 @@ export function PushYourLuckOverlay({
   onBank,
   onPush,
 }: PushYourLuckOverlayProps) {
+  const { t } = useTranslation();
   const [chosen, setChosen] = useState(false);
   // Each 25% of remaining area cleared = +1 OT
   const chunkSize = remainingPercent * 0.25;
@@ -68,19 +70,19 @@ export function PushYourLuckOverlay({
             <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
               <Trophy className="w-5 h-5 text-success" />
             </div>
-            <h2 className="text-xl font-display font-bold text-success">Level Cleared!</h2>
+            <h2 className="text-xl font-display font-bold text-success">{t('pushYourLuck.levelCleared')}</h2>
           </div>
 
           {/* Info */}
           <div className="text-center mb-4">
             <p className="text-muted-foreground text-sm mb-2">
-              Remaining: <span className="text-foreground font-semibold">{remainingPercent}%</span>
-              <span className="text-muted-foreground"> / {thresholdPercent}% target</span>
+              {t('pushYourLuck.remainingLabel')} <span className="text-foreground font-semibold">{remainingPercent}%</span>
+              <span className="text-muted-foreground"> {t('pushYourLuck.targetSuffix', { threshold: thresholdPercent })}</span>
             </p>
             <p className="text-xs text-muted-foreground">
-              Keep cutting for <span className="text-primary font-medium">+1h per {chunkSize.toFixed(0)}% removed</span>.
+              {t('pushYourLuck.keepCuttingPrefix')} <span className="text-primary font-medium">{t('pushYourLuck.bonusPerRemoved', { percent: chunkSize.toFixed(0) })}</span>.
               <br />
-              <span className="text-success">No risk — you keep your score if you fail!</span>
+              <span className="text-success">{t('pushYourLuck.noRisk')}</span>
             </p>
           </div>
 
@@ -97,7 +99,7 @@ export function PushYourLuckOverlay({
               }}
             >
               <Coins className="w-4 h-4" />
-              Bank & Continue
+              {t('pushYourLuck.bankAndContinue')}
             </button>
             <button
               disabled={chosen}
@@ -110,7 +112,7 @@ export function PushYourLuckOverlay({
               }}
             >
               <Zap className="w-4 h-4" />
-              Push Your Luck
+              {t('pushYourLuck.pushYourLuck')}
             </button>
           </div>
         </div>

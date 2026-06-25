@@ -7,6 +7,7 @@
  * component is purely presentational.
  */
 import { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Medal, ArrowLeft, Check, Lock, ChevronRight, ChevronDown, Hexagon, Info } from 'lucide-react';
 import { Certificate } from '@/types/certificate';
@@ -14,6 +15,7 @@ import { Achievement, ACHIEVEMENT_STAT_LABELS } from '@/types/achievement';
 import { MetaProgressionStats } from '@/types/metaProgression';
 import { UpgradeConfig } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
+import { contentText } from '@/i18n/content';
 import { Progress } from '@/components/ui/progress';
 import { TutorialOverlay } from './TutorialOverlay';
 
@@ -69,6 +71,7 @@ export function CertificateStore({
   metaStats,
   lifetimeHoursSpent = 0,
 }: CertificateStoreProps) {
+  const { t } = useTranslation();
   // selectedLevel[certId] = target level (1-indexed) the player has tapped
   const [selectedLevels, setSelectedLevels] = useState<Record<string, number>>({});
 
@@ -94,13 +97,13 @@ export function CertificateStore({
   const getUnlockInfo = (cert: Certificate): UnlockInfo => {
     if (cert.unlockType === 'upgrade-chain' && cert.sourceUpgradeId) {
       const upgrade = upgrades.find(u => u.id === cert.sourceUpgradeId);
-      const upgradeName = upgrade ? `${upgrade.name} (${upgrade.tier})` : cert.sourceUpgradeId;
+      const upgradeName = upgrade ? `${contentText.upgradeName(t, upgrade)} (${contentText.tier(t, upgrade.tier)})` : cert.sourceUpgradeId;
       const required = cert.requiredRuns ?? 3;
       return {
-        requirementText: `Buy the ${upgradeName} upgrade in ${required} different runs.`,
+        requirementText: t('certificateStore.unlockUpgradeChain', { upgradeName, required }),
         current: Math.min(maxTierCounts[cert.sourceUpgradeId] || 0, required),
         required,
-        progressLabel: 'runs',
+        progressLabel: t('certificateStore.progressLabelRuns'),
       };
     }
     if (cert.unlockType === 'achievement' && cert.sourceAchievementId) {
@@ -108,14 +111,14 @@ export function CertificateStore({
       if (achievement) {
         const statValue = metaStats?.[achievement.requirement.stat] ?? 0;
         return {
-          requirementText: `Complete the "${achievement.name}" achievement: ${achievement.description}`,
+          requirementText: t('certificateStore.unlockAchievement', { name: contentText.achName(t, achievement), description: contentText.achDesc(t, achievement) }),
           current: Math.min(statValue, achievement.requirement.threshold),
           required: achievement.requirement.threshold,
           progressLabel: ACHIEVEMENT_STAT_LABELS[achievement.requirement.stat].toLowerCase(),
         };
       }
       return {
-        requirementText: 'Complete the linked achievement.',
+        requirementText: t('certificateStore.unlockLinkedAchievement'),
         current: 0,
         required: 1,
         progressLabel: '',
@@ -124,13 +127,13 @@ export function CertificateStore({
     if (cert.unlockType === 'hours-spent') {
       const required = cert.requiredHoursSpent ?? 1;
       return {
-        requirementText: `Spend ${required} Certificate Hours in this store (on any certificates).`,
+        requirementText: t('certificateStore.unlockHoursSpent', { required }),
         current: Math.min(lifetimeHoursSpent, required),
         required,
-        progressLabel: 'hours spent',
+        progressLabel: t('certificateStore.progressLabelHoursSpent'),
       };
     }
-    return { requirementText: 'Keep playing to unlock.', current: 0, required: 1, progressLabel: '' };
+    return { requirementText: t('certificateStore.unlockKeepPlaying'), current: 0, required: 1, progressLabel: '' };
   };
 
   const getCertStatus = (cert: Certificate) => {
@@ -213,7 +216,7 @@ export function CertificateStore({
           <div className="flex items-center gap-3">
             <Medal className="w-8 h-8 text-white" />
             <h1 className="text-3xl sm:text-4xl font-display font-black tracking-wider text-foreground">
-              CERTIFICATES
+              {t('certificateStore.title')}
             </h1>
           </div>
 
@@ -226,7 +229,7 @@ export function CertificateStore({
             style={{ boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}
           >
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
-              Certificate Hours
+              {t('certificateStore.certificateHours')}
             </p>
             <div className="flex items-center justify-center gap-2">
               <Hexagon className="w-6 h-6 text-white fill-white/20" />
@@ -235,7 +238,7 @@ export function CertificateStore({
               </p>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Earn 1h every 5 levels completed
+              {t('certificateStore.earnRate')}
             </p>
           </motion.div>
 
@@ -244,7 +247,7 @@ export function CertificateStore({
 
             {/* ── Unlocked & levels available ── */}
             {available.length > 0 && (
-              <Section title="Available">
+              <Section title={t('certificateStore.sectionAvailable')}>
                 {available.map((cert, i) => {
                   const levelsOwned = certLevelsOwned[cert.id] || 0;
                   const selectedTarget = selectedLevels[cert.id];
@@ -265,12 +268,12 @@ export function CertificateStore({
                       {/* Header: name + description + owned summary + chevron */}
                       <div className="flex items-start gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="font-display font-bold text-base text-foreground">{cert.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{cert.description}</p>
+                          <p className="font-display font-bold text-base text-foreground">{contentText.certName(t, cert)}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{contentText.certDesc(t, cert)}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                           <span className="text-xs font-display font-bold text-muted-foreground tabular-nums">
-                            Lv {levelsOwned}/{cert.levels.length}
+                            {t('certificateStore.levelFraction', { owned: levelsOwned, total: cert.levels.length })}
                           </span>
                           <ChevronDown
                             className={`w-5 h-5 text-muted-foreground transition-transform ${expanded ? 'rotate-180 text-white' : ''}`}
@@ -316,9 +319,9 @@ export function CertificateStore({
                                       ) : (
                                         <Hexagon className="w-3.5 h-3.5 fill-current opacity-50" />
                                       )}
-                                      Lv {levelNum}
+                                      {t('certificateStore.levelLabel', { level: levelNum })}
                                       {!owned && (
-                                        <span className="text-xs font-normal opacity-70">({level.cost}h)</span>
+                                        <span className="text-xs font-normal opacity-70">{t('certificateStore.levelCost', { cost: level.cost })}</span>
                                       )}
                                     </button>
                                   );
@@ -328,12 +331,12 @@ export function CertificateStore({
                               {selectedTarget != null && (
                                 <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
                                   <div className="text-sm text-muted-foreground">
-                                    Cost: <span className={canAfford ? 'text-white font-bold' : 'text-destructive font-bold'}>
-                                      {pendingCost}h
+                                    {t('certificateStore.cost')} <span className={canAfford ? 'text-white font-bold' : 'text-destructive font-bold'}>
+                                      {t('certificateStore.hoursValue', { hours: pendingCost })}
                                     </span>
                                     {!canAfford && (
                                       <span className="text-xs text-destructive/80 ml-1">
-                                        (need {pendingCost - totalCertificateHours}h more)
+                                        {t('certificateStore.needMore', { hours: pendingCost - totalCertificateHours })}
                                       </span>
                                     )}
                                   </div>
@@ -342,7 +345,7 @@ export function CertificateStore({
                                     disabled={!canAfford}
                                     className="arcade-button-primary rounded-lg px-4 py-1.5 text-sm flex items-center gap-1.5 disabled:opacity-40 disabled:pointer-events-none"
                                   >
-                                    Buy up to Lv {selectedTarget}
+                                    {t('certificateStore.buyUpToLevel', { level: selectedTarget })}
                                     <ChevronRight className="w-4 h-4" />
                                   </button>
                                 </div>
@@ -359,7 +362,7 @@ export function CertificateStore({
 
             {/* ── Locked ── */}
             {locked.length > 0 && (
-              <Section title="Locked">
+              <Section title={t('certificateStore.sectionLocked')}>
                 {locked.map((cert, i) => {
                   const unlock = getUnlockInfo(cert);
                   const expanded = expandedCertId === cert.id;
@@ -377,8 +380,8 @@ export function CertificateStore({
                       <div className="flex items-start gap-3">
                         <Lock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                         <div className="flex-1 min-w-0">
-                          <p className="font-display font-bold text-sm text-muted-foreground">{cert.name}</p>
-                          <p className="text-xs text-muted-foreground/70 mt-0.5">{cert.description}</p>
+                          <p className="font-display font-bold text-sm text-muted-foreground">{contentText.certName(t, cert)}</p>
+                          <p className="text-xs text-muted-foreground/70 mt-0.5">{contentText.certDesc(t, cert)}</p>
                           {unlock.required > 1 && (
                             <Progress
                               value={(unlock.current / unlock.required) * 100}
@@ -390,7 +393,7 @@ export function CertificateStore({
                         <button
                           type="button"
                           aria-expanded={expanded}
-                          aria-label={`How to unlock ${cert.name}`}
+                          aria-label={t('certificateStore.howToUnlockAria', { name: cert.name })}
                           className={`shrink-0 -m-2 p-2 rounded-lg transition-colors ${expanded ? 'text-white' : 'text-muted-foreground'}`}
                         >
                           <Info className="w-5 h-5" />
@@ -409,12 +412,15 @@ export function CertificateStore({
                           >
                             <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5">
                               <p className="font-display font-bold text-xs uppercase tracking-wider text-white">
-                                How to unlock
+                                {t('certificateStore.howToUnlock')}
                               </p>
                               <p className="text-xs leading-relaxed text-foreground/85">{unlock.requirementText}</p>
                               <p className="text-xs font-bold tabular-nums text-white">
-                                Progress: {unlock.current} / {unlock.required}
-                                {unlock.progressLabel ? ` ${unlock.progressLabel}` : ''}
+                                {t('certificateStore.progress', {
+                                  current: unlock.current,
+                                  required: unlock.required,
+                                  label: unlock.progressLabel ? ` ${unlock.progressLabel}` : '',
+                                })}
                               </p>
                               <Progress
                                 value={(unlock.current / unlock.required) * 100}
@@ -432,7 +438,7 @@ export function CertificateStore({
 
             {/* ── Fully purchased ── */}
             {maxed.length > 0 && (
-              <Section title="Complete">
+              <Section title={t('certificateStore.sectionComplete')}>
                 {maxed.map((cert, i) => {
                   const expanded = expandedCertId === cert.id;
 
@@ -448,9 +454,9 @@ export function CertificateStore({
                     >
                       <div className="flex items-center gap-3">
                         <Check className="w-5 h-5 text-white shrink-0" />
-                        <p className="flex-1 min-w-0 font-display font-bold text-sm text-white">{cert.name}</p>
+                        <p className="flex-1 min-w-0 font-display font-bold text-sm text-white">{contentText.certName(t, cert)}</p>
                         <span className="text-xs font-display font-bold text-muted-foreground tabular-nums shrink-0">
-                          Lv {cert.levels.length}/{cert.levels.length}
+                          {t('certificateStore.levelFraction', { owned: cert.levels.length, total: cert.levels.length })}
                         </span>
                         <ChevronDown
                           className={`w-5 h-5 text-muted-foreground transition-transform shrink-0 ${expanded ? 'rotate-180 text-white' : ''}`}
@@ -467,7 +473,7 @@ export function CertificateStore({
                             className="overflow-hidden"
                           >
                             <div className="mt-3 pt-3 border-t border-white/10">
-                              <p className="text-xs text-muted-foreground">{cert.description}</p>
+                              <p className="text-xs text-muted-foreground">{contentText.certDesc(t, cert)}</p>
                             </div>
                           </motion.div>
                         )}
@@ -479,7 +485,7 @@ export function CertificateStore({
             )}
 
             {certificates.length === 0 && (
-              <p className="text-center text-muted-foreground text-sm py-8">Loading certificates…</p>
+              <p className="text-center text-muted-foreground text-sm py-8">{t('certificateStore.loading')}</p>
             )}
           </div>
 
@@ -492,7 +498,7 @@ export function CertificateStore({
             className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2 mt-[-0.75rem]"
           >
             <ArrowLeft className="w-5 h-5" />
-            Continue
+            {t('certificateStore.continue')}
           </motion.button>
         </motion.div>
       </div>
@@ -500,8 +506,8 @@ export function CertificateStore({
       {showTutorial && (
         <TutorialOverlay
           visible
-          title="CERTIFICATE WORKSHOP"
-          body="Unlock permanent bonuses by mastering upgrade families across multiple runs. Each certificate has levels you can purchase with Certificate Hours earned during gameplay."
+          title={t('certificateStore.tutorialTitle')}
+          body={t('certificateStore.tutorialBody')}
           arrowDirection="none"
           onDismiss={() => onTutorialDismiss?.()}
         />

@@ -1,7 +1,9 @@
-import { motion } from 'framer-motion';
-import { ArrowLeft, Settings, RefreshCw, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
+import { ArrowLeft, Settings, RefreshCw, Trash2, Languages, ChevronDown, Check } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { CRTBackground } from './CRTBackground';
+import { changeLanguage, languageNames, supportedLanguages, type SupportedLanguage } from '@/i18n';
 
 interface OptionsScreenProps {
   onBack: () => void;
@@ -18,7 +20,32 @@ export function OptionsScreen({
   hasCertificates,
   accentColor,
 }: OptionsScreenProps) {
+  const { t, i18n } = useTranslation();
   const [showConfirm, setShowConfirm] = useState(false);
+  const [langOpen, setLangOpen] = useState(false);
+  const langRef = useRef<HTMLDivElement>(null);
+
+  const resolved = i18n.resolvedLanguage ?? i18n.language;
+  const activeLanguage: SupportedLanguage = (supportedLanguages as readonly string[]).includes(resolved)
+    ? (resolved as SupportedLanguage)
+    : 'en';
+
+  // Close the language dropdown when tapping/clicking outside it.
+  useEffect(() => {
+    if (!langOpen) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (langRef.current && !langRef.current.contains(e.target as Node)) {
+        setLangOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [langOpen]);
+
+  const handleSelectLanguage = (lang: SupportedLanguage) => {
+    changeLanguage(lang);
+    setLangOpen(false);
+  };
 
   const handleResetClick = () => {
     setShowConfirm(true);
@@ -69,7 +96,7 @@ export function OptionsScreen({
         <div className="flex items-center gap-3">
           <Settings className="w-8 h-8 text-primary" />
           <h1 className="text-3xl sm:text-4xl font-display font-black tracking-wider text-foreground">
-            OPTIONS
+            {t('options.title')}
           </h1>
         </div>
 
@@ -80,6 +107,60 @@ export function OptionsScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
+          {/* Language selector */}
+          <div className="w-full" ref={langRef}>
+            <div className="flex items-center gap-2 mb-2 text-sm font-display tracking-wide text-muted-foreground">
+              <Languages className="w-4 h-4" />
+              {t('options.language')}
+            </div>
+            <div className="relative">
+              <motion.button
+                className="w-full flex items-center justify-between gap-3 rounded-lg px-4 py-3 bg-card/60 border-2 border-primary/40 hover:border-primary text-foreground font-display tracking-wide transition-colors"
+                onClick={() => setLangOpen((o) => !o)}
+                whileTap={{ scale: 0.98 }}
+                aria-haspopup="listbox"
+                aria-expanded={langOpen}
+              >
+                <span>{languageNames[activeLanguage]}</span>
+                <ChevronDown
+                  className={`w-5 h-5 text-primary transition-transform duration-200 ${langOpen ? 'rotate-180' : ''}`}
+                />
+              </motion.button>
+
+              <AnimatePresence>
+                {langOpen && (
+                  <motion.ul
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15 }}
+                    role="listbox"
+                    className="absolute left-0 right-0 top-full mt-2 z-50 rounded-lg overflow-hidden border-2 border-primary/40 bg-card shadow-xl shadow-primary/10"
+                  >
+                    {supportedLanguages.map((lang) => {
+                      const isActive = activeLanguage === lang;
+                      return (
+                        <li key={lang} role="option" aria-selected={isActive}>
+                          <button
+                            className={`w-full flex items-center justify-between gap-3 px-4 py-3 text-left font-display tracking-wide transition-colors ${
+                              isActive
+                                ? 'bg-primary/15 text-primary'
+                                : 'text-foreground hover:bg-primary/10'
+                            }`}
+                            onClick={() => handleSelectLanguage(lang)}
+                          >
+                            <span>{languageNames[lang]}</span>
+                            {isActive && <Check className="w-4 h-4 text-primary" />}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </motion.ul>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
           {/* Re-enable All Tutorials */}
           <motion.button
             className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
@@ -88,7 +169,7 @@ export function OptionsScreen({
             whileTap={{ scale: 0.98 }}
           >
             <RefreshCw className="w-5 h-5" />
-            Re-enable All Tutorials
+            {t('options.reEnableTutorials')}
           </motion.button>
 
           {/* Reset certificates */}
@@ -100,7 +181,7 @@ export function OptionsScreen({
               whileTap={{ scale: 0.98 }}
             >
               <Trash2 className="w-5 h-5" />
-              Reset Certificates & Score
+              {t('options.resetCertificates')}
             </motion.button>
           )}
 
@@ -112,7 +193,7 @@ export function OptionsScreen({
             whileTap={{ scale: 0.98 }}
           >
             <ArrowLeft className="w-5 h-5" />
-            Back
+            {t('options.back')}
           </motion.button>
         </motion.div>
       </motion.div>
@@ -130,23 +211,23 @@ export function OptionsScreen({
             className="bg-card border border-border rounded-xl p-6 max-w-sm w-full shadow-xl"
           >
             <h2 className="text-xl font-display font-bold text-foreground mb-4">
-              Reset All Progress?
+              {t('options.resetConfirmTitle')}
             </h2>
             <p className="text-muted-foreground mb-6">
-              This will reset your score balance and all owned certificates. This action cannot be undone.
+              {t('options.resetConfirmBody')}
             </p>
             <div className="flex gap-3">
               <button
                 className="flex-1 arcade-button-secondary rounded-lg py-2"
                 onClick={handleCancelReset}
               >
-                Cancel
+                {t('options.cancel')}
               </button>
               <button
                 className="flex-1 arcade-button-danger rounded-lg py-2"
                 onClick={handleConfirmReset}
               >
-                Reset
+                {t('options.reset')}
               </button>
             </div>
           </motion.div>

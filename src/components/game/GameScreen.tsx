@@ -7,6 +7,7 @@
  * (TopBarDetailsPanel / BottomBarDetailsPanel).
  */
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Menu, Home, RotateCcw, Pause, Play } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
@@ -91,6 +92,7 @@ export function GameScreen({
   activeMutators = [],
   fenceDurability = null,
 }: GameScreenProps) {
+  const { t } = useTranslation();
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
 
   // In-game tutorial step state
@@ -235,14 +237,14 @@ export function GameScreen({
             className="font-display text-4xl font-bold tracking-widest"
             style={{ color: accentColor, textShadow: `0 0 24px ${accentColor}` }}
           >
-            PAUSED
+            {t('game.paused')}
           </p>
           <button
             className="arcade-button-primary px-8 py-3 rounded-lg flex items-center gap-2 text-base font-bold"
             onClick={() => setIsPaused(false)}
           >
             <Play className="w-5 h-5" />
-            Resume
+            {t('game.resume')}
           </button>
         </div>
       )}
@@ -257,7 +259,7 @@ export function GameScreen({
             border: `1px solid ${accentColor}55`,
             color: accentColor,
           }}
-          aria-label="Game menu"
+          aria-label={t('game.gameMenu')}
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -270,7 +272,7 @@ export function GameScreen({
               border: `1px solid ${accentColor}55`,
               color: accentColor,
             }}
-            aria-label={isPaused ? 'Resume' : 'Pause'}
+            aria-label={isPaused ? t('game.resume') : t('game.pause')}
           >
             {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
           </button>
@@ -292,7 +294,7 @@ export function GameScreen({
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <RotateCcw className="w-4 h-4" />
-              Restart Run
+              {t('game.restartRun')}
             </button>
             <button
               onClick={() => { setMenuOpen(false); onMainMenu(); }}
@@ -302,7 +304,7 @@ export function GameScreen({
               onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <Home className="w-4 h-4" />
-              Main Menu
+              {t('game.mainMenu')}
             </button>
           </div>
         )}
@@ -316,12 +318,8 @@ export function GameScreen({
           onMoverTutorialSeen?.();
         }}
         accentColor="#ff8800"
-        title="⚠ Moving Obstacles"
-        body={
-          "Orange obstacles move back and forth on a fixed track.\n\n" +
-          "Balls bounce off them — but if your growing fence touches one, you lose a life.\n\n" +
-          "Watch the track lines and time your fences carefully!"
-        }
+        title={t('game.moverTutorialTitle')}
+        body={t('game.moverTutorialBody')}
       />
 
       {/* Info panels tutorial — shown after fence tutorial, first run only */}
@@ -329,12 +327,8 @@ export function GameScreen({
         visible={inGameStep === 'done' && showInfoPanelsTutorial && !showMoverOverlay}
         onDismiss={onInfoPanelsTutorialSeen}
         accentColor={accentColor}
-        title="Info Panels"
-        body={
-          "The status bars are expandable!\n\n" +
-          "Tap the TOP BAR to see full level details, all your active upgrades with descriptions, and certificate-hour progress.\n\n" +
-          "Tap the BOTTOM BAR to view every active modifier explained in plain language."
-        }
+        title={t('game.infoPanelsTutorialTitle')}
+        body={t('game.infoPanelsTutorialBody')}
       />
 
       {/* Full-screen top info panel */}
