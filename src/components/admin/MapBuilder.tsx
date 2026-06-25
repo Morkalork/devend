@@ -466,7 +466,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         </div>
 
         {/* Side Panel */}
-        <div className="flex-shrink-0 w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-border bg-card overflow-y-auto max-h-64 lg:max-h-none">
+        <div className="flex-shrink-0 w-full lg:w-72 border-t lg:border-t-0 lg:border-l border-border bg-card overflow-y-auto max-h-64 lg:max-h-full lg:h-full">
           {currentLevel && (
             <>
               <LevelPanel
