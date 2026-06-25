@@ -424,7 +424,7 @@ export function isPositionActive(grid: SpaceGrid, pos: Vector2): boolean {
 export function getActiveNeighbors(grid: SpaceGrid, index: number): number[] {
   const { row, col } = indexToRowCol(grid, index);
   const neighbors: number[] = [];
-  
+
   // 4-connected neighbors
   if (row > 0) {
     const up = index - grid.width;
@@ -442,6 +442,62 @@ export function getActiveNeighbors(grid: SpaceGrid, index: number): number[] {
     const right = index + 1;
     if (isCellActive(grid, right)) neighbors.push(right);
   }
-  
+
   return neighbors;
+}
+
+/**
+ * Build a Map from cell index → GridRegion for O(1) ball-in-region lookups.
+ * Call once per frame when you need repeated lookups across multiple balls.
+ */
+export function buildGridRegionMap(gridRegions: GridRegion[]): Map<number, GridRegion> {
+  const map = new Map<number, GridRegion>();
+  for (const region of gridRegions) {
+    for (const idx of region.cellIndices) {
+      map.set(idx, region);
+    }
+  }
+  return map;
+}
+
+/**
+ * Find the GridRegion a ball belongs to, even when the ball's direct grid cell is
+ * REMOVED (e.g. ball center fractionally inside a mirror-polygon boundary).
+ *
+ * Tries the direct cell first; if that is not in any region, expands outward up to
+ * SEARCH_RADIUS cells looking for an ACTIVE cell that IS in a region.  The search
+ * is performed in spiral order so the nearest valid cell wins.
+ */
+export function findGridRegionForBall(
+  grid: SpaceGrid,
+  regionMap: Map<number, GridRegion>,
+  ballX: number,
+  ballY: number,
+): GridRegion | null {
+  const directIndex = worldToGridIndex(grid, ballX, ballY);
+  if (directIndex < 0) return null;
+
+  // Fast path: direct cell is active and mapped
+  const direct = regionMap.get(directIndex);
+  if (direct !== undefined) return direct;
+
+  // Fallback: search a 5×5 neighbourhood (±2 cells) for the nearest active region cell
+  const col = directIndex % grid.width;
+  const row = Math.floor(directIndex / grid.width);
+  // Search in order of Manhattan distance so the closest match wins
+  for (let radius = 1; radius <= 2; radius++) {
+    for (let dr = -radius; dr <= radius; dr++) {
+      for (let dc = -radius; dc <= radius; dc++) {
+        if (Math.abs(dr) !== radius && Math.abs(dc) !== radius) continue; // only the shell
+        const r2 = row + dr;
+        const c2 = col + dc;
+        if (r2 < 0 || r2 >= grid.height || c2 < 0 || c2 >= grid.width) continue;
+        const idx = r2 * grid.width + c2;
+        const region = regionMap.get(idx);
+        if (region !== undefined) return region;
+      }
+    }
+  }
+
+  return null;
 }

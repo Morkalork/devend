@@ -100,6 +100,7 @@ export function findSubRegionsGrid(
 
     let hasBalls = false;
     for (const ball of balls) {
+      if (ball.state === 'won') continue;
       for (const sample of component) {
         let ballBlocked = false;
         for (const seg of wallSegments) {

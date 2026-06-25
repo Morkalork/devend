@@ -2,6 +2,7 @@
  * BottomBarDetailsPanel — full-screen expansion of GameBottomBar: every
  * active modifier explained in plain language.
  */
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 
@@ -27,6 +28,7 @@ export function BottomBarDetailsPanel({
   accentColor = '#00ff88',
   lockedBalls = 0,
 }: BottomBarDetailsPanelProps) {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   const m = activeModifiers;
@@ -41,119 +43,121 @@ export function BottomBarDetailsPanel({
 
   const rows: StatRow[] = [
     {
-      label: 'Ball Speed',
+      label: t('bottomBarDetails.ballSpeed'),
       value: pct(effectiveSpeed),
       changed: effectiveSpeed !== 1,
-      description: `Effective multiplier on ball velocity. Base: ${pct(m.ballSpeedMultiplier)}${
+      description: `${t('bottomBarDetails.ballSpeedDescBase', { base: pct(m.ballSpeedMultiplier) })}${
         m.microManagerPerLock > 0
-          ? `. MicroManager applies an additional ${Math.round((1 - microFactor) * 100)}% reduction from ${lockedBalls} locked ball${lockedBalls !== 1 ? 's' : ''}`
+          ? t('bottomBarDetails.ballSpeedDescMicro', { reduction: Math.round((1 - microFactor) * 100), count: lockedBalls })
           : ''
-      }. Slower balls give you more reaction time when drawing fences.`,
+      }${t('bottomBarDetails.ballSpeedDescTail')}`,
     },
     {
-      label: 'Ball Size',
+      label: t('bottomBarDetails.ballSize'),
       value: pct(m.ballSizeMultiplier),
       changed: m.ballSizeMultiplier !== 1,
-      description:
-        'Radius multiplier applied to every ball. Larger balls are harder to dodge when drawing a fence — but also cover more of the board for locking purposes.',
+      description: t('bottomBarDetails.ballSizeDesc'),
     },
     {
-      label: 'Fence Speed',
+      label: t('bottomBarDetails.fenceSpeed'),
       value: pct(m.fenceGenerationSpeedMultiplier),
       changed: m.fenceGenerationSpeedMultiplier !== 1,
-      description:
-        'How quickly your fence grows after you start drawing. Higher fence speed shortens the window a ball has to collide with your in-progress fence, making cuts safer.',
+      description: t('bottomBarDetails.fenceSpeedDesc'),
     },
     {
-      label: 'Score Multiplier',
+      label: t('bottomBarDetails.scoreMultiplier'),
       value: pct(m.scoreMultiplier),
       changed: m.scoreMultiplier !== 1,
-      description:
-        'Global multiplier applied to all points earned this run. Stacks multiplicatively with per-cut par bonuses.',
+      description: t('bottomBarDetails.scoreMultiplierDesc'),
     },
     {
-      label: 'Instant Fences',
+      label: t('bottomBarDetails.instantFences'),
       value: bonus(m.instantFencesPerMap),
       changed: m.instantFencesPerMap !== 0,
       description:
         m.instantFencesPerMap > 0
-          ? `${m.instantFencesPerMap} fence${m.instantFencesPerMap !== 1 ? 's' : ''} are automatically completed at the start of each level, capturing territory without any risk.`
-          : 'No instant fences active. Purchase upgrades to gain free fences each level.',
+          ? t('bottomBarDetails.instantFencesActive', { count: m.instantFencesPerMap })
+          : t('bottomBarDetails.instantFencesInactive'),
     },
     {
-      label: 'Concurrent Fences',
+      label: t('bottomBarDetails.concurrentFences'),
       value: bonus(m.additionalConcurrentFences),
       changed: m.additionalConcurrentFences !== 0,
       description:
         m.additionalConcurrentFences > 0
-          ? `You can draw ${1 + m.additionalConcurrentFences} fences simultaneously. Extra concurrent fences let you cut from multiple walls at once.`
-          : 'Default: 1 active fence at a time.',
+          ? t('bottomBarDetails.concurrentFencesActive', { total: 1 + m.additionalConcurrentFences })
+          : t('bottomBarDetails.concurrentFencesInactive'),
     },
     {
-      label: 'Bonus Removal',
+      label: t('bottomBarDetails.bonusRemoval'),
       value: `${pct(m.bonusRemovalChance)} @ ${pct(m.bonusRemovalAmount)}`,
       changed: m.bonusRemovalChance > 0,
       description:
         m.bonusRemovalChance > 0
-          ? `Each successful cut has a ${pct(m.bonusRemovalChance)} chance to strip ${pct(m.bonusRemovalAmount)} of a ball's accumulated speed bonus, gradually nudging fast balls back toward their base speed.`
-          : 'No bonus removal active.',
+          ? t('bottomBarDetails.bonusRemovalActive', { chance: pct(m.bonusRemovalChance), amount: pct(m.bonusRemovalAmount) })
+          : t('bottomBarDetails.bonusRemovalInactive'),
     },
     {
-      label: 'Extra Lives',
+      label: t('bottomBarDetails.extraLives'),
       value: bonus(m.extraLives),
       changed: m.extraLives !== 0,
       description:
         m.extraLives > 0
-          ? `+${m.extraLives} additional starting live${m.extraLives !== 1 ? 's' : ''} added at the start of every run. More lives means more chances to recover from a bad cut.`
-          : 'No extra starting lives.',
+          ? t('bottomBarDetails.extraLivesActive', { count: m.extraLives })
+          : t('bottomBarDetails.extraLivesInactive'),
     },
     {
-      label: 'Score Interest',
+      label: t('bottomBarDetails.scoreInterest'),
       value: pct(m.scoreInterestRate),
       changed: m.scoreInterestRate !== 0,
       description:
         m.scoreInterestRate > 0
-          ? `At the end of each level, ${pct(m.scoreInterestRate)} of your current total score is added as a bonus. Higher accumulated scores compound faster.`
-          : 'No interest rate active.',
+          ? t('bottomBarDetails.scoreInterestActive', { rate: pct(m.scoreInterestRate) })
+          : t('bottomBarDetails.scoreInterestInactive'),
     },
     {
-      label: 'Extra Shop Slots',
+      label: t('bottomBarDetails.extraShopSlots'),
       value: bonus(m.extraShopItems),
       changed: m.extraShopItems !== 0,
       description:
         m.extraShopItems > 0
-          ? `${m.extraShopItems} extra item${m.extraShopItems !== 1 ? 's' : ''} appear in the upgrade shop between levels, giving you more choices each visit.`
-          : 'Default shop size.',
+          ? t('bottomBarDetails.extraShopSlotsActive', { count: m.extraShopItems })
+          : t('bottomBarDetails.extraShopSlotsInactive'),
     },
     {
-      label: 'Shop Restocks',
+      label: t('bottomBarDetails.shopRestocks'),
       value: bonus(m.shopRestockCount),
       changed: m.shopRestockCount !== 0,
       description:
         m.shopRestockCount > 0
-          ? `Your first ${m.shopRestockCount === 1 ? 'purchase' : `${m.shopRestockCount} purchases`} per shop visit each add a fresh offer to the shelf (Procurement).`
-          : 'No shop restocking.',
+          ? t('bottomBarDetails.shopRestocksActive', { count: m.shopRestockCount })
+          : t('bottomBarDetails.shopRestocksInactive'),
     },
     {
-      label: 'MicroManager',
-      value: m.microManagerPerLock > 0 ? `${Math.round(m.microManagerPerLock * 100)}% / lock` : 'Off',
+      label: t('bottomBarDetails.microManager'),
+      value: m.microManagerPerLock > 0 ? t('bottomBarDetails.microManagerValue', { percent: Math.round(m.microManagerPerLock * 100) }) : t('bottomBarDetails.off'),
       changed: m.microManagerPerLock > 0,
       description:
         m.microManagerPerLock > 0
-          ? `Each locked ball reduces ball speed by ${Math.round(m.microManagerPerLock * 100)}% (stacks multiplicatively, capped at 70% total). Right now ${lockedBalls} ball${lockedBalls !== 1 ? 's' : ''} locked → effective speed ${pct(effectiveSpeed)}.`
-          : 'MicroManager not active.',
+          ? t('bottomBarDetails.microManagerActive', { percent: Math.round(m.microManagerPerLock * 100), count: lockedBalls, speed: pct(effectiveSpeed) })
+          : t('bottomBarDetails.microManagerInactive'),
     },
     {
-      label: 'Ball Path Prediction',
+      label: t('bottomBarDetails.ballPathPrediction'),
       value:
         m.ballPathPredictionBounces > 0
-          ? `${m.ballPathPredictionBounces} bounce${m.ballPathPredictionBounces !== 1 ? 's' : ''}`
-          : 'Off',
+          ? t('bottomBarDetails.bounceCount', { count: m.ballPathPredictionBounces })
+          : t('bottomBarDetails.off'),
       changed: m.ballPathPredictionBounces > 0,
       description:
         m.ballPathPredictionBounces > 0
-          ? `Draws a predicted trajectory ${m.ballPathPredictionBounces} bounce${m.ballPathPredictionBounces !== 1 ? 's' : ''} ahead for the ${m.ballPathPredictionBalls >= 100 ? 'fastest balls' : `top ${m.ballPathPredictionBalls} fastest ball${m.ballPathPredictionBalls !== 1 ? 's' : ''}`}. Helps you time fences to avoid collisions.`
-          : 'No trajectory preview active.',
+          ? t('bottomBarDetails.ballPathPredictionActive', {
+              bounceText: t('bottomBarDetails.bounceCount', { count: m.ballPathPredictionBounces }),
+              target: m.ballPathPredictionBalls >= 100
+                ? t('bottomBarDetails.ballPathTargetAll')
+                : t('bottomBarDetails.ballPathTargetTop', { count: m.ballPathPredictionBalls }),
+            })
+          : t('bottomBarDetails.ballPathPredictionInactive'),
     },
   ];
 
@@ -184,7 +188,7 @@ export function BottomBarDetailsPanel({
           className="text-xl font-black tracking-widest uppercase"
           style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
         >
-          Active Modifiers
+          {t('bottomBarDetails.activeModifiers')}
         </h1>
         <button
           onClick={onClose}
@@ -195,7 +199,7 @@ export function BottomBarDetailsPanel({
             color: accentColor,
             boxShadow: `0 0 12px ${accentColor}44`,
           }}
-          aria-label="Close panel"
+          aria-label={t('bottomBarDetails.closePanel')}
         >
           <X className="w-6 h-6" />
         </button>
@@ -207,7 +211,7 @@ export function BottomBarDetailsPanel({
         {/* Active (non-default) modifiers */}
         {activeRows.length > 0 && (
           <section>
-            <p style={sectionHeadStyle}>Modified ({activeRows.length})</p>
+            <p style={sectionHeadStyle}>{t('bottomBarDetails.modifiedCount', { count: activeRows.length })}</p>
             <div className="space-y-3">
               {activeRows.map(row => (
                 <div
@@ -241,7 +245,7 @@ export function BottomBarDetailsPanel({
             style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: `1px solid ${accentColor}22` }}
           >
             <p className="text-sm" style={{ color: '#4a7a5a' }}>
-              No modifiers active yet. Purchase upgrades between levels to gain power-ups for your run.
+              {t('bottomBarDetails.noModifiers')}
             </p>
           </div>
         )}
@@ -249,7 +253,7 @@ export function BottomBarDetailsPanel({
         {/* Base / inactive modifiers */}
         {inactiveRows.length > 0 && (
           <section>
-            <p style={sectionHeadStyle}>At Default</p>
+            <p style={sectionHeadStyle}>{t('bottomBarDetails.atDefault')}</p>
             <div className="space-y-2">
               {inactiveRows.map(row => (
                 <div

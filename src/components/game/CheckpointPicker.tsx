@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 
 interface CheckpointPickerProps {
@@ -10,6 +11,7 @@ interface CheckpointPickerProps {
 }
 
 export function CheckpointPicker({ maxLevel, onSelect, onClose, accentColor = '#00ff88' }: CheckpointPickerProps) {
+  const { t } = useTranslation();
   const levels = Array.from({ length: maxLevel - 1 }, (_, i) => i + 1).reverse();
 
   return (
@@ -42,7 +44,7 @@ export function CheckpointPicker({ maxLevel, onSelect, onClose, accentColor = '#
               className="text-lg font-black tracking-widest uppercase"
               style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor }}
             >
-              Start From…
+              {t('checkpointPicker.startFrom')}
             </h2>
             <button
               onClick={onClose}
@@ -71,7 +73,7 @@ export function CheckpointPicker({ maxLevel, onSelect, onClose, accentColor = '#
               }}
             >
               <span className="font-bold text-base" style={{ color: `${accentColor}cc` }}>
-                Level {level}
+                {t('checkpointPicker.level', { level })}
               </span>
             </motion.button>
           ))}

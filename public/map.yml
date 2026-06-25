@@ -210,7 +210,7 @@ levels:
     variety: 8
     balls:
       - id: ball-1
-        initialSpeed: 162
+        initialSpeed: 102
         topSpeed: 326
         color: ff0055
         startX: 158
@@ -274,7 +274,7 @@ levels:
     variety: 8
     balls:
       - id: ball-1
-        initialSpeed: 162
+        initialSpeed: 122
         topSpeed: 326
         color: ff0055
         startX: 158
@@ -338,13 +338,13 @@ levels:
     variety: 10
     balls:
       - id: ball-1
-        initialSpeed: 130
+        initialSpeed: 110
         topSpeed: 320
         color: ff3366
         startX: 150
         startY: 450
       - id: ball-2
-        initialSpeed: 125
+        initialSpeed: 105
         topSpeed: 310
         color: 33ff99
         startX: 750
@@ -379,13 +379,13 @@ levels:
     variety: 10
     balls:
       - id: ball-1
-        initialSpeed: 130
+        initialSpeed: 110
         topSpeed: 320
         color: ff3366
         startX: 450
         startY: 150
       - id: ball-2
-        initialSpeed: 125
+        initialSpeed: 105
         topSpeed: 310
         color: 33ff99
         startX: 450
@@ -420,13 +420,13 @@ levels:
     variety: 10
     balls:
       - id: ball-1
-        initialSpeed: 140
+        initialSpeed: 120
         topSpeed: 340
         color: ff9900
         startX: 200
         startY: 200
       - id: ball-2
-        initialSpeed: 135
+        initialSpeed: 125
         topSpeed: 330
         color: 0099ff
         startX: 700
@@ -468,13 +468,13 @@ levels:
     variety: 12
     balls:
       - id: ball-1
-        initialSpeed: 145
+        initialSpeed: 120
         topSpeed: 340
         color: ff0055
         startX: 150
         startY: 150
       - id: ball-2
-        initialSpeed: 140
+        initialSpeed: 100
         topSpeed: 335
         color: 00aaff
         startX: 750
@@ -521,19 +521,19 @@ levels:
     variety: 15
     balls:
       - id: ball-1
-        initialSpeed: 150
+        initialSpeed: 120
         topSpeed: 350
         color: ff0066
         startX: 150
         startY: 300
       - id: ball-2
-        initialSpeed: 145
+        initialSpeed: 105
         topSpeed: 345
         color: 66ff00
         startX: 450
         startY: 700
       - id: ball-3
-        initialSpeed: 155
+        initialSpeed: 95
         topSpeed: 340
         color: 0066ff
         startX: 750
@@ -581,19 +581,19 @@ levels:
     variety: 15
     balls:
       - id: ball-1
-        initialSpeed: 125
+        initialSpeed: 100
         topSpeed: 360
         color: cc00ff
         startX: 150
         startY: 150
       - id: ball-2
-        initialSpeed: 130
+        initialSpeed: 110
         topSpeed: 355
         color: 00ffcc
         startX: 750
         startY: 450
       - id: ball-3
-        initialSpeed: 115
+        initialSpeed: 80
         topSpeed: 350
         color: ffcc00
         startX: 450

@@ -1,0 +1,832 @@
+{
+  "achievements": {
+    "title": "Logros",
+    "back": "Atrás",
+    "activeUnlocked": "{{active}} activos / {{unlocked}} desbloqueados",
+    "noneLoaded": "No se han cargado logros.",
+    "sectionAvailable": "Disponibles",
+    "sectionActive": "Activos",
+    "sectionInProgress": "En progreso",
+    "activate": "Activar",
+    "bonusLabel": "Bonificación:",
+    "stat": {
+      "totalFencesDrawn": "Vallas trazadas",
+      "highestLevelReached": "Nivel más alto",
+      "totalLevelsCompletedWithoutLoss": "Niveles impecables",
+      "totalLivesLost": "Vidas perdidas",
+      "deepestAscension": "Ascensión más profunda",
+      "pushBonusesBanked": "Bonos de presión asegurados"
+    }
+  },
+  "ascension": {
+    "allLevelsCleared": "Todos los niveles superados",
+    "ascensionComplete": "Ascensión {{depth}} completada. ",
+    "retireOrAscend": "Retírate y asegura todo, o elige un mutador y asciende a la profundidad {{depth}}.",
+    "ascendedLevelsInfo": "Los niveles ascendidos son más rápidos y cuentan {{multiplier}}× para las horas de certificado. ",
+    "bankedOvertime": "Horas extra aseguradas: {{score}}h",
+    "noMutators": "No hay mutadores disponibles: no se pudo cargar mutators.yml. Aun así puedes retirarte abajo.",
+    "ascendToDepth": "Ascender a la profundidad {{depth}}",
+    "selectMutator": "Selecciona un mutador",
+    "retireBankRun": "Retirarse — asegurar esta partida",
+    "ascensionUnlocked": "Ascensión desbloqueada",
+    "tutorialIntro1": "Superaste todos los niveles, pero el esfuerzo nunca acaba. Asciende para empezar de nuevo en el nivel 1 con tu puntuación, mejoras y vidas intactas, además de un ",
+    "tutorialMutatorWord": "mutador",
+    "tutorialIntro2": ": una maldición combinada con una bendición. Los mutadores se acumulan con cada ascensión, los niveles se vuelven más rápidos y cada nivel superado cuenta más para las horas de certificado. Retírate cuando quieras para asegurarlo todo.",
+    "gotIt": "Entendido"
+  },
+  "bottomBar": {
+    "ballSpeed": "Velocidad de bola",
+    "ballSize": "Tamaño de bola",
+    "fenceSpeed": "Velocidad de valla",
+    "otMult": "Mult. HE",
+    "instantFences": "Vallas instantáneas",
+    "concurrent": "Simultáneas",
+    "bonusRemove": "Quitar bono",
+    "extraLives": "Vidas extra",
+    "interest": "Interés",
+    "shopSlots": "Espacios de tienda",
+    "restocks": "Reposiciones",
+    "microMgrPerLock": "MicroMgr/bloq.",
+    "tapForDetails": "▲ toca para detalles"
+  },
+  "bottomBarDetails": {
+    "ballSpeed": "Velocidad de bola",
+    "ballSpeedDescBase": "Multiplicador efectivo sobre la velocidad de la bola. Base: {{base}}",
+    "ballSpeedDescMicro_one": ". MicroManager aplica una reducción adicional del {{reduction}}% por {{count}} bola bloqueada",
+    "ballSpeedDescMicro_other": ". MicroManager aplica una reducción adicional del {{reduction}}% por {{count}} bolas bloqueadas",
+    "ballSpeedDescTail": ". Las bolas más lentas te dan más tiempo de reacción al trazar vallas.",
+    "ballSize": "Tamaño de bola",
+    "ballSizeDesc": "Multiplicador de radio aplicado a cada bola. Las bolas más grandes son más difíciles de esquivar al trazar una valla, pero también cubren más del tablero para bloquear.",
+    "fenceSpeed": "Velocidad de valla",
+    "fenceSpeedDesc": "Lo rápido que crece tu valla después de empezar a trazar. Una mayor velocidad de valla acorta el margen que tiene una bola para chocar con tu valla en progreso, haciendo los cortes más seguros.",
+    "scoreMultiplier": "Multiplicador de puntuación",
+    "scoreMultiplierDesc": "Multiplicador global aplicado a todos los puntos ganados en esta partida. Se acumula de forma multiplicativa con los bonos de par por corte.",
+    "instantFences": "Vallas instantáneas",
+    "instantFencesActive_one": "{{count}} valla se completa automáticamente al inicio de cada nivel, capturando territorio sin ningún riesgo.",
+    "instantFencesActive_other": "{{count}} vallas se completan automáticamente al inicio de cada nivel, capturando territorio sin ningún riesgo.",
+    "instantFencesInactive": "No hay vallas instantáneas activas. Compra mejoras para obtener vallas gratis en cada nivel.",
+    "concurrentFences": "Vallas simultáneas",
+    "concurrentFencesActive": "Puedes trazar {{total}} vallas a la vez. Las vallas simultáneas adicionales te permiten cortar desde varios muros al mismo tiempo.",
+    "concurrentFencesInactive": "Por defecto: 1 valla activa a la vez.",
+    "bonusRemoval": "Eliminación de bono",
+    "bonusRemovalActive": "Cada corte exitoso tiene un {{chance}} de probabilidad de quitar {{amount}} del bono de velocidad acumulado de una bola, devolviendo gradualmente a las bolas rápidas hacia su velocidad base.",
+    "bonusRemovalInactive": "No hay eliminación de bono activa.",
+    "extraLives": "Vidas extra",
+    "extraLivesActive_one": "+{{count}} vida inicial adicional al comienzo de cada partida. Más vidas significan más oportunidades de recuperarte de un mal corte.",
+    "extraLivesActive_other": "+{{count}} vidas iniciales adicionales al comienzo de cada partida. Más vidas significan más oportunidades de recuperarte de un mal corte.",
+    "extraLivesInactive": "Sin vidas iniciales extra.",
+    "scoreInterest": "Interés de puntuación",
+    "scoreInterestActive": "Al final de cada nivel, se añade {{rate}} de tu puntuación total actual como bonificación. Las puntuaciones acumuladas más altas crecen más rápido.",
+    "scoreInterestInactive": "No hay tasa de interés activa.",
+    "extraShopSlots": "Espacios de tienda extra",
+    "extraShopSlotsActive_one": "{{count}} artículo extra aparece en la tienda de mejoras entre niveles, dándote más opciones en cada visita.",
+    "extraShopSlotsActive_other": "{{count}} artículos extra aparecen en la tienda de mejoras entre niveles, dándote más opciones en cada visita.",
+    "extraShopSlotsInactive": "Tamaño de tienda por defecto.",
+    "shopRestocks": "Reposiciones de tienda",
+    "shopRestocksActive_one": "Tu primera compra por visita a la tienda añade una nueva oferta al estante (Aprovisionamiento).",
+    "shopRestocksActive_other": "Tus primeras {{count}} compras por visita a la tienda añaden cada una una nueva oferta al estante (Aprovisionamiento).",
+    "shopRestocksInactive": "Sin reposición de tienda.",
+    "microManager": "MicroManager",
+    "microManagerValue": "{{percent}}% / bloqueo",
+    "microManagerActive_one": "Cada bola bloqueada reduce la velocidad de la bola en {{percent}}% (se acumula de forma multiplicativa, con un máximo del 70% total). Ahora mismo {{count}} bola bloqueada → velocidad efectiva {{speed}}.",
+    "microManagerActive_other": "Cada bola bloqueada reduce la velocidad de la bola en {{percent}}% (se acumula de forma multiplicativa, con un máximo del 70% total). Ahora mismo {{count}} bolas bloqueadas → velocidad efectiva {{speed}}.",
+    "microManagerInactive": "MicroManager no activo.",
+    "off": "Apagado",
+    "ballPathPrediction": "Predicción de trayectoria",
+    "bounceCount_one": "{{count}} rebote",
+    "bounceCount_other": "{{count}} rebotes",
+    "ballPathPredictionActive": "Dibuja una trayectoria prevista {{bounceText}} por delante para {{target}}. Te ayuda a cronometrar las vallas para evitar colisiones.",
+    "ballPathPredictionInactive": "No hay vista previa de trayectoria activa.",
+    "ballPathTargetAll": "las bolas más rápidas",
+    "ballPathTargetTop_one": "la bola más rápida",
+    "ballPathTargetTop_other": "las {{count}} bolas más rápidas",
+    "activeModifiers": "Modificadores activos",
+    "closePanel": "Cerrar panel",
+    "modifiedCount": "Modificados ({{count}})",
+    "noModifiers": "Aún no hay modificadores activos. Compra mejoras entre niveles para obtener potenciadores para tu partida.",
+    "atDefault": "Por defecto"
+  },
+  "certificateStore": {
+    "unlockUpgradeChain": "Compra la mejora {{upgradeName}} en {{required}} partidas diferentes.",
+    "progressLabelRuns": "partidas",
+    "unlockAchievement": "Completa el logro \"{{name}}\": {{description}}",
+    "unlockLinkedAchievement": "Completa el logro vinculado.",
+    "unlockHoursSpent": "Gasta {{required}} horas de certificado en esta tienda (en cualquier certificado).",
+    "progressLabelHoursSpent": "horas gastadas",
+    "unlockKeepPlaying": "Sigue jugando para desbloquear.",
+    "title": "CERTIFICADOS",
+    "certificateHours": "Horas de certificado",
+    "earnRate": "Gana 1h por cada 5 niveles completados",
+    "sectionAvailable": "Disponibles",
+    "sectionLocked": "Bloqueados",
+    "sectionComplete": "Completados",
+    "levelFraction": "Nv {{owned}}/{{total}}",
+    "levelLabel": "Nv {{level}}",
+    "levelCost": "({{cost}}h)",
+    "cost": "Coste:",
+    "hoursValue": "{{hours}}h",
+    "needMore": "(faltan {{hours}}h más)",
+    "buyUpToLevel": "Comprar hasta Nv {{level}}",
+    "howToUnlockAria": "Cómo desbloquear {{name}}",
+    "howToUnlock": "Cómo desbloquear",
+    "progress": "Progreso: {{current}} / {{required}}{{label}}",
+    "loading": "Cargando certificados…",
+    "continue": "Continuar",
+    "tutorialTitle": "TALLER DE CERTIFICADOS",
+    "tutorialBody": "Desbloquea bonificaciones permanentes dominando familias de mejoras a lo largo de varias partidas. Cada certificado tiene niveles que puedes comprar con las horas de certificado ganadas durante el juego."
+  },
+  "checkpointPicker": {
+    "startFrom": "Empezar desde…",
+    "level": "Nivel {{level}}"
+  },
+  "common": {
+    "loading": "Cargando..."
+  },
+  "game": {
+    "paused": "EN PAUSA",
+    "resume": "Reanudar",
+    "pause": "Pausar",
+    "gameMenu": "Menú del juego",
+    "restartRun": "Reiniciar partida",
+    "mainMenu": "Menú principal",
+    "moverTutorialTitle": "⚠ Obstáculos móviles",
+    "moverTutorialBody": "Los obstáculos naranjas se mueven de un lado a otro por un carril fijo.\n\nLas bolas rebotan en ellos, pero si tu valla en crecimiento toca uno, pierdes una vida.\n\n¡Vigila las líneas del carril y cronometra bien tus vallas!",
+    "infoPanelsTutorialTitle": "Paneles de información",
+    "infoPanelsTutorialBody": "¡Las barras de estado se pueden expandir!\n\nToca la BARRA SUPERIOR para ver todos los detalles del nivel, todas tus mejoras activas con descripciones y el progreso de horas de certificado.\n\nToca la BARRA INFERIOR para ver cada modificador activo explicado en lenguaje sencillo."
+  },
+  "interactiveTutorial": {
+    "drawAFence": "TRAZA UNA VALLA",
+    "dragInstruction": "Arrastra en cualquier lugar dentro del área para crear un muro que corte. ¡No dejes que la bola toque el muro mientras crece!",
+    "drawAFenceToContinue": "TRAZA UNA VALLA PARA CONTINUAR"
+  },
+  "levelComplete": {
+    "title": "¡Nivel completado!",
+    "pushFailed": "¡La presión falló!",
+    "pushFailedBonus": " Pero ganaste +{{bonus}}h de bonificación.",
+    "pushFailedNoBonus": " No se ganó bonificación extra.",
+    "level": "Nivel",
+    "remaining": "Restante",
+    "fencesUsed": "Vallas usadas",
+    "underPar": "{{count}} bajo par",
+    "overPar": "{{count}} sobre par",
+    "baseMultiplier": "Base x{{multiplier}}",
+    "noSpaceBonus": " · Sin bono de espacio",
+    "extraSpaceRemoved": "Espacio extra eliminado",
+    "spaceBonus": "Bono de espacio",
+    "baseOvertime": "Horas extra base",
+    "multiplierParen": "(x{{multiplier}})",
+    "threadLocks": "Bloqueos de hilo ({{count}})",
+    "interest": "Interés",
+    "pushBonus": "Bono de presión",
+    "totalBonus": "Bonificación total",
+    "overtimeEarned": "Horas extra ganadas",
+    "totalOvertime": "Horas extra totales",
+    "certificateUnlocked": "Certificado desbloqueado",
+    "nextLevel": "Siguiente nivel"
+  },
+  "notFound": {
+    "message": "¡Vaya! Página no encontrada",
+    "returnHome": "Volver al inicio"
+  },
+  "options": {
+    "title": "OPCIONES",
+    "language": "Idioma",
+    "reEnableTutorials": "Reactivar todos los tutoriales",
+    "resetCertificates": "Restablecer certificados y puntuación",
+    "back": "Atrás",
+    "resetConfirmTitle": "¿Restablecer todo el progreso?",
+    "resetConfirmBody": "Esto restablecerá tu saldo de puntuación y todos los certificados que posees. Esta acción no se puede deshacer.",
+    "cancel": "Cancelar",
+    "reset": "Restablecer"
+  },
+  "pushYourLuck": {
+    "levelCleared": "¡Nivel superado!",
+    "remainingLabel": "Restante:",
+    "targetSuffix": "/ {{threshold}}% objetivo",
+    "keepCuttingPrefix": "Sigue cortando para",
+    "bonusPerRemoved": "+1h por cada {{percent}}% eliminado",
+    "noRisk": "Sin riesgo: ¡conservas tu puntuación si fallas!",
+    "bankAndContinue": "Asegurar y continuar",
+    "pushYourLuck": "Tienta tu suerte"
+  },
+  "result": {
+    "youWin": "¡GANASTE!",
+    "gameOver": "FIN DEL JUEGO",
+    "completedAllLevels": "🎉 ¡Completaste todos los niveles! 🎉",
+    "ascensionDepth": "Profundidad de ascensión {{depth}}",
+    "mutatorsBraved": "Mutadores afrontados: {{mutators}}",
+    "completedLevel": "Nivel completado",
+    "failedAtLevel": "Fallaste en el nivel",
+    "arenaRemaining": "Arena restante",
+    "levelsCompleted": "Niveles completados",
+    "certificateHours_one": "+{{count}}h hora de certificado",
+    "certificateHours_other": "+{{count}}h horas de certificado",
+    "continueLevel": "Continuar (Nivel {{level}})",
+    "restart": "Reiniciar",
+    "playAgain": "Jugar de nuevo",
+    "mainMenu": "Menú principal"
+  },
+  "topBar": {
+    "clear": "DESPEJADO",
+    "percentToGo": "{{percent}}% restante",
+    "currentlyReducingBy": "Reduciendo actualmente un {{percent}}%"
+  },
+  "topBarDetails": {
+    "levelStatusTitle": "Estado del nivel {{level}}",
+    "closePanel": "Cerrar panel",
+    "objectives": "Objetivos",
+    "territoryCapture": "Captura de territorio",
+    "territoryGoalMet": "¡Objetivo cumplido! Has capturado el {{remaining}}% (se necesitaba {{required}}%).",
+    "territoryGoalPending": "Captura al menos el {{required}}% del tablero. Actualmente en {{remaining}}%, faltan {{more}}% más.",
+    "fenceCuts": "Cortes de valla",
+    "cutsParValue": "{{used}} / {{par}} par",
+    "cutsOverPar_one": "Sobre par por {{count}} corte. El multiplicador de puntuación se reduce al superar el par.",
+    "cutsOverPar_other": "Sobre par por {{count}} cortes. El multiplicador de puntuación se reduce al superar el par.",
+    "cutsParInfo": "El par es {{par}} cortes. Mantenerte dentro del par da una bonificación de puntuación.",
+    "cutsRemaining_one": "Queda {{count}} corte antes del par. ¡Buen trabajo!",
+    "cutsRemaining_other": "Quedan {{count}} cortes antes del par. ¡Buen trabajo!",
+    "threadLocks": "Bloqueos de hilo",
+    "lockObjectiveMet": "¡Objetivo de bloqueo cumplido! {{locked}} de {{required}} bolas bloqueadas.",
+    "lockObjectivePending": "Bloquea {{required}} bolas atrapándolas con vallas. Faltan {{more}} más.",
+    "lockNoneRequiredWithLocks_one": "{{count}} bola bloqueada. Sin requisito de bloqueo en este nivel.",
+    "lockNoneRequiredWithLocks_other": "{{count}} bolas bloqueadas. Sin requisito de bloqueo en este nivel.",
+    "lockNoneRequired": "Sin requisito de bloqueo de hilo en este nivel.",
+    "yourStatus": "Tu estado",
+    "livesRemaining": "Vidas restantes",
+    "livesNone": "¡Ninguna!",
+    "livesDescription": "Pierdes una vida cuando una bola golpea tu valla mientras crece. Si te quedas sin vidas, el nivel se reinicia.",
+    "certificatePoints": "Puntos de certificado",
+    "certPointsEarned_one": "{{count}} punto ganado hasta ahora.",
+    "certPointsEarned_other": "{{count}} puntos ganados hasta ahora.",
+    "certPointsToGo_one": "Completa {{count}} nivel más para ganar el siguiente punto de certificado y desbloquear mejoras en la Tienda de certificados.",
+    "certPointsToGo_other": "Completa {{count}} niveles más para ganar el siguiente punto de certificado y desbloquear mejoras en la Tienda de certificados.",
+    "ascensionDepth": "Ascensión — Profundidad {{depth}}",
+    "ascensionDescription": "Diste la vuelta tras el nivel final. Las bolas son más rápidas, cada mutador elegido abajo está activo y cada nivel completado cuenta {{multiplier}}× para las horas de certificado.",
+    "activeUpgradesCount": "Mejoras activas ({{count}})",
+    "currentlyReducingBallSpeed": "Reduciendo actualmente la velocidad de la bola un {{percent}}%",
+    "activeUpgrades": "Mejoras activas",
+    "noUpgrades": "Aún no has comprado mejoras. Visita la tienda de mejoras entre niveles para potenciar tu partida."
+  },
+  "tutorial": {
+    "back": "Atrás",
+    "howToPlay": "Cómo jugar",
+    "lifeCycle": "Ciclo de vida",
+    "gotIt": "¡Entendido!",
+    "achievementsCertificatesTitle": "Logros y certificados",
+    "achievementsCertificatesBody": "Juega más para desbloquear logros y certificados. Los logros recompensan los hitos de por vida con bonificaciones permanentes de partida. Los certificados se ganan dominando mejoras específicas a lo largo de varias partidas y se pueden comprar en la Tienda de certificados para obtener efectos duraderos.",
+    "controlsTitle": "Controles",
+    "controlTouchLabel": "TÁCTIL",
+    "controlMouseLabel": "RATÓN",
+    "controlSwipeToCut": "Desliza para cortar",
+    "controlSecondFinger": "Un segundo dedo mientras la valla crece la cancela",
+    "controlClickAndDrag": "Haz clic y arrastra",
+    "steps": {
+      "swipeToCut": {
+        "title": "Desliza para cortar",
+        "description": "Desliza o arrastra para crear un muro que corte. Horizontal o vertical según la dirección de tu deslizamiento."
+      },
+      "removeEmptySpace": {
+        "title": "Elimina el espacio vacío",
+        "description": "Cuando el muro se completa, el lado SIN la bola se elimina y se convierte en oscuridad."
+      },
+      "avoidTheBall": {
+        "title": "Evita la bola",
+        "description": "No dejes que la bola golpee el muro mientras aún crece: ¡fin del juego al instante!"
+      },
+      "winCondition": {
+        "title": "Condición de victoria",
+        "description": "Reduce la arena a menos del 25% de su tamaño original para ganar. ¡La velocidad aumenta con cada corte!"
+      },
+      "lives": {
+        "title": "Vidas",
+        "description": "Empiezas cada partida con un número determinado de vidas. Pierdes una vida cada vez que una bola golpea tu valla en crecimiento. Si te quedas sin vidas, la partida termina."
+      },
+      "checkpoints": {
+        "title": "Puntos de control",
+        "description": "Cada 5 niveles hay un punto de control. Cuando tu partida termina, la siguiente siempre se reinicia desde el punto de control más alto que alcanzaste; nunca pierdes todo tu progreso."
+      },
+      "headStartCertificates": {
+        "title": "Certificados de ventaja inicial",
+        "description": "En la Tienda de certificados puedes desbloquear certificados de ventaja inicial que aumentan permanentemente tu nivel de inicio, para que los jugadores experimentados nunca tengan que repetir los primeros niveles."
+      }
+    }
+  },
+  "tutorialOverlay": {
+    "tapToContinue": "TOCA EN CUALQUIER LUGAR PARA CONTINUAR",
+    "replayFromOptions": "Los tutoriales se pueden volver a ver desde OPCIONES"
+  },
+  "upgradeShop": {
+    "storeLabel": "Tienda",
+    "levelComplete": "Nivel {{level}} completado",
+    "checkpointReached": "punto de control alcanzado",
+    "levelBanner": "NIVEL {{level}}",
+    "progressSavedHere": "el progreso se guardará aquí",
+    "hoursValue": "{{hours}}h",
+    "overtime": "horas extra",
+    "restocksLeft": "Reposiciones restantes: {{count}} — comprar un artículo añade una nueva oferta",
+    "noRestocksLeft": "No quedan reposiciones en esta visita",
+    "requires": "Requiere:",
+    "certificateUnlocked": "¡Certificado desbloqueado!",
+    "buyAndContinue": "Comprar {{count}} y continuar ({{cost}}h)",
+    "continue": "Continuar",
+    "tutorialTitle": "LA TIENDA DE MEJORAS",
+    "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa."
+  },
+  "welcome": {
+    "tagline": "Corta. Atrapa. Sobrevive.",
+    "startAtLevel": "Empezar en el nivel {{level}}",
+    "checkpointExpires": "El punto de control expira en {{time}}",
+    "loading": "Cargando...",
+    "continueFromLevel": "Continuar desde el nivel {{level}}",
+    "startGame": "Empezar juego",
+    "chooseStartMap": "Elige el mapa de inicio",
+    "tutorial": "Tutorial",
+    "options": "Opciones",
+    "certificates": "Certificados",
+    "hoursSuffix": "{{hours}}h",
+    "achievements": "Logros",
+    "admin": "Admin"
+  },
+  "content": {
+    "upgrades": {
+      "runtime_optimisation_junior": {
+        "name": "Optimización en Tiempo de Ejecución",
+        "description": "Reduce la velocidad de la bola un 5%."
+      },
+      "runtime_optimisation_senior": {
+        "name": "Optimización en Tiempo de Ejecución",
+        "description": "Reduce la velocidad de la bola un 10%."
+      },
+      "runtime_optimisation_principal": {
+        "name": "Optimización en Tiempo de Ejecución",
+        "description": "Reduce la velocidad de la bola un 15%."
+      },
+      "memory_footprint_junior": {
+        "name": "Huella de Memoria",
+        "description": "Reduce el tamaño de la bola un 5%."
+      },
+      "memory_footprint_senior": {
+        "name": "Huella de Memoria",
+        "description": "Reduce el tamaño de la bola un 10%."
+      },
+      "memory_footprint_principal": {
+        "name": "Huella de Memoria",
+        "description": "Reduce el tamaño de la bola un 15%."
+      },
+      "fast_compile_junior": {
+        "name": "Compilación Rápida",
+        "description": "Aumenta la velocidad de generación de vallas un 10%."
+      },
+      "fast_compile_senior": {
+        "name": "Compilación Rápida",
+        "description": "Aumenta la velocidad de generación de vallas un 20%."
+      },
+      "fast_compile_principal": {
+        "name": "Compilación Rápida",
+        "description": "Aumenta la velocidad de generación de vallas un 30%."
+      },
+      "hot_start_junior": {
+        "name": "Arranque en Caliente",
+        "description": "La primera valla de cada mapa se genera al instante."
+      },
+      "hot_start_principal": {
+        "name": "Arranque en Caliente",
+        "description": "Las dos primeras vallas de cada mapa se generan al instante."
+      },
+      "hot_start_architect": {
+        "name": "Arranque en Caliente",
+        "description": "Las tres primeras vallas de cada mapa se generan al instante."
+      },
+      "multithreading_principal": {
+        "name": "Multihilo",
+        "description": "Permite que una valla adicional esté en progreso simultáneamente."
+      },
+      "ultrathreading_principal": {
+        "name": "Ultrahilo",
+        "description": "Permite que una valla adicional esté en progreso simultáneamente."
+      },
+      "garbage_collector_senior": {
+        "name": "Recolector de Basura",
+        "description": "Cada valla tiene una pequeña probabilidad de eliminar un 5% de área adicional."
+      },
+      "garbage_collector_medior": {
+        "name": "Recolector de Basura 2",
+        "description": "Cada valla tiene una pequeña probabilidad de eliminar un 10% de área adicional."
+      },
+      "fault_tolerance_junior": {
+        "name": "Tolerancia a Fallos",
+        "description": "Obtén 1 vida extra."
+      },
+      "fault_tolerance_senior": {
+        "name": "Tolerancia a Fallos",
+        "description": "Obtén 2 vidas extra."
+      },
+      "fault_tolerance_architect": {
+        "name": "Tolerancia a Fallos",
+        "description": "Obtén 3 vidas extra."
+      },
+      "performance_bonus_junior": {
+        "name": "Bonificación por Rendimiento",
+        "description": "Gana un 5% más de horas extra por mapa."
+      },
+      "performance_bonus_senior": {
+        "name": "Bonificación por Rendimiento",
+        "description": "Gana un 10% más de horas extra por mapa."
+      },
+      "performance_bonus_principal": {
+        "name": "Bonificación por Rendimiento",
+        "description": "Gana un 15% más de horas extra por mapa."
+      },
+      "venture_capital_senior": {
+        "name": "Capital Riesgo",
+        "description": "10% de interés sobre las horas extra no usadas entre mapas."
+      },
+      "venture_capital_principal": {
+        "name": "Capital Riesgo",
+        "description": "20% de interés sobre las horas extra no usadas entre mapas."
+      },
+      "venture_capital_architect": {
+        "name": "Capital Riesgo",
+        "description": "30% de interés sobre las horas extra no usadas entre mapas."
+      },
+      "micro_manager_junior": {
+        "name": "MicroManager",
+        "description": "Cada bola bloqueada reduce la velocidad de todas las bolas un 1%, hasta un 50%."
+      },
+      "micro_manager_senior": {
+        "name": "MicroManager",
+        "description": "Cada bola bloqueada reduce la velocidad de todas las bolas un 2% adicional, hasta un 50% en total."
+      },
+      "micro_manager_principal": {
+        "name": "MicroManager",
+        "description": "Cada bola bloqueada reduce la velocidad de todas las bolas un 3% adicional, hasta un 50% en total."
+      },
+      "procurement_junior": {
+        "name": "Aprovisionamiento",
+        "description": "Una vez por visita a la tienda, comprar un artículo añade una nueva oferta a la estantería."
+      },
+      "procurement_senior": {
+        "name": "Aprovisionamiento",
+        "description": "Tus dos primeras compras por visita a la tienda añaden cada una una nueva oferta a la estantería."
+      },
+      "procurement_principal": {
+        "name": "Aprovisionamiento",
+        "description": "Tus tres primeras compras por visita a la tienda añaden cada una una nueva oferta a la estantería."
+      },
+      "system_architect": {
+        "name": "Arquitecto de Sistemas",
+        "description": "Obtén una ranura de artículo adicional en la tienda."
+      },
+      "augmentation_wizard": {
+        "name": "Mago de la Certificación",
+        "description": "Obtén +1 Hora de Certificado."
+      },
+      "technical_debt_senior": {
+        "name": "Deuda Técnica",
+        "description": "Gana un 20% más de horas extra por mapa, pero las bolas se mueven un 8% más rápido. Beneficio a corto plazo, dolor a largo plazo."
+      },
+      "technical_debt_principal": {
+        "name": "Deuda Técnica",
+        "description": "Gana un 35% más de horas extra por mapa, pero las bolas se mueven un 15% más rápido."
+      },
+      "technical_debt_architect": {
+        "name": "Deuda Técnica",
+        "description": "Gana un 50% más de horas extra por mapa, pero las bolas se mueven un 25% más rápido."
+      },
+      "pair_programming_principal": {
+        "name": "Programación en Pareja",
+        "description": "Una valla concurrente extra, pero cada valla se construye un 12% más despacio. Dos mentes, atención dividida."
+      },
+      "pair_programming_architect": {
+        "name": "Programación en Pareja",
+        "description": "Una valla concurrente más, pero la velocidad de las vallas cae otro 12%."
+      },
+      "scrum_master_1": {
+        "name": "SCRUM Master",
+        "description": "Previsualiza los próximos 2 rebotes de la trayectoria de la bola más rápida."
+      },
+      "scrum_master_2": {
+        "name": "SCRUM Master",
+        "description": "Previsualiza también la trayectoria de la 2ª bola más rápida."
+      },
+      "scrum_master_3": {
+        "name": "SCRUM Master",
+        "description": "Previsualiza también la trayectoria de la 3ª bola más rápida."
+      },
+      "scrum_master_4": {
+        "name": "SCRUM Master",
+        "description": "Amplía la previsualización de trayectoria a 3 rebotes por delante para las bolas rastreadas."
+      },
+      "scrum_master_5": {
+        "name": "SCRUM Master",
+        "description": "Amplía la previsualización de trayectoria a 4 rebotes por delante."
+      },
+      "scrum_master_6": {
+        "name": "SCRUM Master",
+        "description": "Muestra la previsualización de trayectoria de todas las bolas simultáneamente."
+      },
+      "defensive_programming_junior": {
+        "name": "Programación Defensiva",
+        "description": "Gana 1 vida extra y reduce todas las bolas un 8%. La seguridad primero.",
+        "descriptionAscension": "Las vallas sobreviven a 1 impacto de bola extra antes de desmoronarse (Ascensión)."
+      },
+      "defensive_programming_senior": {
+        "name": "Programación Defensiva",
+        "description": "Gana 2 vidas extra más y reduce todas las bolas un 8% adicional.",
+        "descriptionAscension": "Las vallas sobreviven a 2 impactos de bola extra antes de desmoronarse (Ascensión)."
+      },
+      "defensive_programming_principal": {
+        "name": "Programación Defensiva",
+        "description": "Gana 3 vidas extra más y reduce todas las bolas un 8% adicional.",
+        "descriptionAscension": "Las vallas sobreviven a 3 impactos de bola extra antes de desmoronarse (Ascensión)."
+      }
+    },
+    "tiers": {
+      "Junior": "Junior",
+      "Senior": "Senior",
+      "Principal": "Principal",
+      "Architect": "Arquitecto",
+      "Wizard": "Mago"
+    },
+    "certificates": {
+      "runtime-augmentation": {
+        "name": "Mejora en Tiempo de Ejecución",
+        "description": "Velocidades de bola permanentemente reducidas: una recompensa permanente por dominar la Optimización en Tiempo de Ejecución."
+      },
+      "memory-compression": {
+        "name": "Compresión de Memoria",
+        "description": "Bolas permanentemente más pequeñas: una recompensa permanente por dominar la Huella de Memoria."
+      },
+      "compile-cache": {
+        "name": "Caché de Compilación",
+        "description": "Generación de vallas permanentemente más rápida: una recompensa permanente por dominar la Compilación Rápida."
+      },
+      "warm-deploy": {
+        "name": "Despliegue en Caliente",
+        "description": "Obtén permanentemente una valla instantánea al inicio del mapa: una recompensa por dominar el Arranque en Caliente."
+      },
+      "parallel-processing": {
+        "name": "Procesamiento Paralelo",
+        "description": "Una valla concurrente extra de forma permanente: una recompensa por dominar el Multihilo."
+      },
+      "resilience-protocol": {
+        "name": "Protocolo de Resiliencia",
+        "description": "Empieza permanentemente con una vida extra: una recompensa por dominar la Tolerancia a Fallos."
+      },
+      "performance-suite": {
+        "name": "Suite de Rendimiento",
+        "description": "Multiplicador de puntuación permanentemente mayor: una recompensa por dominar la Bonificación por Rendimiento."
+      },
+      "investment-strategy": {
+        "name": "Estrategia de Inversión",
+        "description": "Bonificación de interés permanente sobre tu puntuación: una recompensa por dominar el Capital Riesgo."
+      },
+      "process-optimiser": {
+        "name": "Optimizador de Procesos",
+        "description": "Reducción de velocidad por bloqueo permanente: una recompensa por dominar el MicroManager."
+      },
+      "sprint-protocol": {
+        "name": "Protocolo de Sprint",
+        "description": "Rebote extra permanente en la previsualización de trayectoria: una recompensa por dominar el SCRUM Master."
+      },
+      "head-start-i": {
+        "name": "Ventaja Inicial I",
+        "description": "Empieza cada partida en el nivel 5. Otorgado a quienes han demostrado que pueden alcanzar el nivel 25."
+      },
+      "head-start-ii": {
+        "name": "Ventaja Inicial II",
+        "description": "Empieza cada partida en el nivel 10. Otorgado por una consistencia excepcional a lo largo de 50 niveles perfectos."
+      },
+      "equity-grant": {
+        "name": "Concesión de Acciones",
+        "description": "Empieza cada mapa con parte del tablero ya capturado. La consolidación comienza de inmediato."
+      },
+      "night-school-diploma": {
+        "name": "Diploma de Escuela Nocturna",
+        "description": "Acumula Horas de Certificado extra en cada partida. Ascender acelera todo."
+      },
+      "bulk-licensing": {
+        "name": "Licencias al por Mayor",
+        "description": "Descuento permanente en todos los precios de la tienda de mejoras. Aprovisionamiento por fin negoció un acuerdo marco."
+      },
+      "risk-assessment-certified": {
+        "name": "Evaluación de Riesgos Certificada",
+        "description": "Las bonificaciones de Tienta tu Suerte pagan más. Auditado, sellado y avalado."
+      }
+    },
+    "achievements": {
+      "hello-world": {
+        "name": "Hello, World!",
+        "description": "Pierde tu primera vida: toda arena acaba lanzando un error de ejecución tarde o temprano.",
+        "bonusDescription": "Velocidad de generación de vallas +2%"
+      },
+      "junior-dev": {
+        "name": "Desarrollador Junior",
+        "description": "Dibuja 50 vallas. Todavía estás leyendo la documentación de incorporación.",
+        "bonusDescription": "Multiplicador de horas extra +4%"
+      },
+      "shipped-it": {
+        "name": "¡Desplegado!",
+        "description": "Completa 5 niveles sin perder una vida. Sin reversiones, tres veces seguidas.",
+        "bonusDescription": "Velocidad de generación de vallas +3%"
+      },
+      "passing-tests": {
+        "name": "Tests en Verde",
+        "description": "Llega al nivel 5 en una sola partida. Las marcas verdes nunca cansan.",
+        "bonusDescription": "Velocidad de las bolas -2%"
+      },
+      "stack-overflow": {
+        "name": "Stack Overflow",
+        "description": "Dibuja 175 vallas. Ya sabes qué preguntas buscar.",
+        "bonusDescription": "Velocidad de generación de vallas +3%"
+      },
+      "merge-conflict": {
+        "name": "Conflicto de Fusión",
+        "description": "Pierde 35 vidas en todas tus partidas. Los resuelves, pero no dejan de aparecer.",
+        "bonusDescription": "Velocidad de generación de vallas +3%"
+      },
+      "zero-regressions": {
+        "name": "Cero Regresiones",
+        "description": "Completa 8 niveles sin perder una vida. PRs limpias, sin necesidad de reversiones.",
+        "bonusDescription": "Multiplicador de horas extra +3%"
+      },
+      "code-review": {
+        "name": "Revisión de Código",
+        "description": "Llega al nivel 10 en una sola partida. Tu trabajo está bajo escrutinio.",
+        "bonusDescription": "Velocidad de las bolas -3%"
+      },
+      "pull-request": {
+        "name": "Pull Request",
+        "description": "Dibuja 400 vallas. Tus contribuciones empiezan a llamar la atención.",
+        "bonusDescription": "Multiplicador de horas extra +2%"
+      },
+      "rtfm": {
+        "name": "RTFM",
+        "description": "Completa 15 niveles sin perder una vida. De verdad te has leído la documentación.",
+        "bonusDescription": "Tasa de interés de horas extra +1%"
+      },
+      "technical-debt": {
+        "name": "Deuda Técnica",
+        "description": "Pierde 50 vidas en todas tus partidas. La heredas. La esquivas como puedes.",
+        "bonusDescription": "Velocidad de generación de vallas +5%"
+      },
+      "full-stack": {
+        "name": "Full Stack",
+        "description": "Dibuja 500 vallas. Front end, back end, fence end.",
+        "bonusDescription": "Velocidad de las bolas -5%"
+      },
+      "senior-dev": {
+        "name": "Desarrollador Senior",
+        "description": "Llega al nivel 15 en una sola partida. Ya has dejado de buscar lo básico en Google.",
+        "bonusDescription": "Multiplicador de horas extra +5%"
+      },
+      "on-call-veteran": {
+        "name": "Veterano de Guardia",
+        "description": "Pierde 100 vidas en todas tus partidas. Tienes un cargador junto a la cama.",
+        "bonusDescription": "+1 vida inicial por partida"
+      },
+      "clean-architecture": {
+        "name": "Arquitectura Limpia",
+        "description": "Completa 20 niveles sin perder una vida. Sin atajos, sin atajos.",
+        "bonusDescription": "Velocidad de generación de vallas +5%"
+      },
+      "commit-history": {
+        "name": "Historial de Commits",
+        "description": "Dibuja 1000 vallas. A estas alturas tu git log se lee como unas memorias.",
+        "bonusDescription": "+1 valla gratis por mapa"
+      },
+      "tech-lead": {
+        "name": "Líder Técnico",
+        "description": "Llega al nivel 20 en una sola partida. Ahora los demás acuden a ti para tener la respuesta.",
+        "bonusDescription": "Predicción de trayectoria de la bola: rastrea 1 bola"
+      },
+      "five-am-page": {
+        "name": "Aviso a las 5 a. m.",
+        "description": "Pierde 200 vidas en todas tus partidas. A PagerDuty le da igual qué hora sea.",
+        "bonusDescription": "Predicción de trayectoria de la bola: +1 rebote por adelantado"
+      },
+      "open-source": {
+        "name": "Código Abierto",
+        "description": "Dibuja 2000 vallas. Tus contribuciones ya son de dominio público.",
+        "bonusDescription": "Velocidad de las bolas -5%"
+      },
+      "full-coverage": {
+        "name": "Cobertura Total",
+        "description": "Completa 35 niveles sin perder una vida. Cada ruta, cada rama, probada.",
+        "bonusDescription": "Velocidad de generación de vallas +10%"
+      },
+      "principal-engineer": {
+        "name": "Ingeniero Principal",
+        "description": "Llega al nivel 25 en una sola partida. Menos reuniones, problemas más profundos.",
+        "bonusDescription": "Velocidad de las bolas -5%"
+      },
+      "ci-cd-pipeline": {
+        "name": "Pipeline CI/CD",
+        "description": "Completa 50 niveles sin perder una vida. Despiadado y automatizado.",
+        "bonusDescription": "Multiplicador de horas extra +10%"
+      },
+      "staff-engineer": {
+        "name": "Ingeniero de Plantilla",
+        "description": "Llega al nivel 30 en una sola partida. Arreglas las cosas antes de que los demás noten que están rotas.",
+        "bonusDescription": "+1 vida inicial por partida"
+      },
+      "ten-k-commits": {
+        "name": "10k Commits",
+        "description": "Dibuja 5000 vallas. El registro de blame lleva tu nombre en todo.",
+        "bonusDescription": "+1 valla gratis por mapa"
+      },
+      "distinguished": {
+        "name": "Ingeniero Distinguido",
+        "description": "Llega al nivel 40 en una sola partida. Tus ADR sobreviven a los proyectos que describen.",
+        "bonusDescription": "+1 valla simultánea"
+      },
+      "sunday-deploy": {
+        "name": "Despliegue en Domingo",
+        "description": "Pierde 500 vidas en todas tus partidas. Te sabes el procedimiento de reversión de memoria.",
+        "bonusDescription": "Velocidad de las bolas -5%"
+      },
+      "five-nines": {
+        "name": "Los Cinco Nueves",
+        "description": "Completa 100 niveles sin perder una vida. 99,999% de disponibilidad, sostenida.",
+        "bonusDescription": "Multiplicador de horas extra +10%"
+      },
+      "left-the-company": {
+        "name": "Dejó la Empresa",
+        "description": "Dibuja 10000 vallas. Tu código sigue ejecutándose en producción en algún lado.",
+        "bonusDescription": "+1 valla simultánea"
+      },
+      "beyond-the-backlog": {
+        "name": "Más Allá del Backlog",
+        "description": "Asciende más allá del nivel final. El sprint nunca termina: se repite en bucle.",
+        "bonusDescription": "Multiplicador de horas extra +5%"
+      },
+      "calculated-risk": {
+        "name": "Riesgo Calculado",
+        "description": "Embolsa un bonus de Tienta la Suerte 5 veces. La fortuna favorece a quien se cubre las espaldas.",
+        "bonusDescription": "+5% de probabilidad de que los cortes despejen espacio extra"
+      }
+    },
+    "mutators": {
+      "crunch_time": {
+        "name": "Crunch Time",
+        "curse": "Las bolas se mueven un 25% más rápido.",
+        "blessing": "Gana un 50% más de horas extra."
+      },
+      "scope_creep": {
+        "name": "Scope Creep",
+        "curse": "Las bolas son un 30% más grandes.",
+        "blessing": "Las vallas crecen un 35% más rápido."
+      },
+      "death_march": {
+        "name": "Marcha de la Muerte",
+        "curse": "Pierde una vida de inmediato.",
+        "blessing": "Gana un 75% más de horas extra."
+      },
+      "hiring_freeze": {
+        "name": "Congelación de Contrataciones",
+        "curse": "La tienda ofrece 2 mejoras menos.",
+        "blessing": "Gana un 10% de interés sobre las horas extra acumuladas tras cada nivel."
+      },
+      "legacy_codebase": {
+        "name": "Código Heredado",
+        "curse": "Las vallas crecen un 20% más lento.",
+        "blessing": "Empieza cada mapa con 2 vallas instantáneas."
+      },
+      "parallel_pipelines": {
+        "name": "Pipelines Paralelos",
+        "curse": "Las bolas se mueven un 15% más rápido.",
+        "blessing": "Dibuja una valla extra al mismo tiempo."
+      },
+      "tech_debt_audit": {
+        "name": "Auditoría de Deuda Técnica",
+        "curse": "Las bolas se mueven un 10% más rápido y son un 10% más grandes.",
+        "blessing": "Los cortes tienen un 25% de probabilidad de despejar un 5% de espacio extra."
+      },
+      "night_school": {
+        "name": "Escuela Nocturna",
+        "curse": "Las bolas se mueven un 20% más rápido.",
+        "blessing": "Embolsa 1 Hora de Certificado extra cuando termina la partida."
+      },
+      "micromanagement": {
+        "name": "Microgestión",
+        "curse": "Las bolas son un 20% más grandes.",
+        "blessing": "Cada bola bloqueada ralentiza a las bolas restantes un 2%."
+      },
+      "roadmap_clarity": {
+        "name": "Claridad de Hoja de Ruta",
+        "curse": "Las bolas se mueven un 15% más rápido.",
+        "blessing": "Ve la trayectoria prevista de las dos bolas más rápidas."
+      },
+      "golden_handcuffs": {
+        "name": "Esposas Doradas",
+        "curse": "Gana un 25% menos de horas extra.",
+        "blessing": "Gana 2 vidas extra de inmediato."
+      },
+      "agile_transformation": {
+        "name": "Transformación Ágil",
+        "curse": "Las vallas crecen un 15% más lento.",
+        "blessing": "La tienda ofrece 1 mejora extra y se reabastece dos veces por visita."
+      }
+    }
+  }
+}

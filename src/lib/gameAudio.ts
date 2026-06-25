@@ -5,6 +5,15 @@ let audioContext: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let isMuted = false;
 
+// Ball-to-ball collisions can fire many times per physics step when several
+// balls cluster in a shrinking region. Each playBallCollideSound call allocates
+// ~6 oscillators + biquad filters + gain nodes; unthrottled on a low-end Android
+// audio thread this storms the graph and churns GC, producing crackle and frame
+// hitches. Gate to at most one collision blip per MIN_COLLIDE_INTERVAL_MS — a
+// dropped near-simultaneous blip is inaudible, the storm is not.
+const MIN_COLLIDE_INTERVAL_MS = 25;
+let lastCollideTime = -Infinity;
+
 // Volume settings
 const VOLUME = {
   wallHit: 0.15,
@@ -106,7 +115,11 @@ export function playWallHitSound(intensity: number = 0.5): void {
 export function playBallCollideSound(intensity: number = 0.5): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
-  
+
+  const nowMs = performance.now();
+  if (nowMs - lastCollideTime < MIN_COLLIDE_INTERVAL_MS) return;
+  lastCollideTime = nowMs;
+
   const now = ctx.currentTime;
   const volume = VOLUME.ballCollide * Math.min(1, Math.max(0.3, intensity));
   

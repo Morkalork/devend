@@ -5,7 +5,8 @@ import { GameCallbacks } from "./gameCallbacks";
 import {
   findGridRegions,
   countActiveCells,
-  worldToGridIndex,
+  buildGridRegionMap,
+  findGridRegionForBall,
 } from "@/lib/spaceGrid";
 import { lineSegmentIntersection, vec2Length } from "@/lib/polygon";
 import { LockDustParticle } from "@/types/game";
@@ -24,17 +25,15 @@ export function checkAndUpdateBallWonStates(
   let anyBallWon = false;
   const prevLockedCount = game.lockedBallsCount;
   const gridRegions = findGridRegions(game.spaceGrid);
+  const gridRegionMap = buildGridRegionMap(gridRegions);
 
   for (const ball of game.balls) {
     if (ball.state === 'won' || ball.speed === 0) continue;
 
-    const ballGridIndex = worldToGridIndex(game.spaceGrid, ball.position.x, ball.position.y);
-    if (ballGridIndex < 0) continue;
-
-    let ballRegion = null;
-    for (const region of gridRegions) {
-      if (region.cellIndices.includes(ballGridIndex)) { ballRegion = region; break; }
-    }
+    // Use neighbour-search fallback: ball may sit in a REMOVED cell (e.g. its grid-cell
+    // centre fractionally overlaps a mirror-polygon boundary even though the ball itself
+    // is outside the obstacle).
+    const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
     if (!ballRegion) continue;
 
     const currentActive = countActiveCells(game.spaceGrid);

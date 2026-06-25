@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy, ChevronRight } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
@@ -46,6 +47,7 @@ export function WelcomeScreen({
   totalCertificateHours,
   completedAchievementCount,
 }: WelcomeScreenProps) {
+  const { t } = useTranslation();
   const [remainingTime, setRemainingTime] = useState(checkpointRemainingMs || 0);
   const [showStartMapPicker, setShowStartMapPicker] = useState(false);
   
@@ -117,13 +119,13 @@ export function WelcomeScreen({
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            Slice. Trap. Survive.
+            {t('welcome.tagline')}
           </motion.p>
         </motion.div>
 
         {/* Animated spinning ball preview with multi-axis illusion */}
         <motion.div
-          className="relative w-20 h-20"
+          className="relative w-20 h-20 mt-4"
           animate={{ y: [0, -8, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         >
@@ -249,7 +251,7 @@ export function WelcomeScreen({
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-primary" />
                 <span className="text-sm font-medium text-foreground">
-                  Start at Level {checkpointLevel}
+                  {t('welcome.startAtLevel', { level: checkpointLevel })}
                 </span>
               </div>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -258,14 +260,14 @@ export function WelcomeScreen({
               </div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Checkpoint expires in {formatTime(remainingTime)}
+              {t('welcome.checkpointExpires', { time: formatTime(remainingTime) })}
             </p>
           </motion.div>
         )}
 
         {/* Buttons */}
         <motion.div
-          className="flex flex-col gap-4 w-full max-w-xs"
+          className="flex flex-col gap-5 w-full max-w-xs"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
@@ -283,7 +285,7 @@ export function WelcomeScreen({
                 whileTap={{ scale: 0.98 }}
                 disabled={isLoading}
               >
-                {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Loading...</> : `Continue from Level ${checkpointLevel}`}
+                {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</> : t('welcome.continueFromLevel', { level: checkpointLevel })}
               </motion.button>
               <div className="w-px bg-primary/30 my-3" />
               <motion.button
@@ -291,7 +293,7 @@ export function WelcomeScreen({
                 onClick={() => setShowStartMapPicker(true)}
                 whileTap={{ scale: 0.95 }}
                 disabled={isLoading}
-                title="Choose start map"
+                title={t('welcome.chooseStartMap')}
               >
                 <ChevronRight className="w-5 h-5" />
               </motion.button>
@@ -305,7 +307,7 @@ export function WelcomeScreen({
               disabled={isLoading}
               style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
             >
-              {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> Loading...</> : 'Start Game'}
+              {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</> : t('welcome.startGame')}
             </motion.button>
           )}
           <motion.button
@@ -315,7 +317,7 @@ export function WelcomeScreen({
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
           >
-            Tutorial
+            {t('welcome.tutorial')}
           </motion.button>
           <motion.button
             className="arcade-button-primary arcade-button-sm rounded-lg"
@@ -324,7 +326,7 @@ export function WelcomeScreen({
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
           >
-            Options
+            {t('welcome.options')}
           </motion.button>
           <motion.button
             className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
@@ -334,11 +336,11 @@ export function WelcomeScreen({
             disabled={!onOpenCertificateStore || isLoading}
           >
             <Sparkles className="w-5 h-5" />
-            Certificates
+            {t('welcome.certificates')}
             {totalCertificateHours !== undefined && totalCertificateHours > 0 && (
               <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Hexagon className="w-3 h-3" />
-                {totalCertificateHours}h
+                {t('welcome.hoursSuffix', { hours: totalCertificateHours })}
               </span>
             )}
           </motion.button>
@@ -351,7 +353,7 @@ export function WelcomeScreen({
               disabled={!totalCertificateHours || isLoading}
             >
               <Trophy className="w-5 h-5" />
-              Achievements
+              {t('welcome.achievements')}
               {completedAchievementCount !== undefined && completedAchievementCount > 0 && (
                 <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full">
                   {completedAchievementCount}
@@ -366,7 +368,7 @@ export function WelcomeScreen({
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              Admin
+              {t('welcome.admin')}
             </motion.button>
           )}
         </motion.div>

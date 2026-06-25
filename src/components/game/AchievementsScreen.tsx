@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Trophy, Zap, ChevronLeft, Check } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { Achievement, ACHIEVEMENT_STAT_LABELS } from '@/types/achievement';
 import { MetaProgressionStats } from '@/types/metaProgression';
+import { contentText } from '@/i18n/content';
 
 interface AchievementsScreenProps {
   achievements: Achievement[];
@@ -24,6 +26,7 @@ export function AchievementsScreen({
   onBack,
   accentColor = '#00ff88',
 }: AchievementsScreenProps) {
+  const { t } = useTranslation();
   const { available, active, remaining } = useMemo(() => {
     const available = achievements.filter(
       a => completedIds.includes(a.id) && !activatedIds.includes(a.id)
@@ -81,19 +84,19 @@ export function AchievementsScreen({
               className="font-bold text-sm"
               style={{ fontFamily: 'Orbitron, sans-serif', color: '#f59e0b' }}
             >
-              {achievement.name}
+              {contentText.achName(t, achievement)}
             </span>
             <p
               className="text-xs leading-relaxed mt-0.5 mb-2"
               style={{ color: 'hsl(var(--muted-foreground))', fontFamily: "'JetBrains Mono', monospace" }}
             >
-              {achievement.description}
+              {contentText.achDesc(t, achievement)}
             </p>
             <div
               className="text-[10px] font-semibold"
               style={{ color: '#f59e0b99', fontFamily: "'JetBrains Mono', monospace" }}
             >
-              Bonus: {achievement.bonus.description}
+              {t('achievements.bonusLabel')} {contentText.achBonus(t, achievement)}
             </div>
           </div>
 
@@ -112,7 +115,7 @@ export function AchievementsScreen({
             }}
           >
             <Zap className="w-3.5 h-3.5" />
-            Activate
+            {t('achievements.activate')}
           </motion.button>
         </div>
       </motion.div>
@@ -139,19 +142,19 @@ export function AchievementsScreen({
               className="font-bold text-sm"
               style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor }}
             >
-              {achievement.name}
+              {contentText.achName(t, achievement)}
             </span>
             <p
               className="text-xs leading-relaxed mt-0.5 mb-1"
               style={{ color: `${accentColor}cc`, fontFamily: "'JetBrains Mono', monospace" }}
             >
-              {achievement.description}
+              {contentText.achDesc(t, achievement)}
             </p>
             <div
               className="text-[10px] font-semibold"
               style={{ color: accentColor, fontFamily: "'JetBrains Mono', monospace" }}
             >
-              Bonus: {achievement.bonus.description}
+              {t('achievements.bonusLabel')} {contentText.achBonus(t, achievement)}
             </div>
           </div>
         </div>
@@ -183,13 +186,13 @@ export function AchievementsScreen({
               className="font-bold text-sm"
               style={{ fontFamily: 'Orbitron, sans-serif', color: 'hsl(var(--foreground))' }}
             >
-              {achievement.name}
+              {contentText.achName(t, achievement)}
             </span>
             <p
               className="text-xs leading-relaxed mt-0.5 mb-2"
               style={{ color: 'hsl(var(--muted-foreground))', fontFamily: "'JetBrains Mono', monospace" }}
             >
-              {achievement.description}
+              {contentText.achDesc(t, achievement)}
             </p>
             <div
               className="h-1.5 rounded-full overflow-hidden mb-1"
@@ -207,13 +210,13 @@ export function AchievementsScreen({
               className="text-[10px]"
               style={{ color: `${accentColor}88`, fontFamily: "'JetBrains Mono', monospace" }}
             >
-              {current} / {target} {statLabels[achievement.requirement.stat]}
+              {current} / {target} {t(`achievements.stat.${achievement.requirement.stat}`, { defaultValue: statLabels[achievement.requirement.stat] })}
             </div>
             <div
               className="text-[10px] font-semibold mt-1"
               style={{ color: `${accentColor}77`, fontFamily: "'JetBrains Mono', monospace" }}
             >
-              Bonus: {achievement.bonus.description}
+              {t('achievements.bonusLabel')} {contentText.achBonus(t, achievement)}
             </div>
           </div>
           <div
@@ -251,7 +254,7 @@ export function AchievementsScreen({
             style={{ color: accentColor }}
           >
             <ChevronLeft className="w-5 h-5" />
-            Back
+            {t('achievements.back')}
           </motion.button>
           <div className="flex items-center gap-2 ml-2">
             <Trophy className="w-5 h-5" style={{ color: accentColor }} />
@@ -259,11 +262,11 @@ export function AchievementsScreen({
               className="text-lg font-black tracking-widest uppercase"
               style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor }}
             >
-              Achievements
+              {t('achievements.title')}
             </span>
           </div>
           <div className="ml-auto text-xs" style={{ color: `${accentColor}99`, fontFamily: "'JetBrains Mono', monospace" }}>
-            {activatedIds.length} active / {completedIds.length} unlocked
+            {t('achievements.activeUnlocked', { active: activatedIds.length, unlocked: completedIds.length })}
           </div>
         </div>
 
@@ -278,7 +281,7 @@ export function AchievementsScreen({
         >
           {Object.entries(statLabels).map(([key, label]) => (
             <div key={key} className="flex items-center gap-1">
-              <span style={{ color: `${accentColor}88` }}>{label}:</span>
+              <span style={{ color: `${accentColor}88` }}>{t(`achievements.stat.${key}`, { defaultValue: label })}:</span>
               <span className="font-bold" style={{ color: accentColor }}>
                 {metaStats[key as keyof MetaProgressionStats]}
               </span>
@@ -293,7 +296,7 @@ export function AchievementsScreen({
               className="text-center mt-16 text-sm"
               style={{ color: `${accentColor}66`, fontFamily: "'JetBrains Mono', monospace" }}
             >
-              No achievements loaded.
+              {t('achievements.noneLoaded')}
             </div>
           ) : (
             <div className="flex flex-col gap-3 max-w-xl mx-auto">
@@ -301,7 +304,7 @@ export function AchievementsScreen({
               {/* Available to activate */}
               {available.length > 0 && (
                 <>
-                  <SectionHeader label="Available" count={available.length} />
+                  <SectionHeader label={t('achievements.sectionAvailable')} count={available.length} />
                   {available.map((a, i) => <AvailableCard key={a.id} achievement={a} index={i} />)}
                 </>
               )}
@@ -309,7 +312,7 @@ export function AchievementsScreen({
               {/* Active */}
               {active.length > 0 && (
                 <>
-                  <SectionHeader label="Active" count={active.length} />
+                  <SectionHeader label={t('achievements.sectionActive')} count={active.length} />
                   {active.map((a, i) => <ActiveCard key={a.id} achievement={a} index={i} />)}
                 </>
               )}
@@ -317,7 +320,7 @@ export function AchievementsScreen({
               {/* In progress */}
               {remaining.length > 0 && (
                 <>
-                  <SectionHeader label="In Progress" count={remaining.length} />
+                  <SectionHeader label={t('achievements.sectionInProgress')} count={remaining.length} />
                   {remaining.map((a, i) => <RemainingCard key={a.id} achievement={a} index={i} />)}
                 </>
               )}

@@ -15,12 +15,14 @@
  * restocked offers or refund the restock.
  */
 import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { TutorialOverlay } from './TutorialOverlay';
 import { Certificate } from '@/types/certificate';
+import { contentText } from '@/i18n/content';
 
 interface UpgradeShopProps {
   playerPoints: number;
@@ -94,6 +96,7 @@ export function UpgradeShop({
   onTutorialDismiss,
   newlyUnlockedCerts = [],
 }: UpgradeShopProps) {
+  const { t } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
   const [lockedInfoId, setLockedInfoId] = useState<string | null>(null);
@@ -221,7 +224,7 @@ export function UpgradeShop({
           <span
             className="inline-block text-2xl font-bold text-foreground/30 tracking-widest uppercase [transform:rotate(-90deg)] md:[transform:rotate(-45deg)]"
           >
-            Store
+            {t('upgradeShop.storeLabel')}
           </span>
         </motion.div>
 
@@ -232,7 +235,7 @@ export function UpgradeShop({
           transition={{ delay: 0.05 }}
           className="text-sm text-muted-foreground"
         >
-          Level {completedLevel} complete
+          {t('upgradeShop.levelComplete', { level: completedLevel })}
         </motion.div>
 
         {/* Waypoint banner — shown only on multiples of 5 */}
@@ -261,7 +264,7 @@ export function UpgradeShop({
               className="text-xs font-bold tracking-[0.3em] uppercase"
               style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
             >
-              ⚑ &nbsp;checkpoint reached&nbsp; ⚑
+              ⚑ &nbsp;{t('upgradeShop.checkpointReached')}&nbsp; ⚑
             </motion.p>
 
             <motion.p
@@ -270,14 +273,14 @@ export function UpgradeShop({
               className="text-4xl font-black tracking-widest"
               style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
             >
-              LEVEL {completedLevel}
+              {t('upgradeShop.levelBanner', { level: completedLevel })}
             </motion.p>
 
             <p
               className="text-xs tracking-widest uppercase"
               style={{ fontFamily: "'JetBrains Mono', monospace", color: '#4a7a5a' }}
             >
-              progress will be saved here
+              {t('upgradeShop.progressSavedHere')}
             </p>
           </motion.div>
         )}
@@ -290,8 +293,8 @@ export function UpgradeShop({
           className="flex items-center justify-center gap-2 text-xl"
         >
           <Clock className="w-6 h-6 text-yellow-500" />
-          <span className="font-semibold text-foreground">{effectiveOvertime}h</span>
-          <span className="text-muted-foreground">overtime</span>
+          <span className="font-semibold text-foreground">{t('upgradeShop.hoursValue', { hours: effectiveOvertime })}</span>
+          <span className="text-muted-foreground">{t('upgradeShop.overtime')}</span>
         </motion.div>
 
         {/* Restock counter — only when the Procurement upgrades are owned */}
@@ -305,8 +308,8 @@ export function UpgradeShop({
             <RefreshCw className={`w-3.5 h-3.5 ${restocksLeft > 0 ? 'text-cyan-400' : ''}`} />
             <span>
               {restocksLeft > 0
-                ? `Restocks left: ${restocksLeft} — buying an item adds a new offer`
-                : 'No restocks left this visit'}
+                ? t('upgradeShop.restocksLeft', { count: restocksLeft })
+                : t('upgradeShop.noRestocksLeft')}
             </span>
           </motion.div>
         )}
@@ -362,12 +365,12 @@ export function UpgradeShop({
               >
                 {/* Tier badge */}
                 <div className={`text-xs font-medium mb-1 ${tierColors.text}`}>
-                  {upgrade.tier}
+                  {contentText.tier(t, upgrade.tier)}
                 </div>
 
                 {/* Name */}
                 <div className="text-sm font-semibold text-foreground mb-1 truncate">
-                  {upgrade.name}
+                  {contentText.upgradeName(t, upgrade)}
                 </div>
 
                 {/* Status icon */}
@@ -394,16 +397,16 @@ export function UpgradeShop({
                 )}
                 {locked && !owned && lockedInfoId === upgrade.id && (
                   <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full z-10 bg-popover border border-border rounded px-2 py-1 text-[10px] text-muted-foreground whitespace-nowrap shadow-md">
-                    Requires: {(upgrade.prerequisites || []).filter(p => !effectiveOwned.includes(p)).map(p => {
+                    {t('upgradeShop.requires')} {(upgrade.prerequisites || []).filter(p => !effectiveOwned.includes(p)).map(p => {
                       const prereq = upgrades.find(u => u.id === p);
-                      return prereq ? prereq.name : p;
+                      return prereq ? contentText.upgradeName(t, prereq) : p;
                     }).join(', ')}
                   </div>
                 )}
 
                 {/* Description */}
                 <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
-                  {upgrade.description}
+                  {contentText.upgradeDesc(t, upgrade)}
                 </p>
 
                 {/* Cost */}
@@ -413,9 +416,9 @@ export function UpgradeShop({
                   `}>
                     <Clock className="w-4 h-4" />
                     {hasDiscount && (
-                      <span className="text-xs font-normal line-through opacity-50">{upgrade.cost}h</span>
+                      <span className="text-xs font-normal line-through opacity-50">{t('upgradeShop.hoursValue', { hours: upgrade.cost })}</span>
                     )}
-                    {priceFor(upgrade)}h
+                    {t('upgradeShop.hoursValue', { hours: priceFor(upgrade) })}
                   </div>
                 )}
               </motion.button>
@@ -438,8 +441,8 @@ export function UpgradeShop({
               >
                 <Medal className="w-4 h-4 text-yellow-400 shrink-0" />
                 <div>
-                  <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">Certificate Unlocked!</p>
-                  <p className="text-sm text-foreground font-semibold">{cert.name}</p>
+                  <p className="text-xs font-bold text-yellow-400 uppercase tracking-wider">{t('upgradeShop.certificateUnlocked')}</p>
+                  <p className="text-sm text-foreground font-semibold">{contentText.certName(t, cert)}</p>
                 </div>
               </div>
             ))}
@@ -456,7 +459,7 @@ export function UpgradeShop({
           whileTap={{ scale: 0.98 }}
           className="arcade-button-primary rounded-lg flex items-center gap-2 text-sm whitespace-nowrap"
         >
-          {selectedIds.length > 0 ? `Buy ${selectedIds.length} & Continue (${selectedTotalCost}h)` : 'Continue'}
+          {selectedIds.length > 0 ? t('upgradeShop.buyAndContinue', { count: selectedIds.length, cost: selectedTotalCost }) : t('upgradeShop.continue')}
           <ArrowRight className="w-5 h-5" />
         </motion.button>
       </motion.div>
@@ -464,8 +467,8 @@ export function UpgradeShop({
       {showTutorial && (
         <TutorialOverlay
           visible
-          title="THE UPGRADE SHOP"
-          body="Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map."
+          title={t('upgradeShop.tutorialTitle')}
+          body={t('upgradeShop.tutorialBody')}
           arrowDirection="none"
           onDismiss={() => onTutorialDismiss?.()}
         />

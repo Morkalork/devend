@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 
 interface TutorialOverlayProps {
   visible: boolean;
@@ -23,6 +24,7 @@ export function TutorialOverlay({
   spotlightHeightPx = 0,
   accentColor = '#00ff88',
 }: TutorialOverlayProps) {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   const h = spotlightHeightPx;
@@ -106,7 +108,7 @@ export function TutorialOverlay({
           className="text-center text-xs tracking-widest uppercase mt-1"
           style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor, opacity: 0.7 }}
         >
-          TAP ANYWHERE TO CONTINUE
+          {t('tutorialOverlay.tapToContinue')}
         </div>
       )}
 
@@ -114,7 +116,7 @@ export function TutorialOverlay({
         className="text-center text-[10px] tracking-wide uppercase mt-1"
         style={{ fontFamily: "'JetBrains Mono', monospace", color: '#4a7a5a' }}
       >
-        Tutorials can be replayed from OPTIONS
+        {t('tutorialOverlay.replayFromOptions')}
       </div>
     </motion.div>
   );

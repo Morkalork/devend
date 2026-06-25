@@ -7,10 +7,12 @@
  * drafted mutator still active.
  */
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ArrowUpCircle, Flag, Skull, Sparkles } from 'lucide-react';
 import { MutatorConfig } from '@/types/mutator';
 import { CRTBackground } from './CRTBackground';
+import { contentText } from '@/i18n/content';
 
 interface AscensionDraftScreenProps {
   mutators: MutatorConfig[];
@@ -50,6 +52,7 @@ export function AscensionDraftScreen({
   showTutorial = false,
   onTutorialDismiss,
 }: AscensionDraftScreenProps) {
+  const { t } = useTranslation();
   // Drawn once per mount so re-renders don't reshuffle the offer
   const [offers] = useState(() => drawOffers(mutators, draftedMutatorIds, 3));
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -85,15 +88,15 @@ export function AscensionDraftScreen({
               className="text-3xl sm:text-4xl font-display font-black tracking-wider uppercase"
               style={{ color: accentColor, textShadow: `0 0 30px ${accentColor}88` }}
             >
-              All Levels Cleared
+              {t('ascension.allLevelsCleared')}
             </h1>
             <p className="mt-2 text-sm" style={{ color: '#c8ffd8', opacity: 0.75 }}>
-              {ascensionDepth > 0 ? `Ascension ${ascensionDepth} complete. ` : ''}
-              Retire and bank everything — or draft a mutator and ascend to depth {nextDepth}.
+              {ascensionDepth > 0 ? t('ascension.ascensionComplete', { depth: ascensionDepth }) : ''}
+              {t('ascension.retireOrAscend', { depth: nextDepth })}
             </p>
             <p className="mt-1 text-xs" style={{ color: '#4a7a5a' }}>
-              Ascended levels are faster and count {nextDepth + 1}× toward Certificate Hours.
-              Banked overtime: {totalScore}h
+              {t('ascension.ascendedLevelsInfo', { multiplier: nextDepth + 1 })}
+              {t('ascension.bankedOvertime', { score: totalScore })}
             </p>
           </div>
 
@@ -121,15 +124,15 @@ export function AscensionDraftScreen({
                     className="font-display font-bold text-base mb-3"
                     style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
                   >
-                    {mutator.name}
+                    {contentText.mutName(t, mutator)}
                   </p>
                   <div className="flex items-start gap-2 mb-2">
                     <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{mutator.curse}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.mutCurse(t, mutator)}</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{mutator.blessing}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.mutBlessing(t, mutator)}</p>
                   </div>
                 </motion.button>
               );
@@ -139,7 +142,7 @@ export function AscensionDraftScreen({
                 className="sm:col-span-3 rounded-lg p-4 text-center text-xs"
                 style={{ border: `1px solid ${accentColor}44`, color: '#4a7a5a' }}
               >
-                No mutators available — mutators.yml failed to load. You can still retire below.
+                {t('ascension.noMutators')}
               </div>
             )}
           </div>
@@ -159,7 +162,7 @@ export function AscensionDraftScreen({
               whileTap={selectedId ? { scale: 0.98 } : undefined}
             >
               <ArrowUpCircle className="w-5 h-5" />
-              {selectedId ? `Ascend to Depth ${nextDepth}` : 'Select a Mutator'}
+              {selectedId ? t('ascension.ascendToDepth', { depth: nextDepth }) : t('ascension.selectMutator')}
             </motion.button>
             <motion.button
               className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
@@ -168,7 +171,7 @@ export function AscensionDraftScreen({
               whileTap={{ scale: 0.98 }}
             >
               <Flag className="w-5 h-5" />
-              Retire — Bank This Run
+              {t('ascension.retireBankRun')}
             </motion.button>
           </motion.div>
         </motion.div>
@@ -190,16 +193,13 @@ export function AscensionDraftScreen({
                 className="font-display font-black text-xl uppercase tracking-wider mb-3"
                 style={{ color: accentColor }}
               >
-                Ascension Unlocked
+                {t('ascension.ascensionUnlocked')}
               </h2>
               <p className="text-sm leading-relaxed mb-4" style={{ color: '#c8ffd8' }}>
-                You beat every level — but the grind never ends. Ascend to start over at level 1
-                with your score, upgrades and lives intact, plus one <b>mutator</b>: a curse bundled
-                with a blessing. Mutators stack with every ascension, levels get faster, and each
-                cleared level counts more toward Certificate Hours. Retire whenever you want to bank it all.
+                {t('ascension.tutorialIntro1')}<b>{t('ascension.tutorialMutatorWord')}</b>{t('ascension.tutorialIntro2')}
               </p>
               <button className="arcade-button-primary rounded-lg" onClick={onTutorialDismiss}>
-                Got It
+                {t('ascension.gotIt')}
               </button>
             </motion.div>
           </div>

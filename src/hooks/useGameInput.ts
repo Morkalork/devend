@@ -24,6 +24,7 @@ import {
   BOARD_HEIGHT,
   screenToWorld,
   isPointInBoard,
+  getDevicePixelRatio,
 } from "@/lib/boardConstants";
 import { isPositionActive } from "@/lib/spaceGrid";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
@@ -42,7 +43,7 @@ export function useGameInput(
 
     const getCanvasCoords = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = getDevicePixelRatio();
       return { screenX: (e.clientX - rect.left) * dpr, screenY: (e.clientY - rect.top) * dpr };
     };
 

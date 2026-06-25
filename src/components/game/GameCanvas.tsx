@@ -72,6 +72,7 @@ import {
   computeBoardRect,
   screenToWorld,
   isPointInBoard,
+  getDevicePixelRatio,
 } from "@/lib/boardConstants";
 import { CanvasGameState } from "@/types/gameState";
 import { createInitialGameData } from "@/lib/initGame";
@@ -433,7 +434,7 @@ export function GameCanvas({
 
     const resizeCanvas = () => {
       const { width, height } = container.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = getDevicePixelRatio();
       const physW = Math.round(width * dpr);
       const physH = Math.round(height * dpr);
       canvas.width = physW; canvas.height = physH;

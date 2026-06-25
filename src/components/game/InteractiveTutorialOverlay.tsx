@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TutorialStep } from '@/types/game';
 
 interface InteractiveTutorialOverlayProps {
@@ -41,6 +42,7 @@ export function InteractiveTutorialOverlay({
   canvasOffsetTop,
   canvasOffsetLeft,
 }: InteractiveTutorialOverlayProps) {
+  const { t } = useTranslation();
   const [showHand, setShowHand] = useState(true);
   const [loopCount, setLoopCount] = useState(0);
   const reshowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -247,13 +249,13 @@ export function InteractiveTutorialOverlay({
             className="text-sm sm:text-base font-black tracking-widest uppercase"
             style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
           >
-            DRAW A FENCE
+            {t('interactiveTutorial.drawAFence')}
           </p>
           <p
             className="text-xs sm:text-sm mt-2 leading-relaxed"
             style={{ fontFamily: "'JetBrains Mono', monospace", color: '#c8ffd8' }}
           >
-            Drag anywhere inside the area to create a slicing wall. Don't let the ball hit the wall while it's growing!
+            {t('interactiveTutorial.dragInstruction')}
           </p>
         </div>
       </motion.div>
@@ -338,7 +340,7 @@ export function InteractiveTutorialOverlay({
             color: '#00ff88',
           }}
         >
-          DRAW A FENCE TO CONTINUE
+          {t('interactiveTutorial.drawAFenceToContinue')}
         </div>
       </motion.div>
     </div>

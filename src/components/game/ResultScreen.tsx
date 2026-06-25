@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { CRTBackground } from './CRTBackground';
@@ -24,6 +25,7 @@ export function ResultScreen({
   runHoursAwarded = 0,
   runLevelsCompleted = 0,
 }: ResultScreenProps) {
+  const { t } = useTranslation();
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, mutatorNames } = result;
 
   return (
@@ -86,7 +88,7 @@ export function ResultScreen({
               : '0 0 30px hsl(var(--danger) / 0.5)',
           }}
         >
-          {isWin ? 'YOU WIN!' : 'GAME OVER'}
+          {isWin ? t('result.youWin') : t('result.gameOver')}
         </motion.h1>
 
         {/* Completed all levels message */}
@@ -97,7 +99,7 @@ export function ResultScreen({
             transition={{ delay: 0.35 }}
             className="text-2xl font-display text-primary"
           >
-            🎉 Completed all levels! 🎉
+            {t('result.completedAllLevels')}
           </motion.div>
         )}
 
@@ -115,12 +117,12 @@ export function ResultScreen({
                 className="text-xl font-display font-bold"
                 style={{ color: '#ffb347', textShadow: '0 0 16px #ffb34788' }}
               >
-                Ascension Depth {ascensionDepth}
+                {t('result.ascensionDepth', { depth: ascensionDepth })}
               </p>
             </div>
             {mutatorNames && mutatorNames.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                Mutators braved: {mutatorNames.join(' · ')}
+                {t('result.mutatorsBraved', { mutators: mutatorNames.join(' · ') })}
               </p>
             )}
           </motion.div>
@@ -135,7 +137,7 @@ export function ResultScreen({
         >
           <div>
             <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
-              {isWin ? 'Completed Level' : 'Failed at Level'}
+              {isWin ? t('result.completedLevel') : t('result.failedAtLevel')}
             </p>
             <p className="text-3xl font-display font-bold text-foreground">
               {levelNumber}
@@ -145,7 +147,7 @@ export function ResultScreen({
 
           <div>
             <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
-              Arena Remaining
+              {t('result.arenaRemaining')}
             </p>
             <p className="text-5xl font-display font-bold text-foreground">
               {remainingPercent}%
@@ -161,7 +163,7 @@ export function ResultScreen({
               className="mt-4 pt-4 border-t border-border"
             >
               <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
-                Levels Completed
+                {t('result.levelsCompleted')}
               </p>
               <p className="text-3xl font-display font-bold text-foreground mb-2">
                 {runLevelsCompleted}
@@ -170,7 +172,7 @@ export function ResultScreen({
                 <div className="flex items-center justify-center gap-2">
                   <Hexagon className="w-6 h-6 text-white fill-white/20" />
                   <p className="text-2xl font-display font-bold text-white">
-                    +{runHoursAwarded}h Certificate Hour{runHoursAwarded > 1 ? 's' : ''}
+                    {t('result.certificateHours', { count: runHoursAwarded })}
                   </p>
                 </div>
               )}
@@ -196,7 +198,7 @@ export function ResultScreen({
                   whileTap={{ scale: 0.98 }}
                 >
                   <RotateCcw className="w-5 h-5" />
-                  Continue (Level {checkpointLevel})
+                  {t('result.continueLevel', { level: checkpointLevel })}
                 </motion.button>
               )}
               {onRestart && (
@@ -207,7 +209,7 @@ export function ResultScreen({
                   whileTap={{ scale: 0.98 }}
                 >
                   <RotateCcw className="w-5 h-5" />
-                  Restart
+                  {t('result.restart')}
                 </motion.button>
               )}
             </>
@@ -220,7 +222,7 @@ export function ResultScreen({
                 whileTap={{ scale: 0.98 }}
               >
                 <RotateCcw className="w-5 h-5" />
-                Play Again
+                {t('result.playAgain')}
               </motion.button>
             )
           )}
@@ -231,7 +233,7 @@ export function ResultScreen({
             whileTap={{ scale: 0.98 }}
           >
             <Home className="w-5 h-5" />
-            Main Menu
+            {t('result.mainMenu')}
           </motion.button>
         </motion.div>
       </motion.div>

@@ -6,9 +6,10 @@
  *   - useGameSession:      all game/run state, passed to each screen as props
  *
  * Screens slide left/right with framer-motion based on SCREEN_ORDER.
- * Admin screens are lazy-loaded and only available in dev (or ?admin=true).
+ * Admin screens are lazy-loaded and only available in dev builds.
  */
 import { lazy, Suspense, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
 import { useGameSession } from '@/hooks/useGameSession';
@@ -47,8 +48,9 @@ type Navigation = ReturnType<typeof useScreenNavigation>;
 type Session = ReturnType<typeof useGameSession>;
 
 function IndexContent({ navigation, session }: { navigation: Navigation; session: Session }) {
+  const { t } = useTranslation();
   const { accentHex } = useAccentColor();
-  const isAdminEnabled = import.meta.env.DEV || new URLSearchParams(window.location.search).get('admin') === 'true';
+  const isAdminEnabled = import.meta.env.DEV;
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1,
@@ -226,17 +228,17 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             )}
 
             {isAdminEnabled && navigation.currentScreen === 'admin' && (
-              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
+              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <AdminScreen onBack={navigation.goToWelcome} onMapBuilder={navigation.goToMapBuilder} onAnimationTest={navigation.goToAnimationTest} />
               </Suspense>
             )}
             {isAdminEnabled && navigation.currentScreen === 'mapBuilder' && (
-              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
+              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <MapBuilder onBack={navigation.goToAdmin} />
               </Suspense>
             )}
             {isAdminEnabled && navigation.currentScreen === 'animationTest' && (
-              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">Loading...</div>}>
+              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <PlaygroundScreen onBack={navigation.goToAdmin} accentColor={accentHex} />
               </Suspense>
             )}

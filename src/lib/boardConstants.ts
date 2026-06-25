@@ -19,6 +19,21 @@ export const BOTTOM_UI_PERCENT = 0.05;
 // mobile/desktop breakpoint misfired on high-DPR phones and capped them at 50%.
 export const BOARD_SIZE_PERCENT = 0.95;
 
+// Cap the canvas backing-store resolution at 2× CSS pixels. Phones commonly
+// report a native devicePixelRatio of 2.6–3.0; rendering at that means 2–2.5×
+// more pixels per frame than 2×, and because boardRect.scale (and therefore
+// every shadowBlur radius in renderFrame) grows with physical pixels, the cost
+// climbs faster than linearly. Capping at 2 is visually imperceptible on a
+// high-ppi screen but is the single biggest lever for smooth frame rates and
+// thermal headroom inside the Android WebView. The canvas sizing and the
+// pointer→world mapping MUST share this value or cuts land off-target.
+export const MAX_DEVICE_PIXEL_RATIO = 2;
+
+/** Effective device pixel ratio, capped at MAX_DEVICE_PIXEL_RATIO. */
+export function getDevicePixelRatio(): number {
+  return Math.min(window.devicePixelRatio || 1, MAX_DEVICE_PIXEL_RATIO);
+}
+
 export interface BoardRect {
   left: number;
   top: number;

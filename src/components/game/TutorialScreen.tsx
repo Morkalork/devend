@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 
@@ -8,47 +9,20 @@ interface TutorialScreenProps {
 }
 
 const tutorialSteps = [
-  {
-    icon: Move,
-    title: 'Swipe to Cut',
-    description: 'Swipe or drag to create a slicing wall. Horizontal or vertical based on your swipe direction.',
-  },
-  {
-    icon: Scissors,
-    title: 'Remove Empty Space',
-    description: 'When the wall completes, the side WITHOUT the ball is removed and becomes darkness.',
-  },
-  {
-    icon: AlertTriangle,
-    title: 'Avoid the Ball',
-    description: "Don't let the ball hit the wall while it's still growing — instant game over!",
-  },
-  {
-    icon: Target,
-    title: 'Win Condition',
-    description: 'Reduce the arena to under 25% of its original size to win. Speed increases with each cut!',
-  },
+  { icon: Move, key: 'swipeToCut' },
+  { icon: Scissors, key: 'removeEmptySpace' },
+  { icon: AlertTriangle, key: 'avoidTheBall' },
+  { icon: Target, key: 'winCondition' },
 ];
 
 const lifeCycleSteps = [
-  {
-    icon: Heart,
-    title: 'Lives',
-    description: 'You start each run with a set number of lives. Lose a life every time a ball hits your growing fence. Run out of lives and the run ends.',
-  },
-  {
-    icon: Flag,
-    title: 'Checkpoints',
-    description: 'Every 5 levels is a checkpoint. When your run ends, your next run always restarts from the highest checkpoint you reached — you never lose all your progress.',
-  },
-  {
-    icon: Star,
-    title: 'Head Start Certificates',
-    description: 'In the Certificate Store you can unlock Head Start certificates that permanently raise your starting level — so experienced players never have to replay early levels.',
-  },
+  { icon: Heart, key: 'lives' },
+  { icon: Flag, key: 'checkpoints' },
+  { icon: Star, key: 'headStartCertificates' },
 ];
 
 export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
+  const { t } = useTranslation();
   return (
     <>
       <CRTBackground accentColor={accentColor} />
@@ -64,7 +38,7 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
-          <span className="font-display uppercase tracking-wider text-sm">Back</span>
+          <span className="font-display uppercase tracking-wider text-sm">{t('tutorial.back')}</span>
         </button>
       </motion.div>
 
@@ -75,7 +49,7 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
       >
-        How to Play
+        {t('tutorial.howToPlay')}
       </motion.h1>
 
       {/* Tutorial steps */}
@@ -83,7 +57,7 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
         <div className="grid gap-6 w-full">
           {tutorialSteps.map((step, index) => (
             <motion.div
-              key={step.title}
+              key={step.key}
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 + index * 0.1 }}
@@ -94,10 +68,10 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
               </div>
               <div>
                 <h3 className="font-display font-semibold text-foreground mb-1">
-                  {step.title}
+                  {t(`tutorial.steps.${step.key}.title`)}
                 </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  {step.description}
+                  {t(`tutorial.steps.${step.key}.description`)}
                 </p>
               </div>
             </motion.div>
@@ -111,12 +85,12 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.65 }}
         >
-          Life Cycle
+          {t('tutorial.lifeCycle')}
         </motion.h2>
         <div className="grid gap-6 w-full">
           {lifeCycleSteps.map((step, index) => (
             <motion.div
-              key={step.title}
+              key={step.key}
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.7 + index * 0.1 }}
@@ -127,10 +101,10 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
               </div>
               <div>
                 <h3 className="font-display font-semibold text-foreground mb-1">
-                  {step.title}
+                  {t(`tutorial.steps.${step.key}.title`)}
                 </h3>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  {step.description}
+                  {t(`tutorial.steps.${step.key}.description`)}
                 </p>
               </div>
             </motion.div>
@@ -144,9 +118,9 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
           transition={{ delay: 1.0 }}
           className="mt-8 p-4 bg-secondary/30 border border-border rounded-lg w-full"
         >
-          <h4 className="font-display text-sm font-semibold text-foreground mb-2">Achievements &amp; Certificates</h4>
+          <h4 className="font-display text-sm font-semibold text-foreground mb-2">{t('tutorial.achievementsCertificatesTitle')}</h4>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Play more to unlock achievements and certificates. Achievements reward lifetime milestones with permanent run bonuses. Certificates are earned by mastering specific upgrades across multiple runs and can be purchased in the Certificate Store for lasting effects.
+            {t('tutorial.achievementsCertificatesBody')}
           </p>
         </motion.div>
 
@@ -157,20 +131,20 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
           transition={{ delay: 0.6 }}
           className="mt-8 p-4 bg-secondary/30 border border-border rounded-lg w-full"
         >
-          <h4 className="font-display text-sm font-semibold text-foreground mb-2">Controls</h4>
+          <h4 className="font-display text-sm font-semibold text-foreground mb-2">{t('tutorial.controlsTitle')}</h4>
           <div className="flex flex-col gap-3 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-card rounded border border-border text-xs font-display shrink-0">TOUCH</span>
-              <span>Swipe to cut</span>
+              <span className="px-2 py-1 bg-card rounded border border-border text-xs font-display shrink-0">{t('tutorial.controlTouchLabel')}</span>
+              <span>{t('tutorial.controlSwipeToCut')}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="px-2 py-1 bg-card rounded border border-border text-xs font-display shrink-0">TOUCH</span>
-              <span>Second finger while fence is growing cancels it</span>
+              <span className="px-2 py-1 bg-card rounded border border-border text-xs font-display shrink-0">{t('tutorial.controlTouchLabel')}</span>
+              <span>{t('tutorial.controlSecondFinger')}</span>
             </div>
             {!('ontouchstart' in window) && (
               <div className="flex items-center gap-2">
-                <span className="px-2 py-1 bg-card rounded border border-border text-xs font-display shrink-0">MOUSE</span>
-                <span>Click and drag</span>
+                <span className="px-2 py-1 bg-card rounded border border-border text-xs font-display shrink-0">{t('tutorial.controlMouseLabel')}</span>
+                <span>{t('tutorial.controlClickAndDrag')}</span>
               </div>
             )}
           </div>
@@ -188,7 +162,7 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
           onClick={onBack}
           className="arcade-button-secondary rounded-lg"
         >
-          Got it!
+          {t('tutorial.gotIt')}
         </button>
       </motion.div>
     </div>

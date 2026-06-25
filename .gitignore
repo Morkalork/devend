@@ -26,3 +26,11 @@ tmpclaude-*-cwd
 *.njsproj
 *.sln
 *.sw?
+
+# Android signing secrets — NEVER commit these
+*.jks
+*.keystore
+android/keystore.properties
+android/local.properties
+
+devend-upload.keystore

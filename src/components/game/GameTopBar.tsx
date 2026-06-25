@@ -4,8 +4,10 @@
  * certificate-hour progress. Tapping it opens TopBarDetailsPanel.
  */
 import { useRef, useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
+import { contentText } from '@/i18n/content';
 import {
   Tooltip,
   TooltipContent,
@@ -54,6 +56,7 @@ export function GameTopBar({
   ascensionDepth = 0,
   onExpand,
 }: GameTopBarProps) {
+  const { t } = useTranslation();
   const upgradesContainerRef = useRef<HTMLDivElement>(null);
   const [needsCarousel, setNeedsCarousel] = useState(false);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
@@ -268,8 +271,8 @@ export function GameTopBar({
             }}
           >
             {spaceRemaining <= spaceRequired
-              ? 'CLEAR'
-              : `${displaySpace - spaceRequired}% to go`}
+              ? t('topBar.clear')
+              : t('topBar.percentToGo', { percent: displaySpace - spaceRequired })}
           </span>
         </div>
 
@@ -328,9 +331,9 @@ export function GameTopBar({
                         boxShadow: openTooltipId === upgrade.id ? `0 0 12px ${accentColor}88` : 'none',
                         color: accentColor,
                       }}
-                      aria-label={upgrade.name}
+                      aria-label={contentText.upgradeName(t, upgrade)}
                     >
-                      {upgrade.name.substring(0, 3).toUpperCase()}
+                      {contentText.upgradeName(t, upgrade).substring(0, 3).toUpperCase()}
                     </button>
                   </TooltipTrigger>
                   <TooltipContent
@@ -345,14 +348,14 @@ export function GameTopBar({
                   >
                     <div className="space-y-1.5">
                       <p className="font-display font-bold text-base" style={{ color: accentColor }}>
-                        {upgrade.name} ({upgrade.tier})
+                        {contentText.upgradeName(t, upgrade)} ({contentText.tier(t, upgrade.tier)})
                       </p>
                       <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--foreground) / 0.85)' }}>
-                        {upgrade.description}
+                        {contentText.upgradeDesc(t, upgrade)}
                       </p>
                       {upgrade.id.startsWith('micro_manager_') && microManagerPerLock > 0 && (
                         <p className="text-sm font-bold tabular-nums" style={{ color: accentColor }}>
-                          Currently reducing by {Math.min(70, Math.round(lockedBalls * microManagerPerLock * 100))}%
+                          {t('topBar.currentlyReducingBy', { percent: Math.min(70, Math.round(lockedBalls * microManagerPerLock * 100)) })}
                         </p>
                       )}
                     </div>
