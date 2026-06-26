@@ -8,7 +8,7 @@
  *
  * Persistence: localStorage key ACHIEVEMENT_STORAGE_KEY (src/types/achievement.ts).
  */
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import yaml from 'js-yaml';
 import {
   Achievement,
@@ -42,7 +42,11 @@ function loadPersistence(): AchievementPersistence {
 }
 
 function savePersistence(state: AchievementPersistence): void {
-  localStorage.setItem(ACHIEVEMENT_STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(ACHIEVEMENT_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn('Failed to persist achievements', e);
+  }
 }
 
 // Stable empty reference — returned when nothing is activated so that
@@ -55,9 +59,18 @@ export function useAchievementManager() {
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [activatedIds, setActivatedIds] = useState<string[]>([]);
 
+  // Refs mirror the two persisted arrays so the mutators below have a single,
+  // always-current source of truth to read+write+persist from, without nesting
+  // setState calls inside one another (a React anti-pattern that can re-fire
+  // the side-effecting save or read a stale value under concurrent rendering).
+  const completedIdsRef = useRef<string[]>([]);
+  const activatedIdsRef = useRef<string[]>([]);
+
   // Load achievements.yml and persistence on mount
   useEffect(() => {
     const stored = loadPersistence();
+    completedIdsRef.current = stored.completedIds;
+    activatedIdsRef.current = stored.activatedIds;
     setCompletedIds(stored.completedIds);
     setActivatedIds(stored.activatedIds);
 
@@ -77,40 +90,35 @@ export function useAchievementManager() {
    * Call this whenever stats change (e.g., after level complete).
    */
   const checkAndComplete = useCallback((stats: MetaProgressionStats) => {
-    setCompletedIds(prev => {
-      const next = [...prev];
-      let changed = false;
-      for (const a of achievements) {
-        if (next.includes(a.id)) continue;
-        const current = stats[a.requirement.stat];
-        if (current >= a.requirement.threshold) {
-          next.push(a.id);
-          changed = true;
-        }
+    const prev = completedIdsRef.current;
+    const next = [...prev];
+    let changed = false;
+    for (const a of achievements) {
+      if (next.includes(a.id)) continue;
+      const current = stats[a.requirement.stat];
+      if (typeof current === 'number' && current >= a.requirement.threshold) {
+        next.push(a.id);
+        changed = true;
       }
-      if (changed) {
-        // Save with current activatedIds (read from storage to avoid stale closure)
-        const stored = loadPersistence();
-        savePersistence({ completedIds: next, activatedIds: stored.activatedIds });
-        return next;
-      }
-      return prev;
-    });
+    }
+    if (changed) {
+      completedIdsRef.current = next;
+      setCompletedIds(next);
+      // activatedIds is untouched here; persist it from its ref to keep both
+      // fields consistent without a second read of storage.
+      savePersistence({ completedIds: next, activatedIds: activatedIdsRef.current });
+    }
   }, [achievements]);
 
   /**
    * Activate a completed achievement so its bonus takes effect.
    */
   const activateAchievement = useCallback((id: string) => {
-    setActivatedIds(prev => {
-      if (prev.includes(id)) return prev;
-      const next = [...prev, id];
-      setCompletedIds(completed => {
-        savePersistence({ completedIds: completed, activatedIds: next });
-        return completed;
-      });
-      return next;
-    });
+    if (activatedIdsRef.current.includes(id)) return;
+    const next = [...activatedIdsRef.current, id];
+    activatedIdsRef.current = next;
+    setActivatedIds(next);
+    savePersistence({ completedIds: completedIdsRef.current, activatedIds: next });
   }, []);
 
   /**
@@ -140,9 +148,9 @@ export function useAchievementManager() {
     return achievements
       .filter(a => !completedIds.includes(a.id))
       .sort((a, b) => {
-        const ratioA = stats[a.requirement.stat] / a.requirement.threshold;
-        const ratioB = stats[b.requirement.stat] / b.requirement.threshold;
-        return ratioB - ratioA;
+        const ratioA = (stats[a.requirement.stat] ?? 0) / a.requirement.threshold;
+        const ratioB = (stats[b.requirement.stat] ?? 0) / b.requirement.threshold;
+        return (Number.isFinite(ratioB) ? ratioB : 0) - (Number.isFinite(ratioA) ? ratioA : 0);
       });
   }, [achievements, completedIds]);
 

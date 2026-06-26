@@ -230,10 +230,12 @@ export function calculateScore(
     usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig
   );
 
-  const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * scoreMultiplier);
+  // Guard against a NaN/negative scoreMultiplier leaking in from bad config.
+  const safeMultiplier = Number.isFinite(scoreMultiplier) && scoreMultiplier > 0 ? scoreMultiplier : 1;
+  const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
   const rawScore = multipliedBase + breakdown.totalBonus;
   const cap = getOvertimeCap(levelNumber);
-  const levelScore = Math.min(rawScore, cap);
+  const levelScore = Math.max(0, Math.min(rawScore, cap));
 
   return { levelScore, breakdown };
 }

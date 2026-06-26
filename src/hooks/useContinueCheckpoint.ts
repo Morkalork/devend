@@ -55,14 +55,18 @@ export function useContinueCheckpoint() {
     try {
       const stored = localStorage.getItem(CHECKPOINT_STORAGE_KEY);
       if (stored) {
-        const data: CheckpointData = JSON.parse(stored);
+        const data = JSON.parse(stored) as Partial<CheckpointData>;
         const now = Date.now();
-        
-        // Check if checkpoint is still valid (not expired)
-        if (data.expiresAt > now && data.checkpointLevel > 1) {
-          setCheckpointData(data);
+
+        // Accept only a well-formed, unexpired checkpoint past the first tier.
+        if (
+          typeof data?.checkpointLevel === 'number' && Number.isFinite(data.checkpointLevel) &&
+          typeof data.expiresAt === 'number' && Number.isFinite(data.expiresAt) &&
+          data.expiresAt > now && data.checkpointLevel > 1
+        ) {
+          setCheckpointData(data as CheckpointData);
         } else {
-          // Expired, remove it
+          // Expired or malformed, remove it
           localStorage.removeItem(CHECKPOINT_STORAGE_KEY);
         }
       }
@@ -89,8 +93,26 @@ export function useContinueCheckpoint() {
     };
 
     setCheckpointData(data);
-    localStorage.setItem(CHECKPOINT_STORAGE_KEY, JSON.stringify(data));
+    try {
+      localStorage.setItem(CHECKPOINT_STORAGE_KEY, JSON.stringify(data));
+    } catch (e) {
+      console.warn('Failed to persist checkpoint:', e);
+    }
   }, []);
+
+  // Auto-clear the checkpoint the instant it expires, so the welcome screen
+  // updates without a render-time side effect inside getStartingLevel.
+  useEffect(() => {
+    if (!checkpointData) return;
+    const clear = () => {
+      setCheckpointData(null);
+      try { localStorage.removeItem(CHECKPOINT_STORAGE_KEY); } catch { /* ignore */ }
+    };
+    const remaining = checkpointData.expiresAt - Date.now();
+    if (remaining <= 0) { clear(); return; }
+    const t = setTimeout(clear, remaining);
+    return () => clearTimeout(t);
+  }, [checkpointData]);
 
   // Clear checkpoint (when player completes the game or starts fresh)
   const clearCheckpoint = useCallback(() => {
@@ -99,17 +121,11 @@ export function useContinueCheckpoint() {
   }, []);
 
   // Get the starting level (checkpoint level if valid, otherwise 1)
+  // Pure read — expiry cleanup is handled by the effect above so this is safe
+  // to call during render.
   const getStartingLevel = useCallback((): number => {
     if (!checkpointData) return 1;
-    
-    const now = Date.now();
-    if (checkpointData.expiresAt <= now) {
-      // Expired
-      localStorage.removeItem(CHECKPOINT_STORAGE_KEY);
-      setCheckpointData(null);
-      return 1;
-    }
-    
+    if (checkpointData.expiresAt <= Date.now()) return 1;
     return checkpointData.checkpointLevel;
   }, [checkpointData]);
 

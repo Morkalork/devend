@@ -20,7 +20,7 @@ import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { clearBallRenderCache } from "@/lib/ballRenderCache";
 import { clearBallEffectsCache } from "@/lib/ballEffects";
-import { renderFrame, createRainParticles } from "@/lib/rendering/renderFrame";
+import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/rendering/renderFrame";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded } from "@/lib/scoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
@@ -119,6 +119,23 @@ interface GameCanvasProps {
   paused?: boolean;
 }
 
+/**
+ * Start the rAF game loop. Always cancels the previously-stored handle first so
+ * the four start sites (setup, resume, dissolve, push-mode) can never leave two
+ * self-rescheduling loops running against the single shared game.animationId.
+ */
+function startGameLoop(game: CanvasGameState): void {
+  if (!game.gameLoopFn) return;
+  cancelAnimationFrame(game.animationId);
+  game.animationId = requestAnimationFrame(game.gameLoopFn);
+}
+
+/** Stop the rAF game loop and clear the handle. */
+function stopGameLoop(game: CanvasGameState): void {
+  cancelAnimationFrame(game.animationId);
+  game.animationId = 0;
+}
+
 export function GameCanvas({
   level,
   levelNumber,
@@ -157,7 +174,7 @@ export function GameCanvas({
     const game = gameRef.current;
     if (!game.gameLoopFn || game.gameOver || game.levelComplete) return;
     if (paused) {
-      cancelAnimationFrame(game.animationId);
+      stopGameLoop(game);
       // Drop any in-progress swipe so a drag can't resume mid-gesture
       game.swipeStart = null;
       game.swipeRegionId = null;
@@ -165,7 +182,7 @@ export function GameCanvas({
       game.swipePointerId = null;
     } else {
       game.lastTime = 0; // reset to avoid a dt spike on the first resumed frame
-      game.animationId = requestAnimationFrame(game.gameLoopFn);
+      startGameLoop(game);
     }
   }, [paused]);
 
@@ -488,7 +505,7 @@ export function GameCanvas({
         }
       }
       game.dissolve = { captured, tiles, startTime: performance.now(), onComplete };
-      game.animationId = requestAnimationFrame(gameLoop);
+      startGameLoop(game);
     };
     startDissolveRef.current = startDissolve;
 
@@ -542,11 +559,14 @@ export function GameCanvas({
 
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
-    game.animationId = requestAnimationFrame(gameLoop);
+    startGameLoop(game);
 
     return () => {
       window.removeEventListener("resize", resizeCanvas);
-      cancelAnimationFrame(game.animationId);
+      stopGameLoop(game);
+      clearBallRenderCache();
+      clearBallEffectsCache();
+      clearRenderFrameCache();
     };
   }, [level, levelNumber, activeModifiers, fenceDurability]);
 
@@ -604,14 +624,7 @@ export function GameCanvas({
     const game = gameRef.current;
     game.lastTime = 0;
     game.accumulator = 0;
-    if (game.gameLoopFn) {
-      cancelAnimationFrame(game.animationId);
-      requestAnimationFrame(() => {
-        game.lastTime = 0;
-        game.accumulator = 0;
-        game.animationId = requestAnimationFrame(game.gameLoopFn!);
-      });
-    }
+    startGameLoop(game);
   }, [pushMode]);
 
   useEffect(() => {

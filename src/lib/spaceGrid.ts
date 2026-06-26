@@ -303,13 +303,16 @@ export function findGridRegions(grid: SpaceGrid): GridRegion[] {
     
     // Start new region with flood-fill
     const cellIndices: number[] = [];
+    // Use a head index instead of Array.shift() (which is O(n) and makes the
+    // whole flood-fill O(n²) on large grids — this runs on every cut).
     const queue: number[] = [i];
+    let head = 0;
     visited[i] = 1;
-    
+
     let sumX = 0, sumY = 0;
-    
-    while (queue.length > 0) {
-      const current = queue.shift()!;
+
+    while (head < queue.length) {
+      const current = queue[head++];
       cellIndices.push(current);
       
       const center = gridIndexToWorld(grid, current);

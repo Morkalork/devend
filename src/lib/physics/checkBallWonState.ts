@@ -27,6 +27,14 @@ export function checkAndUpdateBallWonStates(
   const gridRegions = findGridRegions(game.spaceGrid);
   const gridRegionMap = buildGridRegionMap(gridRegions);
 
+  // Snapshot the win denominator inputs ONCE before the loop. Computing these
+  // per-ball makes the win threshold order-dependent: as earlier balls lock,
+  // `activeBalls` shrinks and later balls in the same pass get a different
+  // verdict, so two balls in symmetric regions could disagree.
+  const currentActive = countActiveCells(game.spaceGrid);
+  const activeBalls = game.balls.filter(b => b.state !== 'won' && b.speed > 0).length;
+  const denominator = Math.max(currentActive, Math.floor(game.spaceGrid.initialActiveCount / Math.max(1, activeBalls)));
+
   for (const ball of game.balls) {
     if (ball.state === 'won' || ball.speed === 0) continue;
 
@@ -36,9 +44,6 @@ export function checkAndUpdateBallWonStates(
     const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
     if (!ballRegion) continue;
 
-    const currentActive = countActiveCells(game.spaceGrid);
-    const activeBalls = game.balls.filter(b => b.state !== 'won' && b.speed > 0).length;
-    const denominator = Math.max(currentActive, Math.floor(game.spaceGrid.initialActiveCount / Math.max(1, activeBalls)));
     const percentage = (ballRegion.cellIndices.length / denominator) * 100;
     if (percentage > BALL_WON_REGION_THRESHOLD) continue;
 
@@ -134,8 +139,16 @@ export function checkAndUpdateBallWonStates(
     anyBallWon = true;
   }
 
+  // Simultaneous-trap bonus: trapping multiple balls in a single cut multiplies
+  // the locking points. Each ball is worth `newlyLocked` points, so the cut total
+  // is newlyLocked × newlyLocked — i.e. 1 ball → ×1, 2 balls → ×2 (double),
+  // 3 balls → ×3 (triple). (Locking balls one-at-a-time stays at 1 point each.)
+  // We don't expect more than 3 trapped at once, but the formula scales anyway.
   const newlyLocked = game.lockedBallsCount - prevLockedCount;
-  if (newlyLocked > 0) game.lockBonus += newlyLocked * newlyLocked;
+  if (newlyLocked > 0) {
+    const simultaneousMultiplier = newlyLocked; // 1× / 2× / 3× ...
+    game.lockBonus += newlyLocked * simultaneousMultiplier;
+  }
 
   return anyBallWon;
 }

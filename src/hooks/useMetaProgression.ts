@@ -24,14 +24,14 @@ function loadMetaStats(): MetaProgressionStats {
     if (!stored) return { ...DEFAULT_META_STATS };
     
     const parsed = JSON.parse(stored);
-    return {
-      highestLevelReached: parsed.highestLevelReached ?? 0,
-      totalFencesDrawn: parsed.totalFencesDrawn ?? 0,
-      totalLevelsCompletedWithoutLoss: parsed.totalLevelsCompletedWithoutLoss ?? 0,
-      totalLivesLost: parsed.totalLivesLost ?? 0,
-      deepestAscension: parsed.deepestAscension ?? 0,
-      pushBonusesBanked: parsed.pushBonusesBanked ?? 0,
-    };
+    // Spread defaults first so any stat key added later defaults to its
+    // default instead of becoming undefined; coerce each to a finite number.
+    const merged: MetaProgressionStats = { ...DEFAULT_META_STATS };
+    for (const key of Object.keys(merged) as (keyof MetaProgressionStats)[]) {
+      const v = parsed[key];
+      if (typeof v === 'number' && Number.isFinite(v)) merged[key] = v;
+    }
+    return merged;
   } catch {
     return { ...DEFAULT_META_STATS };
   }
@@ -41,7 +41,11 @@ function loadMetaStats(): MetaProgressionStats {
  * Save meta stats to localStorage
  */
 function saveMetaStats(stats: MetaProgressionStats): void {
-  localStorage.setItem(META_STATS_STORAGE_KEY, JSON.stringify(stats));
+  try {
+    localStorage.setItem(META_STATS_STORAGE_KEY, JSON.stringify(stats));
+  } catch (e) {
+    console.warn('Failed to persist meta stats', e);
+  }
 }
 
 /**
@@ -65,7 +69,11 @@ function loadUnlockState(): UnlockState {
  * Save unlock state to localStorage
  */
 function saveUnlockState(state: UnlockState): void {
-  localStorage.setItem(UNLOCK_STATE_STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(UNLOCK_STATE_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn('Failed to persist unlock state', e);
+  }
 }
 
 /**

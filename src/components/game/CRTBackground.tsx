@@ -210,6 +210,8 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
   const [highlights, setHighlights] = useState<Array<WordHighlight & { id: number; phase: Phase }>>([]);
   const highlightIdRef = useRef(0);
   const nextHighlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const glitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const glitchResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggerRef = useRef<() => void>(() => {});
   
   // Generate a shuffled, repeated code block for seamless looping
@@ -364,7 +366,9 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
     
     // Duration varies by type
     const duration = type === 'flicker' ? 80 : type === 'tear' ? 150 : 200;
-    setTimeout(() => setActiveGlitch(null), duration);
+    // Track the reset timeout so it can be cleared on unmount (otherwise it
+    // fires setActiveGlitch on an unmounted component).
+    glitchResetTimerRef.current = setTimeout(() => setActiveGlitch(null), duration);
   }, []);
 
   // Random glitch interval
@@ -372,14 +376,19 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
     const scheduleNextGlitch = () => {
       // Random interval: 3.75-10 seconds (25% longer = 20% fewer glitches)
       const delay = 3750 + Math.random() * 6250;
-      return setTimeout(() => {
+      // Store in a ref so cleanup clears the *current* pending timeout, not
+      // just the first one in this self-rescheduling chain.
+      glitchTimerRef.current = setTimeout(() => {
         triggerGlitch();
         scheduleNextGlitch();
       }, delay);
     };
-    
-    const timeout = scheduleNextGlitch();
-    return () => clearTimeout(timeout);
+
+    scheduleNextGlitch();
+    return () => {
+      if (glitchTimerRef.current) clearTimeout(glitchTimerRef.current);
+      if (glitchResetTimerRef.current) clearTimeout(glitchResetTimerRef.current);
+    };
   }, [triggerGlitch]);
 
   // Clone content for seamless loop

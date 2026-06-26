@@ -46,6 +46,19 @@ export function createGameLoop(
   parallaxTickRef: { current: ((ts: number) => void) | null | undefined } | null | undefined,
   callbacks: GameLoopCallbacks,
 ): (timestamp: number) => void {
+  // Always cancel the previously-stored handle before scheduling a new one, so
+  // an external start site (resume/dissolve/pushMode) that assigns into
+  // game.animationId can never leave a second self-rescheduling loop running.
+  const schedule = () => {
+    cancelAnimationFrame(game.animationId);
+    game.animationId = requestAnimationFrame(gameLoop);
+  };
+
+  // The frozen-ball invariant breach below should never happen; log it once
+  // rather than every physics tick (up to 120Hz) so it can't flood the console
+  // and tank performance if the invariant ever does break.
+  let frozenBreachLogged = false;
+
   const gameLoop = (timestamp: number): void => {
     // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning one
     parallaxTickRef?.current?.(timestamp);
@@ -83,7 +96,7 @@ export function createGameLoop(
         return;
       }
 
-      game.animationId = requestAnimationFrame(gameLoop);
+      schedule();
       return;
     }
 
@@ -99,7 +112,7 @@ export function createGameLoop(
           }
         }
         callbacks.render();
-        game.animationId = requestAnimationFrame(gameLoop);
+        schedule();
       }
       return;
     }
@@ -134,7 +147,10 @@ export function createGameLoop(
           if (game.frozenBallPosition &&
               (ball.position.x !== game.frozenBallPosition.x ||
                ball.position.y !== game.frozenBallPosition.y)) {
-            console.error("[FREEZE] Ball position changed during freeze! Current:", ball.position, "Should be:", game.frozenBallPosition);
+            if (!frozenBreachLogged) {
+              console.error("[FREEZE] Ball position changed during freeze! Current:", ball.position, "Should be:", game.frozenBallPosition);
+              frozenBreachLogged = true;
+            }
             ball.position = { ...game.frozenBallPosition };
           }
           continue;
@@ -174,7 +190,7 @@ export function createGameLoop(
       callbacks.applyCut(game.activeWall);
     }
 
-    game.animationId = requestAnimationFrame(gameLoop);
+    schedule();
   };
 
   return gameLoop;

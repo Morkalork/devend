@@ -58,6 +58,7 @@ export function mergeBonuses(
   if (!b) return a;
   const result: Partial<Record<keyof GameModifiers, number>> = { ...a };
   for (const [key, value] of Object.entries(b)) {
+    if (!Number.isFinite(value as number)) continue; // guard against bad YAML values
     const k = key as keyof GameModifiers;
     if (MULTIPLICATIVE_KEYS.includes(k)) {
       result[k] = ((result[k] as number) ?? 1) * (value as number);
@@ -113,6 +114,7 @@ export function computeGameModifiers(
 
     for (const [key, value] of Object.entries(upgrade.modifiers)) {
       if (!(key in result)) continue; // ignore unknown keys from YAML gracefully
+      if (!Number.isFinite(value)) continue; // ignore non-numeric/NaN YAML values
 
       const k = key as keyof GameModifiers;
       if (MULTIPLICATIVE_KEYS.includes(k)) {
@@ -127,6 +129,7 @@ export function computeGameModifiers(
   if (extraBonuses) {
     for (const [key, value] of Object.entries(extraBonuses)) {
       if (!(key in result)) continue;
+      if (!Number.isFinite(value)) continue;
       const k = key as keyof GameModifiers;
       if (MULTIPLICATIVE_KEYS.includes(k)) {
         r[k] *= value;

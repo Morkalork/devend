@@ -104,6 +104,36 @@ function getRadialGlowSprite(colorHex: string, kind: 'tip' | 'burst'): Offscreen
   return oc;
 }
 
+/**
+ * Release all module-level render caches (OffscreenCanvases + sprite maps).
+ * Call on canvas teardown so several full-screen bitmaps don't outlive the
+ * component for the rest of the page lifetime — matters on memory-constrained
+ * WebViews. Mirrors clearBallRenderCache / clearBallEffectsCache.
+ */
+export function clearRenderFrameCache(): void {
+  _shadowGradCache.clear();
+  _shadowGradBoardKey = '';
+  _rimOC = null;
+  _rimOCKey = '';
+  _obstacleGlowOC = null;
+  _obstacleGlowKey = '';
+  _obstacleGlowPolys = null;
+  _mirrorGlowOC = null;
+  _mirrorGlowKey = '';
+  _mirrorGlowPolys = null;
+  _dangerFrameOC = null;
+  _dangerFrameKey = '';
+  _pulseSpriteCache.clear();
+  _radialSpriteCache.clear();
+  _fenceClipCache.key = '';
+  _fenceClipCache.board = null;
+  _fenceClipCache.polys = null;
+  _fenceClipCache.path = null;
+  _obstacleHolesCache.key = '';
+  _obstacleHolesCache.polys = null;
+  _obstacleHolesCache.path = null;
+}
+
 export function createRainParticles(count: number): import("./types").RainParticle[] {
   return Array.from({ length: count }, (_, i) => ({
     x: 15 + Math.random() * (BOARD_WIDTH - 30),
