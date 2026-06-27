@@ -18,6 +18,20 @@ interface ColorConfig {
   progression: ColorStep[];
 }
 
+/** Validate a single colour step from YAML, normalising hex to a bare 6-digit
+ * string. Returns null if the step is malformed so it can be filtered out
+ * before it produces NaN HSL values in AccentColorContext. */
+function parseColorStep(raw: unknown): ColorStep | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const step = raw as Record<string, unknown>;
+  const name = typeof step.name === 'string' ? step.name : null;
+  const levels = typeof step.levels === 'number' && Number.isFinite(step.levels) && step.levels > 0
+    ? step.levels : null;
+  const hex = typeof step.hex === 'string' ? step.hex.replace(/^#/, '') : null;
+  if (!name || !levels || !hex || !/^[0-9a-fA-F]{6}$/.test(hex)) return null;
+  return { name, hex, levels };
+}
+
 const defaultProgression: ColorStep[] = [
   { name: "Neon Green", hex: "00ff88", levels: 5 },
   { name: "Electric Blue", hex: "00d4ff", levels: 5 },
@@ -37,7 +51,11 @@ export function useColorProgression(currentLevel: number = 1) {
       .then((text) => {
         const parsed = yaml.load(text) as ColorConfig;
         if (parsed?.progression && Array.isArray(parsed.progression)) {
-          setProgression(parsed.progression);
+          const valid = parsed.progression
+            .map(parseColorStep)
+            .filter((s): s is ColorStep => s !== null);
+          if (valid.length > 0) setProgression(valid);
+          else console.warn('colors.yml has no valid colour steps, using defaults');
         }
       })
       .catch((err) => {
@@ -51,12 +69,13 @@ export function useColorProgression(currentLevel: number = 1) {
   // Calculate current color based on level
   const currentColor = useMemo(() => {
     if (progression.length === 0) {
-      return { name: "Default", hex: "00ff88" };
+      return { name: "Default", hex: "00ff88", levels: 5 };
     }
 
     // Calculate total cycle length
     const totalCycleLength = progression.reduce((sum, step) => sum + step.levels, 0);
-    
+    if (totalCycleLength <= 0) return progression[0];
+
     // Get position in cycle (0-indexed)
     const positionInCycle = ((currentLevel - 1) % totalCycleLength);
     

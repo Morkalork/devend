@@ -59,51 +59,63 @@ export function useLevelManager() {
         throw new Error('Invalid map.yml: no levels found');
       }
 
-      // Validate level structure
-      for (const level of data.levels) {
-        if (!level.id || typeof level.sizeThreshold !== 'number' || !Array.isArray(level.balls)) {
-          throw new Error(`Invalid level configuration for: ${level.id || 'unknown'}`);
-        }
-        
-        if (typeof level.expectedCuts !== 'number' || typeof level.points !== 'number') {
-          throw new Error(`Level "${level.id}" is missing expectedCuts or points`);
-        }
-        
-        if (level.expectedCuts >= level.points) {
-          throw new Error(`Level "${level.id}" is invalid: expectedCuts (${level.expectedCuts}) must be less than points (${level.points})`);
-        }
+      // Validate level structure. A single malformed level is skipped (with a
+      // warning) rather than bricking the entire game — only an empty result
+      // after filtering is fatal.
+      const validLevels = data.levels.filter((level) => {
+        try {
+          if (!level.id || typeof level.sizeThreshold !== 'number' || !Array.isArray(level.balls)) {
+            throw new Error(`Invalid level configuration for: ${level.id || 'unknown'}`);
+          }
 
-        // Default level number from id if not specified
-        if (typeof level.level !== 'number') {
-          const match = level.id.match(/^level-(\d+)/);
-          level.level = match ? parseInt(match[1], 10) : 1;
-        }
-        
-        if (level.entities && Array.isArray(level.entities)) {
-          for (const entity of level.entities) {
-            const ent = entity as LevelEntity;
-            if (!ent.id || !ent.kind || !ent.shape) {
-              throw new Error(`Invalid entity in level "${level.id}": missing id, kind, or shape`);
-            }
-            
-            if (ent.shape === 'rect') {
-              if (typeof ent.x !== 'number' || typeof ent.y !== 'number' ||
-                  typeof ent.width !== 'number' || typeof ent.height !== 'number') {
-                throw new Error(`Invalid rect entity "${ent.id}" in level "${level.id}": missing x, y, width, or height`);
+          if (typeof level.expectedCuts !== 'number' || typeof level.points !== 'number') {
+            throw new Error(`Level "${level.id}" is missing expectedCuts or points`);
+          }
+
+          if (level.expectedCuts >= level.points) {
+            throw new Error(`Level "${level.id}" is invalid: expectedCuts (${level.expectedCuts}) must be less than points (${level.points})`);
+          }
+
+          // Default level number from id if not specified
+          if (typeof level.level !== 'number') {
+            const match = level.id.match(/^level-(\d+)/);
+            level.level = match ? parseInt(match[1], 10) : 1;
+          }
+
+          if (level.entities && Array.isArray(level.entities)) {
+            for (const entity of level.entities) {
+              const ent = entity as LevelEntity;
+              if (!ent.id || !ent.kind || !ent.shape) {
+                throw new Error(`Invalid entity in level "${level.id}": missing id, kind, or shape`);
               }
-            } else if (ent.shape === 'polygon') {
-              if (!Array.isArray(ent.points) || ent.points.length < 3) {
-                throw new Error(`Invalid polygon entity "${ent.id}" in level "${level.id}": points must be array with at least 3 vertices`);
+
+              if (ent.shape === 'rect') {
+                if (typeof ent.x !== 'number' || typeof ent.y !== 'number' ||
+                    typeof ent.width !== 'number' || typeof ent.height !== 'number') {
+                  throw new Error(`Invalid rect entity "${ent.id}" in level "${level.id}": missing x, y, width, or height`);
+                }
+              } else if (ent.shape === 'polygon') {
+                if (!Array.isArray(ent.points) || ent.points.length < 3) {
+                  throw new Error(`Invalid polygon entity "${ent.id}" in level "${level.id}": points must be array with at least 3 vertices`);
+                }
               }
             }
           }
+          return true;
+        } catch (e) {
+          console.warn('Skipping invalid level in map.yml:', e);
+          return false;
         }
+      });
+
+      if (validLevels.length === 0) {
+        throw new Error('Invalid map.yml: no valid levels after validation');
       }
 
-      const sequence = buildLevelSequence(data.levels);
-      
+      const sequence = buildLevelSequence(validLevels);
+
       setState({
-        allMaps: data.levels,
+        allMaps: validLevels,
         levelSequence: sequence,
         currentLevelIndex: 0,
         isLoading: false,

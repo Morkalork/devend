@@ -201,6 +201,8 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `extraCertificateHours` | `0` | Bonus Certificate Hours banked when the run ends (Certification Wizard, Night School Diploma). | `1` |
 | `startingCapturePercent` | `0` | Board starts with this % already captured — the arena shrinks and the run starts below 100% remaining (Equity Grant certificate; clamped to 40). | `5` |
 | `fenceDurabilityBonus` | `0` | Extra ball hits Ascension fences survive before crumbling. No effect outside Ascension. | `1` |
+| `ballFreezeDuration` | `0` | Seconds a ball stays frozen when tapped (Feature Freeze). `0` = the ability is off. Values from tiers sum (2+2+2 → 6s; Cascade Freeze adds a further +2 → 8s). After thawing, that ball can't be re-frozen for `duration × 2`. | `2` |
+| `ballFreezeCount` | `0` | Extra balls a single freeze tap also freezes, beyond the tapped one (Cascade Freeze). Total frozen per tap = `1 + ballFreezeCount`; the nearest eligible balls in the tapped ball's region are chosen. | `1` |
 
 ---
 

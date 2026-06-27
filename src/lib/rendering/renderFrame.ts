@@ -13,10 +13,11 @@ import {
   vec2Length,
   vec2Normalize,
   clipLineAgainstPolygons,
+  lineSegmentIntersection,
   Vector2,
 } from "@/lib/polygon";
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
-import { computeBallTrajectory } from "@/lib/gameUtils";
+import { computeBallTrajectory, hexToRgba } from "@/lib/gameUtils";
 import { getBallBase, getBallSpecular, getHexOverlay } from "@/lib/ballRenderCache";
 import { renderBallEffects } from "@/lib/ballEffects";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
@@ -26,6 +27,8 @@ import {
   LOCK_FLOOD_DURATION,
   LOCK_DUST_DURATION,
   COLORS,
+  FREEZE_COOLDOWN_MULTIPLIER,
+  SWIPE_TRAIL_DURATION,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 
@@ -102,6 +105,36 @@ function getRadialGlowSprite(colorHex: string, kind: 'tip' | 'burst'): Offscreen
     _radialSpriteCache.set(key, oc);
   }
   return oc;
+}
+
+/**
+ * Release all module-level render caches (OffscreenCanvases + sprite maps).
+ * Call on canvas teardown so several full-screen bitmaps don't outlive the
+ * component for the rest of the page lifetime — matters on memory-constrained
+ * WebViews. Mirrors clearBallRenderCache / clearBallEffectsCache.
+ */
+export function clearRenderFrameCache(): void {
+  _shadowGradCache.clear();
+  _shadowGradBoardKey = '';
+  _rimOC = null;
+  _rimOCKey = '';
+  _obstacleGlowOC = null;
+  _obstacleGlowKey = '';
+  _obstacleGlowPolys = null;
+  _mirrorGlowOC = null;
+  _mirrorGlowKey = '';
+  _mirrorGlowPolys = null;
+  _dangerFrameOC = null;
+  _dangerFrameKey = '';
+  _pulseSpriteCache.clear();
+  _radialSpriteCache.clear();
+  _fenceClipCache.key = '';
+  _fenceClipCache.board = null;
+  _fenceClipCache.polys = null;
+  _fenceClipCache.path = null;
+  _obstacleHolesCache.key = '';
+  _obstacleHolesCache.polys = null;
+  _obstacleHolesCache.path = null;
 }
 
 export function createRainParticles(count: number): import("./types").RainParticle[] {
@@ -703,6 +736,83 @@ export function renderFrame(
     }
   }
 
+  // ── Swipe afterglow (issue #35) ───────────────────────────────────────────
+  // A brief fading streak tracing the gesture that produced the latest fence,
+  // in the current game colour. Subtle — it reads as feedback, not decoration.
+  if (game.swipeTrail) {
+    const age = performance.now() - game.swipeTrail.createdAt;
+    if (age >= SWIPE_TRAIL_DURATION) {
+      game.swipeTrail = null;
+    } else {
+      const t = age / SWIPE_TRAIL_DURATION;
+      const ease = 1 - t * t;            // ease-out fade
+
+      // Truncate the gesture at the first wall/obstacle crossing from its
+      // start, so the afterglow never continues past a wall or obstacle.
+      // (The start is guaranteed clear of walls by handlePointerDown, and the
+      // resulting fence is collinear with the gesture so it never self-clips.)
+      const startW = game.swipeTrail.start;
+      const endW   = game.swipeTrail.end;
+      const fullLen = vec2Length(vec2Sub(endW, startW));
+      let drawLen = fullLen;
+      let crossed = false;
+      if (fullLen > 0.001) {
+        const consider = (a: Vector2, b: Vector2) => {
+          const ix = lineSegmentIntersection(startW, endW, a, b);
+          if (!ix) return;
+          const d = vec2Length(vec2Sub(ix, startW));
+          if (d > 0.5 && d < drawLen) { drawLen = d; crossed = true; }
+        };
+        for (const wl of walls) consider(wl.start, wl.end);
+        for (const poly of game.obstaclePolygons) {
+          const v = poly.vertices;
+          for (let i = 0; i < v.length; i++) consider(v[i], v[(i + 1) % v.length]);
+        }
+      }
+      // Pull the endpoint just short of the crossing so it doesn't sit on top.
+      if (crossed) drawLen = Math.max(0, drawLen - WALL_THICKNESS * 0.5);
+      const dir = fullLen > 0.001 ? vec2Normalize(vec2Sub(endW, startW)) : { x: 0, y: 0 };
+      const drawEndW = { x: startW.x + dir.x * drawLen, y: startW.y + dir.y * drawLen };
+
+      const s = w2s(startW.x, startW.y);
+      const e = w2s(drawEndW.x, drawEndW.y);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
+      ctx.clip();
+      ctx.lineCap = 'round';
+
+      // Soft outer glow
+      ctx.strokeStyle = hexToRgba(accentColor, 0.18 * ease);
+      ctx.lineWidth = 9 * scale;
+      ctx.shadowColor = accentColor;
+      ctx.shadowBlur = 12 * scale * ease;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(e.x, e.y);
+      ctx.stroke();
+
+      // Bright thin core
+      ctx.strokeStyle = hexToRgba(accentColor, 0.55 * ease);
+      ctx.lineWidth = 2 * scale;
+      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y);
+      ctx.lineTo(e.x, e.y);
+      ctx.stroke();
+
+      // Endpoint dots to anchor the gesture's start and finish
+      ctx.fillStyle = hexToRgba(accentColor, 0.6 * ease);
+      for (const p of [s, e]) {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
   // ── Ball trajectory prediction (SCRUM Master modifier) ───────────────────
   if (activeModifiers.ballPathPredictionBounces > 0 && activeModifiers.ballPathPredictionBalls > 0) {
     const numBounces = activeModifiers.ballPathPredictionBounces;
@@ -966,6 +1076,57 @@ export function renderFrame(
     const specCanvas = getBallSpecular(screenRadius, scale);
     ctx.drawImage(specCanvas, Math.round(screenPos.x - screenRadius - 2), Math.round(screenPos.y - screenRadius - 2));
     ctx.restore();
+
+    // ── Feature Freeze: frost overlay on tap-frozen balls ───────────────────
+    const nowFreeze = performance.now();
+    if (ball.frozenUntil !== undefined && nowFreeze < ball.frozenUntil) {
+      const frost = "#bfefff";
+
+      // Icy tint over the ball body
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.beginPath();
+      ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
+      ctx.fillStyle = hexToRgba(frost, 0.22);
+      ctx.fill();
+      ctx.restore();
+
+      // Crisp frost ring + crystalline spikes
+      ctx.save();
+      ctx.translate(screenPos.x, screenPos.y);
+      ctx.strokeStyle = hexToRgba(frost, 0.9);
+      ctx.lineWidth = Math.max(1.5, 2 * scale);
+      ctx.beginPath();
+      ctx.arc(0, 0, screenRadius + 2 * scale, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineWidth = Math.max(1, 1.5 * scale);
+      const spikes = 6;
+      for (let s = 0; s < spikes; s++) {
+        const a = (s / spikes) * Math.PI * 2 + ball.rotation * 0.2;
+        const r0 = screenRadius + 2 * scale;
+        const r1 = screenRadius + 7 * scale;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * r0, Math.sin(a) * r0);
+        ctx.lineTo(Math.cos(a) * r1, Math.sin(a) * r1);
+        ctx.stroke();
+      }
+
+      // Countdown arc — remaining freeze time, depleting clockwise from the top.
+      // Total duration is recovered from the cooldown window stored on the ball.
+      const durMs = ball.freezeReadyAt !== undefined
+        ? (ball.freezeReadyAt - ball.frozenUntil) / FREEZE_COOLDOWN_MULTIPLIER
+        : 0;
+      if (durMs > 0) {
+        const frac = Math.max(0, Math.min(1, (ball.frozenUntil - nowFreeze) / durMs));
+        ctx.strokeStyle = hexToRgba(frost, 0.95);
+        ctx.lineWidth = Math.max(2, 3 * scale);
+        ctx.beginPath();
+        ctx.arc(0, 0, screenRadius + 5 * scale, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     ctx.restore(); // globalAlpha
   }
 

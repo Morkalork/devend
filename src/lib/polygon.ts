@@ -248,7 +248,12 @@ export function splitPolygon(
   });
   
   const [int1, int2] = intersections;
-  
+
+  // Both intersections on the same edge means the cut is collinear with (grazes)
+  // that single edge — it cannot split the polygon into two non-degenerate pieces.
+  // Bail out explicitly rather than producing two 2-vertex slivers.
+  if (int1.edgeIndex === int2.edgeIndex) return null;
+
   // Build two polygons by walking around the original
   const poly1Vertices: Vector2[] = [];
   const poly2Vertices: Vector2[] = [];

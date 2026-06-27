@@ -46,6 +46,8 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   pushBonusMultiplier:              { label: 'Push Bonus Mult.',       kind: 'multiplicative', step: 0.25, min: 0.25, defaultValue: 1,    description: 'Multiplies push-your-luck chunk payouts' },
   startingCapturePercent:           { label: 'Starting Capture %',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Board starts with this % already captured (max 40)' },
   fenceDurabilityBonus:             { label: 'Fence Durability +',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra ball hits Ascension fences survive (no effect outside Ascension)' },
+  ballFreezeDuration:               { label: 'Feature Freeze (s)',     kind: 'additive',       step: 2,    min: 0,    defaultValue: 0,    description: 'Feature Freeze: seconds a tapped ball stays frozen (0 = off)' },
+  ballFreezeCount:                  { label: 'Cascade Freeze (+balls)',kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cascade Freeze: extra nearby balls frozen per tap (total = 1 + this)' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

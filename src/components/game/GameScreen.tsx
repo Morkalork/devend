@@ -148,13 +148,15 @@ export function GameScreen({
 
   useEffect(() => {
     if (!menuOpen) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
       }
     };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    // pointerdown covers touch/pen/mouse uniformly; mousedown alone is
+    // unreliable on the touch-only Android WebView target.
+    document.addEventListener('pointerdown', handler);
+    return () => document.removeEventListener('pointerdown', handler);
   }, [menuOpen]);
 
   return (
@@ -290,8 +292,11 @@ export function GameScreen({
               onClick={() => { setMenuOpen(false); onRestart(); }}
               className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
               style={{ color: accentColor, backgroundColor: 'transparent' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <RotateCcw className="w-4 h-4" />
               {t('game.restartRun')}
@@ -300,8 +305,11 @@ export function GameScreen({
               onClick={() => { setMenuOpen(false); onMainMenu(); }}
               className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
               style={{ color: accentColor, backgroundColor: 'transparent' }}
-              onMouseEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
               <Home className="w-4 h-4" />
               {t('game.mainMenu')}

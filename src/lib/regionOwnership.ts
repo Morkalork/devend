@@ -431,9 +431,18 @@ export function constrainBallToRegion(
   
   let nearestSample: Vector2 | null = null;
   let minDist = Infinity;
-  
+  // Track the nearest sample irrespective of wall-blocking, used as a safe
+  // fallback: sample points are inside the region by construction, whereas a
+  // polygon centroid can fall outside a non-convex (e.g. L-shaped) region.
+  let nearestAnySample: Vector2 | null = null;
+  let minAnyDist = Infinity;
+
   for (const sample of region.samplePoints) {
     const dist = vec2Distance(ball.position, sample);
+    if (dist < minAnyDist) {
+      minAnyDist = dist;
+      nearestAnySample = sample;
+    }
     if (dist < minDist) {
       // Verify this sample is accessible (no wall between ball and sample)
       let blocked = false;
@@ -443,30 +452,27 @@ export function constrainBallToRegion(
           break;
         }
       }
-      
+
       if (!blocked) {
         minDist = dist;
         nearestSample = sample;
       }
     }
   }
-  
+
+  // Reverse velocity to bounce back
+  const newVelocity = vec2Scale(ball.velocity, -0.8);
+
   if (nearestSample) {
     // Move toward the nearest accessible sample
-    const direction = vec2Normalize(vec2Sub(nearestSample, ball.position));
-    const newPosition = { ...nearestSample };
-    
-    // Reverse velocity to bounce back
-    const newVelocity = vec2Scale(ball.velocity, -0.8);
-    
-    return { position: newPosition, corrected: true, newVelocity };
+    return { position: { ...nearestSample }, corrected: true, newVelocity };
   }
-  
-  // Fallback: use region centroid
-  const centroid = polygonCentroid(region.polygon);
-  return { 
-    position: centroid, 
-    corrected: true, 
-    newVelocity: vec2Scale(ball.velocity, -0.8)
-  };
+
+  // Fallback: nearest sample (guaranteed inside the region), not the centroid.
+  if (nearestAnySample) {
+    return { position: { ...nearestAnySample }, corrected: true, newVelocity };
+  }
+
+  // Last resort: region centroid (only if the region has no samples at all).
+  return { position: polygonCentroid(region.polygon), corrected: true, newVelocity };
 }

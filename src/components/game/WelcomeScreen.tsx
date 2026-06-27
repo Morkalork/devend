@@ -344,13 +344,19 @@ export function WelcomeScreen({
               </span>
             )}
           </motion.button>
-          {onAchievements && (
+          {onAchievements && (() => {
+            // Available once the player has earned anything to look at — cert
+            // hours OR completed achievements. Gating on cert hours alone hid
+            // the screen from players who'd completed achievements but never
+            // banked an hour (while still showing the completed-count badge).
+            const achievementsEnabled = (!!totalCertificateHours || !!completedAchievementCount) && !isLoading;
+            return (
             <motion.button
               className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
               onClick={onAchievements}
-              whileHover={totalCertificateHours ? { scale: 1.02 } : undefined}
-              whileTap={totalCertificateHours ? { scale: 0.98 } : undefined}
-              disabled={!totalCertificateHours || isLoading}
+              whileHover={achievementsEnabled ? { scale: 1.02 } : undefined}
+              whileTap={achievementsEnabled ? { scale: 0.98 } : undefined}
+              disabled={!achievementsEnabled}
             >
               <Trophy className="w-5 h-5" />
               {t('welcome.achievements')}
@@ -360,7 +366,8 @@ export function WelcomeScreen({
                 </span>
               )}
             </motion.button>
-          )}
+            );
+          })()}
           {onAdmin && (
             <motion.button
               className="arcade-button-secondary arcade-button-sm rounded-lg opacity-70"

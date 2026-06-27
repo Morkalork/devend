@@ -46,6 +46,9 @@ export interface Ball {
   prevPosition?: Vector2;    // position at start of last fixed physics step (for interpolation)
   renderPosition?: Vector2;  // interpolated render position (set each frame, used by render only)
   trailPositions?: Vector2[]; // last N render positions for motion trail (screen-space world coords)
+  // ── Feature Freeze upgrade (tap-to-freeze) ──────────────────────────────
+  frozenUntil?: number;      // performance.now() timestamp until which the ball is held still (tap-frozen)
+  freezeReadyAt?: number;    // performance.now() timestamp before which the ball cannot be re-frozen (cooldown)
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

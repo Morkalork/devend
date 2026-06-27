@@ -44,7 +44,11 @@ function loadPersistence(): CertPersistence {
 }
 
 function savePersistence(state: CertPersistence): void {
-  localStorage.setItem(CERT_STORAGE_KEY, JSON.stringify(state));
+  try {
+    localStorage.setItem(CERT_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn('Failed to persist certificate state', e);
+  }
 }
 
 export interface CertManagerOptions {
@@ -182,17 +186,28 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
   const purchaseCertLevel = useCallback((certId: string, targetLevel: number): boolean => {
     const cert = certificates.find(c => c.id === certId);
     if (!cert) return false;
+    if (targetLevel > cert.levels.length) return false;
 
-    const currentLevel = persistence.certLevelsOwned[certId] || 0;
-    if (targetLevel <= currentLevel || targetLevel > cert.levels.length) return false;
-
-    const totalCost = cert.levels
-      .slice(currentLevel, targetLevel)
+    // Optimistic check against the rendered snapshot for the return value.
+    const snapshotLevel = persistence.certLevelsOwned[certId] || 0;
+    if (targetLevel <= snapshotLevel) return false;
+    const snapshotCost = cert.levels
+      .slice(snapshotLevel, targetLevel)
       .reduce((sum, l) => sum + l.cost, 0);
+    const affordable = persistence.totalCertificateHours >= snapshotCost;
 
-    if (persistence.totalCertificateHours < totalCost) return false;
-
+    // Re-validate and mutate atomically against `prev` so rapid double-taps
+    // can't both pass the stale snapshot check and overdraw the balance.
     setPersistence(prev => {
+      const currentLevel = prev.certLevelsOwned[certId] || 0;
+      if (targetLevel <= currentLevel) return prev;
+
+      const totalCost = cert.levels
+        .slice(currentLevel, targetLevel)
+        .reduce((sum, l) => sum + l.cost, 0);
+
+      if (prev.totalCertificateHours < totalCost) return prev;
+
       const lifetimeHoursSpent = prev.lifetimeHoursSpent + totalCost;
 
       // Spending hours can itself unlock certs (hours-spent unlock type)
@@ -204,7 +219,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
 
       const newState = {
         ...prev,
-        totalCertificateHours: prev.totalCertificateHours - totalCost,
+        totalCertificateHours: Math.max(0, prev.totalCertificateHours - totalCost),
         certLevelsOwned: { ...prev.certLevelsOwned, [certId]: targetLevel },
         lifetimeHoursSpent,
         unlockedCertIds: newlyUnlocked.length > 0
@@ -214,7 +229,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
       savePersistence(newState);
       return newState;
     });
-    return true;
+    return affordable;
   }, [certificates, persistence]);
 
   /**
@@ -271,9 +286,10 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
 
   /** `extraHours` is the extraCertificateHours modifier (Certification Wizard). */
   const finalizeRun = useCallback((extraHours: number = 0): number => {
+    const safeExtra = Number.isFinite(extraHours) ? Math.max(0, Math.round(extraHours)) : 0;
     const hoursAwarded =
       Math.floor(runLevelsCompleted / LEVELS_PER_HOUR) +
-      (runLevelsCompleted > 0 ? Math.max(0, Math.round(extraHours)) : 0);
+      (runLevelsCompleted > 0 ? safeExtra : 0);
     if (runLevelsCompleted > 0) {
       setPersistence(prev => {
         const newState = { ...prev, totalCertificateHours: prev.totalCertificateHours + hoursAwarded };

@@ -33,6 +33,11 @@ export interface GameModifiers {
   // Additive (sum) — SCRUM Master
   ballPathPredictionBounces: number; // how many bounces ahead to show
   ballPathPredictionBalls: number;   // how many balls to track (by speed desc; ≥100 = all)
+
+  // Additive (sum) — Feature Freeze: seconds a tapped ball stays frozen (0 = upgrade not owned)
+  ballFreezeDuration: number;
+  // Additive (sum) — Cascade Freeze: extra balls a single tap freezes beyond the tapped one
+  ballFreezeCount: number;
 }
 
 // Keys that stack multiplicatively
@@ -58,6 +63,7 @@ export function mergeBonuses(
   if (!b) return a;
   const result: Partial<Record<keyof GameModifiers, number>> = { ...a };
   for (const [key, value] of Object.entries(b)) {
+    if (!Number.isFinite(value as number)) continue; // guard against bad YAML values
     const k = key as keyof GameModifiers;
     if (MULTIPLICATIVE_KEYS.includes(k)) {
       result[k] = ((result[k] as number) ?? 1) * (value as number);
@@ -89,6 +95,8 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   microManagerPerLock: 0,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,
+  ballFreezeDuration: 0,
+  ballFreezeCount: 0,
 };
 
 /**
@@ -113,6 +121,7 @@ export function computeGameModifiers(
 
     for (const [key, value] of Object.entries(upgrade.modifiers)) {
       if (!(key in result)) continue; // ignore unknown keys from YAML gracefully
+      if (!Number.isFinite(value)) continue; // ignore non-numeric/NaN YAML values
 
       const k = key as keyof GameModifiers;
       if (MULTIPLICATIVE_KEYS.includes(k)) {
@@ -127,6 +136,7 @@ export function computeGameModifiers(
   if (extraBonuses) {
     for (const [key, value] of Object.entries(extraBonuses)) {
       if (!(key in result)) continue;
+      if (!Number.isFinite(value)) continue;
       const k = key as keyof GameModifiers;
       if (MULTIPLICATIVE_KEYS.includes(k)) {
         r[k] *= value;
