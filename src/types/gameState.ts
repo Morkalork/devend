@@ -50,6 +50,8 @@ export interface CanvasGameState {
   currentSwipePos: Vector2 | null;
   /** Pointer ID that initiated the current swipe. */
   swipePointerId: number | null;
+  /** Last completed cut gesture, rendered as a brief fading afterglow (issue #35). */
+  swipeTrail: { start: Vector2; end: Vector2; createdAt: number } | null;
 
   // ── Timing / loop ──────────────────────────────────────────────────────
   lastTime: number;

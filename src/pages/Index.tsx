@@ -82,7 +82,18 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             animate="center"
             exit="exit"
             transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-            style={{ willChange: 'transform', position: 'relative', width: '100%', height: '100dvh' }}
+            style={{
+              willChange: 'transform',
+              position: 'relative',
+              width: '100%',
+              height: '100dvh',
+              // Issue #36: every view scrolls when its content overflows — the
+              // game view is the sole exception and must never scroll. Scrollbar
+              // chrome is hidden globally (see index.css), so this only adds the
+              // ability to scroll, never a visible bar.
+              overflowX: 'hidden',
+              overflowY: navigation.currentScreen === 'game' ? 'hidden' : 'auto',
+            }}
           >
             {navigation.currentScreen === 'welcome' && (
               <WelcomeScreen

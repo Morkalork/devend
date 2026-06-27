@@ -467,4 +467,16 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Issue #36: never render scrollbar chrome anywhere in the app. Scrolling
+     still works wherever a container overflows (e.g. the main menu with the
+     admin button visible). The game view disables scrolling entirely via
+     overflow:hidden — this rule only governs the bar's visibility. */
+  * {
+    scrollbar-width: none;       /* Firefox */
+    -ms-overflow-style: none;    /* IE / old Edge */
+  }
+  *::-webkit-scrollbar {
+    display: none;               /* WebKit (Chrome, Safari) */
+  }
 }

@@ -155,6 +155,10 @@ export function createGameLoop(
           }
           continue;
         }
+
+        // Feature Freeze: tap-frozen balls hold position until their timer ends.
+        if (ball.frozenUntil && performance.now() < ball.frozenUntil) continue;
+
         updateBall(ball, PHYSICS_STEP, game);
       }
       handleBallCollisions(game);

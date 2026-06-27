@@ -33,6 +33,11 @@ export interface GameModifiers {
   // Additive (sum) — SCRUM Master
   ballPathPredictionBounces: number; // how many bounces ahead to show
   ballPathPredictionBalls: number;   // how many balls to track (by speed desc; ≥100 = all)
+
+  // Additive (sum) — Feature Freeze: seconds a tapped ball stays frozen (0 = upgrade not owned)
+  ballFreezeDuration: number;
+  // Additive (sum) — Cascade Freeze: extra balls a single tap freezes beyond the tapped one
+  ballFreezeCount: number;
 }
 
 // Keys that stack multiplicatively
@@ -90,6 +95,8 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   microManagerPerLock: 0,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,
+  ballFreezeDuration: 0,
+  ballFreezeCount: 0,
 };
 
 /**

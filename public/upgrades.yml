@@ -576,6 +576,84 @@ upgrades:
       ballPathPredictionBalls: 999
 
   # ===============================
+  # FEATURE FREEZE (Tap-to-freeze a ball)
+  # Tap any ball to halt it in place. After it thaws, that ball briefly
+  # can't be re-frozen (cooldown = freeze duration × 2). Durations stack.
+  # ===============================
+
+  - id: feature_freeze_junior
+    name: Feature Freeze
+    tier: Junior
+    description: Tap a ball to freeze it in place for 2 seconds.
+    cost: 14
+    unlockLevel: 4
+    modifiers:
+      ballFreezeDuration: 2
+
+  - id: feature_freeze_senior
+    name: Feature Freeze
+    tier: Senior
+    description: Tapped balls now freeze for 4 seconds.
+    cost: 24
+    unlockLevel: 8
+    prerequisites:
+      - feature_freeze_junior
+    modifiers:
+      ballFreezeDuration: 2
+
+  - id: feature_freeze_principal
+    name: Feature Freeze
+    tier: Principal
+    description: Tapped balls now freeze for 6 seconds.
+    cost: 36
+    unlockLevel: 14
+    prerequisites:
+      - feature_freeze_senior
+    modifiers:
+      ballFreezeDuration: 2
+
+
+  # ===============================
+  # CASCADE FREEZE (Multi-ball freeze)
+  # Only unlocks once Feature Freeze is mastered (all three tiers) this run.
+  # A single tap freezes the tapped ball plus the nearest others in its region.
+  # ===============================
+
+  - id: cascade_freeze_junior
+    name: Cascade Freeze
+    tier: Senior
+    description: A single freeze tap now freezes the 2 nearest balls.
+    cost: 30
+    unlockLevel: 14
+    prerequisites:
+      - feature_freeze_principal
+    modifiers:
+      ballFreezeCount: 1
+
+  - id: cascade_freeze_senior
+    name: Cascade Freeze
+    tier: Principal
+    description: A single freeze tap now freezes the 3 nearest balls.
+    cost: 44
+    unlockLevel: 18
+    prerequisites:
+      - cascade_freeze_junior
+    modifiers:
+      ballFreezeCount: 1
+
+  - id: cascade_freeze_principal
+    name: Cascade Freeze
+    tier: Architect
+    description: Frozen balls now stay frozen for 8 seconds.
+    cost: 58
+    unlockLevel: 22
+    prerequisites:
+      - cascade_freeze_senior
+    modifiers:
+      ballFreezeDuration: 2
+
+
+  # ===============================
   # DEFENSIVE PROGRAMMING (Ascension fence durability)
   # Only offered while ascended — fences wear out past level 30.
   # ===============================

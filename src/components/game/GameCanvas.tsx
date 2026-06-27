@@ -234,6 +234,7 @@ export function GameCanvas({
     swipeRegionId: null as string | null,
     currentSwipePos: null as Vector2 | null,
     swipePointerId: null as number | null,
+    swipeTrail: null as { start: Vector2; end: Vector2; createdAt: number } | null,
     lastTime: 0,
     accumulator: 0,
     animationId: 0,
