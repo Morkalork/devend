@@ -223,11 +223,13 @@ function traceDentedPath(
   dentDepth: number,
   dentRadius: number,
   rng: () => number,
+  bounds?: { minX: number; minY: number; maxX: number; maxY: number },
 ): void {
   let cx = 0, cy = 0;
   for (const v of verts) { cx += v.x; cy += v.y; }
   cx /= verts.length; cy /= verts.length;
 
+  const EDGE = 7; // world units: points this close to a board edge stay pinned to it
   ctx.beginPath();
   let first = true;
   for (let i = 0; i < verts.length; i++) {
@@ -238,7 +240,8 @@ function traceDentedPath(
     const sub = Math.max(2, Math.round(el / 20)); // ~one point every 20 world units
     for (let s = 0; s < sub; s++) {
       const t = s / sub;
-      let wx = a.x + ex * t, wy = a.y + ey * t;
+      const baseX = a.x + ex * t, baseY = a.y + ey * t;
+      let wx = baseX, wy = baseY;
 
       // Strongest nearby impact wins.
       let dent = 0;
@@ -257,6 +260,19 @@ function traceDentedPath(
         const off = (rng() * 2 - 1) * baseAmp;
         wx += px * off; wy += py * off;
       }
+
+      // Keep edges that sit against the gameboard border flush to it: points
+      // whose base is on a board edge are pinned there; everything else is
+      // clamped inside the board so nothing overhangs the rim.
+      if (bounds) {
+        if (Math.abs(baseX - bounds.minX) < EDGE) wx = bounds.minX;
+        else if (Math.abs(baseX - bounds.maxX) < EDGE) wx = bounds.maxX;
+        else wx = Math.max(bounds.minX, Math.min(bounds.maxX, wx));
+        if (Math.abs(baseY - bounds.minY) < EDGE) wy = bounds.minY;
+        else if (Math.abs(baseY - bounds.maxY) < EDGE) wy = bounds.maxY;
+        else wy = Math.max(bounds.minY, Math.min(bounds.maxY, wy));
+      }
+
       const sp = w2s(wx, wy);
       if (first) { ctx.moveTo(sp.x, sp.y); first = false; } else ctx.lineTo(sp.x, sp.y);
     }
@@ -549,51 +565,44 @@ export function renderFrame(
   }
 
   // ── Breakable obstacles (issue #38) ───────────────────────────────────────
-  // Pristine: clean amber box with a dashed inner outline ("this can break").
-  // Damaged: the silhouette frays and the fill thins out, more so each hit, so
-  // damage is unmistakable. The two highest-damage hits also flash a tag.
-  for (const d of game.destructibles) {
-    if (d.kind !== 'breakable' || d.destroyed || !d.obstaclePolygon) continue;
-    const poly = d.obstaclePolygon;
-    const amber = d.objective ? '#ffb454' : '#ffcf7a';
-    const dmg = d.maxHits > 0 ? Math.min(1, d.hits / d.maxHits) : 0;
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+  // All breakables (blocks and border-attached gates) use the same look: a
+  // softly rugged amber outline + fill, with a clear inward dent where each ball
+  // hit. Clipped to the board, and edges on the board rim stay pinned flush.
+  {
+    let bMinX = Infinity, bMinY = Infinity, bMaxX = -Infinity, bMaxY = -Infinity;
+    if (game.boardPolygon) {
+      for (const v of game.boardPolygon.vertices) {
+        if (v.x < bMinX) bMinX = v.x; if (v.x > bMaxX) bMaxX = v.x;
+        if (v.y < bMinY) bMinY = v.y; if (v.y > bMaxY) bMaxY = v.y;
+      }
+    }
+    const bounds = game.boardPolygon ? { minX: bMinX, minY: bMinY, maxX: bMaxX, maxY: bMaxY } : undefined;
 
-    if (d.hits > 0) {
-      // A clear inward dent at each hit, plus gentle random fray elsewhere;
-      // the fill thins as damage grows.
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
+    ctx.clip();
+    for (const d of game.destructibles) {
+      if (d.kind !== 'breakable' || d.destroyed || !d.obstaclePolygon) continue;
+      const poly = d.obstaclePolygon;
+      const amber = d.objective ? '#ffb454' : '#ffcf7a';
+      const dmg = d.maxHits > 0 ? Math.min(1, d.hits / d.maxHits) : 0;
       const rng = _mulberry(_hashStr(`break-${d.id}`));
-      traceDentedPath(ctx, w2s, poly.vertices, 1.5 + dmg * 4, d.dents ?? [], 16, 34, rng);
-      ctx.fillStyle = hexToRgba(amber, 0.2 * (1 - dmg * 0.7));
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      // baseAmp 0 when pristine → clean (but board-pinned) outline.
+      traceDentedPath(ctx, w2s, poly.vertices, d.hits > 0 ? 1.5 + dmg * 4 : 0, d.dents ?? [], 16, 34, rng, bounds);
+      ctx.fillStyle = d.hits > 0 ? hexToRgba(amber, 0.2 * (1 - dmg * 0.7)) : 'rgba(255,180,84,0.12)';
       ctx.fill();
       ctx.lineWidth = Math.max(2, WALL_THICKNESS * scale * (1 - dmg * 0.25));
-      ctx.strokeStyle = hexToRgba(amber, 0.95);
+      ctx.strokeStyle = d.hits > 0 ? hexToRgba(amber, 0.95) : amber;
       ctx.shadowColor = amber;
-      ctx.shadowBlur = 8 * scale;
+      ctx.shadowBlur = (d.hits > 0 ? 8 : 7) * scale;
       ctx.stroke();
-    } else {
-      ctx.beginPath();
-      const v0 = w2s(poly.vertices[0].x, poly.vertices[0].y);
-      ctx.moveTo(v0.x, v0.y);
-      for (let i = 1; i < poly.vertices.length; i++) { const p = w2s(poly.vertices[i].x, poly.vertices[i].y); ctx.lineTo(p.x, p.y); }
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(255,180,84,0.12)';
-      ctx.fill();
-      ctx.lineWidth = WALL_THICKNESS * scale;
-      ctx.strokeStyle = amber;
-      ctx.shadowColor = amber;
-      ctx.shadowBlur = 7 * scale;
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-      ctx.lineWidth = Math.max(1, 1.5 * scale);
-      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-      ctx.setLineDash([5 * scale, 5 * scale]);
-      ctx.stroke();
-      ctx.setLineDash([]);
+      ctx.restore();
     }
-    ctx.restore();
+    ctx.restore(); // breakable board clip
   }
 
   // ── Unified wall render loop ───────────────────────────────────────────────
@@ -912,7 +921,32 @@ export function renderFrame(
     let expired = false;
     for (const fo of game.fallingObjects) {
       const elapsed = nowF - fo.startTime;
-      if (elapsed >= fo.durationMs) { expired = true; continue; }
+      if (elapsed >= fo.durationMs) {
+        expired = true;
+        if (!fo.shattered) {
+          fo.shattered = true;
+          // Shatter on landing: a debris burst at the object's final position.
+          const finalY = fo.fallSpeed * (fo.durationMs / 1000) + 320 * (fo.durationMs / 1000) ** 2;
+          let cx = 0, cy = 0;
+          for (const v of fo.vertices) { cx += v.x; cy += v.y; }
+          cx /= fo.vertices.length; cy /= fo.vertices.length;
+          const particles = fo.vertices.map(v => {
+            const dx = v.x - cx, dy = v.y - cy;
+            const len = Math.hypot(dx, dy) || 1;
+            const speed = 60 + Math.random() * 120;
+            return {
+              x: v.x, y: v.y + finalY,
+              vx: (dx / len) * speed + (Math.random() - 0.5) * 30,
+              vy: (dy / len) * speed - 40,
+              rotation: Math.random() * Math.PI * 2,
+              rotSpeed: (Math.random() - 0.5) * 10,
+              size: 5 + Math.random() * 9,
+            };
+          });
+          game.objectDebris.push({ startTime: nowF, durationMs: 500, color: fo.color, particles });
+        }
+        continue;
+      }
       const t = elapsed / 1000;
       const prog = elapsed / fo.durationMs;
       const fallY = fo.fallSpeed * t + 320 * t * t; // accelerating toward the bottom
