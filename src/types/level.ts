@@ -43,6 +43,13 @@ export interface BaseEntity {
 export interface WallEntity extends BaseEntity {
   kind: "wall";
   mirror?: boolean; // When true, growing fences reflect off this obstacle
+  // ── Breakable obstacles (issue #38) ──────────────────────────────────────
+  /** When true, balls break this obstacle by hitting it (any ball; black = half). */
+  breakable?: boolean;
+  /** Hits required to break (default 3). Black ball counts double. */
+  hitsToBreak?: number;
+  /** When true, this obstacle MUST be broken to complete the level. */
+  objective?: boolean;
 }
 
 // Combined entity type with shape

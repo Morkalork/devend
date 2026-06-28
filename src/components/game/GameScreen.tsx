@@ -107,6 +107,19 @@ export function GameScreen({
   const [moverTutorialDismissed, setMoverTutorialDismissed] = useState(false);
   const showMoverOverlay = showMoverTutorial && levelHasMovers && !moverTutorialDismissed;
 
+  // Breaking-obstacles intro — shown the first time a break-objective level loads
+  // (issue #38). Persisted in localStorage; self-contained (no session wiring).
+  const levelHasBreakObjective = (level.entities ?? []).some(
+    e => e.kind === 'wall' && e.breakable === true && e.objective === true,
+  );
+  const [showBreakIntro, setShowBreakIntro] = useState(false);
+  useEffect(() => {
+    if (!levelHasBreakObjective) { setShowBreakIntro(false); return; }
+    let seen = false;
+    try { seen = !!localStorage.getItem('devend_break_tutorial_seen'); } catch { /* ignore */ }
+    setShowBreakIntro(!seen);
+  }, [levelHasBreakObjective, level.id]);
+
   // Game state for top bar
   const [gameState, setGameState] = useState<GameStateInfo>({
     cutsUsed: 0,
@@ -334,9 +347,21 @@ export function GameScreen({
         body={t('game.moverTutorialBody')}
       />
 
+      {/* Breaking-obstacles tutorial — first break-objective level (issue #38) */}
+      <TutorialOverlay
+        visible={showBreakIntro && !showMoverOverlay}
+        onDismiss={() => {
+          setShowBreakIntro(false);
+          try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ }
+        }}
+        accentColor="#ffb454"
+        title={t('game.breakTutorialTitle')}
+        body={t('game.breakTutorialBody')}
+      />
+
       {/* Info panels tutorial — shown after fence tutorial, first run only */}
       <TutorialOverlay
-        visible={inGameStep === 'done' && showInfoPanelsTutorial && !showMoverOverlay}
+        visible={inGameStep === 'done' && showInfoPanelsTutorial && !showMoverOverlay && !showBreakIntro}
         onDismiss={onInfoPanelsTutorialSeen}
         accentColor={accentColor}
         title={t('game.infoPanelsTutorialTitle')}

@@ -11,7 +11,7 @@
 import { LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity } from "@/types/level";
 import { MoverState, buildMoverPolygon } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
-import { Ball, Region, Vector2, DestructibleState } from "@/types/game";
+import { Ball, Region, Vector2, DestructibleState, StackObject } from "@/types/game";
 import { Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
@@ -66,6 +66,8 @@ export interface InitialGameData {
   balls: Ball[];
   movers: MoverState[];
   destructibles: DestructibleState[];
+  stackObjects: StackObject[];
+  objectivesTotal: number;
   initialSamplePoints: Vector2[];
   spaceGrid: SpaceGrid;
   gridRegions: GridRegion[];
@@ -106,6 +108,9 @@ export function createInitialGameData(
   const obstaclePolygons: Polygon[] = [];
   const mirrorPolygons:   Polygon[] = [];
   const destructibles:    DestructibleState[] = [];
+  // Non-mirror obstacles participating in the break/topple support graph (#38).
+  const obstacleEntities: Array<{ id: string; polygon: Polygon; breakable: boolean }> = [];
+  let objectivesTotal = 0;
 
   // Reset run seed for new game/level (consistent variety per run)
   resetRunSeed();
@@ -199,6 +204,25 @@ export function createInitialGameData(
         obstaclePolygons.push(obstaclePolygon);
         const obstacleWalls = createWallsFromPolygon(obstaclePolygon, `obstacle-${entity.id}`, isMirror);
         allWalls.push(...obstacleWalls);
+
+        // Breakable obstacles + stack graph (issue #38). Mirrors are handled by
+        // the #37 path above and don't participate in break-stacks.
+        if (!isMirror) {
+          obstacleEntities.push({ id: entity.id, polygon: obstaclePolygon, breakable: !!entity.breakable });
+          if (entity.breakable) {
+            destructibles.push({
+              id: entity.id,
+              kind: 'breakable',
+              hits: 0,
+              maxHits: Math.max(1, Math.round(entity.hitsToBreak ?? 3)),
+              lastHitAt: 0,
+              destroyed: false,
+              obstaclePolygon,
+              objective: !!entity.objective,
+            });
+            if (entity.objective) objectivesTotal++;
+          }
+        }
       }
     }
   }
@@ -444,6 +468,49 @@ export function createInitialGameData(
     });
   }
 
+  // ── Stack / support graph (issue #38) ────────────────────────────────────
+  // "Down" is the board bottom. Each obstacle rests on the obstacle directly
+  // beneath it (its bottom edge meets that one's top edge with x-overlap) or on
+  // the ground. When a support is removed, whatever rests on it topples.
+  const stackObjects: StackObject[] = [];
+  {
+    const SUPPORT_TOL = 30; // world units of slack for "resting on"
+    const boxes = obstacleEntities.map(o => {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const v of o.polygon.vertices) {
+        if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+        if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+      }
+      return { id: o.id, minX, minY, maxX, maxY };
+    });
+    for (let i = 0; i < boxes.length; i++) {
+      const a = boxes[i];
+      let supporterId: string | null = null;
+      const onGround = Math.abs(bottom - a.maxY) <= SUPPORT_TOL;
+      if (!onGround) {
+        let best = Infinity;
+        for (let j = 0; j < boxes.length; j++) {
+          if (i === j) continue;
+          const b = boxes[j];
+          const xOverlap = a.minX < b.maxX && a.maxX > b.minX;
+          if (!xOverlap) continue;
+          const gap = b.minY - a.maxY; // b sits just below a when this ≈ 0
+          if (gap >= -SUPPORT_TOL && gap <= SUPPORT_TOL && Math.abs(gap) < best) {
+            best = Math.abs(gap);
+            supporterId = b.id;
+          }
+        }
+      }
+      stackObjects.push({
+        id: a.id,
+        polygon: obstacleEntities[i].polygon,
+        breakable: obstacleEntities[i].breakable,
+        supporterId,
+        toppled: false,
+      });
+    }
+  }
+
   // ── Fastest ball ──────────────────────────────────────────────────────
 
   let fastestBallId: string | null = null;
@@ -466,6 +533,8 @@ export function createInitialGameData(
     balls,
     movers,
     destructibles,
+    stackObjects,
+    objectivesTotal,
     initialSamplePoints: initSamplePoints,
     spaceGrid,
     gridRegions,

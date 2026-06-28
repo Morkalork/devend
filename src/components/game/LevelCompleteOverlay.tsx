@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { contentText } from '@/i18n/content';
@@ -67,11 +67,13 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     lockedBallsCount = 0,
     interestGain = 0,
     pushBonus = 0,
+    breakBonus = 0,
   } = scoreData;
 
   const isOverPar = fencesOverPar > 0;
   const isSpaceDisabled = fencesOverPar >= 3;
   const hasLockBonus = lockBonus > 0;
+  const hasBreakBonus = breakBonus > 0;
   const hasInterest = interestGain > 0;
   const hasPushBonus = pushBonus > 0;
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
@@ -240,6 +242,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
+            {/* Break Bonus Section (issue #38) */}
+            {hasBreakBonus && (
+              <div className="flex justify-between items-center py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2">
+                <span className="text-amber-400 flex items-center gap-1">
+                  <Hammer className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.breakBonus')}
+                </span>
+                <span className="font-bold text-amber-400">+{breakBonus}h</span>
+              </div>
+            )}
+
             {/* Interest Gain */}
             {hasInterest && (
               <div className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
@@ -263,10 +276,10 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             )}
 
             {/* Total Bonus Summary */}
-            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0) && (
+            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0 || breakBonus > 0) && (
               <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
                 <span className="font-semibold text-foreground">{t('levelComplete.totalBonus')}</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus}h</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus}h</span>
               </div>
             )}
 

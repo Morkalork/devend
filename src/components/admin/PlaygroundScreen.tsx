@@ -49,6 +49,7 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   fenceDurabilityBonus:             { label: 'Fence Durability +',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra ball hits Ascension fences survive (no effect outside Ascension)' },
   ballFreezeDuration:               { label: 'Feature Freeze (s)',     kind: 'additive',       step: 2,    min: 0,    defaultValue: 0,    description: 'Feature Freeze: seconds a tapped ball stays frozen (0 = off)' },
   ballFreezeCount:                  { label: 'Cascade Freeze (+balls)',kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cascade Freeze: extra nearby balls frozen per tap (total = 1 + this)' },
+  autoFreezeDuration:               { label: 'Cron Job (s)',           kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cron Job: seconds an auto-frozen ball stays frozen, fired every 10s (0 = off)' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

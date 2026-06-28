@@ -7,6 +7,7 @@ import { X } from 'lucide-react';
 import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
 import { MutatorConfig } from '@/types/mutator';
+import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
 
 interface CertificateHourProgress {
@@ -274,10 +275,15 @@ export function TopBarDetailsPanel({
           <section>
             <p style={sectionHeadStyle}>{t('topBarDetails.activeUpgradesCount', { count: ownedUpgrades.length })}</p>
             <div className="space-y-3">
-              {ownedUpgrades.map(upgrade => (
+              {ownedUpgrades.map(upgrade => {
+                const Icon = getUpgradeIcon(upgrade, ownedUpgrades);
+                return (
                 <div key={upgrade.id} style={cardStyle}>
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <span className="font-bold text-sm leading-tight" style={{ color: accentColor }}>{contentText.upgradeName(t, upgrade)}</span>
+                    <span className="font-bold text-sm leading-tight flex items-center gap-2" style={{ color: accentColor }}>
+                      {Icon && <Icon className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />}
+                      {contentText.upgradeName(t, upgrade)}
+                    </span>
                     <span
                       className="text-xs px-2 py-0.5 rounded font-bold flex-shrink-0"
                       style={{ backgroundColor: `${accentColor}22`, border: `1px solid ${accentColor}55`, color: accentColor }}
@@ -294,7 +300,8 @@ export function TopBarDetailsPanel({
                     </p>
                   )}
                 </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

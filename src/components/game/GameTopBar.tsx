@@ -6,8 +6,21 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown } from 'lucide-react';
-import { UpgradeConfig } from '@/types/upgrade';
+import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
+import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
+
+/**
+ * Tier rank shown as a small signal-strength meter (1–3 bars) in the corner
+ * of each upgrade icon. Architect/Wizard cap out at the full three bars.
+ */
+const TIER_BARS: Record<UpgradeTier, number> = {
+  Junior: 1,
+  Senior: 2,
+  Principal: 3,
+  Architect: 3,
+  Wizard: 3,
+};
 import {
   Tooltip,
   TooltipContent,
@@ -312,9 +325,11 @@ export function GameTopBar({
               }`}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {ownedUpgrades.map((upgrade) => (
-                <Tooltip 
-                  key={upgrade.id} 
+              {ownedUpgrades.map((upgrade) => {
+                const Icon = getUpgradeIcon(upgrade, ownedUpgrades);
+                return (
+                <Tooltip
+                  key={upgrade.id}
                   open={openTooltipId === upgrade.id}
                   onOpenChange={(open) => {
                     if (!open && openTooltipId === upgrade.id) setOpenTooltipId(null);
@@ -324,8 +339,8 @@ export function GameTopBar({
                     <button
                       data-upgrade-icon
                       onClick={(e) => handleUpgradeClick(upgrade.id, e)}
-                      className="flex-shrink-0 h-8 px-2 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-1 text-[10px] font-bold"
-                      style={{ 
+                      className="relative flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-1 text-[10px] font-bold"
+                      style={{
                         backgroundColor: `${accentColor}18`,
                         border: `1px solid ${accentColor}55`,
                         boxShadow: openTooltipId === upgrade.id ? `0 0 12px ${accentColor}88` : 'none',
@@ -333,7 +348,19 @@ export function GameTopBar({
                       }}
                       aria-label={contentText.upgradeName(t, upgrade)}
                     >
-                      {contentText.upgradeName(t, upgrade).substring(0, 3).toUpperCase()}
+                      {Icon
+                        ? <Icon className="w-4 h-4" strokeWidth={1.5} />
+                        : contentText.upgradeName(t, upgrade).substring(0, 3).toUpperCase()}
+                      {/* Tier meter: 1–3 ascending bars in the top-right corner */}
+                      <span className="absolute top-[3px] right-[3px] flex items-end gap-[1px]" aria-hidden="true">
+                        {Array.from({ length: TIER_BARS[upgrade.tier] }).map((_, i) => (
+                          <span
+                            key={i}
+                            className="w-[2px] rounded-[1px]"
+                            style={{ height: `${3 + i * 2}px`, backgroundColor: accentColor }}
+                          />
+                        ))}
+                      </span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent
@@ -348,7 +375,7 @@ export function GameTopBar({
                   >
                     <div className="space-y-1.5">
                       <p className="font-display font-bold text-base" style={{ color: accentColor }}>
-                        {contentText.upgradeName(t, upgrade)} ({contentText.tier(t, upgrade.tier)})
+                        {contentText.upgradeName(t, upgrade)} [{contentText.tier(t, upgrade.tier)}]
                       </p>
                       <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--foreground) / 0.85)' }}>
                         {contentText.upgradeDesc(t, upgrade)}
@@ -361,7 +388,8 @@ export function GameTopBar({
                     </div>
                   </TooltipContent>
                 </Tooltip>
-              ))}
+                );
+              })}
             </div>
           </TooltipProvider>
         </div>

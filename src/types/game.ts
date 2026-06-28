@@ -150,10 +150,13 @@ export interface DissolveState {
 
 // ── Destructible objects (issue #37 Phase 2: black ball) ──────────────────
 
-/** A mirror or mover the black ball can break after repeated hits. */
+/**
+ * A breakable object: a mirror/mover (black ball only, issue #37) or a
+ * breakable obstacle (any ball; issue #38). Hits accumulate to maxHits.
+ */
 export interface DestructibleState {
   id: string;                  // stable id (the level entity id)
-  kind: 'mirror' | 'mover';
+  kind: 'mirror' | 'mover' | 'breakable';
   hits: number;                // accumulated hits, 0..maxHits
   maxHits: number;             // hits needed to destroy (3)
   lastHitAt: number;           // performance.now() of last counted hit (debounce)
@@ -161,6 +164,31 @@ export interface DestructibleState {
   destroyedBy?: string;        // id of the ball that landed the killing hit
   mirrorPolygon?: Polygon;     // mirror: reference into obstacle/mirror polygon arrays
   moverId?: string;            // mover: id of the MoverState
+  // ── Breakable obstacles (issue #38) ──────────────────────────────────────
+  obstaclePolygon?: Polygon;   // breakable: reference into obstaclePolygons
+  objective?: boolean;         // breakable: must be broken to win the level
+  dents?: Vector2[];           // world-space impact points — rendered as inward dents
+}
+
+/**
+ * A stacked obstacle in the support graph (issue #38). When the thing it rests
+ * on is removed, it topples (falls toward the board bottom and shatters).
+ */
+export interface StackObject {
+  id: string;
+  polygon: Polygon;            // reference into obstaclePolygons
+  breakable: boolean;
+  supporterId: string | null;  // id of the obstacle it rests on, or null = ground
+  toppled: boolean;            // already falling/removed
+}
+
+/** An obstacle mid-collapse: its shape animates toward the board bottom. */
+export interface FallingObject {
+  vertices: Vector2[];         // world-space polygon (snapshot at fall start)
+  color: string;               // hex with #
+  startTime: number;
+  durationMs: number;
+  fallSpeed: number;           // initial downward speed (world units/sec)
 }
 
 export interface ObjectDebrisParticle {
@@ -204,6 +232,8 @@ export interface LevelScoreData {
   // Lock bonus from capturing balls
   lockBonus?: number;
   lockedBallsCount?: number;
+  // Bonus from smashing breakable objects (issue #38)
+  breakBonus?: number;
   // Interest gain from Venture Capital
   interestGain?: number;
 }

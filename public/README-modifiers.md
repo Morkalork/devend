@@ -212,6 +212,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `fenceDurabilityBonus` | `0` | Extra ball hits Ascension fences survive before crumbling. No effect outside Ascension. | `1` |
 | `ballFreezeDuration` | `0` | Seconds a ball stays frozen when tapped (Feature Freeze). `0` = the ability is off. Values from tiers sum (2+2+2 → 6s; Cascade Freeze adds a further +2 → 8s). After thawing, that ball can't be re-frozen for `duration × 2`. | `2` |
 | `ballFreezeCount` | `0` | Extra balls a single freeze tap also freezes, beyond the tapped one (Cascade Freeze). Total frozen per tap = `1 + ballFreezeCount`; the nearest eligible balls in the tapped ball's region are chosen. | `1` |
+| `autoFreezeDuration` | `0` | Seconds an automatically-frozen ball stays frozen (Cron Job). `0` = the ability is off. Every 10s (`AUTO_FREEZE_INTERVAL_MS`) one random eligible ball is frozen via the same path as Feature Freeze. Values from tiers sum (3+1+1 → 5s). After thawing, that ball can't be re-frozen for `duration × 2`. | `3` |
 
 ---
 

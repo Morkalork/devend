@@ -11,7 +11,7 @@ levels:
     level: 2
     sizeThreshold: 40
     expectedCuts: 5
-    points: 10
+    points: 8
     variety: 3
     maxBalls: 2
     entities:
@@ -33,7 +33,7 @@ levels:
     level: 2
     sizeThreshold: 40
     expectedCuts: 5
-    points: 10
+    points: 8
     variety: 3
     maxBalls: 2
     entities:
@@ -55,7 +55,7 @@ levels:
     level: 3
     sizeThreshold: 35
     expectedCuts: 6
-    points: 10
+    points: 11
     variety: 5
     maxBalls: 2
     entities:
@@ -70,7 +70,7 @@ levels:
     level: 3
     sizeThreshold: 35
     expectedCuts: 6
-    points: 10
+    points: 11
     variety: 5
     maxBalls: 2
     entities:
@@ -84,7 +84,7 @@ levels:
     level: 4
     sizeThreshold: 30
     expectedCuts: 8
-    points: 15
+    points: 14
     variety: 5
     maxBalls: 2
     entities:
@@ -106,7 +106,7 @@ levels:
     level: 4
     sizeThreshold: 30
     expectedCuts: 8
-    points: 15
+    points: 14
     variety: 5
     maxBalls: 2
     entities:
@@ -126,9 +126,9 @@ levels:
         height: 200
   - id: level-5
     level: 5
-    sizeThreshold: 15
+    sizeThreshold: 28
     expectedCuts: 10
-    points: 15
+    points: 17
     variety: 8
     maxBalls: 2
     entities:
@@ -178,9 +178,9 @@ levels:
         radius: 41
   - id: level-5b
     level: 5
-    sizeThreshold: 15
+    sizeThreshold: 28
     expectedCuts: 10
-    points: 15
+    points: 17
     variety: 8
     maxBalls: 2
     entities:
@@ -290,7 +290,7 @@ levels:
     level: 7
     sizeThreshold: 22
     expectedCuts: 16
-    points: 20
+    points: 23
     variety: 10
     maxBalls: 2
     entities:
@@ -326,7 +326,7 @@ levels:
     level: 8
     sizeThreshold: 20
     expectedCuts: 15
-    points: 25
+    points: 26
     variety: 12
     maxBalls: 2
     entities:
@@ -367,7 +367,7 @@ levels:
     level: 9
     sizeThreshold: 18
     expectedCuts: 18
-    points: 25
+    points: 29
     variety: 15
     maxBalls: 3
     entities:
@@ -409,7 +409,7 @@ levels:
     level: 10
     sizeThreshold: 15
     expectedCuts: 20
-    points: 25
+    points: 32
     variety: 15
     maxBalls: 3
     entities:
@@ -463,7 +463,7 @@ levels:
     level: 11
     sizeThreshold: 10
     expectedCuts: 12
-    points: 30
+    points: 35
     variety: 18
     maxBalls: 4
     entities:
@@ -494,7 +494,7 @@ levels:
     level: 12
     sizeThreshold: 10
     expectedCuts: 22
-    points: 30
+    points: 38
     variety: 20
     maxBalls: 3
     entities:
@@ -520,7 +520,7 @@ levels:
     level: 13
     sizeThreshold: 8
     expectedCuts: 24
-    points: 35
+    points: 41
     variety: 25
     maxBalls: 4
     entities:
@@ -554,7 +554,7 @@ levels:
     level: 14
     sizeThreshold: 8
     expectedCuts: 26
-    points: 35
+    points: 44
     variety: 25
     maxBalls: 4
     entities:
@@ -588,7 +588,7 @@ levels:
     level: 15
     sizeThreshold: 5
     expectedCuts: 28
-    points: 40
+    points: 47
     variety: 30
     maxBalls: 4
     entities:
@@ -626,7 +626,7 @@ levels:
     level: 16
     sizeThreshold: 7
     expectedCuts: 30
-    points: 45
+    points: 50
     variety: 28
     maxBalls: 4
     entities:
@@ -660,7 +660,7 @@ levels:
     level: 17
     sizeThreshold: 7
     expectedCuts: 32
-    points: 45
+    points: 53
     variety: 30
     maxBalls: 4
     entities:
@@ -698,7 +698,7 @@ levels:
     level: 18
     sizeThreshold: 6
     expectedCuts: 35
-    points: 50
+    points: 56
     variety: 30
     maxBalls: 4
     entities:
@@ -738,7 +738,7 @@ levels:
     level: 19
     sizeThreshold: 5
     expectedCuts: 38
-    points: 55
+    points: 59
     variety: 35
     threadLockRequired: 1
     maxBalls: 4
@@ -799,7 +799,7 @@ levels:
     level: 20
     sizeThreshold: 30
     expectedCuts: 10
-    points: 100
+    points: 66
     variety: 0
     randomShapes: 0
     maxBalls: 1
@@ -824,7 +824,7 @@ levels:
     level: 21
     sizeThreshold: 22
     expectedCuts: 10
-    points: 120
+    points: 72
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -843,7 +843,7 @@ levels:
     level: 22
     sizeThreshold: 20
     expectedCuts: 10
-    points: 130
+    points: 78
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -872,7 +872,7 @@ levels:
     level: 23
     sizeThreshold: 18
     expectedCuts: 11
-    points: 140
+    points: 84
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -911,7 +911,7 @@ levels:
     level: 24
     sizeThreshold: 16
     expectedCuts: 12
-    points: 150
+    points: 90
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -947,7 +947,7 @@ levels:
     level: 25
     sizeThreshold: 15
     expectedCuts: 12
-    points: 160
+    points: 96
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -986,7 +986,7 @@ levels:
     level: 26
     sizeThreshold: 14
     expectedCuts: 13
-    points: 165
+    points: 102
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -1013,7 +1013,7 @@ levels:
     level: 27
     sizeThreshold: 13
     expectedCuts: 14
-    points: 170
+    points: 108
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -1048,7 +1048,7 @@ levels:
     level: 28
     sizeThreshold: 12
     expectedCuts: 15
-    points: 175
+    points: 114
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -1085,7 +1085,7 @@ levels:
     level: 29
     sizeThreshold: 11
     expectedCuts: 16
-    points: 180
+    points: 120
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -1140,7 +1140,7 @@ levels:
     level: 30
     sizeThreshold: 10
     expectedCuts: 18
-    points: 190
+    points: 126
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -1191,3 +1191,194 @@ levels:
         range: 260
         speed: 152
         phase: 0.25
+  - id: level-31
+    level: 31
+    sizeThreshold: 45
+    expectedCuts: 4
+    points: 132
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 400
+        'y': 400
+        width: 100
+        height: 100
+        breakable: true
+        objective: true
+        hitsToBreak: 3
+  - id: level-32
+    level: 32
+    sizeThreshold: 42
+    expectedCuts: 5
+    points: 138
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 560
+        width: 160
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 3
+      - id: box-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 520
+        width: 160
+        height: 40
+      - id: box-2
+        kind: wall
+        shape: rect
+        x: 405
+        'y': 480
+        width: 110
+        height: 40
+      - id: box-3
+        kind: wall
+        shape: rect
+        x: 425
+        'y': 440
+        width: 70
+        height: 40
+  - id: level-33
+    level: 33
+    sizeThreshold: 40
+    expectedCuts: 7
+    points: 144
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 520
+        width: 140
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 4
+      - id: box-1
+        kind: wall
+        shape: rect
+        x: 390
+        'y': 480
+        width: 120
+        height: 40
+      - id: box-2
+        kind: wall
+        shape: rect
+        x: 410
+        'y': 440
+        width: 80
+        height: 40
+  - id: level-34
+    level: 34
+    sizeThreshold: 35
+    expectedCuts: 8
+    points: 150
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 180
+        'y': 520
+        width: 120
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 4
+      - id: target-2
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 520
+        width: 120
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 4
+      - id: box-1
+        kind: wall
+        shape: rect
+        x: 190
+        'y': 480
+        width: 100
+        height: 40
+      - id: box-2
+        kind: wall
+        shape: rect
+        x: 610
+        'y': 480
+        width: 100
+        height: 40
+  - id: level-35
+    level: 35
+    sizeThreshold: 30
+    expectedCuts: 9
+    points: 156
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 600
+        width: 160
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 5
+      - id: box-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 560
+        width: 160
+        height: 40
+      - id: box-2
+        kind: wall
+        shape: rect
+        x: 405
+        'y': 520
+        width: 110
+        height: 40
+      - id: box-3
+        kind: wall
+        shape: rect
+        x: 425
+        'y': 480
+        width: 70
+        height: 40
+      - id: mirror-1
+        kind: wall
+        shape: rect
+        x: 150
+        'y': 250
+        width: 30
+        height: 200
+        mirror: true
+      - id: mirror-2
+        kind: wall
+        shape: rect
+        x: 720
+        'y': 250
+        width: 30
+        height: 200
+        mirror: true

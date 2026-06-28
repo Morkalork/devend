@@ -6,7 +6,7 @@
  */
 
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
-import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState } from "@/types/game";
+import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
@@ -58,6 +58,8 @@ export interface CanvasGameState {
   accumulator: number;
   animationId: number;
   gameLoopFn: ((timestamp: number) => void) | null;
+  /** Cron Job: performance.now() of the last auto-freeze (0 = clock not yet started this map). */
+  lastAutoFreezeAt: number;
 
   // ── Layout ─────────────────────────────────────────────────────────────
   screenSize: { width: number; height: number };
@@ -119,4 +121,18 @@ export interface CanvasGameState {
   pendingDestroys: DestructibleState[];
   /** Active collapse animations (rendered then culled). */
   objectDebris: ObjectDebrisState[];
+
+  // ── Breakable obstacles + stacking (issue #38) ─────────────────────────
+  /** Stack/support graph of obstacles, for toppling when a support breaks. */
+  stackObjects: StackObject[];
+  /** Obstacles currently animating their fall (rendered then culled). */
+  fallingObjects: FallingObject[];
+  /** Number of break-objective obstacles at level start. */
+  objectivesTotal: number;
+  /** Number of break-objective obstacles broken so far. */
+  objectivesBroken: number;
+  /** Bonus overtime hours earned by smashing breakable objects this level. */
+  breakBonus: number;
+  /** True for one frame after a cut "duds" against a breakable structure. */
+  lastDudAt: number;
 }

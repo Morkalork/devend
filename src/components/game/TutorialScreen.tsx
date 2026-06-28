@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star } from 'lucide-react';
+import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star, Hammer } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { getImplementedBallTypes } from '@/lib/ballTypes';
 
@@ -14,6 +14,7 @@ const tutorialSteps = [
   { icon: Scissors, key: 'removeEmptySpace' },
   { icon: AlertTriangle, key: 'avoidTheBall' },
   { icon: Target, key: 'winCondition' },
+  { icon: Hammer, key: 'breakObstacles' },
 ];
 
 const lifeCycleSteps = [

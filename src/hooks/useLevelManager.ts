@@ -17,6 +17,36 @@ interface LevelManagerState {
   error: string | null;
 }
 
+/**
+ * Dev-time pay-curve sanity check. Warns (does not throw) when, across the
+ * level-sorted maps, reward `points` decreases or fails the engine invariant
+ * `points > expectedCuts`. Keeps the overtime curve monotonic as levels are
+ * added later — independent of how many levels exist. No-op in production.
+ */
+function warnOnPayCurveRegressions(allMaps: LevelConfig[]): void {
+  if (!import.meta.env.DEV) return;
+  const byLevel = new Map<number, LevelConfig>();
+  for (const map of allMaps) {
+    if (!byLevel.has(map.level)) byLevel.set(map.level, map);
+  }
+  const sorted = [...byLevel.keys()].sort((a, b) => a - b);
+  let prevPoints: number | null = null;
+  for (const lvl of sorted) {
+    const m = byLevel.get(lvl)!;
+    if (prevPoints !== null && m.points < prevPoints) {
+      console.warn(
+        `[pay curve] Level ${lvl} points (${m.points}) is lower than the previous level (${prevPoints}) — pay should grow steadily.`,
+      );
+    }
+    if (m.points <= m.expectedCuts) {
+      console.warn(
+        `[pay curve] Level ${lvl} points (${m.points}) must exceed expectedCuts (${m.expectedCuts}).`,
+      );
+    }
+    prevPoints = m.points;
+  }
+}
+
 /** Group maps by their `level` field, then pick one random map per level */
 function buildLevelSequence(allMaps: LevelConfig[]): LevelConfig[] {
   const groups = new Map<number, LevelConfig[]>();
@@ -115,6 +145,7 @@ export function useLevelManager() {
         throw new Error('Invalid map.yml: no valid levels after validation');
       }
 
+      warnOnPayCurveRegressions(validLevels);
       const sequence = buildLevelSequence(validLevels);
 
       setState({

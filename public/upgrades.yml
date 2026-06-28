@@ -10,6 +10,7 @@ upgrades:
     description: Reduce ball speed by 5%.
     cost: 8
     unlockLevel: 1
+    icon: clock
     modifiers:
       ballSpeedMultiplier: 0.95
 
@@ -46,6 +47,7 @@ upgrades:
     description: Reduce ball size by 5%.
     cost: 8
     unlockLevel: 1
+    icon: memory
     modifiers:
       ballSizeMultiplier: 0.95
 
@@ -82,6 +84,7 @@ upgrades:
     description: Increase fence generation speed by 10%.
     cost: 8
     unlockLevel: 1
+    icon: fast-forward
     modifiers:
       fenceGenerationSpeedMultiplier: 1.10
 
@@ -118,6 +121,7 @@ upgrades:
     description: First fence in each map generates instantly.
     cost: 16
     unlockLevel: 5
+    icon: flame
     modifiers:
       instantFencesPerMap: 1
 
@@ -156,6 +160,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - fast_compile_senior
+    icon: split
     modifiers:
       additionalConcurrentFences: 1
 
@@ -167,6 +172,7 @@ upgrades:
     unlockLevel: 30
     prerequisites:
       - fast_compile_senior
+    icon: layers
     modifiers:
       additionalConcurrentFences: 1
 
@@ -181,6 +187,7 @@ upgrades:
     description: Each fence has a small chance to remove an additional 5% area.
     cost: 16
     unlockLevel: 10
+    icon: trash
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.05
@@ -191,6 +198,7 @@ upgrades:
     description: Each fence has a small chance to remove an additional 10% area.
     cost: 16
     unlockLevel: 20
+    icon: recycle
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.10
@@ -206,6 +214,7 @@ upgrades:
     description: Gain 1 extra life.
     cost: 8
     unlockLevel: 5
+    icon: heart
     modifiers:
       extraLives: 1
 
@@ -242,6 +251,7 @@ upgrades:
     description: Gain 5% more overtime per map.
     cost: 8
     unlockLevel: 2
+    icon: trending-up
     modifiers:
       scoreMultiplier: 1.05
 
@@ -278,6 +288,7 @@ upgrades:
     description: 10% interest on unused overtime between maps.
     cost: 18
     unlockLevel: 6
+    icon: piggy-bank
     modifiers:
       scoreInterestRate: 0.10
 
@@ -314,6 +325,7 @@ upgrades:
     description: Each locked ball reduces all ball speeds by 1%, up to 50%.
     cost: 12
     unlockLevel: 3
+    icon: sliders
     modifiers:
       microManagerPerLock: 0.01
 
@@ -352,6 +364,7 @@ upgrades:
     description: Once per store visit, buying an item adds a new offer to the shelf.
     cost: 12
     unlockLevel: 3
+    icon: package-plus
     modifiers:
       shopRestockCount: 1
 
@@ -388,6 +401,7 @@ upgrades:
     description: Gain one additional shop item slot.
     cost: 36
     unlockLevel: 4
+    icon: building
     modifiers:
       extraShopItems: 1
 
@@ -397,6 +411,7 @@ upgrades:
     description: Gain +1 Certificate Hour.
     cost: 55
     unlockLevel: 10
+    icon: graduation-cap
     modifiers:
       extraCertificateHours: 1
 
@@ -411,6 +426,7 @@ upgrades:
     description: Earn 20% more overtime per map — but balls move 8% faster. Short-term gain, long-term pain.
     cost: 14
     unlockLevel: 4
+    icon: credit-card
     modifiers:
       scoreMultiplier: 1.20
       ballSpeedMultiplier: 1.08
@@ -441,33 +457,6 @@ upgrades:
 
 
   # ===============================
-  # PAIR PROGRAMMING (Concurrent + Speed tradeoff)
-  # ===============================
-
-  - id: pair_programming_principal
-    name: Pair Programming
-    tier: Principal
-    description: One extra concurrent fence — but each fence builds 12% slower. Two minds, divided attention.
-    cost: 30
-    unlockLevel: 8
-    modifiers:
-      additionalConcurrentFences: 1
-      fenceGenerationSpeedMultiplier: 0.88
-
-  - id: pair_programming_architect
-    name: Pair Programming
-    tier: Architect
-    description: One more concurrent fence — but fence speed drops another 12%.
-    cost: 44
-    unlockLevel: 16
-    prerequisites:
-      - pair_programming_principal
-    modifiers:
-      additionalConcurrentFences: 1
-      fenceGenerationSpeedMultiplier: 0.88
-
-
-  # ===============================
   # DEFENSIVE PROGRAMMING (Lives + Ball Size)
   # ===============================
 
@@ -477,6 +466,7 @@ upgrades:
     description: Gain 1 extra life and shrink all balls by 8%. Safety first.
     cost: 12
     unlockLevel: 5
+    icon: shield
     modifiers:
       extraLives: 1
       ballSizeMultiplier: 0.92
@@ -516,6 +506,7 @@ upgrades:
     description: Preview the next 2 bounces of the fastest ball's path.
     cost: 12
     unlockLevel: 4
+    icon: route
     modifiers:
       ballPathPredictionBounces: 2
       ballPathPredictionBalls: 1
@@ -587,6 +578,7 @@ upgrades:
     description: Tap a ball to freeze it in place for 2 seconds.
     cost: 14
     unlockLevel: 4
+    icon: snowflake
     modifiers:
       ballFreezeDuration: 2
 
@@ -627,6 +619,7 @@ upgrades:
     unlockLevel: 14
     prerequisites:
       - feature_freeze_principal
+    icon: cloud-snow
     modifiers:
       ballFreezeCount: 1
 
@@ -654,6 +647,45 @@ upgrades:
 
 
   # ===============================
+  # CRON JOB (Automatic timed freeze)
+  # A scheduled task: every 10 seconds it freezes one random ball in place.
+  # Tiers extend how long the freeze holds (3 → 4 → 5 seconds).
+  # ===============================
+
+  - id: cron_job_senior
+    name: Cron Job
+    tier: Senior
+    description: Every 10 seconds, automatically freeze a random ball in place for 3 seconds.
+    cost: 30
+    unlockLevel: 20
+    icon: calendar-clock
+    modifiers:
+      autoFreezeDuration: 3
+
+  - id: cron_job_principal
+    name: Cron Job
+    tier: Principal
+    description: Scheduled freezes now hold a ball for 4 seconds.
+    cost: 42
+    unlockLevel: 22
+    prerequisites:
+      - cron_job_senior
+    modifiers:
+      autoFreezeDuration: 1
+
+  - id: cron_job_architect
+    name: Cron Job
+    tier: Architect
+    description: Scheduled freezes now hold a ball for 5 seconds.
+    cost: 54
+    unlockLevel: 24
+    prerequisites:
+      - cron_job_principal
+    modifiers:
+      autoFreezeDuration: 1
+
+
+  # ===============================
   # DEFENSIVE PROGRAMMING (Ascension fence durability)
   # Only offered while ascended — fences wear out past level 30.
   # ===============================
@@ -663,7 +695,7 @@ upgrades:
     tier: Junior
     description: Fences survive 1 extra ball hit before crumbling (Ascension).
     cost: 10
-    unlockLevel: 1
+    unlockLevel: 30
     ascensionOnly: true
     modifiers:
       fenceDurabilityBonus: 1
@@ -673,7 +705,7 @@ upgrades:
     tier: Senior
     description: Fences survive 2 extra ball hits before crumbling (Ascension).
     cost: 18
-    unlockLevel: 1
+    unlockLevel: 30
     ascensionOnly: true
     prerequisites:
       - defensive_programming_junior
@@ -685,7 +717,7 @@ upgrades:
     tier: Principal
     description: Fences survive 3 extra ball hits before crumbling (Ascension).
     cost: 30
-    unlockLevel: 1
+    unlockLevel: 30
     ascensionOnly: true
     prerequisites:
       - defensive_programming_senior

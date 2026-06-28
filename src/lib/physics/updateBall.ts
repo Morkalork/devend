@@ -33,7 +33,7 @@ import {
 } from "@/lib/regionOwnership";
 import { playWallHitSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
-import { findMirrorDestructible, findMoverDestructible, registerObjectHit } from "@/lib/physics/destructibles";
+import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit } from "@/lib/physics/destructibles";
 
 // ---------------------------------------------------------------------------
 // Hot-loop notes
@@ -316,12 +316,6 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
       playWallHitSound(impactStrength);
-
-      // Black ball wears down mirrors (mirrors are obstacle polygons).
-      if (ball.ability === 'breakObjects') {
-        const d = findMirrorDestructible(game, obstacle);
-        if (d) registerObjectHit(game, d, ball.id, performance.now());
-      }
     }
   }
 
@@ -346,11 +340,28 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       // Ascension fence durability: each (debounced) hit wears the fence down.
       // Exhausted fences are queued and broken after the physics step.
       if (wall.hitsLeft !== undefined) {
-        const now = performance.now();
-        if (wall.lastDamageAt === undefined || now - wall.lastDamageAt > 250) {
-          wall.lastDamageAt = now;
+        const dn = performance.now();
+        if (wall.lastDamageAt === undefined || dn - wall.lastDamageAt > 250) {
+          wall.lastDamageAt = dn;
           wall.hitsLeft--;
           if (wall.hitsLeft <= 0) game.pendingWallBreaks.push(wall);
+        }
+      }
+
+      // Destructible obstacles are bounced by these edge walls, so hits are
+      // counted here (the polygon-collision path rarely fires). Mirrors: black
+      // ball only (#37). Breakables: any ball, black counts double (#38).
+      if (wall.id.startsWith("obstacle-")) {
+        const oid = obstacleIdFromWallId(wall.id);
+        if (oid) {
+          const d = findObstacleDestructibleById(game, oid);
+          if (d) {
+            if (d.kind === 'breakable') {
+              registerObjectHit(game, d, ball.id, now, ball.ability === 'breakObjects' ? 2 : 1, impactPoint ?? undefined);
+            } else if (d.kind === 'mirror' && ball.ability === 'breakObjects') {
+              registerObjectHit(game, d, ball.id, now, 1, impactPoint ?? undefined);
+            }
+          }
         }
       }
     }

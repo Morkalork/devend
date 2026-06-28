@@ -246,6 +246,7 @@ export function GameCanvas({
     lastTime: 0,
     accumulator: 0,
     animationId: 0,
+    lastAutoFreezeAt: 0,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -276,6 +277,12 @@ export function GameCanvas({
     destructibles: [] as import("@/types/game").DestructibleState[],
     pendingDestroys: [] as import("@/types/game").DestructibleState[],
     objectDebris: [] as import("@/types/game").ObjectDebrisState[],
+    stackObjects: [] as import("@/types/game").StackObject[],
+    fallingObjects: [] as import("@/types/game").FallingObject[],
+    objectivesTotal: 0,
+    objectivesBroken: 0,
+    breakBonus: 0,
+    lastDudAt: 0,
   });
 
   useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging);
@@ -429,6 +436,10 @@ export function GameCanvas({
       game.pendingWallBreaks = [];
       game.pendingDestroys = [];
       game.objectDebris = [];
+      game.fallingObjects = [];
+      game.objectivesBroken = 0;
+      game.breakBonus = 0;
+      game.lastDudAt = 0;
       game.moneyMultiplier = 1;
       game.ballSpeedScale = activeModifiers.ballSpeedMultiplier;
       const data = createInitialGameData(level, levelNumber, activeModifiers);
@@ -441,6 +452,8 @@ export function GameCanvas({
       game.basePlayableArea   = data.basePlayableArea;
       game.balls              = data.balls;
       game.destructibles      = data.destructibles;
+      game.stackObjects       = data.stackObjects;
+      game.objectivesTotal    = data.objectivesTotal;
       game.initialSamplePoints = data.initialSamplePoints;
       game.spaceGrid          = data.spaceGrid;
       game.gridRegions        = data.gridRegions;
@@ -459,6 +472,7 @@ export function GameCanvas({
       game.swipePointerId = null;
       game.lastTime = 0;
       game.accumulator = 0;
+      game.lastAutoFreezeAt = 0; // Cron Job: restart the auto-freeze clock each map
       game.wallCount = 0;
       clearWallImpacts();
       setCutCount(0);
@@ -579,7 +593,7 @@ export function GameCanvas({
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
     };
-    const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks);
+    const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration);
     game.gameLoopFn = gameLoop;
 
     resizeCanvas();

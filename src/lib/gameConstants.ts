@@ -23,6 +23,9 @@ export const BALL_DANGER_SPEED         = 160;     // Reference speed for the spe
 export const FREEZE_COOLDOWN_MULTIPLIER = 2;      // Cooldown after a thaw = freeze duration × this
 export const FREEZE_TAP_SLOP            = 22;      // World units of touch slop added to ball radius when tapping
 
+// ── Cron Job (automatic timed freeze upgrade) ──────────────────────────────
+export const AUTO_FREEZE_INTERVAL_MS    = 10000;  // How often Cron Job freezes a random ball
+
 // ── Static colours ────────────────────────────────────────────────────────
 export const COLORS = {
   cutPreview:           "rgba(255, 255, 255, 0.3)",

@@ -21,6 +21,7 @@ import { computeBallTrajectory, hexToRgba } from "@/lib/gameUtils";
 import { getBallBase, getBallSpecular, getHexOverlay } from "@/lib/ballRenderCache";
 import { renderBallEffects } from "@/lib/ballEffects";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
+import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from "@/lib/boardConstants";
 import {
   LOCK_PULSE_DURATION,
@@ -178,56 +179,112 @@ function _mulberry(seed: number): () => number {
   };
 }
 
-function drawDamageCracks(
+/**
+ * Trace a jagged version of a polygon onto ctx (current path). Each edge is
+ * subdivided and its points nudged perpendicular by a seeded amount, so the
+ * silhouette reads as chipped/broken. Bigger ampWorld = more frayed.
+ */
+function traceJaggedPath(
   ctx: CanvasRenderingContext2D,
   w2s: (x: number, y: number) => { x: number; y: number },
-  poly: { vertices: { x: number; y: number }[] },
-  hits: number,
-  seedKey: string,
-  scale: number,
+  verts: { x: number; y: number }[],
+  ampWorld: number,
+  rng: () => number,
 ): void {
-  const verts = poly.vertices;
-  if (hits <= 0 || verts.length < 3) return;
+  const SUB = 3; // subdivisions per edge
+  ctx.beginPath();
+  let first = true;
+  for (let i = 0; i < verts.length; i++) {
+    const a = verts[i], b = verts[(i + 1) % verts.length];
+    const ex = b.x - a.x, ey = b.y - a.y;
+    const el = Math.hypot(ex, ey) || 1;
+    const px = -ey / el, py = ex / el; // unit perpendicular
+    for (let s = 0; s < SUB; s++) {
+      const t = s / SUB;
+      const off = (rng() * 2 - 1) * ampWorld;
+      const sp = w2s(a.x + ex * t + px * off, a.y + ey * t + py * off);
+      if (first) { ctx.moveTo(sp.x, sp.y); first = false; } else ctx.lineTo(sp.x, sp.y);
+    }
+  }
+  ctx.closePath();
+}
 
+/**
+ * Trace a polygon with mostly-random small fray, but a guaranteed inward DENT
+ * at each impact point (where a ball struck). Used for breakable obstacles so
+ * the player can read exactly where their hits landed.
+ */
+function traceDentedPath(
+  ctx: CanvasRenderingContext2D,
+  w2s: (x: number, y: number) => { x: number; y: number },
+  verts: { x: number; y: number }[],
+  baseAmp: number,
+  dents: { x: number; y: number }[],
+  dentDepth: number,
+  dentRadius: number,
+  rng: () => number,
+): void {
   let cx = 0, cy = 0;
   for (const v of verts) { cx += v.x; cy += v.y; }
   cx /= verts.length; cy /= verts.length;
 
-  ctx.save();
-  // Badly-harmed objects also darken.
-  if (hits >= 2) {
-    ctx.beginPath();
-    const p0 = w2s(verts[0].x, verts[0].y);
-    ctx.moveTo(p0.x, p0.y);
-    for (let i = 1; i < verts.length; i++) { const p = w2s(verts[i].x, verts[i].y); ctx.lineTo(p.x, p.y); }
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(0,0,0,0.28)';
-    ctx.fill();
-  }
+  ctx.beginPath();
+  let first = true;
+  for (let i = 0; i < verts.length; i++) {
+    const a = verts[i], b = verts[(i + 1) % verts.length];
+    const ex = b.x - a.x, ey = b.y - a.y;
+    const el = Math.hypot(ex, ey) || 1;
+    const px = -ey / el, py = ex / el;
+    const sub = Math.max(2, Math.round(el / 20)); // ~one point every 20 world units
+    for (let s = 0; s < sub; s++) {
+      const t = s / sub;
+      let wx = a.x + ex * t, wy = a.y + ey * t;
 
-  const rng = _mulberry(_hashStr(seedKey));
-  const count = hits * 3;
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = 'rgba(8,10,14,0.9)';
-  ctx.lineWidth = Math.max(1, 1.6 * scale);
-  for (let i = 0; i < count; i++) {
-    const t = rng() * verts.length;
-    const vi = Math.floor(t) % verts.length;
-    const vn = (vi + 1) % verts.length;
-    const f = t - Math.floor(t);
-    const ex = verts[vi].x + (verts[vn].x - verts[vi].x) * f;
-    const ey = verts[vi].y + (verts[vn].y - verts[vi].y) * f;
-    const sx = cx + (ex - cx) * 0.12;
-    const sy = cy + (ey - cy) * 0.12;
-    const mx = cx + (ex - cx) * 0.55 + (rng() - 0.5) * 22;
-    const my = cy + (ey - cy) * 0.55 + (rng() - 0.5) * 22;
-    const s = w2s(sx, sy), m = w2s(mx, my), e = w2s(ex, ey);
-    ctx.beginPath();
-    ctx.moveTo(s.x, s.y);
-    ctx.lineTo(m.x, m.y);
-    ctx.lineTo(e.x, e.y);
-    ctx.stroke();
+      // Strongest nearby impact wins.
+      let dent = 0;
+      for (const imp of dents) {
+        const dd = Math.hypot(wx - imp.x, wy - imp.y);
+        if (dd < dentRadius) dent = Math.max(dent, 1 - dd / dentRadius);
+      }
+
+      if (dent > 0) {
+        // Pull the border toward the centre — a clear inward dent at the hit.
+        const tox = cx - wx, toy = cy - wy;
+        const tl = Math.hypot(tox, toy) || 1;
+        wx += (tox / tl) * dentDepth * dent;
+        wy += (toy / tl) * dentDepth * dent;
+      } else {
+        const off = (rng() * 2 - 1) * baseAmp;
+        wx += px * off; wy += py * off;
+      }
+      const sp = w2s(wx, wy);
+      if (first) { ctx.moveTo(sp.x, sp.y); first = false; } else ctx.lineTo(sp.x, sp.y);
+    }
   }
+  ctx.closePath();
+}
+
+/** Bold jagged damage outline in the object's colour (mirrors/movers). */
+function drawDamageCracks(
+  ctx: CanvasRenderingContext2D,
+  w2s: (x: number, y: number) => { x: number; y: number },
+  poly: { vertices: { x: number; y: number }[] },
+  level: number,
+  seedKey: string,
+  scale: number,
+  color: string,
+): void {
+  const verts = poly.vertices;
+  if (level <= 0 || verts.length < 3) return;
+  const col = color || '#ffffff';
+  const rng = _mulberry(_hashStr(seedKey));
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  traceJaggedPath(ctx, w2s, verts, 3 + level * 4, rng);
+  ctx.strokeStyle = hexToRgba(col, Math.min(1, 0.7 + level * 0.2));
+  ctx.lineWidth = Math.max(1.5, 2.4 * scale);
+  ctx.stroke();
   ctx.restore();
 }
 
@@ -448,7 +505,7 @@ export function renderFrame(
       // travel with it).
       const dmover = game.destructibles.find(d => d.kind === 'mover' && !d.destroyed && d.moverId === mover.id);
       if (dmover && dmover.hits > 0) {
-        drawDamageCracks(ctx, w2s, mover.polygon, dmover.hits, `mover-${mover.id}`, scale);
+        drawDamageCracks(ctx, w2s, mover.polygon, dmover.hits, `mover-${mover.id}`, scale, MOVER_COLOR);
       }
     }
 
@@ -470,6 +527,8 @@ export function renderFrame(
       _obstacleGlowOC = new OffscreenCanvas(Math.max(1, screenWidth), Math.max(1, screenHeight));
       const c = _obstacleGlowOC.getContext('2d')!;
       const mirrorSet = new Set(game.mirrorPolygons);
+      // Breakable obstacles get a distinct per-frame look (below), so skip them.
+      const breakableSet = new Set(game.destructibles.filter(d => d.kind === 'breakable' && d.obstaclePolygon).map(d => d.obstaclePolygon));
       c.strokeStyle = accentColor;
       c.lineCap = 'round';
       c.lineJoin = 'round';
@@ -477,7 +536,7 @@ export function renderFrame(
       c.shadowColor = accentColor;
       c.shadowBlur = 6 * scale;
       for (const poly of game.obstaclePolygons) {
-        if (mirrorSet.has(poly)) continue;
+        if (mirrorSet.has(poly) || breakableSet.has(poly)) continue;
         const sv = poly.vertices.map(v => w2s(v.x, v.y));
         c.beginPath();
         c.moveTo(sv[0].x, sv[0].y);
@@ -487,6 +546,54 @@ export function renderFrame(
       }
     }
     if (_obstacleGlowOC) ctx.drawImage(_obstacleGlowOC, 0, 0);
+  }
+
+  // ── Breakable obstacles (issue #38) ───────────────────────────────────────
+  // Pristine: clean amber box with a dashed inner outline ("this can break").
+  // Damaged: the silhouette frays and the fill thins out, more so each hit, so
+  // damage is unmistakable. The two highest-damage hits also flash a tag.
+  for (const d of game.destructibles) {
+    if (d.kind !== 'breakable' || d.destroyed || !d.obstaclePolygon) continue;
+    const poly = d.obstaclePolygon;
+    const amber = d.objective ? '#ffb454' : '#ffcf7a';
+    const dmg = d.maxHits > 0 ? Math.min(1, d.hits / d.maxHits) : 0;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    if (d.hits > 0) {
+      // A clear inward dent at each hit, plus gentle random fray elsewhere;
+      // the fill thins as damage grows.
+      const rng = _mulberry(_hashStr(`break-${d.id}`));
+      traceDentedPath(ctx, w2s, poly.vertices, 1.5 + dmg * 4, d.dents ?? [], 16, 34, rng);
+      ctx.fillStyle = hexToRgba(amber, 0.2 * (1 - dmg * 0.7));
+      ctx.fill();
+      ctx.lineWidth = Math.max(2, WALL_THICKNESS * scale * (1 - dmg * 0.25));
+      ctx.strokeStyle = hexToRgba(amber, 0.95);
+      ctx.shadowColor = amber;
+      ctx.shadowBlur = 8 * scale;
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      const v0 = w2s(poly.vertices[0].x, poly.vertices[0].y);
+      ctx.moveTo(v0.x, v0.y);
+      for (let i = 1; i < poly.vertices.length; i++) { const p = w2s(poly.vertices[i].x, poly.vertices[i].y); ctx.lineTo(p.x, p.y); }
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(255,180,84,0.12)';
+      ctx.fill();
+      ctx.lineWidth = WALL_THICKNESS * scale;
+      ctx.strokeStyle = amber;
+      ctx.shadowColor = amber;
+      ctx.shadowBlur = 7 * scale;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = Math.max(1, 1.5 * scale);
+      ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+      ctx.setLineDash([5 * scale, 5 * scale]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
   }
 
   // ── Unified wall render loop ───────────────────────────────────────────────
@@ -761,7 +868,7 @@ export function renderFrame(
   // ── Mirror damage cracks (Phase 2: black ball) ────────────────────────────
   for (const d of game.destructibles) {
     if (d.kind === 'mirror' && !d.destroyed && d.hits > 0 && d.mirrorPolygon) {
-      drawDamageCracks(ctx, w2s, d.mirrorPolygon, d.hits, `mirror-${d.id}`, scale);
+      drawDamageCracks(ctx, w2s, d.mirrorPolygon, d.hits, `mirror-${d.id}`, scale, '#88ddff');
     }
   }
 
@@ -799,6 +906,39 @@ export function renderFrame(
     }
   }
 
+  // ── Falling obstacles (issue #38: toppled stacks) ─────────────────────────
+  if (game.fallingObjects.length > 0) {
+    const nowF = performance.now();
+    let expired = false;
+    for (const fo of game.fallingObjects) {
+      const elapsed = nowF - fo.startTime;
+      if (elapsed >= fo.durationMs) { expired = true; continue; }
+      const t = elapsed / 1000;
+      const prog = elapsed / fo.durationMs;
+      const fallY = fo.fallSpeed * t + 320 * t * t; // accelerating toward the bottom
+      const alpha = 1 - prog;
+      const cr = parseInt(fo.color.slice(1, 3), 16);
+      const cg = parseInt(fo.color.slice(3, 5), 16);
+      const cb = parseInt(fo.color.slice(5, 7), 16);
+      ctx.save();
+      ctx.beginPath();
+      const v0 = w2s(fo.vertices[0].x, fo.vertices[0].y + fallY);
+      ctx.moveTo(v0.x, v0.y);
+      for (let i = 1; i < fo.vertices.length; i++) {
+        const p = w2s(fo.vertices[i].x, fo.vertices[i].y + fallY);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.closePath();
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},${(alpha * 0.45).toFixed(3)})`;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(${cr},${cg},${cb},${alpha.toFixed(3)})`;
+      ctx.lineWidth = 2 * scale;
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (expired) game.fallingObjects = game.fallingObjects.filter(fo => nowF - fo.startTime < fo.durationMs);
+  }
+
   // ── Cut preview line during drag ──────────────────────────────────────────
   if (swipeStart && swipeRegionId && currentSwipePos && !wall) {
     const delta = vec2Sub(currentSwipePos, swipeStart);
@@ -811,8 +951,17 @@ export function renderFrame(
       const bwdPreview = castRayWithReflections(swipeStart, negDir, walls);
 
       if (fwdPreview && bwdPreview) {
+        // Issue #38: a fence can't anchor on a breakable — show the preview in
+        // red so the player sees the cut will "dud" before releasing.
+        const fEnd = fwdPreview.waypoints[fwdPreview.waypoints.length - 1];
+        const bEnd = bwdPreview.waypoints[bwdPreview.waypoints.length - 1];
+        const isDud = cutAnchorsBreakable(game, fEnd, bEnd, WALL_THICKNESS + 6);
+        const outerColor = isDud ? "#ff8080" : "#ffffff";
+        const innerColor = isDud ? "#ff2a2a" : accentColor;
+        const dotColor   = isDud ? "#ff5b5b" : "#88ddff";
+
         ctx.save();
-        ctx.globalAlpha = 0.15;
+        ctx.globalAlpha = isDud ? 0.3 : 0.15;
         ctx.beginPath();
         ctx.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height);
         ctx.clip();
@@ -840,8 +989,8 @@ export function renderFrame(
               ctx.fill();
             };
 
-            drawPoly((previewThickness + 8) * scale / 2, "#ffffff");
-            drawPoly((previewThickness + 4) * scale / 2, accentColor);
+            drawPoly((previewThickness + 8) * scale / 2, outerColor);
+            drawPoly((previewThickness + 4) * scale / 2, innerColor);
           }
         }
 
@@ -849,7 +998,7 @@ export function renderFrame(
         for (const waypoints of allWaypoints) {
           for (let i = 1; i < waypoints.length - 1; i++) {
             const pt = w2s(waypoints[i].x, waypoints[i].y);
-            ctx.fillStyle = "#88ddff";
+            ctx.fillStyle = dotColor;
             ctx.beginPath();
             ctx.arc(pt.x, pt.y, 4 * scale, 0, Math.PI * 2);
             ctx.fill();
