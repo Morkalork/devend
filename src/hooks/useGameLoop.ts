@@ -13,7 +13,7 @@
 
 import { CanvasGameState } from "@/types/gameState";
 import { GrowingWall } from "@/types/game";
-import { PHYSICS_STEP, DISSOLVE_DURATION } from "@/lib/gameConstants";
+import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
@@ -28,6 +28,8 @@ export interface GameLoopCallbacks {
   render: () => void;
   /** Called when Ascension fences ran out of durability this frame. */
   processWallBreaks?: () => void;
+  /** Called when a black ball destroyed a mirror/mover this frame. */
+  processDestroys?: () => void;
 }
 
 /**
@@ -38,6 +40,7 @@ export interface GameLoopCallbacks {
  * @param ctx      - The 2D rendering context for the canvas
  * @param parallaxTickRef - Ref to the parallax tick function (shared rAF)
  * @param callbacks - render / updateWall / applyCut functions
+ * @param autoFreezeDuration - Cron Job: seconds an auto-frozen ball holds (0 = upgrade off)
  */
 export function createGameLoop(
   game: CanvasGameState,
@@ -45,6 +48,7 @@ export function createGameLoop(
   ctx: CanvasRenderingContext2D,
   parallaxTickRef: { current: ((ts: number) => void) | null | undefined } | null | undefined,
   callbacks: GameLoopCallbacks,
+  autoFreezeDuration: number,
 ): (timestamp: number) => void {
   // Always cancel the previously-stored handle before scheduling a new one, so
   // an external start site (resume/dissolve/pushMode) that assigns into
@@ -121,6 +125,33 @@ export function createGameLoop(
     game.lastTime   = timestamp;
     game.accumulator += Math.min(dt, 0.05);
 
+    // Cron Job: on a fixed interval, freeze one random eligible ball. Reuses the
+    // same frozenUntil/freezeReadyAt path as the tap-driven Feature Freeze, so
+    // the physics loop below (and rendering) already hold and visualise it.
+    if (autoFreezeDuration > 0 && !game.isRecovering) {
+      const now = performance.now();
+      if (game.lastAutoFreezeAt === 0) {
+        // First active frame of the map — start the clock so the first freeze
+        // lands one full interval in, not immediately at map start.
+        game.lastAutoFreezeAt = now;
+      } else if (now - game.lastAutoFreezeAt >= AUTO_FREEZE_INTERVAL_MS) {
+        const eligible = game.balls.filter(b =>
+          b.state === "active" &&
+          !(b.frozenUntil && now < b.frozenUntil) &&     // not already frozen
+          !(b.freezeReadyAt && now < b.freezeReadyAt)     // not on thaw cooldown
+        );
+        if (eligible.length > 0) {
+          const target = eligible[Math.floor(Math.random() * eligible.length)];
+          const durationMs = autoFreezeDuration * 1000;
+          target.frozenUntil   = now + durationMs;
+          target.freezeReadyAt = now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
+          game.lastAutoFreezeAt = now;
+        }
+        // No eligible ball (all frozen/cooling) — leave the clock so it retries
+        // next frame rather than skipping this scheduled tick entirely.
+      }
+    }
+
     while (game.accumulator >= PHYSICS_STEP) {
       // Snapshot positions before this step (used for render interpolation).
       // Mutate in-place to avoid allocating a new object every physics tick.
@@ -170,6 +201,12 @@ export function createGameLoop(
     // fixed-step loop — breaking rebuilds regions, too heavy per step)
     if (game.pendingWallBreaks.length > 0) {
       callbacks.processWallBreaks?.();
+    }
+
+    // Remove mirrors/movers a black ball finished off this frame (rebuilds
+    // regions when a mirror reopens space — too heavy for the fixed-step loop).
+    if (game.pendingDestroys.length > 0) {
+      callbacks.processDestroys?.();
     }
 
     // Interpolate render positions between last two physics states.

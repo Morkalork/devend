@@ -2,6 +2,11 @@
 # Values are in overtime hours.
 
 scoring:
+  # Per-level overtime cap multiplier.
+  # cap = round(basePoints × overtimeCapHeadroom). Tracks the pay curve so
+  # late levels pay more, while bounding extreme multiplier stacks.
+  overtimeCapHeadroom: 2.0
+
   # Under-Par Bonus
   # +1h if any fences under par
   fenceEfficiency:

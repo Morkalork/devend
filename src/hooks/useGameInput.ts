@@ -30,6 +30,7 @@ import {
 } from "@/lib/boardConstants";
 import { isPositionActive } from "@/lib/spaceGrid";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
+import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { initAudio } from "@/lib/gameAudio";
 
 export function useGameInput(
@@ -174,6 +175,19 @@ export function useGameInput(
             const startWaypoints = backwardResult.waypoints;
             const targetEnd      = endWaypoints[endWaypoints.length - 1];
             const targetStart    = startWaypoints[startWaypoints.length - 1];
+
+            // Issue #38: you can't fence against a breakable structure — if the
+            // cut would anchor on one, it "duds" (no wall, brief feedback).
+            if (cutAnchorsBreakable(game, targetStart, targetEnd, WALL_THICKNESS + 6)) {
+              game.lastDudAt = performance.now();
+              if (navigator.vibrate) navigator.vibrate([8, 30, 8]);
+              game.swipeStart = null;
+              game.swipeRegionId = null;
+              game.currentSwipePos = null;
+              game.swipePointerId = null;
+              setIsPlayerDragging(false);
+              return;
+            }
 
             game.wallCount += 1;
             setCutCount(game.wallCount);

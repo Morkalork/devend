@@ -5,33 +5,15 @@ levels:
     expectedCuts: 3
     points: 5
     variety: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 115
-        topSpeed: 230
-        color: 00d4ff
-        startX: 225
-        startY: 225
+    maxBalls: 1
     entities: []
   - id: level-2
     level: 2
     sizeThreshold: 40
     expectedCuts: 5
-    points: 10
+    points: 8
     variety: 3
-    balls:
-      - id: ball-1
-        initialSpeed: 120
-        topSpeed: 269
-        color: ff6b6b
-        startX: 300
-        startY: 450
-      - id: ball-2
-        initialSpeed: 111
-        topSpeed: 261
-        color: 4ecdc4
-        startX: 600
-        startY: 450
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -51,21 +33,9 @@ levels:
     level: 2
     sizeThreshold: 40
     expectedCuts: 5
-    points: 10
+    points: 8
     variety: 3
-    balls:
-      - id: ball-1
-        initialSpeed: 134
-        topSpeed: 269
-        color: ff6b6b
-        startX: 300
-        startY: 450
-      - id: ball-2
-        initialSpeed: 123
-        topSpeed: 261
-        color: 4ecdc4
-        startX: 600
-        startY: 450
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -85,21 +55,9 @@ levels:
     level: 3
     sizeThreshold: 35
     expectedCuts: 6
-    points: 10
+    points: 11
     variety: 5
-    balls:
-      - id: ball-1
-        initialSpeed: 146
-        topSpeed: 288
-        color: ffd93d
-        startX: 250
-        startY: 450
-      - id: ball-2
-        initialSpeed: 138
-        topSpeed: 277
-        color: 6bcb77
-        startX: 650
-        startY: 450
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -112,21 +70,9 @@ levels:
     level: 3
     sizeThreshold: 35
     expectedCuts: 6
-    points: 10
+    points: 11
     variety: 5
-    balls:
-      - id: ball-1
-        initialSpeed: 146
-        topSpeed: 288
-        color: ffd93d
-        startX: 150
-        startY: 450
-      - id: ball-2
-        initialSpeed: 138
-        topSpeed: 277
-        color: 6bcb77
-        startX: 750
-        startY: 450
+    maxBalls: 2
     entities:
       - id: wall-1771491223262
         kind: wall
@@ -138,21 +84,9 @@ levels:
     level: 4
     sizeThreshold: 30
     expectedCuts: 8
-    points: 15
+    points: 14
     variety: 5
-    balls:
-      - id: ball-1
-        initialSpeed: 154
-        topSpeed: 307
-        color: ff8c42
-        startX: 450
-        startY: 350
-      - id: ball-2
-        initialSpeed: 146
-        topSpeed: 299
-        color: 98d8c8
-        startX: 350
-        startY: 550
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -172,21 +106,9 @@ levels:
     level: 4
     sizeThreshold: 30
     expectedCuts: 8
-    points: 15
+    points: 14
     variety: 5
-    balls:
-      - id: ball-1
-        initialSpeed: 154
-        topSpeed: 307
-        color: ff8c42
-        startX: 450
-        startY: 350
-      - id: ball-2
-        initialSpeed: 146
-        topSpeed: 299
-        color: 98d8c8
-        startX: 350
-        startY: 550
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -204,23 +126,11 @@ levels:
         height: 200
   - id: level-5
     level: 5
-    sizeThreshold: 15
+    sizeThreshold: 28
     expectedCuts: 10
-    points: 15
+    points: 17
     variety: 8
-    balls:
-      - id: ball-1
-        initialSpeed: 102
-        topSpeed: 326
-        color: ff0055
-        startX: 158
-        startY: 168
-      - id: ball-2
-        initialSpeed: 77
-        topSpeed: 165
-        color: 00ff88
-        startX: 741
-        startY: 742
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -268,23 +178,11 @@ levels:
         radius: 41
   - id: level-5b
     level: 5
-    sizeThreshold: 15
+    sizeThreshold: 28
     expectedCuts: 10
-    points: 15
+    points: 17
     variety: 8
-    balls:
-      - id: ball-1
-        initialSpeed: 122
-        topSpeed: 326
-        color: ff0055
-        startX: 158
-        startY: 168
-      - id: ball-2
-        initialSpeed: 77
-        topSpeed: 165
-        color: 00ff88
-        startX: 741
-        startY: 742
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -336,19 +234,7 @@ levels:
     expectedCuts: 14
     points: 20
     variety: 10
-    balls:
-      - id: ball-1
-        initialSpeed: 110
-        topSpeed: 320
-        color: ff3366
-        startX: 150
-        startY: 450
-      - id: ball-2
-        initialSpeed: 105
-        topSpeed: 310
-        color: 33ff99
-        startX: 750
-        startY: 450
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -377,19 +263,7 @@ levels:
     expectedCuts: 14
     points: 20
     variety: 10
-    balls:
-      - id: ball-1
-        initialSpeed: 110
-        topSpeed: 320
-        color: ff3366
-        startX: 450
-        startY: 150
-      - id: ball-2
-        initialSpeed: 105
-        topSpeed: 310
-        color: 33ff99
-        startX: 450
-        startY: 750
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -416,21 +290,9 @@ levels:
     level: 7
     sizeThreshold: 22
     expectedCuts: 16
-    points: 20
+    points: 23
     variety: 10
-    balls:
-      - id: ball-1
-        initialSpeed: 120
-        topSpeed: 340
-        color: ff9900
-        startX: 200
-        startY: 200
-      - id: ball-2
-        initialSpeed: 125
-        topSpeed: 330
-        color: 0099ff
-        startX: 700
-        startY: 700
+    maxBalls: 2
     entities:
       - id: wall-h
         kind: wall
@@ -464,21 +326,9 @@ levels:
     level: 8
     sizeThreshold: 20
     expectedCuts: 15
-    points: 25
+    points: 26
     variety: 12
-    balls:
-      - id: ball-1
-        initialSpeed: 120
-        topSpeed: 340
-        color: ff0055
-        startX: 150
-        startY: 150
-      - id: ball-2
-        initialSpeed: 100
-        topSpeed: 335
-        color: 00aaff
-        startX: 750
-        startY: 750
+    maxBalls: 2
     entities:
       - id: wall-1
         kind: wall
@@ -517,27 +367,9 @@ levels:
     level: 9
     sizeThreshold: 18
     expectedCuts: 18
-    points: 25
+    points: 29
     variety: 15
-    balls:
-      - id: ball-1
-        initialSpeed: 120
-        topSpeed: 350
-        color: ff0066
-        startX: 150
-        startY: 300
-      - id: ball-2
-        initialSpeed: 105
-        topSpeed: 345
-        color: 66ff00
-        startX: 450
-        startY: 700
-      - id: ball-3
-        initialSpeed: 95
-        topSpeed: 340
-        color: 0066ff
-        startX: 750
-        startY: 300
+    maxBalls: 3
     entities:
       - id: wall-div-l-top
         kind: wall
@@ -577,27 +409,9 @@ levels:
     level: 10
     sizeThreshold: 15
     expectedCuts: 20
-    points: 25
+    points: 32
     variety: 15
-    balls:
-      - id: ball-1
-        initialSpeed: 100
-        topSpeed: 360
-        color: cc00ff
-        startX: 150
-        startY: 150
-      - id: ball-2
-        initialSpeed: 110
-        topSpeed: 355
-        color: 00ffcc
-        startX: 750
-        startY: 450
-      - id: ball-3
-        initialSpeed: 80
-        topSpeed: 350
-        color: ffcc00
-        startX: 450
-        startY: 750
+    maxBalls: 3
     entities:
       - id: wall-L-h
         kind: wall
@@ -649,33 +463,9 @@ levels:
     level: 11
     sizeThreshold: 10
     expectedCuts: 12
-    points: 30
+    points: 35
     variety: 18
-    balls:
-      - id: ball-1
-        initialSpeed: 111
-        topSpeed: 340
-        color: ff4444
-        startX: 150
-        startY: 150
-      - id: ball-2
-        initialSpeed: 100
-        topSpeed: 335
-        color: 44ff44
-        startX: 750
-        startY: 150
-      - id: ball-3
-        initialSpeed: 90
-        topSpeed: 330
-        color: 4444ff
-        startX: 150
-        startY: 750
-      - id: ball-4
-        initialSpeed: 50
-        topSpeed: 325
-        color: ffff44
-        startX: 750
-        startY: 750
+    maxBalls: 4
     entities:
       - id: wall-1
         kind: wall
@@ -704,27 +494,9 @@ levels:
     level: 12
     sizeThreshold: 10
     expectedCuts: 22
-    points: 30
+    points: 38
     variety: 20
-    balls:
-      - id: ball-1
-        initialSpeed: 70
-        topSpeed: 345
-        color: ff6699
-        startX: 450
-        startY: 200
-      - id: ball-2
-        initialSpeed: 115
-        topSpeed: 340
-        color: 99ff66
-        startX: 200
-        startY: 500
-      - id: ball-3
-        initialSpeed: 100
-        topSpeed: 335
-        color: 6699ff
-        startX: 700
-        startY: 500
+    maxBalls: 3
     entities:
       - id: wall-1
         kind: wall
@@ -748,33 +520,9 @@ levels:
     level: 13
     sizeThreshold: 8
     expectedCuts: 24
-    points: 35
+    points: 41
     variety: 25
-    balls:
-      - id: ball-1
-        initialSpeed: 105
-        topSpeed: 355
-        color: ff0099
-        startX: 200
-        startY: 200
-      - id: ball-2
-        initialSpeed: 160
-        topSpeed: 350
-        color: 99ff00
-        startX: 700
-        startY: 200
-      - id: ball-3
-        initialSpeed: 45
-        topSpeed: 345
-        color: 0099ff
-        startX: 200
-        startY: 700
-      - id: ball-4
-        initialSpeed: 100
-        topSpeed: 340
-        color: ff9900
-        startX: 700
-        startY: 700
+    maxBalls: 4
     entities:
       - id: wall-1
         kind: wall
@@ -806,33 +554,9 @@ levels:
     level: 14
     sizeThreshold: 8
     expectedCuts: 26
-    points: 35
+    points: 44
     variety: 25
-    balls:
-      - id: ball-1
-        initialSpeed: 110
-        topSpeed: 360
-        color: dd44ff
-        startX: 300
-        startY: 300
-      - id: ball-2
-        initialSpeed: 145
-        topSpeed: 355
-        color: 44ffdd
-        startX: 600
-        startY: 300
-      - id: ball-3
-        initialSpeed: 120
-        topSpeed: 350
-        color: ffdd44
-        startX: 300
-        startY: 600
-      - id: ball-4
-        initialSpeed: 115
-        topSpeed: 345
-        color: 44ddff
-        startX: 600
-        startY: 600
+    maxBalls: 4
     entities:
       - id: wall-1
         kind: wall
@@ -864,33 +588,9 @@ levels:
     level: 15
     sizeThreshold: 5
     expectedCuts: 28
-    points: 40
+    points: 47
     variety: 30
-    balls:
-      - id: ball-1
-        initialSpeed: 125
-        topSpeed: 370
-        color: ff2288
-        startX: 450
-        startY: 150
-      - id: ball-2
-        initialSpeed: 110
-        topSpeed: 365
-        color: 22ff88
-        startX: 150
-        startY: 450
-      - id: ball-3
-        initialSpeed: 145
-        topSpeed: 360
-        color: 8822ff
-        startX: 750
-        startY: 450
-      - id: ball-4
-        initialSpeed: 100
-        topSpeed: 355
-        color: 88ff22
-        startX: 450
-        startY: 750
+    maxBalls: 4
     entities:
       - id: wall-1
         kind: wall
@@ -926,33 +626,9 @@ levels:
     level: 16
     sizeThreshold: 7
     expectedCuts: 30
-    points: 45
+    points: 50
     variety: 28
-    balls:
-      - id: ball-1
-        initialSpeed: 135
-        topSpeed: 372
-        color: ff3399
-        startX: 200
-        startY: 200
-      - id: ball-2
-        initialSpeed: 128
-        topSpeed: 365
-        color: 33ccff
-        startX: 700
-        startY: 200
-      - id: ball-3
-        initialSpeed: 130
-        topSpeed: 368
-        color: ccff33
-        startX: 200
-        startY: 700
-      - id: ball-4
-        initialSpeed: 124
-        topSpeed: 360
-        color: ff9933
-        startX: 700
-        startY: 700
+    maxBalls: 4
     entities:
       - id: wall-cross-h
         kind: wall
@@ -984,33 +660,9 @@ levels:
     level: 17
     sizeThreshold: 7
     expectedCuts: 32
-    points: 45
+    points: 53
     variety: 30
-    balls:
-      - id: ball-1
-        initialSpeed: 138
-        topSpeed: 375
-        color: ff6600
-        startX: 200
-        startY: 200
-      - id: ball-2
-        initialSpeed: 132
-        topSpeed: 368
-        color: 0066ff
-        startX: 700
-        startY: 200
-      - id: ball-3
-        initialSpeed: 135
-        topSpeed: 372
-        color: 00ff66
-        startX: 200
-        startY: 700
-      - id: ball-4
-        initialSpeed: 128
-        topSpeed: 365
-        color: ff0066
-        startX: 700
-        startY: 700
+    maxBalls: 4
     entities:
       - id: wall-center
         kind: wall
@@ -1046,33 +698,9 @@ levels:
     level: 18
     sizeThreshold: 6
     expectedCuts: 35
-    points: 50
+    points: 56
     variety: 30
-    balls:
-      - id: ball-1
-        initialSpeed: 140
-        topSpeed: 378
-        color: ff44cc
-        startX: 220
-        startY: 260
-      - id: ball-2
-        initialSpeed: 135
-        topSpeed: 372
-        color: 44ccff
-        startX: 680
-        startY: 260
-      - id: ball-3
-        initialSpeed: 138
-        topSpeed: 375
-        color: ccff44
-        startX: 220
-        startY: 640
-      - id: ball-4
-        initialSpeed: 132
-        topSpeed: 368
-        color: ffcc44
-        startX: 680
-        startY: 640
+    maxBalls: 4
     entities:
       - id: wall-mirror
         kind: wall
@@ -1110,34 +738,10 @@ levels:
     level: 19
     sizeThreshold: 5
     expectedCuts: 38
-    points: 55
+    points: 59
     variety: 35
     threadLockRequired: 1
-    balls:
-      - id: ball-1
-        initialSpeed: 145
-        topSpeed: 382
-        color: ff2200
-        startX: 450
-        startY: 180
-      - id: ball-2
-        initialSpeed: 140
-        topSpeed: 378
-        color: 0022ff
-        startX: 180
-        startY: 450
-      - id: ball-3
-        initialSpeed: 142
-        topSpeed: 380
-        color: 22ff00
-        startX: 720
-        startY: 450
-      - id: ball-4
-        initialSpeed: 138
-        topSpeed: 375
-        color: ffdd00
-        startX: 450
-        startY: 720
+    maxBalls: 4
     entities:
       - id: wall-diamond
         kind: wall
@@ -1195,16 +799,10 @@ levels:
     level: 20
     sizeThreshold: 30
     expectedCuts: 10
-    points: 100
+    points: 66
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 109
-        topSpeed: 245
-        color: 00ff88
-        startX: 230
-        startY: 450
+    maxBalls: 1
     entities:
       - id: wall-mirror-top
         kind: wall
@@ -1226,22 +824,10 @@ levels:
     level: 21
     sizeThreshold: 22
     expectedCuts: 10
-    points: 120
+    points: 72
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 70
-        topSpeed: 360
-        color: 00d4ff
-        startX: 180
-        startY: 200
-      - id: ball-2
-        initialSpeed: 110
-        topSpeed: 340
-        color: ff6b6b
-        startX: 700
-        startY: 700
+    maxBalls: 2
     entities:
       - id: mover-h
         kind: mover
@@ -1253,27 +839,14 @@ levels:
         range: 400
         speed: 140
         phase: 0
-
   - id: level-22
     level: 22
     sizeThreshold: 20
     expectedCuts: 10
-    points: 130
+    points: 78
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 77
-        topSpeed: 259
-        color: 00ff88
-        startX: 150
-        startY: 150
-      - id: ball-2
-        initialSpeed: 70
-        topSpeed: 249
-        color: ff6b00
-        startX: 740
-        startY: 700
+    maxBalls: 2
     entities:
       - id: mover-h
         kind: mover
@@ -1295,27 +868,14 @@ levels:
         range: 280
         speed: 135
         phase: 0.5
-
   - id: level-23
     level: 23
     sizeThreshold: 18
     expectedCuts: 11
-    points: 140
+    points: 84
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 105
-        topSpeed: 266
-        color: 00d4ff
-        startX: 130
-        startY: 450
-      - id: ball-2
-        initialSpeed: 102
-        topSpeed: 256
-        color: ff4466
-        startX: 770
-        startY: 450
+    maxBalls: 2
     entities:
       - id: mover-top
         kind: mover
@@ -1347,39 +907,20 @@ levels:
         range: 380
         speed: 125
         phase: 0.67
-
   - id: level-24
     level: 24
     sizeThreshold: 16
     expectedCuts: 12
-    points: 150
+    points: 90
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 109
-        topSpeed: 273
-        color: 00ff88
-        startX: 150
-        startY: 200
-      - id: ball-2
-        initialSpeed: 102
-        topSpeed: 263
-        color: ff8800
-        startX: 750
-        startY: 200
-      - id: ball-3
-        initialSpeed: 91
-        topSpeed: 249
-        color: aa44ff
-        startX: 450
-        startY: 730
+    maxBalls: 3
     entities:
       - id: wall-divider
         kind: wall
         shape: rect
         x: 300
-        y: 320
+        'y': 320
         width: 300
         height: 80
       - id: mover-left
@@ -1402,33 +943,14 @@ levels:
         range: 220
         speed: 135
         phase: 0.5
-
   - id: level-25
     level: 25
     sizeThreshold: 15
     expectedCuts: 12
-    points: 160
+    points: 96
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 112
-        topSpeed: 280
-        color: 00d4ff
-        startX: 150
-        startY: 150
-      - id: ball-2
-        initialSpeed: 109
-        topSpeed: 273
-        color: ff4466
-        startX: 750
-        startY: 150
-      - id: ball-3
-        initialSpeed: 38
-        topSpeed: 259
-        color: ffcc00
-        startX: 450
-        startY: 740
+    maxBalls: 3
     entities:
       - id: mover-h-top
         kind: mover
@@ -1460,34 +982,21 @@ levels:
         range: 380
         speed: 150
         phase: 0.5
-
   - id: level-26
     level: 26
     sizeThreshold: 14
     expectedCuts: 13
-    points: 165
+    points: 102
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 115
-        topSpeed: 283
-        color: 00d4ff
-        startX: 200
-        startY: 250
-      - id: ball-2
-        initialSpeed: 110
-        topSpeed: 276
-        color: ff6644
-        startX: 700
-        startY: 660
+    maxBalls: 2
     entities:
       - id: mirror-center
         kind: wall
         mirror: true
         shape: rect
         x: 80
-        y: 420
+        'y': 420
         width: 740
         height: 24
       - id: mover-top
@@ -1500,34 +1009,21 @@ levels:
         range: 380
         speed: 155
         phase: 0
-
   - id: level-27
     level: 27
     sizeThreshold: 13
     expectedCuts: 14
-    points: 170
+    points: 108
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 118
-        topSpeed: 287
-        color: ffaa00
-        startX: 150
-        startY: 350
-      - id: ball-2
-        initialSpeed: 113
-        topSpeed: 279
-        color: 0088ff
-        startX: 750
-        startY: 550
+    maxBalls: 2
     entities:
       - id: mirror-left
         kind: wall
         mirror: true
         shape: rect
         x: 270
-        y: 200
+        'y': 200
         width: 24
         height: 500
       - id: mirror-right
@@ -1535,7 +1031,7 @@ levels:
         mirror: true
         shape: rect
         x: 606
-        y: 200
+        'y': 200
         width: 24
         height: 500
       - id: mover-corridor
@@ -1548,40 +1044,21 @@ levels:
         range: 320
         speed: 150
         phase: 0
-
   - id: level-28
     level: 28
     sizeThreshold: 12
     expectedCuts: 15
-    points: 175
+    points: 114
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 120
-        topSpeed: 290
-        color: ff2288
-        startX: 180
-        startY: 180
-      - id: ball-2
-        initialSpeed: 115
-        topSpeed: 283
-        color: 22ff88
-        startX: 720
-        startY: 200
-      - id: ball-3
-        initialSpeed: 108
-        topSpeed: 276
-        color: aa44ff
-        startX: 450
-        startY: 730
+    maxBalls: 3
     entities:
       - id: mirror-h-mid
         kind: wall
         mirror: true
         shape: rect
         x: 180
-        y: 415
+        'y': 415
         width: 540
         height: 22
       - id: mover-tl
@@ -1604,40 +1081,21 @@ levels:
         range: 280
         speed: 145
         phase: 0.5
-
   - id: level-29
     level: 29
     sizeThreshold: 11
     expectedCuts: 16
-    points: 180
+    points: 120
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 122
-        topSpeed: 294
-        color: 00d4ff
-        startX: 300
-        startY: 150
-      - id: ball-2
-        initialSpeed: 118
-        topSpeed: 287
-        color: ff4466
-        startX: 600
-        startY: 750
-      - id: ball-3
-        initialSpeed: 112
-        topSpeed: 280
-        color: ffcc00
-        startX: 180
-        startY: 600
+    maxBalls: 3
     entities:
       - id: mirror-left
         kind: wall
         mirror: true
         shape: rect
         x: 120
-        y: 200
+        'y': 200
         width: 24
         height: 500
       - id: mirror-right
@@ -1645,7 +1103,7 @@ levels:
         mirror: true
         shape: rect
         x: 756
-        y: 200
+        'y': 200
         width: 24
         height: 500
       - id: mover-top
@@ -1678,40 +1136,21 @@ levels:
         range: 360
         speed: 155
         phase: 0.67
-
   - id: level-30
     level: 30
     sizeThreshold: 10
     expectedCuts: 18
-    points: 190
+    points: 126
     variety: 0
     randomShapes: 0
-    balls:
-      - id: ball-1
-        initialSpeed: 125
-        topSpeed: 297
-        color: ff3366
-        startX: 180
-        startY: 200
-      - id: ball-2
-        initialSpeed: 120
-        topSpeed: 290
-        color: 33ffcc
-        startX: 720
-        startY: 200
-      - id: ball-3
-        initialSpeed: 115
-        topSpeed: 283
-        color: ffcc33
-        startX: 450
-        startY: 720
+    maxBalls: 3
     entities:
       - id: mirror-h-top
         kind: wall
         mirror: true
         shape: rect
         x: 80
-        y: 310
+        'y': 310
         width: 500
         height: 22
       - id: mirror-v-right
@@ -1719,7 +1158,7 @@ levels:
         mirror: true
         shape: rect
         x: 680
-        y: 380
+        'y': 380
         width: 22
         height: 460
       - id: mover-left
@@ -1752,3 +1191,194 @@ levels:
         range: 260
         speed: 152
         phase: 0.25
+  - id: level-31
+    level: 31
+    sizeThreshold: 45
+    expectedCuts: 4
+    points: 132
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 400
+        'y': 400
+        width: 100
+        height: 100
+        breakable: true
+        objective: true
+        hitsToBreak: 3
+  - id: level-32
+    level: 32
+    sizeThreshold: 42
+    expectedCuts: 5
+    points: 138
+    variety: 0
+    randomShapes: 0
+    maxBalls: 1
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 560
+        width: 160
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 3
+      - id: box-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 520
+        width: 160
+        height: 40
+      - id: box-2
+        kind: wall
+        shape: rect
+        x: 405
+        'y': 480
+        width: 110
+        height: 40
+      - id: box-3
+        kind: wall
+        shape: rect
+        x: 425
+        'y': 440
+        width: 70
+        height: 40
+  - id: level-33
+    level: 33
+    sizeThreshold: 40
+    expectedCuts: 7
+    points: 144
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 520
+        width: 140
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 4
+      - id: box-1
+        kind: wall
+        shape: rect
+        x: 390
+        'y': 480
+        width: 120
+        height: 40
+      - id: box-2
+        kind: wall
+        shape: rect
+        x: 410
+        'y': 440
+        width: 80
+        height: 40
+  - id: level-34
+    level: 34
+    sizeThreshold: 35
+    expectedCuts: 8
+    points: 150
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 180
+        'y': 520
+        width: 120
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 4
+      - id: target-2
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 520
+        width: 120
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 4
+      - id: box-1
+        kind: wall
+        shape: rect
+        x: 190
+        'y': 480
+        width: 100
+        height: 40
+      - id: box-2
+        kind: wall
+        shape: rect
+        x: 610
+        'y': 480
+        width: 100
+        height: 40
+  - id: level-35
+    level: 35
+    sizeThreshold: 30
+    expectedCuts: 9
+    points: 156
+    variety: 0
+    randomShapes: 0
+    maxBalls: 2
+    entities:
+      - id: target-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 600
+        width: 160
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 5
+      - id: box-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 560
+        width: 160
+        height: 40
+      - id: box-2
+        kind: wall
+        shape: rect
+        x: 405
+        'y': 520
+        width: 110
+        height: 40
+      - id: box-3
+        kind: wall
+        shape: rect
+        x: 425
+        'y': 480
+        width: 70
+        height: 40
+      - id: mirror-1
+        kind: wall
+        shape: rect
+        x: 150
+        'y': 250
+        width: 30
+        height: 200
+        mirror: true
+      - id: mirror-2
+        kind: wall
+        shape: rect
+        x: 720
+        'y': 250
+        width: 30
+        height: 200
+        mirror: true

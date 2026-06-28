@@ -26,6 +26,7 @@ import { useContinueCheckpoint } from './useContinueCheckpoint';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
+import { loadBallTypes } from '@/lib/ballTypes';
 import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
@@ -214,6 +215,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadUpgrades(),
       loadCertificates(),
       loadMutators(),
+      // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
+      // it does not gate starting a run — same treatment as mutators.
+      loadBallTypes(),
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
@@ -491,6 +495,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     resetCertData();
     resetProgression();
   }, [resetCertData, resetProgression]);
+
+  // Load the ball catalogue (balls.yml) once on mount so the Tutorial reflects
+  // edits even before a run starts. handleStartGame reloads it per run.
+  useEffect(() => { loadBallTypes(); }, []);
 
   // Sync completed achievements into cert manager for achievement-locked certs
   useEffect(() => {

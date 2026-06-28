@@ -143,8 +143,7 @@ upload) and set `versionName` (human string, e.g. `1.0.0`).
 - [ ] Replace placeholder app icon + splash. Drop a 1024×1024 source at
       `assets/icon.png` (and optionally `assets/splash.png`) and run
       `npx @capacitor/assets generate --android`. No suitable source logo exists
-      in the repo yet — `public/favicon.ico` is only 256×256 and the
-      `public/icons/*.svg` are small in-game glyphs, not an app mark.
+      in the repo yet — `public/favicon.ico` is only 256×256.
 - [x] `index.html` author/OG tags de-Lovable'd (author → `Morkalork`, stale
       `lovable.dev` image tags removed). Re-add an `og:image` once a share image
       exists.

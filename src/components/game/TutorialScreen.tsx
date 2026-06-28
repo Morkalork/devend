@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star } from 'lucide-react';
+import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star, Hammer } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
+import { getImplementedBallTypes } from '@/lib/ballTypes';
 
 interface TutorialScreenProps {
   onBack: () => void;
@@ -13,6 +14,7 @@ const tutorialSteps = [
   { icon: Scissors, key: 'removeEmptySpace' },
   { icon: AlertTriangle, key: 'avoidTheBall' },
   { icon: Target, key: 'winCondition' },
+  { icon: Hammer, key: 'breakObstacles' },
 ];
 
 const lifeCycleSteps = [
@@ -73,6 +75,55 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   {t(`tutorial.steps.${step.key}.description`)}
                 </p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Ball Types section */}
+        <motion.h2
+          className="text-xl font-display font-bold text-center mt-10 mb-3 text-primary"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+        >
+          {t('tutorial.ballTypes.title')}
+        </motion.h2>
+        <p className="text-sm text-muted-foreground text-center max-w-xl mx-auto mb-6">
+          {t('tutorial.ballTypes.intro')}
+        </p>
+        <div className="grid gap-4 w-full">
+          {getImplementedBallTypes().map((ball, index) => (
+            <motion.div
+              key={ball.id}
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.65 + index * 0.06 }}
+              className="flex gap-4 p-4 bg-card/50 border border-border rounded-lg"
+            >
+              <div
+                className="flex-shrink-0 w-12 h-12 rounded-full self-center"
+                style={{
+                  backgroundColor: ball.color,
+                  boxShadow: `0 0 14px ${ball.color}, inset -4px -4px 8px rgba(0,0,0,0.35)`,
+                  border: '1px solid rgba(255,255,255,0.25)',
+                }}
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <h3 className="font-display font-semibold text-foreground mb-1">{ball.name}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed mb-2">{ball.description}</p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="px-2 py-0.5 rounded bg-secondary/50 border border-border text-muted-foreground">
+                    {t('tutorial.ballTypes.speed', { speed: ball.baseSpeed })}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-secondary/50 border border-border text-muted-foreground">
+                    {t('tutorial.ballTypes.unlocks', { level: ball.unlockLevel })}
+                  </span>
+                  <span className="px-2 py-0.5 rounded bg-secondary/50 border border-border text-muted-foreground">
+                    {t('tutorial.ballTypes.lock', { mult: ball.lockMultiplier })}
+                  </span>
+                </div>
               </div>
             </motion.div>
           ))}

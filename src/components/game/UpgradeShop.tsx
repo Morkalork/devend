@@ -14,11 +14,12 @@
  * to deselect anything that depended on it. Deselecting does not remove
  * restocked offers or refund the restock.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw } from 'lucide-react';
+import { getUpgradeIcon } from './upgradeIcons';
 import { CRTBackground } from './CRTBackground';
 import { TutorialOverlay } from './TutorialOverlay';
 import { Certificate } from '@/types/certificate';
@@ -96,7 +97,7 @@ export function UpgradeShop({
   onTutorialDismiss,
   newlyUnlockedCerts = [],
 }: UpgradeShopProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
   const [lockedInfoId, setLockedInfoId] = useState<string | null>(null);
@@ -126,6 +127,25 @@ export function UpgradeShop({
     }
     return offers;
   });
+
+  // Equal-height cards across wrapped rows: flexbox centers every row (incl. a
+  // partial last one), but can't equalise heights across rows. So we measure the
+  // tallest card's natural height and expose it as a `--card-h` CSS variable that
+  // every card uses as its min-height. Re-runs when the offered set or language
+  // changes (both can change how many lines a description wraps to).
+  const gridRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const grid = gridRef.current;
+    if (!grid) return;
+    // Release the constraint so each card reports its natural content height…
+    grid.style.setProperty('--card-h', 'auto');
+    let tallest = 0;
+    for (const child of Array.from(grid.children)) {
+      tallest = Math.max(tallest, (child as HTMLElement).offsetHeight);
+    }
+    // …then pin every card to the tallest.
+    grid.style.setProperty('--card-h', `${tallest}px`);
+  }, [offeredUpgrades, i18n.language]);
 
   const [restocksUsed, setRestocksUsed] = useState(0);
   const restocksLeft = Math.max(0, shopRestockCount - restocksUsed);
@@ -314,8 +334,11 @@ export function UpgradeShop({
           </motion.div>
         )}
 
-        {/* Upgrade Tree */}
+        {/* Upgrade Tree — flex-wrap keeps every row centered (including a partial
+            last row); the measured `--card-h` var (see useLayoutEffect) makes all
+            cards the same height as the tallest, growing to fit any line count. */}
         <motion.div
+          ref={gridRef}
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
@@ -332,6 +355,7 @@ export function UpgradeShop({
                 // Can't afford with remaining budget (unless already selected)
                 const cantAfford = !locked && !owned && !selected && priceFor(upgrade) > remainingBudget;
                 const tierColors = TIER_COLORS[upgrade.tier];
+                const Icon = getUpgradeIcon(upgrade, upgrades);
 
             return (
               <motion.div
@@ -347,8 +371,11 @@ export function UpgradeShop({
                 disabled={owned || locked}
                 whileHover={{ scale: purchasable ? 1.05 : 1 }}
                 whileTap={{ scale: purchasable ? 0.95 : 1 }}
+                // min-height comes from the measured `--card-h` var so all cards
+                // match the tallest; falls back to auto before the first measure.
+                style={{ minHeight: 'var(--card-h, auto)' }}
                 className={`
-                  relative w-44 h-36 p-3 rounded-lg transition-all duration-200 text-center flex flex-col
+                  relative w-44 p-3 rounded-lg transition-all duration-200 text-center flex flex-col
                   ${cantAfford ? 'border-dashed' : ''} border-2
                   ${selected ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black' : ''}
                   ${owned
@@ -367,6 +394,13 @@ export function UpgradeShop({
                 <div className={`text-xs font-medium mb-1 ${tierColors.text}`}>
                   {contentText.tier(t, upgrade.tier)}
                 </div>
+
+                {/* Icon */}
+                {Icon && (
+                  <div className="flex justify-center mb-1">
+                    <Icon className={`w-7 h-7 ${tierColors.text}`} strokeWidth={1.5} />
+                  </div>
+                )}
 
                 {/* Name */}
                 <div className="text-sm font-semibold text-foreground mb-1 truncate">
@@ -404,14 +438,16 @@ export function UpgradeShop({
                   </div>
                 )}
 
-                {/* Description */}
-                <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
+                {/* Description — grows to fit its full text (no clamp); the grid
+                    keeps every card the same height as the tallest one. */}
+                <p className="text-xs text-muted-foreground">
                   {contentText.upgradeDesc(t, upgrade)}
                 </p>
 
-                {/* Cost */}
+                {/* Cost — mt-auto pins it to the card bottom regardless of how
+                    many lines the description above it takes. */}
                 {!owned && (
-                  <div className={`flex items-center justify-center gap-1 text-sm font-bold
+                  <div className={`mt-auto pt-1 flex items-center justify-center gap-1 text-sm font-bold
                     ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
                   `}>
                     <Clock className="w-4 h-4" />

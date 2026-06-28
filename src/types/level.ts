@@ -43,6 +43,13 @@ export interface BaseEntity {
 export interface WallEntity extends BaseEntity {
   kind: "wall";
   mirror?: boolean; // When true, growing fences reflect off this obstacle
+  // ── Breakable obstacles (issue #38) ──────────────────────────────────────
+  /** When true, balls break this obstacle by hitting it (any ball; black = half). */
+  breakable?: boolean;
+  /** Hits required to break (default 3). Black ball counts double. */
+  hitsToBreak?: number;
+  /** When true, this obstacle MUST be broken to complete the level. */
+  objective?: boolean;
 }
 
 // Combined entity type with shape
@@ -77,7 +84,25 @@ export interface LevelConfig {
   variety?: number; // 0-100: controlled randomness for organic variation (default 0)
   randomShapes?: number; // 0-100: percentage of random mini-obstacles added (default 20)
   threadLockRequired?: number; // minimum number of balls that must be thread-locked to win
-  balls: BallConfig[];
+  /**
+   * Maximum balls this map spawns (issue #37). The game selects which ball
+   * TYPES fill these slots based on the level's eligible types — the map no
+   * longer dictates colours, speeds, or positions. Clamped to the number of
+   * eligible types for the level.
+   */
+  maxBalls?: number;
+  /**
+   * Admin/testing override: spawn exactly these ball-type ids (in order,
+   * duplicates allowed), bypassing the deterministic selection. Used by the
+   * Playground "Balls" picker. Ignored when empty/absent.
+   */
+  ballTypeIds?: string[];
+  /**
+   * Legacy/admin: explicit ball definitions. No longer used by gameplay (the
+   * game derives balls from `maxBalls` + level eligibility). Retained so the
+   * dev map-builder keeps compiling; falls back to `.length` for maxBalls.
+   */
+  balls?: BallConfig[];
   entities?: LevelEntity[]; // optional array of entities (obstacles, etc.)
 }
 

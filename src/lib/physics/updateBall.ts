@@ -33,6 +33,7 @@ import {
 } from "@/lib/regionOwnership";
 import { playWallHitSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
+import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit } from "@/lib/physics/destructibles";
 
 // ---------------------------------------------------------------------------
 // Hot-loop notes
@@ -156,6 +157,10 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
   const now = performance.now();
   updateBallEffects(ball.effects, dt, now);
 
+  // Yellow "variable speed" ability: track whether the ball touched any surface
+  // (board edge, mover, obstacle, or fence) this step so its speed can shift.
+  let surfaceHit = false;
+
   // Legacy flash decay (kept for compatibility)
   if (ball.flashIntensity > 0) {
     ball.flashIntensity = Math.max(0, ball.flashIntensity - dt * 7);
@@ -230,6 +235,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     const boardResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, game.boardPolygon);
     ball.position = boardResult.position;
     ball.velocity = boardResult.velocity;
+    if (boardResult.collided) surfaceHit = true;
 
     // Register wall impact for visual effect
     if (boardResult.collided && boardResult.impactEdge) {
@@ -267,8 +273,14 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     if (result.collided) {
       ball.position = result.position;
       ball.velocity = result.velocity;
+      surfaceHit = true;
       triggerWallHit(ball.effects, performance.now());
       playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));
+      // Black ball wears down movers.
+      if (ball.ability === 'breakObjects') {
+        const d = findMoverDestructible(game, mover.id);
+        if (d) registerObjectHit(game, d, ball.id, performance.now());
+      }
     }
   }
 
@@ -295,6 +307,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     if (obstacleResult.collided) {
       ball.position = obstacleResult.position;
       ball.velocity = obstacleResult.velocity;
+      surfaceHit = true;
 
       // Trigger wall hit effect on ball
       triggerWallHit(ball.effects, performance.now());
@@ -317,6 +330,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
 
     // Register wall impact for visual effect
     if (impactPoint) {
+      surfaceHit = true;
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
       registerWallImpact(wall.start, wall.end, impactPoint, impactStrength);
@@ -326,13 +340,82 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       // Ascension fence durability: each (debounced) hit wears the fence down.
       // Exhausted fences are queued and broken after the physics step.
       if (wall.hitsLeft !== undefined) {
-        const now = performance.now();
-        if (wall.lastDamageAt === undefined || now - wall.lastDamageAt > 250) {
-          wall.lastDamageAt = now;
+        const dn = performance.now();
+        if (wall.lastDamageAt === undefined || dn - wall.lastDamageAt > 250) {
+          wall.lastDamageAt = dn;
           wall.hitsLeft--;
           if (wall.hitsLeft <= 0) game.pendingWallBreaks.push(wall);
         }
       }
+
+      // Destructible obstacles are bounced by these edge walls, so hits are
+      // counted here (the polygon-collision path rarely fires). Mirrors: black
+      // ball only (#37). Breakables: any ball, black counts double (#38).
+      if (wall.id.startsWith("obstacle-")) {
+        const oid = obstacleIdFromWallId(wall.id);
+        if (oid) {
+          const d = findObstacleDestructibleById(game, oid);
+          if (d) {
+            if (d.kind === 'breakable') {
+              registerObjectHit(game, d, ball.id, now, ball.ability === 'breakObjects' ? 2 : 1, impactPoint ?? undefined);
+            } else if (d.kind === 'mirror' && ball.ability === 'breakObjects') {
+              registerObjectHit(game, d, ball.id, now, 1, impactPoint ?? undefined);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ── Ball-type speed abilities (issue #37) ────────────────────────────────
+  // Yellow: every surface contact picks a new random speed within its range
+  // (never below its minimum). The range itself can be shrunk by a purple.
+  if (ball.ability === 'variableSpeed' && surfaceHit && ball.speedRange) {
+    if (now - (ball.lastSpeedStepAt ?? 0) > 90) {
+      ball.lastSpeedStepAt = now;
+      const lo = Math.max(ball.minimumSpeed, ball.speedRange[0]);
+      const hi = Math.max(lo, ball.speedRange[1]);
+      const target = lo + Math.random() * (hi - lo);
+      const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
+      if (cur > 1e-6) {
+        const r = target / cur;
+        ball.velocity.x *= r;
+        ball.velocity.y *= r;
+      }
+      ball.speed = target;
+    }
+  }
+
+  // Grey: winds down by 10 speed every 5 seconds, down to its minimum speed.
+  if (ball.ability === 'slowDown') {
+    const steps = Math.floor((now - ball.spawnTime) / 5000);
+    const target = Math.max(ball.minimumSpeed, ball.baseSpeed - 10 * game.ballSpeedScale * steps);
+    const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
+    if (cur > 1e-6) {
+      const r = target / cur;
+      ball.velocity.x *= r;
+      ball.velocity.y *= r;
+    }
+    ball.speed = target;
+  }
+
+  // Universal minimum-speed floor: no active ball may move below its
+  // minimumSpeed for ANY reason — collisions, the MicroManager upgrade, etc.
+  // (The post-cut recovery freeze is exempt; it's held in place on purpose.)
+  if (ball.minimumSpeed > 0 && !(game.frozenBallId && ball.id === game.frozenBallId)) {
+    const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
+    if (cur > 1e-6) {
+      if (cur < ball.minimumSpeed) {
+        const r = ball.minimumSpeed / cur;
+        ball.velocity.x *= r;
+        ball.velocity.y *= r;
+        ball.speed = ball.minimumSpeed;
+      }
+    } else {
+      // Fully stopped but should be moving — nudge it back to its floor.
+      ball.velocity.x = ball.minimumSpeed;
+      ball.velocity.y = 0;
+      ball.speed = ball.minimumSpeed;
     }
   }
 

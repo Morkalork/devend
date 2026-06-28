@@ -31,7 +31,10 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         if (!data?.levels || !Array.isArray(data.levels)) {
           throw new Error('Invalid map.yml structure');
         }
-        setLevels(data.levels);
+        // Issue #37: gameplay no longer stores per-ball configs in map.yml (the
+        // game picks ball types from maxBalls). Normalise legacy/missing `balls`
+        // to an empty array so the (dev-only) builder UI keeps working.
+        setLevels(data.levels.map(l => ({ ...l, balls: l.balls ?? [] })));
         setIsLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load levels');

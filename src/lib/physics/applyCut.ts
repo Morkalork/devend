@@ -28,7 +28,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore } from "@/lib/scoring";
-import { LOCK_TOTAL_DURATION, BALL_SPEED_INCREASE } from "@/lib/gameConstants";
+import { LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -171,16 +171,8 @@ export function applyCutFn(
   checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks);
   callbacks.render();
 
-  // Speed up balls + MicroManager cap
-  for (const ball of balls) {
-    if (ball.speed === 0) continue;
-    const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
-    const ratio = newSpeed / ball.speed;
-    ball.speed = newSpeed;
-    ball.baseSpeed = Math.min(ball.baseSpeed * BALL_SPEED_INCREASE, ball.topSpeed);
-    ball.velocity.x *= ratio;
-    ball.velocity.y *= ratio;
-  }
+  // Issue #37: ball speeds are flat — no per-cut acceleration ramp. Only the
+  // MicroManager upgrade still caps speeds relative to each ball's base speed.
   const totalLockedMM = cumulativeLockedBalls + game.lockedBallsCount;
   if (activeModifiers.microManagerPerLock > 0 && totalLockedMM > 0) {
     const speedFactor = Math.max(0.30, Math.pow(1 - activeModifiers.microManagerPerLock, totalLockedMM));
@@ -198,29 +190,7 @@ export function applyCutFn(
   }
 
   if (areAllBallsWon(game)) {
-    game.levelComplete = true;
-    const percent = Math.round(getGridRemainingPercent(game));
-    callbacks.setRemainingPercent(percent);
-
-    const { levelScore, breakdown } = calculateScore(
-      game.wallCount, level.expectedCuts, percent,
-      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    );
-    const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
-    setTimeout(() => {
-      callbacks.onLevelComplete({
-        levelNumber, levelId: level.id, cutCount: game.wallCount,
-        expectedCuts: level.expectedCuts, basePoints: level.points,
-        levelScore: levelScore + game.lockBonus,
-        remainingPercent: percent, thresholdPercent: level.sizeThreshold,
-        underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
-        spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
-        fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-        extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
-        lockedBallsCount: game.lockedBallsCount,
-      });
-      callbacks.startDissolve(() => {});
-    }, lockDelay);
+    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
     return;
   }
 
@@ -236,6 +206,8 @@ export function applyCutFn(
     game.bestRemainingPercent = percent;
   }
 
+  // Breaking objects is a bonus, not a win condition (issue #38) — the level is
+  // completed by shrinking the board, exactly as normal.
   const lockReq = level.threadLockRequired ?? 0;
   if (percent < level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none") {
     // The frame is already drawn (loop render + the post-cut render above) and
@@ -249,4 +221,41 @@ export function applyCutFn(
     game.bestRemainingPercent = percent;
     game.pushStartPercent = percent;
   }
+}
+
+type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'onLevelComplete' | 'startDissolve'>;
+
+/** Finalise the level: score it, fire onLevelComplete, and start the dissolve. */
+export function triggerLevelComplete(
+  game: CanvasGameState,
+  level: LevelConfig,
+  levelNumber: number,
+  activeModifiers: GameModifiers,
+  callbacks: CompleteCallbacks,
+): void {
+  if (game.levelComplete) return;
+  game.levelComplete = true;
+  const percent = Math.round(getGridRemainingPercent(game));
+  callbacks.setRemainingPercent(percent);
+
+  const { levelScore, breakdown } = calculateScore(
+    game.wallCount, level.expectedCuts, percent,
+    level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
+  );
+  const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
+  setTimeout(() => {
+    callbacks.onLevelComplete({
+      levelNumber, levelId: level.id, cutCount: game.wallCount,
+      expectedCuts: level.expectedCuts, basePoints: level.points,
+      levelScore: levelScore + game.lockBonus + game.breakBonus,
+      remainingPercent: percent, thresholdPercent: level.sizeThreshold,
+      underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
+      spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
+      fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
+      extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+      lockedBallsCount: game.lockedBallsCount,
+      breakBonus: game.breakBonus,
+    });
+    callbacks.startDissolve(() => {});
+  }, lockDelay);
 }

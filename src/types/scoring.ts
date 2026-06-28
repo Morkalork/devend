@@ -12,6 +12,10 @@ export interface SpaceThreshold {
 
 export interface ScoringConfig {
   scoring: {
+    // Per-level overtime cap = round(basePoints × overtimeCapHeadroom).
+    // Headroom > 1 leaves room for multiplier builds to pay off while still
+    // softly bounding degenerate multiplier stacks.
+    overtimeCapHeadroom: number;
     fenceEfficiency: {
       maxBonus: number;
       steps: FenceEfficiencyStep[];

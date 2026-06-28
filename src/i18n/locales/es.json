@@ -493,13 +493,17 @@
         "name": "Deuda Técnica",
         "description": "Gana un 50% más de horas extra por mapa, pero las bolas se mueven un 25% más rápido."
       },
-      "pair_programming_principal": {
-        "name": "Programación en Pareja",
-        "description": "Una valla concurrente extra, pero cada valla se construye un 12% más despacio. Dos mentes, atención dividida."
+      "cron_job_senior": {
+        "name": "Tarea Programada",
+        "description": "Cada 10 segundos, congela automáticamente una bola al azar durante 3 segundos."
       },
-      "pair_programming_architect": {
-        "name": "Programación en Pareja",
-        "description": "Una valla concurrente más, pero la velocidad de las vallas cae otro 12%."
+      "cron_job_principal": {
+        "name": "Tarea Programada",
+        "description": "Las congelaciones programadas ahora retienen una bola durante 4 segundos."
+      },
+      "cron_job_architect": {
+        "name": "Tarea Programada",
+        "description": "Las congelaciones programadas ahora retienen una bola durante 5 segundos."
       },
       "scrum_master_1": {
         "name": "SCRUM Master",

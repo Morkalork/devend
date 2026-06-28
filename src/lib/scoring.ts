@@ -13,14 +13,18 @@ import yaml from 'js-yaml';
 import { ScoringConfig, ScoreBreakdown } from '@/types/scoring';
 
 /**
- * Get the overtime reward cap for a given level number.
- * Levels 1-3: max 14h, 4-6: max 24h, 7-10: max 32h, 11+: max 44h
+ * Get the overtime reward cap for a level, scaled from its own base points.
+ *
+ * cap = round(basePoints × headroom). Because it keys off the level's points
+ * rather than its number, the cap grows with the pay curve (so later levels
+ * pay more) and works for any number of levels — nothing is pinned to a fixed
+ * level count. Headroom > 1 leaves room for multiplier builds (Performance
+ * Bonus, Technical Debt, mutators) to pay off, while still softly bounding
+ * degenerate multiplier stacks.
  */
-export function getOvertimeCap(levelNumber: number): number {
-  if (levelNumber <= 3) return 14;
-  if (levelNumber <= 6) return 24;
-  if (levelNumber <= 10) return 32;
-  return 44;
+export function getOvertimeCap(basePoints: number, headroom: number): number {
+  const safeHeadroom = Number.isFinite(headroom) && headroom > 0 ? headroom : 1;
+  return Math.round(basePoints * safeHeadroom);
 }
 
 /**
@@ -145,7 +149,9 @@ export function generateScoringPreview(
     const usedFences = Math.max(1, parFences + scenario.fenceOffset);
     const actualRemovedRatio = requiredRemovedRatio * (1 + scenario.extraPercent);
     const breakdown = calculateScoreBreakdown(usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, config);
-    const earnedScore = Math.floor(basePoints * breakdown.performanceMultiplier) + breakdown.totalBonus;
+    const rawScore = Math.floor(basePoints * breakdown.performanceMultiplier) + breakdown.totalBonus;
+    const cap = getOvertimeCap(basePoints, config.scoring.overtimeCapHeadroom);
+    const earnedScore = Math.max(0, Math.min(rawScore, cap));
     return { label: scenario.label, usedFences, actualRemovedRatio, breakdown, earnedScore };
   });
 }
@@ -154,6 +160,7 @@ export function generateScoringPreview(
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
+    overtimeCapHeadroom: 2.0,
     fenceEfficiency: {
       maxBonus: 1,
       steps: [{ fencesUnder: 1, bonus: 1 }],
@@ -185,6 +192,7 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
       if (parsed?.scoring) {
         loadedConfig = {
           scoring: {
+            overtimeCapHeadroom: parsed.scoring.overtimeCapHeadroom ?? DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom,
             fenceEfficiency: { ...DEFAULT_SCORING_CONFIG.scoring.fenceEfficiency, ...parsed.scoring.fenceEfficiency },
             spaceOptimization: { ...DEFAULT_SCORING_CONFIG.scoring.spaceOptimization, ...parsed.scoring.spaceOptimization },
             performanceMultiplier: { ...DEFAULT_SCORING_CONFIG.scoring.performanceMultiplier, ...parsed.scoring.performanceMultiplier },
@@ -209,7 +217,9 @@ export async function ensureScoringConfigLoaded(): Promise<void> {
  * Calculate the overtime reward for a level, synchronously, using the
  * preloaded config. Performance multiplier scales the base reward,
  * scoreMultiplier (from upgrades) applies on top, and the result is capped
- * per level tier (see getOvertimeCap).
+ * at basePoints × overtimeCapHeadroom (see getOvertimeCap). The levelNumber
+ * arg is retained for the callers' breakdown/telemetry but no longer drives
+ * the cap. lockBonus/pushBonus are added by the caller on top of the cap.
  */
 export function calculateScore(
   usedFences: number,
@@ -234,7 +244,7 @@ export function calculateScore(
   const safeMultiplier = Number.isFinite(scoreMultiplier) && scoreMultiplier > 0 ? scoreMultiplier : 1;
   const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
   const rawScore = multipliedBase + breakdown.totalBonus;
-  const cap = getOvertimeCap(levelNumber);
+  const cap = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom);
   const levelScore = Math.max(0, Math.min(rawScore, cap));
 
   return { levelScore, breakdown };

@@ -82,6 +82,7 @@ import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn } from "@/lib/physics/applyCut";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
+import { processDestroysFn } from "@/lib/physics/destructibles";
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -117,6 +118,8 @@ interface GameCanvasProps {
   parallaxTickRef?: React.MutableRefObject<((timestamp: number) => void) | null>;
   /** When true, freeze the game loop without ending the level. */
   paused?: boolean;
+  /** Admin/Playground: draw a live speed label above each ball. */
+  showBallSpeeds?: boolean;
 }
 
 /**
@@ -160,6 +163,7 @@ export function GameCanvas({
   fenceDurability = null,
   parallaxTickRef,
   paused = false,
+  showBallSpeeds = false,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -169,6 +173,10 @@ export function GameCanvas({
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
+  // Live ref so toggling the speed-label overlay takes effect without restarting
+  // the render loop (the rctx is rebuilt only per level).
+  const showBallSpeedsRef = useRef(showBallSpeeds);
+  useEffect(() => { showBallSpeedsRef.current = showBallSpeeds; }, [showBallSpeeds]);
 
   useEffect(() => {
     const game = gameRef.current;
@@ -238,6 +246,7 @@ export function GameCanvas({
     lastTime: 0,
     accumulator: 0,
     animationId: 0,
+    lastAutoFreezeAt: 0,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -258,11 +267,22 @@ export function GameCanvas({
     frozenBallPosition: null as Vector2 | null,
     lockedBallsCount: 0,
     lockBonus: 0,
+    moneyMultiplier: 1,
+    ballSpeedScale: 1,
     assimilations: new Map<string, LockFlashState>(),
     dissolve: null as DissolveState | null,
     bonusCutCells: new Set<string>(),
     fenceDurability: null as number | null,
     pendingWallBreaks: [] as Wall[],
+    destructibles: [] as import("@/types/game").DestructibleState[],
+    pendingDestroys: [] as import("@/types/game").DestructibleState[],
+    objectDebris: [] as import("@/types/game").ObjectDebrisState[],
+    stackObjects: [] as import("@/types/game").StackObject[],
+    fallingObjects: [] as import("@/types/game").FallingObject[],
+    objectivesTotal: 0,
+    objectivesBroken: 0,
+    breakBonus: 0,
+    lastDudAt: 0,
   });
 
   useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging);
@@ -414,6 +434,14 @@ export function GameCanvas({
       game.bonusCutCells.clear();
       game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
+      game.pendingDestroys = [];
+      game.objectDebris = [];
+      game.fallingObjects = [];
+      game.objectivesBroken = 0;
+      game.breakBonus = 0;
+      game.lastDudAt = 0;
+      game.moneyMultiplier = 1;
+      game.ballSpeedScale = activeModifiers.ballSpeedMultiplier;
       const data = createInitialGameData(level, levelNumber, activeModifiers);
       game.walls              = data.walls;
       game.movers             = data.movers;
@@ -423,6 +451,9 @@ export function GameCanvas({
       game.originalArea       = data.originalArea;
       game.basePlayableArea   = data.basePlayableArea;
       game.balls              = data.balls;
+      game.destructibles      = data.destructibles;
+      game.stackObjects       = data.stackObjects;
+      game.objectivesTotal    = data.objectivesTotal;
       game.initialSamplePoints = data.initialSamplePoints;
       game.spaceGrid          = data.spaceGrid;
       game.gridRegions        = data.gridRegions;
@@ -441,6 +472,7 @@ export function GameCanvas({
       game.swipePointerId = null;
       game.lastTime = 0;
       game.accumulator = 0;
+      game.lastAutoFreezeAt = 0; // Cron Job: restart the auto-freeze clock each map
       game.wallCount = 0;
       clearWallImpacts();
       setCutCount(0);
@@ -474,8 +506,8 @@ export function GameCanvas({
       }
     };
 
-    const rctx: RenderContext = { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState, spaceThreshold: level.sizeThreshold };
-    const render = () => renderFrame(ctx, game, rctx);
+    const rctx: RenderContext = { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState, spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current };
+    const render = () => { rctx.showBallSpeeds = showBallSpeedsRef.current; renderFrame(ctx, game, rctx); };
 
     const startDissolve = (onComplete: () => void, tint?: string) => {
       const TILE = 28;
@@ -554,8 +586,14 @@ export function GameCanvas({
           setRemainingPercent,
           onFenceBroke: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
+      processDestroys: () =>
+        processDestroysFn(game, {
+          repaintRegionCanvas,
+          setRemainingPercent,
+          onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
+        }),
     };
-    const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks);
+    const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration);
     game.gameLoopFn = gameLoop;
 
     resizeCanvas();

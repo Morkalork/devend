@@ -493,13 +493,17 @@
         "name": "Teknisk skuld",
         "description": "Tjäna 50% mer övertid per karta — men bollarna rör sig 25% snabbare."
       },
-      "pair_programming_principal": {
-        "name": "Parprogrammering",
-        "description": "Ett extra samtidigt stängsel — men varje stängsel byggs 12% långsammare. Två sinnen, delad uppmärksamhet."
+      "cron_job_senior": {
+        "name": "Schemalagt jobb",
+        "description": "Var 10:e sekund fryses automatiskt en slumpmässig boll i 3 sekunder."
       },
-      "pair_programming_architect": {
-        "name": "Parprogrammering",
-        "description": "Ytterligare ett samtidigt stängsel — men stängselhastigheten sjunker ytterligare 12%."
+      "cron_job_principal": {
+        "name": "Schemalagt jobb",
+        "description": "Schemalagda frysningar håller nu en boll i 4 sekunder."
+      },
+      "cron_job_architect": {
+        "name": "Schemalagt jobb",
+        "description": "Schemalagda frysningar håller nu en boll i 5 sekunder."
       },
       "defensive_programming_junior": {
         "name": "Defensiv programmering",

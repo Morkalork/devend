@@ -11,7 +11,7 @@
 import { LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity } from "@/types/level";
 import { MoverState, buildMoverPolygon } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
-import { Ball, Region, Vector2 } from "@/types/game";
+import { Ball, Region, Vector2, DestructibleState, StackObject } from "@/types/game";
 import { Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
@@ -50,9 +50,9 @@ import {
 import {
   generateRegionId,
   getRandomDirection,
-  getBallSpeedLevelMultiplier,
 } from "@/lib/gameUtils";
 import { createBallEffectState } from "@/lib/ballEffects";
+import { selectBallTypesForMap, getBallType, BallTypeDef } from "@/lib/ballTypes";
 
 // ── Return type ────────────────────────────────────────────────────────────
 
@@ -65,6 +65,9 @@ export interface InitialGameData {
   basePlayableArea: number;
   balls: Ball[];
   movers: MoverState[];
+  destructibles: DestructibleState[];
+  stackObjects: StackObject[];
+  objectivesTotal: number;
   initialSamplePoints: Vector2[];
   spaceGrid: SpaceGrid;
   gridRegions: GridRegion[];
@@ -104,6 +107,10 @@ export function createInitialGameData(
   const allWalls: Wall[] = createWallsFromPolygon(boardPolygon, "board");
   const obstaclePolygons: Polygon[] = [];
   const mirrorPolygons:   Polygon[] = [];
+  const destructibles:    DestructibleState[] = [];
+  // Non-mirror obstacles participating in the break/topple support graph (#38).
+  const obstacleEntities: Array<{ id: string; polygon: Polygon; breakable: boolean }> = [];
+  let objectivesTotal = 0;
 
   // Reset run seed for new game/level (consistent variety per run)
   resetRunSeed();
@@ -113,7 +120,7 @@ export function createInitialGameData(
   const randomObstacles = generateRandomObstacles(
     level.randomShapes ?? 20,
     level.entities || [],
-    level.balls,
+    [], // balls now spawn at game-chosen positions (after obstacles), so none to avoid here
   );
   const allEntities = [...(level.entities || []), ...randomObstacles];
 
@@ -183,10 +190,39 @@ export function createInitialGameData(
 
         if (isMirror) {
           mirrorPolygons.push(obstaclePolygon);
+          // Mirrors can be broken by the black ball (Phase 2).
+          destructibles.push({
+            id: entity.id,
+            kind: 'mirror',
+            hits: 0,
+            maxHits: 3,
+            lastHitAt: 0,
+            destroyed: false,
+            mirrorPolygon: obstaclePolygon,
+          });
         }
         obstaclePolygons.push(obstaclePolygon);
         const obstacleWalls = createWallsFromPolygon(obstaclePolygon, `obstacle-${entity.id}`, isMirror);
         allWalls.push(...obstacleWalls);
+
+        // Breakable obstacles + stack graph (issue #38). Mirrors are handled by
+        // the #37 path above and don't participate in break-stacks.
+        if (!isMirror) {
+          obstacleEntities.push({ id: entity.id, polygon: obstaclePolygon, breakable: !!entity.breakable });
+          if (entity.breakable) {
+            destructibles.push({
+              id: entity.id,
+              kind: 'breakable',
+              hits: 0,
+              maxHits: Math.max(1, Math.round(entity.hitsToBreak ?? 3)),
+              lastHitAt: 0,
+              destroyed: false,
+              obstaclePolygon,
+              objective: !!entity.objective,
+            });
+            if (entity.objective) objectivesTotal++;
+          }
+        }
       }
     }
   }
@@ -264,41 +300,59 @@ export function createInitialGameData(
   };
 
   // ── Create balls ───────────────────────────────────────────────────────
+  // Issue #37: the game (not the map) decides which balls to use. The map only
+  // supplies a maximum; the ball TYPES are chosen deterministically from those
+  // eligible at this level. Speeds are flat (literal base-speed × the upgrade
+  // multiplier) — no per-level scaling, no per-cut acceleration ramp.
 
-  const ballSpeedLevelMult   = getBallSpeedLevelMultiplier(levelNumber);
-  const baseSpeedMultiplier  = 2.0;
+  const speedScale = activeModifiers.ballSpeedMultiplier;
+  const maxBalls   = level.maxBalls ?? level.balls?.length ?? 1;
+  // Admin override (Playground): when `ballTypeIds` is provided, spawn exactly
+  // those types — even an empty list, which means "no balls". Only when the
+  // field is absent do we fall back to the normal deterministic selection.
+  let selectedTypes: BallTypeDef[];
+  if (level.ballTypeIds !== undefined) {
+    selectedTypes = level.ballTypeIds.map(id => getBallType(id)).filter((t): t is BallTypeDef => !!t);
+  } else {
+    selectedTypes = selectBallTypesForMap(level.id, levelNumber, maxBalls);
+  }
+  const spawnTime  = performance.now();
 
-  const balls: Ball[] = level.balls.map((ballConfig) => {
-    const dir             = getRandomDirection();
-    const levelScaledSpeed =
-      ballConfig.initialSpeed * baseSpeedMultiplier * ballSpeedLevelMult * activeModifiers.ballSpeedMultiplier;
-    const modifiedTopSpeed = ballConfig.topSpeed * baseSpeedMultiplier * activeModifiers.ballSpeedMultiplier;
-    const modifiedSpeed    = Math.min(levelScaledSpeed, modifiedTopSpeed);
-
-    const ballRadius = (ballConfig.radius ?? BASE_BALL_RADIUS) * activeModifiers.ballSizeMultiplier;
-
-    let position: Vector2;
-    if (ballConfig.startX !== undefined && ballConfig.startY !== undefined) {
-      const configuredPos = { x: ballConfig.startX, y: ballConfig.startY };
-      if (isBallPositionValid(configuredPos, ballRadius)) {
-        position = configuredPos;
-      } else {
-        console.warn(`Ball ${ballConfig.id} configured position is invalid, finding alternative`);
-        position = findValidSpawnPosition(ballRadius);
+  // Keep spawned balls from overlapping each other (findValidSpawnPosition only
+  // avoids walls/obstacles, not other balls).
+  const placed: Vector2[] = [];
+  const findSpacedSpawn = (radius: number): Vector2 => {
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const p = findValidSpawnPosition(radius);
+      if (placed.every(q => Math.hypot(p.x - q.x, p.y - q.y) > radius * 3)) {
+        placed.push(p);
+        return p;
       }
-    } else {
-      position = findValidSpawnPosition(ballRadius);
     }
+    const p = findValidSpawnPosition(radius);
+    placed.push(p);
+    return p;
+  };
+
+  const balls: Ball[] = selectedTypes.map((type, i) => {
+    const dir    = getRandomDirection();
+    const speed  = type.baseSpeed * speedScale;
+    const ballRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
+    const position = findSpacedSpawn(ballRadius);
+
+    const speedRange: [number, number] | undefined = type.speedRange
+      ? [type.speedRange[0] * speedScale, type.speedRange[1] * speedScale]
+      : undefined;
 
     return {
-      id:            ballConfig.id,
+      id:            `${type.id}-${i}`,
       position,
-      velocity:      { x: dir.x * modifiedSpeed, y: dir.y * modifiedSpeed },
+      velocity:      { x: dir.x * speed, y: dir.y * speed },
       radius:        ballRadius,
-      speed:         modifiedSpeed,
-      baseSpeed:     modifiedSpeed,
-      topSpeed:      modifiedTopSpeed,
-      color:         `#${ballConfig.color}`,
+      speed,
+      baseSpeed:     speed,
+      topSpeed:      speed, // flat speed; the danger tint uses an absolute reference
+      color:         type.color,
       regionId:      "", // assigned after regions are created
       rotation:      Math.random() * Math.PI * 2,
       flashIntensity: 0,
@@ -308,6 +362,14 @@ export function createInitialGameData(
       wonTime:       0,
       assimScale:    1,
       assimColorFade: 0,
+      typeId:        type.id,
+      ability:       type.ability,
+      lockMultiplier: type.lockMultiplier,
+      spawnTime,
+      minimumSpeed:  type.minimumSpeed * speedScale,
+      speedReduction: type.speedReduction !== undefined ? type.speedReduction * speedScale : undefined,
+      speedRange,
+      lastSpeedStepAt: 0,
     };
   });
 
@@ -394,6 +456,59 @@ export function createInitialGameData(
     };
     mover.polygon = buildMoverPolygon(mover);
     movers.push(mover);
+    // Movers can be broken by the black ball (Phase 2).
+    destructibles.push({
+      id: e.id,
+      kind: 'mover',
+      hits: 0,
+      maxHits: 3,
+      lastHitAt: 0,
+      destroyed: false,
+      moverId: mover.id,
+    });
+  }
+
+  // ── Stack / support graph (issue #38) ────────────────────────────────────
+  // "Down" is the board bottom. Each obstacle rests on the obstacle directly
+  // beneath it (its bottom edge meets that one's top edge with x-overlap) or on
+  // the ground. When a support is removed, whatever rests on it topples.
+  const stackObjects: StackObject[] = [];
+  {
+    const SUPPORT_TOL = 30; // world units of slack for "resting on"
+    const boxes = obstacleEntities.map(o => {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const v of o.polygon.vertices) {
+        if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+        if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+      }
+      return { id: o.id, minX, minY, maxX, maxY };
+    });
+    for (let i = 0; i < boxes.length; i++) {
+      const a = boxes[i];
+      let supporterId: string | null = null;
+      const onGround = Math.abs(bottom - a.maxY) <= SUPPORT_TOL;
+      if (!onGround) {
+        let best = Infinity;
+        for (let j = 0; j < boxes.length; j++) {
+          if (i === j) continue;
+          const b = boxes[j];
+          const xOverlap = a.minX < b.maxX && a.maxX > b.minX;
+          if (!xOverlap) continue;
+          const gap = b.minY - a.maxY; // b sits just below a when this ≈ 0
+          if (gap >= -SUPPORT_TOL && gap <= SUPPORT_TOL && Math.abs(gap) < best) {
+            best = Math.abs(gap);
+            supporterId = b.id;
+          }
+        }
+      }
+      stackObjects.push({
+        id: a.id,
+        polygon: obstacleEntities[i].polygon,
+        breakable: obstacleEntities[i].breakable,
+        supporterId,
+        toppled: false,
+      });
+    }
   }
 
   // ── Fastest ball ──────────────────────────────────────────────────────
@@ -417,6 +532,9 @@ export function createInitialGameData(
     basePlayableArea:    initialEstimatedArea,
     balls,
     movers,
+    destructibles,
+    stackObjects,
+    objectivesTotal,
     initialSamplePoints: initSamplePoints,
     spaceGrid,
     gridRegions,

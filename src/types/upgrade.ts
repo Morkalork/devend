@@ -10,6 +10,11 @@ export interface UpgradeConfig {
   prerequisites?: string[];
   /** Only offered while ascended (Ascension mode, depth ≥ 1) */
   ascensionOnly?: boolean;
+  /**
+   * Icon name (see upgradeIcons.ts registry) shown on the upgrade card.
+   * Only set on the first tier of each family; higher tiers inherit it.
+   */
+  icon?: string;
   modifiers: Record<string, number>;
 }
 

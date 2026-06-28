@@ -49,6 +49,15 @@ export interface Ball {
   // ── Feature Freeze upgrade (tap-to-freeze) ──────────────────────────────
   frozenUntil?: number;      // performance.now() timestamp until which the ball is held still (tap-frozen)
   freezeReadyAt?: number;    // performance.now() timestamp before which the ball cannot be re-frozen (cooldown)
+  // ── Ball type / abilities (issue #37) ───────────────────────────────────
+  typeId: string;            // ball-type id from ballTypes.ts (red, blue, yellow, …)
+  ability: import('@/lib/ballTypes').BallAbility; // gameplay ability this ball carries
+  lockMultiplier: number;    // lock-bonus multiplier when this ball is locked away
+  spawnTime: number;         // performance.now() at map start — used by the grey "slow down" ability
+  minimumSpeed: number;      // scaled speed floor; slow-down/slow-others/range never go below this
+  speedReduction?: number;   // purple (slowOthers): scaled speed each struck ball loses per hit
+  speedRange?: [number, number]; // yellow: current (scaled) [lo, hi] random-speed range; shrinks when slowed
+  lastSpeedStepAt?: number;  // yellow: debounce so one contact changes speed once
 }
 
 // Diagonal growing wall - extends from origin in +/- direction
@@ -139,6 +148,65 @@ export interface DissolveState {
   onComplete: () => void;
 }
 
+// ── Destructible objects (issue #37 Phase 2: black ball) ──────────────────
+
+/**
+ * A breakable object: a mirror/mover (black ball only, issue #37) or a
+ * breakable obstacle (any ball; issue #38). Hits accumulate to maxHits.
+ */
+export interface DestructibleState {
+  id: string;                  // stable id (the level entity id)
+  kind: 'mirror' | 'mover' | 'breakable';
+  hits: number;                // accumulated hits, 0..maxHits
+  maxHits: number;             // hits needed to destroy (3)
+  lastHitAt: number;           // performance.now() of last counted hit (debounce)
+  destroyed: boolean;          // queued/processed for removal
+  destroyedBy?: string;        // id of the ball that landed the killing hit
+  mirrorPolygon?: Polygon;     // mirror: reference into obstacle/mirror polygon arrays
+  moverId?: string;            // mover: id of the MoverState
+  // ── Breakable obstacles (issue #38) ──────────────────────────────────────
+  obstaclePolygon?: Polygon;   // breakable: reference into obstaclePolygons
+  objective?: boolean;         // breakable: must be broken to win the level
+  dents?: Vector2[];           // world-space impact points — rendered as inward dents
+}
+
+/**
+ * A stacked obstacle in the support graph (issue #38). When the thing it rests
+ * on is removed, it topples (falls toward the board bottom and shatters).
+ */
+export interface StackObject {
+  id: string;
+  polygon: Polygon;            // reference into obstaclePolygons
+  breakable: boolean;
+  supporterId: string | null;  // id of the obstacle it rests on, or null = ground
+  toppled: boolean;            // already falling/removed
+}
+
+/** An obstacle mid-collapse: its shape animates toward the board bottom. */
+export interface FallingObject {
+  vertices: Vector2[];         // world-space polygon (snapshot at fall start)
+  color: string;               // hex with #
+  startTime: number;
+  durationMs: number;
+  fallSpeed: number;           // initial downward speed (world units/sec)
+}
+
+export interface ObjectDebrisParticle {
+  x: number; y: number;        // world-space position at birth
+  vx: number; vy: number;      // world units / sec
+  rotation: number;
+  rotSpeed: number;            // rad / sec
+  size: number;                // world units
+}
+
+/** A short collapse animation spawned when a destructible is destroyed. */
+export interface ObjectDebrisState {
+  startTime: number;
+  durationMs: number;
+  color: string;               // hex with #
+  particles: ObjectDebrisParticle[];
+}
+
 export interface LevelScoreData {
   levelNumber: number;
   levelId: string;
@@ -164,6 +232,8 @@ export interface LevelScoreData {
   // Lock bonus from capturing balls
   lockBonus?: number;
   lockedBallsCount?: number;
+  // Bonus from smashing breakable objects (issue #38)
+  breakBonus?: number;
   // Interest gain from Venture Capital
   interestGain?: number;
 }

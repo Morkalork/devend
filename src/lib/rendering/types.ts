@@ -23,4 +23,6 @@ export interface RenderContext {
   rain: RainState;
   /** Level threshold (% space remaining when level completes) — for progress bar. */
   spaceThreshold: number;
+  /** Admin/Playground: draw a live speed label above each ball. */
+  showBallSpeeds?: boolean;
 }

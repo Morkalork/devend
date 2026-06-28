@@ -1,11 +1,12 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight } from 'lucide-react';
+import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight, Circle, Plus, Trash2 } from 'lucide-react';
 import yaml from 'js-yaml';
 import { GameScreen } from '@/components/game/GameScreen';
 import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useColorProgression } from '@/hooks/useColorProgression';
 import { LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
+import { BallTypeDef, getAllBallTypes, loadBallTypes, selectBallTypesForMap } from '@/lib/ballTypes';
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 
@@ -48,6 +49,7 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   fenceDurabilityBonus:             { label: 'Fence Durability +',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra ball hits Ascension fences survive (no effect outside Ascension)' },
   ballFreezeDuration:               { label: 'Feature Freeze (s)',     kind: 'additive',       step: 2,    min: 0,    defaultValue: 0,    description: 'Feature Freeze: seconds a tapped ball stays frozen (0 = off)' },
   ballFreezeCount:                  { label: 'Cascade Freeze (+balls)',kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cascade Freeze: extra nearby balls frozen per tap (total = 1 + this)' },
+  autoFreezeDuration:               { label: 'Cron Job (s)',           kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cron Job: seconds an auto-frozen ball stays frozen, fired every 10s (0 = off)' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)
@@ -111,14 +113,67 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [selectedLevel, setSelectedLevel] = useState<LevelConfig | null>(null);
   const [levelPickerOpen, setLevelPickerOpen] = useState(false);
 
+  // Ball picker — explicit ball-type override for trying balls out.
+  // null = no override (use the level's default selection); [] = explicitly no
+  // balls; non-empty = exactly those balls.
+  const [ballCatalog, setBallCatalog] = useState<BallTypeDef[]>(getAllBallTypes());
+  const [ballTypeIds, setBallTypeIds] = useState<string[] | null>(null);
+  const [ballPickerOpen, setBallPickerOpen] = useState(false);
+  const [showBallSpeeds, setShowBallSpeeds] = useState(false);
+
   useEffect(() => {
     fetch('/map.yml')
       .then(r => r.text())
       .then(text => {
         const data = yaml.load(text) as LevelData;
-        if (data?.levels) setAllLevels(data.levels);
+        // Migrated maps have no `balls` array (the game derives them). Normalise
+        // so the legacy entity/ball editor panels don't choke on `undefined`.
+        if (data?.levels) setAllLevels(data.levels.map(l => ({ ...l, balls: l.balls ?? [] })));
       })
       .catch(() => {/* silently ignore */});
+    // Load the ball catalogue (balls.yml) so the picker lists the latest types,
+    // then restart so the running game reflects the loaded catalogue.
+    loadBallTypes().then(() => { setBallCatalog([...getAllBallTypes()]); setGameKey(k => k + 1); });
+  }, []);
+
+  // The level the game is running (base for the ball override below).
+  const baseLevel = selectedLevel ?? PLAYGROUND_LEVEL;
+
+  // The balls the game spawns by default for this level (same deterministic
+  // selection the real game uses) — what the picker shows when there's no
+  // explicit override yet, so adding appends instead of replacing.
+  const defaultBallIds = useMemo(
+    () => selectBallTypesForMap(
+      baseLevel.id,
+      baseLevel.level,
+      baseLevel.maxBalls ?? baseLevel.balls?.length ?? 1,
+    ).map(t => t.id),
+    // selectBallTypesForMap reads the module-level catalogue, which balls.yml
+    // mutates on load; ballCatalog is the render signal that it changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [baseLevel, ballCatalog],
+  );
+
+  // What's actually in play: the user's explicit override (which may be empty =
+  // no balls), or the level default when there's no override yet.
+  const effectiveBallIds = ballTypeIds ?? defaultBallIds;
+
+  const addBallType = useCallback((id: string) => {
+    setBallTypeIds([...effectiveBallIds, id]);
+    setGameKey(k => k + 1);
+  }, [effectiveBallIds]);
+
+  const removeBallTypeAt = useCallback((index: number) => {
+    // Removing leaves an explicit list — it may become empty (no balls), which
+    // is intentional and does NOT revert to the default.
+    setBallTypeIds(effectiveBallIds.filter((_, i) => i !== index));
+    setGameKey(k => k + 1);
+  }, [effectiveBallIds]);
+
+  // Reset back to the level's default ball selection (drops the override).
+  const clearBallTypes = useCallback(() => {
+    setBallTypeIds(null);
+    setGameKey(k => k + 1);
   }, []);
 
   // Level editor panel
@@ -314,7 +369,12 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
   const achievementBonuses = toBonuses(applied);
   const activeModifiers = useActiveModifiers([], [], achievementBonuses);
-  const activeLevel = selectedLevel ?? PLAYGROUND_LEVEL;
+  // The game always spawns exactly the effective ball list (override or default),
+  // so the picker and the running game never disagree.
+  const activeLevel = useMemo<LevelConfig>(
+    () => ({ ...baseLevel, ballTypeIds: effectiveBallIds, maxBalls: effectiveBallIds.length }),
+    [baseLevel, effectiveBallIds],
+  );
   const { accentHex: levelAccent } = useColorProgression(activeLevel.level);
   const accent = levelAccent;
 
@@ -340,6 +400,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           accentColor={accent}
           achievementBonuses={achievementBonuses}
           activeModifiers={activeModifiers}
+          showBallSpeeds={showBallSpeeds}
         />
 
         {/* Controls overlay — only visible when a level is selected (floating toolbar handles the no-level case) */}
@@ -371,6 +432,17 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
           >
             <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setBallPickerOpen(true)}
+            title="Balls"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg shadow-lg text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+          >
+            <Circle className="w-4 h-4" /> Balls
+            {ballTypeIds !== null && (
+              <span className="bg-black/30 px-1.5 rounded-full text-[10px] font-bold">{effectiveBallIds.length}</span>
+            )}
           </button>
         </div>}
       </div>
@@ -494,6 +566,17 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
+            onClick={() => setBallPickerOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+          >
+            <Circle className="w-4 h-4" />
+            Balls
+            {ballTypeIds !== null && (
+              <span className="ml-1 bg-black/30 px-1.5 py-0.5 rounded-full text-xs font-bold">{effectiveBallIds.length}</span>
+            )}
+          </button>
+          <button
             onClick={openModal}
             className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: accent, color: '#000', boxShadow: `0 0 16px ${accent}66` }}
@@ -589,7 +672,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                         L{lvl.level}: {lvl.id}
                       </div>
                       <div className="text-[10px]" style={{ color: 'hsl(var(--muted-foreground) / 0.6)', fontFamily: "'JetBrains Mono', monospace" }}>
-                        {lvl.balls.length} ball{lvl.balls.length !== 1 ? 's' : ''} · threshold {lvl.sizeThreshold}%
+                        {(() => { const n = lvl.maxBalls ?? lvl.balls?.length ?? 0; return `max ${n} ball${n !== 1 ? 's' : ''}`; })()} · threshold {lvl.sizeThreshold}%
                         {lvl.entities?.length ? ` · ${lvl.entities.length} entity` : ''}
                       </div>
                     </button>
@@ -601,6 +684,158 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     Loading levels…
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Ball picker modal */}
+      <AnimatePresence>
+        {ballPickerOpen && (
+          <motion.div
+            key="ball-picker-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            style={{ backgroundColor: 'rgba(0,0,0,0.75)' }}
+            onClick={() => setBallPickerOpen(false)}
+          >
+            <motion.div
+              key="ball-picker-panel"
+              initial={{ opacity: 0, scale: 0.93, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.93, y: 16 }}
+              transition={{ duration: 0.18 }}
+              className="w-full max-w-md max-h-[85vh] rounded-xl overflow-hidden flex flex-col"
+              style={{ backgroundColor: '#0a0f0a', border: `1px solid ${accent}55`, boxShadow: `0 0 40px ${accent}22` }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderBottom: `1px solid ${accent}33` }}>
+                <div className="flex items-center gap-2">
+                  <Circle className="w-4 h-4" style={{ color: accent }} />
+                  <span className="font-black tracking-widest uppercase text-sm" style={{ fontFamily: 'Orbitron, sans-serif', color: accent }}>
+                    Balls
+                  </span>
+                </div>
+                <button onClick={() => setBallPickerOpen(false)}>
+                  <X className="w-5 h-5" style={{ color: `${accent}99` }} />
+                </button>
+              </div>
+
+              {/* Show-speeds toggle */}
+              <div className="px-5 pt-4 flex-shrink-0">
+                <button
+                  onClick={() => setShowBallSpeeds(v => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: showBallSpeeds ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${showBallSpeeds ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <span className="text-xs font-semibold" style={{ color: showBallSpeeds ? accent : 'hsl(var(--foreground))' }}>
+                    Show ball speeds
+                  </span>
+                  <span
+                    className="relative inline-flex items-center rounded-full transition-colors"
+                    style={{ width: 36, height: 20, backgroundColor: showBallSpeeds ? accent : 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span
+                      className="absolute rounded-full bg-white transition-all"
+                      style={{ width: 14, height: 14, top: 3, left: showBallSpeeds ? 19 : 3 }}
+                    />
+                  </span>
+                </button>
+              </div>
+
+              {/* In-play balls (override if set, otherwise the level default) */}
+              <div className="px-5 pt-4 flex-shrink-0">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: `${accent}99`, fontFamily: 'Orbitron, sans-serif' }}>
+                    In play ({effectiveBallIds.length}){ballTypeIds === null ? ' · level default' : ''}
+                  </span>
+                  {ballTypeIds !== null && (
+                    <button onClick={clearBallTypes} className="text-[10px] px-2 py-0.5 rounded" style={{ color: '#ef4444', border: '1px solid #ef444433' }}>
+                      Reset to default
+                    </button>
+                  )}
+                </div>
+                {effectiveBallIds.length === 0 && (
+                  <div className="text-[11px] mb-3" style={{ color: 'hsl(var(--muted-foreground) / 0.7)', fontFamily: "'JetBrains Mono', monospace" }}>
+                    No balls — add some below, or Reset to default.
+                  </div>
+                )}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {effectiveBallIds.map((id, i) => {
+                    const t = ballCatalog.find(b => b.id === id);
+                    return (
+                      <button
+                        key={`${id}-${i}`}
+                        onClick={() => removeBallTypeAt(i)}
+                        title="Remove"
+                        className="flex items-center gap-1.5 pl-1.5 pr-2 py-1 rounded-full text-xs"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}
+                      >
+                        <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: t?.color ?? '#888', boxShadow: `0 0 6px ${t?.color ?? '#888'}` }} />
+                        <span style={{ color: 'hsl(var(--foreground))' }}>{t?.name ?? id}</span>
+                        <X className="w-3 h-3" style={{ color: '#ef4444' }} />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Catalogue */}
+              <div className="overflow-y-auto flex-1 px-3 pb-3 space-y-1.5">
+                {ballCatalog.map(ball => (
+                  <div
+                    key={ball.id}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    <span
+                      className="flex-shrink-0 w-7 h-7 rounded-full"
+                      style={{ backgroundColor: ball.color, boxShadow: `0 0 10px ${ball.color}, inset -2px -2px 4px rgba(0,0,0,0.4)`, border: '1px solid rgba(255,255,255,0.2)' }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'hsl(var(--foreground))' }}>
+                        {ball.name}
+                        {ball.phase2 && <span className="text-[9px] px-1 rounded" style={{ color: '#f59e0b', border: '1px solid #f59e0b55' }}>WIP</span>}
+                      </div>
+                      <div className="text-[10px] truncate" style={{ color: 'hsl(var(--muted-foreground) / 0.7)', fontFamily: "'JetBrains Mono', monospace" }}>
+                        spd {ball.baseSpeed} · L{ball.unlockLevel} · ×{ball.lockMultiplier} · {ball.ability}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => addBallType(ball.id)}
+                      title={`Add ${ball.name}`}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg flex-shrink-0"
+                      style={{ backgroundColor: `${accent}22`, color: accent, border: `1px solid ${accent}44` }}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                {ballCatalog.length === 0 && (
+                  <div className="text-xs text-center py-4" style={{ color: 'hsl(var(--muted-foreground))' }}>Loading balls…</div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 flex-shrink-0 flex items-center justify-between" style={{ borderTop: `1px solid ${accent}33` }}>
+                <span className="text-[10px]" style={{ color: `${accent}44`, fontFamily: "'JetBrains Mono', monospace" }}>
+                  Adding / removing restarts the game.
+                </span>
+                <button
+                  onClick={clearBallTypes}
+                  disabled={ballTypeIds === null}
+                  className="flex items-center gap-1.5 text-[11px] px-2 py-1 rounded"
+                  style={{ color: '#ef4444', border: '1px solid #ef444433', opacity: ballTypeIds === null ? 0.3 : 1 }}
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Reset to default
+                </button>
               </div>
             </motion.div>
           </motion.div>

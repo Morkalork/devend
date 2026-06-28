@@ -151,6 +151,8 @@
     "mainMenu": "Main Menu",
     "moverTutorialTitle": "⚠ Moving Obstacles",
     "moverTutorialBody": "Orange obstacles move back and forth on a fixed track.\n\nBalls bounce off them — but if your growing fence touches one, you lose a life.\n\nWatch the track lines and time your fences carefully!",
+    "breakTutorialTitle": "✦ Breaking Things",
+    "breakTutorialBody": "Amber blocks can be smashed for bonus overtime — guide balls into them until they shatter, and anything stacked on top falls with them.\n\nYou still win the normal way, by shrinking the board; breaking is just extra points.\n\nYou can't fence against a breakable (the cut fizzles), and the black ball breaks things in half the hits.",
     "infoPanelsTutorialTitle": "Info Panels",
     "infoPanelsTutorialBody": "The status bars are expandable!\n\nTap the TOP BAR to see full level details, all your active upgrades with descriptions, and certificate-hour progress.\n\nTap the BOTTOM BAR to view every active modifier explained in plain language."
   },
@@ -178,6 +180,7 @@
     "threadLocks": "Thread Locks ({{count}})",
     "interest": "Interest",
     "pushBonus": "Push Bonus",
+    "breakBonus": "Demolition Bonus",
     "totalBonus": "Total Bonus",
     "overtimeEarned": "Overtime Earned",
     "totalOvertime": "Total Overtime",
@@ -280,6 +283,13 @@
     "controlSwipeToCut": "Swipe to cut",
     "controlSecondFinger": "Second finger while fence is growing cancels it",
     "controlClickAndDrag": "Click and drag",
+    "ballTypes": {
+      "title": "Ball Types",
+      "intro": "A ball's colour tells you what it does. Which balls appear is decided by the level you've reached — new colours unlock as you climb.",
+      "speed": "Speed {{speed}}",
+      "unlocks": "From level {{level}}",
+      "lock": "Lock ×{{mult}}"
+    },
     "steps": {
       "swipeToCut": {
         "title": "Swipe to Cut",
@@ -295,7 +305,11 @@
       },
       "winCondition": {
         "title": "Win Condition",
-        "description": "Reduce the arena to under 25% of its original size to win. Speed increases with each cut!"
+        "description": "Reduce the arena below the level's target size to win. Trap a ball in a small enough region and it locks away for a bonus!"
+      },
+      "breakObstacles": {
+        "title": "Breaking Obstacles",
+        "description": "Later levels add amber breakable blocks. Guide balls into them to smash them for bonus overtime — stacked pieces fall when their support breaks. You still win by shrinking the board; breaking is extra. You can't fence against a breakable (it fizzles), and the black ball breaks things in half the hits."
       },
       "lives": {
         "title": "Lives",

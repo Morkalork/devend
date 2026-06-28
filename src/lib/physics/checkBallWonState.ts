@@ -24,6 +24,7 @@ export function checkAndUpdateBallWonStates(
 
   let anyBallWon = false;
   const prevLockedCount = game.lockedBallsCount;
+  const wonThisPass: typeof game.balls = [];
   const gridRegions = findGridRegions(game.spaceGrid);
   const gridRegionMap = buildGridRegionMap(gridRegions);
 
@@ -118,6 +119,7 @@ export function checkAndUpdateBallWonStates(
     }
 
     game.lockedBallsCount += 1;
+    wonThisPass.push(ball);
 
     if (activeModifiers.microManagerPerLock > 0) {
       const totalLocked = cumulativeLockedBalls + game.lockedBallsCount;
@@ -140,14 +142,28 @@ export function checkAndUpdateBallWonStates(
   }
 
   // Simultaneous-trap bonus: trapping multiple balls in a single cut multiplies
-  // the locking points. Each ball is worth `newlyLocked` points, so the cut total
-  // is newlyLocked × newlyLocked — i.e. 1 ball → ×1, 2 balls → ×2 (double),
-  // 3 balls → ×3 (triple). (Locking balls one-at-a-time stays at 1 point each.)
-  // We don't expect more than 3 trapped at once, but the formula scales anyway.
+  // the locking points. 1 ball → ×1, 2 balls → ×2 (double), 3 → ×3 (triple).
+  // Each ball contributes its own lock-multiplier (issue #37: e.g. green/yellow
+  // ×2, black ×4), and the green "money ball" triples every subsequent lock this
+  // map via game.moneyMultiplier.
   const newlyLocked = game.lockedBallsCount - prevLockedCount;
   if (newlyLocked > 0) {
     const simultaneousMultiplier = newlyLocked; // 1× / 2× / 3× ...
-    game.lockBonus += newlyLocked * simultaneousMultiplier;
+
+    // Green "money ball" tripling. It applies to every other lock — including
+    // balls trapped in the SAME cut as the green — and to all subsequent locks
+    // this map (via game.moneyMultiplier). A green's own lock is never tripled
+    // by itself, so each ball is tripled by every green this pass except itself.
+    const greensThisPass = wonThisPass.filter(b => b.ability === 'moneyBall').length;
+    let points = 0;
+    for (const b of wonThisPass) {
+      const selfGreen = b.ability === 'moneyBall' ? 1 : 0;
+      const mult = game.moneyMultiplier * Math.pow(3, greensThisPass - selfGreen);
+      points += (b.lockMultiplier ?? 1) * mult;
+    }
+    game.lockBonus += points * simultaneousMultiplier;
+
+    if (greensThisPass > 0) game.moneyMultiplier *= Math.pow(3, greensThisPass);
   }
 
   return anyBallWon;

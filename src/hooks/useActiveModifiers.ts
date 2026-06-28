@@ -38,6 +38,9 @@ export interface GameModifiers {
   ballFreezeDuration: number;
   // Additive (sum) — Cascade Freeze: extra balls a single tap freezes beyond the tapped one
   ballFreezeCount: number;
+  // Additive (sum) — Cron Job: seconds an auto-frozen ball stays frozen (0 = upgrade not owned).
+  // The freeze fires automatically on a fixed interval (AUTO_FREEZE_INTERVAL_MS).
+  autoFreezeDuration: number;
 }
 
 // Keys that stack multiplicatively
@@ -97,6 +100,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   ballPathPredictionBalls: 0,
   ballFreezeDuration: 0,
   ballFreezeCount: 0,
+  autoFreezeDuration: 0,
 };
 
 /**

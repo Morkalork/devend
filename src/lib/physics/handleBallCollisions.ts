@@ -6,6 +6,7 @@
  */
 
 import { CanvasGameState } from "@/types/gameState";
+import { Ball } from "@/types/game";
 import {
   vec2Add,
   vec2Sub,
@@ -71,6 +72,12 @@ export function handleBallCollisions(game: CanvasGameState): void {
         const relVelNormal = vec2Dot(relVel, normal);
 
         if (relVelNormal > 0) {
+          // Capture each ball's speed at impact, before the elastic exchange, so
+          // a purple's drain is measured against the pre-collision speed (a fixed
+          // amount) instead of riding on top of the random elastic change.
+          const preSpeed1 = vec2Length(ball1.velocity);
+          const preSpeed2 = vec2Length(ball2.velocity);
+
           ball1.velocity = vec2Sub(ball1.velocity, vec2Scale(normal, relVelNormal));
           ball2.velocity = vec2Add(ball2.velocity, vec2Scale(normal, relVelNormal));
 
@@ -87,8 +94,47 @@ export function handleBallCollisions(game: CanvasGameState): void {
           // Play ball collision sound
           const collisionIntensity = Math.min(1, Math.abs(relVelNormal) / 300);
           playBallCollideSound(collisionIntensity);
+
+          // Purple "slow others": the struck ball ends at (its impact speed −
+          // the purple's speedReduction), floored at its own minimum speed. A
+          // yellow's random speed range is shrunk by the same amount.
+          if (ball1.ability === 'slowOthers') slowBall(ball2, preSpeed2, ball1.speedReduction ?? 0);
+          if (ball2.ability === 'slowOthers') slowBall(ball1, preSpeed1, ball2.speedReduction ?? 0);
         }
       }
     }
+  }
+}
+
+/**
+ * Set a struck ball's speed to (its pre-collision speed − `reduction`), never
+ * below its own minimumSpeed, preserving its post-collision direction. Also
+ * shrinks a yellow ball's speed range by the same amount so the drain sticks
+ * across its future random speed changes.
+ */
+function slowBall(ball: Ball, preSpeed: number, reduction: number): void {
+  if (reduction <= 0) return;
+  const floor = ball.minimumSpeed ?? 0;
+  const target = Math.max(floor, preSpeed - reduction);
+
+  const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
+  if (cur > 1e-6 && target < cur) {
+    const r = target / cur;
+    ball.velocity.x *= r;
+    ball.velocity.y *= r;
+    ball.speed = target;
+  }
+
+  if (ball.speedRange) {
+    ball.speedRange = [
+      Math.max(floor, ball.speedRange[0] - reduction),
+      Math.max(floor, ball.speedRange[1] - reduction),
+    ];
+  }
+
+  // Grey re-derives its speed from baseSpeed every frame, so to make the drain
+  // stick, permanently lower its curve by dropping baseSpeed (floored at min).
+  if (ball.ability === 'slowDown') {
+    ball.baseSpeed = Math.max(floor, ball.baseSpeed - reduction);
   }
 }
