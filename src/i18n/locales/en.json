@@ -340,11 +340,16 @@
     "restocksLeft": "Restocks left: {{count}} — buying an item adds a new offer",
     "noRestocksLeft": "No restocks left this visit",
     "requires": "Requires:",
+    "holdHint": "Hold an upgrade to see its track",
+    "detailUnlockedBy": "Unlocked by",
+    "detailUnlocks": "Unlocks",
+    "detailNoPrereqs": "Available from the start",
+    "detailNoUnlocks": "Nothing further yet",
     "certificateUnlocked": "Certificate Unlocked!",
     "buyAndContinue": "Buy {{count}} & Continue ({{cost}}h)",
     "continue": "Continue",
     "tutorialTitle": "THE UPGRADE SHOP",
-    "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map."
+    "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade to see what unlocks it and what it leads to."
   },
   "welcome": {
     "tagline": "Slice. Trap. Survive.",

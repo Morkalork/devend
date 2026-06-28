@@ -121,6 +121,8 @@ upgrades:
     description: First fence in each map generates instantly.
     cost: 16
     unlockLevel: 5
+    prerequisites:
+      - fast_compile_senior
     icon: flame
     modifiers:
       instantFencesPerMap: 1
@@ -171,7 +173,7 @@ upgrades:
     cost: 28
     unlockLevel: 30
     prerequisites:
-      - fast_compile_senior
+      - multithreading_principal
     icon: layers
     modifiers:
       additionalConcurrentFences: 1
@@ -186,7 +188,9 @@ upgrades:
     tier: Senior
     description: Each fence has a small chance to remove an additional 5% area.
     cost: 16
-    unlockLevel: 10
+    unlockLevel: 5
+    prerequisites:
+      - memory_footprint_senior
     icon: trash
     modifiers:
       bonusRemovalChance: 0.10
@@ -198,6 +202,8 @@ upgrades:
     description: Each fence has a small chance to remove an additional 10% area.
     cost: 16
     unlockLevel: 20
+    prerequisites:
+      - garbage_collector_senior
     icon: recycle
     modifiers:
       bonusRemovalChance: 0.10
@@ -214,6 +220,8 @@ upgrades:
     description: Gain 1 extra life.
     cost: 8
     unlockLevel: 5
+    prerequisites:
+      - system_architect
     icon: heart
     modifiers:
       extraLives: 1
@@ -288,6 +296,8 @@ upgrades:
     description: 10% interest on unused overtime between maps.
     cost: 18
     unlockLevel: 6
+    prerequisites:
+      - performance_bonus_senior
     icon: piggy-bank
     modifiers:
       scoreInterestRate: 0.10
@@ -325,6 +335,8 @@ upgrades:
     description: Each locked ball reduces all ball speeds by 1%, up to 50%.
     cost: 12
     unlockLevel: 3
+    prerequisites:
+      - runtime_optimisation_senior
     icon: sliders
     modifiers:
       microManagerPerLock: 0.01
@@ -364,6 +376,8 @@ upgrades:
     description: Once per store visit, buying an item adds a new offer to the shelf.
     cost: 12
     unlockLevel: 3
+    prerequisites:
+      - fault_tolerance_senior
     icon: package-plus
     modifiers:
       shopRestockCount: 1
@@ -411,6 +425,8 @@ upgrades:
     description: Gain +1 Certificate Hour.
     cost: 55
     unlockLevel: 10
+    prerequisites:
+      - technical_debt_principal
     icon: graduation-cap
     modifiers:
       extraCertificateHours: 1
@@ -426,6 +442,8 @@ upgrades:
     description: Earn 20% more overtime per map — but balls move 8% faster. Short-term gain, long-term pain.
     cost: 14
     unlockLevel: 4
+    prerequisites:
+      - venture_capital_principal
     icon: credit-card
     modifiers:
       scoreMultiplier: 1.20
@@ -578,6 +596,8 @@ upgrades:
     description: Tap a ball to freeze it in place for 2 seconds.
     cost: 14
     unlockLevel: 4
+    prerequisites:
+      - scrum_master_2
     icon: snowflake
     modifiers:
       ballFreezeDuration: 2
@@ -658,6 +678,8 @@ upgrades:
     description: Every 10 seconds, automatically freeze a random ball in place for 3 seconds.
     cost: 30
     unlockLevel: 20
+    prerequisites:
+      - feature_freeze_principal
     icon: calendar-clock
     modifiers:
       autoFreezeDuration: 3
@@ -690,7 +712,7 @@ upgrades:
   # Only offered while ascended — fences wear out past level 30.
   # ===============================
 
-  - id: defensive_programming_junior
+  - id: defensive_programming_ascension_junior
     name: Defensive Programming
     tier: Junior
     description: Fences survive 1 extra ball hit before crumbling (Ascension).
@@ -700,7 +722,7 @@ upgrades:
     modifiers:
       fenceDurabilityBonus: 1
 
-  - id: defensive_programming_senior
+  - id: defensive_programming_ascension_senior
     name: Defensive Programming
     tier: Senior
     description: Fences survive 2 extra ball hits before crumbling (Ascension).
@@ -708,11 +730,11 @@ upgrades:
     unlockLevel: 30
     ascensionOnly: true
     prerequisites:
-      - defensive_programming_junior
+      - defensive_programming_ascension_junior
     modifiers:
       fenceDurabilityBonus: 1
 
-  - id: defensive_programming_principal
+  - id: defensive_programming_ascension_principal
     name: Defensive Programming
     tier: Principal
     description: Fences survive 3 extra ball hits before crumbling (Ascension).
@@ -720,6 +742,6 @@ upgrades:
     unlockLevel: 30
     ascensionOnly: true
     prerequisites:
-      - defensive_programming_senior
+      - defensive_programming_ascension_senior
     modifiers:
       fenceDurabilityBonus: 1

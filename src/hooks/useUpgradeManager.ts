@@ -18,6 +18,33 @@ interface UpgradeManagerState {
   error: string | null;
 }
 
+/**
+ * Throw if the prerequisite graph contains a cycle (3-colour DFS). A cycle
+ * would leave every upgrade on it permanently locked in the shop, so this is a
+ * hard error, consistent with the unknown-prerequisite check.
+ */
+function detectPrerequisiteCycle(upgrades: UpgradeConfig[]): void {
+  const prereqsById = new Map(upgrades.map(u => [u.id, u.prerequisites ?? []]));
+  const WHITE = 0, GREY = 1, BLACK = 2;
+  const colour = new Map<string, number>();
+
+  const visit = (id: string, stack: string[]): void => {
+    colour.set(id, GREY);
+    for (const prereqId of prereqsById.get(id) ?? []) {
+      const c = colour.get(prereqId) ?? WHITE;
+      if (c === GREY) {
+        throw new Error(`Cyclic upgrade prerequisites: ${[...stack, id, prereqId].join(' -> ')}`);
+      }
+      if (c === WHITE) visit(prereqId, [...stack, id]);
+    }
+    colour.set(id, BLACK);
+  };
+
+  for (const u of upgrades) {
+    if ((colour.get(u.id) ?? WHITE) === WHITE) visit(u.id, []);
+  }
+}
+
 export function useUpgradeManager() {
   const [state, setState] = useState<UpgradeManagerState>({
     upgrades: [],
@@ -44,40 +71,56 @@ export function useUpgradeManager() {
 
       const lookup = new Map<string, UpgradeConfig>();
 
-      // Validate each upgrade
+      // Validate each upgrade and build the id lookup.
       for (const upgrade of data.upgrades) {
         if (!upgrade.id || !upgrade.name || !upgrade.description) {
           throw new Error(`Upgrade "${upgrade.id || 'unknown'}" is missing required fields (id, name, description)`);
         }
-        
+
         if (!upgrade.tier || !VALID_TIERS.includes(upgrade.tier)) {
           throw new Error(`Upgrade "${upgrade.id}" has invalid tier. Must be one of: ${VALID_TIERS.join(', ')}`);
         }
-        
+
         if (typeof upgrade.cost !== 'number') {
           throw new Error(`Upgrade "${upgrade.id}" is missing cost`);
         }
-        
+
         if (!upgrade.modifiers || typeof upgrade.modifiers !== 'object') {
           throw new Error(`Upgrade "${upgrade.id}" is missing modifiers object`);
         }
 
-        // Validate prerequisites reference existing ids
-        if (upgrade.prerequisites) {
-          for (const prereqId of upgrade.prerequisites) {
-            // We'll validate after all are loaded
-          }
+        // Ids must be unique. A duplicate would silently overwrite the earlier
+        // entry in the lookup — this previously masked a normal/ascension clash
+        // on the defensive_programming_* ids.
+        if (lookup.has(upgrade.id)) {
+          throw new Error(`Duplicate upgrade id "${upgrade.id}"`);
         }
 
         lookup.set(upgrade.id, upgrade);
       }
 
-      // Validate all prerequisite references
+      // Validate all prerequisite references exist.
       for (const upgrade of data.upgrades) {
-        if (upgrade.prerequisites) {
-          for (const prereqId of upgrade.prerequisites) {
-            if (!lookup.has(prereqId)) {
-              throw new Error(`Upgrade "${upgrade.id}" references unknown prerequisite "${prereqId}"`);
+        for (const prereqId of upgrade.prerequisites ?? []) {
+          if (!lookup.has(prereqId)) {
+            throw new Error(`Upgrade "${upgrade.id}" references unknown prerequisite "${prereqId}"`);
+          }
+        }
+      }
+
+      // The prerequisite graph must be acyclic.
+      detectPrerequisiteCycle(data.upgrades);
+
+      // Dev-only sanity: a normal-run upgrade gated behind an ascension-only one
+      // could never be bought outside ascension. Warn rather than throw.
+      if (import.meta.env.DEV) {
+        for (const upgrade of data.upgrades) {
+          if (upgrade.ascensionOnly) continue;
+          for (const prereqId of upgrade.prerequisites ?? []) {
+            if (lookup.get(prereqId)?.ascensionOnly) {
+              console.warn(
+                `[upgrades] "${upgrade.id}" requires ascension-only prerequisite "${prereqId}" — unreachable in a normal run.`,
+              );
             }
           }
         }
