@@ -28,6 +28,8 @@ export interface GameLoopCallbacks {
   render: () => void;
   /** Called when Ascension fences ran out of durability this frame. */
   processWallBreaks?: () => void;
+  /** Called when a black ball destroyed a mirror/mover this frame. */
+  processDestroys?: () => void;
 }
 
 /**
@@ -170,6 +172,12 @@ export function createGameLoop(
     // fixed-step loop — breaking rebuilds regions, too heavy per step)
     if (game.pendingWallBreaks.length > 0) {
       callbacks.processWallBreaks?.();
+    }
+
+    // Remove mirrors/movers a black ball finished off this frame (rebuilds
+    // regions when a mirror reopens space — too heavy for the fixed-step loop).
+    if (game.pendingDestroys.length > 0) {
+      callbacks.processDestroys?.();
     }
 
     // Interpolate render positions between last two physics states.

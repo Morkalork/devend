@@ -134,20 +134,29 @@ Defines all levels. Each level is an entry in the `levels` array.
 | `variety` | number | | `0–100` — controlled randomness for organic variation (default: `0`) |
 | `randomShapes` | number | | `0–100` — percentage chance for random mini-obstacles (default: `20`) |
 | `threadLockRequired` | number | | Minimum number of balls that must be thread-locked to win |
-| `balls` | array | ✓ | List of balls (see below) |
+| `maxBalls` | number | | Maximum balls the map spawns (default `1`). The **game** chooses which ball *types* fill these slots — see Ball types below. The map no longer specifies colours, speeds, or positions. |
 | `entities` | array | | Optional obstacles/walls (see below) |
 
-### Ball fields
+### Ball types
 
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `id` | string | ✓ | Unique within the level |
-| `initialSpeed` | number | ✓ | Starting speed in world units/s |
-| `topSpeed` | number | ✓ | Maximum speed after ramping |
-| `color` | string | ✓ | 6-char hex colour **without** `#` (e.g. `ff6b6b`) |
-| `radius` | number | | Override default ball radius in world units |
-| `startX` | number | | Override starting X position (world units, 0–900) |
-| `startY` | number | | Override starting Y position (world units, 0–900) |
+Balls are no longer defined per-map. Each level spawns up to `maxBalls` balls, whose
+**types** are chosen deterministically (stable per map id) from the types **eligible**
+at that level — a type is eligible once the level number reaches its unlock level. A map
+never uses more distinct types than are eligible. All stats (colours, speeds, unlock
+levels, lock multipliers, abilities) live in [`balls.yml`](balls.yml) and are tweakable
+without a rebuild — the table below summarises the abilities only. Speeds are flat (no
+per-level scaling, no per-cut ramp) and still scale with the `ballSpeedMultiplier` upgrade.
+Each type has a `minimumSpeed` floor that speed-altering effects never cross.
+
+| Type | Ability |
+|---|---|
+| Red | none (standard) |
+| Blue | none (standard) |
+| Yellow | Variable speed — picks a new random speed in its `speedRange` on each surface contact |
+| Purple | Slows every ball it clashes with by its `speedReduction`, down to that ball's `minimumSpeed` (also shrinks a yellow's range) |
+| Green | Money ball — locking it triples all subsequent locks this round |
+| Grey | Winds down by 10 every 5 seconds, down to its `minimumSpeed` |
+| Black | Breaks mirrors and movers after 3 hits, losing one lock-× per kill (floor 1); destroyed mirrors re-open as capturable space |
 
 ### Entity fields
 

@@ -6,7 +6,7 @@
  */
 
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
-import { Region, Ball, GrowingWall, LockFlashState, DissolveState } from "@/types/game";
+import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
@@ -92,6 +92,10 @@ export interface CanvasGameState {
   /** Number of balls locked this level (for lock-bonus multiplier). */
   lockedBallsCount: number;
   lockBonus: number;
+  /** Green "money ball" multiplier applied to subsequent locks this map (default 1). */
+  moneyMultiplier: number;
+  /** ballSpeedMultiplier captured at map init — scales ability speed constants. */
+  ballSpeedScale: number;
 
   // ── Animations ─────────────────────────────────────────────────────────
   assimilations: Map<string, LockFlashState>;
@@ -107,4 +111,12 @@ export interface CanvasGameState {
   fenceDurability: number | null;
   /** Fences whose durability hit 0 this frame, broken after the physics step. */
   pendingWallBreaks: Wall[];
+
+  // ── Destructible mirrors/movers (Phase 2: black ball) ──────────────────
+  /** All mirrors/movers that can be broken by the black ball. */
+  destructibles: DestructibleState[];
+  /** Destructibles that reached 0 HP this frame, removed after the physics step. */
+  pendingDestroys: DestructibleState[];
+  /** Active collapse animations (rendered then culled). */
+  objectDebris: ObjectDebrisState[];
 }

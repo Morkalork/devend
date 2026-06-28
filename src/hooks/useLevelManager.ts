@@ -64,7 +64,10 @@ export function useLevelManager() {
       // after filtering is fatal.
       const validLevels = data.levels.filter((level) => {
         try {
-          if (!level.id || typeof level.sizeThreshold !== 'number' || !Array.isArray(level.balls)) {
+          // Issue #37: levels declare `maxBalls` (the game picks ball types);
+          // legacy `balls` arrays are still accepted for backward compatibility.
+          const hasBallSpec = typeof level.maxBalls === 'number' || Array.isArray(level.balls);
+          if (!level.id || typeof level.sizeThreshold !== 'number' || !hasBallSpec) {
             throw new Error(`Invalid level configuration for: ${level.id || 'unknown'}`);
           }
 

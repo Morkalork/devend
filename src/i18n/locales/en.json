@@ -280,6 +280,13 @@
     "controlSwipeToCut": "Swipe to cut",
     "controlSecondFinger": "Second finger while fence is growing cancels it",
     "controlClickAndDrag": "Click and drag",
+    "ballTypes": {
+      "title": "Ball Types",
+      "intro": "A ball's colour tells you what it does. Which balls appear is decided by the level you've reached — new colours unlock as you climb.",
+      "speed": "Speed {{speed}}",
+      "unlocks": "From level {{level}}",
+      "lock": "Lock ×{{mult}}"
+    },
     "steps": {
       "swipeToCut": {
         "title": "Swipe to Cut",
@@ -295,7 +302,7 @@
       },
       "winCondition": {
         "title": "Win Condition",
-        "description": "Reduce the arena to under 25% of its original size to win. Speed increases with each cut!"
+        "description": "Reduce the arena below the level's target size to win. Trap a ball in a small enough region and it locks away for a bonus!"
       },
       "lives": {
         "title": "Lives",

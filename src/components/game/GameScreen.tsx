@@ -62,6 +62,8 @@ interface GameScreenProps {
   activeMutators?: MutatorConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
+  /** Admin/Playground: draw a live speed label above each ball. */
+  showBallSpeeds?: boolean;
 }
 
 export function GameScreen({
@@ -91,6 +93,7 @@ export function GameScreen({
   ascensionDepth = 0,
   activeMutators = [],
   fenceDurability = null,
+  showBallSpeeds = false,
 }: GameScreenProps) {
   const { t } = useTranslation();
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
@@ -217,6 +220,7 @@ export function GameScreen({
             cumulativeLockedBalls={cumulativeLockedBalls}
             fenceDurability={fenceDurability}
             parallaxTickRef={memParallaxTickRef}
+            showBallSpeeds={showBallSpeeds}
           />
         </div>
 

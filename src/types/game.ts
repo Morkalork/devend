@@ -49,6 +49,15 @@ export interface Ball {
   // ── Feature Freeze upgrade (tap-to-freeze) ──────────────────────────────
   frozenUntil?: number;      // performance.now() timestamp until which the ball is held still (tap-frozen)
   freezeReadyAt?: number;    // performance.now() timestamp before which the ball cannot be re-frozen (cooldown)
+  // ── Ball type / abilities (issue #37) ───────────────────────────────────
+  typeId: string;            // ball-type id from ballTypes.ts (red, blue, yellow, …)
+  ability: import('@/lib/ballTypes').BallAbility; // gameplay ability this ball carries
+  lockMultiplier: number;    // lock-bonus multiplier when this ball is locked away
+  spawnTime: number;         // performance.now() at map start — used by the grey "slow down" ability
+  minimumSpeed: number;      // scaled speed floor; slow-down/slow-others/range never go below this
+  speedReduction?: number;   // purple (slowOthers): scaled speed each struck ball loses per hit
+  speedRange?: [number, number]; // yellow: current (scaled) [lo, hi] random-speed range; shrinks when slowed
+  lastSpeedStepAt?: number;  // yellow: debounce so one contact changes speed once
 }
 
 // Diagonal growing wall - extends from origin in +/- direction
@@ -137,6 +146,37 @@ export interface DissolveState {
   tiles: DissolveTile[];
   startTime: number;
   onComplete: () => void;
+}
+
+// ── Destructible objects (issue #37 Phase 2: black ball) ──────────────────
+
+/** A mirror or mover the black ball can break after repeated hits. */
+export interface DestructibleState {
+  id: string;                  // stable id (the level entity id)
+  kind: 'mirror' | 'mover';
+  hits: number;                // accumulated hits, 0..maxHits
+  maxHits: number;             // hits needed to destroy (3)
+  lastHitAt: number;           // performance.now() of last counted hit (debounce)
+  destroyed: boolean;          // queued/processed for removal
+  destroyedBy?: string;        // id of the ball that landed the killing hit
+  mirrorPolygon?: Polygon;     // mirror: reference into obstacle/mirror polygon arrays
+  moverId?: string;            // mover: id of the MoverState
+}
+
+export interface ObjectDebrisParticle {
+  x: number; y: number;        // world-space position at birth
+  vx: number; vy: number;      // world units / sec
+  rotation: number;
+  rotSpeed: number;            // rad / sec
+  size: number;                // world units
+}
+
+/** A short collapse animation spawned when a destructible is destroyed. */
+export interface ObjectDebrisState {
+  startTime: number;
+  durationMs: number;
+  color: string;               // hex with #
+  particles: ObjectDebrisParticle[];
 }
 
 export interface LevelScoreData {

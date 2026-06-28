@@ -1,0 +1,94 @@
+# Ball types (issue #37)
+#
+# The game picks which of these spawn on each map — colour communicates ability.
+# A type becomes eligible once the level number reaches its `unlockLevel`.
+# Speeds are flat world-units/second (no per-level scaling, no per-cut ramp); the
+# `ballSpeedMultiplier` upgrade still scales them at spawn.
+#
+# Fields:
+#   id             unique key (also used for the ball's element id)
+#   name           display name (tutorial)
+#   color          hex colour WITH a leading '#' (quote it so YAML keeps the '#')
+#   baseSpeed      flat base speed in world units/second
+#   minimumSpeed   speed floor; slow-down/slow-others/range effects never go below this
+#   unlockLevel    minimum level number at which this type may appear
+#   lockMultiplier lock-bonus multiplier when this ball is locked away
+#   ability        one of: none | variableSpeed | slowOthers | moneyBall | slowDown | breakObjects
+#   speedReduction (slowOthers only) speed each struck ball loses per hit (down to its minimumSpeed)
+#   description    one-line ability summary shown in the tutorial
+#   speedRange     (variableSpeed only) [lo, hi] — a new random speed is picked on each
+#                  surface contact; the range itself shrinks when the ball is slowed
+#   phase2         true = not yet wired up; excluded from selection and the tutorial
+
+balls:
+  - id: red
+    name: Red
+    color: "#ff5b5b"
+    baseSpeed: 250
+    minimumSpeed: 150
+    unlockLevel: 1
+    lockMultiplier: 1
+    ability: none
+    description: A standard ball. No special behaviour — just bounces.
+
+  - id: blue
+    name: Blue
+    color: "#00b4ff"
+    baseSpeed: 250
+    minimumSpeed: 150
+    unlockLevel: 1
+    lockMultiplier: 1
+    ability: none
+    description: A standard ball, a touch faster than the red one.
+
+  - id: yellow
+    name: Yellow
+    color: "#ffd93d"
+    minimumSpeed: 150
+    baseSpeed: 280
+    unlockLevel: 5
+    lockMultiplier: 2
+    ability: variableSpeed
+    description: "Variable speed: every surface it touches shifts it between 200 and 400."
+    speedRange: [200, 400]
+
+  - id: purple
+    name: Purple
+    color: "#b06bff"
+    baseSpeed: 340
+    minimumSpeed: 150
+    unlockLevel: 10
+    lockMultiplier: 2
+    ability: slowOthers
+    speedReduction: 20
+    description: "Saps momentum: every ball it clashes with loses speed, down to the balls' minimum speed."
+
+  - id: green
+    name: Green
+    color: "#00c853"
+    baseSpeed: 300
+    minimumSpeed: 180
+    unlockLevel: 15
+    lockMultiplier: 2
+    ability: moneyBall
+    description: "Money ball: locking it away triples the gains of every later lock this round."
+
+  - id: grey
+    name: Grey
+    color: "#9aa3ad"
+    baseSpeed: 200
+    minimumSpeed: 150
+    unlockLevel: 15
+    lockMultiplier: 1
+    ability: slowDown
+    description: "Winds down: slows down 10 speedUnits ever 5 seconds. Down to minimum speed."
+
+  - id: black
+    name: Black
+    color: "#2b2f3a"
+    baseSpeed: 200
+    minimumSpeed: 150
+    unlockLevel: 20
+    lockMultiplier: 4
+    ability: breakObjects
+    description: "Wrecking ball: smashes mirrors and movers after three hits, losing a multiplier each time."

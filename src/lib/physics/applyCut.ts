@@ -28,7 +28,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore } from "@/lib/scoring";
-import { LOCK_TOTAL_DURATION, BALL_SPEED_INCREASE } from "@/lib/gameConstants";
+import { LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -171,16 +171,8 @@ export function applyCutFn(
   checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks);
   callbacks.render();
 
-  // Speed up balls + MicroManager cap
-  for (const ball of balls) {
-    if (ball.speed === 0) continue;
-    const newSpeed = Math.min(ball.speed * BALL_SPEED_INCREASE, ball.topSpeed);
-    const ratio = newSpeed / ball.speed;
-    ball.speed = newSpeed;
-    ball.baseSpeed = Math.min(ball.baseSpeed * BALL_SPEED_INCREASE, ball.topSpeed);
-    ball.velocity.x *= ratio;
-    ball.velocity.y *= ratio;
-  }
+  // Issue #37: ball speeds are flat — no per-cut acceleration ramp. Only the
+  // MicroManager upgrade still caps speeds relative to each ball's base speed.
   const totalLockedMM = cumulativeLockedBalls + game.lockedBallsCount;
   if (activeModifiers.microManagerPerLock > 0 && totalLockedMM > 0) {
     const speedFactor = Math.max(0.30, Math.pow(1 - activeModifiers.microManagerPerLock, totalLockedMM));

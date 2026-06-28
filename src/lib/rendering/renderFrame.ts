@@ -29,6 +29,7 @@ import {
   COLORS,
   FREEZE_COOLDOWN_MULTIPLIER,
   SWIPE_TRAIL_DURATION,
+  BALL_DANGER_SPEED,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 
@@ -155,6 +156,79 @@ function worldToScreen(worldX: number, worldY: number, boardRect: BoardRect) {
     x: boardRect.left + worldX * boardRect.scale,
     y: boardRect.top  + worldY * boardRect.scale,
   };
+}
+
+// ── Destructible damage cracks (Phase 2) ──────────────────────────────────
+// Stateless, deterministic crack lines derived from a polygon + hit count, so
+// they're stable per object (and track a moving mover, which is rebuilt each
+// frame). Computed at runtime since object size/shape varies.
+
+function _hashStr(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return h >>> 0;
+}
+function _mulberry(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function drawDamageCracks(
+  ctx: CanvasRenderingContext2D,
+  w2s: (x: number, y: number) => { x: number; y: number },
+  poly: { vertices: { x: number; y: number }[] },
+  hits: number,
+  seedKey: string,
+  scale: number,
+): void {
+  const verts = poly.vertices;
+  if (hits <= 0 || verts.length < 3) return;
+
+  let cx = 0, cy = 0;
+  for (const v of verts) { cx += v.x; cy += v.y; }
+  cx /= verts.length; cy /= verts.length;
+
+  ctx.save();
+  // Badly-harmed objects also darken.
+  if (hits >= 2) {
+    ctx.beginPath();
+    const p0 = w2s(verts[0].x, verts[0].y);
+    ctx.moveTo(p0.x, p0.y);
+    for (let i = 1; i < verts.length; i++) { const p = w2s(verts[i].x, verts[i].y); ctx.lineTo(p.x, p.y); }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fill();
+  }
+
+  const rng = _mulberry(_hashStr(seedKey));
+  const count = hits * 3;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(8,10,14,0.9)';
+  ctx.lineWidth = Math.max(1, 1.6 * scale);
+  for (let i = 0; i < count; i++) {
+    const t = rng() * verts.length;
+    const vi = Math.floor(t) % verts.length;
+    const vn = (vi + 1) % verts.length;
+    const f = t - Math.floor(t);
+    const ex = verts[vi].x + (verts[vn].x - verts[vi].x) * f;
+    const ey = verts[vi].y + (verts[vn].y - verts[vi].y) * f;
+    const sx = cx + (ex - cx) * 0.12;
+    const sy = cy + (ey - cy) * 0.12;
+    const mx = cx + (ex - cx) * 0.55 + (rng() - 0.5) * 22;
+    const my = cy + (ey - cy) * 0.55 + (rng() - 0.5) * 22;
+    const s = w2s(sx, sy), m = w2s(mx, my), e = w2s(ex, ey);
+    ctx.beginPath();
+    ctx.moveTo(s.x, s.y);
+    ctx.lineTo(m.x, m.y);
+    ctx.lineTo(e.x, e.y);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 // ── Main render entry point ───────────────────────────────────────────────
@@ -369,6 +443,13 @@ export function renderFrame(
       ctx.closePath();
       ctx.fill();
       ctx.globalAlpha = 1;
+
+      // Black-ball damage cracks (computed from the mover's live polygon so they
+      // travel with it).
+      const dmover = game.destructibles.find(d => d.kind === 'mover' && !d.destroyed && d.moverId === mover.id);
+      if (dmover && dmover.hits > 0) {
+        drawDamageCracks(ctx, w2s, mover.polygon, dmover.hits, `mover-${mover.id}`, scale);
+      }
     }
 
     ctx.restore();
@@ -593,9 +674,11 @@ export function renderFrame(
 
   // ── Speed danger tint ─────────────────────────────────────────────────────
   {
-    const activeBalls = balls.filter(b => b.speed > 0 && b.topSpeed > 0);
+    const activeBalls = balls.filter(b => b.speed > 0);
     if (activeBalls.length > 0) {
-      const maxDanger = activeBalls.reduce((m, b) => Math.max(m, b.speed / b.topSpeed), 0);
+      // Flat speeds (issue #37): danger is measured against an absolute reference
+      // speed rather than each ball's (now equal) top speed.
+      const maxDanger = activeBalls.reduce((m, b) => Math.max(m, b.speed / BALL_DANGER_SPEED), 0);
       if (maxDanger > 0.55) {
         const { left: rl, top: rt, width: rw, height: rh } = boardRect;
         const dangerT = Math.min(1, (maxDanger - 0.55) / 0.45);
@@ -673,6 +756,47 @@ export function renderFrame(
       }
     }
     if (_mirrorGlowOC) ctx.drawImage(_mirrorGlowOC, 0, 0);
+  }
+
+  // ── Mirror damage cracks (Phase 2: black ball) ────────────────────────────
+  for (const d of game.destructibles) {
+    if (d.kind === 'mirror' && !d.destroyed && d.hits > 0 && d.mirrorPolygon) {
+      drawDamageCracks(ctx, w2s, d.mirrorPolygon, d.hits, `mirror-${d.id}`, scale);
+    }
+  }
+
+  // ── Object destruction debris (Phase 2) ───────────────────────────────────
+  if (game.objectDebris.length > 0) {
+    const nowD = performance.now();
+    let anyExpired = false;
+    for (const debris of game.objectDebris) {
+      const elapsed = nowD - debris.startTime;
+      if (elapsed >= debris.durationMs) { anyExpired = true; continue; }
+      const t = elapsed / 1000;                 // seconds for physics
+      const prog = elapsed / debris.durationMs; // 0..1 for fade
+      const alpha = 1 - prog;
+      const cr = parseInt(debris.color.slice(1, 3), 16);
+      const cg = parseInt(debris.color.slice(3, 5), 16);
+      const cb = parseInt(debris.color.slice(5, 7), 16);
+      ctx.save();
+      for (const p of debris.particles) {
+        const wx = p.x + p.vx * t;
+        const wy = p.y + p.vy * t + 220 * t * t; // gravity
+        const s = w2s(wx, wy);
+        const size = p.size * scale * (1 - prog * 0.5);
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(p.rotation + p.rotSpeed * t);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha.toFixed(3)})`;
+        ctx.fillRect(-size / 2, -size / 2, size, size);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+    if (anyExpired) {
+      game.objectDebris = game.objectDebris.filter(dd => nowD - dd.startTime < dd.durationMs);
+    }
   }
 
   // ── Cut preview line during drag ──────────────────────────────────────────
@@ -1128,6 +1252,22 @@ export function renderFrame(
     }
 
     ctx.restore(); // globalAlpha
+
+    // Admin/Playground: live speed label above the ball.
+    if (rctx.showBallSpeeds && ball.state === 'active') {
+      const label = String(Math.round(ball.speed));
+      const ly = screenPos.y - screenRadius - 6 * scale;
+      ctx.save();
+      ctx.font = `${Math.max(10, Math.round(11 * scale))}px 'JetBrains Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.strokeText(label, screenPos.x, ly);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(label, screenPos.x, ly);
+      ctx.restore();
+    }
   }
 
 
