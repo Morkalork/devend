@@ -166,8 +166,10 @@ export interface DestructibleState {
   moverId?: string;            // mover: id of the MoverState
   // ── Breakable obstacles (issue #38) ──────────────────────────────────────
   obstaclePolygon?: Polygon;   // breakable: reference into obstaclePolygons
-  objective?: boolean;         // breakable: must be broken to win the level
+  objective?: boolean;         // breakable: smashing it awards more bonus
   dents?: Vector2[];           // world-space impact points — rendered as inward dents
+  fenceStyle?: boolean;        // breakable: render as a barrier/fence line, not a block
+  sealedCells?: number[];      // breakable gate: grid cells of the sealed area to reopen on break
 }
 
 /**
@@ -189,6 +191,7 @@ export interface FallingObject {
   startTime: number;
   durationMs: number;
   fallSpeed: number;           // initial downward speed (world units/sec)
+  shattered?: boolean;         // guard so the landing debris is spawned only once
 }
 
 export interface ObjectDebrisParticle {

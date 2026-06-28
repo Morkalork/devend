@@ -48,8 +48,15 @@ export interface WallEntity extends BaseEntity {
   breakable?: boolean;
   /** Hits required to break (default 3). Black ball counts double. */
   hitsToBreak?: number;
-  /** When true, this obstacle MUST be broken to complete the level. */
+  /** When true, smashing it awards more bonus (an intended target). */
   objective?: boolean;
+  /** Render this breakable as a barrier/fence line rather than a solid block. */
+  fence?: boolean;
+  /**
+   * A sealed-off area this breakable gates. Those cells start removed (locked /
+   * uncuttable) and are re-opened as capturable space when the breakable breaks.
+   */
+  reveals?: { x: number; y: number; width: number; height: number };
 }
 
 // Combined entity type with shape

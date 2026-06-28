@@ -29,6 +29,7 @@ import {
   createSpaceGrid,
   findGridRegions,
   isPositionActive,
+  CellState,
 } from "@/lib/spaceGrid";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
@@ -110,6 +111,9 @@ export function createInitialGameData(
   const destructibles:    DestructibleState[] = [];
   // Non-mirror obstacles participating in the break/topple support graph (#38).
   const obstacleEntities: Array<{ id: string; polygon: Polygon; breakable: boolean }> = [];
+  // Sealed areas gated by a breakable (issue #38): carved out at init, re-opened
+  // when their gate breaks. Paired with their descriptor to record cell indices.
+  const sealedAreas: Array<{ destructible: DestructibleState; poly: Polygon }> = [];
   let objectivesTotal = 0;
 
   // Reset run seed for new game/level (consistent variety per run)
@@ -210,7 +214,7 @@ export function createInitialGameData(
         if (!isMirror) {
           obstacleEntities.push({ id: entity.id, polygon: obstaclePolygon, breakable: !!entity.breakable });
           if (entity.breakable) {
-            destructibles.push({
+            const dest: DestructibleState = {
               id: entity.id,
               kind: 'breakable',
               hits: 0,
@@ -219,8 +223,14 @@ export function createInitialGameData(
               destroyed: false,
               obstaclePolygon,
               objective: !!entity.objective,
-            });
+              fenceStyle: !!entity.fence,
+            };
+            destructibles.push(dest);
             if (entity.objective) objectivesTotal++;
+            if (entity.reveals) {
+              const r = entity.reveals;
+              sealedAreas.push({ destructible: dest, poly: createRectPolygon(r.x, r.y, r.x + r.width, r.y + r.height) });
+            }
           }
         }
       }
@@ -244,6 +254,11 @@ export function createInitialGameData(
       const angle = (i / numPerimeterChecks) * Math.PI * 2;
       const p = { x: pos.x + Math.cos(angle) * safeRadius, y: pos.y + Math.sin(angle) * safeRadius };
       if (!pointInPolygon(p, boardPolygon)) return false;
+    }
+
+    // Never spawn inside a sealed (locked) area.
+    for (const sealed of sealedAreas) {
+      if (pointInPolygon(pos, sealed.poly)) return false;
     }
 
     for (const obstacle of obstaclePolygons) {
@@ -379,10 +394,14 @@ export function createInitialGameData(
   const initBounds   = polygonBounds(boardPolygon);
   const initSamplePoints: Vector2[] = [];
 
+  const sealedPolys = sealedAreas.map(s => s.poly);
+  const insideSealed = (p: Vector2) => sealedPolys.some(poly => pointInPolygon(p, poly));
+
   for (let x = initBounds.minX + initGridSize / 2; x < initBounds.maxX; x += initGridSize) {
     for (let y = initBounds.minY + initGridSize / 2; y < initBounds.maxY; y += initGridSize) {
       const point = { x, y };
       if (!pointInPolygon(point, boardPolygon)) continue;
+      if (insideSealed(point)) continue; // sealed areas aren't playable until opened
       let insideObstacle = false;
       for (const obstacle of obstaclePolygons) {
         if (pointInPolygon(point, obstacle)) { insideObstacle = true; break; }
@@ -391,7 +410,29 @@ export function createInitialGameData(
     }
   }
 
-  const spaceGrid   = createSpaceGrid(boardPolygon, obstaclePolygons, initGridSize);
+  // Sealed areas are carved out of the grid like obstacles (removed, and NOT
+  // counted in initialActiveCount), so they read as locked until their gate
+  // breaks and restores them.
+  const spaceGrid   = createSpaceGrid(boardPolygon, sealedPolys.length ? [...obstaclePolygons, ...sealedPolys] : obstaclePolygons, initGridSize);
+  // Record each sealed area's grid cells so its gate can re-open exactly those.
+  for (const sealed of sealedAreas) {
+    const b = polygonBounds(sealed.poly);
+    const cells: number[] = [];
+    const c0 = Math.max(0, Math.floor((b.minX - spaceGrid.originX) / spaceGrid.cellSize));
+    const c1 = Math.min(spaceGrid.width - 1, Math.ceil((b.maxX - spaceGrid.originX) / spaceGrid.cellSize));
+    const r0 = Math.max(0, Math.floor((b.minY - spaceGrid.originY) / spaceGrid.cellSize));
+    const r1 = Math.min(spaceGrid.height - 1, Math.ceil((b.maxY - spaceGrid.originY) / spaceGrid.cellSize));
+    for (let row = r0; row <= r1; row++) {
+      for (let col = c0; col <= c1; col++) {
+        const idx = row * spaceGrid.width + col;
+        if (spaceGrid.cells[idx] !== CellState.REMOVED) continue;
+        const wx = spaceGrid.originX + col * spaceGrid.cellSize + spaceGrid.cellSize / 2;
+        const wy = spaceGrid.originY + row * spaceGrid.cellSize + spaceGrid.cellSize / 2;
+        if (pointInPolygon({ x: wx, y: wy }, sealed.poly)) cells.push(idx);
+      }
+    }
+    sealed.destructible.sealedCells = cells;
+  }
   const gridRegions = findGridRegions(spaceGrid);
 
   // Inflate the percentage baseline so the remaining% starts at targetRemaining

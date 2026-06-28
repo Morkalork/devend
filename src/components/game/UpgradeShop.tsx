@@ -14,11 +14,11 @@
  * to deselect anything that depended on it. Deselecting does not remove
  * restocked offers or refund the restock.
  */
-import { useState, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+import { useState, useMemo, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
-import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw } from 'lucide-react';
+import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
 import { CRTBackground } from './CRTBackground';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -102,8 +102,57 @@ export function UpgradeShop({
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
   const [lockedInfoId, setLockedInfoId] = useState<string | null>(null);
   const [shakingId, setShakingId] = useState<string | null>(null);
+  // Upgrade whose detail card (track relationships) is open via press-and-hold.
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  // Press-and-hold detection: a held card opens its detail view; the timer fires
+  // detailId and the flag suppresses the click-to-select that follows on release.
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFired = useRef(false);
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const startLongPress = useCallback((id: string, e: React.PointerEvent) => {
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+    longPressFired.current = false;
+    cancelLongPress();
+    longPressTimer.current = setTimeout(() => {
+      longPressFired.current = true;
+      setDetailId(id);
+    }, 450);
+  }, [cancelLongPress]);
+
+  const moveLongPress = useCallback((e: React.PointerEvent) => {
+    const start = pointerStart.current;
+    if (start && (Math.abs(e.clientX - start.x) > 10 || Math.abs(e.clientY - start.y) > 10)) {
+      cancelLongPress();
+    }
+  }, [cancelLongPress]);
+
+  // Clear any pending hold timer if the shop unmounts mid-press.
+  useEffect(() => cancelLongPress, [cancelLongPress]);
 
   const shopSlots = 3 + extraShopItems;
+
+  // Reverse prerequisite index: id → the upgrades that list it as a prerequisite
+  // (i.e. what this upgrade unlocks). Used by the press-and-hold detail card.
+  const dependentsById = useMemo(() => {
+    const map = new Map<string, UpgradeConfig[]>();
+    for (const u of upgrades) {
+      for (const prereqId of u.prerequisites ?? []) {
+        const list = map.get(prereqId);
+        if (list) list.push(u);
+        else map.set(prereqId, [u]);
+      }
+    }
+    return map;
+  }, [upgrades]);
 
   // Pick random offers once on mount; restocks append to this list.
   const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() => {
@@ -334,6 +383,17 @@ export function UpgradeShop({
           </motion.div>
         )}
 
+        {/* Press-and-hold discovery hint */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.18 }}
+          className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70"
+        >
+          <Info className="w-3 h-3" />
+          <span>{t('upgradeShop.holdHint')}</span>
+        </motion.div>
+
         {/* Upgrade Tree — flex-wrap keeps every row centered (including a partial
             last row); the measured `--card-h` var (see useLayoutEffect) makes all
             cards the same height as the tallest, growing to fit any line count. */}
@@ -360,6 +420,14 @@ export function UpgradeShop({
             return (
               <motion.div
                 key={upgrade.id}
+                className="select-none"
+                style={{ touchAction: 'pan-y' }}
+                onPointerDown={(e) => startLongPress(upgrade.id, e)}
+                onPointerUp={cancelLongPress}
+                onPointerLeave={cancelLongPress}
+                onPointerCancel={cancelLongPress}
+                onPointerMove={moveLongPress}
+                onContextMenu={(e) => e.preventDefault()}
                 animate={shakingId === upgrade.id ? { x: [-10, 10, -8, 8, -4, 4, 0] } : { x: 0 }}
                 transition={shakingId === upgrade.id ? { duration: 0.5, type: 'tween' } : { duration: 0 }}
               >
@@ -367,7 +435,15 @@ export function UpgradeShop({
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.05 }}
-                onClick={() => handleItemClick(upgrade, selected, remainingBudget)}
+                onClick={() => {
+                  // A press-and-hold opened the detail card — swallow the click
+                  // so it doesn't also select/deselect the upgrade.
+                  if (longPressFired.current) {
+                    longPressFired.current = false;
+                    return;
+                  }
+                  handleItemClick(upgrade, selected, remainingBudget);
+                }}
                 disabled={owned || locked}
                 whileHover={{ scale: purchasable ? 1.05 : 1 }}
                 whileTap={{ scale: purchasable ? 0.95 : 1 }}
@@ -499,6 +575,98 @@ export function UpgradeShop({
           <ArrowRight className="w-5 h-5" />
         </motion.button>
       </motion.div>
+
+      {/* Press-and-hold detail card: track relationships (what unlocks this, and
+          what this unlocks). Tapping the backdrop or the X closes it. */}
+      <AnimatePresence>
+        {detailId && (() => {
+          const u = upgrades.find(x => x.id === detailId);
+          if (!u) return null;
+          const DetailIcon = getUpgradeIcon(u, upgrades);
+          const tc = TIER_COLORS[u.tier];
+          const prereqs = (u.prerequisites ?? [])
+            .map(id => upgrades.find(x => x.id === id))
+            .filter((x): x is UpgradeConfig => Boolean(x));
+          const dependents = dependentsById.get(u.id) ?? [];
+
+          const relRow = (rel: UpgradeConfig) => {
+            const RelIcon = getUpgradeIcon(rel, upgrades);
+            const relTc = TIER_COLORS[rel.tier];
+            const relHas = allOwnedIds.includes(rel.id) || selectedIds.includes(rel.id);
+            return (
+              <li key={rel.id} className="flex items-center gap-2 text-sm text-foreground">
+                {RelIcon && <RelIcon className={`w-4 h-4 shrink-0 ${relTc.text}`} strokeWidth={1.5} />}
+                <span className="flex-1 truncate">{contentText.upgradeName(t, rel)}</span>
+                <span className={`text-[10px] uppercase tracking-wider ${relTc.text}`}>{contentText.tier(t, rel.tier)}</span>
+                {relHas && <Check className="w-3.5 h-3.5 shrink-0 text-green-500" />}
+              </li>
+            );
+          };
+
+          return (
+            <motion.div
+              key="upgrade-detail"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDetailId(null)}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.92, y: 8 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 8, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
+              >
+                <button
+                  onClick={() => setDetailId(null)}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                {/* Header */}
+                <div className="flex items-center gap-3 mb-2 pr-6">
+                  {DetailIcon && <DetailIcon className={`w-8 h-8 shrink-0 ${tc.text}`} strokeWidth={1.5} />}
+                  <div className="min-w-0">
+                    <div className="text-base font-bold text-foreground truncate">{contentText.upgradeName(t, u)}</div>
+                    <div className={`text-xs ${tc.text}`}>{contentText.tier(t, u.tier)}</div>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-4">{contentText.upgradeDesc(t, u)}</p>
+
+                {/* Unlocked by (prerequisites) */}
+                <div className="mb-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
+                    {t('upgradeShop.detailUnlockedBy')}
+                  </div>
+                  {prereqs.length > 0 ? (
+                    <ul className="space-y-1.5">{prereqs.map(relRow)}</ul>
+                  ) : (
+                    <p className="text-xs italic text-muted-foreground/60">{t('upgradeShop.detailNoPrereqs')}</p>
+                  )}
+                </div>
+
+                {/* Unlocks (dependents) */}
+                <div>
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
+                    {t('upgradeShop.detailUnlocks')}
+                  </div>
+                  {dependents.length > 0 ? (
+                    <ul className="space-y-1.5">{dependents.map(relRow)}</ul>
+                  ) : (
+                    <p className="text-xs italic text-muted-foreground/60">{t('upgradeShop.detailNoUnlocks')}</p>
+                  )}
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
 
       {showTutorial && (
         <TutorialOverlay

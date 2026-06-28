@@ -25,17 +25,8 @@ function field(t: TFunction, kind: string, id: string, name: string, fallback?: 
 
 export const contentText = {
   upgradeName: (t: TFunction, u: WithId & { name?: string }) => field(t, 'upgrades', u.id, 'name', u.name),
-  upgradeDesc: (t: TFunction, u: WithId & { description?: string; ascensionOnly?: boolean }) => {
-    // A few upgrade ids are reused by a normal-run AND an ascension-only variant
-    // with different descriptions (e.g. defensive_programming_*). The ascension
-    // variant's text lives under `descriptionAscension`; if absent it falls back
-    // to the base `description`, then to the English YAML value.
-    const base = field(t, 'upgrades', u.id, 'description', u.description);
-    if (u.ascensionOnly) {
-      return t(`content.upgrades.${u.id}.descriptionAscension`, { defaultValue: base }) as string;
-    }
-    return base;
-  },
+  upgradeDesc: (t: TFunction, u: WithId & { description?: string }) =>
+    field(t, 'upgrades', u.id, 'description', u.description),
 
   /** Job-title tier (Junior, Senior, …) shared across all upgrades. */
   tier: (t: TFunction, tier?: string): string =>

@@ -326,11 +326,16 @@
     "restocksLeft": "Påfyllningar kvar: {{count}} — att köpa en vara lägger till ett nytt erbjudande",
     "noRestocksLeft": "Inga påfyllningar kvar detta besök",
     "requires": "Kräver:",
+    "holdHint": "Håll på en uppgradering för att se dess spår",
+    "detailUnlockedBy": "Låses upp av",
+    "detailUnlocks": "Låser upp",
+    "detailNoPrereqs": "Tillgänglig från start",
+    "detailNoUnlocks": "Inget mer ännu",
     "certificateUnlocked": "Certifikat upplåst!",
     "buyAndContinue": "Köp {{count}} & fortsätt ({{cost}}h)",
     "continue": "Fortsätt",
     "tutorialTitle": "BUTIKEN",
-    "tutorialBody": "Spendera övertidstimmar på uppgraderingar efter varje bana. Övertidsuppgraderingar mångdubblar framtida intäkter. Effekterna visas i den nedre listen på nästa bana."
+    "tutorialBody": "Spendera övertidstimmar på uppgraderingar efter varje bana. Övertidsuppgraderingar mångdubblar framtida intäkter. Effekterna visas i den nedre listen på nästa bana. Håll inne en uppgradering för att se vad som låser upp den och vad den leder till."
   },
   "welcome": {
     "tagline": "Skär. Fånga. Överlev.",
@@ -507,18 +512,27 @@
       },
       "defensive_programming_junior": {
         "name": "Defensiv programmering",
-        "description": "Få 1 extra liv och krymp alla bollar med 8%. Säkerheten först.",
-        "descriptionAscension": "Stängsel överlever 1 extra bollträff innan de smular sönder (Uppstigning)."
+        "description": "Få 1 extra liv och krymp alla bollar med 8%. Säkerheten först."
       },
       "defensive_programming_senior": {
         "name": "Defensiv programmering",
-        "description": "Få 2 extra liv till och krymp alla bollar med ytterligare 8%.",
-        "descriptionAscension": "Stängsel överlever 2 extra bollträffar innan de smular sönder (Uppstigning)."
+        "description": "Få 2 extra liv till och krymp alla bollar med ytterligare 8%."
       },
       "defensive_programming_principal": {
         "name": "Defensiv programmering",
-        "description": "Få 3 extra liv till och krymp alla bollar med ytterligare 8%.",
-        "descriptionAscension": "Stängsel överlever 3 extra bollträffar innan de smular sönder (Uppstigning)."
+        "description": "Få 3 extra liv till och krymp alla bollar med ytterligare 8%."
+      },
+      "defensive_programming_ascension_junior": {
+        "name": "Defensiv programmering",
+        "description": "Stängsel överlever 1 extra bollträff innan de smular sönder (Uppstigning)."
+      },
+      "defensive_programming_ascension_senior": {
+        "name": "Defensiv programmering",
+        "description": "Stängsel överlever 2 extra bollträffar innan de smular sönder (Uppstigning)."
+      },
+      "defensive_programming_ascension_principal": {
+        "name": "Defensiv programmering",
+        "description": "Stängsel överlever 3 extra bollträffar innan de smular sönder (Uppstigning)."
       },
       "scrum_master_1": {
         "name": "SCRUM Master",

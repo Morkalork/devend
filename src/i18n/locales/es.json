@@ -326,11 +326,16 @@
     "restocksLeft": "Reposiciones restantes: {{count}} — comprar un artículo añade una nueva oferta",
     "noRestocksLeft": "No quedan reposiciones en esta visita",
     "requires": "Requiere:",
+    "holdHint": "Mantén pulsada una mejora para ver su ruta",
+    "detailUnlockedBy": "Desbloqueado por",
+    "detailUnlocks": "Desbloquea",
+    "detailNoPrereqs": "Disponible desde el inicio",
+    "detailNoUnlocks": "Nada más por ahora",
     "certificateUnlocked": "¡Certificado desbloqueado!",
     "buyAndContinue": "Comprar {{count}} y continuar ({{cost}}h)",
     "continue": "Continuar",
     "tutorialTitle": "LA TIENDA DE MEJORAS",
-    "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa."
+    "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa. Mantén pulsada una mejora para ver qué la desbloquea y a qué conduce."
   },
   "welcome": {
     "tagline": "Corta. Atrapa. Sobrevive.",
@@ -531,18 +536,27 @@
       },
       "defensive_programming_junior": {
         "name": "Programación Defensiva",
-        "description": "Gana 1 vida extra y reduce todas las bolas un 8%. La seguridad primero.",
-        "descriptionAscension": "Las vallas sobreviven a 1 impacto de bola extra antes de desmoronarse (Ascensión)."
+        "description": "Gana 1 vida extra y reduce todas las bolas un 8%. La seguridad primero."
       },
       "defensive_programming_senior": {
         "name": "Programación Defensiva",
-        "description": "Gana 2 vidas extra más y reduce todas las bolas un 8% adicional.",
-        "descriptionAscension": "Las vallas sobreviven a 2 impactos de bola extra antes de desmoronarse (Ascensión)."
+        "description": "Gana 2 vidas extra más y reduce todas las bolas un 8% adicional."
       },
       "defensive_programming_principal": {
         "name": "Programación Defensiva",
-        "description": "Gana 3 vidas extra más y reduce todas las bolas un 8% adicional.",
-        "descriptionAscension": "Las vallas sobreviven a 3 impactos de bola extra antes de desmoronarse (Ascensión)."
+        "description": "Gana 3 vidas extra más y reduce todas las bolas un 8% adicional."
+      },
+      "defensive_programming_ascension_junior": {
+        "name": "Programación Defensiva",
+        "description": "Las vallas sobreviven a 1 impacto de bola extra antes de desmoronarse (Ascensión)."
+      },
+      "defensive_programming_ascension_senior": {
+        "name": "Programación Defensiva",
+        "description": "Las vallas sobreviven a 2 impactos de bola extra antes de desmoronarse (Ascensión)."
+      },
+      "defensive_programming_ascension_principal": {
+        "name": "Programación Defensiva",
+        "description": "Las vallas sobreviven a 3 impactos de bola extra antes de desmoronarse (Ascensión)."
       }
     },
     "tiers": {

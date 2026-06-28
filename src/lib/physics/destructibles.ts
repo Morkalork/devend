@@ -26,6 +26,7 @@ import {
   findGridRegions,
   getRemainingPercent,
   getRegionCellPositions,
+  gridIndexToWorld,
 } from "@/lib/spaceGrid";
 import { buildPolygonFromSamples } from "@/lib/regionSplit";
 import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnership";
@@ -214,10 +215,22 @@ function detachObstacle(game: CanvasGameState, id: string, poly: Polygon): numbe
   if (!game.spaceGrid) return 0;
   const cells = removedCellsUnder(game, poly);
   if (cells.length > 0) {
-    restoreCells(game.spaceGrid, cells);
-    game.spaceGrid.initialActiveCount += cells.length; // keep remaining% ≤ 100
+    reopenCells(game, cells);
   }
   return cells.length;
+}
+
+/**
+ * Restore cells to ACTIVE, keep the percentage baseline sane, and register them
+ * as sample points so the board grid texture is painted over the newly-opened
+ * area (otherwise it renders as a bare patch).
+ */
+function reopenCells(game: CanvasGameState, cells: number[]): void {
+  const grid = game.spaceGrid;
+  if (!grid) return;
+  restoreCells(grid, cells);
+  grid.initialActiveCount += cells.length; // keep remaining% ≤ 100
+  for (const idx of cells) game.initialSamplePoints.push(gridIndexToWorld(grid, idx));
 }
 
 /** Topple every obstacle resting on `supporterId` (recursively): detach + fall. */
@@ -306,6 +319,13 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
     // whatever rests on it.
     if (d.objective) game.objectivesBroken++;
     game.breakBonus += d.objective ? BREAK_BONUS_OBJECTIVE : BREAK_BONUS_BASE;
+
+    // A gate breakable re-opens its sealed (locked) area as capturable space.
+    if (d.sealedCells && d.sealedCells.length > 0 && game.spaceGrid) {
+      reopenCells(game, d.sealedCells);
+      opened += d.sealedCells.length;
+    }
+
     const so = game.stackObjects.find(s => s.id === d.id);
     if (so) so.toppled = true;
     opened += toppleSupportedBy(game, d.id, now);
