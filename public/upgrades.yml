@@ -439,7 +439,7 @@ upgrades:
   - id: technical_debt_senior
     name: Technical Debt
     tier: Senior
-    description: Earn 20% more overtime per map — but balls move 8% faster. Short-term gain, long-term pain.
+    description: Earn 20% more overtime per map - but balls move 8% faster. Short-term gain, long-term pain.
     cost: 14
     unlockLevel: 4
     prerequisites:
@@ -452,7 +452,7 @@ upgrades:
   - id: technical_debt_principal
     name: Technical Debt
     tier: Principal
-    description: Earn 35% more overtime per map — but balls move 15% faster.
+    description: Earn 35% more overtime per map - but balls move 15% faster.
     cost: 26
     unlockLevel: 8
     prerequisites:
@@ -464,7 +464,7 @@ upgrades:
   - id: technical_debt_architect
     name: Technical Debt
     tier: Architect
-    description: Earn 50% more overtime per map — but balls move 25% faster.
+    description: Earn 50% more overtime per map - but balls move 25% faster.
     cost: 40
     unlockLevel: 14
     prerequisites:

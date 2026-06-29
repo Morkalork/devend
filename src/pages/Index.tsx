@@ -149,7 +149,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onLevelComplete={session.handleLevelComplete}
                 onMainMenu={session.handleBackToWelcome}
                 onRestart={session.handlePlayAgain}
-                showInGameTutorial={session.showInGameTutorial && session.currentLevelIndex === 0}
+                showInGameTutorial={session.showInGameTutorial}
                 onFenceSeen={session.markFenceSeen}
                 showMoverTutorial={session.showMoverTutorial}
                 onMoverTutorialSeen={session.markMoverSeen}

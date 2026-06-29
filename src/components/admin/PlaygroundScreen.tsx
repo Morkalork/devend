@@ -508,7 +508,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               }}
             >
               {editSaveStatus === 'saved'  ? <><Check className="w-4 h-4" /> Saved!</> :
-               editSaveStatus === 'error'  ? <><AlertCircle className="w-4 h-4" /> Failed — dev server running?</> :
+               editSaveStatus === 'error'  ? <><AlertCircle className="w-4 h-4" /> Failed - dev server running?</> :
                editSaveStatus === 'saving' ? 'Saving…' :
                <><Save className="w-4 h-4" /> Save to disk</>}
             </button>
@@ -764,7 +764,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 </div>
                 {effectiveBallIds.length === 0 && (
                   <div className="text-[11px] mb-3" style={{ color: 'hsl(var(--muted-foreground) / 0.7)', fontFamily: "'JetBrains Mono', monospace" }}>
-                    No balls — add some below, or Reset to default.
+                    No balls - add some below, or Reset to default.
                   </div>
                 )}
                 <div className="flex flex-wrap gap-2 mb-3">
@@ -902,7 +902,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               <div className="overflow-y-auto flex-1 px-5 py-4 space-y-6">
                 <ModifierSection
                   title="Multiplicative"
-                  subtitle="Stack by ×  — default 1.0"
+                  subtitle="Stack by ×  - default 1.0"
                   keys={MULTIPLICATIVE_KEYS}
                   getValue={getDraftValue}
                   setValue={setDraftValue}
@@ -911,7 +911,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 />
                 <ModifierSection
                   title="Additive"
-                  subtitle="Stack by +  — default 0"
+                  subtitle="Stack by +  - default 0"
                   keys={ADDITIVE_KEYS}
                   getValue={getDraftValue}
                   setValue={setDraftValue}

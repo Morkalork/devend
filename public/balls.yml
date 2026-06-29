@@ -29,7 +29,7 @@ balls:
     unlockLevel: 1
     lockMultiplier: 1
     ability: none
-    description: A standard ball. No special behaviour — just bounces.
+    description: A standard ball. No special behaviour - just bounces.
 
   - id: blue
     name: Blue

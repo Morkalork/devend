@@ -50,6 +50,11 @@ for Capacitor/Play-Store packaging.
   YAML and the matching type in `src/types/`.
 - **i18n**: user-facing strings go through `react-i18next`; add keys to all
   locale files under `src/i18n/locales/`.
+- **No em-dashes in UI text.** Never use the em-dash character (`—`) in
+  user-facing strings — this means the locale files in `src/i18n/locales/` and
+  the `name`/`description`/other displayed fields in `public/*.yml`. Use a
+  comma, colon, parentheses, or a spaced hyphen (`-`) instead. (Code comments
+  are not UI text and are exempt.)
 
 ## Git
 

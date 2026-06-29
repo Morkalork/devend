@@ -204,6 +204,11 @@ export function GameCanvas({
   const [isPlayerDragging, setIsPlayerDragging] = useState(false);
   const [canvasOffsetTop, setCanvasOffsetTop] = useState(0);
   const [canvasOffsetLeft, setCanvasOffsetLeft] = useState(0);
+  // CSS (layout) size of the canvas, used to position the tutorial overlay.
+  // NOTE: game.screenSize is in physical pixels (×devicePixelRatio); the overlay
+  // lives in CSS-pixel/viewport space, so it must use these instead.
+  const [canvasCssWidth, setCanvasCssWidth] = useState(0);
+  const [canvasCssHeight, setCanvasCssHeight] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
@@ -673,6 +678,8 @@ export function GameCanvas({
       const rect = container.getBoundingClientRect();
       setCanvasOffsetTop(rect.top);
       setCanvasOffsetLeft(rect.left);
+      setCanvasCssWidth(rect.width);
+      setCanvasCssHeight(rect.height);
     };
     updateCanvasPosition();
     window.addEventListener("resize", updateCanvasPosition);
@@ -730,8 +737,8 @@ export function GameCanvas({
         <InteractiveTutorialOverlay
           tutorialStep={tutorialStep}
           isPlayerDragging={isPlayerDragging}
-          canvasWidth={gameRef.current.screenSize.width}
-          canvasHeight={gameRef.current.screenSize.height}
+          canvasWidth={canvasCssWidth}
+          canvasHeight={canvasCssHeight}
           canvasOffsetTop={canvasOffsetTop}
           canvasOffsetLeft={canvasOffsetLeft}
         />

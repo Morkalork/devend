@@ -385,7 +385,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
           }`}
           title={
             saveStatus === 'saved'  ? 'Saved!' :
-            saveStatus === 'error'  ? 'Save failed — dev server running?' :
+            saveStatus === 'error'  ? 'Save failed - dev server running?' :
             'Save to disk (requires dev server)'
           }
         >

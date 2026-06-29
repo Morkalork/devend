@@ -211,7 +211,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                     {t('levelComplete.spaceBonus')}
                   </span>
                   <span className={`font-bold ${isSpaceDisabled ? 'text-destructive line-through' : 'text-primary'}`}>
-                    {isSpaceDisabled ? `${spaceBonusRaw}h` : spaceBonus > 0 ? `+${spaceBonus}h` : '—'}
+                    {isSpaceDisabled ? `${spaceBonusRaw}h` : spaceBonus > 0 ? `+${spaceBonus}h` : '-'}
                   </span>
                 </div>
               </div>
