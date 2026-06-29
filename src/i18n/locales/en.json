@@ -140,7 +140,8 @@
     "level": "Level {{level}}"
   },
   "common": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "close": "Close"
   },
   "game": {
     "paused": "PAUSED",
@@ -364,6 +365,9 @@
     "certificates": "Certificates",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Achievements",
-    "admin": "Admin"
+    "admin": "Admin",
+    "certLockedTitle": "Certificates Locked",
+    "certLockedBody": "Certificates are permanent bonuses you earn by mastering upgrade families across multiple runs.\n\nReach the top tier of an upgrade family, or unlock your first certificate by playing, and this store opens up.\n\nThen spend Certificate Hours (earned every 5 levels you complete) to level certificates up for lasting effects.",
+    "certLockedGotIt": "Got it"
   }
 }

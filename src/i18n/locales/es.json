@@ -140,7 +140,8 @@
     "level": "Nivel {{level}}"
   },
   "common": {
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "close": "Cerrar"
   },
   "game": {
     "paused": "EN PAUSA",
@@ -350,7 +351,10 @@
     "certificates": "Certificados",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Logros",
-    "admin": "Admin"
+    "admin": "Admin",
+    "certLockedTitle": "Certificados bloqueados",
+    "certLockedBody": "Los certificados son bonificaciones permanentes que consigues al dominar familias de mejoras a lo largo de varias partidas.\n\nAlcanza el nivel máximo de una familia de mejoras, o desbloquea tu primer certificado jugando, y esta tienda se abrirá.\n\nLuego gasta horas de certificado (se ganan cada 5 niveles que completas) para subir de nivel los certificados y obtener efectos duraderos.",
+    "certLockedGotIt": "Entendido"
   },
   "content": {
     "upgrades": {

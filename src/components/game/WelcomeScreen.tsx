@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
-import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy, ChevronRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy, ChevronRight, X } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { CheckpointPicker } from './CheckpointPicker';
@@ -50,6 +50,10 @@ export function WelcomeScreen({
   const { t } = useTranslation();
   const [remainingTime, setRemainingTime] = useState(checkpointRemainingMs || 0);
   const [showStartMapPicker, setShowStartMapPicker] = useState(false);
+  const [showCertInfo, setShowCertInfo] = useState(false);
+  // When certificates aren't unlocked yet the store callback is absent; instead
+  // of a dead button we keep it tappable and explain how to gain access.
+  const certLocked = !onOpenCertificateStore;
   
   // Update countdown timer
   useEffect(() => {
@@ -329,11 +333,11 @@ export function WelcomeScreen({
             {t('welcome.options')}
           </motion.button>
           <motion.button
-            className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
-            onClick={onOpenCertificateStore}
-            whileHover={onOpenCertificateStore ? { scale: 1.02 } : undefined}
-            whileTap={onOpenCertificateStore ? { scale: 0.98 } : undefined}
-            disabled={!onOpenCertificateStore || isLoading}
+            className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed ${certLocked ? 'opacity-50 grayscale' : ''}`}
+            onClick={() => (onOpenCertificateStore ? onOpenCertificateStore() : setShowCertInfo(true))}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={isLoading}
           >
             <Sparkles className="w-5 h-5" />
             {t('welcome.certificates')}
@@ -393,6 +397,51 @@ export function WelcomeScreen({
         accentColor={accentColor}
       />
     )}
+    {/* Explainer shown when certificates aren't unlocked yet. Tapping the
+        backdrop or the X closes it. */}
+    <AnimatePresence>
+      {showCertInfo && (
+        <motion.div
+          key="cert-info"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowCertInfo(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+        >
+          <motion.div
+            initial={{ scale: 0.92, y: 8 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.92, y: 8, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+            style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
+          >
+            <button
+              onClick={() => setShowCertInfo(false)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              aria-label={t('common.close')}
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3 pr-6">
+              <Sparkles className="w-7 h-7 shrink-0 text-primary" />
+              <div className="text-base font-bold text-foreground">{t('welcome.certLockedTitle')}</div>
+            </div>
+
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{t('welcome.certLockedBody')}</p>
+
+            <button
+              onClick={() => setShowCertInfo(false)}
+              className="arcade-button-primary arcade-button-sm rounded-lg w-full mt-5"
+            >
+              {t('welcome.certLockedGotIt')}
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
     </>
   );
 }
