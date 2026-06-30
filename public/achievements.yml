@@ -4,7 +4,7 @@ achievements:
 
   - id: hello-world
     name: "Hello, World!"
-    description: Lose your first life — every arena throws a runtime error eventually.
+    description: Lose your first life - every arena throws a runtime error eventually.
     requirement:
       stat: totalLivesLost
       threshold: 1
@@ -329,7 +329,7 @@ achievements:
 
   - id: beyond-the-backlog
     name: Beyond The Backlog
-    description: Ascend past the final level. The sprint never ends — it loops.
+    description: Ascend past the final level. The sprint never ends - it loops.
     requirement:
       stat: deepestAscension
       threshold: 1

@@ -27,7 +27,7 @@
     "noMutators": "No hay mutadores disponibles: no se pudo cargar mutators.yml. Aun así puedes retirarte abajo.",
     "ascendToDepth": "Ascender a la profundidad {{depth}}",
     "selectMutator": "Selecciona un mutador",
-    "retireBankRun": "Retirarse — asegurar esta partida",
+    "retireBankRun": "Retirarse - asegurar esta partida",
     "ascensionUnlocked": "Ascensión desbloqueada",
     "tutorialIntro1": "Superaste todos los niveles, pero el esfuerzo nunca acaba. Asciende para empezar de nuevo en el nivel 1 con tu puntuación, mejoras y vidas intactas, además de un ",
     "tutorialMutatorWord": "mutador",
@@ -140,7 +140,8 @@
     "level": "Nivel {{level}}"
   },
   "common": {
-    "loading": "Cargando..."
+    "loading": "Cargando...",
+    "close": "Cerrar"
   },
   "game": {
     "paused": "EN PAUSA",
@@ -260,7 +261,7 @@
     "certPointsEarned_other": "{{count}} puntos ganados hasta ahora.",
     "certPointsToGo_one": "Completa {{count}} nivel más para ganar el siguiente punto de certificado y desbloquear mejoras en la Tienda de certificados.",
     "certPointsToGo_other": "Completa {{count}} niveles más para ganar el siguiente punto de certificado y desbloquear mejoras en la Tienda de certificados.",
-    "ascensionDepth": "Ascensión — Profundidad {{depth}}",
+    "ascensionDepth": "Ascensión - Profundidad {{depth}}",
     "ascensionDescription": "Diste la vuelta tras el nivel final. Las bolas son más rápidas, cada mutador elegido abajo está activo y cada nivel completado cuenta {{multiplier}}× para las horas de certificado.",
     "activeUpgradesCount": "Mejoras activas ({{count}})",
     "currentlyReducingBallSpeed": "Reduciendo actualmente la velocidad de la bola un {{percent}}%",
@@ -323,7 +324,7 @@
     "progressSavedHere": "el progreso se guardará aquí",
     "hoursValue": "{{hours}}h",
     "overtime": "horas extra",
-    "restocksLeft": "Reposiciones restantes: {{count}} — comprar un artículo añade una nueva oferta",
+    "restocksLeft": "Reposiciones restantes: {{count}} - comprar un artículo añade una nueva oferta",
     "noRestocksLeft": "No quedan reposiciones en esta visita",
     "requires": "Requiere:",
     "holdHint": "Mantén pulsada una mejora para ver su ruta",
@@ -335,7 +336,7 @@
     "buyAndContinue": "Comprar {{count}} y continuar ({{cost}}h)",
     "continue": "Continuar",
     "tutorialTitle": "LA TIENDA DE MEJORAS",
-    "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa. Mantén pulsada una mejora para ver qué la desbloquea y a qué conduce."
+    "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa. Mantén pulsada una mejora para ver más información, incluido qué la desbloquea y qué desbloquea."
   },
   "welcome": {
     "tagline": "Corta. Atrapa. Sobrevive.",
@@ -350,7 +351,10 @@
     "certificates": "Certificados",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Logros",
-    "admin": "Admin"
+    "admin": "Admin",
+    "certLockedTitle": "Certificados bloqueados",
+    "certLockedBody": "Los certificados son bonificaciones permanentes que consigues al dominar familias de mejoras a lo largo de varias partidas.\n\nAlcanza el nivel máximo de una familia de mejoras, o desbloquea tu primer certificado jugando, y esta tienda se abrirá.\n\nLuego gasta horas de certificado (se ganan cada 5 niveles que completas) para subir de nivel los certificados y obtener efectos duraderos.",
+    "certLockedGotIt": "Entendido"
   },
   "content": {
     "upgrades": {

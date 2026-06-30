@@ -16,13 +16,20 @@ scoring:
         bonus: 1
 
   # Space Optimization Bonus
-  # +1h if removed 10%+ more than required
-  # Disabled when 3+ over par
+  # Ascending ladder: the more you clear past the level's requirement, the more
+  # overtime you bank. extraPercent is the extra area removed as a fraction of
+  # what was required (e.g. required 70%, removed 90% => +28% extra). We award
+  # the highest rung whose floor is met, capped at maxBonus. Rewards greedy,
+  # push-your-luck removal. Disabled when 3+ over par.
   spaceOptimization:
-    maxBonus: 1
+    maxBonus: 3
     thresholds:
-      - extraPercent: 0.10
+      - extraPercent: 0.10   # +10% over required
         bonus: 1
+      - extraPercent: 0.30   # +30% over required
+        bonus: 2
+      - extraPercent: 0.55   # +55% over required (near-total clears)
+        bonus: 3
 
   # Performance Multiplier
   # Scales base points based on fences vs par

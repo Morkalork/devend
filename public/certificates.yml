@@ -8,7 +8,7 @@ certificates:
 
   - id: runtime-augmentation
     name: Runtime Augmentation
-    description: Perpetually reduced ball speeds — a permanent reward for mastering Runtime Optimisation.
+    description: Perpetually reduced ball speeds - a permanent reward for mastering Runtime Optimisation.
     unlockType: upgrade-chain
     sourceUpgradeId: runtime_optimisation_principal
     requiredRuns: 3
@@ -22,7 +22,7 @@ certificates:
 
   - id: memory-compression
     name: Memory Compression
-    description: Perpetually smaller balls — a permanent reward for mastering Memory Footprint.
+    description: Perpetually smaller balls - a permanent reward for mastering Memory Footprint.
     unlockType: upgrade-chain
     sourceUpgradeId: memory_footprint_principal
     requiredRuns: 3
@@ -36,7 +36,7 @@ certificates:
 
   - id: compile-cache
     name: Compile Cache
-    description: Perpetually faster fence generation — a permanent reward for mastering Fast Compile.
+    description: Perpetually faster fence generation - a permanent reward for mastering Fast Compile.
     unlockType: upgrade-chain
     sourceUpgradeId: fast_compile_principal
     requiredRuns: 3
@@ -50,7 +50,7 @@ certificates:
 
   - id: warm-deploy
     name: Warm Deploy
-    description: Permanently gain one instant fence at map start — a reward for mastering Hot Start.
+    description: Permanently gain one instant fence at map start - a reward for mastering Hot Start.
     unlockType: upgrade-chain
     sourceUpgradeId: hot_start_architect
     requiredRuns: 3
@@ -62,7 +62,7 @@ certificates:
 
   - id: parallel-processing
     name: Parallel Processing
-    description: Permanently one extra concurrent fence — a reward for mastering Multithreading.
+    description: Permanently one extra concurrent fence - a reward for mastering Multithreading.
     unlockType: upgrade-chain
     sourceUpgradeId: multithreading_principal
     requiredRuns: 3
@@ -74,7 +74,7 @@ certificates:
 
   - id: resilience-protocol
     name: Resilience Protocol
-    description: Permanently start with an extra life — a reward for mastering Fault Tolerance.
+    description: Permanently start with an extra life - a reward for mastering Fault Tolerance.
     unlockType: upgrade-chain
     sourceUpgradeId: fault_tolerance_architect
     requiredRuns: 3
@@ -88,7 +88,7 @@ certificates:
 
   - id: performance-suite
     name: Performance Suite
-    description: Permanently higher score multiplier — a reward for mastering Performance Bonus.
+    description: Permanently higher score multiplier - a reward for mastering Performance Bonus.
     unlockType: upgrade-chain
     sourceUpgradeId: performance_bonus_principal
     requiredRuns: 3
@@ -102,7 +102,7 @@ certificates:
 
   - id: investment-strategy
     name: Investment Strategy
-    description: Permanent interest bonus on your score — a reward for mastering Venture Capital.
+    description: Permanent interest bonus on your score - a reward for mastering Venture Capital.
     unlockType: upgrade-chain
     sourceUpgradeId: venture_capital_architect
     requiredRuns: 3
@@ -114,7 +114,7 @@ certificates:
 
   - id: process-optimiser
     name: Process Optimiser
-    description: Permanent per-lock speed reduction — a reward for mastering MicroManager.
+    description: Permanent per-lock speed reduction - a reward for mastering MicroManager.
     unlockType: upgrade-chain
     sourceUpgradeId: micro_manager_principal
     requiredRuns: 3
@@ -126,7 +126,7 @@ certificates:
 
   - id: sprint-protocol
     name: Sprint Protocol
-    description: Permanent extra bounce in path preview — a reward for mastering SCRUM Master.
+    description: Permanent extra bounce in path preview - a reward for mastering SCRUM Master.
     unlockType: upgrade-chain
     sourceUpgradeId: scrum_master_6
     requiredRuns: 3

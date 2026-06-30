@@ -66,22 +66,36 @@ export function calculateUnderParBonus(
 }
 
 /**
- * Calculate space bonus: +1h if removed significantly more than required, 0 otherwise.
- * Disabled when 3+ over par.
+ * Calculate space bonus: a config-driven ladder that pays more overtime the
+ * further you clear past what the level required. `thresholds` is an ascending
+ * ladder of `{ extraPercent, bonus }` rungs; we award the highest rung whose
+ * extraPercent floor is met (capped at `maxBonus`). This rewards greedy,
+ * push-your-luck removal: leaving less space on the board climbs to bigger
+ * payouts instead of the old flat +1h. A single-rung config reproduces the
+ * legacy binary behaviour. Disabled when 3+ over par.
  */
 export function calculateSpaceBonus(
   actualRemovedRatio: number,
   requiredRemovedRatio: number,
   fencesOverPar: number,
-  _config: ScoringConfig
+  config: ScoringConfig
 ): { bonus: number; bonusRaw: number; extraPercent: number } {
   if (requiredRemovedRatio <= 0) return { bonus: 0, bonusRaw: 0, extraPercent: 0 };
 
   const extraRemovedRatio = Math.max(0, actualRemovedRatio - requiredRemovedRatio);
   const extraPercent = extraRemovedRatio / requiredRemovedRatio;
 
-  // +1h if extra removal is >= 10% of required
-  const bonusRaw = extraPercent >= 0.10 ? 1 : 0;
+  const { maxBonus, thresholds } = config.scoring.spaceOptimization;
+
+  // Highest rung whose extraPercent floor is cleared (order-independent), then
+  // clamp to maxBonus. Below the first floor this stays 0.
+  let bonusRaw = 0;
+  for (const step of thresholds) {
+    if (extraPercent >= step.extraPercent) {
+      bonusRaw = Math.max(bonusRaw, step.bonus);
+    }
+  }
+  bonusRaw = Math.min(bonusRaw, maxBonus);
 
   // Disabled when 3+ over par
   const bonus = fencesOverPar >= 3 ? 0 : bonusRaw;
@@ -166,8 +180,12 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
       steps: [{ fencesUnder: 1, bonus: 1 }],
     },
     spaceOptimization: {
-      maxBonus: 1,
-      thresholds: [{ extraPercent: 0.10, bonus: 1 }],
+      maxBonus: 3,
+      thresholds: [
+        { extraPercent: 0.10, bonus: 1 },
+        { extraPercent: 0.30, bonus: 2 },
+        { extraPercent: 0.55, bonus: 3 },
+      ],
     },
     performanceMultiplier: {
       underPar: 1.0,

@@ -8,6 +8,8 @@
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
 import { UpgradeConfig, UpgradeData, UpgradeTier } from '@/types/upgrade';
+import { LevelData } from '@/types/level';
+import { buildLevelPoints, mergePricing, computeUpgradeCost } from '@/lib/upgradePricing';
 
 const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
@@ -57,17 +59,28 @@ export function useUpgradeManager() {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const response = await fetch('/upgrades.yml');
-      if (!response.ok) {
-        throw new Error(`Failed to load upgrades.yml: ${response.status}`);
-      }
-      
-      const yamlText = await response.text();
+      // Fetch the catalogue and the level curve together: upgrade costs are
+      // derived from the base points of the level each one unlocks at.
+      const [yamlText, mapText] = await Promise.all([
+        fetch('/upgrades.yml').then((res) => {
+          if (!res.ok) throw new Error(`Failed to load upgrades.yml: ${res.status}`);
+          return res.text();
+        }),
+        fetch('/map.yml', { cache: 'no-store' }).then((res) => {
+          if (!res.ok) throw new Error(`Failed to load map.yml for upgrade pricing: ${res.status}`);
+          return res.text();
+        }),
+      ]);
+
       const data = yaml.load(yamlText) as UpgradeData;
-      
+
       if (!data?.upgrades || !Array.isArray(data.upgrades)) {
         throw new Error('Invalid upgrades.yml: no upgrades array found');
       }
+
+      const mapData = yaml.load(mapText) as LevelData;
+      const levelPoints = buildLevelPoints(mapData?.levels ?? []);
+      const pricing = mergePricing(data.pricing);
 
       const lookup = new Map<string, UpgradeConfig>();
 
@@ -81,8 +94,16 @@ export function useUpgradeManager() {
           throw new Error(`Upgrade "${upgrade.id}" has invalid tier. Must be one of: ${VALID_TIERS.join(', ')}`);
         }
 
+        // Resolve the effective cost: an explicit `cost` overrides the formula,
+        // otherwise derive it from the unlock level's base points x tier factor.
         if (typeof upgrade.cost !== 'number') {
-          throw new Error(`Upgrade "${upgrade.id}" is missing cost`);
+          const computed = computeUpgradeCost(upgrade.unlockLevel ?? 1, upgrade.tier, levelPoints, pricing);
+          if (computed === null) {
+            throw new Error(
+              `Upgrade "${upgrade.id}" has no explicit cost and could not be priced (missing level points or tier factor).`,
+            );
+          }
+          upgrade.cost = computed;
         }
 
         if (!upgrade.modifiers || typeof upgrade.modifiers !== 'object') {

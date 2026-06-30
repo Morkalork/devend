@@ -21,15 +21,15 @@
   "ascension": {
     "allLevelsCleared": "All Levels Cleared",
     "ascensionComplete": "Ascension {{depth}} complete. ",
-    "retireOrAscend": "Retire and bank everything — or draft a mutator and ascend to depth {{depth}}.",
+    "retireOrAscend": "Retire and bank everything - or draft a mutator and ascend to depth {{depth}}.",
     "ascendedLevelsInfo": "Ascended levels are faster and count {{multiplier}}× toward Certificate Hours. ",
     "bankedOvertime": "Banked overtime: {{score}}h",
-    "noMutators": "No mutators available — mutators.yml failed to load. You can still retire below.",
+    "noMutators": "No mutators available - mutators.yml failed to load. You can still retire below.",
     "ascendToDepth": "Ascend to Depth {{depth}}",
     "selectMutator": "Select a Mutator",
-    "retireBankRun": "Retire — Bank This Run",
+    "retireBankRun": "Retire - Bank This Run",
     "ascensionUnlocked": "Ascension Unlocked",
-    "tutorialIntro1": "You beat every level — but the grind never ends. Ascend to start over at level 1 with your score, upgrades and lives intact, plus one ",
+    "tutorialIntro1": "You beat every level - but the grind never ends. Ascend to start over at level 1 with your score, upgrades and lives intact, plus one ",
     "tutorialMutatorWord": "mutator",
     "tutorialIntro2": ": a curse bundled with a blessing. Mutators stack with every ascension, levels get faster, and each cleared level counts more toward Certificate Hours. Retire whenever you want to bank it all.",
     "gotIt": "Got It"
@@ -56,7 +56,7 @@
     "ballSpeedDescMicro_other": ". MicroManager applies an additional {{reduction}}% reduction from {{count}} locked balls",
     "ballSpeedDescTail": ". Slower balls give you more reaction time when drawing fences.",
     "ballSize": "Ball Size",
-    "ballSizeDesc": "Radius multiplier applied to every ball. Larger balls are harder to dodge when drawing a fence — but also cover more of the board for locking purposes.",
+    "ballSizeDesc": "Radius multiplier applied to every ball. Larger balls are harder to dodge when drawing a fence - but also cover more of the board for locking purposes.",
     "fenceSpeed": "Fence Speed",
     "fenceSpeedDesc": "How quickly your fence grows after you start drawing. Higher fence speed shortens the window a ball has to collide with your in-progress fence, making cuts safer.",
     "scoreMultiplier": "Score Multiplier",
@@ -140,7 +140,8 @@
     "level": "Level {{level}}"
   },
   "common": {
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "close": "Close"
   },
   "game": {
     "paused": "PAUSED",
@@ -150,9 +151,9 @@
     "restartRun": "Restart Run",
     "mainMenu": "Main Menu",
     "moverTutorialTitle": "⚠ Moving Obstacles",
-    "moverTutorialBody": "Orange obstacles move back and forth on a fixed track.\n\nBalls bounce off them — but if your growing fence touches one, you lose a life.\n\nWatch the track lines and time your fences carefully!",
+    "moverTutorialBody": "Orange obstacles move back and forth on a fixed track.\n\nBalls bounce off them - but if your growing fence touches one, you lose a life.\n\nWatch the track lines and time your fences carefully!",
     "breakTutorialTitle": "✦ Breaking Things",
-    "breakTutorialBody": "Amber blocks can be smashed for bonus overtime — guide balls into them until they shatter, and anything stacked on top falls with them.\n\nYou still win the normal way, by shrinking the board; breaking is just extra points.\n\nYou can't fence against a breakable (the cut fizzles), and the black ball breaks things in half the hits.",
+    "breakTutorialBody": "Amber blocks can be smashed for bonus overtime - guide balls into them until they shatter, and anything stacked on top falls with them.\n\nYou still win the normal way, by shrinking the board; breaking is just extra points.\n\nYou can't fence against a breakable (the cut fizzles), and the black ball breaks things in half the hits.",
     "infoPanelsTutorialTitle": "Info Panels",
     "infoPanelsTutorialBody": "The status bars are expandable!\n\nTap the TOP BAR to see full level details, all your active upgrades with descriptions, and certificate-hour progress.\n\nTap the BOTTOM BAR to view every active modifier explained in plain language."
   },
@@ -208,7 +209,7 @@
     "targetSuffix": "/ {{threshold}}% target",
     "keepCuttingPrefix": "Keep cutting for",
     "bonusPerRemoved": "+1h per {{percent}}% removed",
-    "noRisk": "No risk — you keep your score if you fail!",
+    "noRisk": "No risk - you keep your score if you fail!",
     "bankAndContinue": "Bank & Continue",
     "pushYourLuck": "Push Your Luck"
   },
@@ -240,7 +241,7 @@
     "objectives": "Objectives",
     "territoryCapture": "Territory Capture",
     "territoryGoalMet": "Goal met! You have captured {{remaining}}% (needed {{required}}%).",
-    "territoryGoalPending": "Capture at least {{required}}% of the board. Currently at {{remaining}}% — need {{more}}% more.",
+    "territoryGoalPending": "Capture at least {{required}}% of the board. Currently at {{remaining}}% - need {{more}}% more.",
     "fenceCuts": "Fence Cuts",
     "cutsParValue": "{{used}} / {{par}} par",
     "cutsOverPar_one": "Over par by {{count}} cut. Score multiplier is reduced when exceeding par.",
@@ -263,7 +264,7 @@
     "certPointsEarned_other": "{{count}} points earned so far.",
     "certPointsToGo_one": "Complete {{count}} more level to earn the next cert point and unlock upgrades in the Certificate Store.",
     "certPointsToGo_other": "Complete {{count}} more levels to earn the next cert point and unlock upgrades in the Certificate Store.",
-    "ascensionDepth": "Ascension — Depth {{depth}}",
+    "ascensionDepth": "Ascension - Depth {{depth}}",
     "ascensionDescription": "You looped past the final level. Balls are faster, every drafted mutator below is active, and each completed level counts {{multiplier}}× toward Certificate Hours.",
     "activeUpgradesCount": "Active Upgrades ({{count}})",
     "currentlyReducingBallSpeed": "Currently reducing ball speed by {{percent}}%",
@@ -285,7 +286,7 @@
     "controlClickAndDrag": "Click and drag",
     "ballTypes": {
       "title": "Ball Types",
-      "intro": "A ball's colour tells you what it does. Which balls appear is decided by the level you've reached — new colours unlock as you climb.",
+      "intro": "A ball's colour tells you what it does. Which balls appear is decided by the level you've reached - new colours unlock as you climb.",
       "speed": "Speed {{speed}}",
       "unlocks": "From level {{level}}",
       "lock": "Lock ×{{mult}}"
@@ -301,7 +302,7 @@
       },
       "avoidTheBall": {
         "title": "Avoid the Ball",
-        "description": "Don't let the ball hit the wall while it's still growing — instant game over!"
+        "description": "Don't let the ball hit the wall while it's still growing - instant game over!"
       },
       "winCondition": {
         "title": "Win Condition",
@@ -309,7 +310,7 @@
       },
       "breakObstacles": {
         "title": "Breaking Obstacles",
-        "description": "Later levels add amber breakable blocks. Guide balls into them to smash them for bonus overtime — stacked pieces fall when their support breaks. You still win by shrinking the board; breaking is extra. You can't fence against a breakable (it fizzles), and the black ball breaks things in half the hits."
+        "description": "Later levels add amber breakable blocks. Guide balls into them to smash them for bonus overtime - stacked pieces fall when their support breaks. You still win by shrinking the board; breaking is extra. You can't fence against a breakable (it fizzles), and the black ball breaks things in half the hits."
       },
       "lives": {
         "title": "Lives",
@@ -317,11 +318,11 @@
       },
       "checkpoints": {
         "title": "Checkpoints",
-        "description": "Every 5 levels is a checkpoint. When your run ends, your next run always restarts from the highest checkpoint you reached — you never lose all your progress."
+        "description": "Every 5 levels is a checkpoint. When your run ends, your next run always restarts from the highest checkpoint you reached - you never lose all your progress."
       },
       "headStartCertificates": {
         "title": "Head Start Certificates",
-        "description": "In the Certificate Store you can unlock Head Start certificates that permanently raise your starting level — so experienced players never have to replay early levels."
+        "description": "In the Certificate Store you can unlock Head Start certificates that permanently raise your starting level - so experienced players never have to replay early levels."
       }
     }
   },
@@ -337,7 +338,7 @@
     "progressSavedHere": "progress will be saved here",
     "hoursValue": "{{hours}}h",
     "overtime": "overtime",
-    "restocksLeft": "Restocks left: {{count}} — buying an item adds a new offer",
+    "restocksLeft": "Restocks left: {{count}} - buying an item adds a new offer",
     "noRestocksLeft": "No restocks left this visit",
     "requires": "Requires:",
     "holdHint": "Hold an upgrade to see its track",
@@ -349,7 +350,7 @@
     "buyAndContinue": "Buy {{count}} & Continue ({{cost}}h)",
     "continue": "Continue",
     "tutorialTitle": "THE UPGRADE SHOP",
-    "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade to see what unlocks it and what it leads to."
+    "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade for more info - including what unlocks it and what it unlocks."
   },
   "welcome": {
     "tagline": "Slice. Trap. Survive.",
@@ -364,6 +365,9 @@
     "certificates": "Certificates",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Achievements",
-    "admin": "Admin"
+    "admin": "Admin",
+    "certLockedTitle": "Certificates Locked",
+    "certLockedBody": "Certificates are permanent bonuses you earn by mastering upgrade families across multiple runs.\n\nReach the top tier of an upgrade family, or unlock your first certificate by playing, and this store opens up.\n\nThen spend Certificate Hours (earned every 5 levels you complete) to level certificates up for lasting effects.",
+    "certLockedGotIt": "Got it"
   }
 }
