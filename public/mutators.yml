@@ -4,6 +4,11 @@
 #
 # Drafted mutators stack across ascensions, so keep individual effects
 # moderate — a deep run accumulates many of these.
+#
+# `startEligible` (optional, default true): may this mutator be offered in the
+# run-start loadout draft (the base-game "Sprint Planning" pick), as opposed to
+# only the post-final-level Ascension draft? Set false on mutators whose curse
+# is unfair as a fresh-run opener (e.g. a life lost when you only have three).
 
 ascension:
   # Baseline ball-speed multiplier applied per ascension depth, on top of any
@@ -40,6 +45,8 @@ mutators:
     name: Death March
     curse: Lose one life immediately.
     blessing: Earn 75% more overtime hours.
+    # Too harsh as a fresh-run opener (you only start with 3 lives).
+    startEligible: false
     modifiers:
       extraLives: -1
       scoreMultiplier: 1.75
@@ -48,6 +55,8 @@ mutators:
     name: Hiring Freeze
     curse: The shop offers 2 fewer upgrades.
     blessing: Earn 10% interest on banked overtime after every level.
+    # Too harsh as a fresh-run opener (the early shop is already small).
+    startEligible: false
     modifiers:
       extraShopItems: -2
       scoreInterestRate: 0.10

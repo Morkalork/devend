@@ -1,50 +1,40 @@
 /**
- * AscensionDraftScreen — shown after beating the final level.
+ * RunDraftScreen — the run-start loadout draft ("Sprint Planning").
  *
- * The player either retires (banks the run, sees the result screen) or
- * ascends: drafts one of three randomly offered mutators (curse + blessing
- * bundles from public/mutators.yml) and loops back to level 1 with every
- * drafted mutator still active.
+ * Shown once at the start of every fresh run. The player either picks one of
+ * three randomly offered curse + blessing mutators (from public/mutators.yml,
+ * filtered to startEligible by the caller) to shape the run from level 1, or
+ * skips and plays vanilla. Mirrors AscensionDraftScreen's card UI; the chosen
+ * loadout rides the same modifier pipeline (draftedMutatorIds) at depth 0.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ArrowUpCircle, Flag, Skull, Sparkles } from 'lucide-react';
+import { ClipboardList, Play, SkipForward, Skull, Sparkles } from 'lucide-react';
 import { MutatorConfig } from '@/types/mutator';
 import { drawOffers } from '@/lib/mutatorDraft';
 import { CRTBackground } from './CRTBackground';
 import { contentText } from '@/i18n/content';
 
-interface AscensionDraftScreenProps {
+interface RunDraftScreenProps {
+  /** Already filtered to startEligible mutators by the caller. */
   mutators: MutatorConfig[];
   draftedMutatorIds: string[];
-  /** Depth completed so far; ascending enters depth + 1. */
-  ascensionDepth: number;
-  totalScore: number;
-  onAscend: (mutatorId: string) => void;
-  onRetire: () => void;
+  /** Called with the chosen mutator id, or null when the player skips. */
+  onConfirm: (mutatorId: string | null) => void;
   accentColor?: string;
-  showTutorial?: boolean;
-  onTutorialDismiss?: () => void;
 }
 
-export function AscensionDraftScreen({
+export function RunDraftScreen({
   mutators,
   draftedMutatorIds,
-  ascensionDepth,
-  totalScore,
-  onAscend,
-  onRetire,
+  onConfirm,
   accentColor = '#00ff88',
-  showTutorial = false,
-  onTutorialDismiss,
-}: AscensionDraftScreenProps) {
+}: RunDraftScreenProps) {
   const { t } = useTranslation();
   // Drawn once per mount so re-renders don't reshuffle the offer
   const [offers] = useState(() => drawOffers(mutators, draftedMutatorIds, 3));
   const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const nextDepth = ascensionDepth + 1;
 
   return (
     <>
@@ -69,21 +59,19 @@ export function AscensionDraftScreen({
                 boxShadow: `0 0 40px ${accentColor}55`,
               }}
             >
-              <ArrowUpCircle className="w-9 h-9" style={{ color: accentColor }} />
+              <ClipboardList className="w-9 h-9" style={{ color: accentColor }} />
             </motion.div>
             <h1
               className="text-3xl sm:text-4xl font-display font-black tracking-wider uppercase"
               style={{ color: accentColor, textShadow: `0 0 30px ${accentColor}88` }}
             >
-              {t('ascension.allLevelsCleared')}
+              {t('runDraft.title')}
             </h1>
             <p className="mt-2 text-sm" style={{ color: '#c8ffd8', opacity: 0.75 }}>
-              {ascensionDepth > 0 ? t('ascension.ascensionComplete', { depth: ascensionDepth }) : ''}
-              {t('ascension.retireOrAscend', { depth: nextDepth })}
+              {t('runDraft.subtitle')}
             </p>
             <p className="mt-1 text-xs" style={{ color: '#4a7a5a' }}>
-              {t('ascension.ascendedLevelsInfo', { multiplier: nextDepth + 1 })}
-              {t('ascension.bankedOvertime', { score: totalScore })}
+              {t('runDraft.pickHint')}
             </p>
           </div>
 
@@ -129,7 +117,7 @@ export function AscensionDraftScreen({
                 className="sm:col-span-3 rounded-lg p-4 text-center text-xs"
                 style={{ border: `1px solid ${accentColor}44`, color: '#4a7a5a' }}
               >
-                {t('ascension.noMutators')}
+                {t('runDraft.noLoadouts')}
               </div>
             )}
           </div>
@@ -144,53 +132,24 @@ export function AscensionDraftScreen({
             <motion.button
               className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               disabled={!selectedId}
-              onClick={() => selectedId && onAscend(selectedId)}
+              onClick={() => selectedId && onConfirm(selectedId)}
               whileHover={selectedId ? { scale: 1.02 } : undefined}
               whileTap={selectedId ? { scale: 0.98 } : undefined}
             >
-              <ArrowUpCircle className="w-5 h-5" />
-              {selectedId ? t('ascension.ascendToDepth', { depth: nextDepth }) : t('ascension.selectMutator')}
+              <Play className="w-5 h-5" />
+              {selectedId ? t('runDraft.startButton') : t('runDraft.pickToStart')}
             </motion.button>
             <motion.button
               className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
-              onClick={onRetire}
+              onClick={() => onConfirm(null)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
             >
-              <Flag className="w-5 h-5" />
-              {t('ascension.retireBankRun')}
+              <SkipForward className="w-5 h-5" />
+              {t('runDraft.skipButton')}
             </motion.button>
           </motion.div>
         </motion.div>
-
-        {/* One-time intro overlay */}
-        {showTutorial && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-6">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="max-w-md rounded-lg p-6 text-center"
-              style={{
-                backgroundColor: '#0a0f0a',
-                border: `2px solid ${accentColor}`,
-                boxShadow: `0 0 40px ${accentColor}44`,
-              }}
-            >
-              <h2
-                className="font-display font-black text-xl uppercase tracking-wider mb-3"
-                style={{ color: accentColor }}
-              >
-                {t('ascension.ascensionUnlocked')}
-              </h2>
-              <p className="text-sm leading-relaxed mb-4" style={{ color: '#c8ffd8' }}>
-                {t('ascension.tutorialIntro1')}<b>{t('ascension.tutorialMutatorWord')}</b>{t('ascension.tutorialIntro2')}
-              </p>
-              <button className="arcade-button-primary rounded-lg" onClick={onTutorialDismiss}>
-                {t('ascension.gotIt')}
-              </button>
-            </motion.div>
-          </div>
-        )}
       </div>
     </>
   );

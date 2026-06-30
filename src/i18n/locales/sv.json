@@ -230,7 +230,9 @@
   "topBar": {
     "clear": "KLART",
     "percentToGo": "{{percent}}% kvar",
-    "currentlyReducingBy": "Minskar just nu med {{percent}}%"
+    "currentlyReducingBy": "Minskar just nu med {{percent}}%",
+    "continues_one": "{{count}} Fortsättning sparad",
+    "continues_other": "{{count}} Fortsättningar sparade"
   },
   "topBarDetails": {
     "levelStatusTitle": "Status för nivå {{level}}",
@@ -255,7 +257,10 @@
     "yourStatus": "Din status",
     "livesRemaining": "Liv kvar",
     "livesNone": "Inga!",
-    "livesDescription": "Du förlorar ett liv när en boll träffar ditt stängsel medan det växer. Får du slut på liv startar nivån om.",
+    "livesDescription": "Du förlorar ett liv när en boll träffar ditt stängsel medan det växer. Får du slut på liv kan du spendera en Fortsättning för att göra om nivån.",
+    "continues": "Fortsättningar",
+    "continuesDescription": "När du får slut på liv låter en Fortsättning dig göra om nivån med dina övertidstimmar och uppgraderingar kvar. Tjäna fler via certifikat.",
+    "loadout": "Laddning",
     "certificatePoints": "Certifikatpoäng",
     "certPointsEarned_one": "{{count}} poäng intjänad hittills.",
     "certPointsEarned_other": "{{count}} poäng intjänade hittills.",
@@ -338,14 +343,26 @@
     "tutorialTitle": "BUTIKEN",
     "tutorialBody": "Spendera övertidstimmar på uppgraderingar efter varje bana. Övertidsuppgraderingar mångdubblar framtida intäkter. Effekterna visas i den nedre listen på nästa bana. Håll inne en uppgradering för mer information - bland annat vad som låser upp den och vad den låser upp."
   },
+  "runDraft": {
+    "title": "Sprintplanering",
+    "subtitle": "Välj en laddning som formar omgången från nivå 1.",
+    "pickHint": "Varje laddning kombinerar en förbannelse med en välsignelse. Välj en, eller hoppa över för att spela rakt.",
+    "startButton": "Starta omgång",
+    "pickToStart": "Välj en laddning",
+    "skipButton": "Hoppa över (ingen laddning)",
+    "noLoadouts": "Inga laddningar tillgängliga."
+  },
+  "continue": {
+    "title": "Fortsätta?",
+    "body_one": "Spendera 1 Fortsättning för att göra om nivån med dina övertidstimmar och uppgraderingar kvar. {{count}} kvar.",
+    "body_other": "Spendera 1 Fortsättning för att göra om nivån med dina övertidstimmar och uppgraderingar kvar. {{count}} kvar.",
+    "spendButton": "Fortsätt",
+    "declineButton": "Avsluta omgång"
+  },
   "welcome": {
     "tagline": "Skär. Fånga. Överlev.",
-    "startAtLevel": "Börja på nivå {{level}}",
-    "checkpointExpires": "Kontrollpunkt löper ut om {{time}}",
     "loading": "Laddar...",
-    "continueFromLevel": "Fortsätt från nivå {{level}}",
     "startGame": "Starta spel",
-    "chooseStartMap": "Välj startbana",
     "tutorial": "Genomgång",
     "options": "Alternativ",
     "certificates": "Certifikat",

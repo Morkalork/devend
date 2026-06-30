@@ -230,7 +230,9 @@
   "topBar": {
     "clear": "DESPEJADO",
     "percentToGo": "{{percent}}% restante",
-    "currentlyReducingBy": "Reduciendo actualmente un {{percent}}%"
+    "currentlyReducingBy": "Reduciendo actualmente un {{percent}}%",
+    "continues_one": "{{count}} Continuación guardada",
+    "continues_other": "{{count}} Continuaciones guardadas"
   },
   "topBarDetails": {
     "levelStatusTitle": "Estado del nivel {{level}}",
@@ -255,7 +257,10 @@
     "yourStatus": "Tu estado",
     "livesRemaining": "Vidas restantes",
     "livesNone": "¡Ninguna!",
-    "livesDescription": "Pierdes una vida cuando una bola golpea tu valla mientras crece. Si te quedas sin vidas, el nivel se reinicia.",
+    "livesDescription": "Pierdes una vida cuando una bola golpea tu valla mientras crece. Si te quedas sin vidas, puedes gastar una Continuación para reintentar el nivel.",
+    "continues": "Continuaciones",
+    "continuesDescription": "Cuando te quedas sin vidas, una Continuación te permite reintentar este nivel con tus horas extra y mejoras intactas. Consigue más con certificados.",
+    "loadout": "Equipamiento",
     "certificatePoints": "Puntos de certificado",
     "certPointsEarned_one": "{{count}} punto ganado hasta ahora.",
     "certPointsEarned_other": "{{count}} puntos ganados hasta ahora.",
@@ -338,14 +343,26 @@
     "tutorialTitle": "LA TIENDA DE MEJORAS",
     "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa. Mantén pulsada una mejora para ver más información, incluido qué la desbloquea y qué desbloquea."
   },
+  "runDraft": {
+    "title": "Planificación de sprint",
+    "subtitle": "Elige un equipamiento para definir esta partida desde el nivel 1.",
+    "pickHint": "Cada equipamiento combina una maldición con una bendición. Elige uno o sáltalo para jugar sin extras.",
+    "startButton": "Empezar partida",
+    "pickToStart": "Elige un equipamiento",
+    "skipButton": "Saltar (sin equipamiento)",
+    "noLoadouts": "No hay equipamientos disponibles."
+  },
+  "continue": {
+    "title": "¿Continuar?",
+    "body_one": "Gasta 1 Continuación para reintentar este nivel con tus horas extra y mejoras intactas. Quedan {{count}}.",
+    "body_other": "Gasta 1 Continuación para reintentar este nivel con tus horas extra y mejoras intactas. Quedan {{count}}.",
+    "spendButton": "Continuar",
+    "declineButton": "Terminar partida"
+  },
   "welcome": {
     "tagline": "Corta. Atrapa. Sobrevive.",
-    "startAtLevel": "Empezar en el nivel {{level}}",
-    "checkpointExpires": "El punto de control expira en {{time}}",
     "loading": "Cargando...",
-    "continueFromLevel": "Continuar desde el nivel {{level}}",
     "startGame": "Empezar juego",
-    "chooseStartMap": "Elige el mapa de inicio",
     "tutorial": "Tutorial",
     "options": "Opciones",
     "certificates": "Certificados",

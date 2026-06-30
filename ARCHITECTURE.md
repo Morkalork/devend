@@ -50,12 +50,16 @@ public/
 `Index.tsx` renders exactly one screen at a time, chosen by [useScreenNavigation](src/hooks/useScreenNavigation.ts) (a simple state machine over the `GameScreen` union in [types/game.ts](src/types/game.ts)):
 
 ```
-welcome ──► game ──► (LevelCompleteOverlay) ──► upgradeShop ──► game … ──► result
-   │                       │ (final level)                                  │
-   │                       └──► ascensionDraft ──► game (loop) or result    │
-   ├──► tutorial / options / achievements / certificateStore ◄──────────────┘
+welcome ──► runDraft ──► game ──► (LevelCompleteOverlay) ──► upgradeShop ──► game … ──► result
+   │        (loadout)      │ (final level)            ▲                                   │
+   │                       │                          │ (ContinuePrompt on death,         │
+   │                       │                          └─ spend a Continue to retry level) │
+   │                       └──► ascensionDraft ──► game (loop) or result                  │
+   ├──► tutorial / options / achievements / certificateStore ◄───────────────────────────┘
    └──► admin ──► mapBuilder / animationTest        (dev builds only)
 ```
+
+A fresh run first visits **runDraft** ("Sprint Planning"), where the player drafts one curse+blessing mutator (or skips) to shape the run from level 1. On running out of lives, the **ContinuePrompt** overlay offers a per-run revive (`continuesRemaining`): spend one to retry the current level with score + upgrades intact, or end the run. The `?level=` debug jump skips the draft.
 
 All run state (score, lives, owned upgrades, current level) lives in [useGameSession](src/hooks/useGameSession.ts), which composes the smaller managers below and is created once in `Index.tsx`.
 
@@ -69,14 +73,13 @@ Each hook owns one subsystem; most load a YAML file and/or persist to localStora
 | [useScreenNavigation](src/hooks/useScreenNavigation.ts) | visible screen | — | — |
 | [useLevelManager](src/hooks/useLevelManager.ts) | level sequence | `map.yml` | — |
 | [useUpgradeManager](src/hooks/useUpgradeManager.ts) | upgrade catalogue | `upgrades.yml` | — |
-| [useMutatorManager](src/hooks/useMutatorManager.ts) | Ascension mutator catalogue | `mutators.yml` | — |
+| [useMutatorManager](src/hooks/useMutatorManager.ts) | mutator catalogue (run-start loadout + Ascension drafts) | `mutators.yml` | — |
 | [useActiveModifiers](src/hooks/useActiveModifiers.ts) | **GameModifiers pipeline** | — | — |
 | [useCertificateManager](src/hooks/useCertificateManager.ts) | certificates, Certificate Hours | `certificates.yml` | `jezzball_certs_v1` |
 | [useAchievementManager](src/hooks/useAchievementManager.ts) | achievements + bonuses | `achievements.yml` | `jezzball_achievements_v1` |
 | [useMetaProgression](src/hooks/useMetaProgression.ts) | lifetime stats, super-upgrade unlocks | — | `jezzball_meta_stats`, `jezzball_unlock_state` |
 | [useTutorialManager](src/hooks/useTutorialManager.ts) | one-time tutorial flags | — | `tutorials_seen_v1` |
-| [useContinueCheckpoint](src/hooks/useContinueCheckpoint.ts) | 10-minute "Continue" checkpoint | — | `ballbreaker_checkpoint` |
-| [useCheckpointSnapshots](src/hooks/useCheckpointSnapshots.ts) | level-picker snapshots | — | `jezzball_checkpoints_v2` |
+| [useCheckpointSnapshots](src/hooks/useCheckpointSnapshots.ts) | level snapshots | — | `jezzball_checkpoints_v2` |
 | [useColorProgression](src/hooks/useColorProgression.ts) | accent colour per level | `colors.yml` | — |
 | [useGameConfig](src/hooks/useGameConfig.ts) | global tuning values | `game-config.yml` | — |
 | [useGameInput](src/hooks/useGameInput.ts) | pointer → fence cuts (canvas-level) | — | — |
@@ -129,6 +132,6 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 ## Known gaps
 
-- Ascension state (depth, drafted mutators) is not persisted: ascended runs are bank-or-bust — the Continue checkpoint and level-picker snapshots are only written at depth 0.
+- Ascension state (depth, drafted mutators) is not persisted across sessions: a quit ascended run starts over from depth 0 next launch. (In-run, the per-run Continue lets you retry a level after death at any depth.)
 - Test coverage is minimal (one placeholder test). The `lib/` modules are pure and React-free, so they are the natural place to start adding unit tests.
 - `eslint` reports 12 `react-hooks/exhaustive-deps` warnings that are intentional (adding the deps would re-trigger effects); review carefully before "fixing".

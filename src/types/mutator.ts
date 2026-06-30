@@ -14,6 +14,13 @@ export interface MutatorConfig {
   curse: string; // short text of the downside, shown in red on the draft card
   blessing: string; // short text of the upside, shown in accent colour
   modifiers: Record<string, number>;
+  /**
+   * May this mutator be offered in the run-start loadout draft (the base-game
+   * "Sprint Planning" pick), as opposed to only the post-final-level Ascension
+   * draft? Defaults to true; set false on mutators whose curse is unfair as a
+   * fresh-run opener (e.g. losing a life when you only have three).
+   */
+  startEligible?: boolean;
 }
 
 export interface AscensionConfig {

@@ -233,7 +233,9 @@
   "topBar": {
     "clear": "CLEAR",
     "percentToGo": "{{percent}}% to go",
-    "currentlyReducingBy": "Currently reducing by {{percent}}%"
+    "currentlyReducingBy": "Currently reducing by {{percent}}%",
+    "continues_one": "{{count}} Continue banked",
+    "continues_other": "{{count}} Continues banked"
   },
   "topBarDetails": {
     "levelStatusTitle": "Level {{level}} Status",
@@ -258,7 +260,10 @@
     "yourStatus": "Your Status",
     "livesRemaining": "Lives Remaining",
     "livesNone": "None!",
-    "livesDescription": "You lose a life when a ball hits your fence while it is growing. Run out of lives and the level restarts.",
+    "livesDescription": "You lose a life when a ball hits your fence while it is growing. Run out of lives and you can spend a Continue to retry the level.",
+    "continues": "Continues",
+    "continuesDescription": "Run out of lives and a Continue lets you retry this level with your overtime and upgrades intact. Earn more through certificates.",
+    "loadout": "Loadout",
     "certificatePoints": "Certificate Points",
     "certPointsEarned_one": "{{count}} point earned so far.",
     "certPointsEarned_other": "{{count}} points earned so far.",
@@ -352,14 +357,26 @@
     "tutorialTitle": "THE UPGRADE SHOP",
     "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade for more info - including what unlocks it and what it unlocks."
   },
+  "runDraft": {
+    "title": "Sprint Planning",
+    "subtitle": "Pick a loadout to shape this run from level 1.",
+    "pickHint": "Each loadout pairs a curse with a blessing. Choose one, or skip to play it straight.",
+    "startButton": "Start Run",
+    "pickToStart": "Pick a Loadout",
+    "skipButton": "Skip (no loadout)",
+    "noLoadouts": "No loadouts available."
+  },
+  "continue": {
+    "title": "Continue?",
+    "body_one": "Spend 1 Continue to retry this level with your overtime and upgrades intact. {{count}} left.",
+    "body_other": "Spend 1 Continue to retry this level with your overtime and upgrades intact. {{count}} left.",
+    "spendButton": "Continue",
+    "declineButton": "End Run"
+  },
   "welcome": {
     "tagline": "Slice. Trap. Survive.",
-    "startAtLevel": "Start at Level {{level}}",
-    "checkpointExpires": "Checkpoint expires in {{time}}",
     "loading": "Loading...",
-    "continueFromLevel": "Continue from Level {{level}}",
     "startGame": "Start Game",
-    "chooseStartMap": "Choose start map",
     "tutorial": "Tutorial",
     "options": "Options",
     "certificates": "Certificates",

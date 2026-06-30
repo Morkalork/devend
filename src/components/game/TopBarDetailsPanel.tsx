@@ -4,7 +4,7 @@
  */
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
-import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
 import { MutatorConfig } from '@/types/mutator';
 import { getUpgradeIcon } from './upgradeIcons';
@@ -25,6 +25,7 @@ interface TopBarDetailsPanelProps {
   cutsUsed: number;
   parCuts: number;
   lives: number;
+  continuesRemaining?: number;
   spaceRemaining: number;
   spaceRequired: number;
   lockedBalls: number;
@@ -54,6 +55,7 @@ export function TopBarDetailsPanel({
   microManagerPerLock = 0,
   ascensionDepth = 0,
   activeMutators = [],
+  continuesRemaining = 0,
 }: TopBarDetailsPanelProps) {
   const { t } = useTranslation();
   if (!visible) return null;
@@ -222,6 +224,22 @@ export function TopBarDetailsPanel({
               </p>
             </div>
 
+            {/* Continues (per-run revives) */}
+            <div style={cardStyle}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
+                  <span className="font-bold text-sm" style={{ color: accentColor }}>{t('topBarDetails.continues')}</span>
+                </div>
+                <span className="font-bold text-base tabular-nums" style={{ color: 'hsl(var(--foreground))' }}>
+                  {continuesRemaining}
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed mt-2" style={{ color: '#c8ffd8', opacity: 0.6 }}>
+                {t('topBarDetails.continuesDescription')}
+              </p>
+            </div>
+
             {/* Certificate-hour progress */}
             {certificateProgress && (
               <div style={cardStyle}>
@@ -243,16 +261,24 @@ export function TopBarDetailsPanel({
           </div>
         </section>
 
-        {/* ── ASCENSION ── */}
-        {ascensionDepth > 0 && (
+        {/* ── ASCENSION / LOADOUT ──
+            At depth 0 the drafted mutators are the run-start loadout; past it
+            they're the stacked ascension picks (with the depth multiplier). */}
+        {(ascensionDepth > 0 || activeMutators.length > 0) && (
           <section>
-            <p style={sectionHeadStyle}>{t('topBarDetails.ascensionDepth', { depth: ascensionDepth })}</p>
+            <p style={sectionHeadStyle}>
+              {ascensionDepth > 0
+                ? t('topBarDetails.ascensionDepth', { depth: ascensionDepth })
+                : t('topBarDetails.loadout')}
+            </p>
             <div className="space-y-3">
-              <div style={{ ...cardStyle, border: '1px solid #ffb34755' }}>
-                <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.7 }}>
-                  {t('topBarDetails.ascensionDescription', { multiplier: ascensionDepth + 1 })}
-                </p>
-              </div>
+              {ascensionDepth > 0 && (
+                <div style={{ ...cardStyle, border: '1px solid #ffb34755' }}>
+                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.7 }}>
+                    {t('topBarDetails.ascensionDescription', { multiplier: ascensionDepth + 1 })}
+                  </p>
+                </div>
+              )}
               {activeMutators.map(mutator => (
                 <div key={mutator.id} style={cardStyle}>
                   <p className="font-bold text-sm mb-2" style={{ color: '#ffb347' }}>{contentText.mutName(t, mutator)}</p>

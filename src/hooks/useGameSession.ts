@@ -5,10 +5,10 @@
  * It wires together all the smaller managers:
  *   - useLevelManager        levels from public/map.yml, current level index
  *   - useUpgradeManager      shop upgrades from public/upgrades.yml
- *   - useMutatorManager      Ascension mutators from public/mutators.yml
+ *   - useMutatorManager      curse/blessing mutators from public/mutators.yml
+ *                            (run-start loadout draft + Ascension draft)
  *   - useCertificateManager  certificates + Certificate Hours (meta currency)
  *   - useTutorialManager     one-time tutorial flags
- *   - useContinueCheckpoint  the 10-minute 'Continue' checkpoint
  *   - useCheckpointSnapshots saved per-level snapshots for the level picker
  *   - useMetaProgression     lifetime stats (fences drawn, lives lost, …)
  *   - useAchievementManager  achievements + their gameplay bonuses
@@ -22,17 +22,18 @@ import { useUpgradeManager } from './useUpgradeManager';
 import { useMutatorManager } from './useMutatorManager';
 import { useActiveModifiers, mergeBonuses, GameModifiers } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
-import { useContinueCheckpoint } from './useContinueCheckpoint';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
+import { eligibleForStart } from '@/lib/mutatorDraft';
 import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 
 const BASE_LIVES = 3;
+const BASE_CONTINUES = 1;
 
 export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
@@ -76,6 +77,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [cumulativeLockedBalls, setCumulativeLockedBalls] = useState(0);
   const [shopUnlockedCerts, setShopUnlockedCerts] = useState<Certificate[]>([]);
   const [pendingCertUnlocks, setPendingCertUnlocks] = useState<Certificate[]>([]);
+
+  // Per-run revive resource ("Continue"). Each run starts with BASE_CONTINUES
+  // (+ any certificate grant); spending one on death retries the current level
+  // with score + upgrades intact. gameInstanceKey forces GameCanvas to re-init
+  // the current level on revive; pendingDeathResult drives the revive overlay.
+  const [continuesRemaining, setContinuesRemaining] = useState(BASE_CONTINUES);
+  const [gameInstanceKey, setGameInstanceKey] = useState(0);
+  const [pendingDeathResult, setPendingDeathResult] = useState<GameResult | null>(null);
 
   // Ascension mode: after the final level the player may loop back to level 1
   // with a drafted mutator. Depth 0 = first pass through the levels.
@@ -130,13 +139,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   } = useTutorialManager();
 
   const {
-    saveCheckpoint,
-    clearCheckpoint,
-    getStartingLevel,
-    getRemainingTimeMs,
-  } = useContinueCheckpoint();
-
-  const {
     saveCheckpoint: saveRunCheckpoint,
     clearCheckpoints: clearRunCheckpoints,
   } = useCheckpointSnapshots();
@@ -188,6 +190,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     [draftedMutatorIds, mutatorLookup]
   );
 
+  // Mutators offered in the run-start loadout draft (a curated subset of the
+  // Ascension pool — see eligibleForStart / the `startEligible` YAML flag).
+  const loadoutMutators = useMemo(() => eligibleForStart(mutators), [mutators]);
+
   // Ascension rule: fences wear out after a number of ball hits — generous on
   // early levels, brutal late, plus the Defensive Programming upgrade bonus.
   // null at depth 0 = indestructible fences (the normal game).
@@ -207,7 +213,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     [certificates]
   );
 
-  const handleStartGame = useCallback(async (forceLevel?: number) => {
+  const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
     // Mutators only matter past the final level, so their load result does
     // not gate starting a run.
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
@@ -234,17 +240,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       const startingLives = BASE_LIVES + certBonusLives;
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
+      setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
+      setPendingDeathResult(null);
 
       if (forceLevel !== undefined) {
         setLevelIndex(forceLevel - 1);
       } else {
-        const checkpointLevel = getStartingLevel();
         const certStartLevel = getCertStartingLevel();
         const queryLevel = parseInt(new URLSearchParams(window.location.search).get('level') || '0', 10);
         if (queryLevel > 0) {
           window.history.replaceState(null, '', window.location.pathname);
         }
-        const startingLevel = Math.max(checkpointLevel, certStartLevel, queryLevel || 0);
+        const startingLevel = Math.max(certStartLevel, queryLevel || 0);
         if (startingLevel > 1) {
           setLevelIndex(startingLevel - 1);
         } else {
@@ -252,17 +259,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         }
       }
 
-      nav.startGame();
+      // A fresh run drafts a loadout first; the ?level= debug path skips it.
+      if (skipDraft) nav.startGame();
+      else nav.goToRunDraft();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadMutators, nav.startGame, getStartingLevel, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadMutators, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress]);
 
-  const handleGameEnd = useCallback((result: GameResult) => {
-    if (!result.isWin) {
-      // Ascension runs are bank-or-bust: no Continue checkpoint past depth 0.
-      if (ascensionDepth === 0) saveCheckpoint(result.levelNumber);
-    } else if (result.completedAllLevels) {
-      clearCheckpoint();
-    }
+  const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
@@ -272,7 +275,34 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
       mutatorNames: ascensionDepth > 0 ? activeMutators.map(m => m.name) : undefined,
     });
-  }, [nav.endGame, totalScore, saveCheckpoint, clearCheckpoint, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeMutators]);
+  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeMutators]);
+
+  const handleGameEnd = useCallback((result: GameResult) => {
+    // On death with a Continue banked, defer finalizing and offer a revive.
+    if (!result.isWin && continuesRemaining > 0) {
+      setPendingDeathResult(result);
+      return;
+    }
+    finalizeAndShowResult(result);
+  }, [continuesRemaining, finalizeAndShowResult]);
+
+  /** Spend a Continue: refill lives and retry the current level (score + upgrades kept). */
+  const handleSpendContinue = useCallback(() => {
+    setContinuesRemaining(n => Math.max(0, n - 1));
+    const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
+    const refilled = Math.max(1, Math.max(currentLives, startingLives));
+    setCurrentLives(refilled);
+    setLivesAtLevelStart(refilled);
+    setPendingDeathResult(null);
+    setGameInstanceKey(k => k + 1); // remount the game view -> current level re-inits
+  }, [certBonuses, currentLives]);
+
+  /** Decline the revive: finalize the deferred death and show the result screen. */
+  const handleDeclineContinue = useCallback(() => {
+    const result = pendingDeathResult;
+    setPendingDeathResult(null);
+    if (result) finalizeAndShowResult(result);
+  }, [pendingDeathResult, finalizeAndShowResult]);
 
   const handleLivesChange = useCallback((newLives: number) => {
     const livesLost = currentLives - newLives;
@@ -355,9 +385,27 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     nav.goToGame();
   }, [ascensionDepth, recordAscensionDepth, certBonuses, mutatorLookup, currentLives, resetToFirstLevel, nav.goToGame]);
 
+  /**
+   * Confirm the run-start loadout draft: adopt the chosen mutator (or none on
+   * skip) at depth 0, then enter the game. Applies the mutator's extraLives
+   * delta once, mirroring handleAscend.
+   */
+  const handleConfirmLoadout = useCallback((mutatorId: string | null) => {
+    if (mutatorId) {
+      setDraftedMutatorIds([mutatorId]);
+      const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
+      const livesDelta = mutatorLookup.get(mutatorId)?.modifiers.extraLives ?? 0;
+      const lives = Math.max(1, startingLives + livesDelta);
+      setCurrentLives(lives);
+      setLivesAtLevelStart(lives);
+    } else {
+      setDraftedMutatorIds([]);
+    }
+    nav.startGame();
+  }, [certBonuses, mutatorLookup, nav.startGame]);
+
   /** Retire: bank the run and show the result screen. */
   const handleRetire = useCallback(() => {
-    clearCheckpoint();
     const levelsCompleted = runLevelsCompleted;
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
@@ -376,7 +424,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       mutatorNames: ascensionDepth > 0 ? activeMutators.map(m => m.name) : undefined,
     });
     setPendingLevelScore(null);
-  }, [clearCheckpoint, runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeMutators]);
+  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeMutators]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
@@ -427,23 +475,23 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const startingLives = BASE_LIVES + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
+    setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
+    setPendingDeathResult(null);
 
     if (startLevel !== undefined) {
       setLevelIndex(startLevel - 1);
     } else {
       clearRunCheckpoints();
-      const checkpointLevel = getStartingLevel();
       const certStartLevel = getCertStartingLevel();
-      const level = Math.max(checkpointLevel, certStartLevel);
-      if (level > 1) {
-        setLevelIndex(level - 1);
+      if (certStartLevel > 1) {
+        setLevelIndex(certStartLevel - 1);
       } else {
         resetToFirstLevel();
       }
     }
 
-    nav.startGame();
-  }, [resetToFirstLevel, nav.startGame, getStartingLevel, setLevelIndex, certBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints]);
+    nav.goToRunDraft();
+  }, [resetToFirstLevel, nav.goToRunDraft, setLevelIndex, certBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints]);
 
   const handleRestartRun = useCallback(() => {
     setTotalScore(0);
@@ -456,16 +504,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLastRunSummary(null);
     resetRunProgress();
     clearRunCheckpoints();
-    clearCheckpoint();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
     const startingLives = BASE_LIVES + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
+    setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
+    setPendingDeathResult(null);
 
     resetToFirstLevel();
-    nav.startGame();
-  }, [resetToFirstLevel, nav.startGame, certBonuses, resetRunProgress, clearRunCheckpoints, clearCheckpoint]);
+    nav.goToRunDraft();
+  }, [resetToFirstLevel, nav.goToRunDraft, certBonuses, resetRunProgress, clearRunCheckpoints]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
@@ -476,6 +525,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCurrentLives(BASE_LIVES);
     setAscensionDepth(0);
     setDraftedMutatorIds([]);
+    setPendingDeathResult(null);
     resetRunProgress();
     nav.goToWelcome();
   }, [resetToFirstLevel, nav.goToWelcome, resetRunProgress]);
@@ -514,7 +564,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const levelParam = new URLSearchParams(window.location.search).get('level');
     if (levelParam && parseInt(levelParam, 10) > 0) {
       levelQueryHandled.current = true;
-      handleStartGame();
+      handleStartGame(undefined, true); // debug jump skips the loadout draft
     }
   }, [handleStartGame]);
 
@@ -573,19 +623,24 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Ascension mode
     ascensionDepth,
     mutators,
+    loadoutMutators,
     draftedMutatorIds,
     activeMutators,
     fenceDurability,
+    // Continue (per-run revive)
+    continuesRemaining,
+    gameInstanceKey,
+    pendingDeathResult,
     // Modifiers / bonuses
     activeModifiers,
     achievementBonuses: mergedBonuses,
     certificateProgress: runProgress,
-    // Checkpoint (for welcome screen display)
-    checkpointStartLevel: getStartingLevel(),
-    checkpointRemaining: getRemainingTimeMs(),
     // Callbacks
     handleStartGame,
+    handleConfirmLoadout,
     handleGameEnd,
+    handleSpendContinue,
+    handleDeclineContinue,
     handleLivesChange,
     handleLevelComplete,
     handleContinueFromOverlay,

@@ -1,15 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Loader2, Clock, Zap, Sparkles, Hexagon, Trophy, ChevronRight, X } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, X } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
-import { CheckpointPicker } from './CheckpointPicker';
 import { version } from '@/lib/version';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
-  onStartFromLevel?: (level: number) => void;
   onTutorial: () => void;
   onOptions: () => void;
   onOpenCertificateStore?: () => void;
@@ -18,22 +16,12 @@ interface WelcomeScreenProps {
   isLoading?: boolean;
   error?: string | null;
   accentColor?: string;
-  checkpointLevel?: number;
-  checkpointRemainingMs?: number;
   totalCertificateHours?: number;
   completedAchievementCount?: number;
 }
 
-function formatTime(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
-
 export function WelcomeScreen({
   onStartGame,
-  onStartFromLevel,
   onTutorial,
   onOptions,
   onOpenCertificateStore,
@@ -42,39 +30,15 @@ export function WelcomeScreen({
   isLoading,
   error,
   accentColor,
-  checkpointLevel,
-  checkpointRemainingMs,
   totalCertificateHours,
   completedAchievementCount,
 }: WelcomeScreenProps) {
   const { t } = useTranslation();
-  const [remainingTime, setRemainingTime] = useState(checkpointRemainingMs || 0);
-  const [showStartMapPicker, setShowStartMapPicker] = useState(false);
   const [showCertInfo, setShowCertInfo] = useState(false);
   // When certificates aren't unlocked yet the store callback is absent; instead
   // of a dead button we keep it tappable and explain how to gain access.
   const certLocked = !onOpenCertificateStore;
-  
-  // Update countdown timer
-  useEffect(() => {
-    if (!checkpointRemainingMs || checkpointRemainingMs <= 0) {
-      setRemainingTime(0);
-      return;
-    }
-    
-    setRemainingTime(checkpointRemainingMs);
-    
-    const interval = setInterval(() => {
-      setRemainingTime(prev => {
-        const newTime = prev - 1000;
-        return newTime > 0 ? newTime : 0;
-      });
-    }, 1000);
-    
-    return () => clearInterval(interval);
-  }, [checkpointRemainingMs]);
-  
-  const hasActiveCheckpoint = checkpointLevel && checkpointLevel > 1 && remainingTime > 0;
+
   return (
     <>
       <CRTBackground accentColor={accentColor} />
@@ -243,32 +207,6 @@ export function WelcomeScreen({
           </motion.div>
         )}
 
-        {/* Checkpoint Banner */}
-        {hasActiveCheckpoint && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="w-full max-w-xs p-3 bg-primary/15 border border-primary/30 rounded-lg"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-primary" />
-                <span className="text-sm font-medium text-foreground">
-                  {t('welcome.startAtLevel', { level: checkpointLevel })}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                <span>{formatTime(remainingTime)}</span>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t('welcome.checkpointExpires', { time: formatTime(remainingTime) })}
-            </p>
-          </motion.div>
-        )}
-
         {/* Buttons */}
         <motion.div
           className="flex flex-col gap-5 w-full max-w-xs"
@@ -276,44 +214,16 @@ export function WelcomeScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          {hasActiveCheckpoint ? (
-            /* Split button: Continue (left) + level-picker arrow (right) */
-            <div
-              className="flex rounded-lg overflow-hidden border-2 border-primary bg-primary/10 animate-pulse-glow"
-              style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2), inset 0 0 20px hsl(var(--primary) / 0.1)' }}
-            >
-              <motion.button
-              className="flex-1 px-[1.45rem] py-[0.72rem] font-semibold text-[0.8rem] uppercase tracking-widest text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center justify-center gap-2"
-                style={{ fontFamily: "'Orbitron', sans-serif" }}
-                onClick={onStartGame}
-                whileTap={{ scale: 0.98 }}
-                disabled={isLoading}
-              >
-                {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</> : t('welcome.continueFromLevel', { level: checkpointLevel })}
-              </motion.button>
-              <div className="w-px bg-primary/30 my-3" />
-              <motion.button
-                className="px-4 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 flex items-center"
-                onClick={() => setShowStartMapPicker(true)}
-                whileTap={{ scale: 0.95 }}
-                disabled={isLoading}
-                title={t('welcome.chooseStartMap')}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </motion.button>
-            </div>
-          ) : (
-            <motion.button
-              className="arcade-button-primary arcade-button-sm animate-pulse-glow rounded-lg flex items-center justify-center gap-2"
-              onClick={onStartGame}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              disabled={isLoading}
-              style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
-            >
-              {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</> : t('welcome.startGame')}
-            </motion.button>
-          )}
+          <motion.button
+            className="arcade-button-primary arcade-button-sm animate-pulse-glow rounded-lg flex items-center justify-center gap-2"
+            onClick={onStartGame}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            disabled={isLoading}
+            style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
+          >
+            {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</> : t('welcome.startGame')}
+          </motion.button>
           <motion.button
             className="arcade-button-primary arcade-button-sm rounded-lg"
             onClick={onTutorial}
@@ -389,14 +299,6 @@ export function WelcomeScreen({
         v{version}
       </div>
     </div>
-    {showStartMapPicker && checkpointLevel && onStartFromLevel && (
-      <CheckpointPicker
-        maxLevel={checkpointLevel + 1}
-        onSelect={(level) => { setShowStartMapPicker(false); onStartFromLevel(level); }}
-        onClose={() => setShowStartMapPicker(false)}
-        accentColor={accentColor}
-      />
-    )}
     {/* Explainer shown when certificates aren't unlocked yet. Tapping the
         backdrop or the X closes it. */}
     <AnimatePresence>
