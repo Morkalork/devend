@@ -94,7 +94,7 @@ Permanent one-time rewards earned by reaching lifetime stat thresholds. Complete
 
 ## mutators.yml
 
-Ascension mutators — curse + blessing bundles offered after beating the final level. The player drafts one per ascension and loops back to level 1; drafted mutators stack for the rest of the run. Loaded by `useMutatorManager`, drafted in `AscensionDraftScreen`, folded into the same GameModifiers pipeline as upgrades.
+Curse + blessing bundles drafted at the **start of every run** (the base-game "Sprint Planning" loadout draft, `RunDraftScreen`) and again after beating the final level (the Ascension draft, `AscensionDraftScreen`). A run-start pick shapes the run from level 1; ascension picks stack on top and loop back to level 1. Loaded by `useMutatorManager`, folded into the same GameModifiers pipeline as upgrades.
 
 ### Fields
 
@@ -105,6 +105,7 @@ Ascension mutators — curse + blessing bundles offered after beating the final 
 | `curse` | string | ✓ | Downside text (shown in red) |
 | `blessing` | string | ✓ | Upside text (shown in accent colour) |
 | `modifiers` | map | ✓ | One or more **GameModifier keys** — a curse is simply an adverse value (e.g. `ballSpeedMultiplier: 1.25`) |
+| `startEligible` | bool | | Whether this mutator may be offered in the run-start loadout draft. Defaults to **true**; set `false` on mutators whose curse is unfair as a fresh-run opener (e.g. a life lost at 3 lives). Excluded mutators still appear in the Ascension draft. |
 
 The file also has a top-level `ascension` block:
 
@@ -212,6 +213,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `scoreInterestRate` | `0` | Fraction of current overtime balance added as interest between maps (capped at 8h). | `0.05` = 5% interest |
 | `extraShopItems` | `0` | Extra item slots shown in the shop after each map. | `1` |
 | `shopRestockCount` | `0` | Purchases per shop visit that refill their slot with a new offer (Procurement upgrades). | `1` |
+| `extraContinues` | `0` | Extra per-run revives beyond the base 1. Spend a Continue on death to retry the level with overtime + upgrades intact. Grantable by a certificate or upgrade. | `1` |
 | `extraCertificateHours` | `0` | Bonus Certificate Hours banked when the run ends (Certification Wizard, Night School Diploma). | `1` |
 | `startingCapturePercent` | `0` | Board starts with this % already captured — the arena shrinks and the run starts below 100% remaining (Equity Grant certificate; clamped to 40). | `5` |
 | `fenceDurabilityBonus` | `0` | Extra ball hits Ascension fences survive before crumbling. No effect outside Ascension. | `1` |

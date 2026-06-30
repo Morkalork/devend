@@ -42,6 +42,8 @@ interface GameScreenProps {
   ownedUpgradeIds: string[];
   upgrades: UpgradeConfig[];
   lives: number;
+  /** Per-run revives banked; shown in the HUD. */
+  continuesRemaining?: number;
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
@@ -74,6 +76,7 @@ export function GameScreen({
   ownedUpgradeIds,
   upgrades,
   lives,
+  continuesRemaining = 0,
   onLivesChange,
   onGameEnd,
   onLevelComplete,
@@ -191,6 +194,7 @@ export function GameScreen({
             cutsUsed={gameState.cutsUsed}
             parCuts={level.expectedCuts}
             lives={lives}
+            continuesRemaining={continuesRemaining}
             spaceRemaining={gameState.spaceRemaining}
             spaceRequired={100 - level.sizeThreshold}
             lockedBalls={totalLockedBalls}
@@ -376,6 +380,7 @@ export function GameScreen({
         cutsUsed={gameState.cutsUsed}
         parCuts={level.expectedCuts}
         lives={lives}
+        continuesRemaining={continuesRemaining}
         spaceRemaining={gameState.spaceRemaining}
         spaceRequired={100 - level.sizeThreshold}
         lockedBalls={totalLockedBalls}

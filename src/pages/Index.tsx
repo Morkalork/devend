@@ -21,6 +21,8 @@ import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
+import { RunDraftScreen } from '@/components/game/RunDraftScreen';
+import { ContinuePrompt } from '@/components/game/ContinuePrompt';
 import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
 import { CertificateStore } from '@/components/game/CertificateStore';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
@@ -33,9 +35,7 @@ const Index = () => {
   const navigation = useScreenNavigation();
   const session = useGameSession(navigation);
 
-  const displayLevel = navigation.currentScreen === 'game'
-    ? session.currentLevelIndex + 1
-    : session.checkpointStartLevel;
+  const displayLevel = session.currentLevelIndex + 1;
 
   return (
     <AccentColorProvider currentLevel={displayLevel}>
@@ -54,7 +54,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1,
-    game: 2, upgradeShop: 3, certificateStore: 3, ascensionDraft: 3, result: 4,
+    game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3, ascensionDraft: 3, result: 4,
   };
   const prevScreenRef = useRef(navigation.currentScreen);
   const transitionDirRef = useRef(1);
@@ -98,11 +98,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             {navigation.currentScreen === 'welcome' && (
               <WelcomeScreen
                 onStartGame={() => session.handleStartGame()}
-                onStartFromLevel={
-                  session.checkpointStartLevel > 1 && session.checkpointRemaining > 0
-                    ? (level) => session.handleStartGame(level)
-                    : undefined
-                }
                 onTutorial={navigation.goToTutorial}
                 onOptions={navigation.goToOptions}
                 onOpenCertificateStore={
@@ -117,8 +112,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 isLoading={session.isLoading}
                 error={session.error}
                 accentColor={accentHex}
-                checkpointLevel={session.checkpointStartLevel}
-                checkpointRemainingMs={session.checkpointRemaining}
                 totalCertificateHours={session.totalCertificateHours}
                 completedAchievementCount={session.completedAchievementIds.length}
               />
@@ -137,6 +130,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             )}
             {navigation.currentScreen === 'game' && session.currentLevel && !session.showLevelComplete && (
               <GameScreen
+                // Bumping gameInstanceKey (spending a Continue) remounts this so
+                // the current level re-inits fresh with score + upgrades intact.
+                key={`game-${session.gameInstanceKey}`}
                 level={session.currentLevel}
                 levelNumber={session.currentLevelIndex + 1}
                 totalLevels={session.totalLevels}
@@ -144,6 +140,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 ownedUpgradeIds={session.ownedUpgradeIds}
                 upgrades={session.upgrades}
                 lives={session.currentLives}
+                continuesRemaining={session.continuesRemaining}
                 onLivesChange={session.handleLivesChange}
                 onGameEnd={session.handleGameEnd}
                 onLevelComplete={session.handleLevelComplete}
@@ -163,6 +160,14 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 ascensionDepth={session.ascensionDepth}
                 activeMutators={session.activeMutators}
                 fenceDurability={session.fenceDurability}
+              />
+            )}
+            {navigation.currentScreen === 'runDraft' && (
+              <RunDraftScreen
+                mutators={session.loadoutMutators}
+                draftedMutatorIds={session.draftedMutatorIds}
+                onConfirm={session.handleConfirmLoadout}
+                accentColor={accentHex}
               />
             )}
             {navigation.currentScreen === 'upgradeShop' && (
@@ -266,6 +271,18 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
           newlyUnlockedCerts={session.pendingCertUnlocks}
         />
       )}
+
+      <AnimatePresence>
+        {session.pendingDeathResult && (
+          <ContinuePrompt
+            key="continue-prompt"
+            continuesRemaining={session.continuesRemaining}
+            onSpend={session.handleSpendContinue}
+            onDecline={session.handleDeclineContinue}
+            accentColor={accentHex}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -23,6 +23,7 @@ export interface GameModifiers {
   scoreInterestRate: number;
   extraShopItems: number;
   shopRestockCount: number; // purchases per shop visit that refill their slot with a new offer
+  extraContinues: number;   // extra per-run revives beyond the base 1 (cert/upgrade grantable)
   extraCertificateHours: number;
   startingCapturePercent: number; // board starts with this % already captured (Equity Grant)
   fenceDurabilityBonus: number;   // extra ball hits Ascension fences survive
@@ -92,6 +93,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   scoreInterestRate: 0,
   extraShopItems: 0,
   shopRestockCount: 0,
+  extraContinues: 0,
   extraCertificateHours: 0,
   startingCapturePercent: 0,
   fenceDurabilityBonus: 0,

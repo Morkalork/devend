@@ -13,7 +13,7 @@
  *
  * Interpolated values use the `{{name}}` placeholder syntax:
  *
- *     t('welcome.startAtLevel', { level: 3 })   // "Start at Level 3"
+ *     t('topBar.percentToGo', { percent: 20 })   // "20% to go"
  *
  * Import this module once, for its side effect, before the app renders
  * (see src/main.tsx).

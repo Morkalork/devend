@@ -2,11 +2,10 @@
  * useCheckpointSnapshots — saved per-level run snapshots (score, upgrades,
  * lives) that power the level picker on the welcome screen.
  *
- * A snapshot is saved each time the player advances to a new level; the
- * picker lets them restart from any saved level with the matching state.
+ * A snapshot is saved each time the player advances to a new level.
  *
- * Not to be confused with useContinueCheckpoint, which is the single
- * 10-minute 'Continue' checkpoint.
+ * Not to be confused with the in-run Continue revive (a per-run resource
+ * spent on death to retry the current level; see useGameSession).
  */
 import { useCallback, useState, useEffect } from 'react';
 

@@ -5,7 +5,7 @@
  */
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw } from 'lucide-react';
 import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
 import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
@@ -41,6 +41,7 @@ interface GameTopBarProps {
   cutsUsed: number;
   parCuts: number;
   lives: number;
+  continuesRemaining?: number;
   spaceRemaining: number;
   spaceRequired: number;
   lockedBalls: number;
@@ -58,6 +59,7 @@ export function GameTopBar({
   cutsUsed,
   parCuts,
   lives,
+  continuesRemaining = 0,
   spaceRemaining,
   spaceRequired,
   lockedBalls,
@@ -200,20 +202,33 @@ export function GameTopBar({
           )}
         </div>
 
-        {/* Lives */}
-        <div key={livesFlashKey} className={`flex items-center gap-1 ${livesFlashKey > 0 ? 'animate-stat-flash' : ''}`}>
-          {Array.from({ length: lives }).map((_, i) => (
-            <Heart
-              key={i}
-              className="w-5 h-5 animate-pulse-heart"
-              style={{
-                color: accentColor,
-                fill: accentColor,
-                filter: `drop-shadow(0 0 6px ${accentColor}aa)`,
-                animationDelay: `${i * 0.15}s`,
-              }}
-            />
-          ))}
+        {/* Lives (+ banked Continues) */}
+        <div className="flex items-center gap-2">
+          <div key={livesFlashKey} className={`flex items-center gap-1 ${livesFlashKey > 0 ? 'animate-stat-flash' : ''}`}>
+            {Array.from({ length: lives }).map((_, i) => (
+              <Heart
+                key={i}
+                className="w-5 h-5 animate-pulse-heart"
+                style={{
+                  color: accentColor,
+                  fill: accentColor,
+                  filter: `drop-shadow(0 0 6px ${accentColor}aa)`,
+                  animationDelay: `${i * 0.15}s`,
+                }}
+              />
+            ))}
+          </div>
+          {continuesRemaining > 0 && (
+            <div
+              className="flex items-center gap-0.5 flex-shrink-0"
+              title={t('topBar.continues', { count: continuesRemaining })}
+            >
+              <RotateCcw className="w-4 h-4" style={{ color: accentColor }} />
+              <span className="font-display text-sm font-bold tabular-nums" style={{ color: accentColor }}>
+                {continuesRemaining}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Certificate-hour progress */}
