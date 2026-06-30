@@ -1,3 +1,19 @@
+# Upgrade pricing (overtime economy rebalance).
+# Base-game costs are computed at load time from the unlock level's base
+# points x a tier factor (see src/lib/upgradePricing.ts):
+#   cost = max(minCost, round(basePoints(unlockLevel) * tierFactor[tier]))
+# Prices therefore scale automatically as new maps/upgrades are added.
+# An explicit `cost:` on an upgrade overrides the formula (used for the
+# ascension trio, whose post-L30 economy is tuned separately).
+pricing:
+  minCost: 8
+  tierFactor:
+    Junior: 1.0
+    Senior: 1.35
+    Principal: 1.85
+    Architect: 2.4
+    Wizard: 3.0
+
 upgrades:
 
   # ===============================
@@ -8,7 +24,6 @@ upgrades:
     name: Runtime Optimisation
     tier: Junior
     description: Reduce ball speed by 5%.
-    cost: 8
     unlockLevel: 1
     icon: clock
     modifiers:
@@ -18,7 +33,6 @@ upgrades:
     name: Runtime Optimisation
     tier: Senior
     description: Reduce ball speed by 10%.
-    cost: 14
     unlockLevel: 3
     prerequisites:
       - runtime_optimisation_junior
@@ -29,7 +43,6 @@ upgrades:
     name: Runtime Optimisation
     tier: Principal
     description: Reduce ball speed by 15%.
-    cost: 24
     unlockLevel: 5
     prerequisites:
       - runtime_optimisation_senior
@@ -45,7 +58,6 @@ upgrades:
     name: Memory Footprint
     tier: Junior
     description: Reduce ball size by 5%.
-    cost: 8
     unlockLevel: 1
     icon: memory
     modifiers:
@@ -55,7 +67,6 @@ upgrades:
     name: Memory Footprint
     tier: Senior
     description: Reduce ball size by 10%.
-    cost: 14
     unlockLevel: 5
     prerequisites:
       - memory_footprint_junior
@@ -66,7 +77,6 @@ upgrades:
     name: Memory Footprint
     tier: Principal
     description: Reduce ball size by 15%.
-    cost: 24
     unlockLevel: 10
     prerequisites:
       - memory_footprint_senior
@@ -82,7 +92,6 @@ upgrades:
     name: Fast Compile
     tier: Junior
     description: Increase fence generation speed by 10%.
-    cost: 8
     unlockLevel: 1
     icon: fast-forward
     modifiers:
@@ -92,7 +101,6 @@ upgrades:
     name: Fast Compile
     tier: Senior
     description: Increase fence generation speed by 20%.
-    cost: 14
     unlockLevel: 5
     prerequisites:
       - fast_compile_junior
@@ -103,7 +111,6 @@ upgrades:
     name: Fast Compile
     tier: Principal
     description: Increase fence generation speed by 30%.
-    cost: 24
     unlockLevel: 10
     prerequisites:
       - fast_compile_senior
@@ -119,7 +126,6 @@ upgrades:
     name: Hot Start
     tier: Senior
     description: First fence in each map generates instantly.
-    cost: 16
     unlockLevel: 5
     prerequisites:
       - fast_compile_senior
@@ -131,7 +137,6 @@ upgrades:
     name: Hot Start
     tier: Principal
     description: First two fences in each map generate instantly.
-    cost: 26
     unlockLevel: 10
     prerequisites:
       - hot_start_junior
@@ -142,7 +147,6 @@ upgrades:
     name: Hot Start
     tier: Architect
     description: First three fences in each map generate instantly.
-    cost: 36
     unlockLevel: 20
     prerequisites:
       - hot_start_principal
@@ -158,7 +162,6 @@ upgrades:
     name: Multithreading
     tier: Principal
     description: Allow one additional fence to be in progress simultaneously.
-    cost: 28
     unlockLevel: 10
     prerequisites:
       - fast_compile_senior
@@ -170,7 +173,6 @@ upgrades:
     name: Ultrathreading
     tier: Principal
     description: Allow one additional fence to be in progress simultaneously.
-    cost: 28
     unlockLevel: 30
     prerequisites:
       - multithreading_principal
@@ -187,7 +189,6 @@ upgrades:
     name: Garbage Collector
     tier: Senior
     description: Each fence has a small chance to remove an additional 5% area.
-    cost: 16
     unlockLevel: 5
     prerequisites:
       - memory_footprint_senior
@@ -200,7 +201,6 @@ upgrades:
     name: Garbage Collector 2
     tier: Principal
     description: Each fence has a small chance to remove an additional 10% area.
-    cost: 16
     unlockLevel: 20
     prerequisites:
       - garbage_collector_senior
@@ -218,7 +218,6 @@ upgrades:
     name: Fault Tolerance
     tier: Junior
     description: Gain 1 extra life.
-    cost: 8
     unlockLevel: 5
     prerequisites:
       - system_architect
@@ -230,7 +229,6 @@ upgrades:
     name: Fault Tolerance
     tier: Senior
     description: Gain 2 extra lives.
-    cost: 18
     unlockLevel: 10
     prerequisites:
       - fault_tolerance_junior
@@ -241,7 +239,6 @@ upgrades:
     name: Fault Tolerance
     tier: Architect
     description: Gain 3 extra lives.
-    cost: 36
     unlockLevel: 15
     prerequisites:
       - fault_tolerance_senior
@@ -257,7 +254,6 @@ upgrades:
     name: Performance Bonus
     tier: Junior
     description: Gain 5% more overtime per map.
-    cost: 8
     unlockLevel: 2
     icon: trending-up
     modifiers:
@@ -267,7 +263,6 @@ upgrades:
     name: Performance Bonus
     tier: Senior
     description: Gain 10% more overtime per map.
-    cost: 16
     unlockLevel: 5
     prerequisites:
       - performance_bonus_junior
@@ -278,7 +273,6 @@ upgrades:
     name: Performance Bonus
     tier: Principal
     description: Gain 15% more overtime per map.
-    cost: 26
     unlockLevel: 8
     prerequisites:
       - performance_bonus_senior
@@ -294,7 +288,6 @@ upgrades:
     name: Venture Capital
     tier: Senior
     description: 10% interest on unused overtime between maps.
-    cost: 18
     unlockLevel: 6
     prerequisites:
       - performance_bonus_senior
@@ -306,7 +299,6 @@ upgrades:
     name: Venture Capital
     tier: Principal
     description: 20% interest on unused overtime between maps.
-    cost: 28
     unlockLevel: 7
     prerequisites:
       - venture_capital_senior
@@ -317,7 +309,6 @@ upgrades:
     name: Venture Capital
     tier: Architect
     description: 30% interest on unused overtime between maps.
-    cost: 40
     unlockLevel: 11
     prerequisites:
       - venture_capital_principal
@@ -333,7 +324,6 @@ upgrades:
     name: MicroManager
     tier: Junior
     description: Each locked ball reduces all ball speeds by 1%, up to 50%.
-    cost: 12
     unlockLevel: 3
     prerequisites:
       - runtime_optimisation_senior
@@ -345,7 +335,6 @@ upgrades:
     name: MicroManager
     tier: Senior
     description: Each locked ball reduces all ball speeds by an additional 2%, up to 50% total.
-    cost: 22
     unlockLevel: 8
     prerequisites:
       - micro_manager_junior
@@ -356,7 +345,6 @@ upgrades:
     name: MicroManager
     tier: Principal
     description: Each locked ball reduces all ball speeds by an additional 3%, up to 50% total.
-    cost: 34
     unlockLevel: 15
     prerequisites:
       - micro_manager_senior
@@ -374,7 +362,6 @@ upgrades:
     name: Procurement
     tier: Junior
     description: Once per store visit, buying an item adds a new offer to the shelf.
-    cost: 12
     unlockLevel: 3
     prerequisites:
       - fault_tolerance_senior
@@ -386,7 +373,6 @@ upgrades:
     name: Procurement
     tier: Senior
     description: Your first two purchases per store visit each add a new offer to the shelf.
-    cost: 20
     unlockLevel: 7
     prerequisites:
       - procurement_junior
@@ -397,7 +383,6 @@ upgrades:
     name: Procurement
     tier: Principal
     description: Your first three purchases per store visit each add a new offer to the shelf.
-    cost: 30
     unlockLevel: 12
     prerequisites:
       - procurement_senior
@@ -413,7 +398,6 @@ upgrades:
     name: System Architect
     tier: Architect
     description: Gain one additional shop item slot.
-    cost: 36
     unlockLevel: 4
     icon: building
     modifiers:
@@ -423,7 +407,6 @@ upgrades:
     name: Certification Wizard
     tier: Wizard
     description: Gain +1 Certificate Hour.
-    cost: 55
     unlockLevel: 10
     prerequisites:
       - technical_debt_principal
@@ -440,7 +423,6 @@ upgrades:
     name: Technical Debt
     tier: Senior
     description: Earn 20% more overtime per map - but balls move 8% faster. Short-term gain, long-term pain.
-    cost: 14
     unlockLevel: 4
     prerequisites:
       - venture_capital_principal
@@ -453,7 +435,6 @@ upgrades:
     name: Technical Debt
     tier: Principal
     description: Earn 35% more overtime per map - but balls move 15% faster.
-    cost: 26
     unlockLevel: 8
     prerequisites:
       - technical_debt_senior
@@ -465,7 +446,6 @@ upgrades:
     name: Technical Debt
     tier: Architect
     description: Earn 50% more overtime per map - but balls move 25% faster.
-    cost: 40
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
@@ -482,7 +462,6 @@ upgrades:
     name: Defensive Programming
     tier: Junior
     description: Gain 1 extra life and shrink all balls by 8%. Safety first.
-    cost: 12
     unlockLevel: 5
     icon: shield
     modifiers:
@@ -493,7 +472,6 @@ upgrades:
     name: Defensive Programming
     tier: Senior
     description: Gain 2 more extra lives and shrink all balls by an additional 8%.
-    cost: 22
     unlockLevel: 10
     prerequisites:
       - defensive_programming_junior
@@ -505,7 +483,6 @@ upgrades:
     name: Defensive Programming
     tier: Principal
     description: Gain 3 more extra lives and shrink all balls by an additional 8%.
-    cost: 36
     unlockLevel: 20
     prerequisites:
       - defensive_programming_senior
@@ -522,7 +499,6 @@ upgrades:
     name: SCRUM Master
     tier: Junior
     description: Preview the next 2 bounces of the fastest ball's path.
-    cost: 12
     unlockLevel: 4
     icon: route
     modifiers:
@@ -533,7 +509,6 @@ upgrades:
     name: SCRUM Master
     tier: Senior
     description: Also preview the 2nd fastest ball's path.
-    cost: 18
     unlockLevel: 7
     prerequisites:
       - scrum_master_1
@@ -544,7 +519,6 @@ upgrades:
     name: SCRUM Master
     tier: Senior
     description: Also preview the 3rd fastest ball's path.
-    cost: 24
     unlockLevel: 10
     prerequisites:
       - scrum_master_2
@@ -555,7 +529,6 @@ upgrades:
     name: SCRUM Master
     tier: Principal
     description: Extend path preview to 3 bounces ahead for tracked balls.
-    cost: 32
     unlockLevel: 13
     prerequisites:
       - scrum_master_3
@@ -566,7 +539,6 @@ upgrades:
     name: SCRUM Master
     tier: Principal
     description: Extend path preview to 4 bounces ahead.
-    cost: 40
     unlockLevel: 16
     prerequisites:
       - scrum_master_4
@@ -577,7 +549,6 @@ upgrades:
     name: SCRUM Master
     tier: Architect
     description: Show path preview for all balls simultaneously.
-    cost: 52
     unlockLevel: 19
     prerequisites:
       - scrum_master_5
@@ -594,7 +565,6 @@ upgrades:
     name: Feature Freeze
     tier: Junior
     description: Tap a ball to freeze it in place for 2 seconds.
-    cost: 14
     unlockLevel: 4
     prerequisites:
       - scrum_master_2
@@ -606,7 +576,6 @@ upgrades:
     name: Feature Freeze
     tier: Senior
     description: Tapped balls now freeze for 4 seconds.
-    cost: 24
     unlockLevel: 8
     prerequisites:
       - feature_freeze_junior
@@ -617,7 +586,6 @@ upgrades:
     name: Feature Freeze
     tier: Principal
     description: Tapped balls now freeze for 6 seconds.
-    cost: 36
     unlockLevel: 14
     prerequisites:
       - feature_freeze_senior
@@ -635,7 +603,6 @@ upgrades:
     name: Cascade Freeze
     tier: Senior
     description: A single freeze tap now freezes the 2 nearest balls.
-    cost: 30
     unlockLevel: 14
     prerequisites:
       - feature_freeze_principal
@@ -647,7 +614,6 @@ upgrades:
     name: Cascade Freeze
     tier: Principal
     description: A single freeze tap now freezes the 3 nearest balls.
-    cost: 44
     unlockLevel: 18
     prerequisites:
       - cascade_freeze_junior
@@ -658,7 +624,6 @@ upgrades:
     name: Cascade Freeze
     tier: Architect
     description: Frozen balls now stay frozen for 8 seconds.
-    cost: 58
     unlockLevel: 22
     prerequisites:
       - cascade_freeze_senior
@@ -676,7 +641,6 @@ upgrades:
     name: Cron Job
     tier: Senior
     description: Every 10 seconds, automatically freeze a random ball in place for 3 seconds.
-    cost: 30
     unlockLevel: 20
     prerequisites:
       - feature_freeze_principal
@@ -688,7 +652,6 @@ upgrades:
     name: Cron Job
     tier: Principal
     description: Scheduled freezes now hold a ball for 4 seconds.
-    cost: 42
     unlockLevel: 22
     prerequisites:
       - cron_job_senior
@@ -699,7 +662,6 @@ upgrades:
     name: Cron Job
     tier: Architect
     description: Scheduled freezes now hold a ball for 5 seconds.
-    cost: 54
     unlockLevel: 24
     prerequisites:
       - cron_job_principal

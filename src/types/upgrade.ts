@@ -5,7 +5,13 @@ export interface UpgradeConfig {
   name: string;
   tier: UpgradeTier;
   description: string;
-  cost: number;
+  /**
+   * Overtime cost. Optional in the YAML source: when omitted the loader derives
+   * it from the unlock level's base points x the tier factor (see
+   * src/lib/upgradePricing.ts). After loading, this field is always populated
+   * with the resolved cost, so consumers can read it directly.
+   */
+  cost?: number;
   unlockLevel?: number;
   prerequisites?: string[];
   /** Only offered while ascended (Ascension mode, depth ≥ 1) */
@@ -18,7 +24,17 @@ export interface UpgradeConfig {
   modifiers: Record<string, number>;
 }
 
+/**
+ * Pricing config for the formula that derives upgrade costs from level points.
+ * Lives under `pricing:` in public/upgrades.yml; see src/lib/upgradePricing.ts.
+ */
+export interface UpgradePricing {
+  minCost: number;
+  tierFactor: Record<UpgradeTier, number>;
+}
+
 export interface UpgradeData {
+  pricing?: Partial<UpgradePricing>;
   upgrades: UpgradeConfig[];
 }
 

@@ -2,13 +2,27 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import type { UpgradeData } from "@/types/upgrade";
+import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
+import type { LevelData } from "@/types/level";
+import { buildLevelPoints, mergePricing, computeUpgradeCost } from "@/lib/upgradePricing";
 
 // Read the upgrade catalogue straight from the YAML source of truth so this
 // suite guards the data, not a hand-maintained copy.
-const upgrades = (
-  yaml.load(readFileSync(resolve(process.cwd(), "public/upgrades.yml"), "utf8")) as UpgradeData
-).upgrades;
+const upgradeDoc = yaml.load(
+  readFileSync(resolve(process.cwd(), "public/upgrades.yml"), "utf8"),
+) as UpgradeData;
+const upgrades = upgradeDoc.upgrades;
+
+// Pricing is derived from level points + tier factors (see upgradePricing.ts),
+// so recompute effective costs the same way the loader does to guard them.
+const pricing = mergePricing(upgradeDoc.pricing);
+const levelPoints = buildLevelPoints(
+  (yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData).levels,
+);
+const effectiveCost = (u: UpgradeConfig): number | null =>
+  typeof u.cost === "number"
+    ? u.cost
+    : computeUpgradeCost(u.unlockLevel ?? 1, u.tier, levelPoints, pricing);
 
 const byId = new Map(upgrades.map(u => [u.id, u] as const));
 const prereqsOf = (id: string): string[] => byId.get(id)?.prerequisites ?? [];
@@ -94,6 +108,43 @@ describe("track structure", () => {
       .filter(u => !u.ascensionOnly)
       .filter(u => [...ancestors(u.id)].some(a => byId.get(a)?.ascensionOnly))
       .map(u => u.id);
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe("pricing", () => {
+  it("prices every upgrade (explicit cost or resolvable formula)", () => {
+    const unpriced = upgrades.filter(u => effectiveCost(u) === null).map(u => u.id);
+    expect(unpriced).toEqual([]);
+  });
+
+  it("keeps the catalogue scarce: total cost exceeds a strong run's income", () => {
+    // An ace player earns ~2535h over the current 30-level run (see the economy
+    // model). The catalogue must cost more than that so no one buys it all.
+    // Bump this floor when the level count (and thus max income) grows.
+    const ACE_FULL_RUN_INCOME = 2535;
+    const total = upgrades
+      .filter(u => !u.ascensionOnly)
+      .reduce((sum, u) => sum + (effectiveCost(u) ?? 0), 0);
+    expect(total).toBeGreaterThan(ACE_FULL_RUN_INCOME);
+  });
+
+  it("is monotonic within each family: later tiers never cost less", () => {
+    const families = new Map<string, UpgradeConfig[]>();
+    for (const u of upgrades) {
+      if (u.ascensionOnly) continue;
+      if (!families.has(u.name)) families.set(u.name, []);
+      families.get(u.name)!.push(u);
+    }
+    const offenders: string[] = [];
+    for (const tiers of families.values()) {
+      const sorted = [...tiers].sort((a, b) => (a.unlockLevel ?? 1) - (b.unlockLevel ?? 1));
+      for (let i = 1; i < sorted.length; i++) {
+        if ((effectiveCost(sorted[i]) ?? 0) < (effectiveCost(sorted[i - 1]) ?? 0)) {
+          offenders.push(`${sorted[i - 1].id} -> ${sorted[i].id}`);
+        }
+      }
+    }
     expect(offenders).toEqual([]);
   });
 });
