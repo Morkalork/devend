@@ -237,7 +237,12 @@ export async function ensureScoringConfigLoaded(): Promise<void> {
  * scoreMultiplier (from upgrades) applies on top, and the result is capped
  * at basePoints × overtimeCapHeadroom (see getOvertimeCap). The levelNumber
  * arg is retained for the callers' breakdown/telemetry but no longer drives
- * the cap. lockBonus/pushBonus are added by the caller on top of the cap.
+ * the cap.
+ *
+ * `extraBonus` folds lock/push/break bonuses in BEFORE the cap so a single map
+ * can never pay more than the cap (issue #43): together with the flat per-map
+ * base points this keeps every map's reward in the same band and stops the
+ * money-ball / push-your-luck stack from inflating the economy.
  */
 export function calculateScore(
   usedFences: number,
@@ -247,6 +252,7 @@ export function calculateScore(
   basePoints: number,
   scoreMultiplier: number = 1,
   levelNumber: number = 1,
+  extraBonus: number = 0,
 ): {
   levelScore: number;
   breakdown: ScoreBreakdown;
@@ -260,8 +266,9 @@ export function calculateScore(
 
   // Guard against a NaN/negative scoreMultiplier leaking in from bad config.
   const safeMultiplier = Number.isFinite(scoreMultiplier) && scoreMultiplier > 0 ? scoreMultiplier : 1;
+  const safeExtra = Number.isFinite(extraBonus) && extraBonus > 0 ? extraBonus : 0;
   const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
-  const rawScore = multipliedBase + breakdown.totalBonus;
+  const rawScore = multipliedBase + breakdown.totalBonus + safeExtra;
   const cap = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom);
   const levelScore = Math.max(0, Math.min(rawScore, cap));
 

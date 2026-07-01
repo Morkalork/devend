@@ -1,4 +1,4 @@
-import { Vector2 } from "@/types/game";
+import { Vector2, Ball } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
@@ -9,10 +9,43 @@ import {
   findGridRegionForBall,
 } from "@/lib/spaceGrid";
 import { lineSegmentIntersection, vec2Length } from "@/lib/polygon";
+import { effectiveBallSpeedFactor } from "@/lib/ballTypes";
 import { LockDustParticle } from "@/types/game";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
+
+/**
+ * MicroManager: each locked ball slows the survivors. Caps every active ball's
+ * speed to a fraction of its NORMAL (type) base speed that shrinks as more
+ * balls are locked — but never below MIN_BALL_SPEED_FACTOR of normal once the
+ * ballSpeedMultiplier is folded in (issue #42). The floor is enforced by
+ * effectiveBallSpeedFactor so the cap and the bottom-bar readout agree.
+ */
+export function applyMicroManagerSpeedCap(
+  balls: Ball[],
+  activeModifiers: GameModifiers,
+  totalLocked: number,
+): void {
+  if (activeModifiers.microManagerPerLock <= 0 || totalLocked <= 0) return;
+  const microFactor = Math.pow(1 - activeModifiers.microManagerPerLock, totalLocked);
+  const combined = effectiveBallSpeedFactor(activeModifiers.ballSpeedMultiplier, microFactor);
+  // Spawn folded ballSpeedMultiplier (floored) into baseSpeed, so divide it back
+  // out to recover the ball's normal type speed before applying the floored cap.
+  const spawnScale = effectiveBallSpeedFactor(activeModifiers.ballSpeedMultiplier, 1);
+  for (const ball of balls) {
+    if (ball.state === 'won' || ball.speed === 0) continue;
+    const actualSpeed = vec2Length(ball.velocity);
+    const normalSpeed = ball.baseSpeed / spawnScale;
+    const cappedSpeed = normalSpeed * combined;
+    if (actualSpeed > cappedSpeed && cappedSpeed > 0) {
+      const ratio = cappedSpeed / actualSpeed;
+      ball.velocity.x *= ratio;
+      ball.velocity.y *= ratio;
+      ball.speed = cappedSpeed;
+    }
+  }
+}
 
 export function checkAndUpdateBallWonStates(
   game: CanvasGameState,
@@ -121,21 +154,11 @@ export function checkAndUpdateBallWonStates(
     game.lockedBallsCount += 1;
     wonThisPass.push(ball);
 
-    if (activeModifiers.microManagerPerLock > 0) {
-      const totalLocked = cumulativeLockedBalls + game.lockedBallsCount;
-      const speedFactor = Math.max(0.30, Math.pow(1 - activeModifiers.microManagerPerLock, totalLocked));
-      for (const other of game.balls) {
-        if (other.state === 'won' || other.speed === 0) continue;
-        const actualSpeed = vec2Length(other.velocity);
-        const cappedSpeed = other.baseSpeed * speedFactor;
-        if (actualSpeed > cappedSpeed && cappedSpeed > 0) {
-          const ratio = cappedSpeed / actualSpeed;
-          other.velocity.x *= ratio;
-          other.velocity.y *= ratio;
-          other.speed = cappedSpeed;
-        }
-      }
-    }
+    applyMicroManagerSpeedCap(
+      game.balls,
+      activeModifiers,
+      cumulativeLockedBalls + game.lockedBallsCount,
+    );
 
     callbacks.setLockedBallsCount(game.lockedBallsCount);
     anyBallWon = true;

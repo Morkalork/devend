@@ -5,6 +5,7 @@
 import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
+import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
 
 interface GameBottomBarProps {
   activeModifiers: GameModifiers;
@@ -33,9 +34,15 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand
   const formatRate = (value: number) => `${Math.round(value * 100)}%`;
 
   const microManagerFactor = modifiers.microManagerPerLock > 0 && lockedBalls > 0
-    ? Math.max(0.30, Math.pow(1 - modifiers.microManagerPerLock, lockedBalls))
+    ? Math.pow(1 - modifiers.microManagerPerLock, lockedBalls)
     : 1;
-  const effectiveSpeedFactor = modifiers.ballSpeedMultiplier * microManagerFactor;
+  // Floored combined factor — matches what the physics actually enforces (#42).
+  const effectiveSpeedFactor = effectiveBallSpeedFactor(modifiers.ballSpeedMultiplier, microManagerFactor);
+  // Current MicroManager reduction after the floor, so this readout can't claim
+  // a bigger slow than the ball-speed line above actually shows.
+  const microNowReduction = modifiers.ballSpeedMultiplier > 0
+    ? Math.max(0, 1 - effectiveSpeedFactor / modifiers.ballSpeedMultiplier)
+    : 0;
 
   const stats = [
     { label: t('bottomBar.ballSpeed'), value: formatPercent(effectiveSpeedFactor), changed: effectiveSpeedFactor !== 1 },
@@ -49,7 +56,7 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand
     { label: t('bottomBar.interest'), value: formatRate(modifiers.scoreInterestRate), changed: modifiers.scoreInterestRate !== 0 },
     { label: t('bottomBar.shopSlots'), value: formatBonus(modifiers.extraShopItems), changed: modifiers.extraShopItems !== 0 },
     { label: t('bottomBar.restocks'), value: formatBonus(modifiers.shopRestockCount), changed: modifiers.shopRestockCount !== 0 },
-    { label: t('bottomBar.microMgrPerLock'), value: `${Math.round(modifiers.microManagerPerLock * 100)}% (${Math.round((1 - microManagerFactor) * 100)}% now)`, changed: modifiers.microManagerPerLock !== 0 },
+    { label: t('bottomBar.microMgrPerLock'), value: `${Math.round(modifiers.microManagerPerLock * 100)}% (${Math.round(microNowReduction * 100)}% now)`, changed: modifiers.microManagerPerLock !== 0 },
   ];
 
   return (

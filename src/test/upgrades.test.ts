@@ -118,15 +118,20 @@ describe("pricing", () => {
     expect(unpriced).toEqual([]);
   });
 
-  it("keeps the catalogue scarce: total cost exceeds a strong run's income", () => {
-    // An ace player earns ~2535h over the current 30-level run (see the economy
-    // model). The catalogue must cost more than that so no one buys it all.
-    // Bump this floor when the level count (and thus max income) grows.
-    const ACE_FULL_RUN_INCOME = 2535;
+  it("keeps the catalogue scarce: total cost exceeds a perfect run's income", () => {
+    // Issue #43: per-map overtime is flat and hard-capped at basePoints ×
+    // overtimeCapHeadroom (lock/push bonuses fold in under that cap). So the
+    // most a flawless ace can earn is levels × cap. The catalogue must cost more
+    // than that, so no one can ever buy it all. This auto-scales with the level
+    // count and the flat base, so it never needs a manual bump.
+    const OVERTIME_CAP_HEADROOM = 2.0; // mirrors scoring-config.yml
+    const flatBase = [...levelPoints.values()][0];
+    const perMapCap = flatBase * OVERTIME_CAP_HEADROOM;
+    const aceFullRunIncome = levelPoints.size * perMapCap;
     const total = upgrades
       .filter(u => !u.ascensionOnly)
       .reduce((sum, u) => sum + (effectiveCost(u) ?? 0), 0);
-    expect(total).toBeGreaterThan(ACE_FULL_RUN_INCOME);
+    expect(total).toBeGreaterThan(aceFullRunIncome);
   });
 
   it("is monotonic within each family: later tiers never cost less", () => {

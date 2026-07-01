@@ -19,6 +19,28 @@
 
 import yaml from 'js-yaml';
 
+/**
+ * Hard floor on how slow the upgrade/lock stack may make a ball: its effective
+ * speed never drops below this fraction of its normal (type) base speed. Guards
+ * against the ballSpeedMultiplier (Runtime Optimisation, certificates, slow
+ * loadouts) compounding with the MicroManager per-lock reduction into an
+ * unplayably slow game (issue #42). Per-ball `minimumSpeed` may floor higher.
+ */
+export const MIN_BALL_SPEED_FACTOR = 0.5;
+
+/**
+ * Combined slow-down factor from the ballSpeedMultiplier and the MicroManager
+ * per-lock reduction, floored at MIN_BALL_SPEED_FACTOR. `microManagerFactor` is
+ * 1 when no MicroManager reduction applies. Used by both the physics speed cap
+ * and the bottom-bar readout so the number shown matches what the balls do.
+ */
+export function effectiveBallSpeedFactor(
+  ballSpeedMultiplier: number,
+  microManagerFactor: number,
+): number {
+  return Math.max(MIN_BALL_SPEED_FACTOR, ballSpeedMultiplier * microManagerFactor);
+}
+
 export type BallAbility =
   | 'none'          // standard ball
   | 'variableSpeed' // yellow: cycles through fixed speeds on every surface contact

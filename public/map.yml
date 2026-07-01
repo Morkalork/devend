@@ -3,7 +3,7 @@ levels:
     level: 1
     sizeThreshold: 40
     expectedCuts: 3
-    points: 5
+    points: 40
     variety: 0
     maxBalls: 1
     entities: []
@@ -11,7 +11,7 @@ levels:
     level: 2
     sizeThreshold: 40
     expectedCuts: 5
-    points: 8
+    points: 40
     variety: 3
     maxBalls: 2
     entities:
@@ -33,7 +33,7 @@ levels:
     level: 2
     sizeThreshold: 40
     expectedCuts: 5
-    points: 8
+    points: 40
     variety: 3
     maxBalls: 2
     entities:
@@ -55,7 +55,7 @@ levels:
     level: 3
     sizeThreshold: 35
     expectedCuts: 6
-    points: 11
+    points: 40
     variety: 5
     maxBalls: 2
     entities:
@@ -70,7 +70,7 @@ levels:
     level: 3
     sizeThreshold: 35
     expectedCuts: 6
-    points: 11
+    points: 40
     variety: 5
     maxBalls: 2
     entities:
@@ -84,7 +84,7 @@ levels:
     level: 4
     sizeThreshold: 30
     expectedCuts: 8
-    points: 14
+    points: 40
     variety: 5
     maxBalls: 2
     entities:
@@ -106,7 +106,7 @@ levels:
     level: 4
     sizeThreshold: 30
     expectedCuts: 8
-    points: 14
+    points: 40
     variety: 5
     maxBalls: 2
     entities:
@@ -128,7 +128,7 @@ levels:
     level: 5
     sizeThreshold: 28
     expectedCuts: 10
-    points: 17
+    points: 40
     variety: 8
     maxBalls: 2
     entities:
@@ -180,7 +180,7 @@ levels:
     level: 5
     sizeThreshold: 28
     expectedCuts: 10
-    points: 17
+    points: 40
     variety: 8
     maxBalls: 2
     entities:
@@ -232,7 +232,7 @@ levels:
     level: 6
     sizeThreshold: 25
     expectedCuts: 14
-    points: 20
+    points: 40
     variety: 10
     maxBalls: 2
     entities:
@@ -261,7 +261,7 @@ levels:
     level: 6
     sizeThreshold: 25
     expectedCuts: 14
-    points: 20
+    points: 40
     variety: 10
     maxBalls: 2
     entities:
@@ -290,7 +290,7 @@ levels:
     level: 7
     sizeThreshold: 22
     expectedCuts: 16
-    points: 23
+    points: 40
     variety: 10
     maxBalls: 2
     entities:
@@ -326,7 +326,7 @@ levels:
     level: 8
     sizeThreshold: 20
     expectedCuts: 15
-    points: 26
+    points: 40
     variety: 12
     maxBalls: 2
     entities:
@@ -367,7 +367,7 @@ levels:
     level: 9
     sizeThreshold: 18
     expectedCuts: 18
-    points: 29
+    points: 40
     variety: 15
     maxBalls: 3
     entities:
@@ -409,7 +409,7 @@ levels:
     level: 10
     sizeThreshold: 15
     expectedCuts: 20
-    points: 32
+    points: 40
     variety: 15
     maxBalls: 3
     entities:
@@ -463,7 +463,7 @@ levels:
     level: 11
     sizeThreshold: 10
     expectedCuts: 12
-    points: 35
+    points: 40
     variety: 18
     maxBalls: 4
     entities:
@@ -494,7 +494,7 @@ levels:
     level: 12
     sizeThreshold: 10
     expectedCuts: 22
-    points: 38
+    points: 40
     variety: 20
     maxBalls: 3
     entities:
@@ -520,7 +520,7 @@ levels:
     level: 13
     sizeThreshold: 8
     expectedCuts: 24
-    points: 41
+    points: 40
     variety: 25
     maxBalls: 4
     entities:
@@ -554,7 +554,7 @@ levels:
     level: 14
     sizeThreshold: 8
     expectedCuts: 26
-    points: 44
+    points: 40
     variety: 25
     maxBalls: 4
     entities:
@@ -588,7 +588,7 @@ levels:
     level: 15
     sizeThreshold: 5
     expectedCuts: 28
-    points: 47
+    points: 40
     variety: 30
     maxBalls: 4
     entities:
@@ -626,7 +626,7 @@ levels:
     level: 16
     sizeThreshold: 7
     expectedCuts: 30
-    points: 50
+    points: 40
     variety: 28
     maxBalls: 4
     entities:
@@ -660,7 +660,7 @@ levels:
     level: 17
     sizeThreshold: 7
     expectedCuts: 32
-    points: 53
+    points: 40
     variety: 30
     maxBalls: 4
     entities:
@@ -698,7 +698,7 @@ levels:
     level: 18
     sizeThreshold: 6
     expectedCuts: 35
-    points: 56
+    points: 40
     variety: 30
     maxBalls: 4
     entities:
@@ -738,7 +738,7 @@ levels:
     level: 19
     sizeThreshold: 5
     expectedCuts: 38
-    points: 59
+    points: 40
     variety: 35
     threadLockRequired: 1
     maxBalls: 4
@@ -799,7 +799,7 @@ levels:
     level: 20
     sizeThreshold: 30
     expectedCuts: 10
-    points: 66
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 1
@@ -824,7 +824,7 @@ levels:
     level: 21
     sizeThreshold: 22
     expectedCuts: 10
-    points: 72
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -843,7 +843,7 @@ levels:
     level: 22
     sizeThreshold: 20
     expectedCuts: 10
-    points: 78
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -872,7 +872,7 @@ levels:
     level: 23
     sizeThreshold: 18
     expectedCuts: 11
-    points: 84
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -911,7 +911,7 @@ levels:
     level: 24
     sizeThreshold: 16
     expectedCuts: 12
-    points: 90
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -947,7 +947,7 @@ levels:
     level: 25
     sizeThreshold: 15
     expectedCuts: 12
-    points: 96
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -986,7 +986,7 @@ levels:
     level: 26
     sizeThreshold: 14
     expectedCuts: 13
-    points: 102
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -1013,7 +1013,7 @@ levels:
     level: 27
     sizeThreshold: 13
     expectedCuts: 14
-    points: 108
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -1048,7 +1048,7 @@ levels:
     level: 28
     sizeThreshold: 12
     expectedCuts: 15
-    points: 114
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -1085,7 +1085,7 @@ levels:
     level: 29
     sizeThreshold: 11
     expectedCuts: 16
-    points: 120
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -1140,7 +1140,7 @@ levels:
     level: 30
     sizeThreshold: 10
     expectedCuts: 18
-    points: 126
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 3
@@ -1195,7 +1195,7 @@ levels:
     level: 31
     sizeThreshold: 45
     expectedCuts: 4
-    points: 132
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -1214,7 +1214,7 @@ levels:
     level: 32
     sizeThreshold: 42
     expectedCuts: 5
-    points: 138
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 1
@@ -1254,7 +1254,7 @@ levels:
     level: 33
     sizeThreshold: 40
     expectedCuts: 7
-    points: 60
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 1
@@ -1279,7 +1279,7 @@ levels:
     level: 34
     sizeThreshold: 35
     expectedCuts: 8
-    points: 75
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
@@ -1321,7 +1321,7 @@ levels:
     level: 35
     sizeThreshold: 30
     expectedCuts: 9
-    points: 95
+    points: 40
     variety: 0
     randomShapes: 0
     maxBalls: 2
