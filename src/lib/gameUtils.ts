@@ -83,17 +83,94 @@ export function getBallSpeedLevelMultiplier(levelIndex: number): number {
 
 // ── Ball trajectory ───────────────────────────────────────────────────────
 
+interface CapsuleHit { t: number; nx: number; ny: number; }
+
+/** Nearest forward hit (t > eps) of a UNIT-direction ray with a circle. */
+function rayCircleFirstHit(
+  ox: number, oy: number, dx: number, dy: number,
+  cx: number, cy: number, R: number,
+): number | null {
+  const fx = ox - cx, fy = oy - cy;
+  const b = fx * dx + fy * dy;        // dir is unit, so the quadratic's a = 1
+  const c = fx * fx + fy * fy - R * R;
+  const disc = b * b - c;
+  if (disc < 0) return null;
+  const s = Math.sqrt(disc);
+  const t0 = -b - s;
+  if (t0 > 1e-4) return t0;
+  const t1 = -b + s;
+  return t1 > 1e-4 ? t1 : null;
+}
+
 /**
- * Compute future ball path waypoints by ray-casting off solid walls and
- * obstacle polygons.  Handles each obstacle as a whole unit so adjacent
- * polygon edges never cause false double-bounces, and uses outward-facing
- * normals with back-face culling so interior faces are ignored.
+ * Nearest forward hit of a UNIT-direction ray against the CAPSULE around
+ * segment a–b with radius R — the surface swept by the CENTRE of a ball of
+ * radius R as it rolls along the wall. This is exactly the model the real
+ * collision uses (closest point on the segment, within radius R), so it
+ * reflects at the correct angle on the flat sides AND rounds the endpoints and
+ * corners the way the physics does. Returns the centre-contact distance `t` and
+ * the outward surface normal, or null.
+ */
+function capsuleRayHit(
+  ox: number, oy: number, dx: number, dy: number,
+  ax: number, ay: number, bx: number, by: number, R: number,
+): CapsuleHit | null {
+  const sx = bx - ax, sy = by - ay;
+  const segLen = Math.sqrt(sx * sx + sy * sy);
+  let best: CapsuleHit | null = null;
+  const consider = (t: number, nx: number, ny: number) => {
+    if (t > 1e-4 && (!best || t < best.t)) best = { t, nx, ny };
+  };
+
+  if (segLen >= 1e-9) {
+    const ux = sx / segLen, uy = sy / segLen;         // unit vector along the wall
+    // Flat side facing the ray: its outward normal must oppose the ray dir.
+    let onx = -uy, ony = ux;
+    if (dx * onx + dy * ony > 0) { onx = -onx; ony = -ony; }
+    // Ray vs the offset line through (a + R·outward) with direction u.
+    const px = ax + onx * R, py = ay + ony * R;
+    const denom = dx * uy - dy * ux;
+    if (Math.abs(denom) > 1e-9) {
+      const t = ((px - ox) * uy - (py - oy) * ux) / denom;
+      if (t > 1e-4) {
+        const hx = ox + t * dx, hy = oy + t * dy;
+        const w = (hx - ax) * ux + (hy - ay) * uy;    // projection along the wall
+        if (w >= 0 && w <= segLen) consider(t, onx, ony); // only the flat span
+      }
+    }
+  }
+
+  // Rounded end caps (the corners). A cap only counts where it sticks out past
+  // the segment end — within the span the flat side is the true surface.
+  const caps: Array<[number, number, number]> = [[ax, ay, -1], [bx, by, 1]];
+  for (const [ex, ey, side] of caps) {
+    const t = rayCircleFirstHit(ox, oy, dx, dy, ex, ey, R);
+    if (t == null) continue;
+    const hx = ox + t * dx, hy = oy + t * dy;
+    if (segLen >= 1e-9) {
+      const w = ((hx - ax) * sx + (hy - ay) * sy) / segLen;
+      if (side < 0 && w > 0) continue;         // cap a: keep only w < 0
+      if (side > 0 && w < segLen) continue;    // cap b: keep only w > segLen
+    }
+    let nx = hx - ex, ny = hy - ey;
+    const nl = Math.sqrt(nx * nx + ny * ny) || 1;
+    consider(t, nx / nl, ny / nl);
+  }
+
+  return best;
+}
+
+/**
+ * Predict the ball's future path as centre-position waypoints by ray-casting
+ * off the board edges, user fences and obstacle polygons. Each surface is
+ * modelled as a capsule (see capsuleRayHit) whose radius matches the real
+ * collision distance, so the preview reflects at the right angle, rounds
+ * corners/fence-ends, and accounts for ball radius + wall thickness — matching
+ * how the ball actually bounces.
  *
- * @param ballRadius - Ball radius in world units; used to offset the bounce
- *   point so the preview lands where the ball surface first contacts the wall.
- * @param obstaclePolygons - Obstacle polygon list from CanvasGameState.
- *   Walls with isObstacleBoundary are skipped in the wall loop and handled
- *   here at the polygon level instead.
+ * Note: this is a single-ball prediction; it does not model ball-to-ball
+ * collisions (both balls are moving), so paths can still diverge once balls
+ * meet. That is an inherent limit of a forward preview, not a bug here.
  */
 export function computeBallTrajectory(
   ballPosition: Vector2,
@@ -104,113 +181,54 @@ export function computeBallTrajectory(
   obstaclePolygons: Polygon[] = [],
 ): Vector2[] {
   const points: Vector2[] = [{ ...ballPosition }];
-  let origin = { ...ballPosition };
-  let dir = vec2Normalize(ballVelocity);
-  let lastHitWallId: string | undefined;
-  let lastHitObstacleIdx = -1;
+  const v = vec2Normalize(ballVelocity);
+  let ox = ballPosition.x, oy = ballPosition.y;
+  let dx = v.x, dy = v.y;
+  if (dx === 0 && dy === 0) return points;
 
+  // Build the collision surfaces once as capsule segments. Board edges use the
+  // ball radius (matching the boardPolygon collision); user fences add half the
+  // wall thickness (matching collideBallWithWall). Obstacle polygon edges use
+  // the ball radius. Obstacle-boundary walls are skipped — handled via polygons.
+  interface Seg { ax: number; ay: number; bx: number; by: number; R: number; id: string; }
+  const segs: Seg[] = [];
+  for (const wall of walls) {
+    if (wall.id.startsWith('obstacle-')) continue;
+    const R = wall.id.startsWith('board-') ? ballRadius : ballRadius + (wall.thickness ?? 0) / 2;
+    segs.push({ ax: wall.start.x, ay: wall.start.y, bx: wall.end.x, by: wall.end.y, R, id: wall.id });
+  }
+  for (let pi = 0; pi < obstaclePolygons.length; pi++) {
+    const vs = obstaclePolygons[pi].vertices;
+    for (let i = 0; i < vs.length; i++) {
+      const j = (i + 1) % vs.length;
+      segs.push({ ax: vs[i].x, ay: vs[i].y, bx: vs[j].x, by: vs[j].y, R: ballRadius, id: `obs:${pi}:${i}` });
+    }
+  }
+
+  let skipId = ""; // don't immediately re-hit the surface we just bounced off
   for (let bounce = 0; bounce < numBounces; bounce++) {
-    let bestT = Infinity;
-    let bestNormal: Vector2 | null = null;
-    let bestWallId: string | undefined;
-    let bestObstacleIdx = -1;
-
-    // ── Board-edge and fence walls ────────────────────────────────────────
-    for (const wall of walls) {
-      // Obstacle walls (prefix "obstacle-") are handled per-polygon below.
-      // Board edges (prefix "board-") and user fences (prefix "wall-") stay.
-      if (wall.id.startsWith('obstacle-')) continue;
-      if (wall.id === lastHitWallId) continue;
-
-      const ex = wall.end.x - wall.start.x;
-      const ey = wall.end.y - wall.start.y;
-      const denom = dir.x * ey - dir.y * ex;
-      if (Math.abs(denom) < 1e-9) continue;
-
-      const wx = wall.start.x - origin.x;
-      const wy = wall.start.y - origin.y;
-      const t = (wx * ey - wy * ex) / denom;
-      const u = (wx * dir.y - wy * dir.x) / denom;
-
-      if (t > 1e-4 && u >= 0 && u <= 1 && t < bestT) {
-        bestT = t;
-        bestWallId = wall.id;
-        bestObstacleIdx = -1;
-        const len = Math.sqrt(ex * ex + ey * ey);
-        let nx = -ey / len;
-        let ny =  ex / len;
-        if (dir.x * nx + dir.y * ny > 0) { nx = -nx; ny = -ny; }
-        bestNormal = { x: nx, y: ny };
-      }
+    let bestT = Infinity, bnx = 0, bny = 0, bestId = "";
+    for (const s of segs) {
+      if (s.id === skipId) continue;
+      const hit = capsuleRayHit(ox, oy, dx, dy, s.ax, s.ay, s.bx, s.by, s.R);
+      if (hit && hit.t < bestT) { bestT = hit.t; bnx = hit.nx; bny = hit.ny; bestId = s.id; }
     }
+    if (!Number.isFinite(bestT)) break;
 
-    // ── Obstacle polygons (ball is outside, bounces off outer surface) ────
-    for (let pi = 0; pi < obstaclePolygons.length; pi++) {
-      if (pi === lastHitObstacleIdx) continue;
-      const poly = obstaclePolygons[pi];
+    // Waypoint = ball CENTRE at contact (distance R from the surface).
+    const hx = ox + bestT * dx, hy = oy + bestT * dy;
+    points.push({ x: hx, y: hy });
 
-      for (let i = 0; i < poly.vertices.length; i++) {
-        const j = (i + 1) % poly.vertices.length;
-        const p1 = poly.vertices[i];
-        const p2 = poly.vertices[j];
+    // Reflect the direction about the surface normal (angle in = angle out).
+    const dot = dx * bnx + dy * bny;
+    dx -= 2 * dot * bnx;
+    dy -= 2 * dot * bny;
+    const dl = Math.sqrt(dx * dx + dy * dy) || 1;
+    dx /= dl; dy /= dl;
 
-        const ex = p2.x - p1.x;
-        const ey = p2.y - p1.y;
-        const denom = dir.x * ey - dir.y * ex;
-        if (Math.abs(denom) < 1e-9) continue;
-
-        const wx = p1.x - origin.x;
-        const wy = p1.y - origin.y;
-        const t = (wx * ey - wy * ex) / denom;
-        const u = (wx * dir.y - wy * dir.x) / denom;
-
-        if (t <= 1e-4 || u < 0 || u > 1 || t >= bestT) continue;
-
-        // Compute normal and orient it to point away from the polygon
-        // (toward the side the ray originates from).
-        const len = Math.sqrt(ex * ex + ey * ey);
-        let nx = -ey / len;
-        let ny =  ex / len;
-        const midX = p1.x + ex * 0.5;
-        const midY = p1.y + ey * 0.5;
-        if (nx * (origin.x - midX) + ny * (origin.y - midY) < 0) { nx = -nx; ny = -ny; }
-
-        // Back-face cull: skip edges whose outward normal faces away from the ray
-        if (dir.x * nx + dir.y * ny > -1e-6) continue;
-
-        bestT = t;
-        bestWallId = undefined;
-        bestObstacleIdx = pi;
-        bestNormal = { x: nx, y: ny };
-      }
-    }
-
-    if (!bestNormal) break;
-
-    // Place the bounce point where the ball surface first contacts the surface
-    const tEffective = Math.max(1e-4, bestT - ballRadius);
-    const hitPoint: Vector2 = {
-      x: origin.x + tEffective * dir.x,
-      y: origin.y + tEffective * dir.y,
-    };
-    points.push(hitPoint);
-
-    // Reflect direction
-    const dot = dir.x * bestNormal.x + dir.y * bestNormal.y;
-    dir = vec2Normalize({
-      x: dir.x - 2 * dot * bestNormal.x,
-      y: dir.y - 2 * dot * bestNormal.y,
-    });
-
-    // Nudge past the collision surface to avoid immediate re-intersection
-    const nudge = Math.max(ballRadius + 1, 3);
-    origin = {
-      x: hitPoint.x + dir.x * nudge,
-      y: hitPoint.y + dir.y * nudge,
-    };
-
-    lastHitWallId = bestWallId;
-    lastHitObstacleIdx = bestObstacleIdx;
+    ox = hx + dx * 1e-3; // nudge a hair off the surface to avoid self-hit
+    oy = hy + dy * 1e-3;
+    skipId = bestId;
   }
 
   return points;
