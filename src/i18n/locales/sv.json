@@ -88,8 +88,8 @@
     "shopRestocksInactive": "Ingen butikspåfyllning.",
     "microManager": "MicroManager",
     "microManagerValue": "{{percent}}% / lås",
-    "microManagerActive_one": "Varje låst boll minskar bollhastigheten med {{percent}}% (staplas multiplikativt, max 70% totalt). Just nu {{count}} boll låst → effektiv hastighet {{speed}}.",
-    "microManagerActive_other": "Varje låst boll minskar bollhastigheten med {{percent}}% (staplas multiplikativt, max 70% totalt). Just nu {{count}} bollar låsta → effektiv hastighet {{speed}}.",
+    "microManagerActive_one": "Varje låst boll minskar bollhastigheten med {{percent}}% (staplas multiplikativt, ner till ett golv på 50%). Just nu {{count}} boll låst → effektiv hastighet {{speed}}.",
+    "microManagerActive_other": "Varje låst boll minskar bollhastigheten med {{percent}}% (staplas multiplikativt, ner till ett golv på 50%). Just nu {{count}} bollar låsta → effektiv hastighet {{speed}}.",
     "microManagerInactive": "MicroManager inte aktiv.",
     "off": "Av",
     "ballPathPrediction": "Bollbaneprognos",
@@ -475,17 +475,9 @@
         "name": "Riskkapital",
         "description": "30% ränta på oanvänd övertid mellan kartor."
       },
-      "micro_manager_junior": {
-        "name": "MicroManager",
-        "description": "Varje låst boll minskar alla bollhastigheter med 1%, upp till 50%."
-      },
-      "micro_manager_senior": {
-        "name": "MicroManager",
-        "description": "Varje låst boll minskar alla bollhastigheter med ytterligare 2%, upp till 50% totalt."
-      },
       "micro_manager_principal": {
         "name": "MicroManager",
-        "description": "Varje låst boll minskar alla bollhastigheter med ytterligare 3%, upp till 50% totalt."
+        "description": "Varje låst boll minskar alla bollhastigheter med 1%, ner till ett golv på 50%. En kraftfull och dyr nivå."
       },
       "procurement_junior": {
         "name": "Inköp",
@@ -849,7 +841,7 @@
       "micromanagement": {
         "name": "Detaljstyrning",
         "curse": "Bollar är 20% större.",
-        "blessing": "Varje låst boll saktar ner de återstående bollarna med 2%."
+        "blessing": "Varje låst boll saktar ner de återstående bollarna med 1%."
       },
       "roadmap_clarity": {
         "name": "Tydlig roadmap",

@@ -320,36 +320,21 @@ upgrades:
   # MICRO MANAGER (Per-Lock Speed)
   # ===============================
 
-  - id: micro_manager_junior
-    name: MicroManager
-    tier: Junior
-    description: Each locked ball reduces all ball speeds by 1%, up to 50%.
-    unlockLevel: 3
-    prerequisites:
-      - runtime_optimisation_senior
-    icon: sliders
-    modifiers:
-      microManagerPerLock: 0.01
-
-  - id: micro_manager_senior
-    name: MicroManager
-    tier: Senior
-    description: Each locked ball reduces all ball speeds by an additional 2%, up to 50% total.
-    unlockLevel: 8
-    prerequisites:
-      - micro_manager_junior
-    modifiers:
-      microManagerPerLock: 0.02
-
+  # A single, deliberately pricey tier. The per-lock reduction is hard-capped
+  # at 1% (see MAX_MICRO_MANAGER_PER_LOCK in useActiveModifiers.ts), so this
+  # can't stack with the certificate/loadout past 1% or with the ball-speed
+  # upgrades into a game-breaking slow. `cost` overrides the flat pricing.
   - id: micro_manager_principal
     name: MicroManager
     tier: Principal
-    description: Each locked ball reduces all ball speeds by an additional 3%, up to 50% total.
-    unlockLevel: 15
+    description: Each locked ball reduces all ball speeds by 1%, down to a 50% floor. One powerful, costly tier.
+    unlockLevel: 8
     prerequisites:
-      - micro_manager_senior
+      - runtime_optimisation_senior
+    icon: sliders
+    cost: 200
     modifiers:
-      microManagerPerLock: 0.03
+      microManagerPerLock: 0.01
 
 
   # ===============================

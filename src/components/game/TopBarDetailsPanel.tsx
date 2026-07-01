@@ -322,7 +322,7 @@ export function TopBarDetailsPanel({
                   </p>
                   {upgrade.id.startsWith('micro_manager_') && microManagerPerLock > 0 && (
                     <p className="text-xs font-bold mt-2" style={{ color: accentColor }}>
-                      {t('topBarDetails.currentlyReducingBallSpeed', { percent: Math.min(70, Math.round(lockedBalls * microManagerPerLock * 100)) })}
+                      {t('topBarDetails.currentlyReducingBallSpeed', { percent: Math.min(50, Math.round(lockedBalls * microManagerPerLock * 100)) })}
                     </p>
                   )}
                 </div>

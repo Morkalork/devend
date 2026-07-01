@@ -98,10 +98,10 @@ mutators:
   - id: micromanagement
     name: Micromanagement
     curse: Balls are 20% bigger.
-    blessing: Every locked ball slows the remaining balls by 2%.
+    blessing: Every locked ball slows the remaining balls by 1%.
     modifiers:
       ballSizeMultiplier: 1.2
-      microManagerPerLock: 0.02
+      microManagerPerLock: 0.01
 
   - id: roadmap_clarity
     name: Roadmap Clarity

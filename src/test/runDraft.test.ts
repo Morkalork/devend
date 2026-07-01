@@ -7,8 +7,10 @@ import { drawOffers, eligibleForStart } from "@/lib/mutatorDraft";
 import {
   mergeBonuses,
   computeGameModifiers,
+  MAX_MICRO_MANAGER_PER_LOCK,
   type GameModifiers,
 } from "@/hooks/useActiveModifiers";
+import type { UpgradeConfig as UpgradeConfigType } from "@/types/upgrade";
 
 // Read the mutator catalogue straight from the YAML source of truth so this
 // suite guards the data, not a hand-maintained copy (mirrors upgrades.test.ts).
@@ -65,5 +67,25 @@ describe("extraContinues modifier", () => {
     const result: Partial<Record<keyof GameModifiers, number>> | undefined =
       mergeBonuses({ extraContinues: 1 }, { extraContinues: 1 });
     expect(result?.extraContinues).toBe(2);
+  });
+});
+
+describe("microManagerPerLock 1% cap", () => {
+  it("clamps the aggregated per-lock reduction to at most 1% (issue #42 follow-up)", () => {
+    // Upgrade (0.01) + certificate (0.01) + loadout (0.01) would sum to 0.03,
+    // but a locked ball must never slow the others by more than 1%.
+    const upgrade: UpgradeConfigType = {
+      id: "micro_manager_principal", name: "MicroManager", tier: "Principal",
+      description: "", modifiers: { microManagerPerLock: 0.01 },
+    };
+    const lookup = new Map([[upgrade.id, upgrade]]);
+    const mods = computeGameModifiers([upgrade.id], lookup, { microManagerPerLock: 0.02 });
+    expect(mods.microManagerPerLock).toBe(MAX_MICRO_MANAGER_PER_LOCK);
+    expect(mods.microManagerPerLock).toBe(0.01);
+  });
+
+  it("leaves a sub-cap value untouched", () => {
+    const mods = computeGameModifiers([], new Map(), { microManagerPerLock: 0.005 });
+    expect(mods.microManagerPerLock).toBe(0.005);
   });
 });

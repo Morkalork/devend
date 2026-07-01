@@ -397,7 +397,7 @@ export function GameTopBar({
                       </p>
                       {upgrade.id.startsWith('micro_manager_') && microManagerPerLock > 0 && (
                         <p className="text-sm font-bold tabular-nums" style={{ color: accentColor }}>
-                          {t('topBar.currentlyReducingBy', { percent: Math.min(70, Math.round(lockedBalls * microManagerPerLock * 100)) })}
+                          {t('topBar.currentlyReducingBy', { percent: Math.min(50, Math.round(lockedBalls * microManagerPerLock * 100)) })}
                         </p>
                       )}
                     </div>

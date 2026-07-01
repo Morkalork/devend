@@ -88,8 +88,8 @@
     "shopRestocksInactive": "Sin reposición de tienda.",
     "microManager": "MicroManager",
     "microManagerValue": "{{percent}}% / bloqueo",
-    "microManagerActive_one": "Cada bola bloqueada reduce la velocidad de la bola en {{percent}}% (se acumula de forma multiplicativa, con un máximo del 70% total). Ahora mismo {{count}} bola bloqueada → velocidad efectiva {{speed}}.",
-    "microManagerActive_other": "Cada bola bloqueada reduce la velocidad de la bola en {{percent}}% (se acumula de forma multiplicativa, con un máximo del 70% total). Ahora mismo {{count}} bolas bloqueadas → velocidad efectiva {{speed}}.",
+    "microManagerActive_one": "Cada bola bloqueada reduce la velocidad de la bola en {{percent}}% (se acumula de forma multiplicativa, hasta un suelo del 50%). Ahora mismo {{count}} bola bloqueada → velocidad efectiva {{speed}}.",
+    "microManagerActive_other": "Cada bola bloqueada reduce la velocidad de la bola en {{percent}}% (se acumula de forma multiplicativa, hasta un suelo del 50%). Ahora mismo {{count}} bolas bloqueadas → velocidad efectiva {{speed}}.",
     "microManagerInactive": "MicroManager no activo.",
     "off": "Apagado",
     "ballPathPrediction": "Predicción de trayectoria",
@@ -475,17 +475,9 @@
         "name": "Capital Riesgo",
         "description": "30% de interés sobre las horas extra no usadas entre mapas."
       },
-      "micro_manager_junior": {
-        "name": "MicroManager",
-        "description": "Cada bola bloqueada reduce la velocidad de todas las bolas un 1%, hasta un 50%."
-      },
-      "micro_manager_senior": {
-        "name": "MicroManager",
-        "description": "Cada bola bloqueada reduce la velocidad de todas las bolas un 2% adicional, hasta un 50% en total."
-      },
       "micro_manager_principal": {
         "name": "MicroManager",
-        "description": "Cada bola bloqueada reduce la velocidad de todas las bolas un 3% adicional, hasta un 50% en total."
+        "description": "Cada bola bloqueada reduce la velocidad de todas las bolas un 1%, hasta un suelo del 50%. Un nivel potente y costoso."
       },
       "procurement_junior": {
         "name": "Aprovisionamiento",
@@ -849,7 +841,7 @@
       "micromanagement": {
         "name": "Microgestión",
         "curse": "Las bolas son un 20% más grandes.",
-        "blessing": "Cada bola bloqueada ralentiza a las bolas restantes un 2%."
+        "blessing": "Cada bola bloqueada ralentiza a las bolas restantes un 1%."
       },
       "roadmap_clarity": {
         "name": "Claridad de Hoja de Ruta",
