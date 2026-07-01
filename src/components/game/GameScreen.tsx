@@ -241,6 +241,8 @@ export function GameScreen({
             fenceSpeedBase={config.fence.speed_base}
             fenceSpeedMin={config.fence.speed_min}
             fenceSpeedPerLevel={config.fence.speed_per_level}
+            lockWinThresholdPercent={config.lock.win_threshold_percent}
+            lockMinRegionCells={config.lock.min_region_cells}
             regionColor={getRegionColor()}
             accentColor={accentColor}
             activeModifiers={activeModifiers}

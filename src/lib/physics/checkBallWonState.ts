@@ -78,8 +78,18 @@ export function checkAndUpdateBallWonStates(
     const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
     if (!ballRegion) continue;
 
-    const percentage = (ballRegion.cellIndices.length / denominator) * 100;
-    if (percentage > BALL_WON_REGION_THRESHOLD) continue;
+    // Lock rule (configurable via game-config.yml `lock:`; see GameCanvas):
+    // a ball locks when its region is small enough by PERCENT of the win
+    // denominator, OR — when the sliver floor is enabled — at/below an absolute
+    // cell count (so a ball can't bounce forever in a tiny region just above
+    // the %).
+    const regionCells = ballRegion.cellIndices.length;
+    const threshold = game.lockWinThresholdPercent ?? BALL_WON_REGION_THRESHOLD;
+    const minCells = game.lockMinRegionCells ?? 0;
+    const percentage = (regionCells / denominator) * 100;
+    const lockedByPercent = percentage <= threshold;
+    const lockedBySliver = minCells > 0 && regionCells <= minCells;
+    if (!lockedByPercent && !lockedBySliver) continue;
 
     ball.state = 'won';
     ball.wonTime = performance.now();

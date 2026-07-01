@@ -108,6 +108,13 @@ export interface CanvasGameState {
    *  so new cuts don't treat old cut boundaries as real walls to push against. */
   bonusCutCells: Set<string>;
 
+  // ── Lock rule (configurable, from game-config.yml `lock:`) ─────────────
+  /** A ball locks when its region is <= this % of the win denominator. */
+  lockWinThresholdPercent: number;
+  /** A region with <= this many cells always locks its ball, ignoring the %
+   *  (0 = disabled). Kills balls bouncing forever in a tiny sliver. */
+  lockMinRegionCells: number;
+
   // ── Ascension fence durability ─────────────────────────────────────────
   /** Ball hits a new fence survives this level; null = fences indestructible. */
   fenceDurability: number | null;
