@@ -3,7 +3,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
-import { checkAndUpdateBallWonStates } from "./checkBallWonState";
+import { checkAndUpdateBallWonStates, applyMicroManagerSpeedCap } from "./checkBallWonState";
 import { handleGameOverFn } from "./handleGameOver";
 import {
   pointToSegmentDistance,
@@ -172,22 +172,9 @@ export function applyCutFn(
   callbacks.render();
 
   // Issue #37: ball speeds are flat — no per-cut acceleration ramp. Only the
-  // MicroManager upgrade still caps speeds relative to each ball's base speed.
-  const totalLockedMM = cumulativeLockedBalls + game.lockedBallsCount;
-  if (activeModifiers.microManagerPerLock > 0 && totalLockedMM > 0) {
-    const speedFactor = Math.max(0.30, Math.pow(1 - activeModifiers.microManagerPerLock, totalLockedMM));
-    for (const ball of balls) {
-      if (ball.state === 'won' || ball.speed === 0) continue;
-      const actualSpeed = vec2Length(ball.velocity);
-      const cappedSpeed = ball.baseSpeed * speedFactor;
-      if (actualSpeed > cappedSpeed && cappedSpeed > 0) {
-        const ratio = cappedSpeed / actualSpeed;
-        ball.velocity.x *= ratio;
-        ball.velocity.y *= ratio;
-        ball.speed = cappedSpeed;
-      }
-    }
-  }
+  // MicroManager upgrade still caps speeds, floored so the stack never drops a
+  // ball below MIN_BALL_SPEED_FACTOR of normal (issue #42).
+  applyMicroManagerSpeedCap(balls, activeModifiers, cumulativeLockedBalls + game.lockedBallsCount);
 
   if (areAllBallsWon(game)) {
     triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
@@ -238,16 +225,19 @@ export function triggerLevelComplete(
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
 
+  // Fold lock + break bonuses in before the cap so a single map can't exceed
+  // the per-map ceiling (issue #43).
   const { levelScore, breakdown } = calculateScore(
     game.wallCount, level.expectedCuts, percent,
     level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
+    game.lockBonus + game.breakBonus,
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
   setTimeout(() => {
     callbacks.onLevelComplete({
       levelNumber, levelId: level.id, cutCount: game.wallCount,
       expectedCuts: level.expectedCuts, basePoints: level.points,
-      levelScore: levelScore + game.lockBonus + game.breakBonus,
+      levelScore,
       remainingPercent: percent, thresholdPercent: level.sizeThreshold,
       underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
       spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,

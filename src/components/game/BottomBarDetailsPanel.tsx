@@ -5,6 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
+import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
 
 interface BottomBarDetailsPanelProps {
   visible: boolean;
@@ -37,9 +38,10 @@ export function BottomBarDetailsPanel({
 
   const microFactor =
     m.microManagerPerLock > 0 && lockedBalls > 0
-      ? Math.max(0.3, Math.pow(1 - m.microManagerPerLock, lockedBalls))
+      ? Math.pow(1 - m.microManagerPerLock, lockedBalls)
       : 1;
-  const effectiveSpeed = m.ballSpeedMultiplier * microFactor;
+  // Floored combined factor — matches the physics cap (#42).
+  const effectiveSpeed = effectiveBallSpeedFactor(m.ballSpeedMultiplier, microFactor);
 
   const rows: StatRow[] = [
     {

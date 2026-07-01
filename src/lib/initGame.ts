@@ -53,7 +53,7 @@ import {
   getRandomDirection,
 } from "@/lib/gameUtils";
 import { createBallEffectState } from "@/lib/ballEffects";
-import { selectBallTypesForMap, getBallType, BallTypeDef } from "@/lib/ballTypes";
+import { selectBallTypesForMap, getBallType, BallTypeDef, effectiveBallSpeedFactor } from "@/lib/ballTypes";
 
 // ── Return type ────────────────────────────────────────────────────────────
 
@@ -320,7 +320,10 @@ export function createInitialGameData(
   // eligible at this level. Speeds are flat (literal base-speed × the upgrade
   // multiplier) — no per-level scaling, no per-cut acceleration ramp.
 
-  const speedScale = activeModifiers.ballSpeedMultiplier;
+  // Floor the low end so a slow-stacked run never spawns balls below
+  // MIN_BALL_SPEED_FACTOR of normal (issue #42); >1 (ascension, Crunch Time)
+  // is unaffected.
+  const speedScale = effectiveBallSpeedFactor(activeModifiers.ballSpeedMultiplier, 1);
   const maxBalls   = level.maxBalls ?? level.balls?.length ?? 1;
   // Admin override (Playground): when `ballTypeIds` is provided, spawn exactly
   // those types — even an empty list, which means "no balls". Only when the

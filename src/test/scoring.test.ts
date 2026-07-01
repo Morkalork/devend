@@ -6,9 +6,10 @@ import {
   DEFAULT_SCORING_CONFIG,
 } from "@/lib/scoring";
 
-// Base-points curve currently produced by the map.yml ramp (Act 1 +3/level
-// from 5; Act 2 mover world +6/level from L19's 59). Kept in sync as a guard:
-// the economics below must hold for whatever curve map.yml declares.
+// A representative range of base-point values used to exercise the scoring
+// FUNCTION (its cap and monotonicity in basePoints). This is independent of
+// map.yml, which since issue #43 declares a FLAT per-map base (every map pays
+// in the same band); these values just probe calculateScore across inputs.
 const CURVE = [
   5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41, 44, 47, 50, 53, 56, 59,
   66, 72, 78, 84, 90, 96, 102, 108, 114, 120, 126,
@@ -36,10 +37,25 @@ describe("overtime cap", () => {
       expect(earned).toBe(base + 1);
     }
   });
+
+  it("folds lock/push bonuses in UNDER the cap so one map can't exceed it (#43)", () => {
+    const base = 40; // the flat per-map base
+    const cap = getOvertimeCap(base, HEADROOM); // 80
+    // A huge lock/push stack passed as extraBonus is clamped to the cap, not
+    // added on top of it (the old hyperinflation path).
+    const huge = calculateScore(5, 5, 10, 30, base, 1, 1, 10_000).levelScore;
+    expect(huge).toBe(cap);
+    // A modest bonus still lands under the cap and is counted.
+    const modest = calculateScore(5, 5, 10, 30, base, 1, 1, 10).levelScore;
+    expect(modest).toBe(Math.min(cap, base + 1 + 10));
+  });
 });
 
-describe("pay grows steadily across the curve", () => {
-  it("effective overtime is strictly increasing level to level", () => {
+describe("pay scales with base points (scoring function, not the flat map)", () => {
+  // The map is flat since #43, but the scoring function must still respond
+  // monotonically to basePoints so a higher flat base (or a future tweak)
+  // always pays more, never less.
+  it("effective overtime is strictly increasing in base points", () => {
     let prev = -Infinity;
     for (const base of CURVE) {
       const earned = earnedAtPar(base);
@@ -48,7 +64,7 @@ describe("pay grows steadily across the curve", () => {
     }
   });
 
-  it("late levels now out-earn mid levels (regression vs the flat cap)", () => {
+  it("a higher base always out-earns a lower one", () => {
     expect(earnedAtPar(CURVE[29])).toBeGreaterThan(earnedAtPar(CURVE[15]));
   });
 });

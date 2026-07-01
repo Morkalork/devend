@@ -33,21 +33,23 @@ export function handleGameOverFn(
 
   if (game.pushMode === "pushing") {
     const pushStartPercent = game.bestRemainingPercent;
-    const { levelScore, breakdown } = calculateScore(
-      game.wallCount, level.expectedCuts, pushStartPercent,
-      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    );
     const areaAtPushStart = game.pushStartPercent ?? pushStartPercent;
     const areaCleared = Math.max(0, areaAtPushStart - percent);
     const chunkSize = areaAtPushStart * 0.25;
     const pushBonus = chunkSize > 0
       ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
       : 0;
+    // Fold lock + push bonuses in before the cap (issue #43).
+    const { levelScore, breakdown } = calculateScore(
+      game.wallCount, level.expectedCuts, pushStartPercent,
+      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
+      game.lockBonus + pushBonus,
+    );
 
     callbacks.onLevelComplete({
       levelNumber, levelId: level.id, cutCount: game.wallCount,
       expectedCuts: level.expectedCuts, basePoints: level.points,
-      levelScore: levelScore + game.lockBonus + pushBonus,
+      levelScore,
       remainingPercent: percent, overcutBonus: 0,
       thresholdPercent: level.sizeThreshold, pushFailed: true, pushBonus,
       underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
@@ -86,21 +88,23 @@ export function handlePushFailedFn(
   game.gameOver = true;
   const percent = Math.round((getCombinedArea(game) / game.originalArea) * 100);
 
-  const { levelScore, breakdown } = calculateScore(
-    game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent,
-    level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-  );
   const areaAtPushStart = game.pushStartPercent ?? percent;
   const areaCleared = Math.max(0, areaAtPushStart - percent);
   const chunkSize = areaAtPushStart * 0.25;
   const pushBonus = chunkSize > 0
     ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
     : 0;
+  // Fold lock + push bonuses in before the cap (issue #43).
+  const { levelScore, breakdown } = calculateScore(
+    game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent,
+    level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
+    game.lockBonus + pushBonus,
+  );
 
   callbacks.onLevelComplete({
     levelNumber, levelId: level.id, cutCount: game.wallCount,
     expectedCuts: level.expectedCuts, basePoints: level.points,
-    levelScore: levelScore + game.lockBonus + pushBonus,
+    levelScore,
     remainingPercent: percent, overcutBonus: 0,
     thresholdPercent: level.sizeThreshold, pushFailed: true, pushBonus,
     underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,

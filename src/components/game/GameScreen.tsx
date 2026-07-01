@@ -165,6 +165,16 @@ export function GameScreen({
 
   const canPause = gameState.pushMode === 'none';
 
+  // Any modal/panel/menu that overlays the board should freeze the sim and
+  // resume it on close (issue #41). The interactive fence tutorial is NOT a
+  // modal — it needs the game running — so it is deliberately excluded.
+  const showBreakOverlay = showBreakIntro && !showMoverOverlay;
+  const showInfoPanelsOverlay =
+    inGameStep === 'done' && showInfoPanelsTutorial && !showMoverOverlay && !showBreakIntro;
+  const modalOverlayActive =
+    topPanelOpen || bottomPanelOpen || menuOpen ||
+    showMoverOverlay || showBreakOverlay || showInfoPanelsOverlay;
+
   useEffect(() => {
     if (!menuOpen) return;
     const handler = (e: PointerEvent) => {
@@ -220,7 +230,7 @@ export function GameScreen({
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
             onGameStateChange={handleGameStateChange}
-            paused={isPaused}
+            paused={isPaused || modalOverlayActive}
             tutorialMode={inGameStep === 'fence'}
             tutorialStep={inGameStep === 'fence' ? 'waitingForSuccessfulCut' : 'completed'}
             onTutorialCutSuccess={() => {
@@ -353,7 +363,7 @@ export function GameScreen({
 
       {/* Breaking-obstacles tutorial — first break-objective level (issue #38) */}
       <TutorialOverlay
-        visible={showBreakIntro && !showMoverOverlay}
+        visible={showBreakOverlay}
         onDismiss={() => {
           setShowBreakIntro(false);
           try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ }
@@ -365,7 +375,7 @@ export function GameScreen({
 
       {/* Info panels tutorial — shown after fence tutorial, first run only */}
       <TutorialOverlay
-        visible={inGameStep === 'done' && showInfoPanelsTutorial && !showMoverOverlay && !showBreakIntro}
+        visible={showInfoPanelsOverlay}
         onDismiss={onInfoPanelsTutorialSeen}
         accentColor={accentColor}
         title={t('game.infoPanelsTutorialTitle')}
