@@ -44,6 +44,14 @@ export interface GameModifiers {
   autoFreezeDuration: number;
 }
 
+/**
+ * Hard ceiling on the MicroManager per-lock speed reduction (issue #42
+ * follow-up): a locked ball never slows the others by more than 1%, no matter
+ * how the upgrade, certificate and loadout stack. Enforced once on the final
+ * aggregated value so physics and every HUD readout see the same capped number.
+ */
+export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
+
 // Keys that stack multiplicatively
 export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'ballSpeedMultiplier',
@@ -151,6 +159,9 @@ export function computeGameModifiers(
       }
     }
   }
+
+  // Cap the MicroManager per-lock reduction at 1% across all sources.
+  result.microManagerPerLock = Math.min(result.microManagerPerLock, MAX_MICRO_MANAGER_PER_LOCK);
 
   return result;
 }

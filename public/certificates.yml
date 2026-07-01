@@ -114,14 +114,14 @@ certificates:
 
   - id: process-optimiser
     name: Process Optimiser
-    description: Permanent per-lock speed reduction - a reward for mastering MicroManager.
+    description: Permanently reduce ball speed by 1% per locked ball, even without the upgrade. A reward for mastering MicroManager.
     unlockType: upgrade-chain
     sourceUpgradeId: micro_manager_principal
     requiredRuns: 3
+    # Single level: the per-lock reduction is capped at 1% total, so extra
+    # levels would do nothing (see MAX_MICRO_MANAGER_PER_LOCK).
     levels:
-      - cost: 4
-        effect: { type: microManagerPerLock, value: 0.01 }
-      - cost: 7
+      - cost: 6
         effect: { type: microManagerPerLock, value: 0.01 }
 
   - id: sprint-protocol
