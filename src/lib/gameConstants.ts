@@ -15,7 +15,7 @@ export const BASE_SWIPE_MIN_DISTANCE   = 5;       // World units
 export const ARENA_MARGIN              = 0.05;    // 5% margin from board edges
 export const MINIMUM_WALL_TIME         = 0.35;    // seconds
 export const RECOVERY_WINDOW_MS        = 700;     // Recovery time after failed wall
-export const BALL_WON_REGION_THRESHOLD = 10;      // Ball is WON if its region is <= this % of current active area
+export const BALL_WON_REGION_THRESHOLD = 10;      // DEFAULT lock threshold: ball is WON if its region is <= this % of the win denominator. Overridable per game via game-config.yml `lock.win_threshold_percent` (see checkBallWonState.ts).
 export const WON_BALL_SPIN_SPEED       = 8;       // Radians per second for won ball spin
 export const BALL_DANGER_SPEED         = 160;     // Reference speed for the speed-danger screen tint (flat-speed balls)
 

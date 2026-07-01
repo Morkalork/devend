@@ -39,6 +39,20 @@ gameplay:
   max_lives: 5
   cut_completion_threshold: 0.75  # 75% of level must be cut to complete
 
+# Lock Rule
+# When does a ball become "locked" (trapped/won)? Tune these to find the sweet
+# spot for how tightly the player must confine a ball.
+lock:
+  # A ball locks when its region shrinks to <= this % of the win denominator
+  # (roughly a ball's fair share of the board). Lower = harder (must confine
+  # tighter); higher = easier.
+  win_threshold_percent: 10
+
+  # A region with at most this many grid cells ALWAYS locks its ball, ignoring
+  # the % above (0 = disabled). Set > 0 to guarantee tiny slivers resolve
+  # instead of a ball bouncing forever just above the % threshold.
+  min_region_cells: 0
+
 # CRT Word Highlight Effect
 # Every interval_seconds, a random visible word in the background gets a highlight rectangle.
 crt_word_highlight:

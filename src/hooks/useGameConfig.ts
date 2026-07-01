@@ -29,6 +29,10 @@ export interface GameConfig {
     max_lives: number;
     cut_completion_threshold: number;
   };
+  lock: {
+    win_threshold_percent: number; // region <= this % of the denominator -> lock
+    min_region_cells: number;      // region <= this many cells always locks (0 = off)
+  };
   crt_word_highlight: {
     interval_min_seconds: number; // min delay between highlights appearing
     interval_max_seconds: number; // max delay between highlights appearing
@@ -65,6 +69,10 @@ const defaultConfig: GameConfig = {
     max_lives: 5,
     cut_completion_threshold: 0.75,
   },
+  lock: {
+    win_threshold_percent: 10,
+    min_region_cells: 0,
+  },
   crt_word_highlight: {
     interval_min_seconds: 8,
     interval_max_seconds: 14,
@@ -94,6 +102,7 @@ export function useGameConfig() {
           ball: { ...defaultConfig.ball, ...parsed?.ball },
           fence: { ...defaultConfig.fence, ...parsed?.fence },
           gameplay: { ...defaultConfig.gameplay, ...parsed?.gameplay },
+          lock: { ...defaultConfig.lock, ...parsed?.lock },
           crt_word_highlight: { ...defaultConfig.crt_word_highlight, ...parsed?.crt_word_highlight },
         });
       })

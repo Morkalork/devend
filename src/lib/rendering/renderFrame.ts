@@ -1132,7 +1132,10 @@ export function renderFrame(
 
     ctx.save();
     for (const ball of trackedBalls) {
-      const waypoints = computeBallTrajectory(ball.position, ball.velocity, walls, numBounces, ball.radius, game.obstaclePolygons);
+      // Start from the interpolated render position (where the ball is drawn),
+      // not the physics position, so the line begins exactly at the ball.
+      const startPos = ball.renderPosition ?? ball.position;
+      const waypoints = computeBallTrajectory(startPos, ball.velocity, walls, numBounces, ball.radius, game.obstaclePolygons);
       if (waypoints.length < 2) continue;
 
       const totalSegs = waypoints.length - 1;

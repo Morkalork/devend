@@ -37,6 +37,7 @@ import {
 } from "@/types/game";
 import {
   LOCK_TOTAL_DURATION,
+  BALL_WON_REGION_THRESHOLD,
 } from "@/lib/gameConstants";
 import {
   generateRegionId,
@@ -109,6 +110,9 @@ interface GameCanvasProps {
   fenceSpeedBase?: number;
   fenceSpeedMin?: number;
   fenceSpeedPerLevel?: number;
+  /** Lock rule (from game-config.yml `lock:`). */
+  lockWinThresholdPercent?: number;
+  lockMinRegionCells?: number;
   regionColor?: string;
   accentColor?: string;
   activeModifiers: GameModifiers;
@@ -156,6 +160,8 @@ export function GameCanvas({
   fenceSpeedBase = 1200,
   fenceSpeedMin = 750,
   fenceSpeedPerLevel = 50,
+  lockWinThresholdPercent = BALL_WON_REGION_THRESHOLD,
+  lockMinRegionCells = 0,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
   activeModifiers,
@@ -177,6 +183,12 @@ export function GameCanvas({
   // the render loop (the rctx is rebuilt only per level).
   const showBallSpeedsRef = useRef(showBallSpeeds);
   useEffect(() => { showBallSpeedsRef.current = showBallSpeeds; }, [showBallSpeeds]);
+  // Keep the lock-rule config live on the game state (initGame also seeds it),
+  // so tuning game-config.yml applies without waiting for the next level init.
+  useEffect(() => {
+    gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent;
+    gameRef.current.lockMinRegionCells = lockMinRegionCells;
+  }, [lockWinThresholdPercent, lockMinRegionCells]);
 
   useEffect(() => {
     const game = gameRef.current;
@@ -277,6 +289,8 @@ export function GameCanvas({
     assimilations: new Map<string, LockFlashState>(),
     dissolve: null as DissolveState | null,
     bonusCutCells: new Set<string>(),
+    lockWinThresholdPercent: BALL_WON_REGION_THRESHOLD,
+    lockMinRegionCells: 0,
     fenceDurability: null as number | null,
     pendingWallBreaks: [] as Wall[],
     destructibles: [] as import("@/types/game").DestructibleState[],
@@ -437,6 +451,8 @@ export function GameCanvas({
     const initGame = () => {
       game.assimilations.clear();
       game.bonusCutCells.clear();
+      game.lockWinThresholdPercent = lockWinThresholdPercent;
+      game.lockMinRegionCells = lockMinRegionCells;
       game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
       game.pendingDestroys = [];
