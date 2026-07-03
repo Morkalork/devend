@@ -36,7 +36,7 @@ src/
 public/
 ├── map.yml                  All levels (see public/README-modifiers.md)
 ├── upgrades.yml             Shop upgrades
-├── mutators.yml             Ascension mutators (post-final-level loop)
+├── loadouts.yml            Loadouts (run-start draft + Ascension loop)
 ├── certificates.yml         Meta-progression certificates
 ├── achievements.yml         Achievements
 ├── colors.yml               Accent colour per level range
@@ -73,7 +73,7 @@ Each hook owns one subsystem; most load a YAML file and/or persist to localStora
 | [useScreenNavigation](src/hooks/useScreenNavigation.ts) | visible screen | — | — |
 | [useLevelManager](src/hooks/useLevelManager.ts) | level sequence | `map.yml` | — |
 | [useUpgradeManager](src/hooks/useUpgradeManager.ts) | upgrade catalogue | `upgrades.yml` | — |
-| [useMutatorManager](src/hooks/useMutatorManager.ts) | mutator catalogue (run-start loadout + Ascension drafts) | `mutators.yml` | — |
+| [useLoadoutManager](src/hooks/useLoadoutManager.ts) | loadout catalogue (run-start + Ascension drafts) | `loadouts.yml` | — |
 | [useActiveModifiers](src/hooks/useActiveModifiers.ts) | **GameModifiers pipeline** | — | — |
 | [useCertificateManager](src/hooks/useCertificateManager.ts) | certificates, Certificate Hours | `certificates.yml` | `jezzball_certs_v1` |
 | [useAchievementManager](src/hooks/useAchievementManager.ts) | achievements + bonuses | `achievements.yml` | `jezzball_achievements_v1` |
@@ -95,7 +95,7 @@ Everything that changes gameplay numbers flows through one structure: **`GameMod
 owned upgrades (this run)        → useActiveModifiers(upgrades, ownedIds, extraBonuses)
 achievement bonuses (permanent)  ─┐
 certificate bonuses (permanent)  ─┼→ mergeBonuses() → extraBonuses
-mutators + depth ramp (ascension)─┘
+loadouts + depth ramp (ascension)─┘
 ```
 
 The merged `GameModifiers` object is passed as a prop into `GameScreen` → `GameCanvas` and read by the physics code. Multiplicative keys (listed in `MULTIPLICATIVE_KEYS`) stack by multiplication, the rest by addition. The key names are a public contract: YAML files reference them as strings, so renaming a key means updating `upgrades.yml`, `certificates.yml`, `achievements.yml` and [public/README-modifiers.md](public/README-modifiers.md) together.
@@ -120,7 +120,7 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 **Add an upgrade** — add an entry to [public/upgrades.yml](public/upgrades.yml) using existing `GameModifiers` keys. No code needed unless you need a brand-new modifier key.
 
-**Add an Ascension mutator** — add an entry to [public/mutators.yml](public/mutators.yml) (`id`, `name`, `curse`, `blessing`, `modifiers` with existing `GameModifiers` keys; a curse is just an adverse value). The per-depth difficulty ramp is the `ascension.speedRampPerDepth` field in the same file.
+**Add a loadout** — add an entry to [public/loadouts.yml](public/loadouts.yml) (`id`, `name`, `curse`, `blessing`, `modifiers` with existing `GameModifiers` keys; a curse is just an adverse value). Add `uniqueWinsRequired: N` to gate it behind N unique wins in the run-start draft (omit for the loadouts available from scratch). The per-depth difficulty ramp is the `ascension.speedRampPerDepth` field in the same file.
 
 **Add a new modifier key** — add the field + default to `GameModifiers` and `DEFAULT_MODIFIERS` in [useActiveModifiers.ts](src/hooks/useActiveModifiers.ts) (and `MULTIPLICATIVE_KEYS` if it stacks by ×), consume it in the physics/scoring code, document it in `README-modifiers.md`, and add a slider entry in [PlaygroundScreen.tsx](src/components/admin/PlaygroundScreen.tsx) so it can be tested live.
 
@@ -132,6 +132,6 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 ## Known gaps
 
-- Ascension state (depth, drafted mutators) is not persisted across sessions: a quit ascended run starts over from depth 0 next launch. (In-run, the per-run Continue lets you retry a level after death at any depth.)
+- Ascension state (depth, drafted loadouts) is not persisted across sessions: a quit ascended run starts over from depth 0 next launch. (In-run, the per-run Continue lets you retry a level after death at any depth.)
 - Test coverage is minimal (one placeholder test). The `lib/` modules are pure and React-free, so they are the natural place to start adding unit tests.
 - `eslint` reports 12 `react-hooks/exhaustive-deps` warnings that are intentional (adding the deps would re-trigger effects); review carefully before "fixing".

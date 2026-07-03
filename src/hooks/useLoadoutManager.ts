@@ -1,65 +1,65 @@
 /**
- * useMutatorManager — loads the Ascension mutator catalogue from
- * public/mutators.yml (curse + blessing bundles drafted after the final
- * level) plus the ascension tuning block. The drafted set itself lives in
+ * useLoadoutManager — loads the loadout catalogue from public/loadouts.yml
+ * (curse + blessing bundles drafted at the run start and during Ascension)
+ * plus the ascension tuning block. The drafted set itself lives in
  * useGameSession, mirroring how useUpgradeManager owns only the catalogue.
  */
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
 import {
-  MutatorConfig,
-  MutatorData,
+  LoadoutConfig,
+  LoadoutData,
   AscensionConfig,
   DEFAULT_ASCENSION_CONFIG,
-} from '@/types/mutator';
+} from '@/types/loadout';
 
-interface MutatorManagerState {
-  mutators: MutatorConfig[];
-  mutatorLookup: Map<string, MutatorConfig>;
+interface LoadoutManagerState {
+  loadouts: LoadoutConfig[];
+  loadoutLookup: Map<string, LoadoutConfig>;
   ascensionConfig: AscensionConfig;
   isLoading: boolean;
   error: string | null;
 }
 
-export function useMutatorManager() {
-  const [state, setState] = useState<MutatorManagerState>({
-    mutators: [],
-    mutatorLookup: new Map(),
+export function useLoadoutManager() {
+  const [state, setState] = useState<LoadoutManagerState>({
+    loadouts: [],
+    loadoutLookup: new Map(),
     ascensionConfig: DEFAULT_ASCENSION_CONFIG,
     isLoading: false,
     error: null,
   });
 
-  const loadMutators = useCallback(async (): Promise<boolean> => {
+  const loadLoadouts = useCallback(async (): Promise<boolean> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch('/mutators.yml');
+      const response = await fetch('/loadouts.yml');
       if (!response.ok) {
-        throw new Error(`Failed to load mutators.yml: ${response.status}`);
+        throw new Error(`Failed to load loadouts.yml: ${response.status}`);
       }
 
       const yamlText = await response.text();
-      const data = yaml.load(yamlText) as MutatorData;
+      const data = yaml.load(yamlText) as LoadoutData;
 
-      if (!data?.mutators || !Array.isArray(data.mutators)) {
-        throw new Error('Invalid mutators.yml: no mutators array found');
+      if (!data?.loadouts || !Array.isArray(data.loadouts)) {
+        throw new Error('Invalid loadouts.yml: no loadouts array found');
       }
 
-      const lookup = new Map<string, MutatorConfig>();
-      for (const mutator of data.mutators) {
-        if (!mutator.id || !mutator.name || !mutator.curse || !mutator.blessing) {
-          throw new Error(`Mutator "${mutator.id || 'unknown'}" is missing required fields (id, name, curse, blessing)`);
+      const lookup = new Map<string, LoadoutConfig>();
+      for (const loadout of data.loadouts) {
+        if (!loadout.id || !loadout.name || !loadout.curse || !loadout.blessing) {
+          throw new Error(`Loadout "${loadout.id || 'unknown'}" is missing required fields (id, name, curse, blessing)`);
         }
-        if (!mutator.modifiers || typeof mutator.modifiers !== 'object') {
-          throw new Error(`Mutator "${mutator.id}" is missing modifiers object`);
+        if (!loadout.modifiers || typeof loadout.modifiers !== 'object') {
+          throw new Error(`Loadout "${loadout.id}" is missing modifiers object`);
         }
-        lookup.set(mutator.id, mutator);
+        lookup.set(loadout.id, loadout);
       }
 
       setState({
-        mutators: data.mutators,
-        mutatorLookup: lookup,
+        loadouts: data.loadouts,
+        loadoutLookup: lookup,
         ascensionConfig: { ...DEFAULT_ASCENSION_CONFIG, ...data.ascension },
         isLoading: false,
         error: null,
@@ -67,7 +67,7 @@ export function useMutatorManager() {
 
       return true;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load mutators';
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load loadouts';
       setState(prev => ({
         ...prev,
         isLoading: false,
@@ -78,11 +78,11 @@ export function useMutatorManager() {
   }, []);
 
   return {
-    mutators: state.mutators,
-    mutatorLookup: state.mutatorLookup,
+    loadouts: state.loadouts,
+    loadoutLookup: state.loadoutLookup,
     ascensionConfig: state.ascensionConfig,
     isLoading: state.isLoading,
     error: state.error,
-    loadMutators,
+    loadLoadouts,
   };
 }

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
-import { MutatorConfig } from '@/types/mutator';
+import { LoadoutConfig } from '@/types/loadout';
 import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
 
@@ -35,7 +35,7 @@ interface TopBarDetailsPanelProps {
   certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
   ascensionDepth?: number;
-  activeMutators?: MutatorConfig[];
+  activeLoadouts?: LoadoutConfig[];
 }
 
 export function TopBarDetailsPanel({
@@ -54,7 +54,7 @@ export function TopBarDetailsPanel({
   certificateProgress,
   microManagerPerLock = 0,
   ascensionDepth = 0,
-  activeMutators = [],
+  activeLoadouts = [],
   continuesRemaining = 0,
 }: TopBarDetailsPanelProps) {
   const { t } = useTranslation();
@@ -262,9 +262,9 @@ export function TopBarDetailsPanel({
         </section>
 
         {/* ── ASCENSION / LOADOUT ──
-            At depth 0 the drafted mutators are the run-start loadout; past it
+            At depth 0 the drafted loadout is the run-start pick; past it
             they're the stacked ascension picks (with the depth multiplier). */}
-        {(ascensionDepth > 0 || activeMutators.length > 0) && (
+        {(ascensionDepth > 0 || activeLoadouts.length > 0) && (
           <section>
             <p style={sectionHeadStyle}>
               {ascensionDepth > 0
@@ -279,16 +279,16 @@ export function TopBarDetailsPanel({
                   </p>
                 </div>
               )}
-              {activeMutators.map(mutator => (
-                <div key={mutator.id} style={cardStyle}>
-                  <p className="font-bold text-sm mb-2" style={{ color: '#ffb347' }}>{contentText.mutName(t, mutator)}</p>
+              {activeLoadouts.map(loadout => (
+                <div key={loadout.id} style={cardStyle}>
+                  <p className="font-bold text-sm mb-2" style={{ color: '#ffb347' }}>{contentText.loadoutName(t, loadout)}</p>
                   <div className="flex items-start gap-2 mb-1.5">
                     <Skull className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.mutCurse(t, mutator)}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.loadoutCurse(t, loadout)}</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>{contentText.mutBlessing(t, mutator)}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>{contentText.loadoutBlessing(t, loadout)}</p>
                   </div>
                 </div>
               ))}

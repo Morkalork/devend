@@ -1,14 +1,16 @@
-# Ascension mutators — curse + blessing bundles drafted after beating the
-# final level. Each `modifiers` map uses the same GameModifiers keys as
-# upgrades.yml (see README-modifiers.md); a curse is simply an adverse value.
+# Loadouts — curse + blessing bundles. One is drafted at the run start
+# ("Sprint Planning") to shape the run from level 1; the same catalogue also
+# powers the post-final-level Ascension draft. Each `modifiers` map uses the
+# same GameModifiers keys as upgrades.yml (see README-modifiers.md); a curse is
+# simply an adverse value.
 #
-# Drafted mutators stack across ascensions, so keep individual effects
+# Drafted loadouts stack across ascensions, so keep individual effects
 # moderate — a deep run accumulates many of these.
 #
-# `startEligible` (optional, default true): may this mutator be offered in the
-# run-start loadout draft (the base-game "Sprint Planning" pick), as opposed to
-# only the post-final-level Ascension draft? Set false on mutators whose curse
-# is unfair as a fresh-run opener (e.g. a life lost when you only have three).
+# `uniqueWinsRequired` (optional): how many UNIQUE wins (runs beaten with
+# distinct run-start loadouts) the player must have before this loadout unlocks
+# for the run-start draft. Omit it for the loadouts available from scratch. It
+# has no effect on the Ascension draft, which always offers the full catalogue.
 
 ascension:
   # Baseline ball-speed multiplier applied per ascension depth, on top of any
@@ -23,15 +25,15 @@ ascension:
   fenceDurabilityBase: 6
   fenceDurabilityAtFinal: 2
 
-mutators:
+loadouts:
 
   - id: crunch_time
     name: Crunch Time
     curse: Balls move 25% faster.
-    blessing: Earn 50% more overtime hours.
+    blessing: Earn 25% more overtime hours.
     modifiers:
       ballSpeedMultiplier: 1.25
-      scoreMultiplier: 1.5
+      scoreMultiplier: 1.25
 
   - id: scope_creep
     name: Scope Creep
@@ -46,7 +48,7 @@ mutators:
     curse: Lose one life immediately.
     blessing: Earn 75% more overtime hours.
     # Too harsh as a fresh-run opener (you only start with 3 lives).
-    startEligible: false
+    uniqueWinsRequired: 1
     modifiers:
       extraLives: -1
       scoreMultiplier: 1.75
@@ -56,7 +58,7 @@ mutators:
     curse: The shop offers 2 fewer upgrades.
     blessing: Earn 10% interest on banked overtime after every level.
     # Too harsh as a fresh-run opener (the early shop is already small).
-    startEligible: false
+    uniqueWinsRequired: 2
     modifiers:
       extraShopItems: -2
       scoreInterestRate: 0.10
@@ -65,6 +67,7 @@ mutators:
     name: Legacy Codebase
     curse: Fences grow 20% slower.
     blessing: Start every map with 2 instant fences.
+    uniqueWinsRequired: 3
     modifiers:
       fenceGenerationSpeedMultiplier: 0.8
       instantFencesPerMap: 2
@@ -73,6 +76,7 @@ mutators:
     name: Parallel Pipelines
     curse: Balls move 15% faster.
     blessing: Draw one extra fence at the same time.
+    uniqueWinsRequired: 4
     modifiers:
       ballSpeedMultiplier: 1.15
       additionalConcurrentFences: 1
@@ -81,6 +85,7 @@ mutators:
     name: Tech Debt Audit
     curse: Balls move 10% faster and are 10% bigger.
     blessing: Cuts have a 25% chance to clear 5% extra space.
+    uniqueWinsRequired: 5
     modifiers:
       ballSpeedMultiplier: 1.1
       ballSizeMultiplier: 1.1
@@ -91,6 +96,7 @@ mutators:
     name: Night School
     curse: Balls move 20% faster.
     blessing: Bank 1 extra Certificate Hour when the run ends.
+    uniqueWinsRequired: 6
     modifiers:
       ballSpeedMultiplier: 1.2
       extraCertificateHours: 1
@@ -99,6 +105,7 @@ mutators:
     name: Micromanagement
     curse: Balls are 20% bigger.
     blessing: Every locked ball slows the remaining balls by 1%.
+    uniqueWinsRequired: 7
     modifiers:
       ballSizeMultiplier: 1.2
       microManagerPerLock: 0.01
@@ -107,6 +114,7 @@ mutators:
     name: Roadmap Clarity
     curse: Balls move 15% faster.
     blessing: See the predicted path of the two fastest balls.
+    uniqueWinsRequired: 8
     modifiers:
       ballSpeedMultiplier: 1.15
       ballPathPredictionBounces: 2
@@ -116,6 +124,7 @@ mutators:
     name: Golden Handcuffs
     curse: Earn 25% less overtime.
     blessing: Gain 2 extra lives immediately.
+    uniqueWinsRequired: 9
     modifiers:
       scoreMultiplier: 0.75
       extraLives: 2
@@ -124,6 +133,7 @@ mutators:
     name: Agile Transformation
     curse: Fences grow 15% slower.
     blessing: The shop offers 1 extra upgrade and restocks twice per visit.
+    uniqueWinsRequired: 10
     modifiers:
       fenceGenerationSpeedMultiplier: 0.85
       extraShopItems: 1

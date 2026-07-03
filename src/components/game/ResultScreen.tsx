@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw } from 'lucide-react';
+import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { CRTBackground } from './CRTBackground';
 
@@ -13,6 +13,8 @@ interface ResultScreenProps {
   accentColor?: string;
   runHoursAwarded?: number;
   runLevelsCompleted?: number;
+  /** Names of loadouts that unlocked this run (celebrated below the title). */
+  newlyUnlockedLoadouts?: string[];
 }
 
 export function ResultScreen({
@@ -24,9 +26,10 @@ export function ResultScreen({
   accentColor,
   runHoursAwarded = 0,
   runLevelsCompleted = 0,
+  newlyUnlockedLoadouts = [],
 }: ResultScreenProps) {
   const { t } = useTranslation();
-  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, mutatorNames } = result;
+  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames } = result;
 
   return (
     <>
@@ -120,11 +123,29 @@ export function ResultScreen({
                 {t('result.ascensionDepth', { depth: ascensionDepth })}
               </p>
             </div>
-            {mutatorNames && mutatorNames.length > 0 && (
+            {loadoutNames && loadoutNames.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                {t('result.mutatorsBraved', { mutators: mutatorNames.join(' · ') })}
+                {t('result.loadoutsBraved', { loadouts: loadoutNames.join(' · ') })}
               </p>
             )}
+          </motion.div>
+        )}
+
+        {/* New loadout unlocks */}
+        {newlyUnlockedLoadouts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="text-center flex flex-col items-center gap-1"
+          >
+            <div className="flex items-center justify-center gap-2">
+              <Backpack className="w-5 h-5 text-primary" />
+              <p className="text-sm font-display font-bold text-primary uppercase tracking-wider">
+                {t('result.newLoadoutsUnlocked')}
+              </p>
+            </div>
+            <p className="text-sm text-foreground">{newlyUnlockedLoadouts.join(' · ')}</p>
           </motion.div>
         )}
 

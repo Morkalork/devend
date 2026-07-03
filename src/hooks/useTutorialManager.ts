@@ -9,7 +9,8 @@ import { useState, useCallback } from 'react';
  * - `store`      — upgrade shop intro (first shop visit)
  * - `certStore`  — certificate store intro (first store visit)
  * - `mover`      — moving-obstacle warning (first level with movers)
- * - `infoPanels` — "the top/bottom bars are expandable" hint
+ * - `topBar`     — "what is the top bar" hint (level 2)
+ * - `bottomBar`  — "what is the bottom bar" hint (level 3)
  * - `ascension`  — Ascension mode intro (first arrival at the draft screen)
  *
  * "Re-enable All Tutorials" in the options screen calls resetAllTutorials().
@@ -23,7 +24,8 @@ interface TutorialsSeen {
   store: boolean;
   certStore: boolean;
   mover: boolean;
-  infoPanels: boolean;
+  topBar: boolean;
+  bottomBar: boolean;
   ascension: boolean;
 }
 
@@ -32,7 +34,8 @@ const NONE_SEEN: TutorialsSeen = {
   store: false,
   certStore: false,
   mover: false,
-  infoPanels: false,
+  topBar: false,
+  bottomBar: false,
   ascension: false,
 };
 
@@ -41,13 +44,15 @@ function loadSeen(): TutorialsSeen {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      // `infoPanels` is the legacy single flag that covered both bars.
       return {
         fence: !!parsed.fence,
         store: !!parsed.store,
         // `augment` is the legacy name for the certificate store flag.
         certStore: !!(parsed.certStore ?? parsed.augment),
         mover: !!parsed.mover,
-        infoPanels: !!parsed.infoPanels,
+        topBar: !!(parsed.topBar ?? parsed.infoPanels),
+        bottomBar: !!(parsed.bottomBar ?? parsed.infoPanels),
         ascension: !!parsed.ascension,
       };
     }
@@ -85,7 +90,8 @@ export function useTutorialManager() {
   const markStoreSeen = useCallback(() => markSeen('store'), [markSeen]);
   const markCertStoreSeen = useCallback(() => markSeen('certStore'), [markSeen]);
   const markMoverSeen = useCallback(() => markSeen('mover'), [markSeen]);
-  const markInfoPanelsSeen = useCallback(() => markSeen('infoPanels'), [markSeen]);
+  const markTopBarSeen = useCallback(() => markSeen('topBar'), [markSeen]);
+  const markBottomBarSeen = useCallback(() => markSeen('bottomBar'), [markSeen]);
   const markAscensionSeen = useCallback(() => markSeen('ascension'), [markSeen]);
 
   const resetAllTutorials = useCallback(() => {
@@ -103,13 +109,15 @@ export function useTutorialManager() {
     shouldShowStore: !seen.store,
     shouldShowCertStore: !seen.certStore,
     shouldShowMover: !seen.mover,
-    shouldShowInfoPanels: !seen.infoPanels,
+    shouldShowTopBar: !seen.topBar,
+    shouldShowBottomBar: !seen.bottomBar,
     shouldShowAscension: !seen.ascension,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
     markMoverSeen,
-    markInfoPanelsSeen,
+    markTopBarSeen,
+    markBottomBarSeen,
     markAscensionSeen,
     resetAllTutorials,
   };

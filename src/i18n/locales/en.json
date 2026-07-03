@@ -21,17 +21,17 @@
   "ascension": {
     "allLevelsCleared": "All Levels Cleared",
     "ascensionComplete": "Ascension {{depth}} complete. ",
-    "retireOrAscend": "Retire and bank everything - or draft a mutator and ascend to depth {{depth}}.",
+    "retireOrAscend": "Retire and bank everything - or draft a loadout and ascend to depth {{depth}}.",
     "ascendedLevelsInfo": "Ascended levels are faster and count {{multiplier}}× toward Certificate Hours. ",
     "bankedOvertime": "Banked overtime: {{score}}h",
-    "noMutators": "No mutators available - mutators.yml failed to load. You can still retire below.",
+    "noLoadouts": "No loadouts available - loadouts.yml failed to load. You can still retire below.",
     "ascendToDepth": "Ascend to Depth {{depth}}",
-    "selectMutator": "Select a Mutator",
+    "selectLoadout": "Select a Loadout",
     "retireBankRun": "Retire - Bank This Run",
     "ascensionUnlocked": "Ascension Unlocked",
     "tutorialIntro1": "You beat every level - but the grind never ends. Ascend to start over at level 1 with your score, upgrades and lives intact, plus one ",
-    "tutorialMutatorWord": "mutator",
-    "tutorialIntro2": ": a curse bundled with a blessing. Mutators stack with every ascension, levels get faster, and each cleared level counts more toward Certificate Hours. Retire whenever you want to bank it all.",
+    "tutorialLoadoutWord": "loadout",
+    "tutorialIntro2": ": a curse bundled with a blessing. Loadouts stack with every ascension, levels get faster, and each cleared level counts more toward Certificate Hours. Retire whenever you want to bank it all.",
     "gotIt": "Got It"
   },
   "bottomBar": {
@@ -104,7 +104,9 @@
     "closePanel": "Close panel",
     "modifiedCount": "Modified ({{count}})",
     "noModifiers": "No modifiers active yet. Purchase upgrades between levels to gain power-ups for your run.",
-    "atDefault": "At Default"
+    "atDefault": "At Default",
+    "fromSources": "From",
+    "ascensionSource": "Ascension x{{depth}}"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Buy the {{upgradeName}} upgrade in {{required}} different runs.",
@@ -154,8 +156,10 @@
     "moverTutorialBody": "Orange obstacles move back and forth on a fixed track.\n\nBalls bounce off them - but if your growing fence touches one, you lose a life.\n\nWatch the track lines and time your fences carefully!",
     "breakTutorialTitle": "✦ Breaking Things",
     "breakTutorialBody": "Amber blocks can be smashed for bonus overtime - guide balls into them until they shatter, and anything stacked on top falls with them.\n\nYou still win the normal way, by shrinking the board; breaking is just extra points.\n\nYou can't fence against a breakable (the cut fizzles), and the black ball breaks things in half the hits.",
-    "infoPanelsTutorialTitle": "Info Panels",
-    "infoPanelsTutorialBody": "The status bars are expandable!\n\nTap the TOP BAR to see full level details, all your active upgrades with descriptions, and certificate-hour progress.\n\nTap the BOTTOM BAR to view every active modifier explained in plain language."
+    "topBarTutorialTitle": "The Top Bar",
+    "topBarTutorialBody": "The top bar is expandable!\n\nTap it to see full level details, all your active upgrades with descriptions, and certificate-hour progress.",
+    "bottomBarTutorialTitle": "The Bottom Bar",
+    "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language."
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
@@ -218,7 +222,8 @@
     "gameOver": "GAME OVER",
     "completedAllLevels": "🎉 Completed all levels! 🎉",
     "ascensionDepth": "Ascension Depth {{depth}}",
-    "mutatorsBraved": "Mutators braved: {{mutators}}",
+    "loadoutsBraved": "Loadouts braved: {{loadouts}}",
+    "newLoadoutsUnlocked": "New loadout unlocked",
     "completedLevel": "Completed Level",
     "failedAtLevel": "Failed at Level",
     "arenaRemaining": "Arena Remaining",
@@ -382,9 +387,24 @@
     "certificates": "Certificates",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Achievements",
+    "loadouts": "Loadouts",
     "admin": "Admin",
     "certLockedTitle": "Certificates Locked",
     "certLockedBody": "Certificates are permanent bonuses you earn by mastering upgrade families across multiple runs.\n\nReach the top tier of an upgrade family, or unlock your first certificate by playing, and this store opens up.\n\nThen spend Certificate Hours (earned every 5 levels you complete) to level certificates up for lasting effects.",
     "certLockedGotIt": "Got it"
+  },
+  "loadouts": {
+    "title": "Loadouts",
+    "uniqueWins": "Unique wins",
+    "sectionUnlocked": "Unlocked",
+    "sectionLocked": "Locked",
+    "unlockRequirement_one": "Win with {{count}} more unique loadout to unlock.",
+    "unlockRequirement_other": "Win with {{count}} more unique loadouts to unlock.",
+    "progress": "{{current}} / {{required}} unique wins",
+    "loading": "Loading...",
+    "back": "Back",
+    "unlockedModalTitle": "Loadouts Unlocked",
+    "unlockedModalBody": "You won your first run! From now on, every run starts with a loadout: a curse bundled with a blessing that shapes the whole run. Win with different loadouts to unlock more.",
+    "unlockedModalDismiss": "Got It"
   }
 }

@@ -21,17 +21,17 @@
   "ascension": {
     "allLevelsCleared": "Todos los niveles superados",
     "ascensionComplete": "Ascensión {{depth}} completada. ",
-    "retireOrAscend": "Retírate y asegura todo, o elige un mutador y asciende a la profundidad {{depth}}.",
+    "retireOrAscend": "Retírate y asegura todo, o elige un equipamiento y asciende a la profundidad {{depth}}.",
     "ascendedLevelsInfo": "Los niveles ascendidos son más rápidos y cuentan {{multiplier}}× para las horas de certificado. ",
     "bankedOvertime": "Horas extra aseguradas: {{score}}h",
-    "noMutators": "No hay mutadores disponibles: no se pudo cargar mutators.yml. Aun así puedes retirarte abajo.",
+    "noLoadouts": "No hay equipamientos disponibles: no se pudo cargar loadouts.yml. Aun así puedes retirarte abajo.",
     "ascendToDepth": "Ascender a la profundidad {{depth}}",
-    "selectMutator": "Selecciona un mutador",
+    "selectLoadout": "Selecciona un equipamiento",
     "retireBankRun": "Retirarse - asegurar esta partida",
     "ascensionUnlocked": "Ascensión desbloqueada",
     "tutorialIntro1": "Superaste todos los niveles, pero el esfuerzo nunca acaba. Asciende para empezar de nuevo en el nivel 1 con tu puntuación, mejoras y vidas intactas, además de un ",
-    "tutorialMutatorWord": "mutador",
-    "tutorialIntro2": ": una maldición combinada con una bendición. Los mutadores se acumulan con cada ascensión, los niveles se vuelven más rápidos y cada nivel superado cuenta más para las horas de certificado. Retírate cuando quieras para asegurarlo todo.",
+    "tutorialLoadoutWord": "equipamiento",
+    "tutorialIntro2": ": una maldición combinada con una bendición. Los equipamientos se acumulan con cada ascensión, los niveles se vuelven más rápidos y cada nivel superado cuenta más para las horas de certificado. Retírate cuando quieras para asegurarlo todo.",
     "gotIt": "Entendido"
   },
   "bottomBar": {
@@ -104,7 +104,9 @@
     "closePanel": "Cerrar panel",
     "modifiedCount": "Modificados ({{count}})",
     "noModifiers": "Aún no hay modificadores activos. Compra mejoras entre niveles para obtener potenciadores para tu partida.",
-    "atDefault": "Por defecto"
+    "atDefault": "Por defecto",
+    "fromSources": "De",
+    "ascensionSource": "Ascensión x{{depth}}"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Compra la mejora {{upgradeName}} en {{required}} partidas diferentes.",
@@ -152,8 +154,10 @@
     "mainMenu": "Menú principal",
     "moverTutorialTitle": "⚠ Obstáculos móviles",
     "moverTutorialBody": "Los obstáculos naranjas se mueven de un lado a otro por un carril fijo.\n\nLas bolas rebotan en ellos, pero si tu valla en crecimiento toca uno, pierdes una vida.\n\n¡Vigila las líneas del carril y cronometra bien tus vallas!",
-    "infoPanelsTutorialTitle": "Paneles de información",
-    "infoPanelsTutorialBody": "¡Las barras de estado se pueden expandir!\n\nToca la BARRA SUPERIOR para ver todos los detalles del nivel, todas tus mejoras activas con descripciones y el progreso de horas de certificado.\n\nToca la BARRA INFERIOR para ver cada modificador activo explicado en lenguaje sencillo."
+    "topBarTutorialTitle": "La barra superior",
+    "topBarTutorialBody": "¡La barra superior se puede expandir!\n\nTócala para ver todos los detalles del nivel, todas tus mejoras activas con descripciones y el progreso de horas de certificado.",
+    "bottomBarTutorialTitle": "La barra inferior",
+    "bottomBarTutorialBody": "¡La barra inferior también se puede expandir!\n\nTócala para ver cada modificador activo explicado en lenguaje sencillo."
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",
@@ -215,7 +219,8 @@
     "gameOver": "FIN DEL JUEGO",
     "completedAllLevels": "🎉 ¡Completaste todos los niveles! 🎉",
     "ascensionDepth": "Profundidad de ascensión {{depth}}",
-    "mutatorsBraved": "Mutadores afrontados: {{mutators}}",
+    "loadoutsBraved": "Equipamientos afrontados: {{loadouts}}",
+    "newLoadoutsUnlocked": "Nuevo equipamiento desbloqueado",
     "completedLevel": "Nivel completado",
     "failedAtLevel": "Fallaste en el nivel",
     "arenaRemaining": "Arena restante",
@@ -368,6 +373,7 @@
     "certificates": "Certificados",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Logros",
+    "loadouts": "Equipamientos",
     "admin": "Admin",
     "certLockedTitle": "Certificados bloqueados",
     "certLockedBody": "Los certificados son bonificaciones permanentes que consigues al dominar familias de mejoras a lo largo de varias partidas.\n\nAlcanza el nivel máximo de una familia de mejoras, o desbloquea tu primer certificado jugando, y esta tienda se abrirá.\n\nLuego gasta horas de certificado (se ganan cada 5 niveles que completas) para subir de nivel los certificados y obtener efectos duraderos.",
@@ -797,7 +803,7 @@
         "bonusDescription": "+5% de probabilidad de que los cortes despejen espacio extra"
       }
     },
-    "mutators": {
+    "loadouts": {
       "crunch_time": {
         "name": "Crunch Time",
         "curse": "Las bolas se mueven un 25% más rápido.",
@@ -859,5 +865,19 @@
         "blessing": "La tienda ofrece 1 mejora extra y se reabastece dos veces por visita."
       }
     }
+  },
+  "loadouts": {
+    "title": "Equipamientos",
+    "uniqueWins": "Victorias únicas",
+    "sectionUnlocked": "Desbloqueados",
+    "sectionLocked": "Bloqueados",
+    "unlockRequirement_one": "Gana con {{count}} equipamiento único más para desbloquear.",
+    "unlockRequirement_other": "Gana con {{count}} equipamientos únicos más para desbloquear.",
+    "progress": "{{current}} / {{required}} victorias únicas",
+    "loading": "Cargando...",
+    "back": "Atrás",
+    "unlockedModalTitle": "Equipamientos desbloqueados",
+    "unlockedModalBody": "¡Ganaste tu primera partida! A partir de ahora, cada partida empieza con un equipamiento: una maldición combinada con una bendición que define toda la partida. Gana con equipamientos distintos para desbloquear más.",
+    "unlockedModalDismiss": "Entendido"
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Localized accessors for YAML-authored game content — upgrades, certificates,
- * achievements and mutators (public/*.yml).
+ * achievements and loadouts (public/*.yml).
  *
  * The YAML files stay the **English source of truth**. Each translated
  * language fills in `content.<kind>.<id>.<field>` keys in its locale file
@@ -42,8 +42,8 @@ export const contentText = {
   achBonus: (t: TFunction, a: WithId & { bonus?: { description?: string } }) =>
     field(t, 'achievements', a.id, 'bonusDescription', a.bonus?.description),
 
-  mutName: (t: TFunction, m: WithId & { name?: string }) => field(t, 'mutators', m.id, 'name', m.name),
-  mutCurse: (t: TFunction, m: WithId & { curse?: string }) => field(t, 'mutators', m.id, 'curse', m.curse),
-  mutBlessing: (t: TFunction, m: WithId & { blessing?: string }) =>
-    field(t, 'mutators', m.id, 'blessing', m.blessing),
+  loadoutName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'loadouts', l.id, 'name', l.name),
+  loadoutCurse: (t: TFunction, l: WithId & { curse?: string }) => field(t, 'loadouts', l.id, 'curse', l.curse),
+  loadoutBlessing: (t: TFunction, l: WithId & { blessing?: string }) =>
+    field(t, 'loadouts', l.id, 'blessing', l.blessing),
 };

@@ -21,17 +21,17 @@
   "ascension": {
     "allLevelsCleared": "Alla nivåer klara",
     "ascensionComplete": "Uppstigning {{depth}} klar. ",
-    "retireOrAscend": "Dra dig tillbaka och säkra allt - eller välj en mutator och stig upp till djup {{depth}}.",
+    "retireOrAscend": "Dra dig tillbaka och säkra allt - eller välj en loadout och stig upp till djup {{depth}}.",
     "ascendedLevelsInfo": "Uppstigna nivåer är snabbare och räknas {{multiplier}}× mot certifikattimmar. ",
     "bankedOvertime": "Säkrad övertid: {{score}}h",
-    "noMutators": "Inga mutatorer tillgängliga - mutators.yml kunde inte laddas. Du kan ändå dra dig tillbaka nedan.",
+    "noLoadouts": "Inga loadouts tillgängliga - loadouts.yml kunde inte laddas. Du kan ändå dra dig tillbaka nedan.",
     "ascendToDepth": "Stig upp till djup {{depth}}",
-    "selectMutator": "Välj en mutator",
+    "selectLoadout": "Välj en loadout",
     "retireBankRun": "Dra dig tillbaka - säkra denna omgång",
     "ascensionUnlocked": "Uppstigning upplåst",
     "tutorialIntro1": "Du klarade alla nivåer - men slitet tar aldrig slut. Stig upp för att börja om på nivå 1 med poäng, uppgraderingar och liv intakta, plus en ",
-    "tutorialMutatorWord": "mutator",
-    "tutorialIntro2": ": en förbannelse i kombination med en välsignelse. Mutatorer staplas vid varje uppstigning, nivåerna blir snabbare och varje avklarad nivå räknas mer mot certifikattimmar. Dra dig tillbaka när du vill för att säkra allt.",
+    "tutorialLoadoutWord": "loadout",
+    "tutorialIntro2": ": en förbannelse i kombination med en välsignelse. Loadouts staplas vid varje uppstigning, nivåerna blir snabbare och varje avklarad nivå räknas mer mot certifikattimmar. Dra dig tillbaka när du vill för att säkra allt.",
     "gotIt": "Uppfattat"
   },
   "bottomBar": {
@@ -104,7 +104,9 @@
     "closePanel": "Stäng panel",
     "modifiedCount": "Modifierade ({{count}})",
     "noModifiers": "Inga modifierare aktiva ännu. Köp uppgraderingar mellan nivåerna för att få förstärkningar till din omgång.",
-    "atDefault": "Standard"
+    "atDefault": "Standard",
+    "fromSources": "Från",
+    "ascensionSource": "Uppstigning x{{depth}}"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Köp uppgraderingen {{upgradeName}} i {{required}} olika omgångar.",
@@ -152,8 +154,10 @@
     "mainMenu": "Huvudmeny",
     "moverTutorialTitle": "⚠ Rörliga hinder",
     "moverTutorialBody": "Orangea hinder rör sig fram och tillbaka på ett fast spår.\n\nBollar studsar mot dem - men om ditt växande stängsel rör vid ett förlorar du ett liv.\n\nHåll koll på spårlinjerna och tajma dina stängsel noga!",
-    "infoPanelsTutorialTitle": "Infopaneler",
-    "infoPanelsTutorialBody": "Statuslisterna går att fälla ut!\n\nTryck på DEN ÖVRE LISTEN för att se fullständiga nivådetaljer, alla dina aktiva uppgraderingar med beskrivningar och framsteg för certifikattimmar.\n\nTryck på DEN NEDRE LISTEN för att se varje aktiv modifierare förklarad på vanlig svenska."
+    "topBarTutorialTitle": "Den övre listen",
+    "topBarTutorialBody": "Den övre listen går att fälla ut!\n\nTryck på den för att se fullständiga nivådetaljer, alla dina aktiva uppgraderingar med beskrivningar och framsteg för certifikattimmar.",
+    "bottomBarTutorialTitle": "Den nedre listen",
+    "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska."
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
@@ -215,7 +219,8 @@
     "gameOver": "SPELET SLUT",
     "completedAllLevels": "🎉 Klarade alla nivåer! 🎉",
     "ascensionDepth": "Uppstigningsdjup {{depth}}",
-    "mutatorsBraved": "Mutatorer trotsade: {{mutators}}",
+    "loadoutsBraved": "Loadouts trotsade: {{loadouts}}",
+    "newLoadoutsUnlocked": "Ny loadout upplåst",
     "completedLevel": "Klarade nivå",
     "failedAtLevel": "Föll på nivå",
     "arenaRemaining": "Arena kvar",
@@ -368,6 +373,7 @@
     "certificates": "Certifikat",
     "hoursSuffix": "{{hours}}h",
     "achievements": "Prestationer",
+    "loadouts": "Loadouts",
     "admin": "Admin",
     "certLockedTitle": "Certifikat låsta",
     "certLockedBody": "Certifikat är permanenta bonusar som du tjänar genom att bemästra uppgraderingsfamiljer över flera omgångar.\n\nNå den högsta nivån i en uppgraderingsfamilj, eller lås upp ditt första certifikat genom att spela, så öppnas den här butiken.\n\nSedan kan du spendera certifikattimmar (tjänas var 5:e nivå du klarar) för att höja certifikatens nivå och få bestående effekter.",
@@ -797,7 +803,7 @@
         "bonusDescription": "+5% chans att snitt rensar extra utrymme"
       }
     },
-    "mutators": {
+    "loadouts": {
       "crunch_time": {
         "name": "Crunch Time",
         "curse": "Bollar rör sig 25% snabbare.",
@@ -859,5 +865,19 @@
         "blessing": "Butiken erbjuder 1 extra uppgradering och fyller på två gånger per besök."
       }
     }
+  },
+  "loadouts": {
+    "title": "Loadouts",
+    "uniqueWins": "Unika vinster",
+    "sectionUnlocked": "Upplåsta",
+    "sectionLocked": "Låsta",
+    "unlockRequirement_one": "Vinn med {{count}} unik loadout till för att låsa upp.",
+    "unlockRequirement_other": "Vinn med {{count}} unika loadouts till för att låsa upp.",
+    "progress": "{{current}} / {{required}} unika vinster",
+    "loading": "Laddar...",
+    "back": "Tillbaka",
+    "unlockedModalTitle": "Loadouts upplåsta",
+    "unlockedModalBody": "Du vann din första omgång! Från och med nu börjar varje omgång med en loadout: en förbannelse i kombination med en välsignelse som formar hela omgången. Vinn med olika loadouts för att låsa upp fler.",
+    "unlockedModalDismiss": "Uppfattat"
   }
 }

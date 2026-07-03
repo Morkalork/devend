@@ -5,7 +5,7 @@
  * Stats feed achievement requirements and the unlock conditions of locked
  * 'super' upgrades. See src/types/metaProgression.ts for the stat list.
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   MetaProgressionStats,
   UnlockState,
@@ -54,14 +54,16 @@ function saveMetaStats(stats: MetaProgressionStats): void {
 function loadUnlockState(): UnlockState {
   try {
     const stored = localStorage.getItem(UNLOCK_STATE_STORAGE_KEY);
-    if (!stored) return { unlockedIds: [] };
-    
+    if (!stored) return { unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: false };
+
     const parsed = JSON.parse(stored);
     return {
       unlockedIds: Array.isArray(parsed.unlockedIds) ? parsed.unlockedIds : [],
+      wonLoadoutIds: Array.isArray(parsed.wonLoadoutIds) ? parsed.wonLoadoutIds : [],
+      loadoutsIntroduced: parsed.loadoutsIntroduced === true,
     };
   } catch {
-    return { unlockedIds: [] };
+    return { unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: false };
   }
 }
 
@@ -94,7 +96,15 @@ function getConditionProgress(condition: UnlockCondition, stats: MetaProgression
 export function useMetaProgression() {
   const [stats, setStats] = useState<MetaProgressionStats>(DEFAULT_META_STATS);
   const [unlockedIds, setUnlockedIds] = useState<string[]>([]);
+  const [wonLoadoutIds, setWonLoadoutIds] = useState<string[]>([]);
+  const [loadoutsIntroduced, setLoadoutsIntroduced] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
+
+  // Refs mirror the persisted unlock state so recordLoadoutWin /
+  // introduceLoadouts can read/write it synchronously without stale state.
+  const unlockedIdsRef = useRef<string[]>([]);
+  const wonLoadoutIdsRef = useRef<string[]>([]);
+  const loadoutsIntroducedRef = useRef(false);
 
   // Load on mount
   useEffect(() => {
@@ -102,6 +112,11 @@ export function useMetaProgression() {
     const loadedUnlocks = loadUnlockState();
     setStats(loadedStats);
     setUnlockedIds(loadedUnlocks.unlockedIds);
+    setWonLoadoutIds(loadedUnlocks.wonLoadoutIds);
+    setLoadoutsIntroduced(loadedUnlocks.loadoutsIntroduced);
+    unlockedIdsRef.current = loadedUnlocks.unlockedIds;
+    wonLoadoutIdsRef.current = loadedUnlocks.wonLoadoutIds;
+    loadoutsIntroducedRef.current = loadedUnlocks.loadoutsIntroduced;
     setIsLoaded(true);
   }, []);
 
@@ -185,18 +200,55 @@ export function useMetaProgression() {
   }, [updateStats]);
 
   /**
+   * Record a win with a run-start loadout. Adds the id to the unique-win set
+   * only if new, persists, and returns the win-count transition so callers can
+   * compute which loadouts just unlocked. Idempotent for a repeat loadout.
+   */
+  const recordLoadoutWin = useCallback((loadoutId: string): { added: boolean; prevCount: number; newCount: number } => {
+    const prev = wonLoadoutIdsRef.current;
+    const prevCount = prev.length;
+    if (prev.includes(loadoutId)) {
+      return { added: false, prevCount, newCount: prevCount };
+    }
+    const next = [...prev, loadoutId];
+    wonLoadoutIdsRef.current = next;
+    setWonLoadoutIds(next);
+    saveUnlockState({ unlockedIds: unlockedIdsRef.current, wonLoadoutIds: next, loadoutsIntroduced: loadoutsIntroducedRef.current });
+    return { added: true, prevCount, newCount: next.length };
+  }, []);
+
+  /**
+   * Reveal the loadout system (called on the first win). Returns true only the
+   * first time, so the caller can show a one-time "loadouts unlocked" modal.
+   */
+  const introduceLoadouts = useCallback((): boolean => {
+    if (loadoutsIntroducedRef.current) return false;
+    loadoutsIntroducedRef.current = true;
+    setLoadoutsIntroduced(true);
+    saveUnlockState({ unlockedIds: unlockedIdsRef.current, wonLoadoutIds: wonLoadoutIdsRef.current, loadoutsIntroduced: true });
+    return true;
+  }, []);
+
+  /**
    * Reset all progression (for debugging)
    */
   const resetProgression = useCallback(() => {
     setStats({ ...DEFAULT_META_STATS });
     setUnlockedIds([]);
+    setWonLoadoutIds([]);
+    setLoadoutsIntroduced(false);
+    unlockedIdsRef.current = [];
+    wonLoadoutIdsRef.current = [];
+    loadoutsIntroducedRef.current = false;
     saveMetaStats({ ...DEFAULT_META_STATS });
-    saveUnlockState({ unlockedIds: [] });
+    saveUnlockState({ unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: false });
   }, []);
 
   return {
     stats,
     isLoaded,
+    wonLoadoutIds,
+    loadoutsIntroduced,
     updateStats,
     recordLevelReached,
     recordFencesDrawn,
@@ -204,6 +256,8 @@ export function useMetaProgression() {
     recordLivesLost,
     recordAscensionDepth,
     recordPushBonusBanked,
+    recordLoadoutWin,
+    introduceLoadouts,
     resetProgression,
   };
 }

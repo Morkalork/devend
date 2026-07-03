@@ -55,6 +55,10 @@ export function useScreenNavigation() {
     setCurrentScreen('certificateStore');
   }, []);
 
+  const goToLoadouts = useCallback(() => {
+    setCurrentScreen('loadouts');
+  }, []);
+
   const goToOptions = useCallback(() => {
     setCurrentScreen('options');
   }, []);
@@ -88,6 +92,7 @@ export function useScreenNavigation() {
     goToRunDraft,
     goToAscensionDraft,
     goToCertificateStore,
+    goToLoadouts,
     goToOptions,
     goToAchievements,
     goToAdmin,
