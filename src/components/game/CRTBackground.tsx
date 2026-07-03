@@ -180,6 +180,8 @@ const CALLOUT_TEXTS = [
 
 interface CRTBackgroundProps {
   accentColor?: string; // hex color with #
+  /** Freeze all scroll/glitch animation (map finished); resumes when false. */
+  paused?: boolean;
 }
 
 // Glitch effect types
@@ -198,7 +200,7 @@ interface WordHighlight {
   calloutToRight: boolean;
 }
 
-export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
+export function CRTBackground({ accentColor = '#00ff88', paused = false }: CRTBackgroundProps) {
   const codeContainerRef = useRef<HTMLDivElement>(null);
   const [activeGlitch, setActiveGlitch] = useState<GlitchType>(null);
   const [glitchOffset, setGlitchOffset] = useState(0);
@@ -409,7 +411,7 @@ export function CRTBackground({ accentColor = '#00ff88' }: CRTBackgroundProps) {
 
   return (
     <div 
-      className={`crt-background ${activeGlitch ? `crt-glitch-${activeGlitch}` : ''}`}
+      className={`crt-background ${activeGlitch ? `crt-glitch-${activeGlitch}` : ''} ${paused ? 'crt-paused' : ''}`}
       aria-hidden="true"
       style={{
         // CSS Custom Properties for easy tweaking

@@ -37,6 +37,13 @@
   will-change: transform;
 }
 
+/* Freeze the whole background (scroll, highlights, glitches) when the map is
+   finished; it resumes when the next map mounts a fresh, unpaused background. */
+.crt-background.crt-paused,
+.crt-background.crt-paused * {
+  animation-play-state: paused !important;
+}
+
 /* The actual code text */
 .crt-code {
   color: var(--crt-text-color, #00ff88);

@@ -64,8 +64,13 @@ export function createGameLoop(
   let frozenBreachLogged = false;
 
   const gameLoop = (timestamp: number): void => {
-    // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning one
-    parallaxTickRef?.current?.(timestamp);
+    // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning
+    // one. Frozen once the map is over (level complete / game over) so the
+    // background code goes still with the board; it resumes when the next map's
+    // loop starts (levelComplete resets to false on init).
+    if (!game.levelComplete && !game.gameOver) {
+      parallaxTickRef?.current?.(timestamp);
+    }
 
     // Dissolve animation always runs regardless of gameOver/levelComplete state
     if (game.dissolve) {

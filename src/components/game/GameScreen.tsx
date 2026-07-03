@@ -155,6 +155,9 @@ export function GameScreen({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  // Set once the map is won; freezes the scrolling-code background through the
+  // clear shimmer. Resets naturally when the next map remounts this screen.
+  const [mapComplete, setMapComplete] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const memParallaxTickRef = useRef<((timestamp: number) => void) | null>(null);
 
@@ -202,7 +205,7 @@ export function GameScreen({
   return (
     <>
       {/* CRT Terminal Background */}
-      <CRTBackground accentColor={accentColor} />
+      <CRTBackground accentColor={accentColor} paused={mapComplete} />
       
       {/* Memory Parallax Layer - between CRT and game */}
       <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />
@@ -240,6 +243,7 @@ export function GameScreen({
             onLivesChange={onLivesChange}
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
+            onMapComplete={() => setMapComplete(true)}
             onGameStateChange={handleGameStateChange}
             paused={isPaused || modalOverlayActive}
             tutorialMode={inGameStep === 'fence'}

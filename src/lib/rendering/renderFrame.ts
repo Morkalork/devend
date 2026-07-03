@@ -1763,27 +1763,27 @@ export function renderFrame(
       ctx.clip();
       ctx.globalCompositeOperation = 'lighter';
 
-      // White wake: only the STRUCTURES the wave has passed go white, keeping the
-      // same soft neon glow they had while "live" - just drained of colour so the
-      // cleared board reads as finished/dead. The dark board itself is untouched.
-      // Clipped to the region above the wave front, so the whitening follows the
-      // wave down and objects straddling it are half-white.
-      // Extend into the overscan so the progress bar below the board whitens too.
-      const wakeBottom = Math.min(centerY, bt + bh + overscan);
+      // Dead wake: as the wave passes, redraw JUST the walls, objects and the
+      // remaining-space bar in a drained grey so they look powered-down. The board
+      // background and region fills are left alone. Clipped to the swept region
+      // above the wave front so it drains top-down and objects straddling the
+      // front are half-grey; the clip reaches the bar just below the board.
+      const barBottom = bt + bh + 7 * scale;
+      const wakeBottom = Math.min(centerY, barBottom);
       if (wakeBottom > bt) {
-        const whiteEnv = Math.min(1, progress / 0.08); // ease in only, never out
-        const DEAD = '#c8ccd6';                         // drained, desaturated white
-        const DEAD_GLOW = 'rgba(200,206,222,0.9)';
+        const drain = Math.min(1, progress / 0.08); // ease in only, never out
+        const GREY = '#b8bcc4';
+        const GREY_GLOW = 'rgba(184,188,196,0.9)';
         ctx.save();
         ctx.beginPath();
-        ctx.rect(bl, bt, bw, wakeBottom - bt);          // swept region only
+        ctx.rect(bl, bt, bw, wakeBottom - bt);       // swept region only
         ctx.clip();
         ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = whiteEnv;
+        ctx.globalAlpha = drain;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // Obstacles, mirrors and breakable bodies: faint fill + soft glowing edge.
+        // Obstacles, mirrors and breakable bodies: soft glowing grey edge.
         for (const poly of game.obstaclePolygons) {
           const v = poly.vertices;
           if (v.length < 2) continue;
@@ -1792,18 +1792,15 @@ export function renderFrame(
           ctx.moveTo(p0.x, p0.y);
           for (let i = 1; i < v.length; i++) { const p = w2s(v[i].x, v[i].y); ctx.lineTo(p.x, p.y); }
           ctx.closePath();
-          ctx.fillStyle = 'rgba(200,206,222,0.12)';
-          ctx.fill();
-          ctx.strokeStyle = DEAD;
+          ctx.strokeStyle = GREY;
           ctx.lineWidth = WALL_THICKNESS * scale;
-          ctx.shadowColor = DEAD_GLOW;
+          ctx.shadowColor = GREY_GLOW;
           ctx.shadowBlur = 7 * scale;
           ctx.stroke();
-          ctx.stroke(); // second pass thickens the halo for a softer bloom
         }
         ctx.shadowBlur = 0;
 
-        // Moving obstacles at their current position: glowing rounded body.
+        // Moving obstacles at their current position.
         for (const mover of game.movers) {
           const mdx = mover.axis === 'horizontal' ? mover.offset : 0;
           const mdy = mover.axis === 'vertical'   ? mover.offset : 0;
@@ -1816,56 +1813,93 @@ export function renderFrame(
             const hh = (mover.height ?? 60) / 2 * scale;
             ctx.rect(sc.x - hw, sc.y - hh, hw * 2, hh * 2);
           }
-          ctx.fillStyle = 'rgba(200,206,222,0.18)';
-          ctx.fill();
-          ctx.strokeStyle = DEAD;
+          ctx.strokeStyle = GREY;
           ctx.lineWidth = 2 * scale;
-          ctx.shadowColor = DEAD_GLOW;
+          ctx.shadowColor = GREY_GLOW;
           ctx.shadowBlur = 12 * scale;
           ctx.stroke();
         }
         ctx.shadowBlur = 0;
 
-        // Fences and board-edge walls: reuse the live wall renderer with the dead
-        // colour, so the glow/soft caps match exactly - just white instead of accent.
+        // Fences and board-edge walls: reuse the live wall renderer with grey so
+        // the glow and soft caps match exactly, just drained of colour.
         for (const w of walls) {
           renderWallWithEffects(
             ctx, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y),
-            w.start, w.end, scale, DEAD, w.thickness * scale,
+            w.start, w.end, scale, GREY, w.thickness * scale,
           );
         }
 
-        // Balls: soft glowing discs (radial halo + bright core) - a dead pulse.
-        ctx.globalAlpha = whiteEnv; // renderWallWithEffects resets alpha to 1
+        // Balls: soft grey discs (glow halo + core).
+        ctx.globalAlpha = drain; // renderWallWithEffects resets alpha to 1
+        const flameNow = performance.now();
         for (const ball of balls) {
           const pos = ball.renderPosition ?? ball.position;
           const p = w2s(pos.x, pos.y);
           const r = Math.max(1, ball.radius * scale);
           const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
-          halo.addColorStop(0, 'rgba(255,255,255,0.9)');
-          halo.addColorStop(0.5, 'rgba(205,210,226,0.45)');
-          halo.addColorStop(1, 'rgba(205,210,226,0)');
+          halo.addColorStop(0, 'rgba(220,223,230,0.9)');
+          halo.addColorStop(0.5, 'rgba(184,188,196,0.45)');
+          halo.addColorStop(1, 'rgba(184,188,196,0)');
           ctx.fillStyle = halo;
           ctx.beginPath();
           ctx.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = '#eef1f6';
+          ctx.fillStyle = '#cfd3da';
           ctx.beginPath();
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.fill();
+
+          // Flame plume burning upward off the dead ball. Stateless: each of the
+          // looping "tongues" is placed from a per-ball seeded RNG (stable across
+          // frames) and animated by the clock, so no particle state is stored.
+          const rng = _mulberry(_hashStr(`flame-${ball.id}`));
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          const FLAME_N = 16;
+          const flameH = r * 4.8;
+          const life = 620; // ms per tongue cycle
+          for (let i = 0; i < FLAME_N; i++) {
+            const off = rng();               // stable phase offset for this tongue
+            const spd = 0.75 + rng() * 0.6;  // per-tongue rise speed
+            const lat = rng() - 0.5;         // lateral spawn position
+            const ph = ((flameNow / life) * spd + off) % 1; // 0..1 life progress
+            // Buoyant rise: accelerates upward (normal gravity pulls flame up here).
+            const rise = (ph * 0.4 + ph * ph * 0.6) * flameH;
+            const wob = Math.sin(flameNow * 0.008 + off * 6.283 + rise * 0.04) * r * 0.5 * ph;
+            const px = p.x + lat * r * 0.7 + wob;
+            const py = p.y - r * 0.2 - rise;
+            const size = Math.max(0.5, r * (0.95 - 0.6 * ph) * (0.55 + off * 0.5));
+            const a = (1 - ph) * 0.55 * drain;
+            // White flame: bright white core at the base cooling to a faint grey
+            // at the tips, fading to transparent.
+            const hot = ph < 0.35
+              ? `rgba(255,255,255,${a})`
+              : ph < 0.65
+                ? `rgba(230,234,242,${a})`
+                : `rgba(196,201,212,${a})`;
+            const g = ctx.createRadialGradient(px, py, 0, px, py, size);
+            g.addColorStop(0, hot);
+            g.addColorStop(1, 'rgba(210,214,224,0)');
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(px, py, size, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
         }
 
-        // Progress bar under the board: its green fill also goes dead as the wave
-        // crosses it (the clip above whitens it progressively, top-down).
+        // Remaining-space bar below the board: redraw its fill in grey. The clip
+        // above reveals it top-down as the wave crosses.
         if (game.spaceGrid) {
           const remaining = getRemainingPercent(game.spaceGrid);
           const targetCaptured = 100 - rctx.spaceThreshold;
           const fillRatio = Math.min(1, targetCaptured > 0 ? (100 - remaining) / targetCaptured : 1);
           const barY = bt + bh + 3 * scale;
           const barH = 4 * scale;
-          ctx.globalAlpha = 0.85 * whiteEnv;
-          ctx.fillStyle = DEAD;
-          ctx.shadowColor = DEAD_GLOW;
+          ctx.globalAlpha = 0.85 * drain;
+          ctx.fillStyle = GREY;
+          ctx.shadowColor = GREY_GLOW;
           ctx.shadowBlur = 3 * scale;
           ctx.fillRect(bl, barY, bw * fillRatio, barH);
           ctx.shadowBlur = 0;

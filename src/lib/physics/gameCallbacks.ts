@@ -15,6 +15,9 @@ export interface GameCallbacks {
   setDisplayLives: (n: number) => void;
   // Outcome callbacks (wrap refs so extracted fns don't hold stale closures)
   onLevelComplete: (data: LevelScoreData) => void;
+  /** Fired the instant the map is won (before the clear shimmer), so the UI can
+   *  freeze the scrolling-code background. */
+  onMapComplete?: () => void;
   onGameEnd: (result: GameResult) => void;
   onLivesChange: (n: number) => void;
   onTutorialCutSuccess?: () => void;

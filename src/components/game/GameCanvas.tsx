@@ -103,6 +103,8 @@ interface GameCanvasProps {
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
+  /** Fired the instant the map is won, so the shell can freeze the code background. */
+  onMapComplete?: () => void;
   onGameStateChange?: (state: GameStateInfo) => void;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
@@ -153,6 +155,7 @@ export function GameCanvas({
   onLivesChange,
   onGameEnd,
   onLevelComplete,
+  onMapComplete,
   onGameStateChange,
   tutorialMode = false,
   tutorialStep = "completed",
@@ -178,6 +181,8 @@ export function GameCanvas({
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
   const onLevelCompleteRef = useRef(onLevelComplete);
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
+  const onMapCompleteRef = useRef(onMapComplete);
+  useEffect(() => { onMapCompleteRef.current = onMapComplete; }, [onMapComplete]);
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
   // Live ref so toggling the speed-label overlay takes effect without restarting
@@ -579,6 +584,7 @@ export function GameCanvas({
       setWallShieldCount,
       setDisplayLives,
       onLevelComplete: d => onLevelCompleteRef.current(d),
+      onMapComplete: () => onMapCompleteRef.current?.(),
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
       onTutorialCutSuccess,
@@ -645,6 +651,7 @@ export function GameCanvas({
     // The push-your-luck prompt halted the rAF loop (it returns without
     // rescheduling), so restart it here or the shimmer window renders no frames.
     game.shimmerStart = performance.now();
+    onMapCompleteRef.current?.(); // freeze the background code for the "dead" beat
     startGameLoop(game);
     const { levelScore, breakdown } = calculateScore(
       game.wallCount, level.expectedCuts, game.bestRemainingPercent,

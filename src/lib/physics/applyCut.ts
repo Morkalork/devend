@@ -210,7 +210,7 @@ export function applyCutFn(
   }
 }
 
-type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'onLevelComplete' | 'startDissolve'>;
+type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete'>;
 
 /** Finalise the level: score it, fire onLevelComplete, and start the dissolve. */
 export function triggerLevelComplete(
@@ -236,6 +236,7 @@ export function triggerLevelComplete(
   // Celebratory beat: after any lock animations settle, sweep a shimmer down the
   // whole board (fences, obstacles and all) before the completion overlay mounts.
   game.shimmerStart = performance.now() + lockDelay;
+  callbacks.onMapComplete?.(); // freeze the background code for the "dead" beat
   setTimeout(() => {
     callbacks.onLevelComplete({
       levelNumber, levelId: level.id, cutCount: game.wallCount,
