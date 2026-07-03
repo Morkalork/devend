@@ -79,6 +79,8 @@ export interface CanvasGameState {
   bestRemainingPercent: number;
   pushStartPercent: number;
   levelClearedTime: number;
+  /** performance.now() at which the level-clear shimmer begins (0 = inactive). */
+  shimmerStart: number;
 
   // ── Recovery state ─────────────────────────────────────────────────────
   isRecovering: boolean;

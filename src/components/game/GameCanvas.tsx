@@ -38,6 +38,7 @@ import {
 import {
   LOCK_TOTAL_DURATION,
   BALL_WON_REGION_THRESHOLD,
+  LEVEL_CLEAR_SHIMMER_MS,
 } from "@/lib/gameConstants";
 import {
   generateRegionId,
@@ -275,6 +276,7 @@ export function GameCanvas({
     bestRemainingPercent: 100,
     pushStartPercent: 100,
     levelClearedTime: 0,
+    shimmerStart: 0,
     gameLoopFn: null as ((timestamp: number) => void) | null,
     isRecovering: false,
     recoveryEndTime: 0,
@@ -487,6 +489,7 @@ export function GameCanvas({
       game.activeWall = null;
       game.gameOver = false;
       game.levelComplete = false;
+      game.shimmerStart = 0;
       game.swipeStart = null;
       game.swipeRegionId = null;
       game.currentSwipePos = null;
@@ -633,6 +636,16 @@ export function GameCanvas({
   const handleBankAndContinue = useCallback(() => {
     const game = gameRef.current;
     game.levelComplete = true;
+    // Clear the prompt so the loop reaches its levelComplete branch (it bails
+    // early while pushMode is "prompt") and the prompt overlay is dismissed,
+    // revealing the board for the shimmer.
+    game.pushMode = "none";
+    setPushMode("none");
+    // Same celebratory shimmer as a normal clear before the overlay mounts.
+    // The push-your-luck prompt halted the rAF loop (it returns without
+    // rescheduling), so restart it here or the shimmer window renders no frames.
+    game.shimmerStart = performance.now();
+    startGameLoop(game);
     const { levelScore, breakdown } = calculateScore(
       game.wallCount, level.expectedCuts, game.bestRemainingPercent,
       level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
@@ -658,7 +671,7 @@ export function GameCanvas({
         lockedBallsCount: game.lockedBallsCount,
       });
       startDissolveRef.current?.(() => {});
-    }, 150);
+    }, 150 + LEVEL_CLEAR_SHIMMER_MS);
   }, [level, levelNumber, activeModifiers]);
 
   useEffect(() => {

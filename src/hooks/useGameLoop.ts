@@ -13,7 +13,7 @@
 
 import { CanvasGameState } from "@/types/gameState";
 import { GrowingWall } from "@/types/game";
-import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
+import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
@@ -106,7 +106,8 @@ export function createGameLoop(
 
     if (game.gameOver || game.pushMode === "prompt") return;
 
-    // After level complete, keep rendering until all lock animations finish
+    // After level complete, keep rendering until all lock animations finish and
+    // the celebratory clear shimmer has swept the whole board.
     if (game.levelComplete) {
       if (game.assimilations.size > 0) {
         for (const ball of game.balls) {
@@ -115,6 +116,11 @@ export function createGameLoop(
             ball.assimScale = Math.max(0, 1 - Math.max(0, elapsed - 50) / 180);
           }
         }
+      }
+      const shimmerActive =
+        game.shimmerStart > 0 &&
+        performance.now() < game.shimmerStart + LEVEL_CLEAR_SHIMMER_MS;
+      if (game.assimilations.size > 0 || shimmerActive) {
         callbacks.render();
         schedule();
       }

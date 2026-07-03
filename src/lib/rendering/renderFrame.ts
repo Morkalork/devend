@@ -31,6 +31,7 @@ import {
   FREEZE_COOLDOWN_MULTIPLIER,
   SWIPE_TRAIL_DURATION,
   BALL_DANGER_SPEED,
+  LEVEL_CLEAR_SHIMMER_MS,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 
@@ -1735,5 +1736,164 @@ export function renderFrame(
     }
 
     ctx.restore();
+  }
+
+  // ── Level-clear shimmer ─────────────────────────────────────────────────────
+  // A luminous band sweeps top→bottom across the whole cleared board — grid,
+  // fences, obstacles and balls all included — as a beat of accomplishment
+  // before the completion overlay mounts.
+  if (game.shimmerStart > 0) {
+    const elapsed = performance.now() - game.shimmerStart;
+    if (elapsed >= 0 && elapsed <= LEVEL_CLEAR_SHIMMER_MS) {
+      const progress = elapsed / LEVEL_CLEAR_SHIMMER_MS;
+      const { left: bl, top: bt, width: bw, height: bh } = boardRect;
+      const band = bh * 0.28;
+      // Let the wave keep travelling a little past the board's bottom edge.
+      const overscan = bh * 0.22;
+      // Sweep the band centre from just above the top edge to past the bottom.
+      const centerY = bt - band + progress * (bh + band * 2 + overscan);
+      // Ease in over the first 15% and out over the last 20% so it never pops.
+      const envelope = Math.max(0, Math.min(1, progress / 0.15, (1 - progress) / 0.2));
+      const peak = 0.55 * envelope;
+
+      ctx.save();
+      ctx.beginPath();
+      // Clip extends past the board bottom so the wave can run off it.
+      ctx.rect(bl, bt, bw, bh + overscan);
+      ctx.clip();
+      ctx.globalCompositeOperation = 'lighter';
+
+      // White wake: only the STRUCTURES the wave has passed go white, keeping the
+      // same soft neon glow they had while "live" - just drained of colour so the
+      // cleared board reads as finished/dead. The dark board itself is untouched.
+      // Clipped to the region above the wave front, so the whitening follows the
+      // wave down and objects straddling it are half-white.
+      // Extend into the overscan so the progress bar below the board whitens too.
+      const wakeBottom = Math.min(centerY, bt + bh + overscan);
+      if (wakeBottom > bt) {
+        const whiteEnv = Math.min(1, progress / 0.08); // ease in only, never out
+        const DEAD = '#c8ccd6';                         // drained, desaturated white
+        const DEAD_GLOW = 'rgba(200,206,222,0.9)';
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(bl, bt, bw, wakeBottom - bt);          // swept region only
+        ctx.clip();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = whiteEnv;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Obstacles, mirrors and breakable bodies: faint fill + soft glowing edge.
+        for (const poly of game.obstaclePolygons) {
+          const v = poly.vertices;
+          if (v.length < 2) continue;
+          const p0 = w2s(v[0].x, v[0].y);
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          for (let i = 1; i < v.length; i++) { const p = w2s(v[i].x, v[i].y); ctx.lineTo(p.x, p.y); }
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(200,206,222,0.12)';
+          ctx.fill();
+          ctx.strokeStyle = DEAD;
+          ctx.lineWidth = WALL_THICKNESS * scale;
+          ctx.shadowColor = DEAD_GLOW;
+          ctx.shadowBlur = 7 * scale;
+          ctx.stroke();
+          ctx.stroke(); // second pass thickens the halo for a softer bloom
+        }
+        ctx.shadowBlur = 0;
+
+        // Moving obstacles at their current position: glowing rounded body.
+        for (const mover of game.movers) {
+          const mdx = mover.axis === 'horizontal' ? mover.offset : 0;
+          const mdy = mover.axis === 'vertical'   ? mover.offset : 0;
+          const sc = w2s(mover.homeX + mdx, mover.homeY + mdy);
+          ctx.beginPath();
+          if (mover.shape === 'circle') {
+            ctx.arc(sc.x, sc.y, (mover.radius ?? 30) * scale, 0, Math.PI * 2);
+          } else {
+            const hw = (mover.width ?? 60) / 2 * scale;
+            const hh = (mover.height ?? 60) / 2 * scale;
+            ctx.rect(sc.x - hw, sc.y - hh, hw * 2, hh * 2);
+          }
+          ctx.fillStyle = 'rgba(200,206,222,0.18)';
+          ctx.fill();
+          ctx.strokeStyle = DEAD;
+          ctx.lineWidth = 2 * scale;
+          ctx.shadowColor = DEAD_GLOW;
+          ctx.shadowBlur = 12 * scale;
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+
+        // Fences and board-edge walls: reuse the live wall renderer with the dead
+        // colour, so the glow/soft caps match exactly - just white instead of accent.
+        for (const w of walls) {
+          renderWallWithEffects(
+            ctx, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y),
+            w.start, w.end, scale, DEAD, w.thickness * scale,
+          );
+        }
+
+        // Balls: soft glowing discs (radial halo + bright core) - a dead pulse.
+        ctx.globalAlpha = whiteEnv; // renderWallWithEffects resets alpha to 1
+        for (const ball of balls) {
+          const pos = ball.renderPosition ?? ball.position;
+          const p = w2s(pos.x, pos.y);
+          const r = Math.max(1, ball.radius * scale);
+          const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
+          halo.addColorStop(0, 'rgba(255,255,255,0.9)');
+          halo.addColorStop(0.5, 'rgba(205,210,226,0.45)');
+          halo.addColorStop(1, 'rgba(205,210,226,0)');
+          ctx.fillStyle = halo;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#eef1f6';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Progress bar under the board: its green fill also goes dead as the wave
+        // crosses it (the clip above whitens it progressively, top-down).
+        if (game.spaceGrid) {
+          const remaining = getRemainingPercent(game.spaceGrid);
+          const targetCaptured = 100 - rctx.spaceThreshold;
+          const fillRatio = Math.min(1, targetCaptured > 0 ? (100 - remaining) / targetCaptured : 1);
+          const barY = bt + bh + 3 * scale;
+          const barH = 4 * scale;
+          ctx.globalAlpha = 0.85 * whiteEnv;
+          ctx.fillStyle = DEAD;
+          ctx.shadowColor = DEAD_GLOW;
+          ctx.shadowBlur = 3 * scale;
+          ctx.fillRect(bl, barY, bw * fillRatio, barH);
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+      }
+
+      const grad = ctx.createLinearGradient(0, centerY - band, 0, centerY + band);
+      grad.addColorStop(0, hexToRgba(accentColor, 0));
+      grad.addColorStop(0.45, hexToRgba(accentColor, peak * 0.5));
+      grad.addColorStop(0.5, hexToRgba('#ffffff', peak));
+      grad.addColorStop(0.55, hexToRgba(accentColor, peak * 0.5));
+      grad.addColorStop(1, hexToRgba(accentColor, 0));
+      ctx.fillStyle = grad;
+      ctx.fillRect(bl, centerY - band, bw, band * 2);
+
+      // Crisp leading edge for a clean "wipe" feel.
+      ctx.strokeStyle = hexToRgba('#ffffff', peak);
+      ctx.lineWidth = Math.max(1.5, 2 * scale);
+      ctx.shadowColor = accentColor;
+      ctx.shadowBlur = 12 * scale;
+      ctx.beginPath();
+      ctx.moveTo(bl, centerY);
+      ctx.lineTo(bl + bw, centerY);
+      ctx.stroke();
+
+      ctx.restore();
+    }
   }
 }

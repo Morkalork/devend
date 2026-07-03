@@ -28,7 +28,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore } from "@/lib/scoring";
-import { LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
+import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -233,6 +233,9 @@ export function triggerLevelComplete(
     game.lockBonus + game.breakBonus,
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
+  // Celebratory beat: after any lock animations settle, sweep a shimmer down the
+  // whole board (fences, obstacles and all) before the completion overlay mounts.
+  game.shimmerStart = performance.now() + lockDelay;
   setTimeout(() => {
     callbacks.onLevelComplete({
       levelNumber, levelId: level.id, cutCount: game.wallCount,
@@ -247,5 +250,5 @@ export function triggerLevelComplete(
       breakBonus: game.breakBonus,
     });
     callbacks.startDissolve(() => {});
-  }, lockDelay);
+  }, lockDelay + LEVEL_CLEAR_SHIMMER_MS);
 }
