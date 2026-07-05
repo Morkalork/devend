@@ -64,3 +64,4 @@ for Capacitor/Play-Store packaging.
 ## Github
 
 - If working on an issue, always add a comment there with what you've done
+- Don't ever add the "Co-authored-by" in the commit message
