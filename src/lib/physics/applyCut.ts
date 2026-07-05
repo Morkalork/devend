@@ -28,7 +28,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore } from "@/lib/scoring";
-import { LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
+import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -210,7 +210,7 @@ export function applyCutFn(
   }
 }
 
-type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'onLevelComplete' | 'startDissolve'>;
+type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;
 
 /** Finalise the level: score it, fire onLevelComplete, and start the dissolve. */
 export function triggerLevelComplete(
@@ -233,6 +233,14 @@ export function triggerLevelComplete(
     game.lockBonus + game.breakBonus,
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
+  // Celebratory beat: after any lock animations settle, sweep a shimmer down the
+  // whole board (fences, obstacles and all) before the completion overlay mounts.
+  game.shimmerStart = performance.now() + lockDelay;
+  game.shimmerFrozen = callbacks.freezeOnComplete?.() ?? false;
+  callbacks.onMapComplete?.(); // freeze the background code for the "dead" beat
+  // Dev/playground freeze: play the shimmer, then hold the drained frame instead
+  // of advancing to the completion overlay / dissolve.
+  if (game.shimmerFrozen) return;
   setTimeout(() => {
     callbacks.onLevelComplete({
       levelNumber, levelId: level.id, cutCount: game.wallCount,
@@ -247,5 +255,5 @@ export function triggerLevelComplete(
       breakBonus: game.breakBonus,
     });
     callbacks.startDissolve(() => {});
-  }, lockDelay);
+  }, lockDelay + LEVEL_CLEAR_SHIMMER_MS);
 }

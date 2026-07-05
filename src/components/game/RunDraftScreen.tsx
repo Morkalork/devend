@@ -2,38 +2,38 @@
  * RunDraftScreen — the run-start loadout draft ("Sprint Planning").
  *
  * Shown once at the start of every fresh run. The player either picks one of
- * three randomly offered curse + blessing mutators (from public/mutators.yml,
- * filtered to startEligible by the caller) to shape the run from level 1, or
+ * the randomly offered curse + blessing loadouts (from public/loadouts.yml,
+ * filtered to the unlocked set by the caller) to shape the run from level 1, or
  * skips and plays vanilla. Mirrors AscensionDraftScreen's card UI; the chosen
- * loadout rides the same modifier pipeline (draftedMutatorIds) at depth 0.
+ * loadout rides the same modifier pipeline (draftedLoadoutIds) at depth 0.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ClipboardList, Play, SkipForward, Skull, Sparkles } from 'lucide-react';
-import { MutatorConfig } from '@/types/mutator';
-import { drawOffers } from '@/lib/mutatorDraft';
+import { LoadoutConfig } from '@/types/loadout';
+import { drawOffers } from '@/lib/loadoutDraft';
 import { CRTBackground } from './CRTBackground';
 import { contentText } from '@/i18n/content';
 
 interface RunDraftScreenProps {
-  /** Already filtered to startEligible mutators by the caller. */
-  mutators: MutatorConfig[];
-  draftedMutatorIds: string[];
-  /** Called with the chosen mutator id, or null when the player skips. */
-  onConfirm: (mutatorId: string | null) => void;
+  /** Already filtered to the player's unlocked loadouts by the caller. */
+  loadouts: LoadoutConfig[];
+  draftedLoadoutIds: string[];
+  /** Called with the chosen loadout id, or null when the player skips. */
+  onConfirm: (loadoutId: string | null) => void;
   accentColor?: string;
 }
 
 export function RunDraftScreen({
-  mutators,
-  draftedMutatorIds,
+  loadouts,
+  draftedLoadoutIds,
   onConfirm,
   accentColor = '#00ff88',
 }: RunDraftScreenProps) {
   const { t } = useTranslation();
   // Drawn once per mount so re-renders don't reshuffle the offer
-  const [offers] = useState(() => drawOffers(mutators, draftedMutatorIds, 3));
+  const [offers] = useState(() => drawOffers(loadouts, draftedLoadoutIds, 3));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   return (
@@ -75,19 +75,24 @@ export function RunDraftScreen({
             </p>
           </div>
 
-          {/* Mutator cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-            {offers.map((mutator, i) => {
-              const selected = selectedId === mutator.id;
+          {/* Loadout cards. With only two unlocked loadouts the draw returns two
+              cards; center them instead of leaving a gap in a three-wide grid. */}
+          <div
+            className={`grid grid-cols-1 gap-3 w-full ${
+              offers.length === 2 ? 'sm:grid-cols-2 sm:max-w-xl sm:mx-auto' : 'sm:grid-cols-3'
+            }`}
+          >
+            {offers.map((loadout, i) => {
+              const selected = selectedId === loadout.id;
               return (
                 <motion.button
-                  key={mutator.id}
+                  key={loadout.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.1 }}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setSelectedId(selected ? null : mutator.id)}
+                  onClick={() => setSelectedId(selected ? null : loadout.id)}
                   className="text-left rounded-lg p-4 transition-colors"
                   style={{
                     backgroundColor: selected ? `${accentColor}1a` : 'rgba(255,255,255,0.04)',
@@ -99,15 +104,15 @@ export function RunDraftScreen({
                     className="font-display font-bold text-base mb-3"
                     style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
                   >
-                    {contentText.mutName(t, mutator)}
+                    {contentText.loadoutName(t, loadout)}
                   </p>
                   <div className="flex items-start gap-2 mb-2">
                     <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.mutCurse(t, mutator)}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.loadoutCurse(t, loadout)}</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.mutBlessing(t, mutator)}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.loadoutBlessing(t, loadout)}</p>
                   </div>
                 </motion.button>
               );

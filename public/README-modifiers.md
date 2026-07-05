@@ -9,7 +9,7 @@ This document covers every modifier key, effect type, stat, and field that can b
 1. [upgrades.yml](#upgradesyml)
 2. [certificates.yml](#certificatesyml)
 3. [achievements.yml](#achievementsyml)
-4. [mutators.yml](#mutatorsyml)
+4. [loadouts.yml](#loadoutsyml)
 5. [map.yml](#mapyml)
 6. [GameModifiers — shared modifier keys](#gamemodifiers--shared-modifier-keys)
 7. [Achievement stat types](#achievement-stat-types)
@@ -92,9 +92,9 @@ Permanent one-time rewards earned by reaching lifetime stat thresholds. Complete
 
 ---
 
-## mutators.yml
+## loadouts.yml
 
-Curse + blessing bundles drafted at the **start of every run** (the base-game "Sprint Planning" loadout draft, `RunDraftScreen`) and again after beating the final level (the Ascension draft, `AscensionDraftScreen`). A run-start pick shapes the run from level 1; ascension picks stack on top and loop back to level 1. Loaded by `useMutatorManager`, folded into the same GameModifiers pipeline as upgrades.
+Curse + blessing bundles drafted at the **start of every run** (the base-game "Sprint Planning" loadout draft, `RunDraftScreen`) and again after beating the final level (the Ascension draft, `AscensionDraftScreen`). A run-start pick shapes the run from level 1; ascension picks stack on top and loop back to level 1. Loaded by `useLoadoutManager`, folded into the same GameModifiers pipeline as upgrades.
 
 ### Fields
 
@@ -105,13 +105,13 @@ Curse + blessing bundles drafted at the **start of every run** (the base-game "S
 | `curse` | string | ✓ | Downside text (shown in red) |
 | `blessing` | string | ✓ | Upside text (shown in accent colour) |
 | `modifiers` | map | ✓ | One or more **GameModifier keys** — a curse is simply an adverse value (e.g. `ballSpeedMultiplier: 1.25`) |
-| `startEligible` | bool | | Whether this mutator may be offered in the run-start loadout draft. Defaults to **true**; set `false` on mutators whose curse is unfair as a fresh-run opener (e.g. a life lost at 3 lives). Excluded mutators still appear in the Ascension draft. |
+| `uniqueWinsRequired` | number | | How many **unique wins** (runs beaten with distinct run-start loadouts) are needed before this loadout unlocks for the run-start draft. Omit for the loadouts available from scratch. Has no effect on the Ascension draft, which always offers the full catalogue. |
 
 The file also has a top-level `ascension` block:
 
 | Field | Type | Description |
 |---|---|---|
-| `ascension.speedRampPerDepth` | number | Baseline ball-speed multiplier applied per ascension depth on top of drafted mutators (default 1.08, compounds) |
+| `ascension.speedRampPerDepth` | number | Baseline ball-speed multiplier applied per ascension depth on top of drafted loadouts (default 1.08, compounds) |
 | `ascension.fenceDurabilityBase` | number | Ball hits an ascended fence survives on level 1 (default 6) |
 | `ascension.fenceDurabilityAtFinal` | number | …declining linearly to this on the final level (default 2). Fences bordering captured space never break. |
 

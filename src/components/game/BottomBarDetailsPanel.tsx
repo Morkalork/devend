@@ -3,14 +3,17 @@
  * active modifier explained in plain language.
  */
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { X } from 'lucide-react';
-import { GameModifiers } from '@/hooks/useActiveModifiers';
+import { GameModifiers, ModifierSource, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
+import { contentText } from '@/i18n/content';
 
 interface BottomBarDetailsPanelProps {
   visible: boolean;
   onClose: () => void;
   activeModifiers: GameModifiers;
+  modifierSources?: ModifierSource[];
   accentColor?: string;
   lockedBalls?: number;
 }
@@ -20,12 +23,60 @@ interface StatRow {
   value: string;
   changed: boolean;
   description: string;
+  /** GameModifiers keys this row reads, used to attribute it to its sources. */
+  keys: (keyof GameModifiers)[];
+}
+
+/** Additive keys expressed as fractions (shown as percentages, not raw counts). */
+const FRACTIONAL_ADDITIVE_KEYS = new Set<keyof GameModifiers>([
+  'scoreInterestRate',
+  'bonusRemovalChance',
+  'bonusRemovalAmount',
+  'microManagerPerLock',
+]);
+
+/** Localized display name for a modifier source, by its kind. */
+function sourceName(t: TFunction, s: ModifierSource): string {
+  switch (s.kind) {
+    case 'upgrade': return contentText.upgradeName(t, s);
+    case 'certificate': return contentText.certName(t, s);
+    case 'achievement': return contentText.achName(t, s);
+    case 'loadout': return contentText.loadoutName(t, s);
+    case 'ascension': return t('bottomBarDetails.ascensionSource', { depth: s.name });
+    default: return s.name;
+  }
+}
+
+/** A source's contribution to the first of `keys` it actually changes, or null. */
+function contributionFor(s: ModifierSource, keys: (keyof GameModifiers)[]): { key: keyof GameModifiers; value: number } | null {
+  for (const key of keys) {
+    const v = s.modifiers[key];
+    if (v == null) continue;
+    const identity = MULTIPLICATIVE_KEYS.includes(key) ? v === 1 : v === 0;
+    if (identity) continue;
+    return { key, value: v };
+  }
+  return null;
+}
+
+/** Format one source's contribution the way its key reads elsewhere. */
+function formatContribution(key: keyof GameModifiers, v: number): string {
+  if (MULTIPLICATIVE_KEYS.includes(key)) {
+    const d = Math.round((v - 1) * 100);
+    return `${d >= 0 ? '+' : ''}${d}%`;
+  }
+  if (FRACTIONAL_ADDITIVE_KEYS.has(key)) {
+    const p = Math.round(v * 100);
+    return `${p >= 0 ? '+' : ''}${p}%`;
+  }
+  return v >= 0 ? `+${v}` : `${v}`;
 }
 
 export function BottomBarDetailsPanel({
   visible,
   onClose,
   activeModifiers,
+  modifierSources = [],
   accentColor = '#00ff88',
   lockedBalls = 0,
 }: BottomBarDetailsPanelProps) {
@@ -48,6 +99,7 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.ballSpeed'),
       value: pct(effectiveSpeed),
       changed: effectiveSpeed !== 1,
+      keys: ['ballSpeedMultiplier'],
       description: `${t('bottomBarDetails.ballSpeedDescBase', { base: pct(m.ballSpeedMultiplier) })}${
         m.microManagerPerLock > 0
           ? t('bottomBarDetails.ballSpeedDescMicro', { reduction: Math.round((1 - microFactor) * 100), count: lockedBalls })
@@ -58,24 +110,28 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.ballSize'),
       value: pct(m.ballSizeMultiplier),
       changed: m.ballSizeMultiplier !== 1,
+      keys: ['ballSizeMultiplier'],
       description: t('bottomBarDetails.ballSizeDesc'),
     },
     {
       label: t('bottomBarDetails.fenceSpeed'),
       value: pct(m.fenceGenerationSpeedMultiplier),
       changed: m.fenceGenerationSpeedMultiplier !== 1,
+      keys: ['fenceGenerationSpeedMultiplier'],
       description: t('bottomBarDetails.fenceSpeedDesc'),
     },
     {
       label: t('bottomBarDetails.scoreMultiplier'),
       value: pct(m.scoreMultiplier),
       changed: m.scoreMultiplier !== 1,
+      keys: ['scoreMultiplier'],
       description: t('bottomBarDetails.scoreMultiplierDesc'),
     },
     {
       label: t('bottomBarDetails.instantFences'),
       value: bonus(m.instantFencesPerMap),
       changed: m.instantFencesPerMap !== 0,
+      keys: ['instantFencesPerMap'],
       description:
         m.instantFencesPerMap > 0
           ? t('bottomBarDetails.instantFencesActive', { count: m.instantFencesPerMap })
@@ -85,6 +141,7 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.concurrentFences'),
       value: bonus(m.additionalConcurrentFences),
       changed: m.additionalConcurrentFences !== 0,
+      keys: ['additionalConcurrentFences'],
       description:
         m.additionalConcurrentFences > 0
           ? t('bottomBarDetails.concurrentFencesActive', { total: 1 + m.additionalConcurrentFences })
@@ -94,6 +151,7 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.bonusRemoval'),
       value: `${pct(m.bonusRemovalChance)} @ ${pct(m.bonusRemovalAmount)}`,
       changed: m.bonusRemovalChance > 0,
+      keys: ['bonusRemovalChance', 'bonusRemovalAmount'],
       description:
         m.bonusRemovalChance > 0
           ? t('bottomBarDetails.bonusRemovalActive', { chance: pct(m.bonusRemovalChance), amount: pct(m.bonusRemovalAmount) })
@@ -103,6 +161,7 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.extraLives'),
       value: bonus(m.extraLives),
       changed: m.extraLives !== 0,
+      keys: ['extraLives'],
       description:
         m.extraLives > 0
           ? t('bottomBarDetails.extraLivesActive', { count: m.extraLives })
@@ -112,6 +171,7 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.scoreInterest'),
       value: pct(m.scoreInterestRate),
       changed: m.scoreInterestRate !== 0,
+      keys: ['scoreInterestRate'],
       description:
         m.scoreInterestRate > 0
           ? t('bottomBarDetails.scoreInterestActive', { rate: pct(m.scoreInterestRate) })
@@ -121,6 +181,7 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.extraShopSlots'),
       value: bonus(m.extraShopItems),
       changed: m.extraShopItems !== 0,
+      keys: ['extraShopItems'],
       description:
         m.extraShopItems > 0
           ? t('bottomBarDetails.extraShopSlotsActive', { count: m.extraShopItems })
@@ -130,6 +191,7 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.shopRestocks'),
       value: bonus(m.shopRestockCount),
       changed: m.shopRestockCount !== 0,
+      keys: ['shopRestockCount'],
       description:
         m.shopRestockCount > 0
           ? t('bottomBarDetails.shopRestocksActive', { count: m.shopRestockCount })
@@ -139,6 +201,7 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.microManager'),
       value: m.microManagerPerLock > 0 ? t('bottomBarDetails.microManagerValue', { percent: Math.round(m.microManagerPerLock * 100) }) : t('bottomBarDetails.off'),
       changed: m.microManagerPerLock > 0,
+      keys: ['microManagerPerLock'],
       description:
         m.microManagerPerLock > 0
           ? t('bottomBarDetails.microManagerActive', { percent: Math.round(m.microManagerPerLock * 100), count: lockedBalls, speed: pct(effectiveSpeed) })
@@ -151,6 +214,7 @@ export function BottomBarDetailsPanel({
           ? t('bottomBarDetails.bounceCount', { count: m.ballPathPredictionBounces })
           : t('bottomBarDetails.off'),
       changed: m.ballPathPredictionBounces > 0,
+      keys: ['ballPathPredictionBounces', 'ballPathPredictionBalls'],
       description:
         m.ballPathPredictionBounces > 0
           ? t('bottomBarDetails.ballPathPredictionActive', {
@@ -215,28 +279,49 @@ export function BottomBarDetailsPanel({
           <section>
             <p style={sectionHeadStyle}>{t('bottomBarDetails.modifiedCount', { count: activeRows.length })}</p>
             <div className="space-y-3">
-              {activeRows.map(row => (
-                <div
-                  key={row.label}
-                  className="rounded-lg p-4"
-                  style={{
-                    backgroundColor: `${accentColor}0d`,
-                    border: `1px solid ${accentColor}44`,
-                  }}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-sm" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
-                      {row.label}
-                    </span>
-                    <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
-                      {row.value}
-                    </span>
+              {activeRows.map(row => {
+                const contributors = modifierSources
+                  .map(s => ({ s, c: contributionFor(s, row.keys) }))
+                  .filter((x): x is { s: ModifierSource; c: { key: keyof GameModifiers; value: number } } => x.c !== null);
+                return (
+                  <div
+                    key={row.label}
+                    className="rounded-lg p-4"
+                    style={{
+                      backgroundColor: `${accentColor}0d`,
+                      border: `1px solid ${accentColor}44`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-bold text-sm" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
+                        {row.label}
+                      </span>
+                      <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
+                        {row.value}
+                      </span>
+                    </div>
+                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                      {row.description}
+                    </p>
+
+                    {contributors.length > 0 && (
+                      <div className="mt-2.5 pt-2.5 space-y-1" style={{ borderTop: `1px solid ${accentColor}22` }}>
+                        <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Orbitron, sans-serif' }}>
+                          {t('bottomBarDetails.fromSources')}
+                        </p>
+                        {contributors.map(({ s, c }) => (
+                          <div key={`${s.kind}-${s.id}`} className="flex items-center justify-between gap-3">
+                            <span className="text-xs" style={{ color: '#c8ffd8' }}>{sourceName(t, s)}</span>
+                            <span className="text-xs font-bold tabular-nums" style={{ color: accentColor }}>
+                              {formatContribution(c.key, c.value)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.65 }}>
-                    {row.description}
-                  </p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}
@@ -264,14 +349,14 @@ export function BottomBarDetailsPanel({
                   style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${accentColor}18` }}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-bold" style={{ color: `${accentColor}55` }}>
+                    <span className="text-sm font-bold" style={{ color: `${accentColor}bb` }}>
                       {row.label}
                     </span>
-                    <span className="text-sm tabular-nums" style={{ color: `${accentColor}44` }}>
+                    <span className="text-sm tabular-nums" style={{ color: `${accentColor}aa` }}>
                       {row.value}
                     </span>
                   </div>
-                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.35 }}>
+                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.6 }}>
                     {row.description}
                   </p>
                 </div>

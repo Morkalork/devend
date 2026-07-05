@@ -3,7 +3,7 @@
  * lives, space cleared, locked balls, owned upgrade icons and
  * certificate-hour progress. Tapping it opens TopBarDetailsPanel.
  */
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw } from 'lucide-react';
 import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
@@ -21,6 +21,32 @@ const TIER_BARS: Record<UpgradeTier, number> = {
   Architect: 3,
   Wizard: 3,
 };
+
+/** Strict tier ordering, used to pick the highest tier owned within a family. */
+const TIER_RANK: Record<UpgradeTier, number> = {
+  Junior: 1,
+  Senior: 2,
+  Principal: 3,
+  Architect: 4,
+  Wizard: 5,
+};
+
+/**
+ * Collapse owned upgrades to one entry per family (shared `name`), keeping the
+ * highest tier bought. Owning Junior + Senior + Principal of the same upgrade
+ * shows a single icon whose tier meter reflects the top tier, rather than three
+ * separate icons. Family order follows first appearance in the owned list.
+ */
+function groupUpgradesByFamily(owned: UpgradeConfig[]): UpgradeConfig[] {
+  const byFamily = new Map<string, UpgradeConfig>();
+  for (const upgrade of owned) {
+    const existing = byFamily.get(upgrade.name);
+    if (!existing || TIER_RANK[upgrade.tier] > TIER_RANK[existing.tier]) {
+      byFamily.set(upgrade.name, upgrade);
+    }
+  }
+  return [...byFamily.values()];
+}
 import {
   Tooltip,
   TooltipContent,
@@ -72,6 +98,8 @@ export function GameTopBar({
   onExpand,
 }: GameTopBarProps) {
   const { t } = useTranslation();
+  // One icon per upgrade family (highest tier owned), not one per bought tier.
+  const groupedUpgrades = useMemo(() => groupUpgradesByFamily(ownedUpgrades), [ownedUpgrades]);
   const upgradesContainerRef = useRef<HTMLDivElement>(null);
   const [needsCarousel, setNeedsCarousel] = useState(false);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
@@ -141,7 +169,7 @@ export function GameTopBar({
     checkOverflow();
     window.addEventListener('resize', checkOverflow);
     return () => window.removeEventListener('resize', checkOverflow);
-  }, [ownedUpgrades]);
+  }, [groupedUpgrades]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -161,7 +189,7 @@ export function GameTopBar({
     setOpenTooltipId(prev => prev === upgradeId ? null : upgradeId);
   };
 
-  const hasUpgrades = ownedUpgrades.length > 0;
+  const hasUpgrades = groupedUpgrades.length > 0;
 
   const lockReq = threadLockRequired ?? 0;
   const lockMet = lockedBalls >= lockReq;
@@ -340,7 +368,7 @@ export function GameTopBar({
               }`}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
-              {ownedUpgrades.map((upgrade) => {
+              {groupedUpgrades.map((upgrade) => {
                 const Icon = getUpgradeIcon(upgrade, ownedUpgrades);
                 return (
                 <Tooltip

@@ -1,7 +1,7 @@
 import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'options' | 'achievements' | 'admin' | 'mapBuilder' | 'animationTest';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'admin' | 'mapBuilder' | 'animationTest';
 
 /** Progress of the interactive "draw your first fence" tutorial on level 1. */
 export type TutorialStep = 'showingHint' | 'waitingForSuccessfulCut' | 'completed';
@@ -109,7 +109,7 @@ export interface GameResult {
   basePoints?: number;
   // Ascension mode (post-final-level loop) — set when the run went past depth 0
   ascensionDepth?: number;
-  mutatorNames?: string[];
+  loadoutNames?: string[];
 }
 
 // ── Lock / dissolve animation types (used by GameCanvas rendering) ────────

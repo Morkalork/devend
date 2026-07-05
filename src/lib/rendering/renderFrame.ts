@@ -31,6 +31,7 @@ import {
   FREEZE_COOLDOWN_MULTIPLIER,
   SWIPE_TRAIL_DURATION,
   BALL_DANGER_SPEED,
+  LEVEL_CLEAR_SHIMMER_MS,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 
@@ -177,6 +178,113 @@ function _mulberry(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+// ── Flame puff sprite cache ─────────────────────────────────────────────────
+// Balls burn continuously, so the plume must be cheap. It's drawn as many small
+// additive "puffs"; each colour's puff is pre-rendered once to an OffscreenCanvas
+// (a soft radial gradient) and blitted per tongue, so no gradient is allocated
+// per frame. Under 'lighter' compositing the overlapping puffs pile up toward
+// white, reading as a hot core.
+const _flamePuffCache = new Map<string, OffscreenCanvas>();
+const FLAME_PUFF_PX = 24; // sprite half-size in px; scaled per-tongue on draw
+
+function getFlamePuff(rgb: string): OffscreenCanvas {
+  const cached = _flamePuffCache.get(rgb);
+  if (cached) return cached;
+  const R = FLAME_PUFF_PX;
+  const oc = new OffscreenCanvas(R * 2, R * 2);
+  const c = oc.getContext('2d');
+  if (c) {
+    const g = c.createRadialGradient(R, R, 0, R, R, R);
+    g.addColorStop(0,    `rgba(${rgb},1)`);
+    g.addColorStop(0.45, `rgba(${rgb},0.55)`);
+    g.addColorStop(1,    `rgba(${rgb},0)`);
+    c.fillStyle = g;
+    c.beginPath();
+    c.arc(R, R, R, 0, Math.PI * 2);
+    c.fill();
+  }
+  _flamePuffCache.set(rgb, oc);
+  return oc;
+}
+
+// Flame palette: [hot core, mid, cool tip] as "r,g,b" strings. DRAINED is the
+// white/grey clear-wave beat; live balls derive theirs from their own colour
+// (ballFlamePalette) so the fire matches the ball.
+const FLAME_DRAINED: [string, string, string] = ['255,255,255', '230,234,242', '196,201,212'];
+const FLAME_SHEAR_SPEED = 380; // ball speed (world u/s) at which the lean saturates
+
+// Per-colour flame palette derived from the ball's own colour: a near-white hot
+// core, the ball colour in the middle, and a darkened tip. Cached so a distinct
+// ball colour yields a stable set of puff colours (bounding getFlamePuff's cache).
+const _flamePaletteCache = new Map<string, [string, string, string]>();
+
+function ballFlamePalette(hex: string): [string, string, string] {
+  const cached = _flamePaletteCache.get(hex);
+  if (cached) return cached;
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
+  const toward = (c: number, t: number, target: number) => Math.round(c + (target - c) * t);
+  const hot = `${toward(r, 0.75, 255)},${toward(g, 0.75, 255)},${toward(b, 0.75, 255)}`;
+  const mid = `${toward(r, 0.15, 255)},${toward(g, 0.15, 255)},${toward(b, 0.15, 255)}`;
+  const tip = `${Math.round(r * 0.55)},${Math.round(g * 0.55)},${Math.round(b * 0.55)}`;
+  const palette: [string, string, string] = [hot, mid, tip];
+  _flamePaletteCache.set(hex, palette);
+  return palette;
+}
+
+/**
+ * Draw a stateless flame plume rising off a ball. The looping "tongues" are
+ * seeded per-ball (stable across frames) and animated by the clock, so no
+ * particle state is stored. Each tongue is blitted from a cached puff sprite
+ * (getFlamePuff) — no per-frame gradient allocation.
+ *
+ * Buoyancy always lifts the plume upward; (vx,vy) is the ball's screen-space
+ * velocity and shears the plume opposite to travel (more toward the tips), so a
+ * fast ball's flame trails behind it like a real burning object in motion. The
+ * vertical shear is damped and can never overcome buoyancy, so it always burns
+ * upward. `alpha` scales overall opacity.
+ */
+function drawBallFlame(
+  ctx: CanvasRenderingContext2D,
+  px: number, py: number, r: number, id: string, now: number,
+  vx: number, vy: number,
+  palette: [string, string, string],
+  alpha: number,
+): void {
+  const rng = _mulberry(_hashStr(`flame-${id}`));
+  const FLAME_N = 12;
+  const flameH = r * 4.8;
+  const life = 620; // ms per tongue cycle
+  const speed = Math.hypot(vx, vy);
+  const lean = speed > 0 ? Math.min(1, speed / FLAME_SHEAR_SPEED) : 0;
+  // Lean opposite to travel: horizontal applied fully, vertical damped so it
+  // never cancels the upward rise.
+  const lx = speed > 0 ? -(vx / speed) * lean * 1.1  : 0;
+  const ly = speed > 0 ? -(vy / speed) * lean * 0.35 : 0;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < FLAME_N; i++) {
+    const off = rng();               // stable phase offset for this tongue
+    const spd = 0.75 + rng() * 0.6;  // per-tongue rise speed
+    const lat = rng() - 0.5;         // lateral spawn position
+    const ph = ((now / life) * spd + off) % 1; // 0..1 life progress
+    const rise = (ph * 0.4 + ph * ph * 0.6) * flameH; // buoyant, accelerating
+    const wob = Math.sin(now * 0.008 + off * 6.283 + rise * 0.04) * r * 0.5 * ph;
+    // Shear scales with rise, so tips lean downstream more than the base.
+    const cx = px + lat * r * 0.7 + wob + lx * rise;
+    const cy = py - r * 0.2 - rise + ly * rise;
+    const size = Math.max(0.5, r * (0.95 - 0.6 * ph) * (0.55 + off * 0.5));
+    const a = (1 - ph) * 0.55 * alpha;
+    if (a <= 0.01) continue;
+    const rgb = ph < 0.35 ? palette[0] : ph < 0.65 ? palette[1] : palette[2];
+    ctx.globalAlpha = a;
+    ctx.drawImage(getFlamePuff(rgb), cx - size, cy - size, size * 2, size * 2);
+  }
+  ctx.restore();
 }
 
 /**
@@ -1278,6 +1386,21 @@ export function renderFrame(
       }
     }
 
+    // Continuous flame plume: the ball is a burning object. Drawn behind the
+    // body so the tongues rise up and around it. Skipped while frozen (frost,
+    // not fire) and for won/disintegrating balls (the clear wave draws their
+    // drained flame instead).
+    {
+      const nowF = performance.now();
+      const isFrozen = ball.frozenUntil !== undefined && nowF < ball.frozenUntil;
+      if (ball.state === 'active' && !isFrozen && screenRadius > 0.5) {
+        drawBallFlame(
+          ctx, screenPos.x, screenPos.y, screenRadius, ball.id, nowF,
+          ball.velocity.x, ball.velocity.y, ballFlamePalette(ball.color), assimScale,
+        );
+      }
+    }
+
     const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);
     ctx.drawImage(baseCanvas, Math.round(screenPos.x - baseHalf), Math.round(screenPos.y - baseHalf));
 
@@ -1735,5 +1858,205 @@ export function renderFrame(
     }
 
     ctx.restore();
+  }
+
+  // ── Level-clear shimmer ─────────────────────────────────────────────────────
+  // A luminous band sweeps top→bottom across the whole cleared board — grid,
+  // fences, obstacles and balls all included — as a beat of accomplishment
+  // before the completion overlay mounts.
+  if (game.shimmerStart > 0) {
+    // In freeze mode (dev/playground), clamp to the end-state once the sweep is
+    // done so the fully-drained board holds indefinitely instead of reverting.
+    const elapsedRaw = performance.now() - game.shimmerStart;
+    const elapsed = game.shimmerFrozen ? Math.min(elapsedRaw, LEVEL_CLEAR_SHIMMER_MS) : elapsedRaw;
+    if (elapsed >= 0 && elapsed <= LEVEL_CLEAR_SHIMMER_MS) {
+      const progress = elapsed / LEVEL_CLEAR_SHIMMER_MS;
+      const { left: bl, top: bt, width: bw, height: bh } = boardRect;
+      const band = bh * 0.28;
+      // Let the wave keep travelling a little past the board's bottom edge.
+      const overscan = bh * 0.22;
+      // Sweep the band centre from just above the top edge to past the bottom.
+      const centerY = bt - band + progress * (bh + band * 2 + overscan);
+      // Ease in over the first 15% and out over the last 20% so it never pops.
+      const envelope = Math.max(0, Math.min(1, progress / 0.15, (1 - progress) / 0.2));
+      const peak = 0.55 * envelope;
+
+      ctx.save();
+      ctx.beginPath();
+      // Clip extends past the board bottom so the wave can run off it.
+      ctx.rect(bl, bt, bw, bh + overscan);
+      ctx.clip();
+      ctx.globalCompositeOperation = 'lighter';
+
+      // Dead wake: as the wave passes, redraw JUST the walls, objects and the
+      // remaining-space bar in a drained grey so they look powered-down. The board
+      // background and region fills are left alone. Clipped to the swept region
+      // above the wave front so it drains top-down and objects straddling the
+      // front are half-grey; the clip reaches the bar just below the board.
+      const barBottom = bt + bh + 7 * scale;
+      const wakeBottom = Math.min(centerY, barBottom);
+      if (wakeBottom > bt) {
+        const drain = Math.min(1, progress / 0.08); // ease in only, never out
+        const GREY = '#b8bcc4';
+        const GREY_GLOW = 'rgba(184,188,196,0.9)';
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(bl, bt, bw, wakeBottom - bt);       // swept region only
+        ctx.clip();
+        // Remove the region fills (captured + active) in the wake so only the
+        // structures remain - just borders, fences, objects and balls, drained to
+        // grey below. Clearing sidesteps any fill-recolour artifacts (blocky grid
+        // cells, jagged hole seams) entirely.
+        ctx.clearRect(bl, bt, bw, Math.min(wakeBottom, bt + bh) - bt);
+
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = drain;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        // Obstacles, mirrors and breakable bodies: soft glowing grey edge with a
+        // bright glossy highlight laid over it.
+        for (const poly of game.obstaclePolygons) {
+          const v = poly.vertices;
+          if (v.length < 2) continue;
+          const p0 = w2s(v[0].x, v[0].y);
+          ctx.beginPath();
+          ctx.moveTo(p0.x, p0.y);
+          for (let i = 1; i < v.length; i++) { const p = w2s(v[i].x, v[i].y); ctx.lineTo(p.x, p.y); }
+          ctx.closePath();
+          ctx.strokeStyle = GREY;
+          ctx.lineWidth = WALL_THICKNESS * scale;
+          ctx.shadowColor = GREY_GLOW;
+          ctx.shadowBlur = 7 * scale;
+          ctx.stroke();
+          // Gloss: a thin bright-white sheen, added on top.
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+          ctx.lineWidth = Math.max(1, WALL_THICKNESS * scale * 0.45);
+          ctx.shadowColor = 'rgba(235,242,255,0.85)';
+          ctx.shadowBlur = 5 * scale;
+          ctx.stroke();
+          ctx.restore();
+        }
+        ctx.shadowBlur = 0;
+
+        // Moving obstacles: fill solid grey at their (now frozen) position so the
+        // live orange body, direction arrow and pulsing glow are fully covered -
+        // they read white/dead and stop moving. Physics is already halted at
+        // level complete, so the frozen fill sits exactly over the live sprite.
+        for (const mover of game.movers) {
+          const mdx = mover.axis === 'horizontal' ? mover.offset : 0;
+          const mdy = mover.axis === 'vertical'   ? mover.offset : 0;
+          const sc = w2s(mover.homeX + mdx, mover.homeY + mdy);
+          ctx.beginPath();
+          if (mover.shape === 'circle') {
+            ctx.arc(sc.x, sc.y, (mover.radius ?? 30) * scale, 0, Math.PI * 2);
+          } else {
+            const hw = (mover.width ?? 60) / 2 * scale;
+            const hh = (mover.height ?? 60) / 2 * scale;
+            ctx.rect(sc.x - hw, sc.y - hh, hw * 2, hh * 2);
+          }
+          ctx.fillStyle = GREY;
+          ctx.shadowColor = GREY_GLOW;
+          ctx.shadowBlur = 14 * scale; // >= the live mover glow so its halo is covered too
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = GREY;
+          ctx.lineWidth = 2 * scale;
+          ctx.stroke();
+        }
+        ctx.shadowBlur = 0;
+
+        // Fences and board-edge walls: reuse the live wall renderer with grey so
+        // the glow and soft caps match, plus a glowBoost for extra bloom.
+        for (const w of walls) {
+          renderWallWithEffects(
+            ctx, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y),
+            w.start, w.end, scale, GREY, w.thickness * scale, 0.5,
+          );
+        }
+        // Gloss: a bright-white sheen run along every border and fence, added on top.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.shadowColor = 'rgba(235,242,255,0.9)';
+        ctx.shadowBlur = 6 * scale;
+        for (const w of walls) {
+          const s = w2s(w.start.x, w.start.y);
+          const e = w2s(w.end.x, w.end.y);
+          ctx.lineWidth = Math.max(1, w.thickness * scale * 0.4);
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(e.x, e.y);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Balls: soft grey discs (glow halo + core).
+        ctx.globalAlpha = drain; // renderWallWithEffects resets alpha to 1
+        const flameNow = performance.now();
+        for (const ball of balls) {
+          const pos = ball.renderPosition ?? ball.position;
+          const p = w2s(pos.x, pos.y);
+          const r = Math.max(1, ball.radius * scale);
+          const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
+          halo.addColorStop(0, 'rgba(220,223,230,0.9)');
+          halo.addColorStop(0.5, 'rgba(184,188,196,0.45)');
+          halo.addColorStop(1, 'rgba(184,188,196,0)');
+          ctx.fillStyle = halo;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#cfd3da';
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Dead ball: a drained white/grey flame burning straight up (no motion
+          // shear — the board is frozen for the clear beat).
+          drawBallFlame(ctx, p.x, p.y, r, ball.id, flameNow, 0, 0, FLAME_DRAINED, drain);
+        }
+
+        // Remaining-space bar below the board: redraw its fill in grey. The clip
+        // above reveals it top-down as the wave crosses.
+        if (game.spaceGrid) {
+          const remaining = getRemainingPercent(game.spaceGrid);
+          const targetCaptured = 100 - rctx.spaceThreshold;
+          const fillRatio = Math.min(1, targetCaptured > 0 ? (100 - remaining) / targetCaptured : 1);
+          const barY = bt + bh + 3 * scale;
+          const barH = 4 * scale;
+          ctx.globalAlpha = 0.85 * drain;
+          ctx.fillStyle = GREY;
+          ctx.shadowColor = GREY_GLOW;
+          ctx.shadowBlur = 3 * scale;
+          ctx.fillRect(bl, barY, bw * fillRatio, barH);
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.restore();
+      }
+
+      const grad = ctx.createLinearGradient(0, centerY - band, 0, centerY + band);
+      grad.addColorStop(0, hexToRgba(accentColor, 0));
+      grad.addColorStop(0.45, hexToRgba(accentColor, peak * 0.5));
+      grad.addColorStop(0.5, hexToRgba('#ffffff', peak));
+      grad.addColorStop(0.55, hexToRgba(accentColor, peak * 0.5));
+      grad.addColorStop(1, hexToRgba(accentColor, 0));
+      ctx.fillStyle = grad;
+      ctx.fillRect(bl, centerY - band, bw, band * 2);
+
+      // Crisp leading edge for a clean "wipe" feel.
+      ctx.strokeStyle = hexToRgba('#ffffff', peak);
+      ctx.lineWidth = Math.max(1.5, 2 * scale);
+      ctx.shadowColor = accentColor;
+      ctx.shadowBlur = 12 * scale;
+      ctx.beginPath();
+      ctx.moveTo(bl, centerY);
+      ctx.lineTo(bl + bw, centerY);
+      ctx.stroke();
+
+      ctx.restore();
+    }
   }
 }

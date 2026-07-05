@@ -13,7 +13,7 @@
 
 import { CanvasGameState } from "@/types/gameState";
 import { GrowingWall } from "@/types/game";
-import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
+import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
@@ -64,8 +64,13 @@ export function createGameLoop(
   let frozenBreachLogged = false;
 
   const gameLoop = (timestamp: number): void => {
-    // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning one
-    parallaxTickRef?.current?.(timestamp);
+    // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning
+    // one. Frozen once the map is over (level complete / game over) so the
+    // background code goes still with the board; it resumes when the next map's
+    // loop starts (levelComplete resets to false on init).
+    if (!game.levelComplete && !game.gameOver) {
+      parallaxTickRef?.current?.(timestamp);
+    }
 
     // Dissolve animation always runs regardless of gameOver/levelComplete state
     if (game.dissolve) {
@@ -106,7 +111,8 @@ export function createGameLoop(
 
     if (game.gameOver || game.pushMode === "prompt") return;
 
-    // After level complete, keep rendering until all lock animations finish
+    // After level complete, keep rendering until all lock animations finish and
+    // the celebratory clear shimmer has swept the whole board.
     if (game.levelComplete) {
       if (game.assimilations.size > 0) {
         for (const ball of game.balls) {
@@ -115,6 +121,18 @@ export function createGameLoop(
             ball.assimScale = Math.max(0, 1 - Math.max(0, elapsed - 50) / 180);
           }
         }
+      }
+      const shimmerActive =
+        game.shimmerStart > 0 &&
+        performance.now() < game.shimmerStart + LEVEL_CLEAR_SHIMMER_MS;
+      // Freeze mode (dev/playground): render every frame through the sweep, then a
+      // final clamped full-drain frame, and stop scheduling so the board holds.
+      if (game.shimmerFrozen) {
+        callbacks.render();
+        if (shimmerActive) schedule();
+        return;
+      }
+      if (game.assimilations.size > 0 || shimmerActive) {
         callbacks.render();
         schedule();
       }

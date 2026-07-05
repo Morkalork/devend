@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, X } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, X } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { version } from '@/lib/version';
@@ -11,6 +11,7 @@ interface WelcomeScreenProps {
   onTutorial: () => void;
   onOptions: () => void;
   onOpenCertificateStore?: () => void;
+  onLoadouts?: () => void;
   onAchievements?: () => void;
   onAdmin?: () => void;
   isLoading?: boolean;
@@ -25,6 +26,7 @@ export function WelcomeScreen({
   onTutorial,
   onOptions,
   onOpenCertificateStore,
+  onLoadouts,
   onAchievements,
   onAdmin,
   isLoading,
@@ -258,6 +260,18 @@ export function WelcomeScreen({
               </span>
             )}
           </motion.button>
+          {onLoadouts && (
+            <motion.button
+              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
+              onClick={onLoadouts}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+            >
+              <Backpack className="w-5 h-5" />
+              {t('welcome.loadouts')}
+            </motion.button>
+          )}
           {onAchievements && (() => {
             // Available once the player has earned anything to look at — cert
             // hours OR completed achievements. Gating on cert hours alone hid

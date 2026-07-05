@@ -5,7 +5,7 @@ Guidance for Claude Code (and humans) working in this repository.
 ## Project
 
 **Dev/End** — a browser game built with Vite + React 18 + TypeScript, packaged
-for Android via Capacitor. Game content (levels, upgrades, scoring, mutators,
+for Android via Capacitor. Game content (levels, upgrades, scoring, loadouts,
 etc.) is data-driven from YAML files in `public/`.
 
 ## Commands
@@ -32,7 +32,7 @@ should pass clean.
 - `src/i18n/` — `react-i18next` setup and `locales/{en,es,sv}.json`.
 - `src/test/` — Vitest tests.
 - `public/*.yml` — runtime game config (`map.yml`, `upgrades.yml`,
-  `scoring-config.yml`, `mutators.yml`, `certificates.yml`, `balls.yml`, …),
+  `scoring-config.yml`, `loadouts.yml`, `certificates.yml`, `balls.yml`, …),
   loaded at runtime with `js-yaml`.
 
 See **ARCHITECTURE.md** for the game design and data model, and **ANDROID.md**

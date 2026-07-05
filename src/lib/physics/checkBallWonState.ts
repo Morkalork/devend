@@ -96,6 +96,18 @@ export function checkAndUpdateBallWonStates(
     ball.velocity = { x: 0, y: 0 };
     ball.speed = 0;
 
+    // Snap the locked ball to the centre of its region. Its bounce position at
+    // the instant of lock is off-centre, which showed up as a misplaced ball
+    // once motion stopped (most visibly on the frozen level-clear frame). Update
+    // the interpolation snapshots too, or a render with the loop paused would
+    // hold the stale off-centre renderPosition.
+    {
+      const c = ballRegion.centroid;
+      ball.position = { x: c.x, y: c.y };
+      ball.prevPosition = { x: c.x, y: c.y };
+      ball.renderPosition = { x: c.x, y: c.y };
+    }
+
     if (ballRegion.cellIndices.length > 0) {
       const centroid = ballRegion.centroid;
       const RAY_COUNT = 360;

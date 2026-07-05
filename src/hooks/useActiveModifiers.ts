@@ -52,6 +52,19 @@ export interface GameModifiers {
  */
 export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
 
+/**
+ * A single named contributor to the merged GameModifiers — an owned upgrade,
+ * certificate, activated achievement, drafted loadout, or the ascension ramp.
+ * Its `modifiers` are that source's raw (pre-merge) contribution, so the HUD
+ * can attribute each active modifier to what produced it.
+ */
+export interface ModifierSource {
+  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension';
+  id: string;
+  name: string;
+  modifiers: Record<string, number>;
+}
+
 // Keys that stack multiplicatively
 export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'ballSpeedMultiplier',

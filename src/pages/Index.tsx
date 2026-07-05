@@ -25,6 +25,8 @@ import { RunDraftScreen } from '@/components/game/RunDraftScreen';
 import { ContinuePrompt } from '@/components/game/ContinuePrompt';
 import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
 import { CertificateStore } from '@/components/game/CertificateStore';
+import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
+import { LoadoutsUnlockedModal } from '@/components/game/LoadoutsUnlockedModal';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
@@ -53,7 +55,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   const isAdminEnabled = import.meta.env.DEV;
 
   const SCREEN_ORDER: Record<string, number> = {
-    welcome: 0, tutorial: 1, options: 1, achievements: 1,
+    welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1,
     game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3, ascensionDraft: 3, result: 4,
   };
   const prevScreenRef = useRef(navigation.currentScreen);
@@ -107,6 +109,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                     ? session.handleOpenCertificateStore
                     : undefined
                 }
+                onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
                 onAchievements={() => navigation.goToAchievements()}
                 onAdmin={isAdminEnabled ? navigation.goToAdmin : undefined}
                 isLoading={session.isLoading}
@@ -150,22 +153,25 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onFenceSeen={session.markFenceSeen}
                 showMoverTutorial={session.showMoverTutorial}
                 onMoverTutorialSeen={session.markMoverSeen}
-                showInfoPanelsTutorial={session.showInfoPanelsTutorial}
-                onInfoPanelsTutorialSeen={session.markInfoPanelsSeen}
+                showTopBarTutorial={session.showTopBarTutorial}
+                onTopBarTutorialSeen={session.markTopBarSeen}
+                showBottomBarTutorial={session.showBottomBarTutorial}
+                onBottomBarTutorialSeen={session.markBottomBarSeen}
                 accentColor={accentHex}
                 certificateProgress={session.certificateProgress}
                 achievementBonuses={session.achievementBonuses}
                 activeModifiers={session.activeModifiers}
+                modifierSources={session.modifierSources}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 ascensionDepth={session.ascensionDepth}
-                activeMutators={session.activeMutators}
+                activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
               />
             )}
             {navigation.currentScreen === 'runDraft' && (
               <RunDraftScreen
-                mutators={session.loadoutMutators}
-                draftedMutatorIds={session.draftedMutatorIds}
+                loadouts={session.availableLoadouts}
+                draftedLoadoutIds={session.draftedLoadoutIds}
                 onConfirm={session.handleConfirmLoadout}
                 accentColor={accentHex}
               />
@@ -190,8 +196,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             )}
             {navigation.currentScreen === 'ascensionDraft' && (
               <AscensionDraftScreen
-                mutators={session.mutators}
-                draftedMutatorIds={session.draftedMutatorIds}
+                loadouts={session.loadouts}
+                draftedLoadoutIds={session.draftedLoadoutIds}
                 ascensionDepth={session.ascensionDepth}
                 totalScore={session.totalScore}
                 onAscend={session.handleAscend}
@@ -211,6 +217,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 accentColor={accentHex}
                 runHoursAwarded={session.lastRunHoursAwarded}
                 runLevelsCompleted={session.lastRunLevelsCompleted}
+                newlyUnlockedLoadouts={session.lastRunLoadoutUnlocks}
               />
             )}
             {navigation.currentScreen === 'certificateStore' && (
@@ -229,6 +236,14 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 achievements={session.achievements}
                 metaStats={session.metaStats}
                 lifetimeHoursSpent={session.lifetimeHoursSpent}
+              />
+            )}
+            {navigation.currentScreen === 'loadouts' && (
+              <LoadoutGalleryScreen
+                loadouts={session.loadouts}
+                wonLoadoutIds={session.wonLoadoutIds}
+                onBack={navigation.goToWelcome}
+                accentColor={accentHex}
               />
             )}
             {navigation.currentScreen === 'achievements' && (
@@ -283,6 +298,12 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
           />
         )}
       </AnimatePresence>
+
+      <LoadoutsUnlockedModal
+        visible={session.showLoadoutsUnlockedModal}
+        onDismiss={session.handleDismissLoadoutsUnlocked}
+        accentColor={accentHex}
+      />
     </>
   );
 }

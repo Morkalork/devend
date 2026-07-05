@@ -38,6 +38,7 @@ import {
 import {
   LOCK_TOTAL_DURATION,
   BALL_WON_REGION_THRESHOLD,
+  LEVEL_CLEAR_SHIMMER_MS,
 } from "@/lib/gameConstants";
 import {
   generateRegionId,
@@ -102,6 +103,8 @@ interface GameCanvasProps {
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
+  /** Fired the instant the map is won, so the shell can freeze the code background. */
+  onMapComplete?: () => void;
   onGameStateChange?: (state: GameStateInfo) => void;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
@@ -124,6 +127,9 @@ interface GameCanvasProps {
   paused?: boolean;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
+  /** Admin/Playground: on clear, play the drain shimmer then freeze on the drained
+   *  frame instead of completing the level (no overlay, no dissolve). */
+  freezeOnComplete?: boolean;
 }
 
 /**
@@ -152,6 +158,7 @@ export function GameCanvas({
   onLivesChange,
   onGameEnd,
   onLevelComplete,
+  onMapComplete,
   onGameStateChange,
   tutorialMode = false,
   tutorialStep = "completed",
@@ -170,6 +177,7 @@ export function GameCanvas({
   parallaxTickRef,
   paused = false,
   showBallSpeeds = false,
+  freezeOnComplete = false,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -177,6 +185,10 @@ export function GameCanvas({
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
   const onLevelCompleteRef = useRef(onLevelComplete);
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
+  const onMapCompleteRef = useRef(onMapComplete);
+  useEffect(() => { onMapCompleteRef.current = onMapComplete; }, [onMapComplete]);
+  const freezeOnCompleteRef = useRef(freezeOnComplete);
+  useEffect(() => { freezeOnCompleteRef.current = freezeOnComplete; }, [freezeOnComplete]);
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
   // Live ref so toggling the speed-label overlay takes effect without restarting
@@ -275,6 +287,8 @@ export function GameCanvas({
     bestRemainingPercent: 100,
     pushStartPercent: 100,
     levelClearedTime: 0,
+    shimmerStart: 0,
+    shimmerFrozen: false,
     gameLoopFn: null as ((timestamp: number) => void) | null,
     isRecovering: false,
     recoveryEndTime: 0,
@@ -487,6 +501,8 @@ export function GameCanvas({
       game.activeWall = null;
       game.gameOver = false;
       game.levelComplete = false;
+      game.shimmerStart = 0;
+      game.shimmerFrozen = false;
       game.swipeStart = null;
       game.swipeRegionId = null;
       game.currentSwipePos = null;
@@ -576,6 +592,8 @@ export function GameCanvas({
       setWallShieldCount,
       setDisplayLives,
       onLevelComplete: d => onLevelCompleteRef.current(d),
+      onMapComplete: () => onMapCompleteRef.current?.(),
+      freezeOnComplete: () => freezeOnCompleteRef.current,
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
       onTutorialCutSuccess,
@@ -633,6 +651,20 @@ export function GameCanvas({
   const handleBankAndContinue = useCallback(() => {
     const game = gameRef.current;
     game.levelComplete = true;
+    // Clear the prompt so the loop reaches its levelComplete branch (it bails
+    // early while pushMode is "prompt") and the prompt overlay is dismissed,
+    // revealing the board for the shimmer.
+    game.pushMode = "none";
+    setPushMode("none");
+    // Same celebratory shimmer as a normal clear before the overlay mounts.
+    // The push-your-luck prompt halted the rAF loop (it returns without
+    // rescheduling), so restart it here or the shimmer window renders no frames.
+    game.shimmerStart = performance.now();
+    game.shimmerFrozen = freezeOnCompleteRef.current;
+    onMapCompleteRef.current?.(); // freeze the background code for the "dead" beat
+    startGameLoop(game);
+    // Dev/playground freeze: play the shimmer, hold the drained frame, no overlay.
+    if (freezeOnCompleteRef.current) return;
     const { levelScore, breakdown } = calculateScore(
       game.wallCount, level.expectedCuts, game.bestRemainingPercent,
       level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
@@ -658,7 +690,7 @@ export function GameCanvas({
         lockedBallsCount: game.lockedBallsCount,
       });
       startDissolveRef.current?.(() => {});
-    }, 150);
+    }, 150 + LEVEL_CLEAR_SHIMMER_MS);
   }, [level, levelNumber, activeModifiers]);
 
   useEffect(() => {

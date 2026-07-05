@@ -33,10 +33,18 @@ export interface MetaProgressionStats {
 }
 
 /**
- * Tracks which super upgrades have been permanently unlocked
+ * Tracks permanent unlocks: legacy super-upgrade ids, plus the run-start
+ * loadouts the player has won a run with (their count drives loadout unlocks).
  */
 export interface UnlockState {
   unlockedIds: string[];
+  /** Distinct run-start loadout ids the player has beaten a run with. */
+  wonLoadoutIds: string[];
+  /**
+   * Whether the loadout system has been revealed. The very first run has no
+   * loadout draft (tutorial only); loadouts are introduced after the first win.
+   */
+  loadoutsIntroduced: boolean;
 }
 
 export const DEFAULT_META_STATS: MetaProgressionStats = {

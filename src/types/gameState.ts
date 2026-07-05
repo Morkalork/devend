@@ -79,6 +79,11 @@ export interface CanvasGameState {
   bestRemainingPercent: number;
   pushStartPercent: number;
   levelClearedTime: number;
+  /** performance.now() at which the level-clear shimmer begins (0 = inactive). */
+  shimmerStart: number;
+  /** Dev/playground: hold the fully-drained frame after the shimmer instead of
+   *  completing (loop stops, renderFrame clamps the drain to its end-state). */
+  shimmerFrozen: boolean;
 
   // ── Recovery state ─────────────────────────────────────────────────────
   isRecovering: boolean;

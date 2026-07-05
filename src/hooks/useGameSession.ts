@@ -5,7 +5,7 @@
  * It wires together all the smaller managers:
  *   - useLevelManager        levels from public/map.yml, current level index
  *   - useUpgradeManager      shop upgrades from public/upgrades.yml
- *   - useMutatorManager      curse/blessing mutators from public/mutators.yml
+ *   - useLoadoutManager      curse/blessing loadouts from public/loadouts.yml
  *                            (run-start loadout draft + Ascension draft)
  *   - useCertificateManager  certificates + Certificate Hours (meta currency)
  *   - useTutorialManager     one-time tutorial flags
@@ -19,14 +19,14 @@
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useLevelManager } from './useLevelManager';
 import { useUpgradeManager } from './useUpgradeManager';
-import { useMutatorManager } from './useMutatorManager';
-import { useActiveModifiers, mergeBonuses, GameModifiers } from './useActiveModifiers';
+import { useLoadoutManager } from './useLoadoutManager';
+import { useActiveModifiers, mergeBonuses, GameModifiers, MULTIPLICATIVE_KEYS, ModifierSource } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
-import { eligibleForStart } from '@/lib/mutatorDraft';
+import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
 import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
@@ -59,11 +59,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   } = useUpgradeManager();
 
   const {
-    mutators,
-    mutatorLookup,
+    loadouts,
+    loadoutLookup,
     ascensionConfig,
-    loadMutators,
-  } = useMutatorManager();
+    loadLoadouts,
+  } = useLoadoutManager();
 
   const isLoading = isLoadingLevels || isLoadingUpgrades;
   const error = levelError || upgradeError;
@@ -87,13 +87,23 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [pendingDeathResult, setPendingDeathResult] = useState<GameResult | null>(null);
 
   // Ascension mode: after the final level the player may loop back to level 1
-  // with a drafted mutator. Depth 0 = first pass through the levels.
+  // with a drafted loadout. Depth 0 = first pass through the levels. Index 0 of
+  // draftedLoadoutIds is always the run-start loadout; ascension appends more.
   const [ascensionDepth, setAscensionDepth] = useState(0);
-  const [draftedMutatorIds, setDraftedMutatorIds] = useState<string[]>([]);
+  const [draftedLoadoutIds, setDraftedLoadoutIds] = useState<string[]>([]);
 
   // Snapshot of the just-finalized run for the result screen (finalizeRun
   // resets the live counters, so the result screen can't read those).
   const [lastRunSummary, setLastRunSummary] = useState<{ levelsCompleted: number; hoursAwarded: number } | null>(null);
+
+  // Names of loadouts that unlocked this run (shown on the result screen).
+  const [lastRunLoadoutUnlocks, setLastRunLoadoutUnlocks] = useState<string[]>([]);
+
+  // One-time "loadouts unlocked" modal, shown after the first win reveals the
+  // loadout system. Armed at the winning level, surfaced when leaving the
+  // level-complete overlay (so it doesn't stack on top of it).
+  const [showLoadoutsUnlockedModal, setShowLoadoutsUnlockedModal] = useState(false);
+  const pendingLoadoutsIntroRef = useRef(false);
 
   const handleCertificateHourEarned = useCallback(() => {
     // Visual flash handled by consumer; cert manager calls this on point award
@@ -127,13 +137,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     shouldShowStore,
     shouldShowCertStore,
     shouldShowMover,
-    shouldShowInfoPanels,
+    shouldShowTopBar,
+    shouldShowBottomBar,
     shouldShowAscension,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
     markMoverSeen,
-    markInfoPanelsSeen,
+    markTopBarSeen,
+    markBottomBarSeen,
     markAscensionSeen,
     resetAllTutorials,
   } = useTutorialManager();
@@ -145,12 +157,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const {
     stats: metaStats,
+    wonLoadoutIds,
+    loadoutsIntroduced,
     recordLevelReached,
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
     recordAscensionDepth,
     recordPushBonusBanked,
+    recordLoadoutWin,
+    introduceLoadouts,
     resetProgression,
   } = useMetaProgression();
 
@@ -163,13 +179,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
   } = useAchievementManager();
 
-  // Drafted mutators + the baseline per-depth speed ramp, folded into the
+  // Drafted loadouts + the baseline per-depth speed ramp, folded into the
   // same bonus map the achievements/certificates use.
-  const mutatorBonuses = useMemo(() => {
+  const loadoutBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
-    for (const id of draftedMutatorIds) {
-      const mutator = mutatorLookup.get(id);
-      if (mutator) bonuses = mergeBonuses(bonuses, mutator.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    for (const id of draftedLoadoutIds) {
+      const loadout = loadoutLookup.get(id);
+      if (loadout) bonuses = mergeBonuses(bonuses, loadout.modifiers as Partial<Record<keyof GameModifiers, number>>);
     }
     if (ascensionDepth > 0) {
       bonuses = mergeBonuses(bonuses, {
@@ -177,22 +193,70 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       });
     }
     return bonuses;
-  }, [draftedMutatorIds, mutatorLookup, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [draftedLoadoutIds, loadoutLookup, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
   const mergedBonuses = useMemo(
-    () => mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), mutatorBonuses),
-    [achievementBonuses, certBonuses, mutatorBonuses]
+    () => mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses),
+    [achievementBonuses, certBonuses, loadoutBonuses]
   );
   const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
 
-  const activeMutators = useMemo(
-    () => draftedMutatorIds.map(id => mutatorLookup.get(id)).filter((m): m is NonNullable<typeof m> => m != null),
-    [draftedMutatorIds, mutatorLookup]
+  const activeLoadouts = useMemo(
+    () => draftedLoadoutIds.map(id => loadoutLookup.get(id)).filter((l): l is NonNullable<typeof l> => l != null),
+    [draftedLoadoutIds, loadoutLookup]
   );
 
-  // Mutators offered in the run-start loadout draft (a curated subset of the
-  // Ascension pool — see eligibleForStart / the `startEligible` YAML flag).
-  const loadoutMutators = useMemo(() => eligibleForStart(mutators), [mutators]);
+  // Per-source breakdown of what feeds activeModifiers, so the bottom-bar panel
+  // can attribute each active modifier to the upgrade/cert/achievement/loadout/
+  // ascension that produced it.
+  const modifierSources = useMemo<ModifierSource[]>(() => {
+    const sources: ModifierSource[] = [];
+
+    for (const id of ownedUpgradeIds) {
+      const u = upgrades.find(x => x.id === id);
+      if (u) sources.push({ kind: 'upgrade', id: u.id, name: u.name, modifiers: u.modifiers });
+    }
+
+    for (const cert of certificates) {
+      const owned = certLevelsOwned[cert.id] || 0;
+      if (owned === 0) continue;
+      const mods: Record<string, number> = {};
+      for (let i = 0; i < owned; i++) {
+        const { type, value } = cert.levels[i].effect;
+        if (type === 'startingLevelBonus') continue;
+        if (MULTIPLICATIVE_KEYS.includes(type as keyof GameModifiers)) mods[type] = (mods[type] ?? 1) * value;
+        else mods[type] = (mods[type] ?? 0) + value;
+      }
+      if (Object.keys(mods).length > 0) sources.push({ kind: 'certificate', id: cert.id, name: cert.name, modifiers: mods });
+    }
+
+    for (const a of achievements) {
+      if (!activatedAchievementIds.includes(a.id) || !a.bonus) continue;
+      sources.push({ kind: 'achievement', id: a.id, name: a.name, modifiers: { [a.bonus.modifier]: a.bonus.value } });
+    }
+
+    for (const l of activeLoadouts) {
+      sources.push({ kind: 'loadout', id: l.id, name: l.name, modifiers: l.modifiers });
+    }
+
+    if (ascensionDepth > 0) {
+      sources.push({
+        kind: 'ascension',
+        id: 'ascension',
+        name: String(ascensionDepth),
+        modifiers: { ballSpeedMultiplier: Math.pow(ascensionConfig.speedRampPerDepth, ascensionDepth) },
+      });
+    }
+
+    return sources;
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+
+  // Loadouts offered in the run-start draft: unlocked once the player has
+  // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
+  const availableLoadouts = useMemo(
+    () => unlockedForStart(loadouts, wonLoadoutIds.length),
+    [loadouts, wonLoadoutIds]
+  );
 
   // Ascension rule: fences wear out after a number of ball hits — generous on
   // early levels, brutal late, plus the Defensive Programming upgrade bonus.
@@ -214,15 +278,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   );
 
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
-    // Mutators only matter past the final level, so their load result does
-    // not gate starting a run.
+    // The loadout catalogue backs the run-start draft, but a load failure
+    // should not hard-gate starting a run.
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
       loadLevels(),
       loadUpgrades(),
       loadCertificates(),
-      loadMutators(),
+      loadLoadouts(),
       // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
-      // it does not gate starting a run — same treatment as mutators.
+      // it does not gate starting a run — same treatment as loadouts.
       loadBallTypes(),
     ]);
 
@@ -232,8 +296,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
       setAscensionDepth(0);
-      setDraftedMutatorIds([]);
+      setDraftedLoadoutIds([]);
       setLastRunSummary(null);
+      setLastRunLoadoutUnlocks([]);
       resetRunProgress();
 
       const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
@@ -259,11 +324,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         }
       }
 
-      // A fresh run drafts a loadout first; the ?level= debug path skips it.
-      if (skipDraft) nav.startGame();
+      // A fresh run drafts a loadout first, but the loadout system only appears
+      // once it's been introduced (after the first win). The first run and the
+      // ?level= debug path go straight into the game.
+      if (skipDraft || !loadoutsIntroduced) nav.startGame();
       else nav.goToRunDraft();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadMutators, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress, loadoutsIntroduced]);
 
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
@@ -273,9 +340,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       ...result,
       totalScore,
       ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
-      mutatorNames: ascensionDepth > 0 ? activeMutators.map(m => m.name) : undefined,
+      loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
-  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeMutators]);
+  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // On death with a Continue banked, defer finalizing and offer a revive.
@@ -337,6 +404,24 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     };
     checkAndCompleteAchievements(projectedStats);
 
+    // Beating the final level = a win. The very first win reveals the loadout
+    // system (the modal is surfaced when leaving the level-complete overlay).
+    // Credit the run-start loadout (index 0) toward unique wins, and remember
+    // any loadouts that just unlocked so the result screen can celebrate them.
+    // Skipped runs (no drafted loadout) and repeat wins with the same loadout
+    // do not advance the count.
+    if (isLastLevel) {
+      if (introduceLoadouts()) pendingLoadoutsIntroRef.current = true;
+      const startLoadoutId = draftedLoadoutIds[0];
+      if (startLoadoutId) {
+        const { added, prevCount, newCount } = recordLoadoutWin(startLoadoutId);
+        if (added) {
+          const unlocked = newlyUnlocked(loadouts, prevCount, newCount).map(l => l.name);
+          if (unlocked.length > 0) setLastRunLoadoutUnlocks(unlocked);
+        }
+      }
+    }
+
     const levelOvertime = scoreData.levelScore;
     const interestGain = activeModifiers.scoreInterestRate > 0
       ? Math.min(8, Math.floor(totalScore * activeModifiers.scoreInterestRate))
@@ -351,11 +436,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, introduceLoadouts, loadouts]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
+    // The first win armed the loadouts-unlocked modal; show it now (it overlays
+    // whatever screen we navigate to next).
+    if (pendingLoadoutsIntroRef.current) {
+      pendingLoadoutsIntroRef.current = false;
+      setShowLoadoutsUnlockedModal(true);
+    }
     if (isLastLevel) {
       // Beat the final level: offer the ascend-or-retire choice. The pending
       // level score is kept so handleRetire can put it on the result screen.
@@ -365,17 +456,21 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [isLastLevel, nav.goToAscensionDraft, nav.goToUpgradeShop]);
 
-  /** Ascend: draft a mutator and loop back to level 1 at depth + 1. */
-  const handleAscend = useCallback((mutatorId: string) => {
+  const handleDismissLoadoutsUnlocked = useCallback(() => {
+    setShowLoadoutsUnlockedModal(false);
+  }, []);
+
+  /** Ascend: draft a loadout and loop back to level 1 at depth + 1. */
+  const handleAscend = useCallback((loadoutId: string) => {
     const newDepth = ascensionDepth + 1;
-    setDraftedMutatorIds(prev => [...prev, mutatorId]);
+    setDraftedLoadoutIds(prev => [...prev, loadoutId]);
     setAscensionDepth(newDepth);
     recordAscensionDepth(newDepth);
 
     // Refill lives to the run's starting value (never down), then apply the
-    // drafted mutator's life delta once — same as buying an extraLives upgrade.
+    // drafted loadout's life delta once — same as buying an extraLives upgrade.
     const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
-    const livesDelta = mutatorLookup.get(mutatorId)?.modifiers.extraLives ?? 0;
+    const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
     const refilled = Math.max(1, Math.max(currentLives, startingLives) + livesDelta);
     setCurrentLives(refilled);
     setLivesAtLevelStart(refilled);
@@ -383,26 +478,26 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingLevelScore(null);
     resetToFirstLevel(); // also re-randomizes the level variants for the new loop
     nav.goToGame();
-  }, [ascensionDepth, recordAscensionDepth, certBonuses, mutatorLookup, currentLives, resetToFirstLevel, nav.goToGame]);
+  }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, nav.goToGame]);
 
   /**
-   * Confirm the run-start loadout draft: adopt the chosen mutator (or none on
-   * skip) at depth 0, then enter the game. Applies the mutator's extraLives
+   * Confirm the run-start loadout draft: adopt the chosen loadout (or none on
+   * skip) at depth 0, then enter the game. Applies the loadout's extraLives
    * delta once, mirroring handleAscend.
    */
-  const handleConfirmLoadout = useCallback((mutatorId: string | null) => {
-    if (mutatorId) {
-      setDraftedMutatorIds([mutatorId]);
+  const handleConfirmLoadout = useCallback((loadoutId: string | null) => {
+    if (loadoutId) {
+      setDraftedLoadoutIds([loadoutId]);
       const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
-      const livesDelta = mutatorLookup.get(mutatorId)?.modifiers.extraLives ?? 0;
+      const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
       const lives = Math.max(1, startingLives + livesDelta);
       setCurrentLives(lives);
       setLivesAtLevelStart(lives);
     } else {
-      setDraftedMutatorIds([]);
+      setDraftedLoadoutIds([]);
     }
     nav.startGame();
-  }, [certBonuses, mutatorLookup, nav.startGame]);
+  }, [certBonuses, loadoutLookup, nav.startGame]);
 
   /** Retire: bank the run and show the result screen. */
   const handleRetire = useCallback(() => {
@@ -421,10 +516,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       expectedCuts: pendingLevelScore?.expectedCuts,
       basePoints: pendingLevelScore?.basePoints,
       ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
-      mutatorNames: ascensionDepth > 0 ? activeMutators.map(m => m.name) : undefined,
+      loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
     setPendingLevelScore(null);
-  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeMutators]);
+  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
@@ -467,8 +562,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
     setAscensionDepth(0);
-    setDraftedMutatorIds([]);
+    setDraftedLoadoutIds([]);
     setLastRunSummary(null);
+    setLastRunLoadoutUnlocks([]);
     resetRunProgress();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
@@ -490,8 +586,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       }
     }
 
-    nav.goToRunDraft();
-  }, [resetToFirstLevel, nav.goToRunDraft, setLevelIndex, certBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints]);
+    if (loadoutsIntroduced) nav.goToRunDraft();
+    else nav.startGame();
+  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, setLevelIndex, certBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints, loadoutsIntroduced]);
 
   const handleRestartRun = useCallback(() => {
     setTotalScore(0);
@@ -500,8 +597,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
     setAscensionDepth(0);
-    setDraftedMutatorIds([]);
+    setDraftedLoadoutIds([]);
     setLastRunSummary(null);
+    setLastRunLoadoutUnlocks([]);
     resetRunProgress();
     clearRunCheckpoints();
 
@@ -513,8 +611,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingDeathResult(null);
 
     resetToFirstLevel();
-    nav.goToRunDraft();
-  }, [resetToFirstLevel, nav.goToRunDraft, certBonuses, resetRunProgress, clearRunCheckpoints]);
+    if (loadoutsIntroduced) nav.goToRunDraft();
+    else nav.startGame();
+  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, certBonuses, resetRunProgress, clearRunCheckpoints, loadoutsIntroduced]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
@@ -524,7 +623,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setOwnedUpgradeIds([]);
     setCurrentLives(BASE_LIVES);
     setAscensionDepth(0);
-    setDraftedMutatorIds([]);
+    setDraftedLoadoutIds([]);
     setPendingDeathResult(null);
     resetRunProgress();
     nav.goToWelcome();
@@ -536,6 +635,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     await Promise.all([loadCertificates(), loadUpgrades()]);
     nav.goToCertificateStore();
   }, [loadCertificates, loadUpgrades, nav.goToCertificateStore]);
+
+  const handleOpenLoadouts = useCallback(async () => {
+    // The catalogue isn't loaded yet when entering from the welcome screen.
+    await loadLoadouts();
+    nav.goToLoadouts();
+  }, [loadLoadouts, nav.goToLoadouts]);
 
   const handleReEnableAllTutorials = useCallback(() => {
     resetAllTutorials();
@@ -592,13 +697,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     shouldShowStore,
     shouldShowCertStore,
     showMoverTutorial: shouldShowMover,
-    showInfoPanelsTutorial: shouldShowInfoPanels,
+    showTopBarTutorial: shouldShowTopBar,
+    showBottomBarTutorial: shouldShowBottomBar,
     shouldShowAscension,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
     markMoverSeen,
-    markInfoPanelsSeen,
+    markTopBarSeen,
+    markBottomBarSeen,
     markAscensionSeen,
     // Certificates
     certificates,
@@ -620,12 +727,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     runLevelsCompleted,
     lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,
     lastRunLevelsCompleted: lastRunSummary?.levelsCompleted ?? 0,
-    // Ascension mode
+    lastRunLoadoutUnlocks,
+    // Loadouts + Ascension mode
     ascensionDepth,
-    mutators,
-    loadoutMutators,
-    draftedMutatorIds,
-    activeMutators,
+    loadouts,
+    availableLoadouts,
+    draftedLoadoutIds,
+    activeLoadouts,
+    wonLoadoutIds,
+    loadoutsIntroduced,
+    showLoadoutsUnlockedModal,
     fenceDurability,
     // Continue (per-run revive)
     continuesRemaining,
@@ -633,6 +744,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     pendingDeathResult,
     // Modifiers / bonuses
     activeModifiers,
+    modifierSources,
     achievementBonuses: mergedBonuses,
     certificateProgress: runProgress,
     // Callbacks
@@ -644,6 +756,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleLivesChange,
     handleLevelComplete,
     handleContinueFromOverlay,
+    handleDismissLoadoutsUnlocked,
     handleAscend,
     handleRetire,
     handlePurchaseUpgrade,
@@ -653,6 +766,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleRestartRun,
     handleBackToWelcome,
     handleOpenCertificateStore,
+    handleOpenLoadouts,
     handleReEnableAllTutorials,
     handleResetCertificates,
   };

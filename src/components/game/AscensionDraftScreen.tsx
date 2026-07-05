@@ -2,26 +2,26 @@
  * AscensionDraftScreen — shown after beating the final level.
  *
  * The player either retires (banks the run, sees the result screen) or
- * ascends: drafts one of three randomly offered mutators (curse + blessing
- * bundles from public/mutators.yml) and loops back to level 1 with every
- * drafted mutator still active.
+ * ascends: drafts one of three randomly offered loadouts (curse + blessing
+ * bundles from public/loadouts.yml) and loops back to level 1 with every
+ * drafted loadout still active.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ArrowUpCircle, Flag, Skull, Sparkles } from 'lucide-react';
-import { MutatorConfig } from '@/types/mutator';
-import { drawOffers } from '@/lib/mutatorDraft';
+import { LoadoutConfig } from '@/types/loadout';
+import { drawOffers } from '@/lib/loadoutDraft';
 import { CRTBackground } from './CRTBackground';
 import { contentText } from '@/i18n/content';
 
 interface AscensionDraftScreenProps {
-  mutators: MutatorConfig[];
-  draftedMutatorIds: string[];
+  loadouts: LoadoutConfig[];
+  draftedLoadoutIds: string[];
   /** Depth completed so far; ascending enters depth + 1. */
   ascensionDepth: number;
   totalScore: number;
-  onAscend: (mutatorId: string) => void;
+  onAscend: (loadoutId: string) => void;
   onRetire: () => void;
   accentColor?: string;
   showTutorial?: boolean;
@@ -29,8 +29,8 @@ interface AscensionDraftScreenProps {
 }
 
 export function AscensionDraftScreen({
-  mutators,
-  draftedMutatorIds,
+  loadouts,
+  draftedLoadoutIds,
   ascensionDepth,
   totalScore,
   onAscend,
@@ -41,7 +41,7 @@ export function AscensionDraftScreen({
 }: AscensionDraftScreenProps) {
   const { t } = useTranslation();
   // Drawn once per mount so re-renders don't reshuffle the offer
-  const [offers] = useState(() => drawOffers(mutators, draftedMutatorIds, 3));
+  const [offers] = useState(() => drawOffers(loadouts, draftedLoadoutIds, 3));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const nextDepth = ascensionDepth + 1;
@@ -87,19 +87,19 @@ export function AscensionDraftScreen({
             </p>
           </div>
 
-          {/* Mutator cards */}
+          {/* Loadout cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
-            {offers.map((mutator, i) => {
-              const selected = selectedId === mutator.id;
+            {offers.map((loadout, i) => {
+              const selected = selectedId === loadout.id;
               return (
                 <motion.button
-                  key={mutator.id}
+                  key={loadout.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 + i * 0.1 }}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setSelectedId(selected ? null : mutator.id)}
+                  onClick={() => setSelectedId(selected ? null : loadout.id)}
                   className="text-left rounded-lg p-4 transition-colors"
                   style={{
                     backgroundColor: selected ? `${accentColor}1a` : 'rgba(255,255,255,0.04)',
@@ -111,15 +111,15 @@ export function AscensionDraftScreen({
                     className="font-display font-bold text-base mb-3"
                     style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
                   >
-                    {contentText.mutName(t, mutator)}
+                    {contentText.loadoutName(t, loadout)}
                   </p>
                   <div className="flex items-start gap-2 mb-2">
                     <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.mutCurse(t, mutator)}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.loadoutCurse(t, loadout)}</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.mutBlessing(t, mutator)}</p>
+                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.loadoutBlessing(t, loadout)}</p>
                   </div>
                 </motion.button>
               );
@@ -129,7 +129,7 @@ export function AscensionDraftScreen({
                 className="sm:col-span-3 rounded-lg p-4 text-center text-xs"
                 style={{ border: `1px solid ${accentColor}44`, color: '#4a7a5a' }}
               >
-                {t('ascension.noMutators')}
+                {t('ascension.noLoadouts')}
               </div>
             )}
           </div>
@@ -149,7 +149,7 @@ export function AscensionDraftScreen({
               whileTap={selectedId ? { scale: 0.98 } : undefined}
             >
               <ArrowUpCircle className="w-5 h-5" />
-              {selectedId ? t('ascension.ascendToDepth', { depth: nextDepth }) : t('ascension.selectMutator')}
+              {selectedId ? t('ascension.ascendToDepth', { depth: nextDepth }) : t('ascension.selectLoadout')}
             </motion.button>
             <motion.button
               className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
@@ -183,7 +183,7 @@ export function AscensionDraftScreen({
                 {t('ascension.ascensionUnlocked')}
               </h2>
               <p className="text-sm leading-relaxed mb-4" style={{ color: '#c8ffd8' }}>
-                {t('ascension.tutorialIntro1')}<b>{t('ascension.tutorialMutatorWord')}</b>{t('ascension.tutorialIntro2')}
+                {t('ascension.tutorialIntro1')}<b>{t('ascension.tutorialLoadoutWord')}</b>{t('ascension.tutorialIntro2')}
               </p>
               <button className="arcade-button-primary rounded-lg" onClick={onTutorialDismiss}>
                 {t('ascension.gotIt')}

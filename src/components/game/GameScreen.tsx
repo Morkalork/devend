@@ -20,9 +20,9 @@ import { TutorialOverlay } from './TutorialOverlay';
 import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
-import { MutatorConfig } from '@/types/mutator';
+import { LoadoutConfig } from '@/types/loadout';
 import { useGameConfig } from '@/hooks/useGameConfig';
-import { GameModifiers } from '@/hooks/useActiveModifiers';
+import { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -53,19 +53,26 @@ interface GameScreenProps {
   onFenceSeen?: () => void;
   showMoverTutorial?: boolean;
   onMoverTutorialSeen?: () => void;
-  showInfoPanelsTutorial?: boolean;
-  onInfoPanelsTutorialSeen?: () => void;
+  showTopBarTutorial?: boolean;
+  onTopBarTutorialSeen?: () => void;
+  showBottomBarTutorial?: boolean;
+  onBottomBarTutorialSeen?: () => void;
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   achievementBonuses?: Partial<Record<string, number>>;
   activeModifiers: GameModifiers;
+  modifierSources?: ModifierSource[];
   cumulativeLockedBalls?: number;
   ascensionDepth?: number;
-  activeMutators?: MutatorConfig[];
+  activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
+  /** Admin/Playground: on clear, freeze on the drained frame instead of completing. */
+  freezeOnClear?: boolean;
+  /** Admin/Playground: fired the instant the map is won (before the shimmer). */
+  onMapComplete?: () => void;
 }
 
 export function GameScreen({
@@ -86,24 +93,30 @@ export function GameScreen({
   onFenceSeen,
   showMoverTutorial = false,
   onMoverTutorialSeen,
-  showInfoPanelsTutorial = false,
-  onInfoPanelsTutorialSeen,
+  showTopBarTutorial = false,
+  onTopBarTutorialSeen,
+  showBottomBarTutorial = false,
+  onBottomBarTutorialSeen,
   accentColor: externalAccentColor,
   certificateProgress,
   achievementBonuses,
   activeModifiers,
+  modifierSources = [],
   cumulativeLockedBalls = 0,
   ascensionDepth = 0,
-  activeMutators = [],
+  activeLoadouts = [],
   fenceDurability = null,
   showBallSpeeds = false,
+  freezeOnClear = false,
+  onMapComplete,
 }: GameScreenProps) {
   const { t } = useTranslation();
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
 
-  // In-game tutorial step state
+  // In-game tutorial step state. The interactive fence tutorial is level 1 only,
+  // so it can never re-arm on a later map even if it was never marked seen.
   const [inGameStep, setInGameStep] = useState<InGameStep>(
-    showInGameTutorial ? 'fence' : 'done'
+    showInGameTutorial && levelNumber === 1 ? 'fence' : 'done'
   );
 
   const levelHasMovers = (level.entities ?? []).some(e => e.kind === 'mover');
@@ -148,6 +161,9 @@ export function GameScreen({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  // Set once the map is won; freezes the scrolling-code background through the
+  // clear shimmer. Resets naturally when the next map remounts this screen.
+  const [mapComplete, setMapComplete] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const memParallaxTickRef = useRef<((timestamp: number) => void) | null>(null);
 
@@ -169,11 +185,15 @@ export function GameScreen({
   // resume it on close (issue #41). The interactive fence tutorial is NOT a
   // modal — it needs the game running — so it is deliberately excluded.
   const showBreakOverlay = showBreakIntro && !showMoverOverlay;
-  const showInfoPanelsOverlay =
-    inGameStep === 'done' && showInfoPanelsTutorial && !showMoverOverlay && !showBreakIntro;
+  // The bar tutorials are split across maps so they never stack on level 1's
+  // Level Cleared overlay: top bar on map 2, bottom bar on map 3.
+  const showTopBarOverlay =
+    levelNumber === 2 && showTopBarTutorial && !showMoverOverlay && !showBreakIntro;
+  const showBottomBarOverlay =
+    levelNumber === 3 && showBottomBarTutorial && !showMoverOverlay && !showBreakIntro;
   const modalOverlayActive =
     topPanelOpen || bottomPanelOpen || menuOpen ||
-    showMoverOverlay || showBreakOverlay || showInfoPanelsOverlay;
+    showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -191,7 +211,7 @@ export function GameScreen({
   return (
     <>
       {/* CRT Terminal Background */}
-      <CRTBackground accentColor={accentColor} />
+      <CRTBackground accentColor={accentColor} paused={mapComplete} />
       
       {/* Memory Parallax Layer - between CRT and game */}
       <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />
@@ -229,6 +249,8 @@ export function GameScreen({
             onLivesChange={onLivesChange}
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
+            onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
+            freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}
             paused={isPaused || modalOverlayActive}
             tutorialMode={inGameStep === 'fence'}
@@ -375,13 +397,22 @@ export function GameScreen({
         body={t('game.breakTutorialBody')}
       />
 
-      {/* Info panels tutorial — shown after fence tutorial, first run only */}
+      {/* Top bar tutorial — map 2, first run only */}
       <TutorialOverlay
-        visible={showInfoPanelsOverlay}
-        onDismiss={onInfoPanelsTutorialSeen}
+        visible={showTopBarOverlay}
+        onDismiss={onTopBarTutorialSeen}
         accentColor={accentColor}
-        title={t('game.infoPanelsTutorialTitle')}
-        body={t('game.infoPanelsTutorialBody')}
+        title={t('game.topBarTutorialTitle')}
+        body={t('game.topBarTutorialBody')}
+      />
+
+      {/* Bottom bar tutorial — map 3, first run only */}
+      <TutorialOverlay
+        visible={showBottomBarOverlay}
+        onDismiss={onBottomBarTutorialSeen}
+        accentColor={accentColor}
+        title={t('game.bottomBarTutorialTitle')}
+        body={t('game.bottomBarTutorialBody')}
       />
 
       {/* Full-screen top info panel */}
@@ -402,7 +433,7 @@ export function GameScreen({
         certificateProgress={certificateProgress}
         microManagerPerLock={activeModifiers.microManagerPerLock}
         ascensionDepth={ascensionDepth}
-        activeMutators={activeMutators}
+        activeLoadouts={activeLoadouts}
       />
 
       {/* Full-screen bottom stats panel */}
@@ -410,6 +441,7 @@ export function GameScreen({
         visible={bottomPanelOpen}
         onClose={() => setBottomPanelOpen(false)}
         activeModifiers={activeModifiers}
+        modifierSources={modifierSources}
         accentColor={accentColor}
         lockedBalls={totalLockedBalls}
       />

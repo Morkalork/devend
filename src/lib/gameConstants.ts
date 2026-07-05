@@ -5,6 +5,7 @@ export const LOCK_DUST_DURATION   = 900;  // ms — longest particle lifetime
 export const LOCK_TOTAL_DURATION  = LOCK_PULSE_DURATION + LOCK_FLOOD_DURATION;
 export const BALL_DISINTEGRATE_MS = 420;  // ms — ball shrinks to nothing
 export const DISSOLVE_DURATION    = 1000; // ms — board dissolve after level complete
+export const LEVEL_CLEAR_SHIMMER_MS = 1000; // ms — celebratory shimmer sweeping down the cleared board
 export const SWIPE_TRAIL_DURATION = 550;  // ms — fading afterglow tracing a cut swipe
 
 // ── Physics / world units ─────────────────────────────────────────────────

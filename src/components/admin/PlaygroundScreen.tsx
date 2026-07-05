@@ -120,6 +120,10 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [ballTypeIds, setBallTypeIds] = useState<string[] | null>(null);
   const [ballPickerOpen, setBallPickerOpen] = useState(false);
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
+  // Dev: on clear, play the desaturation drain then freeze on the drained frame;
+  // click the board to reload. `frozen` arms the click-to-reload catcher.
+  const [freezeOnClear, setFreezeOnClear] = useState(false);
+  const [frozen, setFrozen] = useState(false);
 
   useEffect(() => {
     fetch('/map.yml')
@@ -395,6 +399,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           onLivesChange={() => {}}
           onGameEnd={onBack}
           onLevelComplete={() => setGameKey(k => k + 1)}
+          freezeOnClear={freezeOnClear}
+          onMapComplete={() => { if (freezeOnClear) setFrozen(true); }}
           onMainMenu={onBack}
           onRestart={hardReset}
           accentColor={accent}
@@ -402,6 +408,44 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           activeModifiers={activeModifiers}
           showBallSpeeds={showBallSpeeds}
         />
+
+        {/* Dev: freeze-on-clear toggle (always visible) */}
+        <button
+          onClick={() => setFreezeOnClear(v => !v)}
+          title="On clear, play the desaturation drain then freeze; click the board to reload"
+          className="absolute bottom-4 left-4 flex items-center gap-2 px-3 py-2 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+          style={{
+            zIndex: 50,
+            backgroundColor: freezeOnClear ? `${accent}1a` : '#1a1f1a',
+            border: `1px solid ${freezeOnClear ? `${accent}55` : 'rgba(255,255,255,0.12)'}`,
+          }}
+        >
+          <span className="text-xs font-semibold" style={{ color: freezeOnClear ? accent : 'hsl(var(--foreground))' }}>
+            Freeze on clear
+          </span>
+          <span
+            className="relative inline-flex items-center rounded-full transition-colors"
+            style={{ width: 36, height: 20, backgroundColor: freezeOnClear ? accent : 'rgba(255,255,255,0.15)' }}
+          >
+            <span className="absolute rounded-full bg-white transition-all" style={{ width: 14, height: 14, top: 3, left: freezeOnClear ? 19 : 3 }} />
+          </span>
+        </button>
+
+        {/* Dev: click anywhere on the frozen drained board to reload the map */}
+        {frozen && (
+          <div
+            onClick={() => { setFrozen(false); setGameKey(k => k + 1); }}
+            className="absolute inset-0 flex items-end justify-center pb-12 cursor-pointer"
+            style={{ zIndex: 40 }}
+          >
+            <span
+              className="px-3 py-1.5 rounded-full text-xs font-semibold animate-pulse"
+              style={{ backgroundColor: 'rgba(0,0,0,0.6)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}
+            >
+              Click to reload
+            </span>
+          </div>
+        )}
 
         {/* Controls overlay — only visible when a level is selected (floating toolbar handles the no-level case) */}
         {selectedLevel && <div style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 50, display: 'flex', alignItems: 'center', gap: 8 }}>
