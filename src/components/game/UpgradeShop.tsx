@@ -283,16 +283,13 @@ export function UpgradeShop({
         exit={{ opacity: 0 }}
         className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6 z-50 overflow-y-auto"
       >
-        {/* Store label — vertical mid-left on mobile, rotated corner on desktop */}
+        {/* Store title — above the items */}
         <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="fixed left-2 top-1/2 -translate-y-1/2 md:top-8 md:left-8 md:translate-y-0 md:origin-top-left"
         >
-          <span
-            className="inline-block text-2xl font-bold text-foreground/30 tracking-widest uppercase [transform:rotate(-90deg)] md:[transform:rotate(-45deg)]"
-          >
+          <span className="text-2xl font-bold text-foreground/30 tracking-widest uppercase">
             {t('upgradeShop.storeLabel')}
           </span>
         </motion.div>
@@ -420,7 +417,7 @@ export function UpgradeShop({
             return (
               <motion.div
                 key={upgrade.id}
-                className="select-none"
+                className="select-none w-[calc(50%-0.5rem)] sm:w-44"
                 style={{ touchAction: 'pan-y' }}
                 onPointerDown={(e) => startLongPress(upgrade.id, e)}
                 onPointerUp={cancelLongPress}
@@ -451,7 +448,7 @@ export function UpgradeShop({
                 // match the tallest; falls back to auto before the first measure.
                 style={{ minHeight: 'var(--card-h, auto)' }}
                 className={`
-                  relative w-44 p-3 rounded-lg transition-all duration-200 text-center flex flex-col
+                  relative w-full p-3 rounded-lg transition-all duration-200 text-center flex flex-col
                   ${cantAfford ? 'border-dashed' : ''} border-2
                   ${selected ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black' : ''}
                   ${owned
