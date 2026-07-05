@@ -180,6 +180,14 @@ function _mulberry(seed: number): () => number {
   };
 }
 
+// ── Level-clear wake cache ──────────────────────────────────────────────────
+// The drained-grey scene the clear wave reveals is static for the whole sweep
+// (physics is halted), but drawing it live costs many shadowBlur passes per
+// frame — visible lag on mobile. It's rendered ONCE per shimmer into a
+// full-screen OffscreenCanvas and blitted per frame; only the flames stay live.
+let _wakeOC: OffscreenCanvas | null = null;
+let _wakeKey = '';
+
 // ── Flame puff sprite cache ─────────────────────────────────────────────────
 // Balls burn continuously, so the plume must be cheap. It's drawn as many small
 // additive "puffs"; each colour's puff is pre-rendered once to an OffscreenCanvas
@@ -1864,6 +1872,11 @@ export function renderFrame(
   // A luminous band sweeps top→bottom across the whole cleared board — grid,
   // fences, obstacles and balls all included — as a beat of accomplishment
   // before the completion overlay mounts.
+  if (game.shimmerStart <= 0 && _wakeOC) {
+    // Free the screen-sized wake cache between levels.
+    _wakeOC = null;
+    _wakeKey = '';
+  }
   if (game.shimmerStart > 0) {
     // In freeze mode (dev/playground), clamp to the end-state once the sweep is
     // done so the fully-drained board holds indefinitely instead of reverting.
@@ -1897,8 +1910,133 @@ export function renderFrame(
       const wakeBottom = Math.min(centerY, barBottom);
       if (wakeBottom > bt) {
         const drain = Math.min(1, progress / 0.08); // ease in only, never out
-        const GREY = '#b8bcc4';
-        const GREY_GLOW = 'rgba(184,188,196,0.9)';
+
+        // Build the drained scene ONCE per shimmer (it's static — physics is
+        // halted), then blit the swept slice per frame. Drawing it live cost a
+        // dozen shadowBlur passes per frame and lagged on mobile.
+        const wakeKey = `${game.shimmerStart}|${ctx.canvas.width}x${ctx.canvas.height}|${bl},${bt},${bw},${bh}`;
+        if (!_wakeOC || _wakeKey !== wakeKey) {
+          _wakeOC = new OffscreenCanvas(ctx.canvas.width, ctx.canvas.height);
+          _wakeKey = wakeKey;
+          const oc = _wakeOC.getContext('2d') as unknown as CanvasRenderingContext2D;
+          const GREY = '#b8bcc4';
+          const GREY_GLOW = 'rgba(184,188,196,0.9)';
+          oc.lineCap = 'round';
+          oc.lineJoin = 'round';
+
+          // Obstacles, mirrors and breakable bodies: soft glowing grey edge with
+          // a bright glossy highlight laid over it.
+          for (const poly of game.obstaclePolygons) {
+            const v = poly.vertices;
+            if (v.length < 2) continue;
+            const p0 = w2s(v[0].x, v[0].y);
+            oc.beginPath();
+            oc.moveTo(p0.x, p0.y);
+            for (let i = 1; i < v.length; i++) { const p = w2s(v[i].x, v[i].y); oc.lineTo(p.x, p.y); }
+            oc.closePath();
+            oc.strokeStyle = GREY;
+            oc.lineWidth = WALL_THICKNESS * scale;
+            oc.shadowColor = GREY_GLOW;
+            oc.shadowBlur = 7 * scale;
+            oc.stroke();
+            // Gloss: a thin bright-white sheen, added on top.
+            oc.save();
+            oc.globalCompositeOperation = 'lighter';
+            oc.strokeStyle = 'rgba(255,255,255,0.45)';
+            oc.lineWidth = Math.max(1, WALL_THICKNESS * scale * 0.45);
+            oc.shadowColor = 'rgba(235,242,255,0.85)';
+            oc.shadowBlur = 5 * scale;
+            oc.stroke();
+            oc.restore();
+          }
+          oc.shadowBlur = 0;
+
+          // Moving obstacles: fill solid grey at their (now frozen) position so
+          // the live orange body, direction arrow and pulsing glow are fully
+          // covered - they read white/dead and stop moving. Physics is already
+          // halted at level complete, so the fill sits exactly over the sprite.
+          for (const mover of game.movers) {
+            const mdx = mover.axis === 'horizontal' ? mover.offset : 0;
+            const mdy = mover.axis === 'vertical'   ? mover.offset : 0;
+            const sc = w2s(mover.homeX + mdx, mover.homeY + mdy);
+            oc.beginPath();
+            if (mover.shape === 'circle') {
+              oc.arc(sc.x, sc.y, (mover.radius ?? 30) * scale, 0, Math.PI * 2);
+            } else {
+              const hw = (mover.width ?? 60) / 2 * scale;
+              const hh = (mover.height ?? 60) / 2 * scale;
+              oc.rect(sc.x - hw, sc.y - hh, hw * 2, hh * 2);
+            }
+            oc.fillStyle = GREY;
+            oc.shadowColor = GREY_GLOW;
+            oc.shadowBlur = 14 * scale; // >= the live mover glow so its halo is covered too
+            oc.fill();
+            oc.shadowBlur = 0;
+            oc.strokeStyle = GREY;
+            oc.lineWidth = 2 * scale;
+            oc.stroke();
+          }
+          oc.shadowBlur = 0;
+
+          // Fences and board-edge walls: reuse the live wall renderer with grey
+          // so the glow and soft caps match, plus a glowBoost for extra bloom.
+          for (const w of walls) {
+            renderWallWithEffects(
+              oc, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y),
+              w.start, w.end, scale, GREY, w.thickness * scale, 0.5,
+            );
+          }
+          // Gloss: a bright-white sheen run along every border and fence.
+          oc.save();
+          oc.globalCompositeOperation = 'lighter';
+          oc.strokeStyle = 'rgba(255,255,255,0.5)';
+          oc.shadowColor = 'rgba(235,242,255,0.9)';
+          oc.shadowBlur = 6 * scale;
+          for (const w of walls) {
+            const s = w2s(w.start.x, w.start.y);
+            const e = w2s(w.end.x, w.end.y);
+            oc.lineWidth = Math.max(1, w.thickness * scale * 0.4);
+            oc.beginPath();
+            oc.moveTo(s.x, s.y);
+            oc.lineTo(e.x, e.y);
+            oc.stroke();
+          }
+          oc.restore();
+
+          // Balls: soft grey discs (glow halo + core). Flames stay live below.
+          for (const ball of balls) {
+            const pos = ball.renderPosition ?? ball.position;
+            const p = w2s(pos.x, pos.y);
+            const r = Math.max(1, ball.radius * scale);
+            const halo = oc.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
+            halo.addColorStop(0, 'rgba(220,223,230,0.9)');
+            halo.addColorStop(0.5, 'rgba(184,188,196,0.45)');
+            halo.addColorStop(1, 'rgba(184,188,196,0)');
+            oc.fillStyle = halo;
+            oc.beginPath();
+            oc.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2);
+            oc.fill();
+            oc.fillStyle = '#cfd3da';
+            oc.beginPath();
+            oc.arc(p.x, p.y, r, 0, Math.PI * 2);
+            oc.fill();
+          }
+
+          // Remaining-space bar below the board, filled in grey.
+          if (game.spaceGrid) {
+            const remaining = getRemainingPercent(game.spaceGrid);
+            const targetCaptured = 100 - rctx.spaceThreshold;
+            const fillRatio = Math.min(1, targetCaptured > 0 ? (100 - remaining) / targetCaptured : 1);
+            oc.globalAlpha = 0.85;
+            oc.fillStyle = GREY;
+            oc.shadowColor = GREY_GLOW;
+            oc.shadowBlur = 3 * scale;
+            oc.fillRect(bl, bt + bh + 3 * scale, bw * fillRatio, 4 * scale);
+            oc.shadowBlur = 0;
+            oc.globalAlpha = 1;
+          }
+        }
+
         ctx.save();
         ctx.beginPath();
         ctx.rect(bl, bt, bw, wakeBottom - bt);       // swept region only
@@ -1909,130 +2047,21 @@ export function renderFrame(
         // cells, jagged hole seams) entirely.
         ctx.clearRect(bl, bt, bw, Math.min(wakeBottom, bt + bh) - bt);
 
+        // Blit the cached drained scene into the swept slice.
         ctx.globalCompositeOperation = 'source-over';
         ctx.globalAlpha = drain;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
+        const sliceH = wakeBottom - bt;
+        ctx.drawImage(_wakeOC, bl, bt, bw, sliceH, bl, bt, bw, sliceH);
 
-        // Obstacles, mirrors and breakable bodies: soft glowing grey edge with a
-        // bright glossy highlight laid over it.
-        for (const poly of game.obstaclePolygons) {
-          const v = poly.vertices;
-          if (v.length < 2) continue;
-          const p0 = w2s(v[0].x, v[0].y);
-          ctx.beginPath();
-          ctx.moveTo(p0.x, p0.y);
-          for (let i = 1; i < v.length; i++) { const p = w2s(v[i].x, v[i].y); ctx.lineTo(p.x, p.y); }
-          ctx.closePath();
-          ctx.strokeStyle = GREY;
-          ctx.lineWidth = WALL_THICKNESS * scale;
-          ctx.shadowColor = GREY_GLOW;
-          ctx.shadowBlur = 7 * scale;
-          ctx.stroke();
-          // Gloss: a thin bright-white sheen, added on top.
-          ctx.save();
-          ctx.globalCompositeOperation = 'lighter';
-          ctx.strokeStyle = 'rgba(255,255,255,0.45)';
-          ctx.lineWidth = Math.max(1, WALL_THICKNESS * scale * 0.45);
-          ctx.shadowColor = 'rgba(235,242,255,0.85)';
-          ctx.shadowBlur = 5 * scale;
-          ctx.stroke();
-          ctx.restore();
-        }
-        ctx.shadowBlur = 0;
-
-        // Moving obstacles: fill solid grey at their (now frozen) position so the
-        // live orange body, direction arrow and pulsing glow are fully covered -
-        // they read white/dead and stop moving. Physics is already halted at
-        // level complete, so the frozen fill sits exactly over the live sprite.
-        for (const mover of game.movers) {
-          const mdx = mover.axis === 'horizontal' ? mover.offset : 0;
-          const mdy = mover.axis === 'vertical'   ? mover.offset : 0;
-          const sc = w2s(mover.homeX + mdx, mover.homeY + mdy);
-          ctx.beginPath();
-          if (mover.shape === 'circle') {
-            ctx.arc(sc.x, sc.y, (mover.radius ?? 30) * scale, 0, Math.PI * 2);
-          } else {
-            const hw = (mover.width ?? 60) / 2 * scale;
-            const hh = (mover.height ?? 60) / 2 * scale;
-            ctx.rect(sc.x - hw, sc.y - hh, hw * 2, hh * 2);
-          }
-          ctx.fillStyle = GREY;
-          ctx.shadowColor = GREY_GLOW;
-          ctx.shadowBlur = 14 * scale; // >= the live mover glow so its halo is covered too
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = GREY;
-          ctx.lineWidth = 2 * scale;
-          ctx.stroke();
-        }
-        ctx.shadowBlur = 0;
-
-        // Fences and board-edge walls: reuse the live wall renderer with grey so
-        // the glow and soft caps match, plus a glowBoost for extra bloom.
-        for (const w of walls) {
-          renderWallWithEffects(
-            ctx, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y),
-            w.start, w.end, scale, GREY, w.thickness * scale, 0.5,
-          );
-        }
-        // Gloss: a bright-white sheen run along every border and fence, added on top.
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-        ctx.shadowColor = 'rgba(235,242,255,0.9)';
-        ctx.shadowBlur = 6 * scale;
-        for (const w of walls) {
-          const s = w2s(w.start.x, w.start.y);
-          const e = w2s(w.end.x, w.end.y);
-          ctx.lineWidth = Math.max(1, w.thickness * scale * 0.4);
-          ctx.beginPath();
-          ctx.moveTo(s.x, s.y);
-          ctx.lineTo(e.x, e.y);
-          ctx.stroke();
-        }
-        ctx.restore();
-
-        // Balls: soft grey discs (glow halo + core).
-        ctx.globalAlpha = drain; // renderWallWithEffects resets alpha to 1
+        // Flames animate, so they stay live: cheap cached-sprite blits per ball.
         const flameNow = performance.now();
         for (const ball of balls) {
           const pos = ball.renderPosition ?? ball.position;
           const p = w2s(pos.x, pos.y);
           const r = Math.max(1, ball.radius * scale);
-          const halo = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 2.2);
-          halo.addColorStop(0, 'rgba(220,223,230,0.9)');
-          halo.addColorStop(0.5, 'rgba(184,188,196,0.45)');
-          halo.addColorStop(1, 'rgba(184,188,196,0)');
-          ctx.fillStyle = halo;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, r * 2.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#cfd3da';
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Dead ball: a drained white/grey flame burning straight up (no motion
-          // shear — the board is frozen for the clear beat).
           drawBallFlame(ctx, p.x, p.y, r, ball.id, flameNow, 0, 0, FLAME_DRAINED, drain);
         }
-
-        // Remaining-space bar below the board: redraw its fill in grey. The clip
-        // above reveals it top-down as the wave crosses.
-        if (game.spaceGrid) {
-          const remaining = getRemainingPercent(game.spaceGrid);
-          const targetCaptured = 100 - rctx.spaceThreshold;
-          const fillRatio = Math.min(1, targetCaptured > 0 ? (100 - remaining) / targetCaptured : 1);
-          const barY = bt + bh + 3 * scale;
-          const barH = 4 * scale;
-          ctx.globalAlpha = 0.85 * drain;
-          ctx.fillStyle = GREY;
-          ctx.shadowColor = GREY_GLOW;
-          ctx.shadowBlur = 3 * scale;
-          ctx.fillRect(bl, barY, bw * fillRatio, barH);
-          ctx.shadowBlur = 0;
-        }
+        ctx.globalAlpha = 1;
 
         ctx.restore();
       }
