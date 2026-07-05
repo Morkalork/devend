@@ -69,6 +69,10 @@ interface GameScreenProps {
   fenceDurability?: number | null;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
+  /** Admin/Playground: on clear, freeze on the drained frame instead of completing. */
+  freezeOnClear?: boolean;
+  /** Admin/Playground: fired the instant the map is won (before the shimmer). */
+  onMapComplete?: () => void;
 }
 
 export function GameScreen({
@@ -103,6 +107,8 @@ export function GameScreen({
   activeLoadouts = [],
   fenceDurability = null,
   showBallSpeeds = false,
+  freezeOnClear = false,
+  onMapComplete,
 }: GameScreenProps) {
   const { t } = useTranslation();
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
@@ -243,7 +249,8 @@ export function GameScreen({
             onLivesChange={onLivesChange}
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
-            onMapComplete={() => setMapComplete(true)}
+            onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
+            freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}
             paused={isPaused || modalOverlayActive}
             tutorialMode={inGameStep === 'fence'}

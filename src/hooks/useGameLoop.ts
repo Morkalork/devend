@@ -125,6 +125,13 @@ export function createGameLoop(
       const shimmerActive =
         game.shimmerStart > 0 &&
         performance.now() < game.shimmerStart + LEVEL_CLEAR_SHIMMER_MS;
+      // Freeze mode (dev/playground): render every frame through the sweep, then a
+      // final clamped full-drain frame, and stop scheduling so the board holds.
+      if (game.shimmerFrozen) {
+        callbacks.render();
+        if (shimmerActive) schedule();
+        return;
+      }
       if (game.assimilations.size > 0 || shimmerActive) {
         callbacks.render();
         schedule();

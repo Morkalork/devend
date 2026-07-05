@@ -18,6 +18,9 @@ export interface GameCallbacks {
   /** Fired the instant the map is won (before the clear shimmer), so the UI can
    *  freeze the scrolling-code background. */
   onMapComplete?: () => void;
+  /** Dev/playground: when true, play the clear shimmer then freeze on the drained
+   *  frame instead of firing onLevelComplete / starting the dissolve. */
+  freezeOnComplete?: () => boolean;
   onGameEnd: (result: GameResult) => void;
   onLivesChange: (n: number) => void;
   onTutorialCutSuccess?: () => void;

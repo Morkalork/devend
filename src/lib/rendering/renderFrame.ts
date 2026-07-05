@@ -180,6 +180,113 @@ function _mulberry(seed: number): () => number {
   };
 }
 
+// ── Flame puff sprite cache ─────────────────────────────────────────────────
+// Balls burn continuously, so the plume must be cheap. It's drawn as many small
+// additive "puffs"; each colour's puff is pre-rendered once to an OffscreenCanvas
+// (a soft radial gradient) and blitted per tongue, so no gradient is allocated
+// per frame. Under 'lighter' compositing the overlapping puffs pile up toward
+// white, reading as a hot core.
+const _flamePuffCache = new Map<string, OffscreenCanvas>();
+const FLAME_PUFF_PX = 24; // sprite half-size in px; scaled per-tongue on draw
+
+function getFlamePuff(rgb: string): OffscreenCanvas {
+  const cached = _flamePuffCache.get(rgb);
+  if (cached) return cached;
+  const R = FLAME_PUFF_PX;
+  const oc = new OffscreenCanvas(R * 2, R * 2);
+  const c = oc.getContext('2d');
+  if (c) {
+    const g = c.createRadialGradient(R, R, 0, R, R, R);
+    g.addColorStop(0,    `rgba(${rgb},1)`);
+    g.addColorStop(0.45, `rgba(${rgb},0.55)`);
+    g.addColorStop(1,    `rgba(${rgb},0)`);
+    c.fillStyle = g;
+    c.beginPath();
+    c.arc(R, R, R, 0, Math.PI * 2);
+    c.fill();
+  }
+  _flamePuffCache.set(rgb, oc);
+  return oc;
+}
+
+// Flame palette: [hot core, mid, cool tip] as "r,g,b" strings. DRAINED is the
+// white/grey clear-wave beat; live balls derive theirs from their own colour
+// (ballFlamePalette) so the fire matches the ball.
+const FLAME_DRAINED: [string, string, string] = ['255,255,255', '230,234,242', '196,201,212'];
+const FLAME_SHEAR_SPEED = 380; // ball speed (world u/s) at which the lean saturates
+
+// Per-colour flame palette derived from the ball's own colour: a near-white hot
+// core, the ball colour in the middle, and a darkened tip. Cached so a distinct
+// ball colour yields a stable set of puff colours (bounding getFlamePuff's cache).
+const _flamePaletteCache = new Map<string, [string, string, string]>();
+
+function ballFlamePalette(hex: string): [string, string, string] {
+  const cached = _flamePaletteCache.get(hex);
+  if (cached) return cached;
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) || 0;
+  const g = parseInt(h.slice(2, 4), 16) || 0;
+  const b = parseInt(h.slice(4, 6), 16) || 0;
+  const toward = (c: number, t: number, target: number) => Math.round(c + (target - c) * t);
+  const hot = `${toward(r, 0.75, 255)},${toward(g, 0.75, 255)},${toward(b, 0.75, 255)}`;
+  const mid = `${toward(r, 0.15, 255)},${toward(g, 0.15, 255)},${toward(b, 0.15, 255)}`;
+  const tip = `${Math.round(r * 0.55)},${Math.round(g * 0.55)},${Math.round(b * 0.55)}`;
+  const palette: [string, string, string] = [hot, mid, tip];
+  _flamePaletteCache.set(hex, palette);
+  return palette;
+}
+
+/**
+ * Draw a stateless flame plume rising off a ball. The looping "tongues" are
+ * seeded per-ball (stable across frames) and animated by the clock, so no
+ * particle state is stored. Each tongue is blitted from a cached puff sprite
+ * (getFlamePuff) — no per-frame gradient allocation.
+ *
+ * Buoyancy always lifts the plume upward; (vx,vy) is the ball's screen-space
+ * velocity and shears the plume opposite to travel (more toward the tips), so a
+ * fast ball's flame trails behind it like a real burning object in motion. The
+ * vertical shear is damped and can never overcome buoyancy, so it always burns
+ * upward. `alpha` scales overall opacity.
+ */
+function drawBallFlame(
+  ctx: CanvasRenderingContext2D,
+  px: number, py: number, r: number, id: string, now: number,
+  vx: number, vy: number,
+  palette: [string, string, string],
+  alpha: number,
+): void {
+  const rng = _mulberry(_hashStr(`flame-${id}`));
+  const FLAME_N = 12;
+  const flameH = r * 4.8;
+  const life = 620; // ms per tongue cycle
+  const speed = Math.hypot(vx, vy);
+  const lean = speed > 0 ? Math.min(1, speed / FLAME_SHEAR_SPEED) : 0;
+  // Lean opposite to travel: horizontal applied fully, vertical damped so it
+  // never cancels the upward rise.
+  const lx = speed > 0 ? -(vx / speed) * lean * 1.1  : 0;
+  const ly = speed > 0 ? -(vy / speed) * lean * 0.35 : 0;
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < FLAME_N; i++) {
+    const off = rng();               // stable phase offset for this tongue
+    const spd = 0.75 + rng() * 0.6;  // per-tongue rise speed
+    const lat = rng() - 0.5;         // lateral spawn position
+    const ph = ((now / life) * spd + off) % 1; // 0..1 life progress
+    const rise = (ph * 0.4 + ph * ph * 0.6) * flameH; // buoyant, accelerating
+    const wob = Math.sin(now * 0.008 + off * 6.283 + rise * 0.04) * r * 0.5 * ph;
+    // Shear scales with rise, so tips lean downstream more than the base.
+    const cx = px + lat * r * 0.7 + wob + lx * rise;
+    const cy = py - r * 0.2 - rise + ly * rise;
+    const size = Math.max(0.5, r * (0.95 - 0.6 * ph) * (0.55 + off * 0.5));
+    const a = (1 - ph) * 0.55 * alpha;
+    if (a <= 0.01) continue;
+    const rgb = ph < 0.35 ? palette[0] : ph < 0.65 ? palette[1] : palette[2];
+    ctx.globalAlpha = a;
+    ctx.drawImage(getFlamePuff(rgb), cx - size, cy - size, size * 2, size * 2);
+  }
+  ctx.restore();
+}
+
 /**
  * Trace a jagged version of a polygon onto ctx (current path). Each edge is
  * subdivided and its points nudged perpendicular by a seeded amount, so the
@@ -1279,6 +1386,21 @@ export function renderFrame(
       }
     }
 
+    // Continuous flame plume: the ball is a burning object. Drawn behind the
+    // body so the tongues rise up and around it. Skipped while frozen (frost,
+    // not fire) and for won/disintegrating balls (the clear wave draws their
+    // drained flame instead).
+    {
+      const nowF = performance.now();
+      const isFrozen = ball.frozenUntil !== undefined && nowF < ball.frozenUntil;
+      if (ball.state === 'active' && !isFrozen && screenRadius > 0.5) {
+        drawBallFlame(
+          ctx, screenPos.x, screenPos.y, screenRadius, ball.id, nowF,
+          ball.velocity.x, ball.velocity.y, ballFlamePalette(ball.color), assimScale,
+        );
+      }
+    }
+
     const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);
     ctx.drawImage(baseCanvas, Math.round(screenPos.x - baseHalf), Math.round(screenPos.y - baseHalf));
 
@@ -1743,7 +1865,10 @@ export function renderFrame(
   // fences, obstacles and balls all included — as a beat of accomplishment
   // before the completion overlay mounts.
   if (game.shimmerStart > 0) {
-    const elapsed = performance.now() - game.shimmerStart;
+    // In freeze mode (dev/playground), clamp to the end-state once the sweep is
+    // done so the fully-drained board holds indefinitely instead of reverting.
+    const elapsedRaw = performance.now() - game.shimmerStart;
+    const elapsed = game.shimmerFrozen ? Math.min(elapsedRaw, LEVEL_CLEAR_SHIMMER_MS) : elapsedRaw;
     if (elapsed >= 0 && elapsed <= LEVEL_CLEAR_SHIMMER_MS) {
       const progress = elapsed / LEVEL_CLEAR_SHIMMER_MS;
       const { left: bl, top: bt, width: bw, height: bh } = boardRect;
@@ -1778,12 +1903,19 @@ export function renderFrame(
         ctx.beginPath();
         ctx.rect(bl, bt, bw, wakeBottom - bt);       // swept region only
         ctx.clip();
+        // Remove the region fills (captured + active) in the wake so only the
+        // structures remain - just borders, fences, objects and balls, drained to
+        // grey below. Clearing sidesteps any fill-recolour artifacts (blocky grid
+        // cells, jagged hole seams) entirely.
+        ctx.clearRect(bl, bt, bw, Math.min(wakeBottom, bt + bh) - bt);
+
         ctx.globalCompositeOperation = 'source-over';
         ctx.globalAlpha = drain;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        // Obstacles, mirrors and breakable bodies: soft glowing grey edge.
+        // Obstacles, mirrors and breakable bodies: soft glowing grey edge with a
+        // bright glossy highlight laid over it.
         for (const poly of game.obstaclePolygons) {
           const v = poly.vertices;
           if (v.length < 2) continue;
@@ -1797,10 +1929,22 @@ export function renderFrame(
           ctx.shadowColor = GREY_GLOW;
           ctx.shadowBlur = 7 * scale;
           ctx.stroke();
+          // Gloss: a thin bright-white sheen, added on top.
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+          ctx.lineWidth = Math.max(1, WALL_THICKNESS * scale * 0.45);
+          ctx.shadowColor = 'rgba(235,242,255,0.85)';
+          ctx.shadowBlur = 5 * scale;
+          ctx.stroke();
+          ctx.restore();
         }
         ctx.shadowBlur = 0;
 
-        // Moving obstacles at their current position.
+        // Moving obstacles: fill solid grey at their (now frozen) position so the
+        // live orange body, direction arrow and pulsing glow are fully covered -
+        // they read white/dead and stop moving. Physics is already halted at
+        // level complete, so the frozen fill sits exactly over the live sprite.
         for (const mover of game.movers) {
           const mdx = mover.axis === 'horizontal' ? mover.offset : 0;
           const mdy = mover.axis === 'vertical'   ? mover.offset : 0;
@@ -1813,22 +1957,41 @@ export function renderFrame(
             const hh = (mover.height ?? 60) / 2 * scale;
             ctx.rect(sc.x - hw, sc.y - hh, hw * 2, hh * 2);
           }
+          ctx.fillStyle = GREY;
+          ctx.shadowColor = GREY_GLOW;
+          ctx.shadowBlur = 14 * scale; // >= the live mover glow so its halo is covered too
+          ctx.fill();
+          ctx.shadowBlur = 0;
           ctx.strokeStyle = GREY;
           ctx.lineWidth = 2 * scale;
-          ctx.shadowColor = GREY_GLOW;
-          ctx.shadowBlur = 12 * scale;
           ctx.stroke();
         }
         ctx.shadowBlur = 0;
 
         // Fences and board-edge walls: reuse the live wall renderer with grey so
-        // the glow and soft caps match exactly, just drained of colour.
+        // the glow and soft caps match, plus a glowBoost for extra bloom.
         for (const w of walls) {
           renderWallWithEffects(
             ctx, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y),
-            w.start, w.end, scale, GREY, w.thickness * scale,
+            w.start, w.end, scale, GREY, w.thickness * scale, 0.5,
           );
         }
+        // Gloss: a bright-white sheen run along every border and fence, added on top.
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+        ctx.shadowColor = 'rgba(235,242,255,0.9)';
+        ctx.shadowBlur = 6 * scale;
+        for (const w of walls) {
+          const s = w2s(w.start.x, w.start.y);
+          const e = w2s(w.end.x, w.end.y);
+          ctx.lineWidth = Math.max(1, w.thickness * scale * 0.4);
+          ctx.beginPath();
+          ctx.moveTo(s.x, s.y);
+          ctx.lineTo(e.x, e.y);
+          ctx.stroke();
+        }
+        ctx.restore();
 
         // Balls: soft grey discs (glow halo + core).
         ctx.globalAlpha = drain; // renderWallWithEffects resets alpha to 1
@@ -1850,43 +2013,9 @@ export function renderFrame(
           ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
           ctx.fill();
 
-          // Flame plume burning upward off the dead ball. Stateless: each of the
-          // looping "tongues" is placed from a per-ball seeded RNG (stable across
-          // frames) and animated by the clock, so no particle state is stored.
-          const rng = _mulberry(_hashStr(`flame-${ball.id}`));
-          ctx.save();
-          ctx.globalCompositeOperation = 'lighter';
-          const FLAME_N = 16;
-          const flameH = r * 4.8;
-          const life = 620; // ms per tongue cycle
-          for (let i = 0; i < FLAME_N; i++) {
-            const off = rng();               // stable phase offset for this tongue
-            const spd = 0.75 + rng() * 0.6;  // per-tongue rise speed
-            const lat = rng() - 0.5;         // lateral spawn position
-            const ph = ((flameNow / life) * spd + off) % 1; // 0..1 life progress
-            // Buoyant rise: accelerates upward (normal gravity pulls flame up here).
-            const rise = (ph * 0.4 + ph * ph * 0.6) * flameH;
-            const wob = Math.sin(flameNow * 0.008 + off * 6.283 + rise * 0.04) * r * 0.5 * ph;
-            const px = p.x + lat * r * 0.7 + wob;
-            const py = p.y - r * 0.2 - rise;
-            const size = Math.max(0.5, r * (0.95 - 0.6 * ph) * (0.55 + off * 0.5));
-            const a = (1 - ph) * 0.55 * drain;
-            // White flame: bright white core at the base cooling to a faint grey
-            // at the tips, fading to transparent.
-            const hot = ph < 0.35
-              ? `rgba(255,255,255,${a})`
-              : ph < 0.65
-                ? `rgba(230,234,242,${a})`
-                : `rgba(196,201,212,${a})`;
-            const g = ctx.createRadialGradient(px, py, 0, px, py, size);
-            g.addColorStop(0, hot);
-            g.addColorStop(1, 'rgba(210,214,224,0)');
-            ctx.fillStyle = g;
-            ctx.beginPath();
-            ctx.arc(px, py, size, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          ctx.restore();
+          // Dead ball: a drained white/grey flame burning straight up (no motion
+          // shear — the board is frozen for the clear beat).
+          drawBallFlame(ctx, p.x, p.y, r, ball.id, flameNow, 0, 0, FLAME_DRAINED, drain);
         }
 
         // Remaining-space bar below the board: redraw its fill in grey. The clip
