@@ -36,7 +36,13 @@ import {
   BALL_DANGER_SPEED,
   LEVEL_CLEAR_SHIMMER_MS,
 } from "@/lib/gameConstants";
-import { getRemainingPercent } from "@/lib/spaceGrid";
+import { getRemainingPercent, CellState } from "@/lib/spaceGrid";
+
+// TEMP DEBUG: `?grid` in the URL tints every space-grid cell (green = ACTIVE /
+// in-play, red = REMOVED / captured-or-obstacle) so we can see whether a dark
+// patch in a captured region is genuinely active cells or a fill artifact.
+const GRID_DEBUG =
+  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('grid');
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -563,6 +569,24 @@ export function renderFrame(
   // ── Board grid + region fill ──────────────────────────────────────────────
   ctx.drawImage(boardGridCanvas, 0, 0);
   ctx.drawImage(regionCanvas, 0, 0);
+
+  // TEMP DEBUG grid overlay (see GRID_DEBUG note at top).
+  if (GRID_DEBUG && game.spaceGrid) {
+    const g = game.spaceGrid;
+    const cs = g.cellSize * scale;
+    ctx.save();
+    for (let row = 0; row < g.height; row++) {
+      for (let col = 0; col < g.width; col++) {
+        const active = g.cells[row * g.width + col] === CellState.ACTIVE;
+        const wx = g.originX + col * g.cellSize;
+        const wy = g.originY + row * g.cellSize;
+        const s = w2s(wx, wy);
+        ctx.fillStyle = active ? 'rgba(0,255,0,0.28)' : 'rgba(255,0,0,0.28)';
+        ctx.fillRect(s.x, s.y, Math.ceil(cs), Math.ceil(cs));
+      }
+    }
+    ctx.restore();
+  }
 
   // ── Wall shadow quads ─────────────────────────────────────────────────────
   {
