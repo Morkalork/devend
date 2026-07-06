@@ -7,14 +7,6 @@
 
 import { CanvasGameState } from "@/types/gameState";
 import { Ball } from "@/types/game";
-import {
-  vec2Add,
-  vec2Sub,
-  vec2Scale,
-  vec2Normalize,
-  vec2Length,
-  vec2Dot,
-} from "@/lib/polygon";
 import { triggerBallHit } from "@/lib/ballEffects";
 import { playBallCollideSound } from "@/lib/gameAudio";
 
@@ -43,18 +35,24 @@ export function handleBallCollisions(game: CanvasGameState): void {
       if (f1 || f2) {
         const frozen = f1 ? ball1 : ball2;
         const mover  = f1 ? ball2 : ball1;
-        const delta = vec2Sub(mover.position, frozen.position); // frozen → mover
-        const distance = vec2Length(delta);
+        // Scalar math + in-place mutation: this runs O(n^2) per physics step, so
+        // allocating vec2 temporaries here was a primary source of GC-pause jank.
+        const dx = mover.position.x - frozen.position.x; // frozen → mover
+        const dy = mover.position.y - frozen.position.y;
+        const distance = Math.hypot(dx, dy);
         const minDistance = ball1.radius + ball2.radius;
         if (distance < minDistance && distance > 0) {
-          const normal = vec2Normalize(delta);
-          const velNormal = vec2Dot(mover.velocity, normal);
+          const nx = dx / distance, ny = dy / distance;
+          const velNormal = mover.velocity.x * nx + mover.velocity.y * ny;
           if (velNormal < 0) {
             // reflect the mover's normal component; frozen ball is unaffected
-            mover.velocity = vec2Sub(mover.velocity, vec2Scale(normal, 2 * velNormal));
+            mover.velocity.x -= nx * 2 * velNormal;
+            mover.velocity.y -= ny * 2 * velNormal;
           }
           // push the mover fully out of the frozen ball
-          mover.position = vec2Add(mover.position, vec2Scale(normal, minDistance - distance));
+          const push = minDistance - distance;
+          mover.position.x += nx * push;
+          mover.position.y += ny * push;
           triggerBallHit(mover.effects, now);
           triggerBallHit(frozen.effects, now);
           playBallCollideSound(Math.min(1, Math.abs(velNormal) / 300));
@@ -62,29 +60,38 @@ export function handleBallCollisions(game: CanvasGameState): void {
         continue;
       }
 
-      const delta = vec2Sub(ball2.position, ball1.position);
-      const distance = vec2Length(delta);
+      // Scalar math + in-place mutation (no vec2 temporaries): the delta below
+      // was previously allocated for every same-region pair every step.
+      const dx = ball2.position.x - ball1.position.x;
+      const dy = ball2.position.y - ball1.position.y;
+      const distance = Math.hypot(dx, dy);
       const minDistance = ball1.radius + ball2.radius;
 
       if (distance < minDistance && distance > 0) {
-        const normal = vec2Normalize(delta);
-        const relVel = vec2Sub(ball1.velocity, ball2.velocity);
-        const relVelNormal = vec2Dot(relVel, normal);
+        const nx = dx / distance, ny = dy / distance;
+        const relVelNormal =
+          (ball1.velocity.x - ball2.velocity.x) * nx +
+          (ball1.velocity.y - ball2.velocity.y) * ny;
 
         if (relVelNormal > 0) {
           // Capture each ball's speed at impact, before the elastic exchange, so
           // a purple's drain is measured against the pre-collision speed (a fixed
           // amount) instead of riding on top of the random elastic change.
-          const preSpeed1 = vec2Length(ball1.velocity);
-          const preSpeed2 = vec2Length(ball2.velocity);
+          const preSpeed1 = Math.hypot(ball1.velocity.x, ball1.velocity.y);
+          const preSpeed2 = Math.hypot(ball2.velocity.x, ball2.velocity.y);
 
-          ball1.velocity = vec2Sub(ball1.velocity, vec2Scale(normal, relVelNormal));
-          ball2.velocity = vec2Add(ball2.velocity, vec2Scale(normal, relVelNormal));
+          ball1.velocity.x -= nx * relVelNormal;
+          ball1.velocity.y -= ny * relVelNormal;
+          ball2.velocity.x += nx * relVelNormal;
+          ball2.velocity.y += ny * relVelNormal;
 
           const overlap = minDistance - distance;
-          const separation = vec2Scale(normal, overlap / 2);
-          ball1.position = vec2Sub(ball1.position, separation);
-          ball2.position = vec2Add(ball2.position, separation);
+          const sepx = nx * overlap * 0.5;
+          const sepy = ny * overlap * 0.5;
+          ball1.position.x -= sepx;
+          ball1.position.y -= sepy;
+          ball2.position.x += sepx;
+          ball2.position.y += sepy;
 
           // Trigger ball-to-ball collision effect (strongest visual)
           const now = performance.now();
