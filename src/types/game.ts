@@ -45,7 +45,9 @@ export interface Ball {
   assimColorFade: number; // 0→1 fade from ball color to accent color (default 0)
   prevPosition?: Vector2;    // position at start of last fixed physics step (for interpolation)
   renderPosition?: Vector2;  // interpolated render position (set each frame, used by render only)
-  trailPositions?: Vector2[]; // last N render positions for motion trail (screen-space world coords)
+  trailPositions?: Vector2[]; // ring buffer of last N render positions for motion trail (world coords); slots reused in place
+  trailHead?: number;         // ring-buffer write cursor (index of the next slot to overwrite)
+  trailCount?: number;        // number of valid entries in the ring buffer (<= its length)
   // ── Feature Freeze upgrade (tap-to-freeze) ──────────────────────────────
   frozenUntil?: number;      // performance.now() timestamp until which the ball is held still (tap-frozen)
   freezeReadyAt?: number;    // performance.now() timestamp before which the ball cannot be re-frozen (cooldown)

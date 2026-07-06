@@ -133,6 +133,8 @@ export function clearRenderFrameCache(): void {
   _dangerFrameKey = '';
   _pulseSpriteCache.clear();
   _radialSpriteCache.clear();
+  _flamePuffCache.clear();
+  _flamePaletteCache.clear();
   _fenceClipCache.key = '';
   _fenceClipCache.board = null;
   _fenceClipCache.polys = null;
@@ -960,11 +962,17 @@ export function renderFrame(
 
   // ── Speed danger tint ─────────────────────────────────────────────────────
   {
-    const activeBalls = balls.filter(b => b.speed > 0);
-    if (activeBalls.length > 0) {
-      // Flat speeds (issue #37): danger is measured against an absolute reference
-      // speed rather than each ball's (now equal) top speed.
-      const maxDanger = activeBalls.reduce((m, b) => Math.max(m, b.speed / BALL_DANGER_SPEED), 0);
+    // Flat speeds (issue #37): danger is measured against an absolute reference
+    // speed rather than each ball's (now equal) top speed. Plain loop (no
+    // filter/reduce) to avoid a per-frame array + closure allocation.
+    let maxDanger = 0;
+    for (const b of balls) {
+      if (b.speed > 0) {
+        const d = b.speed / BALL_DANGER_SPEED;
+        if (d > maxDanger) maxDanger = d;
+      }
+    }
+    {
       if (maxDanger > 0.55) {
         const { left: rl, top: rt, width: rw, height: rh } = boardRect;
         const dangerT = Math.min(1, (maxDanger - 0.55) / 0.45);
@@ -1336,6 +1344,10 @@ export function renderFrame(
       };
 
       ctx.globalAlpha = 1;
+      // Most segments sit in the flat-alpha (0.55) run before the tail fade, so
+      // their gradient is a solid color — use a plain stroke there and only
+      // allocate a CanvasGradient for the genuinely fading tail segments.
+      ctx.lineWidth = 2 * scale;
       for (let i = 0; i < totalSegs; i++) {
         const a0 = pathAlpha(cumDist[i]);
         const a1 = pathAlpha(cumDist[i + 1]);
@@ -1344,13 +1356,16 @@ export function renderFrame(
         const s = w2s(waypoints[i].x, waypoints[i].y);
         const e = w2s(waypoints[i + 1].x, waypoints[i + 1].y);
 
-        const grad = ctx.createLinearGradient(s.x, s.y, e.x, e.y);
-        grad.addColorStop(0, `rgba(0,255,136,${a0.toFixed(3)})`);
-        grad.addColorStop(1, `rgba(0,255,136,${a1.toFixed(3)})`);
-        ctx.strokeStyle = grad;
+        if (a0 === a1) {
+          ctx.strokeStyle = `rgba(0,255,136,${a0.toFixed(3)})`;
+        } else {
+          const grad = ctx.createLinearGradient(s.x, s.y, e.x, e.y);
+          grad.addColorStop(0, `rgba(0,255,136,${a0.toFixed(3)})`);
+          grad.addColorStop(1, `rgba(0,255,136,${a1.toFixed(3)})`);
+          ctx.strokeStyle = grad;
+        }
         ctx.shadowColor = `rgba(0,255,136,${Math.max(a0, a1).toFixed(3)})`;
         ctx.shadowBlur = 6 * scale;
-        ctx.lineWidth = 2 * scale;
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
         ctx.lineTo(e.x, e.y);
@@ -1380,7 +1395,9 @@ export function renderFrame(
   // ── Balls ─────────────────────────────────────────────────────────────────
   // Flame LOD: fewer tongues per plume as more balls burn, so the dominant
   // per-ball draw cost stays roughly bounded on a crowded board.
-  const flameTongues = flameTonguesForCount(balls.reduce((n, b) => (b.state === 'active' ? n + 1 : n), 0));
+  let activeBallCount = 0;
+  for (const b of balls) if (b.state === 'active') activeBallCount++;
+  const flameTongues = flameTonguesForCount(activeBallCount);
   for (const ball of balls) {
     const screenPos = w2s(
       (ball.renderPosition ?? ball.position).x,
@@ -1409,17 +1426,31 @@ export function renderFrame(
       ctx.restore();
     }
 
-    const fade = ball.assimColorFade ?? 0;
+    // Bucket the fade before blending. assimColorFade is a continuous 0→1 clock
+    // during the ~2s lock fade, so an unbucketed blend produces a distinct
+    // blendedHex nearly every frame and getBallBase spawns a fresh OffscreenCanvas
+    // per key. 13 steps (1/12) is visually indistinguishable from continuous but
+    // collapses the per-clear canvas churn from ~120 to ≤13. r0/g0/b0 stay the
+    // true ball color (the motion trail below uses them unblended).
+    const fadeRaw = ball.assimColorFade ?? 0;
+    const fade = fadeRaw > 0 ? Math.round(fadeRaw * 12) / 12 : 0;
     const r0 = parseInt(ball.color.slice(1, 3), 16);
     const g0 = parseInt(ball.color.slice(3, 5), 16);
     const b0 = parseInt(ball.color.slice(5, 7), 16);
-    const ar = parseInt(accentColor.slice(1, 3), 16);
-    const ag = parseInt(accentColor.slice(3, 5), 16);
-    const ab = parseInt(accentColor.slice(5, 7), 16);
-    const r = Math.round(r0 + (ar - r0) * fade);
-    const g = Math.round(g0 + (ag - g0) * fade);
-    const b = Math.round(b0 + (ab - b0) * fade);
-    const blendedHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    let blendedHex: string;
+    if (fade === 0) {
+      // No fade (the common case for every active ball): the blend is the ball's
+      // own color, so skip the channel math and string building entirely.
+      blendedHex = ball.color.slice(1);
+    } else {
+      const ar = parseInt(accentColor.slice(1, 3), 16);
+      const ag = parseInt(accentColor.slice(3, 5), 16);
+      const ab = parseInt(accentColor.slice(5, 7), 16);
+      const r = Math.round(r0 + (ar - r0) * fade);
+      const g = Math.round(g0 + (ag - g0) * fade);
+      const b = Math.round(b0 + (ab - b0) * fade);
+      blendedHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
 
     ctx.save();
     ctx.globalAlpha = assimScale;
@@ -1429,19 +1460,34 @@ export function renderFrame(
       screenRadius, accentColor, ball.color, performance.now(), scale,
     );
 
-    // Motion trail
+    // Motion trail. Ring buffer: overwrite slots in place with a moving head
+    // index instead of push()/shift() (which allocated a {x,y} every frame per
+    // ball and O(n)-reindexed the array) — the previous version was the only
+    // steady, unconditional per-frame allocation in the render hot path.
     {
+      const TRAIL_LEN = 8;
       const trailPos = ball.renderPosition ?? ball.position;
-      if (!ball.trailPositions) ball.trailPositions = [];
-      ball.trailPositions.push({ x: trailPos.x, y: trailPos.y });
-      if (ball.trailPositions.length > 8) ball.trailPositions.shift();
-      const N = ball.trailPositions.length;
+      let buf = ball.trailPositions;
+      if (!buf || buf.length !== TRAIL_LEN) {
+        buf = ball.trailPositions = Array.from({ length: TRAIL_LEN }, () => ({ x: 0, y: 0 }));
+        ball.trailHead = 0;
+        ball.trailCount = 0;
+      }
+      const slot = buf[ball.trailHead ?? 0];
+      slot.x = trailPos.x;
+      slot.y = trailPos.y;
+      const head = ((ball.trailHead ?? 0) + 1) % TRAIL_LEN;
+      ball.trailHead = head;
+      const N = ball.trailCount = Math.min((ball.trailCount ?? 0) + 1, TRAIL_LEN);
       if (N > 1 && assimScale > 0.05) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        for (let ti = 0; ti < N - 1; ti++) {
-          const fraction = (ti + 1) / N;
-          const tp = w2s(ball.trailPositions[ti].x, ball.trailPositions[ti].y);
+        // Oldest→newest, skipping the newest (the ball body sits there). Oldest
+        // valid entry is `head - N`; index k of N maps to (head - N + k) mod LEN.
+        for (let k = 0; k < N - 1; k++) {
+          const fraction = (k + 1) / N;
+          const idx = (head - N + k + TRAIL_LEN) % TRAIL_LEN;
+          const tp = w2s(buf[idx].x, buf[idx].y);
           ctx.beginPath();
           ctx.arc(tp.x, tp.y, screenRadius * fraction * 0.5, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(${r0},${g0},${b0},${fraction * 0.35})`;

@@ -658,6 +658,11 @@ export function GameCanvas({
     return () => {
       window.removeEventListener("resize", resizeCanvas);
       stopGameLoop(game);
+      // Cancel any pending flash/shake/game-over timeouts so they can't fire a
+      // React setter (or onGameEnd, via the 1s game-over timeout) after unmount
+      // when the canvas is torn down mid-animation (Main Menu, Continue-remount).
+      if (flashTimeoutRef.current) { clearTimeout(flashTimeoutRef.current); flashTimeoutRef.current = null; }
+      if (shakeTimeoutRef.current) { clearTimeout(shakeTimeoutRef.current); shakeTimeoutRef.current = null; }
       clearBallRenderCache();
       clearBallSphereCache();
       clearRainGlyphCache();
