@@ -115,7 +115,7 @@ export function createSpaceGrid(
     }
   }
   
-  return {
+  const grid: SpaceGrid = {
     cellSize,
     width,
     height,
@@ -126,6 +126,25 @@ export function createSpaceGrid(
     activeCount: initialActiveCount,
     cellRegionIds: new Array<string | null>(cells.length).fill(null),
   };
+
+  // Seal obstacle boundaries into the grid. Removing only cells whose CENTER
+  // falls inside an obstacle leaves a sparse, non-4-connected barrier for thin or
+  // diagonal obstacles (mirrors especially): grid connectivity then leaks across
+  // the obstacle, so space it physically separates stays one region and is never
+  // isolated or captured (the persistent "shadow behind the obstacle"). Rasterize
+  // each obstacle edge into a connected band of REMOVED cells — the same sealing
+  // the game already applies to fence cuts — so the grid matches physical
+  // reachability. Paths *around* a partial obstacle stay connected, since only
+  // cells along the boundary are removed.
+  for (const obstacle of obstacles) {
+    const vs = obstacle.vertices;
+    for (let i = 0; i < vs.length; i++) {
+      rasterizeCutToGrid(grid, vs[i], vs[(i + 1) % vs.length], cellSize);
+    }
+  }
+  grid.initialActiveCount = grid.activeCount;
+
+  return grid;
 }
 
 /**
