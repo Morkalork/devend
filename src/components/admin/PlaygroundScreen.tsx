@@ -120,6 +120,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [ballTypeIds, setBallTypeIds] = useState<string[] | null>(null);
   const [ballPickerOpen, setBallPickerOpen] = useState(false);
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
+  const [showPerfOverlay, setShowPerfOverlay] = useState(false);
   // Dev: on clear, play the desaturation drain then freeze on the drained frame;
   // click the board to reload. `frozen` arms the click-to-reload catcher.
   const [freezeOnClear, setFreezeOnClear] = useState(false);
@@ -407,6 +408,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           achievementBonuses={achievementBonuses}
           activeModifiers={activeModifiers}
           showBallSpeeds={showBallSpeeds}
+          showPerfOverlay={showPerfOverlay}
         />
 
         {/* Dev: freeze-on-clear toggle (always visible) */}
@@ -789,6 +791,31 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     <span
                       className="absolute rounded-full bg-white transition-all"
                       style={{ width: 14, height: 14, top: 3, left: showBallSpeeds ? 19 : 3 }}
+                    />
+                  </span>
+                </button>
+              </div>
+
+              {/* Perf-overlay toggle (frame-timing HUD) */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <button
+                  onClick={() => setShowPerfOverlay(v => !v)}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: showPerfOverlay ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${showPerfOverlay ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <span className="text-xs font-semibold" style={{ color: showPerfOverlay ? accent : 'hsl(var(--foreground))' }}>
+                    Show perf overlay
+                  </span>
+                  <span
+                    className="relative inline-flex items-center rounded-full transition-colors"
+                    style={{ width: 36, height: 20, backgroundColor: showPerfOverlay ? accent : 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span
+                      className="absolute rounded-full bg-white transition-all"
+                      style={{ width: 14, height: 14, top: 3, left: showPerfOverlay ? 19 : 3 }}
                     />
                   </span>
                 </button>

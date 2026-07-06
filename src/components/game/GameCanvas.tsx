@@ -21,6 +21,7 @@ import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { clearBallRenderCache } from "@/lib/ballRenderCache";
 import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/rendering/renderFrame";
+import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded } from "@/lib/scoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
@@ -127,6 +128,8 @@ interface GameCanvasProps {
   paused?: boolean;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
+  /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
+  showPerfOverlay?: boolean;
   /** Admin/Playground: on clear, play the drain shimmer then freeze on the drained
    *  frame instead of completing the level (no overlay, no dissolve). */
   freezeOnComplete?: boolean;
@@ -177,6 +180,7 @@ export function GameCanvas({
   parallaxTickRef,
   paused = false,
   showBallSpeeds = false,
+  showPerfOverlay = false,
   freezeOnComplete = false,
 }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -195,6 +199,8 @@ export function GameCanvas({
   // the render loop (the rctx is rebuilt only per level).
   const showBallSpeedsRef = useRef(showBallSpeeds);
   useEffect(() => { showBallSpeedsRef.current = showBallSpeeds; }, [showBallSpeeds]);
+  const showPerfOverlayRef = useRef(showPerfOverlay);
+  useEffect(() => { showPerfOverlayRef.current = showPerfOverlay; }, [showPerfOverlay]);
   // Keep the lock-rule config live on the game state (initGame also seeds it),
   // so tuning game-config.yml applies without waiting for the next level init.
   useEffect(() => {
@@ -544,7 +550,13 @@ export function GameCanvas({
     };
 
     const rctx: RenderContext = { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState, spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current };
-    const render = () => { rctx.showBallSpeeds = showBallSpeedsRef.current; renderFrame(ctx, game, rctx); };
+    const render = () => {
+      rctx.showBallSpeeds = showBallSpeedsRef.current;
+      renderFrame(ctx, game, rctx);
+      // Perf HUD drawn after renderFrame (which returns early on normal frames),
+      // so it always lands on top. Its cost counts toward the measured render ms.
+      if (showPerfOverlayRef.current) drawPerfOverlay(ctx, game);
+    };
 
     const startDissolve = (onComplete: () => void, tint?: string) => {
       const TILE = 28;

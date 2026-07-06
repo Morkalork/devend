@@ -18,6 +18,7 @@ import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updateWallImpacts } from "@/lib/wallImpactEffects";
+import { recordFrame } from "@/lib/rendering/perfStats";
 
 export interface GameLoopCallbacks {
   /** Called every physics step to advance wall growth. */
@@ -170,7 +171,10 @@ export function createGameLoop(
       }
     }
 
+    let _physSteps = 0;
+    const _physStart = performance.now();
     while (game.accumulator >= PHYSICS_STEP) {
+      _physSteps++;
       // Snapshot positions before this step (used for render interpolation).
       // Mutate in-place to avoid allocating a new object every physics tick.
       for (const ball of game.balls) {
@@ -239,10 +243,16 @@ export function createGameLoop(
       ball.renderPosition.y = prev.y + (ball.position.y - prev.y) * alpha;
     }
 
+    const _physMs = performance.now() - _physStart;
+
     // Update wall impact visual effects (time-based)
     updateWallImpacts();
 
+    const _renderStart = performance.now();
     callbacks.render();
+    // Feed the perf overlay (physics-loop time vs render time vs frame delta).
+    // Cheap and allocation-free; the overlay only paints when toggled on.
+    recordFrame(dt * 1000, _physMs, performance.now() - _renderStart, _physSteps, game.balls.length);
 
     // Apply completed wall cut immediately (skip if level already finishing)
     if (!game.levelComplete && game.activeWall && game.activeWall.isComplete) {
