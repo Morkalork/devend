@@ -20,6 +20,7 @@ import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { clearBallRenderCache } from "@/lib/ballRenderCache";
 import { clearBallSphereCache } from "@/lib/ballSphereCache";
+import { clearRainGlyphCache } from "@/lib/rendering/rainGlyphCache";
 import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/rendering/renderFrame";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
@@ -537,6 +538,7 @@ export function GameCanvas({
       game.boardRect = computeBoardRect(physW, physH);
       clearBallRenderCache();
       clearBallSphereCache();
+      clearRainGlyphCache();
       clearBallEffectsCache();
       repaintRegionCanvas();
       paintOverlayCanvas();
@@ -658,6 +660,7 @@ export function GameCanvas({
       stopGameLoop(game);
       clearBallRenderCache();
       clearBallSphereCache();
+      clearRainGlyphCache();
       clearBallEffectsCache();
       clearRenderFrameCache();
     };

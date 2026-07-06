@@ -20,6 +20,7 @@ import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { computeBallTrajectory, hexToRgba } from "@/lib/gameUtils";
 import { getBallBase, getBallSpecular, getHexOverlay } from "@/lib/ballRenderCache";
 import { getBallSphere } from "@/lib/ballSphereCache";
+import { getRainGlyph } from "./rainGlyphCache";
 import { renderBallEffects } from "@/lib/ballEffects";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
@@ -238,6 +239,21 @@ function getFlamePuff(rgb: string): OffscreenCanvas {
 const FLAME_DRAINED: [string, string, string] = ['255,255,255', '230,234,242', '196,201,212'];
 const FLAME_SHEAR_SPEED = 380; // ball speed (world u/s) at which the lean saturates
 
+/**
+ * LOD for the flame plume: how many tongues (each a blit) to draw given the
+ * number of flaming balls on screen. The plume is the dominant per-ball draw
+ * cost, and its detail matters least exactly when the board is crowded, so the
+ * count degrades gracefully. Tuned to keep total flame blits roughly bounded
+ * (~100-150/frame) as ball count climbs.
+ */
+export function flameTonguesForCount(activeBalls: number): number {
+  if (activeBalls <= 8) return 12;
+  if (activeBalls <= 14) return 9;
+  if (activeBalls <= 20) return 6;
+  if (activeBalls <= 30) return 4;
+  return 3;
+}
+
 // Per-colour flame palette derived from the ball's own colour: a near-white hot
 // core, the ball colour in the middle, and a darkened tip. Cached so a distinct
 // ball colour yields a stable set of puff colours (bounding getFlamePuff's cache).
@@ -270,6 +286,11 @@ function ballFlamePalette(hex: string): [string, string, string] {
  * fast ball's flame trails behind it like a real burning object in motion. The
  * vertical shear is damped and can never overcome buoyancy, so it always burns
  * upward. `alpha` scales overall opacity.
+ *
+ * `tongues` is the LOD tongue count (see flameTonguesForCount): each tongue is a
+ * blit, and the plume is the dominant per-ball draw cost, so a crowded board
+ * uses fewer tongues. Tongues are seeded in a stable order, so drawing the first
+ * N is a stable subset of the full plume, not a different-looking flame.
  */
 function drawBallFlame(
   ctx: CanvasRenderingContext2D,
@@ -277,9 +298,10 @@ function drawBallFlame(
   vx: number, vy: number,
   palette: [string, string, string],
   alpha: number,
+  tongues = 12,
 ): void {
   const rng = _mulberry(_hashStr(`flame-${id}`));
-  const FLAME_N = 12;
+  const FLAME_N = tongues;
   const flameH = r * 4.8;
   const life = 620; // ms per tongue cycle
   const speed = Math.hypot(vx, vy);
@@ -489,9 +511,10 @@ export function renderFrame(
     const dtRain = rain.lastTime ? Math.min((now - rain.lastTime) / 1000, 0.05) : 0;
     rain.lastTime = now;
     const { scale: s, left: bx, top: by } = game.boardRect;
+    // Blit pre-rendered glyph sprites instead of ctx.fillText per particle: text
+    // shaping is one of the slowest mobile Canvas2D ops and ran 40x every frame.
+    const fontPx = Math.round(14 * s);
     ctx.save();
-    ctx.font = `${Math.round(14 * s)}px 'JetBrains Mono', monospace`;
-    ctx.textBaseline = 'top';
     for (const p of rain.particles) {
       p.y += p.speed * dtRain;
       if (p.y > BOARD_HEIGHT + 20) {
@@ -501,9 +524,9 @@ export function renderFrame(
         p.alpha = 0.03 + Math.random() * 0.04;
         p.speed = 30 + Math.random() * 50;
       }
+      const glyph = getRainGlyph(p.symbol, accentColor, fontPx);
       ctx.globalAlpha = p.alpha;
-      ctx.fillStyle = accentColor;
-      ctx.fillText(p.symbol, bx + p.x * s, by + p.y * s);
+      ctx.drawImage(glyph.canvas, Math.round(bx + p.x * s) - glyph.pad, Math.round(by + p.y * s) - glyph.pad);
     }
     ctx.restore();
   }
@@ -1355,6 +1378,9 @@ export function renderFrame(
   }
 
   // ── Balls ─────────────────────────────────────────────────────────────────
+  // Flame LOD: fewer tongues per plume as more balls burn, so the dominant
+  // per-ball draw cost stays roughly bounded on a crowded board.
+  const flameTongues = flameTonguesForCount(balls.reduce((n, b) => (b.state === 'active' ? n + 1 : n), 0));
   for (const ball of balls) {
     const screenPos = w2s(
       (ball.renderPosition ?? ball.position).x,
@@ -1436,6 +1462,7 @@ export function renderFrame(
         drawBallFlame(
           ctx, screenPos.x, screenPos.y, screenRadius, ball.id, nowF,
           ball.velocity.x, ball.velocity.y, ballFlamePalette(ball.color), assimScale,
+          flameTongues,
         );
       }
     }
