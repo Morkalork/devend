@@ -15,6 +15,7 @@ import {
   clipLineAgainstPolygons,
   lineSegmentIntersection,
   Vector2,
+  Polygon,
 } from "@/lib/polygon";
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { computeBallTrajectory, hexToRgba } from "@/lib/gameUtils";
@@ -162,6 +163,32 @@ function worldToScreen(worldX: number, worldY: number, boardRect: BoardRect) {
     x: boardRect.left + worldX * boardRect.scale,
     y: boardRect.top  + worldY * boardRect.scale,
   };
+}
+
+/**
+ * Screen-space Path2D of all obstacle outlines, for punching obstacle holes out
+ * of a fill via the even-odd rule. Obstacles are static per level, so the traced
+ * path (each obstacle is a 64-gon) is cached and only rebuilt on a boardRect/scale
+ * change or when the obstacle-polygon array identity changes (new level).
+ */
+function getObstacleHolesPath(obstacles: Polygon[], boardRect: BoardRect, scale: number): Path2D {
+  const key = `${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}`;
+  if (_obstacleHolesCache.key !== key || _obstacleHolesCache.polys !== obstacles) {
+    _obstacleHolesCache.key = key;
+    _obstacleHolesCache.polys = obstacles;
+    const holes = new Path2D();
+    for (const poly of obstacles) {
+      const v0 = worldToScreen(poly.vertices[0].x, poly.vertices[0].y, boardRect);
+      holes.moveTo(v0.x, v0.y);
+      for (let i = 1; i < poly.vertices.length; i++) {
+        const vp = worldToScreen(poly.vertices[i].x, poly.vertices[i].y, boardRect);
+        holes.lineTo(vp.x, vp.y);
+      }
+      holes.closePath();
+    }
+    _obstacleHolesCache.path = holes;
+  }
+  return _obstacleHolesCache.path!;
 }
 
 // ── Destructible damage cracks (Phase 2) ──────────────────────────────────
@@ -1652,6 +1679,16 @@ export function renderFrame(
 
       ctx.save();
       if (flash.polygon.length >= 3) {
+        // The lock polygon is a ray-cast star polygon from the region centroid,
+        // so it can't represent a floating obstacle as a hole and would tint
+        // pixels behind an obstacle (the "shadow behind the obstacle" bug). Clip
+        // obstacles out with the even-odd rule (board rect minus obstacle
+        // subpaths), exactly like the active-fence fill below.
+        ctx.save();
+        const holeClip = new Path2D();
+        holeClip.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
+        holeClip.addPath(getObstacleHolesPath(obstacles, boardRect, scale));
+        ctx.clip(holeClip, 'evenodd');
         ctx.beginPath();
         const fp = w2s(flash.polygon[0].x, flash.polygon[0].y);
         ctx.moveTo(fp.x, fp.y);
@@ -1662,6 +1699,7 @@ export function renderFrame(
         ctx.closePath();
         ctx.fillStyle = `rgba(${acR}, ${acG}, ${acB}, ${fillAlpha})`;
         ctx.fill();
+        ctx.restore();
       }
 
       if (elapsed >= LOCK_PULSE_DURATION && glowAlpha > 0) {
@@ -1732,27 +1770,8 @@ export function renderFrame(
       const { left, top, width, height } = game.boardRect;
       clipPath.rect(left, top, width, height);
     }
-    // Obstacle hole subpaths are static per level — cached as a Path2D
-    // instead of re-tracing every (64-gon) polygon on every growth frame.
-    {
-      const holesKey = `${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}`;
-      if (_obstacleHolesCache.key !== holesKey || _obstacleHolesCache.polys !== obstacles) {
-        _obstacleHolesCache.key = holesKey;
-        _obstacleHolesCache.polys = obstacles;
-        const holes = new Path2D();
-        for (const poly of obstacles) {
-          const sv0 = w2s(poly.vertices[0].x, poly.vertices[0].y);
-          holes.moveTo(sv0.x, sv0.y);
-          for (let i = 1; i < poly.vertices.length; i++) {
-            const svp = w2s(poly.vertices[i].x, poly.vertices[i].y);
-            holes.lineTo(svp.x, svp.y);
-          }
-          holes.closePath();
-        }
-        _obstacleHolesCache.path = holes;
-      }
-      clipPath.addPath(_obstacleHolesCache.path!);
-    }
+    // Obstacle hole subpaths are static per level — cached (see helper).
+    clipPath.addPath(getObstacleHolesPath(obstacles, boardRect, scale));
     ctx.clip(clipPath, 'evenodd');
 
     ctx.lineCap = 'round';

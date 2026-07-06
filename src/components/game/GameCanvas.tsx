@@ -422,8 +422,19 @@ export function GameCanvas({
       // Step 2: punch transparent holes for active region cells
       const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
       const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
+      const grid = game.spaceGrid;
       for (const region of game.regions) {
         for (const sample of (region.samplePoints ?? [])) {
+          // Authoritative mask: only punch where the space grid still marks this
+          // cell ACTIVE. A region's sample point can leak onto the captured side
+          // of an obstacle (region polygons are bounding boxes, and the 8-way
+          // sample adjacency in regionSplit can connect past an obstacle corner);
+          // punching it would clear a hole in the captured fill, showing the dark
+          // background through it as a "shadow behind the obstacle".
+          if (grid) {
+            const idx = worldToGridIndex(grid, sample.x, sample.y);
+            if (idx < 0 || grid.cells[idx] !== CellState.ACTIVE) continue;
+          }
           const sx = Math.round(boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale);
           const sy = Math.round(boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale);
           rCtx.clearRect(sx, sy, size, size);
