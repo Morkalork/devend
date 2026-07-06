@@ -69,6 +69,8 @@ interface GameScreenProps {
   fenceDurability?: number | null;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
+  /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
+  showPerfOverlay?: boolean;
   /** Admin/Playground: on clear, freeze on the drained frame instead of completing. */
   freezeOnClear?: boolean;
   /** Admin/Playground: fired the instant the map is won (before the shimmer). */
@@ -107,6 +109,7 @@ export function GameScreen({
   activeLoadouts = [],
   fenceDurability = null,
   showBallSpeeds = false,
+  showPerfOverlay = false,
   freezeOnClear = false,
   onMapComplete,
 }: GameScreenProps) {
@@ -272,6 +275,7 @@ export function GameScreen({
             fenceDurability={fenceDurability}
             parallaxTickRef={memParallaxTickRef}
             showBallSpeeds={showBallSpeeds}
+            showPerfOverlay={showPerfOverlay}
           />
         </div>
 

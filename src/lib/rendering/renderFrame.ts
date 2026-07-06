@@ -19,6 +19,7 @@ import {
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { computeBallTrajectory, hexToRgba } from "@/lib/gameUtils";
 import { getBallBase, getBallSpecular, getHexOverlay } from "@/lib/ballRenderCache";
+import { getBallSphere } from "@/lib/ballSphereCache";
 import { renderBallEffects } from "@/lib/ballEffects";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
@@ -1365,10 +1366,10 @@ export function renderFrame(
     const screenRadius = ball.radius * scale;
     const isFastest = ball.id === game.fastestBallId;
 
+    // Per-ball hash de-correlates the sphere band phases between balls; the
+    // shading itself is a pure function of (radius, rotation, hash), cached by
+    // getBallSphere. Phase math lives there now.
     const ballIdHash = ball.id.charCodeAt(ball.id.length - 1) || 0;
-    const primaryPhase = ball.rotation;
-    const secondaryPhase = ball.rotation * 0.7 + ballIdHash * 0.5;
-    const tertiaryPhase = ball.rotation * 1.3 + ballIdHash * 0.3;
 
     if (isFastest) {
       ctx.save();
@@ -1442,94 +1443,25 @@ export function renderFrame(
     const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);
     ctx.drawImage(baseCanvas, Math.round(screenPos.x - baseHalf), Math.round(screenPos.y - baseHalf));
 
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
-    ctx.clip();
-
-    // Layer 1: Latitude bands
-    ctx.save();
-    ctx.translate(screenPos.x, screenPos.y);
-    const tiltAngle = Math.sin(secondaryPhase) * 0.4;
-    ctx.rotate(tiltAngle);
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.25)";
-    ctx.lineWidth = 1.8 * scale;
-    ctx.lineCap = "round";
-    for (let i = -2; i <= 2; i++) {
-      const baseY = i * screenRadius * 0.35;
-      const compression = 0.6 + 0.4 * Math.cos(primaryPhase + i * 0.3);
-      const yOffset = baseY * compression;
-      if (Math.abs(yOffset) < screenRadius * 0.95) {
-        const xExtent = Math.sqrt(Math.max(0, screenRadius * screenRadius - yOffset * yOffset));
-        ctx.beginPath();
-        ctx.ellipse(0, yOffset, xExtent, screenRadius * 0.08, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
+    // Sphere shading (latitude bands, longitude meridians, equatorial band,
+    // polar caps) — Layers 1-4 baked into a rotation-bucketed sprite and blitted
+    // once, instead of ~18 live ellipse/arc path ops + a clip per ball per frame.
+    // Pure black-on-transparent, so it sits directly over the coloured base disc.
+    {
+      const sphere = getBallSphere(screenRadius, scale, ball.rotation, ballIdHash);
+      ctx.drawImage(sphere.canvas, Math.round(screenPos.x - sphere.halfSize), Math.round(screenPos.y - sphere.halfSize));
     }
-    ctx.restore();
 
-    // Layer 2: Longitude meridians
-    ctx.save();
-    ctx.translate(screenPos.x, screenPos.y);
-    ctx.rotate(primaryPhase);
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
-    ctx.lineWidth = 2 * scale;
-    for (let i = 0; i < 4; i++) {
-      const angle = (i / 4) * Math.PI * 2;
-      const xOffset = Math.sin(angle) * screenRadius * 0.9;
-      const foreShorten = Math.abs(Math.cos(angle));
-      if (foreShorten > 0.15) {
-        ctx.beginPath();
-        ctx.ellipse(xOffset * 0.5, 0, Math.max(1, screenRadius * 0.15 * foreShorten), screenRadius * 0.85, 0, -Math.PI / 2, Math.PI / 2);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
-
-    // Layer 3: Equatorial band
-    ctx.save();
-    ctx.translate(screenPos.x, screenPos.y);
-    ctx.rotate(tertiaryPhase);
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.lineWidth = 3 * scale;
-    ctx.beginPath();
-    ctx.moveTo(-screenRadius, 0);
-    ctx.lineTo(screenRadius, 0);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
-    const segmentCount = 8;
-    for (let i = 0; i < segmentCount; i++) {
-      const segAngle = (i / segmentCount) * Math.PI * 2;
-      const xPos = Math.cos(segAngle) * screenRadius * 0.65;
-      const yPos = Math.sin(segAngle) * screenRadius * 0.15;
-      const visibility = Math.cos(segAngle);
-      if (visibility > -0.3) {
-        const segSize = (2.5 + visibility * 1.5) * scale;
-        ctx.beginPath();
-        ctx.arc(xPos, yPos, segSize, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.restore();
-
-    // Layer 4: Polar caps
-    ctx.save();
-    ctx.translate(screenPos.x, screenPos.y);
-    const tiltX = Math.sin(secondaryPhase) * screenRadius * 0.1;
-    const tiltY = Math.cos(secondaryPhase) * screenRadius * 0.1;
-    ctx.fillStyle = "rgba(0, 0, 0, 0.12)";
-    ctx.beginPath();
-    ctx.ellipse(tiltX, -screenRadius * 0.7 + tiltY, screenRadius * 0.35, screenRadius * 0.15, secondaryPhase * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(-tiltX, screenRadius * 0.7 - tiltY, screenRadius * 0.35, screenRadius * 0.15, -secondaryPhase * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // Layer 5: Circuit-board hex overlay
+    // Layer 5: Circuit-board hex overlay. Kept live (not baked) because its
+    // 'overlay' composite must blend against the coloured base disc beneath it;
+    // baking it onto transparency would change the blend. Clips to the ball
+    // circle itself now that the shared clip above is gone.
     if (screenRadius > 0) {
       const hexOC = getHexOverlay(accentColor);
       ctx.save();
+      ctx.beginPath();
+      ctx.arc(screenPos.x, screenPos.y, screenRadius, 0, Math.PI * 2);
+      ctx.clip();
       ctx.globalCompositeOperation = 'overlay';
       ctx.globalAlpha = 0.18;
       ctx.translate(Math.round(screenPos.x), Math.round(screenPos.y));
@@ -1537,8 +1469,6 @@ export function renderFrame(
       ctx.drawImage(hexOC, -screenRadius, -screenRadius, screenRadius * 2, screenRadius * 2);
       ctx.restore();
     }
-
-    ctx.restore(); // end clip
 
     ctx.save();
     ctx.beginPath();
