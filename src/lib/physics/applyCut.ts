@@ -15,7 +15,7 @@ import {
   rasterizeCutToGrid,
   findGridRegions,
   getRemainingPercent,
-  removeRegion,
+  captureUnreachableCells,
   buildGridRegionMap,
   findGridRegionForBall,
 } from "@/lib/spaceGrid";
@@ -57,25 +57,27 @@ function wouldWallTrapBallCheck(start: Vector2, end: Vector2, game: CanvasGameSt
 }
 
 /**
- * Capture (REMOVE from the space grid) every connected grid region that has no
- * active ball in it. A won ball counts as no ball, so a region a ball just locked
- * in becomes capturable. game.gridRegions is left holding only the ball-bearing
- * regions.
+ * Capture (REMOVE from the space grid) every cell no active ball can physically
+ * reach. This captures fenced-off, ball-free areas AND pockets sealed behind an
+ * obstacle by a gap too narrow for the ball to fit through (which plain 1-cell
+ * connectivity wrongly counts as reachable — the "shadow behind the obstacle").
+ * A won ball counts as no ball, so a region a ball just locked in is captured.
+ * game.gridRegions is left holding only the surviving (ball-bearing) regions.
  */
 function captureBallFreeGridRegions(game: CanvasGameState): void {
   if (!game.spaceGrid) return;
+  captureUnreachableCells(game.spaceGrid, game.balls);
+
+  // Recompute the surviving regions (all now ball-reachable) for downstream
+  // bookkeeping. Neighbour-search fallback locates balls whose grid-cell centre
+  // sits in a REMOVED cell (e.g. touching a mirror boundary).
   const gridRegions = findGridRegions(game.spaceGrid);
-  // Build index→region map once; use neighbour-search fallback so balls whose
-  // grid-cell centre falls inside a mirror polygon (REMOVED) are still located.
   const gridRegionMap = buildGridRegionMap(gridRegions);
   const regionsWithBalls = new Set<(typeof gridRegions)[number]>();
   for (const ball of game.balls) {
     if (ball.state === 'won') continue;
     const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
     if (ballRegion) regionsWithBalls.add(ballRegion);
-  }
-  for (const region of gridRegions) {
-    if (!regionsWithBalls.has(region)) removeRegion(game.spaceGrid, region);
   }
   game.gridRegions = [...regionsWithBalls];
 }

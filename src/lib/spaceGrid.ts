@@ -413,6 +413,119 @@ export function removeRegion(grid: SpaceGrid, region: GridRegion): void {
 }
 
 /**
+ * Capture (REMOVE) every ACTIVE cell that no ball can PHYSICALLY reach, given the
+ * ball radius. Grid connectivity alone is 1-cell and ignores ball size, so a
+ * pocket sealed behind an obstacle by a gap narrower than the ball reads as
+ * "reachable" and never captures — the persistent "shadow behind the obstacle".
+ * This also subsumes ordinary ball-free capture (a fenced-off area with no ball
+ * has no reachable core, so all of it is captured).
+ *
+ * Method:
+ *  1. Clearance = BFS distance (in cells) from each ACTIVE cell to the nearest
+ *     REMOVED cell (wall/obstacle/edge).
+ *  2. "Core" cells are where a ball CENTRE fits: clearance from the wall edge >=
+ *     radius. A channel narrower than the ball has no core cells.
+ *  3. Flood core cells reachable from each ball.
+ *  4. Keep every ACTIVE cell a reachable ball physically covers (within radius of
+ *     a reachable core cell); capture the rest.
+ *
+ * Uses the SMALLEST active-ball radius so it never captures space some ball could
+ * actually reach (conservative — at worst it leaves a thin sliver, never over-
+ * captures). No active balls: everything remaining is captured (level is over).
+ */
+export function captureUnreachableCells(
+  grid: SpaceGrid,
+  balls: { position: Vector2; radius: number; state: string; speed: number }[],
+): void {
+  const { width, height, cells, cellSize } = grid;
+  const n = cells.length;
+
+  const activeBalls = balls.filter(b => b.state !== 'won' && b.speed > 0);
+  if (activeBalls.length === 0) {
+    // No ball left in play — everything remaining is captured territory.
+    for (let i = 0; i < n; i++) {
+      if (cells[i] === CellState.ACTIVE) { cells[i] = CellState.REMOVED; grid.activeCount--; }
+    }
+    return;
+  }
+
+  // 1. Multi-source BFS: distance (in cells) from each ACTIVE cell to nearest REMOVED.
+  const dist = new Int32Array(n).fill(-1);
+  const q = new Int32Array(n);
+  let qh = 0, qt = 0;
+  for (let i = 0; i < n; i++) {
+    if (cells[i] !== CellState.ACTIVE) { dist[i] = 0; q[qt++] = i; }
+  }
+  if (qt === 0) return; // no walls at all — nothing to capture against
+  while (qh < qt) {
+    const cur = q[qh++];
+    const row = (cur / width) | 0, col = cur % width;
+    const d = dist[cur] + 1;
+    if (row > 0)          { const ni = cur - width; if (dist[ni] < 0) { dist[ni] = d; q[qt++] = ni; } }
+    if (row < height - 1) { const ni = cur + width; if (dist[ni] < 0) { dist[ni] = d; q[qt++] = ni; } }
+    if (col > 0)          { const ni = cur - 1;     if (dist[ni] < 0) { dist[ni] = d; q[qt++] = ni; } }
+    if (col < width - 1)  { const ni = cur + 1;     if (dist[ni] < 0) { dist[ni] = d; q[qt++] = ni; } }
+  }
+
+  // 2. Core threshold: a cell at BFS distance d has its nearest wall edge about
+  //    (d*cellSize - cellSize/2) away, so a ball of radius r fits when
+  //    d >= (r + cellSize/2) / cellSize.
+  const radius = Math.min(...activeBalls.map(b => b.radius));
+  const coreMinDist = (radius + cellSize / 2) / cellSize;
+  const radiusCells = Math.ceil(radius / cellSize);
+  const isCore = (i: number) => cells[i] === CellState.ACTIVE && dist[i] >= coreMinDist;
+
+  // 3. Flood core cells reachable from a ball (seed the core cells the ball covers).
+  const reachable = new Uint8Array(n);
+  qh = 0; qt = 0;
+  for (const b of activeBalls) {
+    const bi = worldToGridIndex(grid, b.position.x, b.position.y);
+    if (bi < 0) continue;
+    const brow = (bi / width) | 0, bcol = bi % width;
+    for (let dr = -radiusCells; dr <= radiusCells; dr++) {
+      for (let dc = -radiusCells; dc <= radiusCells; dc++) {
+        const rr = brow + dr, cc = bcol + dc;
+        if (rr < 0 || rr >= height || cc < 0 || cc >= width) continue;
+        const si = rr * width + cc;
+        if (isCore(si) && !reachable[si]) { reachable[si] = 1; q[qt++] = si; }
+      }
+    }
+  }
+  while (qh < qt) {
+    const cur = q[qh++];
+    const row = (cur / width) | 0, col = cur % width;
+    if (row > 0)          { const ni = cur - width; if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+    if (row < height - 1) { const ni = cur + width; if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+    if (col > 0)          { const ni = cur - 1;     if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+    if (col < width - 1)  { const ni = cur + 1;     if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+  }
+
+  // 4. Dilate reachable core out to `radiusCells` over ACTIVE cells: the ball,
+  //    centred on a reachable core cell, physically covers cells within its radius.
+  const steps = new Int32Array(n);
+  for (let k = 0; k < qt; k++) steps[q[k]] = radiusCells;
+  qh = 0; // re-walk the reachable-core cells already in the queue, now dilating
+  while (qh < qt) {
+    const cur = q[qh++];
+    const s = steps[cur];
+    if (s <= 0) continue;
+    const row = (cur / width) | 0, col = cur % width;
+    const spread = (ni: number) => {
+      if (cells[ni] === CellState.ACTIVE && !reachable[ni]) { reachable[ni] = 1; steps[ni] = s - 1; q[qt++] = ni; }
+    };
+    if (row > 0) spread(cur - width);
+    if (row < height - 1) spread(cur + width);
+    if (col > 0) spread(cur - 1);
+    if (col < width - 1) spread(cur + 1);
+  }
+
+  // 5. Capture every ACTIVE cell no ball can reach.
+  for (let i = 0; i < n; i++) {
+    if (cells[i] === CellState.ACTIVE && !reachable[i]) { cells[i] = CellState.REMOVED; grid.activeCount--; }
+  }
+}
+
+/**
  * Get all ACTIVE cell world positions (for rendering).
  */
 export function getActiveCellPositions(grid: SpaceGrid): Vector2[] {
