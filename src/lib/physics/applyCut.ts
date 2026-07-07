@@ -18,7 +18,6 @@ import {
   removeRegion,
   buildGridRegionMap,
   findGridRegionForBall,
-  CellState,
 } from "@/lib/spaceGrid";
 import {
   reassignBallsToRegions,
@@ -62,44 +61,23 @@ function wouldWallTrapBallCheck(start: Vector2, end: Vector2, game: CanvasGameSt
  * active ball in it. A won ball counts as no ball, so a region a ball just locked
  * in becomes capturable. game.gridRegions is left holding only the ball-bearing
  * regions.
- *
- * Obstacles are temporarily treated as playable while capture connectivity is
- * computed, so ONLY fences and board edges bound a region. Without this, an
- * obstacle subdivides the grid and can leave a pocket sealed behind it that the
- * ball can't physically reach (through a sub-ball-width gap) yet the grid counts
- * as reachable — so it never captures and shows as a dark "shadow behind the
- * obstacle". Merging across obstacles folds such a pocket into the fenced-off,
- * ball-free area around it so it captures. Obstacle cells that end up inside a
- * ball-bearing region are restored to REMOVED (objects the ball plays around).
  */
 function captureBallFreeGridRegions(game: CanvasGameState): void {
-  const grid = game.spaceGrid;
-  if (!grid) return;
-
-  for (const ci of grid.obstacleCells) {
-    if (grid.cells[ci] === CellState.REMOVED) { grid.cells[ci] = CellState.ACTIVE; grid.activeCount++; }
-  }
-
-  const gridRegions = findGridRegions(grid);
+  if (!game.spaceGrid) return;
+  const gridRegions = findGridRegions(game.spaceGrid);
   // Build index→region map once; use neighbour-search fallback so balls whose
   // grid-cell centre falls inside a mirror polygon (REMOVED) are still located.
   const gridRegionMap = buildGridRegionMap(gridRegions);
   const regionsWithBalls = new Set<(typeof gridRegions)[number]>();
   for (const ball of game.balls) {
     if (ball.state === 'won') continue;
-    const ballRegion = findGridRegionForBall(grid, gridRegionMap, ball.position.x, ball.position.y);
+    const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
     if (ballRegion) regionsWithBalls.add(ballRegion);
   }
   for (const region of gridRegions) {
-    if (!regionsWithBalls.has(region)) removeRegion(grid, region);
+    if (!regionsWithBalls.has(region)) removeRegion(game.spaceGrid, region);
   }
   game.gridRegions = [...regionsWithBalls];
-
-  // Restore obstacles: any obstacle cell not captured into a ball-free region
-  // goes back to REMOVED.
-  for (const ci of grid.obstacleCells) {
-    if (grid.cells[ci] === CellState.ACTIVE) { grid.cells[ci] = CellState.REMOVED; grid.activeCount--; }
-  }
 }
 
 export function applyCutFn(
