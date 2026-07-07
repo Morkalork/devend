@@ -34,6 +34,25 @@ let el: HTMLAudioElement | null = null;
 let currentKey: string | null = null; // logical track: bandKey() or 'main'
 let musicMuted = false;
 let musicVolume = DEFAULT_VOLUME;
+let audioUnlocked = false;
+let gestureArmed = false;
+
+/**
+ * Browsers block audio until the first user gesture. On the menu (the first
+ * screen) our .play() is rejected, so arm a one-time capture-phase listener that,
+ * on the first interaction anywhere, resumes whatever track we intended to play.
+ */
+function armGestureUnlock(): void {
+  if (audioUnlocked || gestureArmed || typeof window === "undefined") return;
+  gestureArmed = true;
+  const events = ["pointerdown", "keydown", "touchstart"] as const;
+  const handler = () => {
+    audioUnlocked = true;
+    for (const ev of events) window.removeEventListener(ev, handler, true);
+    if (el && currentKey && el.paused) el.play().catch(() => { /* ignore */ });
+  };
+  for (const ev of events) window.addEventListener(ev, handler, true);
+}
 
 function ensureEl(): HTMLAudioElement | null {
   if (typeof Audio === "undefined") return null; // non-browser (tests/SSR)
@@ -69,7 +88,10 @@ function playSrc(src: string, withFallback: boolean): void {
   a.volume = musicVolume;
   applyMute(a);
   const p = a.play();
-  if (p) p.catch(() => { /* autoplay blocked until a user gesture; retried later */ });
+  if (p && typeof p.catch === "function") {
+    // Autoplay blocked before the first gesture: arm a one-time resume.
+    p.catch(() => { armGestureUnlock(); });
+  }
 }
 
 /**
