@@ -1709,12 +1709,16 @@ export function renderFrame(
         glowAlpha = fillAlpha * 0.7;
       } else if (elapsed < LOCK_PULSE_DURATION + LOCK_FLOOD_DURATION) {
         const ft = Math.min(1, (elapsed - LOCK_PULSE_DURATION) / LOCK_FLOOD_DURATION);
-        const ease = ft < 0.5 ? 2 * ft * ft : 1 - Math.pow(-2 * ft + 2, 2) / 2;
-        fillAlpha = 0.2 + ease * 0.65;
+        // Wash the accent flood in and back out over the region, leaving nothing
+        // behind. A permanent fill here painted the ray-cast lock polygon, which
+        // is occluded by any obstacle from the ball's lock centre — that stale
+        // wedge in the obstacle's shadow was the persistent "shadow behind the
+        // obstacle". The captured territory already shows via the region fill, so
+        // no overlay needs to linger.
+        fillAlpha = Math.sin(ft * Math.PI) * 0.7;
         glowAlpha = (1 - ft) * 0.9;
       } else {
-        // Animation complete — hold a subtle permanent fill over the captured region.
-        fillAlpha = 0.22;
+        fillAlpha = 0;
         glowAlpha = 0;
       }
 
