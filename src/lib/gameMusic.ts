@@ -1,10 +1,11 @@
 // Background Music
 //
-// One looping <audio> element (module singleton, so it survives the per-round
-// GameScreen remount and keeps playing seamlessly). Track selection is driven by
-// the current level: a shared "main" loop plus one track per 5-level band
-// (levels 1-5 -> maps_1-5.mp3, 6-10 -> maps_6-10.mp3, ...). If a band track is
-// missing or fails to load, we fall back to main.mp3.
+// Two looping <audio> elements (module singletons, so they survive the per-round
+// GameScreen remount and keep playing). Track selection is driven by the current
+// level: a shared "main" loop plus one track per 5-level band (levels 1-5 ->
+// maps_1-5.mp3, 6-10 -> maps_6-10.mp3, ...). Switching crossfades between the two
+// elements so track changes are smooth, not abrupt. A missing/broken band track
+// falls back to main.mp3.
 //
 // Files live in public/assets/music/ and are served at /assets/music/*.
 
@@ -14,6 +15,7 @@ const MUSIC_DIR = "/assets/music";
 const MAIN_TRACK = `${MUSIC_DIR}/main.mp3`;
 const DEFAULT_VOLUME = 0.35; // sits under the SFX; tune to taste
 const LEVELS_PER_BAND = 5;
+const CROSSFADE_MS = 900;
 
 /** Path of the band track for a level (levels 1-5 -> maps_1-5.mp3, etc.). */
 export function musicFileForLevel(levelNumber: number): string {
@@ -30,39 +32,30 @@ function bandKey(levelNumber: number): string {
   return `band:${Math.floor((level - 1) / LEVELS_PER_BAND)}`;
 }
 
-let el: HTMLAudioElement | null = null;
+// Two-element crossfade deck. `activeIndex` is the element holding the current
+// (foreground) track; the other is used for the incoming track on a switch.
+let deck: [HTMLAudioElement, HTMLAudioElement] | null = null;
+let activeIndex: 0 | 1 = 0;
 let currentKey: string | null = null; // logical track: bandKey() or 'main'
 let musicMuted = false;
 let musicVolume = DEFAULT_VOLUME;
+let fadeGen = 0; // bumped on each switch so stale fades cancel themselves
 let audioUnlocked = false;
 let gestureArmed = false;
 
-/**
- * Browsers block audio until the first user gesture. On the menu (the first
- * screen) our .play() is rejected, so arm a one-time capture-phase listener that,
- * on the first interaction anywhere, resumes whatever track we intended to play.
- */
-function armGestureUnlock(): void {
-  if (audioUnlocked || gestureArmed || typeof window === "undefined") return;
-  gestureArmed = true;
-  const events = ["pointerdown", "keydown", "touchstart"] as const;
-  const handler = () => {
-    audioUnlocked = true;
-    for (const ev of events) window.removeEventListener(ev, handler, true);
-    if (el && currentKey && el.paused) el.play().catch(() => { /* ignore */ });
-  };
-  for (const ev of events) window.addEventListener(ev, handler, true);
-}
-
-function ensureEl(): HTMLAudioElement | null {
+function ensureDeck(): [HTMLAudioElement, HTMLAudioElement] | null {
   if (typeof Audio === "undefined") return null; // non-browser (tests/SSR)
-  if (!el) {
-    el = new Audio();
-    el.loop = true;
-    el.preload = "auto";
-    el.volume = musicVolume;
+  if (!deck) {
+    const make = () => {
+      const a = new Audio();
+      a.loop = true;
+      a.preload = "auto";
+      a.volume = 0;
+      return a;
+    };
+    deck = [make(), make()];
   }
-  return el;
+  return deck;
 }
 
 function applyMute(a: HTMLAudioElement): void {
@@ -72,68 +65,123 @@ function applyMute(a: HTMLAudioElement): void {
 }
 
 /**
- * Point the element at `src` and play. When `withFallback` is set (a band track),
- * a load error routes to main.mp3. `.play()` may reject before the first user
- * gesture; that's swallowed and the next gesture-driven call retries.
+ * Browsers block audio until the first user gesture. On the menu (the first
+ * screen) our .play() is rejected, so arm a one-time capture-phase listener that,
+ * on the first interaction anywhere, resumes the active track.
  */
-function playSrc(src: string, withFallback: boolean): void {
-  const a = ensureEl();
-  if (!a) return;
+function armGestureUnlock(): void {
+  if (audioUnlocked || gestureArmed || typeof window === "undefined") return;
+  gestureArmed = true;
+  const events = ["pointerdown", "keydown", "touchstart"] as const;
+  const handler = () => {
+    audioUnlocked = true;
+    for (const ev of events) window.removeEventListener(ev, handler, true);
+    if (deck && currentKey) {
+      const a = deck[activeIndex];
+      if (a.paused) a.play().catch(() => { /* ignore */ });
+    }
+  };
+  for (const ev of events) window.addEventListener(ev, handler, true);
+}
 
-  a.onerror = withFallback
-    ? () => { a.onerror = null; playSrc(MAIN_TRACK, false); }
+/**
+ * Ramp an element's volume to `target` over `durationMs`. Tagged with the switch
+ * generation so a newer switch cancels this fade mid-flight. Muted elements still
+ * ramp (inaudible) so unmuting mid-fade lands at the right level.
+ */
+function fadeTo(a: HTMLAudioElement, target: number, durationMs: number, gen: number, onDone?: () => void): void {
+  if (typeof requestAnimationFrame === "undefined") { a.volume = target; onDone?.(); return; }
+  const start = a.volume;
+  const t0 = performance.now();
+  const step = (now: number) => {
+    if (gen !== fadeGen) return; // superseded by a newer switch
+    const p = Math.min(1, (now - t0) / durationMs);
+    a.volume = Math.max(0, Math.min(1, start + (target - start) * p));
+    if (p < 1) requestAnimationFrame(step);
+    else onDone?.();
+  };
+  requestAnimationFrame(step);
+}
+
+/**
+ * Crossfade to `src` (logical `key`). No-op if that track is already current, so
+ * calling it every level only switches at band boundaries. When `withFallback`,
+ * a load error swaps the incoming element to main.mp3 without changing the key
+ * (so a missing band file isn't re-attempted on every level in the band).
+ */
+function switchTo(src: string, key: string, withFallback: boolean): void {
+  if (key === currentKey) return;
+  const pair = ensureDeck();
+  if (!pair) return;
+  currentKey = key;
+  const gen = ++fadeGen;
+
+  const outgoing = pair[activeIndex];
+  const incoming = pair[(1 - activeIndex) as 0 | 1];
+  const crossfade = !outgoing.paused;
+
+  incoming.onerror = withFallback
+    ? () => {
+        incoming.onerror = null;
+        incoming.src = MAIN_TRACK; // fall back, keep the in-flight crossfade + key
+        incoming.currentTime = 0;
+        const pf = incoming.play();
+        if (pf && typeof pf.catch === "function") pf.catch(() => armGestureUnlock());
+      }
     : null;
 
-  a.src = src;
-  a.volume = musicVolume;
-  applyMute(a);
-  const p = a.play();
-  if (p && typeof p.catch === "function") {
-    // Autoplay blocked before the first gesture: arm a one-time resume.
-    p.catch(() => { armGestureUnlock(); });
+  incoming.src = src;
+  incoming.currentTime = 0;
+  incoming.volume = 0;
+  applyMute(incoming);
+  const p = incoming.play();
+  if (p && typeof p.catch === "function") p.catch(() => armGestureUnlock());
+
+  activeIndex = (1 - activeIndex) as 0 | 1;
+
+  fadeTo(incoming, musicVolume, CROSSFADE_MS, gen);
+  if (crossfade) {
+    fadeTo(outgoing, 0, CROSSFADE_MS, gen, () => outgoing.pause());
+  } else {
+    outgoing.pause();
   }
 }
 
 /**
- * Play the track for the given level. Idempotent within a band: calling it every
- * level (including across GameScreen remounts) only switches audio at band
- * boundaries, so music runs continuously through a 5-level stretch. A missing or
- * broken band file falls back to main.mp3, and we stay on the band key so we
- * don't re-attempt the missing file on every level in that band.
+ * Play the track for the given level. Idempotent within a band, so calling it
+ * every level (including across GameScreen remounts) crossfades only at band
+ * boundaries and runs continuously through a 5-level stretch. Missing/broken band
+ * files fall back to main.mp3.
  */
 export function playMusicForLevel(levelNumber: number): void {
-  const key = bandKey(levelNumber);
-  if (key === currentKey) return;
-  currentKey = key;
-  playSrc(musicFileForLevel(levelNumber), true);
+  switchTo(musicFileForLevel(levelNumber), bandKey(levelNumber), true);
 }
 
-/** Play the shared main loop (menus, or an explicit default). */
+/** Crossfade to the shared main loop (menus, or an explicit default). */
 export function playMainMusic(): void {
-  if (currentKey === "main") return;
-  currentKey = "main";
-  playSrc(MAIN_TRACK, false);
+  switchTo(MAIN_TRACK, "main", false);
 }
 
 /** Stop and reset (e.g., returning to a silent screen). */
 export function stopMusic(): void {
   currentKey = null;
-  if (el) el.pause();
+  fadeGen++; // cancel any in-flight fades
+  if (deck) for (const a of deck) a.pause();
 }
 
 /** Music-only mute (independent of the global SFX mute). */
 export function setMusicMuted(muted: boolean): void {
   musicMuted = muted;
-  if (el) applyMute(el);
+  if (deck) for (const a of deck) applyMute(a);
 }
 
 /** Re-evaluate mute after the global sound toggle changes. */
 export function refreshMusicMute(): void {
-  if (el) applyMute(el);
+  if (deck) for (const a of deck) applyMute(a);
 }
 
 /** Set music volume (0..1). */
 export function setMusicVolume(volume: number): void {
   musicVolume = Math.max(0, Math.min(1, volume));
-  if (el) el.volume = musicVolume;
+  if (deck) deck[activeIndex].volume = musicVolume;
 }
