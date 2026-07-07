@@ -60,13 +60,13 @@ import {
 import {
   SpaceGrid,
   GridRegion,
-  CellState,
   findGridRegions,
   getRemainingPercent,
   getRegionPercentage,
   removeRegion,
-  worldToGridIndex,
 } from "@/lib/spaceGrid";
+import { traceActiveContours } from "@/lib/rendering/regionContour";
+import { maybeRampDpr } from "@/lib/rendering/adaptiveDpr";
 import { playFenceBreakSound, playDeathSound, playBallLockSound } from "@/lib/gameAudio";
 import { vibrateFenceComplete, vibrateFenceBreak } from "@/lib/gameHaptics";
 
@@ -419,25 +419,40 @@ export function GameCanvas({
       rCtx.fillStyle = regionColor;
       rCtx.fillRect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
       rCtx.restore();
-      // Step 2: punch transparent holes for active region cells
-      const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
-      const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
+      // Step 2: punch transparent holes over the ACTIVE (playable) area.
       const grid = game.spaceGrid;
-      for (const region of game.regions) {
-        for (const sample of (region.samplePoints ?? [])) {
-          // Authoritative mask: only punch where the space grid still marks this
-          // cell ACTIVE. A region's sample point can leak onto the captured side
-          // of an obstacle (region polygons are bounding boxes, and the 8-way
-          // sample adjacency in regionSplit can connect past an obstacle corner);
-          // punching it would clear a hole in the captured fill, showing the dark
-          // background through it as a "shadow behind the obstacle".
-          if (grid) {
-            const idx = worldToGridIndex(grid, sample.x, sample.y);
-            if (idx < 0 || grid.cells[idx] !== CellState.ACTIVE) continue;
+      if (grid) {
+        // Authoritative + smooth: trace the ACTIVE/removed boundary straight from
+        // the space grid (the single source of truth, so captured space behind an
+        // obstacle can never leak a hole — the old "shadow behind the obstacle")
+        // and punch it as one anti-aliased path with rounded corners, instead of
+        // stamping hard 15px cells. Even-odd fill keeps interior captured holes
+        // (obstacles inside the playable area) intact.
+        const loops = traceActiveContours(grid);
+        rCtx.save();
+        rCtx.globalCompositeOperation = "destination-out";
+        rCtx.beginPath();
+        for (const loop of loops) {
+          for (let i = 0; i < loop.length; i++) {
+            const sx = boardRect.left + loop[i].x * boardRect.scale;
+            const sy = boardRect.top + loop[i].y * boardRect.scale;
+            if (i === 0) rCtx.moveTo(sx, sy);
+            else rCtx.lineTo(sx, sy);
           }
-          const sx = Math.round(boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale);
-          const sy = Math.round(boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale);
-          rCtx.clearRect(sx, sy, size, size);
+          rCtx.closePath();
+        }
+        rCtx.fill("evenodd");
+        rCtx.restore();
+      } else {
+        // Fallback (no space grid): stamp active region cells as before.
+        const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
+        const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
+        for (const region of game.regions) {
+          for (const sample of (region.samplePoints ?? [])) {
+            const sx = Math.round(boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale);
+            const sy = Math.round(boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale);
+            rCtx.clearRect(sx, sy, size, size);
+          }
         }
       }
       // Step 3: scanline overlay on captured fill only
@@ -666,8 +681,21 @@ export function GameCanvas({
     window.addEventListener("resize", resizeCanvas);
     startGameLoop(game);
 
+    // Once the level has run long enough for the perf window to fill, try (once)
+    // to ramp the render resolution up if the device has frame-time headroom.
+    // Poll for a few seconds while the window fills, then give up. resizeCanvas
+    // re-applies the raised DPR ceiling.
+    let dprRampChecks = 0;
+    const dprRampInterval = window.setInterval(() => {
+      dprRampChecks++;
+      if (maybeRampDpr(resizeCanvas) || dprRampChecks >= 8) {
+        window.clearInterval(dprRampInterval);
+      }
+    }, 1000);
+
     return () => {
       window.removeEventListener("resize", resizeCanvas);
+      window.clearInterval(dprRampInterval);
       stopGameLoop(game);
       // Cancel any pending flash/shake/game-over timeouts so they can't fire a
       // React setter (or onGameEnd, via the 1s game-over timeout) after unmount
