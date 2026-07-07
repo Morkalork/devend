@@ -64,7 +64,7 @@ function wouldWallTrapBallCheck(start: Vector2, end: Vector2, game: CanvasGameSt
  * A won ball counts as no ball, so a region a ball just locked in is captured.
  * game.gridRegions is left holding only the surviving (ball-bearing) regions.
  */
-function captureBallFreeGridRegions(game: CanvasGameState): void {
+function captureUnreachableSpace(game: CanvasGameState): void {
   if (!game.spaceGrid) return;
   captureUnreachableCells(game.spaceGrid, game.balls);
 
@@ -147,7 +147,7 @@ export function applyCutFn(
   addSegmentWalls(wall.startWaypoints);
   addSegmentWalls(wall.endWaypoints);
 
-  captureBallFreeGridRegions(game);
+  captureUnreachableSpace(game);
 
   // Update sample-based regions for rendering
   const updatedRegions: Region[] = [];
@@ -187,7 +187,7 @@ export function applyCutFn(
     // the "shadow behind the obstacle". Capture ball-free regions again now that
     // it's won, and repaint (the region-fill's space-grid mask then renders those
     // cells as captured instead of punching them dark).
-    captureBallFreeGridRegions(game);
+    captureUnreachableSpace(game);
     callbacks.repaintRegionCanvas();
   }
   callbacks.render();

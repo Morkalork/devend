@@ -36,14 +36,7 @@ import {
   BALL_DANGER_SPEED,
   LEVEL_CLEAR_SHIMMER_MS,
 } from "@/lib/gameConstants";
-import { getRemainingPercent, CellState, findGridRegions, worldToGridIndex } from "@/lib/spaceGrid";
-
-// TEMP DEBUG: `?grid` in the URL tints every space-grid cell so we can see the
-// capture state. red = REMOVED (captured/obstacle); green = ACTIVE and in a
-// region a live ball can reach; ORANGE = ACTIVE but ball-free (a region that
-// should have been captured but wasn't — the "shadow behind the obstacle").
-const GRID_DEBUG =
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('grid');
+import { getRemainingPercent } from "@/lib/spaceGrid";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -570,40 +563,6 @@ export function renderFrame(
   // ── Board grid + region fill ──────────────────────────────────────────────
   ctx.drawImage(boardGridCanvas, 0, 0);
   ctx.drawImage(regionCanvas, 0, 0);
-
-  // TEMP DEBUG grid overlay (see GRID_DEBUG note at top).
-  if (GRID_DEBUG && game.spaceGrid) {
-    const g = game.spaceGrid;
-    // Map each ACTIVE cell to its connected region, then flag regions a live ball
-    // can reach. A ball-free ACTIVE region is one that should have been captured.
-    const regions = findGridRegions(g);
-    const cellToRegion = new Int32Array(g.cells.length).fill(-1);
-    regions.forEach((r, ri) => { for (const ci of r.cellIndices) cellToRegion[ci] = ri; });
-    const regionHasBall = new Uint8Array(regions.length);
-    for (const b of game.balls) {
-      if (b.state === 'won' || b.speed === 0) continue;
-      const bi = worldToGridIndex(g, b.position.x, b.position.y);
-      if (bi < 0) continue;
-      let ri = cellToRegion[bi];
-      if (ri < 0) { // ball centre in a REMOVED cell (on an obstacle edge) — check neighbours
-        for (const d of [1, -1, g.width, -g.width]) {
-          const ni = bi + d;
-          if (ni >= 0 && ni < cellToRegion.length && cellToRegion[ni] >= 0) { ri = cellToRegion[ni]; break; }
-        }
-      }
-      if (ri >= 0) regionHasBall[ri] = 1;
-    }
-    const cs = g.cellSize * scale;
-    ctx.save();
-    for (let i = 0; i < g.cells.length; i++) {
-      const s = w2s(g.originX + (i % g.width) * g.cellSize, g.originY + Math.floor(i / g.width) * g.cellSize);
-      if (g.cells[i] !== CellState.ACTIVE) ctx.fillStyle = 'rgba(255,0,0,0.22)';
-      else if (cellToRegion[i] >= 0 && regionHasBall[cellToRegion[i]]) ctx.fillStyle = 'rgba(0,255,0,0.26)';
-      else ctx.fillStyle = 'rgba(255,150,0,0.5)'; // ACTIVE but ball-free → should be captured
-      ctx.fillRect(s.x, s.y, Math.ceil(cs), Math.ceil(cs));
-    }
-    ctx.restore();
-  }
 
   // ── Wall shadow quads ─────────────────────────────────────────────────────
   {
