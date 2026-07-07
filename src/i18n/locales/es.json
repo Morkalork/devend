@@ -196,6 +196,9 @@
   "options": {
     "title": "OPCIONES",
     "language": "Idioma",
+    "sound": "Sonido",
+    "music": "Música",
+    "effects": "Efectos",
     "reEnableTutorials": "Reactivar todos los tutoriales",
     "resetCertificates": "Restablecer certificados y puntuación",
     "back": "Atrás",

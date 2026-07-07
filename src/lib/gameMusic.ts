@@ -13,7 +13,7 @@ import { isAudioMuted } from "@/lib/gameAudio";
 
 const MUSIC_DIR = "/assets/music";
 const MAIN_TRACK = `${MUSIC_DIR}/main.mp3`;
-const DEFAULT_VOLUME = 0.35; // sits under the SFX; tune to taste
+const DEFAULT_VOLUME = 0.5; // default music level; user-adjustable in Options
 const LEVELS_PER_BAND = 5;
 const CROSSFADE_MS = 900;
 
@@ -184,4 +184,9 @@ export function refreshMusicMute(): void {
 export function setMusicVolume(volume: number): void {
   musicVolume = Math.max(0, Math.min(1, volume));
   if (deck) deck[activeIndex].volume = musicVolume;
+}
+
+/** Current music volume (0..1). */
+export function getMusicVolume(): number {
+  return musicVolume;
 }
