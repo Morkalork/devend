@@ -46,13 +46,6 @@ export interface SpaceGrid {
    * Only meaningful for cells that are ACTIVE — removed cells may hold stale ids.
    */
   cellRegionIds: (string | null)[];
-  /**
-   * Indices of cells that are REMOVED because they belong to an obstacle (its
-   * interior or sealed boundary), as opposed to board-outside or fences. Capture
-   * treats these as passable so an obstacle can't leave an uncapturable pocket
-   * behind it — see captureBallFreeGridRegions.
-   */
-  obstacleCells: number[];
 }
 
 export interface GridRegion {
@@ -94,19 +87,17 @@ export function createSpaceGrid(
   cells.fill(CellState.REMOVED); // Default to removed
   
   let initialActiveCount = 0;
-  const obstacleCellSet = new Set<number>();
-
+  
   // Mark cells inside board and outside obstacles as ACTIVE
   for (let row = 0; row < height; row++) {
     for (let col = 0; col < width; col++) {
       const worldX = originX + col * cellSize + cellSize / 2;
       const worldY = originY + row * cellSize + cellSize / 2;
       const point = { x: worldX, y: worldY };
-      const index = row * width + col;
-
+      
       // Must be inside board
       if (!pointInPolygon(point, boardPolygon)) continue;
-
+      
       // Must not be inside any obstacle
       let insideObstacle = false;
       for (const obstacle of obstacles) {
@@ -115,14 +106,15 @@ export function createSpaceGrid(
           break;
         }
       }
-      if (insideObstacle) { obstacleCellSet.add(index); continue; } // obstacle interior (inside board)
-
+      if (insideObstacle) continue;
+      
       // Cell is playable
+      const index = row * width + col;
       cells[index] = CellState.ACTIVE;
       initialActiveCount++;
     }
   }
-
+  
   const grid: SpaceGrid = {
     cellSize,
     width,
@@ -133,7 +125,6 @@ export function createSpaceGrid(
     initialActiveCount,
     activeCount: initialActiveCount,
     cellRegionIds: new Array<string | null>(cells.length).fill(null),
-    obstacleCells: [],
   };
 
   // Seal obstacle boundaries into the grid. Removing only cells whose CENTER
@@ -148,13 +139,10 @@ export function createSpaceGrid(
   for (const obstacle of obstacles) {
     const vs = obstacle.vertices;
     for (let i = 0; i < vs.length; i++) {
-      for (const ci of rasterizeCutToGrid(grid, vs[i], vs[(i + 1) % vs.length], cellSize)) {
-        obstacleCellSet.add(ci); // sealed obstacle boundary
-      }
+      rasterizeCutToGrid(grid, vs[i], vs[(i + 1) % vs.length], cellSize);
     }
   }
   grid.initialActiveCount = grid.activeCount;
-  grid.obstacleCells = [...obstacleCellSet];
 
   return grid;
 }
