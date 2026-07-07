@@ -56,6 +56,30 @@ function wouldWallTrapBallCheck(start: Vector2, end: Vector2, game: CanvasGameSt
   return wouldWallOrphanBall(start, end, game.balls, game.regions, game.walls);
 }
 
+/**
+ * Capture (REMOVE from the space grid) every connected grid region that has no
+ * active ball in it. A won ball counts as no ball, so a region a ball just locked
+ * in becomes capturable. game.gridRegions is left holding only the ball-bearing
+ * regions.
+ */
+function captureBallFreeGridRegions(game: CanvasGameState): void {
+  if (!game.spaceGrid) return;
+  const gridRegions = findGridRegions(game.spaceGrid);
+  // Build index→region map once; use neighbour-search fallback so balls whose
+  // grid-cell centre falls inside a mirror polygon (REMOVED) are still located.
+  const gridRegionMap = buildGridRegionMap(gridRegions);
+  const regionsWithBalls = new Set<(typeof gridRegions)[number]>();
+  for (const ball of game.balls) {
+    if (ball.state === 'won') continue;
+    const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
+    if (ballRegion) regionsWithBalls.add(ballRegion);
+  }
+  for (const region of gridRegions) {
+    if (!regionsWithBalls.has(region)) removeRegion(game.spaceGrid, region);
+  }
+  game.gridRegions = [...regionsWithBalls];
+}
+
 export function applyCutFn(
   wall: GrowingWall,
   game: CanvasGameState,
@@ -121,22 +145,7 @@ export function applyCutFn(
   addSegmentWalls(wall.startWaypoints);
   addSegmentWalls(wall.endWaypoints);
 
-  if (game.spaceGrid) {
-    const gridRegions = findGridRegions(game.spaceGrid);
-    // Build index→region map once; use neighbour-search fallback so balls whose
-    // grid-cell centre falls inside a mirror polygon (REMOVED) are still located.
-    const gridRegionMap = buildGridRegionMap(gridRegions);
-    const regionsWithBalls = new Set<(typeof gridRegions)[number]>();
-    for (const ball of balls) {
-      if (ball.state === 'won') continue;
-      const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
-      if (ballRegion) regionsWithBalls.add(ballRegion);
-    }
-    for (const region of gridRegions) {
-      if (!regionsWithBalls.has(region)) removeRegion(game.spaceGrid, region);
-    }
-    game.gridRegions = [...regionsWithBalls];
-  }
+  captureBallFreeGridRegions(game);
 
   // Update sample-based regions for rendering
   const updatedRegions: Region[] = [];
@@ -168,7 +177,17 @@ export function applyCutFn(
   validateAllBallOwnership(game.balls, game.regions, game.walls);
   game.activeWall = null;
 
-  checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks);
+  const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks);
+  if (anyBallWon) {
+    // A ball locked during this cut. It was still an active ball when the capture
+    // above ran, so the region it locked in wasn't captured then and would linger
+    // as an uncaptured (active) region beside the obstacle until the next cut -
+    // the "shadow behind the obstacle". Capture ball-free regions again now that
+    // it's won, and repaint (the region-fill's space-grid mask then renders those
+    // cells as captured instead of punching them dark).
+    captureBallFreeGridRegions(game);
+    callbacks.repaintRegionCanvas();
+  }
   callbacks.render();
 
   // Issue #37: ball speeds are flat — no per-cut acceleration ramp. Only the
