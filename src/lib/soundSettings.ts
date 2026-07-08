@@ -1,20 +1,35 @@
-// Sound settings — persists the music and effects volumes and applies them to
-// the audio subsystems. Music (gameMusic) and SFX (gameAudio) are independent
-// levels so players can balance them in Options.
+// Sound settings — loads the default music/effects volumes (and crossfade) from
+// public/game-config.yml (`sound:` section), applies any per-device overrides the
+// player saved in Options, and pushes the result to the audio subsystems. Music
+// (gameMusic) and SFX (gameAudio) are independent levels.
 
-import { setMusicVolume } from "@/lib/gameMusic";
+import yaml from "js-yaml";
+import { setMusicVolume, setCrossfadeMs } from "@/lib/gameMusic";
 import { setSfxVolume } from "@/lib/gameAudio";
 
 const LS_MUSIC = "devend:musicVolume";
 const LS_SFX = "devend:sfxVolume";
 
-export const DEFAULT_MUSIC_VOLUME = 0.2; // 20% by default (keeps SFX audible)
-export const DEFAULT_SFX_VOLUME = 1.0;
+// Hard fallbacks used ONLY if game-config.yml can't be loaded. The real defaults
+// live in public/game-config.yml under `sound:`.
+const FALLBACK_MUSIC = 0.2;
+const FALLBACK_SFX = 1.0;
+const FALLBACK_CROSSFADE_MS = 900;
 
-let musicVolume = DEFAULT_MUSIC_VOLUME;
-let sfxVolume = DEFAULT_SFX_VOLUME;
+interface SoundConfig {
+  music_volume?: number;
+  sfx_volume?: number;
+  crossfade_ms?: number;
+}
+
+let musicVolume = FALLBACK_MUSIC;
+let sfxVolume = FALLBACK_SFX;
+let defaultMusicVolume = FALLBACK_MUSIC;
+let defaultSfxVolume = FALLBACK_SFX;
 
 const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+const num = (v: unknown, fallback: number) =>
+  typeof v === "number" && Number.isFinite(v) ? v : fallback;
 
 function readStored(key: string, fallback: number): number {
   try {
@@ -35,10 +50,27 @@ function store(key: string, value: number): void {
   }
 }
 
-/** Load persisted volumes and apply them. Call once at app startup. */
-export function loadSoundSettings(): void {
-  musicVolume = readStored(LS_MUSIC, DEFAULT_MUSIC_VOLUME);
-  sfxVolume = readStored(LS_SFX, DEFAULT_SFX_VOLUME);
+/**
+ * Load default volumes from game-config.yml, apply any localStorage overrides,
+ * and push the result to the audio subsystems. Call once at startup; async
+ * because it fetches the config (audio doesn't play until the first gesture, well
+ * after this resolves, so the config-driven defaults are in place in time).
+ */
+export async function loadSoundSettings(): Promise<void> {
+  try {
+    const res = await fetch("/game-config.yml");
+    const cfg = yaml.load(await res.text()) as { sound?: SoundConfig } | undefined;
+    const s = cfg?.sound ?? {};
+    defaultMusicVolume = clamp01(num(s.music_volume, FALLBACK_MUSIC));
+    defaultSfxVolume = clamp01(num(s.sfx_volume, FALLBACK_SFX));
+    setCrossfadeMs(num(s.crossfade_ms, FALLBACK_CROSSFADE_MS));
+  } catch (err) {
+    console.warn("Failed to load sound config, using fallback defaults:", err);
+  }
+
+  // A saved per-device choice (Options slider) overrides the config default.
+  musicVolume = readStored(LS_MUSIC, defaultMusicVolume);
+  sfxVolume = readStored(LS_SFX, defaultSfxVolume);
   setMusicVolume(musicVolume);
   setSfxVolume(sfxVolume);
 }

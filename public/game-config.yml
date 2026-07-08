@@ -24,6 +24,18 @@ ball:
   max_speed: 12
   radius_percent: 2.5  # As percentage of board size
 
+# Sound Settings
+# Default volumes (0-1). Each is the starting value only: players can override it
+# in Options, and their choice is persisted per-device. Music is independent of
+# effects.
+sound:
+  # Default background-music volume (kept low so effect sounds sit on top)
+  music_volume: 0.2
+  # Default sound-effects volume
+  sfx_volume: 1.0
+  # Crossfade duration between music tracks (milliseconds)
+  crossfade_ms: 900
+
 # Fence Settings
 fence:
   # Base generation speed at level 1 (world units per second)

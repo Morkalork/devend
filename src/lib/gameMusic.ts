@@ -15,7 +15,7 @@ const MUSIC_DIR = "/assets/music";
 const MAIN_TRACK = `${MUSIC_DIR}/main.mp3`;
 const DEFAULT_VOLUME = 0.2; // default music level; user-adjustable in Options
 const LEVELS_PER_BAND = 5;
-const CROSSFADE_MS = 900;
+let crossfadeMs = 900; // default; overridden from game-config.yml via setCrossfadeMs
 
 /** Path of the band track for a level (levels 1-5 -> maps_1-5.mp3, etc.). */
 export function musicFileForLevel(levelNumber: number): string {
@@ -139,9 +139,9 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
 
   activeIndex = (1 - activeIndex) as 0 | 1;
 
-  fadeTo(incoming, musicVolume, CROSSFADE_MS, gen);
+  fadeTo(incoming, musicVolume, crossfadeMs, gen);
   if (crossfade) {
-    fadeTo(outgoing, 0, CROSSFADE_MS, gen, () => outgoing.pause());
+    fadeTo(outgoing, 0, crossfadeMs, gen, () => outgoing.pause());
   } else {
     outgoing.pause();
   }
@@ -189,4 +189,9 @@ export function setMusicVolume(volume: number): void {
 /** Current music volume (0..1). */
 export function getMusicVolume(): number {
   return musicVolume;
+}
+
+/** Set the crossfade duration between tracks (milliseconds). */
+export function setCrossfadeMs(ms: number): void {
+  if (Number.isFinite(ms) && ms >= 0) crossfadeMs = ms;
 }
