@@ -8,7 +8,7 @@ import { setSfxVolume } from "@/lib/gameAudio";
 const LS_MUSIC = "devend:musicVolume";
 const LS_SFX = "devend:sfxVolume";
 
-export const DEFAULT_MUSIC_VOLUME = 0.5; // 50% by default
+export const DEFAULT_MUSIC_VOLUME = 0.2; // 20% by default (keeps SFX audible)
 export const DEFAULT_SFX_VOLUME = 1.0;
 
 let musicVolume = DEFAULT_MUSIC_VOLUME;

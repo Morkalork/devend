@@ -13,7 +13,7 @@ import { isAudioMuted } from "@/lib/gameAudio";
 
 const MUSIC_DIR = "/assets/music";
 const MAIN_TRACK = `${MUSIC_DIR}/main.mp3`;
-const DEFAULT_VOLUME = 0.5; // default music level; user-adjustable in Options
+const DEFAULT_VOLUME = 0.2; // default music level; user-adjustable in Options
 const LEVELS_PER_BAND = 5;
 const CROSSFADE_MS = 900;
 
