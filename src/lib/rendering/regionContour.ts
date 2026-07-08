@@ -21,6 +21,9 @@ export interface ContourPoint {
   y: number;
 }
 
+/** Predicate: is cell (col,row) part of the area being outlined? */
+export type CellInside = (col: number, row: number) => boolean;
+
 /** Chaikin passes. 2 rounds staircases cleanly while keeping the board edges
  * straight (they stay collinear) and the four board corners rounded by only
  * ~one cell — imperceptible on a full-size board. Bump for a softer look. */
@@ -34,10 +37,21 @@ const SMOOTH_ITERATIONS = 2;
  * with interior holes correctly preserved.
  */
 export function traceActiveContours(grid: SpaceGrid): ContourPoint[][] {
-  const { width: w, height: h, cells, cellSize, originX, originY } = grid;
+  const { cells, width } = grid;
+  return traceContours(grid, (col, row) => cells[row * width + col] === CellState.ACTIVE);
+}
+
+/**
+ * Trace smooth closed contours around every cell the `inside` predicate accepts.
+ * Same machinery as traceActiveContours, but usable for any grid subset (e.g.
+ * the lock-captured cells that get an accent tint). Out-of-bounds counts as
+ * outside; the predicate is only ever called for in-bounds cells.
+ */
+export function traceContours(grid: SpaceGrid, inside: CellInside): ContourPoint[][] {
+  const { width: w, height: h, cellSize, originX, originY } = grid;
 
   const active = (col: number, row: number): boolean =>
-    col >= 0 && row >= 0 && col < w && row < h && cells[row * w + col] === CellState.ACTIVE;
+    col >= 0 && row >= 0 && col < w && row < h && inside(col, row);
 
   // Corner lattice is (w+1) x (h+1); key a corner (cx,cy) as cy*stride+cx.
   const stride = w + 1;
@@ -55,13 +69,12 @@ export function traceActiveContours(grid: SpaceGrid): ContourPoint[][] {
     edgeCount++;
   };
 
-  // For each ACTIVE cell, emit the sides that border a non-ACTIVE neighbour,
+  // For each inside cell, emit the sides that border a non-inside neighbour,
   // directed clockwise around the cell so shared interior sides cancel and the
   // remaining boundary sides chain into closed loops.
   for (let row = 0; row < h; row++) {
-    const base = row * w;
     for (let col = 0; col < w; col++) {
-      if (cells[base + col] !== CellState.ACTIVE) continue;
+      if (!active(col, row)) continue;
       if (!active(col, row - 1)) addEdge(col, row, col + 1, row); // top:    L->R
       if (!active(col + 1, row)) addEdge(col + 1, row, col + 1, row + 1); // right:  T->B
       if (!active(col, row + 1)) addEdge(col + 1, row + 1, col, row + 1); // bottom: R->L

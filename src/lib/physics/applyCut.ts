@@ -12,6 +12,7 @@ import {
 } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 import {
+  CellState,
   rasterizeCutToGrid,
   findGridRegions,
   getRemainingPercent,
@@ -187,7 +188,19 @@ export function applyCutFn(
     // the "shadow behind the obstacle". Capture ball-free regions again now that
     // it's won, and repaint (the region-fill's space-grid mask then renders those
     // cells as captured instead of punching them dark).
+    const grid = game.spaceGrid;
+    // Snapshot ACTIVE cells so we can tag exactly what this lock captures and
+    // give it the persistent accent tint that marks locked territory.
+    const before = grid ? Uint8Array.from(grid.cells) : null;
     captureUnreachableSpace(game);
+    if (grid && before) {
+      if (!grid.lockCaptured) grid.lockCaptured = new Uint8Array(grid.cells.length);
+      for (let i = 0; i < grid.cells.length; i++) {
+        if (before[i] === CellState.ACTIVE && grid.cells[i] === CellState.REMOVED) {
+          grid.lockCaptured[i] = 1;
+        }
+      }
+    }
     callbacks.repaintRegionCanvas();
   }
   callbacks.render();

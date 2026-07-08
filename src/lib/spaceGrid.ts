@@ -46,6 +46,15 @@ export interface SpaceGrid {
    * Only meaningful for cells that are ACTIVE — removed cells may hold stale ids.
    */
   cellRegionIds: (string | null)[];
+  /**
+   * 1 for each cell that was captured by a ball LOCK (as opposed to a fence cut
+   * or obstacle). Drives the persistent accent tint that marks locked territory
+   * in the region fill. Grid-based (not the ray-cast lock polygon), so the tint
+   * is uniform behind obstacles and can't reproduce the "shadow behind the
+   * obstacle" wedge. Optional so older serialized grids stay valid; lazily
+   * created on first lock if absent.
+   */
+  lockCaptured?: Uint8Array;
 }
 
 export interface GridRegion {
@@ -125,6 +134,7 @@ export function createSpaceGrid(
     initialActiveCount,
     activeCount: initialActiveCount,
     cellRegionIds: new Array<string | null>(cells.length).fill(null),
+    lockCaptured: new Uint8Array(cells.length),
   };
 
   // Seal obstacle boundaries into the grid. Removing only cells whose CENTER

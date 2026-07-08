@@ -65,7 +65,7 @@ import {
   getRegionPercentage,
   removeRegion,
 } from "@/lib/spaceGrid";
-import { traceActiveContours } from "@/lib/rendering/regionContour";
+import { traceActiveContours, traceContours } from "@/lib/rendering/regionContour";
 import { maybeRampDpr } from "@/lib/rendering/adaptiveDpr";
 import { playFenceBreakSound, playDeathSound, playBallLockSound } from "@/lib/gameAudio";
 import { vibrateFenceComplete, vibrateFenceBreak } from "@/lib/gameHaptics";
@@ -453,6 +453,34 @@ export function GameCanvas({
             const sy = Math.round(boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale);
             rCtx.clearRect(sx, sy, size, size);
           }
+        }
+      }
+      // Step 2b: accent-tint LOCKED territory. Marks where balls were locked
+      // (vs plain fenced-off space) with a persistent accent wash. Traced from the
+      // grid's lock-captured mask, not the ray-cast lock polygon, so it's uniform
+      // behind obstacles and can't leave the "shadow behind the obstacle" wedge.
+      // source-atop keeps it on the captured fill only (never over active holes).
+      if (grid?.lockCaptured) {
+        const mask = grid.lockCaptured;
+        const gw = grid.width;
+        const lockLoops = traceContours(grid, (col, row) => mask[row * gw + col] === 1);
+        if (lockLoops.length > 0) {
+          rCtx.save();
+          rCtx.globalCompositeOperation = 'source-atop';
+          rCtx.globalAlpha = canvasOpacity * 0.3;
+          rCtx.fillStyle = accentColor;
+          rCtx.beginPath();
+          for (const loop of lockLoops) {
+            for (let i = 0; i < loop.length; i++) {
+              const sx = boardRect.left + loop[i].x * boardRect.scale;
+              const sy = boardRect.top + loop[i].y * boardRect.scale;
+              if (i === 0) rCtx.moveTo(sx, sy);
+              else rCtx.lineTo(sx, sy);
+            }
+            rCtx.closePath();
+          }
+          rCtx.fill('evenodd');
+          rCtx.restore();
         }
       }
       // Step 3: scanline overlay on captured fill only
