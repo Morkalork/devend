@@ -175,6 +175,7 @@ export function generateScoringPreview(
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
     overtimeCapHeadroom: 2.0,
+    highscoreBonusMultiplier: 1.25,
     fenceEfficiency: {
       maxBonus: 1,
       steps: [{ fencesUnder: 1, bonus: 1 }],
@@ -211,6 +212,7 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
         loadedConfig = {
           scoring: {
             overtimeCapHeadroom: parsed.scoring.overtimeCapHeadroom ?? DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom,
+            highscoreBonusMultiplier: parsed.scoring.highscoreBonusMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.highscoreBonusMultiplier,
             fenceEfficiency: { ...DEFAULT_SCORING_CONFIG.scoring.fenceEfficiency, ...parsed.scoring.fenceEfficiency },
             spaceOptimization: { ...DEFAULT_SCORING_CONFIG.scoring.spaceOptimization, ...parsed.scoring.spaceOptimization },
             performanceMultiplier: { ...DEFAULT_SCORING_CONFIG.scoring.performanceMultiplier, ...parsed.scoring.performanceMultiplier },
@@ -229,6 +231,12 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
 /** Await this before calling calculateScore() to guarantee the YAML config is in. */
 export async function ensureScoringConfigLoaded(): Promise<void> {
   await loadScoringConfig();
+}
+
+/** The beat-the-highscore score multiplier from the loaded config (#45). */
+export function getHighscoreBonusMultiplier(): number {
+  const m = loadedConfig.scoring.highscoreBonusMultiplier;
+  return Number.isFinite(m) && m > 0 ? m : 1;
 }
 
 /**

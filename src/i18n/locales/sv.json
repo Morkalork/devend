@@ -183,6 +183,7 @@
     "threadLocks": "Trådlås ({{count}})",
     "interest": "Ränta",
     "pushBonus": "Pressbonus",
+    "newHighscore": "Nytt rekord",
     "totalBonus": "Total bonus",
     "overtimeEarned": "Intjänad övertid",
     "totalOvertime": "Total övertid",
@@ -238,6 +239,7 @@
   "topBar": {
     "clear": "KLART",
     "percentToGo": "{{percent}}% kvar",
+    "recordPace": "REKORD",
     "currentlyReducingBy": "Minskar just nu med {{percent}}%",
     "continues_one": "{{count}} Fortsättning sparad",
     "continues_other": "{{count}} Fortsättningar sparade"

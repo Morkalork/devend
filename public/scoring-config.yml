@@ -7,6 +7,12 @@ scoring:
   # late levels pay more, while bounding extreme multiplier stacks.
   overtimeCapHeadroom: 2.0
 
+  # Beat-the-highscore bonus (#45)
+  # When you finish a map with a higher score than its previous highscore, the
+  # map's score is multiplied by this. Applied after the per-map cap, so beating
+  # a record always pays. Only fires if the map has been played before.
+  highscoreBonusMultiplier: 1.25
+
   # Under-Par Bonus
   # +1h if any fences under par
   fenceEfficiency:

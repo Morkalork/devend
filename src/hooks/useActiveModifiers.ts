@@ -42,6 +42,11 @@ export interface GameModifiers {
   // Additive (sum) — Cron Job: seconds an auto-frozen ball stays frozen (0 = upgrade not owned).
   // The freeze fires automatically on a fixed interval (AUTO_FREEZE_INTERVAL_MS).
   autoFreezeDuration: number;
+
+  // Additive (sum) — Benchmarking (#45): 0 = off, >0 = show the map-highscore
+  // progress bar in the HUD (a second bar under the capture readout). Gated in
+  // upgrades.yml behind the ball-size upgrade.
+  showHighscoreProgress: number;
 }
 
 /**
@@ -124,6 +129,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   ballFreezeDuration: 0,
   ballFreezeCount: 0,
   autoFreezeDuration: 0,
+  showHighscoreProgress: 0,
 };
 
 /**

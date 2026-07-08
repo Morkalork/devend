@@ -16,6 +16,10 @@ export interface ScoringConfig {
     // Headroom > 1 leaves room for multiplier builds to pay off while still
     // softly bounding degenerate multiplier stacks.
     overtimeCapHeadroom: number;
+    // Multiplier applied to a map's score when the player beats that map's
+    // existing highscore (#45). Applied AFTER the per-map cap, so it genuinely
+    // rewards a record instead of being clamped away.
+    highscoreBonusMultiplier: number;
     fenceEfficiency: {
       maxBonus: number;
       steps: FenceEfficiencyStep[];

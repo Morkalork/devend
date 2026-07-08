@@ -6,8 +6,9 @@
  * Tapping the top/bottom bars opens their full-screen counterparts
  * (TopBarDetailsPanel / BottomBarDetailsPanel).
  */
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { calculateScore } from '@/lib/scoring';
 import { Menu, Home, RotateCcw, Pause, Play } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
@@ -65,6 +66,8 @@ interface GameScreenProps {
   modifierSources?: ModifierSource[];
   cumulativeLockedBalls?: number;
   ascensionDepth?: number;
+  /** Best score per map id, for the Benchmarking highscore bar (#45). */
+  mapHighscores?: Record<string, number>;
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
@@ -107,6 +110,7 @@ export function GameScreen({
   modifierSources = [],
   cumulativeLockedBalls = 0,
   ascensionDepth = 0,
+  mapHighscores,
   activeLoadouts = [],
   fenceDurability = null,
   showBallSpeeds = false,
@@ -159,6 +163,21 @@ export function GameScreen({
   const handleGameStateChange = useCallback((state: GameStateInfo) => {
     setGameState(state);
   }, []);
+
+  // Map-highscore bar (#45): only with the Benchmarking upgrade and a stored
+  // highscore for this map. `projectedScore` is the score the map would pay if
+  // it ended now (same formula as the real level score, sans lock/break bonus),
+  // so the bar tracks how close the run is to beating the record.
+  const showHighscoreBar = activeModifiers.showHighscoreProgress > 0;
+  const highscoreTarget = mapHighscores?.[level.id] ?? 0;
+  const projectedScore = useMemo(() => {
+    if (!showHighscoreBar || highscoreTarget <= 0) return 0;
+    return calculateScore(
+      gameState.cutsUsed, level.expectedCuts, gameState.spaceRemaining,
+      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber, 0,
+    ).levelScore;
+  }, [showHighscoreBar, highscoreTarget, gameState.cutsUsed, gameState.spaceRemaining,
+      level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber]);
 
   const totalLockedBalls = cumulativeLockedBalls + gameState.lockedBalls;
   
@@ -245,6 +264,9 @@ export function GameScreen({
             certificateProgress={certificateProgress}
             microManagerPerLock={activeModifiers.microManagerPerLock}
             ascensionDepth={ascensionDepth}
+            showHighscoreBar={showHighscoreBar}
+            highscoreCurrent={projectedScore}
+            highscoreTarget={highscoreTarget}
             onExpand={() => setTopPanelOpen(true)}
           />
         </div>

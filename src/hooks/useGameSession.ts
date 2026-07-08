@@ -26,6 +26,8 @@ import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
+import { getHighscoreBonusMultiplier } from '@/lib/scoring';
+import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
 import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
@@ -159,6 +161,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     stats: metaStats,
     wonLoadoutIds,
     loadoutsIntroduced,
+    mapHighscores,
     recordLevelReached,
     recordFencesDrawn,
     recordPerfectLevel,
@@ -166,6 +169,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordAscensionDepth,
     recordPushBonusBanked,
     recordLoadoutWin,
+    recordMapHighscore,
     introduceLoadouts,
     resetProgression,
   } = useMetaProgression();
@@ -422,13 +426,33 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       }
     }
 
-    const levelOvertime = scoreData.levelScore;
+    // Map highscore (#45): record this map's base score and, if it beat the
+    // map's previous highscore, credit a bonus multiplier on TOP of the base
+    // (applied after the per-map cap, so beating a record always pays). A map's
+    // first-ever completion just sets the baseline, no bonus.
+    const baseLevelScore = scoreData.levelScore;
+    let highscoreBonusEarned = 0;
+    let beatHighscore = false;
+    let previousHighscore: number | undefined;
+    if (scoreData.levelId) {
+      const { previous, isRecord } = recordMapHighscore(scoreData.levelId, baseLevelScore);
+      if (isRecord) {
+        beatHighscore = true;
+        previousHighscore = previous ?? undefined;
+        highscoreBonusEarned = highscoreBonus(previous, baseLevelScore, getHighscoreBonusMultiplier());
+      }
+    }
+
+    const levelOvertime = baseLevelScore + highscoreBonusEarned;
     const interestGain = activeModifiers.scoreInterestRate > 0
       ? Math.min(8, Math.floor(totalScore * activeModifiers.scoreInterestRate))
       : 0;
 
     setTotalScore(totalScore + levelOvertime + interestGain);
-    setPendingLevelScore({ ...scoreData, levelScore: levelOvertime, tierMultiplier: 1, interestGain });
+    setPendingLevelScore({
+      ...scoreData, levelScore: levelOvertime, tierMultiplier: 1, interestGain,
+      beatHighscore, previousHighscore, highscoreBonus: highscoreBonusEarned,
+    });
     setShowLevelComplete(true);
 
     if (scoreData.lockedBallsCount && scoreData.lockedBallsCount > 0) {
@@ -436,7 +460,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, introduceLoadouts, loadouts]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -723,6 +747,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
     // Meta progression
     metaStats,
+    mapHighscores,
     runHoursAwarded,
     runLevelsCompleted,
     lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,

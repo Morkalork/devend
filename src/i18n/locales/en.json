@@ -186,6 +186,7 @@
     "interest": "Interest",
     "pushBonus": "Push Bonus",
     "breakBonus": "Demolition Bonus",
+    "newHighscore": "New Highscore",
     "totalBonus": "Total Bonus",
     "overtimeEarned": "Overtime Earned",
     "totalOvertime": "Total Overtime",
@@ -241,6 +242,7 @@
   "topBar": {
     "clear": "CLEAR",
     "percentToGo": "{{percent}}% to go",
+    "recordPace": "RECORD",
     "currentlyReducingBy": "Currently reducing by {{percent}}%",
     "continues_one": "{{count}} Continue banked",
     "continues_other": "{{count}} Continues banked"

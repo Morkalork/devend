@@ -83,6 +83,24 @@ upgrades:
     modifiers:
       ballSizeMultiplier: 0.85
 
+  # ===============================
+  # BENCHMARKING (Highscore progress bar, #45)
+  # Needs Memory Footprint (ball size). One tier: adds a second HUD bar tracking
+  # your live score against the map highscore, so you can see how close you are
+  # to beating it (and the beat-highscore bonus).
+  # ===============================
+
+  - id: benchmarking_junior
+    name: Benchmarking
+    tier: Senior
+    description: Adds a HUD bar tracking your live score against the map highscore.
+    unlockLevel: 3
+    prerequisites:
+      - memory_footprint_junior
+    icon: trending-up
+    modifiers:
+      showHighscoreProgress: 1
+
 
   # ===============================
   # FAST COMPILE (Fence Speed)

@@ -45,6 +45,12 @@ export interface UnlockState {
    * loadout draft (tutorial only); loadouts are introduced after the first win.
    */
   loadoutsIntroduced: boolean;
+  /**
+   * Best score ever achieved on each map, keyed by map id (LevelConfig.id).
+   * Beating a map's existing highscore grants a bonus score multiplier (#45).
+   * A map absent from the record has never been completed.
+   */
+  mapHighscores: Record<string, number>;
 }
 
 export const DEFAULT_META_STATS: MetaProgressionStats = {

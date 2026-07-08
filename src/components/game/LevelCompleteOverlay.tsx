@@ -68,6 +68,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     interestGain = 0,
     pushBonus = 0,
     breakBonus = 0,
+    beatHighscore = false,
+    highscoreBonus = 0,
   } = scoreData;
 
   const isOverPar = fencesOverPar > 0;
@@ -272,6 +274,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   {t('levelComplete.pushBonus')}
                 </span>
                 <span className="font-bold text-orange-400">+{pushBonus}h</span>
+              </div>
+            )}
+
+            {/* New highscore (#45): beat this map's previous record for a bonus */}
+            {beatHighscore && (
+              <div className="flex justify-between items-center py-2 border-b rounded px-2" style={{ borderColor: '#ffd54a55', background: '#ffd54a1a' }}>
+                <span className="flex items-center gap-1" style={{ color: '#ffd54a' }}>
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.newHighscore')}
+                </span>
+                <span className="font-bold" style={{ color: '#ffd54a' }}>+{highscoreBonus}h</span>
               </div>
             )}
 

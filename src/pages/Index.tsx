@@ -176,6 +176,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 modifierSources={session.modifierSources}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 ascensionDepth={session.ascensionDepth}
+                mapHighscores={session.mapHighscores}
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
               />
