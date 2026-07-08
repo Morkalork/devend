@@ -55,6 +55,14 @@ export interface BallEffectState {
   // Ball-to-ball collision effect (0-1, decays over time)
   ballHitIntensity: number;
   ballHitTime: number; // timestamp when ball hit occurred
+
+  // Squash & stretch on contact (issue #44). The ball deforms along the impact
+  // normal and springs back, like a soft ball bouncing. 0 everywhere = round.
+  squishIntensity: number; // signed spring envelope: +compress along normal, -stretch, decays to 0
+  squishTime: number;      // timestamp of the impact
+  squishNx: number;        // unit impact-normal x (the compression axis)
+  squishNy: number;        // unit impact-normal y
+  squishAmount: number;    // 0-1 speed-scaled magnitude captured at impact (0 = no squish)
 }
 
 // Effect configuration
@@ -77,6 +85,11 @@ const CONFIG = {
   ballHitGlowIntensity: 0.85, // Brighter than wall hit
   ballHitRingRadius: 6.5, // Expands to 6.5x ball radius (was 1.8)
   ballHitSecondaryPulse: true, // Optional spark-like secondary effect
+
+  // Squash & stretch on contact (issue #44) - gentle, speed-scaled
+  squishDuration: 220,       // ms spring-back to round
+  squishMaxCompress: 0.22,   // peak compression fraction along the impact axis at full speed
+  squishReferenceSpeed: 320, // world speed at which the squish magnitude saturates
 };
 
 /**
@@ -89,6 +102,11 @@ export function createBallEffectState(): BallEffectState {
     wallHitTime: 0,
     ballHitIntensity: 0,
     ballHitTime: 0,
+    squishIntensity: 0,
+    squishTime: 0,
+    squishNx: 0,
+    squishNy: 0,
+    squishAmount: 0,
   };
 }
 
@@ -125,22 +143,87 @@ export function updateBallEffects(state: BallEffectState, dt: number, now: numbe
       state.ballHitIntensity = 1 - Math.pow(progress, 1.5);
     }
   }
+
+  // Spring the squish back to round. One gentle overshoot (compress -> slight
+  // stretch -> settle) under a linear-decay envelope, like a soft ball rebounding.
+  if (state.squishAmount > 0) {
+    const elapsed = now - state.squishTime;
+    if (elapsed >= CONFIG.squishDuration) {
+      state.squishAmount = 0;
+      state.squishIntensity = 0;
+    } else {
+      const p = elapsed / CONFIG.squishDuration;
+      state.squishIntensity = (1 - p) * Math.cos(p * Math.PI * 1.5);
+    }
+  }
 }
 
 /**
- * Trigger wall collision effect
+ * Trigger wall collision effect. Pass the ball's post-bounce velocity + speed to
+ * also fire a speed-scaled squash along the bounce axis (issue #44); omit them
+ * (e.g. resting contacts) to keep the halo without any squish.
  */
-export function triggerWallHit(state: BallEffectState, now: number): void {
+export function triggerWallHit(
+  state: BallEffectState, now: number, vx = 0, vy = 0, speed = 0,
+): void {
   state.wallHitIntensity = 1;
   state.wallHitTime = now;
+  triggerSquish(state, vx, vy, speed, now);
 }
 
 /**
- * Trigger ball-to-ball collision effect
+ * Trigger ball-to-ball collision effect (+ optional speed-scaled squash).
  */
-export function triggerBallHit(state: BallEffectState, now: number): void {
+export function triggerBallHit(
+  state: BallEffectState, now: number, vx = 0, vy = 0, speed = 0,
+): void {
   state.ballHitIntensity = 1;
   state.ballHitTime = now;
+  triggerSquish(state, vx, vy, speed, now);
+}
+
+/**
+ * Record a squash impulse: compress the ball along its travel axis (which, just
+ * after a bounce, points away from the surface it hit), by an amount scaled to
+ * how fast it was moving. Near-resting contacts (amount ~0) leave the ball round.
+ */
+function triggerSquish(
+  state: BallEffectState, vx: number, vy: number, speed: number, now: number,
+): void {
+  const amount = Math.min(1, speed / CONFIG.squishReferenceSpeed);
+  if (amount <= 0.01) return;
+  const mag = Math.hypot(vx, vy) || 1;
+  state.squishNx = vx / mag;
+  state.squishNy = vy / mag;
+  state.squishAmount = amount;
+  state.squishIntensity = 1;
+  state.squishTime = now;
+}
+
+/**
+ * Current squash-and-stretch deformation. `scaleAlong` compresses the ball along
+ * the impact normal (nx,ny); `scalePerp` stretches perpendicular to preserve
+ * area. Both are 1 when round. Apply as a rotated non-uniform scale at render.
+ */
+export function getSquishEffect(state: BallEffectState): {
+  active: boolean;
+  scaleAlong: number;
+  scalePerp: number;
+  nx: number;
+  ny: number;
+} {
+  if (state.squishAmount <= 0) {
+    return { active: false, scaleAlong: 1, scalePerp: 1, nx: 1, ny: 0 };
+  }
+  // Signed compression along the normal; inverse perpendicular keeps area constant.
+  const s = state.squishIntensity * state.squishAmount * CONFIG.squishMaxCompress;
+  return {
+    active: true,
+    scaleAlong: 1 - s,
+    scalePerp: 1 / (1 - s),
+    nx: state.squishNx,
+    ny: state.squishNy,
+  };
 }
 
 /**

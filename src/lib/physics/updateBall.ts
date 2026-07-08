@@ -248,7 +248,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
         impactStrength
       );
       // Trigger wall hit effect on ball
-      triggerWallHit(ball.effects, performance.now());
+      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, ball.speed);
       // Play wall hit sound
       playWallHitSound(impactStrength);
     }
@@ -274,7 +274,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       ball.position = result.position;
       ball.velocity = result.velocity;
       surfaceHit = true;
-      triggerWallHit(ball.effects, performance.now());
+      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, ball.speed);
       playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));
       // Black ball wears down movers.
       if (ball.ability === 'breakObjects') {
@@ -310,7 +310,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       surfaceHit = true;
 
       // Trigger wall hit effect on ball
-      triggerWallHit(ball.effects, performance.now());
+      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, ball.speed);
 
       // Play wall hit sound for obstacle collision
       const spd = vec2Length(ball.velocity);
@@ -334,7 +334,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
       registerWallImpact(wall.start, wall.end, impactPoint, impactStrength);
-      triggerWallHit(ball.effects, performance.now());
+      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, ball.speed);
       playWallHitSound(impactStrength);
 
       // Ascension fence durability: each (debounced) hit wears the fence down.

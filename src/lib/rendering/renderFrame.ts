@@ -22,7 +22,7 @@ import { computeBallTrajectory, hexToRgba } from "@/lib/gameUtils";
 import { getBallBase, getBallSpecular, getHexOverlay } from "@/lib/ballRenderCache";
 import { getBallSphere } from "@/lib/ballSphereCache";
 import { getRainGlyph } from "./rainGlyphCache";
-import { renderBallEffects } from "@/lib/ballEffects";
+import { renderBallEffects, getSquishEffect } from "@/lib/ballEffects";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from "@/lib/boardConstants";
@@ -1540,6 +1540,20 @@ export function renderFrame(
       }
     }
 
+    // Squash & stretch (issue #44): deform ONLY the ball body along the impact
+    // normal, springing back over ~220ms. Wraps just the body sprites (base,
+    // sphere, hex, specular, frost) so the halos, trail and flame stay round.
+    const squish = getSquishEffect(ball.effects);
+    if (squish.active) {
+      const ang = Math.atan2(squish.ny, squish.nx);
+      ctx.save();
+      ctx.translate(screenPos.x, screenPos.y);
+      ctx.rotate(ang);
+      ctx.scale(squish.scaleAlong, squish.scalePerp);
+      ctx.rotate(-ang);
+      ctx.translate(-screenPos.x, -screenPos.y);
+    }
+
     const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);
     ctx.drawImage(baseCanvas, Math.round(screenPos.x - baseHalf), Math.round(screenPos.y - baseHalf));
 
@@ -1627,6 +1641,8 @@ export function renderFrame(
       }
       ctx.restore();
     }
+
+    if (squish.active) ctx.restore(); // squash & stretch transform
 
     ctx.restore(); // globalAlpha
 
