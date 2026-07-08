@@ -4,6 +4,7 @@
 let audioContext: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let isMuted = false;
+let sfxVolume = 1; // 0..1 master level for sound effects (music is separate)
 
 // Ball-to-ball collisions can fire many times per physics step when several
 // balls cluster in a shrinking region. Each playBallCollideSound call allocates
@@ -34,7 +35,7 @@ function ensureAudioContext(): AudioContext | null {
       audioContext = new AudioCtx();
       masterGain = audioContext.createGain();
       masterGain.connect(audioContext.destination);
-      masterGain.gain.value = isMuted ? 0 : 1;
+      masterGain.gain.value = isMuted ? 0 : sfxVolume;
     } catch (e) {
       console.warn('Web Audio API not supported:', e);
       return null;
@@ -452,8 +453,21 @@ export function playBallLockSound(): void {
 export function setAudioMuted(muted: boolean): void {
   isMuted = muted;
   if (masterGain) {
-    masterGain.gain.value = muted ? 0 : 1;
+    masterGain.gain.value = muted ? 0 : sfxVolume;
   }
+}
+
+/** Set the sound-effects master volume (0..1). Music volume is separate. */
+export function setSfxVolume(volume: number): void {
+  sfxVolume = Math.max(0, Math.min(1, volume));
+  if (masterGain && !isMuted) {
+    masterGain.gain.value = sfxVolume;
+  }
+}
+
+/** Current sound-effects master volume (0..1). */
+export function getSfxVolume(): number {
+  return sfxVolume;
 }
 
 /**

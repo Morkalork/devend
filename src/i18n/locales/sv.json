@@ -196,6 +196,9 @@
   "options": {
     "title": "ALTERNATIV",
     "language": "Språk",
+    "sound": "Ljud",
+    "music": "Musik",
+    "effects": "Effekter",
     "reEnableTutorials": "Återaktivera alla genomgångar",
     "resetCertificates": "Nollställ certifikat & poäng",
     "back": "Tillbaka",

@@ -22,6 +22,7 @@ import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
 import { useGameConfig } from '@/hooks/useGameConfig';
+import { playMusicForLevel } from '@/lib/gameMusic';
 import { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
 
 interface CertificateHourProgress {
@@ -115,6 +116,13 @@ export function GameScreen({
 }: GameScreenProps) {
   const { t } = useTranslation();
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
+
+  // Background music, selected by 5-level band. Idempotent within a band, so it
+  // plays continuously across levels and the per-round remount, switching only at
+  // band boundaries. A missing band track falls back to main.mp3 (see gameMusic).
+  useEffect(() => {
+    playMusicForLevel(levelNumber);
+  }, [levelNumber]);
 
   // In-game tutorial step state. The interactive fence tutorial is level 1 only,
   // so it can never re-arm on a later map even if it was never marked seen.

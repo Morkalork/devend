@@ -8,7 +8,7 @@
  * Screens slide left/right with framer-motion based on SCREEN_ORDER.
  * Admin screens are lazy-loaded and only available in dev builds.
  */
-import { lazy, Suspense, useRef } from 'react';
+import { lazy, Suspense, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
@@ -28,10 +28,16 @@ import { CertificateStore } from '@/components/game/CertificateStore';
 import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
 import { LoadoutsUnlockedModal } from '@/components/game/LoadoutsUnlockedModal';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
+import { playMainMusic } from '@/lib/gameMusic';
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
+
+// Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
+// driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
+// intentionally left out so the current band track keeps playing through them.
+const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'loadouts']);
 
 const Index = () => {
   const navigation = useScreenNavigation();
@@ -53,6 +59,12 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   const { t } = useTranslation();
   const { accentHex } = useAccentColor();
   const isAdminEnabled = import.meta.env.DEV;
+
+  // Play the main-menu loop on menu screens. Blocked by autoplay on the very
+  // first screen until a gesture, which gameMusic resumes automatically.
+  useEffect(() => {
+    if (MENU_MUSIC_SCREENS.has(navigation.currentScreen)) playMainMusic();
+  }, [navigation.currentScreen]);
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1,

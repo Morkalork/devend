@@ -201,7 +201,7 @@ export function GameTopBar({
     <div className="flex-shrink-0 flex flex-col">
       {/* Row 1: Navigation — menu, level, lives, certificate-hour progress */}
       <div
-        className={`px-3 py-2 flex items-center justify-between gap-2${onExpand ? ' cursor-pointer' : ''}`}
+        className={`pl-[88px] pr-3 py-2 flex items-center justify-between gap-2${onExpand ? ' cursor-pointer' : ''}`}
         onClick={onExpand}
         onTouchStart={handleSwipeTouchStart}
         onTouchEnd={handleSwipeTouchEnd}
