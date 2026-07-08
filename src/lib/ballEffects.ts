@@ -86,10 +86,12 @@ const CONFIG = {
   ballHitRingRadius: 6.5, // Expands to 6.5x ball radius (was 1.8)
   ballHitSecondaryPulse: true, // Optional spark-like secondary effect
 
-  // Squash & stretch on contact (issue #44) - gentle, speed-scaled
-  squishDuration: 220,       // ms spring-back to round
-  squishMaxCompress: 0.22,   // peak compression fraction along the impact axis at full speed
-  squishReferenceSpeed: 320, // world speed at which the squish magnitude saturates
+  // Squash & stretch on contact (issue #44) - speed-scaled. Reference speed sits
+  // near typical ball speeds (~125-170) so an ordinary bounce reads as a clear
+  // squash rather than a barely-there wobble; faster hits saturate.
+  squishDuration: 240,       // ms spring-back to round
+  squishMaxCompress: 0.28,   // peak compression fraction along the impact axis at full speed
+  squishReferenceSpeed: 150, // world speed at which the squish magnitude saturates
 };
 
 /**
