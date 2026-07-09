@@ -51,7 +51,7 @@ export function checkAndUpdateBallWonStates(
   game: CanvasGameState,
   activeModifiers: GameModifiers,
   cumulativeLockedBalls: number,
-  callbacks: Pick<GameCallbacks, 'setLockedBallsCount'>,
+  callbacks: Pick<GameCallbacks, 'setLockedBallsCount' | 'onBallTypeLocked'>,
 ): boolean {
   if (!game.spaceGrid) return false;
 
@@ -175,6 +175,7 @@ export function checkAndUpdateBallWonStates(
 
     game.lockedBallsCount += 1;
     wonThisPass.push(ball);
+    callbacks.onBallTypeLocked?.(ball.typeId);
 
     applyMicroManagerSpeedCap(
       game.balls,

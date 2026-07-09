@@ -304,7 +304,8 @@
       "intro": "A ball's colour tells you what it does. Which balls appear is decided by the level you've reached - new colours unlock as you climb.",
       "speed": "Speed {{speed}}",
       "unlocks": "From level {{level}}",
-      "lock": "Lock ×{{mult}}"
+      "lock": "Lock ×{{mult}}",
+      "notEncounteredYet": "Not encountered yet."
     },
     "steps": {
       "swipeToCut": {

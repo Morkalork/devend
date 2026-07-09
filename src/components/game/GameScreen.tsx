@@ -49,6 +49,9 @@ interface GameScreenProps {
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
+  /** Fired once per ball the instant it locks, with its ball-type id (drives the
+   *  tutorial's "encountered ball types" tracking). */
+  onBallTypeLocked?: (typeId: string) => void;
   onMainMenu: () => void;
   onRestart: () => void;
   showInGameTutorial?: boolean;
@@ -93,6 +96,7 @@ export function GameScreen({
   onLivesChange,
   onGameEnd,
   onLevelComplete,
+  onBallTypeLocked,
   onMainMenu,
   onRestart,
   showInGameTutorial = false,
@@ -282,6 +286,7 @@ export function GameScreen({
             onLivesChange={onLivesChange}
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
+            onBallTypeLocked={onBallTypeLocked}
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
             freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}

@@ -112,6 +112,9 @@ interface GameCanvasProps {
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
+  /** Fired once per ball the instant it locks, with its ball-type id (drives the
+   *  tutorial's "encountered ball types" tracking). */
+  onBallTypeLocked?: (typeId: string) => void;
   canvasOpacity?: number;
   fenceSpeedBase?: number;
   fenceSpeedMin?: number;
@@ -168,6 +171,7 @@ export function GameCanvas({
   tutorialMode = false,
   tutorialStep = "completed",
   onTutorialCutSuccess,
+  onBallTypeLocked,
   canvasOpacity = 0.9,
   fenceSpeedBase = 1200,
   fenceSpeedMin = 750,
@@ -197,6 +201,8 @@ export function GameCanvas({
   useEffect(() => { freezeOnCompleteRef.current = freezeOnComplete; }, [freezeOnComplete]);
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
+  const onBallTypeLockedRef = useRef(onBallTypeLocked);
+  useEffect(() => { onBallTypeLockedRef.current = onBallTypeLocked; }, [onBallTypeLocked]);
   // Live ref so toggling the speed-label overlay takes effect without restarting
   // the render loop (the rctx is rebuilt only per level).
   const showBallSpeedsRef = useRef(showBallSpeeds);
@@ -667,6 +673,7 @@ export function GameCanvas({
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
       onTutorialCutSuccess,
+      onBallTypeLocked: id => onBallTypeLockedRef.current?.(id),
       getLives: () => livesRef.current,
       setLivesRef: n => { livesRef.current = n; },
       flashTimeoutRef,

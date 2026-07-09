@@ -132,7 +132,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               />
             )}
             {navigation.currentScreen === 'tutorial' && (
-              <TutorialScreen onBack={navigation.goToWelcome} accentColor={accentHex} />
+              <TutorialScreen
+                onBack={navigation.goToWelcome}
+                accentColor={accentHex}
+                encounteredBallTypeIds={session.encounteredBallTypeIds}
+              />
             )}
             {navigation.currentScreen === 'options' && (
               <OptionsScreen
@@ -159,6 +163,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onLivesChange={session.handleLivesChange}
                 onGameEnd={session.handleGameEnd}
                 onLevelComplete={session.handleLevelComplete}
+                onBallTypeLocked={session.recordBallTypeEncountered}
                 onMainMenu={session.handleBackToWelcome}
                 onRestart={session.handlePlayAgain}
                 showInGameTutorial={session.showInGameTutorial}

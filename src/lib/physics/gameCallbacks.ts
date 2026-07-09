@@ -24,6 +24,10 @@ export interface GameCallbacks {
   onGameEnd: (result: GameResult) => void;
   onLivesChange: (n: number) => void;
   onTutorialCutSuccess?: () => void;
+  /** Fired once per ball the instant it locks, with its ball-type id (#tutorial
+   *  encountered-ball-types tracking). Optional: tests/tools that build a bare
+   *  CanvasGameState can omit it. */
+  onBallTypeLocked?: (typeId: string) => void;
   // Lives ref access — updateWall needs mutable live value
   getLives: () => number;
   setLivesRef: (n: number) => void;

@@ -51,6 +51,13 @@ export interface UnlockState {
    * A map absent from the record has never been completed.
    */
   mapHighscores: Record<string, number>;
+  /**
+   * Ball type ids (ballTypes.ts) the player has LOCKED (captured) at least
+   * once, across every run. Drives the tutorial's ball-types section: a type
+   * absent here shows "Not encountered yet." instead of its ability. Red and
+   * green are always shown regardless of this set (see TutorialScreen).
+   */
+  encounteredBallTypeIds: string[];
 }
 
 export const DEFAULT_META_STATS: MetaProgressionStats = {

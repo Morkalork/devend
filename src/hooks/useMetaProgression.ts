@@ -53,7 +53,10 @@ function saveMetaStats(stats: MetaProgressionStats): void {
  * Load unlock state from localStorage
  */
 function emptyUnlockState(): UnlockState {
-  return { unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: false, mapHighscores: {} };
+  return {
+    unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: false, mapHighscores: {},
+    encounteredBallTypeIds: [],
+  };
 }
 
 function loadUnlockState(): UnlockState {
@@ -74,6 +77,7 @@ function loadUnlockState(): UnlockState {
       wonLoadoutIds: Array.isArray(parsed.wonLoadoutIds) ? parsed.wonLoadoutIds : [],
       loadoutsIntroduced: parsed.loadoutsIntroduced === true,
       mapHighscores,
+      encounteredBallTypeIds: Array.isArray(parsed.encounteredBallTypeIds) ? parsed.encounteredBallTypeIds : [],
     };
   } catch {
     return emptyUnlockState();
@@ -112,15 +116,17 @@ export function useMetaProgression() {
   const [wonLoadoutIds, setWonLoadoutIds] = useState<string[]>([]);
   const [loadoutsIntroduced, setLoadoutsIntroduced] = useState(false);
   const [mapHighscores, setMapHighscores] = useState<Record<string, number>>({});
+  const [encounteredBallTypeIds, setEncounteredBallTypeIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Refs mirror the persisted unlock state so recordLoadoutWin /
-  // introduceLoadouts / recordMapHighscore can read/write it synchronously
-  // without stale state.
+  // introduceLoadouts / recordMapHighscore / recordBallTypeEncountered can
+  // read/write it synchronously without stale state.
   const unlockedIdsRef = useRef<string[]>([]);
   const wonLoadoutIdsRef = useRef<string[]>([]);
   const loadoutsIntroducedRef = useRef(false);
   const mapHighscoresRef = useRef<Record<string, number>>({});
+  const encounteredBallTypeIdsRef = useRef<string[]>([]);
 
   // Persist the full unlock state from the refs (single source, so no save site
   // can forget a field).
@@ -130,6 +136,7 @@ export function useMetaProgression() {
       wonLoadoutIds: wonLoadoutIdsRef.current,
       loadoutsIntroduced: loadoutsIntroducedRef.current,
       mapHighscores: mapHighscoresRef.current,
+      encounteredBallTypeIds: encounteredBallTypeIdsRef.current,
     });
   }, []);
 
@@ -142,10 +149,12 @@ export function useMetaProgression() {
     setWonLoadoutIds(loadedUnlocks.wonLoadoutIds);
     setLoadoutsIntroduced(loadedUnlocks.loadoutsIntroduced);
     setMapHighscores(loadedUnlocks.mapHighscores);
+    setEncounteredBallTypeIds(loadedUnlocks.encounteredBallTypeIds);
     unlockedIdsRef.current = loadedUnlocks.unlockedIds;
     wonLoadoutIdsRef.current = loadedUnlocks.wonLoadoutIds;
     loadoutsIntroducedRef.current = loadedUnlocks.loadoutsIntroduced;
     mapHighscoresRef.current = loadedUnlocks.mapHighscores;
+    encounteredBallTypeIdsRef.current = loadedUnlocks.encounteredBallTypeIds;
     setIsLoaded(true);
   }, []);
 
@@ -271,6 +280,20 @@ export function useMetaProgression() {
   );
 
   /**
+   * Record that the player has LOCKED (captured) a ball of this type at least
+   * once. Fired once per lock (see GameCanvas.onBallTypeLocked); idempotent for
+   * a type already encountered. Drives the tutorial's ball-types section - see
+   * UnlockState.encounteredBallTypeIds.
+   */
+  const recordBallTypeEncountered = useCallback((typeId: string): void => {
+    if (encounteredBallTypeIdsRef.current.includes(typeId)) return;
+    const next = [...encounteredBallTypeIdsRef.current, typeId];
+    encounteredBallTypeIdsRef.current = next;
+    setEncounteredBallTypeIds(next);
+    persistUnlockState();
+  }, [persistUnlockState]);
+
+  /**
    * Reveal the loadout system (called on the first win). Returns true only the
    * first time, so the caller can show a one-time "loadouts unlocked" modal.
    */
@@ -291,10 +314,12 @@ export function useMetaProgression() {
     setWonLoadoutIds([]);
     setLoadoutsIntroduced(false);
     setMapHighscores({});
+    setEncounteredBallTypeIds([]);
     unlockedIdsRef.current = [];
     wonLoadoutIdsRef.current = [];
     loadoutsIntroducedRef.current = false;
     mapHighscoresRef.current = {};
+    encounteredBallTypeIdsRef.current = [];
     saveMetaStats({ ...DEFAULT_META_STATS });
     saveUnlockState(emptyUnlockState());
   }, []);
@@ -305,6 +330,7 @@ export function useMetaProgression() {
     wonLoadoutIds,
     loadoutsIntroduced,
     mapHighscores,
+    encounteredBallTypeIds,
     updateStats,
     recordLevelReached,
     recordFencesDrawn,
@@ -314,6 +340,7 @@ export function useMetaProgression() {
     recordPushBonusBanked,
     recordLoadoutWin,
     recordMapHighscore,
+    recordBallTypeEncountered,
     introduceLoadouts,
     resetProgression,
   };

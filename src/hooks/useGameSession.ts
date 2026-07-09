@@ -162,6 +162,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     wonLoadoutIds,
     loadoutsIntroduced,
     mapHighscores,
+    encounteredBallTypeIds,
     recordLevelReached,
     recordFencesDrawn,
     recordPerfectLevel,
@@ -170,6 +171,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordPushBonusBanked,
     recordLoadoutWin,
     recordMapHighscore,
+    recordBallTypeEncountered,
     introduceLoadouts,
     resetProgression,
   } = useMetaProgression();
@@ -748,6 +750,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Meta progression
     metaStats,
     mapHighscores,
+    encounteredBallTypeIds,
+    recordBallTypeEncountered,
     runHoursAwarded,
     runLevelsCompleted,
     lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,
