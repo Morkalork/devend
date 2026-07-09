@@ -12,7 +12,7 @@
  * This eliminates any inference from physics or collision outcomes.
  */
 
-import { Vector2, Polygon, pointInPolygon, lineSegmentIntersection } from './polygon';
+import { Vector2, Polygon, pointInPolygon, lineSegmentIntersection, pointToSegmentDistance } from './polygon';
 
 export enum CellState {
   ACTIVE = 0,
@@ -446,6 +446,7 @@ export function removeRegion(grid: SpaceGrid, region: GridRegion): void {
 export function captureUnreachableCells(
   grid: SpaceGrid,
   balls: { position: Vector2; radius: number; state: string; speed: number }[],
+  walls?: { start: Vector2; end: Vector2 }[],
 ): void {
   const { width, height, cells, cellSize } = grid;
   const n = cells.length;
@@ -483,7 +484,33 @@ export function captureUnreachableCells(
   const radius = Math.min(...activeBalls.map(b => b.radius));
   const coreMinDist = (radius + cellSize / 2) / cellSize;
   const radiusCells = Math.ceil(radius / cellSize);
-  const isCore = (i: number) => cells[i] === CellState.ACTIVE && dist[i] >= coreMinDist;
+  const core = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (cells[i] === CellState.ACTIVE && dist[i] >= coreMinDist) core[i] = 1;
+  }
+  // Geometric refinement (when wall segments are available): the BFS test is
+  // cell-quantized and can't see that a corridor barely wider than the ball is
+  // passable - a ~2.5-cell gap has no cell at BFS dist >= 2, so the corridor
+  // reads as impassable, capture severs it, and the lock check right after sees
+  // the ball in a small disconnected region: a FALSE lock on a ball that could
+  // physically escape. Rescue boundary cells (BFS dist 1) whose exact clearance
+  // to the nearest wall segment fits the ball. Sub-ball channels still have no
+  // qualifying cell (no centre can be >= radius from both sides of a gap that
+  // is narrower than the ball), so pockets behind obstacles keep capturing.
+  if (walls && walls.length > 0) {
+    for (let i = 0; i < n; i++) {
+      if (core[i] || cells[i] !== CellState.ACTIVE || dist[i] !== 1) continue;
+      const p = gridIndexToWorld(grid, i);
+      let clearance = Infinity;
+      for (const w of walls) {
+        const d = pointToSegmentDistance(p, w.start, w.end);
+        if (d < clearance) clearance = d;
+        if (clearance < radius) break;
+      }
+      if (clearance >= radius) core[i] = 1;
+    }
+  }
+  const isCore = (i: number) => core[i] === 1;
 
   // 3. Flood core cells reachable from a ball (seed the core cells the ball covers).
   const reachable = new Uint8Array(n);

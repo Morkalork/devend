@@ -381,7 +381,7 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
     // ball, so it would linger forever as an uncapturable dark island in the
     // captured fill AND permanently inflate the remaining-%. Recapture every
     // reopened cell no ball can physically reach, right now.
-    captureUnreachableCells(game.spaceGrid, game.balls);
+    captureUnreachableCells(game.spaceGrid, game.balls, game.walls);
     rebuildRegionsKeepAll(game);
     callbacks.repaintRegionCanvas();
     callbacks.setRemainingPercent(Math.round(getRemainingPercent(game.spaceGrid)));

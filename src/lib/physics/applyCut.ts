@@ -68,7 +68,9 @@ function wouldWallTrapBallCheck(start: Vector2, end: Vector2, game: CanvasGameSt
  */
 function captureUnreachableSpace(game: CanvasGameState): void {
   if (!game.spaceGrid) return;
-  captureUnreachableCells(game.spaceGrid, game.balls);
+  // Wall segments let the capture verify borderline corridors geometrically
+  // instead of severing every gap the cell grid can't resolve (false locks).
+  captureUnreachableCells(game.spaceGrid, game.balls, game.walls);
 
   // Recompute the surviving regions (all now ball-reachable) for downstream
   // bookkeeping. Neighbour-search fallback locates balls whose grid-cell centre
