@@ -283,14 +283,16 @@ export function useMetaProgression() {
    * Record that the player has LOCKED (captured) a ball of this type at least
    * once. Fired once per lock (see GameCanvas.onBallTypeLocked); idempotent for
    * a type already encountered. Drives the tutorial's ball-types section - see
-   * UnlockState.encounteredBallTypeIds.
+   * UnlockState.encounteredBallTypeIds. Returns true iff this was the FIRST
+   * time (a new id), so the caller can trigger the "Info Unlocked" flash.
    */
-  const recordBallTypeEncountered = useCallback((typeId: string): void => {
-    if (encounteredBallTypeIdsRef.current.includes(typeId)) return;
+  const recordBallTypeEncountered = useCallback((typeId: string): boolean => {
+    if (encounteredBallTypeIdsRef.current.includes(typeId)) return false;
     const next = [...encounteredBallTypeIdsRef.current, typeId];
     encounteredBallTypeIdsRef.current = next;
     setEncounteredBallTypeIds(next);
     persistUnlockState();
+    return true;
   }, [persistUnlockState]);
 
   /**

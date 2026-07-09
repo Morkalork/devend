@@ -30,6 +30,7 @@ import {
   LOCK_PULSE_DURATION,
   LOCK_FLOOD_DURATION,
   LOCK_DUST_DURATION,
+  INFO_UNLOCKED_DURATION,
   COLORS,
   FREEZE_COOLDOWN_MULTIPLIER,
   SWIPE_TRAIL_DURATION,
@@ -508,7 +509,7 @@ export function renderFrame(
   } = game;
   const { width: screenWidth, height: screenHeight } = screenSize;
   const { scale } = boardRect;
-  const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain } = rctx;
+  const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain, infoUnlockedLabel = 'Info Unlocked' } = rctx;
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -1761,6 +1762,30 @@ export function renderFrame(
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
+        ctx.restore();
+      }
+
+      // First-ever lock of this ball type: a rising, fading "Info Unlocked"
+      // label above the ball, on top of the usual lock animation.
+      if (flash.firstEncounter && elapsed < INFO_UNLOCKED_DURATION) {
+        const FADE_IN_MS = 150, FADE_OUT_MS = 500, RISE_WORLD = 55;
+        const fadeIn = Math.min(1, elapsed / FADE_IN_MS);
+        const fadeOut = elapsed > INFO_UNLOCKED_DURATION - FADE_OUT_MS
+          ? Math.max(0, (INFO_UNLOCKED_DURATION - elapsed) / FADE_OUT_MS)
+          : 1;
+        const textAlpha = Math.min(fadeIn, fadeOut);
+        const rise = RISE_WORLD * (elapsed / INFO_UNLOCKED_DURATION);
+        const tp = w2s(flash.centroid.x, flash.centroid.y - 40 - rise);
+
+        ctx.save();
+        ctx.globalAlpha = textAlpha;
+        ctx.font = `bold ${Math.max(11, Math.round(13 * scale))}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.shadowColor = accentColor;
+        ctx.shadowBlur = 10 * scale;
+        ctx.fillStyle = accentColor;
+        ctx.fillText(infoUnlockedLabel, tp.x, tp.y);
         ctx.restore();
       }
     }

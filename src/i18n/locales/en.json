@@ -159,7 +159,8 @@
     "topBarTutorialTitle": "The Top Bar",
     "topBarTutorialBody": "The top bar is expandable!\n\nTap it to see full level details, all your active upgrades with descriptions, and certificate-hour progress.",
     "bottomBarTutorialTitle": "The Bottom Bar",
-    "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language."
+    "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language.",
+    "infoUnlocked": "Info Unlocked"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
@@ -305,7 +306,7 @@
       "speed": "Speed {{speed}}",
       "unlocks": "From level {{level}}",
       "lock": "Lock ×{{mult}}",
-      "notEncounteredYet": "Not encountered yet."
+      "notEncounteredYet": "Not encountered yet. Lock it for more info."
     },
     "steps": {
       "swipeToCut": {

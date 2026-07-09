@@ -157,7 +157,8 @@
     "topBarTutorialTitle": "La barra superior",
     "topBarTutorialBody": "¡La barra superior se puede expandir!\n\nTócala para ver todos los detalles del nivel, todas tus mejoras activas con descripciones y el progreso de horas de certificado.",
     "bottomBarTutorialTitle": "La barra inferior",
-    "bottomBarTutorialBody": "¡La barra inferior también se puede expandir!\n\nTócala para ver cada modificador activo explicado en lenguaje sencillo."
+    "bottomBarTutorialBody": "¡La barra inferior también se puede expandir!\n\nTócala para ver cada modificador activo explicado en lenguaje sencillo.",
+    "infoUnlocked": "Información desbloqueada"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",

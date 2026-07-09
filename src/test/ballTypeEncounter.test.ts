@@ -27,6 +27,16 @@ describe("useMetaProgression: encountered ball types", () => {
     expect(result.current.encounteredBallTypeIds).toEqual(["purple"]);
   });
 
+  it("returns true only on the FIRST lock of a type (drives the Info Unlocked flash)", () => {
+    const { result } = renderHook(() => useMetaProgression());
+    let first: boolean | undefined;
+    let second: boolean | undefined;
+    act(() => { first = result.current.recordBallTypeEncountered("black"); });
+    act(() => { second = result.current.recordBallTypeEncountered("black"); });
+    expect(first).toBe(true);
+    expect(second).toBe(false);
+  });
+
   it("accumulates distinct types across multiple locks", () => {
     const { result } = renderHook(() => useMetaProgression());
     act(() => result.current.recordBallTypeEncountered("yellow"));

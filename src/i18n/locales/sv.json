@@ -157,7 +157,8 @@
     "topBarTutorialTitle": "Den övre listen",
     "topBarTutorialBody": "Den övre listen går att fälla ut!\n\nTryck på den för att se fullständiga nivådetaljer, alla dina aktiva uppgraderingar med beskrivningar och framsteg för certifikattimmar.",
     "bottomBarTutorialTitle": "Den nedre listen",
-    "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska."
+    "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska.",
+    "infoUnlocked": "Info upplåst"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",

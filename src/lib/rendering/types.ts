@@ -25,4 +25,8 @@ export interface RenderContext {
   spaceThreshold: number;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
+  /** Localized "Info Unlocked" text flashed above a ball on its first-ever
+   *  lock of that ball type. renderFrame.ts has no i18n of its own, so the
+   *  already-translated string is threaded in here. Falls back to English. */
+  infoUnlockedLabel?: string;
 }

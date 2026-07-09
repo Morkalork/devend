@@ -133,6 +133,10 @@ export interface LockFlashState {
   ballPos: Vector2;      // ball position at moment of lock
   ballColor: string;     // ball colour for dust tint
   particles: LockDustParticle[];
+  /** True when this lock was the player's first-ever capture of this ball type
+   *  (tutorial ball-types intel). Draws a rising "Info Unlocked" flash above the
+   *  ball on top of the usual lock animation. */
+  firstEncounter: boolean;
 }
 
 export interface DissolveTile {

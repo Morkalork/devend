@@ -108,6 +108,11 @@ export function checkAndUpdateBallWonStates(
       ball.renderPosition = { x: c.x, y: c.y };
     }
 
+    // Track this lock for tutorial ball-type intel: fires once per lock, BEFORE
+    // the assimilation state is built below, so a first-time capture can
+    // decorate that same lock animation with the "Info Unlocked" flash.
+    const isFirstEncounter = callbacks.onBallTypeLocked?.(ball.typeId) ?? false;
+
     if (ballRegion.cellIndices.length > 0) {
       const centroid = ballRegion.centroid;
       const RAY_COUNT = 360;
@@ -168,6 +173,7 @@ export function checkAndUpdateBallWonStates(
         ballPos: { ...ball.position },
         ballColor: ball.color,
         particles,
+        firstEncounter: isFirstEncounter,
       });
       playBallLockSound();
       vibrateBallLock();
@@ -175,7 +181,6 @@ export function checkAndUpdateBallWonStates(
 
     game.lockedBallsCount += 1;
     wonThisPass.push(ball);
-    callbacks.onBallTypeLocked?.(ball.typeId);
 
     applyMicroManagerSpeedCap(
       game.balls,

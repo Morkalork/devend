@@ -14,6 +14,7 @@
  *   - rendering: src/lib/rendering/renderFrame.ts
  */
 import { useRef, useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
 import { LevelConfig } from "@/types/level";
 
@@ -113,8 +114,9 @@ interface GameCanvasProps {
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
   /** Fired once per ball the instant it locks, with its ball-type id (drives the
-   *  tutorial's "encountered ball types" tracking). */
-  onBallTypeLocked?: (typeId: string) => void;
+   *  tutorial's "encountered ball types" tracking). Returns true iff this was
+   *  the first-ever lock of that type (triggers the "Info Unlocked" flash). */
+  onBallTypeLocked?: (typeId: string) => boolean;
   canvasOpacity?: number;
   fenceSpeedBase?: number;
   fenceSpeedMin?: number;
@@ -189,6 +191,7 @@ export function GameCanvas({
   showPerfOverlay = false,
   freezeOnComplete = false,
 }: GameCanvasProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -613,7 +616,11 @@ export function GameCanvas({
       }
     };
 
-    const rctx: RenderContext = { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState, spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current };
+    const rctx: RenderContext = {
+      accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState,
+      spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current,
+      infoUnlockedLabel: t('game.infoUnlocked'),
+    };
     const render = () => {
       rctx.showBallSpeeds = showBallSpeedsRef.current;
       renderFrame(ctx, game, rctx);
@@ -673,7 +680,7 @@ export function GameCanvas({
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
       onTutorialCutSuccess,
-      onBallTypeLocked: id => onBallTypeLockedRef.current?.(id),
+      onBallTypeLocked: id => onBallTypeLockedRef.current?.(id) ?? false,
       getLives: () => livesRef.current,
       setLivesRef: n => { livesRef.current = n; },
       flashTimeoutRef,

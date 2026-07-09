@@ -50,8 +50,9 @@ interface GameScreenProps {
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired once per ball the instant it locks, with its ball-type id (drives the
-   *  tutorial's "encountered ball types" tracking). */
-  onBallTypeLocked?: (typeId: string) => void;
+   *  tutorial's "encountered ball types" tracking). Returns true iff this was
+   *  the first-ever lock of that type. */
+  onBallTypeLocked?: (typeId: string) => boolean;
   onMainMenu: () => void;
   onRestart: () => void;
   showInGameTutorial?: boolean;
