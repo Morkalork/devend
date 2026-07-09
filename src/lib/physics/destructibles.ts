@@ -18,6 +18,7 @@ import {
   ObjectDebrisParticle,
   FallingObject,
   Region,
+  Vector2,
 } from "@/types/game";
 import { Polygon, pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
 import {
@@ -27,6 +28,7 @@ import {
   getRemainingPercent,
   getRegionCellPositions,
   gridIndexToWorld,
+  captureUnreachableCells,
 } from "@/lib/spaceGrid";
 import { buildPolygonFromSamples } from "@/lib/regionSplit";
 import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnership";
@@ -180,15 +182,42 @@ function makeFalling(poly: Polygon, color: string, now: number): FallingObject {
 function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
   const grid = game.spaceGrid;
   if (!grid) return [];
+  // createSpaceGrid seals each obstacle EDGE as a band of REMOVED cells reaching
+  // ~cellSize beyond the polygon (rasterizeCutToGrid margin: thickness/2 +
+  // cellSize/2). Reopen that band too, not just the interior footprint: leaving
+  // the ring REMOVED grid-isolates the reopened interior even though physics
+  // lets balls roll right over it, and the follow-up unreachable-capture in
+  // processDestroysFn would then wrongly swallow reachable reopened space.
+  const margin = grid.cellSize;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const v of poly.vertices) {
     if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
     if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
   }
-  const c0 = Math.max(0, Math.floor((minX - grid.originX) / grid.cellSize));
-  const c1 = Math.min(grid.width - 1, Math.ceil((maxX - grid.originX) / grid.cellSize));
-  const r0 = Math.max(0, Math.floor((minY - grid.originY) / grid.cellSize));
-  const r1 = Math.min(grid.height - 1, Math.ceil((maxY - grid.originY) / grid.cellSize));
+  const c0 = Math.max(0, Math.floor((minX - margin - grid.originX) / grid.cellSize));
+  const c1 = Math.min(grid.width - 1, Math.ceil((maxX + margin - grid.originX) / grid.cellSize));
+  const r0 = Math.max(0, Math.floor((minY - margin - grid.originY) / grid.cellSize));
+  const r1 = Math.min(grid.height - 1, Math.ceil((maxY + margin - grid.originY) / grid.cellSize));
+  // Ring cells must NOT reopen space that is REMOVED for reasons other than
+  // this obstacle's seal: a wall/fence corridor (reopening one punches a hole in
+  // the fence's grid band and reconnects a sealed pocket to the live board),
+  // the outside of the board, or another obstacle's footprint. The corridor
+  // test is geometric against every wall segment - a fence's rasterCells list
+  // can't be used here, because cells already removed by this obstacle's seal
+  // were skipped during the fence's rasterization and never recorded on it.
+  const nearWallCorridor = (p: Vector2): boolean => {
+    for (const w of game.walls) {
+      const corridor = (w.thickness ?? 6) / 2 + grid.cellSize / 2;
+      if (pointToSegmentDistance(p, w.start, w.end) <= corridor) return true;
+    }
+    return false;
+  };
+  const inOtherSolid = (p: Vector2): boolean => {
+    for (const op of game.obstaclePolygons) if (pointInPolygon(p, op)) return true;
+    for (const mp of game.mirrorPolygons) if (pointInPolygon(p, mp)) return true;
+    return false;
+  };
+  const vs = poly.vertices;
   const out: number[] = [];
   for (let row = r0; row <= r1; row++) {
     for (let col = c0; col <= c1; col++) {
@@ -196,7 +225,20 @@ function removedCellsUnder(game: CanvasGameState, poly: Polygon): number[] {
       if (grid.cells[index] !== CellState.REMOVED) continue;
       const wx = grid.originX + col * grid.cellSize + grid.cellSize / 2;
       const wy = grid.originY + row * grid.cellSize + grid.cellSize / 2;
-      if (pointInPolygon({ x: wx, y: wy }, poly)) out.push(index);
+      const p = { x: wx, y: wy };
+      let inside = pointInPolygon(p, poly);
+      if (!inside) {
+        // Edge-seal ring: within the seal margin of some polygon edge.
+        let nearEdge = false;
+        for (let i = 0; i < vs.length && !nearEdge; i++) {
+          if (pointToSegmentDistance(p, vs[i], vs[(i + 1) % vs.length]) <= margin) nearEdge = true;
+        }
+        inside = nearEdge
+          && !nearWallCorridor(p)
+          && (!game.boardPolygon || pointInPolygon(p, game.boardPolygon))
+          && !inOtherSolid(p);
+      }
+      if (inside) out.push(index);
     }
   }
   return out;
@@ -332,6 +374,14 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
   }
 
   if (opened > 0 && game.spaceGrid) {
+    // Reopened space a ball can actually reach becomes capturable again (the
+    // point of breaking things). But a footprint reopened INSIDE captured
+    // territory - e.g. a box toppled by the stack-chain when its supporter was
+    // smashed on the other side of a sealed fence - is unreachable by every
+    // ball, so it would linger forever as an uncapturable dark island in the
+    // captured fill AND permanently inflate the remaining-%. Recapture every
+    // reopened cell no ball can physically reach, right now.
+    captureUnreachableCells(game.spaceGrid, game.balls);
     rebuildRegionsKeepAll(game);
     callbacks.repaintRegionCanvas();
     callbacks.setRemainingPercent(Math.round(getRemainingPercent(game.spaceGrid)));
