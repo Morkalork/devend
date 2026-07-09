@@ -19,6 +19,7 @@ import {
   captureUnreachableCells,
   buildGridRegionMap,
   findGridRegionForBall,
+  floodRemovedEnclosure,
 } from "@/lib/spaceGrid";
 import {
   reassignBallsToRegions,
@@ -189,15 +190,28 @@ export function applyCutFn(
     // it's won, and repaint (the region-fill's space-grid mask then renders those
     // cells as captured instead of punching them dark).
     const grid = game.spaceGrid;
-    // Snapshot ACTIVE cells so we can tag exactly what this lock captures and
-    // give it the persistent accent tint that marks locked territory.
+    // Snapshot ACTIVE cells so we can tag what this lock captures and give it
+    // the persistent accent tint that marks locked territory.
     const before = grid ? Uint8Array.from(grid.cells) : null;
     captureUnreachableSpace(game);
     if (grid && before) {
       if (!grid.lockCaptured) grid.lockCaptured = new Uint8Array(grid.cells.length);
+      // The capture diff alone under-covers the pocket: the sealing fence's own
+      // raster band and any cells captured in the PRE-lock pass (e.g. the acute
+      // tip of a wedge the ball never fit into) aren't in the diff, so they
+      // rendered as dark, cell-quantized fringes between the tint and the fence
+      // line. Flood from the diff across REMOVED cells, stopping at actual wall
+      // segments: the tint then spans the whole enclosed chamber, up to (never
+      // across) each bounding fence, obstacle edge and board edge.
+      const seeds: number[] = [];
       for (let i = 0; i < grid.cells.length; i++) {
         if (before[i] === CellState.ACTIVE && grid.cells[i] === CellState.REMOVED) {
-          grid.lockCaptured[i] = 1;
+          seeds.push(i);
+        }
+      }
+      if (seeds.length > 0) {
+        for (const idx of floodRemovedEnclosure(grid, seeds, game.walls)) {
+          grid.lockCaptured[idx] = 1;
         }
       }
     }

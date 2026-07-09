@@ -536,6 +536,56 @@ export function captureUnreachableCells(
 }
 
 /**
+ * Flood-fill REMOVED cells from the given seeds, never stepping across a wall
+ * segment (geometric test between neighbouring cell centres). Returns the set
+ * of reached cell indices - the captured "chamber" enclosing the seeds, right
+ * up to (but not across) every bounding fence, obstacle edge and board edge.
+ *
+ * Used to paint the locked-territory tint: the capture-pass diff alone misses
+ * the fence's own raster band and any cells captured in an earlier pass, which
+ * left dark, cell-quantized fringes between the tint and the fence line (the
+ * reported "glitchy" lock fill). Flooding to the walls makes the tint span the
+ * whole enclosure while wall crossings keep it out of neighbouring territory.
+ */
+export function floodRemovedEnclosure(
+  grid: SpaceGrid,
+  seeds: number[],
+  walls: { start: Vector2; end: Vector2 }[],
+): Set<number> {
+  const { width, height, cells } = grid;
+  const visited = new Uint8Array(cells.length);
+  const queue: number[] = [];
+  for (const s of seeds) {
+    if (s >= 0 && s < cells.length && cells[s] === CellState.REMOVED && !visited[s]) {
+      visited[s] = 1;
+      queue.push(s);
+    }
+  }
+  const out = new Set<number>(queue);
+  while (queue.length > 0) {
+    const cur = queue.pop()!;
+    const a = gridIndexToWorld(grid, cur);
+    const row = (cur / width) | 0;
+    const col = cur % width;
+    const step = (ni: number) => {
+      if (visited[ni] || cells[ni] !== CellState.REMOVED) return;
+      const b = gridIndexToWorld(grid, ni);
+      for (const w of walls) {
+        if (lineSegmentIntersection(a, b, w.start, w.end)) return;
+      }
+      visited[ni] = 1;
+      out.add(ni);
+      queue.push(ni);
+    };
+    if (row > 0) step(cur - width);
+    if (row < height - 1) step(cur + width);
+    if (col > 0) step(cur - 1);
+    if (col < width - 1) step(cur + 1);
+  }
+  return out;
+}
+
+/**
  * Get all ACTIVE cell world positions (for rendering).
  */
 export function getActiveCellPositions(grid: SpaceGrid): Vector2[] {
