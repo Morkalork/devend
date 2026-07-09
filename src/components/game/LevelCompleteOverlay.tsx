@@ -90,35 +90,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
         transition={{ duration: 0.25 }}
       />
 
-      {/* Modal container */}
-      <motion.div
-        className="level-complete-modal fixed z-50 overflow-y-auto"
-        style={{
-          bottom: '1rem',
-          left: '1rem',
-          right: '1rem',
-          maxHeight: 'calc(100vh - 2rem)',
-        }}
-        initial={{ opacity: 0, y: 55, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 310, damping: 26, mass: 0.85 }}
-      >
-        <style>{`
-          @media (min-width: 640px) {
-            .level-complete-modal {
-              top: 50% !important;
-              bottom: auto !important;
-              left: 50% !important;
-              right: auto !important;
-              width: 420px !important;
-              max-height: 90vh !important;
-              margin-left: -210px !important;
-              margin-top: -320px !important;
-            }
-          }
-        `}</style>
-
-        <div className="bg-card/60 backdrop-blur-md border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
+      {/* Modal container: centered on every breakpoint (mobile included), so the
+          card sits with even space above and below instead of pinned to the
+          bottom edge with a large dead gap at the top. */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <motion.div
+          className="w-full sm:w-[420px] max-h-full overflow-y-auto"
+          initial={{ opacity: 0, y: 55, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 310, damping: 26, mass: 0.85 }}
+        >
+          <div className="bg-card/60 backdrop-blur-md border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
           {/* Header */}
           <motion.div
             className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6"
@@ -346,7 +328,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             </button>
           </motion.div>
         </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </>
   );
 }
