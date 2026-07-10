@@ -311,6 +311,27 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Morkalork Display', sans-serif;
   }
+
+  /* This is a game, not a document: text is never selectable, and mobile
+     press-and-hold (used by the shop/door detail views) must not trigger the
+     iOS text-selection callout. Form fields opt back in below so admin inputs
+     stay editable. */
+  * {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+  }
 }
 
 @layer components {
