@@ -11,8 +11,9 @@ import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Award, Play, Sparkles } from 'lucide-react';
 import { CapstoneConfig } from '@/types/capstone';
-import { TAG_COLORS } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
+import { DraftCard } from './DraftCard';
+import { TagChip } from './TagChip';
 import { contentText } from '@/i18n/content';
 
 interface CapstoneDraftScreenProps {
@@ -79,47 +80,24 @@ export function CapstoneDraftScreen({
               offers.length === 2 ? 'sm:grid-cols-2 sm:max-w-xl sm:mx-auto' : 'sm:grid-cols-3'
             }`}
           >
-            {offers.map((cap, i) => {
-              const selected = selectedId === cap.id;
-              const tc = cap.tag ? TAG_COLORS[cap.tag] : null;
-              return (
-                <motion.button
-                  key={cap.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + i * 0.1 }}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setSelectedId(prev => (prev === cap.id ? null : cap.id))}
-                  className="text-left rounded-lg p-4 transition-colors"
-                  style={{
-                    backgroundColor: selected ? `${accentColor}1a` : 'rgba(255,255,255,0.04)',
-                    border: `2px solid ${selected ? accentColor : `${accentColor}44`}`,
-                    boxShadow: selected ? `0 0 24px ${accentColor}66` : 'none',
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-3">
-                    <p
-                      className="font-display font-bold text-base flex-1"
-                      style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
-                    >
-                      {contentText.capstoneName(t, cap)}
-                    </p>
-                    {tc && cap.tag && (
-                      <span className={`px-1.5 py-px rounded text-[9px] font-semibold uppercase tracking-wider ${tc.bg} ${tc.text}`}>
-                        {t(`upgradeShop.tags.${cap.tag}`)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
-                      {contentText.capstoneDesc(t, cap)}
-                    </p>
-                  </div>
-                </motion.button>
-              );
-            })}
+            {offers.map((cap, i) => (
+              <DraftCard
+                key={cap.id}
+                index={i}
+                accentColor={accentColor}
+                selected={selectedId === cap.id}
+                onClick={() => setSelectedId(prev => (prev === cap.id ? null : cap.id))}
+                name={contentText.capstoneName(t, cap)}
+                headerExtra={cap.tag ? <TagChip tag={cap.tag} /> : undefined}
+              >
+                <div className="flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
+                    {contentText.capstoneDesc(t, cap)}
+                  </p>
+                </div>
+              </DraftCard>
+            ))}
           </div>
 
           {/* Confirm — no skip: a capstone is a pure gift, but an exclusive one */}

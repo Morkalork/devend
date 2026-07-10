@@ -6,8 +6,9 @@ import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
-import { TAG_COLORS, UpgradeTag } from '@/types/upgrade';
+import { UpgradeTag } from '@/types/upgrade';
 import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { TagChip } from './TagChip';
 
 interface GameBottomBarProps {
   activeModifiers: GameModifiers;
@@ -88,16 +89,15 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCount
             {[...tagCounts.entries()]
               .sort((a, b) => b[1] - a[1])
               .map(([tag, count]) => {
-                const tc = TAG_COLORS[tag as UpgradeTag];
-                if (!tc) return null;
                 const setActive = count >= tagSetThreshold;
                 return (
-                  <span
+                  <TagChip
                     key={tag}
-                    className={`px-1.5 py-px rounded-full text-[9px] font-semibold uppercase tracking-wider ${tc.bg} ${tc.text} ${setActive ? 'ring-1 ring-current' : ''}`}
-                  >
-                    {t(`upgradeShop.tags.${tag}`)} {setActive ? '✓' : `${count}/${tagSetThreshold}`}
-                  </span>
+                    tag={tag as UpgradeTag}
+                    pill
+                    ringed={setActive}
+                    suffix={setActive ? '✓' : `${count}/${tagSetThreshold}`}
+                  />
                 );
               })}
           </div>

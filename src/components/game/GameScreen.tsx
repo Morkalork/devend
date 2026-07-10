@@ -183,13 +183,15 @@ export function GameScreen({
   const projectedScore = useMemo(() => {
     if (!showHighscoreBar || highscoreTarget <= 0) return 0;
     return calculateScore(
-      gameState.cutsUsed, level.expectedCuts, gameState.spaceRemaining,
-      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber, 0,
-      activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus,
+      gameState.cutsUsed, level.expectedCuts, gameState.spaceRemaining, level.sizeThreshold, level.points, {
+        scoreMultiplier: activeModifiers.scoreMultiplier,
+        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+        overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      },
     ).levelScore;
   }, [showHighscoreBar, highscoreTarget, gameState.cutsUsed, gameState.spaceRemaining,
       level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier,
-      activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus, levelNumber]);
+      activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus]);
 
   const totalLockedBalls = cumulativeLockedBalls + gameState.lockedBalls;
   

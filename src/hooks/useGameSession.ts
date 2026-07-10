@@ -28,9 +28,9 @@ import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
-import { loadDoors, getDoors, drawDoorOffers } from '@/lib/doorDraft';
+import { loadDoors, getDoors, drawDoorOffers, DOOR_OFFERS_PER_SHOP } from '@/lib/doorDraft';
 import { DoorConfig } from '@/types/door';
-import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers } from '@/lib/capstones';
+import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
@@ -42,6 +42,10 @@ import { Certificate } from '@/types/certificate';
 
 const BASE_LIVES = 3;
 const BASE_CONTINUES = 1;
+/** War Chest ceiling: banked overtime never slows balls by more than this. */
+const MAX_BANKED_SLOW = 0.08;
+/** Base per-map interest cap; Venture Capital tiers raise it (scoreInterestCapBonus). */
+export const BASE_INTEREST_CAP = 8;
 
 export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
@@ -259,7 +263,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // (War Chest keys off bankedSlowPer50h + the bank; Clean Release off the
   // under-par carry). Both fold through the same merge rules as everything else.
   const baseModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
-  const MAX_BANKED_SLOW = 0.08; // War Chest ceiling: never more than 8% slower
   const dynamicBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
     if (baseModifiers.bankedSlowPer50h > 0 && totalScore > 0) {
@@ -387,6 +390,28 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     [certificates]
   );
 
+  /**
+   * Clear every piece of run-scoped state. Shared by all four run-reset paths
+   * (start, play-again, restart, back-to-welcome) so a newly added field can
+   * never be forgotten in one of them again. Lives, continues, level index and
+   * navigation stay with the call sites - they legitimately differ per path.
+   */
+  const resetRunScopedState = useCallback(() => {
+    setTotalScore(0);
+    setOwnedUpgradeIds([]);
+    setCarryInstantFences(0);
+    setActiveDoor(null);
+    setCapstone(null);
+    setPendingLevelScore(null);
+    setShowLevelComplete(false);
+    setCumulativeLockedBalls(0);
+    setAscensionDepth(0);
+    setDraftedLoadoutIds([]);
+    setLastRunSummary(null);
+    setLastRunLoadoutUnlocks([]);
+    resetRunProgress();
+  }, [resetRunProgress]);
+
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
     // The loadout catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
@@ -405,18 +430,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
-      setTotalScore(0);
-      setPendingLevelScore(null);
-      setShowLevelComplete(false);
-      setOwnedUpgradeIds([]);
-      setCarryInstantFences(0);
-      setActiveDoor(null);
-      setCapstone(null);
-      setAscensionDepth(0);
-      setDraftedLoadoutIds([]);
-      setLastRunSummary(null);
-      setLastRunLoadoutUnlocks([]);
-      resetRunProgress();
+      resetRunScopedState();
 
       const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
       const startingLives = BASE_LIVES + certBonusLives;
@@ -447,7 +461,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       if (skipDraft || !loadoutsIntroduced) nav.startGame();
       else nav.goToRunDraft();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress, loadoutsIntroduced]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, loadoutsIntroduced]);
 
   // End-of-run build recap: name the build from its archetype lean and score
   // the banked overtime against the dominant archetype's personal best.
@@ -586,10 +600,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     const levelOvertime = baseLevelScore + highscoreBonusEarned;
-    // Interest on the banked total, capped per map. The base cap is 8h; the
-    // higher Venture Capital tiers raise it (scoreInterestCapBonus), so their
-    // bigger rates aren't silently nullified by the cap.
-    const interestCap = 8 + activeModifiers.scoreInterestCapBonus;
+    // Interest on the banked total, capped per map. The higher Venture Capital
+    // tiers raise the cap, so their bigger rates aren't silently nullified.
+    const interestCap = BASE_INTEREST_CAP + activeModifiers.scoreInterestCapBonus;
     const interestGain = activeModifiers.scoreInterestRate > 0
       ? Math.min(interestCap, Math.floor(totalScore * activeModifiers.scoreInterestRate))
       : 0;
@@ -716,7 +729,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const proceedThroughDoors = useCallback(() => {
     const doorPool = getDoors();
     if (doorPool.length > 0 && !isLastLevel) {
-      setDoorOffers(drawDoorOffers(doorPool, 2));
+      setDoorOffers(drawDoorOffers(doorPool, DOOR_OFFERS_PER_SHOP));
       nav.goToDoorDraft();
       return;
     }
@@ -741,7 +754,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Head Start runs that skip the exact trigger level still get theirs.
     const capstonePool = getCapstones();
     if (!capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
-      setCapstoneOffers(drawCapstoneOffers(capstonePool, 3));
+      setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT));
       nav.goToCapstoneDraft();
       return;
     }
@@ -766,19 +779,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [purchaseCertLevel]);
 
   const handlePlayAgain = useCallback((startLevel?: number) => {
-    setTotalScore(0);
-    setOwnedUpgradeIds([]);
-    setCarryInstantFences(0);
-    setActiveDoor(null);
-    setCapstone(null);
-    setPendingLevelScore(null);
-    setShowLevelComplete(false);
-    setCumulativeLockedBalls(0);
-    setAscensionDepth(0);
-    setDraftedLoadoutIds([]);
-    setLastRunSummary(null);
-    setLastRunLoadoutUnlocks([]);
-    resetRunProgress();
+    resetRunScopedState();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
     const startingLives = BASE_LIVES + certBonusLives;
@@ -801,22 +802,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     if (loadoutsIntroduced) nav.goToRunDraft();
     else nav.startGame();
-  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, setLevelIndex, certBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints, loadoutsIntroduced]);
+  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, setLevelIndex, certBonuses, getCertStartingLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced]);
 
   const handleRestartRun = useCallback(() => {
-    setTotalScore(0);
-    setOwnedUpgradeIds([]);
-    setCarryInstantFences(0);
-    setActiveDoor(null);
-    setCapstone(null);
-    setPendingLevelScore(null);
-    setShowLevelComplete(false);
-    setCumulativeLockedBalls(0);
-    setAscensionDepth(0);
-    setDraftedLoadoutIds([]);
-    setLastRunSummary(null);
-    setLastRunLoadoutUnlocks([]);
-    resetRunProgress();
+    resetRunScopedState();
     clearRunCheckpoints();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
@@ -829,24 +818,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     resetToFirstLevel();
     if (loadoutsIntroduced) nav.goToRunDraft();
     else nav.startGame();
-  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, certBonuses, resetRunProgress, clearRunCheckpoints, loadoutsIntroduced]);
+  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, certBonuses, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
-    setTotalScore(0);
-    setPendingLevelScore(null);
-    setShowLevelComplete(false);
-    setOwnedUpgradeIds([]);
-    setCarryInstantFences(0);
-    setActiveDoor(null);
-    setCapstone(null);
+    resetRunScopedState();
     setCurrentLives(BASE_LIVES);
-    setAscensionDepth(0);
-    setDraftedLoadoutIds([]);
     setPendingDeathResult(null);
-    resetRunProgress();
     nav.goToWelcome();
-  }, [resetToFirstLevel, nav.goToWelcome, resetRunProgress]);
+  }, [resetToFirstLevel, nav.goToWelcome, resetRunScopedState]);
 
   const handleOpenCertificateStore = useCallback(async () => {
     // Upgrades too: locked-cert tooltips name the upgrade that unlocks them,

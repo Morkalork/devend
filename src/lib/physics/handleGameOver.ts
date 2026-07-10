@@ -41,10 +41,12 @@ export function handleGameOverFn(
       : 0;
     // Fold lock + push bonuses in before the cap (issue #43).
     const { levelScore, breakdown } = calculateScore(
-      game.wallCount, level.expectedCuts, pushStartPercent,
-      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-      game.lockBonus + pushBonus, activeModifiers.spaceBonusMultiplier,
-      activeModifiers.overtimeCapBonus,
+      game.wallCount, level.expectedCuts, pushStartPercent, level.sizeThreshold, level.points, {
+        scoreMultiplier: activeModifiers.scoreMultiplier,
+        extraBonus: game.lockBonus + pushBonus,
+        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+        overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      },
     );
 
     callbacks.onLevelComplete({
@@ -97,10 +99,12 @@ export function handlePushFailedFn(
     : 0;
   // Fold lock + push bonuses in before the cap (issue #43).
   const { levelScore, breakdown } = calculateScore(
-    game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent,
-    level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    game.lockBonus + pushBonus, activeModifiers.spaceBonusMultiplier,
-    activeModifiers.overtimeCapBonus,
+    game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent, level.sizeThreshold, level.points, {
+      scoreMultiplier: activeModifiers.scoreMultiplier,
+      extraBonus: game.lockBonus + pushBonus,
+      spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+      overtimeCapBonus: activeModifiers.overtimeCapBonus,
+    },
   );
 
   callbacks.onLevelComplete({

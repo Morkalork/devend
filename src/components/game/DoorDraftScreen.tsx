@@ -17,6 +17,7 @@ import { DoorConfig } from '@/types/door';
 import { LevelConfig } from '@/types/level';
 import { selectBallTypesForMap } from '@/lib/ballTypes';
 import { CRTBackground } from './CRTBackground';
+import { DraftCard } from './DraftCard';
 import { contentText } from '@/i18n/content';
 
 interface DoorDraftScreenProps {
@@ -143,47 +144,43 @@ export function DoorDraftScreen({
               offers.length === 1 ? 'sm:grid-cols-2 sm:max-w-xl sm:mx-auto' : 'sm:grid-cols-3'
             }`}
           >
-            <DoorCard
+            <DraftCard
               key={STANDARD}
               index={0}
               accentColor={accentColor}
               selected={selectedId === STANDARD}
               onClick={() => setSelectedId(prev => (prev === STANDARD ? null : STANDARD))}
               name={t('doorDraft.standardName')}
-              body={
-                <div className="flex items-start gap-2">
-                  <DoorOpen className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#c8ffd8' }} />
-                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
-                    {t('doorDraft.standardDesc')}
-                  </p>
-                </div>
-              }
-            />
+            >
+              <div className="flex items-start gap-2">
+                <DoorOpen className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#c8ffd8' }} />
+                <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
+                  {t('doorDraft.standardDesc')}
+                </p>
+              </div>
+            </DraftCard>
             {offers.map((door, i) => (
-              <DoorCard
+              <DraftCard
                 key={door.id}
                 index={i + 1}
                 accentColor={accentColor}
                 selected={selectedId === door.id}
                 onClick={() => setSelectedId(prev => (prev === door.id ? null : door.id))}
                 name={contentText.doorName(t, door)}
-                body={
-                  <>
-                    <div className="flex items-start gap-2 mb-2">
-                      <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                      <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>
-                        {contentText.doorRisk(t, door)}
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                      <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
-                        {contentText.doorReward(t, door)}
-                      </p>
-                    </div>
-                  </>
-                }
-              />
+              >
+                <div className="flex items-start gap-2 mb-2">
+                  <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                  <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>
+                    {contentText.doorRisk(t, door)}
+                  </p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
+                    {contentText.doorReward(t, door)}
+                  </p>
+                </div>
+              </DraftCard>
             ))}
           </div>
 
@@ -207,43 +204,3 @@ export function DoorDraftScreen({
   );
 }
 
-function DoorCard({
-  index,
-  accentColor,
-  selected,
-  onClick,
-  name,
-  body,
-}: {
-  index: number;
-  accentColor: string;
-  selected: boolean;
-  onClick: () => void;
-  name: string;
-  body: React.ReactNode;
-}) {
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 + index * 0.1 }}
-      whileHover={{ scale: 1.03 }}
-      whileTap={{ scale: 0.97 }}
-      onClick={onClick}
-      className="text-left rounded-lg p-4 transition-colors"
-      style={{
-        backgroundColor: selected ? `${accentColor}1a` : 'rgba(255,255,255,0.04)',
-        border: `2px solid ${selected ? accentColor : `${accentColor}44`}`,
-        boxShadow: selected ? `0 0 24px ${accentColor}66` : 'none',
-      }}
-    >
-      <p
-        className="font-display font-bold text-base mb-3"
-        style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
-      >
-        {name}
-      </p>
-      {body}
-    </motion.button>
-  );
-}

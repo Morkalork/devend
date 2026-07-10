@@ -281,10 +281,12 @@ export function triggerLevelComplete(
   // Fold lock + break bonuses in before the cap so a single map can't exceed
   // the per-map ceiling (issue #43).
   const { levelScore, breakdown } = calculateScore(
-    game.wallCount, level.expectedCuts, percent,
-    level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    game.lockBonus + game.breakBonus, activeModifiers.spaceBonusMultiplier,
-    activeModifiers.overtimeCapBonus,
+    game.wallCount, level.expectedCuts, percent, level.sizeThreshold, level.points, {
+      scoreMultiplier: activeModifiers.scoreMultiplier,
+      extraBonus: game.lockBonus + game.breakBonus,
+      spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+      overtimeCapBonus: activeModifiers.overtimeCapBonus,
+    },
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
   // Celebratory beat: after any lock animations settle, sweep a shimmer down the

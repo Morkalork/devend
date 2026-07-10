@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { X } from 'lucide-react';
 import { GameModifiers, ModifierSource, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
+import { BASE_INTEREST_CAP } from '@/hooks/useGameSession';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
 import { contentText } from '@/i18n/content';
 
@@ -180,7 +181,7 @@ export function BottomBarDetailsPanel({
       keys: ['scoreInterestRate', 'scoreInterestCapBonus'],
       description:
         m.scoreInterestRate > 0
-          ? t('bottomBarDetails.scoreInterestActive', { rate: pct(m.scoreInterestRate), cap: 8 + m.scoreInterestCapBonus })
+          ? t('bottomBarDetails.scoreInterestActive', { rate: pct(m.scoreInterestRate), cap: BASE_INTEREST_CAP + m.scoreInterestCapBonus })
           : t('bottomBarDetails.scoreInterestInactive'),
     },
     {

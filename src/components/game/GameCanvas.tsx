@@ -771,9 +771,11 @@ export function GameCanvas({
     // Dev/playground freeze: play the shimmer, hold the drained frame, no overlay.
     if (freezeOnCompleteRef.current) return;
     const { levelScore, breakdown } = calculateScore(
-      game.wallCount, level.expectedCuts, game.bestRemainingPercent,
-      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-      0, activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus,
+      game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
+        scoreMultiplier: activeModifiers.scoreMultiplier,
+        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+        overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      },
     );
     const areaAtPushStart = game.pushStartPercent;
     const areaCleared = Math.max(0, areaAtPushStart - game.bestRemainingPercent);

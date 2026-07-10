@@ -152,7 +152,7 @@ function capsuleRayHit(
       if (side < 0 && w > 0) continue;         // cap a: keep only w < 0
       if (side > 0 && w < segLen) continue;    // cap b: keep only w > segLen
     }
-    let nx = hx - ex, ny = hy - ey;
+    const nx = hx - ex, ny = hy - ey;
     const nl = Math.sqrt(nx * nx + ny * ny) || 1;
     consider(t, nx / nl, ny / nl);
   }

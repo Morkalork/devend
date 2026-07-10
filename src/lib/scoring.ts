@@ -245,12 +245,27 @@ export function getHighscoreBonusMultiplier(): number {
 }
 
 /**
+ * Modifier-driven adjustments to a level's reward, normally sourced from the
+ * run's GameModifiers. Gathered into one options object so call sites stay
+ * readable as the modifier system grows (they were positional args before).
+ */
+export interface ScoreOptions {
+  /** Upgrade/loadout/door score multiplier (default 1). */
+  scoreMultiplier?: number;
+  /** Lock/push/break bonuses, folded in UNDER the cap (default 0). */
+  extraBonus?: number;
+  /** Tech Evangelist: scales the space-optimization bonus (default 1). */
+  spaceBonusMultiplier?: number;
+  /** Stock Options capstone: flat raise on the per-map cap (default 0). */
+  overtimeCapBonus?: number;
+}
+
+/**
  * Calculate the overtime reward for a level, synchronously, using the
  * preloaded config. Performance multiplier scales the base reward,
  * scoreMultiplier (from upgrades) applies on top, and the result is capped
- * at basePoints × overtimeCapHeadroom (see getOvertimeCap). The levelNumber
- * arg is retained for the callers' breakdown/telemetry but no longer drives
- * the cap.
+ * at basePoints × overtimeCapHeadroom (see getOvertimeCap) plus any capstone
+ * cap raise.
  *
  * `extraBonus` folds lock/push/break bonuses in BEFORE the cap so a single map
  * can never pay more than the cap (issue #43): together with the flat per-map
@@ -263,15 +278,12 @@ export function calculateScore(
   remainingPercent: number,
   thresholdPercent: number,
   basePoints: number,
-  scoreMultiplier: number = 1,
-  levelNumber: number = 1,
-  extraBonus: number = 0,
-  spaceBonusMultiplier: number = 1,
-  overtimeCapBonus: number = 0,
+  options: ScoreOptions = {},
 ): {
   levelScore: number;
   breakdown: ScoreBreakdown;
 } {
+  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0 } = options;
   const requiredRemovedRatio = (100 - thresholdPercent) / 100;
   const actualRemovedRatio = (100 - remainingPercent) / 100;
 

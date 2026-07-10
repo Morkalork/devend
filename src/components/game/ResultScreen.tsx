@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { RunRecap } from '@/lib/buildRecap';
-import { TAG_COLORS, UpgradeTag } from '@/types/upgrade';
+import { UpgradeTag } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
+import { TagChip } from './TagChip';
 
 interface ResultScreenProps {
   result: GameResult;
@@ -238,18 +239,11 @@ export function ResultScreen({
               <div className="flex flex-wrap justify-center gap-1.5">
                 {Object.entries(runRecap.tagCounts)
                   .sort((a, b) => b[1] - a[1])
-                  .map(([tag, count]) => {
-                    const tc = TAG_COLORS[tag as UpgradeTag];
-                    if (!tc || count <= 0) return null;
-                    return (
-                      <span
-                        key={tag}
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${tc.bg} ${tc.text}`}
-                      >
-                        {t(`upgradeShop.tags.${tag}`)} {count}
-                      </span>
-                    );
-                  })}
+                  .map(([tag, count]) =>
+                    count > 0
+                      ? <TagChip key={tag} tag={tag as UpgradeTag} pill sizeClass="text-[10px]" suffix={String(count)} />
+                      : null,
+                  )}
               </div>
             )}
             {runRecap.capstoneName && (

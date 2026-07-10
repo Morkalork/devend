@@ -17,8 +17,9 @@
 import { useState, useMemo, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UpgradeConfig, TIER_COLORS, TAG_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
+import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
 import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { TagChip } from './TagChip';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
 import { CRTBackground } from './CRTBackground';
@@ -46,16 +47,6 @@ interface UpgradeShopProps {
   tagSetThreshold?: number;
   /** Company Card capstone: the cheapest unowned offer costs nothing. */
   freeCheapestOffer?: boolean;
-}
-
-/** Shuffle array using Fisher-Yates */
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
 }
 
 /**
@@ -225,17 +216,20 @@ export function UpgradeShop({
   // Effective overtime - playerPoints (totalScore) is already reduced by onPurchase
   const effectiveOvertime = playerPoints;
 
-  // Company Card capstone: the cheapest unowned offer on the shelf is free.
-  // Recomputed as restocks add offers; buyable lockeds/teasers count too.
+  // Company Card capstone: the cheapest PURCHASABLE offer on the shelf is
+  // free. Locked teasers are skipped - a free price on something you can't
+  // buy would waste the perk. Recomputed as restocks add offers and as
+  // purchases change what's locked.
   const freeOfferId = useMemo(() => {
     if (!freeCheapestOffer) return null;
     let cheapest: UpgradeConfig | null = null;
     for (const u of offeredUpgrades) {
       if (allOwnedIds.includes(u.id)) continue;
+      if (isLocked(u.id, allOwnedIds)) continue;
       if (!cheapest || u.cost < cheapest.cost) cheapest = u;
     }
     return cheapest?.id ?? null;
-  }, [freeCheapestOffer, offeredUpgrades, allOwnedIds]);
+  }, [freeCheapestOffer, offeredUpgrades, allOwnedIds, isLocked]);
 
   // All prices flow through the discount (Bulk Licensing certificate)
   const priceFor = useCallback(
@@ -425,16 +419,16 @@ export function UpgradeShop({
             {[...buildTagCounts.entries()]
               .sort((a, b) => b[1] - a[1])
               .map(([tag, count]) => {
-                const tc = TAG_COLORS[tag as UpgradeTag];
-                if (!tc) return null;
                 const setActive = count >= tagSetThreshold;
                 return (
-                  <span
+                  <TagChip
                     key={tag}
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${tc.bg} ${tc.text} ${setActive ? 'ring-1 ring-current' : ''}`}
-                  >
-                    {t(`upgradeShop.tags.${tag}`)} {setActive ? '✓' : `${count}/${tagSetThreshold}`}
-                  </span>
+                    tag={tag as UpgradeTag}
+                    pill
+                    ringed={setActive}
+                    sizeClass="text-[10px]"
+                    suffix={setActive ? '✓' : `${count}/${tagSetThreshold}`}
+                  />
                 );
               })}
           </motion.div>
@@ -543,14 +537,7 @@ export function UpgradeShop({
                 {/* Archetype tag chips */}
                 {(upgrade.tags?.length ?? 0) > 0 && (
                   <div className="flex justify-center gap-1 mb-1 flex-wrap">
-                    {upgrade.tags!.map(tag => (
-                      <span
-                        key={tag}
-                        className={`px-1.5 py-px rounded text-[9px] font-semibold uppercase tracking-wider ${TAG_COLORS[tag].bg} ${TAG_COLORS[tag].text}`}
-                      >
-                        {t(`upgradeShop.tags.${tag}`)}
-                      </span>
-                    ))}
+                    {upgrade.tags!.map(tag => <TagChip key={tag} tag={tag} />)}
                   </div>
                 )}
 
@@ -723,14 +710,7 @@ export function UpgradeShop({
 
                 {(u.tags?.length ?? 0) > 0 && (
                   <div className="flex gap-1 mb-2 flex-wrap">
-                    {u.tags!.map(tag => (
-                      <span
-                        key={tag}
-                        className={`px-1.5 py-px rounded text-[10px] font-semibold uppercase tracking-wider ${TAG_COLORS[tag].bg} ${TAG_COLORS[tag].text}`}
-                      >
-                        {t(`upgradeShop.tags.${tag}`)}
-                      </span>
-                    ))}
+                    {u.tags!.map(tag => <TagChip key={tag} tag={tag} sizeClass="text-[10px]" />)}
                   </div>
                 )}
 

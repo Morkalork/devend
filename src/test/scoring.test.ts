@@ -18,10 +18,10 @@ const CURVE = [
 const HEADROOM = DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom;
 
 // Helper: overtime earned at par (no fence penalty), clearing well past the
-// threshold so the +1 space bonus applies. levelNumber no longer affects the cap.
+// threshold so the +1 space bonus applies.
 function earnedAtPar(basePoints: number, par = 5, scoreMultiplier = 1) {
   // threshold 30 -> required removal 0.70; remaining 10 -> actual 0.90 (+28% extra => space bonus)
-  return calculateScore(par, par, 10, 30, basePoints, scoreMultiplier, 1).levelScore;
+  return calculateScore(par, par, 10, 30, basePoints, { scoreMultiplier }).levelScore;
 }
 
 describe("overtime cap", () => {
@@ -43,11 +43,15 @@ describe("overtime cap", () => {
     const cap = getOvertimeCap(base, HEADROOM); // 80
     // A huge lock/push stack passed as extraBonus is clamped to the cap, not
     // added on top of it (the old hyperinflation path).
-    const huge = calculateScore(5, 5, 10, 30, base, 1, 1, 10_000).levelScore;
+    const huge = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 }).levelScore;
     expect(huge).toBe(cap);
     // A modest bonus still lands under the cap and is counted.
-    const modest = calculateScore(5, 5, 10, 30, base, 1, 1, 10).levelScore;
+    const modest = calculateScore(5, 5, 10, 30, base, { extraBonus: 10 }).levelScore;
     expect(modest).toBe(Math.min(cap, base + 1 + 10));
+    // Stock Options capstone: the cap itself can be raised, so the same huge
+    // stack clamps to the raised ceiling instead.
+    const raised = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, overtimeCapBonus: 20 }).levelScore;
+    expect(raised).toBe(cap + 20);
   });
 });
 
