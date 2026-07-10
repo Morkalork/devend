@@ -56,6 +56,12 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   fenceSpeedPerLock:                { label: 'Fence Speed/Lock',       kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Knowledge Transfer: fence-speed bonus per ball locked this map (0.04 = +4%)' },
   frozenLockBonus:                  { label: 'Frozen Lock Bonus',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Frozen Assets: extra lock-bonus multiplier when locking a frozen ball (1 = double)' },
   scoreInterestCapBonus:            { label: 'Interest Cap +',         kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Venture Capital: raises the per-map interest cap above the base 8h' },
+  simultaneousLockBonus:            { label: 'Simul. Lock Bonus',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Chain Reaction set: every lock pass counts as this many balls bigger for the trap multiplier' },
+  freezeNoCooldown:                 { label: 'No Freeze Cooldown',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Absolute Zero set: >0 = balls can be re-frozen the moment they thaw' },
+  fenceSpeedPerFence:               { label: 'Fence Speed/Fence',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Continuous Delivery: fence-speed bonus per fence completed this map (0.04 = +4%)' },
+  underParInstantFence:             { label: 'Under-Par Carry',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Clean Release: instant fences granted on the next map after an under-par finish' },
+  bankedSlowPer50h:                 { label: 'Banked Slow/50h',        kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'War Chest: ball-speed reduction per 50h banked at map start (max 8%)' },
+  spaceBonusMultiplier:             { label: 'Space Bonus Mult.',      kind: 'multiplicative', step: 0.5,  min: 0.5,  defaultValue: 1,    description: 'Tech Evangelist: multiplies the space-optimization bonus payout' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

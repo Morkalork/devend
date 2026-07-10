@@ -179,6 +179,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 achievementBonuses={session.achievementBonuses}
                 activeModifiers={session.activeModifiers}
                 modifierSources={session.modifierSources}
+                tagSetThreshold={session.tagSetThreshold}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 ascensionDepth={session.ascensionDepth}
                 mapHighscores={session.mapHighscores}
@@ -210,6 +211,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 showTutorial={session.shouldShowStore}
                 onTutorialDismiss={session.markStoreSeen}
                 newlyUnlockedCerts={session.shopUnlockedCerts}
+                tagSetThreshold={session.tagSetThreshold}
               />
             )}
             {navigation.currentScreen === 'ascensionDraft' && (

@@ -9,6 +9,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
+import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
@@ -84,6 +85,8 @@ interface GameScreenProps {
   freezeOnClear?: boolean;
   /** Admin/Playground: fired the instant the map is won (before the shimmer). */
   onMapComplete?: () => void;
+  /** Owned upgrades of a tag needed to activate its set bonus (build readout). */
+  tagSetThreshold?: number;
 }
 
 export function GameScreen({
@@ -123,6 +126,7 @@ export function GameScreen({
   showPerfOverlay = false,
   freezeOnClear = false,
   onMapComplete,
+  tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
 }: GameScreenProps) {
   const { t } = useTranslation();
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
@@ -181,14 +185,19 @@ export function GameScreen({
     return calculateScore(
       gameState.cutsUsed, level.expectedCuts, gameState.spaceRemaining,
       level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber, 0,
+      activeModifiers.spaceBonusMultiplier,
     ).levelScore;
   }, [showHighscoreBar, highscoreTarget, gameState.cutsUsed, gameState.spaceRemaining,
-      level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber]);
+      level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier,
+      activeModifiers.spaceBonusMultiplier, levelNumber]);
 
   const totalLockedBalls = cumulativeLockedBalls + gameState.lockedBalls;
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
+
+  // Build readout for the bottom bar: owned upgrades per archetype tag.
+  const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
 
   const accentColor = externalAccentColor || getAccentColor();
 
@@ -322,6 +331,8 @@ export function GameScreen({
           activeModifiers={activeModifiers}
           accentColor={accentColor}
           lockedBalls={totalLockedBalls}
+          tagCounts={tagCounts}
+          tagSetThreshold={tagSetThreshold}
           onExpand={() => setBottomPanelOpen(true)}
         />
       </div>

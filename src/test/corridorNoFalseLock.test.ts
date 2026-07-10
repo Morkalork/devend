@@ -34,6 +34,8 @@ const MODS: GameModifiers = {
   ballPathPredictionBounces: 0, ballPathPredictionBalls: 0, ballFreezeDuration: 0,
   ballFreezeCount: 0, autoFreezeDuration: 0, showHighscoreProgress: 0,
   overtimePerLock: 0, fenceSpeedPerLock: 0, frozenLockBonus: 0, scoreInterestCapBonus: 0,
+  simultaneousLockBonus: 0, freezeNoCooldown: 0, fenceSpeedPerFence: 0, underParInstantFence: 0,
+  bankedSlowPer50h: 0, spaceBonusMultiplier: 1,
 };
 
 // Board is inset to (45,45)-(855,855). The box's bottom edge sits `gap` world

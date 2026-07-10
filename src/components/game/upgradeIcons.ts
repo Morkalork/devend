@@ -31,6 +31,12 @@ import {
   Banknote,
   Gem,
   BookOpen,
+  Receipt,
+  Vault,
+  Rocket,
+  Infinity as InfinityIcon,
+  Dices,
+  Megaphone,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -61,6 +67,12 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   banknote: Banknote,
   gem: Gem,
   'book-open': BookOpen,
+  receipt: Receipt,
+  vault: Vault,
+  rocket: Rocket,
+  infinity: InfinityIcon,
+  dices: Dices,
+  megaphone: Megaphone,
 };
 
 /**

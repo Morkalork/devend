@@ -19,6 +19,43 @@ pricing:
     Architect: 2.4
     Wizard: 3.0
 
+# Set bonuses: auto-granted for free while the player owns `threshold`
+# upgrades of a tag. One per archetype, giving every build direction a goal.
+# Modifiers use the same GameModifiers keys as upgrades.
+tagSets:
+  threshold: 3
+  bonuses:
+    - tag: lock
+      name: Chain Reaction
+      description: Every lock counts as one ball bigger for the simultaneous-trap multiplier.
+      modifiers:
+        simultaneousLockBonus: 1
+    - tag: freeze
+      name: Absolute Zero
+      description: Frozen balls can be re-frozen immediately, no cooldown.
+      modifiers:
+        freezeNoCooldown: 1
+    - tag: bank
+      name: Framework Agreement
+      description: All shop prices drop by 10%.
+      modifiers:
+        shopDiscountMultiplier: 0.9
+    - tag: tempo
+      name: Ship It
+      description: Draw one additional fence at the same time.
+      modifiers:
+        additionalConcurrentFences: 1
+    - tag: risk
+      name: Double Or Nothing
+      description: Push-your-luck payouts are doubled.
+      modifiers:
+        pushBonusMultiplier: 2
+    - tag: safety
+      name: Insurance Policy
+      description: Gain 1 extra Continue.
+      modifiers:
+        extraContinues: 1
+
 upgrades:
 
   # ===============================
@@ -466,6 +503,98 @@ upgrades:
     tags: [freeze, lock]
     modifiers:
       frozenLockBonus: 1
+
+
+  # ===============================
+  # EXPENSE ACCOUNT & WAR CHEST (Bank payoffs)
+  # Bank stops being "number goes up": cheaper shopping keeps the bank fat,
+  # and War Chest converts a fat bank into a calmer board.
+  # ===============================
+
+  - id: expense_account
+    name: Expense Account
+    tier: Senior
+    description: All shop prices are 10% lower for the rest of the run.
+    unlockLevel: 9
+    prerequisites:
+      - performance_bonus_junior
+    icon: receipt
+    tags: [bank]
+    modifiers:
+      shopDiscountMultiplier: 0.9
+
+  - id: war_chest
+    name: War Chest
+    tier: Principal
+    description: Balls spawn 2% slower for every 50h banked at map start, up to 8%. Hoard it.
+    unlockLevel: 13
+    prerequisites:
+      - venture_capital_senior
+    icon: vault
+    tags: [bank]
+    modifiers:
+      bankedSlowPer50h: 0.02
+
+
+  # ===============================
+  # CLEAN RELEASE & CONTINUOUS DELIVERY (Tempo payoffs)
+  # Tempo pays off skilled play: finishing under par snowballs into the next
+  # map, and every completed fence accelerates the next one.
+  # ===============================
+
+  - id: clean_release
+    name: Clean Release
+    tier: Senior
+    description: Finish a map under par and the next map starts with 1 extra instant fence.
+    unlockLevel: 6
+    prerequisites:
+      - fast_compile_junior
+    icon: rocket
+    tags: [tempo]
+    modifiers:
+      underParInstantFence: 1
+
+  - id: continuous_delivery
+    name: Continuous Delivery
+    tier: Principal
+    description: Each fence you complete speeds up the next one by 4% for the rest of the map.
+    unlockLevel: 11
+    prerequisites:
+      - clean_release
+    icon: infinity
+    tags: [tempo]
+    modifiers:
+      fenceSpeedPerFence: 0.04
+
+
+  # ===============================
+  # RISK APPETITE & TECH EVANGELIST (Risk payoffs)
+  # The greed line: bigger push-your-luck chunks, bigger space-clear bonuses.
+  # ===============================
+
+  - id: risk_appetite
+    name: Risk Appetite
+    tier: Senior
+    description: Push-your-luck payouts are 50% larger.
+    unlockLevel: 7
+    prerequisites:
+      - technical_debt_senior
+    icon: dices
+    tags: [risk]
+    modifiers:
+      pushBonusMultiplier: 1.5
+
+  - id: tech_evangelist
+    name: Tech Evangelist
+    tier: Principal
+    description: Space Optimization bonuses pay double.
+    unlockLevel: 12
+    prerequisites:
+      - risk_appetite
+    icon: megaphone
+    tags: [risk]
+    modifiers:
+      spaceBonusMultiplier: 2
 
 
   # ===============================

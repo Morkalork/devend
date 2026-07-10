@@ -42,6 +42,11 @@ export const contentText = {
   achBonus: (t: TFunction, a: WithId & { bonus?: { description?: string } }) =>
     field(t, 'achievements', a.id, 'bonusDescription', a.bonus?.description),
 
+  /** Set bonus (tagSets in upgrades.yml); id = the archetype tag. */
+  tagSetName: (t: TFunction, s: WithId & { name?: string }) => field(t, 'tagSets', s.id, 'name', s.name),
+  tagSetDesc: (t: TFunction, s: WithId & { description?: string }) =>
+    field(t, 'tagSets', s.id, 'description', s.description),
+
   loadoutName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'loadouts', l.id, 'name', l.name),
   loadoutCurse: (t: TFunction, l: WithId & { curse?: string }) => field(t, 'loadouts', l.id, 'curse', l.curse),
   loadoutBlessing: (t: TFunction, l: WithId & { blessing?: string }) =>

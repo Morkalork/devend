@@ -48,8 +48,27 @@ export interface UpgradePricing {
   tierFactor: Record<UpgradeTier, number>;
 }
 
+/**
+ * A set bonus: auto-granted (free, no purchase) while the player owns at least
+ * `tagSets.threshold` upgrades carrying `tag`. Gives every archetype a build
+ * goal beyond its individual pieces. Defined under `tagSets:` in upgrades.yml.
+ */
+export interface TagSetBonus {
+  tag: UpgradeTag;
+  name: string;
+  description: string;
+  modifiers: Record<string, number>;
+}
+
+export interface TagSetsConfig {
+  /** Owned upgrades of a tag needed to activate its set bonus. */
+  threshold: number;
+  bonuses: TagSetBonus[];
+}
+
 export interface UpgradeData {
   pricing?: Partial<UpgradePricing>;
+  tagSets?: TagSetsConfig;
   upgrades: UpgradeConfig[];
 }
 

@@ -6,16 +6,22 @@ import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
+import { TAG_COLORS, UpgradeTag } from '@/types/upgrade';
+import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 
 interface GameBottomBarProps {
   activeModifiers: GameModifiers;
   accentColor: string;
   lockedBalls?: number;
+  /** Build readout: owned upgrades per archetype tag. */
+  tagCounts?: Map<string, number>;
+  /** Owned upgrades of a tag needed to activate its set bonus. */
+  tagSetThreshold?: number;
   onExpand?: () => void;
 }
 
 export const GameBottomBar = React.forwardRef<HTMLDivElement, GameBottomBarProps>(
-function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand }, ref) {
+function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCounts, tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD, onExpand }, ref) {
   const { t } = useTranslation();
   const swipeStartYRef = useRef<number | null>(null);
 
@@ -75,6 +81,27 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand
           borderTop: `1px solid ${accentColor}40`,
         }}
       >
+        {/* Build readout: archetype chips with progress toward each set bonus.
+            A ✓ chip means that tag's set bonus is active. */}
+        {tagCounts && tagCounts.size > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5 pb-1">
+            {[...tagCounts.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([tag, count]) => {
+                const tc = TAG_COLORS[tag as UpgradeTag];
+                if (!tc) return null;
+                const setActive = count >= tagSetThreshold;
+                return (
+                  <span
+                    key={tag}
+                    className={`px-1.5 py-px rounded-full text-[9px] font-semibold uppercase tracking-wider ${tc.bg} ${tc.text} ${setActive ? 'ring-1 ring-current' : ''}`}
+                  >
+                    {t(`upgradeShop.tags.${tag}`)} {setActive ? '✓' : `${count}/${tagSetThreshold}`}
+                  </span>
+                );
+              })}
+          </div>
+        )}
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
           {stats.map((stat) => (
             <div

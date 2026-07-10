@@ -34,6 +34,8 @@ const FRACTIONAL_ADDITIVE_KEYS = new Set<keyof GameModifiers>([
   'bonusRemovalAmount',
   'microManagerPerLock',
   'fenceSpeedPerLock',
+  'fenceSpeedPerFence',
+  'bankedSlowPer50h',
 ]);
 
 /** Localized display name for a modifier source, by its kind. */
@@ -43,6 +45,7 @@ function sourceName(t: TFunction, s: ModifierSource): string {
     case 'certificate': return contentText.certName(t, s);
     case 'achievement': return contentText.achName(t, s);
     case 'loadout': return contentText.loadoutName(t, s);
+    case 'tagSet': return t('bottomBarDetails.tagSetSource', { name: contentText.tagSetName(t, s) });
     case 'ascension': return t('bottomBarDetails.ascensionSource', { depth: s.name });
     default: return s.name;
   }
@@ -207,6 +210,66 @@ export function BottomBarDetailsPanel({
         m.fenceSpeedPerLock > 0
           ? t('bottomBarDetails.fenceSpeedPerLockActive', { percent: Math.round(m.fenceSpeedPerLock * 100) })
           : t('bottomBarDetails.fenceSpeedPerLockInactive'),
+    },
+    {
+      label: t('bottomBarDetails.simultaneousLockBonus'),
+      value: bonus(m.simultaneousLockBonus),
+      changed: m.simultaneousLockBonus !== 0,
+      keys: ['simultaneousLockBonus'],
+      description:
+        m.simultaneousLockBonus > 0
+          ? t('bottomBarDetails.simultaneousLockBonusActive', { count: m.simultaneousLockBonus })
+          : t('bottomBarDetails.simultaneousLockBonusInactive'),
+    },
+    {
+      label: t('bottomBarDetails.freezeNoCooldown'),
+      value: m.freezeNoCooldown > 0 ? t('bottomBarDetails.on') : t('bottomBarDetails.off'),
+      changed: m.freezeNoCooldown !== 0,
+      keys: ['freezeNoCooldown'],
+      description:
+        m.freezeNoCooldown > 0
+          ? t('bottomBarDetails.freezeNoCooldownActive')
+          : t('bottomBarDetails.freezeNoCooldownInactive'),
+    },
+    {
+      label: t('bottomBarDetails.fenceSpeedPerFence'),
+      value: pct(m.fenceSpeedPerFence),
+      changed: m.fenceSpeedPerFence !== 0,
+      keys: ['fenceSpeedPerFence'],
+      description:
+        m.fenceSpeedPerFence > 0
+          ? t('bottomBarDetails.fenceSpeedPerFenceActive', { percent: Math.round(m.fenceSpeedPerFence * 100) })
+          : t('bottomBarDetails.fenceSpeedPerFenceInactive'),
+    },
+    {
+      label: t('bottomBarDetails.underParInstantFence'),
+      value: bonus(m.underParInstantFence),
+      changed: m.underParInstantFence !== 0,
+      keys: ['underParInstantFence'],
+      description:
+        m.underParInstantFence > 0
+          ? t('bottomBarDetails.underParInstantFenceActive', { count: m.underParInstantFence })
+          : t('bottomBarDetails.underParInstantFenceInactive'),
+    },
+    {
+      label: t('bottomBarDetails.bankedSlow'),
+      value: m.bankedSlowPer50h > 0 ? t('bottomBarDetails.bankedSlowValue', { percent: Math.round(m.bankedSlowPer50h * 100) }) : t('bottomBarDetails.off'),
+      changed: m.bankedSlowPer50h !== 0,
+      keys: ['bankedSlowPer50h'],
+      description:
+        m.bankedSlowPer50h > 0
+          ? t('bottomBarDetails.bankedSlowActive', { percent: Math.round(m.bankedSlowPer50h * 100) })
+          : t('bottomBarDetails.bankedSlowInactive'),
+    },
+    {
+      label: t('bottomBarDetails.spaceBonusMultiplier'),
+      value: pct(m.spaceBonusMultiplier),
+      changed: m.spaceBonusMultiplier !== 1,
+      keys: ['spaceBonusMultiplier'],
+      description:
+        m.spaceBonusMultiplier !== 1
+          ? t('bottomBarDetails.spaceBonusMultiplierActive', { mult: m.spaceBonusMultiplier })
+          : t('bottomBarDetails.spaceBonusMultiplierInactive'),
     },
     {
       label: t('bottomBarDetails.extraShopSlots'),

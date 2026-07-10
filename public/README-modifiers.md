@@ -35,6 +35,22 @@ In-run upgrades purchased in the shop after each map. Each upgrade applies one o
 | `tags` | string[] | ✓ | 1-2 build archetypes: `lock`, `freeze`, `bank`, `tempo`, `risk`, `safety`. Shown as chips on the shop card; the shop weights its random offers toward tags the player already owns (draft coherence). |
 | `modifiers` | map | ✓ | One or more **GameModifier keys** and their values (see below) |
 
+### Set bonuses (`tagSets`)
+
+The file's top-level `tagSets:` block defines one free bonus per archetype,
+auto-granted while the player owns at least `tagSets.threshold` upgrades of
+that tag (selections in the shop preview the activation; the grant itself is
+based on owned upgrades). Active set bonuses appear as their own modifier
+source in the bottom-bar details panel.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `tagSets.threshold` | number | ✓ | Owned upgrades of a tag needed to activate its bonus (currently 3) |
+| `tagSets.bonuses[].tag` | string | ✓ | The archetype this bonus belongs to |
+| `tagSets.bonuses[].name` | string | ✓ | Display name (e.g. "Chain Reaction") |
+| `tagSets.bonuses[].description` | string | ✓ | Shown in the modifier details panel |
+| `tagSets.bonuses[].modifiers` | map | ✓ | GameModifier keys, merged like any other source |
+
 ### Tiers
 
 | Tier | Colour |
@@ -200,7 +216,8 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `fenceGenerationSpeedMultiplier` | `1.0` | Multiplies how fast fences grow. | `1.10` = +10% speed |
 | `scoreMultiplier` | `1.0` | Multiplies overtime hours earned per map. | `1.15` = +15% overtime |
 | `shopDiscountMultiplier` | `1.0` | Multiplies all upgrade-shop prices (Bulk Licensing certificate). | `0.93` = 7% off |
-| `pushBonusMultiplier` | `1.0` | Multiplies push-your-luck chunk payouts (Risk Assessment certificate). | `1.5` = +50% |
+| `pushBonusMultiplier` | `1.0` | Multiplies push-your-luck chunk payouts (Risk Appetite upgrade, Double Or Nothing set bonus, Risk Assessment certificate). | `1.5` = +50% |
+| `spaceBonusMultiplier` | `1.0` | Multiplies the space-optimization bonus payout, still under the per-map cap (Tech Evangelist). | `2` = double |
 
 ### Additive (stack by +)
 
@@ -226,6 +243,11 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `overtimePerLock` | `0` | Flat overtime hours added to the lock bonus per locked ball (Severance Package). Deliberately outside the money-ball/simultaneous multipliers; folds under the per-map cap with the rest of the lock bonus. | `1` |
 | `fenceSpeedPerLock` | `0` | Fence-generation speed bonus per ball locked **this map** (Knowledge Transfer). Applied as `× (1 + value × locksThisMap)` on top of `fenceGenerationSpeedMultiplier`; resets each map. | `0.04` = +4%/lock |
 | `frozenLockBonus` | `0` | Extra lock-bonus multiplier when a ball is locked **while frozen** (Frozen Assets). The frozen ball's lock contribution is multiplied by `1 + value`. | `1` = frozen locks pay double |
+| `simultaneousLockBonus` | `0` | Every lock pass counts as this many balls bigger for the simultaneous-trap multiplier (Chain Reaction set bonus). | `1` |
+| `freezeNoCooldown` | `0` | `> 0` removes the re-freeze cooldown: a thawed ball is immediately tappable again (Absolute Zero set bonus). Applies to Cron Job auto-freezes too. | `1` |
+| `fenceSpeedPerFence` | `0` | Fence-speed bonus per fence completed **this map** (Continuous Delivery). Stacks with `fenceSpeedPerLock` in the same `× (1 + …)` tempo term; resets each map. | `0.04` = +4%/fence |
+| `underParInstantFence` | `0` | Instant fences granted on the **next** map after finishing a map under par (Clean Release). Re-evaluated every completion, so the carry lasts exactly one map. | `1` |
+| `bankedSlowPer50h` | `0` | Ball-speed reduction per 50h banked at map start (War Chest), capped at 8% total. Folded by useGameSession into `ballSpeedMultiplier` per map. | `0.02` = 2%/50h |
 
 ---
 

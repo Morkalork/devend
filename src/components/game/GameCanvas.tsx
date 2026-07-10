@@ -716,7 +716,7 @@ export function GameCanvas({
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
     };
-    const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration);
+    const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration, activeModifiers.freezeNoCooldown);
     game.gameLoopFn = gameLoop;
 
     resizeCanvas();
@@ -772,6 +772,7 @@ export function GameCanvas({
     const { levelScore, breakdown } = calculateScore(
       game.wallCount, level.expectedCuts, game.bestRemainingPercent,
       level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
+      0, activeModifiers.spaceBonusMultiplier,
     );
     const areaAtPushStart = game.pushStartPercent;
     const areaCleared = Math.max(0, areaAtPushStart - game.bestRemainingPercent);

@@ -199,7 +199,9 @@ export function checkAndUpdateBallWonStates(
   // map via game.moneyMultiplier.
   const newlyLocked = game.lockedBallsCount - prevLockedCount;
   if (newlyLocked > 0) {
-    const simultaneousMultiplier = newlyLocked; // 1× / 2× / 3× ...
+    // Chain Reaction (lock set bonus): every lock pass counts as N balls
+    // bigger for the simultaneous-trap multiplier.
+    const simultaneousMultiplier = newlyLocked + activeModifiers.simultaneousLockBonus; // 1× / 2× / 3× ...
 
     // Green "money ball" tripling. It applies to every other lock — including
     // balls trapped in the SAME cut as the green — and to all subsequent locks

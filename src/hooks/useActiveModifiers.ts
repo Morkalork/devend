@@ -38,6 +38,24 @@ export interface GameModifiers {
   // Additive (sum) — Venture Capital: raises the per-map interest cap above the
   // base 8h (see useGameSession's level-complete interest credit)
   scoreInterestCapBonus: number;
+  // Additive (sum) — lock set bonus: every lock pass counts as this many balls
+  // bigger for the simultaneous-trap multiplier (Chain Reaction)
+  simultaneousLockBonus: number;
+  // Additive (sum) — freeze set bonus: >0 = freeze taps have no re-freeze
+  // cooldown after thawing (Absolute Zero)
+  freezeNoCooldown: number;
+  // Additive (sum) — Continuous Delivery: fence-speed bonus per fence already
+  // completed this map (0.04 = +4% per fence; resets each map)
+  fenceSpeedPerFence: number;
+  // Additive (sum) — Clean Release: instant fences granted on the NEXT map
+  // after finishing a map under par (folded per-map by useGameSession)
+  underParInstantFence: number;
+  // Additive (sum) — War Chest: ball-speed reduction per 50h banked at map
+  // start, capped in useGameSession (0.02 = 2% per 50h)
+  bankedSlowPer50h: number;
+
+  // Multiplicative — Tech Evangelist: scales the space-optimization bonus
+  spaceBonusMultiplier: number;
 
   // Additive (sum) — SCRUM Master
   ballPathPredictionBounces: number; // how many bounces ahead to show
@@ -72,7 +90,7 @@ export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
  * can attribute each active modifier to what produced it.
  */
 export interface ModifierSource {
-  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension';
+  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet';
   id: string;
   name: string;
   modifiers: Record<string, number>;
@@ -86,6 +104,7 @@ export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'scoreMultiplier',
   'shopDiscountMultiplier',
   'pushBonusMultiplier',
+  'spaceBonusMultiplier',
 ];
 
 /**
@@ -136,6 +155,12 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   fenceSpeedPerLock: 0,
   frozenLockBonus: 0,
   scoreInterestCapBonus: 0,
+  simultaneousLockBonus: 0,
+  freezeNoCooldown: 0,
+  fenceSpeedPerFence: 0,
+  underParInstantFence: 0,
+  bankedSlowPer50h: 0,
+  spaceBonusMultiplier: 1,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,
   ballFreezeDuration: 0,

@@ -43,7 +43,7 @@ export function handleGameOverFn(
     const { levelScore, breakdown } = calculateScore(
       game.wallCount, level.expectedCuts, pushStartPercent,
       level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-      game.lockBonus + pushBonus,
+      game.lockBonus + pushBonus, activeModifiers.spaceBonusMultiplier,
     );
 
     callbacks.onLevelComplete({
@@ -98,7 +98,7 @@ export function handlePushFailedFn(
   const { levelScore, breakdown } = calculateScore(
     game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent,
     level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    game.lockBonus + pushBonus,
+    game.lockBonus + pushBonus, activeModifiers.spaceBonusMultiplier,
   );
 
   callbacks.onLevelComplete({

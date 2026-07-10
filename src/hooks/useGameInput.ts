@@ -160,7 +160,11 @@ export function useGameInput(
             );
             for (const ball of eligible.slice(0, freezeCount)) {
               ball.frozenUntil   = now + durationMs;
-              ball.freezeReadyAt = now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
+              // Absolute Zero (freeze set bonus): no re-freeze cooldown, the
+              // ball is tappable again the moment it thaws.
+              ball.freezeReadyAt = activeModifiers.freezeNoCooldown > 0
+                ? now + durationMs
+                : now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
             }
             if (navigator.vibrate) navigator.vibrate(20);
           }
@@ -243,5 +247,5 @@ export function useGameInput(
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount]);
+  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown]);
 }

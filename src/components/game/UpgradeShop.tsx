@@ -17,7 +17,8 @@
 import { useState, useMemo, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UpgradeConfig, TIER_COLORS, TAG_COLORS, UpgradeTier } from '@/types/upgrade';
+import { UpgradeConfig, TIER_COLORS, TAG_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
+import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
 import { CRTBackground } from './CRTBackground';
@@ -41,6 +42,8 @@ interface UpgradeShopProps {
   showTutorial?: boolean;
   onTutorialDismiss?: () => void;
   newlyUnlockedCerts?: Certificate[];
+  /** Owned upgrades of a tag needed to activate its set bonus (tagSets). */
+  tagSetThreshold?: number;
 }
 
 /** Shuffle array using Fisher-Yates */
@@ -51,51 +54,6 @@ function shuffle<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
-}
-
-// ── Tag-weighted offers (draft coherence) ──────────────────────────────────
-// Offers lean toward the build the player is already in: a candidate's weight
-// is 1 + the number of owned upgrades sharing at least one tag with it. With
-// nothing owned every weight is 1, i.e. the old uniform shuffle.
-
-/** How many owned upgrades carry each tag. */
-function ownedTagCounts(ownedIds: string[], upgrades: UpgradeConfig[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  const byId = new Map(upgrades.map(u => [u.id, u]));
-  for (const id of ownedIds) {
-    for (const tag of byId.get(id)?.tags ?? []) {
-      counts.set(tag, (counts.get(tag) ?? 0) + 1);
-    }
-  }
-  return counts;
-}
-
-function tagWeight(u: UpgradeConfig, counts: Map<string, number>): number {
-  let w = 1;
-  for (const tag of u.tags ?? []) w += counts.get(tag) ?? 0;
-  return w;
-}
-
-/** Weighted sample without replacement (n picks; weights re-normalise as the
- * pool shrinks). Returns fewer than n when the pool runs out. */
-function weightedSample(
-  items: UpgradeConfig[],
-  n: number,
-  counts: Map<string, number>,
-): UpgradeConfig[] {
-  const pool = [...items];
-  const picked: UpgradeConfig[] = [];
-  while (picked.length < n && pool.length > 0) {
-    const total = pool.reduce((sum, it) => sum + tagWeight(it, counts), 0);
-    let r = Math.random() * total;
-    let idx = pool.length - 1;
-    for (let i = 0; i < pool.length; i++) {
-      r -= tagWeight(pool[i], counts);
-      if (r <= 0) { idx = i; break; }
-    }
-    picked.push(pool.splice(idx, 1)[0]);
-  }
-  return picked;
 }
 
 /**
@@ -141,6 +99,7 @@ export function UpgradeShop({
   showTutorial = false,
   onTutorialDismiss,
   newlyUnlockedCerts = [],
+  tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
 }: UpgradeShopProps) {
   const { t, i18n } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -247,9 +206,17 @@ export function UpgradeShop({
   const restocksLeft = Math.max(0, shopRestockCount - restocksUsed);
 
   // Combine owned with session purchases
-  const allOwnedIds = useMemo(() => 
-    [...ownedUpgradeIds, ...purchasedThisSession], 
+  const allOwnedIds = useMemo(() =>
+    [...ownedUpgradeIds, ...purchasedThisSession],
     [ownedUpgradeIds, purchasedThisSession]
+  );
+
+  // Build readout: owned + currently selected upgrades per tag. Selections
+  // count, so picking the piece that reaches the set threshold lights the
+  // chip up before the purchase is even confirmed.
+  const buildTagCounts = useMemo(
+    () => ownedTagCounts([...allOwnedIds, ...selectedIds], upgrades),
+    [allOwnedIds, selectedIds, upgrades],
   );
 
   // Effective overtime - playerPoints (totalScore) is already reduced by onPurchase
@@ -427,6 +394,33 @@ export function UpgradeShop({
                 ? t('upgradeShop.restocksLeft', { count: restocksLeft })
                 : t('upgradeShop.noRestocksLeft')}
             </span>
+          </motion.div>
+        )}
+
+        {/* Build readout: per-tag piece count toward the set bonus. A ✓ chip
+            means that archetype's set bonus is active (or will be on buy). */}
+        {buildTagCounts.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.16 }}
+            className="flex flex-wrap justify-center gap-1.5"
+          >
+            {[...buildTagCounts.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([tag, count]) => {
+                const tc = TAG_COLORS[tag as UpgradeTag];
+                if (!tc) return null;
+                const setActive = count >= tagSetThreshold;
+                return (
+                  <span
+                    key={tag}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${tc.bg} ${tc.text} ${setActive ? 'ring-1 ring-current' : ''}`}
+                  >
+                    {t(`upgradeShop.tags.${tag}`)} {setActive ? '✓' : `${count}/${tagSetThreshold}`}
+                  </span>
+                );
+              })}
           </motion.div>
         )}
 

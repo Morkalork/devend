@@ -111,14 +111,19 @@ export function calculateScoreBreakdown(
   parFences: number,
   actualRemovedRatio: number,
   requiredRemovedRatio: number,
-  config: ScoringConfig
+  config: ScoringConfig,
+  spaceBonusMultiplier: number = 1,
 ): ScoreBreakdown {
   const { multiplier: performanceMultiplier, fencesOverPar, fencesUnderPar } =
     getPerformanceMultiplier(usedFences, parFences, config);
 
   const underParBonus = calculateUnderParBonus(usedFences, parFences, config);
-  const { bonus: spaceBonus, bonusRaw: spaceBonusRaw, extraPercent } =
+  const { bonus: spaceBonusBase, bonusRaw: spaceBonusRaw, extraPercent } =
     calculateSpaceBonus(actualRemovedRatio, requiredRemovedRatio, fencesOverPar, config);
+  // Tech Evangelist: scales the space-optimization payout (still under the
+  // per-map cap, so it buys consistency rather than inflation).
+  const safeSpaceMult = Number.isFinite(spaceBonusMultiplier) && spaceBonusMultiplier > 0 ? spaceBonusMultiplier : 1;
+  const spaceBonus = Math.round(spaceBonusBase * safeSpaceMult);
 
   const lockBonus = 0; // Calculated separately in game logic
   const totalBonus = underParBonus + spaceBonus + lockBonus;
@@ -261,6 +266,7 @@ export function calculateScore(
   scoreMultiplier: number = 1,
   levelNumber: number = 1,
   extraBonus: number = 0,
+  spaceBonusMultiplier: number = 1,
 ): {
   levelScore: number;
   breakdown: ScoreBreakdown;
@@ -269,7 +275,7 @@ export function calculateScore(
   const actualRemovedRatio = (100 - remainingPercent) / 100;
 
   const breakdown = calculateScoreBreakdown(
-    usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig
+    usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig, spaceBonusMultiplier
   );
 
   // Guard against a NaN/negative scoreMultiplier leaking in from bad config.

@@ -28,8 +28,11 @@ export function updateFenceWallFn(
 
   const wallSpeedBase = getWallSpeedBase(levelNumber, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel);
   // Knowledge Transfer: every ball locked this map speeds up fence generation
-  // for the rest of the map (lockedBallsCount resets per map).
-  const lockTempo = 1 + activeModifiers.fenceSpeedPerLock * game.lockedBallsCount;
+  // for the rest of the map (lockedBallsCount resets per map). Continuous
+  // Delivery does the same per completed fence (wallCount resets per map too).
+  const lockTempo = 1
+    + activeModifiers.fenceSpeedPerLock * game.lockedBallsCount
+    + activeModifiers.fenceSpeedPerFence * game.wallCount;
   const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo;
 
   let totalStartPath = 0;

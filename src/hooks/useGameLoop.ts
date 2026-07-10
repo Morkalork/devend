@@ -42,6 +42,7 @@ export interface GameLoopCallbacks {
  * @param parallaxTickRef - Ref to the parallax tick function (shared rAF)
  * @param callbacks - render / updateWall / applyCut functions
  * @param autoFreezeDuration - Cron Job: seconds an auto-frozen ball holds (0 = upgrade off)
+ * @param freezeNoCooldown - Absolute Zero set bonus: >0 = no re-freeze cooldown after thaw
  */
 export function createGameLoop(
   game: CanvasGameState,
@@ -50,6 +51,7 @@ export function createGameLoop(
   parallaxTickRef: { current: ((ts: number) => void) | null | undefined } | null | undefined,
   callbacks: GameLoopCallbacks,
   autoFreezeDuration: number,
+  freezeNoCooldown: number = 0,
 ): (timestamp: number) => void {
   // Always cancel the previously-stored handle before scheduling a new one, so
   // an external start site (resume/dissolve/pushMode) that assigns into
@@ -163,7 +165,10 @@ export function createGameLoop(
           const target = eligible[Math.floor(Math.random() * eligible.length)];
           const durationMs = autoFreezeDuration * 1000;
           target.frozenUntil   = now + durationMs;
-          target.freezeReadyAt = now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
+          // Absolute Zero (freeze set bonus): no re-freeze cooldown after thaw.
+          target.freezeReadyAt = freezeNoCooldown > 0
+            ? now + durationMs
+            : now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
           game.lastAutoFreezeAt = now;
         }
         // No eligible ball (all frozen/cooling) — leave the clock so it retries

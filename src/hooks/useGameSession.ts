@@ -26,6 +26,7 @@ import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
+import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
@@ -53,6 +54,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const {
     upgrades,
+    tagSets,
     isLoading: isLoadingUpgrades,
     error: upgradeError,
     loadUpgrades,
@@ -79,6 +81,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [cumulativeLockedBalls, setCumulativeLockedBalls] = useState(0);
   const [shopUnlockedCerts, setShopUnlockedCerts] = useState<Certificate[]>([]);
   const [pendingCertUnlocks, setPendingCertUnlocks] = useState<Certificate[]>([]);
+
+  // Clean Release: instant fences carried into the NEXT map after finishing a
+  // map under par. Re-evaluated at every level completion (so it lasts exactly
+  // one map) and cleared on run start/restart.
+  const [carryInstantFences, setCarryInstantFences] = useState(0);
 
   // Per-run revive resource ("Continue"). Each run starts with BASE_CONTINUES
   // (+ any certificate grant); spending one on death retries the current level
@@ -201,11 +208,64 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     return bonuses;
   }, [draftedLoadoutIds, loadoutLookup, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
-  const mergedBonuses = useMemo(
-    () => mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses),
-    [achievementBonuses, certBonuses, loadoutBonuses]
+  // Set bonuses: free modifier bundles active while the player owns enough
+  // upgrades of a tag (tagSets block in upgrades.yml).
+  const activeTagSets = useMemo(
+    () => computeActiveTagSets(ownedUpgradeIds, upgrades, tagSets),
+    [ownedUpgradeIds, upgrades, tagSets]
   );
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
+  const tagSetBonuses = useMemo(() => {
+    let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
+    for (const s of activeTagSets) {
+      bonuses = mergeBonuses(bonuses, s.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    }
+    return bonuses;
+  }, [activeTagSets]);
+
+  const mergedBonuses = useMemo(
+    () => mergeBonuses(mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses), tagSetBonuses),
+    [achievementBonuses, certBonuses, loadoutBonuses, tagSetBonuses]
+  );
+
+  // Two-pass modifier resolution: the base pass aggregates every static source;
+  // a second pass folds in run-state-dependent effects that READ base values
+  // (War Chest keys off bankedSlowPer50h + the bank; Clean Release off the
+  // under-par carry). Both fold through the same merge rules as everything else.
+  const baseModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
+  const MAX_BANKED_SLOW = 0.08; // War Chest ceiling: never more than 8% slower
+  const dynamicBonuses = useMemo(() => {
+    let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
+    if (baseModifiers.bankedSlowPer50h > 0 && totalScore > 0) {
+      const reduction = Math.min(MAX_BANKED_SLOW, Math.floor(totalScore / 50) * baseModifiers.bankedSlowPer50h);
+      if (reduction > 0) bonuses = mergeBonuses(bonuses, { ballSpeedMultiplier: 1 - reduction });
+    }
+    if (carryInstantFences > 0) {
+      bonuses = mergeBonuses(bonuses, { instantFencesPerMap: carryInstantFences });
+    }
+    return bonuses;
+  }, [baseModifiers.bankedSlowPer50h, totalScore, carryInstantFences]);
+  const finalBonuses = useMemo(
+    () => mergeBonuses(mergedBonuses, dynamicBonuses),
+    [mergedBonuses, dynamicBonuses]
+  );
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, finalBonuses);
+
+  // Mid-run extraContinues grants (Insurance Policy set bonus): when the
+  // aggregated value rises, credit the difference to the live counter. Drops
+  // (run reset clearing owned upgrades) just re-baseline without deducting.
+  const extraContinuesSeen = useRef<number | null>(null);
+  useEffect(() => {
+    const now = activeModifiers.extraContinues;
+    const prev = extraContinuesSeen.current;
+    extraContinuesSeen.current = now;
+    if (prev !== null && now > prev) {
+      setContinuesRemaining(c => c + (now - prev));
+    }
+  }, [activeModifiers.extraContinues]);
+
+  // Owned-tag tally for the build readout (HUD + shop chips).
+  const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
+  const tagSetThreshold = tagSets?.threshold ?? DEFAULT_TAG_SET_THRESHOLD;
 
   const activeLoadouts = useMemo(
     () => draftedLoadoutIds.map(id => loadoutLookup.get(id)).filter((l): l is NonNullable<typeof l> => l != null),
@@ -245,6 +305,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'loadout', id: l.id, name: l.name, modifiers: l.modifiers });
     }
 
+    for (const s of activeTagSets) {
+      sources.push({ kind: 'tagSet', id: s.tag, name: s.name, modifiers: s.modifiers });
+    }
+
     if (ascensionDepth > 0) {
       sources.push({
         kind: 'ascension',
@@ -255,7 +319,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
   // Loadouts offered in the run-start draft: unlocked once the player has
   // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
@@ -301,6 +365,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
+    setCarryInstantFences(0);
       setAscensionDepth(0);
       setDraftedLoadoutIds([]);
       setLastRunSummary(null);
@@ -397,6 +462,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const bankedPush = (scoreData.pushBonus ?? 0) > 0 && !scoreData.pushFailed;
     if (bankedPush) recordPushBonusBanked();
 
+    // Clean Release: an under-par finish grants instant fences on the NEXT
+    // map. Re-evaluated on every completion, so the carry lasts exactly one map.
+    setCarryInstantFences(
+      (scoreData.fencesUnderPar ?? 0) > 0 ? activeModifiers.underParInstantFence : 0
+    );
+
     const projectedStats = {
       highestLevelReached: Math.max(metaStats.highestLevelReached, currentLevelNum),
       totalFencesDrawn: metaStats.totalFencesDrawn + (scoreData.cutCount || 0),
@@ -466,7 +537,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, activeModifiers.scoreInterestCapBonus, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, activeModifiers.scoreInterestCapBonus, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -588,6 +659,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handlePlayAgain = useCallback((startLevel?: number) => {
     setTotalScore(0);
     setOwnedUpgradeIds([]);
+    setCarryInstantFences(0);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
@@ -623,6 +695,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleRestartRun = useCallback(() => {
     setTotalScore(0);
     setOwnedUpgradeIds([]);
+    setCarryInstantFences(0);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
@@ -651,6 +724,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
+    setCarryInstantFences(0);
     setCurrentLives(BASE_LIVES);
     setAscensionDepth(0);
     setDraftedLoadoutIds([]);
@@ -783,6 +857,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     modifierSources,
     achievementBonuses: mergedBonuses,
     certificateProgress: runProgress,
+    // Build readout (archetype tags + set bonuses)
+    tagCounts,
+    tagSetThreshold,
+    activeTagSets,
     // Callbacks
     handleStartGame,
     handleConfirmLoadout,
