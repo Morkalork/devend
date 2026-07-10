@@ -33,6 +33,11 @@ describe("door pool integrity", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("gives every door a clarify blurb (shown in the hold-to-detail view)", () => {
+    const offenders = doors.filter(d => !d.clarify || d.clarify.trim().length === 0).map(d => d.id);
+    expect(offenders).toEqual([]);
+  });
+
   it("uses only known GameModifiers keys (typos would be silently ignored)", () => {
     const offenders: string[] = [];
     for (const d of doors) {

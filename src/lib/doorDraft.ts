@@ -34,7 +34,14 @@ function parseDoorEntry(raw: unknown): DoorConfig | null {
   if (typeof r.risk !== 'string' || typeof r.reward !== 'string') return null;
   const modifiers = parseModifiers(r.modifiers);
   if (!modifiers) return null;
-  return { id: r.id, name: r.name, risk: r.risk, reward: r.reward, modifiers };
+  return {
+    id: r.id,
+    name: r.name,
+    risk: r.risk,
+    reward: r.reward,
+    clarify: typeof r.clarify === 'string' ? r.clarify : undefined,
+    modifiers,
+  };
 }
 
 /**

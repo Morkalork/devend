@@ -454,6 +454,11 @@
     "obstaclesWithBreakables": "{{count}} ({{breakables}} krossbara)",
     "standardName": "Standardbiljett",
     "standardDesc": "Ta kartan som den kommer. Inga villkor.",
+    "standardClarify": "Inga modifierare, varken bra eller dåliga. Det säkra valet när din build redan sitter och du hellre avstår en förbannelse än chansar på fördelen.",
+    "standardScopeNote": "Kartan spelas exakt som beskrivs ovan.",
+    "scopeNote": "Gäller endast nästa karta, plus butiken direkt efter.",
+    "holdHint": "Håll in en biljett för hela genomgången.",
+    "closeDetail": "Stäng",
     "enterButton": "Ta den här biljetten",
     "pickHint": "Välj en biljett"
   },

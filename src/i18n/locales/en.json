@@ -469,6 +469,11 @@
     "obstaclesWithBreakables": "{{count}} ({{breakables}} breakable)",
     "standardName": "Standard Ticket",
     "standardDesc": "Take the map as it comes. No strings attached.",
+    "standardClarify": "No modifiers, good or bad. The safe pick when your build is already comfortable and you would rather not risk a curse for the upside.",
+    "standardScopeNote": "The map plays exactly as briefed above.",
+    "scopeNote": "Applies to the next map only, plus the shop right after it.",
+    "holdHint": "Hold a ticket for the full briefing.",
+    "closeDetail": "Close",
     "enterButton": "Take This Ticket",
     "pickHint": "Pick a Ticket"
   },

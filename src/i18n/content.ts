@@ -57,6 +57,8 @@ export const contentText = {
   doorRisk: (t: TFunction, d: WithId & { risk?: string }) => field(t, 'doors', d.id, 'risk', d.risk),
   doorReward: (t: TFunction, d: WithId & { reward?: string }) =>
     field(t, 'doors', d.id, 'reward', d.reward),
+  doorClarify: (t: TFunction, d: WithId & { clarify?: string }) =>
+    field(t, 'doors', d.id, 'clarify', d.clarify),
 
   loadoutName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'loadouts', l.id, 'name', l.name),
   loadoutCurse: (t: TFunction, l: WithId & { curse?: string }) => field(t, 'loadouts', l.id, 'curse', l.curse),

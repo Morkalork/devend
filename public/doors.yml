@@ -20,6 +20,7 @@ doors:
     name: Crunch Sprint
     risk: Balls move 15% faster.
     reward: Earn 25% more overtime on this map.
+    clarify: Faster balls are harder to corner into a clean fence. The overtime boost still folds under this map's cap, so it only pays out when you would otherwise finish below the cap. Strong on a build that already handles speed.
     modifiers:
       ballSpeedMultiplier: 1.15
       scoreMultiplier: 1.25
@@ -28,6 +29,7 @@ doors:
     name: Swarm Contract
     risk: Balls are 20% bigger.
     reward: Each locked ball pays +2 bonus overtime on this map.
+    clarify: Bigger balls fill space fast (easier to seal) but resist tight fences. The per-lock payout scales with how many balls the map spawns, so it shines on crowded maps.
     modifiers:
       ballSizeMultiplier: 1.2
       overtimePerLock: 2
@@ -36,6 +38,7 @@ doors:
     name: Hazard Pay
     risk: Balls move 10% faster and are 10% bigger.
     reward: Push-your-luck payouts are doubled on this map.
+    clarify: A mild double curse for a doubled push payout. Only worth taking if you actually intend to push past the safe line, otherwise the reward does nothing for you.
     modifiers:
       ballSpeedMultiplier: 1.1
       ballSizeMultiplier: 1.1
@@ -45,6 +48,7 @@ doors:
     name: Hiring Surge
     risk: Fences grow 20% slower on this map.
     reward: The shop after this map offers 2 extra upgrades.
+    clarify: Slower fences make just this map harder, but two extra picks in the next shop is permanent build power. A tempo sacrifice now for a stronger run later.
     modifiers:
       fenceGenerationSpeedMultiplier: 0.8
       extraShopItems: 2
@@ -53,6 +57,7 @@ doors:
     name: Overtime Audit
     risk: Earn 25% less overtime on this map.
     reward: Fences grow 30% faster and the first one is instant.
+    clarify: You trade this map's score for raw speed and a free opening fence. Best on a hard map where finishing at all matters more than maxing the payout.
     modifiers:
       scoreMultiplier: 0.75
       fenceGenerationSpeedMultiplier: 1.3
@@ -62,6 +67,7 @@ doors:
     name: Pressure Cooker
     risk: Balls move 20% faster.
     reward: Each locked ball pays +3 bonus overtime on this map.
+    clarify: The heaviest speed curse paired with the biggest per-lock payout. Wants a swarm map plus a freeze or slow build to keep control while you rack up locks.
     modifiers:
       ballSpeedMultiplier: 1.2
       overtimePerLock: 3
@@ -70,6 +76,7 @@ doors:
     name: Cold Call
     risk: Balls are 15% bigger.
     reward: Tap-to-freeze works on this map, 3 seconds per tap.
+    clarify: Grants tap-to-freeze even if your build lacks it, 3 seconds per tap. The bigger balls are the price. A lifeline on chaotic maps you would otherwise struggle to control.
     modifiers:
       ballSizeMultiplier: 1.15
       ballFreezeDuration: 3
@@ -78,6 +85,7 @@ doors:
     name: Gold Rush
     risk: Balls move 12% faster and fences grow 10% slower.
     reward: Space Optimization bonuses pay triple on this map.
+    clarify: Triples Space Optimization, so it rewards sealing tight, efficient territory rather than just surviving. The speed and fence curse makes that precision harder. A payoff for confident cutters.
     modifiers:
       ballSpeedMultiplier: 1.12
       fenceGenerationSpeedMultiplier: 0.9

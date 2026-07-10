@@ -11,8 +11,8 @@
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
-import { DoorOpen, Play, Skull, Sparkles, Ticket } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { DoorOpen, Play, Skull, Sparkles, Ticket, X } from 'lucide-react';
 import { DoorConfig } from '@/types/door';
 import { LevelConfig } from '@/types/level';
 import { selectBallTypesForMap } from '@/lib/ballTypes';
@@ -41,6 +41,8 @@ export function DoorDraftScreen({
 }: DoorDraftScreenProps) {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Door whose press-and-hold detail overlay is open (STANDARD or a door id).
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   // Exact spawn preview: ball-type selection is deterministic per map id.
   const balls = useMemo(
@@ -150,6 +152,7 @@ export function DoorDraftScreen({
               accentColor={accentColor}
               selected={selectedId === STANDARD}
               onClick={() => setSelectedId(prev => (prev === STANDARD ? null : STANDARD))}
+              onLongPress={() => setDetailId(STANDARD)}
               name={t('doorDraft.standardName')}
             >
               <div className="flex items-start gap-2">
@@ -166,6 +169,7 @@ export function DoorDraftScreen({
                 accentColor={accentColor}
                 selected={selectedId === door.id}
                 onClick={() => setSelectedId(prev => (prev === door.id ? null : door.id))}
+                onLongPress={() => setDetailId(door.id)}
                 name={contentText.doorName(t, door)}
               >
                 <div className="flex items-start gap-2 mb-2">
@@ -184,6 +188,11 @@ export function DoorDraftScreen({
             ))}
           </div>
 
+          {/* Press-and-hold discovery hint */}
+          <p className="text-[11px] text-center" style={{ color: '#4a7a5a' }}>
+            {t('doorDraft.holdHint')}
+          </p>
+
           {/* Confirm */}
           <motion.button
             initial={{ opacity: 0, y: 10 }}
@@ -200,6 +209,81 @@ export function DoorDraftScreen({
           </motion.button>
         </motion.div>
       </div>
+
+      {/* Press-and-hold detail overlay: the fuller briefing for one door.
+          Tapping the backdrop or the X closes it. */}
+      <AnimatePresence>
+        {detailId && (() => {
+          const isStandard = detailId === STANDARD;
+          const door = isStandard ? null : offers.find(d => d.id === detailId);
+          if (!isStandard && !door) return null;
+          const title = isStandard ? t('doorDraft.standardName') : contentText.doorName(t, door!);
+          const clarify = isStandard ? t('doorDraft.standardClarify') : contentText.doorClarify(t, door!);
+
+          return (
+            <motion.div
+              key="door-detail"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDetailId(null)}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.92, y: 8 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 8, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                style={{ borderColor: `${accentColor}66` }}
+              >
+                <button
+                  onClick={() => setDetailId(null)}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                  aria-label={t('doorDraft.closeDetail')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                {/* Header */}
+                <div className="flex items-center gap-2 mb-3 pr-6">
+                  {isStandard
+                    ? <DoorOpen className="w-6 h-6 shrink-0" style={{ color: accentColor }} />
+                    : <Ticket className="w-6 h-6 shrink-0" style={{ color: accentColor }} />}
+                  <div className="text-base font-display font-bold" style={{ color: accentColor }}>{title}</div>
+                </div>
+
+                {/* Risk / reward recap (risk doors only) */}
+                {!isStandard && (
+                  <div className="space-y-2 mb-3">
+                    <div className="flex items-start gap-2">
+                      <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                      <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.doorRisk(t, door!)}</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                      <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.doorReward(t, door!)}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Clarification */}
+                {clarify && (
+                  <p className="text-sm leading-relaxed mb-3" style={{ color: '#c8ffd8', opacity: 0.9 }}>{clarify}</p>
+                )}
+
+                {/* Scope note */}
+                <p
+                  className="text-[11px] leading-relaxed pt-2.5"
+                  style={{ color: '#4a7a5a', borderTop: `1px solid ${accentColor}22` }}
+                >
+                  {isStandard ? t('doorDraft.standardScopeNote') : t('doorDraft.scopeNote')}
+                </p>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </>
   );
 }

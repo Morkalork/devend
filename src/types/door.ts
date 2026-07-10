@@ -14,6 +14,8 @@ export interface DoorConfig {
   risk: string;
   /** Payoff text, shown in accent colour. */
   reward: string;
+  /** Longer strategic explanation, shown in the press-and-hold detail view. */
+  clarify?: string;
   modifiers: Record<string, number>;
 }
 
