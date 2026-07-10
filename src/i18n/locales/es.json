@@ -120,6 +120,7 @@
     "spaceBonusMultiplierActive": "Los bonos de optimización de espacio pagan x{{mult}} (Tech Evangelist).",
     "spaceBonusMultiplierInactive": "Los bonos de optimización de espacio pagan lo normal.",
     "tagSetSource": "{{name}} (bono de conjunto)",
+    "doorSource": "{{name}} (puerta)",
     "on": "Activado",
     "off": "Apagado",
     "ballPathPrediction": "Predicción de trayectoria",
@@ -402,6 +403,19 @@
     "pickToStart": "Elige un equipamiento",
     "skipButton": "Saltar (sin equipamiento)",
     "noLoadouts": "No hay equipamientos disponibles."
+  },
+  "doorDraft": {
+    "title": "Próxima tarea",
+    "subtitle": "Informe del nivel {{level}}: elige cómo afrontarlo.",
+    "intelBalls": "Aparecen",
+    "intelPar": "Par",
+    "intelCapture": "Captura",
+    "intelObstacles": "Obstáculos",
+    "obstaclesWithBreakables": "{{count}} ({{breakables}} rompibles)",
+    "standardName": "Tique estándar",
+    "standardDesc": "Toma el mapa tal como viene. Sin condiciones.",
+    "enterButton": "Tomar este tique",
+    "pickHint": "Elige un tique"
   },
   "continue": {
     "title": "¿Continuar?",

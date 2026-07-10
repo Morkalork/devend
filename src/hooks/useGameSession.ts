@@ -27,6 +27,8 @@ import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { loadDoors, getDoors, drawDoorOffers } from '@/lib/doorDraft';
+import { DoorConfig } from '@/types/door';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
@@ -40,6 +42,7 @@ const BASE_CONTINUES = 1;
 
 export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
+    levels,
     currentLevel,
     currentLevelIndex,
     totalLevels,
@@ -86,6 +89,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // map under par. Re-evaluated at every level completion (so it lasts exactly
   // one map) and cleared on run start/restart.
   const [carryInstantFences, setCarryInstantFences] = useState(0);
+
+  // Doors (branching choice): after each shop the player picks how to enter
+  // the next map. `doorOffers` is rolled when leaving the shop; `activeDoor`
+  // is the picked risk door (null = standard). It lives from the pick until
+  // the NEXT shop exit, so its modifiers cover the map plus the shop after it
+  // (shop-facing rewards like extra slots need that window).
+  const [doorOffers, setDoorOffers] = useState<DoorConfig[]>([]);
+  const [activeDoor, setActiveDoor] = useState<DoorConfig | null>(null);
 
   // Per-run revive resource ("Continue"). Each run starts with BASE_CONTINUES
   // (+ any certificate grant); spending one on death retries the current level
@@ -242,8 +253,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (carryInstantFences > 0) {
       bonuses = mergeBonuses(bonuses, { instantFencesPerMap: carryInstantFences });
     }
+    // Door pick: the chosen risk door's bundle rides along for this map (and
+    // the shop after it; see handleContinueFromShop for the expiry).
+    if (activeDoor) {
+      bonuses = mergeBonuses(bonuses, activeDoor.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    }
     return bonuses;
-  }, [baseModifiers.bankedSlowPer50h, totalScore, carryInstantFences]);
+  }, [baseModifiers.bankedSlowPer50h, totalScore, carryInstantFences, activeDoor]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -309,6 +325,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'tagSet', id: s.tag, name: s.name, modifiers: s.modifiers });
     }
 
+    if (activeDoor) {
+      sources.push({ kind: 'door', id: activeDoor.id, name: activeDoor.name, modifiers: activeDoor.modifiers });
+    }
+
     if (ascensionDepth > 0) {
       sources.push({
         kind: 'ascension',
@@ -319,7 +339,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, activeDoor, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
   // Loadouts offered in the run-start draft: unlocked once the player has
   // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
@@ -358,6 +378,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
       // it does not gate starting a run — same treatment as loadouts.
       loadBallTypes(),
+      // Door pool (doors.yml). Failure just skips the door screen.
+      loadDoors(),
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
@@ -365,7 +387,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setPendingLevelScore(null);
       setShowLevelComplete(false);
       setOwnedUpgradeIds([]);
-    setCarryInstantFences(0);
+      setCarryInstantFences(0);
+      setActiveDoor(null);
       setAscensionDepth(0);
       setDraftedLoadoutIds([]);
       setLastRunSummary(null);
@@ -577,6 +600,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLivesAtLevelStart(refilled);
 
     setPendingLevelScore(null);
+    setActiveDoor(null); // the pre-ascension map's door does not follow into the loop
     resetToFirstLevel(); // also re-randomizes the level variants for the new loop
     nav.goToGame();
   }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, nav.goToGame]);
@@ -648,9 +672,27 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
     setShopUnlockedCerts([]);
     setPendingLevelScore(null);
+    // The previous map's door expires here (after its map + this shop).
+    setActiveDoor(null);
+    // Doors: with a pool loaded and a next map to preview, route through the
+    // door draft instead of straight into the game. Two risk doors are rolled
+    // per shop exit; the standard door is always offered by the screen itself.
+    const doorPool = getDoors();
+    if (doorPool.length > 0 && !isLastLevel) {
+      setDoorOffers(drawDoorOffers(doorPool, 2));
+      nav.goToDoorDraft();
+      return;
+    }
     advanceToNextLevel();
     nav.goToGame();
-  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, saveRunCheckpoint, advanceToNextLevel, nav.goToGame, takePendingUnlocks]);
+  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, isLastLevel, saveRunCheckpoint, advanceToNextLevel, nav.goToGame, nav.goToDoorDraft, takePendingUnlocks]);
+
+  /** Door draft pick: `door` is a rolled risk door, or null for the standard door. */
+  const handleSelectDoor = useCallback((door: DoorConfig | null) => {
+    setActiveDoor(door);
+    advanceToNextLevel();
+    nav.goToGame();
+  }, [advanceToNextLevel, nav.goToGame]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);
@@ -660,6 +702,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setTotalScore(0);
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
+    setActiveDoor(null);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
@@ -696,6 +739,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setTotalScore(0);
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
+    setActiveDoor(null);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
@@ -725,6 +769,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setShowLevelComplete(false);
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
+    setActiveDoor(null);
     setCurrentLives(BASE_LIVES);
     setAscensionDepth(0);
     setDraftedLoadoutIds([]);
@@ -861,6 +906,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     tagCounts,
     tagSetThreshold,
     activeTagSets,
+    // Doors (branching map choice)
+    doorOffers,
+    activeDoor,
+    // The map the door draft previews (null past the final level).
+    nextLevel: levels[currentLevelIndex + 1] ?? null,
+    handleSelectDoor,
     // Callbacks
     handleStartGame,
     handleConfirmLoadout,

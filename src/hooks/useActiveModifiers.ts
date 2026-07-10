@@ -90,7 +90,7 @@ export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
  * can attribute each active modifier to what produced it.
  */
 export interface ModifierSource {
-  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet';
+  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet' | 'door';
   id: string;
   name: string;
   modifiers: Record<string, number>;

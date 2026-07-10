@@ -1,7 +1,7 @@
 import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'admin' | 'mapBuilder' | 'animationTest';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'doorDraft' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'admin' | 'mapBuilder' | 'animationTest';
 
 /** Progress of the interactive "draw your first fence" tutorial on level 1. */
 export type TutorialStep = 'showingHint' | 'waitingForSuccessfulCut' | 'completed';

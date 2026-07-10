@@ -109,6 +109,30 @@ Permanent one-time rewards earned by reaching lifetime stat thresholds. Complete
 
 ---
 
+## doors.yml
+
+Doors are risk/reward gates between maps. After each shop the player picks how
+to enter the next map: the **standard door** (always offered, no modifiers) or
+one of two doors drawn from this pool. A door's modifiers apply from the pick
+until the next shop exit — i.e. that map plus the shop right after it, so
+shop-facing rewards (`extraShopItems`, `shopRestockCount`) work. The door
+screen also briefs the next map with real intel (exact ball spawns, par,
+capture target, obstacle count).
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | string | ✓ | Unique identifier |
+| `name` | string | ✓ | Display name on the door card |
+| `risk` | string | ✓ | Downside text (shown in red) |
+| `reward` | string | ✓ | Payoff text (shown in accent colour) |
+| `modifiers` | map | ✓ | One or more **GameModifier keys**; must include at least one adverse value (enforced by tests: no free lunches) |
+
+> Overtime-facing rewards fold under the per-map cap, so doors buy consistency
+> and side payoffs, not inflation. An empty or missing doors.yml simply skips
+> the door screen.
+
+---
+
 ## loadouts.yml
 
 Curse + blessing bundles drafted at the **start of every run** (the base-game "Sprint Planning" loadout draft, `RunDraftScreen`) and again after beating the final level (the Ascension draft, `AscensionDraftScreen`). A run-start pick shapes the run from level 1; ascension picks stack on top and loop back to level 1. Loaded by `useLoadoutManager`, folded into the same GameModifiers pipeline as upgrades.

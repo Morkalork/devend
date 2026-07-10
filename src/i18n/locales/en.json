@@ -120,6 +120,7 @@
     "spaceBonusMultiplierActive": "Space Optimization bonuses pay x{{mult}} (Tech Evangelist).",
     "spaceBonusMultiplierInactive": "Space Optimization bonuses pay normally.",
     "tagSetSource": "{{name}} (set bonus)",
+    "doorSource": "{{name}} (door)",
     "on": "On",
     "off": "Off",
     "ballPathPrediction": "Ball Path Prediction",
@@ -417,6 +418,19 @@
     "pickToStart": "Pick a Loadout",
     "skipButton": "Skip (no loadout)",
     "noLoadouts": "No loadouts available."
+  },
+  "doorDraft": {
+    "title": "Next Assignment",
+    "subtitle": "Level {{level}} briefing: choose how you take it on.",
+    "intelBalls": "Spawns",
+    "intelPar": "Par",
+    "intelCapture": "Capture",
+    "intelObstacles": "Obstacles",
+    "obstaclesWithBreakables": "{{count}} ({{breakables}} breakable)",
+    "standardName": "Standard Ticket",
+    "standardDesc": "Take the map as it comes. No strings attached.",
+    "enterButton": "Take This Ticket",
+    "pickHint": "Pick a Ticket"
   },
   "continue": {
     "title": "Continue?",

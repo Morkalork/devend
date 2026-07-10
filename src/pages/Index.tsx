@@ -21,6 +21,7 @@ import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
+import { DoorDraftScreen } from '@/components/game/DoorDraftScreen';
 import { RunDraftScreen } from '@/components/game/RunDraftScreen';
 import { ContinuePrompt } from '@/components/game/ContinuePrompt';
 import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
@@ -212,6 +213,14 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onTutorialDismiss={session.markStoreSeen}
                 newlyUnlockedCerts={session.shopUnlockedCerts}
                 tagSetThreshold={session.tagSetThreshold}
+              />
+            )}
+            {navigation.currentScreen === 'doorDraft' && session.nextLevel && (
+              <DoorDraftScreen
+                nextLevel={session.nextLevel}
+                offers={session.doorOffers}
+                onSelect={session.handleSelectDoor}
+                accentColor={accentHex}
               />
             )}
             {navigation.currentScreen === 'ascensionDraft' && (

@@ -1,0 +1,79 @@
+# Doors — risk/reward gates between maps.
+#
+# After each shop the player chooses how to enter the next map: the standard
+# door (always offered, no modifiers) or one of two doors drawn from this
+# pool. A door's modifiers apply to THAT MAP ONLY (plus the shop right after,
+# so shop-facing rewards work). Keys are the same GameModifiers used by
+# upgrades.yml and loadouts.yml (see README-modifiers.md).
+#
+# Balance note: overtime-facing rewards fold under the per-map cap, so doors
+# buy consistency and side-payoffs, not inflation (issue #43 stays intact).
+
+doors:
+
+  - id: crunch_sprint
+    name: Crunch Sprint
+    risk: Balls move 15% faster.
+    reward: Earn 25% more overtime on this map.
+    modifiers:
+      ballSpeedMultiplier: 1.15
+      scoreMultiplier: 1.25
+
+  - id: swarm_contract
+    name: Swarm Contract
+    risk: Balls are 20% bigger.
+    reward: Each locked ball pays +2 bonus overtime on this map.
+    modifiers:
+      ballSizeMultiplier: 1.2
+      overtimePerLock: 2
+
+  - id: hazard_pay
+    name: Hazard Pay
+    risk: Balls move 10% faster and are 10% bigger.
+    reward: Push-your-luck payouts are doubled on this map.
+    modifiers:
+      ballSpeedMultiplier: 1.1
+      ballSizeMultiplier: 1.1
+      pushBonusMultiplier: 2
+
+  - id: hiring_surge
+    name: Hiring Surge
+    risk: Fences grow 20% slower on this map.
+    reward: The shop after this map offers 2 extra upgrades.
+    modifiers:
+      fenceGenerationSpeedMultiplier: 0.8
+      extraShopItems: 2
+
+  - id: overtime_audit
+    name: Overtime Audit
+    risk: Earn 25% less overtime on this map.
+    reward: Fences grow 30% faster and the first one is instant.
+    modifiers:
+      scoreMultiplier: 0.75
+      fenceGenerationSpeedMultiplier: 1.3
+      instantFencesPerMap: 1
+
+  - id: pressure_cooker
+    name: Pressure Cooker
+    risk: Balls move 20% faster.
+    reward: Each locked ball pays +3 bonus overtime on this map.
+    modifiers:
+      ballSpeedMultiplier: 1.2
+      overtimePerLock: 3
+
+  - id: cold_call
+    name: Cold Call
+    risk: Balls are 15% bigger.
+    reward: Tap-to-freeze works on this map, 3 seconds per tap.
+    modifiers:
+      ballSizeMultiplier: 1.15
+      ballFreezeDuration: 3
+
+  - id: gold_rush
+    name: Gold Rush
+    risk: Balls move 12% faster and fences grow 10% slower.
+    reward: Space Optimization bonuses pay triple on this map.
+    modifiers:
+      ballSpeedMultiplier: 1.12
+      fenceGenerationSpeedMultiplier: 0.9
+      spaceBonusMultiplier: 3

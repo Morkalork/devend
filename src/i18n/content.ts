@@ -47,6 +47,12 @@ export const contentText = {
   tagSetDesc: (t: TFunction, s: WithId & { description?: string }) =>
     field(t, 'tagSets', s.id, 'description', s.description),
 
+  /** Door (doors.yml): risk/reward gate between maps. */
+  doorName: (t: TFunction, d: WithId & { name?: string }) => field(t, 'doors', d.id, 'name', d.name),
+  doorRisk: (t: TFunction, d: WithId & { risk?: string }) => field(t, 'doors', d.id, 'risk', d.risk),
+  doorReward: (t: TFunction, d: WithId & { reward?: string }) =>
+    field(t, 'doors', d.id, 'reward', d.reward),
+
   loadoutName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'loadouts', l.id, 'name', l.name),
   loadoutCurse: (t: TFunction, l: WithId & { curse?: string }) => field(t, 'loadouts', l.id, 'curse', l.curse),
   loadoutBlessing: (t: TFunction, l: WithId & { blessing?: string }) =>

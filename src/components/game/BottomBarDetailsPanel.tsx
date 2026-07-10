@@ -46,6 +46,7 @@ function sourceName(t: TFunction, s: ModifierSource): string {
     case 'achievement': return contentText.achName(t, s);
     case 'loadout': return contentText.loadoutName(t, s);
     case 'tagSet': return t('bottomBarDetails.tagSetSource', { name: contentText.tagSetName(t, s) });
+    case 'door': return t('bottomBarDetails.doorSource', { name: contentText.doorName(t, s) });
     case 'ascension': return t('bottomBarDetails.ascensionSource', { depth: s.name });
     default: return s.name;
   }

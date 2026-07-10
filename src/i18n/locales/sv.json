@@ -120,6 +120,7 @@
     "spaceBonusMultiplierActive": "Utrymmesoptimeringens bonusar betalar x{{mult}} (Tech Evangelist).",
     "spaceBonusMultiplierInactive": "Utrymmesoptimeringens bonusar betalar som vanligt.",
     "tagSetSource": "{{name}} (setbonus)",
+    "doorSource": "{{name}} (dörr)",
     "on": "På",
     "off": "Av",
     "ballPathPrediction": "Bollbaneprognos",
@@ -402,6 +403,19 @@
     "pickToStart": "Välj en laddning",
     "skipButton": "Hoppa över (ingen laddning)",
     "noLoadouts": "Inga laddningar tillgängliga."
+  },
+  "doorDraft": {
+    "title": "Nästa uppdrag",
+    "subtitle": "Genomgång av nivå {{level}}: välj hur du tar dig an den.",
+    "intelBalls": "Bollar",
+    "intelPar": "Par",
+    "intelCapture": "Erövra",
+    "intelObstacles": "Hinder",
+    "obstaclesWithBreakables": "{{count}} ({{breakables}} krossbara)",
+    "standardName": "Standardbiljett",
+    "standardDesc": "Ta kartan som den kommer. Inga villkor.",
+    "enterButton": "Ta den här biljetten",
+    "pickHint": "Välj en biljett"
   },
   "continue": {
     "title": "Fortsätta?",
