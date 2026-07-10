@@ -418,6 +418,25 @@
     "skipButton": "Hoppa över (ingen laddning)",
     "noLoadouts": "Inga laddningar tillgängliga."
   },
+  "buildRecap": {
+    "heading": "Omgångens sammanfattning",
+    "buildLine": "{{name}}-bygge: {{title}}",
+    "comboName": "{{a}}-{{b}}",
+    "generalist": "Generalist",
+    "generalistTitle": "Fullstack-generalist",
+    "titles": {
+      "lock": "Stängaren",
+      "freeze": "Kryoingenjör",
+      "bank": "Investeraren",
+      "tempo": "Leveransingenjör",
+      "risk": "Crunch-narkoman",
+      "safety": "Defensiv programmerare"
+    },
+    "capstoneLine": "Befordran: {{name}}",
+    "newRecord": "Nytt personbästa för {{archetype}}-byggen: {{hours}}h (tidigare {{previous}}h)",
+    "firstRecord": "Första {{archetype}}-bygget på tavlan: {{hours}}h bankade",
+    "bestSoFar": "Bästa {{archetype}}-bygget hittills: {{hours}}h"
+  },
   "capstoneDraft": {
     "title": "Befordran",
     "subtitle": "Din utvecklingsrunda gick bra. Välj en permanent förmån för resten av omgången.",

@@ -27,6 +27,7 @@ import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers } from '@/lib/doorDraft';
 import { DoorConfig } from '@/types/door';
 import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers } from '@/lib/capstones';
@@ -127,6 +128,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Names of loadouts that unlocked this run (shown on the result screen).
   const [lastRunLoadoutUnlocks, setLastRunLoadoutUnlocks] = useState<string[]>([]);
 
+  // End-of-run build recap (archetype identity, capstone, per-archetype best).
+  const [lastRunRecap, setLastRunRecap] = useState<RunRecap | null>(null);
+
   // One-time "loadouts unlocked" modal, shown after the first win reveals the
   // loadout system. Armed at the winning level, surfaced when leaving the
   // level-complete overlay (so it doesn't stack on top of it).
@@ -198,6 +202,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordLoadoutWin,
     recordMapHighscore,
     recordBallTypeEncountered,
+    recordArchetypeBest,
     introduceLoadouts,
     resetProgression,
   } = useMetaProgression();
@@ -444,17 +449,40 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress, loadoutsIntroduced]);
 
+  // End-of-run build recap: name the build from its archetype lean and score
+  // the banked overtime against the dominant archetype's personal best.
+  const captureRunRecap = useCallback((finalScore: number) => {
+    const identity = computeBuildIdentity(tagCounts);
+    let previousBest: number | null = null;
+    let isArchetypeRecord = false;
+    if (identity.primary) {
+      const res = recordArchetypeBest(identity.primary, finalScore);
+      previousBest = res.previous;
+      isArchetypeRecord = res.isRecord;
+    }
+    setLastRunRecap({
+      ...identity,
+      tagCounts: Object.fromEntries(tagCounts),
+      capstoneId: capstone?.id ?? null,
+      capstoneName: capstone?.name ?? null,
+      score: finalScore,
+      isArchetypeRecord,
+      previousBest,
+    });
+  }, [tagCounts, capstone, recordArchetypeBest]);
+
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
+    captureRunRecap(totalScore);
     nav.endGame({
       ...result,
       totalScore,
       ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
       loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
-  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts]);
+  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // On death with a Continue banked, defer finalizing and offer a revive.
@@ -647,6 +675,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const levelsCompleted = runLevelsCompleted;
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
+    captureRunRecap(totalScore);
     nav.endGame({
       isWin: true,
       remainingPercent: pendingLevelScore?.remainingPercent || 0,
@@ -662,7 +691,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
     setPendingLevelScore(null);
-  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts]);
+  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts, captureRunRecap]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
@@ -921,6 +950,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,
     lastRunLevelsCompleted: lastRunSummary?.levelsCompleted ?? 0,
     lastRunLoadoutUnlocks,
+    lastRunRecap,
     // Head Start certificates: the level a fresh run begins at (1 = none).
     // The result screen uses it to label Play Again as "Continue from level N".
     certStartingLevel: getCertStartingLevel(),

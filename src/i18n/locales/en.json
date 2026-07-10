@@ -433,6 +433,25 @@
     "skipButton": "Skip (no loadout)",
     "noLoadouts": "No loadouts available."
   },
+  "buildRecap": {
+    "heading": "Run Recap",
+    "buildLine": "{{name}} build: {{title}}",
+    "comboName": "{{a}}-{{b}}",
+    "generalist": "Generalist",
+    "generalistTitle": "Full-Stack Generalist",
+    "titles": {
+      "lock": "The Closer",
+      "freeze": "Cryo Engineer",
+      "bank": "The Investor",
+      "tempo": "Ship-It Engineer",
+      "risk": "Crunch Junkie",
+      "safety": "Defensive Programmer"
+    },
+    "capstoneLine": "Capstone: {{name}}",
+    "newRecord": "New personal best for {{archetype}} builds: {{hours}}h (was {{previous}}h)",
+    "firstRecord": "First {{archetype}} build on record: {{hours}}h banked",
+    "bestSoFar": "Best {{archetype}} build so far: {{hours}}h"
+  },
   "capstoneDraft": {
     "title": "Promotion",
     "subtitle": "Your review went well. Pick one permanent perk for the rest of this run.",

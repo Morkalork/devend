@@ -256,6 +256,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 runHoursAwarded={session.lastRunHoursAwarded}
                 runLevelsCompleted={session.lastRunLevelsCompleted}
                 newlyUnlockedLoadouts={session.lastRunLoadoutUnlocks}
+                runRecap={session.lastRunRecap}
               />
             )}
             {navigation.currentScreen === 'certificateStore' && (

@@ -1,7 +1,9 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack } from 'lucide-react';
+import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal } from 'lucide-react';
 import { GameResult } from '@/types/game';
+import { RunRecap } from '@/lib/buildRecap';
+import { TAG_COLORS, UpgradeTag } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
 
 interface ResultScreenProps {
@@ -15,6 +17,8 @@ interface ResultScreenProps {
   runLevelsCompleted?: number;
   /** Names of loadouts that unlocked this run (celebrated below the title). */
   newlyUnlockedLoadouts?: string[];
+  /** End-of-run build recap (archetype identity, capstone, personal best). */
+  runRecap?: RunRecap | null;
 }
 
 export function ResultScreen({
@@ -27,9 +31,22 @@ export function ResultScreen({
   runHoursAwarded = 0,
   runLevelsCompleted = 0,
   newlyUnlockedLoadouts = [],
+  runRecap = null,
 }: ResultScreenProps) {
   const { t } = useTranslation();
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames } = result;
+
+  // Build name: "Freeze-Lock" from the archetype lean, or Generalist. The
+  // flavour title ("Cryo Engineer") keys off the primary archetype alone.
+  const tagLabel = (tag: UpgradeTag) => t(`upgradeShop.tags.${tag}`);
+  const buildName = runRecap?.primary
+    ? runRecap.secondary
+      ? t('buildRecap.comboName', { a: tagLabel(runRecap.primary), b: tagLabel(runRecap.secondary) })
+      : tagLabel(runRecap.primary)
+    : t('buildRecap.generalist');
+  const buildTitle = runRecap?.primary
+    ? t(`buildRecap.titles.${runRecap.primary}`)
+    : t('buildRecap.generalistTitle');
 
   return (
     <>
@@ -201,6 +218,63 @@ export function ResultScreen({
           )}
 
         </motion.div>
+
+        {/* Build recap: what this run WAS. Name the build from its archetype
+            lean, credit the capstone, and celebrate a per-archetype best. */}
+        {runRecap && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="text-center flex flex-col items-center gap-2 pt-4 border-t border-border w-full"
+          >
+            <p className="text-muted-foreground text-sm uppercase tracking-wider">
+              {t('buildRecap.heading')}
+            </p>
+            <p className="text-2xl font-display font-bold text-foreground">
+              {t('buildRecap.buildLine', { name: buildName, title: buildTitle })}
+            </p>
+            {Object.keys(runRecap.tagCounts).length > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {Object.entries(runRecap.tagCounts)
+                  .sort((a, b) => b[1] - a[1])
+                  .map(([tag, count]) => {
+                    const tc = TAG_COLORS[tag as UpgradeTag];
+                    if (!tc || count <= 0) return null;
+                    return (
+                      <span
+                        key={tag}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${tc.bg} ${tc.text}`}
+                      >
+                        {t(`upgradeShop.tags.${tag}`)} {count}
+                      </span>
+                    );
+                  })}
+              </div>
+            )}
+            {runRecap.capstoneName && (
+              <div className="flex items-center justify-center gap-1.5 text-sm text-foreground">
+                <Award className="w-4 h-4 text-primary" />
+                <span>{t('buildRecap.capstoneLine', { name: runRecap.capstoneName })}</span>
+              </div>
+            )}
+            {runRecap.primary && runRecap.isArchetypeRecord && (
+              <div className="flex items-center justify-center gap-1.5 text-sm font-bold text-yellow-400">
+                <Medal className="w-4 h-4" />
+                <span>
+                  {runRecap.previousBest !== null
+                    ? t('buildRecap.newRecord', { archetype: tagLabel(runRecap.primary), hours: runRecap.score, previous: runRecap.previousBest })
+                    : t('buildRecap.firstRecord', { archetype: tagLabel(runRecap.primary), hours: runRecap.score })}
+                </span>
+              </div>
+            )}
+            {runRecap.primary && !runRecap.isArchetypeRecord && runRecap.previousBest !== null && (
+              <p className="text-xs text-muted-foreground">
+                {t('buildRecap.bestSoFar', { archetype: tagLabel(runRecap.primary), hours: runRecap.previousBest })}
+              </p>
+            )}
+          </motion.div>
+        )}
 
         {/* Buttons */}
         <motion.div

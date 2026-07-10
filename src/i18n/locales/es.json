@@ -418,6 +418,25 @@
     "skipButton": "Saltar (sin equipamiento)",
     "noLoadouts": "No hay equipamientos disponibles."
   },
+  "buildRecap": {
+    "heading": "Resumen de la partida",
+    "buildLine": "Build {{name}}: {{title}}",
+    "comboName": "{{a}}-{{b}}",
+    "generalist": "Generalista",
+    "generalistTitle": "Generalista full-stack",
+    "titles": {
+      "lock": "El Cerrador",
+      "freeze": "Ingeniero criogénico",
+      "bank": "El Inversor",
+      "tempo": "Ingeniero de despliegues",
+      "risk": "Adicto al crunch",
+      "safety": "Programador defensivo"
+    },
+    "capstoneLine": "Culminación: {{name}}",
+    "newRecord": "Nuevo récord personal para builds de {{archetype}}: {{hours}}h (antes {{previous}}h)",
+    "firstRecord": "Primera build de {{archetype}} registrada: {{hours}}h aseguradas",
+    "bestSoFar": "Mejor build de {{archetype}} hasta ahora: {{hours}}h"
+  },
   "capstoneDraft": {
     "title": "Ascenso",
     "subtitle": "Tu evaluación fue bien. Elige una ventaja permanente para el resto de la partida.",

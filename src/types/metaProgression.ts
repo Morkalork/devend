@@ -58,6 +58,12 @@ export interface UnlockState {
    * green are always shown regardless of this set (see TutorialScreen).
    */
   encounteredBallTypeIds: string[];
+  /**
+   * Best banked overtime per dominant build archetype (see buildRecap.ts),
+   * keyed by tag. Feeds the end-of-run recap's "personal best for lock
+   * builds" celebration. A tag absent here has never headlined a run.
+   */
+  archetypeBests: Record<string, number>;
 }
 
 export const DEFAULT_META_STATS: MetaProgressionStats = {
