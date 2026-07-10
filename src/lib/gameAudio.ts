@@ -447,6 +447,88 @@ export function playBallLockSound(): void {
   sl.start(st); sl.stop(st + 0.35);
 }
 
+/** Quick territorial "swoosh + ding" when a cut successfully claims space. */
+export function playCutClaimedSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = 0.18;
+
+  // Rising noise sweep — air being captured
+  const nb = createNoiseBuffer(ctx, 0.15);
+  const ns = ctx.createBufferSource();
+  const nf = ctx.createBiquadFilter();
+  const ng = ctx.createGain();
+  ns.buffer = nb;
+  nf.type = "bandpass";
+  nf.frequency.setValueAtTime(800, now);
+  nf.frequency.exponentialRampToValueAtTime(3200, now + 0.12);
+  nf.Q.value = 2;
+  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ng.gain.setValueAtTime(0, now);
+  ng.gain.linearRampToValueAtTime(vol, now + 0.02);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  ns.start(now); ns.stop(now + 0.18);
+
+  // Bright confirmation tone rising quickly
+  const osc = ctx.createOscillator();
+  const ogn = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(880, now + 0.04);
+  osc.frequency.linearRampToValueAtTime(1320, now + 0.10);
+  osc.connect(ogn); ogn.connect(masterGain);
+  ogn.gain.setValueAtTime(0, now + 0.04);
+  ogn.gain.linearRampToValueAtTime(vol * 0.7, now + 0.06);
+  ogn.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+  osc.start(now + 0.04); osc.stop(now + 0.28);
+}
+
+/** Rising pitch sweep — energy spinning up — when the level is cleared. */
+export function playLevelCompleteSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = 0.22;
+
+  // Two slightly-detuned sine oscillators sweep 100 Hz → 1200 Hz for width
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const flt  = ctx.createBiquadFilter();
+  const gn   = ctx.createGain();
+  osc1.type = "sine"; osc2.type = "sine";
+  osc1.frequency.setValueAtTime(100, now);
+  osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.65);
+  osc2.frequency.setValueAtTime(103, now);
+  osc2.frequency.exponentialRampToValueAtTime(1236, now + 0.65);
+  flt.type = "lowpass";
+  flt.frequency.setValueAtTime(300, now);
+  flt.frequency.exponentialRampToValueAtTime(8000, now + 0.65);
+  flt.Q.value = 2;
+  osc1.connect(flt); osc2.connect(flt); flt.connect(gn); gn.connect(masterGain!);
+  gn.gain.setValueAtTime(0, now);
+  gn.gain.linearRampToValueAtTime(vol, now + 0.45);
+  gn.gain.exponentialRampToValueAtTime(vol * 0.3, now + 0.65);
+  gn.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+  osc1.start(now); osc1.stop(now + 0.9);
+  osc2.start(now); osc2.stop(now + 0.9);
+
+  // Bandpass noise sweeps up alongside — adds a spinning/rushing texture
+  const nb = createNoiseBuffer(ctx, 0.7);
+  const ns = ctx.createBufferSource();
+  const nf = ctx.createBiquadFilter();
+  const ng = ctx.createGain();
+  ns.buffer = nb;
+  nf.type = "bandpass";
+  nf.frequency.setValueAtTime(200, now);
+  nf.frequency.exponentialRampToValueAtTime(4000, now + 0.6);
+  nf.Q.value = 3;
+  ns.connect(nf); nf.connect(ng); ng.connect(masterGain!);
+  ng.gain.setValueAtTime(0, now);
+  ng.gain.linearRampToValueAtTime(vol * 0.35, now + 0.3);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+  ns.start(now); ns.stop(now + 0.75);
+}
+
 /**
  * Set mute state
  */

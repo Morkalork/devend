@@ -48,7 +48,7 @@ function ensureDeck(): [HTMLAudioElement, HTMLAudioElement] | null {
   if (!deck) {
     const make = () => {
       const a = new Audio();
-      a.loop = true;
+      a.loop = false; // crossfade-loop handled manually via timeupdate
       a.preload = "auto";
       a.volume = 0;
       return a;
@@ -145,6 +145,27 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
   } else {
     outgoing.pause();
   }
+
+  // Near-end crossfade loop. When the active element is ~(crossfadeMs + 500ms)
+  // from its natural end, crossfade to the same track from the beginning so the
+  // loop is seamless. The +500ms buffer means the fade completes ~500ms before
+  // the old element ends, so it's already silent when it stops. Stale handlers
+  // (from earlier switches) cancel immediately via the fadeGen guard.
+  const self = incoming;
+  const selfSrc = src;
+  const selfKey = key;
+  const selfFallback = withFallback;
+  function onNearEnd() {
+    if (fadeGen !== gen) { self.removeEventListener("timeupdate", onNearEnd); return; }
+    const dur = self.duration;
+    if (!dur || !isFinite(dur)) return;
+    if (self.currentTime >= dur - crossfadeMs / 1000 - 0.5) {
+      self.removeEventListener("timeupdate", onNearEnd);
+      currentKey = null; // bypass the idempotency guard
+      switchTo(selfSrc, selfKey, selfFallback);
+    }
+  }
+  self.addEventListener("timeupdate", onNearEnd);
 }
 
 /**
