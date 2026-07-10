@@ -2,7 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'Morkalork Display';
+  src: url('/assets/fonts/MorkalorkDisplay-regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
 
 /*
  * CRT Background Styles
@@ -301,7 +309,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Morkalork Display', sans-serif;
   }
 }
 
@@ -324,7 +332,7 @@
 
   .game-title {
     @apply text-5xl md:text-7xl font-black tracking-wider;
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Morkalork Display', sans-serif;
     background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(145 80% 40%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -335,7 +343,7 @@
   .arcade-button {
     @apply relative overflow-hidden px-[1.7rem] py-[0.85rem] font-semibold text-[0.9375rem] uppercase tracking-widest;
     @apply border-2 transition-all duration-300;
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Morkalork Display', sans-serif;
   }
 
   .arcade-button:active {
@@ -377,7 +385,7 @@
 
   .hud-display {
     @apply px-4 py-2 bg-card/80 backdrop-blur-sm border border-border rounded-lg;
-    font-family: 'Orbitron', sans-serif;
+    font-family: 'Morkalork Display', sans-serif;
   }
 }
 

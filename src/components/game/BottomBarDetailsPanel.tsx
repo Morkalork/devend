@@ -229,7 +229,7 @@ export function BottomBarDetailsPanel({
 
   const sectionHeadStyle: React.CSSProperties = {
     color: `${accentColor}88`,
-    fontFamily: 'Orbitron, sans-serif',
+    fontFamily: 'Morkalork Display, sans-serif',
     letterSpacing: '0.15em',
     fontSize: '0.7rem',
     fontWeight: 700,
@@ -252,7 +252,7 @@ export function BottomBarDetailsPanel({
       >
         <h1
           className="text-xl font-black tracking-widest uppercase"
-          style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
+          style={{ fontFamily: 'Morkalork Display, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
         >
           {t('bottomBarDetails.activeModifiers')}
         </h1>
@@ -306,7 +306,7 @@ export function BottomBarDetailsPanel({
 
                     {contributors.length > 0 && (
                       <div className="mt-2.5 pt-2.5 space-y-1" style={{ borderTop: `1px solid ${accentColor}22` }}>
-                        <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Orbitron, sans-serif' }}>
+                        <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Morkalork Display, sans-serif' }}>
                           {t('bottomBarDetails.fromSources')}
                         </p>
                         {contributors.map(({ s, c }) => (

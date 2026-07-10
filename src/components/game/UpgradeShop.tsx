@@ -328,7 +328,7 @@ export function UpgradeShop({
               animate={{ opacity: [1, 0.7, 1] }}
               transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
               className="text-xs font-bold tracking-[0.3em] uppercase"
-              style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
+              style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#00ff88' }}
             >
               ⚑ &nbsp;{t('upgradeShop.checkpointReached')}&nbsp; ⚑
             </motion.p>
@@ -337,7 +337,7 @@ export function UpgradeShop({
               animate={{ textShadow: ['0 0 8px #00ff8888', '0 0 24px #00ff88cc', '0 0 8px #00ff8888'] }}
               transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
               className="text-4xl font-black tracking-widest"
-              style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
+              style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#00ff88' }}
             >
               {t('upgradeShop.levelBanner', { level: completedLevel })}
             </motion.p>

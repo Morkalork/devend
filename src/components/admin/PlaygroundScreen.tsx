@@ -511,7 +511,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             <Layers className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#a855f7' }} />
             <span
               className="flex-1 min-w-0 text-xs font-bold truncate"
-              style={{ fontFamily: 'Orbitron, sans-serif', color: '#a855f7' }}
+              style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#a855f7' }}
             >
               L{selectedLevel.level}: {selectedLevel.id}
             </span>
@@ -673,7 +673,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                   <Layers className="w-4 h-4" style={{ color: '#a855f7' }} />
                   <span
                     className="font-black tracking-widest uppercase text-sm"
-                    style={{ fontFamily: 'Orbitron, sans-serif', color: '#a855f7' }}
+                    style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#a855f7' }}
                   >
                     Pick a Level
                   </span>
@@ -762,7 +762,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderBottom: `1px solid ${accent}33` }}>
                 <div className="flex items-center gap-2">
                   <Circle className="w-4 h-4" style={{ color: accent }} />
-                  <span className="font-black tracking-widest uppercase text-sm" style={{ fontFamily: 'Orbitron, sans-serif', color: accent }}>
+                  <span className="font-black tracking-widest uppercase text-sm" style={{ fontFamily: 'Morkalork Display, sans-serif', color: accent }}>
                     Balls
                   </span>
                 </div>
@@ -824,7 +824,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               {/* In-play balls (override if set, otherwise the level default) */}
               <div className="px-5 pt-4 flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: `${accent}99`, fontFamily: 'Orbitron, sans-serif' }}>
+                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: `${accent}99`, fontFamily: 'Morkalork Display, sans-serif' }}>
                     In play ({effectiveBallIds.length}){ballTypeIds === null ? ' · level default' : ''}
                   </span>
                   {ballTypeIds !== null && (
@@ -948,7 +948,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                   <SlidersHorizontal className="w-4 h-4" style={{ color: accent }} />
                   <span
                     className="font-black tracking-widest uppercase text-sm"
-                    style={{ fontFamily: 'Orbitron, sans-serif', color: accent }}
+                    style={{ fontFamily: 'Morkalork Display, sans-serif', color: accent }}
                   >
                     Playground Modifiers
                   </span>
@@ -1035,7 +1035,7 @@ function ModifierSection({
       <div className="mb-3">
         <div
           className="text-xs font-bold uppercase tracking-widest"
-          style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor }}
+          style={{ fontFamily: 'Morkalork Display, sans-serif', color: accentColor }}
         >
           {title}
         </div>

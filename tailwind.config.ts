@@ -15,7 +15,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Orbitron', 'sans-serif'],
+        display: ['Morkalork Display', 'sans-serif'],
         body: ['Space Grotesk', 'sans-serif'],
       },
       colors: {
