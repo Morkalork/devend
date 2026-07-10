@@ -292,7 +292,9 @@
     "recordPace": "RECORD",
     "currentlyReducingBy": "Currently reducing by {{percent}}%",
     "continues_one": "{{count}} Continue banked",
-    "continues_other": "{{count}} Continues banked"
+    "continues_other": "{{count}} Continues banked",
+    "lives_one": "{{count}} life remaining",
+    "lives_other": "{{count}} lives remaining"
   },
   "topBarDetails": {
     "levelStatusTitle": "Level {{level}} Status",

@@ -289,7 +289,9 @@
     "recordPace": "RECORD",
     "currentlyReducingBy": "Reduciendo actualmente un {{percent}}%",
     "continues_one": "{{count}} Continuación guardada",
-    "continues_other": "{{count}} Continuaciones guardadas"
+    "continues_other": "{{count}} Continuaciones guardadas",
+    "lives_one": "{{count}} vida restante",
+    "lives_other": "{{count}} vidas restantes"
   },
   "topBarDetails": {
     "levelStatusTitle": "Estado del nivel {{level}}",

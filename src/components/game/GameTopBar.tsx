@@ -240,19 +240,24 @@ export function GameTopBar({
 
         {/* Lives (+ banked Continues) */}
         <div className="flex items-center gap-2">
-          <div key={livesFlashKey} className={`flex items-center gap-1 ${livesFlashKey > 0 ? 'animate-stat-flash' : ''}`}>
-            {Array.from({ length: lives }).map((_, i) => (
-              <Heart
-                key={i}
-                className="w-5 h-5 animate-pulse-heart"
-                style={{
-                  color: accentColor,
-                  fill: accentColor,
-                  filter: `drop-shadow(0 0 6px ${accentColor}aa)`,
-                  animationDelay: `${i * 0.15}s`,
-                }}
-              />
-            ))}
+          {/* One heart + a counter: a pile of hearts broke the top-bar layout
+              once extra-life upgrades stacked up. */}
+          <div
+            key={livesFlashKey}
+            className={`flex items-center gap-1 ${livesFlashKey > 0 ? 'animate-stat-flash' : ''}`}
+            title={t('topBar.lives', { count: lives })}
+          >
+            <Heart
+              className="w-5 h-5 animate-pulse-heart"
+              style={{
+                color: accentColor,
+                fill: accentColor,
+                filter: `drop-shadow(0 0 6px ${accentColor}aa)`,
+              }}
+            />
+            <span className="font-display text-sm font-bold tabular-nums" style={{ color: accentColor }}>
+              {lives}
+            </span>
           </div>
           {continuesRemaining > 0 && (
             <div

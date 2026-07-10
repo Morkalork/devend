@@ -289,7 +289,9 @@
     "recordPace": "REKORD",
     "currentlyReducingBy": "Minskar just nu med {{percent}}%",
     "continues_one": "{{count}} Fortsättning sparad",
-    "continues_other": "{{count}} Fortsättningar sparade"
+    "continues_other": "{{count}} Fortsättningar sparade",
+    "lives_one": "{{count}} liv kvar",
+    "lives_other": "{{count}} liv kvar"
   },
   "topBarDetails": {
     "levelStatusTitle": "Status för nivå {{level}}",

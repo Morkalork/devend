@@ -207,14 +207,13 @@ export function TopBarDetailsPanel({
                   <span className="font-bold text-sm" style={{ color: accentColor }}>{t('topBarDetails.livesRemaining')}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {Array.from({ length: lives }).map((_, i) => (
-                    <Heart
-                      key={i}
-                      className="w-5 h-5"
-                      style={{ color: accentColor, fill: accentColor, filter: `drop-shadow(0 0 5px ${accentColor}99)` }}
-                    />
-                  ))}
-                  {lives === 0 && (
+                  <Heart
+                    className="w-5 h-5"
+                    style={{ color: accentColor, fill: accentColor, filter: `drop-shadow(0 0 5px ${accentColor}99)` }}
+                  />
+                  {lives > 0 ? (
+                    <span className="font-bold text-base tabular-nums" style={{ color: accentColor }}>{lives}</span>
+                  ) : (
                     <span className="font-bold text-sm" style={{ color: '#ff6b6b' }}>{t('topBarDetails.livesNone')}</span>
                   )}
                 </div>
