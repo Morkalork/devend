@@ -53,6 +53,15 @@ export interface GameModifiers {
   // Additive (sum) — War Chest: ball-speed reduction per 50h banked at map
   // start, capped in useGameSession (0.02 = 2% per 50h)
   bankedSlowPer50h: number;
+  // Additive (sum) — Stock Options capstone: raises the per-map overtime cap
+  overtimeCapBonus: number;
+  // Additive (sum) — Company Card capstone: >0 = the cheapest shop offer is free
+  freeCheapestOffer: number;
+  // Additive (sum) — Second Wind capstone: fence-hit shields granted per map
+  wallShieldsPerMap: number;
+  // Additive (sum) — Ghost Protocol capstone: growing fences ignore ball hits
+  // during their first N milliseconds
+  fenceGraceMs: number;
 
   // Multiplicative — Tech Evangelist: scales the space-optimization bonus
   spaceBonusMultiplier: number;
@@ -90,7 +99,7 @@ export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
  * can attribute each active modifier to what produced it.
  */
 export interface ModifierSource {
-  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet' | 'door';
+  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet' | 'door' | 'capstone';
   id: string;
   name: string;
   modifiers: Record<string, number>;
@@ -160,6 +169,10 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   fenceSpeedPerFence: 0,
   underParInstantFence: 0,
   bankedSlowPer50h: 0,
+  overtimeCapBonus: 0,
+  freeCheapestOffer: 0,
+  wallShieldsPerMap: 0,
+  fenceGraceMs: 0,
   spaceBonusMultiplier: 1,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,

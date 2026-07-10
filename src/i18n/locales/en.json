@@ -121,6 +121,19 @@
     "spaceBonusMultiplierInactive": "Space Optimization bonuses pay normally.",
     "tagSetSource": "{{name}} (set bonus)",
     "doorSource": "{{name}} (door)",
+    "capstoneSource": "{{name}} (capstone)",
+    "overtimeCapBonus": "Overtime Cap",
+    "overtimeCapBonusActive": "The per-map overtime cap is raised by {{hours}}h for the rest of the run (Stock Options).",
+    "overtimeCapBonusInactive": "Standard per-map overtime cap.",
+    "freeCheapestOffer": "Free Shop Offer",
+    "freeCheapestOfferActive": "The cheapest offer in every shop is free (Company Card).",
+    "freeCheapestOfferInactive": "No free shop offers.",
+    "wallShieldsPerMap": "Fence Shields",
+    "wallShieldsPerMapActive": "{{count}} fence hit(s) per map are absorbed without costing a life (Second Wind).",
+    "wallShieldsPerMapInactive": "No fence shields.",
+    "fenceGrace": "Fence Grace Period",
+    "fenceGraceActive": "Fences ignore ball hits during their first {{seconds}}s of growth (Ghost Protocol).",
+    "fenceGraceInactive": "No fence grace period.",
     "on": "On",
     "off": "Off",
     "ballPathPrediction": "Ball Path Prediction",
@@ -382,6 +395,7 @@
   },
   "upgradeShop": {
     "storeLabel": "Store",
+    "freeLabel": "FREE",
     "levelComplete": "Level {{level}} complete",
     "checkpointReached": "checkpoint reached",
     "levelBanner": "LEVEL {{level}}",
@@ -405,7 +419,7 @@
     "detailNoPrereqs": "Available from the start",
     "detailNoUnlocks": "Nothing further yet",
     "certificateUnlocked": "Certificate Unlocked!",
-    "buyAndContinue": "Buy {{count}} & Continue",
+    "buyAndContinue": "Buy {{count}}",
     "continue": "Continue",
     "tutorialTitle": "THE UPGRADE SHOP",
     "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade for more info - including what unlocks it and what it unlocks."
@@ -418,6 +432,13 @@
     "pickToStart": "Pick a Loadout",
     "skipButton": "Skip (no loadout)",
     "noLoadouts": "No loadouts available."
+  },
+  "capstoneDraft": {
+    "title": "Promotion",
+    "subtitle": "Your review went well. Pick one permanent perk for the rest of this run.",
+    "exclusiveHint": "One pick only. The other two are gone for good.",
+    "confirmButton": "Accept Promotion",
+    "pickHint": "Pick a Perk"
   },
   "doorDraft": {
     "title": "Next Assignment",

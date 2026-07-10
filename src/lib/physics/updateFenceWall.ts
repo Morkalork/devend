@@ -167,6 +167,17 @@ export function updateFenceWallFn(
     return;
   }
 
+  // Ghost Protocol capstone: a young fence phases through balls entirely for
+  // its first fenceGraceMs of growth (no bounce either — growing fences never
+  // deflect balls, so "ignore" is symmetric).
+  if (
+    activeModifiers.fenceGraceMs > 0 &&
+    wall.startTime &&
+    performance.now() - wall.startTime < activeModifiers.fenceGraceMs
+  ) {
+    return;
+  }
+
   for (const ball of balls) {
     let hit = false;
     for (const seg of allSegments) {

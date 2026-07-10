@@ -44,6 +44,8 @@ interface UpgradeShopProps {
   newlyUnlockedCerts?: Certificate[];
   /** Owned upgrades of a tag needed to activate its set bonus (tagSets). */
   tagSetThreshold?: number;
+  /** Company Card capstone: the cheapest unowned offer costs nothing. */
+  freeCheapestOffer?: boolean;
 }
 
 /** Shuffle array using Fisher-Yates */
@@ -100,6 +102,7 @@ export function UpgradeShop({
   onTutorialDismiss,
   newlyUnlockedCerts = [],
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
+  freeCheapestOffer = false,
 }: UpgradeShopProps) {
   const { t, i18n } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -222,10 +225,23 @@ export function UpgradeShop({
   // Effective overtime - playerPoints (totalScore) is already reduced by onPurchase
   const effectiveOvertime = playerPoints;
 
+  // Company Card capstone: the cheapest unowned offer on the shelf is free.
+  // Recomputed as restocks add offers; buyable lockeds/teasers count too.
+  const freeOfferId = useMemo(() => {
+    if (!freeCheapestOffer) return null;
+    let cheapest: UpgradeConfig | null = null;
+    for (const u of offeredUpgrades) {
+      if (allOwnedIds.includes(u.id)) continue;
+      if (!cheapest || u.cost < cheapest.cost) cheapest = u;
+    }
+    return cheapest?.id ?? null;
+  }, [freeCheapestOffer, offeredUpgrades, allOwnedIds]);
+
   // All prices flow through the discount (Bulk Licensing certificate)
   const priceFor = useCallback(
-    (u: UpgradeConfig) => Math.max(1, Math.round(u.cost * shopDiscountMultiplier)),
-    [shopDiscountMultiplier],
+    (u: UpgradeConfig) =>
+      u.id === freeOfferId ? 0 : Math.max(1, Math.round(u.cost * shopDiscountMultiplier)),
+    [shopDiscountMultiplier, freeOfferId],
   );
   const hasDiscount = shopDiscountMultiplier < 1;
 
@@ -345,7 +361,7 @@ export function UpgradeShop({
               animate={{ opacity: [1, 0.7, 1] }}
               transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
               className="text-xs font-bold tracking-[0.3em] uppercase"
-              style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#00ff88' }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: '#00ff88' }}
             >
               ⚑ &nbsp;{t('upgradeShop.checkpointReached')}&nbsp; ⚑
             </motion.p>
@@ -354,7 +370,7 @@ export function UpgradeShop({
               animate={{ textShadow: ['0 0 8px #00ff8888', '0 0 24px #00ff88cc', '0 0 8px #00ff8888'] }}
               transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
               className="text-4xl font-black tracking-widest"
-              style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#00ff88' }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: '#00ff88' }}
             >
               {t('upgradeShop.levelBanner', { level: completedLevel })}
             </motion.p>
@@ -582,10 +598,12 @@ export function UpgradeShop({
                     ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
                   `}>
                     <Clock className="w-4 h-4" />
-                    {hasDiscount && (
+                    {(hasDiscount || priceFor(upgrade) === 0) && (
                       <span className="text-xs font-normal line-through opacity-50">{t('upgradeShop.hoursValue', { hours: upgrade.cost })}</span>
                     )}
-                    {t('upgradeShop.hoursValue', { hours: priceFor(upgrade) })}
+                    {priceFor(upgrade) === 0
+                      ? t('upgradeShop.freeLabel')
+                      : t('upgradeShop.hoursValue', { hours: priceFor(upgrade) })}
                   </div>
                 )}
               </motion.button>
@@ -624,7 +642,7 @@ export function UpgradeShop({
           onClick={handleContinue}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 text-sm tracking-wide max-w-full whitespace-nowrap"
+          className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 text-sm max-w-full whitespace-nowrap"
         >
           {selectedIds.length > 0 ? (
             <>

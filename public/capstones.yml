@@ -1,0 +1,56 @@
+# Capstones — the once-per-run exclusive perk ("Promotion").
+#
+# After the first level completed at/past `offeredAfterLevel`, the shop exit
+# routes through a mandatory 1-of-3 draft. The pick applies for the rest of
+# the run (surviving ascension); the two passed-over capstones are gone for
+# good. These are rule-breakers, not stat bumps - one per archetype, so the
+# pick can crown a build or rescue a weak one. Keys are GameModifiers
+# (see README-modifiers.md).
+
+offeredAfterLevel: 10
+
+capstones:
+
+  - id: stock_options
+    name: Stock Options
+    description: The per-map overtime cap rises by 20h for the rest of the run. Big multiplier builds finally pay out.
+    tag: risk
+    modifiers:
+      overtimeCapBonus: 20
+
+  - id: company_card
+    name: Company Card
+    description: The cheapest offer in every shop is free.
+    tag: bank
+    modifiers:
+      freeCheapestOffer: 1
+
+  - id: second_wind
+    name: Second Wind
+    description: Once per map, a fence survives a ball hit without costing a life.
+    tag: safety
+    modifiers:
+      wallShieldsPerMap: 1
+
+  - id: ghost_protocol
+    name: Ghost Protocol
+    description: Fences ignore ball hits during their first 1.5 seconds of growth.
+    tag: tempo
+    modifiers:
+      fenceGraceMs: 1500
+
+  - id: cryo_protocol
+    name: Cryo Protocol
+    description: Tap any ball to freeze it for 3 seconds, with no cooldown. Works even without Feature Freeze.
+    tag: freeze
+    modifiers:
+      ballFreezeDuration: 3
+      freezeNoCooldown: 1
+
+  - id: golden_handshake
+    name: Golden Handshake
+    description: Every locked ball pays +2 overtime, and every lock counts as one ball bigger for the trap multiplier.
+    tag: lock
+    modifiers:
+      overtimePerLock: 2
+      simultaneousLockBonus: 1

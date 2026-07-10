@@ -109,6 +109,28 @@ Permanent one-time rewards earned by reaching lifetime stat thresholds. Complete
 
 ---
 
+## capstones.yml
+
+Capstones are the once-per-run exclusive perk ("Promotion"). At the first shop
+exit at/past `offeredAfterLevel` (default 10), a mandatory 1-of-3 draft is
+offered; the pick applies **permanently for the rest of the run** (surviving
+ascension) and the two passed-over capstones are gone for good. Capstones are
+rule-breakers, not stat bumps - the pool covers one per archetype (enforced by
+tests) so any build can find its crown.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `offeredAfterLevel` | number | | First completed level at/past which the draft appears (default 10) |
+| `capstones[].id` | string | ✓ | Unique identifier |
+| `capstones[].name` | string | ✓ | Display name on the draft card |
+| `capstones[].description` | string | ✓ | Shown on the card |
+| `capstones[].tag` | string | | Archetype chip: `lock`, `freeze`, `bank`, `tempo`, `risk`, `safety` |
+| `capstones[].modifiers` | map | ✓ | One or more **GameModifier keys** |
+
+> A missing or broken capstones.yml simply skips the draft.
+
+---
+
 ## doors.yml
 
 Doors are risk/reward gates between maps. After each shop the player picks how
@@ -272,6 +294,10 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `fenceSpeedPerFence` | `0` | Fence-speed bonus per fence completed **this map** (Continuous Delivery). Stacks with `fenceSpeedPerLock` in the same `× (1 + …)` tempo term; resets each map. | `0.04` = +4%/fence |
 | `underParInstantFence` | `0` | Instant fences granted on the **next** map after finishing a map under par (Clean Release). Re-evaluated every completion, so the carry lasts exactly one map. | `1` |
 | `bankedSlowPer50h` | `0` | Ball-speed reduction per 50h banked at map start (War Chest), capped at 8% total. Folded by useGameSession into `ballSpeedMultiplier` per map. | `0.02` = 2%/50h |
+| `overtimeCapBonus` | `0` | Raises the per-map overtime cap by this many hours (Stock Options capstone). | `20` |
+| `freeCheapestOffer` | `0` | `> 0` makes the cheapest unowned offer in every shop free (Company Card capstone). | `1` |
+| `wallShieldsPerMap` | `0` | Fence-hit shields granted fresh at every map start: a shielded hit breaks the fence but costs no life (Second Wind capstone). | `1` |
+| `fenceGraceMs` | `0` | Growing fences ignore ball hits during their first N milliseconds (Ghost Protocol capstone). Mover collisions still hurt. | `1500` |
 
 ---
 

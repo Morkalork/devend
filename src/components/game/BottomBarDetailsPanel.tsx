@@ -47,6 +47,7 @@ function sourceName(t: TFunction, s: ModifierSource): string {
     case 'loadout': return contentText.loadoutName(t, s);
     case 'tagSet': return t('bottomBarDetails.tagSetSource', { name: contentText.tagSetName(t, s) });
     case 'door': return t('bottomBarDetails.doorSource', { name: contentText.doorName(t, s) });
+    case 'capstone': return t('bottomBarDetails.capstoneSource', { name: contentText.capstoneName(t, s) });
     case 'ascension': return t('bottomBarDetails.ascensionSource', { depth: s.name });
     default: return s.name;
   }
@@ -273,6 +274,46 @@ export function BottomBarDetailsPanel({
           : t('bottomBarDetails.spaceBonusMultiplierInactive'),
     },
     {
+      label: t('bottomBarDetails.overtimeCapBonus'),
+      value: bonus(m.overtimeCapBonus),
+      changed: m.overtimeCapBonus !== 0,
+      keys: ['overtimeCapBonus'],
+      description:
+        m.overtimeCapBonus > 0
+          ? t('bottomBarDetails.overtimeCapBonusActive', { hours: m.overtimeCapBonus })
+          : t('bottomBarDetails.overtimeCapBonusInactive'),
+    },
+    {
+      label: t('bottomBarDetails.freeCheapestOffer'),
+      value: m.freeCheapestOffer > 0 ? t('bottomBarDetails.on') : t('bottomBarDetails.off'),
+      changed: m.freeCheapestOffer !== 0,
+      keys: ['freeCheapestOffer'],
+      description:
+        m.freeCheapestOffer > 0
+          ? t('bottomBarDetails.freeCheapestOfferActive')
+          : t('bottomBarDetails.freeCheapestOfferInactive'),
+    },
+    {
+      label: t('bottomBarDetails.wallShieldsPerMap'),
+      value: bonus(m.wallShieldsPerMap),
+      changed: m.wallShieldsPerMap !== 0,
+      keys: ['wallShieldsPerMap'],
+      description:
+        m.wallShieldsPerMap > 0
+          ? t('bottomBarDetails.wallShieldsPerMapActive', { count: m.wallShieldsPerMap })
+          : t('bottomBarDetails.wallShieldsPerMapInactive'),
+    },
+    {
+      label: t('bottomBarDetails.fenceGrace'),
+      value: m.fenceGraceMs > 0 ? `${(m.fenceGraceMs / 1000).toFixed(1)}s` : t('bottomBarDetails.off'),
+      changed: m.fenceGraceMs !== 0,
+      keys: ['fenceGraceMs'],
+      description:
+        m.fenceGraceMs > 0
+          ? t('bottomBarDetails.fenceGraceActive', { seconds: (m.fenceGraceMs / 1000).toFixed(1) })
+          : t('bottomBarDetails.fenceGraceInactive'),
+    },
+    {
       label: t('bottomBarDetails.extraShopSlots'),
       value: bonus(m.extraShopItems),
       changed: m.extraShopItems !== 0,
@@ -324,7 +365,7 @@ export function BottomBarDetailsPanel({
 
   const sectionHeadStyle: React.CSSProperties = {
     color: `${accentColor}88`,
-    fontFamily: 'Morkalork Display, sans-serif',
+    fontFamily: 'Michroma, sans-serif',
     letterSpacing: '0.15em',
     fontSize: '0.7rem',
     fontWeight: 700,
@@ -347,7 +388,7 @@ export function BottomBarDetailsPanel({
       >
         <h1
           className="text-xl font-black tracking-widest uppercase"
-          style={{ fontFamily: 'Morkalork Display, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
+          style={{ fontFamily: 'Michroma, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
         >
           {t('bottomBarDetails.activeModifiers')}
         </h1>
@@ -401,7 +442,7 @@ export function BottomBarDetailsPanel({
 
                     {contributors.length > 0 && (
                       <div className="mt-2.5 pt-2.5 space-y-1" style={{ borderTop: `1px solid ${accentColor}22` }}>
-                        <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Morkalork Display, sans-serif' }}>
+                        <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Michroma, sans-serif' }}>
                           {t('bottomBarDetails.fromSources')}
                         </p>
                         {contributors.map(({ s, c }) => (

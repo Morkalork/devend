@@ -29,6 +29,8 @@ import { loadBallTypes } from '@/lib/ballTypes';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { loadDoors, getDoors, drawDoorOffers } from '@/lib/doorDraft';
 import { DoorConfig } from '@/types/door';
+import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers } from '@/lib/capstones';
+import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
@@ -97,6 +99,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // (shop-facing rewards like extra slots need that window).
   const [doorOffers, setDoorOffers] = useState<DoorConfig[]>([]);
   const [activeDoor, setActiveDoor] = useState<DoorConfig | null>(null);
+
+  // Capstone ("Promotion"): the once-per-run exclusive perk, drafted 1-of-3
+  // at the first shop exit at/past the trigger level. Permanent for the run
+  // (survives ascension); cleared only on run resets.
+  const [capstoneOffers, setCapstoneOffers] = useState<CapstoneConfig[]>([]);
+  const [capstone, setCapstone] = useState<CapstoneConfig | null>(null);
 
   // Per-run revive resource ("Continue"). Each run starts with BASE_CONTINUES
   // (+ any certificate grant); spending one on death retries the current level
@@ -234,8 +242,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [activeTagSets]);
 
   const mergedBonuses = useMemo(
-    () => mergeBonuses(mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses), tagSetBonuses),
-    [achievementBonuses, certBonuses, loadoutBonuses, tagSetBonuses]
+    () => mergeBonuses(
+      mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses),
+      mergeBonuses(tagSetBonuses, capstone?.modifiers as Partial<Record<keyof GameModifiers, number>> | undefined),
+    ),
+    [achievementBonuses, certBonuses, loadoutBonuses, tagSetBonuses, capstone]
   );
 
   // Two-pass modifier resolution: the base pass aggregates every static source;
@@ -329,6 +340,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'door', id: activeDoor.id, name: activeDoor.name, modifiers: activeDoor.modifiers });
     }
 
+    if (capstone) {
+      sources.push({ kind: 'capstone', id: capstone.id, name: capstone.name, modifiers: capstone.modifiers });
+    }
+
     if (ascensionDepth > 0) {
       sources.push({
         kind: 'ascension',
@@ -339,7 +354,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, activeDoor, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, activeDoor, capstone, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
   // Loadouts offered in the run-start draft: unlocked once the player has
   // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
@@ -380,6 +395,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadBallTypes(),
       // Door pool (doors.yml). Failure just skips the door screen.
       loadDoors(),
+      // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
+      loadCapstones(),
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
@@ -389,6 +406,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setOwnedUpgradeIds([]);
       setCarryInstantFences(0);
       setActiveDoor(null);
+      setCapstone(null);
       setAscensionDepth(0);
       setDraftedLoadoutIds([]);
       setLastRunSummary(null);
@@ -662,6 +680,21 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [upgrades, certSourceIds, recordMaxTierPurchase]);
 
+  /**
+   * Route into the next map, via the door draft when a pool is loaded and a
+   * next map exists to preview. Shared by the shop exit and the capstone pick.
+   */
+  const proceedThroughDoors = useCallback(() => {
+    const doorPool = getDoors();
+    if (doorPool.length > 0 && !isLastLevel) {
+      setDoorOffers(drawDoorOffers(doorPool, 2));
+      nav.goToDoorDraft();
+      return;
+    }
+    advanceToNextLevel();
+    nav.goToGame();
+  }, [isLastLevel, advanceToNextLevel, nav.goToGame, nav.goToDoorDraft]);
+
   const handleContinueFromShop = useCallback(() => {
     const nextLevelNumber = currentLevelIndex + 2;
     // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
@@ -674,18 +707,23 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingLevelScore(null);
     // The previous map's door expires here (after its map + this shop).
     setActiveDoor(null);
-    // Doors: with a pool loaded and a next map to preview, route through the
-    // door draft instead of straight into the game. Two risk doors are rolled
-    // per shop exit; the standard door is always offered by the screen itself.
-    const doorPool = getDoors();
-    if (doorPool.length > 0 && !isLastLevel) {
-      setDoorOffers(drawDoorOffers(doorPool, 2));
-      nav.goToDoorDraft();
+    // Capstone ("Promotion"): the first shop exit at/past the trigger level
+    // routes through the mandatory 1-of-3 perk draft, once per run. ">= " so
+    // Head Start runs that skip the exact trigger level still get theirs.
+    const capstonePool = getCapstones();
+    if (!capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
+      setCapstoneOffers(drawCapstoneOffers(capstonePool, 3));
+      nav.goToCapstoneDraft();
       return;
     }
-    advanceToNextLevel();
-    nav.goToGame();
-  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, isLastLevel, saveRunCheckpoint, advanceToNextLevel, nav.goToGame, nav.goToDoorDraft, takePendingUnlocks]);
+    proceedThroughDoors();
+  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, capstone, saveRunCheckpoint, nav.goToCapstoneDraft, takePendingUnlocks, proceedThroughDoors]);
+
+  /** Capstone draft pick: permanent for the run, then on through the doors. */
+  const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
+    setCapstone(pick);
+    proceedThroughDoors();
+  }, [proceedThroughDoors]);
 
   /** Door draft pick: `door` is a rolled risk door, or null for the standard door. */
   const handleSelectDoor = useCallback((door: DoorConfig | null) => {
@@ -703,6 +741,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
     setActiveDoor(null);
+    setCapstone(null);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
@@ -740,6 +779,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
     setActiveDoor(null);
+    setCapstone(null);
     setPendingLevelScore(null);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
@@ -770,6 +810,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
     setActiveDoor(null);
+    setCapstone(null);
     setCurrentLives(BASE_LIVES);
     setAscensionDepth(0);
     setDraftedLoadoutIds([]);
@@ -912,6 +953,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // The map the door draft previews (null past the final level).
     nextLevel: levels[currentLevelIndex + 1] ?? null,
     handleSelectDoor,
+    // Capstone ("Promotion")
+    capstoneOffers,
+    capstone,
+    handleSelectCapstone,
     // Callbacks
     handleStartGame,
     handleConfirmLoadout,

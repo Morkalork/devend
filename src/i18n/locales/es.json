@@ -121,6 +121,19 @@
     "spaceBonusMultiplierInactive": "Los bonos de optimización de espacio pagan lo normal.",
     "tagSetSource": "{{name}} (bono de conjunto)",
     "doorSource": "{{name}} (puerta)",
+    "capstoneSource": "{{name}} (culminación)",
+    "overtimeCapBonus": "Tope de horas extra",
+    "overtimeCapBonusActive": "El tope de horas extra por mapa sube {{hours}}h durante el resto de la partida (Stock Options).",
+    "overtimeCapBonusInactive": "Tope de horas extra estándar por mapa.",
+    "freeCheapestOffer": "Oferta gratis en tienda",
+    "freeCheapestOfferActive": "La oferta más barata de cada tienda es gratis (Company Card).",
+    "freeCheapestOfferInactive": "Sin ofertas gratis en la tienda.",
+    "wallShieldsPerMap": "Escudos de valla",
+    "wallShieldsPerMapActive": "{{count}} golpe(s) de bola por mapa se absorben sin costar una vida (Second Wind).",
+    "wallShieldsPerMapInactive": "Sin escudos de valla.",
+    "fenceGrace": "Periodo de gracia de valla",
+    "fenceGraceActive": "Las vallas ignoran los golpes de bola durante sus primeros {{seconds}}s de crecimiento (Ghost Protocol).",
+    "fenceGraceInactive": "Sin periodo de gracia de valla.",
     "on": "Activado",
     "off": "Apagado",
     "ballPathPrediction": "Predicción de trayectoria",
@@ -367,6 +380,7 @@
   },
   "upgradeShop": {
     "storeLabel": "Tienda",
+    "freeLabel": "GRATIS",
     "levelComplete": "Nivel {{level}} completado",
     "checkpointReached": "punto de control alcanzado",
     "levelBanner": "NIVEL {{level}}",
@@ -390,7 +404,7 @@
     "detailNoPrereqs": "Disponible desde el inicio",
     "detailNoUnlocks": "Nada más por ahora",
     "certificateUnlocked": "¡Certificado desbloqueado!",
-    "buyAndContinue": "Comprar {{count}} y continuar",
+    "buyAndContinue": "Comprar {{count}}",
     "continue": "Continuar",
     "tutorialTitle": "LA TIENDA DE MEJORAS",
     "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa. Mantén pulsada una mejora para ver más información, incluido qué la desbloquea y qué desbloquea."
@@ -403,6 +417,13 @@
     "pickToStart": "Elige un equipamiento",
     "skipButton": "Saltar (sin equipamiento)",
     "noLoadouts": "No hay equipamientos disponibles."
+  },
+  "capstoneDraft": {
+    "title": "Ascenso",
+    "subtitle": "Tu evaluación fue bien. Elige una ventaja permanente para el resto de la partida.",
+    "exclusiveHint": "Solo una elección. Las otras dos desaparecen para siempre.",
+    "confirmButton": "Aceptar el ascenso",
+    "pickHint": "Elige una ventaja"
   },
   "doorDraft": {
     "title": "Próxima tarea",

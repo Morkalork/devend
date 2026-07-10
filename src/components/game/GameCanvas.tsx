@@ -349,8 +349,9 @@ export function GameCanvas({
 
     const game = gameRef.current;
     game.regionColor = regionColorProp;
-    game.wallShieldsRemaining = 0;
-    setWallShieldCount(0);
+    // Second Wind capstone: N fence-hit shields granted fresh every map.
+    game.wallShieldsRemaining = Math.max(0, Math.round(activeModifiers.wallShieldsPerMap));
+    setWallShieldCount(game.wallShieldsRemaining);
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -772,7 +773,7 @@ export function GameCanvas({
     const { levelScore, breakdown } = calculateScore(
       game.wallCount, level.expectedCuts, game.bestRemainingPercent,
       level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-      0, activeModifiers.spaceBonusMultiplier,
+      0, activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus,
     );
     const areaAtPushStart = game.pushStartPercent;
     const areaCleared = Math.max(0, areaAtPushStart - game.bestRemainingPercent);

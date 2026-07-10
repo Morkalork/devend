@@ -31,6 +31,7 @@ import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore } from "@/lib/scoring";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
+import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -182,6 +183,7 @@ export function applyCutFn(
   reassignBallsToRegions(game.balls, game.regions, game.walls);
   validateAllBallOwnership(game.balls, game.regions, game.walls);
   game.activeWall = null;
+  playCutClaimedSound();
 
   const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks);
   if (anyBallWon) {
@@ -272,6 +274,7 @@ export function triggerLevelComplete(
 ): void {
   if (game.levelComplete) return;
   game.levelComplete = true;
+  playLevelCompleteSound();
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
 
@@ -280,7 +283,8 @@ export function triggerLevelComplete(
   const { levelScore, breakdown } = calculateScore(
     game.wallCount, level.expectedCuts, percent,
     level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    game.lockBonus + game.breakBonus,
+    game.lockBonus + game.breakBonus, activeModifiers.spaceBonusMultiplier,
+    activeModifiers.overtimeCapBonus,
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
   // Celebratory beat: after any lock animations settle, sweep a shimmer down the

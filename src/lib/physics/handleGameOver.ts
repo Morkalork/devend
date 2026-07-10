@@ -44,6 +44,7 @@ export function handleGameOverFn(
       game.wallCount, level.expectedCuts, pushStartPercent,
       level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
       game.lockBonus + pushBonus, activeModifiers.spaceBonusMultiplier,
+      activeModifiers.overtimeCapBonus,
     );
 
     callbacks.onLevelComplete({
@@ -99,6 +100,7 @@ export function handlePushFailedFn(
     game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent,
     level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
     game.lockBonus + pushBonus, activeModifiers.spaceBonusMultiplier,
+    activeModifiers.overtimeCapBonus,
   );
 
   callbacks.onLevelComplete({

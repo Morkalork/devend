@@ -267,6 +267,7 @@ export function calculateScore(
   levelNumber: number = 1,
   extraBonus: number = 0,
   spaceBonusMultiplier: number = 1,
+  overtimeCapBonus: number = 0,
 ): {
   levelScore: number;
   breakdown: ScoreBreakdown;
@@ -283,7 +284,10 @@ export function calculateScore(
   const safeExtra = Number.isFinite(extraBonus) && extraBonus > 0 ? extraBonus : 0;
   const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
   const rawScore = multipliedBase + breakdown.totalBonus + safeExtra;
-  const cap = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom);
+  // Stock Options capstone: a flat raise on the per-map ceiling. Everything
+  // still folds under a cap, it's just a higher one for the rest of the run.
+  const safeCapBonus = Number.isFinite(overtimeCapBonus) && overtimeCapBonus > 0 ? overtimeCapBonus : 0;
+  const cap = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom) + safeCapBonus;
   const levelScore = Math.max(0, Math.min(rawScore, cap));
 
   return { levelScore, breakdown };

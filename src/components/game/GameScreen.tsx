@@ -185,11 +185,11 @@ export function GameScreen({
     return calculateScore(
       gameState.cutsUsed, level.expectedCuts, gameState.spaceRemaining,
       level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber, 0,
-      activeModifiers.spaceBonusMultiplier,
+      activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus,
     ).levelScore;
   }, [showHighscoreBar, highscoreTarget, gameState.cutsUsed, gameState.spaceRemaining,
       level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier,
-      activeModifiers.spaceBonusMultiplier, levelNumber]);
+      activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus, levelNumber]);
 
   const totalLockedBalls = cumulativeLockedBalls + gameState.lockedBalls;
   

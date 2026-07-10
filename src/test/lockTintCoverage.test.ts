@@ -37,7 +37,8 @@ const MODS: GameModifiers = {
   ballFreezeCount: 0, autoFreezeDuration: 0, showHighscoreProgress: 0,
   overtimePerLock: 0, fenceSpeedPerLock: 0, frozenLockBonus: 0, scoreInterestCapBonus: 0,
   simultaneousLockBonus: 0, freezeNoCooldown: 0, fenceSpeedPerFence: 0, underParInstantFence: 0,
-  bankedSlowPer50h: 0, spaceBonusMultiplier: 1,
+  bankedSlowPer50h: 0, spaceBonusMultiplier: 1, overtimeCapBonus: 0, freeCheapestOffer: 0,
+  wallShieldsPerMap: 0, fenceGraceMs: 0,
 };
 
 const LEVEL: LevelConfig = {

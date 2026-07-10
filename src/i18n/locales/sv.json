@@ -121,6 +121,19 @@
     "spaceBonusMultiplierInactive": "Utrymmesoptimeringens bonusar betalar som vanligt.",
     "tagSetSource": "{{name}} (setbonus)",
     "doorSource": "{{name}} (dörr)",
+    "capstoneSource": "{{name}} (befordran)",
+    "overtimeCapBonus": "Övertidstak",
+    "overtimeCapBonusActive": "Övertidstaket per karta höjs med {{hours}}h under resten av omgången (Stock Options).",
+    "overtimeCapBonusInactive": "Standardtak för övertid per karta.",
+    "freeCheapestOffer": "Gratis butikserbjudande",
+    "freeCheapestOfferActive": "Det billigaste erbjudandet i varje butik är gratis (Company Card).",
+    "freeCheapestOfferInactive": "Inga gratis butikserbjudanden.",
+    "wallShieldsPerMap": "Staketsköldar",
+    "wallShieldsPerMapActive": "{{count}} bollträff(ar) per karta absorberas utan att kosta ett liv (Second Wind).",
+    "wallShieldsPerMapInactive": "Inga staketsköldar.",
+    "fenceGrace": "Staketets skonfrist",
+    "fenceGraceActive": "Staket ignorerar bollträffar under sina första {{seconds}}s av bygget (Ghost Protocol).",
+    "fenceGraceInactive": "Ingen skonfrist för staket.",
     "on": "På",
     "off": "Av",
     "ballPathPrediction": "Bollbaneprognos",
@@ -367,6 +380,7 @@
   },
   "upgradeShop": {
     "storeLabel": "Butik",
+    "freeLabel": "GRATIS",
     "levelComplete": "Nivå {{level}} klar",
     "checkpointReached": "kontrollpunkt nådd",
     "levelBanner": "NIVÅ {{level}}",
@@ -390,7 +404,7 @@
     "detailNoPrereqs": "Tillgänglig från start",
     "detailNoUnlocks": "Inget mer ännu",
     "certificateUnlocked": "Certifikat upplåst!",
-    "buyAndContinue": "Köp {{count}} & fortsätt",
+    "buyAndContinue": "Köp {{count}}",
     "continue": "Fortsätt",
     "tutorialTitle": "BUTIKEN",
     "tutorialBody": "Spendera övertidstimmar på uppgraderingar efter varje bana. Övertidsuppgraderingar mångdubblar framtida intäkter. Effekterna visas i den nedre listen på nästa bana. Håll inne en uppgradering för mer information - bland annat vad som låser upp den och vad den låser upp."
@@ -403,6 +417,13 @@
     "pickToStart": "Välj en laddning",
     "skipButton": "Hoppa över (ingen laddning)",
     "noLoadouts": "Inga laddningar tillgängliga."
+  },
+  "capstoneDraft": {
+    "title": "Befordran",
+    "subtitle": "Din utvecklingsrunda gick bra. Välj en permanent förmån för resten av omgången.",
+    "exclusiveHint": "Bara ett val. De andra två försvinner för gott.",
+    "confirmButton": "Acceptera befordran",
+    "pickHint": "Välj en förmån"
   },
   "doorDraft": {
     "title": "Nästa uppdrag",

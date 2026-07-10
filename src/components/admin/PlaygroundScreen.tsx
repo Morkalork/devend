@@ -62,6 +62,10 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   underParInstantFence:             { label: 'Under-Par Carry',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Clean Release: instant fences granted on the next map after an under-par finish' },
   bankedSlowPer50h:                 { label: 'Banked Slow/50h',        kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'War Chest: ball-speed reduction per 50h banked at map start (max 8%)' },
   spaceBonusMultiplier:             { label: 'Space Bonus Mult.',      kind: 'multiplicative', step: 0.5,  min: 0.5,  defaultValue: 1,    description: 'Tech Evangelist: multiplies the space-optimization bonus payout' },
+  overtimeCapBonus:                 { label: 'Overtime Cap +',         kind: 'additive',       step: 5,    min: 0,    defaultValue: 0,    description: 'Stock Options capstone: raises the per-map overtime cap' },
+  freeCheapestOffer:                { label: 'Free Cheapest Offer',    kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Company Card capstone: >0 = the cheapest shop offer is free' },
+  wallShieldsPerMap:                { label: 'Fence Shields/Map',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Second Wind capstone: fence hits absorbed per map without losing a life' },
+  fenceGraceMs:                     { label: 'Fence Grace (ms)',       kind: 'additive',       step: 250,  min: 0,    defaultValue: 0,    description: 'Ghost Protocol capstone: growing fences ignore ball hits for their first N ms' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)
@@ -523,7 +527,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             <Layers className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#a855f7' }} />
             <span
               className="flex-1 min-w-0 text-xs font-bold truncate"
-              style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#a855f7' }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: '#a855f7' }}
             >
               L{selectedLevel.level}: {selectedLevel.id}
             </span>
@@ -685,7 +689,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                   <Layers className="w-4 h-4" style={{ color: '#a855f7' }} />
                   <span
                     className="font-black tracking-widest uppercase text-sm"
-                    style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#a855f7' }}
+                    style={{ fontFamily: 'Michroma, sans-serif', color: '#a855f7' }}
                   >
                     Pick a Level
                   </span>
@@ -774,7 +778,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderBottom: `1px solid ${accent}33` }}>
                 <div className="flex items-center gap-2">
                   <Circle className="w-4 h-4" style={{ color: accent }} />
-                  <span className="font-black tracking-widest uppercase text-sm" style={{ fontFamily: 'Morkalork Display, sans-serif', color: accent }}>
+                  <span className="font-black tracking-widest uppercase text-sm" style={{ fontFamily: 'Michroma, sans-serif', color: accent }}>
                     Balls
                   </span>
                 </div>
@@ -836,7 +840,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               {/* In-play balls (override if set, otherwise the level default) */}
               <div className="px-5 pt-4 flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: `${accent}99`, fontFamily: 'Morkalork Display, sans-serif' }}>
+                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: `${accent}99`, fontFamily: 'Michroma, sans-serif' }}>
                     In play ({effectiveBallIds.length}){ballTypeIds === null ? ' · level default' : ''}
                   </span>
                   {ballTypeIds !== null && (
@@ -960,7 +964,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                   <SlidersHorizontal className="w-4 h-4" style={{ color: accent }} />
                   <span
                     className="font-black tracking-widest uppercase text-sm"
-                    style={{ fontFamily: 'Morkalork Display, sans-serif', color: accent }}
+                    style={{ fontFamily: 'Michroma, sans-serif', color: accent }}
                   >
                     Playground Modifiers
                   </span>
@@ -1047,7 +1051,7 @@ function ModifierSection({
       <div className="mb-3">
         <div
           className="text-xs font-bold uppercase tracking-widest"
-          style={{ fontFamily: 'Morkalork Display, sans-serif', color: accentColor }}
+          style={{ fontFamily: 'Michroma, sans-serif', color: accentColor }}
         >
           {title}
         </div>
