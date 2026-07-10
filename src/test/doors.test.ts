@@ -43,6 +43,11 @@ describe("door pool integrity", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("gates doors behind the early ramp (offeredAfterLevel is a real level)", () => {
+    // Early maps stay clean; doors start once this level is completed.
+    expect(doc.offeredAfterLevel).toBeGreaterThanOrEqual(1);
+  });
+
   it("pairs every reward with a real risk (no free lunches)", () => {
     // Every door must carry at least one adverse modifier: a multiplicative
     // curse (>1 speed/size, <1 fence/score) or losing something additive.

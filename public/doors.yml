@@ -8,6 +8,11 @@
 #
 # Balance note: overtime-facing rewards fold under the per-map cap, so doors
 # buy consistency and side-payoffs, not inflation (issue #43 stays intact).
+#
+# offeredAfterLevel: doors only start once this level has been completed, so the
+# first maps stay clean while players learn the base game. With 5, the first
+# door appears entering level 6.
+offeredAfterLevel: 5
 
 doors:
 

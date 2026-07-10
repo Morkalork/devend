@@ -28,7 +28,7 @@ import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
-import { loadDoors, getDoors, drawDoorOffers, DOOR_OFFERS_PER_SHOP } from '@/lib/doorDraft';
+import { loadDoors, getDoors, drawDoorOffers, getDoorTriggerLevel, DOOR_OFFERS_PER_SHOP } from '@/lib/doorDraft';
 import { DoorConfig } from '@/types/door';
 import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import { CapstoneConfig } from '@/types/capstone';
@@ -728,14 +728,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const proceedThroughDoors = useCallback(() => {
     const doorPool = getDoors();
-    if (doorPool.length > 0 && !isLastLevel) {
+    // Doors only start once the early ramp is done (offeredAfterLevel in
+    // doors.yml): the first maps stay clean so players learn the base game.
+    // currentLevelIndex + 1 is the just-completed level number (1-based).
+    const doorsUnlocked = currentLevelIndex + 1 >= getDoorTriggerLevel();
+    if (doorPool.length > 0 && !isLastLevel && doorsUnlocked) {
       setDoorOffers(drawDoorOffers(doorPool, DOOR_OFFERS_PER_SHOP));
       nav.goToDoorDraft();
       return;
     }
     advanceToNextLevel();
     nav.goToGame();
-  }, [isLastLevel, advanceToNextLevel, nav.goToGame, nav.goToDoorDraft]);
+  }, [currentLevelIndex, isLastLevel, advanceToNextLevel, nav.goToGame, nav.goToDoorDraft]);
 
   const handleContinueFromShop = useCallback(() => {
     const nextLevelNumber = currentLevelIndex + 2;

@@ -19,4 +19,6 @@ export interface DoorConfig {
 
 export interface DoorData {
   doors: DoorConfig[];
+  /** Completed-level threshold at/past which doors start being offered. */
+  offeredAfterLevel?: number;
 }

@@ -141,6 +141,11 @@ shop-facing rewards (`extraShopItems`, `shopRestockCount`) work. The door
 screen also briefs the next map with real intel (exact ball spawns, par,
 capture target, obstacle count).
 
+A top-level **`offeredAfterLevel`** (default 5) keeps the early maps clean:
+doors only start once that level is completed (with 5, the first door appears
+entering level 6), so players learn the base game before the risk/reward layer
+kicks in.
+
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `id` | string | ✓ | Unique identifier |

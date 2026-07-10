@@ -11,10 +11,19 @@ import { fetchYamlCatalogue, parseModifiers, drawRandom } from '@/lib/yamlCatalo
 /** Risk doors rolled per shop exit (the standard door is always offered). */
 export const DOOR_OFFERS_PER_SHOP = 2;
 
+/** Doors stay hidden until this level is completed (early maps play clean). */
+export const DEFAULT_DOOR_LEVEL = 5;
+
 let liveDoors: DoorConfig[] = [];
+let liveTriggerLevel = DEFAULT_DOOR_LEVEL;
 
 export function getDoors(): DoorConfig[] {
   return liveDoors;
+}
+
+/** First completed level at/past which doors start being offered. */
+export function getDoorTriggerLevel(): number {
+  return liveTriggerLevel;
 }
 
 /** Coerce one raw YAML entry into a DoorConfig, or null if it's unusable. */
@@ -34,8 +43,10 @@ function parseDoorEntry(raw: unknown): DoorConfig | null {
  */
 export async function loadDoors(): Promise<boolean> {
   try {
-    const { entries } = await fetchYamlCatalogue('/doors.yml', 'doors', parseDoorEntry);
+    const { entries, doc } = await fetchYamlCatalogue('/doors.yml', 'doors', parseDoorEntry);
     liveDoors = entries;
+    const trigger = Number(doc.offeredAfterLevel);
+    liveTriggerLevel = Number.isFinite(trigger) && trigger > 0 ? Math.round(trigger) : DEFAULT_DOOR_LEVEL;
     return true;
   } catch (err) {
     console.warn('[doors] Door pool unavailable, playing without doors:', err);
