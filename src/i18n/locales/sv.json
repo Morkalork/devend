@@ -150,6 +150,8 @@
     "resume": "Återuppta",
     "pause": "Pausa",
     "gameMenu": "Spelmeny",
+    "soundOn": "Ljud: På",
+    "soundOff": "Ljud: Av",
     "restartRun": "Starta om omgången",
     "mainMenu": "Huvudmeny",
     "moverTutorialTitle": "⚠ Rörliga hinder",

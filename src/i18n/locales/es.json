@@ -150,6 +150,8 @@
     "resume": "Reanudar",
     "pause": "Pausar",
     "gameMenu": "Menú del juego",
+    "soundOn": "Sonido: Activado",
+    "soundOff": "Sonido: Desactivado",
     "restartRun": "Reiniciar partida",
     "mainMenu": "Menú principal",
     "moverTutorialTitle": "⚠ Obstáculos móviles",

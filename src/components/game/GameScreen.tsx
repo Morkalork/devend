@@ -9,7 +9,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
-import { Menu, Home, RotateCcw, Pause, Play } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameBottomBar } from './GameBottomBar';
@@ -24,6 +24,7 @@ import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
 import { useGameConfig } from '@/hooks/useGameConfig';
 import { playMusicForLevel } from '@/lib/gameMusic';
+import { isSoundMuted, setSoundMuted } from '@/lib/soundSettings';
 import { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
 
 interface CertificateHourProgress {
@@ -196,6 +197,7 @@ export function GameScreen({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [soundMuted, setSoundMutedState] = useState(() => isSoundMuted());
   // Set once the map is won; freezes the scrolling-code background through the
   // clear shimmer. Resets naturally when the next map remounts this screen.
   const [mapComplete, setMapComplete] = useState(false);
@@ -383,6 +385,23 @@ export function GameScreen({
               boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 15px ${accentColor}22`,
             }}
           >
+            <button
+              onClick={() => {
+                const next = !soundMuted;
+                setSoundMuted(next);
+                setSoundMutedState(next);
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
+              style={{ color: accentColor, backgroundColor: 'transparent' }}
+              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {soundMuted ? t('game.soundOff') : t('game.soundOn')}
+            </button>
             <button
               onClick={() => { setMenuOpen(false); onRestart(); }}
               className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"

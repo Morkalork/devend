@@ -150,6 +150,8 @@
     "resume": "Resume",
     "pause": "Pause",
     "gameMenu": "Game menu",
+    "soundOn": "Sound: On",
+    "soundOff": "Sound: Off",
     "restartRun": "Restart Run",
     "mainMenu": "Main Menu",
     "moverTutorialTitle": "⚠ Moving Obstacles",
