@@ -28,6 +28,9 @@ const byId = new Map(upgrades.map(u => [u.id, u] as const));
 const prereqsOf = (id: string): string[] => byId.get(id)?.prerequisites ?? [];
 
 // The intended track heads — the only non-ascension upgrades with no prereqs.
+// One head per archetype line: the synergy rework promoted Fault Tolerance,
+// Technical Debt, Feature Freeze and Severance Package to roots (their old
+// cross-family prereqs were whimsical, not tactical).
 const EXPECTED_ROOTS = [
   "runtime_optimisation_junior",
   "memory_footprint_junior",
@@ -36,7 +39,14 @@ const EXPECTED_ROOTS = [
   "system_architect",
   "scrum_master_1",
   "defensive_programming_junior",
+  "fault_tolerance_junior",
+  "technical_debt_senior",
+  "feature_freeze_junior",
+  "severance_package_junior",
 ].sort();
+
+// Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.
+const VALID_TAGS = ["lock", "freeze", "bank", "tempo", "risk", "safety"];
 
 describe("upgrade catalogue integrity", () => {
   it("has unique ids", () => {
@@ -50,6 +60,31 @@ describe("upgrade catalogue integrity", () => {
     for (const u of upgrades)
       for (const p of u.prerequisites ?? []) if (!byId.has(p)) missing.push(`${u.id} -> ${p}`);
     expect(missing).toEqual([]);
+  });
+
+  it("never prints an unlock level below a prerequisite's (the real gate)", () => {
+    // A printed unlockLevel lower than a prereq's lies to the player: the shop
+    // can't offer the upgrade until the prereq itself is unlockable.
+    const offenders: string[] = [];
+    for (const u of upgrades) {
+      for (const p of u.prerequisites ?? []) {
+        const prereq = byId.get(p);
+        if (prereq && (u.unlockLevel ?? 1) < (prereq.unlockLevel ?? 1)) {
+          offenders.push(`${u.id} (L${u.unlockLevel ?? 1}) -> ${p} (L${prereq.unlockLevel ?? 1})`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("tags every upgrade with 1-2 valid archetypes", () => {
+    const offenders = upgrades
+      .filter(u => {
+        const tags = u.tags ?? [];
+        return tags.length < 1 || tags.length > 2 || tags.some(t => !VALID_TAGS.includes(t));
+      })
+      .map(u => u.id);
+    expect(offenders).toEqual([]);
   });
 
   it("has an acyclic prerequisite graph", () => {

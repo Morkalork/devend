@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 vi.mock("@/lib/gameAudio", () => ({
   playBallLockSound: () => {}, playWallHitSound: () => {}, playBallCollideSound: () => {},
-  playFenceBreakSound: () => {}, playDeathSound: () => {},
+  playFenceBreakSound: () => {}, playDeathSound: () => {}, playCutClaimedSound: () => {},
+  playLevelCompleteSound: () => {},
 }));
 vi.mock("@/lib/gameHaptics", () => ({
   vibrateBallLock: () => {}, vibrateFenceComplete: () => {}, vibrateFenceBreak: () => {},
@@ -34,6 +35,7 @@ const MODS: GameModifiers = {
   startingCapturePercent: 0, fenceDurabilityBonus: 0, microManagerPerLock: 0,
   ballPathPredictionBounces: 0, ballPathPredictionBalls: 0, ballFreezeDuration: 0,
   ballFreezeCount: 0, autoFreezeDuration: 0, showHighscoreProgress: 0,
+  overtimePerLock: 0, fenceSpeedPerLock: 0, frozenLockBonus: 0, scoreInterestCapBonus: 0,
 };
 
 const LEVEL: LevelConfig = {

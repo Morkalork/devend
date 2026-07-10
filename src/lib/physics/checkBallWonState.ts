@@ -210,9 +210,24 @@ export function checkAndUpdateBallWonStates(
     for (const b of wonThisPass) {
       const selfGreen = b.ability === 'moneyBall' ? 1 : 0;
       const mult = game.moneyMultiplier * Math.pow(3, greensThisPass - selfGreen);
-      points += (b.lockMultiplier ?? 1) * mult;
+      // Frozen Assets: a ball locked while still frozen pays a multiplied lock
+      // bonus (wonTime is "now" for this pass, so compare frozenUntil to it).
+      const lockedWhileFrozen =
+        b.frozenUntil !== undefined && b.frozenUntil > (b.wonTime ?? performance.now());
+      const frozenMult =
+        lockedWhileFrozen && activeModifiers.frozenLockBonus > 0
+          ? 1 + activeModifiers.frozenLockBonus
+          : 1;
+      points += (b.lockMultiplier ?? 1) * mult * frozenMult;
     }
     game.lockBonus += points * simultaneousMultiplier;
+
+    // Severance Package: flat overtime per locked ball, deliberately outside
+    // the money/simultaneous multipliers so it reads as a predictable "+N per
+    // lock" (still folded under the per-map cap with the rest of lockBonus).
+    if (activeModifiers.overtimePerLock > 0) {
+      game.lockBonus += newlyLocked * activeModifiers.overtimePerLock;
+    }
 
     if (greensThisPass > 0) game.moneyMultiplier *= Math.pow(3, greensThisPass);
   }

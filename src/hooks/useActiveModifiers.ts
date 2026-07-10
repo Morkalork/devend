@@ -30,6 +30,14 @@ export interface GameModifiers {
 
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
+  overtimePerLock: number;   // flat overtime hours added to the lock bonus per locked ball (Severance Package)
+  fenceSpeedPerLock: number; // fence-speed bonus per ball locked this map (0.04 = +4% per lock; Knowledge Transfer)
+  // Additive (sum) — Frozen Assets: extra lock-bonus multiplier when a ball is
+  // locked while frozen (1 = frozen locks pay double, 2 = triple; 0 = off)
+  frozenLockBonus: number;
+  // Additive (sum) — Venture Capital: raises the per-map interest cap above the
+  // base 8h (see useGameSession's level-complete interest credit)
+  scoreInterestCapBonus: number;
 
   // Additive (sum) — SCRUM Master
   ballPathPredictionBounces: number; // how many bounces ahead to show
@@ -124,6 +132,10 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   startingCapturePercent: 0,
   fenceDurabilityBonus: 0,
   microManagerPerLock: 0,
+  overtimePerLock: 0,
+  fenceSpeedPerLock: 0,
+  frozenLockBonus: 0,
+  scoreInterestCapBonus: 0,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,
   ballFreezeDuration: 0,

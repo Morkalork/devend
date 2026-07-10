@@ -17,7 +17,7 @@
 import { useState, useMemo, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
+import { UpgradeConfig, TIER_COLORS, TAG_COLORS, UpgradeTier } from '@/types/upgrade';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
 import { CRTBackground } from './CRTBackground';
@@ -51,6 +51,51 @@ function shuffle<T>(arr: T[]): T[] {
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
+}
+
+// ── Tag-weighted offers (draft coherence) ──────────────────────────────────
+// Offers lean toward the build the player is already in: a candidate's weight
+// is 1 + the number of owned upgrades sharing at least one tag with it. With
+// nothing owned every weight is 1, i.e. the old uniform shuffle.
+
+/** How many owned upgrades carry each tag. */
+function ownedTagCounts(ownedIds: string[], upgrades: UpgradeConfig[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  const byId = new Map(upgrades.map(u => [u.id, u]));
+  for (const id of ownedIds) {
+    for (const tag of byId.get(id)?.tags ?? []) {
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+function tagWeight(u: UpgradeConfig, counts: Map<string, number>): number {
+  let w = 1;
+  for (const tag of u.tags ?? []) w += counts.get(tag) ?? 0;
+  return w;
+}
+
+/** Weighted sample without replacement (n picks; weights re-normalise as the
+ * pool shrinks). Returns fewer than n when the pool runs out. */
+function weightedSample(
+  items: UpgradeConfig[],
+  n: number,
+  counts: Map<string, number>,
+): UpgradeConfig[] {
+  const pool = [...items];
+  const picked: UpgradeConfig[] = [];
+  while (picked.length < n && pool.length > 0) {
+    const total = pool.reduce((sum, it) => sum + tagWeight(it, counts), 0);
+    let r = Math.random() * total;
+    let idx = pool.length - 1;
+    for (let i = 0; i < pool.length; i++) {
+      r -= tagWeight(pool[i], counts);
+      if (r <= 0) { idx = i; break; }
+    }
+    picked.push(pool.splice(idx, 1)[0]);
+  }
+  return picked;
 }
 
 /**
@@ -154,7 +199,8 @@ export function UpgradeShop({
     return map;
   }, [upgrades]);
 
-  // Pick random offers once on mount; restocks append to this list.
+  // Pick random offers once on mount; restocks append to this list. Picks are
+  // tag-weighted toward the player's owned archetypes (see weightedSample).
   const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() => {
     // Filter out owned and upgrades not yet unlocked by level progression
     const available = upgrades.filter(u =>
@@ -169,10 +215,11 @@ export function UpgradeShop({
       if (!u.prerequisites || u.prerequisites.length === 0) return false;
       return u.prerequisites.some(p => !ownedUpgradeIds.includes(p));
     });
-    const offers = shuffle(unlocked).slice(0, shopSlots);
+    const counts = ownedTagCounts(ownedUpgradeIds, upgrades);
+    const offers = weightedSample(unlocked, shopSlots, counts);
     // Add at most one locked item if there's room
     if (offers.length < shopSlots && locked.length > 0) {
-      offers.push(shuffle(locked)[0]);
+      offers.push(weightedSample(locked, 1, counts)[0]);
     }
     return offers;
   });
@@ -256,7 +303,10 @@ export function UpgradeShop({
         !isLocked(u.id, ownedAfterSelect)
       );
       if (candidates.length > 0) {
-        const restockedOffer = shuffle(candidates)[0];
+        // Restocks also lean into the build: the selection counts as owned, so
+        // buying a lock upgrade makes the fresh offer likelier to be lock too.
+        const counts = ownedTagCounts(ownedAfterSelect, upgrades);
+        const restockedOffer = weightedSample(candidates, 1, counts)[0];
         setOfferedUpgrades(prev => [...prev, restockedOffer]);
         setRestocksUsed(prev => prev + 1);
       }
@@ -480,6 +530,20 @@ export function UpgradeShop({
                   {contentText.upgradeName(t, upgrade)}
                 </div>
 
+                {/* Archetype tag chips */}
+                {(upgrade.tags?.length ?? 0) > 0 && (
+                  <div className="flex justify-center gap-1 mb-1 flex-wrap">
+                    {upgrade.tags!.map(tag => (
+                      <span
+                        key={tag}
+                        className={`px-1.5 py-px rounded text-[9px] font-semibold uppercase tracking-wider ${TAG_COLORS[tag].bg} ${TAG_COLORS[tag].text}`}
+                      >
+                        {t(`upgradeShop.tags.${tag}`)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {/* Status icon */}
                 {selected && (
                   <div className="absolute top-1 right-1">
@@ -566,10 +630,21 @@ export function UpgradeShop({
           onClick={handleContinue}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="arcade-button-primary rounded-lg flex items-center gap-2 text-sm whitespace-nowrap"
+          className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 text-sm tracking-wide max-w-full whitespace-nowrap"
         >
-          {selectedIds.length > 0 ? t('upgradeShop.buyAndContinue', { count: selectedIds.length, cost: selectedTotalCost }) : t('upgradeShop.continue')}
-          <ArrowRight className="w-5 h-5" />
+          {selectedIds.length > 0 ? (
+            <>
+              <span>{t('upgradeShop.buyAndContinue', { count: selectedIds.length })}</span>
+              {/* Cost as an icon chip: the display font's parentheses glyphs look broken */}
+              <span className="flex items-center gap-1">
+                <Clock className="w-4 h-4 shrink-0" />
+                {t('upgradeShop.hoursValue', { hours: selectedTotalCost })}
+              </span>
+            </>
+          ) : (
+            t('upgradeShop.continue')
+          )}
+          <ArrowRight className="w-5 h-5 shrink-0" />
         </motion.button>
       </motion.div>
 
@@ -633,6 +708,19 @@ export function UpgradeShop({
                     <div className={`text-xs ${tc.text}`}>{contentText.tier(t, u.tier)}</div>
                   </div>
                 </div>
+
+                {(u.tags?.length ?? 0) > 0 && (
+                  <div className="flex gap-1 mb-2 flex-wrap">
+                    {u.tags!.map(tag => (
+                      <span
+                        key={tag}
+                        className={`px-1.5 py-px rounded text-[10px] font-semibold uppercase tracking-wider ${TAG_COLORS[tag].bg} ${TAG_COLORS[tag].text}`}
+                      >
+                        {t(`upgradeShop.tags.${tag}`)}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <p className="text-sm text-muted-foreground mb-4">{contentText.upgradeDesc(t, u)}</p>
 

@@ -5,6 +5,11 @@
 # Prices therefore scale automatically as new maps/upgrades are added.
 # An explicit `cost:` on an upgrade overrides the formula (used for the
 # ascension trio, whose post-L30 economy is tuned separately).
+#
+# Build archetypes (`tags`): every upgrade carries one or two tags — lock,
+# freeze, bank, tempo, risk, safety. The shop weights its random offers toward
+# tags the player already owns (draft coherence), and the card shows the tags
+# as chips. See UpgradeTag in src/types/upgrade.ts.
 pricing:
   minCost: 8
   tierFactor:
@@ -26,6 +31,7 @@ upgrades:
     description: Reduce ball speed by 5%.
     unlockLevel: 1
     icon: clock
+    tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.95
 
@@ -36,6 +42,7 @@ upgrades:
     unlockLevel: 3
     prerequisites:
       - runtime_optimisation_junior
+    tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.90
 
@@ -46,6 +53,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - runtime_optimisation_senior
+    tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.85
 
@@ -60,6 +68,7 @@ upgrades:
     description: Reduce ball size by 5%.
     unlockLevel: 1
     icon: memory
+    tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.95
 
@@ -70,6 +79,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - memory_footprint_junior
+    tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.90
 
@@ -80,6 +90,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - memory_footprint_senior
+    tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.85
 
@@ -98,6 +109,7 @@ upgrades:
     prerequisites:
       - memory_footprint_junior
     icon: trending-up
+    tags: [risk]
     modifiers:
       showHighscoreProgress: 1
 
@@ -112,6 +124,7 @@ upgrades:
     description: Increase fence generation speed by 10%.
     unlockLevel: 1
     icon: fast-forward
+    tags: [tempo]
     modifiers:
       fenceGenerationSpeedMultiplier: 1.10
 
@@ -122,6 +135,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - fast_compile_junior
+    tags: [tempo]
     modifiers:
       fenceGenerationSpeedMultiplier: 1.20
 
@@ -132,6 +146,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - fast_compile_senior
+    tags: [tempo]
     modifiers:
       fenceGenerationSpeedMultiplier: 1.30
 
@@ -148,6 +163,7 @@ upgrades:
     prerequisites:
       - fast_compile_senior
     icon: flame
+    tags: [tempo]
     modifiers:
       instantFencesPerMap: 1
 
@@ -158,6 +174,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - hot_start_junior
+    tags: [tempo]
     modifiers:
       instantFencesPerMap: 2
 
@@ -168,6 +185,7 @@ upgrades:
     unlockLevel: 20
     prerequisites:
       - hot_start_principal
+    tags: [tempo]
     modifiers:
       instantFencesPerMap: 3
 
@@ -184,6 +202,7 @@ upgrades:
     prerequisites:
       - fast_compile_senior
     icon: split
+    tags: [tempo]
     modifiers:
       additionalConcurrentFences: 1
 
@@ -195,6 +214,7 @@ upgrades:
     prerequisites:
       - multithreading_principal
     icon: layers
+    tags: [tempo]
     modifiers:
       additionalConcurrentFences: 1
 
@@ -211,6 +231,7 @@ upgrades:
     prerequisites:
       - memory_footprint_senior
     icon: trash
+    tags: [tempo, risk]
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.05
@@ -223,6 +244,7 @@ upgrades:
     prerequisites:
       - garbage_collector_senior
     icon: recycle
+    tags: [tempo, risk]
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.10
@@ -230,6 +252,7 @@ upgrades:
 
   # ===============================
   # FAULT TOLERANCE (Lives)
+  # A track head: the safety line no longer hides behind the shop-slot upgrade.
   # ===============================
 
   - id: fault_tolerance_junior
@@ -237,9 +260,8 @@ upgrades:
     tier: Junior
     description: Gain 1 extra life.
     unlockLevel: 5
-    prerequisites:
-      - system_architect
     icon: heart
+    tags: [safety]
     modifiers:
       extraLives: 1
 
@@ -250,6 +272,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - fault_tolerance_junior
+    tags: [safety]
     modifiers:
       extraLives: 2
 
@@ -260,6 +283,7 @@ upgrades:
     unlockLevel: 15
     prerequisites:
       - fault_tolerance_senior
+    tags: [safety]
     modifiers:
       extraLives: 3
 
@@ -274,6 +298,7 @@ upgrades:
     description: Gain 5% more overtime per map.
     unlockLevel: 2
     icon: trending-up
+    tags: [bank]
     modifiers:
       scoreMultiplier: 1.05
 
@@ -284,6 +309,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - performance_bonus_junior
+    tags: [bank]
     modifiers:
       scoreMultiplier: 1.10
 
@@ -294,44 +320,54 @@ upgrades:
     unlockLevel: 8
     prerequisites:
       - performance_bonus_senior
+    tags: [bank]
     modifiers:
       scoreMultiplier: 1.15
 
 
   # ===============================
   # VENTURE CAPITAL (Interest)
+  # Interest is credited between maps and capped per map: base cap 8h, raised
+  # by the higher tiers (scoreInterestCapBonus) so the bigger rates actually
+  # pay out instead of being nullified by the cap. Rates stack additively:
+  # 10% -> 20% -> 30% total, matching the card text.
   # ===============================
 
   - id: venture_capital_senior
     name: Venture Capital
     tier: Senior
-    description: 10% interest on unused overtime between maps.
+    description: "10% interest on unused overtime between maps (up to 8h per map)."
     unlockLevel: 6
     prerequisites:
       - performance_bonus_senior
     icon: piggy-bank
+    tags: [bank]
     modifiers:
       scoreInterestRate: 0.10
 
   - id: venture_capital_principal
     name: Venture Capital
     tier: Principal
-    description: 20% interest on unused overtime between maps.
+    description: "Interest rises to 20%, and the per-map interest cap rises to 12h."
     unlockLevel: 7
     prerequisites:
       - venture_capital_senior
+    tags: [bank]
     modifiers:
-      scoreInterestRate: 0.20
+      scoreInterestRate: 0.10
+      scoreInterestCapBonus: 4
 
   - id: venture_capital_architect
     name: Venture Capital
     tier: Architect
-    description: 30% interest on unused overtime between maps.
+    description: "Interest rises to 30%, and the per-map interest cap rises to 16h."
     unlockLevel: 11
     prerequisites:
       - venture_capital_principal
+    tags: [bank]
     modifiers:
-      scoreInterestRate: 0.30
+      scoreInterestRate: 0.10
+      scoreInterestCapBonus: 4
 
 
   # ===============================
@@ -350,25 +386,104 @@ upgrades:
     prerequisites:
       - runtime_optimisation_senior
     icon: sliders
+    tags: [lock]
     cost: 200
     modifiers:
       microManagerPerLock: 0.01
 
 
   # ===============================
+  # SEVERANCE PACKAGE (Lock payoff)
+  # Head of the lock archetype: turns every locked ball into flat overtime.
+  # The bonus folds under the per-map cap with the rest of the lock bonus.
+  # ===============================
+
+  - id: severance_package_junior
+    name: Severance Package
+    tier: Junior
+    description: Each ball you lock away pays 1 bonus overtime hour (counted under the map cap).
+    unlockLevel: 6
+    icon: banknote
+    tags: [lock]
+    modifiers:
+      overtimePerLock: 1
+
+  - id: severance_package_senior
+    name: Severance Package
+    tier: Senior
+    description: Locked balls now pay 2 bonus overtime hours each.
+    unlockLevel: 12
+    prerequisites:
+      - severance_package_junior
+    tags: [lock]
+    modifiers:
+      overtimePerLock: 1
+
+
+  # ===============================
+  # KNOWLEDGE TRANSFER (Lock -> Tempo)
+  # Cross-archetype payoff: locks convert into fence speed for the map.
+  # ===============================
+
+  - id: knowledge_transfer_senior
+    name: Knowledge Transfer
+    tier: Senior
+    description: Each ball locked away speeds up fence generation by 4% for the rest of the map.
+    unlockLevel: 7
+    prerequisites:
+      - severance_package_junior
+    icon: book-open
+    tags: [lock, tempo]
+    modifiers:
+      fenceSpeedPerLock: 0.04
+
+
+  # ===============================
+  # FROZEN ASSETS (Freeze -> Lock)
+  # The freeze archetype's payoff: freezing is no longer just a panic button,
+  # a ball locked while frozen pays a multiplied lock bonus.
+  # ===============================
+
+  - id: frozen_assets_senior
+    name: Frozen Assets
+    tier: Senior
+    description: Locking a ball while it is frozen pays double the lock bonus.
+    unlockLevel: 8
+    prerequisites:
+      - feature_freeze_junior
+    icon: gem
+    tags: [freeze, lock]
+    modifiers:
+      frozenLockBonus: 1
+
+  - id: frozen_assets_principal
+    name: Frozen Assets
+    tier: Principal
+    description: Locking a ball while it is frozen now pays triple the lock bonus.
+    unlockLevel: 16
+    prerequisites:
+      - frozen_assets_senior
+    tags: [freeze, lock]
+    modifiers:
+      frozenLockBonus: 1
+
+
+  # ===============================
   # PROCUREMENT (Shop Restocking)
   # Each tier adds one restock: buying an item in the store
   # refills its slot with a new offer, N times per visit.
+  # Gated behind System Architect (the shop line), not the lives line.
   # ===============================
 
   - id: procurement_junior
     name: Procurement
     tier: Junior
     description: Once per store visit, buying an item adds a new offer to the shelf.
-    unlockLevel: 3
+    unlockLevel: 5
     prerequisites:
-      - fault_tolerance_senior
+      - system_architect
     icon: package-plus
+    tags: [bank]
     modifiers:
       shopRestockCount: 1
 
@@ -379,6 +494,7 @@ upgrades:
     unlockLevel: 7
     prerequisites:
       - procurement_junior
+    tags: [bank]
     modifiers:
       shopRestockCount: 1
 
@@ -389,6 +505,7 @@ upgrades:
     unlockLevel: 12
     prerequisites:
       - procurement_senior
+    tags: [bank]
     modifiers:
       shopRestockCount: 1
 
@@ -403,6 +520,7 @@ upgrades:
     description: Gain one additional shop item slot.
     unlockLevel: 4
     icon: building
+    tags: [bank]
     modifiers:
       extraShopItems: 1
 
@@ -414,12 +532,14 @@ upgrades:
     prerequisites:
       - technical_debt_principal
     icon: graduation-cap
+    tags: [bank]
     modifiers:
       extraCertificateHours: 1
 
 
   # ===============================
   # TECHNICAL DEBT (Score + Speed tradeoff)
+  # Head of the risk archetype: no longer gated behind Venture Capital.
   # ===============================
 
   - id: technical_debt_senior
@@ -427,9 +547,8 @@ upgrades:
     tier: Senior
     description: Earn 20% more overtime per map - but balls move 8% faster. Short-term gain, long-term pain.
     unlockLevel: 4
-    prerequisites:
-      - venture_capital_principal
     icon: credit-card
+    tags: [risk]
     modifiers:
       scoreMultiplier: 1.20
       ballSpeedMultiplier: 1.08
@@ -441,6 +560,7 @@ upgrades:
     unlockLevel: 8
     prerequisites:
       - technical_debt_senior
+    tags: [risk]
     modifiers:
       scoreMultiplier: 1.35
       ballSpeedMultiplier: 1.15
@@ -452,6 +572,7 @@ upgrades:
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
+    tags: [risk]
     modifiers:
       scoreMultiplier: 1.50
       ballSpeedMultiplier: 1.25
@@ -467,6 +588,7 @@ upgrades:
     description: Gain 1 extra life and shrink all balls by 8%. Safety first.
     unlockLevel: 5
     icon: shield
+    tags: [safety]
     modifiers:
       extraLives: 1
       ballSizeMultiplier: 0.92
@@ -478,6 +600,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - defensive_programming_junior
+    tags: [safety]
     modifiers:
       extraLives: 2
       ballSizeMultiplier: 0.92
@@ -489,6 +612,7 @@ upgrades:
     unlockLevel: 20
     prerequisites:
       - defensive_programming_senior
+    tags: [safety]
     modifiers:
       extraLives: 3
       ballSizeMultiplier: 0.92
@@ -504,6 +628,7 @@ upgrades:
     description: Preview the next 2 bounces of the fastest ball's path.
     unlockLevel: 4
     icon: route
+    tags: [safety]
     modifiers:
       ballPathPredictionBounces: 2
       ballPathPredictionBalls: 1
@@ -515,6 +640,7 @@ upgrades:
     unlockLevel: 7
     prerequisites:
       - scrum_master_1
+    tags: [safety]
     modifiers:
       ballPathPredictionBalls: 1
 
@@ -525,6 +651,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - scrum_master_2
+    tags: [safety]
     modifiers:
       ballPathPredictionBalls: 1
 
@@ -535,6 +662,7 @@ upgrades:
     unlockLevel: 13
     prerequisites:
       - scrum_master_3
+    tags: [safety]
     modifiers:
       ballPathPredictionBounces: 1
 
@@ -545,6 +673,7 @@ upgrades:
     unlockLevel: 16
     prerequisites:
       - scrum_master_4
+    tags: [safety]
     modifiers:
       ballPathPredictionBounces: 1
 
@@ -555,6 +684,7 @@ upgrades:
     unlockLevel: 19
     prerequisites:
       - scrum_master_5
+    tags: [safety]
     modifiers:
       ballPathPredictionBalls: 999
 
@@ -562,6 +692,7 @@ upgrades:
   # FEATURE FREEZE (Tap-to-freeze a ball)
   # Tap any ball to halt it in place. After it thaws, that ball briefly
   # can't be re-frozen (cooldown = freeze duration × 2). Durations stack.
+  # Head of the freeze archetype: no longer gated behind SCRUM Master.
   # ===============================
 
   - id: feature_freeze_junior
@@ -569,9 +700,8 @@ upgrades:
     tier: Junior
     description: Tap a ball to freeze it in place for 2 seconds.
     unlockLevel: 4
-    prerequisites:
-      - scrum_master_2
     icon: snowflake
+    tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
 
@@ -582,6 +712,7 @@ upgrades:
     unlockLevel: 8
     prerequisites:
       - feature_freeze_junior
+    tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
 
@@ -592,6 +723,7 @@ upgrades:
     unlockLevel: 14
     prerequisites:
       - feature_freeze_senior
+    tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
 
@@ -610,6 +742,7 @@ upgrades:
     prerequisites:
       - feature_freeze_principal
     icon: cloud-snow
+    tags: [freeze]
     modifiers:
       ballFreezeCount: 1
 
@@ -620,6 +753,7 @@ upgrades:
     unlockLevel: 18
     prerequisites:
       - cascade_freeze_junior
+    tags: [freeze]
     modifiers:
       ballFreezeCount: 1
 
@@ -630,6 +764,7 @@ upgrades:
     unlockLevel: 22
     prerequisites:
       - cascade_freeze_senior
+    tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
 
@@ -648,6 +783,7 @@ upgrades:
     prerequisites:
       - feature_freeze_principal
     icon: calendar-clock
+    tags: [freeze]
     modifiers:
       autoFreezeDuration: 3
 
@@ -658,6 +794,7 @@ upgrades:
     unlockLevel: 22
     prerequisites:
       - cron_job_senior
+    tags: [freeze]
     modifiers:
       autoFreezeDuration: 1
 
@@ -668,6 +805,7 @@ upgrades:
     unlockLevel: 24
     prerequisites:
       - cron_job_principal
+    tags: [freeze]
     modifiers:
       autoFreezeDuration: 1
 
@@ -684,6 +822,7 @@ upgrades:
     cost: 10
     unlockLevel: 30
     ascensionOnly: true
+    tags: [safety]
     modifiers:
       fenceDurabilityBonus: 1
 
@@ -696,6 +835,7 @@ upgrades:
     ascensionOnly: true
     prerequisites:
       - defensive_programming_ascension_junior
+    tags: [safety]
     modifiers:
       fenceDurabilityBonus: 1
 
@@ -708,5 +848,6 @@ upgrades:
     ascensionOnly: true
     prerequisites:
       - defensive_programming_ascension_senior
+    tags: [safety]
     modifiers:
       fenceDurabilityBonus: 1

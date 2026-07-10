@@ -33,6 +33,7 @@ const FRACTIONAL_ADDITIVE_KEYS = new Set<keyof GameModifiers>([
   'bonusRemovalChance',
   'bonusRemovalAmount',
   'microManagerPerLock',
+  'fenceSpeedPerLock',
 ]);
 
 /** Localized display name for a modifier source, by its kind. */
@@ -171,11 +172,41 @@ export function BottomBarDetailsPanel({
       label: t('bottomBarDetails.scoreInterest'),
       value: pct(m.scoreInterestRate),
       changed: m.scoreInterestRate !== 0,
-      keys: ['scoreInterestRate'],
+      keys: ['scoreInterestRate', 'scoreInterestCapBonus'],
       description:
         m.scoreInterestRate > 0
-          ? t('bottomBarDetails.scoreInterestActive', { rate: pct(m.scoreInterestRate) })
+          ? t('bottomBarDetails.scoreInterestActive', { rate: pct(m.scoreInterestRate), cap: 8 + m.scoreInterestCapBonus })
           : t('bottomBarDetails.scoreInterestInactive'),
+    },
+    {
+      label: t('bottomBarDetails.overtimePerLock'),
+      value: bonus(m.overtimePerLock),
+      changed: m.overtimePerLock !== 0,
+      keys: ['overtimePerLock'],
+      description:
+        m.overtimePerLock > 0
+          ? t('bottomBarDetails.overtimePerLockActive', { hours: m.overtimePerLock })
+          : t('bottomBarDetails.overtimePerLockInactive'),
+    },
+    {
+      label: t('bottomBarDetails.frozenLockBonus'),
+      value: m.frozenLockBonus > 0 ? `x${1 + m.frozenLockBonus}` : t('bottomBarDetails.off'),
+      changed: m.frozenLockBonus !== 0,
+      keys: ['frozenLockBonus'],
+      description:
+        m.frozenLockBonus > 0
+          ? t('bottomBarDetails.frozenLockBonusActive', { mult: 1 + m.frozenLockBonus })
+          : t('bottomBarDetails.frozenLockBonusInactive'),
+    },
+    {
+      label: t('bottomBarDetails.fenceSpeedPerLock'),
+      value: pct(m.fenceSpeedPerLock),
+      changed: m.fenceSpeedPerLock !== 0,
+      keys: ['fenceSpeedPerLock'],
+      description:
+        m.fenceSpeedPerLock > 0
+          ? t('bottomBarDetails.fenceSpeedPerLockActive', { percent: Math.round(m.fenceSpeedPerLock * 100) })
+          : t('bottomBarDetails.fenceSpeedPerLockInactive'),
     },
     {
       label: t('bottomBarDetails.extraShopSlots'),

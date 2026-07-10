@@ -32,6 +32,7 @@ In-run upgrades purchased in the shop after each map. Each upgrade applies one o
 | `unlockLevel` | number | | Minimum completed level before this appears in the shop (default: 1) |
 | `prerequisites` | string[] | | Other upgrade IDs that must be owned before this can appear |
 | `ascensionOnly` | boolean | | Only offered while ascended (e.g. Defensive Programming fence durability) |
+| `tags` | string[] | ✓ | 1-2 build archetypes: `lock`, `freeze`, `bank`, `tempo`, `risk`, `safety`. Shown as chips on the shop card; the shop weights its random offers toward tags the player already owns (draft coherence). |
 | `modifiers` | map | ✓ | One or more **GameModifier keys** and their values (see below) |
 
 ### Tiers
@@ -210,7 +211,8 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `bonusRemovalChance` | `0` | Probability (0–1) that a fence triggers a bonus area removal. | `0.10` = 10% chance |
 | `bonusRemovalAmount` | `0` | Extra area (0–1 fraction) removed when a bonus removal triggers. | `0.05` = 5% extra |
 | `extraLives` | `0` | Extra lives granted when the upgrade is purchased during a run. | `1` |
-| `scoreInterestRate` | `0` | Fraction of current overtime balance added as interest between maps (capped at 8h). | `0.05` = 5% interest |
+| `scoreInterestRate` | `0` | Fraction of current overtime balance added as interest between maps (capped per map at `8 + scoreInterestCapBonus` hours). | `0.05` = 5% interest |
+| `scoreInterestCapBonus` | `0` | Raises the per-map interest cap above the base 8h (Venture Capital Principal/Architect). | `4` = cap 12h |
 | `extraShopItems` | `0` | Extra item slots shown in the shop after each map. | `1` |
 | `shopRestockCount` | `0` | Purchases per shop visit that refill their slot with a new offer (Procurement upgrades). | `1` |
 | `extraContinues` | `0` | Extra per-run revives beyond the base 1. Spend a Continue on death to retry the level with overtime + upgrades intact. Grantable by a certificate or upgrade. | `1` |
@@ -221,6 +223,9 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `ballFreezeCount` | `0` | Extra balls a single freeze tap also freezes, beyond the tapped one (Cascade Freeze). Total frozen per tap = `1 + ballFreezeCount`; the nearest eligible balls in the tapped ball's region are chosen. | `1` |
 | `autoFreezeDuration` | `0` | Seconds an automatically-frozen ball stays frozen (Cron Job). `0` = the ability is off. Every 10s (`AUTO_FREEZE_INTERVAL_MS`) one random eligible ball is frozen via the same path as Feature Freeze. Values from tiers sum (3+1+1 → 5s). After thawing, that ball can't be re-frozen for `duration × 2`. | `3` |
 | `showHighscoreProgress` | `0` | `> 0` reveals the map-highscore HUD bar (Benchmarking upgrade, gated behind Memory Footprint): a second bar under the capture readout tracking the live projected score against the map's stored highscore. Purely a HUD toggle, no gameplay effect. | `1` |
+| `overtimePerLock` | `0` | Flat overtime hours added to the lock bonus per locked ball (Severance Package). Deliberately outside the money-ball/simultaneous multipliers; folds under the per-map cap with the rest of the lock bonus. | `1` |
+| `fenceSpeedPerLock` | `0` | Fence-generation speed bonus per ball locked **this map** (Knowledge Transfer). Applied as `× (1 + value × locksThisMap)` on top of `fenceGenerationSpeedMultiplier`; resets each map. | `0.04` = +4%/lock |
+| `frozenLockBonus` | `0` | Extra lock-bonus multiplier when a ball is locked **while frozen** (Frozen Assets). The frozen ball's lock contribution is multiplied by `1 + value`. | `1` = frozen locks pay double |
 
 ---
 

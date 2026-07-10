@@ -28,6 +28,9 @@ import {
   Snowflake,
   CloudSnow,
   CalendarClock,
+  Banknote,
+  Gem,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -55,6 +58,9 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   snowflake: Snowflake,
   'cloud-snow': CloudSnow,
   'calendar-clock': CalendarClock,
+  banknote: Banknote,
+  gem: Gem,
+  'book-open': BookOpen,
 };
 
 /**

@@ -446,8 +446,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     const levelOvertime = baseLevelScore + highscoreBonusEarned;
+    // Interest on the banked total, capped per map. The base cap is 8h; the
+    // higher Venture Capital tiers raise it (scoreInterestCapBonus), so their
+    // bigger rates aren't silently nullified by the cap.
+    const interestCap = 8 + activeModifiers.scoreInterestCapBonus;
     const interestGain = activeModifiers.scoreInterestRate > 0
-      ? Math.min(8, Math.floor(totalScore * activeModifiers.scoreInterestRate))
+      ? Math.min(interestCap, Math.floor(totalScore * activeModifiers.scoreInterestRate))
       : 0;
 
     setTotalScore(totalScore + levelOvertime + interestGain);
@@ -462,7 +466,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, activeModifiers.scoreInterestCapBonus, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -757,6 +761,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,
     lastRunLevelsCompleted: lastRunSummary?.levelsCompleted ?? 0,
     lastRunLoadoutUnlocks,
+    // Head Start certificates: the level a fresh run begins at (1 = none).
+    // The result screen uses it to label Play Again as "Continue from level N".
+    certStartingLevel: getCertStartingLevel(),
     // Loadouts + Ascension mode
     ascensionDepth,
     loadouts,

@@ -27,7 +27,10 @@ export function updateFenceWallFn(
   if (!activeRegion) { game.activeWall = null; return; }
 
   const wallSpeedBase = getWallSpeedBase(levelNumber, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel);
-  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier;
+  // Knowledge Transfer: every ball locked this map speeds up fence generation
+  // for the rest of the map (lockedBallsCount resets per map).
+  const lockTempo = 1 + activeModifiers.fenceSpeedPerLock * game.lockedBallsCount;
+  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo;
 
   let totalStartPath = 0;
   for (let i = 0; i < wall.startWaypoints.length - 1; i++) {

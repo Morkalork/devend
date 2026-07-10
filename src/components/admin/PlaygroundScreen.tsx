@@ -50,6 +50,12 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   ballFreezeDuration:               { label: 'Feature Freeze (s)',     kind: 'additive',       step: 2,    min: 0,    defaultValue: 0,    description: 'Feature Freeze: seconds a tapped ball stays frozen (0 = off)' },
   ballFreezeCount:                  { label: 'Cascade Freeze (+balls)',kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cascade Freeze: extra nearby balls frozen per tap (total = 1 + this)' },
   autoFreezeDuration:               { label: 'Cron Job (s)',           kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cron Job: seconds an auto-frozen ball stays frozen, fired every 10s (0 = off)' },
+  extraContinues:                   { label: 'Extra Continues',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra per-run revives beyond the base 1' },
+  showHighscoreProgress:            { label: 'Highscore Bar',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Benchmarking: show the map-highscore progress bar in the HUD (>0 = on)' },
+  overtimePerLock:                  { label: 'Overtime/Lock',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Severance Package: flat overtime hours added to the lock bonus per locked ball' },
+  fenceSpeedPerLock:                { label: 'Fence Speed/Lock',       kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Knowledge Transfer: fence-speed bonus per ball locked this map (0.04 = +4%)' },
+  frozenLockBonus:                  { label: 'Frozen Lock Bonus',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Frozen Assets: extra lock-bonus multiplier when locking a frozen ball (1 = double)' },
+  scoreInterestCapBonus:            { label: 'Interest Cap +',         kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Venture Capital: raises the per-map interest cap above the base 8h' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)
