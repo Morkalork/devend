@@ -51,6 +51,8 @@ export const contentText = {
   capstoneName: (t: TFunction, c: WithId & { name?: string }) => field(t, 'capstones', c.id, 'name', c.name),
   capstoneDesc: (t: TFunction, c: WithId & { description?: string }) =>
     field(t, 'capstones', c.id, 'description', c.description),
+  capstoneClarify: (t: TFunction, c: WithId & { clarify?: string }) =>
+    field(t, 'capstones', c.id, 'clarify', c.clarify),
 
   /** Door (doors.yml): risk/reward gate between maps. */
   doorName: (t: TFunction, d: WithId & { name?: string }) => field(t, 'doors', d.id, 'name', d.name),

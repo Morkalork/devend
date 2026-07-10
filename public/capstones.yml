@@ -15,6 +15,7 @@ capstones:
     name: Stock Options
     description: The per-map overtime cap rises by 20h for the rest of the run. Big multiplier builds finally pay out.
     tag: risk
+    clarify: Overtime is normally capped per map, so any score multiplier beyond the cap is wasted. This raises that ceiling by 20h every map, turning stacked multipliers into real score. Near useless on a low-multiplier build, run-defining on a stacked one.
     modifiers:
       overtimeCapBonus: 20
 
@@ -22,6 +23,7 @@ capstones:
     name: Company Card
     description: The cheapest offer in every shop is free.
     tag: bank
+    clarify: The single cheapest upgrade in each shop costs nothing. Over a full run that is a large pile of saved overtime you can redirect into the expensive picks. Best when you plan to keep shopping every level.
     modifiers:
       freeCheapestOffer: 1
 
@@ -29,6 +31,7 @@ capstones:
     name: Second Wind
     description: Once per map, a fence survives a ball hit without costing a life.
     tag: safety
+    clarify: Every map starts with one fence shield. The first ball that would smash a growing fence is absorbed for free, no life lost. A safety net that refreshes each map, so you can fence aggressively in dangerous spots.
     modifiers:
       wallShieldsPerMap: 1
 
@@ -36,6 +39,7 @@ capstones:
     name: Ghost Protocol
     description: Fences ignore ball hits during their first 1.5 seconds of growth.
     tag: tempo
+    clarify: For the first 1.5 seconds of its growth a fence cannot be broken, so you can start one right in a busy lane without instantly losing it. Rewards fast, frequent fencing over slow, cautious placement.
     modifiers:
       fenceGraceMs: 1500
 
@@ -43,6 +47,7 @@ capstones:
     name: Cryo Protocol
     description: Tap any ball to freeze it for 3 seconds, with no cooldown. Works even without Feature Freeze.
     tag: freeze
+    clarify: Grants tap-to-freeze for the whole run with no cooldown, even if you never buy Feature Freeze. Freezing a ball mid-flight makes any chaotic map controllable. The freeze build in a single pick.
     modifiers:
       ballFreezeDuration: 3
       freezeNoCooldown: 1
@@ -51,6 +56,7 @@ capstones:
     name: Golden Handshake
     description: Every locked ball pays +2 overtime, and every lock counts as one ball bigger for the trap multiplier.
     tag: lock
+    clarify: Two lock payoffs at once. Every locked ball pays +2 overtime, and each lock counts as one ball larger for the simultaneous-trap multiplier. Snowballs hard on maps where you seal several balls together.
     modifiers:
       overtimePerLock: 2
       simultaneousLockBonus: 1

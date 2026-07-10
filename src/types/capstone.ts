@@ -16,6 +16,8 @@ export interface CapstoneConfig {
   description: string;
   /** Archetype flavour, shown as a chip on the draft card. */
   tag?: UpgradeTag;
+  /** Longer strategic explanation, shown in the press-and-hold detail view. */
+  clarify?: string;
   modifiers: Record<string, number>;
 }
 

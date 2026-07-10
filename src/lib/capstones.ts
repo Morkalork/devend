@@ -34,6 +34,7 @@ function parseCapstoneEntry(raw: unknown): CapstoneConfig | null {
     name: r.name,
     description: r.description,
     tag: typeof r.tag === 'string' ? (r.tag as CapstoneConfig['tag']) : undefined,
+    clarify: typeof r.clarify === 'string' ? r.clarify : undefined,
     modifiers,
   };
 }

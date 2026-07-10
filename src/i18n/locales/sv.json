@@ -441,6 +441,9 @@
     "title": "Befordran",
     "subtitle": "Din utvecklingsrunda gick bra. Välj en permanent förmån för resten av omgången.",
     "exclusiveHint": "Bara ett val. De andra två försvinner för gott.",
+    "scopeNote": "Gäller resten av omgången, inklusive ascension.",
+    "holdHint": "Håll in en förmån för hela genomgången.",
+    "closeDetail": "Stäng",
     "confirmButton": "Acceptera befordran",
     "pickHint": "Välj en förmån"
   },

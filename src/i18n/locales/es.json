@@ -441,6 +441,9 @@
     "title": "Ascenso",
     "subtitle": "Tu evaluación fue bien. Elige una ventaja permanente para el resto de la partida.",
     "exclusiveHint": "Solo una elección. Las otras dos desaparecen para siempre.",
+    "scopeNote": "Se aplica durante el resto de la partida, incluida la ascensión.",
+    "holdHint": "Mantén pulsada una ventaja para ver el informe completo.",
+    "closeDetail": "Cerrar",
     "confirmButton": "Aceptar el ascenso",
     "pickHint": "Elige una ventaja"
   },

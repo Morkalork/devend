@@ -39,6 +39,11 @@ describe("capstone pool integrity", () => {
     expect(offenders).toEqual([]);
   });
 
+  it("gives every capstone a clarify blurb (shown in the hold-to-detail view)", () => {
+    const offenders = capstones.filter(c => !c.clarify || c.clarify.trim().length === 0).map(c => c.id);
+    expect(offenders).toEqual([]);
+  });
+
   it("uses only known GameModifiers keys (typos would be silently ignored)", () => {
     const offenders: string[] = [];
     for (const c of capstones) {

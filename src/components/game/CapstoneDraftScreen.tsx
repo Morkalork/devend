@@ -8,8 +8,8 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
-import { Award, Play, Sparkles } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Award, Play, Sparkles, X } from 'lucide-react';
 import { CapstoneConfig } from '@/types/capstone';
 import { CRTBackground } from './CRTBackground';
 import { DraftCard } from './DraftCard';
@@ -29,6 +29,8 @@ export function CapstoneDraftScreen({
 }: CapstoneDraftScreenProps) {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Capstone whose press-and-hold detail overlay is open.
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const confirm = () => {
     const pick = offers.find(c => c.id === selectedId);
@@ -87,6 +89,7 @@ export function CapstoneDraftScreen({
                 accentColor={accentColor}
                 selected={selectedId === cap.id}
                 onClick={() => setSelectedId(prev => (prev === cap.id ? null : cap.id))}
+                onLongPress={() => setDetailId(cap.id)}
                 name={contentText.capstoneName(t, cap)}
                 headerExtra={cap.tag ? <TagChip tag={cap.tag} /> : undefined}
               >
@@ -99,6 +102,11 @@ export function CapstoneDraftScreen({
               </DraftCard>
             ))}
           </div>
+
+          {/* Press-and-hold discovery hint */}
+          <p className="text-[11px] text-center" style={{ color: '#4a7a5a' }}>
+            {t('capstoneDraft.holdHint')}
+          </p>
 
           {/* Confirm — no skip: a capstone is a pure gift, but an exclusive one */}
           <motion.button
@@ -116,6 +124,72 @@ export function CapstoneDraftScreen({
           </motion.button>
         </motion.div>
       </div>
+
+      {/* Press-and-hold detail overlay: the fuller briefing for one capstone.
+          Tapping the backdrop or the X closes it. */}
+      <AnimatePresence>
+        {detailId && (() => {
+          const cap = offers.find(c => c.id === detailId);
+          if (!cap) return null;
+          const clarify = contentText.capstoneClarify(t, cap);
+
+          return (
+            <motion.div
+              key="capstone-detail"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDetailId(null)}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.92, y: 8 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 8, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                style={{ borderColor: `${accentColor}66` }}
+              >
+                <button
+                  onClick={() => setDetailId(null)}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                  aria-label={t('capstoneDraft.closeDetail')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                {/* Header */}
+                <div className="flex items-center gap-2 mb-3 pr-6">
+                  <Award className="w-6 h-6 shrink-0" style={{ color: accentColor }} />
+                  <div className="text-base font-display font-bold flex-1" style={{ color: accentColor }}>
+                    {contentText.capstoneName(t, cap)}
+                  </div>
+                  {cap.tag && <TagChip tag={cap.tag} />}
+                </div>
+
+                {/* Effect recap */}
+                <div className="flex items-start gap-2 mb-3">
+                  <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.capstoneDesc(t, cap)}</p>
+                </div>
+
+                {/* Clarification */}
+                {clarify && (
+                  <p className="text-sm leading-relaxed mb-3" style={{ color: '#c8ffd8', opacity: 0.9 }}>{clarify}</p>
+                )}
+
+                {/* Scope note */}
+                <p
+                  className="text-[11px] leading-relaxed pt-2.5"
+                  style={{ color: '#4a7a5a', borderTop: `1px solid ${accentColor}22` }}
+                >
+                  {t('capstoneDraft.scopeNote')}
+                </p>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </>
   );
 }

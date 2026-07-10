@@ -456,6 +456,9 @@
     "title": "Promotion",
     "subtitle": "Your review went well. Pick one permanent perk for the rest of this run.",
     "exclusiveHint": "One pick only. The other two are gone for good.",
+    "scopeNote": "Applies for the rest of the run, including ascension.",
+    "holdHint": "Hold a perk for the full briefing.",
+    "closeDetail": "Close",
     "confirmButton": "Accept Promotion",
     "pickHint": "Pick a Perk"
   },
