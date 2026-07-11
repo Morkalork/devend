@@ -243,6 +243,36 @@ export function BottomBarDetailsPanel({
           : t('bottomBarDetails.frozenLockBonusInactive'),
     },
     {
+      label: t('bottomBarDetails.lockThreshold'),
+      value: m.lockThresholdBonus > 0 ? `+${m.lockThresholdBonus}%` : t('bottomBarDetails.off'),
+      changed: m.lockThresholdBonus !== 0,
+      keys: ['lockThresholdBonus'],
+      description:
+        m.lockThresholdBonus > 0
+          ? t('bottomBarDetails.lockThresholdActive', { percent: m.lockThresholdBonus })
+          : t('bottomBarDetails.lockThresholdInactive'),
+    },
+    {
+      label: t('bottomBarDetails.spawnFreeze'),
+      value: m.spawnFreezeSeconds > 0 ? `${m.spawnFreezeSeconds}s` : t('bottomBarDetails.off'),
+      changed: m.spawnFreezeSeconds !== 0,
+      keys: ['spawnFreezeSeconds'],
+      description:
+        m.spawnFreezeSeconds > 0
+          ? t('bottomBarDetails.spawnFreezeActive', { seconds: m.spawnFreezeSeconds })
+          : t('bottomBarDetails.spawnFreezeInactive'),
+    },
+    {
+      label: t('bottomBarDetails.pushBonus'),
+      value: m.pushBonusMultiplier !== 1 ? `x${m.pushBonusMultiplier}` : t('bottomBarDetails.off'),
+      changed: m.pushBonusMultiplier !== 1,
+      keys: ['pushBonusMultiplier'],
+      description:
+        m.pushBonusMultiplier !== 1
+          ? t('bottomBarDetails.pushBonusActive', { mult: m.pushBonusMultiplier })
+          : t('bottomBarDetails.pushBonusInactive'),
+    },
+    {
       label: t('bottomBarDetails.fenceSpeedPerLock'),
       value: pct(m.fenceSpeedPerLock),
       changed: m.fenceSpeedPerLock !== 0,

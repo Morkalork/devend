@@ -428,6 +428,24 @@ upgrades:
 
 
   # ===============================
+  # CODE REVIEW (Lock threshold)
+  # The lock archetype's early opener: pockets slightly larger than the lock
+  # limit still count, so early lock attempts land instead of missing by a
+  # hair. Folded into lockWinThresholdPercent (base 10, see game-config.yml).
+  # ===============================
+
+  - id: code_review
+    name: Code Review
+    tier: Junior
+    description: Sloppy pockets still count, a pocket up to 3% larger than the lock limit still locks its ball.
+    unlockLevel: 2
+    icon: clipboard-check
+    tags: [lock]
+    modifiers:
+      lockThresholdBonus: 3
+
+
+  # ===============================
   # SEVERANCE PACKAGE (Lock payoff)
   # Head of the lock archetype: turns every locked ball into flat overtime.
   # The bonus folds under the per-map cap with the rest of the lock bonus.
@@ -641,6 +659,16 @@ upgrades:
   # RISK APPETITE & TECH EVANGELIST (Risk payoffs)
   # The greed line: bigger push-your-luck chunks, bigger space-clear bonuses.
   # ===============================
+
+  - id: moonshot
+    name: Moonshot
+    tier: Junior
+    description: Push-your-luck payouts are 25% larger.
+    unlockLevel: 3
+    icon: orbit
+    tags: [risk]
+    modifiers:
+      pushBonusMultiplier: 1.25
 
   - id: risk_appetite
     name: Risk Appetite
@@ -886,6 +914,25 @@ upgrades:
     tags: [safety]
     modifiers:
       ballPathPredictionBalls: 999
+
+  # ===============================
+  # COLD BOOT (Spawn freeze)
+  # The freeze archetype's early opener: every map starts with all balls
+  # frozen for a moment, a planning beat to line up the first cut (which is
+  # also how you hit the top Ship Early window). Rides the same frozenUntil
+  # path as Feature Freeze; no re-freeze cooldown after the spawn thaw.
+  # ===============================
+
+  - id: cold_boot
+    name: Cold Boot
+    tier: Junior
+    description: Every map boots frozen, all balls hold still for the first 2 seconds.
+    unlockLevel: 3
+    icon: power
+    tags: [freeze]
+    modifiers:
+      spawnFreezeSeconds: 2
+
 
   # ===============================
   # FEATURE FREEZE (Tap-to-freeze a ball)

@@ -224,10 +224,12 @@ export function GameCanvas({
   useEffect(() => { showPerfOverlayRef.current = showPerfOverlay; }, [showPerfOverlay]);
   // Keep the lock-rule config live on the game state (initGame also seeds it),
   // so tuning game-config.yml applies without waiting for the next level init.
+  // Code Review folds its bonus percentage points into the threshold here and
+  // in initGame, so the engine and readouts share one effective value.
   useEffect(() => {
-    gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent;
+    gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
     gameRef.current.lockMinRegionCells = lockMinRegionCells;
-  }, [lockWinThresholdPercent, lockMinRegionCells]);
+  }, [lockWinThresholdPercent, lockMinRegionCells, activeModifiers.lockThresholdBonus]);
   // Same live-config treatment for the Scope Creep tuning.
   useEffect(() => {
     if (scopeCreep) gameRef.current.creepConfig = scopeCreep;
@@ -562,7 +564,7 @@ export function GameCanvas({
     const initGame = () => {
       game.assimilations.clear();
       game.bonusCutCells.clear();
-      game.lockWinThresholdPercent = lockWinThresholdPercent;
+      game.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
       game.lockMinRegionCells = lockMinRegionCells;
       game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
@@ -592,6 +594,13 @@ export function GameCanvas({
       game.regions            = data.regions;
       if (game.spaceGrid) paintCellRegionIds(game.spaceGrid, game.regions);
       game.fastestBallId      = data.fastestBallId;
+      // Cold Boot: the map boots frozen, all balls hold still for a planning
+      // beat. Same frozenUntil path as tap-freeze; freezeReadyAt is left unset
+      // so the spawn thaw carries no re-freeze cooldown.
+      if (activeModifiers.spawnFreezeSeconds > 0) {
+        const thaw = performance.now() + activeModifiers.spawnFreezeSeconds * 1000;
+        for (const ball of game.balls) ball.frozenUntil = thaw;
+      }
       removedSamples = [];
       removedSamplesSet = new Set();
       repaintRegionCanvas();

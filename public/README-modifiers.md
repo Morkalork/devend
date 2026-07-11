@@ -308,6 +308,8 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `runwayFreezeAt` | `0` | Runway: while the bank is at/above this threshold, tap-to-freeze is granted (2s, rides the Feature Freeze mechanic). | `300` |
 | `spendInstantFencePerChunk` | `0` | Budget Cycle (spend side): instant fences on the NEXT map per 60h spent in one shop visit (max 3 chunks counted; src/lib/treasury.ts). | `1` |
 | `spendFenceSpeedPerChunk` | `0` | Budget Cycle: fence-speed bonus on the NEXT map per 60h-spend chunk. | `0.05` = +5%/chunk |
+| `lockThresholdBonus` | `0` | Percentage points added to the lock threshold (base `lock.win_threshold_percent`, 10): pockets slightly larger than the limit still lock their ball (Code Review). | `3` |
+| `spawnFreezeSeconds` | `0` | Seconds every ball stays frozen at map start (Cold Boot). Rides the Feature Freeze `frozenUntil` path; the spawn thaw carries no re-freeze cooldown. | `2` |
 | `shipEarlyBonusMultiplier` | `1` | Multiplies the Ship Early payout AFTER the ladder's `maxBonus` clamp (Hard Deadline door). Still folds under the per-map overtime cap. | `2` |
 
 ---

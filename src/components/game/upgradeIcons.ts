@@ -39,6 +39,9 @@ import {
   Megaphone,
   Timer,
   ShoppingCart,
+  ClipboardCheck,
+  Power,
+  Orbit,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -77,6 +80,9 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   megaphone: Megaphone,
   timer: Timer,
   'shopping-cart': ShoppingCart,
+  'clipboard-check': ClipboardCheck,
+  power: Power,
+  orbit: Orbit,
 };
 
 /**

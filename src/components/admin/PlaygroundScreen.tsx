@@ -72,6 +72,8 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   spendInstantFencePerChunk:        { label: 'Spend Fence/Chunk',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Budget Cycle: instant fences on the next map per 60h spent in one shop visit' },
   spendFenceSpeedPerChunk:          { label: 'Spend Fence Speed/Chunk',kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Budget Cycle: fence-speed bonus on the next map per 60h spent (0.05 = +5%)' },
   shipEarlyBonusMultiplier:         { label: 'Ship Early Mult.',       kind: 'multiplicative', step: 0.5,  min: 0.5,  defaultValue: 1,    description: 'Hard Deadline door: multiplies the Ship Early payout' },
+  lockThresholdBonus:               { label: 'Lock Threshold +%',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Code Review: percentage points added to the lock threshold (pockets slightly over the limit still lock)' },
+  spawnFreezeSeconds:               { label: 'Spawn Freeze (s)',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cold Boot: seconds every ball stays frozen at map start' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)
