@@ -45,7 +45,7 @@ describe("ball squash & stretch (issue #44)", () => {
     const st = createBallEffectState();
     triggerWallHit(st, 1000, 300, 0, 300);
     expect(getSquishEffect(st).active).toBe(true);
-    updateBallEffects(st, 0.016, 1000 + 500); // well past squishDuration (220ms)
+    updateBallEffects(st, 0.016, 1000 + 800); // well past squishDuration (500ms)
     expect(getSquishEffect(st).active).toBe(false);
   });
 
