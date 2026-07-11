@@ -236,7 +236,81 @@
     "overtimeEarned": "Horas extra ganadas",
     "totalOvertime": "Horas extra totales",
     "certificateUnlocked": "Certificado desbloqueado",
-    "nextLevel": "Siguiente nivel"
+    "nextLevel": "Siguiente nivel",
+    "holdHint": "Mantén pulsada una fila para ver detalles",
+    "infoTipLabel": "Cómo ganar más",
+    "info": {
+      "level": {
+        "title": "Nivel",
+        "body": "El mapa que acabas de superar. Los mapas posteriores pagan más horas extra base e introducen nuevos tipos de bolas y mecánicas.",
+        "tip": "Mantén viva tu partida para llegar a mapas más profundos y mejor pagados. Las mejoras compradas entre niveles duran toda la partida."
+      },
+      "remaining": {
+        "title": "Espacio restante",
+        "body": "Cuánto tablero seguía abierto cuando ganaste. Superas un nivel cercando espacio hasta que el área abierta cae por debajo del objetivo del mapa.",
+        "tip": "Despejar más de lo requerido alimenta el bono de espacio, y alcanzar el objetivo rápido paga el bono de entrega temprana."
+      },
+      "fencesUsed": {
+        "title": "Vallas contra par",
+        "body": "Cuántas vallas usaste frente al par del mapa. En par o por debajo cobras la base completa. Cada valla sobre par la reduce (x0.75, x0.6 y luego x0.4), y con 3 o más sobre par también se desactiva el bono de espacio.",
+        "tip": "Prefiere pocos cortes grandes. Terminar aunque sea una valla bajo par añade una hora de bonificación."
+      },
+      "spaceBonus": {
+        "title": "Bono de espacio",
+        "body": "Área extra eliminada más allá de lo que exige el mapa. La escalera paga +1h con 10% extra, +2h con 30% y +3h con 55%. Se desactiva si terminas con 3 o más vallas sobre par.",
+        "tip": "Antes del corte ganador, arranca un poco más de tablero. Los despejes casi totales pagan el peldaño más alto."
+      },
+      "baseOvertime": {
+        "title": "Horas extra base",
+        "body": "El pago fijo del mapa, escalado por tu rendimiento con las vallas. Cada mapa paga una base plana, así que los bonos de esta pantalla son donde están las ganancias reales.",
+        "tip": "Mantente en par o por debajo para conservar la base completa, y apila bonos encima."
+      },
+      "threadLocks": {
+        "title": "Bloqueos de hilo",
+        "body": "Bloqueas una bola sellándola en su propio rincón del tablero, aislada de todo lo demás. Cada bola bloqueada paga su valor de bloqueo, y los tipos de bola más duros pagan más. Atrapar varias bolas con un solo corte multiplica todo el pago por el número capturado: 2 a la vez paga el doble, 3 el triple.",
+        "tip": "Bloquea una bola verde de dinero pronto: triplica lo que paga cada bloqueo posterior en este mapa. Después agrupa las bolas y cierra un solo corte alrededor del grupo."
+      },
+      "breakBonus": {
+        "title": "Bono de demolición",
+        "body": "Horas extra por destrozar bloques ámbar rompibles. Las bolas desgastan un rompible con cada contacto hasta que se hace añicos, y lo que esté apilado encima cae con él.",
+        "tip": "Dirige las bolas hacia los rompibles con tus cortes. La bola negra los destroza en la mitad de golpes."
+      },
+      "shipEarly": {
+        "title": "Entrega temprana",
+        "body": "Un bono de ritmo por cumplir la condición de victoria rápido: +1h en menos de 60 segundos, +2h en menos de 40, +3h en menos de 25. Solo cuenta el juego activo, los menús y la pantalla de presión no.",
+        "tip": "Abre con cortes grandes y decididos en lugar de muchos pequeños y seguros. Velocidad y precisión son bonos separados, así que puedes perseguir ambos."
+      },
+      "interest": {
+        "title": "Interés",
+        "body": "Lo pagan las mejoras de interés: al final de cada nivel se añade un porcentaje de tus horas extra totales, hasta un tope por mapa.",
+        "tip": "El interés es compuesto. Cuanto antes compres mejoras de interés y más horas extra acumules, más paga cada nivel."
+      },
+      "pushBonus": {
+        "title": "Bono de presión",
+        "body": "La recompensa por arriesgar. Tras cumplir el objetivo del mapa puedes seguir cortando en lugar de asegurar, y cada porción extra del tablero paga horas extra de bonificación.",
+        "tip": "Presionar es dinero gratis: si fallas a mitad solo pierdes el bono extra, nunca tu puntuación asegurada."
+      },
+      "newHighscore": {
+        "title": "Nuevo récord",
+        "body": "Superaste el récord anterior de este mapa, así que todo el pago se multiplica por x1.25. Se aplica después del tope por mapa, así que batir un récord siempre paga extra.",
+        "tip": "Los récords se guardan por mapa. Una buena build de mejoras puede batir tus marcas mapa tras mapa."
+      },
+      "totalBonus": {
+        "title": "Bonificación total",
+        "body": "Todos los bonos de este nivel sumados: par, espacio, bloqueos, demolición, ritmo y presión.",
+        "tip": "Los bonos se pliegan bajo un tope por mapa del doble del pago base, así que repartir entre varios tipos de bono rinde más que maximizar uno solo."
+      },
+      "overtimeEarned": {
+        "title": "Horas extra ganadas",
+        "body": "Lo que pagó este nivel en total: la base escalada más todos los bonos, con tope en el doble del pago base del mapa. Un nuevo récord multiplica por encima del tope.",
+        "tip": "Si alcanzas el tope a menudo, persigue el multiplicador de récord: se aplica después del tope, así que siempre paga."
+      },
+      "totalOvertime": {
+        "title": "Horas extra totales",
+        "body": "Las horas extra de toda tu partida hasta ahora. Son la moneda que gastas en la tienda de mejoras entre niveles, y lo que se asegura cuando termina la partida.",
+        "tip": "Las horas extra invertidas pronto en mejoras multiplican las ganancias futuras, así que gastar suele rendir más que acumular."
+      }
+    }
   },
   "notFound": {
     "message": "¡Vaya! Página no encontrada",
@@ -295,6 +369,10 @@
     "lives_other": "{{count}} vidas restantes",
     "scopeCreepValue": "+{{percent}}%",
     "scopeCreepTitle": "Corrupción del alcance: bolas un {{percent}}% más rápidas"
+  },
+  "shipEarlyBar": {
+    "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",
+    "bonus": "+{{hours}}h"
   },
   "topBarDetails": {
     "levelStatusTitle": "Estado del nivel {{level}}",

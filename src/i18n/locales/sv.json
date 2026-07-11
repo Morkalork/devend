@@ -236,7 +236,81 @@
     "overtimeEarned": "Intjänad övertid",
     "totalOvertime": "Total övertid",
     "certificateUnlocked": "Certifikat upplåst",
-    "nextLevel": "Nästa nivå"
+    "nextLevel": "Nästa nivå",
+    "holdHint": "Håll på en rad för detaljer",
+    "infoTipLabel": "Så tjänar du mer",
+    "info": {
+      "level": {
+        "title": "Nivå",
+        "body": "Banan du precis klarade. Senare banor betalar mer bas-övertid och introducerar nya bolltyper och mekaniker.",
+        "tip": "Håll omgången vid liv för att nå djupare banor som betalar bättre. Uppgraderingar köpta mellan nivåer varar hela omgången."
+      },
+      "remaining": {
+        "title": "Kvarvarande utrymme",
+        "body": "Hur mycket av brädet som fortfarande var öppet när du vann. Du klarar en nivå genom att stängsla in utrymme tills den öppna ytan faller under banans mål.",
+        "tip": "Att rensa mer än vad som krävs matar utrymmesbonusen, och att nå målet snabbt betalar bonusen för tidig leverans."
+      },
+      "fencesUsed": {
+        "title": "Stängsel mot par",
+        "body": "Hur många stängsel du använde jämfört med banans par. På eller under par betalar hela basen. Varje stängsel över par skalar ner den (x0.75, x0.6, sedan x0.4), och 3 eller fler över par stänger också av utrymmesbonusen.",
+        "tip": "Satsa på färre, större snitt. Att sluta ens ett stängsel under par ger en bonustimme."
+      },
+      "spaceBonus": {
+        "title": "Utrymmesbonus",
+        "body": "Extra yta borttagen utöver banans krav. Stegen betalar +1h vid 10% extra, +2h vid 30% och +3h vid 55%. Den stängs av om du slutar 3 eller fler stängsel över par.",
+        "tip": "Klipp bort lite mer av brädet innan ditt vinnande snitt. Nästan totala rensningar betalar det högsta steget."
+      },
+      "baseOvertime": {
+        "title": "Bas-övertid",
+        "body": "Banans fasta utbetalning, skalad efter din stängselprestation. Varje bana betalar en platt bas, så bonusarna på den här skärmen är där de riktiga intäkterna finns.",
+        "tip": "Håll dig på eller under par för att behålla hela basen, och stapla bonusar ovanpå."
+      },
+      "threadLocks": {
+        "title": "Trådlås",
+        "body": "Du låser en boll genom att stänga in den i en egen liten ficka på brädet, avskuren från allt annat. Varje låst boll betalar sitt låsvärde, och tuffare bolltyper betalar mer. Att fånga flera bollar med ett enda snitt multiplicerar hela utbetalningen med antalet: 2 på en gång betalar dubbelt, 3 betalar tredubbelt.",
+        "tip": "Lås en grön pengaboll tidigt: den tredubblar vad varje senare lås på banan betalar. Valla sedan ihop bollarna och stäng ett snitt runt hela gruppen."
+      },
+      "breakBonus": {
+        "title": "Rivningsbonus",
+        "body": "Övertid för att krossa bärnstensfärgade block. Bollar nöter på ett krossbart block vid kontakt tills det splittras, och allt som står staplat ovanpå faller med det.",
+        "tip": "Styr bollarna mot blocken med dina snitt. Den svarta bollen krossar dem på hälften så många träffar."
+      },
+      "shipEarly": {
+        "title": "Tidig leverans",
+        "body": "En tempobonus för att nå vinstvillkoret snabbt: +1h inom 60 sekunder, +2h inom 40, +3h inom 25. Bara aktivt spel räknas, menyer och pressfrågan gör det inte.",
+        "tip": "Öppna med stora, självsäkra snitt i stället för många små försiktiga. Fart och precision är separata bonusar, så du kan jaga båda."
+      },
+      "interest": {
+        "title": "Ränta",
+        "body": "Betalas av ränteuppgraderingar: i slutet av varje nivå läggs en procentandel av din totala övertid till, upp till ett tak per bana.",
+        "tip": "Räntan är ränta på ränta. Ju tidigare du köper ränteuppgraderingar och ju mer övertid du samlar, desto mer betalar varje nivå."
+      },
+      "pushBonus": {
+        "title": "Pressbonus",
+        "body": "Belöningen för att våga. Efter att banans mål är nått kan du fortsätta skära i stället för att säkra, och varje extra bit av brädet betalar bonusövertid.",
+        "tip": "Att pressa är gratis pengar: misslyckas du mitt i förlorar du bara extrabonusen, aldrig din säkrade poäng."
+      },
+      "newHighscore": {
+        "title": "Nytt rekord",
+        "body": "Du slog banans tidigare rekord, så hela utbetalningen multipliceras med x1.25. Det tillämpas efter taket per bana, så att slå ett rekord betalar alltid extra.",
+        "tip": "Rekord sparas per bana. En stark uppgraderingsbuild kan slå dina gamla resultat bana efter bana."
+      },
+      "totalBonus": {
+        "title": "Total bonus",
+        "body": "Alla nivåns bonusar sammanlagda: par, utrymme, lås, rivning, tempo och press.",
+        "tip": "Bonusar viks in under ett tak per bana på dubbla basutbetalningen, så att sprida sig över flera bonustyper slår att maxa en enda."
+      },
+      "overtimeEarned": {
+        "title": "Intjänad övertid",
+        "body": "Vad den här nivån betalade totalt: den skalade basen plus alla bonusar, med tak på dubbla banans basutbetalning. Ett nytt rekord multiplicerar förbi taket.",
+        "tip": "Slår du ofta i taket, jaga rekordmultiplikatorn: den tillämpas efter taket, så den betalar alltid."
+      },
+      "totalOvertime": {
+        "title": "Total övertid",
+        "body": "Hela omgångens övertid hittills. Det är valutan du spenderar i butiken mellan nivåerna, och det som säkras när omgången tar slut.",
+        "tip": "Övertid som investeras tidigt i uppgraderingar mångdubblar senare intäkter, så att spendera slår oftast att spara på hög."
+      }
+    }
   },
   "notFound": {
     "message": "Hoppsan! Sidan hittades inte",
@@ -295,6 +369,10 @@
     "lives_other": "{{count}} liv kvar",
     "scopeCreepValue": "+{{percent}}%",
     "scopeCreepTitle": "Scope creep: bollarna rör sig {{percent}}% snabbare"
+  },
+  "shipEarlyBar": {
+    "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
+    "bonus": "+{{hours}}h"
   },
   "topBarDetails": {
     "levelStatusTitle": "Status för nivå {{level}}",

@@ -10,7 +10,7 @@
  * generateScoringPreview() via the useScoringConfig hook.
  */
 import yaml from 'js-yaml';
-import { ScoringConfig, ScoreBreakdown } from '@/types/scoring';
+import { ScoringConfig, ScoreBreakdown, ShipEarlyThreshold } from '@/types/scoring';
 
 /**
  * Get the overtime reward cap for a level, scaled from its own base points.
@@ -130,6 +130,11 @@ export function calculateShipEarlyBonus(
 /** Ship Early bonus from the preloaded config (see loadScoringConfig). */
 export function getShipEarlyBonus(clearedActiveSeconds: number | null | undefined): number {
   return calculateShipEarlyBonus(clearedActiveSeconds, loadedConfig);
+}
+
+/** The Ship Early ladder from the preloaded config (drives the countdown bar). */
+export function getShipEarlyThresholds(): ShipEarlyThreshold[] {
+  return loadedConfig.scoring.shipEarly.thresholds;
 }
 
 /**

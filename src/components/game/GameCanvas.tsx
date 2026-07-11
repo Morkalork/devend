@@ -98,6 +98,8 @@ export interface GameStateInfo {
   pushMode: "none" | "prompt" | "pushing";
   /** Current Scope Creep speed boost in percent (0 = not yet active). */
   creepPercent: number;
+  /** Whole active-play seconds this map (1Hz; drives the Ship Early bar). */
+  activeSeconds: number;
   onBankAndContinue?: () => void;
 }
 
@@ -266,6 +268,8 @@ export function GameCanvas({
   const [bonusPulseKey, setBonusPulseKey] = useState(0);
   // Scope Creep: current speed boost in percent, stepped by onCreepStep (~4x/level).
   const [creepPercent, setCreepPercent] = useState(0);
+  // Active-play clock mirrored to React at 1Hz (Ship Early countdown bar).
+  const [activeSeconds, setActiveSeconds] = useState(0);
 
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -604,6 +608,7 @@ export function GameCanvas({
       game.creepFactor = 1;
       game.creepConfig = scopeCreep ?? DEFAULT_SCOPE_CREEP;
       setCreepPercent(0);
+      setActiveSeconds(0);
       game.wallCount = 0;
       clearWallImpacts();
       setCutCount(0);
@@ -739,6 +744,7 @@ export function GameCanvas({
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
       onCreepStep: setCreepPercent,
+      onActiveSecond: setActiveSeconds,
     };
     const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration, activeModifiers.freezeNoCooldown);
     game.gameLoopFn = gameLoop;
@@ -840,10 +846,11 @@ export function GameCanvas({
         lockedBalls: lockedBallsCount,
         pushMode,
         creepPercent,
+        activeSeconds,
         onBankAndContinue: handleBankAndContinue,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, creepPercent, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

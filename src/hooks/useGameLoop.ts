@@ -34,6 +34,8 @@ export interface GameLoopCallbacks {
   processDestroys?: () => void;
   /** Called when Scope Creep escalates to a new step (percentBoost = +X% ball speed). */
   onCreepStep?: (percentBoost: number) => void;
+  /** Called once per whole active-play second (drives the Ship Early countdown bar). */
+  onActiveSecond?: (seconds: number) => void;
 }
 
 /**
@@ -188,11 +190,17 @@ export function createGameLoop(
       // menus and the push prompt never count) and step Scope Creep off it.
       // Death recovery is a forced pause, so it doesn't count either.
       if (!game.isRecovering) {
+        const prevWholeSecond = Math.floor(game.activePlaySeconds);
         game.activePlaySeconds += PHYSICS_STEP;
         const f = creepFactor(game.activePlaySeconds, game.creepConfig);
         if (f !== game.creepFactor) {
           game.creepFactor = f;
           callbacks.onCreepStep?.(Math.round((f - 1) * 100));
+        }
+        // 1Hz clock tick to React (the countdown bar tweens between ticks).
+        const wholeSecond = Math.floor(game.activePlaySeconds);
+        if (wholeSecond !== prevWholeSecond) {
+          callbacks.onActiveSecond?.(wholeSecond);
         }
       }
 

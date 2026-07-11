@@ -14,6 +14,7 @@ import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX } from 'lucide-rea
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameBottomBar } from './GameBottomBar';
+import { ShipEarlyBar } from './ShipEarlyBar';
 import { TopBarDetailsPanel } from './TopBarDetailsPanel';
 import { BottomBarDetailsPanel } from './BottomBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
@@ -168,6 +169,7 @@ export function GameScreen({
     lockedBalls: 0,
     pushMode: "none",
     creepPercent: 0,
+    activeSeconds: 0,
     onBankAndContinue: undefined,
   });
 
@@ -339,6 +341,13 @@ export function GameScreen({
             showPerfOverlay={showPerfOverlay}
           />
         </div>
+
+        {/* Ship Early countdown: drains across the bonus windows, hides once
+            the win condition is met or every window has passed */}
+        <ShipEarlyBar
+          seconds={gameState.activeSeconds}
+          visible={gameState.pushMode === 'none' && !mapComplete}
+        />
 
         {/* Stats Panel at bottom */}
         <GameBottomBar

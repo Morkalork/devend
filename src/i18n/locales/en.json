@@ -239,7 +239,81 @@
     "overtimeEarned": "Overtime Earned",
     "totalOvertime": "Total Overtime",
     "certificateUnlocked": "Certificate Unlocked",
-    "nextLevel": "Next Level"
+    "nextLevel": "Next Level",
+    "holdHint": "Hold any row for details",
+    "infoTipLabel": "How to earn more",
+    "info": {
+      "level": {
+        "title": "Level",
+        "body": "The map you just cleared. Later maps pay a higher base overtime and introduce new ball types and mechanics.",
+        "tip": "Keep your run alive to reach deeper, higher-paying maps. Upgrades bought between levels last the whole run."
+      },
+      "remaining": {
+        "title": "Remaining Space",
+        "body": "How much of the board was still open when you won. You clear a level by fencing off space until the open area drops below the map's target.",
+        "tip": "Clearing more than required feeds the Space Bonus, and meeting the target fast pays the Ship Early bonus."
+      },
+      "fencesUsed": {
+        "title": "Fences vs Par",
+        "body": "How many fences you used against the map's par. At or under par pays the full base overtime. Each fence over par scales it down (x0.75, x0.6, then x0.4), and 3 or more over par also switches off the Space Bonus.",
+        "tip": "Favor fewer, bigger cuts. Finishing even one fence under par adds a bonus hour."
+      },
+      "spaceBonus": {
+        "title": "Space Bonus",
+        "body": "Extra area removed beyond the map's requirement. The ladder pays +1h at 10% extra, +2h at 30% and +3h at 55%. It is disabled if you finish 3 or more fences over par.",
+        "tip": "Before your winning cut, squeeze out a little more of the board. Near-total clears pay the top rung."
+      },
+      "baseOvertime": {
+        "title": "Base Overtime",
+        "body": "The map's fixed payout, scaled by your fence performance. Every map pays a flat base, so the bonuses on this screen are where the real earnings are.",
+        "tip": "Stay at or under par to keep the full base, then stack bonuses on top of it."
+      },
+      "threadLocks": {
+        "title": "Thread Locks",
+        "body": "You lock a ball by sealing it into its own small pocket of the board, cut off from everything else. Each locked ball pays its lock value, and tougher ball types pay more. Trapping several balls with a single cut multiplies the whole payout by the number caught: 2 at once pays double, 3 pays triple.",
+        "tip": "Lock a green money ball early: it triples what every later lock this map pays. Then herd balls close together and close one cut around the whole group."
+      },
+      "breakBonus": {
+        "title": "Demolition Bonus",
+        "body": "Overtime from smashing amber breakable blocks. Balls chip away at a breakable on contact until it shatters, and anything stacked on top falls with it.",
+        "tip": "Steer balls into breakables with your cuts. The black ball smashes them in half the hits."
+      },
+      "shipEarly": {
+        "title": "Ship Early",
+        "body": "A tempo bonus for meeting the win condition fast: +1h within 60 seconds, +2h within 40, +3h within 25. Only active play counts, menus and the push prompt don't.",
+        "tip": "Open with big, confident cuts instead of many small safe ones. Speed and precision are separate bonuses, so you can chase both."
+      },
+      "interest": {
+        "title": "Interest",
+        "body": "Paid by interest upgrades: at the end of each level a percentage of your total overtime is added on top, up to a per-map cap.",
+        "tip": "Interest compounds. The earlier you buy interest upgrades and the more overtime you bank, the more every level pays."
+      },
+      "pushBonus": {
+        "title": "Push Bonus",
+        "body": "The push-your-luck reward. After meeting the map's target you can keep cutting instead of banking, and every extra slice of the board pays bonus overtime.",
+        "tip": "Pushing is free money: if you fail mid-push you only lose the extra bonus, never your banked score."
+      },
+      "newHighscore": {
+        "title": "New Highscore",
+        "body": "You beat this map's previous record, so the whole payout is multiplied by x1.25. It applies after the per-map cap, so breaking a record always pays extra.",
+        "tip": "Records are kept per map. A strong upgrade build can beat your old scores map after map."
+      },
+      "totalBonus": {
+        "title": "Total Bonus",
+        "body": "All this level's bonuses added together: par, space, locks, demolition, tempo and push.",
+        "tip": "Bonuses fold under a per-map cap of twice the base payout, so spreading across several bonus types beats maxing out just one."
+      },
+      "overtimeEarned": {
+        "title": "Overtime Earned",
+        "body": "What this level paid in total: the scaled base plus all bonuses, capped at twice the map's base payout. A new highscore multiplies past the cap.",
+        "tip": "If you hit the cap often, chase the highscore multiplier: it is applied after the cap, so it always pays."
+      },
+      "totalOvertime": {
+        "title": "Total Overtime",
+        "body": "Your whole run's overtime so far. It is the currency you spend in the upgrade shop between levels, and what gets banked when the run ends.",
+        "tip": "Overtime invested in upgrades early multiplies later earnings, so spending usually beats hoarding."
+      }
+    }
   },
   "notFound": {
     "message": "Oops! Page not found",
@@ -298,6 +372,10 @@
     "lives_other": "{{count}} lives remaining",
     "scopeCreepValue": "+{{percent}}%",
     "scopeCreepTitle": "Scope creep: balls moving {{percent}}% faster"
+  },
+  "shipEarlyBar": {
+    "title": "Ship Early: clear the map before the bar runs out for bonus overtime",
+    "bonus": "+{{hours}}h"
   },
   "topBarDetails": {
     "levelStatusTitle": "Level {{level}} Status",
