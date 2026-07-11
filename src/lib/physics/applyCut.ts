@@ -29,7 +29,7 @@ import {
 } from "@/lib/regionOwnership";
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
-import { calculateScore } from "@/lib/scoring";
+import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 
@@ -255,6 +255,10 @@ export function applyCutFn(
     // visible twitch right as the push-your-luck modal mounted.
     game.pushMode = "prompt";
     game.levelClearedTime = performance.now();
+    // Ship Early: freeze the tempo clock at the first win moment, so time spent
+    // in the prompt or pushing is never taxed. Only reachable once per map
+    // (guarded by pushMode === "none").
+    game.clearedActiveSeconds = game.activePlaySeconds;
     callbacks.setPushMode("prompt");
     callbacks.setClearedPercent(percent);
     game.bestRemainingPercent = percent;
@@ -278,12 +282,17 @@ export function triggerLevelComplete(
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
 
-  // Fold lock + break bonuses in before the cap so a single map can't exceed
-  // the per-map ceiling (issue #43).
+  // Ship Early: the all-balls-locked path never opens the push prompt, so the
+  // tempo clock freezes here; banking after a prompt keeps the earlier value.
+  if (game.clearedActiveSeconds == null) game.clearedActiveSeconds = game.activePlaySeconds;
+  const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds);
+
+  // Fold lock + break + ship-early bonuses in before the cap so a single map
+  // can't exceed the per-map ceiling (issue #43).
   const { levelScore, breakdown } = calculateScore(
     game.wallCount, level.expectedCuts, percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
-      extraBonus: game.lockBonus + game.breakBonus,
+      extraBonus: game.lockBonus + game.breakBonus + shipEarlyBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
       overtimeCapBonus: activeModifiers.overtimeCapBonus,
     },
@@ -309,6 +318,7 @@ export function triggerLevelComplete(
       extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
       lockedBallsCount: game.lockedBallsCount,
       breakBonus: game.breakBonus,
+      shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
     });
     callbacks.startDissolve(() => {});
   }, lockDelay + LEVEL_CLEAR_SHIMMER_MS);

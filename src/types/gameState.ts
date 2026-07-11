@@ -11,6 +11,7 @@ import { Wall } from "@/lib/wallGeometry";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
+import { ScopeCreepConfig } from "@/lib/scopeCreep";
 
 export interface CanvasGameState {
   // ── Space model ────────────────────────────────────────────────────────
@@ -58,6 +59,14 @@ export interface CanvasGameState {
   accumulator: number;
   animationId: number;
   gameLoopFn: ((timestamp: number) => void) | null;
+  /** Active-play seconds this level (physics steps only; pause/prompt/menu excluded). */
+  activePlaySeconds: number;
+  /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
+  clearedActiveSeconds: number | null;
+  /** Current Scope Creep displacement multiplier (1 = no creep). */
+  creepFactor: number;
+  /** Scope Creep tuning, seeded from game-config.yml at init. */
+  creepConfig: ScopeCreepConfig;
   /** Cron Job: performance.now() of the last auto-freeze (0 = clock not yet started this map). */
   lastAutoFreezeAt: number;
 

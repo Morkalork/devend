@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   calculateScore,
   calculateSpaceBonus,
+  calculateShipEarlyBonus,
   getOvertimeCap,
   DEFAULT_SCORING_CONFIG,
 } from "@/lib/scoring";
@@ -108,6 +109,60 @@ describe("space bonus ladder rewards clearing more", () => {
     const big = calculateSpaceBonus(REQ * 1.55, REQ, 3, cfg);
     expect(big.bonus).toBe(0);
     expect(big.bonusRaw).toBe(3);
+  });
+});
+
+describe("ship early bonus ladder rewards fast clears", () => {
+  const cfg = DEFAULT_SCORING_CONFIG;
+  const at = (seconds: number | null | undefined) => calculateShipEarlyBonus(seconds, cfg);
+
+  it("pays the best rung whose time window was met", () => {
+    expect(at(10)).toBe(3);
+    expect(at(25)).toBe(3);    // boundary is inclusive
+    expect(at(25.01)).toBe(2);
+    expect(at(40)).toBe(2);
+    expect(at(40.5)).toBe(1);
+    expect(at(60)).toBe(1);
+  });
+
+  it("pays nothing past the last window or without a recorded clear time", () => {
+    expect(at(60.1)).toBe(0);
+    expect(at(300)).toBe(0);
+    expect(at(null)).toBe(0);
+    expect(at(undefined)).toBe(0);
+    expect(at(-5)).toBe(0);
+    expect(at(NaN)).toBe(0);
+  });
+
+  it("is monotonic non-increasing in time (slower never pays more)", () => {
+    let prev = Infinity;
+    for (const s of [0, 10, 25, 26, 40, 41, 60, 61, 120]) {
+      const b = at(s);
+      expect(b).toBeLessThanOrEqual(prev);
+      prev = b;
+    }
+  });
+
+  it("clamps to maxBonus with a hot config", () => {
+    const hot = {
+      scoring: {
+        ...cfg.scoring,
+        shipEarly: { maxBonus: 2, thresholds: [{ withinSeconds: 30, bonus: 99 }] },
+      },
+    };
+    expect(calculateShipEarlyBonus(10, hot)).toBe(2);
+  });
+
+  it("folds under the per-map cap like lock/push bonuses (#43)", () => {
+    const base = 40;
+    const cap = getOvertimeCap(base, HEADROOM); // 80
+    const shipEarly = calculateShipEarlyBonus(10, cfg); // 3
+    // Even riding a huge lock stack, the total clamps at the cap.
+    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 + shipEarly }).levelScore;
+    expect(capped).toBe(cap);
+    // A normal run counts it in full under the cap.
+    const normal = calculateScore(5, 5, 10, 30, base, { extraBonus: shipEarly }).levelScore;
+    expect(normal).toBe(base + 1 + shipEarly);
   });
 });
 

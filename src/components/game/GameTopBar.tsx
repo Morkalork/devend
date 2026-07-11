@@ -5,7 +5,7 @@
  */
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge } from 'lucide-react';
 import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
 import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
@@ -72,6 +72,8 @@ interface GameTopBarProps {
   spaceRequired: number;
   lockedBalls: number;
   threadLockRequired?: number;
+  /** Scope Creep speed boost in percent (0 = inactive, chip hidden). */
+  scopeCreepPercent?: number;
   ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
@@ -95,6 +97,7 @@ export function GameTopBar({
   spaceRequired,
   lockedBalls,
   threadLockRequired,
+  scopeCreepPercent = 0,
   ownedUpgrades,
   accentColor = '#00ff88',
   certificateProgress,
@@ -148,9 +151,11 @@ export function GameTopBar({
   const [spaceFlashKey,  setSpaceFlashKey]  = useState(0);
   const [livesFlashKey,  setLivesFlashKey]  = useState(0);
   const [locksFlashKey,  setLocksFlashKey]  = useState(0);
+  const [creepFlashKey,  setCreepFlashKey]  = useState(0);
   const prevSpaceRef = useRef(spaceRemaining);
   const prevLivesRef = useRef(lives);
   const prevLocksRef = useRef(lockedBalls);
+  const prevCreepRef = useRef(scopeCreepPercent);
   // ignore the ESLint warning — useCallback is just a stable reference here
   const flash = useCallback((set: React.Dispatch<React.SetStateAction<number>>) =>
     set(k => k + 1), []);
@@ -166,6 +171,11 @@ export function GameTopBar({
     if (lockedBalls > prevLocksRef.current) flash(setLocksFlashKey);
     prevLocksRef.current = lockedBalls;
   }, [lockedBalls, flash]);
+  useEffect(() => {
+    // Each Scope Creep surge pulses the chip so the escalation is felt.
+    if (scopeCreepPercent > prevCreepRef.current) flash(setCreepFlashKey);
+    prevCreepRef.current = scopeCreepPercent;
+  }, [scopeCreepPercent, flash]);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -362,6 +372,23 @@ export function GameTopBar({
             {lockReq > 0 ? `${lockedBalls}/${lockReq}` : lockedBalls}
           </span>
         </div>
+
+        {/* Scope Creep: appears once the anti-stall speed surge kicks in */}
+        {scopeCreepPercent > 0 && (
+          <div
+            className="flex items-center gap-1.5 min-w-0"
+            title={t('topBar.scopeCreepTitle', { percent: scopeCreepPercent })}
+          >
+            <Gauge className="w-4 h-4 flex-shrink-0" style={{ color: '#ff6b6b' }} />
+            <span
+              key={creepFlashKey}
+              className={`font-display text-sm font-bold tabular-nums${creepFlashKey > 0 ? ' animate-stat-flash' : ''}`}
+              style={{ color: '#ff6b6b', textShadow: '0 0 10px #ff6b6b88' }}
+            >
+              {t('topBar.scopeCreepValue', { percent: scopeCreepPercent })}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Highscore progress (#45): the Benchmarking upgrade reveals a second bar

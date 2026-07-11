@@ -230,6 +230,7 @@
     "threadLocks": "Bloqueos de hilo ({{count}})",
     "interest": "Interés",
     "pushBonus": "Bono de presión",
+    "shipEarly": "Entrega temprana ({{seconds}}s)",
     "newHighscore": "Nuevo récord",
     "totalBonus": "Bonificación total",
     "overtimeEarned": "Horas extra ganadas",
@@ -291,7 +292,9 @@
     "continues_one": "{{count}} Continuación guardada",
     "continues_other": "{{count}} Continuaciones guardadas",
     "lives_one": "{{count}} vida restante",
-    "lives_other": "{{count}} vidas restantes"
+    "lives_other": "{{count}} vidas restantes",
+    "scopeCreepValue": "+{{percent}}%",
+    "scopeCreepTitle": "Corrupción del alcance: bolas un {{percent}}% más rápidas"
   },
   "topBarDetails": {
     "levelStatusTitle": "Estado del nivel {{level}}",

@@ -13,6 +13,7 @@
 
 import { CanvasGameState } from "@/types/gameState";
 import { GrowingWall } from "@/types/game";
+import { creepFactor } from "@/lib/scopeCreep";
 import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
@@ -31,6 +32,8 @@ export interface GameLoopCallbacks {
   processWallBreaks?: () => void;
   /** Called when a black ball destroyed a mirror/mover this frame. */
   processDestroys?: () => void;
+  /** Called when Scope Creep escalates to a new step (percentBoost = +X% ball speed). */
+  onCreepStep?: (percentBoost: number) => void;
 }
 
 /**
@@ -180,6 +183,19 @@ export function createGameLoop(
     const _physStart = performance.now();
     while (game.accumulator >= PHYSICS_STEP) {
       _physSteps++;
+
+      // Time factor: tick the active-play clock (physics steps only, so pause,
+      // menus and the push prompt never count) and step Scope Creep off it.
+      // Death recovery is a forced pause, so it doesn't count either.
+      if (!game.isRecovering) {
+        game.activePlaySeconds += PHYSICS_STEP;
+        const f = creepFactor(game.activePlaySeconds, game.creepConfig);
+        if (f !== game.creepFactor) {
+          game.creepFactor = f;
+          callbacks.onCreepStep?.(Math.round((f - 1) * 100));
+        }
+      }
+
       // Snapshot positions before this step (used for render interpolation).
       // Mutate in-place to avoid allocating a new object every physics tick.
       for (const ball of game.balls) {

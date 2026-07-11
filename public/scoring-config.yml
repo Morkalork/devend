@@ -37,6 +37,25 @@ scoring:
       - extraPercent: 0.55   # +55% over required (near-total clears)
         bonus: 3
 
+  # Ship Early Bonus
+  # Ladder of ACTIVE-play seconds to first meet the win condition (the push
+  # prompt opening, or the last ball locking). Pauses, menus and the push
+  # prompt itself do not count, so push-your-luck time is never taxed. Note:
+  # if the threshold is crossed by destroying objects, the clock runs until
+  # the next cut confirms it (the existing win rule). Awards the best rung
+  # whose window was met, capped at maxBonus; folds under the per-map cap.
+  # The tempo counterpart to spaceOptimization: speed and precision are
+  # parallel, competing payoffs.
+  shipEarly:
+    maxBonus: 3
+    thresholds:
+      - withinSeconds: 25   # blazing clear
+        bonus: 3
+      - withinSeconds: 40
+        bonus: 2
+      - withinSeconds: 60
+        bonus: 1
+
   # Performance Multiplier
   # Scales base points based on fences vs par
   performanceMultiplier:

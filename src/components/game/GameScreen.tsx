@@ -167,6 +167,7 @@ export function GameScreen({
     spaceRemaining: 100,
     lockedBalls: 0,
     pushMode: "none",
+    creepPercent: 0,
     onBankAndContinue: undefined,
   });
 
@@ -194,6 +195,15 @@ export function GameScreen({
       activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus]);
 
   const totalLockedBalls = cumulativeLockedBalls + gameState.lockedBalls;
+
+  // Scope Creep tuning (game-config.yml snake_case -> ScopeCreepConfig).
+  // Memoized so GameCanvas's live-config effect only re-runs on real changes.
+  const scopeCreepConfig = useMemo(() => ({
+    graceSeconds: config.scope_creep.grace_seconds,
+    stepSeconds: config.scope_creep.step_seconds,
+    stepPercent: config.scope_creep.step_percent,
+    maxSteps: config.scope_creep.max_steps,
+  }), [config.scope_creep]);
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
@@ -277,6 +287,7 @@ export function GameScreen({
             spaceRequired={100 - level.sizeThreshold}
             lockedBalls={totalLockedBalls}
             threadLockRequired={level.threadLockRequired}
+            scopeCreepPercent={gameState.creepPercent}
             ownedUpgrades={ownedUpgrades}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
@@ -317,6 +328,7 @@ export function GameScreen({
             fenceSpeedPerLevel={config.fence.speed_per_level}
             lockWinThresholdPercent={config.lock.win_threshold_percent}
             lockMinRegionCells={config.lock.min_region_cells}
+            scopeCreep={scopeCreepConfig}
             regionColor={getRegionColor()}
             accentColor={accentColor}
             activeModifiers={activeModifiers}

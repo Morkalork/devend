@@ -65,6 +65,19 @@ lock:
   # instead of a ball bouncing forever just above the % threshold.
   min_region_cells: 0
 
+# Scope Creep
+# Anti-stall pressure: after grace_seconds of ACTIVE play (pauses, menus and
+# the push prompt do not count), ball speed surges step_percent every
+# step_seconds, up to max_steps surges. The first surge lands AT grace_seconds.
+# Players who plan and execute within the grace window never see it; waiting
+# out the clock for perfect alignment makes the board progressively hotter.
+# Set max_steps: 0 to disable the mechanic entirely.
+scope_creep:
+  grace_seconds: 45
+  step_seconds: 15
+  step_percent: 8
+  max_steps: 4
+
 # CRT Word Highlight Effect
 # Every interval_seconds, a random visible word in the background gets a highlight rectangle.
 crt_word_highlight:

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { contentText } from '@/i18n/content';
@@ -68,6 +68,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     interestGain = 0,
     pushBonus = 0,
     breakBonus = 0,
+    shipEarlyBonus = 0,
+    clearTimeSeconds = 0,
     beatHighscore = false,
     highscoreBonus = 0,
   } = scoreData;
@@ -76,6 +78,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const isSpaceDisabled = fencesOverPar >= 3;
   const hasLockBonus = lockBonus > 0;
   const hasBreakBonus = breakBonus > 0;
+  const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasInterest = interestGain > 0;
   const hasPushBonus = pushBonus > 0;
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
@@ -237,6 +240,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
+            {/* Ship Early Bonus: fast clears pay a tempo bonus (time factor) */}
+            {hasShipEarlyBonus && (
+              <div className="flex justify-between items-center py-2 border-b border-teal-500/30 bg-teal-500/10 rounded px-2">
+                <span className="text-teal-400 flex items-center gap-1">
+                  <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.shipEarly', { seconds: Math.round(clearTimeSeconds) })}
+                </span>
+                <span className="font-bold text-teal-400">+{shipEarlyBonus}h</span>
+              </div>
+            )}
+
             {/* Interest Gain */}
             {hasInterest && (
               <div className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
@@ -271,10 +285,10 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             )}
 
             {/* Total Bonus Summary */}
-            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0 || breakBonus > 0) && (
+            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0 || breakBonus > 0 || shipEarlyBonus > 0) && (
               <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
                 <span className="font-semibold text-foreground">{t('levelComplete.totalBonus')}</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus}h</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus}h</span>
               </div>
             )}
 

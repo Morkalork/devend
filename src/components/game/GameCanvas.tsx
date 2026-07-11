@@ -26,7 +26,7 @@ import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/rendering/renderFrame";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
-import { calculateScore, ensureScoringConfigLoaded } from "@/lib/scoring";
+import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
 import { TutorialStep } from "@/types/game";
@@ -81,6 +81,7 @@ import {
   getDevicePixelRatio,
 } from "@/lib/boardConstants";
 import { CanvasGameState } from "@/types/gameState";
+import { ScopeCreepConfig, DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
@@ -95,6 +96,8 @@ export interface GameStateInfo {
   spaceRemaining: number;
   lockedBalls: number;
   pushMode: "none" | "prompt" | "pushing";
+  /** Current Scope Creep speed boost in percent (0 = not yet active). */
+  creepPercent: number;
   onBankAndContinue?: () => void;
 }
 
@@ -124,6 +127,8 @@ interface GameCanvasProps {
   /** Lock rule (from game-config.yml `lock:`). */
   lockWinThresholdPercent?: number;
   lockMinRegionCells?: number;
+  /** Scope Creep tuning (from game-config.yml `scope_creep:`). */
+  scopeCreep?: ScopeCreepConfig;
   regionColor?: string;
   accentColor?: string;
   activeModifiers: GameModifiers;
@@ -180,6 +185,7 @@ export function GameCanvas({
   fenceSpeedPerLevel = 50,
   lockWinThresholdPercent = BALL_WON_REGION_THRESHOLD,
   lockMinRegionCells = 0,
+  scopeCreep,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
   activeModifiers,
@@ -218,6 +224,10 @@ export function GameCanvas({
     gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent;
     gameRef.current.lockMinRegionCells = lockMinRegionCells;
   }, [lockWinThresholdPercent, lockMinRegionCells]);
+  // Same live-config treatment for the Scope Creep tuning.
+  useEffect(() => {
+    if (scopeCreep) gameRef.current.creepConfig = scopeCreep;
+  }, [scopeCreep]);
 
   useEffect(() => {
     const game = gameRef.current;
@@ -254,6 +264,8 @@ export function GameCanvas({
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
   const [bonusPulseKey, setBonusPulseKey] = useState(0);
+  // Scope Creep: current speed boost in percent, stepped by onCreepStep (~4x/level).
+  const [creepPercent, setCreepPercent] = useState(0);
 
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -293,6 +305,10 @@ export function GameCanvas({
     accumulator: 0,
     animationId: 0,
     lastAutoFreezeAt: 0,
+    activePlaySeconds: 0,
+    clearedActiveSeconds: null as number | null,
+    creepFactor: 1,
+    creepConfig: DEFAULT_SCOPE_CREEP,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -582,6 +598,12 @@ export function GameCanvas({
       game.lastTime = 0;
       game.accumulator = 0;
       game.lastAutoFreezeAt = 0; // Cron Job: restart the auto-freeze clock each map
+      // Time factor: fresh active-play clock and Scope Creep state each map.
+      game.activePlaySeconds = 0;
+      game.clearedActiveSeconds = null;
+      game.creepFactor = 1;
+      game.creepConfig = scopeCreep ?? DEFAULT_SCOPE_CREEP;
+      setCreepPercent(0);
       game.wallCount = 0;
       clearWallImpacts();
       setCutCount(0);
@@ -716,6 +738,7 @@ export function GameCanvas({
           setRemainingPercent,
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
+      onCreepStep: setCreepPercent,
     };
     const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration, activeModifiers.freezeNoCooldown);
     game.gameLoopFn = gameLoop;
@@ -770,25 +793,32 @@ export function GameCanvas({
     startGameLoop(game);
     // Dev/playground freeze: play the shimmer, hold the drained frame, no overlay.
     if (freezeOnCompleteRef.current) return;
-    const { levelScore, breakdown } = calculateScore(
-      game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
-        scoreMultiplier: activeModifiers.scoreMultiplier,
-        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
-        overtimeCapBonus: activeModifiers.overtimeCapBonus,
-      },
-    );
     const areaAtPushStart = game.pushStartPercent;
     const areaCleared = Math.max(0, areaAtPushStart - game.bestRemainingPercent);
     const chunkSize = areaAtPushStart * 0.25;
     const pushBonus = chunkSize > 0
       ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
       : 0;
+    // Ship Early: the tempo clock froze when the prompt opened, so push time
+    // never counts against it.
+    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds);
+    // Fold lock + push + ship-early bonuses in before the cap (issue #43).
+    // Previously this site added lockBonus + pushBonus AFTER calculateScore,
+    // letting a banked push exceed the per-map ceiling every other path enforces.
+    const { levelScore, breakdown } = calculateScore(
+      game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
+        scoreMultiplier: activeModifiers.scoreMultiplier,
+        extraBonus: game.lockBonus + pushBonus + shipEarlyBonus,
+        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+        overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      },
+    );
 
     setTimeout(() => {
       onLevelCompleteRef.current({
         levelNumber, levelId: level.id, cutCount: game.wallCount,
         expectedCuts: level.expectedCuts, basePoints: level.points,
-        levelScore: levelScore + game.lockBonus + pushBonus,
+        levelScore,
         remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
         thresholdPercent: level.sizeThreshold, pushBonus,
         underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
@@ -796,6 +826,7 @@ export function GameCanvas({
         fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
         extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
         lockedBallsCount: game.lockedBallsCount,
+        shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
       });
       startDissolveRef.current?.(() => {});
     }, 150 + LEVEL_CLEAR_SHIMMER_MS);
@@ -808,10 +839,11 @@ export function GameCanvas({
         spaceRemaining: remainingPercent,
         lockedBalls: lockedBallsCount,
         pushMode,
+        creepPercent,
         onBankAndContinue: handleBankAndContinue,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

@@ -104,6 +104,35 @@ export function calculateSpaceBonus(
 }
 
 /**
+ * Calculate the Ship Early tempo bonus: a config-driven ladder that pays more
+ * overtime the faster the win condition was first met, measured in ACTIVE-play
+ * seconds (pauses, menus and the push prompt do not count). Awards the best
+ * rung whose time window was met, clamped at `maxBonus`; null/undefined means
+ * "no clear time recorded" and pays nothing. Mirrors calculateSpaceBonus so
+ * instinctive speed and tactical precision are parallel, competing payoffs.
+ */
+export function calculateShipEarlyBonus(
+  clearedActiveSeconds: number | null | undefined,
+  config: ScoringConfig,
+): number {
+  if (clearedActiveSeconds == null || !Number.isFinite(clearedActiveSeconds) || clearedActiveSeconds < 0) return 0;
+
+  const { maxBonus, thresholds } = config.scoring.shipEarly;
+  let bonus = 0;
+  for (const step of thresholds) {
+    if (clearedActiveSeconds <= step.withinSeconds) {
+      bonus = Math.max(bonus, step.bonus);
+    }
+  }
+  return Math.min(bonus, maxBonus);
+}
+
+/** Ship Early bonus from the preloaded config (see loadScoringConfig). */
+export function getShipEarlyBonus(clearedActiveSeconds: number | null | undefined): number {
+  return calculateShipEarlyBonus(clearedActiveSeconds, loadedConfig);
+}
+
+/**
  * Calculate complete score breakdown for a level completion.
  */
 export function calculateScoreBreakdown(
@@ -193,6 +222,14 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
         { extraPercent: 0.55, bonus: 3 },
       ],
     },
+    shipEarly: {
+      maxBonus: 3,
+      thresholds: [
+        { withinSeconds: 25, bonus: 3 },
+        { withinSeconds: 40, bonus: 2 },
+        { withinSeconds: 60, bonus: 1 },
+      ],
+    },
     performanceMultiplier: {
       underPar: 1.0,
       atPar: 1.0,
@@ -220,6 +257,7 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
             highscoreBonusMultiplier: parsed.scoring.highscoreBonusMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.highscoreBonusMultiplier,
             fenceEfficiency: { ...DEFAULT_SCORING_CONFIG.scoring.fenceEfficiency, ...parsed.scoring.fenceEfficiency },
             spaceOptimization: { ...DEFAULT_SCORING_CONFIG.scoring.spaceOptimization, ...parsed.scoring.spaceOptimization },
+            shipEarly: { ...DEFAULT_SCORING_CONFIG.scoring.shipEarly, ...parsed.scoring.shipEarly },
             performanceMultiplier: { ...DEFAULT_SCORING_CONFIG.scoring.performanceMultiplier, ...parsed.scoring.performanceMultiplier },
           },
         };

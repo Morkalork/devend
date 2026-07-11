@@ -233,6 +233,7 @@
     "interest": "Interest",
     "pushBonus": "Push Bonus",
     "breakBonus": "Demolition Bonus",
+    "shipEarly": "Ship Early ({{seconds}}s)",
     "newHighscore": "New Highscore",
     "totalBonus": "Total Bonus",
     "overtimeEarned": "Overtime Earned",
@@ -294,7 +295,9 @@
     "continues_one": "{{count}} Continue banked",
     "continues_other": "{{count}} Continues banked",
     "lives_one": "{{count}} life remaining",
-    "lives_other": "{{count}} lives remaining"
+    "lives_other": "{{count}} lives remaining",
+    "scopeCreepValue": "+{{percent}}%",
+    "scopeCreepTitle": "Scope creep: balls moving {{percent}}% faster"
   },
   "topBarDetails": {
     "levelStatusTitle": "Level {{level}} Status",

@@ -243,6 +243,10 @@ export interface LevelScoreData {
   lockedBallsCount?: number;
   // Bonus from smashing breakable objects (issue #38)
   breakBonus?: number;
+  // Ship Early tempo bonus (folded under the cap like lock/push/break)
+  shipEarlyBonus?: number;
+  // Active-play seconds to first meet the win condition (drives the row label)
+  clearTimeSeconds?: number;
   // Interest gain from Venture Capital
   interestGain?: number;
   // Map highscore (#45): set when this map's score beat its previous highscore.

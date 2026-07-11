@@ -230,6 +230,7 @@
     "threadLocks": "Trådlås ({{count}})",
     "interest": "Ränta",
     "pushBonus": "Pressbonus",
+    "shipEarly": "Tidig leverans ({{seconds}}s)",
     "newHighscore": "Nytt rekord",
     "totalBonus": "Total bonus",
     "overtimeEarned": "Intjänad övertid",
@@ -291,7 +292,9 @@
     "continues_one": "{{count}} Fortsättning sparad",
     "continues_other": "{{count}} Fortsättningar sparade",
     "lives_one": "{{count}} liv kvar",
-    "lives_other": "{{count}} liv kvar"
+    "lives_other": "{{count}} liv kvar",
+    "scopeCreepValue": "+{{percent}}%",
+    "scopeCreepTitle": "Scope creep: bollarna rör sig {{percent}}% snabbare"
   },
   "topBarDetails": {
     "levelStatusTitle": "Status för nivå {{level}}",

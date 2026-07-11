@@ -33,6 +33,12 @@ export interface GameConfig {
     win_threshold_percent: number; // region <= this % of the denominator -> lock
     min_region_cells: number;      // region <= this many cells always locks (0 = off)
   };
+  scope_creep: {
+    grace_seconds: number; // active-play seconds before the first speed surge
+    step_seconds: number;  // seconds between surges after the grace window
+    step_percent: number;  // ball speed added per surge (%)
+    max_steps: number;     // surge cap (0 disables the mechanic)
+  };
   crt_word_highlight: {
     interval_min_seconds: number; // min delay between highlights appearing
     interval_max_seconds: number; // max delay between highlights appearing
@@ -73,6 +79,12 @@ const defaultConfig: GameConfig = {
     win_threshold_percent: 10,
     min_region_cells: 0,
   },
+  scope_creep: {
+    grace_seconds: 45,
+    step_seconds: 15,
+    step_percent: 8,
+    max_steps: 4,
+  },
   crt_word_highlight: {
     interval_min_seconds: 8,
     interval_max_seconds: 14,
@@ -103,6 +115,7 @@ export function useGameConfig() {
           fence: { ...defaultConfig.fence, ...parsed?.fence },
           gameplay: { ...defaultConfig.gameplay, ...parsed?.gameplay },
           lock: { ...defaultConfig.lock, ...parsed?.lock },
+          scope_creep: { ...defaultConfig.scope_creep, ...parsed?.scope_creep },
           crt_word_highlight: { ...defaultConfig.crt_word_highlight, ...parsed?.crt_word_highlight },
         });
       })

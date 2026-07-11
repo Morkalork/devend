@@ -10,6 +10,11 @@ export interface SpaceThreshold {
   bonus: number;
 }
 
+export interface ShipEarlyThreshold {
+  withinSeconds: number;
+  bonus: number;
+}
+
 export interface ScoringConfig {
   scoring: {
     // Per-level overtime cap = round(basePoints × overtimeCapHeadroom).
@@ -27,6 +32,13 @@ export interface ScoringConfig {
     spaceOptimization: {
       maxBonus: number;
       thresholds: SpaceThreshold[];
+    };
+    // Ship Early tempo bonus: ladder of active-play seconds to first meet the
+    // win condition. The clock stops when the push prompt opens (or the last
+    // ball locks), so push-your-luck time is never taxed. Folds under the cap.
+    shipEarly: {
+      maxBonus: number;
+      thresholds: ShipEarlyThreshold[];
     };
     performanceMultiplier: {
       underPar: number;
