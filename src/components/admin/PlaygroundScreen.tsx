@@ -66,6 +66,7 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   freeCheapestOffer:                { label: 'Free Cheapest Offer',    kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Company Card capstone: >0 = the cheapest shop offer is free' },
   wallShieldsPerMap:                { label: 'Fence Shields/Map',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Second Wind capstone: fence hits absorbed per map without losing a life' },
   fenceGraceMs:                     { label: 'Fence Grace (ms)',       kind: 'additive',       step: 250,  min: 0,    defaultValue: 0,    description: 'Ghost Protocol capstone: growing fences ignore ball hits for their first N ms' },
+  shipEarlySecondsPerBall:          { label: 'Ship Early +s/Ball',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Deadline Extension: extra seconds per ball added to every Ship Early window' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

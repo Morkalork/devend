@@ -62,6 +62,9 @@ export interface GameModifiers {
   // Additive (sum) — Ghost Protocol capstone: growing fences ignore ball hits
   // during their first N milliseconds
   fenceGraceMs: number;
+  // Additive (sum) — Deadline Extension: extra seconds PER BALL added to every
+  // Ship Early window (2 = each window gains 2s x the map's ball count)
+  shipEarlySecondsPerBall: number;
 
   // Multiplicative — Tech Evangelist: scales the space-optimization bonus
   spaceBonusMultiplier: number;
@@ -173,6 +176,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   freeCheapestOffer: 0,
   wallShieldsPerMap: 0,
   fenceGraceMs: 0,
+  shipEarlySecondsPerBall: 0,
   spaceBonusMultiplier: 1,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,

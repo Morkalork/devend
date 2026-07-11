@@ -117,14 +117,17 @@ export function calculateShipEarlyBonus(
   clearedActiveSeconds: number | null | undefined,
   ballCount: number,
   config: ScoringConfig,
+  extraSecondsPerBall: number = 0,
 ): number {
   if (clearedActiveSeconds == null || !Number.isFinite(clearedActiveSeconds) || clearedActiveSeconds < 0) return 0;
   const balls = Number.isFinite(ballCount) && ballCount > 0 ? ballCount : 1;
+  // Deadline Extension: extra per-ball seconds added to every window.
+  const extra = Number.isFinite(extraSecondsPerBall) && extraSecondsPerBall > 0 ? extraSecondsPerBall : 0;
 
   const { maxBonus, thresholds } = config.scoring.shipEarly;
   let bonus = 0;
   for (const step of thresholds) {
-    if (clearedActiveSeconds <= step.withinSecondsPerBall * balls) {
+    if (clearedActiveSeconds <= (step.withinSecondsPerBall + extra) * balls) {
       bonus = Math.max(bonus, step.bonus);
     }
   }
@@ -132,8 +135,12 @@ export function calculateShipEarlyBonus(
 }
 
 /** Ship Early bonus from the preloaded config (see loadScoringConfig). */
-export function getShipEarlyBonus(clearedActiveSeconds: number | null | undefined, ballCount: number): number {
-  return calculateShipEarlyBonus(clearedActiveSeconds, ballCount, loadedConfig);
+export function getShipEarlyBonus(
+  clearedActiveSeconds: number | null | undefined,
+  ballCount: number,
+  extraSecondsPerBall: number = 0,
+): number {
+  return calculateShipEarlyBonus(clearedActiveSeconds, ballCount, loadedConfig, extraSecondsPerBall);
 }
 
 /** The Ship Early ladder from the preloaded config (drives the countdown bar). */

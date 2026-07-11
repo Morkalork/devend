@@ -303,6 +303,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `freeCheapestOffer` | `0` | `> 0` makes the cheapest unowned offer in every shop free (Company Card capstone). | `1` |
 | `wallShieldsPerMap` | `0` | Fence-hit shields granted fresh at every map start: a shielded hit breaks the fence but costs no life (Second Wind capstone). | `1` |
 | `fenceGraceMs` | `0` | Growing fences ignore ball hits during their first N milliseconds (Ghost Protocol capstone). Mover collisions still hurt. | `1500` |
+| `shipEarlySecondsPerBall` | `0` | Extra seconds PER BALL added to every Ship Early bonus window (Deadline Extension). With `2`, a 4-ball map's windows each gain 8s. | `2` |
 
 ---
 

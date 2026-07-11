@@ -21,6 +21,8 @@ interface ShipEarlyBarProps {
   seconds: number;
   /** Balls spawned on this map: the windows are per ball (15s/ball etc.). */
   ballCount: number;
+  /** Deadline Extension: extra seconds per ball added to every window. */
+  extraSecondsPerBall?: number;
   /** False hides the bar (win condition met, prompt open). */
   visible: boolean;
 }
@@ -32,15 +34,18 @@ const BONUS_COLORS: Record<number, string> = {
   1: '#ffb020',
 };
 
-export function ShipEarlyBar({ seconds, ballCount, visible }: ShipEarlyBarProps) {
+export function ShipEarlyBar({ seconds, ballCount, extraSecondsPerBall = 0, visible }: ShipEarlyBarProps) {
   const { t } = useTranslation();
   const thresholds = getShipEarlyThresholds();
   if (!visible || thresholds.length === 0) return null;
 
-  // Windows scale with the map's workload: withinSecondsPerBall x ball count.
+  // Windows scale with the map's workload: (withinSecondsPerBall + Deadline
+  // Extension) x ball count.
   const balls = ballCount > 0 ? ballCount : 1;
-  const maxWindow = Math.max(...thresholds.map(s => s.withinSecondsPerBall)) * balls;
-  const bonus = getShipEarlyBonus(seconds, balls);
+  const extra = extraSecondsPerBall > 0 ? extraSecondsPerBall : 0;
+  const windowFor = (perBall: number) => (perBall + extra) * balls;
+  const maxWindow = Math.max(...thresholds.map(s => windowFor(s.withinSecondsPerBall)));
+  const bonus = getShipEarlyBonus(seconds, balls, extra);
   // Every window passed: nothing left to chase, get out of the way.
   if (bonus <= 0 || seconds >= maxWindow) return null;
 
@@ -64,13 +69,12 @@ export function ShipEarlyBar({ seconds, ballCount, visible }: ShipEarlyBarProps)
               transition: 'width 1s linear, background-color 0.3s',
             }}
           />
-          {/* Divider ticks where the payout steps down (per-ball rungs scale
-              with the map, so the tick POSITIONS stay proportional). */}
-          {thresholds.filter(s => s.withinSecondsPerBall * balls < maxWindow).map(s => (
+          {/* Divider ticks where the payout steps down. */}
+          {thresholds.filter(s => windowFor(s.withinSecondsPerBall) < maxWindow).map(s => (
             <div
               key={s.withinSecondsPerBall}
               className="absolute top-0 h-full w-px"
-              style={{ left: `${(1 - (s.withinSecondsPerBall * balls) / maxWindow) * 100}%`, background: 'rgba(255,255,255,0.35)' }}
+              style={{ left: `${(1 - windowFor(s.withinSecondsPerBall) / maxWindow) * 100}%`, background: 'rgba(255,255,255,0.35)' }}
             />
           ))}
         </div>

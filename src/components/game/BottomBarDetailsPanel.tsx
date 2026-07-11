@@ -315,6 +315,16 @@ export function BottomBarDetailsPanel({
           : t('bottomBarDetails.fenceGraceInactive'),
     },
     {
+      label: t('bottomBarDetails.shipEarlyWindow'),
+      value: m.shipEarlySecondsPerBall > 0 ? t('bottomBarDetails.shipEarlyWindowValue', { seconds: m.shipEarlySecondsPerBall }) : t('bottomBarDetails.off'),
+      changed: m.shipEarlySecondsPerBall !== 0,
+      keys: ['shipEarlySecondsPerBall'],
+      description:
+        m.shipEarlySecondsPerBall > 0
+          ? t('bottomBarDetails.shipEarlyWindowActive', { seconds: m.shipEarlySecondsPerBall })
+          : t('bottomBarDetails.shipEarlyWindowInactive'),
+    },
+    {
       label: t('bottomBarDetails.extraShopSlots'),
       value: bonus(m.extraShopItems),
       changed: m.extraShopItems !== 0,

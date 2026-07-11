@@ -37,6 +37,7 @@ import {
   Infinity as InfinityIcon,
   Dices,
   Megaphone,
+  Timer,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -73,6 +74,7 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   infinity: InfinityIcon,
   dices: Dices,
   megaphone: Megaphone,
+  timer: Timer,
 };
 
 /**

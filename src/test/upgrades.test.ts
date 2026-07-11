@@ -43,6 +43,7 @@ const EXPECTED_ROOTS = [
   "technical_debt_senior",
   "feature_freeze_junior",
   "severance_package_junior",
+  "deadline_extension_junior",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.

@@ -568,6 +568,46 @@ upgrades:
 
 
   # ===============================
+  # DEADLINE EXTENSION (Ship Early window extender)
+  # Buys time on the Ship Early countdown: each tier adds +2 seconds PER BALL
+  # to every bonus window, so slower tacticians can still chase the tempo
+  # payout. Available once the time factor has had a few maps to teach itself.
+  # ===============================
+
+  - id: deadline_extension_junior
+    name: Deadline Extension
+    tier: Junior
+    description: Every Ship Early bonus window lasts 2 seconds longer per ball on the map.
+    unlockLevel: 10
+    icon: timer
+    tags: [tempo]
+    modifiers:
+      shipEarlySecondsPerBall: 2
+
+  - id: deadline_extension_senior
+    name: Deadline Extension
+    tier: Senior
+    description: Ship Early windows now last 4 seconds longer per ball.
+    unlockLevel: 13
+    prerequisites:
+      - deadline_extension_junior
+    tags: [tempo]
+    modifiers:
+      shipEarlySecondsPerBall: 2
+
+  - id: deadline_extension_principal
+    name: Deadline Extension
+    tier: Principal
+    description: Ship Early windows now last 6 seconds longer per ball.
+    unlockLevel: 16
+    prerequisites:
+      - deadline_extension_senior
+    tags: [tempo]
+    modifiers:
+      shipEarlySecondsPerBall: 2
+
+
+  # ===============================
   # RISK APPETITE & TECH EVANGELIST (Risk payoffs)
   # The greed line: bigger push-your-luck chunks, bigger space-clear bonuses.
   # ===============================

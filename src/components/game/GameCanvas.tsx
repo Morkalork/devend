@@ -812,7 +812,7 @@ export function GameCanvas({
       : 0;
     // Ship Early: the tempo clock froze when the prompt opened, so push time
     // never counts against it.
-    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length);
+    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall);
     // Fold lock + push + ship-early bonuses in before the cap (issue #43).
     // Previously this site added lockBonus + pushBonus AFTER calculateScore,
     // letting a banked push exceed the per-map ceiling every other path enforces.

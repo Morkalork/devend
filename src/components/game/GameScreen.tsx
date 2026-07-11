@@ -356,6 +356,7 @@ export function GameScreen({
             <ShipEarlyBar
               seconds={gameState.activeSeconds}
               ballCount={gameState.ballCount}
+              extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
               visible={gameState.pushMode === 'none' && !mapComplete}
             />
           }

@@ -147,6 +147,20 @@ describe("ship early bonus ladder rewards fast clears", () => {
     expect(at(NaN)).toBe(0);
   });
 
+  it("Deadline Extension widens every window by its per-ball seconds", () => {
+    // +2s/ball: 1-ball windows become 8/12/17.
+    expect(calculateShipEarlyBonus(8, 1, cfg, 2)).toBe(3);
+    expect(calculateShipEarlyBonus(8.01, 1, cfg, 2)).toBe(2);
+    expect(calculateShipEarlyBonus(17, 1, cfg, 2)).toBe(1);
+    expect(calculateShipEarlyBonus(17.1, 1, cfg, 2)).toBe(0);
+    // Scales with ball count: 4 balls at +6s/ball -> last window 84s.
+    expect(calculateShipEarlyBonus(84, 4, cfg, 6)).toBe(1);
+    expect(calculateShipEarlyBonus(84.1, 4, cfg, 6)).toBe(0);
+    // Garbage extension is ignored.
+    expect(calculateShipEarlyBonus(15, 1, cfg, NaN)).toBe(1);
+    expect(calculateShipEarlyBonus(15.1, 1, cfg, -3)).toBe(0);
+  });
+
   it("guards against a bad ball count (treated as 1 ball)", () => {
     expect(at(6, 0)).toBe(3);
     expect(at(6, NaN)).toBe(3);
