@@ -100,6 +100,8 @@ export interface GameStateInfo {
   creepPercent: number;
   /** Whole active-play seconds this map (1Hz; drives the Ship Early bar). */
   activeSeconds: number;
+  /** Balls spawned on this map (scales the Ship Early windows). */
+  ballCount: number;
   onBankAndContinue?: () => void;
 }
 
@@ -270,6 +272,8 @@ export function GameCanvas({
   const [creepPercent, setCreepPercent] = useState(0);
   // Active-play clock mirrored to React at 1Hz (Ship Early countdown bar).
   const [activeSeconds, setActiveSeconds] = useState(0);
+  // Balls spawned this map; scales the Ship Early windows (15s per ball).
+  const [ballCount, setBallCount] = useState(1);
 
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -609,6 +613,7 @@ export function GameCanvas({
       game.creepConfig = scopeCreep ?? DEFAULT_SCOPE_CREEP;
       setCreepPercent(0);
       setActiveSeconds(0);
+      setBallCount(game.balls.length || 1);
       game.wallCount = 0;
       clearWallImpacts();
       setCutCount(0);
@@ -807,7 +812,7 @@ export function GameCanvas({
       : 0;
     // Ship Early: the tempo clock froze when the prompt opened, so push time
     // never counts against it.
-    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds);
+    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length);
     // Fold lock + push + ship-early bonuses in before the cap (issue #43).
     // Previously this site added lockBonus + pushBonus AFTER calculateScore,
     // letting a banked push exceed the per-map ceiling every other path enforces.
@@ -847,10 +852,11 @@ export function GameCanvas({
         pushMode,
         creepPercent,
         activeSeconds,
+        ballCount,
         onBankAndContinue: handleBankAndContinue,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

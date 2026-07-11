@@ -114,19 +114,32 @@ describe("space bonus ladder rewards clearing more", () => {
 
 describe("ship early bonus ladder rewards fast clears", () => {
   const cfg = DEFAULT_SCORING_CONFIG;
-  const at = (seconds: number | null | undefined) => calculateShipEarlyBonus(seconds, cfg);
+  // Default per-ball ladder: 6s -> +3, 10s -> +2, 15s -> +1 (per ball).
+  const at = (seconds: number | null | undefined, balls = 1) => calculateShipEarlyBonus(seconds, balls, cfg);
 
-  it("pays the best rung whose time window was met", () => {
-    expect(at(10)).toBe(3);
-    expect(at(25)).toBe(3);    // boundary is inclusive
-    expect(at(25.01)).toBe(2);
-    expect(at(40)).toBe(2);
-    expect(at(40.5)).toBe(1);
-    expect(at(60)).toBe(1);
+  it("pays the best rung whose per-ball window was met (1 ball)", () => {
+    expect(at(3)).toBe(3);
+    expect(at(6)).toBe(3);     // boundary is inclusive
+    expect(at(6.01)).toBe(2);
+    expect(at(10)).toBe(2);
+    expect(at(10.5)).toBe(1);
+    expect(at(15)).toBe(1);
+  });
+
+  it("scales the windows with the map's ball count (15s per ball)", () => {
+    // A 4-ball map: 24s -> +3, 40s -> +2, 60s -> +1.
+    expect(at(24, 4)).toBe(3);
+    expect(at(24.01, 4)).toBe(2);
+    expect(at(40, 4)).toBe(2);
+    expect(at(60, 4)).toBe(1);
+    expect(at(60.1, 4)).toBe(0);
+    // A 2-ball map halves that: 30s is the last window.
+    expect(at(30, 2)).toBe(1);
+    expect(at(30.1, 2)).toBe(0);
   });
 
   it("pays nothing past the last window or without a recorded clear time", () => {
-    expect(at(60.1)).toBe(0);
+    expect(at(15.1)).toBe(0);
     expect(at(300)).toBe(0);
     expect(at(null)).toBe(0);
     expect(at(undefined)).toBe(0);
@@ -134,9 +147,15 @@ describe("ship early bonus ladder rewards fast clears", () => {
     expect(at(NaN)).toBe(0);
   });
 
+  it("guards against a bad ball count (treated as 1 ball)", () => {
+    expect(at(6, 0)).toBe(3);
+    expect(at(6, NaN)).toBe(3);
+    expect(at(15.1, 0)).toBe(0);
+  });
+
   it("is monotonic non-increasing in time (slower never pays more)", () => {
     let prev = Infinity;
-    for (const s of [0, 10, 25, 26, 40, 41, 60, 61, 120]) {
+    for (const s of [0, 3, 6, 7, 10, 11, 15, 16, 60]) {
       const b = at(s);
       expect(b).toBeLessThanOrEqual(prev);
       prev = b;
@@ -147,16 +166,16 @@ describe("ship early bonus ladder rewards fast clears", () => {
     const hot = {
       scoring: {
         ...cfg.scoring,
-        shipEarly: { maxBonus: 2, thresholds: [{ withinSeconds: 30, bonus: 99 }] },
+        shipEarly: { maxBonus: 2, thresholds: [{ withinSecondsPerBall: 30, bonus: 99 }] },
       },
     };
-    expect(calculateShipEarlyBonus(10, hot)).toBe(2);
+    expect(calculateShipEarlyBonus(10, 1, hot)).toBe(2);
   });
 
   it("folds under the per-map cap like lock/push bonuses (#43)", () => {
     const base = 40;
     const cap = getOvertimeCap(base, HEADROOM); // 80
-    const shipEarly = calculateShipEarlyBonus(10, cfg); // 3
+    const shipEarly = calculateShipEarlyBonus(5, 1, cfg); // 3
     // Even riding a huge lock stack, the total clamps at the cap.
     const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 + shipEarly }).levelScore;
     expect(capped).toBe(cap);

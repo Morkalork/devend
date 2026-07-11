@@ -106,21 +106,25 @@ export function calculateSpaceBonus(
 /**
  * Calculate the Ship Early tempo bonus: a config-driven ladder that pays more
  * overtime the faster the win condition was first met, measured in ACTIVE-play
- * seconds (pauses, menus and the push prompt do not count). Awards the best
- * rung whose time window was met, clamped at `maxBonus`; null/undefined means
- * "no clear time recorded" and pays nothing. Mirrors calculateSpaceBonus so
- * instinctive speed and tactical precision are parallel, competing payoffs.
+ * seconds (pauses, menus and the push prompt do not count). Windows are PER
+ * BALL, so a busy map earns proportionally more time than a one-ball map.
+ * Awards the best rung whose window was met, clamped at `maxBonus`;
+ * null/undefined means "no clear time recorded" and pays nothing. Mirrors
+ * calculateSpaceBonus so instinctive speed and tactical precision are
+ * parallel, competing payoffs.
  */
 export function calculateShipEarlyBonus(
   clearedActiveSeconds: number | null | undefined,
+  ballCount: number,
   config: ScoringConfig,
 ): number {
   if (clearedActiveSeconds == null || !Number.isFinite(clearedActiveSeconds) || clearedActiveSeconds < 0) return 0;
+  const balls = Number.isFinite(ballCount) && ballCount > 0 ? ballCount : 1;
 
   const { maxBonus, thresholds } = config.scoring.shipEarly;
   let bonus = 0;
   for (const step of thresholds) {
-    if (clearedActiveSeconds <= step.withinSeconds) {
+    if (clearedActiveSeconds <= step.withinSecondsPerBall * balls) {
       bonus = Math.max(bonus, step.bonus);
     }
   }
@@ -128,8 +132,8 @@ export function calculateShipEarlyBonus(
 }
 
 /** Ship Early bonus from the preloaded config (see loadScoringConfig). */
-export function getShipEarlyBonus(clearedActiveSeconds: number | null | undefined): number {
-  return calculateShipEarlyBonus(clearedActiveSeconds, loadedConfig);
+export function getShipEarlyBonus(clearedActiveSeconds: number | null | undefined, ballCount: number): number {
+  return calculateShipEarlyBonus(clearedActiveSeconds, ballCount, loadedConfig);
 }
 
 /** The Ship Early ladder from the preloaded config (drives the countdown bar). */
@@ -230,9 +234,9 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     shipEarly: {
       maxBonus: 3,
       thresholds: [
-        { withinSeconds: 25, bonus: 3 },
-        { withinSeconds: 40, bonus: 2 },
-        { withinSeconds: 60, bonus: 1 },
+        { withinSecondsPerBall: 6, bonus: 3 },
+        { withinSecondsPerBall: 10, bonus: 2 },
+        { withinSecondsPerBall: 15, bonus: 1 },
       ],
     },
     performanceMultiplier: {

@@ -11,7 +11,8 @@ export interface SpaceThreshold {
 }
 
 export interface ShipEarlyThreshold {
-  withinSeconds: number;
+  /** Window in ACTIVE-play seconds PER BALL (a 4-ball map gets 4x this). */
+  withinSecondsPerBall: number;
   bonus: number;
 }
 
@@ -34,8 +35,10 @@ export interface ScoringConfig {
       thresholds: SpaceThreshold[];
     };
     // Ship Early tempo bonus: ladder of active-play seconds to first meet the
-    // win condition. The clock stops when the push prompt opens (or the last
-    // ball locks), so push-your-luck time is never taxed. Folds under the cap.
+    // win condition, scaled by the map's ball count (windows are per ball, so
+    // busy maps get proportionally more time). The clock stops when the push
+    // prompt opens (or the last ball locks), so push-your-luck time is never
+    // taxed. Folds under the cap.
     shipEarly: {
       maxBonus: number;
       thresholds: ShipEarlyThreshold[];

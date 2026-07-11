@@ -4,7 +4,8 @@
  * column would sit underneath the fixed bar and be covered by it).
  *
  * Drains as time passes across the ladder's full window (scoring-config.yml
- * shipEarly), with divider ticks where the payout steps down and a value chip
+ * shipEarly; per-ball windows, so busy maps get proportionally more time),
+ * with divider ticks where the payout steps down and a value chip
  * showing the bonus still attainable. Colour cools as the bonus shrinks. It
  * hides the moment the win condition is met (push prompt open) so it never
  * nags during push-your-luck, and once every window has passed (by then the
@@ -18,6 +19,8 @@ import { getShipEarlyThresholds, getShipEarlyBonus } from '@/lib/scoring';
 interface ShipEarlyBarProps {
   /** Whole active-play seconds elapsed this map (1Hz from the loop). */
   seconds: number;
+  /** Balls spawned on this map: the windows are per ball (15s/ball etc.). */
+  ballCount: number;
   /** False hides the bar (win condition met, prompt open). */
   visible: boolean;
 }
@@ -29,13 +32,15 @@ const BONUS_COLORS: Record<number, string> = {
   1: '#ffb020',
 };
 
-export function ShipEarlyBar({ seconds, visible }: ShipEarlyBarProps) {
+export function ShipEarlyBar({ seconds, ballCount, visible }: ShipEarlyBarProps) {
   const { t } = useTranslation();
   const thresholds = getShipEarlyThresholds();
   if (!visible || thresholds.length === 0) return null;
 
-  const maxWindow = Math.max(...thresholds.map(s => s.withinSeconds));
-  const bonus = getShipEarlyBonus(seconds);
+  // Windows scale with the map's workload: withinSecondsPerBall x ball count.
+  const balls = ballCount > 0 ? ballCount : 1;
+  const maxWindow = Math.max(...thresholds.map(s => s.withinSecondsPerBall)) * balls;
+  const bonus = getShipEarlyBonus(seconds, balls);
   // Every window passed: nothing left to chase, get out of the way.
   if (bonus <= 0 || seconds >= maxWindow) return null;
 
@@ -59,12 +64,13 @@ export function ShipEarlyBar({ seconds, visible }: ShipEarlyBarProps) {
               transition: 'width 1s linear, background-color 0.3s',
             }}
           />
-          {/* Divider ticks where the payout steps down (e.g. 25s and 40s of 60). */}
-          {thresholds.filter(s => s.withinSeconds < maxWindow).map(s => (
+          {/* Divider ticks where the payout steps down (per-ball rungs scale
+              with the map, so the tick POSITIONS stay proportional). */}
+          {thresholds.filter(s => s.withinSecondsPerBall * balls < maxWindow).map(s => (
             <div
-              key={s.withinSeconds}
+              key={s.withinSecondsPerBall}
               className="absolute top-0 h-full w-px"
-              style={{ left: `${(1 - s.withinSeconds / maxWindow) * 100}%`, background: 'rgba(255,255,255,0.35)' }}
+              style={{ left: `${(1 - (s.withinSecondsPerBall * balls) / maxWindow) * 100}%`, background: 'rgba(255,255,255,0.35)' }}
             />
           ))}
         </div>

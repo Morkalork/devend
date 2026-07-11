@@ -170,6 +170,7 @@ export function GameScreen({
     pushMode: "none",
     creepPercent: 0,
     activeSeconds: 0,
+    ballCount: 1,
     onBankAndContinue: undefined,
   });
 
@@ -354,6 +355,7 @@ export function GameScreen({
           topSlot={
             <ShipEarlyBar
               seconds={gameState.activeSeconds}
+              ballCount={gameState.ballCount}
               visible={gameState.pushMode === 'none' && !mapComplete}
             />
           }

@@ -41,7 +41,7 @@ export function handleGameOverFn(
       : 0;
     // Ship Early: the threshold was met before the push began, so the earned
     // tempo bonus survives a failed push (pushing is never taxed).
-    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds);
+    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length);
     // Fold lock + push + ship-early bonuses in before the cap (issue #43).
     const { levelScore, breakdown } = calculateScore(
       game.wallCount, level.expectedCuts, pushStartPercent, level.sizeThreshold, level.points, {
@@ -102,7 +102,7 @@ export function handlePushFailedFn(
     ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
     : 0;
   // Ship Early: threshold met before the push, so the bonus survives the fail.
-  const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds);
+  const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length);
   // Fold lock + push + ship-early bonuses in before the cap (issue #43).
   const { levelScore, breakdown } = calculateScore(
     game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent, level.sizeThreshold, level.points, {
