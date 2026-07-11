@@ -18,11 +18,14 @@ interface GameBottomBarProps {
   tagCounts?: Map<string, number>;
   /** Owned upgrades of a tag needed to activate its set bonus. */
   tagSetThreshold?: number;
+  /** Rendered above the stats inside this fixed wrapper (Ship Early bar), so
+   *  it stacks with the bar instead of being covered by it. */
+  topSlot?: React.ReactNode;
   onExpand?: () => void;
 }
 
 export const GameBottomBar = React.forwardRef<HTMLDivElement, GameBottomBarProps>(
-function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCounts, tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD, onExpand }, ref) {
+function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCounts, tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD, topSlot, onExpand }, ref) {
   const { t } = useTranslation();
   const swipeStartYRef = useRef<number | null>(null);
 
@@ -75,6 +78,7 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCount
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {topSlot}
       <div
         className="mx-auto max-w-4xl px-3 py-2"
         style={{

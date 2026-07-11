@@ -342,20 +342,21 @@ export function GameScreen({
           />
         </div>
 
-        {/* Ship Early countdown: drains across the bonus windows, hides once
-            the win condition is met or every window has passed */}
-        <ShipEarlyBar
-          seconds={gameState.activeSeconds}
-          visible={gameState.pushMode === 'none' && !mapComplete}
-        />
-
-        {/* Stats Panel at bottom */}
+        {/* Stats Panel at bottom. The Ship Early countdown rides in its fixed
+            wrapper as the top row (the bar is position:fixed, so a sibling in
+            the flex column would be covered by it). */}
         <GameBottomBar
           activeModifiers={activeModifiers}
           accentColor={accentColor}
           lockedBalls={totalLockedBalls}
           tagCounts={tagCounts}
           tagSetThreshold={tagSetThreshold}
+          topSlot={
+            <ShipEarlyBar
+              seconds={gameState.activeSeconds}
+              visible={gameState.pushMode === 'none' && !mapComplete}
+            />
+          }
           onExpand={() => setBottomPanelOpen(true)}
         />
       </div>

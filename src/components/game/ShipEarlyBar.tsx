@@ -1,5 +1,7 @@
 /**
- * ShipEarlyBar — thin countdown bar under the board for the Ship Early bonus.
+ * ShipEarlyBar — thin countdown bar for the Ship Early bonus, rendered as the
+ * top row of GameBottomBar's fixed wrapper (a plain sibling in the layout
+ * column would sit underneath the fixed bar and be covered by it).
  *
  * Drains as time passes across the ladder's full window (scoring-config.yml
  * shipEarly), with divider ticks where the payout steps down and a value chip
@@ -42,28 +44,34 @@ export function ShipEarlyBar({ seconds, visible }: ShipEarlyBarProps) {
 
   return (
     <div
-      className="flex items-center gap-2 px-3 py-1"
-      style={{ backgroundColor: 'rgba(0, 10, 5, 0.9)', borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.80)', borderTop: `1px solid ${color}55` }}
       title={t('shipEarlyBar.title')}
     >
-      <Timer className="w-3.5 h-3.5 flex-shrink-0" style={{ color }} />
-      <div className="flex-1 relative h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
-        <div
-          className="h-full rounded-full"
-          style={{ width: `${remaining * 100}%`, background: color, transition: 'width 1s linear, background-color 0.3s' }}
-        />
-        {/* Divider ticks where the payout steps down (e.g. 25s and 40s of 60). */}
-        {thresholds.filter(s => s.withinSeconds < maxWindow).map(s => (
+      <div className="mx-auto max-w-4xl px-3 py-1.5 flex items-center gap-2">
+        <Timer className="w-3.5 h-3.5 flex-shrink-0" style={{ color, filter: `drop-shadow(0 0 4px ${color}aa)` }} />
+        <div className="flex-1 relative h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
           <div
-            key={s.withinSeconds}
-            className="absolute top-0 h-full w-px"
-            style={{ left: `${(1 - s.withinSeconds / maxWindow) * 100}%`, background: 'rgba(255,255,255,0.35)' }}
+            className="h-full rounded-full"
+            style={{
+              width: `${remaining * 100}%`,
+              background: color,
+              boxShadow: `0 0 8px ${color}aa`,
+              transition: 'width 1s linear, background-color 0.3s',
+            }}
           />
-        ))}
+          {/* Divider ticks where the payout steps down (e.g. 25s and 40s of 60). */}
+          {thresholds.filter(s => s.withinSeconds < maxWindow).map(s => (
+            <div
+              key={s.withinSeconds}
+              className="absolute top-0 h-full w-px"
+              style={{ left: `${(1 - s.withinSeconds / maxWindow) * 100}%`, background: 'rgba(255,255,255,0.35)' }}
+            />
+          ))}
+        </div>
+        <span className="font-display text-xs font-bold tabular-nums flex-shrink-0" style={{ color, textShadow: `0 0 8px ${color}66` }}>
+          {t('shipEarlyBar.bonus', { hours: bonus })}
+        </span>
       </div>
-      <span className="font-display text-xs font-bold tabular-nums flex-shrink-0" style={{ color, textShadow: `0 0 8px ${color}66` }}>
-        {t('shipEarlyBar.bonus', { hours: bonus })}
-      </span>
     </div>
   );
 }
