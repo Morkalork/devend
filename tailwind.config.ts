@@ -15,7 +15,7 @@ export default {
     },
     extend: {
       fontFamily: {
-        display: ['Morkalork Display', 'sans-serif'],
+        display: ['Michroma', 'sans-serif'],
         body: ['Space Grotesk', 'sans-serif'],
       },
       colors: {

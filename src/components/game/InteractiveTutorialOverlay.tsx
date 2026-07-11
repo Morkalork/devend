@@ -247,7 +247,7 @@ export function InteractiveTutorialOverlay({
         >
           <p
             className="text-sm sm:text-base font-black tracking-widest uppercase"
-            style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#00ff88' }}
+            style={{ fontFamily: 'Michroma, sans-serif', color: '#00ff88' }}
           >
             {t('interactiveTutorial.drawAFence')}
           </p>
@@ -334,7 +334,7 @@ export function InteractiveTutorialOverlay({
         <div
           className="rounded-full px-4 py-2 text-xs font-black uppercase tracking-widest"
           style={{
-            fontFamily: 'Morkalork Display, sans-serif',
+            fontFamily: 'Michroma, sans-serif',
             background: 'rgba(0,255,136,0.08)',
             border: '1px solid rgba(0,255,136,0.4)',
             color: '#00ff88',

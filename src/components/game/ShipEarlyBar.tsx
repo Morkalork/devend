@@ -64,22 +64,34 @@ export function ShipEarlyBar({ seconds, ballCount, extraSecondsPerBall = 0, bonu
     >
       <div className="mx-auto max-w-4xl px-3 py-1.5 flex items-center gap-2">
         <Timer className="w-3.5 h-3.5 flex-shrink-0" style={{ color, filter: `drop-shadow(0 0 4px ${color}aa)` }} />
-        <div className="flex-1 relative h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
-          <div
-            className="h-full rounded-full"
-            style={{
-              width: `${remaining * 100}%`,
-              background: color,
-              boxShadow: `0 0 8px ${color}aa`,
-              transition: 'width 1s linear, background-color 0.3s',
-            }}
-          />
-          {/* Divider ticks where the payout steps down. */}
+        <div className="flex-1 relative h-1.5">
+          {/* Draining fill in its own clipped layer so its rounded corners stay
+              tidy without clipping the marker ticks that stand proud of the bar. */}
+          <div className="absolute inset-0 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${remaining * 100}%`,
+                background: color,
+                boxShadow: `0 0 8px ${color}aa`,
+                transition: 'width 1s linear, background-color 0.3s',
+              }}
+            />
+          </div>
+          {/* Divider ticks where the payout steps down one hour. White and a
+              touch taller than the bar so they read as deliberate marks against
+              both the colored fill and the dark track. */}
           {thresholds.filter(s => windowFor(s.withinSecondsPerBall) < maxWindow).map(s => (
             <div
               key={s.withinSecondsPerBall}
-              className="absolute top-0 h-full w-px"
-              style={{ left: `${(1 - windowFor(s.withinSecondsPerBall) / maxWindow) * 100}%`, background: 'rgba(255,255,255,0.35)' }}
+              className="absolute -top-0.5 w-0.5 rounded-full"
+              style={{
+                left: `${(1 - windowFor(s.withinSecondsPerBall) / maxWindow) * 100}%`,
+                height: 'calc(100% + 4px)',
+                transform: 'translateX(-50%)',
+                background: 'rgba(255,255,255,0.85)',
+                boxShadow: '0 0 3px rgba(255,255,255,0.7)',
+              }}
             />
           ))}
         </div>

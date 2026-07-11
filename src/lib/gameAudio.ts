@@ -17,11 +17,15 @@ let lastCollideTime = -Infinity;
 
 // Volume settings
 const VOLUME = {
-  wallHit: 0.15,
-  ballCollide: 0.09,
-  fenceBreak: 0.25,
-  death: 0.3,
+  wallHit: 0.12,
+  ballCollide: 0.07,
+  fenceBreak: 0.18,
+  death: 0.24,
 };
+
+// Everything above this gets rolled off by the master low-pass; procedural
+// effects otherwise carry piercing energy right up to Nyquist.
+const MASTER_LOWPASS_HZ = 3800;
 
 /**
  * Initialize the audio context (must be called after user interaction)
@@ -34,7 +38,13 @@ function ensureAudioContext(): AudioContext | null {
       if (!AudioCtx) return null;
       audioContext = new AudioCtx();
       masterGain = audioContext.createGain();
-      masterGain.connect(audioContext.destination);
+      // Gentle master low-pass so effects sit softer against the music
+      const softener = audioContext.createBiquadFilter();
+      softener.type = 'lowpass';
+      softener.frequency.value = MASTER_LOWPASS_HZ;
+      softener.Q.value = 0.5; // shallow slope, no resonant peak
+      masterGain.connect(softener);
+      softener.connect(audioContext.destination);
       masterGain.gain.value = isMuted ? 0 : sfxVolume;
     } catch (e) {
       console.warn('Web Audio API not supported:', e);
@@ -155,10 +165,10 @@ export function playBallCollideSound(intensity: number = 0.5): void {
     const partialVolume = volume * partial.amp;
     const decayTime = partial.decay;
     
-    // Sharp attack, long sustaining decay (triangle characteristic)
+    // Rounded attack (a hard 1ms edge reads as harsh), long sustaining decay
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(partialVolume, now + 0.001);
-    gain.gain.setValueAtTime(partialVolume, now + 0.002);
+    gain.gain.linearRampToValueAtTime(partialVolume, now + 0.006);
+    gain.gain.setValueAtTime(partialVolume, now + 0.007);
     gain.gain.exponentialRampToValueAtTime(partialVolume * 0.3, now + decayTime * 0.3);
     gain.gain.exponentialRampToValueAtTime(0.001, now + decayTime);
     
@@ -181,7 +191,7 @@ export function playBallCollideSound(intensity: number = 0.5): void {
   shimmerGain.connect(masterGain);
   
   shimmerGain.gain.setValueAtTime(0, now);
-  shimmerGain.gain.linearRampToValueAtTime(volume * 0.08, now + 0.001);
+  shimmerGain.gain.linearRampToValueAtTime(volume * 0.08, now + 0.006);
   shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
   
   shimmer1.start(now);
@@ -216,7 +226,8 @@ export function playFenceBreakSound(): void {
   crackFilter.connect(crackGain);
   crackGain.connect(masterGain);
   
-  crackGain.gain.setValueAtTime(volume, now);
+  crackGain.gain.setValueAtTime(0, now);
+  crackGain.gain.linearRampToValueAtTime(volume, now + 0.006);
   crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
   
   crackSource.start(now);
@@ -363,7 +374,7 @@ export function playBallLockSound(): void {
   if (!ctx || !masterGain || isMuted) return;
 
   const now = ctx.currentTime;
-  const vol = 0.28;
+  const vol = 0.22;
 
   // --- Phase 1: 3 rising resonant pulses at 0 / 200 / 400 ms ---
   [0, 0.2, 0.4].forEach((delay, i) => {
@@ -452,7 +463,7 @@ export function playCutClaimedSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
   const now = ctx.currentTime;
-  const vol = 0.18;
+  const vol = 0.14;
 
   // Rising noise sweep — air being captured
   const nb = createNoiseBuffer(ctx, 0.15);
@@ -488,7 +499,7 @@ export function playLevelCompleteSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
   const now = ctx.currentTime;
-  const vol = 0.22;
+  const vol = 0.18;
 
   // Two slightly-detuned sine oscillators sweep 100 Hz → 1200 Hz for width
   const osc1 = ctx.createOscillator();

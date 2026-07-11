@@ -8,6 +8,7 @@ import { X } from 'lucide-react';
 import { GameModifiers, ModifierSource, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
 import { SPEND_CHUNK_HOURS } from '@/lib/treasury';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
+import { getShipEarlyThresholds } from '@/lib/scoring';
 import { contentText } from '@/i18n/content';
 
 interface BottomBarDetailsPanelProps {
@@ -93,6 +94,11 @@ export function BottomBarDetailsPanel({
   const m = activeModifiers;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const bonus = (v: number) => (v > 0 ? `+${v}` : `${v}`);
+
+  // Ship Early countdown: always-explained here so the on-board timer bar has a
+  // reference. Top rung drives the "up to +Nh" chip; the ladder derives from
+  // config so the copy can't drift from the actual payouts.
+  const shipEarlyTopBonus = getShipEarlyThresholds().reduce((mx, s) => Math.max(mx, s.bonus), 0);
 
   const microFactor =
     m.microManagerPerLock > 0 && lockedBalls > 0
@@ -472,6 +478,30 @@ export function BottomBarDetailsPanel({
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
+
+        {/* Ship Early countdown: always shown so the on-board timer bar (with its
+            white one-hour tick marks) is explained regardless of modifiers. */}
+        {shipEarlyTopBonus > 0 && (
+          <section>
+            <p style={sectionHeadStyle}>{t('bottomBarDetails.timingHead')}</p>
+            <div
+              className="rounded-lg p-4"
+              style={{ backgroundColor: `${accentColor}0d`, border: `1px solid ${accentColor}44` }}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-bold text-sm" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
+                  {t('bottomBarDetails.shipEarlyCountdown')}
+                </span>
+                <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
+                  {t('bottomBarDetails.shipEarlyCountdownValue', { hours: shipEarlyTopBonus })}
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                {t('bottomBarDetails.shipEarlyCountdownDesc', { hours: shipEarlyTopBonus })}
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Active (non-default) modifiers */}
         {activeRows.length > 0 && (

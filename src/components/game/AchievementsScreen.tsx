@@ -48,7 +48,7 @@ export function AchievementsScreen({
     return (
       <div
         className="flex items-center gap-2 px-1 mb-2 mt-1"
-        style={{ fontFamily: 'Morkalork Display, sans-serif' }}
+        style={{ fontFamily: 'Michroma, sans-serif' }}
       >
         <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: `${accentColor}88` }}>
           {label}
@@ -82,7 +82,7 @@ export function AchievementsScreen({
           <div className="flex-1 min-w-0">
             <span
               className="font-bold text-sm"
-              style={{ fontFamily: 'Morkalork Display, sans-serif', color: '#f59e0b' }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: '#f59e0b' }}
             >
               {contentText.achName(t, achievement)}
             </span>
@@ -108,7 +108,7 @@ export function AchievementsScreen({
             whileTap={{ scale: 0.93 }}
             className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold tracking-wider uppercase"
             style={{
-              fontFamily: 'Morkalork Display, sans-serif',
+              fontFamily: 'Michroma, sans-serif',
               backgroundColor: '#f59e0b22',
               border: '1px solid #f59e0b',
               color: '#f59e0b',
@@ -140,7 +140,7 @@ export function AchievementsScreen({
           <div className="flex-1 min-w-0">
             <span
               className="font-bold text-sm"
-              style={{ fontFamily: 'Morkalork Display, sans-serif', color: accentColor }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: accentColor }}
             >
               {contentText.achName(t, achievement)}
             </span>
@@ -184,7 +184,7 @@ export function AchievementsScreen({
           <div className="flex-1 min-w-0">
             <span
               className="font-bold text-sm"
-              style={{ fontFamily: 'Morkalork Display, sans-serif', color: 'hsl(var(--foreground))' }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: 'hsl(var(--foreground))' }}
             >
               {contentText.achName(t, achievement)}
             </span>
@@ -260,7 +260,7 @@ export function AchievementsScreen({
             <Trophy className="w-5 h-5" style={{ color: accentColor }} />
             <span
               className="text-lg font-black tracking-widest uppercase"
-              style={{ fontFamily: 'Morkalork Display, sans-serif', color: accentColor }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: accentColor }}
             >
               {t('achievements.title')}
             </span>

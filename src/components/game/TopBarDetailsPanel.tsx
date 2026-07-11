@@ -66,7 +66,7 @@ export function TopBarDetailsPanel({
 
   const sectionHeadStyle: React.CSSProperties = {
     color: `${accentColor}88`,
-    fontFamily: 'Morkalork Display, sans-serif',
+    fontFamily: 'Michroma, sans-serif',
     letterSpacing: '0.15em',
     fontSize: '0.7rem',
     fontWeight: 700,
@@ -99,7 +99,7 @@ export function TopBarDetailsPanel({
       >
         <h1
           className="text-xl font-black tracking-widest uppercase"
-          style={{ fontFamily: 'Morkalork Display, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
+          style={{ fontFamily: 'Michroma, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
         >
           {t('topBarDetails.levelStatusTitle', { level: levelNumber })}
         </h1>

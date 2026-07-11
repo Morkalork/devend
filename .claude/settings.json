@@ -5,7 +5,10 @@
       "PowerShell(*)",
       "PowerShell(winget install --id EclipseAdoptium.Temurin.21.JDK -e --accept-source-agreements --accept-package-agreements --silent 2>&1)",
       "PowerShell(npx tsc --noEmit -p tsconfig.app.json)",
-      "PowerShell(node -e \"const y=require\\('js-yaml'\\);const fs=require\\('fs'\\);const d=y.load\\(fs.readFileSync\\('public/upgrades.yml','utf8'\\)\\);const f=d.upgrades.filter\\(u=>u.id.startsWith\\('feature_freeze'\\)\\);console.log\\(JSON.stringify\\(f,null,1\\)\\); console.log\\('count',d.upgrades.length\\)\")"
+      "PowerShell(node -e \"const y=require\\('js-yaml'\\);const fs=require\\('fs'\\);const d=y.load\\(fs.readFileSync\\('public/upgrades.yml','utf8'\\)\\);const f=d.upgrades.filter\\(u=>u.id.startsWith\\('feature_freeze'\\)\\);console.log\\(JSON.stringify\\(f,null,1\\)\\); console.log\\('count',d.upgrades.length\\)\")",
+      "WebFetch(domain:pixabay.com)",
+      "WebSearch",
+      "PowerShell(npx tsc --noEmit)"
     ]
   }
 }
