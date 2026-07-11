@@ -325,6 +325,7 @@ export function GameCanvas({
     wallShieldsRemaining: 0,
     fastestBallId: null as string | null,
     pushMode: "none" as "none" | "prompt" | "pushing",
+    pushPromptPending: false,
     bestRemainingPercent: 100,
     pushStartPercent: 100,
     levelClearedTime: 0,
@@ -597,6 +598,7 @@ export function GameCanvas({
       game.activeWall = null;
       game.gameOver = false;
       game.levelComplete = false;
+      game.pushPromptPending = false;
       game.shimmerStart = 0;
       game.shimmerFrozen = false;
       game.swipeStart = null;
@@ -750,6 +752,9 @@ export function GameCanvas({
         }),
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
+      // Deferred push prompt: the loop already set game.pushMode; mirror it
+      // into React so the modal mounts.
+      onPushPrompt: () => setPushMode("prompt"),
     };
     const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration, activeModifiers.freezeNoCooldown);
     game.gameLoopFn = gameLoop;

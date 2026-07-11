@@ -67,7 +67,7 @@ export function useGameInput(
         return;
       }
 
-      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === "prompt" || game.isRecovering)
+      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
         return;
 
       const { screenX, screenY } = getCanvasCoords(e);
@@ -119,7 +119,8 @@ export function useGameInput(
         !game.gameOver &&
         !game.levelComplete &&
         !game.isRecovering &&
-        game.pushMode !== "prompt"
+        game.pushMode !== "prompt" &&
+        !game.pushPromptPending
       ) {
         const delta = vec2Sub(game.currentSwipePos, game.swipeStart);
         const dist  = vec2Length(delta);

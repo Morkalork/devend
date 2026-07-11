@@ -85,6 +85,9 @@ export interface CanvasGameState {
 
   // ── Push-your-luck ─────────────────────────────────────────────────────
   pushMode: "none" | "prompt" | "pushing";
+  /** Win condition met while a lock flash was still playing: the world is held
+   *  (render-only, input blocked) until the flash ends, then the prompt opens. */
+  pushPromptPending: boolean;
   bestRemainingPercent: number;
   pushStartPercent: number;
   levelClearedTime: number;

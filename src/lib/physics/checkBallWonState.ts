@@ -96,16 +96,18 @@ export function checkAndUpdateBallWonStates(
     ball.velocity = { x: 0, y: 0 };
     ball.speed = 0;
 
-    // Snap the locked ball to the centre of its region. Its bounce position at
-    // the instant of lock is off-centre, which showed up as a misplaced ball
-    // once motion stopped (most visibly on the frozen level-clear frame). Update
-    // the interpolation snapshots too, or a render with the loop paused would
-    // hold the stale off-centre renderPosition.
+    // Centre the locked ball in its region: its bounce position at the instant
+    // of lock is off-centre, which showed up as a misplaced ball once motion
+    // stopped (most visibly on the frozen level-clear frame). Physics state
+    // snaps immediately; the RENDER position glides there over the lock pulse
+    // (see the tween in useGameLoop's interpolation pass, keyed off the
+    // assimilation's ballPos = the catch position captured below).
+    const catchPos = { x: ball.position.x, y: ball.position.y };
     {
       const c = ballRegion.centroid;
       ball.position = { x: c.x, y: c.y };
       ball.prevPosition = { x: c.x, y: c.y };
-      ball.renderPosition = { x: c.x, y: c.y };
+      ball.renderPosition = { x: catchPos.x, y: catchPos.y };
     }
 
     // Track this lock for tutorial ball-type intel: fires once per lock, BEFORE
@@ -170,7 +172,7 @@ export function checkAndUpdateBallWonStates(
         polygon,
         centroid: { ...ballRegion.centroid },
         startTime: performance.now(),
-        ballPos: { ...ball.position },
+        ballPos: catchPos,
         ballColor: ball.color,
         particles,
         firstEncounter: isFirstEncounter,

@@ -248,21 +248,33 @@ export function applyCutFn(
   // Breaking objects is a bonus, not a win condition (issue #38) — the level is
   // completed by shrinking the board, exactly as normal.
   const lockReq = level.threadLockRequired ?? 0;
-  if (percent < level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none") {
+  if (percent < level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none" && !game.pushPromptPending) {
     // The frame is already drawn (loop render + the post-cut render above) and
     // pushMode is still "none" here, so these would be pixel-identical repaints.
     // The two redundant full renders spiked this frame to 4 redraws and caused a
     // visible twitch right as the push-your-luck modal mounted.
-    game.pushMode = "prompt";
     game.levelClearedTime = performance.now();
     // Ship Early: freeze the tempo clock at the first win moment, so time spent
     // in the prompt or pushing is never taxed. Only reachable once per map
-    // (guarded by pushMode === "none").
+    // (guarded by pushMode === "none" / pushPromptPending).
     game.clearedActiveSeconds = game.activePlaySeconds;
-    callbacks.setPushMode("prompt");
     callbacks.setClearedPercent(percent);
     game.bestRemainingPercent = percent;
     game.pushStartPercent = percent;
+    // If a lock flash is still playing (the winning cut usually locked a ball),
+    // hold the world and let it finish before the modal mounts; the game loop
+    // opens the prompt when the flash ends. Otherwise open it right away.
+    const now = performance.now();
+    let flashActive = false;
+    for (const [, f] of game.assimilations) {
+      if (now - f.startTime < LOCK_TOTAL_DURATION) { flashActive = true; break; }
+    }
+    if (flashActive) {
+      game.pushPromptPending = true;
+    } else {
+      game.pushMode = "prompt";
+      callbacks.setPushMode("prompt");
+    }
   }
 }
 

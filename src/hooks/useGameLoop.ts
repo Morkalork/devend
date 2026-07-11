@@ -14,7 +14,7 @@
 import { CanvasGameState } from "@/types/gameState";
 import { GrowingWall } from "@/types/game";
 import { creepFactor } from "@/lib/scopeCreep";
-import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
+import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
@@ -36,6 +36,31 @@ export interface GameLoopCallbacks {
   onCreepStep?: (percentBoost: number) => void;
   /** Called once per whole active-play second (drives the Ship Early countdown bar). */
   onActiveSecond?: (seconds: number) => void;
+  /** Called when a deferred push prompt opens (the lock flash it waited on ended). */
+  onPushPrompt?: () => void;
+}
+
+/**
+ * Lock snap glide: a just-locked ball's physics position snaps to its pocket
+ * centroid the moment it locks (see checkBallWonState), but the RENDER position
+ * glides there from the catch position over the lock pulse so the centering
+ * never reads as a teleport. Runs in the normal interpolation pass AND in the
+ * render-only holds (level complete, deferred push prompt), where physics -
+ * and therefore the interpolation pass - is stopped.
+ */
+function applyLockGlide(game: CanvasGameState, nowMs: number): void {
+  if (game.assimilations.size === 0) return;
+  for (const ball of game.balls) {
+    if (ball.state !== 'won') continue;
+    const flash = game.assimilations.get(ball.id);
+    if (!flash) continue;
+    const t = (nowMs - flash.startTime) / LOCK_PULSE_DURATION;
+    if (t >= 1) continue;
+    const ease = 1 - Math.pow(1 - Math.max(0, t), 3); // easeOutCubic
+    if (!ball.renderPosition) ball.renderPosition = { x: 0, y: 0 };
+    ball.renderPosition.x = flash.ballPos.x + (ball.position.x - flash.ballPos.x) * ease;
+    ball.renderPosition.y = flash.ballPos.y + (ball.position.y - flash.ballPos.y) * ease;
+  }
 }
 
 /**
@@ -123,6 +148,7 @@ export function createGameLoop(
     // the celebratory clear shimmer has swept the whole board.
     if (game.levelComplete) {
       if (game.assimilations.size > 0) {
+        applyLockGlide(game, performance.now());
         for (const ball of game.balls) {
           if (ball.state === 'won') {
             const elapsed = performance.now() - ball.wonTime;
@@ -144,6 +170,30 @@ export function createGameLoop(
         callbacks.render();
         schedule();
       }
+      return;
+    }
+
+    // Deferred push prompt: the win condition was met while a lock flash was
+    // still playing (see applyCut). Hold the world exactly as the prompt would
+    // (no physics, input blocked via pushPromptPending) but keep rendering so
+    // the flash and the lock glide play out, then open the modal.
+    if (game.pushPromptPending) {
+      const now = performance.now();
+      let flashEnd = 0;
+      for (const [, f] of game.assimilations) {
+        flashEnd = Math.max(flashEnd, f.startTime + LOCK_TOTAL_DURATION);
+      }
+      if (now < flashEnd) {
+        applyLockGlide(game, now);
+        game.lastTime = timestamp;
+        callbacks.render();
+        schedule();
+        return;
+      }
+      game.pushPromptPending = false;
+      game.pushMode = "prompt";
+      callbacks.onPushPrompt?.();
+      callbacks.render();
       return;
     }
 
@@ -271,6 +321,7 @@ export function createGameLoop(
       ball.renderPosition.x = prev.x + (ball.position.x - prev.x) * alpha;
       ball.renderPosition.y = prev.y + (ball.position.y - prev.y) * alpha;
     }
+    applyLockGlide(game, performance.now());
 
     const _physMs = performance.now() - _physStart;
 
