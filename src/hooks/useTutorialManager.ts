@@ -98,6 +98,9 @@ export function useTutorialManager() {
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem(OLD_STORAGE_KEY);
+      // Self-contained one-time intros managed by GameScreen (no flag here).
+      localStorage.removeItem('devend_break_tutorial_seen');
+      localStorage.removeItem('devend_creep_tutorial_seen');
     } catch {
       // ignore
     }

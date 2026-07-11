@@ -215,6 +215,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 newlyUnlockedCerts={session.shopUnlockedCerts}
                 tagSetThreshold={session.tagSetThreshold}
                 freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0}
+                activeModifiers={session.activeModifiers}
               />
             )}
             {navigation.currentScreen === 'capstoneDraft' && (

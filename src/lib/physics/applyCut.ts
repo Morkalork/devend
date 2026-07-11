@@ -285,7 +285,7 @@ export function triggerLevelComplete(
   // Ship Early: the all-balls-locked path never opens the push prompt, so the
   // tempo clock freezes here; banking after a prompt keeps the earlier value.
   if (game.clearedActiveSeconds == null) game.clearedActiveSeconds = game.activePlaySeconds;
-  const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall);
+  const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
 
   // Fold lock + break + ship-early bonuses in before the cap so a single map
   // can't exceed the per-map ceiling (issue #43).

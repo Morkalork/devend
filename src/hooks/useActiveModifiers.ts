@@ -20,7 +20,6 @@ export interface GameModifiers {
   bonusRemovalChance: number;
   bonusRemovalAmount: number;
   extraLives: number;
-  scoreInterestRate: number;
   extraShopItems: number;
   shopRestockCount: number; // purchases per shop visit that refill their slot with a new offer
   extraContinues: number;   // extra per-run revives beyond the base 1 (cert/upgrade grantable)
@@ -35,9 +34,6 @@ export interface GameModifiers {
   // Additive (sum) — Frozen Assets: extra lock-bonus multiplier when a ball is
   // locked while frozen (1 = frozen locks pay double, 2 = triple; 0 = off)
   frozenLockBonus: number;
-  // Additive (sum) — Venture Capital: raises the per-map interest cap above the
-  // base 8h (see useGameSession's level-complete interest credit)
-  scoreInterestCapBonus: number;
   // Additive (sum) — lock set bonus: every lock pass counts as this many balls
   // bigger for the simultaneous-trap multiplier (Chain Reaction)
   simultaneousLockBonus: number;
@@ -65,6 +61,22 @@ export interface GameModifiers {
   // Additive (sum) — Deadline Extension: extra seconds PER BALL added to every
   // Ship Early window (2 = each window gains 2s x the map's ball count)
   shipEarlySecondsPerBall: number;
+  // Additive (sum) — Hard Deadline door: >0 = Scope Creep's grace window is
+  // removed, so the first speed surge lands at second 0 of active play
+  scopeCreepImmediate: number;
+  // Additive (sum) — Runway (reworked Venture Capital): each value is a bank
+  // threshold in hours; while totalScore is at/above it when a map starts, the
+  // perk applies (see src/lib/treasury.ts). 0 = perk not owned.
+  runwayInstantFenceAt: number;    // grants +1 instant fence per map
+  runwayConcurrentFenceAt: number; // grants +1 concurrent fence
+  runwayFreezeAt: number;          // grants a 2s tap-freeze
+  // Additive (sum) — Budget Cycle: next-map boons per 60h spent in one shop
+  // visit (max 3 chunks; see src/lib/treasury.ts)
+  spendInstantFencePerChunk: number; // instant fences on the next map per chunk
+  spendFenceSpeedPerChunk: number;   // fence-speed bonus on the next map per chunk (0.05 = +5%)
+
+  // Multiplicative — Hard Deadline door: scales the Ship Early payout
+  shipEarlyBonusMultiplier: number;
 
   // Multiplicative — Tech Evangelist: scales the space-optimization bonus
   spaceBonusMultiplier: number;
@@ -117,6 +129,7 @@ export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'shopDiscountMultiplier',
   'pushBonusMultiplier',
   'spaceBonusMultiplier',
+  'shipEarlyBonusMultiplier',
 ];
 
 /**
@@ -155,7 +168,6 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   bonusRemovalChance: 0,
   bonusRemovalAmount: 0,
   extraLives: 0,
-  scoreInterestRate: 0,
   extraShopItems: 0,
   shopRestockCount: 0,
   extraContinues: 0,
@@ -166,7 +178,6 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   overtimePerLock: 0,
   fenceSpeedPerLock: 0,
   frozenLockBonus: 0,
-  scoreInterestCapBonus: 0,
   simultaneousLockBonus: 0,
   freezeNoCooldown: 0,
   fenceSpeedPerFence: 0,
@@ -177,6 +188,13 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   wallShieldsPerMap: 0,
   fenceGraceMs: 0,
   shipEarlySecondsPerBall: 0,
+  scopeCreepImmediate: 0,
+  runwayInstantFenceAt: 0,
+  runwayConcurrentFenceAt: 0,
+  runwayFreezeAt: 0,
+  spendInstantFencePerChunk: 0,
+  spendFenceSpeedPerChunk: 0,
+  shipEarlyBonusMultiplier: 1,
   spaceBonusMultiplier: 1,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,

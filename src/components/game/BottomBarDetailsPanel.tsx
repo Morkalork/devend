@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { X } from 'lucide-react';
 import { GameModifiers, ModifierSource, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
-import { BASE_INTEREST_CAP } from '@/hooks/useGameSession';
+import { SPEND_CHUNK_HOURS } from '@/lib/treasury';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
 import { contentText } from '@/i18n/content';
 
@@ -30,13 +30,13 @@ interface StatRow {
 
 /** Additive keys expressed as fractions (shown as percentages, not raw counts). */
 const FRACTIONAL_ADDITIVE_KEYS = new Set<keyof GameModifiers>([
-  'scoreInterestRate',
   'bonusRemovalChance',
   'bonusRemovalAmount',
   'microManagerPerLock',
   'fenceSpeedPerLock',
   'fenceSpeedPerFence',
   'bankedSlowPer50h',
+  'spendFenceSpeedPerChunk',
 ]);
 
 /** Localized display name for a modifier source, by its kind. */
@@ -175,14 +175,46 @@ export function BottomBarDetailsPanel({
           : t('bottomBarDetails.extraLivesInactive'),
     },
     {
-      label: t('bottomBarDetails.scoreInterest'),
-      value: pct(m.scoreInterestRate),
-      changed: m.scoreInterestRate !== 0,
-      keys: ['scoreInterestRate', 'scoreInterestCapBonus'],
+      label: t('bottomBarDetails.runwayInstantFence'),
+      value: m.runwayInstantFenceAt > 0 ? `${m.runwayInstantFenceAt}h+` : t('bottomBarDetails.off'),
+      changed: m.runwayInstantFenceAt !== 0,
+      keys: ['runwayInstantFenceAt'],
       description:
-        m.scoreInterestRate > 0
-          ? t('bottomBarDetails.scoreInterestActive', { rate: pct(m.scoreInterestRate), cap: BASE_INTEREST_CAP + m.scoreInterestCapBonus })
-          : t('bottomBarDetails.scoreInterestInactive'),
+        m.runwayInstantFenceAt > 0
+          ? t('bottomBarDetails.runwayInstantFenceActive', { hours: m.runwayInstantFenceAt })
+          : t('bottomBarDetails.runwayInactive'),
+    },
+    {
+      label: t('bottomBarDetails.runwayConcurrentFence'),
+      value: m.runwayConcurrentFenceAt > 0 ? `${m.runwayConcurrentFenceAt}h+` : t('bottomBarDetails.off'),
+      changed: m.runwayConcurrentFenceAt !== 0,
+      keys: ['runwayConcurrentFenceAt'],
+      description:
+        m.runwayConcurrentFenceAt > 0
+          ? t('bottomBarDetails.runwayConcurrentFenceActive', { hours: m.runwayConcurrentFenceAt })
+          : t('bottomBarDetails.runwayInactive'),
+    },
+    {
+      label: t('bottomBarDetails.runwayFreeze'),
+      value: m.runwayFreezeAt > 0 ? `${m.runwayFreezeAt}h+` : t('bottomBarDetails.off'),
+      changed: m.runwayFreezeAt !== 0,
+      keys: ['runwayFreezeAt'],
+      description:
+        m.runwayFreezeAt > 0
+          ? t('bottomBarDetails.runwayFreezeActive', { hours: m.runwayFreezeAt })
+          : t('bottomBarDetails.runwayInactive'),
+    },
+    {
+      label: t('bottomBarDetails.budgetCycle'),
+      value: m.spendInstantFencePerChunk > 0 || m.spendFenceSpeedPerChunk > 0
+        ? t('bottomBarDetails.budgetCycleValue', { hours: SPEND_CHUNK_HOURS })
+        : t('bottomBarDetails.off'),
+      changed: m.spendInstantFencePerChunk !== 0 || m.spendFenceSpeedPerChunk !== 0,
+      keys: ['spendInstantFencePerChunk', 'spendFenceSpeedPerChunk'],
+      description:
+        m.spendInstantFencePerChunk > 0 || m.spendFenceSpeedPerChunk > 0
+          ? t('bottomBarDetails.budgetCycleActive', { hours: SPEND_CHUNK_HOURS })
+          : t('bottomBarDetails.budgetCycleInactive'),
     },
     {
       label: t('bottomBarDetails.overtimePerLock'),
@@ -323,6 +355,26 @@ export function BottomBarDetailsPanel({
         m.shipEarlySecondsPerBall > 0
           ? t('bottomBarDetails.shipEarlyWindowActive', { seconds: m.shipEarlySecondsPerBall })
           : t('bottomBarDetails.shipEarlyWindowInactive'),
+    },
+    {
+      label: t('bottomBarDetails.shipEarlyMultiplier'),
+      value: m.shipEarlyBonusMultiplier !== 1 ? `x${m.shipEarlyBonusMultiplier}` : t('bottomBarDetails.off'),
+      changed: m.shipEarlyBonusMultiplier !== 1,
+      keys: ['shipEarlyBonusMultiplier'],
+      description:
+        m.shipEarlyBonusMultiplier !== 1
+          ? t('bottomBarDetails.shipEarlyMultiplierActive', { mult: m.shipEarlyBonusMultiplier })
+          : t('bottomBarDetails.shipEarlyMultiplierInactive'),
+    },
+    {
+      label: t('bottomBarDetails.scopeCreepImmediate'),
+      value: m.scopeCreepImmediate > 0 ? t('bottomBarDetails.on') : t('bottomBarDetails.off'),
+      changed: m.scopeCreepImmediate !== 0,
+      keys: ['scopeCreepImmediate'],
+      description:
+        m.scopeCreepImmediate > 0
+          ? t('bottomBarDetails.scopeCreepImmediateActive')
+          : t('bottomBarDetails.scopeCreepImmediateInactive'),
     },
     {
       label: t('bottomBarDetails.extraShopSlots'),

@@ -363,48 +363,46 @@ upgrades:
 
 
   # ===============================
-  # VENTURE CAPITAL (Interest)
-  # Interest is credited between maps and capped per map: base cap 8h, raised
-  # by the higher tiers (scoreInterestCapBonus) so the bigger rates actually
-  # pay out instead of being nullified by the cap. Rates stack additively:
-  # 10% -> 20% -> 30% total, matching the card text.
+  # RUNWAY (reworked Venture Capital; ids kept for save-compat)
+  # Hoard-side treasury perks: while the bank sits at/above the threshold when
+  # a map starts, the perk applies (see src/lib/treasury.ts). Paid in
+  # consistency, never score, so the flat economy stays intact. The tension
+  # against Budget Cycle (spend-side) is the bank archetype's identity.
   # ===============================
 
   - id: venture_capital_senior
-    name: Venture Capital
+    name: Runway
     tier: Senior
-    description: "10% interest on unused overtime between maps (up to 8h per map)."
+    description: While you have 100h or more banked, one fence completes instantly at each map start.
     unlockLevel: 6
     prerequisites:
       - performance_bonus_senior
     icon: piggy-bank
     tags: [bank]
     modifiers:
-      scoreInterestRate: 0.10
+      runwayInstantFenceAt: 100
 
   - id: venture_capital_principal
-    name: Venture Capital
+    name: Runway
     tier: Principal
-    description: "Interest rises to 20%, and the per-map interest cap rises to 12h."
+    description: While you have 200h or more banked, you can grow one extra fence at a time.
     unlockLevel: 7
     prerequisites:
       - venture_capital_senior
     tags: [bank]
     modifiers:
-      scoreInterestRate: 0.10
-      scoreInterestCapBonus: 4
+      runwayConcurrentFenceAt: 200
 
   - id: venture_capital_architect
-    name: Venture Capital
+    name: Runway
     tier: Architect
-    description: "Interest rises to 30%, and the per-map interest cap rises to 16h."
+    description: While you have 300h or more banked, tap a ball to freeze it for 2 seconds.
     unlockLevel: 11
     prerequisites:
       - venture_capital_principal
     tags: [bank]
     modifiers:
-      scoreInterestRate: 0.10
-      scoreInterestCapBonus: 4
+      runwayFreezeAt: 300
 
 
   # ===============================
@@ -534,6 +532,38 @@ upgrades:
     tags: [bank]
     modifiers:
       bankedSlowPer50h: 0.02
+
+
+  # ===============================
+  # BUDGET CYCLE (Bank spend payoff)
+  # Spend-side treasury: hours spent in ONE shop visit charge next-map boons in
+  # 60h chunks, max 3 counted (src/lib/treasury.ts). Pulls directly against
+  # Runway's hoard thresholds: a splurge can drop the bank below a threshold
+  # while charging these.
+  # ===============================
+
+  - id: budget_cycle_junior
+    name: Budget Cycle
+    tier: Junior
+    description: Every 60h spent in one shop visit buys an instant fence on the next map.
+    unlockLevel: 10
+    prerequisites:
+      - expense_account
+    icon: shopping-cart
+    tags: [bank]
+    modifiers:
+      spendInstantFencePerChunk: 1
+
+  - id: budget_cycle_senior
+    name: Budget Cycle
+    tier: Senior
+    description: Each 60h spent in one shop visit also speeds fence growth 5% on the next map.
+    unlockLevel: 13
+    prerequisites:
+      - budget_cycle_junior
+    tags: [bank]
+    modifiers:
+      spendFenceSpeedPerChunk: 0.05
 
 
   # ===============================

@@ -63,7 +63,6 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCount
     { label: t('bottomBar.concurrent'), value: formatBonus(modifiers.additionalConcurrentFences), changed: modifiers.additionalConcurrentFences !== 0 },
     { label: t('bottomBar.bonusRemove'), value: `${formatRate(modifiers.bonusRemovalChance)} @ ${formatRate(modifiers.bonusRemovalAmount)}`, changed: modifiers.bonusRemovalChance > 0 },
     { label: t('bottomBar.extraLives'), value: formatBonus(modifiers.extraLives), changed: modifiers.extraLives !== 0 },
-    { label: t('bottomBar.interest'), value: formatRate(modifiers.scoreInterestRate), changed: modifiers.scoreInterestRate !== 0 },
     { label: t('bottomBar.shopSlots'), value: formatBonus(modifiers.extraShopItems), changed: modifiers.extraShopItems !== 0 },
     { label: t('bottomBar.restocks'), value: formatBonus(modifiers.shopRestockCount), changed: modifiers.shopRestockCount !== 0 },
     { label: t('bottomBar.microMgrPerLock'), value: `${Math.round(modifiers.microManagerPerLock * 100)}% (${Math.round(microNowReduction * 100)}% now)`, changed: modifiers.microManagerPerLock !== 0 },

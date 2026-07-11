@@ -17,7 +17,6 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   threadLocks: { icon: Lock, color: 'text-cyan-400' },
   breakBonus: { icon: Hammer, color: 'text-amber-400' },
   shipEarly: { icon: Timer, color: 'text-teal-400' },
-  interest: { icon: TrendingUp, color: 'text-primary' },
   pushBonus: { icon: Zap, color: 'text-orange-400' },
   newHighscore: { icon: TrendingUp, color: 'text-yellow-400' },
   totalBonus: { icon: Sparkles, color: 'text-success' },
@@ -121,7 +120,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     extraPercent = 0,
     lockBonus = 0,
     lockedBallsCount = 0,
-    interestGain = 0,
     pushBonus = 0,
     breakBonus = 0,
     shipEarlyBonus = 0,
@@ -135,7 +133,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const hasLockBonus = lockBonus > 0;
   const hasBreakBonus = breakBonus > 0;
   const hasShipEarlyBonus = shipEarlyBonus > 0;
-  const hasInterest = interestGain > 0;
   const hasPushBonus = pushBonus > 0;
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
 
@@ -304,17 +301,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   {t('levelComplete.shipEarly', { seconds: Math.round(clearTimeSeconds) })}
                 </span>
                 <span className="font-bold text-teal-400">+{shipEarlyBonus}h</span>
-              </div>
-            )}
-
-            {/* Interest Gain */}
-            {hasInterest && (
-              <div {...hold('interest')} className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
-                <span className="text-primary flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.interest')}
-                </span>
-                <span className="font-bold text-primary">+{interestGain}h</span>
               </div>
             )}
 

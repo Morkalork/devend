@@ -17,15 +17,10 @@ import {
   ACHIEVEMENT_STORAGE_KEY,
 } from '@/types/achievement';
 import { MetaProgressionStats } from '@/types/metaProgression';
-import { GameModifiers } from '@/hooks/useActiveModifiers';
-
-// Keys that stack multiplicatively (mirrors useActiveModifiers)
-const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
-  'ballSpeedMultiplier',
-  'ballSizeMultiplier',
-  'fenceGenerationSpeedMultiplier',
-  'scoreMultiplier',
-];
+// The canonical multiplicative-key list: a local copy had drifted (missing the
+// shop-discount and bonus-multiplier keys), which would mis-stack any second
+// multiplicative achievement bonus.
+import { GameModifiers, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
 
 function loadPersistence(): AchievementPersistence {
   try {

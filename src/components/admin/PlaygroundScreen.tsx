@@ -36,7 +36,6 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   bonusRemovalChance:               { label: 'Bonus Remove Chance',    kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Probability a fence triggers a bonus area removal (0–1)' },
   bonusRemovalAmount:               { label: 'Bonus Remove Amount',    kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Extra area removed when bonus triggers (fraction, 0–1)' },
   extraLives:                       { label: 'Extra Lives',            kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra lives granted immediately' },
-  scoreInterestRate:                { label: 'Score Interest Rate',    kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Fraction of score added as interest between maps' },
   extraShopItems:                   { label: 'Extra Shop Slots',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional item slots in the upgrade shop' },
   shopRestockCount:                 { label: 'Shop Restocks',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Purchases per shop visit that refill their slot with a new offer' },
   extraCertificateHours:          { label: 'Extra Cert. Hours',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Certificate Hours banked when the run ends' },
@@ -55,7 +54,6 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   overtimePerLock:                  { label: 'Overtime/Lock',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Severance Package: flat overtime hours added to the lock bonus per locked ball' },
   fenceSpeedPerLock:                { label: 'Fence Speed/Lock',       kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Knowledge Transfer: fence-speed bonus per ball locked this map (0.04 = +4%)' },
   frozenLockBonus:                  { label: 'Frozen Lock Bonus',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Frozen Assets: extra lock-bonus multiplier when locking a frozen ball (1 = double)' },
-  scoreInterestCapBonus:            { label: 'Interest Cap +',         kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Venture Capital: raises the per-map interest cap above the base 8h' },
   simultaneousLockBonus:            { label: 'Simul. Lock Bonus',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Chain Reaction set: every lock pass counts as this many balls bigger for the trap multiplier' },
   freezeNoCooldown:                 { label: 'No Freeze Cooldown',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Absolute Zero set: >0 = balls can be re-frozen the moment they thaw' },
   fenceSpeedPerFence:               { label: 'Fence Speed/Fence',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Continuous Delivery: fence-speed bonus per fence completed this map (0.04 = +4%)' },
@@ -67,6 +65,13 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   wallShieldsPerMap:                { label: 'Fence Shields/Map',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Second Wind capstone: fence hits absorbed per map without losing a life' },
   fenceGraceMs:                     { label: 'Fence Grace (ms)',       kind: 'additive',       step: 250,  min: 0,    defaultValue: 0,    description: 'Ghost Protocol capstone: growing fences ignore ball hits for their first N ms' },
   shipEarlySecondsPerBall:          { label: 'Ship Early +s/Ball',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Deadline Extension: extra seconds per ball added to every Ship Early window' },
+  scopeCreepImmediate:              { label: 'Creep Immediate',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Hard Deadline door: >0 = Scope Creep surges start at second 0 (no grace window)' },
+  runwayInstantFenceAt:             { label: 'Runway Fence @h',        kind: 'additive',       step: 50,   min: 0,    defaultValue: 0,    description: 'Runway: bank threshold granting +1 instant fence per map while met (0 = off)' },
+  runwayConcurrentFenceAt:          { label: 'Runway Concurrent @h',   kind: 'additive',       step: 50,   min: 0,    defaultValue: 0,    description: 'Runway: bank threshold granting +1 concurrent fence while met (0 = off)' },
+  runwayFreezeAt:                   { label: 'Runway Freeze @h',       kind: 'additive',       step: 50,   min: 0,    defaultValue: 0,    description: 'Runway: bank threshold granting a 2s tap-freeze while met (0 = off)' },
+  spendInstantFencePerChunk:        { label: 'Spend Fence/Chunk',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Budget Cycle: instant fences on the next map per 60h spent in one shop visit' },
+  spendFenceSpeedPerChunk:          { label: 'Spend Fence Speed/Chunk',kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Budget Cycle: fence-speed bonus on the next map per 60h spent (0.05 = +5%)' },
+  shipEarlyBonusMultiplier:         { label: 'Ship Early Mult.',       kind: 'multiplicative', step: 0.5,  min: 0.5,  defaultValue: 1,    description: 'Hard Deadline door: multiplies the Ship Early payout' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

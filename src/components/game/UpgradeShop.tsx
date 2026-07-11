@@ -19,8 +19,10 @@ import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
 import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { GameModifiers } from '@/hooks/useActiveModifiers';
+import { runwayStatus, spendChunks, SPEND_CHUNK_HOURS, RunwayPerk } from '@/lib/treasury';
 import { TagChip } from './TagChip';
-import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info } from 'lucide-react';
+import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info, Vault, ShoppingCart } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
 import { CRTBackground } from './CRTBackground';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -47,6 +49,8 @@ interface UpgradeShopProps {
   tagSetThreshold?: number;
   /** Company Card capstone: the cheapest unowned offer costs nothing. */
   freeCheapestOffer?: boolean;
+  /** Full modifier set; drives the treasury strip (Runway + Budget Cycle). */
+  activeModifiers?: GameModifiers;
 }
 
 /**
@@ -94,6 +98,7 @@ export function UpgradeShop({
   newlyUnlockedCerts = [],
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
   freeCheapestOffer = false,
+  activeModifiers,
 }: UpgradeShopProps) {
   const { t, i18n } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -246,6 +251,19 @@ export function UpgradeShop({
   }, 0);
   const remainingBudget = effectiveOvertime - selectedTotalCost;
 
+  // Treasury strip (Runway + Budget Cycle): evaluated against the balance AFTER
+  // the current selection, so picking an item immediately shows a threshold
+  // being lost and the Budget Cycle charging up. Same functions as the engine.
+  const runwayPerks = activeModifiers ? runwayStatus(remainingBudget, activeModifiers) : [];
+  const hasBudgetCycle = !!activeModifiers &&
+    (activeModifiers.spendInstantFencePerChunk > 0 || activeModifiers.spendFenceSpeedPerChunk > 0);
+  const budgetChunks = spendChunks(selectedTotalCost);
+  const RUNWAY_CHIP_KEYS: Record<RunwayPerk, string> = {
+    instantFence: 'upgradeShop.runwayChipInstantFence',
+    concurrentFence: 'upgradeShop.runwayChipConcurrentFence',
+    freeze: 'upgradeShop.runwayChipFreeze',
+  };
+
   const handleItemClick = useCallback((upgrade: UpgradeConfig, alreadySelected: boolean, currentRemainingBudget: number) => {
     if (allOwnedIds.includes(upgrade.id)) return;
 
@@ -389,6 +407,46 @@ export function UpgradeShop({
           <span className="font-semibold text-foreground">{t('upgradeShop.hoursValue', { hours: effectiveOvertime })}</span>
           <span className="text-muted-foreground">{t('upgradeShop.overtime')}</span>
         </motion.div>
+
+        {/* Treasury strip: Runway thresholds + Budget Cycle charge, live against
+            the balance after the current selection (see remainingBudget above). */}
+        {(runwayPerks.length > 0 || hasBudgetCycle) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.12 }}
+            className="flex flex-col items-center gap-1.5"
+          >
+            {runwayPerks.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {runwayPerks.map(p => (
+                  <span
+                    key={p.perk}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+                    style={p.met
+                      ? { color: '#2dd4bf', borderColor: '#2dd4bf66', background: '#2dd4bf14' }
+                      : { color: '#8a8f98', borderColor: '#8a8f9833', background: 'transparent', opacity: 0.8 }}
+                    title={t('upgradeShop.runwayTitle')}
+                  >
+                    <Vault className="w-3 h-3" />
+                    {t(RUNWAY_CHIP_KEYS[p.perk], { hours: p.thresholdHours })}
+                    {p.met ? ' ✓' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
+            {hasBudgetCycle && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <ShoppingCart className={`w-3.5 h-3.5 ${budgetChunks > 0 ? 'text-cyan-400' : ''}`} />
+                <span>
+                  {budgetChunks > 0
+                    ? t('upgradeShop.budgetCycleCharged', { count: budgetChunks, spent: selectedTotalCost })
+                    : t('upgradeShop.budgetCycleProgress', { spent: selectedTotalCost, next: SPEND_CHUNK_HOURS })}
+                </span>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Restock counter — only when the Procurement upgrades are owned */}
         {shopRestockCount > 0 && (

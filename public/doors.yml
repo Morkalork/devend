@@ -81,6 +81,15 @@ doors:
       ballSizeMultiplier: 1.15
       ballFreezeDuration: 3
 
+  - id: hard_deadline
+    name: Hard Deadline
+    risk: Scope Creep starts immediately, no grace period.
+    reward: Ship Early bonuses pay double on this map.
+    clarify: Balls start surging in speed from the very first second and keep stepping up to the usual cap, so there is no calm window to plan in. In exchange every Ship Early payout is doubled. Built for players who cut on instinct, and even better with Deadline Extension buying the windows back.
+    modifiers:
+      scopeCreepImmediate: 1
+      shipEarlyBonusMultiplier: 2
+
   - id: gold_rush
     name: Gold Rush
     risk: Balls move 12% faster and fences grow 10% slower.

@@ -279,8 +279,6 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `bonusRemovalChance` | `0` | Probability (0–1) that a fence triggers a bonus area removal. | `0.10` = 10% chance |
 | `bonusRemovalAmount` | `0` | Extra area (0–1 fraction) removed when a bonus removal triggers. | `0.05` = 5% extra |
 | `extraLives` | `0` | Extra lives granted when the upgrade is purchased during a run. | `1` |
-| `scoreInterestRate` | `0` | Fraction of current overtime balance added as interest between maps (capped per map at `8 + scoreInterestCapBonus` hours). | `0.05` = 5% interest |
-| `scoreInterestCapBonus` | `0` | Raises the per-map interest cap above the base 8h (Venture Capital Principal/Architect). | `4` = cap 12h |
 | `extraShopItems` | `0` | Extra item slots shown in the shop after each map. | `1` |
 | `shopRestockCount` | `0` | Purchases per shop visit that refill their slot with a new offer (Procurement upgrades). | `1` |
 | `extraContinues` | `0` | Extra per-run revives beyond the base 1. Spend a Continue on death to retry the level with overtime + upgrades intact. Grantable by a certificate or upgrade. | `1` |
@@ -304,6 +302,13 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `wallShieldsPerMap` | `0` | Fence-hit shields granted fresh at every map start: a shielded hit breaks the fence but costs no life (Second Wind capstone). | `1` |
 | `fenceGraceMs` | `0` | Growing fences ignore ball hits during their first N milliseconds (Ghost Protocol capstone). Mover collisions still hurt. | `1500` |
 | `shipEarlySecondsPerBall` | `0` | Extra seconds PER BALL added to every Ship Early bonus window (Deadline Extension). With `2`, a 4-ball map's windows each gain 8s. | `2` |
+| `scopeCreepImmediate` | `0` | `> 0` removes Scope Creep's grace window: the first speed surge lands at second 0 of active play and steps to the usual cap (Hard Deadline door). | `1` |
+| `runwayInstantFenceAt` | `0` | Runway (hoard side): while the bank is at/above this many hours when a map starts, one fence completes instantly. `0` = perk not owned. | `100` |
+| `runwayConcurrentFenceAt` | `0` | Runway: while the bank is at/above this threshold, +1 concurrent fence. | `200` |
+| `runwayFreezeAt` | `0` | Runway: while the bank is at/above this threshold, tap-to-freeze is granted (2s, rides the Feature Freeze mechanic). | `300` |
+| `spendInstantFencePerChunk` | `0` | Budget Cycle (spend side): instant fences on the NEXT map per 60h spent in one shop visit (max 3 chunks counted; src/lib/treasury.ts). | `1` |
+| `spendFenceSpeedPerChunk` | `0` | Budget Cycle: fence-speed bonus on the NEXT map per 60h-spend chunk. | `0.05` = +5%/chunk |
+| `shipEarlyBonusMultiplier` | `1` | Multiplies the Ship Early payout AFTER the ladder's `maxBonus` clamp (Hard Deadline door). Still folds under the per-map overtime cap. | `2` |
 
 ---
 

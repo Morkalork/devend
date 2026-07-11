@@ -59,6 +59,7 @@ describe("door pool integrity", () => {
     const isAdverse = (key: string, v: number): boolean => {
       if (key === "ballSpeedMultiplier" || key === "ballSizeMultiplier") return v > 1;
       if (key === "fenceGenerationSpeedMultiplier" || key === "scoreMultiplier") return v < 1;
+      if (key === "scopeCreepImmediate") return v > 0; // removes the creep grace window
       return v < 0;
     };
     const offenders = doors

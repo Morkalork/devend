@@ -23,6 +23,8 @@ interface ShipEarlyBarProps {
   ballCount: number;
   /** Deadline Extension: extra seconds per ball added to every window. */
   extraSecondsPerBall?: number;
+  /** Hard Deadline door: scales the payout shown in the value chip. */
+  bonusMultiplier?: number;
   /** False hides the bar (win condition met, prompt open). */
   visible: boolean;
 }
@@ -34,7 +36,7 @@ const BONUS_COLORS: Record<number, string> = {
   1: '#ffb020',
 };
 
-export function ShipEarlyBar({ seconds, ballCount, extraSecondsPerBall = 0, visible }: ShipEarlyBarProps) {
+export function ShipEarlyBar({ seconds, ballCount, extraSecondsPerBall = 0, bonusMultiplier = 1, visible }: ShipEarlyBarProps) {
   const { t } = useTranslation();
   const thresholds = getShipEarlyThresholds();
   if (!visible || thresholds.length === 0) return null;
@@ -45,7 +47,10 @@ export function ShipEarlyBar({ seconds, ballCount, extraSecondsPerBall = 0, visi
   const extra = extraSecondsPerBall > 0 ? extraSecondsPerBall : 0;
   const windowFor = (perBall: number) => (perBall + extra) * balls;
   const maxWindow = Math.max(...thresholds.map(s => windowFor(s.withinSecondsPerBall)));
+  // Raw rung drives colour and visibility; the value chip shows the real payout
+  // (Hard Deadline door can multiply it).
   const bonus = getShipEarlyBonus(seconds, balls, extra);
+  const payout = getShipEarlyBonus(seconds, balls, extra, bonusMultiplier);
   // Every window passed: nothing left to chase, get out of the way.
   if (bonus <= 0 || seconds >= maxWindow) return null;
 
@@ -79,7 +84,7 @@ export function ShipEarlyBar({ seconds, ballCount, extraSecondsPerBall = 0, visi
           ))}
         </div>
         <span className="font-display text-xs font-bold tabular-nums flex-shrink-0" style={{ color, textShadow: `0 0 8px ${color}66` }}>
-          {t('shipEarlyBar.bonus', { hours: bonus })}
+          {t('shipEarlyBar.bonus', { hours: payout })}
         </span>
       </div>
     </div>

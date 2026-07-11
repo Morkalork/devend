@@ -35,6 +35,7 @@ import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
+import { runwayBonuses, spendChunks, spendBoons } from '@/lib/treasury';
 import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
@@ -44,8 +45,6 @@ const BASE_LIVES = 3;
 const BASE_CONTINUES = 1;
 /** War Chest ceiling: banked overtime never slows balls by more than this. */
 const MAX_BANKED_SLOW = 0.08;
-/** Base per-map interest cap; Venture Capital tiers raise it (scoreInterestCapBonus). */
-export const BASE_INTEREST_CAP = 8;
 
 export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
@@ -96,6 +95,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // map under par. Re-evaluated at every level completion (so it lasts exactly
   // one map) and cleared on run start/restart.
   const [carryInstantFences, setCarryInstantFences] = useState(0);
+
+  // Budget Cycle: boons carried into the NEXT map, charged by hours spent in
+  // the shop visit just left (see src/lib/treasury.ts). Set on shop exit,
+  // zeroed at the next level completion (one-map lifetime) and on run resets.
+  // The spend accumulator is a ref because purchases arrive as a synchronous
+  // burst right before the shop-exit handler (state would read stale).
+  const [carrySpendFences, setCarrySpendFences] = useState(0);
+  const [carrySpendFenceSpeed, setCarrySpendFenceSpeed] = useState(0);
+  const spentThisShopVisitRef = useRef(0);
 
   // Doors (branching choice): after each shop the player picks how to enter
   // the next map. `doorOffers` is rolled when leaving the shop; `activeDoor`
@@ -272,13 +280,22 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (carryInstantFences > 0) {
       bonuses = mergeBonuses(bonuses, { instantFencesPerMap: carryInstantFences });
     }
+    // Runway: perks granted while the bank sits at/above the owned thresholds.
+    bonuses = mergeBonuses(bonuses, runwayBonuses(totalScore, baseModifiers));
+    // Budget Cycle: boons bought by last shop visit's spend (one-map carry).
+    if (carrySpendFences > 0) {
+      bonuses = mergeBonuses(bonuses, { instantFencesPerMap: carrySpendFences });
+    }
+    if (carrySpendFenceSpeed > 0) {
+      bonuses = mergeBonuses(bonuses, { fenceGenerationSpeedMultiplier: 1 + carrySpendFenceSpeed });
+    }
     // Door pick: the chosen risk door's bundle rides along for this map (and
     // the shop after it; see handleContinueFromShop for the expiry).
     if (activeDoor) {
       bonuses = mergeBonuses(bonuses, activeDoor.modifiers as Partial<Record<keyof GameModifiers, number>>);
     }
     return bonuses;
-  }, [baseModifiers.bankedSlowPer50h, totalScore, carryInstantFences, activeDoor]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, activeDoor]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -400,6 +417,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setTotalScore(0);
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
+    setCarrySpendFences(0);
+    setCarrySpendFenceSpeed(0);
+    spentThisShopVisitRef.current = 0;
     setActiveDoor(null);
     setCapstone(null);
     setPendingLevelScore(null);
@@ -550,6 +570,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarryInstantFences(
       (scoreData.fencesUnderPar ?? 0) > 0 ? activeModifiers.underParInstantFence : 0
     );
+    // Budget Cycle boons expire with the map they were bought for (the next
+    // shop exit re-grants them if the player spends again).
+    setCarrySpendFences(0);
+    setCarrySpendFenceSpeed(0);
 
     const projectedStats = {
       highestLevelReached: Math.max(metaStats.highestLevelReached, currentLevelNum),
@@ -600,16 +624,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     const levelOvertime = baseLevelScore + highscoreBonusEarned;
-    // Interest on the banked total, capped per map. The higher Venture Capital
-    // tiers raise the cap, so their bigger rates aren't silently nullified.
-    const interestCap = BASE_INTEREST_CAP + activeModifiers.scoreInterestCapBonus;
-    const interestGain = activeModifiers.scoreInterestRate > 0
-      ? Math.min(interestCap, Math.floor(totalScore * activeModifiers.scoreInterestRate))
-      : 0;
 
-    setTotalScore(totalScore + levelOvertime + interestGain);
+    setTotalScore(totalScore + levelOvertime);
     setPendingLevelScore({
-      ...scoreData, levelScore: levelOvertime, tierMultiplier: 1, interestGain,
+      ...scoreData, levelScore: levelOvertime, tierMultiplier: 1,
       beatHighscore, previousHighscore, highscoreBonus: highscoreBonusEarned,
     });
     setShowLevelComplete(true);
@@ -619,7 +637,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, activeModifiers.scoreInterestCapBonus, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -709,6 +727,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
+    // Budget Cycle: purchases land as a synchronous burst right before the
+    // shop-exit handler, so the visit's spend accumulates in a ref.
+    spentThisShopVisitRef.current += price;
 
     const upgrade = upgrades.find(u => u.id === upgradeId);
     const extraLives = upgrade?.modifiers?.extraLives;
@@ -742,6 +763,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [currentLevelIndex, isLastLevel, advanceToNextLevel, nav.goToGame, nav.goToDoorDraft]);
 
   const handleContinueFromShop = useCallback(() => {
+    // Budget Cycle: this visit's spend buys next-map boons. Granted here (before
+    // the capstone/door routing below) and expired at the next level completion.
+    const chunks = spendChunks(spentThisShopVisitRef.current);
+    spentThisShopVisitRef.current = 0;
+    const boons = spendBoons(chunks, activeModifiers);
+    setCarrySpendFences(boons.instantFences);
+    setCarrySpendFenceSpeed(boons.fenceSpeedBonus);
+
     const nextLevelNumber = currentLevelIndex + 2;
     // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
     if (nextLevelNumber % 5 === 0 && ascensionDepth === 0) {
@@ -763,7 +792,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       return;
     }
     proceedThroughDoors();
-  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, capstone, saveRunCheckpoint, nav.goToCapstoneDraft, takePendingUnlocks, proceedThroughDoors]);
+  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, capstone, activeModifiers, saveRunCheckpoint, nav.goToCapstoneDraft, takePendingUnlocks, proceedThroughDoors]);
 
   /** Capstone draft pick: permanent for the run, then on through the doors. */
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {

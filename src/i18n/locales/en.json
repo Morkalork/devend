@@ -43,7 +43,6 @@
     "concurrent": "Concurrent",
     "bonusRemove": "Bonus Remove",
     "extraLives": "Extra Lives",
-    "interest": "Interest",
     "shopSlots": "Shop Slots",
     "restocks": "Restocks",
     "microMgrPerLock": "MicroMgr/Lock",
@@ -75,9 +74,17 @@
     "extraLivesActive_one": "+{{count}} additional starting live added at the start of every run. More lives means more chances to recover from a bad cut.",
     "extraLivesActive_other": "+{{count}} additional starting lives added at the start of every run. More lives means more chances to recover from a bad cut.",
     "extraLivesInactive": "No extra starting lives.",
-    "scoreInterest": "Score Interest",
-    "scoreInterestActive": "At the end of each level, {{rate}} of your current total score is added as a bonus, up to {{cap}}h per map. Higher accumulated scores compound faster.",
-    "scoreInterestInactive": "No interest rate active.",
+    "runwayInstantFence": "Runway: Instant Fence",
+    "runwayInstantFenceActive": "While you have {{hours}}h or more banked when a map starts, one fence completes instantly (Runway).",
+    "runwayConcurrentFence": "Runway: Extra Fence",
+    "runwayConcurrentFenceActive": "While you have {{hours}}h or more banked when a map starts, you can grow one extra fence at a time (Runway).",
+    "runwayFreeze": "Runway: Tap-Freeze",
+    "runwayFreezeActive": "While you have {{hours}}h or more banked when a map starts, tapping a ball freezes it for 2 seconds (Runway).",
+    "runwayInactive": "No runway perk owned.",
+    "budgetCycle": "Budget Cycle",
+    "budgetCycleValue": "per {{hours}}h spent",
+    "budgetCycleActive": "Every {{hours}}h spent in one shop visit charges boons for the next map (max 3 chunks per visit).",
+    "budgetCycleInactive": "No Budget Cycle boons.",
     "extraShopSlots": "Extra Shop Slots",
     "extraShopSlotsActive_one": "{{count}} extra item appears in the upgrade shop between levels, giving you more choices each visit.",
     "extraShopSlotsActive_other": "{{count}} extra items appear in the upgrade shop between levels, giving you more choices each visit.",
@@ -138,6 +145,12 @@
     "shipEarlyWindowValue": "+{{seconds}}s/ball",
     "shipEarlyWindowActive": "Every Ship Early bonus window lasts {{seconds}} extra seconds per ball on the map (Deadline Extension).",
     "shipEarlyWindowInactive": "No Ship Early window extension.",
+    "shipEarlyMultiplier": "Ship Early Payout",
+    "shipEarlyMultiplierActive": "Ship Early bonuses pay x{{mult}} on this map (Hard Deadline).",
+    "shipEarlyMultiplierInactive": "Ship Early bonuses pay their normal rate.",
+    "scopeCreepImmediate": "Instant Scope Creep",
+    "scopeCreepImmediateActive": "Scope Creep has no grace period on this map: balls start surging in speed from the first second (Hard Deadline).",
+    "scopeCreepImmediateInactive": "Scope Creep starts after its normal grace period.",
     "on": "On",
     "off": "Off",
     "ballPathPrediction": "Ball Path Prediction",
@@ -206,6 +219,8 @@
     "moverTutorialBody": "Orange obstacles move back and forth on a fixed track.\n\nBalls bounce off them - but if your growing fence touches one, you lose a life.\n\nWatch the track lines and time your fences carefully!",
     "breakTutorialTitle": "✦ Breaking Things",
     "breakTutorialBody": "Amber blocks can be smashed for bonus overtime - guide balls into them until they shatter, and anything stacked on top falls with them.\n\nYou still win the normal way, by shrinking the board; breaking is just extra points.\n\nYou can't fence against a breakable (the cut fizzles), and the black ball breaks things in half the hits.",
+    "creepTutorialTitle": "⚠ Scope Creep",
+    "creepTutorialBody": "The project has been running too long - the balls just got faster, and they will keep surging every few seconds until they hit a cap.\n\nScope Creep only punishes waiting: finish the map inside the calm window and you will never see it.\n\nThe red gauge in the top bar shows the current surge.",
     "topBarTutorialTitle": "The Top Bar",
     "topBarTutorialBody": "The top bar is expandable!\n\nTap it to see full level details, all your active upgrades with descriptions, and certificate-hour progress.",
     "bottomBarTutorialTitle": "The Bottom Bar",
@@ -234,7 +249,6 @@
     "baseOvertime": "Base Overtime",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Thread Locks ({{count}})",
-    "interest": "Interest",
     "pushBonus": "Push Bonus",
     "breakBonus": "Demolition Bonus",
     "shipEarly": "Ship Early ({{seconds}}s)",
@@ -287,11 +301,6 @@
         "body": "A tempo bonus for meeting the win condition fast: +1h within 60 seconds, +2h within 40, +3h within 25. Only active play counts, menus and the push prompt don't.",
         "tip": "Open with big, confident cuts instead of many small safe ones. Speed and precision are separate bonuses, so you can chase both."
       },
-      "interest": {
-        "title": "Interest",
-        "body": "Paid by interest upgrades: at the end of each level a percentage of your total overtime is added on top, up to a per-map cap.",
-        "tip": "Interest compounds. The earlier you buy interest upgrades and the more overtime you bank, the more every level pays."
-      },
       "pushBonus": {
         "title": "Push Bonus",
         "body": "The push-your-luck reward. After meeting the map's target you can keep cutting instead of banking, and every extra slice of the board pays bonus overtime.",
@@ -315,7 +324,7 @@
       "totalOvertime": {
         "title": "Total Overtime",
         "body": "Your whole run's overtime so far. It is the currency you spend in the upgrade shop between levels, and what gets banked when the run ends.",
-        "tip": "Overtime invested in upgrades early multiplies later earnings, so spending usually beats hoarding."
+        "tip": "Spending buys power and charges Budget Cycle boons, while a fat bank feeds Runway perks and War Chest. Your build decides which way to lean."
       }
     }
   },
@@ -349,7 +358,7 @@
   },
   "result": {
     "youWin": "YOU WIN!",
-    "gameOver": "GAME OVER",
+    "gameOver": "You have been replaced by AI.",
     "completedAllLevels": "🎉 Completed all levels! 🎉",
     "ascensionDepth": "Ascension Depth {{depth}}",
     "loadoutsBraved": "Loadouts braved: {{loadouts}}",
@@ -491,6 +500,13 @@
     "overtime": "overtime",
     "restocksLeft": "Restocks left: {{count}} - buying an item adds a new offer",
     "noRestocksLeft": "No restocks left this visit",
+    "runwayTitle": "Runway: perks stay active while your bank is above the threshold at map start",
+    "runwayChipInstantFence": "{{hours}}h+: instant fence",
+    "runwayChipConcurrentFence": "{{hours}}h+: extra fence",
+    "runwayChipFreeze": "{{hours}}h+: tap-freeze",
+    "budgetCycleCharged_one": "Budget Cycle: spending {{spent}}h charges {{count}} boon for the next map",
+    "budgetCycleCharged_other": "Budget Cycle: spending {{spent}}h charges {{count}} boons for the next map",
+    "budgetCycleProgress": "Budget Cycle: {{spent}}h of {{next}}h spent toward a next-map boon",
     "requires": "Requires:",
     "holdHint": "Hold an upgrade to see its track",
     "tags": {

@@ -43,7 +43,6 @@
     "concurrent": "Simultáneas",
     "bonusRemove": "Quitar bono",
     "extraLives": "Vidas extra",
-    "interest": "Interés",
     "shopSlots": "Espacios de tienda",
     "restocks": "Reposiciones",
     "microMgrPerLock": "MicroMgr/bloq.",
@@ -75,9 +74,17 @@
     "extraLivesActive_one": "+{{count}} vida inicial adicional al comienzo de cada partida. Más vidas significan más oportunidades de recuperarte de un mal corte.",
     "extraLivesActive_other": "+{{count}} vidas iniciales adicionales al comienzo de cada partida. Más vidas significan más oportunidades de recuperarte de un mal corte.",
     "extraLivesInactive": "Sin vidas iniciales extra.",
-    "scoreInterest": "Interés de puntuación",
-    "scoreInterestActive": "Al final de cada nivel, se añade {{rate}} de tu puntuación total actual como bonificación, hasta {{cap}}h por mapa. Las puntuaciones acumuladas más altas crecen más rápido.",
-    "scoreInterestInactive": "No hay tasa de interés activa.",
+    "runwayInstantFence": "Pista de despegue: valla instantánea",
+    "runwayInstantFenceActive": "Mientras tengas {{hours}}h o más acumuladas al empezar un mapa, una valla se completa al instante (Runway).",
+    "runwayConcurrentFence": "Pista de despegue: valla extra",
+    "runwayConcurrentFenceActive": "Mientras tengas {{hours}}h o más acumuladas al empezar un mapa, puedes hacer crecer una valla adicional a la vez (Runway).",
+    "runwayFreeze": "Pista de despegue: congelar",
+    "runwayFreezeActive": "Mientras tengas {{hours}}h o más acumuladas al empezar un mapa, tocar una bola la congela durante 2 segundos (Runway).",
+    "runwayInactive": "Ningún beneficio de Runway.",
+    "budgetCycle": "Ciclo presupuestario",
+    "budgetCycleValue": "por {{hours}}h gastadas",
+    "budgetCycleActive": "Cada {{hours}}h gastadas en una visita a la tienda cargan mejoras para el siguiente mapa (máximo 3 tramos por visita).",
+    "budgetCycleInactive": "Sin mejoras de ciclo presupuestario.",
     "extraShopSlots": "Espacios de tienda extra",
     "extraShopSlotsActive_one": "{{count}} artículo extra aparece en la tienda de mejoras entre niveles, dándote más opciones en cada visita.",
     "extraShopSlotsActive_other": "{{count}} artículos extra aparecen en la tienda de mejoras entre niveles, dándote más opciones en cada visita.",
@@ -138,6 +145,12 @@
     "shipEarlyWindowValue": "+{{seconds}}s/bola",
     "shipEarlyWindowActive": "Cada ventana de bonificación de entrega temprana dura {{seconds}} segundos extra por bola en el mapa (Deadline Extension).",
     "shipEarlyWindowInactive": "Sin extensión de la ventana de entrega temprana.",
+    "shipEarlyMultiplier": "Pago de entrega temprana",
+    "shipEarlyMultiplierActive": "Los bonos de entrega temprana pagan x{{mult}} en este mapa (Hard Deadline).",
+    "shipEarlyMultiplierInactive": "Los bonos de entrega temprana pagan su tasa normal.",
+    "scopeCreepImmediate": "Corrupción del alcance instantánea",
+    "scopeCreepImmediateActive": "La corrupción del alcance no tiene periodo de gracia en este mapa: las bolas empiezan a acelerar desde el primer segundo (Hard Deadline).",
+    "scopeCreepImmediateInactive": "La corrupción del alcance empieza tras su periodo de gracia normal.",
     "on": "Activado",
     "off": "Apagado",
     "ballPathPrediction": "Predicción de trayectoria",
@@ -204,6 +217,8 @@
     "mainMenu": "Menú principal",
     "moverTutorialTitle": "⚠ Obstáculos móviles",
     "moverTutorialBody": "Los obstáculos naranjas se mueven de un lado a otro por un carril fijo.\n\nLas bolas rebotan en ellos, pero si tu valla en crecimiento toca uno, pierdes una vida.\n\n¡Vigila las líneas del carril y cronometra bien tus vallas!",
+    "creepTutorialTitle": "⚠ Corrupción del alcance",
+    "creepTutorialBody": "El proyecto lleva demasiado tiempo en marcha: las bolas acaban de acelerar, y seguirán acelerando cada pocos segundos hasta alcanzar un tope.\n\nLa corrupción del alcance solo castiga la espera: termina el mapa dentro de la ventana de calma y nunca la verás.\n\nEl indicador rojo de la barra superior muestra el aumento actual.",
     "topBarTutorialTitle": "La barra superior",
     "topBarTutorialBody": "¡La barra superior se puede expandir!\n\nTócala para ver todos los detalles del nivel, todas tus mejoras activas con descripciones y el progreso de horas de certificado.",
     "bottomBarTutorialTitle": "La barra inferior",
@@ -232,7 +247,6 @@
     "baseOvertime": "Horas extra base",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Bloqueos de hilo ({{count}})",
-    "interest": "Interés",
     "pushBonus": "Bono de presión",
     "shipEarly": "Entrega temprana ({{seconds}}s)",
     "newHighscore": "Nuevo récord",
@@ -284,11 +298,6 @@
         "body": "Un bono de ritmo por cumplir la condición de victoria rápido: +1h en menos de 60 segundos, +2h en menos de 40, +3h en menos de 25. Solo cuenta el juego activo, los menús y la pantalla de presión no.",
         "tip": "Abre con cortes grandes y decididos en lugar de muchos pequeños y seguros. Velocidad y precisión son bonos separados, así que puedes perseguir ambos."
       },
-      "interest": {
-        "title": "Interés",
-        "body": "Lo pagan las mejoras de interés: al final de cada nivel se añade un porcentaje de tus horas extra totales, hasta un tope por mapa.",
-        "tip": "El interés es compuesto. Cuanto antes compres mejoras de interés y más horas extra acumules, más paga cada nivel."
-      },
       "pushBonus": {
         "title": "Bono de presión",
         "body": "La recompensa por arriesgar. Tras cumplir el objetivo del mapa puedes seguir cortando en lugar de asegurar, y cada porción extra del tablero paga horas extra de bonificación.",
@@ -312,7 +321,7 @@
       "totalOvertime": {
         "title": "Horas extra totales",
         "body": "Las horas extra de toda tu partida hasta ahora. Son la moneda que gastas en la tienda de mejoras entre niveles, y lo que se asegura cuando termina la partida.",
-        "tip": "Las horas extra invertidas pronto en mejoras multiplican las ganancias futuras, así que gastar suele rendir más que acumular."
+        "tip": "Gastar compra poder y carga el ciclo presupuestario, mientras que un banco abultado alimenta los beneficios de Runway y War Chest. Tu build decide hacia dónde inclinarte."
       }
     }
   },
@@ -346,7 +355,7 @@
   },
   "result": {
     "youWin": "¡GANASTE!",
-    "gameOver": "FIN DEL JUEGO",
+    "gameOver": "Te ha reemplazado una IA.",
     "completedAllLevels": "🎉 ¡Completaste todos los niveles! 🎉",
     "ascensionDepth": "Profundidad de ascensión {{depth}}",
     "loadoutsBraved": "Equipamientos afrontados: {{loadouts}}",
@@ -476,6 +485,13 @@
     "overtime": "horas extra",
     "restocksLeft": "Reposiciones restantes: {{count}} - comprar un artículo añade una nueva oferta",
     "noRestocksLeft": "No quedan reposiciones en esta visita",
+    "runwayTitle": "Runway: los beneficios siguen activos mientras tu banco supere el umbral al empezar el mapa",
+    "runwayChipInstantFence": "{{hours}}h+: valla instantánea",
+    "runwayChipConcurrentFence": "{{hours}}h+: valla extra",
+    "runwayChipFreeze": "{{hours}}h+: congelar al tocar",
+    "budgetCycleCharged_one": "Ciclo presupuestario: gastar {{spent}}h carga {{count}} mejora para el siguiente mapa",
+    "budgetCycleCharged_other": "Ciclo presupuestario: gastar {{spent}}h carga {{count}} mejoras para el siguiente mapa",
+    "budgetCycleProgress": "Ciclo presupuestario: {{spent}}h de {{next}}h gastadas hacia una mejora del siguiente mapa",
     "requires": "Requiere:",
     "holdHint": "Mantén pulsada una mejora para ver su ruta",
     "tags": {
@@ -665,16 +681,24 @@
         "description": "Gana un 15% más de horas extra por mapa."
       },
       "venture_capital_senior": {
-        "name": "Capital Riesgo",
-        "description": "10% de interés sobre las horas extra no usadas entre mapas."
+        "name": "Pista de Despegue",
+        "description": "Mientras tengas 100h o más acumuladas, una valla se completa al instante al empezar cada mapa."
       },
       "venture_capital_principal": {
-        "name": "Capital Riesgo",
-        "description": "20% de interés sobre las horas extra no usadas entre mapas."
+        "name": "Pista de Despegue",
+        "description": "Mientras tengas 200h o más acumuladas, puedes hacer crecer una valla adicional a la vez."
       },
       "venture_capital_architect": {
-        "name": "Capital Riesgo",
-        "description": "30% de interés sobre las horas extra no usadas entre mapas."
+        "name": "Pista de Despegue",
+        "description": "Mientras tengas 300h o más acumuladas, toca una bola para congelarla durante 2 segundos."
+      },
+      "budget_cycle_junior": {
+        "name": "Ciclo Presupuestario",
+        "description": "Cada 60h gastadas en una visita a la tienda compran una valla instantánea en el siguiente mapa."
+      },
+      "budget_cycle_senior": {
+        "name": "Ciclo Presupuestario",
+        "description": "Cada 60h gastadas en una visita a la tienda también aceleran el crecimiento de vallas un 5% en el siguiente mapa."
       },
       "micro_manager_principal": {
         "name": "MicroManager",
@@ -811,7 +835,7 @@
       },
       "investment-strategy": {
         "name": "Estrategia de Inversión",
-        "description": "Bonificación de interés permanente sobre tu puntuación: una recompensa por dominar el Capital Riesgo."
+        "description": "Tus inversiones trabajan por ti, las bolas aparecen un 1% más lentas por cada 50h acumuladas. Una recompensa por dominar la Pista de Despegue."
       },
       "process-optimiser": {
         "name": "Optimizador de Procesos",
@@ -895,7 +919,7 @@
       "rtfm": {
         "name": "RTFM",
         "description": "Completa 15 niveles sin perder una vida. De verdad te has leído la documentación.",
-        "bonusDescription": "Tasa de interés de horas extra +1%"
+        "bonusDescription": "Precios de la tienda -5%"
       },
       "technical-debt": {
         "name": "Deuda Técnica",
@@ -1017,7 +1041,7 @@
       "hiring_freeze": {
         "name": "Congelación de Contrataciones",
         "curse": "La tienda ofrece 2 mejoras menos.",
-        "blessing": "Gana un 10% de interés sobre las horas extra acumuladas tras cada nivel."
+        "blessing": "Todos los precios de la tienda bajan un 10%."
       },
       "legacy_codebase": {
         "name": "Código Heredado",

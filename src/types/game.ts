@@ -247,8 +247,6 @@ export interface LevelScoreData {
   shipEarlyBonus?: number;
   // Active-play seconds to first meet the win condition (drives the row label)
   clearTimeSeconds?: number;
-  // Interest gain from Venture Capital
-  interestGain?: number;
   // Map highscore (#45): set when this map's score beat its previous highscore.
   beatHighscore?: boolean;
   previousHighscore?: number; // the record that was beaten (for display)

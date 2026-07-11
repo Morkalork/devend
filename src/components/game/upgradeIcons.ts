@@ -38,6 +38,7 @@ import {
   Dices,
   Megaphone,
   Timer,
+  ShoppingCart,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -75,6 +76,7 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   dices: Dices,
   megaphone: Megaphone,
   timer: Timer,
+  'shopping-cart': ShoppingCart,
 };
 
 /**

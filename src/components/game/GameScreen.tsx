@@ -162,6 +162,13 @@ export function GameScreen({
     setShowBreakIntro(!seen);
   }, [levelHasBreakObjective, level.id]);
 
+  // Scope Creep explainer — shown once, the first time a speed surge actually
+  // lands (the red Gauge chip appears). Persisted in localStorage; the game
+  // pauses beneath it like the other modal tutorials.
+  const [creepIntroSeen, setCreepIntroSeen] = useState(() => {
+    try { return !!localStorage.getItem('devend_creep_tutorial_seen'); } catch { return false; }
+  });
+
   // Game state for top bar
   const [gameState, setGameState] = useState<GameStateInfo>({
     cutsUsed: 0,
@@ -201,12 +208,14 @@ export function GameScreen({
 
   // Scope Creep tuning (game-config.yml snake_case -> ScopeCreepConfig).
   // Memoized so GameCanvas's live-config effect only re-runs on real changes.
+  // Hard Deadline door: removes the grace window, so the first surge lands at
+  // second 0 of active play.
   const scopeCreepConfig = useMemo(() => ({
-    graceSeconds: config.scope_creep.grace_seconds,
+    graceSeconds: activeModifiers.scopeCreepImmediate > 0 ? 0 : config.scope_creep.grace_seconds,
     stepSeconds: config.scope_creep.step_seconds,
     stepPercent: config.scope_creep.step_percent,
     maxSteps: config.scope_creep.max_steps,
-  }), [config.scope_creep]);
+  }), [config.scope_creep, activeModifiers.scopeCreepImmediate]);
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
@@ -252,9 +261,13 @@ export function GameScreen({
     levelNumber === 2 && showTopBarTutorial && !showMoverOverlay && !showBreakIntro;
   const showBottomBarOverlay =
     levelNumber === 3 && showBottomBarTutorial && !showMoverOverlay && !showBreakIntro;
+  const showCreepOverlay =
+    !creepIntroSeen && gameState.creepPercent > 0 &&
+    !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
   const modalOverlayActive =
     topPanelOpen || bottomPanelOpen || menuOpen ||
-    showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay;
+    showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
+    showCreepOverlay;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -357,6 +370,7 @@ export function GameScreen({
               seconds={gameState.activeSeconds}
               ballCount={gameState.ballCount}
               extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
+              bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
               visible={gameState.pushMode === 'none' && !mapComplete}
             />
           }
@@ -492,6 +506,18 @@ export function GameScreen({
         accentColor="#ffb454"
         title={t('game.breakTutorialTitle')}
         body={t('game.breakTutorialBody')}
+      />
+
+      {/* Scope Creep explainer — first time a speed surge lands, any map */}
+      <TutorialOverlay
+        visible={showCreepOverlay}
+        onDismiss={() => {
+          setCreepIntroSeen(true);
+          try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ }
+        }}
+        accentColor="#ff6b6b"
+        title={t('game.creepTutorialTitle')}
+        body={t('game.creepTutorialBody')}
       />
 
       {/* Top bar tutorial — map 2, first run only */}

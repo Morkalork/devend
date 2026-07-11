@@ -161,6 +161,20 @@ describe("ship early bonus ladder rewards fast clears", () => {
     expect(calculateShipEarlyBonus(15.1, 1, cfg, -3)).toBe(0);
   });
 
+  it("Hard Deadline doubles the payout without unlocking higher rungs", () => {
+    // x2 applies AFTER the maxBonus clamp: 3 -> 6, 2 -> 4, 1 -> 2, 0 stays 0.
+    expect(calculateShipEarlyBonus(6, 1, cfg, 0, 2)).toBe(6);
+    expect(calculateShipEarlyBonus(10, 1, cfg, 0, 2)).toBe(4);
+    expect(calculateShipEarlyBonus(15, 1, cfg, 0, 2)).toBe(2);
+    expect(calculateShipEarlyBonus(15.1, 1, cfg, 0, 2)).toBe(0);
+    // Stacks with Deadline Extension: widened window, then doubled payout.
+    expect(calculateShipEarlyBonus(8, 1, cfg, 2, 2)).toBe(6);
+    // Garbage multipliers are ignored.
+    expect(calculateShipEarlyBonus(6, 1, cfg, 0, NaN)).toBe(3);
+    expect(calculateShipEarlyBonus(6, 1, cfg, 0, -2)).toBe(3);
+    expect(calculateShipEarlyBonus(6, 1, cfg, 0, 0)).toBe(3);
+  });
+
   it("guards against a bad ball count (treated as 1 ball)", () => {
     expect(at(6, 0)).toBe(3);
     expect(at(6, NaN)).toBe(3);

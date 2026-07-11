@@ -34,6 +34,14 @@ describe("scope creep factor", () => {
     }
   });
 
+  it("graceSeconds: 0 surges from the very first moment (Hard Deadline door)", () => {
+    const immediate: ScopeCreepConfig = { ...CFG, graceSeconds: 0 };
+    expect(creepFactor(0, immediate)).toBeCloseTo(1.08);
+    expect(creepFactor(14.99, immediate)).toBeCloseTo(1.08);
+    expect(creepFactor(15, immediate)).toBeCloseTo(1.16);
+    expect(creepFactor(45, immediate)).toBeCloseTo(1.32); // cap arrives 45s sooner
+  });
+
   it("maxSteps: 0 disables the mechanic entirely", () => {
     const off: ScopeCreepConfig = { ...CFG, maxSteps: 0 };
     expect(creepFactor(9999, off)).toBe(1);
