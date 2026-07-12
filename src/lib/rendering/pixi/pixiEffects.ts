@@ -8,7 +8,7 @@
  * whole board while the wave sweeps (instead of the exact drained-wake split),
  * and the dissolve reuses the captured-canvas tiles as sprites.
  */
-import { CanvasSource, ColorMatrixFilter, Container, Graphics, Rectangle, Sprite, Text, TextStyle, Texture } from "pixi.js";
+import { CanvasSource, ColorMatrixFilter, Container, Filter, Graphics, Rectangle, Sprite, Text, TextStyle, Texture } from "pixi.js";
 import { CanvasGameState } from "@/types/gameState";
 import { DissolveState } from "@/types/game";
 import { RenderContext } from "../types";
@@ -373,29 +373,36 @@ export class EffectsLayer {
     }
   }
 
-  // ── Level-clear shimmer (Stage-A simplified) ───────────────────────────────
+  // ── Level-clear shimmer (simplified sweep) ─────────────────────────────────
+  private shimmerFilter: ColorMatrixFilter | null = null;
+
   /**
    * Desaturate the given container progressively while a luminous wave band
-   * sweeps top→bottom. Returns true while the shimmer is active.
+   * sweeps top→bottom. `baseFilters` (e.g. the bloom pass) are preserved.
+   * Returns true while the shimmer is active.
    */
-  syncShimmer(game: CanvasGameState, target: Container, accent: string, now: number): boolean {
+  syncShimmer(game: CanvasGameState, target: Container, accent: string, now: number, baseFilters: Filter[]): boolean {
     const active = game.shimmerStart > 0;
     if (!active) {
-      if (target.filters) target.filters = [];
+      if (this.shimmerFilter) {
+        this.shimmerFilter = null;
+        target.filters = baseFilters;
+      } else if (!target.filters || (target.filters as Filter[]).length !== baseFilters.length) {
+        target.filters = baseFilters;
+      }
       this.wave.clear();
       return false;
     }
     const raw = now - game.shimmerStart;
-    const el = game.shimmerFrozen ? Math.min(raw, LEVEL_CLEAR_SHIMMER_MS) : Math.min(raw, LEVEL_CLEAR_SHIMMER_MS);
+    const el = Math.min(raw, LEVEL_CLEAR_SHIMMER_MS);
     const progress = Math.max(0, Math.min(1, el / LEVEL_CLEAR_SHIMMER_MS));
 
-    let filter = (target.filters as ColorMatrixFilter[] | null)?.[0];
-    if (!filter) {
-      filter = new ColorMatrixFilter();
-      filter.desaturate();
-      target.filters = [filter];
+    if (!this.shimmerFilter) {
+      this.shimmerFilter = new ColorMatrixFilter();
+      this.shimmerFilter.desaturate();
+      target.filters = [...baseFilters, this.shimmerFilter];
     }
-    filter.alpha = progress * 0.8;
+    this.shimmerFilter.alpha = progress * 0.8;
 
     const { left: bl, top: bt, width: bw, height: bh } = game.boardRect;
     const scale = game.boardRect.scale;

@@ -13,18 +13,24 @@
  * tiles as sprites). shadowBlur glows are replaced by layered strokes and
  * tinted radial sprites; resolution runs at NATIVE device pixels (no 2x cap).
  */
-import { Application, Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
+import { Application, Container, Filter, Graphics, Sprite, Text, TextStyle } from "pixi.js";
+import { AdvancedBloomFilter } from "pixi-filters";
 import { CanvasGameState } from "@/types/gameState";
-import { RenderContext } from "../types";
+import { RenderContext, RainState } from "../types";
 import { DissolveState } from "@/types/game";
 import { Vector2, Polygon, clipLineAgainstPolygons } from "@/lib/polygon";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { BALL_DANGER_SPEED } from "@/lib/gameConstants";
+import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
+import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
+import { getRainGlyph } from "../rainGlyphCache";
 import { getFrameStats } from "../perfStats";
 import { flameTonguesForCount } from "../renderFrame";
 import { BallLayer } from "./pixiBalls";
 import { EffectsLayer, DissolveLayer, dashedLine } from "./pixiEffects";
 import { clearCanvasTextures, clearGlowTextures, glowTexture, textureFor, hashStr, mulberry } from "./textures";
+
+const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
 type W2S = (x: number, y: number) => { x: number; y: number };
 
@@ -39,8 +45,13 @@ export class PixiGameRenderer {
   private root = new Container();
   private boardScope = new Container();   // masked to boardRect
   private boardMask = new Graphics();
+  private rainLayer = new Container();
+  private rainSprites: Sprite[] = [];
+  private boardBase = new Container();    // grid + region sprites
   private gridSprite: Sprite | null = null;
   private regionSprite: Sprite | null = null;
+  private mirrorCracks = new Graphics();
+  private bloom: Filter | null = null;
   private movers = new Graphics();
   private obstacles = new Graphics();
   private breakables = new Graphics();
@@ -91,6 +102,8 @@ export class PixiGameRenderer {
     this.wallsScope.mask = this.fenceMask;
 
     this.boardScope.addChild(
+      this.rainLayer,
+      this.boardBase,
       this.movers,
       this.obstacles,
       this.breakables,
@@ -100,6 +113,7 @@ export class PixiGameRenderer {
       this.rim,
       this.danger,
       this.mirrors,
+      this.mirrorCracks,
       this.debris,
       this.effects.container,
       this.balls.container,
@@ -109,6 +123,18 @@ export class PixiGameRenderer {
     this.root.addChild(this.boardScope, this.boardMask, this.effects.overlayContainer, this.dissolve.container);
     this.boardScope.mask = this.boardMask;
     this.app.stage.addChild(this.root);
+
+    // The neon look's payoff pass: everything bright in the board scope blooms.
+    // Threshold keeps the dark grid/region fills untouched; the baked glows
+    // carry most of the halo so the filter stays modest (quality vs mobile GPU).
+    this.bloom = new AdvancedBloomFilter({
+      threshold: 0.45,
+      bloomScale: 0.8,
+      brightness: 1.0,
+      blur: 6,
+      quality: 3,
+    });
+    this.boardScope.filters = [this.bloom];
 
     this.ready = true;
     if (this.pendingSize) {
@@ -175,12 +201,15 @@ export class PixiGameRenderer {
     this.syncStaticSprites(rctx);
 
     // ── Level-clear shimmer: freeze the scene, animate desaturation + wave ──
-    const shimmering = this.effects.syncShimmer(game, this.boardScope, accent, now);
+    const baseFilters = this.bloom ? [this.bloom] : [];
+    const shimmering = this.effects.syncShimmer(game, this.boardScope, accent, now, baseFilters);
     if (!shimmering) {
+      this.syncRain(game, rctx, scale, now);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
       this.syncBreakables(game, w2s, scale);
       this.syncMirrors(game, w2s, scale);
+      this.syncMirrorCracks(game, w2s, scale);
       this.syncDebris(game, w2s, scale, now);
       this.syncWalls(game, w2s, scale, accent, now);
       this.syncRim(game, scale, accent, now);
@@ -201,7 +230,7 @@ export class PixiGameRenderer {
       if (!sprite || sprite.texture !== tex) {
         sprite?.destroy();
         sprite = new Sprite(tex);
-        this.boardScope.addChildAt(sprite, atIndex);
+        this.boardBase.addChildAt(sprite, Math.min(atIndex, this.boardBase.children.length));
       }
       return sprite;
     };
@@ -212,6 +241,41 @@ export class PixiGameRenderer {
       // Re-upload; if the canvas was resized the source picks up new dimensions.
       this.gridSprite.texture.source.update();
       this.regionSprite.texture.source.update();
+    }
+  }
+
+  // ── Ambient data rain (section B; same particle state contract as 2D) ─────
+  private syncRain(game: CanvasGameState, rctx: RenderContext, scale: number, now: number): void {
+    const rain: RainState = rctx.rain;
+    const dtRain = rain.lastTime ? Math.min((now - rain.lastTime) / 1000, 0.05) : 0;
+    rain.lastTime = now;
+    const { left: bx, top: by } = game.boardRect;
+    const fontPx = Math.round(14 * scale);
+    for (let i = 0; i < rain.particles.length; i++) {
+      const p = rain.particles[i];
+      p.y += p.speed * dtRain;
+      if (p.y > BOARD_HEIGHT + 20) {
+        p.y = -(10 + Math.random() * 60);
+        p.x = 15 + Math.random() * (BOARD_WIDTH - 30);
+        p.symbol = RAIN_SYMBOLS[Math.floor(Math.random() * RAIN_SYMBOLS.length)];
+        p.alpha = 0.03 + Math.random() * 0.04;
+        p.speed = 30 + Math.random() * 50;
+      }
+      let s = this.rainSprites[i];
+      if (!s) {
+        s = new Sprite();
+        s.anchor.set(0);
+        this.rainSprites.push(s);
+        this.rainLayer.addChild(s);
+      }
+      const glyph = getRainGlyph(p.symbol, rctx.accentColor, fontPx);
+      s.texture = textureFor(glyph.canvas);
+      s.alpha = p.alpha;
+      s.position.set(Math.round(bx + p.x * scale) - glyph.pad, Math.round(by + p.y * scale) - glyph.pad);
+      s.visible = true;
+    }
+    for (let i = rain.particles.length; i < this.rainSprites.length; i++) {
+      this.rainSprites[i].visible = false;
     }
   }
 
@@ -253,6 +317,62 @@ export class PixiGameRenderer {
         base.x - ady * perp, base.y + adx * perp,
         base.x + ady * perp, base.y - adx * perp,
       ]).fill({ color: MOVER_COLOR, alpha: 0.85 });
+
+      // Black-ball damage cracks (jagged outline follows the live polygon).
+      const dmover = game.destructibles.find(d => d.kind === "mover" && !d.destroyed && d.moverId === mover.id);
+      if (dmover && dmover.hits > 0) {
+        this.strokeCracks(g, mover.polygon.vertices, dmover.hits, `mover-${mover.id}`, w2s, scale, MOVER_COLOR);
+      }
+    }
+  }
+
+  /** drawDamageCracks port: bold jagged outline in the object's colour. */
+  private strokeCracks(
+    g: Graphics,
+    verts: { x: number; y: number }[],
+    level: number,
+    seedKey: string,
+    w2s: W2S,
+    scale: number,
+    color: number | string,
+  ): void {
+    if (level <= 0 || verts.length < 3) return;
+    const rng = mulberry(hashStr(seedKey));
+    const amp = 3 + level * 4;
+    const SUB = 3;
+    const pts: number[] = [];
+    for (let i = 0; i < verts.length; i++) {
+      const a = verts[i], b = verts[(i + 1) % verts.length];
+      const ex = b.x - a.x, ey = b.y - a.y;
+      const el = Math.hypot(ex, ey) || 1;
+      const px = -ey / el, py = ex / el;
+      for (let s = 0; s < SUB; s++) {
+        const t = s / SUB;
+        const off = (rng() * 2 - 1) * amp;
+        const sp = w2s(a.x + ex * t + px * off, a.y + ey * t + py * off);
+        pts.push(sp.x, sp.y);
+      }
+    }
+    pts.push(pts[0], pts[1]);
+    g.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
+    g.stroke({
+      width: Math.max(1.5, 2.4 * scale),
+      color,
+      alpha: Math.min(1, 0.7 + level * 0.2),
+      cap: "round",
+      join: "round",
+    });
+  }
+
+  // ── Mirror damage cracks (hits change at runtime, unlike the static fills) ─
+  private syncMirrorCracks(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const g = this.mirrorCracks;
+    g.clear();
+    for (const d of game.destructibles) {
+      if (d.kind === "mirror" && !d.destroyed && d.hits > 0 && d.mirrorPolygon) {
+        this.strokeCracks(g, d.mirrorPolygon.vertices, d.hits, `mirror-${d.id}`, w2s, scale, 0x88ddff);
+      }
     }
   }
 
@@ -346,8 +466,14 @@ export class PixiGameRenderer {
           const wy = p.y + p.vy * t + 220 * t * t;
           const sp = w2s(wx, wy);
           const size = p.size * scale * (1 - prog * 0.5);
-          // Rotation omitted (Graphics rects); the tumbling read survives.
-          g.rect(sp.x - size / 2, sp.y - size / 2, size, size).fill({ color: debris.color, alpha });
+          const ang = p.rotation + p.rotSpeed * t;
+          const c = Math.cos(ang) * (size / 2), sn = Math.sin(ang) * (size / 2);
+          g.poly([
+            sp.x - c + sn, sp.y - sn - c,
+            sp.x + c + sn, sp.y + sn - c,
+            sp.x + c - sn, sp.y + sn + c,
+            sp.x - c - sn, sp.y - sn + c,
+          ]).fill({ color: debris.color, alpha });
         }
       }
       if (anyExpired) {
@@ -445,18 +571,46 @@ export class PixiGameRenderer {
       return segs;
     };
 
-    const strokeWall = (gGlow: Graphics, gCore: Graphics, s: { x: number; y: number }, e: { x: number; y: number }, baseWidth: number, glowBoost: number) => {
-      // renderWallWithEffects recipe (impact wobble deferred to Stage B).
-      gGlow.moveTo(s.x, s.y).lineTo(e.x, e.y)
-        .stroke({ width: baseWidth * (2.8 + glowBoost * 2.5), color: accent, alpha: 0.10 + glowBoost * 0.22, cap: "round" });
-      gGlow.moveTo(s.x, s.y).lineTo(e.x, e.y)
-        .stroke({ width: baseWidth * (1.6 + glowBoost * 1.8), color: accent, alpha: 0.18 + glowBoost * 0.25, cap: "round" });
-      if (glowBoost > 0.05) {
-        gGlow.moveTo(s.x, s.y).lineTo(e.x, e.y)
-          .stroke({ width: baseWidth * (3.5 + glowBoost * 3), color: accent, alpha: glowBoost * 0.18, cap: "round" });
+    const strokePath = (g: Graphics, pts: number[], width: number, color: number | string, alpha: number) => {
+      g.moveTo(pts[0], pts[1]);
+      for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
+      g.stroke({ width, color, alpha, cap: "round", join: "round" });
+    };
+
+    const strokeWall = (
+      gGlow: Graphics, gCore: Graphics,
+      s: { x: number; y: number }, e: { x: number; y: number },
+      ws: Vector2, we: Vector2,
+      baseWidth: number, glowBoost: number,
+    ) => {
+      // renderWallWithEffects recipe, including the mass-spring impact wobble:
+      // sample the ripple displacement along the wall when an impact is nearby.
+      let pts: number[];
+      let maxGlow = 0;
+      if (hasNearbyImpacts(ws, we)) {
+        pts = [];
+        const sdx = e.x - s.x, sdy = e.y - s.y;
+        for (let i = 0; i <= N_NODES; i++) {
+          const t = i / N_NODES;
+          const { dx, dy, glow } = getEffectsAtPoint(
+            { x: ws.x + (we.x - ws.x) * t, y: ws.y + (we.y - ws.y) * t }, scale,
+          );
+          pts.push(s.x + sdx * t + dx, s.y + sdy * t + dy);
+          if (glow > maxGlow) maxGlow = glow;
+        }
+      } else {
+        pts = [s.x, s.y, e.x, e.y];
       }
-      gCore.moveTo(s.x, s.y).lineTo(e.x, e.y).stroke({ width: baseWidth, color: 0xffffff, alpha: 1, cap: "round" });
-      gCore.moveTo(s.x, s.y).lineTo(e.x, e.y).stroke({ width: baseWidth * 0.7, color: accent, alpha: 1, cap: "round" });
+      strokePath(gGlow, pts, baseWidth * (2.8 + glowBoost * 2.5), accent, 0.10 + glowBoost * 0.22);
+      strokePath(gGlow, pts, baseWidth * (1.6 + glowBoost * 1.8), accent, 0.18 + glowBoost * 0.25);
+      if (glowBoost > 0.05) {
+        strokePath(gGlow, pts, baseWidth * (3.5 + glowBoost * 3), accent, glowBoost * 0.18);
+      }
+      if (maxGlow > 0.05) {
+        strokePath(gGlow, pts, baseWidth * (1 + maxGlow * 2), accent, maxGlow * 0.65);
+      }
+      strokePath(gCore, pts, baseWidth, 0xffffff, 1);
+      strokePath(gCore, pts, baseWidth * 0.7, accent, 1);
     };
 
     for (let wi = game.walls.length - 1; wi >= 0; wi--) {
@@ -471,10 +625,10 @@ export class PixiGameRenderer {
       const segs = getSegs(w);
       if (segs) {
         for (const seg of segs) {
-          strokeWall(gGlow, gCore, w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), baseWidth, freshness);
+          strokeWall(gGlow, gCore, w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, baseWidth, freshness);
         }
       } else {
-        strokeWall(gGlow, gCore, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), baseWidth, freshness);
+        strokeWall(gGlow, gCore, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, baseWidth, freshness);
       }
 
       // Ascension durability crumble overlay.
