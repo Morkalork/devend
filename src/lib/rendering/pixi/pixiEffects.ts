@@ -8,7 +8,7 @@
  * whole board while the wave sweeps (instead of the exact drained-wake split),
  * and the dissolve reuses the captured-canvas tiles as sprites.
  */
-import { CanvasSource, ColorMatrixFilter, Container, Filter, Graphics, Rectangle, Sprite, Text, TextStyle, Texture } from "pixi.js";
+import { CanvasSource, Container, Graphics, Rectangle, Sprite, Text, TextStyle, Texture } from "pixi.js";
 import { CanvasGameState } from "@/types/gameState";
 import { DissolveState } from "@/types/game";
 import { RenderContext } from "../types";
@@ -22,7 +22,6 @@ import {
   LOCK_DUST_DURATION,
   INFO_UNLOCKED_DURATION,
   SWIPE_TRAIL_DURATION,
-  LEVEL_CLEAR_SHIMMER_MS,
   DISSOLVE_DURATION,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
@@ -62,13 +61,12 @@ export class EffectsLayer {
   private swipe = new Graphics();
   private trajectory = new Graphics();
   private spaceBar = new Graphics();
-  private wave = new Graphics();
   private burstPool: Sprite[] = [];
 
   constructor() {
     this.lockDust.blendMode = "add";
     this.container.addChild(this.lockFill, this.lockBursts, this.lockDust, this.preview, this.swipe, this.trajectory);
-    this.overlayContainer.addChild(this.spaceBar, this.wave);
+    this.overlayContainer.addChild(this.spaceBar);
   }
 
   sync(game: CanvasGameState, rctx: RenderContext, w2s: W2S, now: number): void {
@@ -371,52 +369,6 @@ export class EffectsLayer {
         g.rect(bl + bw - pushW, barY, pushW, barH).fill({ color: 0xff8800, alpha: 0.85 });
       }
     }
-  }
-
-  // ── Level-clear shimmer (simplified sweep) ─────────────────────────────────
-  private shimmerFilter: ColorMatrixFilter | null = null;
-
-  /**
-   * Desaturate the given container progressively while a luminous wave band
-   * sweeps top→bottom. `baseFilters` (e.g. the bloom pass) are preserved.
-   * Returns true while the shimmer is active.
-   */
-  syncShimmer(game: CanvasGameState, target: Container, accent: string, now: number, baseFilters: Filter[]): boolean {
-    const active = game.shimmerStart > 0;
-    if (!active) {
-      if (this.shimmerFilter) {
-        this.shimmerFilter = null;
-        target.filters = baseFilters;
-      } else if (!target.filters || (target.filters as Filter[]).length !== baseFilters.length) {
-        target.filters = baseFilters;
-      }
-      this.wave.clear();
-      return false;
-    }
-    const raw = now - game.shimmerStart;
-    const el = Math.min(raw, LEVEL_CLEAR_SHIMMER_MS);
-    const progress = Math.max(0, Math.min(1, el / LEVEL_CLEAR_SHIMMER_MS));
-
-    if (!this.shimmerFilter) {
-      this.shimmerFilter = new ColorMatrixFilter();
-      this.shimmerFilter.desaturate();
-      target.filters = [...baseFilters, this.shimmerFilter];
-    }
-    this.shimmerFilter.alpha = progress * 0.8;
-
-    const { left: bl, top: bt, width: bw, height: bh } = game.boardRect;
-    const scale = game.boardRect.scale;
-    const waveY = bt + bh * progress;
-    const bandH = 46 * scale;
-    this.wave.clear();
-    this.wave
-      .rect(bl, waveY - bandH, bw, bandH)
-      .fill({ color: accent, alpha: 0.22 })
-      .moveTo(bl, waveY)
-      .lineTo(bl + bw, waveY)
-      .stroke({ width: 3 * scale, color: 0xffffff, alpha: 0.85 });
-    this.wave.blendMode = "add";
-    return true;
   }
 
   destroy(): void {

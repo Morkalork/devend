@@ -1,19 +1,20 @@
 // Renderer flag — which implementation draws the game board.
 //
-// 'canvas2d' is the shipping default (renderFrame.ts). 'pixi' is the staged
-// WebGL port (src/lib/rendering/pixi/), currently opt-in while it works toward
-// visual parity. The choice is read ONCE when GameCanvas mounts, so switching
-// requires a remount: the Playground toggle bumps its gameKey, a real game
-// needs a reload.
+// 'pixi' (the WebGL port, src/lib/rendering/pixi/) is the default: native
+// device resolution + the bloom pass. 'canvas2d' (renderFrame.ts) remains as
+// the opt-out escape hatch and the automatic fallback when WebGL init fails
+// (GameCanvas handles that per session). The choice is read ONCE when
+// GameCanvas mounts, so switching requires a remount: the Playground toggle
+// bumps its gameKey, a real game needs a reload.
 //
 // Precedence: ?renderer= query param (one-shot, also persisted) > localStorage
-// > default. Persisting the query override makes `?renderer=pixi` sticky for
-// on-device Android testing where editing localStorage is awkward.
+// > default. Persisting the query override makes `?renderer=canvas2d` sticky
+// for on-device Android testing where editing localStorage is awkward.
 
 export type RendererKind = "canvas2d" | "pixi";
 
 const LS_RENDERER = "devend:renderer";
-const DEFAULT_RENDERER: RendererKind = "canvas2d";
+const DEFAULT_RENDERER: RendererKind = "pixi";
 
 function isRendererKind(v: string | null): v is RendererKind {
   return v === "canvas2d" || v === "pixi";

@@ -85,7 +85,7 @@ import { ScopeCreepConfig, DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
-import { getRenderer } from "@/lib/rendering/rendererSettings";
+import { getRenderer, RendererKind } from "@/lib/rendering/rendererSettings";
 import type { PixiGameRenderer } from "@/lib/rendering/pixi/PixiGameRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn } from "@/lib/physics/applyCut";
@@ -209,9 +209,11 @@ export function GameCanvas({
   const containerRef = useRef<HTMLDivElement>(null);
   // Renderer flag: read once per mount (switching = remount). Under 'pixi' the
   // canvas gets a WebGL context via PixiGameRenderer (dynamic import, so the
-  // default 2D path never pays for the pixi chunk) and renders at NATIVE
-  // device resolution; the 2D path is byte-for-byte the shipping renderer.
-  const rendererKindRef = useRef(getRenderer());
+  // 2D path never pays for the pixi chunk) and renders at NATIVE device
+  // resolution. If WebGL init fails (old WebView, blocklisted GPU), we fall
+  // back to canvas2d for the session: the state change remounts the canvas
+  // element (key below) so the fallback gets a fresh, contextless canvas.
+  const [rendererKind, setRendererKind] = useState<RendererKind>(() => getRenderer());
   const pixiRef = useRef<PixiGameRenderer | null>(null);
   const pixiInitStartedRef = useRef(false);
   const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
@@ -390,7 +392,7 @@ export function GameCanvas({
     game.wallShieldsRemaining = Math.max(0, Math.round(activeModifiers.wallShieldsPerMap));
     setWallShieldCount(game.wallShieldsRemaining);
 
-    const isPixi = rendererKindRef.current === "pixi";
+    const isPixi = rendererKind === "pixi";
     const ctx = isPixi ? null : canvas.getContext("2d");
     if (!isPixi && !ctx) return;
     if (ctx) {
@@ -399,9 +401,18 @@ export function GameCanvas({
     }
 
     // Pixi renderer: created once per component mount (async chunk, so the
-    // default 2D path never loads it); level-effect re-runs share the instance.
+    // 2D path never loads it); level-effect re-runs share the instance. Any
+    // failure (chunk load, WebGL context) drops back to canvas2d for the
+    // session via the renderer state, which remounts a fresh canvas element.
     if (isPixi && !pixiInitStartedRef.current) {
       pixiInitStartedRef.current = true;
+      const fallback = (err: unknown) => {
+        console.warn("[renderer] WebGL init failed, falling back to canvas2d:", err);
+        try { pixiRef.current?.destroy(); } catch { /* half-initialized app */ }
+        pixiRef.current = null;
+        pixiInitStartedRef.current = false;
+        setRendererKind("canvas2d");
+      };
       import("@/lib/rendering/pixi/PixiGameRenderer").then(({ PixiGameRenderer }) => {
         if (pixiRef.current) return;
         const renderer = new PixiGameRenderer();
@@ -412,8 +423,8 @@ export function GameCanvas({
           if (latest && (latest.w !== size.w || latest.h !== size.h)) {
             renderer.resize(latest.w, latest.h);
           }
-        });
-      });
+        }).catch(fallback);
+      }).catch(fallback);
     }
 
     // ── Blur canvas (legacy — now unused, kept for canvas element compatibility) ──
@@ -850,7 +861,7 @@ export function GameCanvas({
       clearBallEffectsCache();
       clearRenderFrameCache();
     };
-  }, [level, levelNumber, activeModifiers, fenceDurability]);
+  }, [level, levelNumber, activeModifiers, fenceDurability, rendererKind]);
 
   // The Pixi renderer survives level changes (the effect above re-runs per
   // level); the GPU context is torn down only when the component unmounts.
@@ -987,7 +998,7 @@ export function GameCanvas({
             }}
           />
         )}
-        <canvas ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
+        <canvas key={rendererKind} ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 pointer-events-none"

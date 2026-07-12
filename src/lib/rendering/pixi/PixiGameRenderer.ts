@@ -13,14 +13,14 @@
  * tiles as sprites). shadowBlur glows are replaced by layered strokes and
  * tinted radial sprites; resolution runs at NATIVE device pixels (no 2x cap).
  */
-import { Application, Container, Filter, Graphics, Sprite, Text, TextStyle } from "pixi.js";
+import { Application, ColorMatrixFilter, Container, Filter, Graphics, RenderTexture, Sprite, Text, TextStyle } from "pixi.js";
 import { AdvancedBloomFilter } from "pixi-filters";
 import { CanvasGameState } from "@/types/gameState";
 import { RenderContext, RainState } from "../types";
 import { DissolveState } from "@/types/game";
 import { Vector2, Polygon, clipLineAgainstPolygons } from "@/lib/polygon";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
-import { BALL_DANGER_SPEED } from "@/lib/gameConstants";
+import { BALL_DANGER_SPEED, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 import { getRainGlyph } from "../rainGlyphCache";
@@ -71,6 +71,20 @@ export class PixiGameRenderer {
   private tipBlooms: Sprite[] = [];
   private dissolve = new DissolveLayer();
   private perfText: Text | null = null;
+
+  // Level-clear sweep: the frozen scene is snapshotted once (physics is
+  // halted), then shown as two slices — drained grey above the wave line,
+  // untouched below — with the luminous band on top. Mirrors the 2D
+  // _frozenLiveOC/_wakeOC approach.
+  private sweep: {
+    rt: RenderTexture;
+    above: Sprite;
+    below: Sprite;
+    aboveMask: Graphics;
+    belowMask: Graphics;
+    wave: Graphics;
+  } | null = null;
+  private sweepKey = 0;
 
   // Cache keys for static layers.
   private staticDirty = true;
@@ -200,10 +214,15 @@ export class PixiGameRenderer {
 
     this.syncStaticSprites(rctx);
 
-    // ── Level-clear shimmer: freeze the scene, animate desaturation + wave ──
-    const baseFilters = this.bloom ? [this.bloom] : [];
-    const shimmering = this.effects.syncShimmer(game, this.boardScope, accent, now, baseFilters);
-    if (!shimmering) {
+    // ── Level-clear sweep: snapshot the frozen scene, then just animate it ──
+    if (game.shimmerStart > 0) {
+      this.renderSweep(game, accent, scale, now);
+      this.app.render();
+      return;
+    }
+    if (this.sweep) this.teardownSweep();
+
+    {
       this.syncRain(game, rctx, scale, now);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
@@ -221,6 +240,74 @@ export class PixiGameRenderer {
 
     this.syncPerfText(rctx);
     this.app.render();
+  }
+
+  // ── Level-clear sweep (renderFrame's renderClearShimmer, snapshot-based) ──
+  private renderSweep(game: CanvasGameState, accent: string, scale: number, now: number): void {
+    const { left: bl, top: bt, width: bw, height: bh } = game.boardRect;
+
+    if (!this.sweep || this.sweepKey !== game.shimmerStart) {
+      this.teardownSweep();
+      this.sweepKey = game.shimmerStart;
+      const rt = RenderTexture.create({ width: this.app.renderer.width, height: this.app.renderer.height });
+      // Snapshot the live scene (including the bloom pass) exactly once.
+      this.app.renderer.render({ container: this.root, target: rt });
+      const below = new Sprite(rt);
+      const above = new Sprite(rt);
+      // Drained wake: desaturated and lifted toward white, like the 2D wake.
+      const grey = new ColorMatrixFilter();
+      grey.desaturate();
+      grey.brightness(1.25, true);
+      above.filters = [grey];
+      const aboveMask = new Graphics();
+      const belowMask = new Graphics();
+      above.mask = aboveMask;
+      below.mask = belowMask;
+      const wave = new Graphics();
+      wave.blendMode = "add";
+      this.app.stage.addChild(below, above, aboveMask, belowMask, wave);
+      this.root.visible = false;
+      this.sweep = { rt, above, below, aboveMask, belowMask, wave };
+    }
+
+    const raw = now - game.shimmerStart;
+    const el = Math.min(raw, LEVEL_CLEAR_SHIMMER_MS);
+    const progress = Math.max(0, Math.min(1, el / LEVEL_CLEAR_SHIMMER_MS));
+    const waveY = bt + bh * progress;
+
+    const s = this.sweep;
+    s.aboveMask.clear().rect(0, 0, this.app.renderer.width, Math.max(0, waveY)).fill(0xffffff);
+    s.belowMask.clear().rect(0, waveY, this.app.renderer.width, Math.max(0, this.app.renderer.height - waveY)).fill(0xffffff);
+
+    // Luminous band + bright leading edge, fading as the sweep completes.
+    const bandH = 46 * scale;
+    const peak = Math.sin(progress * Math.PI);
+    s.wave.clear();
+    if (progress < 1) {
+      s.wave
+        .rect(bl, Math.max(bt, waveY - bandH), bw, Math.min(bandH, waveY - bt))
+        .fill({ color: accent, alpha: 0.25 * (0.4 + peak * 0.6) })
+        .moveTo(bl, waveY)
+        .lineTo(bl + bw, waveY)
+        .stroke({ width: 3 * scale, color: 0xffffff, alpha: 0.85 })
+        .moveTo(bl, waveY)
+        .lineTo(bl + bw, waveY)
+        .stroke({ width: 9 * scale, color: accent, alpha: 0.35 });
+    }
+  }
+
+  private teardownSweep(): void {
+    if (!this.sweep) return;
+    const s = this.sweep;
+    s.above.destroy();
+    s.below.destroy();
+    s.aboveMask.destroy();
+    s.belowMask.destroy();
+    s.wave.destroy();
+    s.rt.destroy(true);
+    this.sweep = null;
+    this.sweepKey = 0;
+    this.root.visible = true;
   }
 
   // ── Board grid + region fill (textures over the shared OffscreenCanvases) ──
@@ -801,6 +888,7 @@ export class PixiGameRenderer {
   }
 
   destroy(): void {
+    this.teardownSweep();
     this.balls.destroy();
     this.effects.destroy();
     this.dissolve.destroy();
