@@ -79,10 +79,9 @@ export class PixiGameRenderer {
   private sweep: {
     liveRT: RenderTexture;
     drainedRT: RenderTexture;
-    aboveTex: Texture;
-    belowTex: Texture;
     above: Sprite;
     below: Sprite;
+    aboveMask: Graphics;
     wave: Graphics;
   } | null = null;
   private sweepKey = 0;
@@ -279,15 +278,19 @@ export class PixiGameRenderer {
       tmp.filters = [grey];
       this.app.renderer.render({ container: tmp, target: drainedRT });
       tmp.destroy();
-      const aboveTex = new Texture({ source: drainedRT.source, frame: new Rectangle(0, 0, W, 1) });
-      const belowTex = new Texture({ source: liveRT.source, frame: new Rectangle(0, 0, W, H) });
-      const above = new Sprite(aboveTex);
-      const below = new Sprite(belowTex);
+      // Both sprites are full-frame and pixel-aligned; only the drained one is
+      // cropped (rect mask) — the live one simply shows wherever it isn't
+      // covered. NB: don't crop by mutating texture.frame — the sprite keeps
+      // scaling by the texture's original size, which stretches the slice.
+      const below = new Sprite(liveRT);
+      const above = new Sprite(drainedRT);
+      const aboveMask = new Graphics();
+      above.mask = aboveMask;
       const wave = new Graphics();
       wave.blendMode = "add";
-      this.app.stage.addChild(below, above, wave);
+      this.app.stage.addChild(below, above, aboveMask, wave);
       this.root.visible = false;
-      this.sweep = { liveRT, drainedRT, aboveTex, belowTex, above, below, wave };
+      this.sweep = { liveRT, drainedRT, above, below, aboveMask, wave };
     }
 
     const raw = now - game.shimmerStart;
@@ -299,18 +302,7 @@ export class PixiGameRenderer {
     const split = Math.max(0, Math.min(H, Math.round(waveY)));
     s.above.visible = split > 0;
     if (split > 0) {
-      s.aboveTex.frame.height = split;
-      s.aboveTex.updateUvs();
-      s.above.position.set(0, 0);
-      s.above.setSize(W, split);
-    }
-    s.below.visible = split < H;
-    if (split < H) {
-      s.belowTex.frame.y = split;
-      s.belowTex.frame.height = H - split;
-      s.belowTex.updateUvs();
-      s.below.position.set(0, split);
-      s.below.setSize(W, H - split);
+      s.aboveMask.clear().rect(0, 0, W, split).fill(0xffffff);
     }
 
     // Luminous band + bright leading edge, fading as the sweep completes.
@@ -374,9 +366,8 @@ export class PixiGameRenderer {
     const s = this.sweep;
     s.above.destroy();
     s.below.destroy();
+    s.aboveMask.destroy();
     s.wave.destroy();
-    s.aboveTex.destroy();
-    s.belowTex.destroy();
     s.liveRT.destroy(true);
     s.drainedRT.destroy(true);
     this.sweep = null;
