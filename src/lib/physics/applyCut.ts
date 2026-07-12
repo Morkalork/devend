@@ -233,13 +233,36 @@ export function applyCutFn(
     return;
   }
 
-  const percent = Math.round(getGridRemainingPercent(game));
-  callbacks.setRemainingPercent(percent);
+  const percent = checkSpaceWin(game, level, callbacks);
 
   if (tutorialMode && !tutorialCutMade && percent < 100) {
     callbacks.setTutorialCutMade(true);
     callbacks.onTutorialCutSuccess?.();
   }
+}
+
+type SpaceWinCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setClearedPercent' | 'setPushMode'>;
+
+/**
+ * Recompute the remaining space and open the push-your-luck prompt when the
+ * win condition is met. Shared by every path that can shrink the playable
+ * space: a completed cut (applyCut above) AND post-cut object destroys, which
+ * can capture pocket cells without a fence involved — previously those could
+ * cross the threshold with "CLEAR" in the top bar but no prompt.
+ *
+ * NB the comparison is <= to match the HUD: the top bar shows CLEAR at
+ * remaining == sizeThreshold, and a win check of strictly-less left the map
+ * unfinished on an exact landing.
+ *
+ * Returns the rounded remaining percent for the caller's own bookkeeping.
+ */
+export function checkSpaceWin(
+  game: CanvasGameState,
+  level: LevelConfig,
+  callbacks: SpaceWinCallbacks,
+): number {
+  const percent = Math.round(getGridRemainingPercent(game));
+  callbacks.setRemainingPercent(percent);
 
   if (game.pushMode === "pushing" && percent < game.bestRemainingPercent) {
     game.bestRemainingPercent = percent;
@@ -248,7 +271,7 @@ export function applyCutFn(
   // Breaking objects is a bonus, not a win condition (issue #38) — the level is
   // completed by shrinking the board, exactly as normal.
   const lockReq = level.threadLockRequired ?? 0;
-  if (percent < level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none" && !game.pushPromptPending) {
+  if (percent <= level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none" && !game.pushPromptPending && !game.levelComplete) {
     // The frame is already drawn (loop render + the post-cut render above) and
     // pushMode is still "none" here, so these would be pixel-identical repaints.
     // The two redundant full renders spiked this frame to 4 redraws and caused a
@@ -276,6 +299,7 @@ export function applyCutFn(
       callbacks.setPushMode("prompt");
     }
   }
+  return percent;
 }
 
 type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;

@@ -89,7 +89,7 @@ import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import { getRenderer, RendererKind } from "@/lib/rendering/rendererSettings";
 import type { PixiGameRenderer } from "@/lib/rendering/pixi/PixiGameRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
-import { applyCutFn } from "@/lib/physics/applyCut";
+import { applyCutFn, checkSpaceWin } from "@/lib/physics/applyCut";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
@@ -818,12 +818,17 @@ export function GameCanvas({
           setRemainingPercent,
           onFenceBroke: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
-      processDestroys: () =>
+      processDestroys: () => {
         processDestroysFn(game, {
           repaintRegionCanvas,
           setRemainingPercent,
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
-        }),
+        });
+        // A destroy can capture pocket cells (destroy-recapture) and take the
+        // remaining space past the goal with no fence involved — run the same
+        // win check a completed cut runs, or the map shows CLEAR but never ends.
+        checkSpaceWin(game, level, callbacks);
+      },
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
       // Deferred push prompt: the loop already set game.pushMode; mirror it
