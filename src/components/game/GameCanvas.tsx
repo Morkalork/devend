@@ -85,6 +85,8 @@ import { ScopeCreepConfig, DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
+import { getRenderer } from "@/lib/rendering/rendererSettings";
+import type { PixiGameRenderer } from "@/lib/rendering/pixi/PixiGameRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn } from "@/lib/physics/applyCut";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
@@ -205,6 +207,14 @@ export function GameCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Renderer flag: read once per mount (switching = remount). Under 'pixi' the
+  // canvas gets a WebGL context via PixiGameRenderer (dynamic import, so the
+  // default 2D path never pays for the pixi chunk) and renders at NATIVE
+  // device resolution; the 2D path is byte-for-byte the shipping renderer.
+  const rendererKindRef = useRef(getRenderer());
+  const pixiRef = useRef<PixiGameRenderer | null>(null);
+  const pixiInitStartedRef = useRef(false);
+  const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
   const onLevelCompleteRef = useRef(onLevelComplete);
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
@@ -380,10 +390,31 @@ export function GameCanvas({
     game.wallShieldsRemaining = Math.max(0, Math.round(activeModifiers.wallShieldsPerMap));
     setWallShieldCount(game.wallShieldsRemaining);
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    const isPixi = rendererKindRef.current === "pixi";
+    const ctx = isPixi ? null : canvas.getContext("2d");
+    if (!isPixi && !ctx) return;
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+
+    // Pixi renderer: created once per component mount (async chunk, so the
+    // default 2D path never loads it); level-effect re-runs share the instance.
+    if (isPixi && !pixiInitStartedRef.current) {
+      pixiInitStartedRef.current = true;
+      import("@/lib/rendering/pixi/PixiGameRenderer").then(({ PixiGameRenderer }) => {
+        if (pixiRef.current) return;
+        const renderer = new PixiGameRenderer();
+        pixiRef.current = renderer;
+        const size = pixiSizeRef.current ?? { w: canvas.width || 1, h: canvas.height || 1 };
+        renderer.init(canvas, size.w, size.h).then(() => {
+          const latest = pixiSizeRef.current;
+          if (latest && (latest.w !== size.w || latest.h !== size.h)) {
+            renderer.resize(latest.w, latest.h);
+          }
+        });
+      });
+    }
 
     // ── Blur canvas (legacy — now unused, kept for canvas element compatibility) ──
     let removedSamples: Vector2[] = [];
@@ -530,6 +561,8 @@ export function GameCanvas({
         rCtx.fillRect(0, 0, regionCanvas.width, regionCanvas.height);
         rCtx.restore();
       }
+      // The Pixi renderer wraps these canvases as textures; tell it to re-upload.
+      pixiRef.current?.markStaticDirty();
     };
 
     const paintOverlayCanvas = () => {
@@ -636,10 +669,18 @@ export function GameCanvas({
 
     const resizeCanvas = () => {
       const { width, height } = container.getBoundingClientRect();
-      const dpr = getDevicePixelRatio();
+      // Pixi renders at native device resolution (3x sanity cap saturates any
+      // panel); the 2D path keeps its capped + adaptive DPR.
+      const dpr = isPixi ? Math.min(window.devicePixelRatio || 1, 3) : getDevicePixelRatio();
       const physW = Math.round(width * dpr);
       const physH = Math.round(height * dpr);
-      canvas.width = physW; canvas.height = physH;
+      pixiSizeRef.current = { w: physW, h: physH };
+      if (isPixi && pixiRef.current?.isReady) {
+        // The WebGL renderer manages canvas.width/height itself.
+        pixiRef.current.resize(physW, physH);
+      } else {
+        canvas.width = physW; canvas.height = physH;
+      }
       canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
       game.screenSize = { width: physW, height: physH };
       game.boardRect = computeBoardRect(physW, physH);
@@ -667,6 +708,12 @@ export function GameCanvas({
     };
     const render = () => {
       rctx.showBallSpeeds = showBallSpeedsRef.current;
+      rctx.showPerfOverlay = showPerfOverlayRef.current;
+      if (!ctx) {
+        // Pixi path — a no-op until the async init lands (a few skipped frames).
+        pixiRef.current?.render(game, rctx);
+        return;
+      }
       renderFrame(ctx, game, rctx);
       // Perf HUD drawn after renderFrame (which returns early on normal frames),
       // so it always lands on top. Its cost counts toward the measured render ms.
@@ -775,18 +822,22 @@ export function GameCanvas({
     // Once the level has run long enough for the perf window to fill, try (once)
     // to ramp the render resolution up if the device has frame-time headroom.
     // Poll for a few seconds while the window fills, then give up. resizeCanvas
-    // re-applies the raised DPR ceiling.
-    let dprRampChecks = 0;
-    const dprRampInterval = window.setInterval(() => {
-      dprRampChecks++;
-      if (maybeRampDpr(resizeCanvas) || dprRampChecks >= 8) {
-        window.clearInterval(dprRampInterval);
-      }
-    }, 1000);
+    // re-applies the raised DPR ceiling. Pixi already renders at native DPR, so
+    // the ramp (whose cost model is 2D-fill-bound) is skipped entirely there.
+    let dprRampInterval: number | undefined;
+    if (!isPixi) {
+      let dprRampChecks = 0;
+      dprRampInterval = window.setInterval(() => {
+        dprRampChecks++;
+        if (maybeRampDpr(resizeCanvas) || dprRampChecks >= 8) {
+          window.clearInterval(dprRampInterval);
+        }
+      }, 1000);
+    }
 
     return () => {
       window.removeEventListener("resize", resizeCanvas);
-      window.clearInterval(dprRampInterval);
+      if (dprRampInterval !== undefined) window.clearInterval(dprRampInterval);
       stopGameLoop(game);
       // Cancel any pending flash/shake/game-over timeouts so they can't fire a
       // React setter (or onGameEnd, via the 1s game-over timeout) after unmount
@@ -800,6 +851,14 @@ export function GameCanvas({
       clearRenderFrameCache();
     };
   }, [level, levelNumber, activeModifiers, fenceDurability]);
+
+  // The Pixi renderer survives level changes (the effect above re-runs per
+  // level); the GPU context is torn down only when the component unmounts.
+  useEffect(() => () => {
+    pixiRef.current?.destroy();
+    pixiRef.current = null;
+    pixiInitStartedRef.current = false;
+  }, []);
 
   const handleBankAndContinue = useCallback(() => {
     const game = gameRef.current;

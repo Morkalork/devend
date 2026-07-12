@@ -25,6 +25,9 @@ export interface RenderContext {
   spaceThreshold: number;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
+  /** Admin/Playground: draw the frame-time HUD (read by the Pixi renderer;
+   *  the 2D path draws its overlay separately via drawPerfOverlay). */
+  showPerfOverlay?: boolean;
   /** Localized "Info Unlocked" text flashed above a ball on its first-ever
    *  lock of that ball type. renderFrame.ts has no i18n of its own, so the
    *  already-translated string is threaded in here. Falls back to English. */

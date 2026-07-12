@@ -77,7 +77,7 @@ function applyLockGlide(game: CanvasGameState, nowMs: number): void {
 export function createGameLoop(
   game: CanvasGameState,
   canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D,
+  ctx: CanvasRenderingContext2D | null,
   parallaxTickRef: { current: ((ts: number) => void) | null | undefined } | null | undefined,
   callbacks: GameLoopCallbacks,
   autoFreezeDuration: number,
@@ -111,29 +111,36 @@ export function createGameLoop(
       const elapsed = (performance.now() - d.startTime) / 1000;
       const dur     = DISSOLVE_DURATION / 1000;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      for (const tile of d.tiles) {
-        const t        = Math.max(0, elapsed - tile.delay);
-        const tMax     = dur - tile.delay;
-        const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
-        const alpha    = Math.max(0, 1 - progress * 1.15);
-        const x        = tile.cx + tile.vx * t;
-        const y        = tile.cy + tile.vy * t + 400 * t * t; // gravity
-        const angle    = tile.rotSpeed * t;
+        for (const tile of d.tiles) {
+          const t        = Math.max(0, elapsed - tile.delay);
+          const tMax     = dur - tile.delay;
+          const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
+          const alpha    = Math.max(0, 1 - progress * 1.15);
+          const x        = tile.cx + tile.vx * t;
+          const y        = tile.cy + tile.vy * t + 400 * t * t; // gravity
+          const angle    = tile.rotSpeed * t;
 
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.translate(x, y);
-        ctx.rotate(angle);
-        ctx.drawImage(d.captured, tile.sx, tile.sy, tile.sw, tile.sh,
-          -tile.sw / 2, -tile.sh / 2, tile.sw, tile.sh);
-        ctx.restore();
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.translate(x, y);
+          ctx.rotate(angle);
+          ctx.drawImage(d.captured, tile.sx, tile.sy, tile.sw, tile.sh,
+            -tile.sw / 2, -tile.sh / 2, tile.sw, tile.sh);
+          ctx.restore();
+        }
+      } else {
+        // No 2D context (Pixi renderer): the renderer draws the tiles itself
+        // from game.dissolve inside the normal render call.
+        callbacks.render();
       }
 
       if (elapsed >= dur) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         game.dissolve = null;
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+        else callbacks.render(); // one clean frame with the dissolve gone
         d.onComplete();
         return;
       }

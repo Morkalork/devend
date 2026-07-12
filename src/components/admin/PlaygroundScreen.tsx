@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { getRenderer, setRenderer, RendererKind } from '@/lib/rendering/rendererSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight, Circle, Plus, Trash2 } from 'lucide-react';
 import yaml from 'js-yaml';
@@ -145,6 +146,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [ballPickerOpen, setBallPickerOpen] = useState(false);
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
   const [showPerfOverlay, setShowPerfOverlay] = useState(false);
+  const [rendererKind, setRendererKind] = useState<RendererKind>(() => getRenderer());
   // Dev: on clear, play the desaturation drain then freeze on the drained frame;
   // click the board to reload. `frozen` arms the click-to-reload catcher.
   const [freezeOnClear, setFreezeOnClear] = useState(false);
@@ -840,6 +842,36 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     <span
                       className="absolute rounded-full bg-white transition-all"
                       style={{ width: 14, height: 14, top: 3, left: showPerfOverlay ? 19 : 3 }}
+                    />
+                  </span>
+                </button>
+              </div>
+
+              {/* Renderer toggle (Stage-A WebGL port; remounts the game) */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    const next: RendererKind = rendererKind === 'pixi' ? 'canvas2d' : 'pixi';
+                    setRenderer(next);
+                    setRendererKind(next);
+                    setGameKey(k => k + 1); // the flag is read at GameCanvas mount
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: rendererKind === 'pixi' ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${rendererKind === 'pixi' ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <span className="text-xs font-semibold" style={{ color: rendererKind === 'pixi' ? accent : 'hsl(var(--foreground))' }}>
+                    WebGL renderer (Pixi)
+                  </span>
+                  <span
+                    className="relative inline-flex items-center rounded-full transition-colors"
+                    style={{ width: 36, height: 20, backgroundColor: rendererKind === 'pixi' ? accent : 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span
+                      className="absolute rounded-full bg-white transition-all"
+                      style={{ width: 14, height: 14, top: 3, left: rendererKind === 'pixi' ? 19 : 3 }}
                     />
                   </span>
                 </button>

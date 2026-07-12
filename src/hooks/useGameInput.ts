@@ -46,7 +46,10 @@ export function useGameInput(
 
     const getCanvasCoords = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = getDevicePixelRatio();
+      // Derive the CSS→physical ratio from the canvas itself rather than
+      // getDevicePixelRatio(): exact under both renderers (the Pixi path runs
+      // at native DPR, above the 2D path's capped ratio) and mid-DPR-ramp.
+      const dpr = rect.width > 0 ? canvas.width / rect.width : getDevicePixelRatio();
       return { screenX: (e.clientX - rect.left) * dpr, screenY: (e.clientY - rect.top) * dpr };
     };
 
