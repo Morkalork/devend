@@ -1,17 +1,22 @@
-# Doors — risk/reward gates between maps.
+# Doors — the "Next Assignment" contract draft.
 #
-# After each shop the player chooses how to enter the next map: the standard
-# door (always offered, no modifiers) or one of two doors drawn from this
-# pool. A door's modifiers apply to THAT MAP ONLY (plus the shop right after,
-# so shop-facing rewards work). Keys are the same GameModifiers used by
-# upgrades.yml and loadouts.yml (see README-modifiers.md).
+# Every 5th completed level (offeredAfterLevel below) replaces the shop with
+# a mandatory draft: the player picks ONE of three doors rolled from this
+# pool, no neutral option. The picked door's modifiers run for the WHOLE
+# 5-level block (maps and their shops) until the next assignment replaces it.
+# Keys are the same GameModifiers used by upgrades.yml and loadouts.yml (see
+# README-modifiers.md).
 #
-# Balance note: overtime-facing rewards fold under the per-map cap, so doors
+# Balance notes: overtime-facing rewards fold under the per-map cap, so doors
 # buy consistency and side-payoffs, not inflation (issue #43 stays intact).
+# Shop-facing rewards (extraShopItems) apply to every shop in the block, and
+# per-map rewards (instantFencesPerMap) fire on each of the 5 maps, so a
+# contract is worth roughly 5x a single-map door. Risks last just as long:
+# keep them survivable.
 #
-# offeredAfterLevel: doors only start once this level has been completed, so the
-# first maps stay clean while players learn the base game. With 5, the first
-# door appears entering level 6.
+# offeredAfterLevel: the assignment cadence. An assignment lands after every
+# multiple of this level (5, 10, 15, ...), so the first maps stay clean while
+# players learn the base game.
 offeredAfterLevel: 5
 
 doors:
@@ -19,73 +24,73 @@ doors:
   - id: crunch_sprint
     name: Crunch Sprint
     risk: Balls move 15% faster.
-    reward: Earn 25% more overtime on this map.
-    clarify: Faster balls are harder to corner into a clean fence. The overtime boost still folds under this map's cap, so it only pays out when you would otherwise finish below the cap. Strong on a build that already handles speed.
+    reward: Earn 40% more overtime.
+    clarify: Faster balls are harder to corner into a clean fence, on every map of this contract. The overtime boost still folds under each map's cap, so it only pays out when you would otherwise finish below the cap. Strong on a build that already handles speed.
     modifiers:
       ballSpeedMultiplier: 1.15
-      scoreMultiplier: 1.25
+      scoreMultiplier: 1.4
 
   - id: swarm_contract
     name: Swarm Contract
     risk: Balls are 20% bigger.
-    reward: Each locked ball pays +2 bonus overtime on this map.
-    clarify: Bigger balls fill space fast (easier to seal) but resist tight fences. The per-lock payout scales with how many balls the map spawns, so it shines on crowded maps.
+    reward: Each locked ball pays +3 bonus overtime.
+    clarify: Bigger balls fill space fast (easier to seal) but resist tight fences. The per-lock payout scales with how many balls each map spawns, so it shines on crowded maps, and it pays on all five.
     modifiers:
       ballSizeMultiplier: 1.2
-      overtimePerLock: 2
+      overtimePerLock: 3
 
   - id: hazard_pay
     name: Hazard Pay
     risk: Balls move 10% faster and are 10% bigger.
-    reward: Push-your-luck payouts are doubled on this map.
-    clarify: A mild double curse for a doubled push payout. Only worth taking if you actually intend to push past the safe line, otherwise the reward does nothing for you.
+    reward: Push-your-luck payouts pay 2.5x.
+    clarify: A mild double curse for a big push payout, running the whole contract. Only worth taking if you actually intend to push past the safe line map after map, otherwise the reward does nothing for you.
     modifiers:
       ballSpeedMultiplier: 1.1
       ballSizeMultiplier: 1.1
-      pushBonusMultiplier: 2
+      pushBonusMultiplier: 2.5
 
   - id: hiring_surge
     name: Hiring Surge
-    risk: Fences grow 20% slower on this map.
-    reward: The shop after this map offers 2 extra upgrades.
-    clarify: Slower fences make just this map harder, but two extra picks in the next shop is permanent build power. A tempo sacrifice now for a stronger run later.
+    risk: Fences grow 15% slower.
+    reward: Every shop offers 2 extra upgrades.
+    clarify: Slower fences make every map of this contract harder, but two extra picks in each of its shops is a lot of permanent build power. A tempo sacrifice now for a much stronger run later.
     modifiers:
-      fenceGenerationSpeedMultiplier: 0.8
+      fenceGenerationSpeedMultiplier: 0.85
       extraShopItems: 2
 
   - id: overtime_audit
     name: Overtime Audit
-    risk: Earn 25% less overtime on this map.
-    reward: Fences grow 30% faster and the first one is instant.
-    clarify: You trade this map's score for raw speed and a free opening fence. Best on a hard map where finishing at all matters more than maxing the payout.
+    risk: Earn 20% less overtime.
+    reward: Fences grow 35% faster and the first one on each map is instant.
+    clarify: You trade this contract's score for raw speed and a free opening fence on every map. Best when surviving the stretch matters more than maxing the payout.
     modifiers:
-      scoreMultiplier: 0.75
-      fenceGenerationSpeedMultiplier: 1.3
+      scoreMultiplier: 0.8
+      fenceGenerationSpeedMultiplier: 1.35
       instantFencesPerMap: 1
 
   - id: pressure_cooker
     name: Pressure Cooker
     risk: Balls move 20% faster.
-    reward: Each locked ball pays +3 bonus overtime on this map.
-    clarify: The heaviest speed curse paired with the biggest per-lock payout. Wants a swarm map plus a freeze or slow build to keep control while you rack up locks.
+    reward: Each locked ball pays +4 bonus overtime.
+    clarify: The heaviest speed curse paired with the biggest per-lock payout, for five straight maps. Wants swarm maps plus a freeze or slow build to keep control while you rack up locks.
     modifiers:
       ballSpeedMultiplier: 1.2
-      overtimePerLock: 3
+      overtimePerLock: 4
 
   - id: cold_call
     name: Cold Call
     risk: Balls are 15% bigger.
-    reward: Tap-to-freeze works on this map, 3 seconds per tap.
-    clarify: Grants tap-to-freeze even if your build lacks it, 3 seconds per tap. The bigger balls are the price. A lifeline on chaotic maps you would otherwise struggle to control.
+    reward: Tap-to-freeze works on every map, 4 seconds per tap.
+    clarify: Grants tap-to-freeze for the whole contract even if your build lacks it, 4 seconds per tap. The bigger balls are the price. A lifeline on chaotic maps you would otherwise struggle to control.
     modifiers:
       ballSizeMultiplier: 1.15
-      ballFreezeDuration: 3
+      ballFreezeDuration: 4
 
   - id: hard_deadline
     name: Hard Deadline
     risk: Scope Creep starts immediately, no grace period.
-    reward: Ship Early bonuses pay double on this map.
-    clarify: Balls start surging in speed from the very first second and keep stepping up to the usual cap, so there is no calm window to plan in. In exchange every Ship Early payout is doubled. Built for players who cut on instinct, and even better with Deadline Extension buying the windows back.
+    reward: Ship Early bonuses pay double.
+    clarify: On every map of this contract, balls start surging in speed from the very first second and keep stepping up to the usual cap, so there is no calm window to plan in. In exchange every Ship Early payout is doubled. Built for players who cut on instinct, and even better with Deadline Extension buying the windows back.
     modifiers:
       scopeCreepImmediate: 1
       shipEarlyBonusMultiplier: 2
@@ -93,8 +98,8 @@ doors:
   - id: gold_rush
     name: Gold Rush
     risk: Balls move 12% faster and fences grow 10% slower.
-    reward: Space Optimization bonuses pay triple on this map.
-    clarify: Triples Space Optimization, so it rewards sealing tight, efficient territory rather than just surviving. The speed and fence curse makes that precision harder. A payoff for confident cutters.
+    reward: Space Optimization bonuses pay triple.
+    clarify: Triples Space Optimization for the whole contract, so it rewards sealing tight, efficient territory rather than just surviving. The speed and fence curse makes that precision harder. A payoff for confident cutters.
     modifiers:
       ballSpeedMultiplier: 1.12
       fenceGenerationSpeedMultiplier: 0.9

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { DoorConfig, DoorData } from "@/types/door";
-import { drawDoorOffers } from "@/lib/doorDraft";
+import { drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from "@/lib/doorDraft";
 import { computeGameModifiers } from "@/hooks/useActiveModifiers";
 
 // Guard the door pool straight from the YAML source of truth.
@@ -17,8 +17,8 @@ const doors = doc.doors;
 const VALID_KEYS = new Set(Object.keys(computeGameModifiers([], new Map())));
 
 describe("door pool integrity", () => {
-  it("has at least 2 doors (so a draw of two risk doors is meaningful)", () => {
-    expect(doors.length).toBeGreaterThanOrEqual(2);
+  it("has at least enough doors for a full assignment roll", () => {
+    expect(doors.length).toBeGreaterThanOrEqual(ASSIGNMENT_OFFER_COUNT);
   });
 
   it("has unique ids", () => {
@@ -48,8 +48,8 @@ describe("door pool integrity", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("gates doors behind the early ramp (offeredAfterLevel is a real level)", () => {
-    // Early maps stay clean; doors start once this level is completed.
+  it("has a real assignment cadence (offeredAfterLevel)", () => {
+    // Assignments land after every multiple of this level; early maps stay clean.
     expect(doc.offeredAfterLevel).toBeGreaterThanOrEqual(1);
   });
 
@@ -75,9 +75,9 @@ describe("drawDoorOffers", () => {
 
   it("draws n distinct doors from the pool", () => {
     for (let i = 0; i < 20; i++) {
-      const drawn = drawDoorOffers(pool, 2);
-      expect(drawn).toHaveLength(2);
-      expect(new Set(drawn.map(d => d.id)).size).toBe(2);
+      const drawn = drawDoorOffers(pool, ASSIGNMENT_OFFER_COUNT);
+      expect(drawn).toHaveLength(ASSIGNMENT_OFFER_COUNT);
+      expect(new Set(drawn.map(d => d.id)).size).toBe(ASSIGNMENT_OFFER_COUNT);
     }
   });
 
@@ -86,5 +86,17 @@ describe("drawDoorOffers", () => {
     expect(drawDoorOffers(pool, 10)).toHaveLength(4);
     expect(drawDoorOffers(pool, 0)).toHaveLength(0);
     expect(pool.map(d => d.id).join(",")).toBe(before);
+  });
+});
+
+describe("isAssignmentLevel", () => {
+  // Uses the default cadence (5): assignments after levels 5, 10, 15, ...
+  it("fires on every 5th completed level and nowhere else", () => {
+    expect(isAssignmentLevel(0)).toBe(false);
+    expect(isAssignmentLevel(4)).toBe(false);
+    expect(isAssignmentLevel(5)).toBe(true);
+    expect(isAssignmentLevel(6)).toBe(false);
+    expect(isAssignmentLevel(10)).toBe(true);
+    expect(isAssignmentLevel(15)).toBe(true);
   });
 });

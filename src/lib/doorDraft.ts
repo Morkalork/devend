@@ -2,16 +2,16 @@
  * Door pool loading + drawing (see src/types/door.ts for the feature note).
  *
  * A module-level catalogue loaded from public/doors.yml, with graceful
- * fallback to an empty pool: no doors simply skips the door screen and the
- * game flows shop -> next map as before.
+ * fallback to an empty pool: no doors makes assignment levels fall back to
+ * the regular shop, so a broken file never gates play.
  */
 import { DoorConfig } from '@/types/door';
 import { fetchYamlCatalogue, parseModifiers, drawRandom } from '@/lib/yamlCatalogue';
 
-/** Risk doors rolled per shop exit (the standard door is always offered). */
-export const DOOR_OFFERS_PER_SHOP = 2;
+/** Doors rolled per assignment; the pick is mandatory (no standard door). */
+export const ASSIGNMENT_OFFER_COUNT = 3;
 
-/** Doors stay hidden until this level is completed (early maps play clean). */
+/** Default assignment cadence: one every N completed levels. */
 export const DEFAULT_DOOR_LEVEL = 5;
 
 let liveDoors: DoorConfig[] = [];
@@ -21,9 +21,19 @@ export function getDoors(): DoorConfig[] {
   return liveDoors;
 }
 
-/** First completed level at/past which doors start being offered. */
+/** Assignment cadence N (doors.yml offeredAfterLevel): one every N levels. */
 export function getDoorTriggerLevel(): number {
   return liveTriggerLevel;
+}
+
+/**
+ * Assignments replace the shop on every Nth completed level (5, 10, 15, ...
+ * with the default cadence). The picked door's bundle then runs until the
+ * next assignment swaps it out.
+ */
+export function isAssignmentLevel(completedLevel: number): boolean {
+  const n = getDoorTriggerLevel();
+  return n > 0 && completedLevel > 0 && completedLevel % n === 0;
 }
 
 /** Coerce one raw YAML entry into a DoorConfig, or null if it's unusable. */
@@ -61,7 +71,7 @@ export async function loadDoors(): Promise<boolean> {
   }
 }
 
-/** Draw `n` distinct risk doors from the pool (uniform, no replacement). */
+/** Draw `n` distinct doors from the pool (uniform, no replacement). */
 export function drawDoorOffers(pool: DoorConfig[], n: number): DoorConfig[] {
   return drawRandom(pool, n);
 }

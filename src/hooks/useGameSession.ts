@@ -28,7 +28,7 @@ import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
-import { loadDoors, getDoors, drawDoorOffers, getDoorTriggerLevel, DOOR_OFFERS_PER_SHOP } from '@/lib/doorDraft';
+import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
 import { DoorConfig } from '@/types/door';
 import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import { CapstoneConfig } from '@/types/capstone';
@@ -105,16 +105,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [carrySpendFenceSpeed, setCarrySpendFenceSpeed] = useState(0);
   const spentThisShopVisitRef = useRef(0);
 
-  // Doors (branching choice): after each shop the player picks how to enter
-  // the next map. `doorOffers` is rolled when leaving the shop; `activeDoor`
-  // is the picked risk door (null = standard). It lives from the pick until
-  // the NEXT shop exit, so its modifiers cover the map plus the shop after it
-  // (shop-facing rewards like extra slots need that window).
+  // Assignments (doors): every 5th completed level replaces the shop with a
+  // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
+  // `activeDoor` is the picked contract and lives until the NEXT assignment
+  // replaces it (all 5 maps + their shops, so shop-facing rewards like extra
+  // slots pay out across the whole block). Cleared on ascend and run resets.
   const [doorOffers, setDoorOffers] = useState<DoorConfig[]>([]);
   const [activeDoor, setActiveDoor] = useState<DoorConfig | null>(null);
 
   // Capstone ("Promotion"): the once-per-run exclusive perk, drafted 1-of-3
-  // at the first shop exit at/past the trigger level. Permanent for the run
+  // at the first assignment at/past the trigger level. Permanent for the run
   // (survives ascension); cleared only on run resets.
   const [capstoneOffers, setCapstoneOffers] = useState<CapstoneConfig[]>([]);
   const [capstone, setCapstone] = useState<CapstoneConfig | null>(null);
@@ -443,7 +443,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
       // it does not gate starting a run — same treatment as loadouts.
       loadBallTypes(),
-      // Door pool (doors.yml). Failure just skips the door screen.
+      // Door pool (doors.yml). On failure assignment levels fall back to the shop.
       loadDoors(),
       // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
       loadCapstones(),
@@ -639,6 +639,39 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLivesAtLevelStart(currentLives);
   }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
 
+  /**
+   * Enter the assignment draft (mandatory 1-of-3 door pick). If the door pool
+   * failed to load, fall back to the regular shop so the level exit never
+   * dead-ends without a screen.
+   */
+  const proceedToAssignment = useCallback(() => {
+    const doorPool = getDoors();
+    if (doorPool.length > 0) {
+      setDoorOffers(drawDoorOffers(doorPool, ASSIGNMENT_OFFER_COUNT));
+      nav.goToDoorDraft();
+      return;
+    }
+    nav.goToUpgradeShop();
+  }, [nav.goToDoorDraft, nav.goToUpgradeShop]);
+
+  /**
+   * Assignment level (every 5th): no shop. Route straight into the capstone
+   * draft when the Promotion is due, otherwise into the assignment draft.
+   */
+  const beginAssignmentPhase = useCallback(() => {
+    setPendingLevelScore(null);
+    // Capstone ("Promotion"): the first assignment at/past the trigger level
+    // routes through the mandatory 1-of-3 perk draft, once per run. ">=" so
+    // runs that resume past the exact trigger level still get theirs.
+    const capstonePool = getCapstones();
+    if (!capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
+      setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT));
+      nav.goToCapstoneDraft();
+      return;
+    }
+    proceedToAssignment();
+  }, [capstone, currentLevelIndex, nav.goToCapstoneDraft, proceedToAssignment]);
+
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
@@ -652,10 +685,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Beat the final level: offer the ascend-or-retire choice. The pending
       // level score is kept so handleRetire can put it on the result screen.
       nav.goToAscensionDraft();
+    } else if (isAssignmentLevel(currentLevelIndex + 1)) {
+      beginAssignmentPhase();
     } else {
       nav.goToUpgradeShop();
     }
-  }, [isLastLevel, nav.goToAscensionDraft, nav.goToUpgradeShop]);
+  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, nav.goToAscensionDraft, nav.goToUpgradeShop]);
 
   const handleDismissLoadoutsUnlocked = useCallback(() => {
     setShowLoadoutsUnlockedModal(false);
@@ -743,28 +778,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [upgrades, certSourceIds, recordMaxTierPurchase]);
 
-  /**
-   * Route into the next map, via the door draft when a pool is loaded and a
-   * next map exists to preview. Shared by the shop exit and the capstone pick.
-   */
-  const proceedThroughDoors = useCallback(() => {
-    const doorPool = getDoors();
-    // Doors only start once the early ramp is done (offeredAfterLevel in
-    // doors.yml): the first maps stay clean so players learn the base game.
-    // currentLevelIndex + 1 is the just-completed level number (1-based).
-    const doorsUnlocked = currentLevelIndex + 1 >= getDoorTriggerLevel();
-    if (doorPool.length > 0 && !isLastLevel && doorsUnlocked) {
-      setDoorOffers(drawDoorOffers(doorPool, DOOR_OFFERS_PER_SHOP));
-      nav.goToDoorDraft();
-      return;
-    }
-    advanceToNextLevel();
-    nav.goToGame();
-  }, [currentLevelIndex, isLastLevel, advanceToNextLevel, nav.goToGame, nav.goToDoorDraft]);
-
   const handleContinueFromShop = useCallback(() => {
-    // Budget Cycle: this visit's spend buys next-map boons. Granted here (before
-    // the capstone/door routing below) and expired at the next level completion.
+    // Budget Cycle: this visit's spend buys next-map boons. Granted here and
+    // expired at the next level completion.
     const chunks = spendChunks(spentThisShopVisitRef.current);
     spentThisShopVisitRef.current = 0;
     const boons = spendBoons(chunks, activeModifiers);
@@ -780,28 +796,21 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
     setShopUnlockedCerts([]);
     setPendingLevelScore(null);
-    // The previous map's door expires here (after its map + this shop).
-    setActiveDoor(null);
-    // Capstone ("Promotion"): the first shop exit at/past the trigger level
-    // routes through the mandatory 1-of-3 perk draft, once per run. ">= " so
-    // Head Start runs that skip the exact trigger level still get theirs.
-    const capstonePool = getCapstones();
-    if (!capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
-      setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT));
-      nav.goToCapstoneDraft();
-      return;
-    }
-    proceedThroughDoors();
-  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, capstone, activeModifiers, saveRunCheckpoint, nav.goToCapstoneDraft, takePendingUnlocks, proceedThroughDoors]);
+    advanceToNextLevel();
+    nav.goToGame();
+  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, activeModifiers, saveRunCheckpoint, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
 
-  /** Capstone draft pick: permanent for the run, then on through the doors. */
+  /** Capstone draft pick: permanent for the run, then on to the assignment. */
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
     setCapstone(pick);
-    proceedThroughDoors();
-  }, [proceedThroughDoors]);
+    proceedToAssignment();
+  }, [proceedToAssignment]);
 
-  /** Door draft pick: `door` is a rolled risk door, or null for the standard door. */
-  const handleSelectDoor = useCallback((door: DoorConfig | null) => {
+  /**
+   * Assignment pick (mandatory): the chosen contract replaces the previous
+   * one and runs until the next assignment swaps it out.
+   */
+  const handleSelectDoor = useCallback((door: DoorConfig) => {
     setActiveDoor(door);
     advanceToNextLevel();
     nav.goToGame();

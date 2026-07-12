@@ -1,7 +1,7 @@
 # Capstones — the once-per-run exclusive perk ("Promotion").
 #
-# After the first level completed at/past `offeredAfterLevel`, the shop exit
-# routes through a mandatory 1-of-3 draft. The pick applies for the rest of
+# The first assignment level at/past `offeredAfterLevel` routes through a
+# mandatory 1-of-3 draft before the door pick. The pick applies for the rest of
 # the run (surviving ascension); the two passed-over capstones are gone for
 # good. These are rule-breakers, not stat bumps - one per archetype, so the
 # pick can crown a build or rescue a weak one. Keys are GameModifiers

@@ -1,18 +1,18 @@
 /**
- * DoorDraftScreen — the between-maps door choice ("Next Assignment").
+ * DoorDraftScreen — the every-5th-level assignment draft ("Next Assignment").
  *
- * Shown after every shop (when a door pool is loaded). The top panel briefs
- * the next map with real intel: the ball types it will spawn (the selection is
+ * Replaces the shop on assignment levels. The top panel briefs the next map
+ * with real intel: the ball types it will spawn (the selection is
  * deterministic per map id, so this is exact), par cuts, capture target and
- * obstacle count. Below it the player picks how to take the assignment on:
- * the standard door (no modifiers) or one of the rolled risk doors, whose
- * curse + blessing bundle applies to that map only. Mirrors RunDraftScreen's
- * card UI; the pick rides the session's dynamic modifier fold (activeDoor).
+ * obstacle count. Below it the player MUST pick one of the rolled doors; the
+ * chosen curse + blessing contract runs for the whole 5-level block until the
+ * next assignment replaces it. Mirrors RunDraftScreen's card UI; the pick
+ * rides the session's dynamic modifier fold (activeDoor).
  */
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
-import { DoorOpen, Play, Skull, Sparkles, Ticket, X } from 'lucide-react';
+import { Play, Skull, Sparkles, Ticket, X } from 'lucide-react';
 import { DoorConfig } from '@/types/door';
 import { LevelConfig } from '@/types/level';
 import { selectBallTypesForMap } from '@/lib/ballTypes';
@@ -23,15 +23,12 @@ import { contentText } from '@/i18n/content';
 interface DoorDraftScreenProps {
   /** The map behind the doors (the run's next level). */
   nextLevel: LevelConfig;
-  /** Rolled risk doors; the standard door is rendered by this screen itself. */
+  /** Rolled doors; picking one is mandatory. */
   offers: DoorConfig[];
-  /** Called with the chosen risk door, or null for the standard door. */
-  onSelect: (door: DoorConfig | null) => void;
+  /** Called with the chosen door. */
+  onSelect: (door: DoorConfig) => void;
   accentColor?: string;
 }
-
-/** Sentinel id for the built-in standard door card. */
-const STANDARD = '__standard__';
 
 export function DoorDraftScreen({
   nextLevel,
@@ -41,7 +38,7 @@ export function DoorDraftScreen({
 }: DoorDraftScreenProps) {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // Door whose press-and-hold detail overlay is open (STANDARD or a door id).
+  // Door whose press-and-hold detail overlay is open.
   const [detailId, setDetailId] = useState<string | null>(null);
 
   // Exact spawn preview: ball-type selection is deterministic per map id.
@@ -54,8 +51,8 @@ export function DoorDraftScreen({
   const captureTarget = 100 - nextLevel.sizeThreshold;
 
   const confirm = () => {
-    if (!selectedId) return;
-    onSelect(selectedId === STANDARD ? null : offers.find(d => d.id === selectedId) ?? null);
+    const door = offers.find(d => d.id === selectedId);
+    if (door) onSelect(door);
   };
 
   const intel: Array<{ label: string; value: string }> = [
@@ -140,32 +137,16 @@ export function DoorDraftScreen({
             ))}
           </motion.div>
 
-          {/* Door cards: the standard door first, then the rolled risk doors */}
+          {/* Door cards: the rolled contracts, pick is mandatory */}
           <div
             className={`grid grid-cols-1 gap-3 w-full ${
-              offers.length === 1 ? 'sm:grid-cols-2 sm:max-w-xl sm:mx-auto' : 'sm:grid-cols-3'
+              offers.length === 2 ? 'sm:grid-cols-2 sm:max-w-xl sm:mx-auto' : 'sm:grid-cols-3'
             }`}
           >
-            <DraftCard
-              key={STANDARD}
-              index={0}
-              accentColor={accentColor}
-              selected={selectedId === STANDARD}
-              onClick={() => setSelectedId(prev => (prev === STANDARD ? null : STANDARD))}
-              onLongPress={() => setDetailId(STANDARD)}
-              name={t('doorDraft.standardName')}
-            >
-              <div className="flex items-start gap-2">
-                <DoorOpen className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#c8ffd8' }} />
-                <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
-                  {t('doorDraft.standardDesc')}
-                </p>
-              </div>
-            </DraftCard>
             {offers.map((door, i) => (
               <DraftCard
                 key={door.id}
-                index={i + 1}
+                index={i}
                 accentColor={accentColor}
                 selected={selectedId === door.id}
                 onClick={() => setSelectedId(prev => (prev === door.id ? null : door.id))}
@@ -214,11 +195,10 @@ export function DoorDraftScreen({
           Tapping the backdrop or the X closes it. */}
       <AnimatePresence>
         {detailId && (() => {
-          const isStandard = detailId === STANDARD;
-          const door = isStandard ? null : offers.find(d => d.id === detailId);
-          if (!isStandard && !door) return null;
-          const title = isStandard ? t('doorDraft.standardName') : contentText.doorName(t, door!);
-          const clarify = isStandard ? t('doorDraft.standardClarify') : contentText.doorClarify(t, door!);
+          const door = offers.find(d => d.id === detailId);
+          if (!door) return null;
+          const title = contentText.doorName(t, door);
+          const clarify = contentText.doorClarify(t, door);
 
           return (
             <motion.div
@@ -247,25 +227,21 @@ export function DoorDraftScreen({
 
                 {/* Header */}
                 <div className="flex items-center gap-2 mb-3 pr-6">
-                  {isStandard
-                    ? <DoorOpen className="w-6 h-6 shrink-0" style={{ color: accentColor }} />
-                    : <Ticket className="w-6 h-6 shrink-0" style={{ color: accentColor }} />}
+                  <Ticket className="w-6 h-6 shrink-0" style={{ color: accentColor }} />
                   <div className="text-base font-display font-bold" style={{ color: accentColor }}>{title}</div>
                 </div>
 
-                {/* Risk / reward recap (risk doors only) */}
-                {!isStandard && (
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-start gap-2">
-                      <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                      <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.doorRisk(t, door!)}</p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                      <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.doorReward(t, door!)}</p>
-                    </div>
+                {/* Risk / reward recap */}
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-start gap-2">
+                    <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.doorRisk(t, door)}</p>
                   </div>
-                )}
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.doorReward(t, door)}</p>
+                  </div>
+                </div>
 
                 {/* Clarification */}
                 {clarify && (
@@ -277,7 +253,7 @@ export function DoorDraftScreen({
                   className="text-[11px] leading-relaxed pt-2.5"
                   style={{ color: '#4a7a5a', borderTop: `1px solid ${accentColor}22` }}
                 >
-                  {isStandard ? t('doorDraft.standardScopeNote') : t('doorDraft.scopeNote')}
+                  {t('doorDraft.scopeNote')}
                 </p>
               </motion.div>
             </motion.div>

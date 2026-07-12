@@ -111,16 +111,17 @@ Permanent one-time rewards earned by reaching lifetime stat thresholds. Complete
 
 ## capstones.yml
 
-Capstones are the once-per-run exclusive perk ("Promotion"). At the first shop
-exit at/past `offeredAfterLevel` (default 10), a mandatory 1-of-3 draft is
-offered; the pick applies **permanently for the rest of the run** (surviving
+Capstones are the once-per-run exclusive perk ("Promotion"). At the first
+assignment level at/past `offeredAfterLevel` (default 10), a mandatory 1-of-3
+draft is offered before the door pick; the pick applies **permanently for the
+rest of the run** (surviving
 ascension) and the two passed-over capstones are gone for good. Capstones are
 rule-breakers, not stat bumps - the pool covers one per archetype (enforced by
 tests) so any build can find its crown.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `offeredAfterLevel` | number | | First completed level at/past which the draft appears (default 10) |
+| `offeredAfterLevel` | number | | First assignment level at/past which the draft appears (default 10) |
 | `capstones[].id` | string | ✓ | Unique identifier |
 | `capstones[].name` | string | ✓ | Display name on the draft card |
 | `capstones[].description` | string | ✓ | Shown on the card |
@@ -133,18 +134,19 @@ tests) so any build can find its crown.
 
 ## doors.yml
 
-Doors are risk/reward gates between maps. After each shop the player picks how
-to enter the next map: the **standard door** (always offered, no modifiers) or
-one of two doors drawn from this pool. A door's modifiers apply from the pick
-until the next shop exit — i.e. that map plus the shop right after it, so
-shop-facing rewards (`extraShopItems`, `shopRestockCount`) work. The door
-screen also briefs the next map with real intel (exact ball spawns, par,
-capture target, obstacle count).
+Doors are the "Next Assignment" contracts. Every 5th completed level replaces
+the shop with a **mandatory** draft: pick one of three doors rolled from this
+pool (no neutral option). The picked door's modifiers run for the whole
+5-level block — all maps and their shops — until the next assignment replaces
+it. Shop-facing rewards (`extraShopItems`, `shopRestockCount`) therefore apply
+to every shop in the block, and per-map rewards (`instantFencesPerMap`) fire
+on each map. The draft screen also briefs the next map with real intel (exact
+ball spawns, par, capture target, obstacle count).
 
-A top-level **`offeredAfterLevel`** (default 5) keeps the early maps clean:
-doors only start once that level is completed (with 5, the first door appears
-entering level 6), so players learn the base game before the risk/reward layer
-kicks in.
+A top-level **`offeredAfterLevel`** (default 5) is the assignment cadence:
+assignments land after every multiple of that level (5, 10, 15, ...), so the
+early maps stay clean while players learn the base game. If the pool fails to
+load, assignment levels fall back to the regular shop.
 
 | Field | Type | Required | Description |
 |---|---|---|---|
@@ -155,8 +157,8 @@ kicks in.
 | `modifiers` | map | ✓ | One or more **GameModifier keys**; must include at least one adverse value (enforced by tests: no free lunches) |
 
 > Overtime-facing rewards fold under the per-map cap, so doors buy consistency
-> and side payoffs, not inflation. An empty or missing doors.yml simply skips
-> the door screen.
+> and side payoffs, not inflation. An empty or missing doors.yml makes
+> assignment levels fall back to the shop.
 
 ---
 
