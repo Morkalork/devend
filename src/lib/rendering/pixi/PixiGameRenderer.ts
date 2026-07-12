@@ -13,7 +13,7 @@
  * tiles as sprites). shadowBlur glows are replaced by layered strokes and
  * tinted radial sprites; resolution runs at NATIVE device pixels (no 2x cap).
  */
-import { Application, ColorMatrixFilter, Container, Filter, Graphics, RenderTexture, Sprite, Text, TextStyle } from "pixi.js";
+import { Application, ColorMatrixFilter, Container, Filter, Graphics, Rectangle, RenderTexture, Sprite, Text, TextStyle, Texture } from "pixi.js";
 import { AdvancedBloomFilter } from "pixi-filters";
 import { CanvasGameState } from "@/types/gameState";
 import { RenderContext, RainState } from "../types";
@@ -77,14 +77,18 @@ export class PixiGameRenderer {
   // untouched below — with the luminous band on top. Mirrors the 2D
   // _frozenLiveOC/_wakeOC approach.
   private sweep: {
-    rt: RenderTexture;
+    liveRT: RenderTexture;
+    drainedRT: RenderTexture;
+    aboveTex: Texture;
+    belowTex: Texture;
     above: Sprite;
     below: Sprite;
-    aboveMask: Graphics;
-    belowMask: Graphics;
     wave: Graphics;
   } | null = null;
   private sweepKey = 0;
+  // GPU-side snapshot for the shatter dissolve (avoids the synchronous
+  // canvas readback that caused a visible hitch right at the sweep's end).
+  private dissolveRT: RenderTexture | null = null;
 
   // Cache keys for static layers.
   private staticDirty = true;
@@ -102,9 +106,11 @@ export class PixiGameRenderer {
       backgroundAlpha: 0,
       resolution: 1,
       autoDensity: false,
-      // Lets the game-over dissolve snapshot the last presented frame via
-      // ctx.drawImage(canvas) exactly like the 2D path.
-      preserveDrawingBuffer: true,
+      // Nothing reads the canvas back (the dissolve snapshots GPU-side via
+      // captureForDissolve), so keep the swap chain unconstrained —
+      // preserveDrawingBuffer forces copy-on-present on some GPUs and shows
+      // up as occasional compositor jank.
+      preserveDrawingBuffer: false,
       autoStart: false,
       sharedTicker: false,
       powerPreference: "high-performance",
@@ -134,9 +140,11 @@ export class PixiGameRenderer {
       this.activeFence,
       this.activeFenceMaskG,
     );
-    this.root.addChild(this.boardScope, this.boardMask, this.effects.overlayContainer, this.dissolve.container);
+    this.root.addChild(this.boardScope, this.boardMask, this.effects.overlayContainer);
     this.boardScope.mask = this.boardMask;
-    this.app.stage.addChild(this.root);
+    // The dissolve is a stage-level sibling: it must stay visible while the
+    // rest of the scene (root, sweep slices) is hidden under it.
+    this.app.stage.addChild(this.root, this.dissolve.container);
 
     // The neon look's payoff pass: everything bright in the board scope blooms.
     // Threshold keeps the dark grid/region fills untouched; the baked glows
@@ -187,20 +195,21 @@ export class PixiGameRenderer {
     if (!this.ready) return;
     const now = performance.now();
 
-    // ── Game-over dissolve replaces the whole scene ──
+    // ── Shatter dissolve replaces the whole scene ──
     if (game.dissolve) {
-      this.boardScope.visible = false;
-      this.effects.overlayContainer.visible = false;
-      this.dissolve.render(game.dissolve as DissolveState, now);
+      if (this.sweep) this.teardownSweep(); // the drained slices become the tiles
+      this.root.visible = false;
+      this.dissolve.render(game.dissolve as DissolveState, now, this.dissolveRT?.source);
       this.app.render();
       return;
     }
-    if (!this.boardScope.visible) {
-      this.dissolve.clear();
-      this.boardScope.visible = true;
-      this.effects.overlayContainer.visible = true;
-    }
-    this.root.visible = true; // may have been hidden by the sweep or presentEmpty
+    // No dissolve in flight: release its resources (no-ops when already clear)
+    // and restore scene visibility after a sweep / presentEmpty.
+    this.dissolve.clear();
+    this.clearDissolveRT();
+    this.root.visible = true;
+    this.boardScope.visible = true;
+    this.effects.overlayContainer.visible = true;
 
     const { boardRect } = game;
     const scale = boardRect.scale;
@@ -246,31 +255,39 @@ export class PixiGameRenderer {
   }
 
   // ── Level-clear sweep (renderFrame's renderClearShimmer, snapshot-based) ──
+  // Both looks are baked ONCE at sweep start (live scene + drained version);
+  // per sweep frame the two slices are plain textured quads whose texture
+  // frames are cropped at the wave line - no filters, no masks, no per-frame
+  // tessellation, so the wave itself costs almost nothing.
   private renderSweep(game: CanvasGameState, accent: string, scale: number, now: number): void {
     const { left: bl, top: bt, width: bw, height: bh } = game.boardRect;
+    const W = this.app.renderer.width;
+    const H = this.app.renderer.height;
 
     if (!this.sweep || this.sweepKey !== game.shimmerStart) {
       this.teardownSweep();
       this.sweepKey = game.shimmerStart;
-      const rt = RenderTexture.create({ width: this.app.renderer.width, height: this.app.renderer.height });
       // Snapshot the live scene (including the bloom pass) exactly once.
-      this.app.renderer.render({ container: this.root, target: rt });
-      const below = new Sprite(rt);
-      const above = new Sprite(rt);
-      // Drained wake: desaturated and lifted toward white, like the 2D wake.
+      const liveRT = RenderTexture.create({ width: W, height: H });
+      this.app.renderer.render({ container: this.root, target: liveRT });
+      // Bake the drained wake once: desaturated + lifted toward white.
+      const drainedRT = RenderTexture.create({ width: W, height: H });
+      const tmp = new Sprite(liveRT);
       const grey = new ColorMatrixFilter();
       grey.desaturate();
       grey.brightness(1.25, true);
-      above.filters = [grey];
-      const aboveMask = new Graphics();
-      const belowMask = new Graphics();
-      above.mask = aboveMask;
-      below.mask = belowMask;
+      tmp.filters = [grey];
+      this.app.renderer.render({ container: tmp, target: drainedRT });
+      tmp.destroy();
+      const aboveTex = new Texture({ source: drainedRT.source, frame: new Rectangle(0, 0, W, 1) });
+      const belowTex = new Texture({ source: liveRT.source, frame: new Rectangle(0, 0, W, H) });
+      const above = new Sprite(aboveTex);
+      const below = new Sprite(belowTex);
       const wave = new Graphics();
       wave.blendMode = "add";
-      this.app.stage.addChild(below, above, aboveMask, belowMask, wave);
+      this.app.stage.addChild(below, above, wave);
       this.root.visible = false;
-      this.sweep = { rt, above, below, aboveMask, belowMask, wave };
+      this.sweep = { liveRT, drainedRT, aboveTex, belowTex, above, below, wave };
     }
 
     const raw = now - game.shimmerStart;
@@ -279,8 +296,22 @@ export class PixiGameRenderer {
     const waveY = bt + bh * progress;
 
     const s = this.sweep;
-    s.aboveMask.clear().rect(0, 0, this.app.renderer.width, Math.max(0, waveY)).fill(0xffffff);
-    s.belowMask.clear().rect(0, waveY, this.app.renderer.width, Math.max(0, this.app.renderer.height - waveY)).fill(0xffffff);
+    const split = Math.max(0, Math.min(H, Math.round(waveY)));
+    s.above.visible = split > 0;
+    if (split > 0) {
+      s.aboveTex.frame.height = split;
+      s.aboveTex.updateUvs();
+      s.above.position.set(0, 0);
+      s.above.setSize(W, split);
+    }
+    s.below.visible = split < H;
+    if (split < H) {
+      s.belowTex.frame.y = split;
+      s.belowTex.frame.height = H - split;
+      s.belowTex.updateUvs();
+      s.below.position.set(0, split);
+      s.below.setSize(W, H - split);
+    }
 
     // Luminous band + bright leading edge, fading as the sweep completes.
     const bandH = 46 * scale;
@@ -307,8 +338,35 @@ export class PixiGameRenderer {
     if (!this.ready) return;
     this.teardownSweep();
     this.dissolve.clear();
+    this.clearDissolveRT();
     this.root.visible = false;
     this.app.render();
+  }
+
+  /**
+   * GPU-side snapshot of whatever is currently presented (the drained sweep
+   * after a level clear, the live scene on game over) for the shatter tiles.
+   * Replaces the ctx.drawImage(canvas) readback, which stalled the frame.
+   */
+  captureForDissolve(tint?: string): void {
+    if (!this.ready) return;
+    this.dissolveRT?.destroy(true);
+    const W = this.app.renderer.width;
+    const H = this.app.renderer.height;
+    this.dissolveRT = RenderTexture.create({ width: W, height: H });
+    this.app.renderer.render({ container: this.app.stage, target: this.dissolveRT });
+    if (tint) {
+      const g = new Graphics().rect(0, 0, W, H).fill(tint);
+      this.app.renderer.render({ container: g, target: this.dissolveRT, clear: false });
+      g.destroy();
+    }
+  }
+
+  private clearDissolveRT(): void {
+    if (this.dissolveRT) {
+      this.dissolveRT.destroy(true);
+      this.dissolveRT = null;
+    }
   }
 
   private teardownSweep(): void {
@@ -316,10 +374,11 @@ export class PixiGameRenderer {
     const s = this.sweep;
     s.above.destroy();
     s.below.destroy();
-    s.aboveMask.destroy();
-    s.belowMask.destroy();
     s.wave.destroy();
-    s.rt.destroy(true);
+    s.aboveTex.destroy();
+    s.belowTex.destroy();
+    s.liveRT.destroy(true);
+    s.drainedRT.destroy(true);
     this.sweep = null;
     this.sweepKey = 0;
     this.root.visible = true;
@@ -904,6 +963,7 @@ export class PixiGameRenderer {
 
   destroy(): void {
     this.teardownSweep();
+    this.clearDissolveRT();
     this.balls.destroy();
     this.effects.destroy();
     this.dissolve.destroy();

@@ -737,9 +737,15 @@ export function GameCanvas({
       const W = canvas.width, H = canvas.height;
       const captured = document.createElement('canvas');
       captured.width = W; captured.height = H;
-      const cctx = captured.getContext('2d')!;
-      cctx.drawImage(canvas, 0, 0);
-      if (tint) { cctx.fillStyle = tint; cctx.fillRect(0, 0, W, H); }
+      if (isPixi) {
+        // GPU-side snapshot: drawImage(webglCanvas) is a synchronous full-frame
+        // readback — a visible hitch right when the shatter should start.
+        pixiRef.current?.captureForDissolve(tint);
+      } else {
+        const cctx = captured.getContext('2d')!;
+        cctx.drawImage(canvas, 0, 0);
+        if (tint) { cctx.fillStyle = tint; cctx.fillRect(0, 0, W, H); }
+      }
 
       const cols = Math.ceil(W / TILE), rows = Math.ceil(H / TILE);
       const tiles: DissolveTile[] = [];

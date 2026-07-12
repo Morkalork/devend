@@ -8,7 +8,7 @@
  * whole board while the wave sweeps (instead of the exact drained-wake split),
  * and the dissolve reuses the captured-canvas tiles as sprites.
  */
-import { CanvasSource, Container, Graphics, Rectangle, Sprite, Text, TextStyle, Texture } from "pixi.js";
+import { CanvasSource, Container, Graphics, Rectangle, Sprite, Text, TextStyle, Texture, TextureSource } from "pixi.js";
 import { CanvasGameState } from "@/types/gameState";
 import { DissolveState } from "@/types/game";
 import { RenderContext } from "../types";
@@ -386,13 +386,17 @@ export class DissolveLayer {
   private sprites: Sprite[] = [];
   private forState: DissolveState | null = null;
 
-  /** Advance the dissolve; mirrors the 2D tile kinematics in useGameLoop. */
-  render(dissolve: DissolveState, now: number): void {
+  /**
+   * Advance the dissolve; mirrors the 2D tile kinematics in useGameLoop.
+   * `gpuSource` (a RenderTexture source from captureForDissolve) avoids the
+   * canvas readback path entirely; without it the captured canvas is used.
+   */
+  render(dissolve: DissolveState, now: number, gpuSource?: TextureSource): void {
     if (this.forState !== dissolve) {
       this.clear();
       this.forState = dissolve;
       // Explicit source (not Texture.from) to stay out of Pixi's global cache.
-      const source = new CanvasSource({ resource: dissolve.captured });
+      const source = gpuSource ?? new CanvasSource({ resource: dissolve.captured });
       for (const tile of dissolve.tiles) {
         const tex = new Texture({
           source,
@@ -419,8 +423,9 @@ export class DissolveLayer {
   }
 
   clear(): void {
+    if (!this.forState && this.sprites.length === 0) return; // called per idle frame
     for (const s of this.sprites) {
-      s.texture.destroy();
+      s.texture.destroy(); // frame textures only; the shared source is owned elsewhere
       s.destroy();
     }
     this.sprites = [];
