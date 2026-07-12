@@ -266,6 +266,10 @@ export class PixiGameRenderer {
     if (!this.sweep || this.sweepKey !== game.shimmerStart) {
       this.teardownSweep();
       this.sweepKey = game.shimmerStart;
+      // The space bar under the board doesn't outlive the board: exclude it
+      // from the snapshot so the sweep takes it too (restored on teardown via
+      // the normal render path).
+      this.effects.overlayContainer.visible = false;
       // Snapshot the live scene (including the bloom pass) exactly once.
       const liveRT = RenderTexture.create({ width: W, height: H });
       this.app.renderer.render({ container: this.root, target: liveRT });
