@@ -38,6 +38,8 @@ export interface GameLoopCallbacks {
   onActiveSecond?: (seconds: number) => void;
   /** Called when a deferred push prompt opens (the lock flash it waited on ended). */
   onPushPrompt?: () => void;
+  /** Renderer-owned "blank the board" (Pixi path; the 2D path clearRects its ctx). */
+  renderEmpty?: () => void;
 }
 
 /**
@@ -140,7 +142,9 @@ export function createGameLoop(
       if (elapsed >= dur) {
         game.dissolve = null;
         if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-        else callbacks.render(); // one clean frame with the dissolve gone
+        // Pixi: present an EMPTY frame (the board has shattered away; a normal
+        // render would repaint the drained sweep since shimmerStart is still set).
+        else callbacks.renderEmpty?.();
         d.onComplete();
         return;
       }

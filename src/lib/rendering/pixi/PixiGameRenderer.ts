@@ -200,6 +200,7 @@ export class PixiGameRenderer {
       this.boardScope.visible = true;
       this.effects.overlayContainer.visible = true;
     }
+    this.root.visible = true; // may have been hidden by the sweep or presentEmpty
 
     const { boardRect } = game;
     const scale = boardRect.scale;
@@ -215,7 +216,9 @@ export class PixiGameRenderer {
     this.syncStaticSprites(rctx);
 
     // ── Level-clear sweep: snapshot the frozen scene, then just animate it ──
-    if (game.shimmerStart > 0) {
+    // shimmerStart can sit in the FUTURE (it waits for lock flashes to play
+    // out), so keep live-rendering until the sweep actually begins.
+    if (game.shimmerStart > 0 && now >= game.shimmerStart) {
       this.renderSweep(game, accent, scale, now);
       this.app.render();
       return;
@@ -294,6 +297,18 @@ export class PixiGameRenderer {
         .lineTo(bl + bw, waveY)
         .stroke({ width: 9 * scale, color: accent, alpha: 0.35 });
     }
+  }
+
+  /**
+   * Present a blank frame (the board has shattered away after a level clear).
+   * The next real render() restores visibility; initGame resets shimmer state.
+   */
+  presentEmpty(): void {
+    if (!this.ready) return;
+    this.teardownSweep();
+    this.dissolve.clear();
+    this.root.visible = false;
+    this.app.render();
   }
 
   private teardownSweep(): void {

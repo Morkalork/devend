@@ -43,6 +43,7 @@ import {
   LOCK_TOTAL_DURATION,
   BALL_WON_REGION_THRESHOLD,
   LEVEL_CLEAR_SHIMMER_MS,
+  LEVEL_CLEAR_HOLD_MS,
 } from "@/lib/gameConstants";
 import {
   generateRegionId,
@@ -822,6 +823,7 @@ export function GameCanvas({
       // Deferred push prompt: the loop already set game.pushMode; mirror it
       // into React so the modal mounts.
       onPushPrompt: () => setPushMode("prompt"),
+      renderEmpty: () => pixiRef.current?.presentEmpty(),
     };
     const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration, activeModifiers.freezeNoCooldown);
     game.gameLoopFn = gameLoop;
@@ -909,22 +911,25 @@ export function GameCanvas({
       },
     );
 
+    // Same post-sweep beat as applyCut: hold the drained board, shatter it,
+    // then mount the completion overlay.
     setTimeout(() => {
-      onLevelCompleteRef.current({
-        levelNumber, levelId: level.id, cutCount: game.wallCount,
-        expectedCuts: level.expectedCuts, basePoints: level.points,
-        levelScore,
-        remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
-        thresholdPercent: level.sizeThreshold, pushBonus,
-        underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
-        spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
-        fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-        extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
-        lockedBallsCount: game.lockedBallsCount,
-        shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+      startDissolveRef.current?.(() => {
+        onLevelCompleteRef.current({
+          levelNumber, levelId: level.id, cutCount: game.wallCount,
+          expectedCuts: level.expectedCuts, basePoints: level.points,
+          levelScore,
+          remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
+          thresholdPercent: level.sizeThreshold, pushBonus,
+          underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
+          spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
+          fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
+          extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+          lockedBallsCount: game.lockedBallsCount,
+          shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+        });
       });
-      startDissolveRef.current?.(() => {});
-    }, 150 + LEVEL_CLEAR_SHIMMER_MS);
+    }, 150 + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);
   }, [level, levelNumber, activeModifiers]);
 
   useEffect(() => {

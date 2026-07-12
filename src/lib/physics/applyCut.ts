@@ -30,7 +30,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
-import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
+import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
@@ -318,20 +318,24 @@ export function triggerLevelComplete(
   // Dev/playground freeze: play the shimmer, then hold the drained frame instead
   // of advancing to the completion overlay / dissolve.
   if (game.shimmerFrozen) return;
+  // Post-sweep beat: hold the drained board for a moment, shatter it away,
+  // and only then mount the completion overlay (mounting it at the exact
+  // sweep end read as a jerky cut, and hid the shatter behind the card).
   setTimeout(() => {
-    callbacks.onLevelComplete({
-      levelNumber, levelId: level.id, cutCount: game.wallCount,
-      expectedCuts: level.expectedCuts, basePoints: level.points,
-      levelScore,
-      remainingPercent: percent, thresholdPercent: level.sizeThreshold,
-      underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
-      spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
-      fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-      extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
-      lockedBallsCount: game.lockedBallsCount,
-      breakBonus: game.breakBonus,
-      shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+    callbacks.startDissolve(() => {
+      callbacks.onLevelComplete({
+        levelNumber, levelId: level.id, cutCount: game.wallCount,
+        expectedCuts: level.expectedCuts, basePoints: level.points,
+        levelScore,
+        remainingPercent: percent, thresholdPercent: level.sizeThreshold,
+        underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
+        spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
+        fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
+        extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+        lockedBallsCount: game.lockedBallsCount,
+        breakBonus: game.breakBonus,
+        shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+      });
     });
-    callbacks.startDissolve(() => {});
-  }, lockDelay + LEVEL_CLEAR_SHIMMER_MS);
+  }, lockDelay + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);
 }

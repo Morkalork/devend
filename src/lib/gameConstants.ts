@@ -7,6 +7,7 @@ export const INFO_UNLOCKED_DURATION = 1600; // ms — "Info Unlocked" flash on a
 export const BALL_DISINTEGRATE_MS = 420;  // ms — ball shrinks to nothing
 export const DISSOLVE_DURATION    = 1000; // ms — board dissolve after level complete
 export const LEVEL_CLEAR_SHIMMER_MS = 1000; // ms — celebratory shimmer sweeping down the cleared board
+export const LEVEL_CLEAR_HOLD_MS    = 500;  // ms — beat on the drained board after the sweep, before it shatters
 export const SWIPE_TRAIL_DURATION = 550;  // ms — fading afterglow tracing a cut swipe
 
 // ── Physics / world units ─────────────────────────────────────────────────
