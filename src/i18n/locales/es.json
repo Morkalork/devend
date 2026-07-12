@@ -496,6 +496,7 @@
     "progressSavedHere": "el progreso se guardará aquí",
     "hoursValue": "{{hours}}h",
     "overtime": "horas extra",
+    "marketRates": "Tarifas del mercado: +{{percent}}%",
     "restocksLeft": "Reposiciones restantes: {{count}} - comprar un artículo añade una nueva oferta",
     "noRestocksLeft": "No quedan reposiciones en esta visita",
     "runwayTitle": "Runway: los beneficios siguen activos mientras tu banco supere el umbral al empezar el mapa",
@@ -703,11 +704,11 @@
       },
       "budget_cycle_junior": {
         "name": "Ciclo Presupuestario",
-        "description": "Cada 60h gastadas en una visita a la tienda compran una valla instantánea en el siguiente mapa."
+        "description": "Cada bloque de gasto en una visita a la tienda compra una valla instantánea en el siguiente mapa. Los bloques empiezan en 60h y crecen con las tarifas del mercado."
       },
       "budget_cycle_senior": {
         "name": "Ciclo Presupuestario",
-        "description": "Cada 60h gastadas en una visita a la tienda también aceleran el crecimiento de vallas un 5% en el siguiente mapa."
+        "description": "Cada bloque de gasto en una visita a la tienda también acelera el crecimiento de vallas un 5% en el siguiente mapa."
       },
       "micro_manager_principal": {
         "name": "MicroManager",

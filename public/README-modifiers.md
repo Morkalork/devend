@@ -201,7 +201,7 @@ Defines all levels. Each level is an entry in the `levels` array.
 | `level` | number | ✓ | Logical level number. Multiple maps can share the same level number — one is picked at random |
 | `sizeThreshold` | number | ✓ | Percentage of board that must be captured to win (e.g. `40` = clear 60%) |
 | `expectedCuts` | number | ✓ | Par cut count — affects scoring and the cuts/par display |
-| `points` | number | ✓ | Base overtime hours awarded on completion. Kept **flat across levels** (issue #43): it also drives the per-map reward cap (`points × overtimeCapHeadroom`, which lock/push bonuses fold in under) and the upgrade-pricing base, so a flat value keeps per-map income and upgrade costs in step and avoids hyperinflation. Must exceed `expectedCuts`. |
+| `points` | number | ✓ | Base overtime hours awarded on completion. Kept **flat across levels** (issue #43): it also drives the per-map reward cap (`points × overtimeCapHeadroom`, which lock/push bonuses fold in under) and the upgrade-pricing base, so a flat value keeps per-map income and upgrade costs in step and avoids hyperinflation. Must exceed `expectedCuts`. Late-run scarcity comes from the shop side instead: `pricing.blockInflation` in upgrades.yml multiplies effective prices (and the Budget Cycle spend chunk) per completed 5-level assignment block, and shop offers are weighted toward recently unlocked upgrades. |
 | `variety` | number | | `0–100` — controlled randomness for organic variation (default: `0`) |
 | `randomShapes` | number | | `0–100` — percentage chance for random mini-obstacles (default: `20`) |
 | `threadLockRequired` | number | | Minimum number of balls that must be thread-locked to win |

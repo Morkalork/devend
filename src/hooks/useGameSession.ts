@@ -35,7 +35,8 @@ import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
-import { runwayBonuses, spendChunks, spendBoons } from '@/lib/treasury';
+import { runwayBonuses, spendChunks, spendBoons, SPEND_CHUNK_HOURS } from '@/lib/treasury';
+import { inflationForLevel } from '@/lib/upgradePricing';
 import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
@@ -780,8 +781,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const handleContinueFromShop = useCallback(() => {
     // Budget Cycle: this visit's spend buys next-map boons. Granted here and
-    // expired at the next level completion.
-    const chunks = spendChunks(spentThisShopVisitRef.current);
+    // expired at the next level completion. The chunk scales with the same
+    // market-rate inflation as prices (see upgradePricing.inflationForLevel).
+    const chunkHours = Math.round(SPEND_CHUNK_HOURS * inflationForLevel(currentLevelIndex + 1));
+    const chunks = spendChunks(spentThisShopVisitRef.current, chunkHours);
     spentThisShopVisitRef.current = 0;
     const boons = spendBoons(chunks, activeModifiers);
     setCarrySpendFences(boons.instantFences);

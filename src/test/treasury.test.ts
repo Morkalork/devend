@@ -65,6 +65,14 @@ describe("budget cycle (spend-side chunks)", () => {
     expect(spendChunks(-60)).toBe(0);
   });
 
+  it("scales with an inflated chunk size (market rates)", () => {
+    expect(spendChunks(120, 120)).toBe(1);
+    expect(spendChunks(119, 120)).toBe(0);
+    expect(spendChunks(360, 120)).toBe(MAX_SPEND_CHUNKS);
+    // Garbage chunk size falls back to the base chunk.
+    expect(spendChunks(60, NaN)).toBe(1);
+  });
+
   it("composes boons from the owned tiers", () => {
     const both = mods({ spendInstantFencePerChunk: 1, spendFenceSpeedPerChunk: 0.05 });
     expect(spendBoons(2, both)).toEqual({ instantFences: 2, fenceSpeedBonus: 0.1 });

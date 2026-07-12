@@ -62,10 +62,16 @@ export function runwayBonuses(bank: number, mods: GameModifiers): Bonuses | unde
   return bonuses;
 }
 
-/** Budget Cycle chunks charged by a shop visit's total spend. */
-export function spendChunks(spentHours: number): number {
+/**
+ * Budget Cycle chunks charged by a shop visit's total spend. `chunkHours`
+ * defaults to the base chunk; callers pass the market-rate-inflated chunk
+ * (SPEND_CHUNK_HOURS x inflationForLevel) so boons don't get cheaper as
+ * prices rise through the run.
+ */
+export function spendChunks(spentHours: number, chunkHours: number = SPEND_CHUNK_HOURS): number {
   if (!Number.isFinite(spentHours) || spentHours <= 0) return 0;
-  return Math.min(MAX_SPEND_CHUNKS, Math.floor(spentHours / SPEND_CHUNK_HOURS));
+  const chunk = Number.isFinite(chunkHours) && chunkHours > 0 ? chunkHours : SPEND_CHUNK_HOURS;
+  return Math.min(MAX_SPEND_CHUNKS, Math.floor(spentHours / chunk));
 }
 
 export interface SpendBoons {

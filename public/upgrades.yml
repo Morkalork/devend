@@ -12,6 +12,10 @@
 # as chips. See UpgradeTag in src/types/upgrade.ts.
 pricing:
   minCost: 8
+  # Market rates: effective prices multiply by this per completed 5-level
+  # assignment block (levels 1-5 at face value, 6-10 x1.35, 11-15 x1.82...).
+  # Keeps the flat per-map income scarce late-run. 1 disables inflation.
+  blockInflation: 1.35
   tierFactor:
     Junior: 1.0
     Senior: 1.35
@@ -563,7 +567,7 @@ upgrades:
   - id: budget_cycle_junior
     name: Budget Cycle
     tier: Junior
-    description: Every 60h spent in one shop visit buys an instant fence on the next map.
+    description: Every spending chunk in one shop visit buys an instant fence on the next map. Chunks start at 60h and grow with market rates.
     unlockLevel: 10
     prerequisites:
       - expense_account
@@ -575,7 +579,7 @@ upgrades:
   - id: budget_cycle_senior
     name: Budget Cycle
     tier: Senior
-    description: Each 60h spent in one shop visit also speeds fence growth 5% on the next map.
+    description: Each spending chunk in one shop visit also speeds fence growth 5% on the next map.
     unlockLevel: 13
     prerequisites:
       - budget_cycle_junior

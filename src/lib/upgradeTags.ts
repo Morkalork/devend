@@ -30,24 +30,43 @@ export function tagWeight(u: UpgradeConfig, counts: Map<string, number>): number
   return w;
 }
 
+// Unlock-recency window: full weight while an upgrade is fresh, then a 15%
+// decay per level of age down to a floor. Keeps a level-14 shelf from filling
+// with level-2 shelf-filler while a build-critical early root can still roll.
+const RECENCY_GRACE_LEVELS = 4;
+const RECENCY_DECAY_PER_LEVEL = 0.15;
+const RECENCY_FLOOR = 0.25;
+
+/** 1.0 for recently unlocked upgrades, decaying with age to RECENCY_FLOOR. */
+export function unlockRecencyWeight(u: UpgradeConfig, completedLevel: number): number {
+  const age = completedLevel - (u.unlockLevel ?? 1);
+  if (age <= RECENCY_GRACE_LEVELS) return 1;
+  return Math.max(RECENCY_FLOOR, 1 - RECENCY_DECAY_PER_LEVEL * (age - RECENCY_GRACE_LEVELS));
+}
+
 /**
  * Weighted sample without replacement (n picks; weights re-normalise as the
  * pool shrinks). Returns fewer than n when the pool runs out. With no owned
- * tags every weight is 1, i.e. a uniform shuffle.
+ * tags every weight is 1, i.e. a uniform shuffle. When `completedLevel` is
+ * given, weights also lean toward recently unlocked upgrades (see
+ * unlockRecencyWeight), so late shelves stay expensive and interesting.
  */
 export function weightedSample(
   items: UpgradeConfig[],
   n: number,
   counts: Map<string, number>,
+  completedLevel?: number,
 ): UpgradeConfig[] {
+  const weightOf = (u: UpgradeConfig) =>
+    tagWeight(u, counts) * (completedLevel !== undefined ? unlockRecencyWeight(u, completedLevel) : 1);
   const pool = [...items];
   const picked: UpgradeConfig[] = [];
   while (picked.length < n && pool.length > 0) {
-    const total = pool.reduce((sum, it) => sum + tagWeight(it, counts), 0);
+    const total = pool.reduce((sum, it) => sum + weightOf(it), 0);
     let r = Math.random() * total;
     let idx = pool.length - 1;
     for (let i = 0; i < pool.length; i++) {
-      r -= tagWeight(pool[i], counts);
+      r -= weightOf(pool[i]);
       if (r <= 0) { idx = i; break; }
     }
     picked.push(pool.splice(idx, 1)[0]);

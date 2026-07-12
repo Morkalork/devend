@@ -511,6 +511,7 @@
     "progressSavedHere": "progress will be saved here",
     "hoursValue": "{{hours}}h",
     "overtime": "overtime",
+    "marketRates": "Market rates: +{{percent}}%",
     "restocksLeft": "Restocks left: {{count}} - buying an item adds a new offer",
     "noRestocksLeft": "No restocks left this visit",
     "runwayTitle": "Runway: perks stay active while your bank is above the threshold at map start",

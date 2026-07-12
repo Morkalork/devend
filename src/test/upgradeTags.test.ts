@@ -6,6 +6,7 @@ import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import {
   ownedTagCounts,
   tagWeight,
+  unlockRecencyWeight,
   computeActiveTagSets,
   DEFAULT_TAG_SET_THRESHOLD,
 } from "@/lib/upgradeTags";
@@ -111,5 +112,24 @@ describe("tagSets catalogue config", () => {
     for (const b of doc.tagSets!.bonuses) {
       expect(counts.get(b.tag) ?? 0, `tag "${b.tag}" needs >= ${threshold} purchasable upgrades`).toBeGreaterThanOrEqual(threshold);
     }
+  });
+});
+
+describe("unlockRecencyWeight", () => {
+  const at = (unlockLevel: number): UpgradeConfig =>
+    ({ ...mk("u", ["lock"]), unlockLevel }) as UpgradeConfig;
+
+  it("gives full weight to recently unlocked upgrades", () => {
+    expect(unlockRecencyWeight(at(10), 10)).toBe(1);
+    expect(unlockRecencyWeight(at(10), 14)).toBe(1);
+    // Not-yet-relevant future unlocks are never boosted above 1.
+    expect(unlockRecencyWeight(at(12), 10)).toBe(1);
+  });
+
+  it("decays with age down to the floor", () => {
+    expect(unlockRecencyWeight(at(2), 8)).toBeCloseTo(0.7);   // age 6
+    expect(unlockRecencyWeight(at(2), 10)).toBeCloseTo(0.4);  // age 8
+    expect(unlockRecencyWeight(at(2), 14)).toBe(0.25);        // floored
+    expect(unlockRecencyWeight(at(2), 40)).toBe(0.25);
   });
 });

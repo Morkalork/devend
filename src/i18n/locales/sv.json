@@ -496,6 +496,7 @@
     "progressSavedHere": "framsteg sparas här",
     "hoursValue": "{{hours}}h",
     "overtime": "övertid",
+    "marketRates": "Marknadstaxor: +{{percent}}%",
     "restocksLeft": "Påfyllningar kvar: {{count}} - att köpa en vara lägger till ett nytt erbjudande",
     "noRestocksLeft": "Inga påfyllningar kvar detta besök",
     "runwayTitle": "Runway: förmånerna är aktiva så länge banken ligger över tröskeln när kartan börjar",
@@ -703,11 +704,11 @@
       },
       "budget_cycle_junior": {
         "name": "Budgetcykel",
-        "description": "Varje 60h som spenderas under ett butiksbesök köper ett direktstängsel på nästa karta."
+        "description": "Varje utgiftsblock under ett butiksbesök köper ett direktstängsel på nästa karta. Blocken börjar på 60h och växer med marknadstaxorna."
       },
       "budget_cycle_senior": {
         "name": "Budgetcykel",
-        "description": "Varje 60h som spenderas under ett butiksbesök snabbar också upp stängselbygget 5% på nästa karta."
+        "description": "Varje utgiftsblock under ett butiksbesök snabbar också upp stängselbygget 5% på nästa karta."
       },
       "micro_manager_principal": {
         "name": "MicroManager",

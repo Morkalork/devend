@@ -10,7 +10,7 @@ import yaml from 'js-yaml';
 import { UpgradeConfig, UpgradeData, UpgradeTier, TagSetsConfig } from '@/types/upgrade';
 import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { LevelData } from '@/types/level';
-import { buildLevelPoints, mergePricing, computeUpgradeCost } from '@/lib/upgradePricing';
+import { buildLevelPoints, mergePricing, computeUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
 
 const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
@@ -84,6 +84,8 @@ export function useUpgradeManager() {
       const mapData = yaml.load(mapText) as LevelData;
       const levelPoints = buildLevelPoints(mapData?.levels ?? []);
       const pricing = mergePricing(data.pricing);
+      // Publish for inflationForLevel (the shop's market-rate multiplier).
+      setLivePricing(pricing);
 
       const lookup = new Map<string, UpgradeConfig>();
 

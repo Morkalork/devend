@@ -46,6 +46,9 @@ export interface UpgradeConfig {
 export interface UpgradePricing {
   minCost: number;
   tierFactor: Record<UpgradeTier, number>;
+  /** Price multiplier applied per completed 5-level assignment block ("market
+   *  rates rise each contract"). 1 disables inflation. */
+  blockInflation?: number;
 }
 
 /**

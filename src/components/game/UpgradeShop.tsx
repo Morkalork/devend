@@ -21,6 +21,7 @@ import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upg
 import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { runwayStatus, spendChunks, SPEND_CHUNK_HOURS, RunwayPerk } from '@/lib/treasury';
+import { inflationForLevel } from '@/lib/upgradePricing';
 import { TagChip } from './TagChip';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info, Vault, ShoppingCart } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
@@ -174,10 +175,10 @@ export function UpgradeShop({
       return u.prerequisites.some(p => !ownedUpgradeIds.includes(p));
     });
     const counts = ownedTagCounts(ownedUpgradeIds, upgrades);
-    const offers = weightedSample(unlocked, shopSlots, counts);
+    const offers = weightedSample(unlocked, shopSlots, counts, completedLevel);
     // Add at most one locked item if there's room
     if (offers.length < shopSlots && locked.length > 0) {
-      offers.push(weightedSample(locked, 1, counts)[0]);
+      offers.push(weightedSample(locked, 1, counts, completedLevel)[0]);
     }
     return offers;
   });
@@ -236,13 +237,16 @@ export function UpgradeShop({
     return cheapest?.id ?? null;
   }, [freeCheapestOffer, offeredUpgrades, allOwnedIds, isLocked]);
 
-  // All prices flow through the discount (Bulk Licensing certificate)
+  // All prices flow through market-rate inflation (rises each 5-level
+  // assignment block) and then the discount (Bulk Licensing certificate).
+  const priceInflation = inflationForLevel(completedLevel);
   const priceFor = useCallback(
     (u: UpgradeConfig) =>
-      u.id === freeOfferId ? 0 : Math.max(1, Math.round(u.cost * shopDiscountMultiplier)),
-    [shopDiscountMultiplier, freeOfferId],
+      u.id === freeOfferId ? 0 : Math.max(1, Math.round(u.cost * priceInflation * shopDiscountMultiplier)),
+    [shopDiscountMultiplier, freeOfferId, priceInflation],
   );
   const hasDiscount = shopDiscountMultiplier < 1;
+  const inflationPercent = Math.round((priceInflation - 1) * 100);
 
   // Budget remaining after currently selected items
   const selectedTotalCost = selectedIds.reduce((sum, id) => {
@@ -257,7 +261,10 @@ export function UpgradeShop({
   const runwayPerks = activeModifiers ? runwayStatus(remainingBudget, activeModifiers) : [];
   const hasBudgetCycle = !!activeModifiers &&
     (activeModifiers.spendInstantFencePerChunk > 0 || activeModifiers.spendFenceSpeedPerChunk > 0);
-  const budgetChunks = spendChunks(selectedTotalCost);
+  // The spend chunk scales with the same inflation index as prices, so the
+  // spender archetype doesn't get cheaper boons as markets rise.
+  const chunkHours = Math.round(SPEND_CHUNK_HOURS * priceInflation);
+  const budgetChunks = spendChunks(selectedTotalCost, chunkHours);
   const RUNWAY_CHIP_KEYS: Record<RunwayPerk, string> = {
     instantFence: 'upgradeShop.runwayChipInstantFence',
     concurrentFence: 'upgradeShop.runwayChipConcurrentFence',
@@ -301,7 +308,7 @@ export function UpgradeShop({
         // Restocks also lean into the build: the selection counts as owned, so
         // buying a lock upgrade makes the fresh offer likelier to be lock too.
         const counts = ownedTagCounts(ownedAfterSelect, upgrades);
-        const restockedOffer = weightedSample(candidates, 1, counts)[0];
+        const restockedOffer = weightedSample(candidates, 1, counts, completedLevel)[0];
         setOfferedUpgrades(prev => [...prev, restockedOffer]);
         setRestocksUsed(prev => prev + 1);
       }
@@ -408,6 +415,19 @@ export function UpgradeShop({
           <span className="text-muted-foreground">{t('upgradeShop.overtime')}</span>
         </motion.div>
 
+        {/* Market rates: prices rise each assignment block */}
+        {inflationPercent > 0 && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.12 }}
+            className="text-center text-[11px] tracking-widest uppercase"
+            style={{ fontFamily: "'JetBrains Mono', monospace", color: '#c9a227' }}
+          >
+            {t('upgradeShop.marketRates', { percent: inflationPercent })}
+          </motion.p>
+        )}
+
         {/* Treasury strip: Runway thresholds + Budget Cycle charge, live against
             the balance after the current selection (see remainingBudget above). */}
         {(runwayPerks.length > 0 || hasBudgetCycle) && (
@@ -441,7 +461,7 @@ export function UpgradeShop({
                 <span>
                   {budgetChunks > 0
                     ? t('upgradeShop.budgetCycleCharged', { count: budgetChunks, spent: selectedTotalCost })
-                    : t('upgradeShop.budgetCycleProgress', { spent: selectedTotalCost, next: SPEND_CHUNK_HOURS })}
+                    : t('upgradeShop.budgetCycleProgress', { spent: selectedTotalCost, next: chunkHours })}
                 </span>
               </div>
             )}

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import type { LevelData } from "@/types/level";
-import { buildLevelPoints, mergePricing, computeUpgradeCost } from "@/lib/upgradePricing";
+import { buildLevelPoints, mergePricing, computeUpgradeCost, inflationForLevel } from "@/lib/upgradePricing";
 
 // Read the upgrade catalogue straight from the YAML source of truth so this
 // suite guards the data, not a hand-maintained copy.
@@ -190,5 +190,24 @@ describe("pricing", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("market-rate inflation", () => {
+  it("is configured in upgrades.yml and steps per 5-level assignment block", () => {
+    expect(pricing.blockInflation).toBeGreaterThan(1);
+    const rate = pricing.blockInflation!;
+    expect(inflationForLevel(1, pricing)).toBe(1);
+    expect(inflationForLevel(4, pricing)).toBe(1);
+    expect(inflationForLevel(6, pricing)).toBeCloseTo(rate);
+    expect(inflationForLevel(9, pricing)).toBeCloseTo(rate);
+    expect(inflationForLevel(11, pricing)).toBeCloseTo(rate ** 2);
+    expect(inflationForLevel(16, pricing)).toBeCloseTo(rate ** 3);
+  });
+
+  it("disables cleanly at rate 1 and guards garbage input", () => {
+    const flat = { ...pricing, blockInflation: 1 };
+    expect(inflationForLevel(23, flat)).toBe(1);
+    expect(inflationForLevel(NaN, pricing)).toBe(1);
   });
 });
