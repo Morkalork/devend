@@ -18,12 +18,15 @@ import { LevelConfig } from '@/types/level';
 
 export const DEFAULT_UPGRADE_PRICING: UpgradePricing = {
   minCost: 8,
+  // Mirrors public/upgrades.yml: factors are tuned against the lock-centric
+  // economy (base points 20), so a Junior costs 40h - more than a no-lock
+  // clear pays, about what a well-locked map pays.
   tierFactor: {
-    Junior: 1.0,
-    Senior: 1.35,
-    Principal: 1.85,
-    Architect: 2.4,
-    Wizard: 3.0,
+    Junior: 2.0,
+    Senior: 2.7,
+    Principal: 3.7,
+    Architect: 4.8,
+    Wizard: 6.0,
   },
   blockInflation: 1.35,
 };

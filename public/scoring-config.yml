@@ -3,9 +3,21 @@
 
 scoring:
   # Per-level overtime cap multiplier.
-  # cap = round(basePoints × overtimeCapHeadroom). Tracks the pay curve so
-  # late levels pay more, while bounding extreme multiplier stacks.
-  overtimeCapHeadroom: 2.0
+  # cap = round(basePoints × overtimeCapHeadroom). With the lock-centric
+  # economy the base (points: 20) is only the floor; the headroom leaves room
+  # for the lock bonuses that make up most of a map's real income, while
+  # bounding extreme multiplier stacks (cap = 20 × 4 = 80h, same absolute
+  # ceiling as the old 40 × 2 economy).
+  overtimeCapHeadroom: 4.0
+
+  # Lock Value
+  # Overtime hours paid per lock-multiplier point when a ball is locked away.
+  # Red/blue/grey (x1) pay 10h, yellow/purple/green (x2) 20h, black (x4) 40h,
+  # before the simultaneous-trap and money-ball multipliers. Locking IS the
+  # income: the flat map base (points: 20) alone cannot fund even a Junior
+  # upgrade (40h), so clearing without locking means an empty-handed shop
+  # visit unless you had hours saved.
+  lockValue: 10
 
   # Beat-the-highscore bonus (#45)
   # When you finish a map with a higher score than its previous highscore, the

@@ -22,6 +22,10 @@ export interface ScoringConfig {
     // Headroom > 1 leaves room for multiplier builds to pay off while still
     // softly bounding degenerate multiplier stacks.
     overtimeCapHeadroom: number;
+    // Overtime hours per lock-multiplier point when a ball is locked away
+    // (a red ball's lockMultiplier is 1, black's is 4). Locking is the main
+    // income; the flat map base is deliberately below the cheapest upgrade.
+    lockValue: number;
     // Multiplier applied to a map's score when the player beats that map's
     // existing highscore (#45). Applied AFTER the per-map cap, so it genuinely
     // rewards a record instead of being clamped away.

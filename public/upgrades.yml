@@ -16,12 +16,15 @@ pricing:
   # assignment block (levels 1-5 at face value, 6-10 x1.35, 11-15 x1.82...).
   # Keeps the flat per-map income scarce late-run. 1 disables inflation.
   blockInflation: 1.35
+  # Factors are tuned against the lock-centric economy: base points is 20, so
+  # a Junior costs 40h. A no-lock clear (20h) can never afford one; locking
+  # the map's balls (10h+ each, see scoring-config.yml lockValue) can.
   tierFactor:
-    Junior: 1.0
-    Senior: 1.35
-    Principal: 1.85
-    Architect: 2.4
-    Wizard: 3.0
+    Junior: 2.0
+    Senior: 2.7
+    Principal: 3.7
+    Architect: 4.8
+    Wizard: 6.0
 
 # Set bonuses: auto-granted for free while the player owns `threshold`
 # upgrades of a tag. One per archetype, giving every build direction a goal.
@@ -458,23 +461,23 @@ upgrades:
   - id: severance_package_junior
     name: Severance Package
     tier: Junior
-    description: Each ball you lock away pays 1 bonus overtime hour (counted under the map cap).
+    description: Each ball you lock away pays 5 bonus overtime hours (counted under the map cap).
     unlockLevel: 6
     icon: banknote
     tags: [lock]
     modifiers:
-      overtimePerLock: 1
+      overtimePerLock: 5
 
   - id: severance_package_senior
     name: Severance Package
     tier: Senior
-    description: Locked balls now pay 2 bonus overtime hours each.
+    description: Locked balls now pay 10 bonus overtime hours each.
     unlockLevel: 12
     prerequisites:
       - severance_package_junior
     tags: [lock]
     modifiers:
-      overtimePerLock: 1
+      overtimePerLock: 5
 
 
   # ===============================

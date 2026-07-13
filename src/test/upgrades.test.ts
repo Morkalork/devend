@@ -163,7 +163,7 @@ describe("pricing", () => {
     // most a flawless ace can earn is levels × cap. The catalogue must cost more
     // than that, so no one can ever buy it all. This auto-scales with the level
     // count and the flat base, so it never needs a manual bump.
-    const OVERTIME_CAP_HEADROOM = 2.0; // mirrors scoring-config.yml
+    const OVERTIME_CAP_HEADROOM = 4.0; // mirrors scoring-config.yml
     const flatBase = [...levelPoints.values()][0];
     const perMapCap = flatBase * OVERTIME_CAP_HEADROOM;
     const aceFullRunIncome = levelPoints.size * perMapCap;
@@ -190,6 +190,35 @@ describe("pricing", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("lock-centric economy", () => {
+  // The economy's core rule: locking balls is the income. A clear that locks
+  // nothing must not fund even the cheapest shop offer that round (unless the
+  // player had hours saved), while lockValue makes locking close that gap.
+  const scoringDoc = yaml.load(
+    readFileSync(resolve(process.cwd(), "public/scoring-config.yml"), "utf8"),
+  ) as { scoring: { lockValue: number; spaceOptimization: { maxBonus: number }; shipEarly: { maxBonus: number } } };
+  const scoring = scoringDoc.scoring;
+
+  it("a flawless no-lock clear cannot afford the cheapest upgrade", () => {
+    const flatBase = [...levelPoints.values()][0];
+    // Every non-lock hour a perfect clear can scrape together: flat base,
+    // under-par (+1), the full space ladder, the full Ship Early ladder, and
+    // a generous push-your-luck allowance (chunks pay ~1h each).
+    const PUSH_ALLOWANCE = 4;
+    const bestNoLockIncome =
+      flatBase + 1 + scoring.spaceOptimization.maxBonus + scoring.shipEarly.maxBonus + PUSH_ALLOWANCE;
+    const cheapest = Math.min(
+      ...upgrades.filter(u => !u.ascensionOnly).map(u => effectiveCost(u) ?? Infinity),
+    );
+    expect(bestNoLockIncome).toBeLessThan(cheapest);
+  });
+
+  it("locking pays enough to matter: one plain lock covers most of the base", () => {
+    const flatBase = [...levelPoints.values()][0];
+    expect(scoring.lockValue).toBeGreaterThanOrEqual(flatBase / 2);
   });
 });
 

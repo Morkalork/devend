@@ -229,7 +229,8 @@ export function generateScoringPreview(
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
-    overtimeCapHeadroom: 2.0,
+    overtimeCapHeadroom: 4.0,
+    lockValue: 10,
     highscoreBonusMultiplier: 1.25,
     fenceEfficiency: {
       maxBonus: 1,
@@ -275,6 +276,7 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
         loadedConfig = {
           scoring: {
             overtimeCapHeadroom: parsed.scoring.overtimeCapHeadroom ?? DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom,
+            lockValue: parsed.scoring.lockValue ?? DEFAULT_SCORING_CONFIG.scoring.lockValue,
             highscoreBonusMultiplier: parsed.scoring.highscoreBonusMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.highscoreBonusMultiplier,
             fenceEfficiency: { ...DEFAULT_SCORING_CONFIG.scoring.fenceEfficiency, ...parsed.scoring.fenceEfficiency },
             spaceOptimization: { ...DEFAULT_SCORING_CONFIG.scoring.spaceOptimization, ...parsed.scoring.spaceOptimization },
@@ -295,6 +297,16 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
 /** Await this before calling calculateScore() to guarantee the YAML config is in. */
 export async function ensureScoringConfigLoaded(): Promise<void> {
   await loadScoringConfig();
+}
+
+/**
+ * Overtime hours per lock-multiplier point, from the loaded config. This is
+ * what makes locking the game's main income: a red lock pays lockValue × 1,
+ * a black lock lockValue × 4 (before trap/money-ball multipliers).
+ */
+export function getLockValue(): number {
+  const v = loadedConfig.scoring.lockValue;
+  return Number.isFinite(v) && v > 0 ? v : 1;
 }
 
 /** The beat-the-highscore score multiplier from the loaded config (#45). */

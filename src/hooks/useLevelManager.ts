@@ -19,9 +19,9 @@ interface LevelManagerState {
 
 /**
  * Dev-time pay-curve sanity check. Warns (does not throw) when, across the
- * level-sorted maps, reward `points` decreases or fails the engine invariant
- * `points > expectedCuts`. Keeps the overtime curve monotonic as levels are
- * added later — independent of how many levels exist. No-op in production.
+ * level-sorted maps, reward `points` decreases. The economy is lock-centric:
+ * `points` is only the flat clear floor (locks pay the real income), so it is
+ * deliberately unrelated to expectedCuts. No-op in production.
  */
 function warnOnPayCurveRegressions(allMaps: LevelConfig[]): void {
   if (!import.meta.env.DEV) return;
@@ -36,11 +36,6 @@ function warnOnPayCurveRegressions(allMaps: LevelConfig[]): void {
     if (prevPoints !== null && m.points < prevPoints) {
       console.warn(
         `[pay curve] Level ${lvl} points (${m.points}) is lower than the previous level (${prevPoints}) — pay should grow steadily.`,
-      );
-    }
-    if (m.points <= m.expectedCuts) {
-      console.warn(
-        `[pay curve] Level ${lvl} points (${m.points}) must exceed expectedCuts (${m.expectedCuts}).`,
       );
     }
     prevPoints = m.points;
@@ -103,10 +98,6 @@ export function useLevelManager() {
 
           if (typeof level.expectedCuts !== 'number' || typeof level.points !== 'number') {
             throw new Error(`Level "${level.id}" is missing expectedCuts or points`);
-          }
-
-          if (level.expectedCuts >= level.points) {
-            throw new Error(`Level "${level.id}" is invalid: expectedCuts (${level.expectedCuts}) must be less than points (${level.points})`);
           }
 
           // Default level number from id if not specified

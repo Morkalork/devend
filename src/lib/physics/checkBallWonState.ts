@@ -14,6 +14,7 @@ import { LockDustParticle } from "@/types/game";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
+import { getLockValue } from "@/lib/scoring";
 
 /**
  * MicroManager: each locked ball slows the survivors. Caps every active ball's
@@ -224,7 +225,10 @@ export function checkAndUpdateBallWonStates(
           : 1;
       points += (b.lockMultiplier ?? 1) * mult * frozenMult;
     }
-    game.lockBonus += points * simultaneousMultiplier;
+    // Each lock-multiplier point is worth lockValue overtime hours (the
+    // economy's main income; scoring-config.yml). Still folds under the
+    // per-map cap with everything else.
+    game.lockBonus += Math.round(points * simultaneousMultiplier * getLockValue());
 
     // Severance Package: flat overtime per locked ball, deliberately outside
     // the money/simultaneous multipliers so it reads as a predictable "+N per

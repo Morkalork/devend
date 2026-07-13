@@ -27,8 +27,8 @@ function earnedAtPar(basePoints: number, par = 5, scoreMultiplier = 1) {
 
 describe("overtime cap", () => {
   it("scales from the level's own base points, not its number", () => {
-    expect(getOvertimeCap(50, HEADROOM)).toBe(100);
-    expect(getOvertimeCap(126, HEADROOM)).toBe(252);
+    expect(getOvertimeCap(50, HEADROOM)).toBe(Math.round(50 * HEADROOM));
+    expect(getOvertimeCap(126, HEADROOM)).toBe(Math.round(126 * HEADROOM));
   });
 
   it("never clips the at-par payout of any level on the curve (the old flat-44 bug)", () => {
