@@ -359,15 +359,11 @@ export function GameScreen({
         {/* Stats Panel at bottom. The Ship Early countdown rides in its fixed
             wrapper as the top row (the bar is position:fixed, so a sibling in
             the flex column would be covered by it). Once the map is won the
-            whole panel fades out with the clear sweep - the bars below the
-            board shouldn't outlive the board. */}
-        <div
-          style={{
-            opacity: mapComplete ? 0 : 1,
-            transition: 'opacity 500ms ease',
-            pointerEvents: mapComplete ? 'none' : 'auto',
-          }}
-        >
+            panel goes visibility:hidden instantly - the bars below the board
+            must never outlive the board (a fade lagged behind the wave
+            on-device), but the layout box stays so the canvas doesn't resize
+            mid-sweep. */}
+        <div style={{ visibility: mapComplete ? 'hidden' : 'visible' }}>
           <GameBottomBar
             activeModifiers={activeModifiers}
             accentColor={accentColor}
