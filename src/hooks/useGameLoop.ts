@@ -32,6 +32,12 @@ export interface GameLoopCallbacks {
   processWallBreaks?: () => void;
   /** Called when a black ball destroyed a mirror/mover this frame. */
   processDestroys?: () => void;
+  /**
+   * Per-frame safety net: evaluate the win conditions so a map that reached the
+   * goal by ANY path (not just a completed cut or destroy) always finishes,
+   * instead of stalling forever with CLEAR shown in the top bar.
+   */
+  checkWinCondition?: () => void;
   /** Called when Scope Creep escalates to a new step (percentBoost = +X% ball speed). */
   onCreepStep?: (percentBoost: number) => void;
   /** Called once per whole active-play second (drives the Ship Early countdown bar). */
@@ -320,6 +326,15 @@ export function createGameLoop(
     if (game.pendingDestroys.length > 0) {
       callbacks.processDestroys?.();
     }
+
+    // Safety net: the win condition is otherwise only evaluated in reaction to a
+    // cut or a destroy, but the top bar shows CLEAR straight off the live
+    // remaining-space state. Re-check every active frame (reached only during
+    // normal play — the levelComplete / prompt / pending / gameOver states all
+    // returned above) so the two can never disagree: if the space is at the goal
+    // and the win is reachable, the map finishes here. Cheap — O(1) percent plus
+    // O(balls), and the completion/prompt paths it calls all guard re-entry.
+    callbacks.checkWinCondition?.();
 
     // Interpolate render positions between last two physics states.
     // Mutate in-place to avoid allocating a new object every display frame.

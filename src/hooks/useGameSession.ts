@@ -127,6 +127,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [continuesRemaining, setContinuesRemaining] = useState(BASE_CONTINUES);
   const [gameInstanceKey, setGameInstanceKey] = useState(0);
   const [pendingDeathResult, setPendingDeathResult] = useState<GameResult | null>(null);
+  // Guard against a duplicated completion delivery for the same map (see
+  // handleLevelComplete); holds the last level number that was scored.
+  const lastDeliveredCompletionRef = useRef<number | null>(null);
 
   // Ascension mode: after the final level the player may loop back to level 1
   // with a drafted loadout. Depth 0 = first pass through the levels. Index 0 of
@@ -424,6 +427,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setActiveDoor(null);
     setCapstone(null);
     setPendingLevelScore(null);
+    lastDeliveredCompletionRef.current = null;
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
     setAscensionDepth(0);
@@ -554,6 +558,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     const currentLevelNum = currentLevelIndex + 1;
+    // A completion can only be delivered once per map: a stale second pipeline
+    // (e.g. a leftover dissolve timeout firing after the overlay was already
+    // continued) would double-score the level and resurrect the overlay over
+    // whatever screen came next - re-running the assignment phase and showing
+    // a second Promotion draft. The ref resets with each new run.
+    if (lastDeliveredCompletionRef.current === currentLevelNum) return;
+    lastDeliveredCompletionRef.current = currentLevelNum;
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
     // Levels completed while ascended count more toward Certificate Hours

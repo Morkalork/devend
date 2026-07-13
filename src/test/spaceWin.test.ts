@@ -1,5 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { checkSpaceWin } from "@/lib/physics/applyCut";
+import { describe, it, expect, vi } from "vitest";
+import { checkSpaceWin, evaluateWinConditions, triggerLevelComplete } from "@/lib/physics/applyCut";
+import type { GameModifiers } from "@/hooks/useActiveModifiers";
+import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
 
@@ -110,5 +112,100 @@ describe("checkSpaceWin (top bar CLEAR must equal an actual win)", () => {
     const cb2 = mkCallbacks();
     checkSpaceWin(met, level, cb2);
     expect(met.pushMode).toBe("prompt");
+  });
+});
+
+describe("evaluateWinConditions (per-frame safety net: CLEAR must never outlast the map)", () => {
+  const MODS = {} as GameModifiers;
+  // The safety net is called from the game loop with the full GameCallbacks;
+  // only the space-check subset is exercised when no ball has locked.
+  const mkGc = () => {
+    const cb = mkCallbacks();
+    return { cb, gc: cb as unknown as GameCallbacks };
+  };
+
+  it("opens the prompt on an already-cleared map with NO cut this frame", () => {
+    // The regression: space reached the goal by some path that never re-ran the
+    // win check, so the top bar showed CLEAR but the level never ended. The
+    // per-frame safety net must close that gap.
+    const game = mkGame(25);
+    const { cb, gc } = mkGc();
+    const percent = evaluateWinConditions(game, LEVEL, 13, MODS, gc);
+    expect(percent).toBe(25);
+    expect(game.pushMode).toBe("prompt");
+    expect(cb.calls.pushMode).toEqual(["prompt"]);
+  });
+
+  it("is an inert no-op above the goal (no false finish while still playing)", () => {
+    const game = mkGame(40);
+    const { cb, gc } = mkGc();
+    evaluateWinConditions(game, LEVEL, 13, MODS, gc);
+    expect(game.pushMode).toBe("none");
+    expect(cb.calls.pushMode).toEqual([]);
+  });
+
+  it("short-circuits once the level is already complete", () => {
+    const game = mkGame(10, { levelComplete: true });
+    const { cb, gc } = mkGc();
+    const percent = evaluateWinConditions(game, LEVEL, 13, MODS, gc);
+    expect(percent).toBeNull();
+    expect(cb.calls.remaining).toEqual([]); // never even recomputed the percent
+  });
+});
+
+describe("triggerLevelComplete (one delivery per map, pushes end cleanly)", () => {
+  const SCORE_MODS = {
+    scoreMultiplier: 1, pushBonusMultiplier: 1, spaceBonusMultiplier: 1,
+    overtimeCapBonus: 0, shipEarlySecondsPerBall: 0, shipEarlyBonusMultiplier: 1,
+  } as unknown as GameModifiers;
+  const SCORE_LEVEL = { id: "t", level: 13, sizeThreshold: 25, expectedCuts: 8, points: 40 } as LevelConfig;
+
+  function mkCompleteCallbacks() {
+    const delivered: Array<{ pushBonus?: number }> = [];
+    const pushModes: string[] = [];
+    return {
+      delivered,
+      pushModes,
+      callbacks: {
+        setRemainingPercent: () => {},
+        setPushMode: (m: "none" | "prompt" | "pushing") => pushModes.push(m),
+        onLevelComplete: (d: { pushBonus?: number }) => delivered.push(d),
+        startDissolve: (onComplete: () => void) => onComplete(),
+      } as unknown as GameCallbacks,
+    };
+  }
+
+  it("ends an in-flight push: HUD leaves pushing and the banked chunks pay out", () => {
+    // Regression: locking the last ball mid-push completed the level via the
+    // per-frame check but left pushMode "pushing" (Bank button still live) and
+    // silently dropped the push bonus earned so far.
+    vi.useFakeTimers();
+    const game = mkGame(10, {
+      pushMode: "pushing", pushStartPercent: 20, bestRemainingPercent: 10,
+      wallCount: 6, lockBonus: 0, breakBonus: 0,
+    });
+    const { delivered, pushModes, callbacks } = mkCompleteCallbacks();
+    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks);
+    expect(game.pushMode).toBe("none");
+    expect(pushModes).toEqual(["none"]);
+    vi.runAllTimers();
+    expect(delivered).toHaveLength(1);
+    // Cleared 10 of a 20% push start = two full 25% chunks banked.
+    expect(delivered[0].pushBonus).toBe(2);
+    vi.useRealTimers();
+  });
+
+  it("delivers the completion exactly once (re-entry is a no-op)", () => {
+    // Regression: a second completion pipeline for the same map re-scored it
+    // and resurrected the level-complete overlay over the next screen - seen
+    // in the wild as two Promotion drafts right after each other.
+    vi.useFakeTimers();
+    const game = mkGame(10, { wallCount: 6, lockBonus: 0, breakBonus: 0 });
+    const { delivered, callbacks } = mkCompleteCallbacks();
+    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks);
+    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks);
+    vi.runAllTimers();
+    expect(delivered).toHaveLength(1);
+    vi.useRealTimers();
   });
 });

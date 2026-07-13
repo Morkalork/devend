@@ -89,7 +89,7 @@ import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import { getRenderer, RendererKind } from "@/lib/rendering/rendererSettings";
 import type { PixiGameRenderer } from "@/lib/rendering/pixi/PixiGameRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
-import { applyCutFn, checkSpaceWin } from "@/lib/physics/applyCut";
+import { applyCutFn, checkSpaceWin, evaluateWinConditions } from "@/lib/physics/applyCut";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
@@ -829,6 +829,11 @@ export function GameCanvas({
         // win check a completed cut runs, or the map shows CLEAR but never ends.
         checkSpaceWin(game, level, callbacks);
       },
+      // Per-frame safety net (see useGameLoop): guarantees a cleared map always
+      // finishes even if the space reached the goal by a path that didn't run
+      // the win check, so the top bar can never stall showing CLEAR.
+      checkWinCondition: () =>
+        evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
       // Deferred push prompt: the loop already set game.pushMode; mirror it
@@ -886,6 +891,12 @@ export function GameCanvas({
 
   const handleBankAndContinue = useCallback(() => {
     const game = gameRef.current;
+    // Locking the last ball mid-push completes the level via the per-frame win
+    // check while the Bank button is still on screen; a tap then must not queue
+    // a SECOND dissolve -> onLevelComplete pipeline (the duplicate resurrected
+    // the level-complete overlay over the next screen and could re-run the
+    // assignment phase - seen in the wild as two Promotion drafts in a row).
+    if (game.levelComplete) return;
     game.levelComplete = true;
     // Clear the prompt so the loop reaches its levelComplete branch (it bails
     // early while pushMode is "prompt") and the prompt overlay is dismissed,

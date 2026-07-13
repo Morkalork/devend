@@ -228,17 +228,44 @@ export function applyCutFn(
   // ball below MIN_BALL_SPEED_FACTOR of normal (issue #42).
   applyMicroManagerSpeedCap(balls, activeModifiers, cumulativeLockedBalls + game.lockedBallsCount);
 
-  if (areAllBallsWon(game)) {
-    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
-    return;
-  }
+  const percent = evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks);
 
-  const percent = checkSpaceWin(game, level, callbacks);
-
-  if (tutorialMode && !tutorialCutMade && percent < 100) {
+  if (percent !== null && tutorialMode && !tutorialCutMade && percent < 100) {
     callbacks.setTutorialCutMade(true);
     callbacks.onTutorialCutSuccess?.();
   }
+}
+
+/**
+ * Evaluate BOTH win conditions in the canonical order and act on them: all
+ * balls locked finishes the level immediately; otherwise the space-clear check
+ * runs (opening the push-your-luck prompt at/under the goal).
+ *
+ * This is the single shared entry point for every win check — the post-cut and
+ * post-destroy checks AND the per-frame safety net in the game loop. Making it
+ * frame-safe is the whole point: triggerLevelComplete and checkSpaceWin each
+ * guard against re-entry, so re-running this every active frame is a cheap
+ * no-op until a win is genuinely reachable. That guarantees the top bar can
+ * never sit on CLEAR while an unfinished, non-pushing map quietly fails to end
+ * (the win was previously only evaluated when a cut or a destroy fired, so any
+ * other path to the goal could strand the map showing CLEAR forever).
+ *
+ * Returns the remaining percent from the space check, or null when the
+ * all-balls-won path finished the level (no percent was computed).
+ */
+export function evaluateWinConditions(
+  game: CanvasGameState,
+  level: LevelConfig,
+  levelNumber: number,
+  activeModifiers: GameModifiers,
+  callbacks: GameCallbacks,
+): number | null {
+  if (game.levelComplete) return null;
+  if (areAllBallsWon(game)) {
+    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+    return null;
+  }
+  return checkSpaceWin(game, level, callbacks);
 }
 
 type SpaceWinCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setClearedPercent' | 'setPushMode'>;
@@ -302,7 +329,7 @@ export function checkSpaceWin(
   return percent;
 }
 
-type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;
+type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setPushMode' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;
 
 /** Finalise the level: score it, fire onLevelComplete, and start the dissolve. */
 export function triggerLevelComplete(
@@ -323,12 +350,29 @@ export function triggerLevelComplete(
   if (game.clearedActiveSeconds == null) game.clearedActiveSeconds = game.activePlaySeconds;
   const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
 
-  // Fold lock + break + ship-early bonuses in before the cap so a single map
-  // can't exceed the per-map ceiling (issue #43).
+  // Locking the last ball can finish the level MID-PUSH (the per-frame win
+  // check). End the push here: award the chunks banked so far and drop the
+  // pushing HUD. Bank & Continue guards on levelComplete, so its button can
+  // never queue a second, competing completion pipeline after this one.
+  let pushBonus = 0;
+  if (game.pushMode === "pushing") {
+    const chunkSize = game.pushStartPercent * 0.25;
+    const areaCleared = Math.max(0, game.pushStartPercent - game.bestRemainingPercent);
+    pushBonus = chunkSize > 0
+      ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
+      : 0;
+  }
+  if (game.pushMode !== "none") {
+    game.pushMode = "none";
+    callbacks.setPushMode("none");
+  }
+
+  // Fold lock + break + push + ship-early bonuses in before the cap so a
+  // single map can't exceed the per-map ceiling (issue #43).
   const { levelScore, breakdown } = calculateScore(
     game.wallCount, level.expectedCuts, percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
-      extraBonus: game.lockBonus + game.breakBonus + shipEarlyBonus,
+      extraBonus: game.lockBonus + game.breakBonus + pushBonus + shipEarlyBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
       overtimeCapBonus: activeModifiers.overtimeCapBonus,
     },
@@ -351,7 +395,7 @@ export function triggerLevelComplete(
         levelNumber, levelId: level.id, cutCount: game.wallCount,
         expectedCuts: level.expectedCuts, basePoints: level.points,
         levelScore,
-        remainingPercent: percent, thresholdPercent: level.sizeThreshold,
+        remainingPercent: percent, thresholdPercent: level.sizeThreshold, pushBonus,
         underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
         spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
         fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
