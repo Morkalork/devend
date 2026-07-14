@@ -30,6 +30,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
+import { wasteCapturedPickups } from "@/lib/pickups";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 
@@ -152,6 +153,12 @@ export function applyCutFn(
   addSegmentWalls(wall.startWaypoints);
   addSegmentWalls(wall.endWaypoints);
 
+  // Snapshot the grid with the new fence rasterized but BEFORE reachability
+  // capture severs any sub-ball-width gaps. The lock check uses it to demand a
+  // REAL seal: a ball only locks in a pocket enclosed by actual barriers, not
+  // one the capture "closed" across a gap the ball merely can't fit through.
+  const preCaptureCells = game.spaceGrid ? Uint8Array.from(game.spaceGrid.cells) : null;
+
   captureUnreachableSpace(game);
 
   // Update sample-based regions for rendering
@@ -185,7 +192,7 @@ export function applyCutFn(
   game.activeWall = null;
   playCutClaimedSound();
 
-  const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks);
+  const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells);
   if (anyBallWon) {
     // A ball locked during this cut. It was still an active ball when the capture
     // above ran, so the region it locked in wasn't captured then and would linger
@@ -221,6 +228,12 @@ export function applyCutFn(
     }
     callbacks.repaintRegionCanvas();
   }
+
+  // Pickups: any token whose cell got captured WITHOUT a lock claiming it is
+  // wasted (empty-space capture, or the fence was drawn straight over it).
+  // Runs after the lock pass, so a properly sealed token was already claimed.
+  wasteCapturedPickups(game);
+
   callbacks.render();
 
   // Issue #37: ball speeds are flat — no per-cut acceleration ramp. Only the
@@ -341,6 +354,7 @@ export function triggerLevelComplete(
 ): void {
   if (game.levelComplete) return;
   game.levelComplete = true;
+  game.levelCompleteTime = performance.now(); // anchors the space bar fade-out
   playLevelCompleteSound();
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
@@ -374,7 +388,10 @@ export function triggerLevelComplete(
       scoreMultiplier: activeModifiers.scoreMultiplier,
       extraBonus: game.lockBonus + game.breakBonus + pushBonus + shipEarlyBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
-      overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      // Comp Time pickups raise THIS map's cap on top of the capstone raise.
+      overtimeCapBonus: activeModifiers.overtimeCapBonus + (game.pickupCapBonus ?? 0),
+      // Overtime pickups pay after the cap (a claimed token always pays).
+      postCapBonus: game.pickupOvertime ?? 0,
     },
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
@@ -403,6 +420,11 @@ export function triggerLevelComplete(
         lockedBallsCount: game.lockedBallsCount,
         breakBonus: game.breakBonus,
         shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+        pickupBonus: game.pickupOvertime || undefined,
+        // triggerLevelComplete is only reached via the all-balls-locked win, so
+        // the board drained to 0% remaining - flag it so the results screen
+        // hides the now-meaningless Remaining row.
+        wonByAllLocked: true,
       });
     });
   }, lockDelay + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);

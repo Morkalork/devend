@@ -33,6 +33,7 @@ import {
 import { buildPolygonFromSamples } from "@/lib/regionSplit";
 import { reassignBallsToRegions, paintCellRegionIds } from "@/lib/regionOwnership";
 import { generateRegionId } from "@/lib/gameUtils";
+import { wasteCapturedPickups } from "@/lib/pickups";
 
 export const DESTRUCTIBLE_MAX_HITS = 3;
 const HIT_DEBOUNCE_MS = 250;     // one ball pass can't count as multiple hits
@@ -383,6 +384,8 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
     // reopened cell no ball can physically reach, right now.
     captureUnreachableCells(game.spaceGrid, game.balls, game.walls);
     rebuildRegionsKeepAll(game);
+    // A destroy-recapture can swallow a token's cell with no lock involved.
+    wasteCapturedPickups(game);
     callbacks.repaintRegionCanvas();
     callbacks.setRemainingPercent(Math.round(getRemainingPercent(game.spaceGrid)));
   }

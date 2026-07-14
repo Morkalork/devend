@@ -75,6 +75,8 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   shipEarlyBonusMultiplier:         { label: 'Ship Early Mult.',       kind: 'multiplicative', step: 0.5,  min: 0.5,  defaultValue: 1,    description: 'Hard Deadline door: multiplies the Ship Early payout' },
   lockThresholdBonus:               { label: 'Lock Threshold +%',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Code Review: percentage points added to the lock threshold (pockets slightly over the limit still lock)' },
   spawnFreezeSeconds:               { label: 'Spawn Freeze (s)',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cold Boot: seconds every ball stays frozen at map start' },
+  pickupChanceBonus:                { label: 'Pickup Chance +',        kind: 'additive',       step: 0.03, min: 0,    defaultValue: 0,    description: 'Benefits Package: extra pickup-token spawn chance per roll (0.03 = +3 points; only where pickups are enabled)' },
+  pickupPayoutLevel:                { label: 'Pickup Payout Lvl',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Total Compensation: +1h/+1s per level on token payouts, split balls 5% slower per level; level 3 = Fork splits into three' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

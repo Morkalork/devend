@@ -1064,6 +1064,89 @@ upgrades:
 
 
   # ===============================
+  # BENEFITS PACKAGE (Pickup spawn chance)
+  # Power-up tokens spawn on a low base chance (game-config.yml pickups:).
+  # Each tier adds +3 percentage points to the roll. The copy is deliberately
+  # vague - the player should feel tokens appearing more often, not do math.
+  # ===============================
+
+  - id: benefits_package_junior
+    name: Benefits Package
+    tier: Junior
+    description: Power-up tokens appear slightly more often.
+    unlockLevel: 8
+    icon: gift
+    tags: [risk]
+    modifiers:
+      pickupChanceBonus: 0.03
+
+  - id: benefits_package_senior
+    name: Benefits Package
+    tier: Senior
+    description: Power-up tokens appear more often still.
+    unlockLevel: 11
+    prerequisites:
+      - benefits_package_junior
+    tags: [risk]
+    modifiers:
+      pickupChanceBonus: 0.03
+
+  - id: benefits_package_principal
+    name: Benefits Package
+    tier: Principal
+    description: Power-up tokens turn up noticeably more often.
+    unlockLevel: 14
+    prerequisites:
+      - benefits_package_senior
+    tags: [risk]
+    modifiers:
+      pickupChanceBonus: 0.03
+
+
+  # ===============================
+  # TOTAL COMPENSATION (Pickup payout enhancer)
+  # Gated behind a fully upgraded Benefits Package. Each level improves EVERY
+  # token payout: +1h on overtime and cap tokens, +1s on freeze charges, and
+  # the Fork's split balls fly 5% slower per level (never below their type's
+  # minimum speed). At level 3 the Fork splits a ball into THREE.
+  # ===============================
+
+  - id: total_compensation_junior
+    name: Total Compensation
+    tier: Junior
+    description: Every power-up pays out better, and split balls come out slower.
+    unlockLevel: 15
+    prerequisites:
+      - benefits_package_principal
+    icon: crown
+    tags: [risk]
+    modifiers:
+      pickupPayoutLevel: 1
+
+  - id: total_compensation_senior
+    name: Total Compensation
+    tier: Senior
+    description: Power-up payouts rise again, and split balls slow down further.
+    unlockLevel: 17
+    prerequisites:
+      - total_compensation_junior
+    tags: [risk]
+    modifiers:
+      pickupPayoutLevel: 1
+
+  - id: total_compensation_principal
+    name: Total Compensation
+    tier: Principal
+    description: Peak perks. The ball splitter now splits a ball into three.
+    unlockLevel: 19
+    prerequisites:
+      - total_compensation_senior
+    tags: [risk]
+    modifiers:
+      pickupPayoutLevel: 1
+
+
+  # ===============================
   # DEFENSIVE PROGRAMMING (Ascension fence durability)
   # Only offered while ascended — fences wear out past level 30.
   # ===============================

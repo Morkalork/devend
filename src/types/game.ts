@@ -126,8 +126,8 @@ export interface LockDustParticle {
 
 export interface LockFlashState {
   ballId: string;
-  cellIndices: number[]; // space-grid cell indices (kept for centroid / dust origin)
-  polygon: Vector2[];    // exact boundary polygon built from wall intersections
+  cellIndices: number[]; // captured cells of the locked pocket (source for `contours`)
+  contours: Vector2[][]; // Chaikin-smoothed outline loops of the pocket; the flash fills these (even-odd)
   centroid: Vector2;
   startTime: number;
   ballPos: Vector2;      // ball position at moment of lock
@@ -152,6 +152,9 @@ export interface DissolveState {
   tiles: DissolveTile[];
   startTime: number;
   onComplete: () => void;
+  /** True runs the tile animation backwards: the board ASSEMBLES from
+   *  scattered tiles instead of shattering (run-start intro). */
+  reverse?: boolean;
 }
 
 // ── Destructible objects (issue #37 Phase 2: black ball) ──────────────────
@@ -245,10 +248,16 @@ export interface LevelScoreData {
   breakBonus?: number;
   // Ship Early tempo bonus (folded under the cap like lock/push/break)
   shipEarlyBonus?: number;
+  // Pickup overtime tokens claimed this map (paid AFTER the per-map cap)
+  pickupBonus?: number;
   // Active-play seconds to first meet the win condition (drives the row label)
   clearTimeSeconds?: number;
   // Map highscore (#45): set when this map's score beat its previous highscore.
   beatHighscore?: boolean;
   previousHighscore?: number; // the record that was beaten (for display)
   highscoreBonus?: number;    // extra score credited for beating it
+  // True when the map was won by locking every ball (an auto-win). The board
+  // fully drains once no ball is left in play, so "remaining space" is 0% and
+  // meaningless here - the results screen hides the Remaining row.
+  wonByAllLocked?: boolean;
 }

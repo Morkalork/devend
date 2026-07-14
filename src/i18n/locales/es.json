@@ -110,6 +110,12 @@
     "spawnFreeze": "Congelación inicial",
     "spawnFreezeActive": "Cada mapa arranca congelado: todas las bolas se quedan quietas durante los primeros {{seconds}}s (Cold Boot).",
     "spawnFreezeInactive": "Las bolas se mueven desde el primer momento de cada mapa.",
+    "pickupChance": "Fichas potenciadoras",
+    "pickupChanceActive": "Las fichas potenciadoras aparecen más a menudo de lo habitual (Benefits Package).",
+    "pickupChanceInactive": "Las fichas potenciadoras aparecen a su ritmo normal.",
+    "pickupPayout": "Pago de potenciadores",
+    "pickupPayoutActive": "Las fichas reclamadas dan recompensas mejoradas, y las bolas divididas vuelan más despacio (Total Compensation nivel {{level}}).",
+    "pickupPayoutInactive": "Las fichas potenciadoras dan sus recompensas base.",
     "pushBonus": "Pagos de presión",
     "pushBonusActive": "Los pagos de arriesgarse se multiplican por x{{mult}}.",
     "pushBonusInactive": "Pagos de arriesgarse estándar.",
@@ -236,7 +242,10 @@
     "topBarTutorialBody": "¡La barra superior se puede expandir!\n\nTócala para ver todos los detalles del nivel, todas tus mejoras activas con descripciones y el progreso de horas de certificado.",
     "bottomBarTutorialTitle": "La barra inferior",
     "bottomBarTutorialBody": "¡La barra inferior también se puede expandir!\n\nTócala para ver cada modificador activo explicado en lenguaje sencillo.",
-    "infoUnlocked": "Información desbloqueada"
+    "infoUnlocked": "Información desbloqueada",
+    "pickupFork": "¡Bola dividida!",
+    "pickupCapRaise": "Tope +{n}h",
+    "pickupFreeze": "Congelación +1"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",
@@ -261,6 +270,7 @@
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Bloqueos de hilo ({{count}})",
     "pushBonus": "Bono de presión",
+    "pickupBonus": "Bono de potenciadores",
     "shipEarly": "Entrega temprana ({{seconds}}s)",
     "newHighscore": "Nuevo récord",
     "totalBonus": "Bonificación total",
@@ -315,6 +325,11 @@
         "title": "Bono de presión",
         "body": "La recompensa por arriesgar. Tras cumplir el objetivo del mapa puedes seguir cortando en lugar de asegurar, y cada porción extra del tablero paga horas extra de bonificación.",
         "tip": "Presionar es dinero gratis: si fallas a mitad solo pierdes el bono extra, nunca tu puntuación asegurada."
+      },
+      "pickupBonus": {
+        "title": "Bono de potenciadores",
+        "body": "Horas extra de fichas potenciadoras que sellaste junto a un bloqueo. Una ficha solo paga cuando una bola queda bloqueada en el bolsillo que la contiene: si capturas su zona sin bola se pierde, y las fichas sin reclamar caducan solas.",
+        "tip": "Guía una bola hacia la ficha antes de sellar el bolsillo. Sus horas se pagan después del tope por mapa, así que siempre cuentan."
       },
       "newHighscore": {
         "title": "Nuevo récord",
@@ -757,6 +772,30 @@
       "cron_job_architect": {
         "name": "Tarea Programada",
         "description": "Las congelaciones programadas ahora retienen una bola durante 5 segundos."
+      },
+      "benefits_package_junior": {
+        "name": "Paquete de Beneficios",
+        "description": "Las fichas potenciadoras aparecen un poco más a menudo."
+      },
+      "benefits_package_senior": {
+        "name": "Paquete de Beneficios",
+        "description": "Las fichas potenciadoras aparecen aún más a menudo."
+      },
+      "benefits_package_principal": {
+        "name": "Paquete de Beneficios",
+        "description": "Las fichas potenciadoras aparecen notablemente más a menudo."
+      },
+      "total_compensation_junior": {
+        "name": "Compensación Total",
+        "description": "Cada potenciador da mejor recompensa, y las bolas divididas salen más lentas."
+      },
+      "total_compensation_senior": {
+        "name": "Compensación Total",
+        "description": "Las recompensas de los potenciadores suben de nuevo, y las bolas divididas se frenan aún más."
+      },
+      "total_compensation_principal": {
+        "name": "Compensación Total",
+        "description": "Beneficios de lujo. El divisor ahora parte una bola en tres."
       },
       "scrum_master_1": {
         "name": "SCRUM Master",

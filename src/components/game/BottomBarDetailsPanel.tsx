@@ -263,6 +263,28 @@ export function BottomBarDetailsPanel({
           : t('bottomBarDetails.spawnFreezeInactive'),
     },
     {
+      // Deliberately vague (no percentages): Benefits Package is sold as
+      // "tokens appear more often", never as an exact number.
+      label: t('bottomBarDetails.pickupChance'),
+      value: m.pickupChanceBonus > 0 ? t('bottomBarDetails.on') : t('bottomBarDetails.off'),
+      changed: m.pickupChanceBonus !== 0,
+      keys: ['pickupChanceBonus'],
+      description:
+        m.pickupChanceBonus > 0
+          ? t('bottomBarDetails.pickupChanceActive')
+          : t('bottomBarDetails.pickupChanceInactive'),
+    },
+    {
+      label: t('bottomBarDetails.pickupPayout'),
+      value: m.pickupPayoutLevel > 0 ? `+${m.pickupPayoutLevel}` : t('bottomBarDetails.off'),
+      changed: m.pickupPayoutLevel !== 0,
+      keys: ['pickupPayoutLevel'],
+      description:
+        m.pickupPayoutLevel > 0
+          ? t('bottomBarDetails.pickupPayoutActive', { level: m.pickupPayoutLevel })
+          : t('bottomBarDetails.pickupPayoutInactive'),
+    },
+    {
       label: t('bottomBarDetails.pushBonus'),
       value: m.pushBonusMultiplier !== 1 ? `x${m.pushBonusMultiplier}` : t('bottomBarDetails.off'),
       changed: m.pushBonusMultiplier !== 1,

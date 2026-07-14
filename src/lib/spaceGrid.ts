@@ -563,6 +563,65 @@ export function captureUnreachableCells(
 }
 
 /**
+ * Is the ball's region REALLY sealed, or did it only become small because the
+ * ball-size-aware capture severed a gap too narrow for the ball to fit through?
+ *
+ * A ball must lock only inside a genuinely enclosed pocket - one bounded by real
+ * barriers (fence / obstacle / board edge), not by a "virtual wall" the capture
+ * conjured across a sub-ball-width opening. Otherwise the player sees a visible
+ * gap out to the rest of the board yet the ball locks: "either it's sealed or
+ * it's not" (issue: confusing near-seal locks).
+ *
+ * Test: flood a PLAIN 4-connected path (ignoring ball width) out of the region,
+ * over the PRE-capture `snapshot`, starting from the region's own cells. Cells
+ * outside the region that this cut just captured (the gap channel, dead pockets)
+ * are dead ends we walk THROUGH. If that walk ever reaches a cell that is STILL
+ * ACTIVE and outside the region, the pocket is connected to living space through
+ * an opening -> NOT truly sealed. If the flood only ever touches now-captured or
+ * barrier cells, the pocket is enclosed -> sealed.
+ *
+ * `snapshot` is the grid's cell states from BEFORE this cut's reachability
+ * capture (fences already rasterized). `regionCellIndices` is the ball's
+ * post-capture region.
+ */
+export function isRegionTrulySealed(
+  grid: SpaceGrid,
+  snapshot: Uint8Array,
+  regionCellIndices: number[],
+): boolean {
+  const { width, height, cells } = grid;
+  if (regionCellIndices.length === 0) return true;
+
+  const inRegion = new Uint8Array(cells.length);
+  const visited = new Uint8Array(cells.length);
+  const queue = regionCellIndices.slice();
+  for (const idx of regionCellIndices) { inRegion[idx] = 1; visited[idx] = 1; }
+
+  let qh = 0;
+  while (qh < queue.length) {
+    const cur = queue[qh++];
+    const row = (cur / width) | 0, col = cur % width;
+    const step = (ni: number): boolean => {
+      if (visited[ni]) return true;
+      // A barrier in the pre-capture snapshot (fence / obstacle / board / space
+      // captured by an EARLIER cut) blocks the plain flood.
+      if (snapshot[ni] !== CellState.ACTIVE) return true;
+      // Pre-capture-active, outside the region, and STILL active after this cut:
+      // the pocket opens into living space -> not sealed.
+      if (!inRegion[ni] && cells[ni] === CellState.ACTIVE) return false;
+      visited[ni] = 1;
+      queue.push(ni);
+      return true;
+    };
+    if (row > 0          && !step(cur - width)) return false;
+    if (row < height - 1 && !step(cur + width)) return false;
+    if (col > 0          && !step(cur - 1))     return false;
+    if (col < width - 1  && !step(cur + 1))     return false;
+  }
+  return true;
+}
+
+/**
  * Flood-fill REMOVED cells from the given seeds, never stepping across a wall
  * segment (geometric test between neighbouring cell centres). Returns the set
  * of reached cell indices - the captured "chamber" enclosing the seeds, right

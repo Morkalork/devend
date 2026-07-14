@@ -494,6 +494,39 @@ export function playCutClaimedSound(): void {
   osc.start(now + 0.04); osc.stop(now + 0.28);
 }
 
+/** Bright two-note chime when a pickup token is claimed by a lock. */
+export function playPickupClaimedSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = 0.16;
+
+  // Two quick ascending sine notes (a fifth apart) with a soft sparkle tail.
+  [[988, 0], [1480, 0.09]].forEach(([freq, delay]) => {
+    const t = now + delay;
+    const osc = ctx.createOscillator();
+    const gn  = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    osc.connect(gn); gn.connect(masterGain!);
+    gn.gain.setValueAtTime(0, t);
+    gn.gain.linearRampToValueAtTime(vol, t + 0.012);
+    gn.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.start(t); osc.stop(t + 0.3);
+  });
+
+  const nb = createNoiseBuffer(ctx, 0.2);
+  const ns = ctx.createBufferSource();
+  const nf = ctx.createBiquadFilter();
+  const ng = ctx.createGain();
+  ns.buffer = nb;
+  nf.type = "highpass"; nf.frequency.value = 5000;
+  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ng.gain.setValueAtTime(vol * 0.3, now + 0.09);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+  ns.start(now + 0.09); ns.stop(now + 0.3);
+}
+
 /** Rising pitch sweep — energy spinning up — when the level is cleared. */
 export function playLevelCompleteSound(): void {
   const ctx = ensureAudioContext();

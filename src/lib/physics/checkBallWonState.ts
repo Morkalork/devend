@@ -1,4 +1,4 @@
-import { Vector2, Ball } from "@/types/game";
+import { Ball } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
@@ -7,14 +7,20 @@ import {
   countActiveCells,
   buildGridRegionMap,
   findGridRegionForBall,
+  isRegionTrulySealed,
+  floodRemovedEnclosure,
+  gridIndexToWorld,
+  CellState,
 } from "@/lib/spaceGrid";
-import { lineSegmentIntersection, vec2Length } from "@/lib/polygon";
+import { vec2Length, lineSegmentIntersection } from "@/lib/polygon";
+import { traceContours } from "@/lib/rendering/regionContour";
 import { effectiveBallSpeedFactor } from "@/lib/ballTypes";
 import { LockDustParticle } from "@/types/game";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
 import { getLockValue } from "@/lib/scoring";
+import { claimPickupsInPocket } from "@/lib/pickups";
 
 /**
  * MicroManager: each locked ball slows the survivors. Caps every active ball's
@@ -52,7 +58,14 @@ export function checkAndUpdateBallWonStates(
   game: CanvasGameState,
   activeModifiers: GameModifiers,
   cumulativeLockedBalls: number,
-  callbacks: Pick<GameCallbacks, 'setLockedBallsCount' | 'onBallTypeLocked'>,
+  callbacks: Pick<GameCallbacks, 'setLockedBallsCount' | 'onBallTypeLocked' | 'onBallCountChanged'>,
+  /**
+   * Grid cell states from before this cut's reachability capture. When present,
+   * a ball only locks in a REALLY sealed pocket (isRegionTrulySealed) — never
+   * one closed off purely by severing a gap too narrow for the ball. Null skips
+   * the check (locks as before).
+   */
+  preCaptureCells: Uint8Array | null = null,
 ): boolean {
   if (!game.spaceGrid) return false;
 
@@ -70,7 +83,9 @@ export function checkAndUpdateBallWonStates(
   const activeBalls = game.balls.filter(b => b.state !== 'won' && b.speed > 0).length;
   const denominator = Math.max(currentActive, Math.floor(game.spaceGrid.initialActiveCount / Math.max(1, activeBalls)));
 
-  for (const ball of game.balls) {
+  // Snapshot: a claimed Fork pickup appends a new ball mid-loop; the clone
+  // spawns in a live region and must not be lock-checked in this same pass.
+  for (const ball of [...game.balls]) {
     if (ball.state === 'won' || ball.speed === 0) continue;
 
     // Use neighbour-search fallback: ball may sit in a REMOVED cell (e.g. its grid-cell
@@ -91,6 +106,14 @@ export function checkAndUpdateBallWonStates(
     const lockedByPercent = percentage <= threshold;
     const lockedBySliver = minCells > 0 && regionCells <= minCells;
     if (!lockedByPercent && !lockedBySliver) continue;
+
+    // Require a REAL seal: a small region that only became small because the
+    // capture severed a sub-ball-width gap still opens onto living space, so the
+    // ball must keep playing until the player actually closes it off. (Skipped
+    // when no snapshot was passed.)
+    if (preCaptureCells && !isRegionTrulySealed(game.spaceGrid, preCaptureCells, ballRegion.cellIndices)) {
+      continue;
+    }
 
     ball.state = 'won';
     ball.wonTime = performance.now();
@@ -117,37 +140,52 @@ export function checkAndUpdateBallWonStates(
     const isFirstEncounter = callbacks.onBallTypeLocked?.(ball.typeId) ?? false;
 
     if (ballRegion.cellIndices.length > 0) {
-      const centroid = ballRegion.centroid;
-      const RAY_COUNT = 360;
-      const RAY_LEN = 4000;
-      const hitPoints: Array<{ angle: number; pt: Vector2 }> = [];
-
-      for (let ri = 0; ri < RAY_COUNT; ri++) {
-        const angle = (ri / RAY_COUNT) * Math.PI * 2;
-        const rayEnd = {
-          x: centroid.x + Math.cos(angle) * RAY_LEN,
-          y: centroid.y + Math.sin(angle) * RAY_LEN,
-        };
-        let closestDist = Infinity;
-        let closestPt: Vector2 | null = null;
-        for (const wall of game.walls) {
-          const hit = lineSegmentIntersection(centroid, rayEnd, wall.start, wall.end);
-          if (hit) {
-            const d = (hit.x - centroid.x) ** 2 + (hit.y - centroid.y) ** 2;
-            if (d < closestDist) { closestDist = d; closestPt = hit; }
+      // Smooth outline of the locked pocket for the flash fill: trace contour
+      // loops (Chaikin-rounded) around the pocket cells. Built once here, not
+      // per frame. Loops may include hole loops (an obstacle enclosed by the
+      // pocket); fill them even-odd. Interior movers are punched out at render
+      // (they aren't grid cells, so they fall inside a loop).
+      //
+      // The ACTIVE cells alone are NOT enough: the cut rasterizer removes every
+      // cell whose centre is within half a cell (+ half the wall thickness) of
+      // the fence line, stranding a REMOVED band up to a cell wide between the
+      // pocket and the fence. Tracing only ACTIVE cells undershoots the fence
+      // by that band - most visibly as 15px stair-steps along a diagonal fence
+      // (the recurring "pixelated lock flash"). Reclaim the pocket's side of
+      // the band the same way the persistent tint does (applyCut's lockCaptured
+      // flood): expand across REMOVED cells, stopping at real wall segments
+      // (fences, board edges, obstacle edges), and trace the union - flush with
+      // every bounding line, still incapable of crossing one.
+      const grid = game.spaceGrid;
+      const gw = grid.width;
+      const cellSet = new Set(ballRegion.cellIndices);
+      const seeds: number[] = [];
+      for (const idx of ballRegion.cellIndices) {
+        const a = gridIndexToWorld(grid, idx);
+        const row = (idx / gw) | 0;
+        const col = idx % gw;
+        const consider = (nIdx: number) => {
+          if (grid.cells[nIdx] !== CellState.REMOVED) return;
+          const b = gridIndexToWorld(grid, nIdx);
+          // Only seed band cells on OUR side of the fence: a step that crosses
+          // a wall segment is the far side's territory.
+          for (const w of game.walls) {
+            if (lineSegmentIntersection(a, b, w.start, w.end)) return;
           }
-        }
-        if (closestPt) hitPoints.push({ angle, pt: closestPt });
+          seeds.push(nIdx);
+        };
+        if (row > 0) consider(idx - gw);
+        if (row < grid.height - 1) consider(idx + gw);
+        if (col > 0) consider(idx - 1);
+        if (col < gw - 1) consider(idx + 1);
       }
+      for (const idx of floodRemovedEnclosure(grid, seeds, game.walls)) cellSet.add(idx);
+      const contours = traceContours(grid, (col, row) => cellSet.has(row * gw + col));
 
-      hitPoints.sort((a, b) => a.angle - b.angle);
-      const polygon: Vector2[] = [];
-      for (const { pt } of hitPoints) {
-        const last = polygon[polygon.length - 1];
-        if (!last || Math.abs(pt.x - last.x) > 0.5 || Math.abs(pt.y - last.y) > 0.5) {
-          polygon.push(pt);
-        }
-      }
+      // Pickups: a token sealed in with this lock is claimed (the whole point
+      // of the mechanic — lead the ball to the token, then lock them together).
+      // Uses the flood-expanded set so a token flush against the fence counts.
+      claimPickupsInPocket(game, cellSet, callbacks, activeModifiers.pickupPayoutLevel);
 
       const PARTICLE_COUNT = 110;
       const particles: LockDustParticle[] = [
@@ -170,7 +208,7 @@ export function checkAndUpdateBallWonStates(
       game.assimilations.set(ball.id, {
         ballId: ball.id,
         cellIndices: [...ballRegion.cellIndices],
-        polygon,
+        contours,
         centroid: { ...ballRegion.centroid },
         startTime: performance.now(),
         ballPos: catchPos,

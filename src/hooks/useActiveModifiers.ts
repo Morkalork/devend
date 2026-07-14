@@ -81,6 +81,14 @@ export interface GameModifiers {
   // Additive (sum) — Cold Boot: seconds every ball stays frozen at map start
   // (rides the Feature Freeze frozenUntil path; no re-freeze cooldown after)
   spawnFreezeSeconds: number;
+  // Additive (sum) — Benefits Package: extra pickup-token spawn chance per
+  // roll (0.03 = +3 percentage points). Deliberately vague in all player-facing
+  // copy ("slightly more often"); only applies where pickups are enabled.
+  pickupChanceBonus: number;
+  // Additive (sum) — Total Compensation: each level enhances every pickup
+  // payout (+1h on overtime/cap tokens, +1s on freeze charges, split balls
+  // 5% slower per level; at level 3 the Fork splits a ball into THREE).
+  pickupPayoutLevel: number;
 
   // Multiplicative — Hard Deadline door: scales the Ship Early payout
   shipEarlyBonusMultiplier: number;
@@ -203,6 +211,8 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   spendFenceSpeedPerChunk: 0,
   lockThresholdBonus: 0,
   spawnFreezeSeconds: 0,
+  pickupChanceBonus: 0,
+  pickupPayoutLevel: 0,
   shipEarlyBonusMultiplier: 1,
   spaceBonusMultiplier: 1,
   ballPathPredictionBounces: 0,

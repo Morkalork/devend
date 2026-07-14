@@ -15,7 +15,14 @@ import { CanvasSource, Texture } from "pixi.js";
 
 type AnyCanvas = OffscreenCanvas | HTMLCanvasElement;
 
-const _canvasTextures = new Map<AnyCanvas, Texture>();
+interface CanvasTexEntry {
+  tex: Texture;
+  /** sweepCanvasTextures() frame counter at the last textureFor() fetch. */
+  lastUsed: number;
+}
+
+const _canvasTextures = new Map<AnyCanvas, CanvasTexEntry>();
+let _sweepFrame = 0;
 
 /**
  * Texture wrapping a (baked) canvas; cached by canvas identity.
@@ -27,17 +34,59 @@ const _canvasTextures = new Map<AnyCanvas, Texture>();
  * CanvasSource explicitly keeps this map as the only cache.
  */
 export function textureFor(canvas: AnyCanvas): Texture {
-  let tex = _canvasTextures.get(canvas);
-  if (!tex) {
-    tex = new Texture({ source: new CanvasSource({ resource: canvas as unknown as HTMLCanvasElement }) });
-    _canvasTextures.set(canvas, tex);
+  let entry = _canvasTextures.get(canvas);
+  if (!entry) {
+    entry = {
+      tex: new Texture({ source: new CanvasSource({ resource: canvas as unknown as HTMLCanvasElement }) }),
+      lastUsed: 0,
+    };
+    _canvasTextures.set(canvas, entry);
   }
-  return tex;
+  entry.lastUsed = _sweepFrame;
+  return entry.tex;
+}
+
+// The bake caches (ballRenderCache, ballSphereCache, rainGlyphCache) are
+// cleared on every level re-init, and GameCanvas creates FRESH board-grid /
+// region OffscreenCanvases per level. This map is keyed by canvas identity, so
+// without eviction every stale entry pins its GPU texture (the grid/region
+// pair alone is two full-screen textures) and the dead canvas itself, forever:
+// ~20 MB leaked per level, freezing long sessions.
+const SWEEP_EVERY = 120;     // amortize the map walk (~2 s at 60 fps)
+const MAX_IDLE_FRAMES = 600; // ~10 s unused → dead bake; re-wrapping a live one is cheap
+
+/**
+ * Advance the texture clock and (amortized) destroy entries whose canvas
+ * hasn't been fetched for MAX_IDLE_FRAMES. Call once per rendered frame,
+ * BEFORE the sync passes: every live consumer re-fetches via textureFor()
+ * each frame, so anything evicted here is either dead or trivially re-wrapped.
+ */
+// Free a canvas texture's GPU memory. unload() on the source, NOT destroy():
+// destroying a TextureSource that a cached Pixi batch still references makes
+// the next batch validation read .alphaMode of null - the batcher crash (or a
+// silently blank scene). unload() drops the GPU copy while keeping the JS
+// object valid; the texture object itself is destroyed (nothing holds it -
+// every consumer re-fetches via textureFor each frame).
+function releaseEntry(entry: CanvasTexEntry): void {
+  const source = entry.tex.source;
+  entry.tex.destroy();
+  source?.unload();
+}
+
+export function sweepCanvasTextures(): void {
+  _sweepFrame++;
+  if (_sweepFrame % SWEEP_EVERY !== 0) return;
+  for (const [canvas, entry] of _canvasTextures) {
+    if (_sweepFrame - entry.lastUsed > MAX_IDLE_FRAMES) {
+      releaseEntry(entry);
+      _canvasTextures.delete(canvas);
+    }
+  }
 }
 
 /** Drop every canvas-backed texture (GPU side); the canvases stay untouched. */
 export function clearCanvasTextures(): void {
-  for (const tex of _canvasTextures.values()) tex.destroy(true);
+  for (const entry of _canvasTextures.values()) releaseEntry(entry);
   _canvasTextures.clear();
 }
 

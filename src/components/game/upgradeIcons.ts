@@ -42,6 +42,8 @@ import {
   ClipboardCheck,
   Power,
   Orbit,
+  Gift,
+  Crown,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -83,6 +85,8 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   'clipboard-check': ClipboardCheck,
   power: Power,
   orbit: Orbit,
+  gift: Gift,
+  crown: Crown,
 };
 
 /**

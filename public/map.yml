@@ -1,16 +1,16 @@
 levels:
   - id: level-1
     level: 1
-    sizeThreshold: 30
-    expectedCuts: 4
+    sizeThreshold: 70
+    expectedCuts: 2
     points: 20
     variety: 0
     maxBalls: 1
     entities: []
   - id: level-2
     level: 2
-    sizeThreshold: 30
-    expectedCuts: 6
+    sizeThreshold: 70
+    expectedCuts: 4
     points: 20
     variety: 3
     maxBalls: 2
@@ -31,8 +31,8 @@ levels:
         height: 180
   - id: level-2b
     level: 2
-    sizeThreshold: 30
-    expectedCuts: 6
+    sizeThreshold: 70
+    expectedCuts: 4
     points: 20
     variety: 3
     maxBalls: 2
@@ -53,8 +53,8 @@ levels:
         height: 220
   - id: level-3
     level: 3
-    sizeThreshold: 28
-    expectedCuts: 7
+    sizeThreshold: 68
+    expectedCuts: 5
     points: 20
     variety: 5
     maxBalls: 2
@@ -68,8 +68,8 @@ levels:
         height: 200
   - id: level-3b
     level: 3
-    sizeThreshold: 28
-    expectedCuts: 7
+    sizeThreshold: 68
+    expectedCuts: 5
     points: 20
     variety: 5
     maxBalls: 2

@@ -329,6 +329,9 @@ export interface ScoreOptions {
   spaceBonusMultiplier?: number;
   /** Stock Options capstone: flat raise on the per-map cap (default 0). */
   overtimeCapBonus?: number;
+  /** Pickup overtime tokens: paid AFTER the cap clamp, like the highscore
+   *  bonus, so a claimed token always pays even on a capped map (default 0). */
+  postCapBonus?: number;
 }
 
 /**
@@ -354,7 +357,7 @@ export function calculateScore(
   levelScore: number;
   breakdown: ScoreBreakdown;
 } {
-  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0 } = options;
+  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0 } = options;
   const requiredRemovedRatio = (100 - thresholdPercent) / 100;
   const actualRemovedRatio = (100 - remainingPercent) / 100;
 
@@ -371,7 +374,10 @@ export function calculateScore(
   // still folds under a cap, it's just a higher one for the rest of the run.
   const safeCapBonus = Number.isFinite(overtimeCapBonus) && overtimeCapBonus > 0 ? overtimeCapBonus : 0;
   const cap = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom) + safeCapBonus;
-  const levelScore = Math.max(0, Math.min(rawScore, cap));
+  // Pickup overtime lands OUTSIDE the cap (a deliberate, small inflation valve:
+  // tokens must feel rewarding even on a capped map — see game-config.yml).
+  const safePostCap = Number.isFinite(postCapBonus) && postCapBonus > 0 ? Math.round(postCapBonus) : 0;
+  const levelScore = Math.max(0, Math.min(rawScore, cap)) + safePostCap;
 
   return { levelScore, breakdown };
 }

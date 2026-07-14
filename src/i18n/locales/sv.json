@@ -110,6 +110,12 @@
     "spawnFreeze": "Startfrysning",
     "spawnFreezeActive": "Varje karta startar frusen: alla bollar står stilla de första {{seconds}}s (Cold Boot).",
     "spawnFreezeInactive": "Bollarna rör sig från kartans första ögonblick.",
+    "pickupChance": "Power-up-symboler",
+    "pickupChanceActive": "Power-up-symboler dyker upp oftare än vanligt (Benefits Package).",
+    "pickupChanceInactive": "Power-up-symboler dyker upp i normal takt.",
+    "pickupPayout": "Power-up-utdelning",
+    "pickupPayoutActive": "Inlösta symboler ger förbättrade belöningar, och delade bollar flyger långsammare (Total Compensation nivå {{level}}).",
+    "pickupPayoutInactive": "Power-up-symboler ger sina grundbelöningar.",
     "pushBonus": "Pressutbetalningar",
     "pushBonusActive": "Pressutbetalningarna multipliceras med x{{mult}}.",
     "pushBonusInactive": "Standardpressutbetalningar.",
@@ -236,7 +242,10 @@
     "topBarTutorialBody": "Den övre listen går att fälla ut!\n\nTryck på den för att se fullständiga nivådetaljer, alla dina aktiva uppgraderingar med beskrivningar och framsteg för certifikattimmar.",
     "bottomBarTutorialTitle": "Den nedre listen",
     "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska.",
-    "infoUnlocked": "Info upplåst"
+    "infoUnlocked": "Info upplåst",
+    "pickupFork": "Bollen delades!",
+    "pickupCapRaise": "Tak +{n}h",
+    "pickupFreeze": "Frysning +1"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
@@ -261,6 +270,7 @@
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Trådlås ({{count}})",
     "pushBonus": "Pressbonus",
+    "pickupBonus": "Power-up-bonus",
     "shipEarly": "Tidig leverans ({{seconds}}s)",
     "newHighscore": "Nytt rekord",
     "totalBonus": "Total bonus",
@@ -315,6 +325,11 @@
         "title": "Pressbonus",
         "body": "Belöningen för att våga. Efter att banans mål är nått kan du fortsätta skära i stället för att säkra, och varje extra bit av brädet betalar bonusövertid.",
         "tip": "Att pressa är gratis pengar: misslyckas du mitt i förlorar du bara extrabonusen, aldrig din säkrade poäng."
+      },
+      "pickupBonus": {
+        "title": "Power-up-bonus",
+        "body": "Övertid från power-up-symboler du stängde in med ett lås. En symbol betalar bara när en boll låses i fickan som håller den: fångar du symbolens yta utan boll går den förlorad, och ohämtade symboler försvinner av sig själva.",
+        "tip": "Valla en boll mot symbolen innan du förseglar fickan. Symbolövertid betalas efter taket per bana, så den räknas alltid."
       },
       "newHighscore": {
         "title": "Nytt rekord",
@@ -757,6 +772,30 @@
       "cron_job_architect": {
         "name": "Schemalagt jobb",
         "description": "Schemalagda frysningar håller nu en boll i 5 sekunder."
+      },
+      "benefits_package_junior": {
+        "name": "Förmånspaket",
+        "description": "Power-up-symboler dyker upp lite oftare."
+      },
+      "benefits_package_senior": {
+        "name": "Förmånspaket",
+        "description": "Power-up-symboler dyker upp ännu lite oftare."
+      },
+      "benefits_package_principal": {
+        "name": "Förmånspaket",
+        "description": "Power-up-symboler dyker upp märkbart oftare."
+      },
+      "total_compensation_junior": {
+        "name": "Totalersättning",
+        "description": "Varje power-up ger bättre utdelning, och delade bollar blir långsammare."
+      },
+      "total_compensation_senior": {
+        "name": "Totalersättning",
+        "description": "Power-up-utdelningen ökar igen, och delade bollar saktar ner ytterligare."
+      },
+      "total_compensation_principal": {
+        "name": "Totalersättning",
+        "description": "Toppförmåner. Bolldelaren delar nu en boll i tre."
       },
       "defensive_programming_junior": {
         "name": "Defensiv programmering",

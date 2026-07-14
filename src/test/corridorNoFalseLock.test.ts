@@ -40,7 +40,7 @@ const MODS: GameModifiers = {
   scopeCreepImmediate: 0, shipEarlyBonusMultiplier: 1,
   runwayInstantFenceAt: 0, runwayConcurrentFenceAt: 0, runwayFreezeAt: 0,
   spendInstantFencePerChunk: 0, spendFenceSpeedPerChunk: 0,
-  lockThresholdBonus: 0, spawnFreezeSeconds: 0,
+  lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
 };
 
 // Board is inset to (45,45)-(855,855). The box's bottom edge sits `gap` world
@@ -117,16 +117,22 @@ function runScenario(gap: number): CanvasGameState {
   return game;
 }
 
-describe("corridor under a box: no false lock (ball-passable gap)", () => {
+describe("corridor under a box: locking requires a REAL seal", () => {
   it("gap 42 (ball diameter 36 fits): the pocket ball does NOT lock", () => {
     const game = runScenario(42);
     expect(game.balls[0].state).toBe("active");
     expect(game.lockedBallsCount).toBe(0);
   });
 
-  it("gap 24 (ball cannot fit): the pocket ball DOES lock (real trap)", () => {
+  // The pocket's only opening is a corridor too narrow for the ball, but it
+  // still leads out to the open field where the other ball plays. A player sees
+  // that gap and reasonably reads the pocket as unsealed, so locking there is
+  // confusing ("either it's sealed or it's not"). Locking now demands a real
+  // seal: with a visible opening to living space, the trapped ball keeps
+  // playing until the gap is actually closed.
+  it("gap 24 (ball cannot fit, but gap still opens to the field): does NOT lock", () => {
     const game = runScenario(24);
-    expect(game.balls[0].state).toBe("won");
-    expect(game.lockedBallsCount).toBe(1);
+    expect(game.balls[0].state).toBe("active");
+    expect(game.lockedBallsCount).toBe(0);
   });
 });

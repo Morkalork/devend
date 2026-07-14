@@ -25,6 +25,8 @@ import { getRainGlyph } from "./rainGlyphCache";
 import { renderBallEffects, getSquishEffect } from "@/lib/ballEffects";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+import { getPickupSprite, pickupColor, pickupFeedbackLabel } from "./pickupSprites";
+import { PICKUP_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from "@/lib/boardConstants";
 import {
   LOCK_PULSE_DURATION,
@@ -36,6 +38,7 @@ import {
   SWIPE_TRAIL_DURATION,
   BALL_DANGER_SPEED,
   LEVEL_CLEAR_SHIMMER_MS,
+  SPACE_BAR_FADE_MS,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 
@@ -1179,6 +1182,36 @@ export function renderFrame(
     if (expired) game.fallingObjects = game.fallingObjects.filter(fo => nowF - fo.startTime < fo.durationMs);
   }
 
+  // ── Pickup tokens ─────────────────────────────────────────────────────────
+  // Drawn under the balls: a ball rolling over a token reads as "reachable".
+  // Timing (pop-in, expiry blink) runs on activePlaySeconds so a paused game
+  // never advances a token's clock; only the idle pulse uses the wall clock.
+  if (game.pickups && game.pickups.length > 0) {
+    const nowP = performance.now();
+    const nowS = game.activePlaySeconds;
+    for (const token of game.pickups) {
+      const sprite = getPickupSprite(token.effect, accentColor, PICKUP_RADIUS * scale);
+      const aliveS = nowS - token.spawnedAtSeconds;
+      const remainingS = token.expiresAtSeconds - nowS;
+      const popT = Math.min(1, aliveS / 0.25);
+      const pop = 1 - Math.pow(1 - popT, 3); // easeOutCubic pop-in
+      const pulse = 1 + 0.07 * Math.sin(nowP / 280 + token.position.x);
+      let alpha = popT;
+      if (remainingS < PICKUP_EXPIRY_WARN_SECONDS) {
+        // Accelerating blink over the final seconds (2 Hz → ~8 Hz).
+        const hz = 2 + (PICKUP_EXPIRY_WARN_SECONDS - remainingS) * 2;
+        alpha *= 0.35 + 0.65 * (0.5 + 0.5 * Math.sin((nowP / 1000) * hz * Math.PI * 2));
+      }
+      const p = w2s(token.position.x, token.position.y);
+      const size = sprite.width * pulse * pop;
+      if (size <= 0 || alpha <= 0) continue;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(sprite, p.x - size / 2, p.y - size / 2, size, size);
+      ctx.restore();
+    }
+  }
+
   // ── Cut preview line during drag ──────────────────────────────────────────
   if (swipeStart && swipeRegionId && currentSwipePos && !wall) {
     const delta = vec2Sub(currentSwipePos, swipeStart);
@@ -1673,7 +1706,7 @@ export function renderFrame(
     const now = performance.now();
 
     for (const [, flash] of game.assimilations) {
-      if (flash.polygon.length === 0) continue;
+      if (flash.contours.length === 0) continue;
       const elapsed = now - flash.startTime;
 
       let fillAlpha = 0;
@@ -1699,27 +1732,44 @@ export function renderFrame(
       }
 
       ctx.save();
-      if (flash.polygon.length >= 3) {
-        // The lock polygon is a ray-cast star polygon from the region centroid,
-        // so it can't represent a floating obstacle as a hole and would tint
-        // pixels behind an obstacle (the "shadow behind the obstacle" bug). Clip
-        // obstacles out with the even-odd rule (board rect minus obstacle
-        // subpaths), exactly like the active-fence fill below.
+      if (flash.contours.length > 0 && fillAlpha > 0) {
+        // Fill the pocket's smooth contour loops (traced + Chaikin-rounded at lock
+        // time, exactly like the persistent captured-territory tint). Bounded to
+        // the real cells so it can't overshoot toward a nearby object, and smooth
+        // so there's no 15px staircase. Even-odd handles enclosed obstacle holes.
         ctx.save();
-        const holeClip = new Path2D();
-        holeClip.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
-        holeClip.addPath(getObstacleHolesPath(obstacles, boardRect, scale));
-        ctx.clip(holeClip, 'evenodd');
-        ctx.beginPath();
-        const fp = w2s(flash.polygon[0].x, flash.polygon[0].y);
-        ctx.moveTo(fp.x, fp.y);
-        for (let i = 1; i < flash.polygon.length; i++) {
-          const p = w2s(flash.polygon[i].x, flash.polygon[i].y);
-          ctx.lineTo(p.x, p.y);
+        // Interior movers aren't grid cells, so a pocket cell can sit under one —
+        // CLIP them out (board minus movers). Clipping, not an even-odd subpath:
+        // a mover OUTSIDE the pocket must stay untouched, not get filled.
+        if (game.movers.length > 0) {
+          const clip = new Path2D();
+          clip.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
+          for (const mover of game.movers) {
+            const vs = mover.polygon.vertices;
+            if (vs.length < 3) continue;
+            const m0 = w2s(vs[0].x, vs[0].y);
+            clip.moveTo(m0.x, m0.y);
+            for (let i = 1; i < vs.length; i++) {
+              const mv = w2s(vs[i].x, vs[i].y);
+              clip.lineTo(mv.x, mv.y);
+            }
+            clip.closePath();
+          }
+          ctx.clip(clip, 'evenodd');
         }
-        ctx.closePath();
+        ctx.beginPath();
+        for (const loop of flash.contours) {
+          if (loop.length < 3) continue;
+          const p0 = w2s(loop[0].x, loop[0].y);
+          ctx.moveTo(p0.x, p0.y);
+          for (let i = 1; i < loop.length; i++) {
+            const p = w2s(loop[i].x, loop[i].y);
+            ctx.lineTo(p.x, p.y);
+          }
+          ctx.closePath();
+        }
         ctx.fillStyle = `rgba(${acR}, ${acG}, ${acB}, ${fillAlpha})`;
-        ctx.fill();
+        ctx.fill('evenodd');
         ctx.restore();
       }
 
@@ -1786,6 +1836,62 @@ export function renderFrame(
         ctx.shadowBlur = 10 * scale;
         ctx.fillStyle = accentColor;
         ctx.fillText(infoUnlockedLabel, tp.x, tp.y);
+        ctx.restore();
+      }
+    }
+  }
+
+  // ── Pickup claim / waste feedback ─────────────────────────────────────────
+  // Claimed: a rising label (Info Unlocked styling) + an expanding ring in the
+  // token's colour. Wasted: a grey collapsing ring with a strike. Entries are
+  // culled by updatePickups, so this only ever draws live markers.
+  if (game.pickupFeedback && game.pickupFeedback.length > 0) {
+    const nowP = performance.now();
+    for (const fb of game.pickupFeedback) {
+      const elapsed = nowP - fb.startTime;
+      if (elapsed < 0 || elapsed >= PICKUP_FEEDBACK_MS) continue;
+      const t = elapsed / PICKUP_FEEDBACK_MS;
+      if (fb.kind === 'claimed') {
+        const col = pickupColor(fb.effect, accentColor);
+        const alpha = Math.min(1, elapsed / 120) * (t > 0.6 ? (1 - t) / 0.4 : 1);
+        const tp = w2s(fb.position.x, fb.position.y - 18 - 45 * t);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold ${Math.max(11, Math.round(13 * scale))}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 10 * scale;
+        ctx.fillStyle = col;
+        ctx.fillText(pickupFeedbackLabel(fb, rctx.pickupLabels), tp.x, tp.y);
+        ctx.restore();
+        const ringT = Math.min(1, elapsed / 450);
+        if (ringT < 1) {
+          const p = w2s(fb.position.x, fb.position.y);
+          ctx.save();
+          ctx.globalAlpha = (1 - ringT) * 0.8;
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2 * scale;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, (PICKUP_RADIUS + 30 * ringT) * scale, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      } else {
+        const p = w2s(fb.position.x, fb.position.y);
+        const rr = PICKUP_RADIUS * scale * (1 - t);
+        if (rr <= 0.5) continue;
+        ctx.save();
+        ctx.globalAlpha = 0.7 * (1 - t);
+        ctx.strokeStyle = '#9aa3ad';
+        ctx.lineWidth = 2 * scale;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(p.x - rr, p.y - rr);
+        ctx.lineTo(p.x + rr, p.y + rr);
+        ctx.stroke();
         ctx.restore();
       }
     }
@@ -1920,8 +2026,14 @@ export function renderFrame(
     ctx.clearRect(bl + bw, bt,       sw - (bl + bw), bh);
   }
 
-  // ── Space progress bar (drawn after clear so it sits below the board) ────
-  if (game.spaceGrid) {
+  // ── Space progress bar (drawn after clear so it sits below the board).
+  // Once the map is won it fades out over SPACE_BAR_FADE_MS - it must not sit
+  // under the board through the clear wave. It returns with the next map's
+  // fresh game state. ───────────────────────────────────────────────────────
+  const spaceBarFade = game.levelComplete
+    ? 1 - (performance.now() - (game.levelCompleteTime ?? 0)) / SPACE_BAR_FADE_MS
+    : 1;
+  if (game.spaceGrid && spaceBarFade > 0) {
     const remaining = getRemainingPercent(game.spaceGrid);
     const threshold = rctx.spaceThreshold;
     const captured = 100 - remaining;
@@ -1937,13 +2049,14 @@ export function renderFrame(
 
     // Track background
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.globalAlpha = spaceBarFade;
     ctx.fillRect(bl, barY, bw, barH);
 
     // Primary fill (left → right, accent/green)
     const fillW = bw * fillRatio;
     const isComplete = fillRatio >= 1;
     ctx.fillStyle = isComplete ? '#00ff44' : accentColor;
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 0.75 * spaceBarFade;
     ctx.shadowColor = isComplete ? '#00ff44' : accentColor;
     ctx.shadowBlur = 3 * scale;
     ctx.fillRect(bl, barY, fillW, barH);
@@ -1955,7 +2068,7 @@ export function renderFrame(
       if (pushRatio > 0) {
         const pushW = bw * pushRatio;
         ctx.fillStyle = '#ff8800';
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 0.85 * spaceBarFade;
         ctx.shadowColor = '#ff8800';
         ctx.shadowBlur = 5 * scale;
         ctx.fillRect(bl + bw - pushW, barY, pushW, barH);

@@ -70,7 +70,9 @@ export function useGameInput(
         return;
       }
 
-      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
+      // game.dissolve also covers the run-intro assemble: no cuts while the
+      // board is still flying together (physics is held until it lands).
+      if (game.gameOver || game.levelComplete || game.dissolve || game.activeWall || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
         return;
 
       const { screenX, screenY } = getCanvasCoords(e);
@@ -129,9 +131,11 @@ export function useGameInput(
         const dist  = vec2Length(delta);
 
         // Feature Freeze: a tap (movement below the cut threshold) on a ball
-        // freezes it in place. Only when the upgrade is owned; the cut path
-        // below is unreachable for taps, so the two never conflict.
-        if (dist < BASE_SWIPE_MIN_DISTANCE && activeModifiers.ballFreezeDuration > 0) {
+        // freezes it in place. Works when the upgrade is owned OR a freeze
+        // charge was claimed from a pickup token; the cut path below is
+        // unreachable for taps, so the two never conflict.
+        const hasFreezeCharge = !activeModifiers.ballFreezeDuration && (game.freezeCharges ?? 0) > 0;
+        if (dist < BASE_SWIPE_MIN_DISTANCE && (activeModifiers.ballFreezeDuration > 0 || hasFreezeCharge)) {
           const tap = game.swipeStart;
           const now = performance.now();
           let target: Ball | null = null;
@@ -148,7 +152,12 @@ export function useGameInput(
             }
           }
           if (target) {
-            const durationMs = activeModifiers.ballFreezeDuration * 1000;
+            // A freeze charge (pickup token) is spent only when the Feature
+            // Freeze upgrade isn't carrying the tap.
+            if (hasFreezeCharge) game.freezeCharges -= 1;
+            const durationMs = (activeModifiers.ballFreezeDuration > 0
+              ? activeModifiers.ballFreezeDuration
+              : game.freezeChargeSeconds || 3) * 1000;
             // Cascade Freeze: a single tap also freezes the nearest eligible
             // balls in the region (the tapped ball plus `ballFreezeCount` more).
             const freezeCount = 1 + Math.max(0, Math.round(activeModifiers.ballFreezeCount));

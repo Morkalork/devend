@@ -47,6 +47,7 @@ const EXPECTED_ROOTS = [
   "code_review",
   "cold_boot",
   "moonshot",
+  "benefits_package_junior",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.

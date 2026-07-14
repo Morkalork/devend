@@ -23,9 +23,12 @@ import {
   INFO_UNLOCKED_DURATION,
   SWIPE_TRAIL_DURATION,
   DISSOLVE_DURATION,
+  SPACE_BAR_FADE_MS,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
-import { glowTexture } from "./textures";
+import { glowTexture, textureFor } from "./textures";
+import { getPickupSprite, pickupColor, pickupFeedbackLabel } from "../pickupSprites";
+import { PICKUP_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
 
 type W2S = (x: number, y: number) => { x: number; y: number };
 
@@ -62,10 +65,16 @@ export class EffectsLayer {
   private trajectory = new Graphics();
   private spaceBar = new Graphics();
   private burstPool: Sprite[] = [];
+  private pickupLayer = new Container();
+  private pickupSprites = new Map<string, Sprite>();
+  private pickupRings = new Graphics();
+  private pickupTexts = new Map<string, Text>();
 
   constructor() {
     this.lockDust.blendMode = "add";
-    this.container.addChild(this.lockFill, this.lockBursts, this.lockDust, this.preview, this.swipe, this.trajectory);
+    // Pickup tokens go FIRST (under the lock flash — a claimed token vanishes
+    // beneath the pocket fill); feedback rings/labels ride on top of the rest.
+    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.preview, this.swipe, this.trajectory, this.pickupRings);
     this.overlayContainer.addChild(this.spaceBar);
   }
 
@@ -74,11 +83,116 @@ export class EffectsLayer {
     const scale = boardRect.scale;
     const accent = rctx.accentColor;
 
+    this.syncPickups(game, rctx, w2s, scale, accent, now);
     this.syncLockFlashes(game, rctx, w2s, scale, accent, now);
     this.syncCutPreview(game, w2s, scale, accent);
     this.syncSwipeTrail(game, w2s, scale, accent, now);
     this.syncTrajectory(game, rctx, w2s, scale);
-    this.syncSpaceBar(game, rctx, scale, accent);
+    this.syncSpaceBar(game, rctx, scale, accent, now);
+  }
+
+  // ── Pickup tokens + claim/waste feedback (renderFrame's pickup sections) ──
+  private syncPickups(
+    game: CanvasGameState, rctx: RenderContext, w2s: W2S,
+    scale: number, accent: string, now: number,
+  ): void {
+    const live = new Set<string>();
+    if (game.pickups && game.pickups.length > 0) {
+      const nowS = game.activePlaySeconds;
+      for (const token of game.pickups) {
+        live.add(token.id);
+        let sprite = this.pickupSprites.get(token.id);
+        if (!sprite) {
+          sprite = new Sprite();
+          sprite.anchor.set(0.5);
+          this.pickupLayer.addChild(sprite);
+          this.pickupSprites.set(token.id, sprite);
+        }
+        // Re-fetch per frame: the bake is scale-keyed and the texture cache is
+        // swept — a held stale texture would render a destroyed source.
+        sprite.texture = textureFor(getPickupSprite(token.effect, accent, PICKUP_RADIUS * scale));
+        const aliveS = nowS - token.spawnedAtSeconds;
+        const remainingS = token.expiresAtSeconds - nowS;
+        const popT = Math.min(1, aliveS / 0.25);
+        const pop = 1 - Math.pow(1 - popT, 3);
+        const pulse = 1 + 0.07 * Math.sin(now / 280 + token.position.x);
+        let alpha = popT;
+        if (remainingS < PICKUP_EXPIRY_WARN_SECONDS) {
+          const hz = 2 + (PICKUP_EXPIRY_WARN_SECONDS - remainingS) * 2;
+          alpha *= 0.35 + 0.65 * (0.5 + 0.5 * Math.sin((now / 1000) * hz * Math.PI * 2));
+        }
+        const p = w2s(token.position.x, token.position.y);
+        sprite.position.set(p.x, p.y);
+        sprite.scale.set(pulse * pop);
+        sprite.alpha = alpha;
+        sprite.visible = alpha > 0 && pop > 0;
+      }
+    }
+    for (const [id, sprite] of this.pickupSprites) {
+      if (!live.has(id)) {
+        sprite.destroy();
+        this.pickupSprites.delete(id);
+      }
+    }
+
+    // Feedback: claimed = rising label + expanding ring; wasted = grey
+    // collapsing ring with a strike. Entries are culled by updatePickups.
+    this.pickupRings.clear();
+    const liveTexts = new Set<string>();
+    if (game.pickupFeedback && game.pickupFeedback.length > 0) {
+      for (const fb of game.pickupFeedback) {
+        const elapsed = now - fb.startTime;
+        if (elapsed < 0 || elapsed >= PICKUP_FEEDBACK_MS) continue;
+        const t = elapsed / PICKUP_FEEDBACK_MS;
+        if (fb.kind === "claimed") {
+          const col = pickupColor(fb.effect, accent);
+          liveTexts.add(fb.id);
+          let label = this.pickupTexts.get(fb.id);
+          if (!label) {
+            label = new Text({
+              text: pickupFeedbackLabel(fb, rctx.pickupLabels),
+              style: new TextStyle({
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: Math.max(11, Math.round(13 * scale)),
+                fontWeight: "bold",
+                fill: col,
+              }),
+            });
+            label.anchor.set(0.5, 1);
+            this.container.addChild(label);
+            this.pickupTexts.set(fb.id, label);
+          }
+          label.alpha = Math.min(1, elapsed / 120) * (t > 0.6 ? (1 - t) / 0.4 : 1);
+          const tp = w2s(fb.position.x, fb.position.y - 18 - 45 * t);
+          label.position.set(tp.x, tp.y);
+          const ringT = Math.min(1, elapsed / 450);
+          if (ringT < 1) {
+            const p = w2s(fb.position.x, fb.position.y);
+            this.pickupRings
+              .circle(p.x, p.y, (PICKUP_RADIUS + 30 * ringT) * scale)
+              .stroke({ width: 2 * scale, color: col, alpha: (1 - ringT) * 0.8 });
+          }
+        } else {
+          const p = w2s(fb.position.x, fb.position.y);
+          const rr = PICKUP_RADIUS * scale * (1 - t);
+          if (rr <= 0.5) continue;
+          const alpha = 0.7 * (1 - t);
+          this.pickupRings
+            .circle(p.x, p.y, rr)
+            .stroke({ width: 2 * scale, color: 0x9aa3ad, alpha });
+          this.pickupRings
+            .moveTo(p.x - rr, p.y - rr)
+            .lineTo(p.x + rr, p.y + rr)
+            .stroke({ width: 2 * scale, color: 0x9aa3ad, alpha });
+        }
+      }
+    }
+    for (const [id, label] of this.pickupTexts) {
+      if (!liveTexts.has(id)) {
+        label.destroy();
+        this.pickupTexts.delete(id);
+      }
+    }
   }
 
   // ── Lock flash / assimilations (renderFrame section T) ────────────────────
@@ -92,7 +206,7 @@ export class EffectsLayer {
     const liveInfo = new Set<string>();
 
     for (const [key, flash] of game.assimilations) {
-      if (flash.polygon.length === 0) continue;
+      if (flash.contours.length === 0) continue;
       const elapsed = now - flash.startTime;
 
       let fillAlpha = 0;
@@ -107,20 +221,45 @@ export class EffectsLayer {
         glowAlpha = (1 - ft) * 0.9;
       }
 
-      // Region fill with obstacle holes cut out (evenodd clip in the 2D path).
-      if (flash.polygon.length >= 3 && fillAlpha > 0) {
-        const pts: number[] = [];
-        for (const p of flash.polygon) {
-          const sp = w2s(p.x, p.y);
-          pts.push(sp.x, sp.y);
-        }
-        this.lockFill.poly(pts).fill({ color: accent, alpha: fillAlpha });
-        for (const poly of game.obstaclePolygons) {
-          const hole: number[] = [];
-          for (const v of poly.vertices) {
-            const sp = w2s(v.x, v.y);
-            hole.push(sp.x, sp.y);
+      // Fill the pocket's smooth contour loops (traced + Chaikin-rounded at lock
+      // time — same as the persistent tint): bounded to the real cells (no
+      // overshoot toward a nearby object) and smooth (no 15px staircase). Pixi
+      // has no even-odd multi-loop fill, so classify loops by orientation: fill
+      // the outer boundary(ies), cut the hole loops and interior movers.
+      if (flash.contours.length > 0 && fillAlpha > 0) {
+        const loops = flash.contours;
+        // Signed area (world coords; w2s is orientation-preserving). The loop
+        // with the largest |area| is an outer boundary; its sign flags outers.
+        const areas = loops.map(loop => {
+          let a = 0;
+          for (let i = 0; i < loop.length; i++) {
+            const p = loop[i], q = loop[(i + 1) % loop.length];
+            a += p.x * q.y - q.x * p.y;
           }
+          return a;
+        });
+        let outerSign = 1, maxAbs = 0;
+        for (const a of areas) {
+          if (Math.abs(a) > maxAbs) { maxAbs = Math.abs(a); outerSign = Math.sign(a) || 1; }
+        }
+        const toScreen = (loop: typeof loops[number]): number[] => {
+          const pts: number[] = [];
+          for (const v of loop) { const sp = w2s(v.x, v.y); pts.push(sp.x, sp.y); }
+          return pts;
+        };
+        for (let i = 0; i < loops.length; i++) {
+          if (loops[i].length >= 3 && Math.sign(areas[i]) === outerSign) this.lockFill.poly(toScreen(loops[i]));
+        }
+        this.lockFill.fill({ color: accent, alpha: fillAlpha });
+        for (let i = 0; i < loops.length; i++) {
+          if (loops[i].length >= 3 && Math.sign(areas[i]) !== outerSign) this.lockFill.poly(toScreen(loops[i])).cut();
+        }
+        // Interior movers aren't grid cells, so they fall inside a loop — cut them.
+        for (const mover of game.movers) {
+          const vs = mover.polygon.vertices;
+          if (vs.length < 3) continue;
+          const hole: number[] = [];
+          for (const v of vs) { const sp = w2s(v.x, v.y); hole.push(sp.x, sp.y); }
           this.lockFill.poly(hole).cut();
         }
       }
@@ -138,6 +277,9 @@ export class EffectsLayer {
           this.burstPool.push(sprite);
           this.lockBursts.addChild(sprite);
         }
+        // Re-fetch per use: pooled sprites outlive texture-cache clears, and a
+        // stale destroyed texture (null source) crashes the batcher.
+        sprite.texture = glowTexture("burst");
         sprite.visible = true;
         sprite.tint = accent;
         sprite.alpha = glowAlpha;
@@ -342,10 +484,19 @@ export class EffectsLayer {
   }
 
   // ── Space progress bar (section W, below the board) ───────────────────────
-  private syncSpaceBar(game: CanvasGameState, rctx: RenderContext, scale: number, accent: string): void {
+  private syncSpaceBar(game: CanvasGameState, rctx: RenderContext, scale: number, accent: string, now: number): void {
     const g = this.spaceBar;
     g.clear();
     if (!game.spaceGrid) return;
+    // Once the map is won the bar fades out over SPACE_BAR_FADE_MS - it must
+    // not sit under the board through the clear wave. It returns with the next
+    // map's fresh game state.
+    let fade = 1;
+    if (game.levelComplete) {
+      fade = 1 - (now - (game.levelCompleteTime ?? 0)) / SPACE_BAR_FADE_MS;
+      if (fade <= 0) return;
+    }
+    g.alpha = fade;
     const remaining = getRemainingPercent(game.spaceGrid);
     const threshold = rctx.spaceThreshold;
     const captured = 100 - remaining;
@@ -374,6 +525,9 @@ export class EffectsLayer {
   destroy(): void {
     for (const [, label] of this.infoTexts) label.destroy();
     this.infoTexts.clear();
+    for (const [, label] of this.pickupTexts) label.destroy();
+    this.pickupTexts.clear();
+    this.pickupSprites.clear(); // sprites are children — destroyed below
     this.container.destroy({ children: true });
     this.overlayContainer.destroy({ children: true });
   }
@@ -385,6 +539,9 @@ export class DissolveLayer {
   readonly container = new Container();
   private sprites: Sprite[] = [];
   private forState: DissolveState | null = null;
+  /** Source WE created for the captured-canvas fallback; a gpuSource passed in
+   *  is owned by the renderer's dissolveRT and must not be destroyed here. */
+  private ownedSource: CanvasSource | null = null;
 
   /**
    * Advance the dissolve; mirrors the 2D tile kinematics in useGameLoop.
@@ -396,7 +553,8 @@ export class DissolveLayer {
       this.clear();
       this.forState = dissolve;
       // Explicit source (not Texture.from) to stay out of Pixi's global cache.
-      const source = gpuSource ?? new CanvasSource({ resource: dissolve.captured });
+      const source = gpuSource
+        ?? (this.ownedSource = new CanvasSource({ resource: dissolve.captured }));
       for (const tile of dissolve.tiles) {
         const tex = new Texture({
           source,
@@ -410,13 +568,23 @@ export class DissolveLayer {
     }
     const elapsed = (now - dissolve.startTime) / 1000;
     const dur = DISSOLVE_DURATION / 1000;
+    // Reverse (run-intro assemble): same kinematics played backwards, so the
+    // tiles fly IN from their scattered end-state and settle in place.
+    const anim = dissolve.reverse ? Math.max(0, dur - elapsed) : elapsed;
     for (let i = 0; i < dissolve.tiles.length; i++) {
       const tile = dissolve.tiles[i];
       const s = this.sprites[i];
-      const t = Math.max(0, elapsed - tile.delay);
+      const t = Math.max(0, anim - tile.delay);
       const tMax = dur - tile.delay;
       const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
-      s.alpha = Math.max(0, 1 - progress * 1.15);
+      // Forward: shards fade out as they scatter. Reverse: they must stay
+      // SOLID while flying together (the mirrored curve leaves them nearly
+      // invisible for most of the flight and the assemble reads as a soft
+      // fade instead of shards) - only a short global fade-in at the very
+      // start stops the scattered cloud from popping in.
+      s.alpha = dissolve.reverse
+        ? Math.max(0, Math.min(1, elapsed / 0.2))
+        : Math.max(0, 1 - progress * 1.15);
       s.position.set(tile.cx + tile.vx * t, tile.cy + tile.vy * t + 400 * t * t);
       s.rotation = tile.rotSpeed * t;
     }
@@ -425,12 +593,22 @@ export class DissolveLayer {
   clear(): void {
     if (!this.forState && this.sprites.length === 0) return; // called per idle frame
     for (const s of this.sprites) {
-      s.texture.destroy(); // frame textures only; the shared source is owned elsewhere
+      s.texture.destroy(); // frame textures only; the shared source goes below
       s.destroy();
     }
     this.sprites = [];
     this.container.removeChildren();
     this.forState = null;
+    // A gpuSource is the renderer's dissolveRT (it destroys it); the fallback
+    // CanvasSource is ours - leaking it strands a full-screen GPU texture per
+    // run-intro assemble / captured dissolve. unload(), NOT destroy():
+    // destroying a CanvasSource poisons Pixi's cached batches (they still hold
+    // the source and read .alphaMode of null on the next validation - the
+    // batcher crash / silently blank scene). unload() frees the GPU copy while
+    // keeping the JS object valid; it simply never re-uploads because nothing
+    // references it again.
+    this.ownedSource?.unload();
+    this.ownedSource = null;
   }
 
   destroy(): void {

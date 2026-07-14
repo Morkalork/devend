@@ -39,7 +39,7 @@ const MODS: GameModifiers = {
   scopeCreepImmediate: 0, shipEarlyBonusMultiplier: 1,
   runwayInstantFenceAt: 0, runwayConcurrentFenceAt: 0, runwayFreezeAt: 0,
   spendInstantFencePerChunk: 0, spendFenceSpeedPerChunk: 0,
-  lockThresholdBonus: 0, spawnFreezeSeconds: 0,
+  lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
 };
 
 const LEVEL: LevelConfig = {

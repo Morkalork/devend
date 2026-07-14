@@ -86,6 +86,9 @@ interface GameScreenProps {
   freezeOnClear?: boolean;
   /** Admin/Playground: fired the instant the map is won (before the shimmer). */
   onMapComplete?: () => void;
+  /** Run-start intro: the board assembles from shatter tiles (reverse of the
+   *  level-clear dissolve). Only true for the first map of a run. */
+  introAssemble?: boolean;
   /** Owned upgrades of a tag needed to activate its set bonus (build readout). */
   tagSetThreshold?: number;
 }
@@ -127,6 +130,7 @@ export function GameScreen({
   showPerfOverlay = false,
   freezeOnClear = false,
   onMapComplete,
+  introAssemble = false,
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
 }: GameScreenProps) {
   const { t } = useTranslation();
@@ -329,6 +333,7 @@ export function GameScreen({
             onLevelComplete={handleLevelComplete}
             onBallTypeLocked={onBallTypeLocked}
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
+            introAssemble={introAssemble}
             freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}
             paused={isPaused || modalOverlayActive}
@@ -345,6 +350,7 @@ export function GameScreen({
             lockWinThresholdPercent={config.lock.win_threshold_percent}
             lockMinRegionCells={config.lock.min_region_cells}
             scopeCreep={scopeCreepConfig}
+            pickupConfig={config.pickups}
             regionColor={getRegionColor()}
             accentColor={accentColor}
             activeModifiers={activeModifiers}

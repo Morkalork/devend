@@ -187,6 +187,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 mapHighscores={session.mapHighscores}
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
+                introAssemble={session.introAssemblePending}
               />
             )}
             {navigation.currentScreen === 'runDraft' && (

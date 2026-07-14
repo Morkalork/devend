@@ -29,6 +29,9 @@ export interface GameCallbacks {
    *  first-ever lock of that type, so the caller can flash "Info Unlocked".
    *  Optional: tests/tools that build a bare CanvasGameState can omit it. */
   onBallTypeLocked?: (typeId: string) => boolean;
+  /** Fired when the ball count changes mid-map (a Fork pickup split a ball),
+   *  so the Ship Early countdown bar rescales its per-ball windows. */
+  onBallCountChanged?: (count: number) => void;
   // Lives ref access — updateWall needs mutable live value
   getLives: () => number;
   setLivesRef: (n: number) => void;

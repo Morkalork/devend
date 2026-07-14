@@ -9,6 +9,7 @@ export const DISSOLVE_DURATION    = 1000; // ms — board dissolve after level c
 export const LEVEL_CLEAR_SHIMMER_MS = 1000; // ms — celebratory shimmer sweeping down the cleared board
 export const LEVEL_CLEAR_HOLD_MS    = 500;  // ms — beat on the drained board after the sweep, before it shatters
 export const SWIPE_TRAIL_DURATION = 550;  // ms — fading afterglow tracing a cut swipe
+export const SPACE_BAR_FADE_MS    = 1000; // ms — space bar below the board fades out once the map is won
 
 // ── Physics / world units ─────────────────────────────────────────────────
 export const PHYSICS_STEP              = 1 / 120; // Fixed physics timestep: 120 ticks per second

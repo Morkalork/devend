@@ -42,7 +42,7 @@ const MODS: GameModifiers = {
   scopeCreepImmediate: 0, shipEarlyBonusMultiplier: 1,
   runwayInstantFenceAt: 0, runwayConcurrentFenceAt: 0, runwayFreezeAt: 0,
   spendInstantFencePerChunk: 0, spendFenceSpeedPerChunk: 0,
-  lockThresholdBonus: 0, spawnFreezeSeconds: 0,
+  lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
 };
 
 const LEVEL: LevelConfig = {
@@ -135,5 +135,41 @@ describe("lock tint covers the whole enclosed pocket", () => {
     expect(checked).toBeGreaterThan(80); // sanity: the probe saw the pocket
     expect(missingTint).toBe(0);
     expect(crossedTint).toBe(0);
+  });
+
+  it("the transient flash contour is built and stays inside the pocket (no overshoot)", () => {
+    // Regression: the lock flash was a ray-cast star polygon that shot past the
+    // fence/board edge and flooded space OUTSIDE the pocket. It's now smooth
+    // contour loops traced from the pocket cells, so every point must sit on the
+    // pocket side of the sealing fence, never out on the main board.
+    const game = makeGame();
+    game.balls = game.balls.slice(0, 2);
+    const [A, B] = game.balls;
+    A.position = { x: 780, y: 120 }; A.velocity = { x: 80, y: 60 }; A.speed = 100;
+    B.position = { x: 300, y: 600 }; B.velocity = { x: -70, y: 90 }; B.speed = 114;
+
+    applyCutFn(completedWall({ x: 727, y: 172 }, FA, FB), game, LEVEL, 2, MODS, false, false, 0, noopCallbacks);
+    expect(A.state).toBe("won");
+
+    const flash = game.assimilations.get(A.id);
+    expect(flash).toBeDefined();
+    expect(flash!.contours.length).toBeGreaterThan(0);
+
+    let pointCount = 0, deepestIntoPocket = -Infinity;
+    for (const loop of flash!.contours) {
+      for (const p of loop) {
+        pointCount++;
+        // Within the board, with a cell of slack for the traced/smoothed boundary.
+        expect(p.x).toBeGreaterThan(40);
+        expect(p.x).toBeLessThan(860);
+        expect(p.y).toBeGreaterThan(40);
+        expect(p.y).toBeLessThan(860);
+        // Never deep on the main-board side of the sealing fence (overshoot).
+        expect(signedDist(p)).toBeGreaterThan(-20);
+        deepestIntoPocket = Math.max(deepestIntoPocket, signedDist(p));
+      }
+    }
+    expect(pointCount).toBeGreaterThan(8);       // a real outline, not a stub
+    expect(deepestIntoPocket).toBeGreaterThan(100); // actually spans the pocket
   });
 });

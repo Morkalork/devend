@@ -110,6 +110,12 @@
     "spawnFreeze": "Spawn Freeze",
     "spawnFreezeActive": "Every map boots frozen: all balls hold still for the first {{seconds}}s (Cold Boot).",
     "spawnFreezeInactive": "Balls move from the first moment of every map.",
+    "pickupChance": "Power-Up Tokens",
+    "pickupChanceActive": "Power-up tokens appear more often than usual (Benefits Package).",
+    "pickupChanceInactive": "Power-up tokens appear at their normal rate.",
+    "pickupPayout": "Power-Up Payouts",
+    "pickupPayoutActive": "Claimed tokens pay out enhanced rewards, and split balls fly slower (Total Compensation level {{level}}).",
+    "pickupPayoutInactive": "Power-up tokens pay their base rewards.",
     "pushBonus": "Push Payouts",
     "pushBonusActive": "Push-your-luck payouts are multiplied by x{{mult}}.",
     "pushBonusInactive": "Standard push-your-luck payouts.",
@@ -238,7 +244,10 @@
     "topBarTutorialBody": "The top bar is expandable!\n\nTap it to see full level details, all your active upgrades with descriptions, and certificate-hour progress.",
     "bottomBarTutorialTitle": "The Bottom Bar",
     "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language.",
-    "infoUnlocked": "Info Unlocked"
+    "infoUnlocked": "Info Unlocked",
+    "pickupFork": "Ball split!",
+    "pickupCapRaise": "Cap +{n}h",
+    "pickupFreeze": "Freeze +1"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
@@ -263,6 +272,7 @@
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Thread Locks ({{count}})",
     "pushBonus": "Push Bonus",
+    "pickupBonus": "Power-Up Bonus",
     "breakBonus": "Demolition Bonus",
     "shipEarly": "Ship Early ({{seconds}}s)",
     "newHighscore": "New Highscore",
@@ -318,6 +328,11 @@
         "title": "Push Bonus",
         "body": "The push-your-luck reward. After meeting the map's target you can keep cutting instead of banking, and every extra slice of the board pays bonus overtime.",
         "tip": "Pushing is free money: if you fail mid-push you only lose the extra bonus, never your banked score."
+      },
+      "pickupBonus": {
+        "title": "Power-Up Bonus",
+        "body": "Overtime from power-up tokens you sealed in with a lock. A token only pays when a ball locks in the pocket holding it: capture the token's area with no ball and it is wasted, and unclaimed tokens expire on their own.",
+        "tip": "Herd a ball toward the token before you seal the pocket. Token overtime is paid after the per-map cap, so it always counts."
       },
       "newHighscore": {
         "title": "New Highscore",

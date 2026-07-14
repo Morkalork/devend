@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { contentText } from '@/i18n/content';
@@ -18,6 +18,7 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   breakBonus: { icon: Hammer, color: 'text-amber-400' },
   shipEarly: { icon: Timer, color: 'text-teal-400' },
   pushBonus: { icon: Zap, color: 'text-orange-400' },
+  pickupBonus: { icon: Gift, color: 'text-fuchsia-400' },
   newHighscore: { icon: TrendingUp, color: 'text-yellow-400' },
   totalBonus: { icon: Sparkles, color: 'text-success' },
   overtimeEarned: { icon: Clock, color: 'text-primary' },
@@ -123,9 +124,11 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     pushBonus = 0,
     breakBonus = 0,
     shipEarlyBonus = 0,
+    pickupBonus = 0,
     clearTimeSeconds = 0,
     beatHighscore = false,
     highscoreBonus = 0,
+    wonByAllLocked = false,
   } = scoreData;
 
   const isOverPar = fencesOverPar > 0;
@@ -194,10 +197,14 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <span className="font-bold text-foreground">{levelNumber}</span>
             </div>
 
-            <div {...hold('remaining')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-              <span className="text-muted-foreground">{t('levelComplete.remaining')}</span>
-              <span className="font-bold text-foreground">{remainingPercent}%</span>
-            </div>
+            {/* Remaining space is meaningless on an all-balls-locked auto-win:
+                the board fully drains to 0% once no ball is left in play. */}
+            {!wonByAllLocked && (
+              <div {...hold('remaining')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+                <span className="text-muted-foreground">{t('levelComplete.remaining')}</span>
+                <span className="font-bold text-foreground">{remainingPercent}%</span>
+              </div>
+            )}
 
             {/* Fence Efficiency Section */}
             <div {...hold('fencesUsed')} className="py-2 border-b border-border">
@@ -312,6 +319,18 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   {t('levelComplete.pushBonus')}
                 </span>
                 <span className="font-bold text-orange-400">+{pushBonus}h</span>
+              </div>
+            )}
+
+            {/* Pickup tokens claimed by locks (paid after the cap, like the
+                highscore bonus below - deliberately outside Total Bonus) */}
+            {pickupBonus > 0 && (
+              <div {...hold('pickupBonus')} className="flex justify-between items-center py-2 border-b border-fuchsia-500/30 bg-fuchsia-500/10 rounded px-2">
+                <span className="text-fuchsia-400 flex items-center gap-1">
+                  <Gift className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.pickupBonus')}
+                </span>
+                <span className="font-bold text-fuchsia-400">+{pickupBonus}h</span>
               </div>
             )}
 

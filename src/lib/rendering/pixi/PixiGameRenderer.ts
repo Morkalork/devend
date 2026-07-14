@@ -28,7 +28,7 @@ import { getFrameStats } from "../perfStats";
 import { flameTonguesForCount } from "../renderFrame";
 import { BallLayer } from "./pixiBalls";
 import { EffectsLayer, DissolveLayer, dashedLine } from "./pixiEffects";
-import { clearCanvasTextures, clearGlowTextures, glowTexture, textureFor, hashStr, mulberry } from "./textures";
+import { clearCanvasTextures, clearGlowTextures, glowTexture, sweepCanvasTextures, textureFor, hashStr, mulberry } from "./textures";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -173,6 +173,12 @@ export class PixiGameRenderer {
       this.pendingSize = { w: widthPx, h: heightPx };
       return;
     }
+    // Same-size "resizes" happen on every level re-init (GameCanvas calls
+    // resizeCanvas per effect run). Destroying every canvas-backed texture
+    // then is pure waste - and any retained sprite that isn't re-textured
+    // before the next present would render a destroyed texture (null source,
+    // batcher crash). Only a real dimension change pays that cost.
+    if (this.app.renderer.width === widthPx && this.app.renderer.height === heightPx) return;
     this.app.renderer.resize(widthPx, heightPx);
     // Scale-keyed bakes are re-baked by their 2D cache modules; drop the GPU
     // copies so textureFor() re-wraps the fresh canvases.
@@ -193,6 +199,10 @@ export class PixiGameRenderer {
   render(game: CanvasGameState, rctx: RenderContext): void {
     if (!this.ready) return;
     const now = performance.now();
+    // Evict canvas textures whose bake was dropped (level re-init recreates
+    // the grid/region canvases and clears the ball/glyph caches); runs before
+    // the syncs so everything still live is re-fetched this same frame.
+    sweepCanvasTextures();
 
     // ── Shatter dissolve replaces the whole scene ──
     if (game.dissolve) {

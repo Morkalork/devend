@@ -32,4 +32,8 @@ export interface RenderContext {
    *  lock of that ball type. renderFrame.ts has no i18n of its own, so the
    *  already-translated string is threaded in here. Falls back to English. */
   infoUnlockedLabel?: string;
+  /** Localized pickup claim labels (same threading rationale as above).
+   *  `overtime` needs none (the renderers format "+Nh" from the feedback
+   *  value); capRaise may contain a `{n}` placeholder for its hours. */
+  pickupLabels?: { fork?: string; capRaise?: string; freezeCharge?: string };
 }

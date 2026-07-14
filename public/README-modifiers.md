@@ -207,6 +207,17 @@ Defines all levels. Each level is an entry in the `levels` array.
 | `threadLockRequired` | number | | Minimum number of balls that must be thread-locked to win |
 | `maxBalls` | number | | Maximum balls the map spawns (default `1`). The **game** chooses which ball *types* fill these slots — see Ball types below. The map no longer specifies colours, speeds, or positions. |
 | `entities` | array | | Optional obstacles/walls (see below) |
+| `pickupChance` | number | | `0–1` — pickup spawn chance override for this map. Setting it also **bypasses** the global `start_level` gate in game-config.yml `pickups:`, so a teaching map can guarantee tokens (`1`) or a set-piece can suppress them (`0`). |
+| `pickupSpots` | array | | Curated pickup anchor positions, `[{ x, y }, …]` in world units. A spawn roll prefers a free spot from this list and falls back to a random open cell. |
+
+### Pickups (power-up tokens)
+
+Global tuning lives in game-config.yml under `pickups:` (start level, spawn cadence/chance,
+max 2 simultaneous, lifetime, effect weights/values). A token is **claimed by locking a
+ball in the pocket that contains it**; capturing its area with no lock wastes it, and
+unclaimed tokens expire. Effects: `overtime` (+h paid **after** the per-map cap),
+`fork` (splits a random free ball into two), `cap_raise` (raises this map's overtime cap),
+`freeze_charge` (one free tap-to-freeze, no upgrade needed).
 
 ### Ball types
 
@@ -312,6 +323,8 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `spendFenceSpeedPerChunk` | `0` | Budget Cycle: fence-speed bonus on the NEXT map per 60h-spend chunk. | `0.05` = +5%/chunk |
 | `lockThresholdBonus` | `0` | Percentage points added to the lock threshold (base `lock.win_threshold_percent`, 10): pockets slightly larger than the limit still lock their ball (Code Review). | `3` |
 | `spawnFreezeSeconds` | `0` | Seconds every ball stays frozen at map start (Cold Boot). Rides the Feature Freeze `frozenUntil` path; the spawn thaw carries no re-freeze cooldown. | `2` |
+| `pickupChanceBonus` | `0` | Extra pickup-token spawn chance per roll, in absolute probability (0.03 = +3 percentage points on the game-config base). Only applies on maps where pickups are enabled; never turns them on. Player-facing copy stays vague on purpose (Benefits Package). | `0.03` |
+| `pickupPayoutLevel` | `0` | Enhances every pickup payout per level: +1h on overtime and cap tokens, +1s on freeze charges, and the Fork's split balls fly 5% slower per level (never below their minimum speed). At level 3 the Fork splits a ball into THREE (Total Compensation). | `1` |
 | `shipEarlyBonusMultiplier` | `1` | Multiplies the Ship Early payout AFTER the ladder's `maxBonus` clamp (Hard Deadline door). Still folds under the per-map overtime cap. | `2` |
 
 ---

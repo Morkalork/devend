@@ -18,6 +18,7 @@ import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDO
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
+import { updatePickups } from "@/lib/pickups";
 import { updateWallImpacts } from "@/lib/wallImpactEffects";
 import { recordFrame } from "@/lib/rendering/perfStats";
 
@@ -118,15 +119,25 @@ export function createGameLoop(
       const d       = game.dissolve;
       const elapsed = (performance.now() - d.startTime) / 1000;
       const dur     = DISSOLVE_DURATION / 1000;
+      // Reverse (run-intro assemble): play the same kinematics backwards, so
+      // the tiles fly IN from their scattered end-state and settle in place.
+      const anim    = d.reverse ? Math.max(0, dur - elapsed) : elapsed;
 
       if (ctx) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         for (const tile of d.tiles) {
-          const t        = Math.max(0, elapsed - tile.delay);
+          const t        = Math.max(0, anim - tile.delay);
           const tMax     = dur - tile.delay;
           const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
-          const alpha    = Math.max(0, 1 - progress * 1.15);
+          // Forward: shards fade out as they scatter. Reverse: they must stay
+          // SOLID while flying together (the mirrored curve leaves them nearly
+          // invisible for most of the flight and the assemble reads as a soft
+          // fade instead of shards) - only a short global fade-in at the very
+          // start stops the scattered cloud from popping in.
+          const alpha    = d.reverse
+            ? Math.max(0, Math.min(1, elapsed / 0.2))
+            : Math.max(0, 1 - progress * 1.15);
           const x        = tile.cx + tile.vx * t;
           const y        = tile.cy + tile.vy * t + 400 * t * t; // gravity
           const angle    = tile.rotSpeed * t;
@@ -147,10 +158,17 @@ export function createGameLoop(
 
       if (elapsed >= dur) {
         game.dissolve = null;
-        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Pixi: present an EMPTY frame (the board has shattered away; a normal
-        // render would repaint the drained sweep since shimmerStart is still set).
-        else callbacks.renderEmpty?.();
+        if (d.reverse) {
+          // Assemble finished: the tiles sit exactly where the live scene
+          // draws them, so hand straight over to a normal frame (no blank).
+          callbacks.render();
+        } else if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else {
+          // Pixi: present an EMPTY frame (the board has shattered away; a normal
+          // render would repaint the drained sweep since shimmerStart is still set).
+          callbacks.renderEmpty?.();
+        }
         d.onComplete();
         return;
       }
@@ -314,6 +332,11 @@ export function createGameLoop(
       callbacks.updateWall(PHYSICS_STEP);
       game.accumulator -= PHYSICS_STEP;
     }
+
+    // Pickups: expire stale tokens and roll spawns. Once per frame (not per
+    // physics step) — all its timing keys off game.activePlaySeconds, so the
+    // pause/prompt/menu holds above never advance a token's clock.
+    updatePickups(game);
 
     // Break any Ascension fences that ran out of durability (outside the
     // fixed-step loop — breaking rebuilds regions, too heavy per step)

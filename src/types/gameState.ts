@@ -12,6 +12,7 @@ import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
 import { ScopeCreepConfig } from "@/lib/scopeCreep";
+import { PickupState, PickupFeedback, PickupConfig } from "@/types/pickups";
 
 export interface CanvasGameState {
   // ── Space model ────────────────────────────────────────────────────────
@@ -91,6 +92,9 @@ export interface CanvasGameState {
   bestRemainingPercent: number;
   pushStartPercent: number;
   levelClearedTime: number;
+  /** performance.now() at which levelComplete was set — anchors the space
+   *  bar's fade-out (unlike shimmerStart it is never scheduled in the future). */
+  levelCompleteTime?: number;
   /** performance.now() at which the level-clear shimmer begins (0 = inactive). */
   shimmerStart: number;
   /** Dev/playground: hold the fully-drained frame after the shimmer instead of
@@ -137,6 +141,26 @@ export interface CanvasGameState {
   fenceDurability: number | null;
   /** Fences whose durability hit 0 this frame, broken after the physics step. */
   pendingWallBreaks: Wall[];
+
+  // ── Pickups (power-up tokens) ──────────────────────────────────────────
+  /** Live tokens on the board. */
+  pickups: PickupState[];
+  /** Spawn/lifetime tuning seeded from game-config.yml; null = disabled this map. */
+  pickupConfig: PickupConfig | null;
+  /** Curated spawn anchors from map.yml (may be empty). */
+  pickupSpots: Vector2[];
+  /** game.activePlaySeconds of the last spawn roll. */
+  lastPickupRollAt: number;
+  /** Overtime hours claimed from tokens this map — paid AFTER the per-map cap. */
+  pickupOvertime: number;
+  /** Comp Time tokens: hours added to THIS map's overtime cap. */
+  pickupCapBonus: number;
+  /** Free tap-to-freeze charges (work without the Feature Freeze upgrade). */
+  freezeCharges: number;
+  /** Seconds a freeze-charge tap holds (from the claimed token's value). */
+  freezeChargeSeconds: number;
+  /** Transient claim/waste markers (culled by updatePickups). */
+  pickupFeedback: PickupFeedback[];
 
   // ── Destructible mirrors/movers (Phase 2: black ball) ──────────────────
   /** All mirrors/movers that can be broken by the black ball. */
