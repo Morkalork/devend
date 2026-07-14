@@ -130,6 +130,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Guard against a duplicated completion delivery for the same map (see
   // handleLevelComplete); holds the last level number that was scored.
   const lastDeliveredCompletionRef = useRef<number | null>(null);
+  // Run-start intro: the first map of a run assembles from shatter tiles
+  // (GameCanvas introAssemble). Armed by every fresh-run path, disarmed by the
+  // first completed level so mid-run maps just appear as usual.
+  const [introAssemblePending, setIntroAssemblePending] = useState(false);
 
   // Ascension mode: after the final level the player may loop back to level 1
   // with a drafted loadout. Depth 0 = first pass through the levels. Index 0 of
@@ -428,6 +432,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCapstone(null);
     setPendingLevelScore(null);
     lastDeliveredCompletionRef.current = null;
+    setIntroAssemblePending(true);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
     setAscensionDepth(0);
@@ -565,6 +570,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // a second Promotion draft. The ref resets with each new run.
     if (lastDeliveredCompletionRef.current === currentLevelNum) return;
     lastDeliveredCompletionRef.current = currentLevelNum;
+    setIntroAssemblePending(false); // the run is underway: later maps appear as usual
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
     // Levels completed while ascended count more toward Certificate Hours
@@ -684,6 +690,25 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     proceedToAssignment();
   }, [capstone, currentLevelIndex, nav.goToCapstoneDraft, proceedToAssignment]);
 
+  /**
+   * Post-shop bookkeeping shared by the shop's Continue button and the
+   * lock-gated skip: save the level-picker checkpoint on 5th levels, surface
+   * any pending cert unlocks, clear the pending score, then advance and play.
+   */
+  const finishShopPhase = useCallback(() => {
+    const nextLevelNumber = currentLevelIndex + 2;
+    // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
+    if (nextLevelNumber % 5 === 0 && ascensionDepth === 0) {
+      saveRunCheckpoint({ level: nextLevelNumber, totalScore, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
+    }
+    const pendingUnlocks = takePendingUnlocks();
+    if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
+    setShopUnlockedCerts([]);
+    setPendingLevelScore(null);
+    advanceToNextLevel();
+    nav.goToGame();
+  }, [currentLevelIndex, ascensionDepth, saveRunCheckpoint, totalScore, ownedUpgradeIds, currentLives, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
+
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
@@ -700,9 +725,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     } else if (isAssignmentLevel(currentLevelIndex + 1)) {
       beginAssignmentPhase();
     } else {
-      nav.goToUpgradeShop();
+      // The shop is only earned by locking balls this round: at least one lock,
+      // or two when the map offered three or more balls. Fall short and we skip
+      // straight to the next level.
+      const locksThisRound = pendingLevelScore?.lockedBallsCount ?? 0;
+      const ballsOnMap = currentLevel?.maxBalls ?? currentLevel?.balls?.length ?? 1;
+      const locksRequired = ballsOnMap >= 3 ? 2 : 1;
+      if (locksThisRound >= locksRequired) {
+        nav.goToUpgradeShop();
+      } else {
+        finishShopPhase();
+      }
     }
-  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, nav.goToAscensionDraft, nav.goToUpgradeShop]);
+  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, finishShopPhase, nav.goToAscensionDraft, nav.goToUpgradeShop]);
 
   const handleDismissLoadoutsUnlocked = useCallback(() => {
     setShowLoadoutsUnlockedModal(false);
@@ -801,18 +836,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendFences(boons.instantFences);
     setCarrySpendFenceSpeed(boons.fenceSpeedBonus);
 
-    const nextLevelNumber = currentLevelIndex + 2;
-    // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
-    if (nextLevelNumber % 5 === 0 && ascensionDepth === 0) {
-      saveRunCheckpoint({ level: nextLevelNumber, totalScore, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
-    }
-    const pendingUnlocks = takePendingUnlocks();
-    if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
-    setShopUnlockedCerts([]);
-    setPendingLevelScore(null);
-    advanceToNextLevel();
-    nav.goToGame();
-  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, activeModifiers, saveRunCheckpoint, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
+    finishShopPhase();
+  }, [currentLevelIndex, activeModifiers, finishShopPhase]);
 
   /** Capstone draft pick: permanent for the run, then on to the assignment. */
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
@@ -1003,6 +1028,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Continue (per-run revive)
     continuesRemaining,
     gameInstanceKey,
+    introAssemblePending,
     pendingDeathResult,
     // Modifiers / bonuses
     activeModifiers,
