@@ -771,10 +771,20 @@ export function GameCanvas({
         freezeCharge: t('game.pickupFreeze'),
       },
     };
+    // Run-intro hold (Pixi): between the renderer becoming ready and
+    // startAssemble installing the reverse dissolve, the game loop would
+    // present normal full-scene frames — the complete board flashed for a
+    // frame or two before collapsing in. While this is set, render() presents
+    // nothing; startAssemble clears it, making the assemble the renderer's
+    // first visible frame. (The 2D path starts its assemble synchronously
+    // before any frame, so it never needs the hold.)
+    let introHold = false;
+
     const render = () => {
       rctx.showBallSpeeds = showBallSpeedsRef.current;
       rctx.showPerfOverlay = showPerfOverlayRef.current;
       if (!ctx) {
+        if (introHold && !game.dissolve) return;
         // Pixi path — a no-op until the async init lands (a few skipped frames).
         pixiRef.current?.render(game, rctx);
         return;
@@ -837,6 +847,9 @@ export function GameCanvas({
     // fallback, keeping the GPU snapshot machinery out of the very first
     // frames of a fresh WebGL context.
     const startAssemble = () => {
+      // Lift the pre-assemble hold: from here on game.dissolve carries the
+      // intro, and after it completes normal frames should present again.
+      introHold = false;
       const W = canvas.width, H = canvas.height;
       const captured = document.createElement('canvas');
       captured.width = W; captured.height = H;
@@ -940,7 +953,10 @@ export function GameCanvas({
       } else {
         // Pixi inits async: keep the loop (and the parallax background)
         // running while it loads — render() no-ops until ready — then let the
-        // assemble be the renderer's first ever presented frame.
+        // assemble be the renderer's first ever presented frame. The hold
+        // covers the frames between init landing and startAssemble below (the
+        // loop runs first in each rAF batch and would flash the full board).
+        introHold = true;
         startGameLoop(game);
         const waitForRenderer = () => {
           if (disposed || game.dissolve) return;
