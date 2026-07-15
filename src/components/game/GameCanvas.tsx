@@ -161,6 +161,10 @@ interface GameCanvasProps {
   /** Admin/Playground: on clear, play the drain shimmer then freeze on the drained
    *  frame instead of completing the level (no overlay, no dissolve). */
   freezeOnComplete?: boolean;
+  /** Fired once when the board first becomes visible: the run-intro assemble
+   *  starts presenting its tiles, or the loop's first frame for a normal start.
+   *  Lets the shell fade out its "Loading..." overlay. */
+  onCanvasReady?: () => void;
 }
 
 /**
@@ -214,6 +218,7 @@ export function GameCanvas({
   showBallSpeeds = false,
   showPerfOverlay = false,
   freezeOnComplete = false,
+  onCanvasReady,
 }: GameCanvasProps) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -243,6 +248,8 @@ export function GameCanvas({
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
   const onBallTypeLockedRef = useRef(onBallTypeLocked);
   useEffect(() => { onBallTypeLockedRef.current = onBallTypeLocked; }, [onBallTypeLocked]);
+  const onCanvasReadyRef = useRef(onCanvasReady);
+  useEffect(() => { onCanvasReadyRef.current = onCanvasReady; }, [onCanvasReady]);
   // Live ref so toggling the speed-label overlay takes effect without restarting
   // the render loop (the rctx is rebuilt only per level).
   const showBallSpeedsRef = useRef(showBallSpeeds);
@@ -780,6 +787,16 @@ export function GameCanvas({
     // before any frame, so it never needs the hold.)
     let introHold = false;
 
+    // One-shot "board is now visible" signal, so the shell can fade its
+    // "Loading..." overlay out exactly as the canvas starts presenting.
+    let readyTimer: number | undefined;
+    let readySignaled = false;
+    const signalCanvasReady = () => {
+      if (readySignaled) return;
+      readySignaled = true;
+      onCanvasReadyRef.current?.();
+    };
+
     const render = () => {
       rctx.showBallSpeeds = showBallSpeedsRef.current;
       rctx.showPerfOverlay = showPerfOverlayRef.current;
@@ -866,6 +883,9 @@ export function GameCanvas({
         reverse: true, onComplete: () => startGameLoop(game),
       };
       startGameLoop(game);
+      // Fade the shell's "Loading..." overlay out just as the first tiles fly
+      // in (at dissolve.startTime), so the wait is covered end to end.
+      readyTimer = window.setTimeout(signalCanvasReady, Math.max(0, game.dissolve.startTime - performance.now()));
     };
 
     // Build callbacks object for extracted physics functions
@@ -968,6 +988,7 @@ export function GameCanvas({
       }
     } else {
       startGameLoop(game);
+      signalCanvasReady(); // normal start: board is visible on the first frame
     }
 
     // Once the level has run long enough for the perf window to fill, try (once)
@@ -990,6 +1011,7 @@ export function GameCanvas({
       disposed = true;
       window.removeEventListener("resize", resizeCanvas);
       if (dprRampInterval !== undefined) window.clearInterval(dprRampInterval);
+      if (readyTimer !== undefined) window.clearTimeout(readyTimer);
       stopGameLoop(game);
       // Cancel any pending flash/shake/game-over timeouts so they can't fire a
       // React setter (or onGameEnd, via the 1s game-over timeout) after unmount

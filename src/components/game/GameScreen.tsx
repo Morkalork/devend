@@ -185,6 +185,13 @@ export function GameScreen({
     onBankAndContinue: undefined,
   });
 
+  // "Loading..." overlay for the run-start intro: the board takes ~half a
+  // second (renderer init + the assemble's slide-in delay) before it begins
+  // flying in over the background code. GameCanvas fires onCanvasReady the
+  // instant the first tiles present, and this fades out to reveal them.
+  const [canvasReady, setCanvasReady] = useState(false);
+  const handleCanvasReady = useCallback(() => setCanvasReady(true), []);
+
   const handleGameStateChange = useCallback((state: GameStateInfo) => {
     setGameState(state);
   }, []);
@@ -321,7 +328,22 @@ export function GameScreen({
         </div>
 
         {/* Game Canvas Area */}
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 relative">
+          {/* Run-start "Loading..." sign: sits over the animating background
+              while the board loads, and fades out the moment the canvas begins
+              assembling in. Only for the run-intro map (introAssemble). */}
+          {introAssemble && (
+            <div
+              className={`absolute inset-0 z-20 flex items-center justify-center pointer-events-none transition-opacity duration-500 ${canvasReady ? 'opacity-0' : 'opacity-100'}`}
+            >
+              <span
+                className="font-display text-xl font-bold tracking-[0.35em] uppercase animate-pulse"
+                style={{ color: accentColor, textShadow: `0 0 18px ${accentColor}` }}
+              >
+                {t('common.loading')}
+              </span>
+            </div>
+          )}
           <GameCanvas
             level={level}
             levelNumber={levelNumber}
@@ -333,6 +355,7 @@ export function GameScreen({
             onLevelComplete={handleLevelComplete}
             onBallTypeLocked={onBallTypeLocked}
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
+            onCanvasReady={handleCanvasReady}
             introAssemble={introAssemble}
             freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}
