@@ -5,7 +5,7 @@
  */
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge } from 'lucide-react';
 import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
 import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
@@ -72,11 +72,18 @@ interface GameTopBarProps {
   spaceRequired: number;
   lockedBalls: number;
   threadLockRequired?: number;
+  /** Scope Creep speed boost in percent (0 = inactive, chip hidden). */
+  scopeCreepPercent?: number;
   ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
   ascensionDepth?: number;
+  // Map highscore progress (#45): shown only with the Benchmarking upgrade and
+  // when this map has a stored highscore. current = live projected score.
+  showHighscoreBar?: boolean;
+  highscoreCurrent?: number;
+  highscoreTarget?: number;
   onExpand?: () => void;
 }
 
@@ -90,11 +97,15 @@ export function GameTopBar({
   spaceRequired,
   lockedBalls,
   threadLockRequired,
+  scopeCreepPercent = 0,
   ownedUpgrades,
   accentColor = '#00ff88',
   certificateProgress,
   microManagerPerLock = 0,
   ascensionDepth = 0,
+  showHighscoreBar = false,
+  highscoreCurrent = 0,
+  highscoreTarget = 0,
   onExpand,
 }: GameTopBarProps) {
   const { t } = useTranslation();
@@ -140,9 +151,11 @@ export function GameTopBar({
   const [spaceFlashKey,  setSpaceFlashKey]  = useState(0);
   const [livesFlashKey,  setLivesFlashKey]  = useState(0);
   const [locksFlashKey,  setLocksFlashKey]  = useState(0);
+  const [creepFlashKey,  setCreepFlashKey]  = useState(0);
   const prevSpaceRef = useRef(spaceRemaining);
   const prevLivesRef = useRef(lives);
   const prevLocksRef = useRef(lockedBalls);
+  const prevCreepRef = useRef(scopeCreepPercent);
   // ignore the ESLint warning — useCallback is just a stable reference here
   const flash = useCallback((set: React.Dispatch<React.SetStateAction<number>>) =>
     set(k => k + 1), []);
@@ -158,6 +171,11 @@ export function GameTopBar({
     if (lockedBalls > prevLocksRef.current) flash(setLocksFlashKey);
     prevLocksRef.current = lockedBalls;
   }, [lockedBalls, flash]);
+  useEffect(() => {
+    // Each Scope Creep surge pulses the chip so the escalation is felt.
+    if (scopeCreepPercent > prevCreepRef.current) flash(setCreepFlashKey);
+    prevCreepRef.current = scopeCreepPercent;
+  }, [scopeCreepPercent, flash]);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -201,7 +219,7 @@ export function GameTopBar({
     <div className="flex-shrink-0 flex flex-col">
       {/* Row 1: Navigation — menu, level, lives, certificate-hour progress */}
       <div
-        className={`px-3 py-2 flex items-center justify-between gap-2${onExpand ? ' cursor-pointer' : ''}`}
+        className={`pl-[88px] pr-3 py-2 flex items-center justify-between gap-2${onExpand ? ' cursor-pointer' : ''}`}
         onClick={onExpand}
         onTouchStart={handleSwipeTouchStart}
         onTouchEnd={handleSwipeTouchEnd}
@@ -232,19 +250,24 @@ export function GameTopBar({
 
         {/* Lives (+ banked Continues) */}
         <div className="flex items-center gap-2">
-          <div key={livesFlashKey} className={`flex items-center gap-1 ${livesFlashKey > 0 ? 'animate-stat-flash' : ''}`}>
-            {Array.from({ length: lives }).map((_, i) => (
-              <Heart
-                key={i}
-                className="w-5 h-5 animate-pulse-heart"
-                style={{
-                  color: accentColor,
-                  fill: accentColor,
-                  filter: `drop-shadow(0 0 6px ${accentColor}aa)`,
-                  animationDelay: `${i * 0.15}s`,
-                }}
-              />
-            ))}
+          {/* One heart + a counter: a pile of hearts broke the top-bar layout
+              once extra-life upgrades stacked up. */}
+          <div
+            key={livesFlashKey}
+            className={`flex items-center gap-1 ${livesFlashKey > 0 ? 'animate-stat-flash' : ''}`}
+            title={t('topBar.lives', { count: lives })}
+          >
+            <Heart
+              className="w-5 h-5 animate-pulse-heart"
+              style={{
+                color: accentColor,
+                fill: accentColor,
+                filter: `drop-shadow(0 0 6px ${accentColor}aa)`,
+              }}
+            />
+            <span className="font-display text-sm font-bold tabular-nums" style={{ color: accentColor }}>
+              {lives}
+            </span>
           </div>
           {continuesRemaining > 0 && (
             <div
@@ -349,7 +372,57 @@ export function GameTopBar({
             {lockReq > 0 ? `${lockedBalls}/${lockReq}` : lockedBalls}
           </span>
         </div>
+
+        {/* Scope Creep: appears once the anti-stall speed surge kicks in */}
+        {scopeCreepPercent > 0 && (
+          <div
+            className="flex items-center gap-1.5 min-w-0"
+            title={t('topBar.scopeCreepTitle', { percent: scopeCreepPercent })}
+          >
+            <Gauge className="w-4 h-4 flex-shrink-0" style={{ color: '#ff6b6b' }} />
+            <span
+              key={creepFlashKey}
+              className={`font-display text-sm font-bold tabular-nums${creepFlashKey > 0 ? ' animate-stat-flash' : ''}`}
+              style={{ color: '#ff6b6b', textShadow: '0 0 10px #ff6b6b88' }}
+            >
+              {t('topBar.scopeCreepValue', { percent: scopeCreepPercent })}
+            </span>
+          </div>
+        )}
       </div>
+
+      {/* Highscore progress (#45): the Benchmarking upgrade reveals a second bar
+          (bottom) tracking the live projected score vs the map highscore, under
+          a bar (top) showing capture progress toward clearing the map. */}
+      {showHighscoreBar && highscoreTarget > 0 && (() => {
+        const captureFraction = spaceRequired < 100
+          ? Math.max(0, Math.min(1, (100 - spaceRemaining) / (100 - spaceRequired)))
+          : 0;
+        const hsFraction = Math.max(0, Math.min(1, highscoreCurrent / highscoreTarget));
+        const beat = highscoreCurrent >= highscoreTarget;
+        return (
+          <div className="mt-1.5 flex items-center gap-2">
+            <TrendingUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: beat ? '#ffd54a' : '#ffb020' }} />
+            <div className="flex-1 flex flex-col gap-1 min-w-0">
+              <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
+                <div className="h-full rounded-full transition-[width] duration-300" style={{ width: `${captureFraction * 100}%`, background: accentColor }} />
+              </div>
+              <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.12)' }}>
+                <div
+                  className="h-full rounded-full transition-[width] duration-300"
+                  style={{ width: `${hsFraction * 100}%`, background: beat ? '#ffd54a' : '#ffb020', boxShadow: beat ? '0 0 8px #ffd54a88' : 'none' }}
+                />
+              </div>
+            </div>
+            <span
+              className="font-display text-[10px] font-bold tabular-nums flex-shrink-0"
+              style={{ color: beat ? '#ffd54a' : 'hsl(var(--muted-foreground))', textShadow: beat ? '0 0 8px #ffd54a88' : 'none' }}
+            >
+              {beat ? t('topBar.recordPace') : `${Math.round(hsFraction * 100)}%`}
+            </span>
+          </div>
+        );
+      })()}
 
       {/* Row 2: Upgrades Bar */}
       {hasUpgrades && (

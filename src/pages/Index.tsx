@@ -8,7 +8,7 @@
  * Screens slide left/right with framer-motion based on SCREEN_ORDER.
  * Admin screens are lazy-loaded and only available in dev builds.
  */
-import { lazy, Suspense, useRef } from 'react';
+import { lazy, Suspense, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
@@ -21,6 +21,8 @@ import { GameScreen } from '@/components/game/GameScreen';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
+import { DoorDraftScreen } from '@/components/game/DoorDraftScreen';
+import { CapstoneDraftScreen } from '@/components/game/CapstoneDraftScreen';
 import { RunDraftScreen } from '@/components/game/RunDraftScreen';
 import { ContinuePrompt } from '@/components/game/ContinuePrompt';
 import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
@@ -28,10 +30,17 @@ import { CertificateStore } from '@/components/game/CertificateStore';
 import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
 import { LoadoutsUnlockedModal } from '@/components/game/LoadoutsUnlockedModal';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
+import { TapToStartGate } from '@/components/game/TapToStartGate';
+import { playMainMusic } from '@/lib/gameMusic';
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
+
+// Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
+// driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
+// intentionally left out so the current band track keeps playing through them.
+const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'loadouts']);
 
 const Index = () => {
   const navigation = useScreenNavigation();
@@ -53,6 +62,12 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   const { t } = useTranslation();
   const { accentHex } = useAccentColor();
   const isAdminEnabled = import.meta.env.DEV;
+
+  // Play the main-menu loop on menu screens. Blocked by autoplay on the very
+  // first screen until a gesture, which gameMusic resumes automatically.
+  useEffect(() => {
+    if (MENU_MUSIC_SCREENS.has(navigation.currentScreen)) playMainMusic();
+  }, [navigation.currentScreen]);
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1,
@@ -120,7 +135,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               />
             )}
             {navigation.currentScreen === 'tutorial' && (
-              <TutorialScreen onBack={navigation.goToWelcome} accentColor={accentHex} />
+              <TutorialScreen
+                onBack={navigation.goToWelcome}
+                accentColor={accentHex}
+                encounteredBallTypeIds={session.encounteredBallTypeIds}
+              />
             )}
             {navigation.currentScreen === 'options' && (
               <OptionsScreen
@@ -147,6 +166,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onLivesChange={session.handleLivesChange}
                 onGameEnd={session.handleGameEnd}
                 onLevelComplete={session.handleLevelComplete}
+                onBallTypeLocked={session.recordBallTypeEncountered}
                 onMainMenu={session.handleBackToWelcome}
                 onRestart={session.handlePlayAgain}
                 showInGameTutorial={session.showInGameTutorial}
@@ -162,10 +182,13 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 achievementBonuses={session.achievementBonuses}
                 activeModifiers={session.activeModifiers}
                 modifierSources={session.modifierSources}
+                tagSetThreshold={session.tagSetThreshold}
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 ascensionDepth={session.ascensionDepth}
+                mapHighscores={session.mapHighscores}
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
+                introAssemble={session.introAssemblePending}
               />
             )}
             {navigation.currentScreen === 'runDraft' && (
@@ -192,6 +215,25 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 showTutorial={session.shouldShowStore}
                 onTutorialDismiss={session.markStoreSeen}
                 newlyUnlockedCerts={session.shopUnlockedCerts}
+                tagSetThreshold={session.tagSetThreshold}
+                freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0}
+                activeModifiers={session.activeModifiers}
+                closed={session.storeClosed}
+              />
+            )}
+            {navigation.currentScreen === 'capstoneDraft' && (
+              <CapstoneDraftScreen
+                offers={session.capstoneOffers}
+                onSelect={session.handleSelectCapstone}
+                accentColor={accentHex}
+              />
+            )}
+            {navigation.currentScreen === 'doorDraft' && session.nextLevel && (
+              <DoorDraftScreen
+                nextLevel={session.nextLevel}
+                offers={session.doorOffers}
+                onSelect={session.handleSelectDoor}
+                accentColor={accentHex}
               />
             )}
             {navigation.currentScreen === 'ascensionDraft' && (
@@ -213,11 +255,12 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onMainMenu={navigation.goToWelcome}
                 onPlayAgain={session.handlePlayAgain}
                 onRestart={session.handleRestartRun}
-                checkpointLevel={session.checkpointStartLevel}
+                checkpointLevel={session.certStartingLevel}
                 accentColor={accentHex}
                 runHoursAwarded={session.lastRunHoursAwarded}
                 runLevelsCompleted={session.lastRunLevelsCompleted}
                 newlyUnlockedLoadouts={session.lastRunLoadoutUnlocks}
+                runRecap={session.lastRunRecap}
               />
             )}
             {navigation.currentScreen === 'certificateStore' && (
@@ -304,6 +347,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
         onDismiss={session.handleDismissLoadoutsUnlocked}
         accentColor={accentHex}
       />
+
+      <TapToStartGate accentColor={accentHex} />
     </>
   );
 }

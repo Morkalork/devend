@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   calculateScore,
   calculateSpaceBonus,
+  calculateShipEarlyBonus,
   getOvertimeCap,
   DEFAULT_SCORING_CONFIG,
 } from "@/lib/scoring";
@@ -18,16 +19,16 @@ const CURVE = [
 const HEADROOM = DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom;
 
 // Helper: overtime earned at par (no fence penalty), clearing well past the
-// threshold so the +1 space bonus applies. levelNumber no longer affects the cap.
+// threshold so the +1 space bonus applies.
 function earnedAtPar(basePoints: number, par = 5, scoreMultiplier = 1) {
   // threshold 30 -> required removal 0.70; remaining 10 -> actual 0.90 (+28% extra => space bonus)
-  return calculateScore(par, par, 10, 30, basePoints, scoreMultiplier, 1).levelScore;
+  return calculateScore(par, par, 10, 30, basePoints, { scoreMultiplier }).levelScore;
 }
 
 describe("overtime cap", () => {
   it("scales from the level's own base points, not its number", () => {
-    expect(getOvertimeCap(50, HEADROOM)).toBe(100);
-    expect(getOvertimeCap(126, HEADROOM)).toBe(252);
+    expect(getOvertimeCap(50, HEADROOM)).toBe(Math.round(50 * HEADROOM));
+    expect(getOvertimeCap(126, HEADROOM)).toBe(Math.round(126 * HEADROOM));
   });
 
   it("never clips the at-par payout of any level on the curve (the old flat-44 bug)", () => {
@@ -43,11 +44,15 @@ describe("overtime cap", () => {
     const cap = getOvertimeCap(base, HEADROOM); // 80
     // A huge lock/push stack passed as extraBonus is clamped to the cap, not
     // added on top of it (the old hyperinflation path).
-    const huge = calculateScore(5, 5, 10, 30, base, 1, 1, 10_000).levelScore;
+    const huge = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 }).levelScore;
     expect(huge).toBe(cap);
     // A modest bonus still lands under the cap and is counted.
-    const modest = calculateScore(5, 5, 10, 30, base, 1, 1, 10).levelScore;
+    const modest = calculateScore(5, 5, 10, 30, base, { extraBonus: 10 }).levelScore;
     expect(modest).toBe(Math.min(cap, base + 1 + 10));
+    // Stock Options capstone: the cap itself can be raised, so the same huge
+    // stack clamps to the raised ceiling instead.
+    const raised = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, overtimeCapBonus: 20 }).levelScore;
+    expect(raised).toBe(cap + 20);
   });
 });
 
@@ -104,6 +109,107 @@ describe("space bonus ladder rewards clearing more", () => {
     const big = calculateSpaceBonus(REQ * 1.55, REQ, 3, cfg);
     expect(big.bonus).toBe(0);
     expect(big.bonusRaw).toBe(3);
+  });
+});
+
+describe("ship early bonus ladder rewards fast clears", () => {
+  const cfg = DEFAULT_SCORING_CONFIG;
+  // Default per-ball ladder: 6s -> +3, 10s -> +2, 15s -> +1 (per ball).
+  const at = (seconds: number | null | undefined, balls = 1) => calculateShipEarlyBonus(seconds, balls, cfg);
+
+  it("pays the best rung whose per-ball window was met (1 ball)", () => {
+    expect(at(3)).toBe(3);
+    expect(at(6)).toBe(3);     // boundary is inclusive
+    expect(at(6.01)).toBe(2);
+    expect(at(10)).toBe(2);
+    expect(at(10.5)).toBe(1);
+    expect(at(15)).toBe(1);
+  });
+
+  it("scales the windows with the map's ball count (15s per ball)", () => {
+    // A 4-ball map: 24s -> +3, 40s -> +2, 60s -> +1.
+    expect(at(24, 4)).toBe(3);
+    expect(at(24.01, 4)).toBe(2);
+    expect(at(40, 4)).toBe(2);
+    expect(at(60, 4)).toBe(1);
+    expect(at(60.1, 4)).toBe(0);
+    // A 2-ball map halves that: 30s is the last window.
+    expect(at(30, 2)).toBe(1);
+    expect(at(30.1, 2)).toBe(0);
+  });
+
+  it("pays nothing past the last window or without a recorded clear time", () => {
+    expect(at(15.1)).toBe(0);
+    expect(at(300)).toBe(0);
+    expect(at(null)).toBe(0);
+    expect(at(undefined)).toBe(0);
+    expect(at(-5)).toBe(0);
+    expect(at(NaN)).toBe(0);
+  });
+
+  it("Deadline Extension widens every window by its per-ball seconds", () => {
+    // +2s/ball: 1-ball windows become 8/12/17.
+    expect(calculateShipEarlyBonus(8, 1, cfg, 2)).toBe(3);
+    expect(calculateShipEarlyBonus(8.01, 1, cfg, 2)).toBe(2);
+    expect(calculateShipEarlyBonus(17, 1, cfg, 2)).toBe(1);
+    expect(calculateShipEarlyBonus(17.1, 1, cfg, 2)).toBe(0);
+    // Scales with ball count: 4 balls at +6s/ball -> last window 84s.
+    expect(calculateShipEarlyBonus(84, 4, cfg, 6)).toBe(1);
+    expect(calculateShipEarlyBonus(84.1, 4, cfg, 6)).toBe(0);
+    // Garbage extension is ignored.
+    expect(calculateShipEarlyBonus(15, 1, cfg, NaN)).toBe(1);
+    expect(calculateShipEarlyBonus(15.1, 1, cfg, -3)).toBe(0);
+  });
+
+  it("Hard Deadline doubles the payout without unlocking higher rungs", () => {
+    // x2 applies AFTER the maxBonus clamp: 3 -> 6, 2 -> 4, 1 -> 2, 0 stays 0.
+    expect(calculateShipEarlyBonus(6, 1, cfg, 0, 2)).toBe(6);
+    expect(calculateShipEarlyBonus(10, 1, cfg, 0, 2)).toBe(4);
+    expect(calculateShipEarlyBonus(15, 1, cfg, 0, 2)).toBe(2);
+    expect(calculateShipEarlyBonus(15.1, 1, cfg, 0, 2)).toBe(0);
+    // Stacks with Deadline Extension: widened window, then doubled payout.
+    expect(calculateShipEarlyBonus(8, 1, cfg, 2, 2)).toBe(6);
+    // Garbage multipliers are ignored.
+    expect(calculateShipEarlyBonus(6, 1, cfg, 0, NaN)).toBe(3);
+    expect(calculateShipEarlyBonus(6, 1, cfg, 0, -2)).toBe(3);
+    expect(calculateShipEarlyBonus(6, 1, cfg, 0, 0)).toBe(3);
+  });
+
+  it("guards against a bad ball count (treated as 1 ball)", () => {
+    expect(at(6, 0)).toBe(3);
+    expect(at(6, NaN)).toBe(3);
+    expect(at(15.1, 0)).toBe(0);
+  });
+
+  it("is monotonic non-increasing in time (slower never pays more)", () => {
+    let prev = Infinity;
+    for (const s of [0, 3, 6, 7, 10, 11, 15, 16, 60]) {
+      const b = at(s);
+      expect(b).toBeLessThanOrEqual(prev);
+      prev = b;
+    }
+  });
+
+  it("clamps to maxBonus with a hot config", () => {
+    const hot = {
+      scoring: {
+        ...cfg.scoring,
+        shipEarly: { maxBonus: 2, thresholds: [{ withinSecondsPerBall: 30, bonus: 99 }] },
+      },
+    };
+    expect(calculateShipEarlyBonus(10, 1, hot)).toBe(2);
+  });
+
+  it("folds under the per-map cap like lock/push bonuses (#43)", () => {
+    const base = 40;
+    const cap = getOvertimeCap(base, HEADROOM); // 80
+    const shipEarly = calculateShipEarlyBonus(5, 1, cfg); // 3
+    // Even riding a huge lock stack, the total clamps at the cap.
+    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 + shipEarly }).levelScore;
+    expect(capped).toBe(cap);
+    // A normal run counts it in full under the cap.
+    const normal = calculateScore(5, 5, 10, 30, base, { extraBonus: shipEarly }).levelScore;
+    expect(normal).toBe(base + 1 + shipEarly);
   });
 });
 

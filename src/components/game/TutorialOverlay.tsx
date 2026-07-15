@@ -91,7 +91,7 @@ export function TutorialOverlay({
     >
       <h2
         className="text-lg sm:text-xl font-black tracking-widest uppercase text-center"
-        style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor }}
+        style={{ fontFamily: 'Michroma, sans-serif', color: accentColor }}
       >
         {title}
       </h2>
@@ -106,7 +106,7 @@ export function TutorialOverlay({
       {showTapHint && (
         <div
           className="text-center text-xs tracking-widest uppercase mt-1"
-          style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor, opacity: 0.7 }}
+          style={{ fontFamily: 'Michroma, sans-serif', color: accentColor, opacity: 0.7 }}
         >
           {t('tutorialOverlay.tapToContinue')}
         </div>

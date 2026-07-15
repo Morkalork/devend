@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import type { LevelData } from "@/types/level";
-import { buildLevelPoints, mergePricing, computeUpgradeCost } from "@/lib/upgradePricing";
+import { buildLevelPoints, mergePricing, computeUpgradeCost, inflationForLevel } from "@/lib/upgradePricing";
 
 // Read the upgrade catalogue straight from the YAML source of truth so this
 // suite guards the data, not a hand-maintained copy.
@@ -28,6 +28,9 @@ const byId = new Map(upgrades.map(u => [u.id, u] as const));
 const prereqsOf = (id: string): string[] => byId.get(id)?.prerequisites ?? [];
 
 // The intended track heads — the only non-ascension upgrades with no prereqs.
+// One head per archetype line: the synergy rework promoted Fault Tolerance,
+// Technical Debt, Feature Freeze and Severance Package to roots (their old
+// cross-family prereqs were whimsical, not tactical).
 const EXPECTED_ROOTS = [
   "runtime_optimisation_junior",
   "memory_footprint_junior",
@@ -36,7 +39,19 @@ const EXPECTED_ROOTS = [
   "system_architect",
   "scrum_master_1",
   "defensive_programming_junior",
+  "fault_tolerance_junior",
+  "technical_debt_senior",
+  "feature_freeze_junior",
+  "severance_package_junior",
+  "deadline_extension_junior",
+  "code_review",
+  "cold_boot",
+  "moonshot",
+  "benefits_package_junior",
 ].sort();
+
+// Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.
+const VALID_TAGS = ["lock", "freeze", "bank", "tempo", "risk", "safety"];
 
 describe("upgrade catalogue integrity", () => {
   it("has unique ids", () => {
@@ -50,6 +65,31 @@ describe("upgrade catalogue integrity", () => {
     for (const u of upgrades)
       for (const p of u.prerequisites ?? []) if (!byId.has(p)) missing.push(`${u.id} -> ${p}`);
     expect(missing).toEqual([]);
+  });
+
+  it("never prints an unlock level below a prerequisite's (the real gate)", () => {
+    // A printed unlockLevel lower than a prereq's lies to the player: the shop
+    // can't offer the upgrade until the prereq itself is unlockable.
+    const offenders: string[] = [];
+    for (const u of upgrades) {
+      for (const p of u.prerequisites ?? []) {
+        const prereq = byId.get(p);
+        if (prereq && (u.unlockLevel ?? 1) < (prereq.unlockLevel ?? 1)) {
+          offenders.push(`${u.id} (L${u.unlockLevel ?? 1}) -> ${p} (L${prereq.unlockLevel ?? 1})`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("tags every upgrade with 1-2 valid archetypes", () => {
+    const offenders = upgrades
+      .filter(u => {
+        const tags = u.tags ?? [];
+        return tags.length < 1 || tags.length > 2 || tags.some(t => !VALID_TAGS.includes(t));
+      })
+      .map(u => u.id);
+    expect(offenders).toEqual([]);
   });
 
   it("has an acyclic prerequisite graph", () => {
@@ -124,7 +164,7 @@ describe("pricing", () => {
     // most a flawless ace can earn is levels × cap. The catalogue must cost more
     // than that, so no one can ever buy it all. This auto-scales with the level
     // count and the flat base, so it never needs a manual bump.
-    const OVERTIME_CAP_HEADROOM = 2.0; // mirrors scoring-config.yml
+    const OVERTIME_CAP_HEADROOM = 4.0; // mirrors scoring-config.yml
     const flatBase = [...levelPoints.values()][0];
     const perMapCap = flatBase * OVERTIME_CAP_HEADROOM;
     const aceFullRunIncome = levelPoints.size * perMapCap;
@@ -151,5 +191,53 @@ describe("pricing", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("lock-centric economy", () => {
+  // The economy's core rule: locking balls is the income. A clear that locks
+  // nothing must not fund even the cheapest shop offer that round (unless the
+  // player had hours saved), while lockValue makes locking close that gap.
+  const scoringDoc = yaml.load(
+    readFileSync(resolve(process.cwd(), "public/scoring-config.yml"), "utf8"),
+  ) as { scoring: { lockValue: number; spaceOptimization: { maxBonus: number }; shipEarly: { maxBonus: number } } };
+  const scoring = scoringDoc.scoring;
+
+  it("a flawless no-lock clear cannot afford the cheapest upgrade", () => {
+    const flatBase = [...levelPoints.values()][0];
+    // Every non-lock hour a perfect clear can scrape together: flat base,
+    // under-par (+1), the full space ladder, the full Ship Early ladder, and
+    // a generous push-your-luck allowance (chunks pay ~1h each).
+    const PUSH_ALLOWANCE = 4;
+    const bestNoLockIncome =
+      flatBase + 1 + scoring.spaceOptimization.maxBonus + scoring.shipEarly.maxBonus + PUSH_ALLOWANCE;
+    const cheapest = Math.min(
+      ...upgrades.filter(u => !u.ascensionOnly).map(u => effectiveCost(u) ?? Infinity),
+    );
+    expect(bestNoLockIncome).toBeLessThan(cheapest);
+  });
+
+  it("locking pays enough to matter: one plain lock covers most of the base", () => {
+    const flatBase = [...levelPoints.values()][0];
+    expect(scoring.lockValue).toBeGreaterThanOrEqual(flatBase / 2);
+  });
+});
+
+describe("market-rate inflation", () => {
+  it("is configured in upgrades.yml and steps per 5-level assignment block", () => {
+    expect(pricing.blockInflation).toBeGreaterThan(1);
+    const rate = pricing.blockInflation!;
+    expect(inflationForLevel(1, pricing)).toBe(1);
+    expect(inflationForLevel(4, pricing)).toBe(1);
+    expect(inflationForLevel(6, pricing)).toBeCloseTo(rate);
+    expect(inflationForLevel(9, pricing)).toBeCloseTo(rate);
+    expect(inflationForLevel(11, pricing)).toBeCloseTo(rate ** 2);
+    expect(inflationForLevel(16, pricing)).toBeCloseTo(rate ** 3);
+  });
+
+  it("disables cleanly at rate 1 and guards garbage input", () => {
+    const flat = { ...pricing, blockInflation: 1 };
+    expect(inflationForLevel(23, flat)).toBe(1);
+    expect(inflationForLevel(NaN, pricing)).toBe(1);
   });
 });

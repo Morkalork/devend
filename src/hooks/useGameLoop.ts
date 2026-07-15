@@ -13,10 +13,12 @@
 
 import { CanvasGameState } from "@/types/gameState";
 import { GrowingWall } from "@/types/game";
-import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
+import { creepFactor } from "@/lib/scopeCreep";
+import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
+import { updatePickups } from "@/lib/pickups";
 import { updateWallImpacts } from "@/lib/wallImpactEffects";
 import { recordFrame } from "@/lib/rendering/perfStats";
 
@@ -31,6 +33,43 @@ export interface GameLoopCallbacks {
   processWallBreaks?: () => void;
   /** Called when a black ball destroyed a mirror/mover this frame. */
   processDestroys?: () => void;
+  /**
+   * Per-frame safety net: evaluate the win conditions so a map that reached the
+   * goal by ANY path (not just a completed cut or destroy) always finishes,
+   * instead of stalling forever with CLEAR shown in the top bar.
+   */
+  checkWinCondition?: () => void;
+  /** Called when Scope Creep escalates to a new step (percentBoost = +X% ball speed). */
+  onCreepStep?: (percentBoost: number) => void;
+  /** Called once per whole active-play second (drives the Ship Early countdown bar). */
+  onActiveSecond?: (seconds: number) => void;
+  /** Called when a deferred push prompt opens (the lock flash it waited on ended). */
+  onPushPrompt?: () => void;
+  /** Renderer-owned "blank the board" (Pixi path; the 2D path clearRects its ctx). */
+  renderEmpty?: () => void;
+}
+
+/**
+ * Lock snap glide: a just-locked ball's physics position snaps to its pocket
+ * centroid the moment it locks (see checkBallWonState), but the RENDER position
+ * glides there from the catch position over the lock pulse so the centering
+ * never reads as a teleport. Runs in the normal interpolation pass AND in the
+ * render-only holds (level complete, deferred push prompt), where physics -
+ * and therefore the interpolation pass - is stopped.
+ */
+function applyLockGlide(game: CanvasGameState, nowMs: number): void {
+  if (game.assimilations.size === 0) return;
+  for (const ball of game.balls) {
+    if (ball.state !== 'won') continue;
+    const flash = game.assimilations.get(ball.id);
+    if (!flash) continue;
+    const t = (nowMs - flash.startTime) / LOCK_PULSE_DURATION;
+    if (t >= 1) continue;
+    const ease = 1 - Math.pow(1 - Math.max(0, t), 3); // easeOutCubic
+    if (!ball.renderPosition) ball.renderPosition = { x: 0, y: 0 };
+    ball.renderPosition.x = flash.ballPos.x + (ball.position.x - flash.ballPos.x) * ease;
+    ball.renderPosition.y = flash.ballPos.y + (ball.position.y - flash.ballPos.y) * ease;
+  }
 }
 
 /**
@@ -42,14 +81,16 @@ export interface GameLoopCallbacks {
  * @param parallaxTickRef - Ref to the parallax tick function (shared rAF)
  * @param callbacks - render / updateWall / applyCut functions
  * @param autoFreezeDuration - Cron Job: seconds an auto-frozen ball holds (0 = upgrade off)
+ * @param freezeNoCooldown - Absolute Zero set bonus: >0 = no re-freeze cooldown after thaw
  */
 export function createGameLoop(
   game: CanvasGameState,
   canvas: HTMLCanvasElement,
-  ctx: CanvasRenderingContext2D,
+  ctx: CanvasRenderingContext2D | null,
   parallaxTickRef: { current: ((ts: number) => void) | null | undefined } | null | undefined,
   callbacks: GameLoopCallbacks,
   autoFreezeDuration: number,
+  freezeNoCooldown: number = 0,
 ): (timestamp: number) => void {
   // Always cancel the previously-stored handle before scheduling a new one, so
   // an external start site (resume/dissolve/pushMode) that assigns into
@@ -78,30 +119,56 @@ export function createGameLoop(
       const d       = game.dissolve;
       const elapsed = (performance.now() - d.startTime) / 1000;
       const dur     = DISSOLVE_DURATION / 1000;
+      // Reverse (run-intro assemble): play the same kinematics backwards, so
+      // the tiles fly IN from their scattered end-state and settle in place.
+      const anim    = d.reverse ? Math.max(0, dur - elapsed) : elapsed;
 
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      for (const tile of d.tiles) {
-        const t        = Math.max(0, elapsed - tile.delay);
-        const tMax     = dur - tile.delay;
-        const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
-        const alpha    = Math.max(0, 1 - progress * 1.15);
-        const x        = tile.cx + tile.vx * t;
-        const y        = tile.cy + tile.vy * t + 400 * t * t; // gravity
-        const angle    = tile.rotSpeed * t;
+        for (const tile of d.tiles) {
+          const t        = Math.max(0, anim - tile.delay);
+          const tMax     = dur - tile.delay;
+          const progress = tMax > 0 ? Math.min(1, t / tMax) : 1;
+          // Forward: shards fade out as they scatter. Reverse: they must stay
+          // SOLID while flying together (the mirrored curve leaves them nearly
+          // invisible for most of the flight and the assemble reads as a soft
+          // fade instead of shards) - only a short global fade-in at the very
+          // start stops the scattered cloud from popping in.
+          const alpha    = d.reverse
+            ? Math.max(0, Math.min(1, elapsed / 0.2))
+            : Math.max(0, 1 - progress * 1.15);
+          const x        = tile.cx + tile.vx * t;
+          const y        = tile.cy + tile.vy * t + 400 * t * t; // gravity
+          const angle    = tile.rotSpeed * t;
 
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.translate(x, y);
-        ctx.rotate(angle);
-        ctx.drawImage(d.captured, tile.sx, tile.sy, tile.sw, tile.sh,
-          -tile.sw / 2, -tile.sh / 2, tile.sw, tile.sh);
-        ctx.restore();
+          ctx.save();
+          ctx.globalAlpha = alpha;
+          ctx.translate(x, y);
+          ctx.rotate(angle);
+          ctx.drawImage(d.captured, tile.sx, tile.sy, tile.sw, tile.sh,
+            -tile.sw / 2, -tile.sh / 2, tile.sw, tile.sh);
+          ctx.restore();
+        }
+      } else {
+        // No 2D context (Pixi renderer): the renderer draws the tiles itself
+        // from game.dissolve inside the normal render call.
+        callbacks.render();
       }
 
       if (elapsed >= dur) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         game.dissolve = null;
+        if (d.reverse) {
+          // Assemble finished: the tiles sit exactly where the live scene
+          // draws them, so hand straight over to a normal frame (no blank).
+          callbacks.render();
+        } else if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        } else {
+          // Pixi: present an EMPTY frame (the board has shattered away; a normal
+          // render would repaint the drained sweep since shimmerStart is still set).
+          callbacks.renderEmpty?.();
+        }
         d.onComplete();
         return;
       }
@@ -116,6 +183,7 @@ export function createGameLoop(
     // the celebratory clear shimmer has swept the whole board.
     if (game.levelComplete) {
       if (game.assimilations.size > 0) {
+        applyLockGlide(game, performance.now());
         for (const ball of game.balls) {
           if (ball.state === 'won') {
             const elapsed = performance.now() - ball.wonTime;
@@ -137,6 +205,30 @@ export function createGameLoop(
         callbacks.render();
         schedule();
       }
+      return;
+    }
+
+    // Deferred push prompt: the win condition was met while a lock flash was
+    // still playing (see applyCut). Hold the world exactly as the prompt would
+    // (no physics, input blocked via pushPromptPending) but keep rendering so
+    // the flash and the lock glide play out, then open the modal.
+    if (game.pushPromptPending) {
+      const now = performance.now();
+      let flashEnd = 0;
+      for (const [, f] of game.assimilations) {
+        flashEnd = Math.max(flashEnd, f.startTime + LOCK_TOTAL_DURATION);
+      }
+      if (now < flashEnd) {
+        applyLockGlide(game, now);
+        game.lastTime = timestamp;
+        callbacks.render();
+        schedule();
+        return;
+      }
+      game.pushPromptPending = false;
+      game.pushMode = "prompt";
+      callbacks.onPushPrompt?.();
+      callbacks.render();
       return;
     }
 
@@ -163,7 +255,10 @@ export function createGameLoop(
           const target = eligible[Math.floor(Math.random() * eligible.length)];
           const durationMs = autoFreezeDuration * 1000;
           target.frozenUntil   = now + durationMs;
-          target.freezeReadyAt = now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
+          // Absolute Zero (freeze set bonus): no re-freeze cooldown after thaw.
+          target.freezeReadyAt = freezeNoCooldown > 0
+            ? now + durationMs
+            : now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
           game.lastAutoFreezeAt = now;
         }
         // No eligible ball (all frozen/cooling) — leave the clock so it retries
@@ -175,6 +270,25 @@ export function createGameLoop(
     const _physStart = performance.now();
     while (game.accumulator >= PHYSICS_STEP) {
       _physSteps++;
+
+      // Time factor: tick the active-play clock (physics steps only, so pause,
+      // menus and the push prompt never count) and step Scope Creep off it.
+      // Death recovery is a forced pause, so it doesn't count either.
+      if (!game.isRecovering) {
+        const prevWholeSecond = Math.floor(game.activePlaySeconds);
+        game.activePlaySeconds += PHYSICS_STEP;
+        const f = creepFactor(game.activePlaySeconds, game.creepConfig);
+        if (f !== game.creepFactor) {
+          game.creepFactor = f;
+          callbacks.onCreepStep?.(Math.round((f - 1) * 100));
+        }
+        // 1Hz clock tick to React (the countdown bar tweens between ticks).
+        const wholeSecond = Math.floor(game.activePlaySeconds);
+        if (wholeSecond !== prevWholeSecond) {
+          callbacks.onActiveSecond?.(wholeSecond);
+        }
+      }
+
       // Snapshot positions before this step (used for render interpolation).
       // Mutate in-place to avoid allocating a new object every physics tick.
       for (const ball of game.balls) {
@@ -219,6 +333,11 @@ export function createGameLoop(
       game.accumulator -= PHYSICS_STEP;
     }
 
+    // Pickups: expire stale tokens and roll spawns. Once per frame (not per
+    // physics step) — all its timing keys off game.activePlaySeconds, so the
+    // pause/prompt/menu holds above never advance a token's clock.
+    updatePickups(game);
+
     // Break any Ascension fences that ran out of durability (outside the
     // fixed-step loop — breaking rebuilds regions, too heavy per step)
     if (game.pendingWallBreaks.length > 0) {
@@ -231,6 +350,15 @@ export function createGameLoop(
       callbacks.processDestroys?.();
     }
 
+    // Safety net: the win condition is otherwise only evaluated in reaction to a
+    // cut or a destroy, but the top bar shows CLEAR straight off the live
+    // remaining-space state. Re-check every active frame (reached only during
+    // normal play — the levelComplete / prompt / pending / gameOver states all
+    // returned above) so the two can never disagree: if the space is at the goal
+    // and the win is reachable, the map finishes here. Cheap — O(1) percent plus
+    // O(balls), and the completion/prompt paths it calls all guard re-entry.
+    callbacks.checkWinCondition?.();
+
     // Interpolate render positions between last two physics states.
     // Mutate in-place to avoid allocating a new object every display frame.
     const alpha = game.accumulator / PHYSICS_STEP;
@@ -242,6 +370,7 @@ export function createGameLoop(
       ball.renderPosition.x = prev.x + (ball.position.x - prev.x) * alpha;
       ball.renderPosition.y = prev.y + (ball.position.y - prev.y) * alpha;
     }
+    applyLockGlide(game, performance.now());
 
     const _physMs = performance.now() - _physStart;
 

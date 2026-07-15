@@ -45,6 +45,25 @@ export interface UnlockState {
    * loadout draft (tutorial only); loadouts are introduced after the first win.
    */
   loadoutsIntroduced: boolean;
+  /**
+   * Best score ever achieved on each map, keyed by map id (LevelConfig.id).
+   * Beating a map's existing highscore grants a bonus score multiplier (#45).
+   * A map absent from the record has never been completed.
+   */
+  mapHighscores: Record<string, number>;
+  /**
+   * Ball type ids (ballTypes.ts) the player has LOCKED (captured) at least
+   * once, across every run. Drives the tutorial's ball-types section: a type
+   * absent here shows "Not encountered yet." instead of its ability. Red and
+   * green are always shown regardless of this set (see TutorialScreen).
+   */
+  encounteredBallTypeIds: string[];
+  /**
+   * Best banked overtime per dominant build archetype (see buildRecap.ts),
+   * keyed by tag. Feeds the end-of-run recap's "personal best for lock
+   * builds" celebration. A tag absent here has never headlined a run.
+   */
+  archetypeBests: Record<string, number>;
 }
 
 export const DEFAULT_META_STATS: MetaProgressionStats = {

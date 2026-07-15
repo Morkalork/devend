@@ -12,12 +12,14 @@ import {
 } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 import {
+  CellState,
   rasterizeCutToGrid,
   findGridRegions,
   getRemainingPercent,
-  removeRegion,
+  captureUnreachableCells,
   buildGridRegionMap,
   findGridRegionForBall,
+  floodRemovedEnclosure,
 } from "@/lib/spaceGrid";
 import {
   reassignBallsToRegions,
@@ -27,8 +29,10 @@ import {
 } from "@/lib/regionOwnership";
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
-import { calculateScore } from "@/lib/scoring";
-import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
+import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
+import { wasteCapturedPickups } from "@/lib/pickups";
+import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS } from "@/lib/gameConstants";
+import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -54,6 +58,34 @@ function getGridRemainingPercent(game: CanvasGameState): number {
 
 function wouldWallTrapBallCheck(start: Vector2, end: Vector2, game: CanvasGameState): boolean {
   return wouldWallOrphanBall(start, end, game.balls, game.regions, game.walls);
+}
+
+/**
+ * Capture (REMOVE from the space grid) every cell no active ball can physically
+ * reach. This captures fenced-off, ball-free areas AND pockets sealed behind an
+ * obstacle by a gap too narrow for the ball to fit through (which plain 1-cell
+ * connectivity wrongly counts as reachable — the "shadow behind the obstacle").
+ * A won ball counts as no ball, so a region a ball just locked in is captured.
+ * game.gridRegions is left holding only the surviving (ball-bearing) regions.
+ */
+function captureUnreachableSpace(game: CanvasGameState): void {
+  if (!game.spaceGrid) return;
+  // Wall segments let the capture verify borderline corridors geometrically
+  // instead of severing every gap the cell grid can't resolve (false locks).
+  captureUnreachableCells(game.spaceGrid, game.balls, game.walls);
+
+  // Recompute the surviving regions (all now ball-reachable) for downstream
+  // bookkeeping. Neighbour-search fallback locates balls whose grid-cell centre
+  // sits in a REMOVED cell (e.g. touching a mirror boundary).
+  const gridRegions = findGridRegions(game.spaceGrid);
+  const gridRegionMap = buildGridRegionMap(gridRegions);
+  const regionsWithBalls = new Set<(typeof gridRegions)[number]>();
+  for (const ball of game.balls) {
+    if (ball.state === 'won') continue;
+    const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
+    if (ballRegion) regionsWithBalls.add(ballRegion);
+  }
+  game.gridRegions = [...regionsWithBalls];
 }
 
 export function applyCutFn(
@@ -121,22 +153,13 @@ export function applyCutFn(
   addSegmentWalls(wall.startWaypoints);
   addSegmentWalls(wall.endWaypoints);
 
-  if (game.spaceGrid) {
-    const gridRegions = findGridRegions(game.spaceGrid);
-    // Build index→region map once; use neighbour-search fallback so balls whose
-    // grid-cell centre falls inside a mirror polygon (REMOVED) are still located.
-    const gridRegionMap = buildGridRegionMap(gridRegions);
-    const regionsWithBalls = new Set<(typeof gridRegions)[number]>();
-    for (const ball of balls) {
-      if (ball.state === 'won') continue;
-      const ballRegion = findGridRegionForBall(game.spaceGrid, gridRegionMap, ball.position.x, ball.position.y);
-      if (ballRegion) regionsWithBalls.add(ballRegion);
-    }
-    for (const region of gridRegions) {
-      if (!regionsWithBalls.has(region)) removeRegion(game.spaceGrid, region);
-    }
-    game.gridRegions = [...regionsWithBalls];
-  }
+  // Snapshot the grid with the new fence rasterized but BEFORE reachability
+  // capture severs any sub-ball-width gaps. The lock check uses it to demand a
+  // REAL seal: a ball only locks in a pocket enclosed by actual barriers, not
+  // one the capture "closed" across a gap the ball merely can't fit through.
+  const preCaptureCells = game.spaceGrid ? Uint8Array.from(game.spaceGrid.cells) : null;
+
+  captureUnreachableSpace(game);
 
   // Update sample-based regions for rendering
   const updatedRegions: Region[] = [];
@@ -167,8 +190,50 @@ export function applyCutFn(
   reassignBallsToRegions(game.balls, game.regions, game.walls);
   validateAllBallOwnership(game.balls, game.regions, game.walls);
   game.activeWall = null;
+  playCutClaimedSound();
 
-  checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks);
+  const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells);
+  if (anyBallWon) {
+    // A ball locked during this cut. It was still an active ball when the capture
+    // above ran, so the region it locked in wasn't captured then and would linger
+    // as an uncaptured (active) region beside the obstacle until the next cut -
+    // the "shadow behind the obstacle". Capture ball-free regions again now that
+    // it's won, and repaint (the region-fill's space-grid mask then renders those
+    // cells as captured instead of punching them dark).
+    const grid = game.spaceGrid;
+    // Snapshot ACTIVE cells so we can tag what this lock captures and give it
+    // the persistent accent tint that marks locked territory.
+    const before = grid ? Uint8Array.from(grid.cells) : null;
+    captureUnreachableSpace(game);
+    if (grid && before) {
+      if (!grid.lockCaptured) grid.lockCaptured = new Uint8Array(grid.cells.length);
+      // The capture diff alone under-covers the pocket: the sealing fence's own
+      // raster band and any cells captured in the PRE-lock pass (e.g. the acute
+      // tip of a wedge the ball never fit into) aren't in the diff, so they
+      // rendered as dark, cell-quantized fringes between the tint and the fence
+      // line. Flood from the diff across REMOVED cells, stopping at actual wall
+      // segments: the tint then spans the whole enclosed chamber, up to (never
+      // across) each bounding fence, obstacle edge and board edge.
+      const seeds: number[] = [];
+      for (let i = 0; i < grid.cells.length; i++) {
+        if (before[i] === CellState.ACTIVE && grid.cells[i] === CellState.REMOVED) {
+          seeds.push(i);
+        }
+      }
+      if (seeds.length > 0) {
+        for (const idx of floodRemovedEnclosure(grid, seeds, game.walls)) {
+          grid.lockCaptured[idx] = 1;
+        }
+      }
+    }
+    callbacks.repaintRegionCanvas();
+  }
+
+  // Pickups: any token whose cell got captured WITHOUT a lock claiming it is
+  // wasted (empty-space capture, or the fence was drawn straight over it).
+  // Runs after the lock pass, so a properly sealed token was already claimed.
+  wasteCapturedPickups(game);
+
   callbacks.render();
 
   // Issue #37: ball speeds are flat — no per-cut acceleration ramp. Only the
@@ -176,18 +241,68 @@ export function applyCutFn(
   // ball below MIN_BALL_SPEED_FACTOR of normal (issue #42).
   applyMicroManagerSpeedCap(balls, activeModifiers, cumulativeLockedBalls + game.lockedBallsCount);
 
-  if (areAllBallsWon(game)) {
-    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
-    return;
-  }
+  const percent = evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks);
 
-  const percent = Math.round(getGridRemainingPercent(game));
-  callbacks.setRemainingPercent(percent);
-
-  if (tutorialMode && !tutorialCutMade && percent < 100) {
+  if (percent !== null && tutorialMode && !tutorialCutMade && percent < 100) {
     callbacks.setTutorialCutMade(true);
     callbacks.onTutorialCutSuccess?.();
   }
+}
+
+/**
+ * Evaluate BOTH win conditions in the canonical order and act on them: all
+ * balls locked finishes the level immediately; otherwise the space-clear check
+ * runs (opening the push-your-luck prompt at/under the goal).
+ *
+ * This is the single shared entry point for every win check — the post-cut and
+ * post-destroy checks AND the per-frame safety net in the game loop. Making it
+ * frame-safe is the whole point: triggerLevelComplete and checkSpaceWin each
+ * guard against re-entry, so re-running this every active frame is a cheap
+ * no-op until a win is genuinely reachable. That guarantees the top bar can
+ * never sit on CLEAR while an unfinished, non-pushing map quietly fails to end
+ * (the win was previously only evaluated when a cut or a destroy fired, so any
+ * other path to the goal could strand the map showing CLEAR forever).
+ *
+ * Returns the remaining percent from the space check, or null when the
+ * all-balls-won path finished the level (no percent was computed).
+ */
+export function evaluateWinConditions(
+  game: CanvasGameState,
+  level: LevelConfig,
+  levelNumber: number,
+  activeModifiers: GameModifiers,
+  callbacks: GameCallbacks,
+): number | null {
+  if (game.levelComplete) return null;
+  if (areAllBallsWon(game)) {
+    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+    return null;
+  }
+  return checkSpaceWin(game, level, callbacks);
+}
+
+type SpaceWinCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setClearedPercent' | 'setPushMode'>;
+
+/**
+ * Recompute the remaining space and open the push-your-luck prompt when the
+ * win condition is met. Shared by every path that can shrink the playable
+ * space: a completed cut (applyCut above) AND post-cut object destroys, which
+ * can capture pocket cells without a fence involved — previously those could
+ * cross the threshold with "CLEAR" in the top bar but no prompt.
+ *
+ * NB the comparison is <= to match the HUD: the top bar shows CLEAR at
+ * remaining == sizeThreshold, and a win check of strictly-less left the map
+ * unfinished on an exact landing.
+ *
+ * Returns the rounded remaining percent for the caller's own bookkeeping.
+ */
+export function checkSpaceWin(
+  game: CanvasGameState,
+  level: LevelConfig,
+  callbacks: SpaceWinCallbacks,
+): number {
+  const percent = Math.round(getGridRemainingPercent(game));
+  callbacks.setRemainingPercent(percent);
 
   if (game.pushMode === "pushing" && percent < game.bestRemainingPercent) {
     game.bestRemainingPercent = percent;
@@ -196,21 +311,38 @@ export function applyCutFn(
   // Breaking objects is a bonus, not a win condition (issue #38) — the level is
   // completed by shrinking the board, exactly as normal.
   const lockReq = level.threadLockRequired ?? 0;
-  if (percent < level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none") {
+  if (percent <= level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none" && !game.pushPromptPending && !game.levelComplete) {
     // The frame is already drawn (loop render + the post-cut render above) and
     // pushMode is still "none" here, so these would be pixel-identical repaints.
     // The two redundant full renders spiked this frame to 4 redraws and caused a
     // visible twitch right as the push-your-luck modal mounted.
-    game.pushMode = "prompt";
     game.levelClearedTime = performance.now();
-    callbacks.setPushMode("prompt");
+    // Ship Early: freeze the tempo clock at the first win moment, so time spent
+    // in the prompt or pushing is never taxed. Only reachable once per map
+    // (guarded by pushMode === "none" / pushPromptPending).
+    game.clearedActiveSeconds = game.activePlaySeconds;
     callbacks.setClearedPercent(percent);
     game.bestRemainingPercent = percent;
     game.pushStartPercent = percent;
+    // If a lock flash is still playing (the winning cut usually locked a ball),
+    // hold the world and let it finish before the modal mounts; the game loop
+    // opens the prompt when the flash ends. Otherwise open it right away.
+    const now = performance.now();
+    let flashActive = false;
+    for (const [, f] of game.assimilations) {
+      if (now - f.startTime < LOCK_TOTAL_DURATION) { flashActive = true; break; }
+    }
+    if (flashActive) {
+      game.pushPromptPending = true;
+    } else {
+      game.pushMode = "prompt";
+      callbacks.setPushMode("prompt");
+    }
   }
+  return percent;
 }
 
-type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;
+type CompleteCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setPushMode' | 'onLevelComplete' | 'startDissolve' | 'onMapComplete' | 'freezeOnComplete'>;
 
 /** Finalise the level: score it, fire onLevelComplete, and start the dissolve. */
 export function triggerLevelComplete(
@@ -222,15 +354,45 @@ export function triggerLevelComplete(
 ): void {
   if (game.levelComplete) return;
   game.levelComplete = true;
+  game.levelCompleteTime = performance.now(); // anchors the space bar fade-out
+  playLevelCompleteSound();
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
 
-  // Fold lock + break bonuses in before the cap so a single map can't exceed
-  // the per-map ceiling (issue #43).
+  // Ship Early: the all-balls-locked path never opens the push prompt, so the
+  // tempo clock freezes here; banking after a prompt keeps the earlier value.
+  if (game.clearedActiveSeconds == null) game.clearedActiveSeconds = game.activePlaySeconds;
+  const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+
+  // Locking the last ball can finish the level MID-PUSH (the per-frame win
+  // check). End the push here: award the chunks banked so far and drop the
+  // pushing HUD. Bank & Continue guards on levelComplete, so its button can
+  // never queue a second, competing completion pipeline after this one.
+  let pushBonus = 0;
+  if (game.pushMode === "pushing") {
+    const chunkSize = game.pushStartPercent * 0.25;
+    const areaCleared = Math.max(0, game.pushStartPercent - game.bestRemainingPercent);
+    pushBonus = chunkSize > 0
+      ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
+      : 0;
+  }
+  if (game.pushMode !== "none") {
+    game.pushMode = "none";
+    callbacks.setPushMode("none");
+  }
+
+  // Fold lock + break + push + ship-early bonuses in before the cap so a
+  // single map can't exceed the per-map ceiling (issue #43).
   const { levelScore, breakdown } = calculateScore(
-    game.wallCount, level.expectedCuts, percent,
-    level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    game.lockBonus + game.breakBonus,
+    game.wallCount, level.expectedCuts, percent, level.sizeThreshold, level.points, {
+      scoreMultiplier: activeModifiers.scoreMultiplier,
+      extraBonus: game.lockBonus + game.breakBonus + pushBonus + shipEarlyBonus,
+      spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+      // Comp Time pickups raise THIS map's cap on top of the capstone raise.
+      overtimeCapBonus: activeModifiers.overtimeCapBonus + (game.pickupCapBonus ?? 0),
+      // Overtime pickups pay after the cap (a claimed token always pays).
+      postCapBonus: game.pickupOvertime ?? 0,
+    },
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
   // Celebratory beat: after any lock animations settle, sweep a shimmer down the
@@ -241,19 +403,29 @@ export function triggerLevelComplete(
   // Dev/playground freeze: play the shimmer, then hold the drained frame instead
   // of advancing to the completion overlay / dissolve.
   if (game.shimmerFrozen) return;
+  // Post-sweep beat: hold the drained board for a moment, shatter it away,
+  // and only then mount the completion overlay (mounting it at the exact
+  // sweep end read as a jerky cut, and hid the shatter behind the card).
   setTimeout(() => {
-    callbacks.onLevelComplete({
-      levelNumber, levelId: level.id, cutCount: game.wallCount,
-      expectedCuts: level.expectedCuts, basePoints: level.points,
-      levelScore,
-      remainingPercent: percent, thresholdPercent: level.sizeThreshold,
-      underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
-      spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
-      fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-      extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
-      lockedBallsCount: game.lockedBallsCount,
-      breakBonus: game.breakBonus,
+    callbacks.startDissolve(() => {
+      callbacks.onLevelComplete({
+        levelNumber, levelId: level.id, cutCount: game.wallCount,
+        expectedCuts: level.expectedCuts, basePoints: level.points,
+        levelScore,
+        remainingPercent: percent, thresholdPercent: level.sizeThreshold, pushBonus,
+        underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
+        spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
+        fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
+        extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+        lockedBallsCount: game.lockedBallsCount,
+        breakBonus: game.breakBonus,
+        shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+        pickupBonus: game.pickupOvertime || undefined,
+        // triggerLevelComplete is only reached via the all-balls-locked win, so
+        // the board drained to 0% remaining - flag it so the results screen
+        // hides the now-meaningless Remaining row.
+        wonByAllLocked: true,
+      });
     });
-    callbacks.startDissolve(() => {});
-  }, lockDelay + LEVEL_CLEAR_SHIMMER_MS);
+  }, lockDelay + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);
 }

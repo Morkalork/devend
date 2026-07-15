@@ -29,9 +29,27 @@ export const BOARD_SIZE_PERCENT = 0.95;
 // pointer→world mapping MUST share this value or cuts land off-target.
 export const MAX_DEVICE_PIXEL_RATIO = 2;
 
-/** Effective device pixel ratio, capped at MAX_DEVICE_PIXEL_RATIO. */
+// Sharper ceiling we may ramp UP to once the device proves it renders the board
+// with comfortable frame-time headroom at the safe 2x cap (see adaptiveDpr.ts).
+// The ramp is one-shot and upward-only: a device that can't keep up never ramps,
+// so it stays at the conservative default. 3x saturates every phone panel.
+export const MAX_DEVICE_PIXEL_RATIO_HIGH = 3;
+
+// Live ceiling. Starts conservative; adaptiveDpr may raise it toward native.
+let dprCeiling = MAX_DEVICE_PIXEL_RATIO;
+
+/** Raise (never lower) the DPR ceiling; clamped to the high cap. */
+export function setDprCeiling(value: number): void {
+  dprCeiling = Math.max(dprCeiling, Math.min(value, MAX_DEVICE_PIXEL_RATIO_HIGH));
+}
+
+export function getDprCeiling(): number {
+  return dprCeiling;
+}
+
+/** Effective device pixel ratio, capped at the current (adaptive) DPR ceiling. */
 export function getDevicePixelRatio(): number {
-  return Math.min(window.devicePixelRatio || 1, MAX_DEVICE_PIXEL_RATIO);
+  return Math.min(window.devicePixelRatio || 1, dprCeiling);
 }
 
 export interface BoardRect {

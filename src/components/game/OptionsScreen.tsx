@@ -1,9 +1,16 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Settings, RefreshCw, Trash2, Languages, ChevronDown, Check } from 'lucide-react';
+import { ArrowLeft, Settings, RefreshCw, Trash2, Languages, ChevronDown, Check, Music, Volume2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { CRTBackground } from './CRTBackground';
 import { changeLanguage, languageNames, supportedLanguages, type SupportedLanguage } from '@/i18n';
+import {
+  getMusicVolumeSetting,
+  getSfxVolumeSetting,
+  setMusicVolumeSetting,
+  setSfxVolumeSetting,
+} from '@/lib/soundSettings';
+import { playWallHitSound } from '@/lib/gameAudio';
 
 interface OptionsScreenProps {
   onBack: () => void;
@@ -24,6 +31,11 @@ export function OptionsScreen({
   const [showConfirm, setShowConfirm] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+  const [musicVol, setMusicVol] = useState(getMusicVolumeSetting());
+  const [sfxVol, setSfxVol] = useState(getSfxVolumeSetting());
+
+  const handleMusicVol = (v: number) => { setMusicVol(v); setMusicVolumeSetting(v); };
+  const handleSfxVol = (v: number) => { setSfxVol(v); setSfxVolumeSetting(v); };
 
   const resolved = i18n.resolvedLanguage ?? i18n.language;
   const activeLanguage: SupportedLanguage = (supportedLanguages as readonly string[]).includes(resolved)
@@ -158,6 +170,51 @@ export function OptionsScreen({
                   </motion.ul>
                 )}
               </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Sound volumes (music + effects, independent) */}
+          <div className="w-full flex flex-col gap-3">
+            <div className="flex items-center gap-2 text-sm font-display tracking-wide text-muted-foreground">
+              <Volume2 className="w-4 h-4" />
+              {t('options.sound')}
+            </div>
+
+            {/* Music */}
+            <div className="flex items-center gap-3">
+              <Music className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
+              <span className="text-xs font-display tracking-wide text-foreground w-14 flex-shrink-0">
+                {t('options.music')}
+              </span>
+              <input
+                type="range" min={0} max={1} step={0.01} value={musicVol}
+                onChange={(e) => handleMusicVol(parseFloat(e.target.value))}
+                className="flex-1 h-1.5 cursor-pointer"
+                style={{ accentColor }}
+                aria-label={t('options.music')}
+              />
+              <span className="text-xs font-display tabular-nums text-muted-foreground w-9 text-right">
+                {Math.round(musicVol * 100)}%
+              </span>
+            </div>
+
+            {/* Effects (play a test blip on release so the level is audible) */}
+            <div className="flex items-center gap-3">
+              <Volume2 className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
+              <span className="text-xs font-display tracking-wide text-foreground w-14 flex-shrink-0">
+                {t('options.effects')}
+              </span>
+              <input
+                type="range" min={0} max={1} step={0.01} value={sfxVol}
+                onChange={(e) => handleSfxVol(parseFloat(e.target.value))}
+                onPointerUp={() => playWallHitSound(1)}
+                className="flex-1 h-1.5 cursor-pointer"
+                style={{ accentColor }}
+                aria-label={t('options.effects')}
+              />
+              <span className="text-xs font-display tabular-nums text-muted-foreground w-9 text-right">
+                {Math.round(sfxVol * 100)}%
+              </span>
             </div>
           </div>
 

@@ -111,6 +111,18 @@ export interface LevelConfig {
    */
   balls?: BallConfig[];
   entities?: LevelEntity[]; // optional array of entities (obstacles, etc.)
+  /**
+   * Pickup spawn-chance override for this map (0-1). Setting it also bypasses
+   * the global start_level gate, so a teaching map can guarantee a token
+   * (1.0) or a set-piece map can suppress them (0).
+   */
+  pickupChance?: number;
+  /**
+   * Curated anchor positions (world units) for pickup spawns: "random, but
+   * thought through". A spawn roll prefers a free, still-playable spot from
+   * this list and falls back to a random open cell when none qualifies.
+   */
+  pickupSpots?: { x: number; y: number }[];
 }
 
 export interface LevelData {

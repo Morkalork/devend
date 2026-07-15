@@ -7,15 +7,18 @@
  */
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
-import { UpgradeConfig, UpgradeData, UpgradeTier } from '@/types/upgrade';
+import { UpgradeConfig, UpgradeData, UpgradeTier, TagSetsConfig } from '@/types/upgrade';
+import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { LevelData } from '@/types/level';
-import { buildLevelPoints, mergePricing, computeUpgradeCost } from '@/lib/upgradePricing';
+import { buildLevelPoints, mergePricing, computeUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
 
 const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
 interface UpgradeManagerState {
   upgrades: UpgradeConfig[];
   upgradeLookup: Map<string, UpgradeConfig>;
+  /** Set-bonus definitions (tagSets block); undefined when the file has none. */
+  tagSets?: TagSetsConfig;
   isLoading: boolean;
   error: string | null;
 }
@@ -81,6 +84,8 @@ export function useUpgradeManager() {
       const mapData = yaml.load(mapText) as LevelData;
       const levelPoints = buildLevelPoints(mapData?.levels ?? []);
       const pricing = mergePricing(data.pricing);
+      // Publish for inflationForLevel (the shop's market-rate multiplier).
+      setLivePricing(pricing);
 
       const lookup = new Map<string, UpgradeConfig>();
 
@@ -132,6 +137,23 @@ export function useUpgradeManager() {
       // The prerequisite graph must be acyclic.
       detectPrerequisiteCycle(data.upgrades);
 
+      // Validate the set-bonus block (optional). A malformed entry is a hard
+      // error like any other catalogue problem, so the shop never silently
+      // drops a bonus a description promised.
+      let tagSets: TagSetsConfig | undefined;
+      if (data.tagSets) {
+        const threshold = typeof data.tagSets.threshold === 'number' && data.tagSets.threshold > 0
+          ? data.tagSets.threshold
+          : DEFAULT_TAG_SET_THRESHOLD;
+        const bonuses = data.tagSets.bonuses ?? [];
+        for (const b of bonuses) {
+          if (!b.tag || !b.name || !b.description || !b.modifiers || Object.keys(b.modifiers).length === 0) {
+            throw new Error(`tagSets bonus "${b.name || b.tag || 'unknown'}" is missing required fields (tag, name, description, modifiers)`);
+          }
+        }
+        tagSets = { threshold, bonuses };
+      }
+
       // Dev-only sanity: a normal-run upgrade gated behind an ascension-only one
       // could never be bought outside ascension. Warn rather than throw.
       if (import.meta.env.DEV) {
@@ -150,6 +172,7 @@ export function useUpgradeManager() {
       setState({
         upgrades: data.upgrades,
         upgradeLookup: lookup,
+        tagSets,
         isLoading: false,
         error: null,
       });
@@ -204,6 +227,7 @@ export function useUpgradeManager() {
   return {
     upgrades: state.upgrades,
     upgradeLookup: state.upgradeLookup,
+    tagSets: state.tagSets,
     isLoading: state.isLoading,
     error: state.error,
     loadUpgrades,

@@ -27,7 +27,13 @@ export function updateFenceWallFn(
   if (!activeRegion) { game.activeWall = null; return; }
 
   const wallSpeedBase = getWallSpeedBase(levelNumber, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel);
-  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier;
+  // Knowledge Transfer: every ball locked this map speeds up fence generation
+  // for the rest of the map (lockedBallsCount resets per map). Continuous
+  // Delivery does the same per completed fence (wallCount resets per map too).
+  const lockTempo = 1
+    + activeModifiers.fenceSpeedPerLock * game.lockedBallsCount
+    + activeModifiers.fenceSpeedPerFence * game.wallCount;
+  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo;
 
   let totalStartPath = 0;
   for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
@@ -158,6 +164,17 @@ export function updateFenceWallFn(
     callbacks.flashTimeoutRef.current = setTimeout(() => { callbacks.setScreenFlash("none"); callbacks.flashTimeoutRef.current = null; }, 200);
     callbacks.shakeTimeoutRef.current = setTimeout(() => { callbacks.setIsShaking(false); }, 400);
     setTimeout(() => { game.isRecovering = false; callbacks.setIsRecovering(false); }, RECOVERY_WINDOW_MS);
+    return;
+  }
+
+  // Ghost Protocol capstone: a young fence phases through balls entirely for
+  // its first fenceGraceMs of growth (no bounce either — growing fences never
+  // deflect balls, so "ignore" is symmetric).
+  if (
+    activeModifiers.fenceGraceMs > 0 &&
+    wall.startTime &&
+    performance.now() - wall.startTime < activeModifiers.fenceGraceMs
+  ) {
     return;
   }
 

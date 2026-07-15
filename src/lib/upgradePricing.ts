@@ -18,13 +18,17 @@ import { LevelConfig } from '@/types/level';
 
 export const DEFAULT_UPGRADE_PRICING: UpgradePricing = {
   minCost: 8,
+  // Mirrors public/upgrades.yml: factors are tuned against the lock-centric
+  // economy (base points 20), so a Junior costs 40h - more than a no-lock
+  // clear pays, about what a well-locked map pays.
   tierFactor: {
-    Junior: 1.0,
-    Senior: 1.35,
-    Principal: 1.85,
-    Architect: 2.4,
-    Wizard: 3.0,
+    Junior: 2.0,
+    Senior: 2.7,
+    Principal: 3.7,
+    Architect: 4.8,
+    Wizard: 6.0,
   },
+  blockInflation: 1.35,
 };
 
 /** Merge a parsed `pricing:` block over the defaults (per-field, tier-by-tier). */
@@ -33,7 +37,45 @@ export function mergePricing(parsed?: Partial<UpgradePricing>): UpgradePricing {
     minCost:
       typeof parsed?.minCost === 'number' ? parsed.minCost : DEFAULT_UPGRADE_PRICING.minCost,
     tierFactor: { ...DEFAULT_UPGRADE_PRICING.tierFactor, ...(parsed?.tierFactor ?? {}) },
+    blockInflation:
+      typeof parsed?.blockInflation === 'number' && parsed.blockInflation > 0
+        ? parsed.blockInflation
+        : DEFAULT_UPGRADE_PRICING.blockInflation,
   };
+}
+
+// ── Market-rate inflation ────────────────────────────────────────────────────
+// Base costs are flat (every level's points is the same by the flat-economy
+// design), so without a counterweight the flat per-map income eventually buys
+// the whole shelf every visit. Prices therefore rise with RUN progress: each
+// completed 5-level assignment block multiplies effective prices by
+// `pricing.blockInflation`. Levels 1-5 play at face value; block 2 is ×1.35,
+// block 3 ×1.82, block 4 ×2.46... The Budget Cycle spend chunk scales by the
+// same index so the spender archetype doesn't simply win inflation.
+
+/** Levels per inflation step. Matches the assignment cadence (doors.yml). */
+export const INFLATION_BLOCK_SIZE = 5;
+
+// Live pricing loaded from upgrades.yml (useUpgradeManager); the default is a
+// safe fallback for early calls and tests.
+let livePricing: UpgradePricing = DEFAULT_UPGRADE_PRICING;
+
+export function setLivePricing(pricing: UpgradePricing): void {
+  livePricing = pricing;
+}
+
+/**
+ * Price multiplier in effect at the shop after `completedLevel`. Shops run
+ * after levels 1-4 at ×1; the first assignment (level 5) starts block 2.
+ */
+export function inflationForLevel(
+  completedLevel: number,
+  pricing: UpgradePricing = livePricing,
+): number {
+  const rate = pricing.blockInflation ?? 1;
+  if (!(rate > 0) || rate === 1 || !Number.isFinite(completedLevel)) return 1;
+  const blocks = Math.max(0, Math.floor(completedLevel / INFLATION_BLOCK_SIZE));
+  return Math.pow(rate, blocks);
 }
 
 /** Build a logical-level -> base points lookup (first variant per level wins). */

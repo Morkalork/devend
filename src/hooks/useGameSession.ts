@@ -26,7 +26,17 @@ import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
+import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
+import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
+import { DoorConfig } from '@/types/door';
+import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
+import { CapstoneConfig } from '@/types/capstone';
+import { getHighscoreBonusMultiplier } from '@/lib/scoring';
+import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
+import { runwayBonuses, spendChunks, spendBoons, SPEND_CHUNK_HOURS } from '@/lib/treasury';
+import { inflationForLevel } from '@/lib/upgradePricing';
 import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
@@ -34,9 +44,12 @@ import { Certificate } from '@/types/certificate';
 
 const BASE_LIVES = 3;
 const BASE_CONTINUES = 1;
+/** War Chest ceiling: banked overtime never slows balls by more than this. */
+const MAX_BANKED_SLOW = 0.08;
 
 export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
+    levels,
     currentLevel,
     currentLevelIndex,
     totalLevels,
@@ -51,6 +64,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const {
     upgrades,
+    tagSets,
     isLoading: isLoadingUpgrades,
     error: upgradeError,
     loadUpgrades,
@@ -78,6 +92,34 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [shopUnlockedCerts, setShopUnlockedCerts] = useState<Certificate[]>([]);
   const [pendingCertUnlocks, setPendingCertUnlocks] = useState<Certificate[]>([]);
 
+  // Clean Release: instant fences carried into the NEXT map after finishing a
+  // map under par. Re-evaluated at every level completion (so it lasts exactly
+  // one map) and cleared on run start/restart.
+  const [carryInstantFences, setCarryInstantFences] = useState(0);
+
+  // Budget Cycle: boons carried into the NEXT map, charged by hours spent in
+  // the shop visit just left (see src/lib/treasury.ts). Set on shop exit,
+  // zeroed at the next level completion (one-map lifetime) and on run resets.
+  // The spend accumulator is a ref because purchases arrive as a synchronous
+  // burst right before the shop-exit handler (state would read stale).
+  const [carrySpendFences, setCarrySpendFences] = useState(0);
+  const [carrySpendFenceSpeed, setCarrySpendFenceSpeed] = useState(0);
+  const spentThisShopVisitRef = useRef(0);
+
+  // Assignments (doors): every 5th completed level replaces the shop with a
+  // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
+  // `activeDoor` is the picked contract and lives until the NEXT assignment
+  // replaces it (all 5 maps + their shops, so shop-facing rewards like extra
+  // slots pay out across the whole block). Cleared on ascend and run resets.
+  const [doorOffers, setDoorOffers] = useState<DoorConfig[]>([]);
+  const [activeDoor, setActiveDoor] = useState<DoorConfig | null>(null);
+
+  // Capstone ("Promotion"): the once-per-run exclusive perk, drafted 1-of-3
+  // at the first assignment at/past the trigger level. Permanent for the run
+  // (survives ascension); cleared only on run resets.
+  const [capstoneOffers, setCapstoneOffers] = useState<CapstoneConfig[]>([]);
+  const [capstone, setCapstone] = useState<CapstoneConfig | null>(null);
+
   // Per-run revive resource ("Continue"). Each run starts with BASE_CONTINUES
   // (+ any certificate grant); spending one on death retries the current level
   // with score + upgrades intact. gameInstanceKey forces GameCanvas to re-init
@@ -85,6 +127,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [continuesRemaining, setContinuesRemaining] = useState(BASE_CONTINUES);
   const [gameInstanceKey, setGameInstanceKey] = useState(0);
   const [pendingDeathResult, setPendingDeathResult] = useState<GameResult | null>(null);
+  // Guard against a duplicated completion delivery for the same map (see
+  // handleLevelComplete); holds the last level number that was scored.
+  const lastDeliveredCompletionRef = useRef<number | null>(null);
+  // Run-start intro: the first map of a run assembles from shatter tiles
+  // (GameCanvas introAssemble). Armed by every fresh-run path, disarmed by the
+  // first completed level so mid-run maps just appear as usual.
+  const [introAssemblePending, setIntroAssemblePending] = useState(false);
+  // When a round is left without the locks the store requires, we still open the
+  // store but show it "closed" (see UpgradeShop `closed`) rather than skipping it.
+  const [storeClosed, setStoreClosed] = useState(false);
 
   // Ascension mode: after the final level the player may loop back to level 1
   // with a drafted loadout. Depth 0 = first pass through the levels. Index 0 of
@@ -98,6 +150,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Names of loadouts that unlocked this run (shown on the result screen).
   const [lastRunLoadoutUnlocks, setLastRunLoadoutUnlocks] = useState<string[]>([]);
+
+  // End-of-run build recap (archetype identity, capstone, per-archetype best).
+  const [lastRunRecap, setLastRunRecap] = useState<RunRecap | null>(null);
 
   // One-time "loadouts unlocked" modal, shown after the first win reveals the
   // loadout system. Armed at the winning level, surfaced when leaving the
@@ -159,6 +214,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     stats: metaStats,
     wonLoadoutIds,
     loadoutsIntroduced,
+    mapHighscores,
+    encounteredBallTypeIds,
     recordLevelReached,
     recordFencesDrawn,
     recordPerfectLevel,
@@ -166,6 +223,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordAscensionDepth,
     recordPushBonusBanked,
     recordLoadoutWin,
+    recordMapHighscore,
+    recordBallTypeEncountered,
+    recordArchetypeBest,
     introduceLoadouts,
     resetProgression,
   } = useMetaProgression();
@@ -195,11 +255,80 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     return bonuses;
   }, [draftedLoadoutIds, loadoutLookup, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
-  const mergedBonuses = useMemo(
-    () => mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses),
-    [achievementBonuses, certBonuses, loadoutBonuses]
+  // Set bonuses: free modifier bundles active while the player owns enough
+  // upgrades of a tag (tagSets block in upgrades.yml).
+  const activeTagSets = useMemo(
+    () => computeActiveTagSets(ownedUpgradeIds, upgrades, tagSets),
+    [ownedUpgradeIds, upgrades, tagSets]
   );
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
+  const tagSetBonuses = useMemo(() => {
+    let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
+    for (const s of activeTagSets) {
+      bonuses = mergeBonuses(bonuses, s.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    }
+    return bonuses;
+  }, [activeTagSets]);
+
+  const mergedBonuses = useMemo(
+    () => mergeBonuses(
+      mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses),
+      mergeBonuses(tagSetBonuses, capstone?.modifiers as Partial<Record<keyof GameModifiers, number>> | undefined),
+    ),
+    [achievementBonuses, certBonuses, loadoutBonuses, tagSetBonuses, capstone]
+  );
+
+  // Two-pass modifier resolution: the base pass aggregates every static source;
+  // a second pass folds in run-state-dependent effects that READ base values
+  // (War Chest keys off bankedSlowPer50h + the bank; Clean Release off the
+  // under-par carry). Both fold through the same merge rules as everything else.
+  const baseModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
+  const dynamicBonuses = useMemo(() => {
+    let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
+    if (baseModifiers.bankedSlowPer50h > 0 && totalScore > 0) {
+      const reduction = Math.min(MAX_BANKED_SLOW, Math.floor(totalScore / 50) * baseModifiers.bankedSlowPer50h);
+      if (reduction > 0) bonuses = mergeBonuses(bonuses, { ballSpeedMultiplier: 1 - reduction });
+    }
+    if (carryInstantFences > 0) {
+      bonuses = mergeBonuses(bonuses, { instantFencesPerMap: carryInstantFences });
+    }
+    // Runway: perks granted while the bank sits at/above the owned thresholds.
+    bonuses = mergeBonuses(bonuses, runwayBonuses(totalScore, baseModifiers));
+    // Budget Cycle: boons bought by last shop visit's spend (one-map carry).
+    if (carrySpendFences > 0) {
+      bonuses = mergeBonuses(bonuses, { instantFencesPerMap: carrySpendFences });
+    }
+    if (carrySpendFenceSpeed > 0) {
+      bonuses = mergeBonuses(bonuses, { fenceGenerationSpeedMultiplier: 1 + carrySpendFenceSpeed });
+    }
+    // Door pick: the chosen risk door's bundle rides along for this map (and
+    // the shop after it; see handleContinueFromShop for the expiry).
+    if (activeDoor) {
+      bonuses = mergeBonuses(bonuses, activeDoor.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    }
+    return bonuses;
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, activeDoor]);
+  const finalBonuses = useMemo(
+    () => mergeBonuses(mergedBonuses, dynamicBonuses),
+    [mergedBonuses, dynamicBonuses]
+  );
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, finalBonuses);
+
+  // Mid-run extraContinues grants (Insurance Policy set bonus): when the
+  // aggregated value rises, credit the difference to the live counter. Drops
+  // (run reset clearing owned upgrades) just re-baseline without deducting.
+  const extraContinuesSeen = useRef<number | null>(null);
+  useEffect(() => {
+    const now = activeModifiers.extraContinues;
+    const prev = extraContinuesSeen.current;
+    extraContinuesSeen.current = now;
+    if (prev !== null && now > prev) {
+      setContinuesRemaining(c => c + (now - prev));
+    }
+  }, [activeModifiers.extraContinues]);
+
+  // Owned-tag tally for the build readout (HUD + shop chips).
+  const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
+  const tagSetThreshold = tagSets?.threshold ?? DEFAULT_TAG_SET_THRESHOLD;
 
   const activeLoadouts = useMemo(
     () => draftedLoadoutIds.map(id => loadoutLookup.get(id)).filter((l): l is NonNullable<typeof l> => l != null),
@@ -239,6 +368,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'loadout', id: l.id, name: l.name, modifiers: l.modifiers });
     }
 
+    for (const s of activeTagSets) {
+      sources.push({ kind: 'tagSet', id: s.tag, name: s.name, modifiers: s.modifiers });
+    }
+
+    if (activeDoor) {
+      sources.push({ kind: 'door', id: activeDoor.id, name: activeDoor.name, modifiers: activeDoor.modifiers });
+    }
+
+    if (capstone) {
+      sources.push({ kind: 'capstone', id: capstone.id, name: capstone.name, modifiers: capstone.modifiers });
+    }
+
     if (ascensionDepth > 0) {
       sources.push({
         kind: 'ascension',
@@ -249,7 +390,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, activeDoor, capstone, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
   // Loadouts offered in the run-start draft: unlocked once the player has
   // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
@@ -277,6 +418,34 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     [certificates]
   );
 
+  /**
+   * Clear every piece of run-scoped state. Shared by all four run-reset paths
+   * (start, play-again, restart, back-to-welcome) so a newly added field can
+   * never be forgotten in one of them again. Lives, continues, level index and
+   * navigation stay with the call sites - they legitimately differ per path.
+   */
+  const resetRunScopedState = useCallback(() => {
+    setTotalScore(0);
+    setOwnedUpgradeIds([]);
+    setCarryInstantFences(0);
+    setCarrySpendFences(0);
+    setCarrySpendFenceSpeed(0);
+    spentThisShopVisitRef.current = 0;
+    setActiveDoor(null);
+    setCapstone(null);
+    setPendingLevelScore(null);
+    lastDeliveredCompletionRef.current = null;
+    setIntroAssemblePending(true);
+    setStoreClosed(false);
+    setShowLevelComplete(false);
+    setCumulativeLockedBalls(0);
+    setAscensionDepth(0);
+    setDraftedLoadoutIds([]);
+    setLastRunSummary(null);
+    setLastRunLoadoutUnlocks([]);
+    resetRunProgress();
+  }, [resetRunProgress]);
+
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
     // The loadout catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
@@ -288,18 +457,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
       // it does not gate starting a run — same treatment as loadouts.
       loadBallTypes(),
+      // Door pool (doors.yml). On failure assignment levels fall back to the shop.
+      loadDoors(),
+      // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
+      loadCapstones(),
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
-      setTotalScore(0);
-      setPendingLevelScore(null);
-      setShowLevelComplete(false);
-      setOwnedUpgradeIds([]);
-      setAscensionDepth(0);
-      setDraftedLoadoutIds([]);
-      setLastRunSummary(null);
-      setLastRunLoadoutUnlocks([]);
-      resetRunProgress();
+      resetRunScopedState();
 
       const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
       const startingLives = BASE_LIVES + certBonusLives;
@@ -330,19 +495,42 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       if (skipDraft || !loadoutsIntroduced) nav.startGame();
       else nav.goToRunDraft();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunProgress, loadoutsIntroduced]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, loadoutsIntroduced]);
+
+  // End-of-run build recap: name the build from its archetype lean and score
+  // the banked overtime against the dominant archetype's personal best.
+  const captureRunRecap = useCallback((finalScore: number) => {
+    const identity = computeBuildIdentity(tagCounts);
+    let previousBest: number | null = null;
+    let isArchetypeRecord = false;
+    if (identity.primary) {
+      const res = recordArchetypeBest(identity.primary, finalScore);
+      previousBest = res.previous;
+      isArchetypeRecord = res.isRecord;
+    }
+    setLastRunRecap({
+      ...identity,
+      tagCounts: Object.fromEntries(tagCounts),
+      capstoneId: capstone?.id ?? null,
+      capstoneName: capstone?.name ?? null,
+      score: finalScore,
+      isArchetypeRecord,
+      previousBest,
+    });
+  }, [tagCounts, capstone, recordArchetypeBest]);
 
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
+    captureRunRecap(totalScore);
     nav.endGame({
       ...result,
       totalScore,
       ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
       loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
-  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts]);
+  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // On death with a Continue banked, defer finalizing and offer a revive.
@@ -379,6 +567,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     const currentLevelNum = currentLevelIndex + 1;
+    // A completion can only be delivered once per map: a stale second pipeline
+    // (e.g. a leftover dissolve timeout firing after the overlay was already
+    // continued) would double-score the level and resurrect the overlay over
+    // whatever screen came next - re-running the assignment phase and showing
+    // a second Promotion draft. The ref resets with each new run.
+    if (lastDeliveredCompletionRef.current === currentLevelNum) return;
+    lastDeliveredCompletionRef.current = currentLevelNum;
+    setIntroAssemblePending(false); // the run is underway: later maps appear as usual
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
     // Levels completed while ascended count more toward Certificate Hours
@@ -390,6 +586,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // also carry a pushBonus, so check the flag too)
     const bankedPush = (scoreData.pushBonus ?? 0) > 0 && !scoreData.pushFailed;
     if (bankedPush) recordPushBonusBanked();
+
+    // Clean Release: an under-par finish grants instant fences on the NEXT
+    // map. Re-evaluated on every completion, so the carry lasts exactly one map.
+    setCarryInstantFences(
+      (scoreData.fencesUnderPar ?? 0) > 0 ? activeModifiers.underParInstantFence : 0
+    );
+    // Budget Cycle boons expire with the map they were bought for (the next
+    // shop exit re-grants them if the player spends again).
+    setCarrySpendFences(0);
+    setCarrySpendFenceSpeed(0);
 
     const projectedStats = {
       highestLevelReached: Math.max(metaStats.highestLevelReached, currentLevelNum),
@@ -422,13 +628,30 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       }
     }
 
-    const levelOvertime = scoreData.levelScore;
-    const interestGain = activeModifiers.scoreInterestRate > 0
-      ? Math.min(8, Math.floor(totalScore * activeModifiers.scoreInterestRate))
-      : 0;
+    // Map highscore (#45): record this map's base score and, if it beat the
+    // map's previous highscore, credit a bonus multiplier on TOP of the base
+    // (applied after the per-map cap, so beating a record always pays). A map's
+    // first-ever completion just sets the baseline, no bonus.
+    const baseLevelScore = scoreData.levelScore;
+    let highscoreBonusEarned = 0;
+    let beatHighscore = false;
+    let previousHighscore: number | undefined;
+    if (scoreData.levelId) {
+      const { previous, isRecord } = recordMapHighscore(scoreData.levelId, baseLevelScore);
+      if (isRecord) {
+        beatHighscore = true;
+        previousHighscore = previous ?? undefined;
+        highscoreBonusEarned = highscoreBonus(previous, baseLevelScore, getHighscoreBonusMultiplier());
+      }
+    }
 
-    setTotalScore(totalScore + levelOvertime + interestGain);
-    setPendingLevelScore({ ...scoreData, levelScore: levelOvertime, tierMultiplier: 1, interestGain });
+    const levelOvertime = baseLevelScore + highscoreBonusEarned;
+
+    setTotalScore(totalScore + levelOvertime);
+    setPendingLevelScore({
+      ...scoreData, levelScore: levelOvertime, tierMultiplier: 1,
+      beatHighscore, previousHighscore, highscoreBonus: highscoreBonusEarned,
+    });
     setShowLevelComplete(true);
 
     if (scoreData.lockedBallsCount && scoreData.lockedBallsCount > 0) {
@@ -436,7 +659,59 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.scoreInterestRate, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, introduceLoadouts, loadouts]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
+
+  /**
+   * Enter the assignment draft (mandatory 1-of-3 door pick). If the door pool
+   * failed to load, fall back to the regular shop so the level exit never
+   * dead-ends without a screen.
+   */
+  const proceedToAssignment = useCallback(() => {
+    const doorPool = getDoors();
+    if (doorPool.length > 0) {
+      setDoorOffers(drawDoorOffers(doorPool, ASSIGNMENT_OFFER_COUNT));
+      nav.goToDoorDraft();
+      return;
+    }
+    nav.goToUpgradeShop();
+  }, [nav.goToDoorDraft, nav.goToUpgradeShop]);
+
+  /**
+   * Assignment level (every 5th): no shop. Route straight into the capstone
+   * draft when the Promotion is due, otherwise into the assignment draft.
+   */
+  const beginAssignmentPhase = useCallback(() => {
+    setPendingLevelScore(null);
+    // Capstone ("Promotion"): the first assignment at/past the trigger level
+    // routes through the mandatory 1-of-3 perk draft, once per run. ">=" so
+    // runs that resume past the exact trigger level still get theirs.
+    const capstonePool = getCapstones();
+    if (!capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
+      setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT));
+      nav.goToCapstoneDraft();
+      return;
+    }
+    proceedToAssignment();
+  }, [capstone, currentLevelIndex, nav.goToCapstoneDraft, proceedToAssignment]);
+
+  /**
+   * Post-shop bookkeeping shared by the shop's Continue button and the
+   * lock-gated skip: save the level-picker checkpoint on 5th levels, surface
+   * any pending cert unlocks, clear the pending score, then advance and play.
+   */
+  const finishShopPhase = useCallback(() => {
+    const nextLevelNumber = currentLevelIndex + 2;
+    // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
+    if (nextLevelNumber % 5 === 0 && ascensionDepth === 0) {
+      saveRunCheckpoint({ level: nextLevelNumber, totalScore, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
+    }
+    const pendingUnlocks = takePendingUnlocks();
+    if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
+    setShopUnlockedCerts([]);
+    setPendingLevelScore(null);
+    advanceToNextLevel();
+    nav.goToGame();
+  }, [currentLevelIndex, ascensionDepth, saveRunCheckpoint, totalScore, ownedUpgradeIds, currentLives, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
@@ -451,10 +726,20 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Beat the final level: offer the ascend-or-retire choice. The pending
       // level score is kept so handleRetire can put it on the result screen.
       nav.goToAscensionDraft();
+    } else if (isAssignmentLevel(currentLevelIndex + 1)) {
+      beginAssignmentPhase();
     } else {
+      // The shop is only earned by locking balls this round: at least one lock,
+      // or two when the map offered three or more balls. We still OPEN the shop
+      // when short, but it opens "closed" (no purchases) so the player sees what
+      // they missed instead of the store being silently skipped.
+      const locksThisRound = pendingLevelScore?.lockedBallsCount ?? 0;
+      const ballsOnMap = currentLevel?.maxBalls ?? currentLevel?.balls?.length ?? 1;
+      const locksRequired = ballsOnMap >= 3 ? 2 : 1;
+      setStoreClosed(locksThisRound < locksRequired);
       nav.goToUpgradeShop();
     }
-  }, [isLastLevel, nav.goToAscensionDraft, nav.goToUpgradeShop]);
+  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, nav.goToAscensionDraft, nav.goToUpgradeShop]);
 
   const handleDismissLoadoutsUnlocked = useCallback(() => {
     setShowLoadoutsUnlockedModal(false);
@@ -476,6 +761,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLivesAtLevelStart(refilled);
 
     setPendingLevelScore(null);
+    setActiveDoor(null); // the pre-ascension map's door does not follow into the loop
     resetToFirstLevel(); // also re-randomizes the level variants for the new loop
     nav.goToGame();
   }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, nav.goToGame]);
@@ -504,6 +790,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const levelsCompleted = runLevelsCompleted;
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
+    captureRunRecap(totalScore);
     nav.endGame({
       isWin: true,
       remainingPercent: pendingLevelScore?.remainingPercent || 0,
@@ -519,11 +806,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
     setPendingLevelScore(null);
-  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts]);
+  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts, captureRunRecap]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
+    // Budget Cycle: purchases land as a synchronous burst right before the
+    // shop-exit handler, so the visit's spend accumulates in a ref.
+    spentThisShopVisitRef.current += price;
 
     const upgrade = upgrades.find(u => u.id === upgradeId);
     const extraLives = upgrade?.modifiers?.extraLives;
@@ -538,34 +828,41 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [upgrades, certSourceIds, recordMaxTierPurchase]);
 
   const handleContinueFromShop = useCallback(() => {
-    const nextLevelNumber = currentLevelIndex + 2;
-    // Level-picker snapshots only describe depth-0 runs, so skip them while ascended
-    if (nextLevelNumber % 5 === 0 && ascensionDepth === 0) {
-      saveRunCheckpoint({ level: nextLevelNumber, totalScore, ownedUpgradeIds, lives: currentLives, savedAt: Date.now() });
-    }
-    const pendingUnlocks = takePendingUnlocks();
-    if (pendingUnlocks.length > 0) setPendingCertUnlocks(pendingUnlocks);
-    setShopUnlockedCerts([]);
-    setPendingLevelScore(null);
+    // Budget Cycle: this visit's spend buys next-map boons. Granted here and
+    // expired at the next level completion. The chunk scales with the same
+    // market-rate inflation as prices (see upgradePricing.inflationForLevel).
+    const chunkHours = Math.round(SPEND_CHUNK_HOURS * inflationForLevel(currentLevelIndex + 1));
+    const chunks = spendChunks(spentThisShopVisitRef.current, chunkHours);
+    spentThisShopVisitRef.current = 0;
+    const boons = spendBoons(chunks, activeModifiers);
+    setCarrySpendFences(boons.instantFences);
+    setCarrySpendFenceSpeed(boons.fenceSpeedBonus);
+
+    finishShopPhase();
+  }, [currentLevelIndex, activeModifiers, finishShopPhase]);
+
+  /** Capstone draft pick: permanent for the run, then on to the assignment. */
+  const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
+    setCapstone(pick);
+    proceedToAssignment();
+  }, [proceedToAssignment]);
+
+  /**
+   * Assignment pick (mandatory): the chosen contract replaces the previous
+   * one and runs until the next assignment swaps it out.
+   */
+  const handleSelectDoor = useCallback((door: DoorConfig) => {
+    setActiveDoor(door);
     advanceToNextLevel();
     nav.goToGame();
-  }, [currentLevelIndex, totalScore, ownedUpgradeIds, currentLives, ascensionDepth, saveRunCheckpoint, advanceToNextLevel, nav.goToGame, takePendingUnlocks]);
+  }, [advanceToNextLevel, nav.goToGame]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);
   }, [purchaseCertLevel]);
 
   const handlePlayAgain = useCallback((startLevel?: number) => {
-    setTotalScore(0);
-    setOwnedUpgradeIds([]);
-    setPendingLevelScore(null);
-    setShowLevelComplete(false);
-    setCumulativeLockedBalls(0);
-    setAscensionDepth(0);
-    setDraftedLoadoutIds([]);
-    setLastRunSummary(null);
-    setLastRunLoadoutUnlocks([]);
-    resetRunProgress();
+    resetRunScopedState();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
     const startingLives = BASE_LIVES + certBonusLives;
@@ -588,19 +885,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     if (loadoutsIntroduced) nav.goToRunDraft();
     else nav.startGame();
-  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, setLevelIndex, certBonuses, getCertStartingLevel, resetRunProgress, clearRunCheckpoints, loadoutsIntroduced]);
+  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, setLevelIndex, certBonuses, getCertStartingLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced]);
 
   const handleRestartRun = useCallback(() => {
-    setTotalScore(0);
-    setOwnedUpgradeIds([]);
-    setPendingLevelScore(null);
-    setShowLevelComplete(false);
-    setCumulativeLockedBalls(0);
-    setAscensionDepth(0);
-    setDraftedLoadoutIds([]);
-    setLastRunSummary(null);
-    setLastRunLoadoutUnlocks([]);
-    resetRunProgress();
+    resetRunScopedState();
     clearRunCheckpoints();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
@@ -613,21 +901,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     resetToFirstLevel();
     if (loadoutsIntroduced) nav.goToRunDraft();
     else nav.startGame();
-  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, certBonuses, resetRunProgress, clearRunCheckpoints, loadoutsIntroduced]);
+  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, certBonuses, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced]);
 
   const handleBackToWelcome = useCallback(() => {
     resetToFirstLevel();
-    setTotalScore(0);
-    setPendingLevelScore(null);
-    setShowLevelComplete(false);
-    setOwnedUpgradeIds([]);
+    resetRunScopedState();
     setCurrentLives(BASE_LIVES);
-    setAscensionDepth(0);
-    setDraftedLoadoutIds([]);
     setPendingDeathResult(null);
-    resetRunProgress();
     nav.goToWelcome();
-  }, [resetToFirstLevel, nav.goToWelcome, resetRunProgress]);
+  }, [resetToFirstLevel, nav.goToWelcome, resetRunScopedState]);
 
   const handleOpenCertificateStore = useCallback(async () => {
     // Upgrades too: locked-cert tooltips name the upgrade that unlocks them,
@@ -723,11 +1005,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
     // Meta progression
     metaStats,
+    mapHighscores,
+    encounteredBallTypeIds,
+    recordBallTypeEncountered,
     runHoursAwarded,
     runLevelsCompleted,
     lastRunHoursAwarded: lastRunSummary?.hoursAwarded ?? 0,
     lastRunLevelsCompleted: lastRunSummary?.levelsCompleted ?? 0,
     lastRunLoadoutUnlocks,
+    lastRunRecap,
+    // Head Start certificates: the level a fresh run begins at (1 = none).
+    // The result screen uses it to label Play Again as "Continue from level N".
+    certStartingLevel: getCertStartingLevel(),
     // Loadouts + Ascension mode
     ascensionDepth,
     loadouts,
@@ -741,12 +1030,28 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Continue (per-run revive)
     continuesRemaining,
     gameInstanceKey,
+    introAssemblePending,
+    storeClosed,
     pendingDeathResult,
     // Modifiers / bonuses
     activeModifiers,
     modifierSources,
     achievementBonuses: mergedBonuses,
     certificateProgress: runProgress,
+    // Build readout (archetype tags + set bonuses)
+    tagCounts,
+    tagSetThreshold,
+    activeTagSets,
+    // Doors (branching map choice)
+    doorOffers,
+    activeDoor,
+    // The map the door draft previews (null past the final level).
+    nextLevel: levels[currentLevelIndex + 1] ?? null,
+    handleSelectDoor,
+    // Capstone ("Promotion")
+    capstoneOffers,
+    capstone,
+    handleSelectCapstone,
     // Callbacks
     handleStartGame,
     handleConfirmLoadout,

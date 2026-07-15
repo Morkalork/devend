@@ -42,6 +42,26 @@ export const contentText = {
   achBonus: (t: TFunction, a: WithId & { bonus?: { description?: string } }) =>
     field(t, 'achievements', a.id, 'bonusDescription', a.bonus?.description),
 
+  /** Set bonus (tagSets in upgrades.yml); id = the archetype tag. */
+  tagSetName: (t: TFunction, s: WithId & { name?: string }) => field(t, 'tagSets', s.id, 'name', s.name),
+  tagSetDesc: (t: TFunction, s: WithId & { description?: string }) =>
+    field(t, 'tagSets', s.id, 'description', s.description),
+
+  /** Capstone (capstones.yml): the once-per-run Promotion perk. */
+  capstoneName: (t: TFunction, c: WithId & { name?: string }) => field(t, 'capstones', c.id, 'name', c.name),
+  capstoneDesc: (t: TFunction, c: WithId & { description?: string }) =>
+    field(t, 'capstones', c.id, 'description', c.description),
+  capstoneClarify: (t: TFunction, c: WithId & { clarify?: string }) =>
+    field(t, 'capstones', c.id, 'clarify', c.clarify),
+
+  /** Door (doors.yml): risk/reward gate between maps. */
+  doorName: (t: TFunction, d: WithId & { name?: string }) => field(t, 'doors', d.id, 'name', d.name),
+  doorRisk: (t: TFunction, d: WithId & { risk?: string }) => field(t, 'doors', d.id, 'risk', d.risk),
+  doorReward: (t: TFunction, d: WithId & { reward?: string }) =>
+    field(t, 'doors', d.id, 'reward', d.reward),
+  doorClarify: (t: TFunction, d: WithId & { clarify?: string }) =>
+    field(t, 'doors', d.id, 'clarify', d.clarify),
+
   loadoutName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'loadouts', l.id, 'name', l.name),
   loadoutCurse: (t: TFunction, l: WithId & { curse?: string }) => field(t, 'loadouts', l.id, 'curse', l.curse),
   loadoutBlessing: (t: TFunction, l: WithId & { blessing?: string }) =>

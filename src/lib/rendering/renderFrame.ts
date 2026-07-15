@@ -15,25 +15,30 @@ import {
   clipLineAgainstPolygons,
   lineSegmentIntersection,
   Vector2,
+  Polygon,
 } from "@/lib/polygon";
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { computeBallTrajectory, hexToRgba } from "@/lib/gameUtils";
 import { getBallBase, getBallSpecular, getHexOverlay } from "@/lib/ballRenderCache";
 import { getBallSphere } from "@/lib/ballSphereCache";
 import { getRainGlyph } from "./rainGlyphCache";
-import { renderBallEffects } from "@/lib/ballEffects";
+import { renderBallEffects, getSquishEffect } from "@/lib/ballEffects";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+import { getPickupSprite, pickupColor, pickupFeedbackLabel } from "./pickupSprites";
+import { PICKUP_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from "@/lib/boardConstants";
 import {
   LOCK_PULSE_DURATION,
   LOCK_FLOOD_DURATION,
   LOCK_DUST_DURATION,
+  INFO_UNLOCKED_DURATION,
   COLORS,
   FREEZE_COOLDOWN_MULTIPLIER,
   SWIPE_TRAIL_DURATION,
   BALL_DANGER_SPEED,
   LEVEL_CLEAR_SHIMMER_MS,
+  SPACE_BAR_FADE_MS,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 
@@ -133,6 +138,8 @@ export function clearRenderFrameCache(): void {
   _dangerFrameKey = '';
   _pulseSpriteCache.clear();
   _radialSpriteCache.clear();
+  _flamePuffCache.clear();
+  _flamePaletteCache.clear();
   _fenceClipCache.key = '';
   _fenceClipCache.board = null;
   _fenceClipCache.polys = null;
@@ -160,6 +167,32 @@ function worldToScreen(worldX: number, worldY: number, boardRect: BoardRect) {
     x: boardRect.left + worldX * boardRect.scale,
     y: boardRect.top  + worldY * boardRect.scale,
   };
+}
+
+/**
+ * Screen-space Path2D of all obstacle outlines, for punching obstacle holes out
+ * of a fill via the even-odd rule. Obstacles are static per level, so the traced
+ * path (each obstacle is a 64-gon) is cached and only rebuilt on a boardRect/scale
+ * change or when the obstacle-polygon array identity changes (new level).
+ */
+function getObstacleHolesPath(obstacles: Polygon[], boardRect: BoardRect, scale: number): Path2D {
+  const key = `${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}`;
+  if (_obstacleHolesCache.key !== key || _obstacleHolesCache.polys !== obstacles) {
+    _obstacleHolesCache.key = key;
+    _obstacleHolesCache.polys = obstacles;
+    const holes = new Path2D();
+    for (const poly of obstacles) {
+      const v0 = worldToScreen(poly.vertices[0].x, poly.vertices[0].y, boardRect);
+      holes.moveTo(v0.x, v0.y);
+      for (let i = 1; i < poly.vertices.length; i++) {
+        const vp = worldToScreen(poly.vertices[i].x, poly.vertices[i].y, boardRect);
+        holes.lineTo(vp.x, vp.y);
+      }
+      holes.closePath();
+    }
+    _obstacleHolesCache.path = holes;
+  }
+  return _obstacleHolesCache.path!;
 }
 
 // ── Destructible damage cracks (Phase 2) ──────────────────────────────────
@@ -479,7 +512,7 @@ export function renderFrame(
   } = game;
   const { width: screenWidth, height: screenHeight } = screenSize;
   const { scale } = boardRect;
-  const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain } = rctx;
+  const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain, infoUnlockedLabel = 'Info Unlocked' } = rctx;
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -960,11 +993,17 @@ export function renderFrame(
 
   // ── Speed danger tint ─────────────────────────────────────────────────────
   {
-    const activeBalls = balls.filter(b => b.speed > 0);
-    if (activeBalls.length > 0) {
-      // Flat speeds (issue #37): danger is measured against an absolute reference
-      // speed rather than each ball's (now equal) top speed.
-      const maxDanger = activeBalls.reduce((m, b) => Math.max(m, b.speed / BALL_DANGER_SPEED), 0);
+    // Flat speeds (issue #37): danger is measured against an absolute reference
+    // speed rather than each ball's (now equal) top speed. Plain loop (no
+    // filter/reduce) to avoid a per-frame array + closure allocation.
+    let maxDanger = 0;
+    for (const b of balls) {
+      if (b.speed > 0) {
+        const d = b.speed / BALL_DANGER_SPEED;
+        if (d > maxDanger) maxDanger = d;
+      }
+    }
+    {
       if (maxDanger > 0.55) {
         const { left: rl, top: rt, width: rw, height: rh } = boardRect;
         const dangerT = Math.min(1, (maxDanger - 0.55) / 0.45);
@@ -1141,6 +1180,36 @@ export function renderFrame(
       ctx.restore();
     }
     if (expired) game.fallingObjects = game.fallingObjects.filter(fo => nowF - fo.startTime < fo.durationMs);
+  }
+
+  // ── Pickup tokens ─────────────────────────────────────────────────────────
+  // Drawn under the balls: a ball rolling over a token reads as "reachable".
+  // Timing (pop-in, expiry blink) runs on activePlaySeconds so a paused game
+  // never advances a token's clock; only the idle pulse uses the wall clock.
+  if (game.pickups && game.pickups.length > 0) {
+    const nowP = performance.now();
+    const nowS = game.activePlaySeconds;
+    for (const token of game.pickups) {
+      const sprite = getPickupSprite(token.effect, accentColor, PICKUP_RADIUS * scale);
+      const aliveS = nowS - token.spawnedAtSeconds;
+      const remainingS = token.expiresAtSeconds - nowS;
+      const popT = Math.min(1, aliveS / 0.25);
+      const pop = 1 - Math.pow(1 - popT, 3); // easeOutCubic pop-in
+      const pulse = 1 + 0.07 * Math.sin(nowP / 280 + token.position.x);
+      let alpha = popT;
+      if (remainingS < PICKUP_EXPIRY_WARN_SECONDS) {
+        // Accelerating blink over the final seconds (2 Hz → ~8 Hz).
+        const hz = 2 + (PICKUP_EXPIRY_WARN_SECONDS - remainingS) * 2;
+        alpha *= 0.35 + 0.65 * (0.5 + 0.5 * Math.sin((nowP / 1000) * hz * Math.PI * 2));
+      }
+      const p = w2s(token.position.x, token.position.y);
+      const size = sprite.width * pulse * pop;
+      if (size <= 0 || alpha <= 0) continue;
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(sprite, p.x - size / 2, p.y - size / 2, size, size);
+      ctx.restore();
+    }
   }
 
   // ── Cut preview line during drag ──────────────────────────────────────────
@@ -1336,6 +1405,10 @@ export function renderFrame(
       };
 
       ctx.globalAlpha = 1;
+      // Most segments sit in the flat-alpha (0.55) run before the tail fade, so
+      // their gradient is a solid color — use a plain stroke there and only
+      // allocate a CanvasGradient for the genuinely fading tail segments.
+      ctx.lineWidth = 2 * scale;
       for (let i = 0; i < totalSegs; i++) {
         const a0 = pathAlpha(cumDist[i]);
         const a1 = pathAlpha(cumDist[i + 1]);
@@ -1344,13 +1417,16 @@ export function renderFrame(
         const s = w2s(waypoints[i].x, waypoints[i].y);
         const e = w2s(waypoints[i + 1].x, waypoints[i + 1].y);
 
-        const grad = ctx.createLinearGradient(s.x, s.y, e.x, e.y);
-        grad.addColorStop(0, `rgba(0,255,136,${a0.toFixed(3)})`);
-        grad.addColorStop(1, `rgba(0,255,136,${a1.toFixed(3)})`);
-        ctx.strokeStyle = grad;
+        if (a0 === a1) {
+          ctx.strokeStyle = `rgba(0,255,136,${a0.toFixed(3)})`;
+        } else {
+          const grad = ctx.createLinearGradient(s.x, s.y, e.x, e.y);
+          grad.addColorStop(0, `rgba(0,255,136,${a0.toFixed(3)})`);
+          grad.addColorStop(1, `rgba(0,255,136,${a1.toFixed(3)})`);
+          ctx.strokeStyle = grad;
+        }
         ctx.shadowColor = `rgba(0,255,136,${Math.max(a0, a1).toFixed(3)})`;
         ctx.shadowBlur = 6 * scale;
-        ctx.lineWidth = 2 * scale;
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
         ctx.lineTo(e.x, e.y);
@@ -1380,7 +1456,9 @@ export function renderFrame(
   // ── Balls ─────────────────────────────────────────────────────────────────
   // Flame LOD: fewer tongues per plume as more balls burn, so the dominant
   // per-ball draw cost stays roughly bounded on a crowded board.
-  const flameTongues = flameTonguesForCount(balls.reduce((n, b) => (b.state === 'active' ? n + 1 : n), 0));
+  let activeBallCount = 0;
+  for (const b of balls) if (b.state === 'active') activeBallCount++;
+  const flameTongues = flameTonguesForCount(activeBallCount);
   for (const ball of balls) {
     const screenPos = w2s(
       (ball.renderPosition ?? ball.position).x,
@@ -1409,17 +1487,31 @@ export function renderFrame(
       ctx.restore();
     }
 
-    const fade = ball.assimColorFade ?? 0;
+    // Bucket the fade before blending. assimColorFade is a continuous 0→1 clock
+    // during the ~2s lock fade, so an unbucketed blend produces a distinct
+    // blendedHex nearly every frame and getBallBase spawns a fresh OffscreenCanvas
+    // per key. 13 steps (1/12) is visually indistinguishable from continuous but
+    // collapses the per-clear canvas churn from ~120 to ≤13. r0/g0/b0 stay the
+    // true ball color (the motion trail below uses them unblended).
+    const fadeRaw = ball.assimColorFade ?? 0;
+    const fade = fadeRaw > 0 ? Math.round(fadeRaw * 12) / 12 : 0;
     const r0 = parseInt(ball.color.slice(1, 3), 16);
     const g0 = parseInt(ball.color.slice(3, 5), 16);
     const b0 = parseInt(ball.color.slice(5, 7), 16);
-    const ar = parseInt(accentColor.slice(1, 3), 16);
-    const ag = parseInt(accentColor.slice(3, 5), 16);
-    const ab = parseInt(accentColor.slice(5, 7), 16);
-    const r = Math.round(r0 + (ar - r0) * fade);
-    const g = Math.round(g0 + (ag - g0) * fade);
-    const b = Math.round(b0 + (ab - b0) * fade);
-    const blendedHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    let blendedHex: string;
+    if (fade === 0) {
+      // No fade (the common case for every active ball): the blend is the ball's
+      // own color, so skip the channel math and string building entirely.
+      blendedHex = ball.color.slice(1);
+    } else {
+      const ar = parseInt(accentColor.slice(1, 3), 16);
+      const ag = parseInt(accentColor.slice(3, 5), 16);
+      const ab = parseInt(accentColor.slice(5, 7), 16);
+      const r = Math.round(r0 + (ar - r0) * fade);
+      const g = Math.round(g0 + (ag - g0) * fade);
+      const b = Math.round(b0 + (ab - b0) * fade);
+      blendedHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
 
     ctx.save();
     ctx.globalAlpha = assimScale;
@@ -1429,19 +1521,34 @@ export function renderFrame(
       screenRadius, accentColor, ball.color, performance.now(), scale,
     );
 
-    // Motion trail
+    // Motion trail. Ring buffer: overwrite slots in place with a moving head
+    // index instead of push()/shift() (which allocated a {x,y} every frame per
+    // ball and O(n)-reindexed the array) — the previous version was the only
+    // steady, unconditional per-frame allocation in the render hot path.
     {
+      const TRAIL_LEN = 8;
       const trailPos = ball.renderPosition ?? ball.position;
-      if (!ball.trailPositions) ball.trailPositions = [];
-      ball.trailPositions.push({ x: trailPos.x, y: trailPos.y });
-      if (ball.trailPositions.length > 8) ball.trailPositions.shift();
-      const N = ball.trailPositions.length;
+      let buf = ball.trailPositions;
+      if (!buf || buf.length !== TRAIL_LEN) {
+        buf = ball.trailPositions = Array.from({ length: TRAIL_LEN }, () => ({ x: 0, y: 0 }));
+        ball.trailHead = 0;
+        ball.trailCount = 0;
+      }
+      const slot = buf[ball.trailHead ?? 0];
+      slot.x = trailPos.x;
+      slot.y = trailPos.y;
+      const head = ((ball.trailHead ?? 0) + 1) % TRAIL_LEN;
+      ball.trailHead = head;
+      const N = ball.trailCount = Math.min((ball.trailCount ?? 0) + 1, TRAIL_LEN);
       if (N > 1 && assimScale > 0.05) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
-        for (let ti = 0; ti < N - 1; ti++) {
-          const fraction = (ti + 1) / N;
-          const tp = w2s(ball.trailPositions[ti].x, ball.trailPositions[ti].y);
+        // Oldest→newest, skipping the newest (the ball body sits there). Oldest
+        // valid entry is `head - N`; index k of N maps to (head - N + k) mod LEN.
+        for (let k = 0; k < N - 1; k++) {
+          const fraction = (k + 1) / N;
+          const idx = (head - N + k + TRAIL_LEN) % TRAIL_LEN;
+          const tp = w2s(buf[idx].x, buf[idx].y);
           ctx.beginPath();
           ctx.arc(tp.x, tp.y, screenRadius * fraction * 0.5, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(${r0},${g0},${b0},${fraction * 0.35})`;
@@ -1465,6 +1572,20 @@ export function renderFrame(
           flameTongues,
         );
       }
+    }
+
+    // Squash & stretch (issue #44): deform ONLY the ball body along the impact
+    // normal, springing back over ~220ms. Wraps just the body sprites (base,
+    // sphere, hex, specular, frost) so the halos, trail and flame stay round.
+    const squish = getSquishEffect(ball.effects);
+    if (squish.active) {
+      const ang = Math.atan2(squish.ny, squish.nx);
+      ctx.save();
+      ctx.translate(screenPos.x, screenPos.y);
+      ctx.rotate(ang);
+      ctx.scale(squish.scaleAlong, squish.scalePerp);
+      ctx.rotate(-ang);
+      ctx.translate(-screenPos.x, -screenPos.y);
     }
 
     const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);
@@ -1555,6 +1676,8 @@ export function renderFrame(
       ctx.restore();
     }
 
+    if (squish.active) ctx.restore(); // squash & stretch transform
+
     ctx.restore(); // globalAlpha
 
     // Admin/Playground: live speed label above the ball.
@@ -1583,7 +1706,7 @@ export function renderFrame(
     const now = performance.now();
 
     for (const [, flash] of game.assimilations) {
-      if (flash.polygon.length === 0) continue;
+      if (flash.contours.length === 0) continue;
       const elapsed = now - flash.startTime;
 
       let fillAlpha = 0;
@@ -1595,27 +1718,59 @@ export function renderFrame(
         glowAlpha = fillAlpha * 0.7;
       } else if (elapsed < LOCK_PULSE_DURATION + LOCK_FLOOD_DURATION) {
         const ft = Math.min(1, (elapsed - LOCK_PULSE_DURATION) / LOCK_FLOOD_DURATION);
-        const ease = ft < 0.5 ? 2 * ft * ft : 1 - Math.pow(-2 * ft + 2, 2) / 2;
-        fillAlpha = 0.2 + ease * 0.65;
+        // Wash the accent flood in and back out over the region, leaving nothing
+        // behind. A permanent fill here painted the ray-cast lock polygon, which
+        // is occluded by any obstacle from the ball's lock centre — that stale
+        // wedge in the obstacle's shadow was the persistent "shadow behind the
+        // obstacle". The captured territory already shows via the region fill, so
+        // no overlay needs to linger.
+        fillAlpha = Math.sin(ft * Math.PI) * 0.7;
         glowAlpha = (1 - ft) * 0.9;
       } else {
-        // Animation complete — hold a subtle permanent fill over the captured region.
-        fillAlpha = 0.22;
+        fillAlpha = 0;
         glowAlpha = 0;
       }
 
       ctx.save();
-      if (flash.polygon.length >= 3) {
-        ctx.beginPath();
-        const fp = w2s(flash.polygon[0].x, flash.polygon[0].y);
-        ctx.moveTo(fp.x, fp.y);
-        for (let i = 1; i < flash.polygon.length; i++) {
-          const p = w2s(flash.polygon[i].x, flash.polygon[i].y);
-          ctx.lineTo(p.x, p.y);
+      if (flash.contours.length > 0 && fillAlpha > 0) {
+        // Fill the pocket's smooth contour loops (traced + Chaikin-rounded at lock
+        // time, exactly like the persistent captured-territory tint). Bounded to
+        // the real cells so it can't overshoot toward a nearby object, and smooth
+        // so there's no 15px staircase. Even-odd handles enclosed obstacle holes.
+        ctx.save();
+        // Interior movers aren't grid cells, so a pocket cell can sit under one —
+        // CLIP them out (board minus movers). Clipping, not an even-odd subpath:
+        // a mover OUTSIDE the pocket must stay untouched, not get filled.
+        if (game.movers.length > 0) {
+          const clip = new Path2D();
+          clip.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
+          for (const mover of game.movers) {
+            const vs = mover.polygon.vertices;
+            if (vs.length < 3) continue;
+            const m0 = w2s(vs[0].x, vs[0].y);
+            clip.moveTo(m0.x, m0.y);
+            for (let i = 1; i < vs.length; i++) {
+              const mv = w2s(vs[i].x, vs[i].y);
+              clip.lineTo(mv.x, mv.y);
+            }
+            clip.closePath();
+          }
+          ctx.clip(clip, 'evenodd');
         }
-        ctx.closePath();
+        ctx.beginPath();
+        for (const loop of flash.contours) {
+          if (loop.length < 3) continue;
+          const p0 = w2s(loop[0].x, loop[0].y);
+          ctx.moveTo(p0.x, p0.y);
+          for (let i = 1; i < loop.length; i++) {
+            const p = w2s(loop[i].x, loop[i].y);
+            ctx.lineTo(p.x, p.y);
+          }
+          ctx.closePath();
+        }
         ctx.fillStyle = `rgba(${acR}, ${acG}, ${acB}, ${fillAlpha})`;
-        ctx.fill();
+        ctx.fill('evenodd');
+        ctx.restore();
       }
 
       if (elapsed >= LOCK_PULSE_DURATION && glowAlpha > 0) {
@@ -1659,6 +1814,86 @@ export function renderFrame(
         }
         ctx.restore();
       }
+
+      // First-ever lock of this ball type: a rising, fading "Info Unlocked"
+      // label above the ball, on top of the usual lock animation.
+      if (flash.firstEncounter && elapsed < INFO_UNLOCKED_DURATION) {
+        const FADE_IN_MS = 150, FADE_OUT_MS = 500, RISE_WORLD = 55;
+        const fadeIn = Math.min(1, elapsed / FADE_IN_MS);
+        const fadeOut = elapsed > INFO_UNLOCKED_DURATION - FADE_OUT_MS
+          ? Math.max(0, (INFO_UNLOCKED_DURATION - elapsed) / FADE_OUT_MS)
+          : 1;
+        const textAlpha = Math.min(fadeIn, fadeOut);
+        const rise = RISE_WORLD * (elapsed / INFO_UNLOCKED_DURATION);
+        const tp = w2s(flash.centroid.x, flash.centroid.y - 40 - rise);
+
+        ctx.save();
+        ctx.globalAlpha = textAlpha;
+        ctx.font = `bold ${Math.max(11, Math.round(13 * scale))}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.shadowColor = accentColor;
+        ctx.shadowBlur = 10 * scale;
+        ctx.fillStyle = accentColor;
+        ctx.fillText(infoUnlockedLabel, tp.x, tp.y);
+        ctx.restore();
+      }
+    }
+  }
+
+  // ── Pickup claim / waste feedback ─────────────────────────────────────────
+  // Claimed: a rising label (Info Unlocked styling) + an expanding ring in the
+  // token's colour. Wasted: a grey collapsing ring with a strike. Entries are
+  // culled by updatePickups, so this only ever draws live markers.
+  if (game.pickupFeedback && game.pickupFeedback.length > 0) {
+    const nowP = performance.now();
+    for (const fb of game.pickupFeedback) {
+      const elapsed = nowP - fb.startTime;
+      if (elapsed < 0 || elapsed >= PICKUP_FEEDBACK_MS) continue;
+      const t = elapsed / PICKUP_FEEDBACK_MS;
+      if (fb.kind === 'claimed') {
+        const col = pickupColor(fb.effect, accentColor);
+        const alpha = Math.min(1, elapsed / 120) * (t > 0.6 ? (1 - t) / 0.4 : 1);
+        const tp = w2s(fb.position.x, fb.position.y - 18 - 45 * t);
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.font = `bold ${Math.max(11, Math.round(13 * scale))}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.shadowColor = col;
+        ctx.shadowBlur = 10 * scale;
+        ctx.fillStyle = col;
+        ctx.fillText(pickupFeedbackLabel(fb, rctx.pickupLabels), tp.x, tp.y);
+        ctx.restore();
+        const ringT = Math.min(1, elapsed / 450);
+        if (ringT < 1) {
+          const p = w2s(fb.position.x, fb.position.y);
+          ctx.save();
+          ctx.globalAlpha = (1 - ringT) * 0.8;
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2 * scale;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, (PICKUP_RADIUS + 30 * ringT) * scale, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      } else {
+        const p = w2s(fb.position.x, fb.position.y);
+        const rr = PICKUP_RADIUS * scale * (1 - t);
+        if (rr <= 0.5) continue;
+        ctx.save();
+        ctx.globalAlpha = 0.7 * (1 - t);
+        ctx.strokeStyle = '#9aa3ad';
+        ctx.lineWidth = 2 * scale;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, rr, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(p.x - rr, p.y - rr);
+        ctx.lineTo(p.x + rr, p.y + rr);
+        ctx.stroke();
+        ctx.restore();
+      }
     }
   }
 
@@ -1686,27 +1921,8 @@ export function renderFrame(
       const { left, top, width, height } = game.boardRect;
       clipPath.rect(left, top, width, height);
     }
-    // Obstacle hole subpaths are static per level — cached as a Path2D
-    // instead of re-tracing every (64-gon) polygon on every growth frame.
-    {
-      const holesKey = `${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}`;
-      if (_obstacleHolesCache.key !== holesKey || _obstacleHolesCache.polys !== obstacles) {
-        _obstacleHolesCache.key = holesKey;
-        _obstacleHolesCache.polys = obstacles;
-        const holes = new Path2D();
-        for (const poly of obstacles) {
-          const sv0 = w2s(poly.vertices[0].x, poly.vertices[0].y);
-          holes.moveTo(sv0.x, sv0.y);
-          for (let i = 1; i < poly.vertices.length; i++) {
-            const svp = w2s(poly.vertices[i].x, poly.vertices[i].y);
-            holes.lineTo(svp.x, svp.y);
-          }
-          holes.closePath();
-        }
-        _obstacleHolesCache.path = holes;
-      }
-      clipPath.addPath(_obstacleHolesCache.path!);
-    }
+    // Obstacle hole subpaths are static per level — cached (see helper).
+    clipPath.addPath(getObstacleHolesPath(obstacles, boardRect, scale));
     ctx.clip(clipPath, 'evenodd');
 
     ctx.lineCap = 'round';
@@ -1810,8 +2026,14 @@ export function renderFrame(
     ctx.clearRect(bl + bw, bt,       sw - (bl + bw), bh);
   }
 
-  // ── Space progress bar (drawn after clear so it sits below the board) ────
-  if (game.spaceGrid) {
+  // ── Space progress bar (drawn after clear so it sits below the board).
+  // Once the map is won it fades out over SPACE_BAR_FADE_MS - it must not sit
+  // under the board through the clear wave. It returns with the next map's
+  // fresh game state. ───────────────────────────────────────────────────────
+  const spaceBarFade = game.levelComplete
+    ? 1 - (performance.now() - (game.levelCompleteTime ?? 0)) / SPACE_BAR_FADE_MS
+    : 1;
+  if (game.spaceGrid && spaceBarFade > 0) {
     const remaining = getRemainingPercent(game.spaceGrid);
     const threshold = rctx.spaceThreshold;
     const captured = 100 - remaining;
@@ -1827,13 +2049,14 @@ export function renderFrame(
 
     // Track background
     ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.globalAlpha = spaceBarFade;
     ctx.fillRect(bl, barY, bw, barH);
 
     // Primary fill (left → right, accent/green)
     const fillW = bw * fillRatio;
     const isComplete = fillRatio >= 1;
     ctx.fillStyle = isComplete ? '#00ff44' : accentColor;
-    ctx.globalAlpha = 0.75;
+    ctx.globalAlpha = 0.75 * spaceBarFade;
     ctx.shadowColor = isComplete ? '#00ff44' : accentColor;
     ctx.shadowBlur = 3 * scale;
     ctx.fillRect(bl, barY, fillW, barH);
@@ -1845,7 +2068,7 @@ export function renderFrame(
       if (pushRatio > 0) {
         const pushW = bw * pushRatio;
         ctx.fillStyle = '#ff8800';
-        ctx.globalAlpha = 0.85;
+        ctx.globalAlpha = 0.85 * spaceBarFade;
         ctx.shadowColor = '#ff8800';
         ctx.shadowBlur = 5 * scale;
         ctx.fillRect(bl + bw - pushW, barY, pushW, barH);

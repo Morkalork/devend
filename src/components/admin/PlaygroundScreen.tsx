@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { getRenderer, setRenderer, RendererKind } from '@/lib/rendering/rendererSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight, Circle, Plus, Trash2 } from 'lucide-react';
 import yaml from 'js-yaml';
@@ -36,7 +37,6 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   bonusRemovalChance:               { label: 'Bonus Remove Chance',    kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Probability a fence triggers a bonus area removal (0–1)' },
   bonusRemovalAmount:               { label: 'Bonus Remove Amount',    kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Extra area removed when bonus triggers (fraction, 0–1)' },
   extraLives:                       { label: 'Extra Lives',            kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra lives granted immediately' },
-  scoreInterestRate:                { label: 'Score Interest Rate',    kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Fraction of score added as interest between maps' },
   extraShopItems:                   { label: 'Extra Shop Slots',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional item slots in the upgrade shop' },
   shopRestockCount:                 { label: 'Shop Restocks',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Purchases per shop visit that refill their slot with a new offer' },
   extraCertificateHours:          { label: 'Extra Cert. Hours',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Certificate Hours banked when the run ends' },
@@ -50,6 +50,33 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   ballFreezeDuration:               { label: 'Feature Freeze (s)',     kind: 'additive',       step: 2,    min: 0,    defaultValue: 0,    description: 'Feature Freeze: seconds a tapped ball stays frozen (0 = off)' },
   ballFreezeCount:                  { label: 'Cascade Freeze (+balls)',kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cascade Freeze: extra nearby balls frozen per tap (total = 1 + this)' },
   autoFreezeDuration:               { label: 'Cron Job (s)',           kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cron Job: seconds an auto-frozen ball stays frozen, fired every 10s (0 = off)' },
+  extraContinues:                   { label: 'Extra Continues',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra per-run revives beyond the base 1' },
+  showHighscoreProgress:            { label: 'Highscore Bar',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Benchmarking: show the map-highscore progress bar in the HUD (>0 = on)' },
+  overtimePerLock:                  { label: 'Overtime/Lock',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Severance Package: flat overtime hours added to the lock bonus per locked ball' },
+  fenceSpeedPerLock:                { label: 'Fence Speed/Lock',       kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Knowledge Transfer: fence-speed bonus per ball locked this map (0.04 = +4%)' },
+  frozenLockBonus:                  { label: 'Frozen Lock Bonus',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Frozen Assets: extra lock-bonus multiplier when locking a frozen ball (1 = double)' },
+  simultaneousLockBonus:            { label: 'Simul. Lock Bonus',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Chain Reaction set: every lock pass counts as this many balls bigger for the trap multiplier' },
+  freezeNoCooldown:                 { label: 'No Freeze Cooldown',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Absolute Zero set: >0 = balls can be re-frozen the moment they thaw' },
+  fenceSpeedPerFence:               { label: 'Fence Speed/Fence',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Continuous Delivery: fence-speed bonus per fence completed this map (0.04 = +4%)' },
+  underParInstantFence:             { label: 'Under-Par Carry',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Clean Release: instant fences granted on the next map after an under-par finish' },
+  bankedSlowPer50h:                 { label: 'Banked Slow/50h',        kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'War Chest: ball-speed reduction per 50h banked at map start (max 8%)' },
+  spaceBonusMultiplier:             { label: 'Space Bonus Mult.',      kind: 'multiplicative', step: 0.5,  min: 0.5,  defaultValue: 1,    description: 'Tech Evangelist: multiplies the space-optimization bonus payout' },
+  overtimeCapBonus:                 { label: 'Overtime Cap +',         kind: 'additive',       step: 5,    min: 0,    defaultValue: 0,    description: 'Stock Options capstone: raises the per-map overtime cap' },
+  freeCheapestOffer:                { label: 'Free Cheapest Offer',    kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Company Card capstone: >0 = the cheapest shop offer is free' },
+  wallShieldsPerMap:                { label: 'Fence Shields/Map',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Second Wind capstone: fence hits absorbed per map without losing a life' },
+  fenceGraceMs:                     { label: 'Fence Grace (ms)',       kind: 'additive',       step: 250,  min: 0,    defaultValue: 0,    description: 'Ghost Protocol capstone: growing fences ignore ball hits for their first N ms' },
+  shipEarlySecondsPerBall:          { label: 'Ship Early +s/Ball',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Deadline Extension: extra seconds per ball added to every Ship Early window' },
+  scopeCreepImmediate:              { label: 'Creep Immediate',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Hard Deadline door: >0 = Scope Creep surges start at second 0 (no grace window)' },
+  runwayInstantFenceAt:             { label: 'Runway Fence @h',        kind: 'additive',       step: 50,   min: 0,    defaultValue: 0,    description: 'Runway: bank threshold granting +1 instant fence per map while met (0 = off)' },
+  runwayConcurrentFenceAt:          { label: 'Runway Concurrent @h',   kind: 'additive',       step: 50,   min: 0,    defaultValue: 0,    description: 'Runway: bank threshold granting +1 concurrent fence while met (0 = off)' },
+  runwayFreezeAt:                   { label: 'Runway Freeze @h',       kind: 'additive',       step: 50,   min: 0,    defaultValue: 0,    description: 'Runway: bank threshold granting a 2s tap-freeze while met (0 = off)' },
+  spendInstantFencePerChunk:        { label: 'Spend Fence/Chunk',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Budget Cycle: instant fences on the next map per 60h spent in one shop visit' },
+  spendFenceSpeedPerChunk:          { label: 'Spend Fence Speed/Chunk',kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Budget Cycle: fence-speed bonus on the next map per 60h spent (0.05 = +5%)' },
+  shipEarlyBonusMultiplier:         { label: 'Ship Early Mult.',       kind: 'multiplicative', step: 0.5,  min: 0.5,  defaultValue: 1,    description: 'Hard Deadline door: multiplies the Ship Early payout' },
+  lockThresholdBonus:               { label: 'Lock Threshold +%',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Code Review: percentage points added to the lock threshold (pockets slightly over the limit still lock)' },
+  spawnFreezeSeconds:               { label: 'Spawn Freeze (s)',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cold Boot: seconds every ball stays frozen at map start' },
+  pickupChanceBonus:                { label: 'Pickup Chance +',        kind: 'additive',       step: 0.03, min: 0,    defaultValue: 0,    description: 'Benefits Package: extra pickup-token spawn chance per roll (0.03 = +3 points; only where pickups are enabled)' },
+  pickupPayoutLevel:                { label: 'Pickup Payout Lvl',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Total Compensation: +1h/+1s per level on token payouts, split balls 5% slower per level; level 3 = Fork splits into three' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)
@@ -121,6 +148,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [ballPickerOpen, setBallPickerOpen] = useState(false);
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
   const [showPerfOverlay, setShowPerfOverlay] = useState(false);
+  const [rendererKind, setRendererKind] = useState<RendererKind>(() => getRenderer());
   // Dev: on clear, play the desaturation drain then freeze on the drained frame;
   // click the board to reload. `frozen` arms the click-to-reload catcher.
   const [freezeOnClear, setFreezeOnClear] = useState(false);
@@ -511,7 +539,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             <Layers className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#a855f7' }} />
             <span
               className="flex-1 min-w-0 text-xs font-bold truncate"
-              style={{ fontFamily: 'Orbitron, sans-serif', color: '#a855f7' }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: '#a855f7' }}
             >
               L{selectedLevel.level}: {selectedLevel.id}
             </span>
@@ -673,7 +701,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                   <Layers className="w-4 h-4" style={{ color: '#a855f7' }} />
                   <span
                     className="font-black tracking-widest uppercase text-sm"
-                    style={{ fontFamily: 'Orbitron, sans-serif', color: '#a855f7' }}
+                    style={{ fontFamily: 'Michroma, sans-serif', color: '#a855f7' }}
                   >
                     Pick a Level
                   </span>
@@ -762,7 +790,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               <div className="flex items-center justify-between px-5 py-3 flex-shrink-0" style={{ borderBottom: `1px solid ${accent}33` }}>
                 <div className="flex items-center gap-2">
                   <Circle className="w-4 h-4" style={{ color: accent }} />
-                  <span className="font-black tracking-widest uppercase text-sm" style={{ fontFamily: 'Orbitron, sans-serif', color: accent }}>
+                  <span className="font-black tracking-widest uppercase text-sm" style={{ fontFamily: 'Michroma, sans-serif', color: accent }}>
                     Balls
                   </span>
                 </div>
@@ -821,10 +849,40 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                 </button>
               </div>
 
+              {/* Renderer toggle (Stage-A WebGL port; remounts the game) */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <button
+                  onClick={() => {
+                    const next: RendererKind = rendererKind === 'pixi' ? 'canvas2d' : 'pixi';
+                    setRenderer(next);
+                    setRendererKind(next);
+                    setGameKey(k => k + 1); // the flag is read at GameCanvas mount
+                  }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: rendererKind === 'pixi' ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${rendererKind === 'pixi' ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <span className="text-xs font-semibold" style={{ color: rendererKind === 'pixi' ? accent : 'hsl(var(--foreground))' }}>
+                    WebGL renderer (Pixi)
+                  </span>
+                  <span
+                    className="relative inline-flex items-center rounded-full transition-colors"
+                    style={{ width: 36, height: 20, backgroundColor: rendererKind === 'pixi' ? accent : 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span
+                      className="absolute rounded-full bg-white transition-all"
+                      style={{ width: 14, height: 14, top: 3, left: rendererKind === 'pixi' ? 19 : 3 }}
+                    />
+                  </span>
+                </button>
+              </div>
+
               {/* In-play balls (override if set, otherwise the level default) */}
               <div className="px-5 pt-4 flex-shrink-0">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: `${accent}99`, fontFamily: 'Orbitron, sans-serif' }}>
+                  <span className="text-[10px] uppercase tracking-widest font-bold" style={{ color: `${accent}99`, fontFamily: 'Michroma, sans-serif' }}>
                     In play ({effectiveBallIds.length}){ballTypeIds === null ? ' · level default' : ''}
                   </span>
                   {ballTypeIds !== null && (
@@ -948,7 +1006,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                   <SlidersHorizontal className="w-4 h-4" style={{ color: accent }} />
                   <span
                     className="font-black tracking-widest uppercase text-sm"
-                    style={{ fontFamily: 'Orbitron, sans-serif', color: accent }}
+                    style={{ fontFamily: 'Michroma, sans-serif', color: accent }}
                   >
                     Playground Modifiers
                   </span>
@@ -1035,7 +1093,7 @@ function ModifierSection({
       <div className="mb-3">
         <div
           className="text-xs font-bold uppercase tracking-widest"
-          style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor }}
+          style={{ fontFamily: 'Michroma, sans-serif', color: accentColor }}
         >
           {title}
         </div>

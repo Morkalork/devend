@@ -6,7 +6,9 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { X } from 'lucide-react';
 import { GameModifiers, ModifierSource, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
+import { SPEND_CHUNK_HOURS } from '@/lib/treasury';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
+import { getShipEarlyThresholds } from '@/lib/scoring';
 import { contentText } from '@/i18n/content';
 
 interface BottomBarDetailsPanelProps {
@@ -29,10 +31,13 @@ interface StatRow {
 
 /** Additive keys expressed as fractions (shown as percentages, not raw counts). */
 const FRACTIONAL_ADDITIVE_KEYS = new Set<keyof GameModifiers>([
-  'scoreInterestRate',
   'bonusRemovalChance',
   'bonusRemovalAmount',
   'microManagerPerLock',
+  'fenceSpeedPerLock',
+  'fenceSpeedPerFence',
+  'bankedSlowPer50h',
+  'spendFenceSpeedPerChunk',
 ]);
 
 /** Localized display name for a modifier source, by its kind. */
@@ -42,6 +47,9 @@ function sourceName(t: TFunction, s: ModifierSource): string {
     case 'certificate': return contentText.certName(t, s);
     case 'achievement': return contentText.achName(t, s);
     case 'loadout': return contentText.loadoutName(t, s);
+    case 'tagSet': return t('bottomBarDetails.tagSetSource', { name: contentText.tagSetName(t, s) });
+    case 'door': return t('bottomBarDetails.doorSource', { name: contentText.doorName(t, s) });
+    case 'capstone': return t('bottomBarDetails.capstoneSource', { name: contentText.capstoneName(t, s) });
     case 'ascension': return t('bottomBarDetails.ascensionSource', { depth: s.name });
     default: return s.name;
   }
@@ -86,6 +94,11 @@ export function BottomBarDetailsPanel({
   const m = activeModifiers;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
   const bonus = (v: number) => (v > 0 ? `+${v}` : `${v}`);
+
+  // Ship Early countdown: always-explained here so the on-board timer bar has a
+  // reference. Top rung drives the "up to +Nh" chip; the ladder derives from
+  // config so the copy can't drift from the actual payouts.
+  const shipEarlyTopBonus = getShipEarlyThresholds().reduce((mx, s) => Math.max(mx, s.bonus), 0);
 
   const microFactor =
     m.microManagerPerLock > 0 && lockedBalls > 0
@@ -168,14 +181,258 @@ export function BottomBarDetailsPanel({
           : t('bottomBarDetails.extraLivesInactive'),
     },
     {
-      label: t('bottomBarDetails.scoreInterest'),
-      value: pct(m.scoreInterestRate),
-      changed: m.scoreInterestRate !== 0,
-      keys: ['scoreInterestRate'],
+      label: t('bottomBarDetails.runwayInstantFence'),
+      value: m.runwayInstantFenceAt > 0 ? `${m.runwayInstantFenceAt}h+` : t('bottomBarDetails.off'),
+      changed: m.runwayInstantFenceAt !== 0,
+      keys: ['runwayInstantFenceAt'],
       description:
-        m.scoreInterestRate > 0
-          ? t('bottomBarDetails.scoreInterestActive', { rate: pct(m.scoreInterestRate) })
-          : t('bottomBarDetails.scoreInterestInactive'),
+        m.runwayInstantFenceAt > 0
+          ? t('bottomBarDetails.runwayInstantFenceActive', { hours: m.runwayInstantFenceAt })
+          : t('bottomBarDetails.runwayInactive'),
+    },
+    {
+      label: t('bottomBarDetails.runwayConcurrentFence'),
+      value: m.runwayConcurrentFenceAt > 0 ? `${m.runwayConcurrentFenceAt}h+` : t('bottomBarDetails.off'),
+      changed: m.runwayConcurrentFenceAt !== 0,
+      keys: ['runwayConcurrentFenceAt'],
+      description:
+        m.runwayConcurrentFenceAt > 0
+          ? t('bottomBarDetails.runwayConcurrentFenceActive', { hours: m.runwayConcurrentFenceAt })
+          : t('bottomBarDetails.runwayInactive'),
+    },
+    {
+      label: t('bottomBarDetails.runwayFreeze'),
+      value: m.runwayFreezeAt > 0 ? `${m.runwayFreezeAt}h+` : t('bottomBarDetails.off'),
+      changed: m.runwayFreezeAt !== 0,
+      keys: ['runwayFreezeAt'],
+      description:
+        m.runwayFreezeAt > 0
+          ? t('bottomBarDetails.runwayFreezeActive', { hours: m.runwayFreezeAt })
+          : t('bottomBarDetails.runwayInactive'),
+    },
+    {
+      label: t('bottomBarDetails.budgetCycle'),
+      value: m.spendInstantFencePerChunk > 0 || m.spendFenceSpeedPerChunk > 0
+        ? t('bottomBarDetails.budgetCycleValue', { hours: SPEND_CHUNK_HOURS })
+        : t('bottomBarDetails.off'),
+      changed: m.spendInstantFencePerChunk !== 0 || m.spendFenceSpeedPerChunk !== 0,
+      keys: ['spendInstantFencePerChunk', 'spendFenceSpeedPerChunk'],
+      description:
+        m.spendInstantFencePerChunk > 0 || m.spendFenceSpeedPerChunk > 0
+          ? t('bottomBarDetails.budgetCycleActive', { hours: SPEND_CHUNK_HOURS })
+          : t('bottomBarDetails.budgetCycleInactive'),
+    },
+    {
+      label: t('bottomBarDetails.overtimePerLock'),
+      value: bonus(m.overtimePerLock),
+      changed: m.overtimePerLock !== 0,
+      keys: ['overtimePerLock'],
+      description:
+        m.overtimePerLock > 0
+          ? t('bottomBarDetails.overtimePerLockActive', { hours: m.overtimePerLock })
+          : t('bottomBarDetails.overtimePerLockInactive'),
+    },
+    {
+      label: t('bottomBarDetails.frozenLockBonus'),
+      value: m.frozenLockBonus > 0 ? `x${1 + m.frozenLockBonus}` : t('bottomBarDetails.off'),
+      changed: m.frozenLockBonus !== 0,
+      keys: ['frozenLockBonus'],
+      description:
+        m.frozenLockBonus > 0
+          ? t('bottomBarDetails.frozenLockBonusActive', { mult: 1 + m.frozenLockBonus })
+          : t('bottomBarDetails.frozenLockBonusInactive'),
+    },
+    {
+      label: t('bottomBarDetails.lockThreshold'),
+      value: m.lockThresholdBonus > 0 ? `+${m.lockThresholdBonus}%` : t('bottomBarDetails.off'),
+      changed: m.lockThresholdBonus !== 0,
+      keys: ['lockThresholdBonus'],
+      description:
+        m.lockThresholdBonus > 0
+          ? t('bottomBarDetails.lockThresholdActive', { percent: m.lockThresholdBonus })
+          : t('bottomBarDetails.lockThresholdInactive'),
+    },
+    {
+      label: t('bottomBarDetails.spawnFreeze'),
+      value: m.spawnFreezeSeconds > 0 ? `${m.spawnFreezeSeconds}s` : t('bottomBarDetails.off'),
+      changed: m.spawnFreezeSeconds !== 0,
+      keys: ['spawnFreezeSeconds'],
+      description:
+        m.spawnFreezeSeconds > 0
+          ? t('bottomBarDetails.spawnFreezeActive', { seconds: m.spawnFreezeSeconds })
+          : t('bottomBarDetails.spawnFreezeInactive'),
+    },
+    {
+      // Deliberately vague (no percentages): Benefits Package is sold as
+      // "tokens appear more often", never as an exact number.
+      label: t('bottomBarDetails.pickupChance'),
+      value: m.pickupChanceBonus > 0 ? t('bottomBarDetails.on') : t('bottomBarDetails.off'),
+      changed: m.pickupChanceBonus !== 0,
+      keys: ['pickupChanceBonus'],
+      description:
+        m.pickupChanceBonus > 0
+          ? t('bottomBarDetails.pickupChanceActive')
+          : t('bottomBarDetails.pickupChanceInactive'),
+    },
+    {
+      label: t('bottomBarDetails.pickupPayout'),
+      value: m.pickupPayoutLevel > 0 ? `+${m.pickupPayoutLevel}` : t('bottomBarDetails.off'),
+      changed: m.pickupPayoutLevel !== 0,
+      keys: ['pickupPayoutLevel'],
+      description:
+        m.pickupPayoutLevel > 0
+          ? t('bottomBarDetails.pickupPayoutActive', { level: m.pickupPayoutLevel })
+          : t('bottomBarDetails.pickupPayoutInactive'),
+    },
+    {
+      label: t('bottomBarDetails.pushBonus'),
+      value: m.pushBonusMultiplier !== 1 ? `x${m.pushBonusMultiplier}` : t('bottomBarDetails.off'),
+      changed: m.pushBonusMultiplier !== 1,
+      keys: ['pushBonusMultiplier'],
+      description:
+        m.pushBonusMultiplier !== 1
+          ? t('bottomBarDetails.pushBonusActive', { mult: m.pushBonusMultiplier })
+          : t('bottomBarDetails.pushBonusInactive'),
+    },
+    {
+      label: t('bottomBarDetails.fenceSpeedPerLock'),
+      value: pct(m.fenceSpeedPerLock),
+      changed: m.fenceSpeedPerLock !== 0,
+      keys: ['fenceSpeedPerLock'],
+      description:
+        m.fenceSpeedPerLock > 0
+          ? t('bottomBarDetails.fenceSpeedPerLockActive', { percent: Math.round(m.fenceSpeedPerLock * 100) })
+          : t('bottomBarDetails.fenceSpeedPerLockInactive'),
+    },
+    {
+      label: t('bottomBarDetails.simultaneousLockBonus'),
+      value: bonus(m.simultaneousLockBonus),
+      changed: m.simultaneousLockBonus !== 0,
+      keys: ['simultaneousLockBonus'],
+      description:
+        m.simultaneousLockBonus > 0
+          ? t('bottomBarDetails.simultaneousLockBonusActive', { count: m.simultaneousLockBonus })
+          : t('bottomBarDetails.simultaneousLockBonusInactive'),
+    },
+    {
+      label: t('bottomBarDetails.freezeNoCooldown'),
+      value: m.freezeNoCooldown > 0 ? t('bottomBarDetails.on') : t('bottomBarDetails.off'),
+      changed: m.freezeNoCooldown !== 0,
+      keys: ['freezeNoCooldown'],
+      description:
+        m.freezeNoCooldown > 0
+          ? t('bottomBarDetails.freezeNoCooldownActive')
+          : t('bottomBarDetails.freezeNoCooldownInactive'),
+    },
+    {
+      label: t('bottomBarDetails.fenceSpeedPerFence'),
+      value: pct(m.fenceSpeedPerFence),
+      changed: m.fenceSpeedPerFence !== 0,
+      keys: ['fenceSpeedPerFence'],
+      description:
+        m.fenceSpeedPerFence > 0
+          ? t('bottomBarDetails.fenceSpeedPerFenceActive', { percent: Math.round(m.fenceSpeedPerFence * 100) })
+          : t('bottomBarDetails.fenceSpeedPerFenceInactive'),
+    },
+    {
+      label: t('bottomBarDetails.underParInstantFence'),
+      value: bonus(m.underParInstantFence),
+      changed: m.underParInstantFence !== 0,
+      keys: ['underParInstantFence'],
+      description:
+        m.underParInstantFence > 0
+          ? t('bottomBarDetails.underParInstantFenceActive', { count: m.underParInstantFence })
+          : t('bottomBarDetails.underParInstantFenceInactive'),
+    },
+    {
+      label: t('bottomBarDetails.bankedSlow'),
+      value: m.bankedSlowPer50h > 0 ? t('bottomBarDetails.bankedSlowValue', { percent: Math.round(m.bankedSlowPer50h * 100) }) : t('bottomBarDetails.off'),
+      changed: m.bankedSlowPer50h !== 0,
+      keys: ['bankedSlowPer50h'],
+      description:
+        m.bankedSlowPer50h > 0
+          ? t('bottomBarDetails.bankedSlowActive', { percent: Math.round(m.bankedSlowPer50h * 100) })
+          : t('bottomBarDetails.bankedSlowInactive'),
+    },
+    {
+      label: t('bottomBarDetails.spaceBonusMultiplier'),
+      value: pct(m.spaceBonusMultiplier),
+      changed: m.spaceBonusMultiplier !== 1,
+      keys: ['spaceBonusMultiplier'],
+      description:
+        m.spaceBonusMultiplier !== 1
+          ? t('bottomBarDetails.spaceBonusMultiplierActive', { mult: m.spaceBonusMultiplier })
+          : t('bottomBarDetails.spaceBonusMultiplierInactive'),
+    },
+    {
+      label: t('bottomBarDetails.overtimeCapBonus'),
+      value: bonus(m.overtimeCapBonus),
+      changed: m.overtimeCapBonus !== 0,
+      keys: ['overtimeCapBonus'],
+      description:
+        m.overtimeCapBonus > 0
+          ? t('bottomBarDetails.overtimeCapBonusActive', { hours: m.overtimeCapBonus })
+          : t('bottomBarDetails.overtimeCapBonusInactive'),
+    },
+    {
+      label: t('bottomBarDetails.freeCheapestOffer'),
+      value: m.freeCheapestOffer > 0 ? t('bottomBarDetails.on') : t('bottomBarDetails.off'),
+      changed: m.freeCheapestOffer !== 0,
+      keys: ['freeCheapestOffer'],
+      description:
+        m.freeCheapestOffer > 0
+          ? t('bottomBarDetails.freeCheapestOfferActive')
+          : t('bottomBarDetails.freeCheapestOfferInactive'),
+    },
+    {
+      label: t('bottomBarDetails.wallShieldsPerMap'),
+      value: bonus(m.wallShieldsPerMap),
+      changed: m.wallShieldsPerMap !== 0,
+      keys: ['wallShieldsPerMap'],
+      description:
+        m.wallShieldsPerMap > 0
+          ? t('bottomBarDetails.wallShieldsPerMapActive', { count: m.wallShieldsPerMap })
+          : t('bottomBarDetails.wallShieldsPerMapInactive'),
+    },
+    {
+      label: t('bottomBarDetails.fenceGrace'),
+      value: m.fenceGraceMs > 0 ? `${(m.fenceGraceMs / 1000).toFixed(1)}s` : t('bottomBarDetails.off'),
+      changed: m.fenceGraceMs !== 0,
+      keys: ['fenceGraceMs'],
+      description:
+        m.fenceGraceMs > 0
+          ? t('bottomBarDetails.fenceGraceActive', { seconds: (m.fenceGraceMs / 1000).toFixed(1) })
+          : t('bottomBarDetails.fenceGraceInactive'),
+    },
+    {
+      label: t('bottomBarDetails.shipEarlyWindow'),
+      value: m.shipEarlySecondsPerBall > 0 ? t('bottomBarDetails.shipEarlyWindowValue', { seconds: m.shipEarlySecondsPerBall }) : t('bottomBarDetails.off'),
+      changed: m.shipEarlySecondsPerBall !== 0,
+      keys: ['shipEarlySecondsPerBall'],
+      description:
+        m.shipEarlySecondsPerBall > 0
+          ? t('bottomBarDetails.shipEarlyWindowActive', { seconds: m.shipEarlySecondsPerBall })
+          : t('bottomBarDetails.shipEarlyWindowInactive'),
+    },
+    {
+      label: t('bottomBarDetails.shipEarlyMultiplier'),
+      value: m.shipEarlyBonusMultiplier !== 1 ? `x${m.shipEarlyBonusMultiplier}` : t('bottomBarDetails.off'),
+      changed: m.shipEarlyBonusMultiplier !== 1,
+      keys: ['shipEarlyBonusMultiplier'],
+      description:
+        m.shipEarlyBonusMultiplier !== 1
+          ? t('bottomBarDetails.shipEarlyMultiplierActive', { mult: m.shipEarlyBonusMultiplier })
+          : t('bottomBarDetails.shipEarlyMultiplierInactive'),
+    },
+    {
+      label: t('bottomBarDetails.scopeCreepImmediate'),
+      value: m.scopeCreepImmediate > 0 ? t('bottomBarDetails.on') : t('bottomBarDetails.off'),
+      changed: m.scopeCreepImmediate !== 0,
+      keys: ['scopeCreepImmediate'],
+      description:
+        m.scopeCreepImmediate > 0
+          ? t('bottomBarDetails.scopeCreepImmediateActive')
+          : t('bottomBarDetails.scopeCreepImmediateInactive'),
     },
     {
       label: t('bottomBarDetails.extraShopSlots'),
@@ -229,7 +486,7 @@ export function BottomBarDetailsPanel({
 
   const sectionHeadStyle: React.CSSProperties = {
     color: `${accentColor}88`,
-    fontFamily: 'Orbitron, sans-serif',
+    fontFamily: 'Michroma, sans-serif',
     letterSpacing: '0.15em',
     fontSize: '0.7rem',
     fontWeight: 700,
@@ -252,7 +509,7 @@ export function BottomBarDetailsPanel({
       >
         <h1
           className="text-xl font-black tracking-widest uppercase"
-          style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
+          style={{ fontFamily: 'Michroma, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
         >
           {t('bottomBarDetails.activeModifiers')}
         </h1>
@@ -273,6 +530,30 @@ export function BottomBarDetailsPanel({
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
+
+        {/* Ship Early countdown: always shown so the on-board timer bar (with its
+            white one-hour tick marks) is explained regardless of modifiers. */}
+        {shipEarlyTopBonus > 0 && (
+          <section>
+            <p style={sectionHeadStyle}>{t('bottomBarDetails.timingHead')}</p>
+            <div
+              className="rounded-lg p-4"
+              style={{ backgroundColor: `${accentColor}0d`, border: `1px solid ${accentColor}44` }}
+            >
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-bold text-sm" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
+                  {t('bottomBarDetails.shipEarlyCountdown')}
+                </span>
+                <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
+                  {t('bottomBarDetails.shipEarlyCountdownValue', { hours: shipEarlyTopBonus })}
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                {t('bottomBarDetails.shipEarlyCountdownDesc', { hours: shipEarlyTopBonus })}
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Active (non-default) modifiers */}
         {activeRows.length > 0 && (
@@ -306,7 +587,7 @@ export function BottomBarDetailsPanel({
 
                     {contributors.length > 0 && (
                       <div className="mt-2.5 pt-2.5 space-y-1" style={{ borderTop: `1px solid ${accentColor}22` }}>
-                        <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Orbitron, sans-serif' }}>
+                        <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Michroma, sans-serif' }}>
                           {t('bottomBarDetails.fromSources')}
                         </p>
                         {contributors.map(({ s, c }) => (

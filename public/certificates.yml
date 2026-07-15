@@ -102,15 +102,15 @@ certificates:
 
   - id: investment-strategy
     name: Investment Strategy
-    description: Permanent interest bonus on your score - a reward for mastering Venture Capital.
+    description: Your investments work for you, balls spawn 1% slower per 50h banked. A reward for mastering Runway.
     unlockType: upgrade-chain
     sourceUpgradeId: venture_capital_architect
     requiredRuns: 3
     levels:
       - cost: 4
-        effect: { type: scoreInterestRate, value: 0.03 }
+        effect: { type: bankedSlowPer50h, value: 0.01 }
       - cost: 7
-        effect: { type: scoreInterestRate, value: 0.03 }
+        effect: { type: bankedSlowPer50h, value: 0.01 }
 
   - id: process-optimiser
     name: Process Optimiser

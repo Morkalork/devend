@@ -1,7 +1,7 @@
 import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
 
-export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'admin' | 'mapBuilder' | 'animationTest';
+export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'doorDraft' | 'capstoneDraft' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'admin' | 'mapBuilder' | 'animationTest';
 
 /** Progress of the interactive "draw your first fence" tutorial on level 1. */
 export type TutorialStep = 'showingHint' | 'waitingForSuccessfulCut' | 'completed';
@@ -45,7 +45,9 @@ export interface Ball {
   assimColorFade: number; // 0→1 fade from ball color to accent color (default 0)
   prevPosition?: Vector2;    // position at start of last fixed physics step (for interpolation)
   renderPosition?: Vector2;  // interpolated render position (set each frame, used by render only)
-  trailPositions?: Vector2[]; // last N render positions for motion trail (screen-space world coords)
+  trailPositions?: Vector2[]; // ring buffer of last N render positions for motion trail (world coords); slots reused in place
+  trailHead?: number;         // ring-buffer write cursor (index of the next slot to overwrite)
+  trailCount?: number;        // number of valid entries in the ring buffer (<= its length)
   // ── Feature Freeze upgrade (tap-to-freeze) ──────────────────────────────
   frozenUntil?: number;      // performance.now() timestamp until which the ball is held still (tap-frozen)
   freezeReadyAt?: number;    // performance.now() timestamp before which the ball cannot be re-frozen (cooldown)
@@ -124,13 +126,17 @@ export interface LockDustParticle {
 
 export interface LockFlashState {
   ballId: string;
-  cellIndices: number[]; // space-grid cell indices (kept for centroid / dust origin)
-  polygon: Vector2[];    // exact boundary polygon built from wall intersections
+  cellIndices: number[]; // captured cells of the locked pocket (source for `contours`)
+  contours: Vector2[][]; // Chaikin-smoothed outline loops of the pocket; the flash fills these (even-odd)
   centroid: Vector2;
   startTime: number;
   ballPos: Vector2;      // ball position at moment of lock
   ballColor: string;     // ball colour for dust tint
   particles: LockDustParticle[];
+  /** True when this lock was the player's first-ever capture of this ball type
+   *  (tutorial ball-types intel). Draws a rising "Info Unlocked" flash above the
+   *  ball on top of the usual lock animation. */
+  firstEncounter: boolean;
 }
 
 export interface DissolveTile {
@@ -146,6 +152,9 @@ export interface DissolveState {
   tiles: DissolveTile[];
   startTime: number;
   onComplete: () => void;
+  /** True runs the tile animation backwards: the board ASSEMBLES from
+   *  scattered tiles instead of shattering (run-start intro). */
+  reverse?: boolean;
 }
 
 // ── Destructible objects (issue #37 Phase 2: black ball) ──────────────────
@@ -237,6 +246,18 @@ export interface LevelScoreData {
   lockedBallsCount?: number;
   // Bonus from smashing breakable objects (issue #38)
   breakBonus?: number;
-  // Interest gain from Venture Capital
-  interestGain?: number;
+  // Ship Early tempo bonus (folded under the cap like lock/push/break)
+  shipEarlyBonus?: number;
+  // Pickup overtime tokens claimed this map (paid AFTER the per-map cap)
+  pickupBonus?: number;
+  // Active-play seconds to first meet the win condition (drives the row label)
+  clearTimeSeconds?: number;
+  // Map highscore (#45): set when this map's score beat its previous highscore.
+  beatHighscore?: boolean;
+  previousHighscore?: number; // the record that was beaten (for display)
+  highscoreBonus?: number;    // extra score credited for beating it
+  // True when the map was won by locking every ball (an auto-win). The board
+  // fully drains once no ball is left in play, so "remaining space" is 0% and
+  // meaningless here - the results screen hides the Remaining row.
+  wonByAllLocked?: boolean;
 }

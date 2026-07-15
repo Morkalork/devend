@@ -5,14 +5,63 @@
 # Prices therefore scale automatically as new maps/upgrades are added.
 # An explicit `cost:` on an upgrade overrides the formula (used for the
 # ascension trio, whose post-L30 economy is tuned separately).
+#
+# Build archetypes (`tags`): every upgrade carries one or two tags — lock,
+# freeze, bank, tempo, risk, safety. The shop weights its random offers toward
+# tags the player already owns (draft coherence), and the card shows the tags
+# as chips. See UpgradeTag in src/types/upgrade.ts.
 pricing:
   minCost: 8
+  # Market rates: effective prices multiply by this per completed 5-level
+  # assignment block (levels 1-5 at face value, 6-10 x1.35, 11-15 x1.82...).
+  # Keeps the flat per-map income scarce late-run. 1 disables inflation.
+  blockInflation: 1.35
+  # Factors are tuned against the lock-centric economy: base points is 20, so
+  # a Junior costs 40h. A no-lock clear (20h) can never afford one; locking
+  # the map's balls (10h+ each, see scoring-config.yml lockValue) can.
   tierFactor:
-    Junior: 1.0
-    Senior: 1.35
-    Principal: 1.85
-    Architect: 2.4
-    Wizard: 3.0
+    Junior: 2.0
+    Senior: 2.7
+    Principal: 3.7
+    Architect: 4.8
+    Wizard: 6.0
+
+# Set bonuses: auto-granted for free while the player owns `threshold`
+# upgrades of a tag. One per archetype, giving every build direction a goal.
+# Modifiers use the same GameModifiers keys as upgrades.
+tagSets:
+  threshold: 3
+  bonuses:
+    - tag: lock
+      name: Chain Reaction
+      description: Every lock counts as one ball bigger for the simultaneous-trap multiplier.
+      modifiers:
+        simultaneousLockBonus: 1
+    - tag: freeze
+      name: Absolute Zero
+      description: Frozen balls can be re-frozen immediately, no cooldown.
+      modifiers:
+        freezeNoCooldown: 1
+    - tag: bank
+      name: Framework Agreement
+      description: All shop prices drop by 10%.
+      modifiers:
+        shopDiscountMultiplier: 0.9
+    - tag: tempo
+      name: Ship It
+      description: Draw one additional fence at the same time.
+      modifiers:
+        additionalConcurrentFences: 1
+    - tag: risk
+      name: Double Or Nothing
+      description: Push-your-luck payouts are doubled.
+      modifiers:
+        pushBonusMultiplier: 2
+    - tag: safety
+      name: Insurance Policy
+      description: Gain 1 extra Continue.
+      modifiers:
+        extraContinues: 1
 
 upgrades:
 
@@ -26,6 +75,7 @@ upgrades:
     description: Reduce ball speed by 5%.
     unlockLevel: 1
     icon: clock
+    tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.95
 
@@ -36,6 +86,7 @@ upgrades:
     unlockLevel: 3
     prerequisites:
       - runtime_optimisation_junior
+    tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.90
 
@@ -46,6 +97,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - runtime_optimisation_senior
+    tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.85
 
@@ -60,6 +112,7 @@ upgrades:
     description: Reduce ball size by 5%.
     unlockLevel: 1
     icon: memory
+    tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.95
 
@@ -70,6 +123,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - memory_footprint_junior
+    tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.90
 
@@ -80,8 +134,28 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - memory_footprint_senior
+    tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.85
+
+  # ===============================
+  # BENCHMARKING (Highscore progress bar, #45)
+  # Needs Memory Footprint (ball size). One tier: adds a second HUD bar tracking
+  # your live score against the map highscore, so you can see how close you are
+  # to beating it (and the beat-highscore bonus).
+  # ===============================
+
+  - id: benchmarking_junior
+    name: Benchmarking
+    tier: Senior
+    description: Adds a HUD bar tracking your live score against the map highscore.
+    unlockLevel: 3
+    prerequisites:
+      - memory_footprint_junior
+    icon: trending-up
+    tags: [risk]
+    modifiers:
+      showHighscoreProgress: 1
 
 
   # ===============================
@@ -94,6 +168,7 @@ upgrades:
     description: Increase fence generation speed by 10%.
     unlockLevel: 1
     icon: fast-forward
+    tags: [tempo]
     modifiers:
       fenceGenerationSpeedMultiplier: 1.10
 
@@ -104,6 +179,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - fast_compile_junior
+    tags: [tempo]
     modifiers:
       fenceGenerationSpeedMultiplier: 1.20
 
@@ -114,6 +190,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - fast_compile_senior
+    tags: [tempo]
     modifiers:
       fenceGenerationSpeedMultiplier: 1.30
 
@@ -130,6 +207,7 @@ upgrades:
     prerequisites:
       - fast_compile_senior
     icon: flame
+    tags: [tempo]
     modifiers:
       instantFencesPerMap: 1
 
@@ -140,6 +218,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - hot_start_junior
+    tags: [tempo]
     modifiers:
       instantFencesPerMap: 2
 
@@ -150,6 +229,7 @@ upgrades:
     unlockLevel: 20
     prerequisites:
       - hot_start_principal
+    tags: [tempo]
     modifiers:
       instantFencesPerMap: 3
 
@@ -166,6 +246,7 @@ upgrades:
     prerequisites:
       - fast_compile_senior
     icon: split
+    tags: [tempo]
     modifiers:
       additionalConcurrentFences: 1
 
@@ -177,6 +258,7 @@ upgrades:
     prerequisites:
       - multithreading_principal
     icon: layers
+    tags: [tempo]
     modifiers:
       additionalConcurrentFences: 1
 
@@ -193,6 +275,7 @@ upgrades:
     prerequisites:
       - memory_footprint_senior
     icon: trash
+    tags: [tempo, risk]
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.05
@@ -205,6 +288,7 @@ upgrades:
     prerequisites:
       - garbage_collector_senior
     icon: recycle
+    tags: [tempo, risk]
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.10
@@ -212,6 +296,7 @@ upgrades:
 
   # ===============================
   # FAULT TOLERANCE (Lives)
+  # A track head: the safety line no longer hides behind the shop-slot upgrade.
   # ===============================
 
   - id: fault_tolerance_junior
@@ -219,9 +304,8 @@ upgrades:
     tier: Junior
     description: Gain 1 extra life.
     unlockLevel: 5
-    prerequisites:
-      - system_architect
     icon: heart
+    tags: [safety]
     modifiers:
       extraLives: 1
 
@@ -232,6 +316,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - fault_tolerance_junior
+    tags: [safety]
     modifiers:
       extraLives: 2
 
@@ -242,6 +327,7 @@ upgrades:
     unlockLevel: 15
     prerequisites:
       - fault_tolerance_senior
+    tags: [safety]
     modifiers:
       extraLives: 3
 
@@ -256,6 +342,7 @@ upgrades:
     description: Gain 5% more overtime per map.
     unlockLevel: 2
     icon: trending-up
+    tags: [bank]
     modifiers:
       scoreMultiplier: 1.05
 
@@ -266,6 +353,7 @@ upgrades:
     unlockLevel: 5
     prerequisites:
       - performance_bonus_junior
+    tags: [bank]
     modifiers:
       scoreMultiplier: 1.10
 
@@ -276,44 +364,52 @@ upgrades:
     unlockLevel: 8
     prerequisites:
       - performance_bonus_senior
+    tags: [bank]
     modifiers:
       scoreMultiplier: 1.15
 
 
   # ===============================
-  # VENTURE CAPITAL (Interest)
+  # RUNWAY (reworked Venture Capital; ids kept for save-compat)
+  # Hoard-side treasury perks: while the bank sits at/above the threshold when
+  # a map starts, the perk applies (see src/lib/treasury.ts). Paid in
+  # consistency, never score, so the flat economy stays intact. The tension
+  # against Budget Cycle (spend-side) is the bank archetype's identity.
   # ===============================
 
   - id: venture_capital_senior
-    name: Venture Capital
+    name: Runway
     tier: Senior
-    description: 10% interest on unused overtime between maps.
+    description: While you have 100h or more banked, one fence completes instantly at each map start.
     unlockLevel: 6
     prerequisites:
       - performance_bonus_senior
     icon: piggy-bank
+    tags: [bank]
     modifiers:
-      scoreInterestRate: 0.10
+      runwayInstantFenceAt: 100
 
   - id: venture_capital_principal
-    name: Venture Capital
+    name: Runway
     tier: Principal
-    description: 20% interest on unused overtime between maps.
+    description: While you have 200h or more banked, you can grow one extra fence at a time.
     unlockLevel: 7
     prerequisites:
       - venture_capital_senior
+    tags: [bank]
     modifiers:
-      scoreInterestRate: 0.20
+      runwayConcurrentFenceAt: 200
 
   - id: venture_capital_architect
-    name: Venture Capital
+    name: Runway
     tier: Architect
-    description: 30% interest on unused overtime between maps.
+    description: While you have 300h or more banked, tap a ball to freeze it for 2 seconds.
     unlockLevel: 11
     prerequisites:
       - venture_capital_principal
+    tags: [bank]
     modifiers:
-      scoreInterestRate: 0.30
+      runwayFreezeAt: 300
 
 
   # ===============================
@@ -332,25 +428,296 @@ upgrades:
     prerequisites:
       - runtime_optimisation_senior
     icon: sliders
+    tags: [lock]
     cost: 200
     modifiers:
       microManagerPerLock: 0.01
 
 
   # ===============================
+  # CODE REVIEW (Lock threshold)
+  # The lock archetype's early opener: pockets slightly larger than the lock
+  # limit still count, so early lock attempts land instead of missing by a
+  # hair. Folded into lockWinThresholdPercent (base 10, see game-config.yml).
+  # ===============================
+
+  - id: code_review
+    name: Code Review
+    tier: Junior
+    description: Sloppy pockets still count, a pocket up to 3% larger than the lock limit still locks its ball.
+    unlockLevel: 2
+    icon: clipboard-check
+    tags: [lock]
+    modifiers:
+      lockThresholdBonus: 3
+
+
+  # ===============================
+  # SEVERANCE PACKAGE (Lock payoff)
+  # Head of the lock archetype: turns every locked ball into flat overtime.
+  # The bonus folds under the per-map cap with the rest of the lock bonus.
+  # ===============================
+
+  - id: severance_package_junior
+    name: Severance Package
+    tier: Junior
+    description: Each ball you lock away pays 5 bonus overtime hours (counted under the map cap).
+    unlockLevel: 6
+    icon: banknote
+    tags: [lock]
+    modifiers:
+      overtimePerLock: 5
+
+  - id: severance_package_senior
+    name: Severance Package
+    tier: Senior
+    description: Locked balls now pay 10 bonus overtime hours each.
+    unlockLevel: 12
+    prerequisites:
+      - severance_package_junior
+    tags: [lock]
+    modifiers:
+      overtimePerLock: 5
+
+
+  # ===============================
+  # KNOWLEDGE TRANSFER (Lock -> Tempo)
+  # Cross-archetype payoff: locks convert into fence speed for the map.
+  # ===============================
+
+  - id: knowledge_transfer_senior
+    name: Knowledge Transfer
+    tier: Senior
+    description: Each ball locked away speeds up fence generation by 4% for the rest of the map.
+    unlockLevel: 7
+    prerequisites:
+      - severance_package_junior
+    icon: book-open
+    tags: [lock, tempo]
+    modifiers:
+      fenceSpeedPerLock: 0.04
+
+
+  # ===============================
+  # FROZEN ASSETS (Freeze -> Lock)
+  # The freeze archetype's payoff: freezing is no longer just a panic button,
+  # a ball locked while frozen pays a multiplied lock bonus.
+  # ===============================
+
+  - id: frozen_assets_senior
+    name: Frozen Assets
+    tier: Senior
+    description: Locking a ball while it is frozen pays double the lock bonus.
+    unlockLevel: 8
+    prerequisites:
+      - feature_freeze_junior
+    icon: gem
+    tags: [freeze, lock]
+    modifiers:
+      frozenLockBonus: 1
+
+  - id: frozen_assets_principal
+    name: Frozen Assets
+    tier: Principal
+    description: Locking a ball while it is frozen now pays triple the lock bonus.
+    unlockLevel: 16
+    prerequisites:
+      - frozen_assets_senior
+    tags: [freeze, lock]
+    modifiers:
+      frozenLockBonus: 1
+
+
+  # ===============================
+  # EXPENSE ACCOUNT & WAR CHEST (Bank payoffs)
+  # Bank stops being "number goes up": cheaper shopping keeps the bank fat,
+  # and War Chest converts a fat bank into a calmer board.
+  # ===============================
+
+  - id: expense_account
+    name: Expense Account
+    tier: Senior
+    description: All shop prices are 10% lower for the rest of the run.
+    unlockLevel: 9
+    prerequisites:
+      - performance_bonus_junior
+    icon: receipt
+    tags: [bank]
+    modifiers:
+      shopDiscountMultiplier: 0.9
+
+  - id: war_chest
+    name: War Chest
+    tier: Principal
+    description: Balls spawn 2% slower for every 50h banked at map start, up to 8%. Hoard it.
+    unlockLevel: 13
+    prerequisites:
+      - venture_capital_senior
+    icon: vault
+    tags: [bank]
+    modifiers:
+      bankedSlowPer50h: 0.02
+
+
+  # ===============================
+  # BUDGET CYCLE (Bank spend payoff)
+  # Spend-side treasury: hours spent in ONE shop visit charge next-map boons in
+  # 60h chunks, max 3 counted (src/lib/treasury.ts). Pulls directly against
+  # Runway's hoard thresholds: a splurge can drop the bank below a threshold
+  # while charging these.
+  # ===============================
+
+  - id: budget_cycle_junior
+    name: Budget Cycle
+    tier: Junior
+    description: Every spending chunk in one shop visit buys an instant fence on the next map. Chunks start at 60h and grow with market rates.
+    unlockLevel: 10
+    prerequisites:
+      - expense_account
+    icon: shopping-cart
+    tags: [bank]
+    modifiers:
+      spendInstantFencePerChunk: 1
+
+  - id: budget_cycle_senior
+    name: Budget Cycle
+    tier: Senior
+    description: Each spending chunk in one shop visit also speeds fence growth 5% on the next map.
+    unlockLevel: 13
+    prerequisites:
+      - budget_cycle_junior
+    tags: [bank]
+    modifiers:
+      spendFenceSpeedPerChunk: 0.05
+
+
+  # ===============================
+  # CLEAN RELEASE & CONTINUOUS DELIVERY (Tempo payoffs)
+  # Tempo pays off skilled play: finishing under par snowballs into the next
+  # map, and every completed fence accelerates the next one.
+  # ===============================
+
+  - id: clean_release
+    name: Clean Release
+    tier: Senior
+    description: Finish a map under par and the next map starts with 1 extra instant fence.
+    unlockLevel: 6
+    prerequisites:
+      - fast_compile_junior
+    icon: rocket
+    tags: [tempo]
+    modifiers:
+      underParInstantFence: 1
+
+  - id: continuous_delivery
+    name: Continuous Delivery
+    tier: Principal
+    description: Each fence you complete speeds up the next one by 4% for the rest of the map.
+    unlockLevel: 11
+    prerequisites:
+      - clean_release
+    icon: infinity
+    tags: [tempo]
+    modifiers:
+      fenceSpeedPerFence: 0.04
+
+
+  # ===============================
+  # DEADLINE EXTENSION (Ship Early window extender)
+  # Buys time on the Ship Early countdown: each tier adds +2 seconds PER BALL
+  # to every bonus window, so slower tacticians can still chase the tempo
+  # payout. Available once the time factor has had a few maps to teach itself.
+  # ===============================
+
+  - id: deadline_extension_junior
+    name: Deadline Extension
+    tier: Junior
+    description: Every Ship Early bonus window lasts 2 seconds longer per ball on the map.
+    unlockLevel: 10
+    icon: timer
+    tags: [tempo]
+    modifiers:
+      shipEarlySecondsPerBall: 2
+
+  - id: deadline_extension_senior
+    name: Deadline Extension
+    tier: Senior
+    description: Ship Early windows now last 4 seconds longer per ball.
+    unlockLevel: 13
+    prerequisites:
+      - deadline_extension_junior
+    tags: [tempo]
+    modifiers:
+      shipEarlySecondsPerBall: 2
+
+  - id: deadline_extension_principal
+    name: Deadline Extension
+    tier: Principal
+    description: Ship Early windows now last 6 seconds longer per ball.
+    unlockLevel: 16
+    prerequisites:
+      - deadline_extension_senior
+    tags: [tempo]
+    modifiers:
+      shipEarlySecondsPerBall: 2
+
+
+  # ===============================
+  # RISK APPETITE & TECH EVANGELIST (Risk payoffs)
+  # The greed line: bigger push-your-luck chunks, bigger space-clear bonuses.
+  # ===============================
+
+  - id: moonshot
+    name: Moonshot
+    tier: Junior
+    description: Push-your-luck payouts are 25% larger.
+    unlockLevel: 3
+    icon: orbit
+    tags: [risk]
+    modifiers:
+      pushBonusMultiplier: 1.25
+
+  - id: risk_appetite
+    name: Risk Appetite
+    tier: Senior
+    description: Push-your-luck payouts are 50% larger.
+    unlockLevel: 7
+    prerequisites:
+      - technical_debt_senior
+    icon: dices
+    tags: [risk]
+    modifiers:
+      pushBonusMultiplier: 1.5
+
+  - id: tech_evangelist
+    name: Tech Evangelist
+    tier: Principal
+    description: Space Optimization bonuses pay double.
+    unlockLevel: 12
+    prerequisites:
+      - risk_appetite
+    icon: megaphone
+    tags: [risk]
+    modifiers:
+      spaceBonusMultiplier: 2
+
+
+  # ===============================
   # PROCUREMENT (Shop Restocking)
   # Each tier adds one restock: buying an item in the store
   # refills its slot with a new offer, N times per visit.
+  # Gated behind System Architect (the shop line), not the lives line.
   # ===============================
 
   - id: procurement_junior
     name: Procurement
     tier: Junior
     description: Once per store visit, buying an item adds a new offer to the shelf.
-    unlockLevel: 3
+    unlockLevel: 5
     prerequisites:
-      - fault_tolerance_senior
+      - system_architect
     icon: package-plus
+    tags: [bank]
     modifiers:
       shopRestockCount: 1
 
@@ -361,6 +728,7 @@ upgrades:
     unlockLevel: 7
     prerequisites:
       - procurement_junior
+    tags: [bank]
     modifiers:
       shopRestockCount: 1
 
@@ -371,6 +739,7 @@ upgrades:
     unlockLevel: 12
     prerequisites:
       - procurement_senior
+    tags: [bank]
     modifiers:
       shopRestockCount: 1
 
@@ -385,6 +754,7 @@ upgrades:
     description: Gain one additional shop item slot.
     unlockLevel: 4
     icon: building
+    tags: [bank]
     modifiers:
       extraShopItems: 1
 
@@ -396,12 +766,14 @@ upgrades:
     prerequisites:
       - technical_debt_principal
     icon: graduation-cap
+    tags: [bank]
     modifiers:
       extraCertificateHours: 1
 
 
   # ===============================
   # TECHNICAL DEBT (Score + Speed tradeoff)
+  # Head of the risk archetype: no longer gated behind Venture Capital.
   # ===============================
 
   - id: technical_debt_senior
@@ -409,9 +781,8 @@ upgrades:
     tier: Senior
     description: Earn 20% more overtime per map - but balls move 8% faster. Short-term gain, long-term pain.
     unlockLevel: 4
-    prerequisites:
-      - venture_capital_principal
     icon: credit-card
+    tags: [risk]
     modifiers:
       scoreMultiplier: 1.20
       ballSpeedMultiplier: 1.08
@@ -423,6 +794,7 @@ upgrades:
     unlockLevel: 8
     prerequisites:
       - technical_debt_senior
+    tags: [risk]
     modifiers:
       scoreMultiplier: 1.35
       ballSpeedMultiplier: 1.15
@@ -434,6 +806,7 @@ upgrades:
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
+    tags: [risk]
     modifiers:
       scoreMultiplier: 1.50
       ballSpeedMultiplier: 1.25
@@ -449,6 +822,7 @@ upgrades:
     description: Gain 1 extra life and shrink all balls by 8%. Safety first.
     unlockLevel: 5
     icon: shield
+    tags: [safety]
     modifiers:
       extraLives: 1
       ballSizeMultiplier: 0.92
@@ -460,6 +834,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - defensive_programming_junior
+    tags: [safety]
     modifiers:
       extraLives: 2
       ballSizeMultiplier: 0.92
@@ -471,6 +846,7 @@ upgrades:
     unlockLevel: 20
     prerequisites:
       - defensive_programming_senior
+    tags: [safety]
     modifiers:
       extraLives: 3
       ballSizeMultiplier: 0.92
@@ -486,6 +862,7 @@ upgrades:
     description: Preview the next 2 bounces of the fastest ball's path.
     unlockLevel: 4
     icon: route
+    tags: [safety]
     modifiers:
       ballPathPredictionBounces: 2
       ballPathPredictionBalls: 1
@@ -497,6 +874,7 @@ upgrades:
     unlockLevel: 7
     prerequisites:
       - scrum_master_1
+    tags: [safety]
     modifiers:
       ballPathPredictionBalls: 1
 
@@ -507,6 +885,7 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - scrum_master_2
+    tags: [safety]
     modifiers:
       ballPathPredictionBalls: 1
 
@@ -517,6 +896,7 @@ upgrades:
     unlockLevel: 13
     prerequisites:
       - scrum_master_3
+    tags: [safety]
     modifiers:
       ballPathPredictionBounces: 1
 
@@ -527,6 +907,7 @@ upgrades:
     unlockLevel: 16
     prerequisites:
       - scrum_master_4
+    tags: [safety]
     modifiers:
       ballPathPredictionBounces: 1
 
@@ -537,13 +918,34 @@ upgrades:
     unlockLevel: 19
     prerequisites:
       - scrum_master_5
+    tags: [safety]
     modifiers:
       ballPathPredictionBalls: 999
+
+  # ===============================
+  # COLD BOOT (Spawn freeze)
+  # The freeze archetype's early opener: every map starts with all balls
+  # frozen for a moment, a planning beat to line up the first cut (which is
+  # also how you hit the top Ship Early window). Rides the same frozenUntil
+  # path as Feature Freeze; no re-freeze cooldown after the spawn thaw.
+  # ===============================
+
+  - id: cold_boot
+    name: Cold Boot
+    tier: Junior
+    description: Every map boots frozen, all balls hold still for the first 2 seconds.
+    unlockLevel: 3
+    icon: power
+    tags: [freeze]
+    modifiers:
+      spawnFreezeSeconds: 2
+
 
   # ===============================
   # FEATURE FREEZE (Tap-to-freeze a ball)
   # Tap any ball to halt it in place. After it thaws, that ball briefly
   # can't be re-frozen (cooldown = freeze duration × 2). Durations stack.
+  # Head of the freeze archetype: no longer gated behind SCRUM Master.
   # ===============================
 
   - id: feature_freeze_junior
@@ -551,9 +953,8 @@ upgrades:
     tier: Junior
     description: Tap a ball to freeze it in place for 2 seconds.
     unlockLevel: 4
-    prerequisites:
-      - scrum_master_2
     icon: snowflake
+    tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
 
@@ -564,6 +965,7 @@ upgrades:
     unlockLevel: 8
     prerequisites:
       - feature_freeze_junior
+    tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
 
@@ -574,6 +976,7 @@ upgrades:
     unlockLevel: 14
     prerequisites:
       - feature_freeze_senior
+    tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
 
@@ -592,6 +995,7 @@ upgrades:
     prerequisites:
       - feature_freeze_principal
     icon: cloud-snow
+    tags: [freeze]
     modifiers:
       ballFreezeCount: 1
 
@@ -602,6 +1006,7 @@ upgrades:
     unlockLevel: 18
     prerequisites:
       - cascade_freeze_junior
+    tags: [freeze]
     modifiers:
       ballFreezeCount: 1
 
@@ -612,6 +1017,7 @@ upgrades:
     unlockLevel: 22
     prerequisites:
       - cascade_freeze_senior
+    tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
 
@@ -630,6 +1036,7 @@ upgrades:
     prerequisites:
       - feature_freeze_principal
     icon: calendar-clock
+    tags: [freeze]
     modifiers:
       autoFreezeDuration: 3
 
@@ -640,6 +1047,7 @@ upgrades:
     unlockLevel: 22
     prerequisites:
       - cron_job_senior
+    tags: [freeze]
     modifiers:
       autoFreezeDuration: 1
 
@@ -650,8 +1058,92 @@ upgrades:
     unlockLevel: 24
     prerequisites:
       - cron_job_principal
+    tags: [freeze]
     modifiers:
       autoFreezeDuration: 1
+
+
+  # ===============================
+  # BENEFITS PACKAGE (Pickup spawn chance)
+  # Power-up tokens spawn on a low base chance (game-config.yml pickups:).
+  # Each tier adds +3 percentage points to the roll. The copy is deliberately
+  # vague - the player should feel tokens appearing more often, not do math.
+  # ===============================
+
+  - id: benefits_package_junior
+    name: Benefits Package
+    tier: Junior
+    description: Power-up tokens appear slightly more often.
+    unlockLevel: 8
+    icon: gift
+    tags: [risk]
+    modifiers:
+      pickupChanceBonus: 0.03
+
+  - id: benefits_package_senior
+    name: Benefits Package
+    tier: Senior
+    description: Power-up tokens appear more often still.
+    unlockLevel: 11
+    prerequisites:
+      - benefits_package_junior
+    tags: [risk]
+    modifiers:
+      pickupChanceBonus: 0.03
+
+  - id: benefits_package_principal
+    name: Benefits Package
+    tier: Principal
+    description: Power-up tokens turn up noticeably more often.
+    unlockLevel: 14
+    prerequisites:
+      - benefits_package_senior
+    tags: [risk]
+    modifiers:
+      pickupChanceBonus: 0.03
+
+
+  # ===============================
+  # TOTAL COMPENSATION (Pickup payout enhancer)
+  # Gated behind a fully upgraded Benefits Package. Each level improves EVERY
+  # token payout: +1h on overtime and cap tokens, +1s on freeze charges, and
+  # the Fork's split balls fly 5% slower per level (never below their type's
+  # minimum speed). At level 3 the Fork splits a ball into THREE.
+  # ===============================
+
+  - id: total_compensation_junior
+    name: Total Compensation
+    tier: Junior
+    description: Every power-up pays out better, and split balls come out slower.
+    unlockLevel: 15
+    prerequisites:
+      - benefits_package_principal
+    icon: crown
+    tags: [risk]
+    modifiers:
+      pickupPayoutLevel: 1
+
+  - id: total_compensation_senior
+    name: Total Compensation
+    tier: Senior
+    description: Power-up payouts rise again, and split balls slow down further.
+    unlockLevel: 17
+    prerequisites:
+      - total_compensation_junior
+    tags: [risk]
+    modifiers:
+      pickupPayoutLevel: 1
+
+  - id: total_compensation_principal
+    name: Total Compensation
+    tier: Principal
+    description: Peak perks. The ball splitter now splits a ball into three.
+    unlockLevel: 19
+    prerequisites:
+      - total_compensation_senior
+    tags: [risk]
+    modifiers:
+      pickupPayoutLevel: 1
 
 
   # ===============================
@@ -666,6 +1158,7 @@ upgrades:
     cost: 10
     unlockLevel: 30
     ascensionOnly: true
+    tags: [safety]
     modifiers:
       fenceDurabilityBonus: 1
 
@@ -678,6 +1171,7 @@ upgrades:
     ascensionOnly: true
     prerequisites:
       - defensive_programming_ascension_junior
+    tags: [safety]
     modifiers:
       fenceDurabilityBonus: 1
 
@@ -690,5 +1184,6 @@ upgrades:
     ascensionOnly: true
     prerequisites:
       - defensive_programming_ascension_senior
+    tags: [safety]
     modifiers:
       fenceDurabilityBonus: 1

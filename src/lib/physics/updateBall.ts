@@ -144,14 +144,19 @@ function collideBallWithWall(ball: Ball, wall: Wall): Vector2 | null {
 export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void {
   if (ball.state === 'won') return; // stopped and disintegrating
 
-  // Move ball (world units)
-  ball.position.x += ball.velocity.x * dt;
-  ball.position.y += ball.velocity.y * dt;
+  // Move ball (world units). Scope Creep scales the DISPLACEMENT, not the
+  // stored velocity, so abilities that rescale velocity to absolute targets
+  // (grey wind-down, yellow variable speed, the minimum-speed floor) stay
+  // untouched and the factor can never compound frame-over-frame.
+  const moveDt = dt * (game.creepFactor || 1);
+  ball.position.x += ball.velocity.x * moveDt;
+  ball.position.y += ball.velocity.y * moveDt;
 
-  // Update rotation based on speed (medium spin rate)
+  // Update rotation based on speed (medium spin rate); uses the creep-scaled
+  // step so spin matches apparent speed.
   const speed = vec2Length(ball.velocity);
   const rotationSpeed = speed * 0.015; // Radians per second based on speed
-  ball.rotation += rotationSpeed * dt;
+  ball.rotation += rotationSpeed * moveDt;
 
   // Update ball visual effects (pulse, wall hit, ball hit decays)
   const now = performance.now();
@@ -248,7 +253,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
         impactStrength
       );
       // Trigger wall hit effect on ball
-      triggerWallHit(ball.effects, performance.now());
+      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
       // Play wall hit sound
       playWallHitSound(impactStrength);
     }
@@ -274,7 +279,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       ball.position = result.position;
       ball.velocity = result.velocity;
       surfaceHit = true;
-      triggerWallHit(ball.effects, performance.now());
+      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
       playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));
       // Black ball wears down movers.
       if (ball.ability === 'breakObjects') {
@@ -310,7 +315,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       surfaceHit = true;
 
       // Trigger wall hit effect on ball
-      triggerWallHit(ball.effects, performance.now());
+      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
 
       // Play wall hit sound for obstacle collision
       const spd = vec2Length(ball.velocity);
@@ -334,7 +339,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
       registerWallImpact(wall.start, wall.end, impactPoint, impactStrength);
-      triggerWallHit(ball.effects, performance.now());
+      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
       playWallHitSound(impactStrength);
 
       // Ascension fence durability: each (debounced) hit wears the fence down.

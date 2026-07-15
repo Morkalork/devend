@@ -66,7 +66,7 @@ export function TopBarDetailsPanel({
 
   const sectionHeadStyle: React.CSSProperties = {
     color: `${accentColor}88`,
-    fontFamily: 'Orbitron, sans-serif',
+    fontFamily: 'Michroma, sans-serif',
     letterSpacing: '0.15em',
     fontSize: '0.7rem',
     fontWeight: 700,
@@ -99,7 +99,7 @@ export function TopBarDetailsPanel({
       >
         <h1
           className="text-xl font-black tracking-widest uppercase"
-          style={{ fontFamily: 'Orbitron, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
+          style={{ fontFamily: 'Michroma, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
         >
           {t('topBarDetails.levelStatusTitle', { level: levelNumber })}
         </h1>
@@ -207,14 +207,13 @@ export function TopBarDetailsPanel({
                   <span className="font-bold text-sm" style={{ color: accentColor }}>{t('topBarDetails.livesRemaining')}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {Array.from({ length: lives }).map((_, i) => (
-                    <Heart
-                      key={i}
-                      className="w-5 h-5"
-                      style={{ color: accentColor, fill: accentColor, filter: `drop-shadow(0 0 5px ${accentColor}99)` }}
-                    />
-                  ))}
-                  {lives === 0 && (
+                  <Heart
+                    className="w-5 h-5"
+                    style={{ color: accentColor, fill: accentColor, filter: `drop-shadow(0 0 5px ${accentColor}99)` }}
+                  />
+                  {lives > 0 ? (
+                    <span className="font-bold text-base tabular-nums" style={{ color: accentColor }}>{lives}</span>
+                  ) : (
                     <span className="font-bold text-sm" style={{ color: '#ff6b6b' }}>{t('topBarDetails.livesNone')}</span>
                   )}
                 </div>

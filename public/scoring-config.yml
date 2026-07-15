@@ -3,9 +3,27 @@
 
 scoring:
   # Per-level overtime cap multiplier.
-  # cap = round(basePoints × overtimeCapHeadroom). Tracks the pay curve so
-  # late levels pay more, while bounding extreme multiplier stacks.
-  overtimeCapHeadroom: 2.0
+  # cap = round(basePoints × overtimeCapHeadroom). With the lock-centric
+  # economy the base (points: 20) is only the floor; the headroom leaves room
+  # for the lock bonuses that make up most of a map's real income, while
+  # bounding extreme multiplier stacks (cap = 20 × 4 = 80h, same absolute
+  # ceiling as the old 40 × 2 economy).
+  overtimeCapHeadroom: 4.0
+
+  # Lock Value
+  # Overtime hours paid per lock-multiplier point when a ball is locked away.
+  # Red/blue/grey (x1) pay 10h, yellow/purple/green (x2) 20h, black (x4) 40h,
+  # before the simultaneous-trap and money-ball multipliers. Locking IS the
+  # income: the flat map base (points: 20) alone cannot fund even a Junior
+  # upgrade (40h), so clearing without locking means an empty-handed shop
+  # visit unless you had hours saved.
+  lockValue: 10
+
+  # Beat-the-highscore bonus (#45)
+  # When you finish a map with a higher score than its previous highscore, the
+  # map's score is multiplied by this. Applied after the per-map cap, so beating
+  # a record always pays. Only fires if the map has been played before.
+  highscoreBonusMultiplier: 1.25
 
   # Under-Par Bonus
   # +1h if any fences under par
@@ -30,6 +48,28 @@ scoring:
         bonus: 2
       - extraPercent: 0.55   # +55% over required (near-total clears)
         bonus: 3
+
+  # Ship Early Bonus
+  # Ladder of ACTIVE-play seconds to first meet the win condition (the push
+  # prompt opening, or the last ball locking). Windows are PER BALL: a map's
+  # actual window = withinSecondsPerBall x its ball count, so busy maps get
+  # proportionally more time (e.g. 15s/ball => a 4-ball map has 60s for the
+  # +1h rung, a 2-ball map 30s). Pauses, menus and the push prompt itself do
+  # not count, so push-your-luck time is never taxed. Note: if the threshold
+  # is crossed by destroying objects, the clock runs until the next cut
+  # confirms it (the existing win rule). Awards the best rung whose window
+  # was met, capped at maxBonus; folds under the per-map cap. The tempo
+  # counterpart to spaceOptimization: speed and precision are parallel,
+  # competing payoffs.
+  shipEarly:
+    maxBonus: 3
+    thresholds:
+      - withinSecondsPerBall: 6   # blazing clear
+        bonus: 3
+      - withinSecondsPerBall: 10
+        bonus: 2
+      - withinSecondsPerBall: 15
+        bonus: 1
 
   # Performance Multiplier
   # Scales base points based on fences vs par

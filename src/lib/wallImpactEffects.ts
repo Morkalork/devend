@@ -4,7 +4,7 @@
 
 import { Vector2, pointToSegmentDistance } from './polygon';
 
-const N_NODES = 16;          // spring nodes per impact
+export const N_NODES = 16;   // spring nodes per impact
 const SPRING_K   = 180;      // spring restoring stiffness
 const DAMPING    = 0.85;     // per-frame velocity multiplier (0→instant stop, 1→no damping)
 const COUPLING_C = 0.4;      // neighbour displacement coupling strength
@@ -130,7 +130,8 @@ export function updateWallImpacts(): boolean {
   return activeImpacts.length > 0;
 }
 
-function getEffectsAtPoint(
+/** Ripple displacement + glow at a world point (also used by the Pixi renderer). */
+export function getEffectsAtPoint(
   queryPoint: Vector2,
   scale: number,
 ): { dx: number; dy: number; glow: number } {
@@ -171,7 +172,7 @@ function getEffectsAtPoint(
   return { dx: totalDx, dy: totalDy, glow: totalGlow };
 }
 
-function hasNearbyImpacts(wallStart: Vector2, wallEnd: Vector2): boolean {
+export function hasNearbyImpacts(wallStart: Vector2, wallEnd: Vector2): boolean {
   for (const impact of activeImpacts) {
     if (pointToSegmentDistance(impact.impactPoint, wallStart, wallEnd) < EFFECT_RADIUS * 1.5) {
       return true;

@@ -43,7 +43,6 @@
     "concurrent": "Concurrent",
     "bonusRemove": "Bonus Remove",
     "extraLives": "Extra Lives",
-    "interest": "Interest",
     "shopSlots": "Shop Slots",
     "restocks": "Restocks",
     "microMgrPerLock": "MicroMgr/Lock",
@@ -75,9 +74,17 @@
     "extraLivesActive_one": "+{{count}} additional starting live added at the start of every run. More lives means more chances to recover from a bad cut.",
     "extraLivesActive_other": "+{{count}} additional starting lives added at the start of every run. More lives means more chances to recover from a bad cut.",
     "extraLivesInactive": "No extra starting lives.",
-    "scoreInterest": "Score Interest",
-    "scoreInterestActive": "At the end of each level, {{rate}} of your current total score is added as a bonus. Higher accumulated scores compound faster.",
-    "scoreInterestInactive": "No interest rate active.",
+    "runwayInstantFence": "Runway: Instant Fence",
+    "runwayInstantFenceActive": "While you have {{hours}}h or more banked when a map starts, one fence completes instantly (Runway).",
+    "runwayConcurrentFence": "Runway: Extra Fence",
+    "runwayConcurrentFenceActive": "While you have {{hours}}h or more banked when a map starts, you can grow one extra fence at a time (Runway).",
+    "runwayFreeze": "Runway: Tap-Freeze",
+    "runwayFreezeActive": "While you have {{hours}}h or more banked when a map starts, tapping a ball freezes it for 2 seconds (Runway).",
+    "runwayInactive": "No runway perk owned.",
+    "budgetCycle": "Budget Cycle",
+    "budgetCycleValue": "per {{hours}}h spent",
+    "budgetCycleActive": "Every {{hours}}h spent in one shop visit charges boons for the next map (max 3 chunks per visit).",
+    "budgetCycleInactive": "No Budget Cycle boons.",
     "extraShopSlots": "Extra Shop Slots",
     "extraShopSlotsActive_one": "{{count}} extra item appears in the upgrade shop between levels, giving you more choices each visit.",
     "extraShopSlotsActive_other": "{{count}} extra items appear in the upgrade shop between levels, giving you more choices each visit.",
@@ -91,6 +98,79 @@
     "microManagerActive_one": "Each locked ball reduces ball speed by {{percent}}% (stacks multiplicatively, down to a 50% floor). Right now {{count}} ball locked → effective speed {{speed}}.",
     "microManagerActive_other": "Each locked ball reduces ball speed by {{percent}}% (stacks multiplicatively, down to a 50% floor). Right now {{count}} balls locked → effective speed {{speed}}.",
     "microManagerInactive": "MicroManager not active.",
+    "overtimePerLock": "Overtime per Lock",
+    "overtimePerLockActive": "Each ball you lock away adds +{{hours}} bonus overtime, folded under the map's reward cap (Severance Package).",
+    "overtimePerLockInactive": "No per-lock overtime bonus.",
+    "frozenLockBonus": "Frozen Lock Bonus",
+    "frozenLockBonusActive": "Locking a ball while it is frozen pays x{{mult}} lock bonus (Frozen Assets).",
+    "frozenLockBonusInactive": "No frozen-lock bonus.",
+    "lockThreshold": "Lock Threshold",
+    "lockThresholdActive": "Pockets up to {{percent}}% larger than the lock limit still lock their ball (Code Review).",
+    "lockThresholdInactive": "Standard lock threshold.",
+    "spawnFreeze": "Spawn Freeze",
+    "spawnFreezeActive": "Every map boots frozen: all balls hold still for the first {{seconds}}s (Cold Boot).",
+    "spawnFreezeInactive": "Balls move from the first moment of every map.",
+    "pickupChance": "Power-Up Tokens",
+    "pickupChanceActive": "Power-up tokens appear more often than usual (Benefits Package).",
+    "pickupChanceInactive": "Power-up tokens appear at their normal rate.",
+    "pickupPayout": "Power-Up Payouts",
+    "pickupPayoutActive": "Claimed tokens pay out enhanced rewards, and split balls fly slower (Total Compensation level {{level}}).",
+    "pickupPayoutInactive": "Power-up tokens pay their base rewards.",
+    "pushBonus": "Push Payouts",
+    "pushBonusActive": "Push-your-luck payouts are multiplied by x{{mult}}.",
+    "pushBonusInactive": "Standard push-your-luck payouts.",
+    "fenceSpeedPerLock": "Fence Speed per Lock",
+    "fenceSpeedPerLockActive": "Each ball locked this map speeds up fence generation by {{percent}}% for the rest of the map (Knowledge Transfer).",
+    "fenceSpeedPerLockInactive": "No per-lock fence speed bonus.",
+    "simultaneousLockBonus": "Trap Multiplier Bonus",
+    "simultaneousLockBonusActive": "Every lock counts as {{count}} ball(s) bigger for the simultaneous-trap multiplier (Chain Reaction set bonus).",
+    "simultaneousLockBonusInactive": "No trap multiplier bonus.",
+    "freezeNoCooldown": "Freeze Cooldown",
+    "freezeNoCooldownActive": "Balls can be re-frozen the moment they thaw, no cooldown (Absolute Zero set bonus).",
+    "freezeNoCooldownInactive": "Frozen balls have a re-freeze cooldown after thawing.",
+    "fenceSpeedPerFence": "Fence Speed per Fence",
+    "fenceSpeedPerFenceActive": "Each fence you complete speeds up the next by {{percent}}% for the rest of the map (Continuous Delivery).",
+    "fenceSpeedPerFenceInactive": "No per-fence speed bonus.",
+    "underParInstantFence": "Under-Par Carry",
+    "underParInstantFenceActive": "Finishing a map under par grants +{{count}} instant fence(s) on the next map (Clean Release).",
+    "underParInstantFenceInactive": "No under-par carry bonus.",
+    "bankedSlow": "Banked Overtime Slow",
+    "bankedSlowValue": "{{percent}}% / 50h",
+    "bankedSlowActive": "Balls spawn {{percent}}% slower for every 50h banked at map start, up to 8% (War Chest).",
+    "bankedSlowInactive": "No banked-overtime slow.",
+    "spaceBonusMultiplier": "Space Bonus Multiplier",
+    "spaceBonusMultiplierActive": "Space Optimization bonuses pay x{{mult}} (Tech Evangelist).",
+    "spaceBonusMultiplierInactive": "Space Optimization bonuses pay normally.",
+    "tagSetSource": "{{name}} (set bonus)",
+    "doorSource": "{{name}} (door)",
+    "capstoneSource": "{{name}} (capstone)",
+    "overtimeCapBonus": "Overtime Cap",
+    "overtimeCapBonusActive": "The per-map overtime cap is raised by {{hours}}h for the rest of the run (Stock Options).",
+    "overtimeCapBonusInactive": "Standard per-map overtime cap.",
+    "freeCheapestOffer": "Free Shop Offer",
+    "freeCheapestOfferActive": "The cheapest offer in every shop is free (Company Card).",
+    "freeCheapestOfferInactive": "No free shop offers.",
+    "wallShieldsPerMap": "Fence Shields",
+    "wallShieldsPerMapActive": "{{count}} fence hit(s) per map are absorbed without costing a life (Second Wind).",
+    "wallShieldsPerMapInactive": "No fence shields.",
+    "fenceGrace": "Fence Grace Period",
+    "fenceGraceActive": "Fences ignore ball hits during their first {{seconds}}s of growth (Ghost Protocol).",
+    "fenceGraceInactive": "No fence grace period.",
+    "timingHead": "Ship Early Countdown",
+    "shipEarlyCountdown": "Countdown Timer",
+    "shipEarlyCountdownValue": "up to +{{hours}}h",
+    "shipEarlyCountdownDesc": "A countdown bar sits above this panel while you play. Clear the map before it drains for up to +{{hours}}h of Ship Early overtime: the sooner you finish, the more it pays. The payout drops by one hour at each white tick on the bar. Its windows scale with the number of balls on the map, and only active play counts - pauses, menus and the push prompt don't spend the clock.",
+    "shipEarlyWindow": "Ship Early Window",
+    "shipEarlyWindowValue": "+{{seconds}}s/ball",
+    "shipEarlyWindowActive": "Every Ship Early bonus window lasts {{seconds}} extra seconds per ball on the map (Deadline Extension).",
+    "shipEarlyWindowInactive": "No Ship Early window extension.",
+    "shipEarlyMultiplier": "Ship Early Payout",
+    "shipEarlyMultiplierActive": "Ship Early bonuses pay x{{mult}} on this map (Hard Deadline).",
+    "shipEarlyMultiplierInactive": "Ship Early bonuses pay their normal rate.",
+    "scopeCreepImmediate": "Instant Scope Creep",
+    "scopeCreepImmediateActive": "Scope Creep has no grace period on this map: balls start surging in speed from the first second (Hard Deadline).",
+    "scopeCreepImmediateInactive": "Scope Creep starts after its normal grace period.",
+    "on": "On",
     "off": "Off",
     "ballPathPrediction": "Ball Path Prediction",
     "bounceCount_one": "{{count}} bounce",
@@ -150,16 +230,24 @@
     "resume": "Resume",
     "pause": "Pause",
     "gameMenu": "Game menu",
+    "soundOn": "Sound: On",
+    "soundOff": "Sound: Off",
     "restartRun": "Restart Run",
     "mainMenu": "Main Menu",
     "moverTutorialTitle": "⚠ Moving Obstacles",
     "moverTutorialBody": "Orange obstacles move back and forth on a fixed track.\n\nBalls bounce off them - but if your growing fence touches one, you lose a life.\n\nWatch the track lines and time your fences carefully!",
     "breakTutorialTitle": "✦ Breaking Things",
     "breakTutorialBody": "Amber blocks can be smashed for bonus overtime - guide balls into them until they shatter, and anything stacked on top falls with them.\n\nYou still win the normal way, by shrinking the board; breaking is just extra points.\n\nYou can't fence against a breakable (the cut fizzles), and the black ball breaks things in half the hits.",
+    "creepTutorialTitle": "⚠ Scope Creep",
+    "creepTutorialBody": "The project has been running too long - the balls just got faster, and they will keep surging every few seconds until they hit a cap.\n\nScope Creep only punishes waiting: finish the map inside the calm window and you will never see it.\n\nThe red gauge in the top bar shows the current surge.",
     "topBarTutorialTitle": "The Top Bar",
     "topBarTutorialBody": "The top bar is expandable!\n\nTap it to see full level details, all your active upgrades with descriptions, and certificate-hour progress.",
     "bottomBarTutorialTitle": "The Bottom Bar",
-    "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language."
+    "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language.",
+    "infoUnlocked": "Info Unlocked",
+    "pickupFork": "Ball split!",
+    "pickupCapRaise": "Cap +{n}h",
+    "pickupFreeze": "Freeze +1"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
@@ -183,14 +271,90 @@
     "baseOvertime": "Base Overtime",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Thread Locks ({{count}})",
-    "interest": "Interest",
     "pushBonus": "Push Bonus",
+    "pickupBonus": "Power-Up Bonus",
     "breakBonus": "Demolition Bonus",
+    "shipEarly": "Ship Early ({{seconds}}s)",
+    "newHighscore": "New Highscore",
     "totalBonus": "Total Bonus",
     "overtimeEarned": "Overtime Earned",
     "totalOvertime": "Total Overtime",
     "certificateUnlocked": "Certificate Unlocked",
-    "nextLevel": "Next Level"
+    "nextLevel": "Next Level",
+    "holdHint": "Hold any row for details",
+    "infoTipLabel": "How to earn more",
+    "info": {
+      "level": {
+        "title": "Level",
+        "body": "The map you just cleared. Later maps pay a higher base overtime and introduce new ball types and mechanics.",
+        "tip": "Keep your run alive to reach deeper, higher-paying maps. Upgrades bought between levels last the whole run."
+      },
+      "remaining": {
+        "title": "Remaining Space",
+        "body": "How much of the board was still open when you won. You clear a level by fencing off space until the open area drops below the map's target.",
+        "tip": "Clearing more than required feeds the Space Bonus, and meeting the target fast pays the Ship Early bonus."
+      },
+      "fencesUsed": {
+        "title": "Fences vs Par",
+        "body": "How many fences you used against the map's par. At or under par pays the full base overtime. Each fence over par scales it down (x0.75, x0.6, then x0.4), and 3 or more over par also switches off the Space Bonus.",
+        "tip": "Favor fewer, bigger cuts. Finishing even one fence under par adds a bonus hour."
+      },
+      "spaceBonus": {
+        "title": "Space Bonus",
+        "body": "Extra area removed beyond the map's requirement. The ladder pays +1h at 10% extra, +2h at 30% and +3h at 55%. It is disabled if you finish 3 or more fences over par.",
+        "tip": "Before your winning cut, squeeze out a little more of the board. Near-total clears pay the top rung."
+      },
+      "baseOvertime": {
+        "title": "Base Overtime",
+        "body": "The map's fixed payout, scaled by your fence performance. Every map pays a flat base, so the bonuses on this screen are where the real earnings are.",
+        "tip": "Stay at or under par to keep the full base, then stack bonuses on top of it."
+      },
+      "threadLocks": {
+        "title": "Thread Locks",
+        "body": "You lock a ball by sealing it into its own small pocket of the board, cut off from everything else. Each locked ball pays its lock value, and tougher ball types pay more. Trapping several balls with a single cut multiplies the whole payout by the number caught: 2 at once pays double, 3 pays triple.",
+        "tip": "Lock a green money ball early: it triples what every later lock this map pays. Then herd balls close together and close one cut around the whole group."
+      },
+      "breakBonus": {
+        "title": "Demolition Bonus",
+        "body": "Overtime from smashing amber breakable blocks. Balls chip away at a breakable on contact until it shatters, and anything stacked on top falls with it.",
+        "tip": "Steer balls into breakables with your cuts. The black ball smashes them in half the hits."
+      },
+      "shipEarly": {
+        "title": "Ship Early",
+        "body": "A tempo bonus for meeting the win condition fast: +1h within 60 seconds, +2h within 40, +3h within 25. Only active play counts, menus and the push prompt don't.",
+        "tip": "Open with big, confident cuts instead of many small safe ones. Speed and precision are separate bonuses, so you can chase both."
+      },
+      "pushBonus": {
+        "title": "Push Bonus",
+        "body": "The push-your-luck reward. After meeting the map's target you can keep cutting instead of banking, and every extra slice of the board pays bonus overtime.",
+        "tip": "Pushing is free money: if you fail mid-push you only lose the extra bonus, never your banked score."
+      },
+      "pickupBonus": {
+        "title": "Power-Up Bonus",
+        "body": "Overtime from power-up tokens you sealed in with a lock. A token only pays when a ball locks in the pocket holding it: capture the token's area with no ball and it is wasted, and unclaimed tokens expire on their own.",
+        "tip": "Herd a ball toward the token before you seal the pocket. Token overtime is paid after the per-map cap, so it always counts."
+      },
+      "newHighscore": {
+        "title": "New Highscore",
+        "body": "You beat this map's previous record, so the whole payout is multiplied by x1.25. It applies after the per-map cap, so breaking a record always pays extra.",
+        "tip": "Records are kept per map. A strong upgrade build can beat your old scores map after map."
+      },
+      "totalBonus": {
+        "title": "Total Bonus",
+        "body": "All this level's bonuses added together: par, space, locks, demolition, tempo and push.",
+        "tip": "Bonuses fold under a per-map cap of twice the base payout, so spreading across several bonus types beats maxing out just one."
+      },
+      "overtimeEarned": {
+        "title": "Overtime Earned",
+        "body": "What this level paid in total: the scaled base plus all bonuses, capped at twice the map's base payout. A new highscore multiplies past the cap.",
+        "tip": "If you hit the cap often, chase the highscore multiplier: it is applied after the cap, so it always pays."
+      },
+      "totalOvertime": {
+        "title": "Total Overtime",
+        "body": "Your whole run's overtime so far. It is the currency you spend in the upgrade shop between levels, and what gets banked when the run ends.",
+        "tip": "Spending buys power and charges Budget Cycle boons, while a fat bank feeds Runway perks and War Chest. Your build decides which way to lean."
+      }
+    }
   },
   "notFound": {
     "message": "Oops! Page not found",
@@ -199,6 +363,9 @@
   "options": {
     "title": "OPTIONS",
     "language": "Language",
+    "sound": "Sound",
+    "music": "Music",
+    "effects": "Effects",
     "reEnableTutorials": "Re-enable All Tutorials",
     "resetCertificates": "Reset Certificates & Score",
     "back": "Back",
@@ -219,7 +386,7 @@
   },
   "result": {
     "youWin": "YOU WIN!",
-    "gameOver": "GAME OVER",
+    "gameOver": "You have been replaced by AI.",
     "completedAllLevels": "🎉 Completed all levels! 🎉",
     "ascensionDepth": "Ascension Depth {{depth}}",
     "loadoutsBraved": "Loadouts braved: {{loadouts}}",
@@ -238,9 +405,18 @@
   "topBar": {
     "clear": "CLEAR",
     "percentToGo": "{{percent}}% to go",
+    "recordPace": "RECORD",
     "currentlyReducingBy": "Currently reducing by {{percent}}%",
     "continues_one": "{{count}} Continue banked",
-    "continues_other": "{{count}} Continues banked"
+    "continues_other": "{{count}} Continues banked",
+    "lives_one": "{{count}} life remaining",
+    "lives_other": "{{count}} lives remaining",
+    "scopeCreepValue": "+{{percent}}%",
+    "scopeCreepTitle": "Scope creep: balls moving {{percent}}% faster"
+  },
+  "shipEarlyBar": {
+    "title": "Ship Early: clear the map before the bar runs out for bonus overtime",
+    "bonus": "+{{hours}}h"
   },
   "topBarDetails": {
     "levelStatusTitle": "Level {{level}} Status",
@@ -299,7 +475,8 @@
       "intro": "A ball's colour tells you what it does. Which balls appear is decided by the level you've reached - new colours unlock as you climb.",
       "speed": "Speed {{speed}}",
       "unlocks": "From level {{level}}",
-      "lock": "Lock ×{{mult}}"
+      "lock": "Lock ×{{mult}}",
+      "notEncounteredYet": "Not encountered yet. Lock it for more info."
     },
     "steps": {
       "swipeToCut": {
@@ -342,23 +519,41 @@
   },
   "upgradeShop": {
     "storeLabel": "Store",
+    "freeLabel": "FREE",
     "levelComplete": "Level {{level}} complete",
     "checkpointReached": "checkpoint reached",
     "levelBanner": "LEVEL {{level}}",
     "progressSavedHere": "progress will be saved here",
     "hoursValue": "{{hours}}h",
     "overtime": "overtime",
+    "marketRates": "Market rates: +{{percent}}%",
     "restocksLeft": "Restocks left: {{count}} - buying an item adds a new offer",
     "noRestocksLeft": "No restocks left this visit",
+    "runwayTitle": "Runway: perks stay active while your bank is above the threshold at map start",
+    "runwayChipInstantFence": "{{hours}}h+: instant fence",
+    "runwayChipConcurrentFence": "{{hours}}h+: extra fence",
+    "runwayChipFreeze": "{{hours}}h+: tap-freeze",
+    "budgetCycleCharged_one": "Budget Cycle: spending {{spent}}h charges {{count}} boon for the next map",
+    "budgetCycleCharged_other": "Budget Cycle: spending {{spent}}h charges {{count}} boons for the next map",
+    "budgetCycleProgress": "Budget Cycle: {{spent}}h of {{next}}h spent toward a next-map boon",
     "requires": "Requires:",
     "holdHint": "Hold an upgrade to see its track",
+    "tags": {
+      "lock": "Lock",
+      "freeze": "Freeze",
+      "bank": "Bank",
+      "tempo": "Tempo",
+      "risk": "Risk",
+      "safety": "Safety"
+    },
     "detailUnlockedBy": "Unlocked by",
     "detailUnlocks": "Unlocks",
     "detailNoPrereqs": "Available from the start",
     "detailNoUnlocks": "Nothing further yet",
     "certificateUnlocked": "Certificate Unlocked!",
-    "buyAndContinue": "Buy {{count}} & Continue ({{cost}}h)",
+    "buyAndContinue": "Buy {{count}}",
     "continue": "Continue",
+    "closedNotEnoughLocks": "Not enough balls locked",
     "tutorialTitle": "THE UPGRADE SHOP",
     "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade for more info - including what unlocks it and what it unlocks."
   },
@@ -371,6 +566,49 @@
     "skipButton": "Skip (no loadout)",
     "noLoadouts": "No loadouts available."
   },
+  "buildRecap": {
+    "heading": "Run Recap",
+    "buildLine": "{{name}} build: {{title}}",
+    "comboName": "{{a}}-{{b}}",
+    "generalist": "Generalist",
+    "generalistTitle": "Full-Stack Generalist",
+    "titles": {
+      "lock": "The Closer",
+      "freeze": "Cryo Engineer",
+      "bank": "The Investor",
+      "tempo": "Ship-It Engineer",
+      "risk": "Crunch Junkie",
+      "safety": "Defensive Programmer"
+    },
+    "capstoneLine": "Capstone: {{name}}",
+    "newRecord": "New personal best for {{archetype}} builds: {{hours}}h (was {{previous}}h)",
+    "firstRecord": "First {{archetype}} build on record: {{hours}}h banked",
+    "bestSoFar": "Best {{archetype}} build so far: {{hours}}h"
+  },
+  "capstoneDraft": {
+    "title": "Promotion",
+    "subtitle": "Your review went well. Pick one permanent perk for the rest of this run.",
+    "exclusiveHint": "One pick only. The other two are gone for good.",
+    "scopeNote": "Applies for the rest of the run, including ascension.",
+    "holdHint": "Hold a perk for the full briefing.",
+    "closeDetail": "Close",
+    "confirmButton": "Accept Promotion",
+    "pickHint": "Pick a Perk"
+  },
+  "doorDraft": {
+    "title": "Next Assignment",
+    "subtitle": "Level {{level}} briefing: choose your contract for the next stretch.",
+    "intelBalls": "Spawns",
+    "intelPar": "Par",
+    "intelCapture": "Capture",
+    "intelObstacles": "Obstacles",
+    "obstaclesWithBreakables": "{{count}} ({{breakables}} breakable)",
+    "scopeNote": "This contract runs for the next 5 levels, shops included, until your next assignment.",
+    "holdHint": "Hold a ticket for the full briefing.",
+    "closeDetail": "Close",
+    "enterButton": "Take This Ticket",
+    "pickHint": "Pick a Ticket"
+  },
   "continue": {
     "title": "Continue?",
     "body_one": "Spend 1 Continue to retry this level with your overtime and upgrades intact. {{count}} left.",
@@ -380,6 +618,7 @@
   },
   "welcome": {
     "tagline": "Slice. Trap. Survive.",
+    "tapToStart": "Tap to start",
     "loading": "Loading...",
     "startGame": "Start Game",
     "tutorial": "Tutorial",

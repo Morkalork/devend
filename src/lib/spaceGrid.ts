@@ -12,7 +12,7 @@
  * This eliminates any inference from physics or collision outcomes.
  */
 
-import { Vector2, Polygon, pointInPolygon, lineSegmentIntersection } from './polygon';
+import { Vector2, Polygon, pointInPolygon, lineSegmentIntersection, pointToSegmentDistance } from './polygon';
 
 export enum CellState {
   ACTIVE = 0,
@@ -46,6 +46,15 @@ export interface SpaceGrid {
    * Only meaningful for cells that are ACTIVE — removed cells may hold stale ids.
    */
   cellRegionIds: (string | null)[];
+  /**
+   * 1 for each cell that was captured by a ball LOCK (as opposed to a fence cut
+   * or obstacle). Drives the persistent accent tint that marks locked territory
+   * in the region fill. Grid-based (not the ray-cast lock polygon), so the tint
+   * is uniform behind obstacles and can't reproduce the "shadow behind the
+   * obstacle" wedge. Optional so older serialized grids stay valid; lazily
+   * created on first lock if absent.
+   */
+  lockCaptured?: Uint8Array;
 }
 
 export interface GridRegion {
@@ -115,7 +124,7 @@ export function createSpaceGrid(
     }
   }
   
-  return {
+  const grid: SpaceGrid = {
     cellSize,
     width,
     height,
@@ -125,7 +134,27 @@ export function createSpaceGrid(
     initialActiveCount,
     activeCount: initialActiveCount,
     cellRegionIds: new Array<string | null>(cells.length).fill(null),
+    lockCaptured: new Uint8Array(cells.length),
   };
+
+  // Seal obstacle boundaries into the grid. Removing only cells whose CENTER
+  // falls inside an obstacle leaves a sparse, non-4-connected barrier for thin or
+  // diagonal obstacles (mirrors especially): grid connectivity then leaks across
+  // the obstacle, so space it physically separates stays one region and is never
+  // isolated or captured (the persistent "shadow behind the obstacle"). Rasterize
+  // each obstacle edge into a connected band of REMOVED cells — the same sealing
+  // the game already applies to fence cuts — so the grid matches physical
+  // reachability. Paths *around* a partial obstacle stay connected, since only
+  // cells along the boundary are removed.
+  for (const obstacle of obstacles) {
+    const vs = obstacle.vertices;
+    for (let i = 0; i < vs.length; i++) {
+      rasterizeCutToGrid(grid, vs[i], vs[(i + 1) % vs.length], cellSize);
+    }
+  }
+  grid.initialActiveCount = grid.activeCount;
+
+  return grid;
 }
 
 /**
@@ -391,6 +420,255 @@ export function removeRegion(grid: SpaceGrid, region: GridRegion): void {
     if (grid.cells[index] === CellState.ACTIVE) grid.activeCount--;
     grid.cells[index] = CellState.REMOVED;
   }
+}
+
+/**
+ * Capture (REMOVE) every ACTIVE cell that no ball can PHYSICALLY reach, given the
+ * ball radius. Grid connectivity alone is 1-cell and ignores ball size, so a
+ * pocket sealed behind an obstacle by a gap narrower than the ball reads as
+ * "reachable" and never captures — the persistent "shadow behind the obstacle".
+ * This also subsumes ordinary ball-free capture (a fenced-off area with no ball
+ * has no reachable core, so all of it is captured).
+ *
+ * Method:
+ *  1. Clearance = BFS distance (in cells) from each ACTIVE cell to the nearest
+ *     REMOVED cell (wall/obstacle/edge).
+ *  2. "Core" cells are where a ball CENTRE fits: clearance from the wall edge >=
+ *     radius. A channel narrower than the ball has no core cells.
+ *  3. Flood core cells reachable from each ball.
+ *  4. Keep every ACTIVE cell a reachable ball physically covers (within radius of
+ *     a reachable core cell); capture the rest.
+ *
+ * Uses the SMALLEST active-ball radius so it never captures space some ball could
+ * actually reach (conservative — at worst it leaves a thin sliver, never over-
+ * captures). No active balls: everything remaining is captured (level is over).
+ */
+export function captureUnreachableCells(
+  grid: SpaceGrid,
+  balls: { position: Vector2; radius: number; state: string; speed: number }[],
+  walls?: { start: Vector2; end: Vector2 }[],
+): void {
+  const { width, height, cells, cellSize } = grid;
+  const n = cells.length;
+
+  const activeBalls = balls.filter(b => b.state !== 'won' && b.speed > 0);
+  if (activeBalls.length === 0) {
+    // No ball left in play — everything remaining is captured territory.
+    for (let i = 0; i < n; i++) {
+      if (cells[i] === CellState.ACTIVE) { cells[i] = CellState.REMOVED; grid.activeCount--; }
+    }
+    return;
+  }
+
+  // 1. Multi-source BFS: distance (in cells) from each ACTIVE cell to nearest REMOVED.
+  const dist = new Int32Array(n).fill(-1);
+  const q = new Int32Array(n);
+  let qh = 0, qt = 0;
+  for (let i = 0; i < n; i++) {
+    if (cells[i] !== CellState.ACTIVE) { dist[i] = 0; q[qt++] = i; }
+  }
+  if (qt === 0) return; // no walls at all — nothing to capture against
+  while (qh < qt) {
+    const cur = q[qh++];
+    const row = (cur / width) | 0, col = cur % width;
+    const d = dist[cur] + 1;
+    if (row > 0)          { const ni = cur - width; if (dist[ni] < 0) { dist[ni] = d; q[qt++] = ni; } }
+    if (row < height - 1) { const ni = cur + width; if (dist[ni] < 0) { dist[ni] = d; q[qt++] = ni; } }
+    if (col > 0)          { const ni = cur - 1;     if (dist[ni] < 0) { dist[ni] = d; q[qt++] = ni; } }
+    if (col < width - 1)  { const ni = cur + 1;     if (dist[ni] < 0) { dist[ni] = d; q[qt++] = ni; } }
+  }
+
+  // 2. Core threshold: a cell at BFS distance d has its nearest wall edge about
+  //    (d*cellSize - cellSize/2) away, so a ball of radius r fits when
+  //    d >= (r + cellSize/2) / cellSize.
+  const radius = Math.min(...activeBalls.map(b => b.radius));
+  const coreMinDist = (radius + cellSize / 2) / cellSize;
+  const radiusCells = Math.ceil(radius / cellSize);
+  const core = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (cells[i] === CellState.ACTIVE && dist[i] >= coreMinDist) core[i] = 1;
+  }
+  // Geometric refinement (when wall segments are available): the BFS test is
+  // cell-quantized and can't see that a corridor barely wider than the ball is
+  // passable - a ~2.5-cell gap has no cell at BFS dist >= 2, so the corridor
+  // reads as impassable, capture severs it, and the lock check right after sees
+  // the ball in a small disconnected region: a FALSE lock on a ball that could
+  // physically escape. Rescue boundary cells (BFS dist 1) whose exact clearance
+  // to the nearest wall segment fits the ball. Sub-ball channels still have no
+  // qualifying cell (no centre can be >= radius from both sides of a gap that
+  // is narrower than the ball), so pockets behind obstacles keep capturing.
+  if (walls && walls.length > 0) {
+    for (let i = 0; i < n; i++) {
+      if (core[i] || cells[i] !== CellState.ACTIVE || dist[i] !== 1) continue;
+      const p = gridIndexToWorld(grid, i);
+      let clearance = Infinity;
+      for (const w of walls) {
+        const d = pointToSegmentDistance(p, w.start, w.end);
+        if (d < clearance) clearance = d;
+        if (clearance < radius) break;
+      }
+      if (clearance >= radius) core[i] = 1;
+    }
+  }
+  const isCore = (i: number) => core[i] === 1;
+
+  // 3. Flood core cells reachable from a ball (seed the core cells the ball covers).
+  const reachable = new Uint8Array(n);
+  qh = 0; qt = 0;
+  for (const b of activeBalls) {
+    const bi = worldToGridIndex(grid, b.position.x, b.position.y);
+    if (bi < 0) continue;
+    const brow = (bi / width) | 0, bcol = bi % width;
+    for (let dr = -radiusCells; dr <= radiusCells; dr++) {
+      for (let dc = -radiusCells; dc <= radiusCells; dc++) {
+        const rr = brow + dr, cc = bcol + dc;
+        if (rr < 0 || rr >= height || cc < 0 || cc >= width) continue;
+        const si = rr * width + cc;
+        if (isCore(si) && !reachable[si]) { reachable[si] = 1; q[qt++] = si; }
+      }
+    }
+  }
+  while (qh < qt) {
+    const cur = q[qh++];
+    const row = (cur / width) | 0, col = cur % width;
+    if (row > 0)          { const ni = cur - width; if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+    if (row < height - 1) { const ni = cur + width; if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+    if (col > 0)          { const ni = cur - 1;     if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+    if (col < width - 1)  { const ni = cur + 1;     if (isCore(ni) && !reachable[ni]) { reachable[ni] = 1; q[qt++] = ni; } }
+  }
+
+  // 4. Dilate reachable core out to `radiusCells` over ACTIVE cells: the ball,
+  //    centred on a reachable core cell, physically covers cells within its radius.
+  const steps = new Int32Array(n);
+  for (let k = 0; k < qt; k++) steps[q[k]] = radiusCells;
+  qh = 0; // re-walk the reachable-core cells already in the queue, now dilating
+  while (qh < qt) {
+    const cur = q[qh++];
+    const s = steps[cur];
+    if (s <= 0) continue;
+    const row = (cur / width) | 0, col = cur % width;
+    const spread = (ni: number) => {
+      if (cells[ni] === CellState.ACTIVE && !reachable[ni]) { reachable[ni] = 1; steps[ni] = s - 1; q[qt++] = ni; }
+    };
+    if (row > 0) spread(cur - width);
+    if (row < height - 1) spread(cur + width);
+    if (col > 0) spread(cur - 1);
+    if (col < width - 1) spread(cur + 1);
+  }
+
+  // 5. Capture every ACTIVE cell no ball can reach.
+  for (let i = 0; i < n; i++) {
+    if (cells[i] === CellState.ACTIVE && !reachable[i]) { cells[i] = CellState.REMOVED; grid.activeCount--; }
+  }
+}
+
+/**
+ * Is the ball's region REALLY sealed, or did it only become small because the
+ * ball-size-aware capture severed a gap too narrow for the ball to fit through?
+ *
+ * A ball must lock only inside a genuinely enclosed pocket - one bounded by real
+ * barriers (fence / obstacle / board edge), not by a "virtual wall" the capture
+ * conjured across a sub-ball-width opening. Otherwise the player sees a visible
+ * gap out to the rest of the board yet the ball locks: "either it's sealed or
+ * it's not" (issue: confusing near-seal locks).
+ *
+ * Test: flood a PLAIN 4-connected path (ignoring ball width) out of the region,
+ * over the PRE-capture `snapshot`, starting from the region's own cells. Cells
+ * outside the region that this cut just captured (the gap channel, dead pockets)
+ * are dead ends we walk THROUGH. If that walk ever reaches a cell that is STILL
+ * ACTIVE and outside the region, the pocket is connected to living space through
+ * an opening -> NOT truly sealed. If the flood only ever touches now-captured or
+ * barrier cells, the pocket is enclosed -> sealed.
+ *
+ * `snapshot` is the grid's cell states from BEFORE this cut's reachability
+ * capture (fences already rasterized). `regionCellIndices` is the ball's
+ * post-capture region.
+ */
+export function isRegionTrulySealed(
+  grid: SpaceGrid,
+  snapshot: Uint8Array,
+  regionCellIndices: number[],
+): boolean {
+  const { width, height, cells } = grid;
+  if (regionCellIndices.length === 0) return true;
+
+  const inRegion = new Uint8Array(cells.length);
+  const visited = new Uint8Array(cells.length);
+  const queue = regionCellIndices.slice();
+  for (const idx of regionCellIndices) { inRegion[idx] = 1; visited[idx] = 1; }
+
+  let qh = 0;
+  while (qh < queue.length) {
+    const cur = queue[qh++];
+    const row = (cur / width) | 0, col = cur % width;
+    const step = (ni: number): boolean => {
+      if (visited[ni]) return true;
+      // A barrier in the pre-capture snapshot (fence / obstacle / board / space
+      // captured by an EARLIER cut) blocks the plain flood.
+      if (snapshot[ni] !== CellState.ACTIVE) return true;
+      // Pre-capture-active, outside the region, and STILL active after this cut:
+      // the pocket opens into living space -> not sealed.
+      if (!inRegion[ni] && cells[ni] === CellState.ACTIVE) return false;
+      visited[ni] = 1;
+      queue.push(ni);
+      return true;
+    };
+    if (row > 0          && !step(cur - width)) return false;
+    if (row < height - 1 && !step(cur + width)) return false;
+    if (col > 0          && !step(cur - 1))     return false;
+    if (col < width - 1  && !step(cur + 1))     return false;
+  }
+  return true;
+}
+
+/**
+ * Flood-fill REMOVED cells from the given seeds, never stepping across a wall
+ * segment (geometric test between neighbouring cell centres). Returns the set
+ * of reached cell indices - the captured "chamber" enclosing the seeds, right
+ * up to (but not across) every bounding fence, obstacle edge and board edge.
+ *
+ * Used to paint the locked-territory tint: the capture-pass diff alone misses
+ * the fence's own raster band and any cells captured in an earlier pass, which
+ * left dark, cell-quantized fringes between the tint and the fence line (the
+ * reported "glitchy" lock fill). Flooding to the walls makes the tint span the
+ * whole enclosure while wall crossings keep it out of neighbouring territory.
+ */
+export function floodRemovedEnclosure(
+  grid: SpaceGrid,
+  seeds: number[],
+  walls: { start: Vector2; end: Vector2 }[],
+): Set<number> {
+  const { width, height, cells } = grid;
+  const visited = new Uint8Array(cells.length);
+  const queue: number[] = [];
+  for (const s of seeds) {
+    if (s >= 0 && s < cells.length && cells[s] === CellState.REMOVED && !visited[s]) {
+      visited[s] = 1;
+      queue.push(s);
+    }
+  }
+  const out = new Set<number>(queue);
+  while (queue.length > 0) {
+    const cur = queue.pop()!;
+    const a = gridIndexToWorld(grid, cur);
+    const row = (cur / width) | 0;
+    const col = cur % width;
+    const step = (ni: number) => {
+      if (visited[ni] || cells[ni] !== CellState.REMOVED) return;
+      const b = gridIndexToWorld(grid, ni);
+      for (const w of walls) {
+        if (lineSegmentIntersection(a, b, w.start, w.end)) return;
+      }
+      visited[ni] = 1;
+      out.add(ni);
+      queue.push(ni);
+    };
+    if (row > 0) step(cur - width);
+    if (row < height - 1) step(cur + width);
+    if (col > 0) step(cur - 1);
+    if (col < width - 1) step(cur + 1);
+  }
+  return out;
 }
 
 /**

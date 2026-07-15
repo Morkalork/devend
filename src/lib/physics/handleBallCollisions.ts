@@ -93,10 +93,11 @@ export function handleBallCollisions(game: CanvasGameState): void {
           ball2.position.x += sepx;
           ball2.position.y += sepy;
 
-          // Trigger ball-to-ball collision effect (strongest visual)
+          // Trigger ball-to-ball collision effect (strongest visual). Both balls
+          // squash along the shared contact normal, scaled by the closing speed.
           const now = performance.now();
-          triggerBallHit(ball1.effects, now);
-          triggerBallHit(ball2.effects, now);
+          triggerBallHit(ball1.effects, now, nx, ny, relVelNormal);
+          triggerBallHit(ball2.effects, now, nx, ny, relVelNormal);
 
           // Play ball collision sound
           const collisionIntensity = Math.min(1, Math.abs(relVelNormal) / 300);

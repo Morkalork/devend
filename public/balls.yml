@@ -36,7 +36,7 @@ balls:
     color: "#00b4ff"
     baseSpeed: 250
     minimumSpeed: 150
-    unlockLevel: 1
+    unlockLevel: 2
     lockMultiplier: 1
     ability: none
     description: A standard ball, a touch faster than the red one.
@@ -46,7 +46,7 @@ balls:
     color: "#ffd93d"
     minimumSpeed: 150
     baseSpeed: 280
-    unlockLevel: 5
+    unlockLevel: 4
     lockMultiplier: 2
     ability: variableSpeed
     description: "Variable speed: every surface it touches shifts it between 200 and 400."
@@ -57,7 +57,7 @@ balls:
     color: "#b06bff"
     baseSpeed: 340
     minimumSpeed: 150
-    unlockLevel: 10
+    unlockLevel: 7
     lockMultiplier: 2
     ability: slowOthers
     speedReduction: 20
@@ -68,7 +68,7 @@ balls:
     color: "#00c853"
     baseSpeed: 300
     minimumSpeed: 180
-    unlockLevel: 15
+    unlockLevel: 13
     lockMultiplier: 2
     ability: moneyBall
     description: "Money ball: locking it away triples the gains of every later lock this round."
@@ -78,7 +78,7 @@ balls:
     color: "#9aa3ad"
     baseSpeed: 200
     minimumSpeed: 150
-    unlockLevel: 15
+    unlockLevel: 10
     lockMultiplier: 1
     ability: slowDown
     description: "Winds down: slows down 10 speedUnits ever 5 seconds. Down to minimum speed."
@@ -88,7 +88,7 @@ balls:
     color: "#2b2f3a"
     baseSpeed: 200
     minimumSpeed: 150
-    unlockLevel: 20
+    unlockLevel: 17
     lockMultiplier: 4
     ability: breakObjects
     description: "Wrecking ball: smashes mirrors and movers after three hits, losing a multiplier each time."

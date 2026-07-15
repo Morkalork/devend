@@ -7,7 +7,14 @@ import { getImplementedBallTypes } from '@/lib/ballTypes';
 interface TutorialScreenProps {
   onBack: () => void;
   accentColor?: string;
+  /** Ball type ids the player has locked at least once (persisted). Types not
+   *  in this set show "Not encountered yet." instead of their ability - except
+   *  red and green, which are always shown (the base/common types). */
+  encounteredBallTypeIds?: string[];
 }
+
+/** Base ball types whose description always shows, regardless of encounter state. */
+const ALWAYS_REVEALED_BALL_IDS = new Set(['red', 'green']);
 
 const tutorialSteps = [
   { icon: Move, key: 'swipeToCut' },
@@ -23,7 +30,7 @@ const lifeCycleSteps = [
   { icon: Star, key: 'headStartCertificates' },
 ];
 
-export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
+export function TutorialScreen({ onBack, accentColor, encounteredBallTypeIds = [] }: TutorialScreenProps) {
   const { t } = useTranslation();
   return (
     <>
@@ -93,7 +100,9 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
           {t('tutorial.ballTypes.intro')}
         </p>
         <div className="grid gap-4 w-full">
-          {getImplementedBallTypes().map((ball, index) => (
+          {getImplementedBallTypes().map((ball, index) => {
+            const isRevealed = ALWAYS_REVEALED_BALL_IDS.has(ball.id) || encounteredBallTypeIds.includes(ball.id);
+            return (
             <motion.div
               key={ball.id}
               initial={{ opacity: 0, x: -30 }}
@@ -112,7 +121,9 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
               />
               <div className="min-w-0">
                 <h3 className="font-display font-semibold text-foreground mb-1">{ball.name}</h3>
-                <p className="text-muted-foreground text-sm leading-relaxed mb-2">{ball.description}</p>
+                <p className={`text-sm leading-relaxed mb-2 ${isRevealed ? 'text-muted-foreground' : 'text-muted-foreground/50 italic'}`}>
+                  {isRevealed ? ball.description : t('tutorial.ballTypes.notEncounteredYet')}
+                </p>
                 <div className="flex flex-wrap gap-2 text-xs">
                   <span className="px-2 py-0.5 rounded bg-secondary/50 border border-border text-muted-foreground">
                     {t('tutorial.ballTypes.speed', { speed: ball.baseSpeed })}
@@ -126,7 +137,8 @@ export function TutorialScreen({ onBack, accentColor }: TutorialScreenProps) {
                 </div>
               </div>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Life Cycle section */}

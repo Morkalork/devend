@@ -6,12 +6,15 @@
  * Tapping the top/bottom bars opens their full-screen counterparts
  * (TopBarDetailsPanel / BottomBarDetailsPanel).
  */
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Menu, Home, RotateCcw, Pause, Play } from 'lucide-react';
+import { calculateScore } from '@/lib/scoring';
+import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameBottomBar } from './GameBottomBar';
+import { ShipEarlyBar } from './ShipEarlyBar';
 import { TopBarDetailsPanel } from './TopBarDetailsPanel';
 import { BottomBarDetailsPanel } from './BottomBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
@@ -22,6 +25,8 @@ import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
 import { useGameConfig } from '@/hooks/useGameConfig';
+import { playMusicForLevel } from '@/lib/gameMusic';
+import { isSoundMuted, setSoundMuted } from '@/lib/soundSettings';
 import { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
 
 interface CertificateHourProgress {
@@ -47,6 +52,10 @@ interface GameScreenProps {
   onLivesChange: (newLives: number) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
+  /** Fired once per ball the instant it locks, with its ball-type id (drives the
+   *  tutorial's "encountered ball types" tracking). Returns true iff this was
+   *  the first-ever lock of that type. */
+  onBallTypeLocked?: (typeId: string) => boolean;
   onMainMenu: () => void;
   onRestart: () => void;
   showInGameTutorial?: boolean;
@@ -64,6 +73,8 @@ interface GameScreenProps {
   modifierSources?: ModifierSource[];
   cumulativeLockedBalls?: number;
   ascensionDepth?: number;
+  /** Best score per map id, for the Benchmarking highscore bar (#45). */
+  mapHighscores?: Record<string, number>;
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
@@ -75,6 +86,11 @@ interface GameScreenProps {
   freezeOnClear?: boolean;
   /** Admin/Playground: fired the instant the map is won (before the shimmer). */
   onMapComplete?: () => void;
+  /** Run-start intro: the board assembles from shatter tiles (reverse of the
+   *  level-clear dissolve). Only true for the first map of a run. */
+  introAssemble?: boolean;
+  /** Owned upgrades of a tag needed to activate its set bonus (build readout). */
+  tagSetThreshold?: number;
 }
 
 export function GameScreen({
@@ -89,6 +105,7 @@ export function GameScreen({
   onLivesChange,
   onGameEnd,
   onLevelComplete,
+  onBallTypeLocked,
   onMainMenu,
   onRestart,
   showInGameTutorial = false,
@@ -106,15 +123,25 @@ export function GameScreen({
   modifierSources = [],
   cumulativeLockedBalls = 0,
   ascensionDepth = 0,
+  mapHighscores,
   activeLoadouts = [],
   fenceDurability = null,
   showBallSpeeds = false,
   showPerfOverlay = false,
   freezeOnClear = false,
   onMapComplete,
+  introAssemble = false,
+  tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
 }: GameScreenProps) {
   const { t } = useTranslation();
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
+
+  // Background music, selected by 5-level band. Idempotent within a band, so it
+  // plays continuously across levels and the per-round remount, switching only at
+  // band boundaries. A missing band track falls back to main.mp3 (see gameMusic).
+  useEffect(() => {
+    playMusicForLevel(levelNumber);
+  }, [levelNumber]);
 
   // In-game tutorial step state. The interactive fence tutorial is level 1 only,
   // so it can never re-arm on a later map even if it was never marked seen.
@@ -139,12 +166,22 @@ export function GameScreen({
     setShowBreakIntro(!seen);
   }, [levelHasBreakObjective, level.id]);
 
+  // Scope Creep explainer — shown once, the first time a speed surge actually
+  // lands (the red Gauge chip appears). Persisted in localStorage; the game
+  // pauses beneath it like the other modal tutorials.
+  const [creepIntroSeen, setCreepIntroSeen] = useState(() => {
+    try { return !!localStorage.getItem('devend_creep_tutorial_seen'); } catch { return false; }
+  });
+
   // Game state for top bar
   const [gameState, setGameState] = useState<GameStateInfo>({
     cutsUsed: 0,
     spaceRemaining: 100,
     lockedBalls: 0,
     pushMode: "none",
+    creepPercent: 0,
+    activeSeconds: 0,
+    ballCount: 1,
     onBankAndContinue: undefined,
   });
 
@@ -152,10 +189,43 @@ export function GameScreen({
     setGameState(state);
   }, []);
 
+  // Map-highscore bar (#45): only with the Benchmarking upgrade and a stored
+  // highscore for this map. `projectedScore` is the score the map would pay if
+  // it ended now (same formula as the real level score, sans lock/break bonus),
+  // so the bar tracks how close the run is to beating the record.
+  const showHighscoreBar = activeModifiers.showHighscoreProgress > 0;
+  const highscoreTarget = mapHighscores?.[level.id] ?? 0;
+  const projectedScore = useMemo(() => {
+    if (!showHighscoreBar || highscoreTarget <= 0) return 0;
+    return calculateScore(
+      gameState.cutsUsed, level.expectedCuts, gameState.spaceRemaining, level.sizeThreshold, level.points, {
+        scoreMultiplier: activeModifiers.scoreMultiplier,
+        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+        overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      },
+    ).levelScore;
+  }, [showHighscoreBar, highscoreTarget, gameState.cutsUsed, gameState.spaceRemaining,
+      level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier,
+      activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus]);
+
   const totalLockedBalls = cumulativeLockedBalls + gameState.lockedBalls;
+
+  // Scope Creep tuning (game-config.yml snake_case -> ScopeCreepConfig).
+  // Memoized so GameCanvas's live-config effect only re-runs on real changes.
+  // Hard Deadline door: removes the grace window, so the first surge lands at
+  // second 0 of active play.
+  const scopeCreepConfig = useMemo(() => ({
+    graceSeconds: activeModifiers.scopeCreepImmediate > 0 ? 0 : config.scope_creep.grace_seconds,
+    stepSeconds: config.scope_creep.step_seconds,
+    stepPercent: config.scope_creep.step_percent,
+    maxSteps: config.scope_creep.max_steps,
+  }), [config.scope_creep, activeModifiers.scopeCreepImmediate]);
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
+
+  // Build readout for the bottom bar: owned upgrades per archetype tag.
+  const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
 
   const accentColor = externalAccentColor || getAccentColor();
 
@@ -164,6 +234,7 @@ export function GameScreen({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [soundMuted, setSoundMutedState] = useState(() => isSoundMuted());
   // Set once the map is won; freezes the scrolling-code background through the
   // clear shimmer. Resets naturally when the next map remounts this screen.
   const [mapComplete, setMapComplete] = useState(false);
@@ -194,9 +265,13 @@ export function GameScreen({
     levelNumber === 2 && showTopBarTutorial && !showMoverOverlay && !showBreakIntro;
   const showBottomBarOverlay =
     levelNumber === 3 && showBottomBarTutorial && !showMoverOverlay && !showBreakIntro;
+  const showCreepOverlay =
+    !creepIntroSeen && gameState.creepPercent > 0 &&
+    !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
   const modalOverlayActive =
     topPanelOpen || bottomPanelOpen || menuOpen ||
-    showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay;
+    showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
+    showCreepOverlay;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -232,11 +307,15 @@ export function GameScreen({
             spaceRequired={100 - level.sizeThreshold}
             lockedBalls={totalLockedBalls}
             threadLockRequired={level.threadLockRequired}
+            scopeCreepPercent={gameState.creepPercent}
             ownedUpgrades={ownedUpgrades}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
             microManagerPerLock={activeModifiers.microManagerPerLock}
             ascensionDepth={ascensionDepth}
+            showHighscoreBar={showHighscoreBar}
+            highscoreCurrent={projectedScore}
+            highscoreTarget={highscoreTarget}
             onExpand={() => setTopPanelOpen(true)}
           />
         </div>
@@ -252,7 +331,9 @@ export function GameScreen({
             onLivesChange={onLivesChange}
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
+            onBallTypeLocked={onBallTypeLocked}
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
+            introAssemble={introAssemble}
             freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}
             paused={isPaused || modalOverlayActive}
@@ -268,6 +349,8 @@ export function GameScreen({
             fenceSpeedPerLevel={config.fence.speed_per_level}
             lockWinThresholdPercent={config.lock.win_threshold_percent}
             lockMinRegionCells={config.lock.min_region_cells}
+            scopeCreep={scopeCreepConfig}
+            pickupConfig={config.pickups}
             regionColor={getRegionColor()}
             accentColor={accentColor}
             activeModifiers={activeModifiers}
@@ -279,13 +362,32 @@ export function GameScreen({
           />
         </div>
 
-        {/* Stats Panel at bottom */}
-        <GameBottomBar
-          activeModifiers={activeModifiers}
-          accentColor={accentColor}
-          lockedBalls={totalLockedBalls}
-          onExpand={() => setBottomPanelOpen(true)}
-        />
+        {/* Stats Panel at bottom. The Ship Early countdown rides in its fixed
+            wrapper as the top row (the bar is position:fixed, so a sibling in
+            the flex column would be covered by it). Once the map is won the
+            panel goes visibility:hidden instantly - the bars below the board
+            must never outlive the board (a fade lagged behind the wave
+            on-device), but the layout box stays so the canvas doesn't resize
+            mid-sweep. */}
+        <div style={{ visibility: mapComplete ? 'hidden' : 'visible' }}>
+          <GameBottomBar
+            activeModifiers={activeModifiers}
+            accentColor={accentColor}
+            lockedBalls={totalLockedBalls}
+            tagCounts={tagCounts}
+            tagSetThreshold={tagSetThreshold}
+            topSlot={
+              <ShipEarlyBar
+                seconds={gameState.activeSeconds}
+                ballCount={gameState.ballCount}
+                extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
+                bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
+                visible={gameState.pushMode === 'none' && !mapComplete}
+              />
+            }
+            onExpand={() => setBottomPanelOpen(true)}
+          />
+        </div>
       </div>
 
       {/* Pause overlay */}
@@ -348,6 +450,23 @@ export function GameScreen({
             }}
           >
             <button
+              onClick={() => {
+                const next = !soundMuted;
+                setSoundMuted(next);
+                setSoundMutedState(next);
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
+              style={{ color: accentColor, backgroundColor: 'transparent' }}
+              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              {soundMuted ? t('game.soundOff') : t('game.soundOn')}
+            </button>
+            <button
               onClick={() => { setMenuOpen(false); onRestart(); }}
               className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
               style={{ color: accentColor, backgroundColor: 'transparent' }}
@@ -399,6 +518,18 @@ export function GameScreen({
         accentColor="#ffb454"
         title={t('game.breakTutorialTitle')}
         body={t('game.breakTutorialBody')}
+      />
+
+      {/* Scope Creep explainer — first time a speed surge lands, any map */}
+      <TutorialOverlay
+        visible={showCreepOverlay}
+        onDismiss={() => {
+          setCreepIntroSeen(true);
+          try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ }
+        }}
+        accentColor="#ff6b6b"
+        title={t('game.creepTutorialTitle')}
+        body={t('game.creepTutorialBody')}
       />
 
       {/* Top bar tutorial — map 2, first run only */}

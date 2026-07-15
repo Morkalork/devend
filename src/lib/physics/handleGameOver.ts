@@ -2,7 +2,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
-import { calculateScore } from "@/lib/scoring";
+import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
 import { playDeathSound } from "@/lib/gameAudio";
 import { vibrateDeath } from "@/lib/gameHaptics";
 import { polygonArea } from "@/lib/polygon";
@@ -39,11 +39,17 @@ export function handleGameOverFn(
     const pushBonus = chunkSize > 0
       ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
       : 0;
-    // Fold lock + push bonuses in before the cap (issue #43).
+    // Ship Early: the threshold was met before the push began, so the earned
+    // tempo bonus survives a failed push (pushing is never taxed).
+    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+    // Fold lock + push + ship-early bonuses in before the cap (issue #43).
     const { levelScore, breakdown } = calculateScore(
-      game.wallCount, level.expectedCuts, pushStartPercent,
-      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-      game.lockBonus + pushBonus,
+      game.wallCount, level.expectedCuts, pushStartPercent, level.sizeThreshold, level.points, {
+        scoreMultiplier: activeModifiers.scoreMultiplier,
+        extraBonus: game.lockBonus + pushBonus + shipEarlyBonus,
+        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+        overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      },
     );
 
     callbacks.onLevelComplete({
@@ -57,6 +63,7 @@ export function handleGameOverFn(
       fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
       extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
       lockedBallsCount: game.lockedBallsCount,
+      shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
     });
     callbacks.startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
     return;
@@ -94,11 +101,16 @@ export function handlePushFailedFn(
   const pushBonus = chunkSize > 0
     ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
     : 0;
-  // Fold lock + push bonuses in before the cap (issue #43).
+  // Ship Early: threshold met before the push, so the bonus survives the fail.
+  const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+  // Fold lock + push + ship-early bonuses in before the cap (issue #43).
   const { levelScore, breakdown } = calculateScore(
-    game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent,
-    level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    game.lockBonus + pushBonus,
+    game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent, level.sizeThreshold, level.points, {
+      scoreMultiplier: activeModifiers.scoreMultiplier,
+      extraBonus: game.lockBonus + pushBonus + shipEarlyBonus,
+      spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+      overtimeCapBonus: activeModifiers.overtimeCapBonus,
+    },
   );
 
   callbacks.onLevelComplete({
@@ -112,6 +124,7 @@ export function handlePushFailedFn(
     fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
     extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
     lockedBallsCount: game.lockedBallsCount,
+    shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
   });
   callbacks.startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
 }

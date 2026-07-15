@@ -20,7 +20,6 @@ export interface GameModifiers {
   bonusRemovalChance: number;
   bonusRemovalAmount: number;
   extraLives: number;
-  scoreInterestRate: number;
   extraShopItems: number;
   shopRestockCount: number; // purchases per shop visit that refill their slot with a new offer
   extraContinues: number;   // extra per-run revives beyond the base 1 (cert/upgrade grantable)
@@ -30,6 +29,72 @@ export interface GameModifiers {
 
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
+  overtimePerLock: number;   // flat overtime hours added to the lock bonus per locked ball (Severance Package)
+  fenceSpeedPerLock: number; // fence-speed bonus per ball locked this map (0.04 = +4% per lock; Knowledge Transfer)
+  // Additive (sum) — Frozen Assets: extra lock-bonus multiplier when a ball is
+  // locked while frozen (1 = frozen locks pay double, 2 = triple; 0 = off)
+  frozenLockBonus: number;
+  // Additive (sum) — lock set bonus: every lock pass counts as this many balls
+  // bigger for the simultaneous-trap multiplier (Chain Reaction)
+  simultaneousLockBonus: number;
+  // Additive (sum) — freeze set bonus: >0 = freeze taps have no re-freeze
+  // cooldown after thawing (Absolute Zero)
+  freezeNoCooldown: number;
+  // Additive (sum) — Continuous Delivery: fence-speed bonus per fence already
+  // completed this map (0.04 = +4% per fence; resets each map)
+  fenceSpeedPerFence: number;
+  // Additive (sum) — Clean Release: instant fences granted on the NEXT map
+  // after finishing a map under par (folded per-map by useGameSession)
+  underParInstantFence: number;
+  // Additive (sum) — War Chest: ball-speed reduction per 50h banked at map
+  // start, capped in useGameSession (0.02 = 2% per 50h)
+  bankedSlowPer50h: number;
+  // Additive (sum) — Stock Options capstone: raises the per-map overtime cap
+  overtimeCapBonus: number;
+  // Additive (sum) — Company Card capstone: >0 = the cheapest shop offer is free
+  freeCheapestOffer: number;
+  // Additive (sum) — Second Wind capstone: fence-hit shields granted per map
+  wallShieldsPerMap: number;
+  // Additive (sum) — Ghost Protocol capstone: growing fences ignore ball hits
+  // during their first N milliseconds
+  fenceGraceMs: number;
+  // Additive (sum) — Deadline Extension: extra seconds PER BALL added to every
+  // Ship Early window (2 = each window gains 2s x the map's ball count)
+  shipEarlySecondsPerBall: number;
+  // Additive (sum) — Hard Deadline door: >0 = Scope Creep's grace window is
+  // removed, so the first speed surge lands at second 0 of active play
+  scopeCreepImmediate: number;
+  // Additive (sum) — Runway (reworked Venture Capital): each value is a bank
+  // threshold in hours; while totalScore is at/above it when a map starts, the
+  // perk applies (see src/lib/treasury.ts). 0 = perk not owned.
+  runwayInstantFenceAt: number;    // grants +1 instant fence per map
+  runwayConcurrentFenceAt: number; // grants +1 concurrent fence
+  runwayFreezeAt: number;          // grants a 2s tap-freeze
+  // Additive (sum) — Budget Cycle: next-map boons per 60h spent in one shop
+  // visit (max 3 chunks; see src/lib/treasury.ts)
+  spendInstantFencePerChunk: number; // instant fences on the next map per chunk
+  spendFenceSpeedPerChunk: number;   // fence-speed bonus on the next map per chunk (0.05 = +5%)
+  // Additive (sum) — Code Review: percentage points added to the lock
+  // threshold (base 10% of the win denominator), so slightly-too-big pockets
+  // still lock their ball
+  lockThresholdBonus: number;
+  // Additive (sum) — Cold Boot: seconds every ball stays frozen at map start
+  // (rides the Feature Freeze frozenUntil path; no re-freeze cooldown after)
+  spawnFreezeSeconds: number;
+  // Additive (sum) — Benefits Package: extra pickup-token spawn chance per
+  // roll (0.03 = +3 percentage points). Deliberately vague in all player-facing
+  // copy ("slightly more often"); only applies where pickups are enabled.
+  pickupChanceBonus: number;
+  // Additive (sum) — Total Compensation: each level enhances every pickup
+  // payout (+1h on overtime/cap tokens, +1s on freeze charges, split balls
+  // 5% slower per level; at level 3 the Fork splits a ball into THREE).
+  pickupPayoutLevel: number;
+
+  // Multiplicative — Hard Deadline door: scales the Ship Early payout
+  shipEarlyBonusMultiplier: number;
+
+  // Multiplicative — Tech Evangelist: scales the space-optimization bonus
+  spaceBonusMultiplier: number;
 
   // Additive (sum) — SCRUM Master
   ballPathPredictionBounces: number; // how many bounces ahead to show
@@ -42,6 +107,11 @@ export interface GameModifiers {
   // Additive (sum) — Cron Job: seconds an auto-frozen ball stays frozen (0 = upgrade not owned).
   // The freeze fires automatically on a fixed interval (AUTO_FREEZE_INTERVAL_MS).
   autoFreezeDuration: number;
+
+  // Additive (sum) — Benchmarking (#45): 0 = off, >0 = show the map-highscore
+  // progress bar in the HUD (a second bar under the capture readout). Gated in
+  // upgrades.yml behind the ball-size upgrade.
+  showHighscoreProgress: number;
 }
 
 /**
@@ -59,7 +129,7 @@ export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
  * can attribute each active modifier to what produced it.
  */
 export interface ModifierSource {
-  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension';
+  kind: 'upgrade' | 'certificate' | 'achievement' | 'loadout' | 'ascension' | 'tagSet' | 'door' | 'capstone';
   id: string;
   name: string;
   modifiers: Record<string, number>;
@@ -73,6 +143,8 @@ export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'scoreMultiplier',
   'shopDiscountMultiplier',
   'pushBonusMultiplier',
+  'spaceBonusMultiplier',
+  'shipEarlyBonusMultiplier',
 ];
 
 /**
@@ -111,7 +183,6 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   bonusRemovalChance: 0,
   bonusRemovalAmount: 0,
   extraLives: 0,
-  scoreInterestRate: 0,
   extraShopItems: 0,
   shopRestockCount: 0,
   extraContinues: 0,
@@ -119,11 +190,37 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   startingCapturePercent: 0,
   fenceDurabilityBonus: 0,
   microManagerPerLock: 0,
+  overtimePerLock: 0,
+  fenceSpeedPerLock: 0,
+  frozenLockBonus: 0,
+  simultaneousLockBonus: 0,
+  freezeNoCooldown: 0,
+  fenceSpeedPerFence: 0,
+  underParInstantFence: 0,
+  bankedSlowPer50h: 0,
+  overtimeCapBonus: 0,
+  freeCheapestOffer: 0,
+  wallShieldsPerMap: 0,
+  fenceGraceMs: 0,
+  shipEarlySecondsPerBall: 0,
+  scopeCreepImmediate: 0,
+  runwayInstantFenceAt: 0,
+  runwayConcurrentFenceAt: 0,
+  runwayFreezeAt: 0,
+  spendInstantFencePerChunk: 0,
+  spendFenceSpeedPerChunk: 0,
+  lockThresholdBonus: 0,
+  spawnFreezeSeconds: 0,
+  pickupChanceBonus: 0,
+  pickupPayoutLevel: 0,
+  shipEarlyBonusMultiplier: 1,
+  spaceBonusMultiplier: 1,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,
   ballFreezeDuration: 0,
   ballFreezeCount: 0,
   autoFreezeDuration: 0,
+  showHighscoreProgress: 0,
 };
 
 /**

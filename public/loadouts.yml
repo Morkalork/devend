@@ -56,12 +56,12 @@ loadouts:
   - id: hiring_freeze
     name: Hiring Freeze
     curse: The shop offers 2 fewer upgrades.
-    blessing: Earn 10% interest on banked overtime after every level.
+    blessing: All shop prices drop by 10%.
     # Too harsh as a fresh-run opener (the early shop is already small).
     uniqueWinsRequired: 2
     modifiers:
       extraShopItems: -2
-      scoreInterestRate: 0.10
+      shopDiscountMultiplier: 0.9
 
   - id: legacy_codebase
     name: Legacy Codebase

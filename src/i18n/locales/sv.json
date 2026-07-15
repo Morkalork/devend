@@ -43,7 +43,6 @@
     "concurrent": "Samtidiga",
     "bonusRemove": "Bonusborttagning",
     "extraLives": "Extra liv",
-    "interest": "Ränta",
     "shopSlots": "Butiksplatser",
     "restocks": "Påfyllningar",
     "microMgrPerLock": "MicroMgr/lås",
@@ -75,9 +74,17 @@
     "extraLivesActive_one": "+{{count}} extra startliv läggs till i början av varje omgång. Fler liv betyder fler chanser att återhämta sig från ett dåligt snitt.",
     "extraLivesActive_other": "+{{count}} extra startliv läggs till i början av varje omgång. Fler liv betyder fler chanser att återhämta sig från ett dåligt snitt.",
     "extraLivesInactive": "Inga extra startliv.",
-    "scoreInterest": "Poängränta",
-    "scoreInterestActive": "I slutet av varje nivå läggs {{rate}} av din nuvarande totalpoäng till som bonus. Högre samlad poäng växer snabbare.",
-    "scoreInterestInactive": "Ingen ränta aktiv.",
+    "runwayInstantFence": "Landningsbana: direktstängsel",
+    "runwayInstantFenceActive": "Så länge du har {{hours}}h eller mer säkrat när en karta börjar slutförs ett stängsel direkt (Runway).",
+    "runwayConcurrentFence": "Landningsbana: extra stängsel",
+    "runwayConcurrentFenceActive": "Så länge du har {{hours}}h eller mer säkrat när en karta börjar kan du bygga ett extra stängsel åt gången (Runway).",
+    "runwayFreeze": "Landningsbana: frysning",
+    "runwayFreezeActive": "Så länge du har {{hours}}h eller mer säkrat när en karta börjar fryser en tryckning på en boll den i 2 sekunder (Runway).",
+    "runwayInactive": "Ingen Runway-förmån ägd.",
+    "budgetCycle": "Budgetcykel",
+    "budgetCycleValue": "per {{hours}}h spenderade",
+    "budgetCycleActive": "Varje {{hours}}h som spenderas under ett butiksbesök laddar förmåner till nästa karta (max 3 delar per besök).",
+    "budgetCycleInactive": "Inga budgetcykelförmåner.",
     "extraShopSlots": "Extra butiksplatser",
     "extraShopSlotsActive_one": "{{count}} extra vara visas i butiken mellan nivåerna och ger dig fler val vid varje besök.",
     "extraShopSlotsActive_other": "{{count}} extra varor visas i butiken mellan nivåerna och ger dig fler val vid varje besök.",
@@ -91,6 +98,79 @@
     "microManagerActive_one": "Varje låst boll minskar bollhastigheten med {{percent}}% (staplas multiplikativt, ner till ett golv på 50%). Just nu {{count}} boll låst → effektiv hastighet {{speed}}.",
     "microManagerActive_other": "Varje låst boll minskar bollhastigheten med {{percent}}% (staplas multiplikativt, ner till ett golv på 50%). Just nu {{count}} bollar låsta → effektiv hastighet {{speed}}.",
     "microManagerInactive": "MicroManager inte aktiv.",
+    "overtimePerLock": "Övertid per infångning",
+    "overtimePerLockActive": "Varje boll du låser in ger +{{hours}} bonusövertid, räknad under kartans belöningstak (Severance Package).",
+    "overtimePerLockInactive": "Ingen övertidsbonus per infångning.",
+    "frozenLockBonus": "Frusen infångningsbonus",
+    "frozenLockBonusActive": "Att låsa in en boll medan den är frusen ger x{{mult}} infångningsbonus (Frozen Assets).",
+    "frozenLockBonusInactive": "Ingen bonus för frusna infångningar.",
+    "lockThreshold": "Låströskel",
+    "lockThresholdActive": "Fickor upp till {{percent}}% större än låsgränsen låser ändå in sin boll (Code Review).",
+    "lockThresholdInactive": "Standardlåströskel.",
+    "spawnFreeze": "Startfrysning",
+    "spawnFreezeActive": "Varje karta startar frusen: alla bollar står stilla de första {{seconds}}s (Cold Boot).",
+    "spawnFreezeInactive": "Bollarna rör sig från kartans första ögonblick.",
+    "pickupChance": "Power-up-symboler",
+    "pickupChanceActive": "Power-up-symboler dyker upp oftare än vanligt (Benefits Package).",
+    "pickupChanceInactive": "Power-up-symboler dyker upp i normal takt.",
+    "pickupPayout": "Power-up-utdelning",
+    "pickupPayoutActive": "Inlösta symboler ger förbättrade belöningar, och delade bollar flyger långsammare (Total Compensation nivå {{level}}).",
+    "pickupPayoutInactive": "Power-up-symboler ger sina grundbelöningar.",
+    "pushBonus": "Pressutbetalningar",
+    "pushBonusActive": "Pressutbetalningarna multipliceras med x{{mult}}.",
+    "pushBonusInactive": "Standardpressutbetalningar.",
+    "fenceSpeedPerLock": "Staketfart per infångning",
+    "fenceSpeedPerLockActive": "Varje boll som låses in på kartan snabbar upp staketbygget med {{percent}}% under resten av kartan (Knowledge Transfer).",
+    "fenceSpeedPerLockInactive": "Ingen staketfartsbonus per infångning.",
+    "simultaneousLockBonus": "Fällmultiplikatorbonus",
+    "simultaneousLockBonusActive": "Varje infångning räknas som {{count}} boll(ar) fler för den samtidiga fällmultiplikatorn (setbonusen Chain Reaction).",
+    "simultaneousLockBonusInactive": "Ingen fällmultiplikatorbonus.",
+    "freezeNoCooldown": "Frysnedkylning",
+    "freezeNoCooldownActive": "Bollar kan frysas igen i samma stund de tinar, ingen nedkylning (setbonusen Absolute Zero).",
+    "freezeNoCooldownInactive": "Frusna bollar har en nedkylningstid efter att de tinat.",
+    "fenceSpeedPerFence": "Staketfart per staket",
+    "fenceSpeedPerFenceActive": "Varje staket du bygger klart snabbar upp nästa med {{percent}}% under resten av kartan (Continuous Delivery).",
+    "fenceSpeedPerFenceInactive": "Ingen fartbonus per staket.",
+    "underParInstantFence": "Under par-bonus",
+    "underParInstantFenceActive": "Att klara en karta under par ger +{{count}} direktstaket på nästa karta (Clean Release).",
+    "underParInstantFenceInactive": "Ingen under par-bonus.",
+    "bankedSlow": "Bankad övertid saktar ner",
+    "bankedSlowValue": "{{percent}}% / 50h",
+    "bankedSlowActive": "Bollar startar {{percent}}% långsammare för varje 50h på banken vid kartstart, upp till 8% (War Chest).",
+    "bankedSlowInactive": "Ingen nedsaktning från bankad övertid.",
+    "spaceBonusMultiplier": "Utrymmesbonusmultiplikator",
+    "spaceBonusMultiplierActive": "Utrymmesoptimeringens bonusar betalar x{{mult}} (Tech Evangelist).",
+    "spaceBonusMultiplierInactive": "Utrymmesoptimeringens bonusar betalar som vanligt.",
+    "tagSetSource": "{{name}} (setbonus)",
+    "doorSource": "{{name}} (dörr)",
+    "capstoneSource": "{{name}} (befordran)",
+    "overtimeCapBonus": "Övertidstak",
+    "overtimeCapBonusActive": "Övertidstaket per karta höjs med {{hours}}h under resten av omgången (Stock Options).",
+    "overtimeCapBonusInactive": "Standardtak för övertid per karta.",
+    "freeCheapestOffer": "Gratis butikserbjudande",
+    "freeCheapestOfferActive": "Det billigaste erbjudandet i varje butik är gratis (Company Card).",
+    "freeCheapestOfferInactive": "Inga gratis butikserbjudanden.",
+    "wallShieldsPerMap": "Staketsköldar",
+    "wallShieldsPerMapActive": "{{count}} bollträff(ar) per karta absorberas utan att kosta ett liv (Second Wind).",
+    "wallShieldsPerMapInactive": "Inga staketsköldar.",
+    "fenceGrace": "Staketets skonfrist",
+    "fenceGraceActive": "Staket ignorerar bollträffar under sina första {{seconds}}s av bygget (Ghost Protocol).",
+    "fenceGraceInactive": "Ingen skonfrist för staket.",
+    "timingHead": "Nedräkning för tidig leverans",
+    "shipEarlyCountdown": "Nedräkningstimer",
+    "shipEarlyCountdownValue": "upp till +{{hours}}h",
+    "shipEarlyCountdownDesc": "En nedräkningsstapel sitter ovanför den här panelen medan du spelar. Klara kartan innan den töms för upp till +{{hours}}h övertid för tidig leverans: ju snabbare du blir klar, desto mer betalar den. Utbetalningen sjunker en timme vid varje vitt streck på stapeln. Fönstren skalar med antalet bollar på kartan, och bara aktivt spel räknas - pauser, menyer och pressfrågan förbrukar inte klockan.",
+    "shipEarlyWindow": "Tidig leverans-fönster",
+    "shipEarlyWindowValue": "+{{seconds}}s/boll",
+    "shipEarlyWindowActive": "Varje bonusfönster för tidig leverans varar {{seconds}} sekunder längre per boll på kartan (Deadline Extension).",
+    "shipEarlyWindowInactive": "Ingen förlängning av tidig leverans-fönstret.",
+    "shipEarlyMultiplier": "Tidig leverans-utbetalning",
+    "shipEarlyMultiplierActive": "Tidig leverans-bonusar betalar x{{mult}} på den här kartan (Hard Deadline).",
+    "shipEarlyMultiplierInactive": "Tidig leverans-bonusar betalar sin normala nivå.",
+    "scopeCreepImmediate": "Omedelbar scope creep",
+    "scopeCreepImmediateActive": "Scope creep har ingen frist på den här kartan: bollarna börjar accelerera från första sekunden (Hard Deadline).",
+    "scopeCreepImmediateInactive": "Scope creep börjar efter sin normala frist.",
+    "on": "På",
     "off": "Av",
     "ballPathPrediction": "Bollbaneprognos",
     "bounceCount_one": "{{count}} studs",
@@ -150,14 +230,22 @@
     "resume": "Återuppta",
     "pause": "Pausa",
     "gameMenu": "Spelmeny",
+    "soundOn": "Ljud: På",
+    "soundOff": "Ljud: Av",
     "restartRun": "Starta om omgången",
     "mainMenu": "Huvudmeny",
     "moverTutorialTitle": "⚠ Rörliga hinder",
     "moverTutorialBody": "Orangea hinder rör sig fram och tillbaka på ett fast spår.\n\nBollar studsar mot dem - men om ditt växande stängsel rör vid ett förlorar du ett liv.\n\nHåll koll på spårlinjerna och tajma dina stängsel noga!",
+    "creepTutorialTitle": "⚠ Scope creep",
+    "creepTutorialBody": "Projektet har pågått för länge: bollarna blev just snabbare, och de fortsätter accelerera med några sekunders mellanrum tills de når ett tak.\n\nScope creep straffar bara väntan: klara kartan inom lugnfönstret så ser du den aldrig.\n\nDen röda mätaren i övre listen visar nuvarande fartökning.",
     "topBarTutorialTitle": "Den övre listen",
     "topBarTutorialBody": "Den övre listen går att fälla ut!\n\nTryck på den för att se fullständiga nivådetaljer, alla dina aktiva uppgraderingar med beskrivningar och framsteg för certifikattimmar.",
     "bottomBarTutorialTitle": "Den nedre listen",
-    "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska."
+    "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska.",
+    "infoUnlocked": "Info upplåst",
+    "pickupFork": "Bollen delades!",
+    "pickupCapRaise": "Tak +{n}h",
+    "pickupFreeze": "Frysning +1"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
@@ -181,13 +269,89 @@
     "baseOvertime": "Bas-övertid",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Trådlås ({{count}})",
-    "interest": "Ränta",
     "pushBonus": "Pressbonus",
+    "pickupBonus": "Power-up-bonus",
+    "shipEarly": "Tidig leverans ({{seconds}}s)",
+    "newHighscore": "Nytt rekord",
     "totalBonus": "Total bonus",
     "overtimeEarned": "Intjänad övertid",
     "totalOvertime": "Total övertid",
     "certificateUnlocked": "Certifikat upplåst",
-    "nextLevel": "Nästa nivå"
+    "nextLevel": "Nästa nivå",
+    "holdHint": "Håll på en rad för detaljer",
+    "infoTipLabel": "Så tjänar du mer",
+    "info": {
+      "level": {
+        "title": "Nivå",
+        "body": "Banan du precis klarade. Senare banor betalar mer bas-övertid och introducerar nya bolltyper och mekaniker.",
+        "tip": "Håll omgången vid liv för att nå djupare banor som betalar bättre. Uppgraderingar köpta mellan nivåer varar hela omgången."
+      },
+      "remaining": {
+        "title": "Kvarvarande utrymme",
+        "body": "Hur mycket av brädet som fortfarande var öppet när du vann. Du klarar en nivå genom att stängsla in utrymme tills den öppna ytan faller under banans mål.",
+        "tip": "Att rensa mer än vad som krävs matar utrymmesbonusen, och att nå målet snabbt betalar bonusen för tidig leverans."
+      },
+      "fencesUsed": {
+        "title": "Stängsel mot par",
+        "body": "Hur många stängsel du använde jämfört med banans par. På eller under par betalar hela basen. Varje stängsel över par skalar ner den (x0.75, x0.6, sedan x0.4), och 3 eller fler över par stänger också av utrymmesbonusen.",
+        "tip": "Satsa på färre, större snitt. Att sluta ens ett stängsel under par ger en bonustimme."
+      },
+      "spaceBonus": {
+        "title": "Utrymmesbonus",
+        "body": "Extra yta borttagen utöver banans krav. Stegen betalar +1h vid 10% extra, +2h vid 30% och +3h vid 55%. Den stängs av om du slutar 3 eller fler stängsel över par.",
+        "tip": "Klipp bort lite mer av brädet innan ditt vinnande snitt. Nästan totala rensningar betalar det högsta steget."
+      },
+      "baseOvertime": {
+        "title": "Bas-övertid",
+        "body": "Banans fasta utbetalning, skalad efter din stängselprestation. Varje bana betalar en platt bas, så bonusarna på den här skärmen är där de riktiga intäkterna finns.",
+        "tip": "Håll dig på eller under par för att behålla hela basen, och stapla bonusar ovanpå."
+      },
+      "threadLocks": {
+        "title": "Trådlås",
+        "body": "Du låser en boll genom att stänga in den i en egen liten ficka på brädet, avskuren från allt annat. Varje låst boll betalar sitt låsvärde, och tuffare bolltyper betalar mer. Att fånga flera bollar med ett enda snitt multiplicerar hela utbetalningen med antalet: 2 på en gång betalar dubbelt, 3 betalar tredubbelt.",
+        "tip": "Lås en grön pengaboll tidigt: den tredubblar vad varje senare lås på banan betalar. Valla sedan ihop bollarna och stäng ett snitt runt hela gruppen."
+      },
+      "breakBonus": {
+        "title": "Rivningsbonus",
+        "body": "Övertid för att krossa bärnstensfärgade block. Bollar nöter på ett krossbart block vid kontakt tills det splittras, och allt som står staplat ovanpå faller med det.",
+        "tip": "Styr bollarna mot blocken med dina snitt. Den svarta bollen krossar dem på hälften så många träffar."
+      },
+      "shipEarly": {
+        "title": "Tidig leverans",
+        "body": "En tempobonus för att nå vinstvillkoret snabbt: +1h inom 60 sekunder, +2h inom 40, +3h inom 25. Bara aktivt spel räknas, menyer och pressfrågan gör det inte.",
+        "tip": "Öppna med stora, självsäkra snitt i stället för många små försiktiga. Fart och precision är separata bonusar, så du kan jaga båda."
+      },
+      "pushBonus": {
+        "title": "Pressbonus",
+        "body": "Belöningen för att våga. Efter att banans mål är nått kan du fortsätta skära i stället för att säkra, och varje extra bit av brädet betalar bonusövertid.",
+        "tip": "Att pressa är gratis pengar: misslyckas du mitt i förlorar du bara extrabonusen, aldrig din säkrade poäng."
+      },
+      "pickupBonus": {
+        "title": "Power-up-bonus",
+        "body": "Övertid från power-up-symboler du stängde in med ett lås. En symbol betalar bara när en boll låses i fickan som håller den: fångar du symbolens yta utan boll går den förlorad, och ohämtade symboler försvinner av sig själva.",
+        "tip": "Valla en boll mot symbolen innan du förseglar fickan. Symbolövertid betalas efter taket per bana, så den räknas alltid."
+      },
+      "newHighscore": {
+        "title": "Nytt rekord",
+        "body": "Du slog banans tidigare rekord, så hela utbetalningen multipliceras med x1.25. Det tillämpas efter taket per bana, så att slå ett rekord betalar alltid extra.",
+        "tip": "Rekord sparas per bana. En stark uppgraderingsbuild kan slå dina gamla resultat bana efter bana."
+      },
+      "totalBonus": {
+        "title": "Total bonus",
+        "body": "Alla nivåns bonusar sammanlagda: par, utrymme, lås, rivning, tempo och press.",
+        "tip": "Bonusar viks in under ett tak per bana på dubbla basutbetalningen, så att sprida sig över flera bonustyper slår att maxa en enda."
+      },
+      "overtimeEarned": {
+        "title": "Intjänad övertid",
+        "body": "Vad den här nivån betalade totalt: den skalade basen plus alla bonusar, med tak på dubbla banans basutbetalning. Ett nytt rekord multiplicerar förbi taket.",
+        "tip": "Slår du ofta i taket, jaga rekordmultiplikatorn: den tillämpas efter taket, så den betalar alltid."
+      },
+      "totalOvertime": {
+        "title": "Total övertid",
+        "body": "Hela omgångens övertid hittills. Det är valutan du spenderar i butiken mellan nivåerna, och det som säkras när omgången tar slut.",
+        "tip": "Att spendera köper styrka och laddar budgetcykeln, medan en fet bank matar Runway-förmånerna och War Chest. Din build avgör åt vilket håll du lutar."
+      }
+    }
   },
   "notFound": {
     "message": "Hoppsan! Sidan hittades inte",
@@ -196,6 +360,9 @@
   "options": {
     "title": "ALTERNATIV",
     "language": "Språk",
+    "sound": "Ljud",
+    "music": "Musik",
+    "effects": "Effekter",
     "reEnableTutorials": "Återaktivera alla genomgångar",
     "resetCertificates": "Nollställ certifikat & poäng",
     "back": "Tillbaka",
@@ -216,7 +383,7 @@
   },
   "result": {
     "youWin": "DU VANN!",
-    "gameOver": "SPELET SLUT",
+    "gameOver": "Du har blivit ersatt av AI.",
     "completedAllLevels": "🎉 Klarade alla nivåer! 🎉",
     "ascensionDepth": "Uppstigningsdjup {{depth}}",
     "loadoutsBraved": "Loadouts trotsade: {{loadouts}}",
@@ -235,9 +402,18 @@
   "topBar": {
     "clear": "KLART",
     "percentToGo": "{{percent}}% kvar",
+    "recordPace": "REKORD",
     "currentlyReducingBy": "Minskar just nu med {{percent}}%",
     "continues_one": "{{count}} Fortsättning sparad",
-    "continues_other": "{{count}} Fortsättningar sparade"
+    "continues_other": "{{count}} Fortsättningar sparade",
+    "lives_one": "{{count}} liv kvar",
+    "lives_other": "{{count}} liv kvar",
+    "scopeCreepValue": "+{{percent}}%",
+    "scopeCreepTitle": "Scope creep: bollarna rör sig {{percent}}% snabbare"
+  },
+  "shipEarlyBar": {
+    "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
+    "bonus": "+{{hours}}h"
   },
   "topBarDetails": {
     "levelStatusTitle": "Status för nivå {{level}}",
@@ -328,23 +504,41 @@
   },
   "upgradeShop": {
     "storeLabel": "Butik",
+    "freeLabel": "GRATIS",
     "levelComplete": "Nivå {{level}} klar",
     "checkpointReached": "kontrollpunkt nådd",
     "levelBanner": "NIVÅ {{level}}",
     "progressSavedHere": "framsteg sparas här",
     "hoursValue": "{{hours}}h",
     "overtime": "övertid",
+    "marketRates": "Marknadstaxor: +{{percent}}%",
     "restocksLeft": "Påfyllningar kvar: {{count}} - att köpa en vara lägger till ett nytt erbjudande",
     "noRestocksLeft": "Inga påfyllningar kvar detta besök",
+    "runwayTitle": "Runway: förmånerna är aktiva så länge banken ligger över tröskeln när kartan börjar",
+    "runwayChipInstantFence": "{{hours}}h+: direktstängsel",
+    "runwayChipConcurrentFence": "{{hours}}h+: extra stängsel",
+    "runwayChipFreeze": "{{hours}}h+: frysning",
+    "budgetCycleCharged_one": "Budgetcykel: att spendera {{spent}}h laddar {{count}} förmån till nästa karta",
+    "budgetCycleCharged_other": "Budgetcykel: att spendera {{spent}}h laddar {{count}} förmåner till nästa karta",
+    "budgetCycleProgress": "Budgetcykel: {{spent}}h av {{next}}h spenderade mot en förmån på nästa karta",
     "requires": "Kräver:",
     "holdHint": "Håll på en uppgradering för att se dess spår",
+    "tags": {
+      "lock": "Låsning",
+      "freeze": "Frysning",
+      "bank": "Bank",
+      "tempo": "Tempo",
+      "risk": "Risk",
+      "safety": "Säkerhet"
+    },
     "detailUnlockedBy": "Låses upp av",
     "detailUnlocks": "Låser upp",
     "detailNoPrereqs": "Tillgänglig från start",
     "detailNoUnlocks": "Inget mer ännu",
     "certificateUnlocked": "Certifikat upplåst!",
-    "buyAndContinue": "Köp {{count}} & fortsätt ({{cost}}h)",
+    "buyAndContinue": "Köp {{count}}",
     "continue": "Fortsätt",
+    "closedNotEnoughLocks": "Inte tillräckligt många bollar låsta",
     "tutorialTitle": "BUTIKEN",
     "tutorialBody": "Spendera övertidstimmar på uppgraderingar efter varje bana. Övertidsuppgraderingar mångdubblar framtida intäkter. Effekterna visas i den nedre listen på nästa bana. Håll inne en uppgradering för mer information - bland annat vad som låser upp den och vad den låser upp."
   },
@@ -357,6 +551,49 @@
     "skipButton": "Hoppa över (ingen laddning)",
     "noLoadouts": "Inga laddningar tillgängliga."
   },
+  "buildRecap": {
+    "heading": "Omgångens sammanfattning",
+    "buildLine": "{{name}}-bygge: {{title}}",
+    "comboName": "{{a}}-{{b}}",
+    "generalist": "Generalist",
+    "generalistTitle": "Fullstack-generalist",
+    "titles": {
+      "lock": "Stängaren",
+      "freeze": "Kryoingenjör",
+      "bank": "Investeraren",
+      "tempo": "Leveransingenjör",
+      "risk": "Crunch-narkoman",
+      "safety": "Defensiv programmerare"
+    },
+    "capstoneLine": "Befordran: {{name}}",
+    "newRecord": "Nytt personbästa för {{archetype}}-byggen: {{hours}}h (tidigare {{previous}}h)",
+    "firstRecord": "Första {{archetype}}-bygget på tavlan: {{hours}}h bankade",
+    "bestSoFar": "Bästa {{archetype}}-bygget hittills: {{hours}}h"
+  },
+  "capstoneDraft": {
+    "title": "Befordran",
+    "subtitle": "Din utvecklingsrunda gick bra. Välj en permanent förmån för resten av omgången.",
+    "exclusiveHint": "Bara ett val. De andra två försvinner för gott.",
+    "scopeNote": "Gäller resten av omgången, inklusive ascension.",
+    "holdHint": "Håll in en förmån för hela genomgången.",
+    "closeDetail": "Stäng",
+    "confirmButton": "Acceptera befordran",
+    "pickHint": "Välj en förmån"
+  },
+  "doorDraft": {
+    "title": "Nästa uppdrag",
+    "subtitle": "Genomgång av nivå {{level}}: välj ditt kontrakt för nästa sträcka.",
+    "intelBalls": "Bollar",
+    "intelPar": "Par",
+    "intelCapture": "Erövra",
+    "intelObstacles": "Hinder",
+    "obstaclesWithBreakables": "{{count}} ({{breakables}} krossbara)",
+    "scopeNote": "Kontraktet gäller de kommande 5 nivåerna, butiker inräknade, fram till ditt nästa uppdrag.",
+    "holdHint": "Håll in en biljett för hela genomgången.",
+    "closeDetail": "Stäng",
+    "enterButton": "Ta den här biljetten",
+    "pickHint": "Välj en biljett"
+  },
   "continue": {
     "title": "Fortsätta?",
     "body_one": "Spendera 1 Fortsättning för att göra om nivån med dina övertidstimmar och uppgraderingar kvar. {{count}} kvar.",
@@ -366,6 +603,7 @@
   },
   "welcome": {
     "tagline": "Skär. Fånga. Överlev.",
+    "tapToStart": "Tryck för att börja",
     "loading": "Laddar...",
     "startGame": "Starta spel",
     "tutorial": "Genomgång",
@@ -470,16 +708,24 @@
         "description": "Få 15% mer övertid per karta."
       },
       "venture_capital_senior": {
-        "name": "Riskkapital",
-        "description": "10% ränta på oanvänd övertid mellan kartor."
+        "name": "Landningsbana",
+        "description": "Så länge du har 100h eller mer säkrat slutförs ett stängsel direkt när varje karta börjar."
       },
       "venture_capital_principal": {
-        "name": "Riskkapital",
-        "description": "20% ränta på oanvänd övertid mellan kartor."
+        "name": "Landningsbana",
+        "description": "Så länge du har 200h eller mer säkrat kan du bygga ett extra stängsel åt gången."
       },
       "venture_capital_architect": {
-        "name": "Riskkapital",
-        "description": "30% ränta på oanvänd övertid mellan kartor."
+        "name": "Landningsbana",
+        "description": "Så länge du har 300h eller mer säkrat kan du trycka på en boll för att frysa den i 2 sekunder."
+      },
+      "budget_cycle_junior": {
+        "name": "Budgetcykel",
+        "description": "Varje utgiftsblock under ett butiksbesök köper ett direktstängsel på nästa karta. Blocken börjar på 60h och växer med marknadstaxorna."
+      },
+      "budget_cycle_senior": {
+        "name": "Budgetcykel",
+        "description": "Varje utgiftsblock under ett butiksbesök snabbar också upp stängselbygget 5% på nästa karta."
       },
       "micro_manager_principal": {
         "name": "MicroManager",
@@ -528,6 +774,30 @@
       "cron_job_architect": {
         "name": "Schemalagt jobb",
         "description": "Schemalagda frysningar håller nu en boll i 5 sekunder."
+      },
+      "benefits_package_junior": {
+        "name": "Förmånspaket",
+        "description": "Power-up-symboler dyker upp lite oftare."
+      },
+      "benefits_package_senior": {
+        "name": "Förmånspaket",
+        "description": "Power-up-symboler dyker upp ännu lite oftare."
+      },
+      "benefits_package_principal": {
+        "name": "Förmånspaket",
+        "description": "Power-up-symboler dyker upp märkbart oftare."
+      },
+      "total_compensation_junior": {
+        "name": "Totalersättning",
+        "description": "Varje power-up ger bättre utdelning, och delade bollar blir långsammare."
+      },
+      "total_compensation_senior": {
+        "name": "Totalersättning",
+        "description": "Power-up-utdelningen ökar igen, och delade bollar saktar ner ytterligare."
+      },
+      "total_compensation_principal": {
+        "name": "Totalersättning",
+        "description": "Toppförmåner. Bolldelaren delar nu en boll i tre."
       },
       "defensive_programming_junior": {
         "name": "Defensiv programmering",
@@ -616,7 +886,7 @@
       },
       "investment-strategy": {
         "name": "Investeringsstrategi",
-        "description": "Permanent räntebonus på din poäng - en belöning för att ha bemästrat Riskkapital."
+        "description": "Dina investeringar jobbar åt dig, bollarna rör sig 1% långsammare per 50h säkrade. En belöning för att ha bemästrat Landningsbanan."
       },
       "process-optimiser": {
         "name": "Processoptimerare",
@@ -700,7 +970,7 @@
       "rtfm": {
         "name": "RTFM",
         "description": "Klara 15 nivåer utan att förlora ett liv. Du läste faktiskt dokumentationen.",
-        "bonusDescription": "Övertidsränta +1%"
+        "bonusDescription": "Butikspriser -5%"
       },
       "technical-debt": {
         "name": "Teknisk skuld",
@@ -822,7 +1092,7 @@
       "hiring_freeze": {
         "name": "Anställningsstopp",
         "curse": "Butiken erbjuder 2 färre uppgraderingar.",
-        "blessing": "Tjäna 10% ränta på sparad övertid efter varje nivå."
+        "blessing": "Alla butikspriser sänks med 10%."
       },
       "legacy_codebase": {
         "name": "Legacy-kodbas",

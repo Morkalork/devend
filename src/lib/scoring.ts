@@ -10,7 +10,7 @@
  * generateScoringPreview() via the useScoringConfig hook.
  */
 import yaml from 'js-yaml';
-import { ScoringConfig, ScoreBreakdown } from '@/types/scoring';
+import { ScoringConfig, ScoreBreakdown, ShipEarlyThreshold } from '@/types/scoring';
 
 /**
  * Get the overtime reward cap for a level, scaled from its own base points.
@@ -104,6 +104,56 @@ export function calculateSpaceBonus(
 }
 
 /**
+ * Calculate the Ship Early tempo bonus: a config-driven ladder that pays more
+ * overtime the faster the win condition was first met, measured in ACTIVE-play
+ * seconds (pauses, menus and the push prompt do not count). Windows are PER
+ * BALL, so a busy map earns proportionally more time than a one-ball map.
+ * Awards the best rung whose window was met, clamped at `maxBonus`;
+ * null/undefined means "no clear time recorded" and pays nothing. Mirrors
+ * calculateSpaceBonus so instinctive speed and tactical precision are
+ * parallel, competing payoffs.
+ */
+export function calculateShipEarlyBonus(
+  clearedActiveSeconds: number | null | undefined,
+  ballCount: number,
+  config: ScoringConfig,
+  extraSecondsPerBall: number = 0,
+  bonusMultiplier: number = 1,
+): number {
+  if (clearedActiveSeconds == null || !Number.isFinite(clearedActiveSeconds) || clearedActiveSeconds < 0) return 0;
+  const balls = Number.isFinite(ballCount) && ballCount > 0 ? ballCount : 1;
+  // Deadline Extension: extra per-ball seconds added to every window.
+  const extra = Number.isFinite(extraSecondsPerBall) && extraSecondsPerBall > 0 ? extraSecondsPerBall : 0;
+  // Hard Deadline door: scales the payout AFTER the maxBonus clamp (the door
+  // doubles what the ladder pays, it does not unlock higher rungs).
+  const mult = Number.isFinite(bonusMultiplier) && bonusMultiplier > 0 ? bonusMultiplier : 1;
+
+  const { maxBonus, thresholds } = config.scoring.shipEarly;
+  let bonus = 0;
+  for (const step of thresholds) {
+    if (clearedActiveSeconds <= (step.withinSecondsPerBall + extra) * balls) {
+      bonus = Math.max(bonus, step.bonus);
+    }
+  }
+  return Math.round(Math.min(bonus, maxBonus) * mult);
+}
+
+/** Ship Early bonus from the preloaded config (see loadScoringConfig). */
+export function getShipEarlyBonus(
+  clearedActiveSeconds: number | null | undefined,
+  ballCount: number,
+  extraSecondsPerBall: number = 0,
+  bonusMultiplier: number = 1,
+): number {
+  return calculateShipEarlyBonus(clearedActiveSeconds, ballCount, loadedConfig, extraSecondsPerBall, bonusMultiplier);
+}
+
+/** The Ship Early ladder from the preloaded config (drives the countdown bar). */
+export function getShipEarlyThresholds(): ShipEarlyThreshold[] {
+  return loadedConfig.scoring.shipEarly.thresholds;
+}
+
+/**
  * Calculate complete score breakdown for a level completion.
  */
 export function calculateScoreBreakdown(
@@ -111,14 +161,19 @@ export function calculateScoreBreakdown(
   parFences: number,
   actualRemovedRatio: number,
   requiredRemovedRatio: number,
-  config: ScoringConfig
+  config: ScoringConfig,
+  spaceBonusMultiplier: number = 1,
 ): ScoreBreakdown {
   const { multiplier: performanceMultiplier, fencesOverPar, fencesUnderPar } =
     getPerformanceMultiplier(usedFences, parFences, config);
 
   const underParBonus = calculateUnderParBonus(usedFences, parFences, config);
-  const { bonus: spaceBonus, bonusRaw: spaceBonusRaw, extraPercent } =
+  const { bonus: spaceBonusBase, bonusRaw: spaceBonusRaw, extraPercent } =
     calculateSpaceBonus(actualRemovedRatio, requiredRemovedRatio, fencesOverPar, config);
+  // Tech Evangelist: scales the space-optimization payout (still under the
+  // per-map cap, so it buys consistency rather than inflation).
+  const safeSpaceMult = Number.isFinite(spaceBonusMultiplier) && spaceBonusMultiplier > 0 ? spaceBonusMultiplier : 1;
+  const spaceBonus = Math.round(spaceBonusBase * safeSpaceMult);
 
   const lockBonus = 0; // Calculated separately in game logic
   const totalBonus = underParBonus + spaceBonus + lockBonus;
@@ -174,7 +229,9 @@ export function generateScoringPreview(
 
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
-    overtimeCapHeadroom: 2.0,
+    overtimeCapHeadroom: 4.0,
+    lockValue: 10,
+    highscoreBonusMultiplier: 1.25,
     fenceEfficiency: {
       maxBonus: 1,
       steps: [{ fencesUnder: 1, bonus: 1 }],
@@ -185,6 +242,14 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
         { extraPercent: 0.10, bonus: 1 },
         { extraPercent: 0.30, bonus: 2 },
         { extraPercent: 0.55, bonus: 3 },
+      ],
+    },
+    shipEarly: {
+      maxBonus: 3,
+      thresholds: [
+        { withinSecondsPerBall: 6, bonus: 3 },
+        { withinSecondsPerBall: 10, bonus: 2 },
+        { withinSecondsPerBall: 15, bonus: 1 },
       ],
     },
     performanceMultiplier: {
@@ -211,8 +276,11 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
         loadedConfig = {
           scoring: {
             overtimeCapHeadroom: parsed.scoring.overtimeCapHeadroom ?? DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom,
+            lockValue: parsed.scoring.lockValue ?? DEFAULT_SCORING_CONFIG.scoring.lockValue,
+            highscoreBonusMultiplier: parsed.scoring.highscoreBonusMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.highscoreBonusMultiplier,
             fenceEfficiency: { ...DEFAULT_SCORING_CONFIG.scoring.fenceEfficiency, ...parsed.scoring.fenceEfficiency },
             spaceOptimization: { ...DEFAULT_SCORING_CONFIG.scoring.spaceOptimization, ...parsed.scoring.spaceOptimization },
+            shipEarly: { ...DEFAULT_SCORING_CONFIG.scoring.shipEarly, ...parsed.scoring.shipEarly },
             performanceMultiplier: { ...DEFAULT_SCORING_CONFIG.scoring.performanceMultiplier, ...parsed.scoring.performanceMultiplier },
           },
         };
@@ -232,12 +300,46 @@ export async function ensureScoringConfigLoaded(): Promise<void> {
 }
 
 /**
+ * Overtime hours per lock-multiplier point, from the loaded config. This is
+ * what makes locking the game's main income: a red lock pays lockValue × 1,
+ * a black lock lockValue × 4 (before trap/money-ball multipliers).
+ */
+export function getLockValue(): number {
+  const v = loadedConfig.scoring.lockValue;
+  return Number.isFinite(v) && v > 0 ? v : 1;
+}
+
+/** The beat-the-highscore score multiplier from the loaded config (#45). */
+export function getHighscoreBonusMultiplier(): number {
+  const m = loadedConfig.scoring.highscoreBonusMultiplier;
+  return Number.isFinite(m) && m > 0 ? m : 1;
+}
+
+/**
+ * Modifier-driven adjustments to a level's reward, normally sourced from the
+ * run's GameModifiers. Gathered into one options object so call sites stay
+ * readable as the modifier system grows (they were positional args before).
+ */
+export interface ScoreOptions {
+  /** Upgrade/loadout/door score multiplier (default 1). */
+  scoreMultiplier?: number;
+  /** Lock/push/break bonuses, folded in UNDER the cap (default 0). */
+  extraBonus?: number;
+  /** Tech Evangelist: scales the space-optimization bonus (default 1). */
+  spaceBonusMultiplier?: number;
+  /** Stock Options capstone: flat raise on the per-map cap (default 0). */
+  overtimeCapBonus?: number;
+  /** Pickup overtime tokens: paid AFTER the cap clamp, like the highscore
+   *  bonus, so a claimed token always pays even on a capped map (default 0). */
+  postCapBonus?: number;
+}
+
+/**
  * Calculate the overtime reward for a level, synchronously, using the
  * preloaded config. Performance multiplier scales the base reward,
  * scoreMultiplier (from upgrades) applies on top, and the result is capped
- * at basePoints × overtimeCapHeadroom (see getOvertimeCap). The levelNumber
- * arg is retained for the callers' breakdown/telemetry but no longer drives
- * the cap.
+ * at basePoints × overtimeCapHeadroom (see getOvertimeCap) plus any capstone
+ * cap raise.
  *
  * `extraBonus` folds lock/push/break bonuses in BEFORE the cap so a single map
  * can never pay more than the cap (issue #43): together with the flat per-map
@@ -250,18 +352,17 @@ export function calculateScore(
   remainingPercent: number,
   thresholdPercent: number,
   basePoints: number,
-  scoreMultiplier: number = 1,
-  levelNumber: number = 1,
-  extraBonus: number = 0,
+  options: ScoreOptions = {},
 ): {
   levelScore: number;
   breakdown: ScoreBreakdown;
 } {
+  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0 } = options;
   const requiredRemovedRatio = (100 - thresholdPercent) / 100;
   const actualRemovedRatio = (100 - remainingPercent) / 100;
 
   const breakdown = calculateScoreBreakdown(
-    usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig
+    usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig, spaceBonusMultiplier
   );
 
   // Guard against a NaN/negative scoreMultiplier leaking in from bad config.
@@ -269,8 +370,14 @@ export function calculateScore(
   const safeExtra = Number.isFinite(extraBonus) && extraBonus > 0 ? extraBonus : 0;
   const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
   const rawScore = multipliedBase + breakdown.totalBonus + safeExtra;
-  const cap = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom);
-  const levelScore = Math.max(0, Math.min(rawScore, cap));
+  // Stock Options capstone: a flat raise on the per-map ceiling. Everything
+  // still folds under a cap, it's just a higher one for the rest of the run.
+  const safeCapBonus = Number.isFinite(overtimeCapBonus) && overtimeCapBonus > 0 ? overtimeCapBonus : 0;
+  const cap = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom) + safeCapBonus;
+  // Pickup overtime lands OUTSIDE the cap (a deliberate, small inflation valve:
+  // tokens must feel rewarding even on a capped map — see game-config.yml).
+  const safePostCap = Number.isFinite(postCapBonus) && postCapBonus > 0 ? Math.round(postCapBonus) : 0;
+  const levelScore = Math.max(0, Math.min(rawScore, cap)) + safePostCap;
 
   return { levelScore, breakdown };
 }

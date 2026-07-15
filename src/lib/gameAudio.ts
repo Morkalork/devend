@@ -4,6 +4,7 @@
 let audioContext: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 let isMuted = false;
+let sfxVolume = 1; // 0..1 master level for sound effects (music is separate)
 
 // Ball-to-ball collisions can fire many times per physics step when several
 // balls cluster in a shrinking region. Each playBallCollideSound call allocates
@@ -16,11 +17,15 @@ let lastCollideTime = -Infinity;
 
 // Volume settings
 const VOLUME = {
-  wallHit: 0.15,
-  ballCollide: 0.09,
-  fenceBreak: 0.25,
-  death: 0.3,
+  wallHit: 0.12,
+  ballCollide: 0.07,
+  fenceBreak: 0.18,
+  death: 0.24,
 };
+
+// Everything above this gets rolled off by the master low-pass; procedural
+// effects otherwise carry piercing energy right up to Nyquist.
+const MASTER_LOWPASS_HZ = 3800;
 
 /**
  * Initialize the audio context (must be called after user interaction)
@@ -33,8 +38,14 @@ function ensureAudioContext(): AudioContext | null {
       if (!AudioCtx) return null;
       audioContext = new AudioCtx();
       masterGain = audioContext.createGain();
-      masterGain.connect(audioContext.destination);
-      masterGain.gain.value = isMuted ? 0 : 1;
+      // Gentle master low-pass so effects sit softer against the music
+      const softener = audioContext.createBiquadFilter();
+      softener.type = 'lowpass';
+      softener.frequency.value = MASTER_LOWPASS_HZ;
+      softener.Q.value = 0.5; // shallow slope, no resonant peak
+      masterGain.connect(softener);
+      softener.connect(audioContext.destination);
+      masterGain.gain.value = isMuted ? 0 : sfxVolume;
     } catch (e) {
       console.warn('Web Audio API not supported:', e);
       return null;
@@ -154,10 +165,10 @@ export function playBallCollideSound(intensity: number = 0.5): void {
     const partialVolume = volume * partial.amp;
     const decayTime = partial.decay;
     
-    // Sharp attack, long sustaining decay (triangle characteristic)
+    // Rounded attack (a hard 1ms edge reads as harsh), long sustaining decay
     gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(partialVolume, now + 0.001);
-    gain.gain.setValueAtTime(partialVolume, now + 0.002);
+    gain.gain.linearRampToValueAtTime(partialVolume, now + 0.006);
+    gain.gain.setValueAtTime(partialVolume, now + 0.007);
     gain.gain.exponentialRampToValueAtTime(partialVolume * 0.3, now + decayTime * 0.3);
     gain.gain.exponentialRampToValueAtTime(0.001, now + decayTime);
     
@@ -180,7 +191,7 @@ export function playBallCollideSound(intensity: number = 0.5): void {
   shimmerGain.connect(masterGain);
   
   shimmerGain.gain.setValueAtTime(0, now);
-  shimmerGain.gain.linearRampToValueAtTime(volume * 0.08, now + 0.001);
+  shimmerGain.gain.linearRampToValueAtTime(volume * 0.08, now + 0.006);
   shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
   
   shimmer1.start(now);
@@ -215,7 +226,8 @@ export function playFenceBreakSound(): void {
   crackFilter.connect(crackGain);
   crackGain.connect(masterGain);
   
-  crackGain.gain.setValueAtTime(volume, now);
+  crackGain.gain.setValueAtTime(0, now);
+  crackGain.gain.linearRampToValueAtTime(volume, now + 0.006);
   crackGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
   
   crackSource.start(now);
@@ -362,7 +374,7 @@ export function playBallLockSound(): void {
   if (!ctx || !masterGain || isMuted) return;
 
   const now = ctx.currentTime;
-  const vol = 0.28;
+  const vol = 0.22;
 
   // --- Phase 1: 3 rising resonant pulses at 0 / 200 / 400 ms ---
   [0, 0.2, 0.4].forEach((delay, i) => {
@@ -446,14 +458,142 @@ export function playBallLockSound(): void {
   sl.start(st); sl.stop(st + 0.35);
 }
 
+/** Quick territorial "swoosh + ding" when a cut successfully claims space. */
+export function playCutClaimedSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = 0.14;
+
+  // Rising noise sweep — air being captured
+  const nb = createNoiseBuffer(ctx, 0.15);
+  const ns = ctx.createBufferSource();
+  const nf = ctx.createBiquadFilter();
+  const ng = ctx.createGain();
+  ns.buffer = nb;
+  nf.type = "bandpass";
+  nf.frequency.setValueAtTime(800, now);
+  nf.frequency.exponentialRampToValueAtTime(3200, now + 0.12);
+  nf.Q.value = 2;
+  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ng.gain.setValueAtTime(0, now);
+  ng.gain.linearRampToValueAtTime(vol, now + 0.02);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+  ns.start(now); ns.stop(now + 0.18);
+
+  // Bright confirmation tone rising quickly
+  const osc = ctx.createOscillator();
+  const ogn = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(880, now + 0.04);
+  osc.frequency.linearRampToValueAtTime(1320, now + 0.10);
+  osc.connect(ogn); ogn.connect(masterGain);
+  ogn.gain.setValueAtTime(0, now + 0.04);
+  ogn.gain.linearRampToValueAtTime(vol * 0.7, now + 0.06);
+  ogn.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+  osc.start(now + 0.04); osc.stop(now + 0.28);
+}
+
+/** Bright two-note chime when a pickup token is claimed by a lock. */
+export function playPickupClaimedSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = 0.16;
+
+  // Two quick ascending sine notes (a fifth apart) with a soft sparkle tail.
+  [[988, 0], [1480, 0.09]].forEach(([freq, delay]) => {
+    const t = now + delay;
+    const osc = ctx.createOscillator();
+    const gn  = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = freq;
+    osc.connect(gn); gn.connect(masterGain!);
+    gn.gain.setValueAtTime(0, t);
+    gn.gain.linearRampToValueAtTime(vol, t + 0.012);
+    gn.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+    osc.start(t); osc.stop(t + 0.3);
+  });
+
+  const nb = createNoiseBuffer(ctx, 0.2);
+  const ns = ctx.createBufferSource();
+  const nf = ctx.createBiquadFilter();
+  const ng = ctx.createGain();
+  ns.buffer = nb;
+  nf.type = "highpass"; nf.frequency.value = 5000;
+  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ng.gain.setValueAtTime(vol * 0.3, now + 0.09);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+  ns.start(now + 0.09); ns.stop(now + 0.3);
+}
+
+/** Rising pitch sweep — energy spinning up — when the level is cleared. */
+export function playLevelCompleteSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = 0.18;
+
+  // Two slightly-detuned sine oscillators sweep 100 Hz → 1200 Hz for width
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const flt  = ctx.createBiquadFilter();
+  const gn   = ctx.createGain();
+  osc1.type = "sine"; osc2.type = "sine";
+  osc1.frequency.setValueAtTime(100, now);
+  osc1.frequency.exponentialRampToValueAtTime(1200, now + 0.65);
+  osc2.frequency.setValueAtTime(103, now);
+  osc2.frequency.exponentialRampToValueAtTime(1236, now + 0.65);
+  flt.type = "lowpass";
+  flt.frequency.setValueAtTime(300, now);
+  flt.frequency.exponentialRampToValueAtTime(8000, now + 0.65);
+  flt.Q.value = 2;
+  osc1.connect(flt); osc2.connect(flt); flt.connect(gn); gn.connect(masterGain!);
+  gn.gain.setValueAtTime(0, now);
+  gn.gain.linearRampToValueAtTime(vol, now + 0.45);
+  gn.gain.exponentialRampToValueAtTime(vol * 0.3, now + 0.65);
+  gn.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
+  osc1.start(now); osc1.stop(now + 0.9);
+  osc2.start(now); osc2.stop(now + 0.9);
+
+  // Bandpass noise sweeps up alongside — adds a spinning/rushing texture
+  const nb = createNoiseBuffer(ctx, 0.7);
+  const ns = ctx.createBufferSource();
+  const nf = ctx.createBiquadFilter();
+  const ng = ctx.createGain();
+  ns.buffer = nb;
+  nf.type = "bandpass";
+  nf.frequency.setValueAtTime(200, now);
+  nf.frequency.exponentialRampToValueAtTime(4000, now + 0.6);
+  nf.Q.value = 3;
+  ns.connect(nf); nf.connect(ng); ng.connect(masterGain!);
+  ng.gain.setValueAtTime(0, now);
+  ng.gain.linearRampToValueAtTime(vol * 0.35, now + 0.3);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+  ns.start(now); ns.stop(now + 0.75);
+}
+
 /**
  * Set mute state
  */
 export function setAudioMuted(muted: boolean): void {
   isMuted = muted;
   if (masterGain) {
-    masterGain.gain.value = muted ? 0 : 1;
+    masterGain.gain.value = muted ? 0 : sfxVolume;
   }
+}
+
+/** Set the sound-effects master volume (0..1). Music volume is separate. */
+export function setSfxVolume(volume: number): void {
+  sfxVolume = Math.max(0, Math.min(1, volume));
+  if (masterGain && !isMuted) {
+    masterGain.gain.value = sfxVolume;
+  }
+}
+
+/** Current sound-effects master volume (0..1). */
+export function getSfxVolume(): number {
+  return sfxVolume;
 }
 
 /**

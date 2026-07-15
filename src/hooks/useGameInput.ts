@@ -46,7 +46,10 @@ export function useGameInput(
 
     const getCanvasCoords = (e: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
-      const dpr = getDevicePixelRatio();
+      // Derive the CSS→physical ratio from the canvas itself rather than
+      // getDevicePixelRatio(): exact under both renderers (the Pixi path runs
+      // at native DPR, above the 2D path's capped ratio) and mid-DPR-ramp.
+      const dpr = rect.width > 0 ? canvas.width / rect.width : getDevicePixelRatio();
       return { screenX: (e.clientX - rect.left) * dpr, screenY: (e.clientY - rect.top) * dpr };
     };
 
@@ -67,7 +70,9 @@ export function useGameInput(
         return;
       }
 
-      if (game.gameOver || game.levelComplete || game.activeWall || game.pushMode === "prompt" || game.isRecovering)
+      // game.dissolve also covers the run-intro assemble: no cuts while the
+      // board is still flying together (physics is held until it lands).
+      if (game.gameOver || game.levelComplete || game.dissolve || game.activeWall || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
         return;
 
       const { screenX, screenY } = getCanvasCoords(e);
@@ -119,15 +124,18 @@ export function useGameInput(
         !game.gameOver &&
         !game.levelComplete &&
         !game.isRecovering &&
-        game.pushMode !== "prompt"
+        game.pushMode !== "prompt" &&
+        !game.pushPromptPending
       ) {
         const delta = vec2Sub(game.currentSwipePos, game.swipeStart);
         const dist  = vec2Length(delta);
 
         // Feature Freeze: a tap (movement below the cut threshold) on a ball
-        // freezes it in place. Only when the upgrade is owned; the cut path
-        // below is unreachable for taps, so the two never conflict.
-        if (dist < BASE_SWIPE_MIN_DISTANCE && activeModifiers.ballFreezeDuration > 0) {
+        // freezes it in place. Works when the upgrade is owned OR a freeze
+        // charge was claimed from a pickup token; the cut path below is
+        // unreachable for taps, so the two never conflict.
+        const hasFreezeCharge = !activeModifiers.ballFreezeDuration && (game.freezeCharges ?? 0) > 0;
+        if (dist < BASE_SWIPE_MIN_DISTANCE && (activeModifiers.ballFreezeDuration > 0 || hasFreezeCharge)) {
           const tap = game.swipeStart;
           const now = performance.now();
           let target: Ball | null = null;
@@ -144,7 +152,12 @@ export function useGameInput(
             }
           }
           if (target) {
-            const durationMs = activeModifiers.ballFreezeDuration * 1000;
+            // A freeze charge (pickup token) is spent only when the Feature
+            // Freeze upgrade isn't carrying the tap.
+            if (hasFreezeCharge) game.freezeCharges -= 1;
+            const durationMs = (activeModifiers.ballFreezeDuration > 0
+              ? activeModifiers.ballFreezeDuration
+              : game.freezeChargeSeconds || 3) * 1000;
             // Cascade Freeze: a single tap also freezes the nearest eligible
             // balls in the region (the tapped ball plus `ballFreezeCount` more).
             const freezeCount = 1 + Math.max(0, Math.round(activeModifiers.ballFreezeCount));
@@ -160,7 +173,11 @@ export function useGameInput(
             );
             for (const ball of eligible.slice(0, freezeCount)) {
               ball.frozenUntil   = now + durationMs;
-              ball.freezeReadyAt = now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
+              // Absolute Zero (freeze set bonus): no re-freeze cooldown, the
+              // ball is tappable again the moment it thaws.
+              ball.freezeReadyAt = activeModifiers.freezeNoCooldown > 0
+                ? now + durationMs
+                : now + durationMs * (1 + FREEZE_COOLDOWN_MULTIPLIER);
             }
             if (navigator.vibrate) navigator.vibrate(20);
           }
@@ -243,5 +260,5 @@ export function useGameInput(
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount]);
+  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown]);
 }

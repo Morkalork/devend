@@ -113,9 +113,9 @@ achievements:
       stat: totalLevelsCompletedWithoutLoss
       threshold: 15
     bonus:
-      modifier: scoreInterestRate
-      value: 0.01
-      description: Overtime interest rate +1%
+      modifier: shopDiscountMultiplier
+      value: 0.95
+      description: Shop prices -5%
 
   # ── FROM HERE, BONUSES START TO MATTER ─────────────────────────────────────
 

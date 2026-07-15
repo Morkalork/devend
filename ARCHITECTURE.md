@@ -77,7 +77,7 @@ Each hook owns one subsystem; most load a YAML file and/or persist to localStora
 | [useActiveModifiers](src/hooks/useActiveModifiers.ts) | **GameModifiers pipeline** | — | — |
 | [useCertificateManager](src/hooks/useCertificateManager.ts) | certificates, Certificate Hours | `certificates.yml` | `jezzball_certs_v1` |
 | [useAchievementManager](src/hooks/useAchievementManager.ts) | achievements + bonuses | `achievements.yml` | `jezzball_achievements_v1` |
-| [useMetaProgression](src/hooks/useMetaProgression.ts) | lifetime stats, super-upgrade unlocks | — | `jezzball_meta_stats`, `jezzball_unlock_state` |
+| [useMetaProgression](src/hooks/useMetaProgression.ts) | lifetime stats, super-upgrade unlocks, per-map highscores, encountered ball types | — | `jezzball_meta_stats`, `jezzball_unlock_state` |
 | [useTutorialManager](src/hooks/useTutorialManager.ts) | one-time tutorial flags | — | `tutorials_seen_v1` |
 | [useCheckpointSnapshots](src/hooks/useCheckpointSnapshots.ts) | level snapshots | — | `jezzball_checkpoints_v2` |
 | [useColorProgression](src/hooks/useColorProgression.ts) | accent colour per level | `colors.yml` | — |
@@ -111,6 +111,7 @@ The merged `GameModifiers` object is passed as a prop into `GameScreen` → `Gam
 - **Regions**: the playable area is a set of polygons ([types/game.ts](src/types/game.ts) `Region`). Core invariant, enforced by [regionOwnership.ts](src/lib/regionOwnership.ts): every ball belongs to exactly one region at all times.
 - **A cut**: pointer input ([useGameInput.ts](src/hooks/useGameInput.ts)) starts a `GrowingWall`; [physics/updateFenceWall.ts](src/lib/physics/updateFenceWall.ts) grows it; when complete, [physics/applyCut.ts](src/lib/physics/applyCut.ts) splits the region, captures ball-free parts, locks lone balls and awards score.
 - **Rendering**: a single stateless pass, [rendering/renderFrame.ts](src/lib/rendering/renderFrame.ts). Draw order is documented at the top of that file. Static imagery (region fill, ball spheres, glows) is cached on OffscreenCanvases — see `ballRenderCache.ts`, `ballEffects.ts`.
+- **WebGL renderer (default)**: a PixiJS v8 port of the render pass lives in [rendering/pixi/](src/lib/rendering/pixi/PixiGameRenderer.ts) and is the DEFAULT renderer ([rendering/rendererSettings.ts](src/lib/rendering/rendererSettings.ts)). It consumes the same game/rctx state, reuses the 2D bakes as GPU textures, renders at native device resolution (no 2x DPR cap) and adds a bloom post-pass (pixi-filters) over the board; the level-clear sweep snapshots the frozen scene to a RenderTexture (drained-grey wake above the wave line). The Canvas-2D path (renderFrame.ts) remains fully functional as the opt-out (`?renderer=canvas2d`, sticky, or the Playground toggle) and as the automatic per-session fallback when WebGL init fails. The pixi chunk is dynamically imported.
 
 React callbacks the physics needs (setters, game-over handling) are bundled in `GameCallbacks` ([physics/gameCallbacks.ts](src/lib/physics/gameCallbacks.ts)) so lib code stays React-free.
 

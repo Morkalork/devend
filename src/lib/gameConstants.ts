@@ -3,10 +3,13 @@ export const LOCK_PULSE_DURATION  = 600;  // ms — 3 quick pulses
 export const LOCK_FLOOD_DURATION  = 380;  // ms — fill explodes across region
 export const LOCK_DUST_DURATION   = 900;  // ms — longest particle lifetime
 export const LOCK_TOTAL_DURATION  = LOCK_PULSE_DURATION + LOCK_FLOOD_DURATION;
+export const INFO_UNLOCKED_DURATION = 1600; // ms — "Info Unlocked" flash on a first-time ball-type lock
 export const BALL_DISINTEGRATE_MS = 420;  // ms — ball shrinks to nothing
 export const DISSOLVE_DURATION    = 1000; // ms — board dissolve after level complete
 export const LEVEL_CLEAR_SHIMMER_MS = 1000; // ms — celebratory shimmer sweeping down the cleared board
+export const LEVEL_CLEAR_HOLD_MS    = 500;  // ms — beat on the drained board after the sweep, before it shatters
 export const SWIPE_TRAIL_DURATION = 550;  // ms — fading afterglow tracing a cut swipe
+export const SPACE_BAR_FADE_MS    = 1000; // ms — space bar below the board fades out once the map is won
 
 // ── Physics / world units ─────────────────────────────────────────────────
 export const PHYSICS_STEP              = 1 / 120; // Fixed physics timestep: 120 ticks per second

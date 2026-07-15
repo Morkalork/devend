@@ -24,6 +24,18 @@ ball:
   max_speed: 12
   radius_percent: 2.5  # As percentage of board size
 
+# Sound Settings
+# Default volumes (0-1). Each is the starting value only: players can override it
+# in Options, and their choice is persisted per-device. Music is independent of
+# effects.
+sound:
+  # Default background-music volume (kept low so effect sounds sit on top)
+  music_volume: 0.2
+  # Default sound-effects volume
+  sfx_volume: 1.0
+  # Crossfade duration between music tracks (milliseconds)
+  crossfade_ms: 900
+
 # Fence Settings
 fence:
   # Base generation speed at level 1 (world units per second)
@@ -52,6 +64,53 @@ lock:
   # the % above (0 = disabled). Set > 0 to guarantee tiny slivers resolve
   # instead of a ball bouncing forever just above the % threshold.
   min_region_cells: 0
+
+# Scope Creep
+# Anti-stall pressure: after grace_seconds of ACTIVE play (pauses, menus and
+# the push prompt do not count), ball speed surges step_percent every
+# step_seconds, up to max_steps surges. The first surge lands AT grace_seconds.
+# Players who plan and execute within the grace window never see it; waiting
+# out the clock for perfect alignment makes the board progressively hotter.
+# Set max_steps: 0 to disable the mechanic entirely.
+scope_creep:
+  grace_seconds: 45
+  step_seconds: 15
+  step_percent: 8
+  max_steps: 4
+
+# Pickups (power-up tokens)
+# Tokens spawn in open playable space. Locking a ball in a pocket that contains
+# the token claims it; capturing the token's area with NO ball locked in that
+# pocket wastes it; an unclaimed token expires after lifetime_seconds. Claimed
+# overtime is paid AFTER the per-map cap (like the highscore bonus). Maps can
+# override the spawn chance (map.yml pickupChance, also bypasses start_level)
+# and suggest curated anchor positions (pickupSpots).
+pickups:
+  # First level tokens may randomly spawn on
+  start_level: 8
+  # A spawn roll happens every N active-play seconds (pauses don't count)
+  spawn_check_seconds: 5
+  # Chance per roll (0-1), rolled only while fewer than max_simultaneous alive.
+  # Kept low on purpose: the Benefits Package upgrade raises it per tier
+  # (pickupChanceBonus in upgrades.yml), so token frequency is build-driven.
+  spawn_chance: 0.10
+  # Hard cap on simultaneous tokens
+  max_simultaneous: 2
+  # Unclaimed tokens vanish after this many active-play seconds
+  lifetime_seconds: 14
+  # Effect pool: weight = relative spawn odds; value = magnitude
+  effects:
+    overtime:
+      weight: 4
+      value: 4          # overtime hours, paid after the per-map cap
+    fork:
+      weight: 2         # splits a random free ball into two (more lock income)
+    cap_raise:
+      weight: 2
+      value: 5          # this map's overtime cap rises by this many hours
+    freeze_charge:
+      weight: 2
+      value: 3          # one free tap-to-freeze, holds this many seconds
 
 # CRT Word Highlight Effect
 # Every interval_seconds, a random visible word in the background gets a highlight rectangle.

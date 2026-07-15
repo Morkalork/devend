@@ -6,16 +6,26 @@ import React, { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
+import { UpgradeTag } from '@/types/upgrade';
+import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { TagChip } from './TagChip';
 
 interface GameBottomBarProps {
   activeModifiers: GameModifiers;
   accentColor: string;
   lockedBalls?: number;
+  /** Build readout: owned upgrades per archetype tag. */
+  tagCounts?: Map<string, number>;
+  /** Owned upgrades of a tag needed to activate its set bonus. */
+  tagSetThreshold?: number;
+  /** Rendered above the stats inside this fixed wrapper (Ship Early bar), so
+   *  it stacks with the bar instead of being covered by it. */
+  topSlot?: React.ReactNode;
   onExpand?: () => void;
 }
 
 export const GameBottomBar = React.forwardRef<HTMLDivElement, GameBottomBarProps>(
-function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand }, ref) {
+function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCounts, tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD, topSlot, onExpand }, ref) {
   const { t } = useTranslation();
   const swipeStartYRef = useRef<number | null>(null);
 
@@ -53,7 +63,6 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand
     { label: t('bottomBar.concurrent'), value: formatBonus(modifiers.additionalConcurrentFences), changed: modifiers.additionalConcurrentFences !== 0 },
     { label: t('bottomBar.bonusRemove'), value: `${formatRate(modifiers.bonusRemovalChance)} @ ${formatRate(modifiers.bonusRemovalAmount)}`, changed: modifiers.bonusRemovalChance > 0 },
     { label: t('bottomBar.extraLives'), value: formatBonus(modifiers.extraLives), changed: modifiers.extraLives !== 0 },
-    { label: t('bottomBar.interest'), value: formatRate(modifiers.scoreInterestRate), changed: modifiers.scoreInterestRate !== 0 },
     { label: t('bottomBar.shopSlots'), value: formatBonus(modifiers.extraShopItems), changed: modifiers.extraShopItems !== 0 },
     { label: t('bottomBar.restocks'), value: formatBonus(modifiers.shopRestockCount), changed: modifiers.shopRestockCount !== 0 },
     { label: t('bottomBar.microMgrPerLock'), value: `${Math.round(modifiers.microManagerPerLock * 100)}% (${Math.round(microNowReduction * 100)}% now)`, changed: modifiers.microManagerPerLock !== 0 },
@@ -68,6 +77,7 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      {topSlot}
       <div
         className="mx-auto max-w-4xl px-3 py-2"
         style={{
@@ -75,6 +85,26 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, onExpand
           borderTop: `1px solid ${accentColor}40`,
         }}
       >
+        {/* Build readout: archetype chips with progress toward each set bonus.
+            A ✓ chip means that tag's set bonus is active. */}
+        {tagCounts && tagCounts.size > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5 pb-1">
+            {[...tagCounts.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([tag, count]) => {
+                const setActive = count >= tagSetThreshold;
+                return (
+                  <TagChip
+                    key={tag}
+                    tag={tag as UpgradeTag}
+                    pill
+                    ringed={setActive}
+                    suffix={setActive ? '✓' : `${count}/${tagSetThreshold}`}
+                  />
+                );
+              })}
+          </div>
+        )}
         <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs">
           {stats.map((stat) => (
             <div

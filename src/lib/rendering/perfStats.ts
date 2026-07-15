@@ -35,6 +35,9 @@ class Ring {
     for (let k = 0; k < this.count; k++) if (this.buf[k] > m) m = this.buf[k];
     return m;
   }
+  size(): number {
+    return this.count;
+  }
 }
 
 const _frameMs = new Ring();   // wall-clock between frames
@@ -56,6 +59,24 @@ export function recordFrame(
   _renderMs.push(renderMs);
   _steps = steps;
   _balls = ballCount;
+}
+
+/**
+ * Snapshot of the rolling window, consumed by the adaptive-DPR ramp to decide
+ * whether the device has frame-time headroom to render at a higher resolution.
+ */
+export function getFrameStats(): {
+  samples: number;
+  physPeak: number;
+  renderAvg: number;
+  renderPeak: number;
+} {
+  return {
+    samples: _renderMs.size(),
+    physPeak: _physicsMs.max(),
+    renderAvg: _renderMs.avg(),
+    renderPeak: _renderMs.max(),
+  };
 }
 
 // Reused across draws so the overlay itself never allocates.

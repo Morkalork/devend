@@ -1,10 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { contentText } from '@/i18n/content';
+
+// Press-and-hold info cards: each stat row explains its mechanic and how to
+// earn more from it (keys under levelComplete.info.<key> in the locales).
+const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
+  level: { icon: Trophy, color: 'text-success' },
+  remaining: { icon: Target, color: 'text-foreground' },
+  fencesUsed: { icon: Target, color: 'text-foreground' },
+  spaceBonus: { icon: Sparkles, color: 'text-primary' },
+  baseOvertime: { icon: Clock, color: 'text-foreground' },
+  threadLocks: { icon: Lock, color: 'text-cyan-400' },
+  breakBonus: { icon: Hammer, color: 'text-amber-400' },
+  shipEarly: { icon: Timer, color: 'text-teal-400' },
+  pushBonus: { icon: Zap, color: 'text-orange-400' },
+  pickupBonus: { icon: Gift, color: 'text-fuchsia-400' },
+  newHighscore: { icon: TrendingUp, color: 'text-yellow-400' },
+  totalBonus: { icon: Sparkles, color: 'text-success' },
+  overtimeEarned: { icon: Clock, color: 'text-primary' },
+  totalOvertime: { icon: Clock, color: 'text-accent-foreground' },
+};
 
 interface LevelCompleteOverlayProps {
   scoreData: LevelScoreData;
@@ -23,6 +42,43 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const [buttonReady, setButtonReady] = useState(buttonDelay === 0);
   const [displayLevelScore, setDisplayLevelScore] = useState(0);
   const [displayTotalScore, setDisplayTotalScore] = useState(0);
+  // Stat row whose info card is open via press-and-hold (same pattern as the
+  // upgrade shop's detail card: 450ms hold, >10px movement cancels for scroll).
+  const [infoKey, setInfoKey] = useState<string | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pointerStart = useRef<{ x: number; y: number } | null>(null);
+
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  const startLongPress = useCallback((key: string, e: React.PointerEvent) => {
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+    cancelLongPress();
+    longPressTimer.current = setTimeout(() => setInfoKey(key), 450);
+  }, [cancelLongPress]);
+
+  const moveLongPress = useCallback((e: React.PointerEvent) => {
+    const start = pointerStart.current;
+    if (start && (Math.abs(e.clientX - start.x) > 10 || Math.abs(e.clientY - start.y) > 10)) {
+      cancelLongPress();
+    }
+  }, [cancelLongPress]);
+
+  useEffect(() => cancelLongPress, [cancelLongPress]);
+
+  const hold = (key: string) => ({
+    onPointerDown: (e: React.PointerEvent) => startLongPress(key, e),
+    onPointerUp: cancelLongPress,
+    onPointerLeave: cancelLongPress,
+    onPointerCancel: cancelLongPress,
+    onPointerMove: moveLongPress,
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+    style: { touchAction: 'pan-y' } as React.CSSProperties,
+  });
 
   useEffect(() => {
     if (buttonDelay <= 0) return;
@@ -65,16 +121,21 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     extraPercent = 0,
     lockBonus = 0,
     lockedBallsCount = 0,
-    interestGain = 0,
     pushBonus = 0,
     breakBonus = 0,
+    shipEarlyBonus = 0,
+    pickupBonus = 0,
+    clearTimeSeconds = 0,
+    beatHighscore = false,
+    highscoreBonus = 0,
+    wonByAllLocked = false,
   } = scoreData;
 
   const isOverPar = fencesOverPar > 0;
   const isSpaceDisabled = fencesOverPar >= 3;
   const hasLockBonus = lockBonus > 0;
   const hasBreakBonus = breakBonus > 0;
-  const hasInterest = interestGain > 0;
+  const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
 
@@ -88,35 +149,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
         transition={{ duration: 0.25 }}
       />
 
-      {/* Modal container */}
-      <motion.div
-        className="level-complete-modal fixed z-50 overflow-y-auto"
-        style={{
-          bottom: '1rem',
-          left: '1rem',
-          right: '1rem',
-          maxHeight: 'calc(100vh - 2rem)',
-        }}
-        initial={{ opacity: 0, y: 55, scale: 0.96 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 310, damping: 26, mass: 0.85 }}
-      >
-        <style>{`
-          @media (min-width: 640px) {
-            .level-complete-modal {
-              top: 50% !important;
-              bottom: auto !important;
-              left: 50% !important;
-              right: auto !important;
-              width: 420px !important;
-              max-height: 90vh !important;
-              margin-left: -210px !important;
-              margin-top: -320px !important;
-            }
-          }
-        `}</style>
-
-        <div className="bg-card/60 backdrop-blur-md border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
+      {/* Modal container: centered on every breakpoint (mobile included), so the
+          card sits with even space above and below instead of pinned to the
+          bottom edge with a large dead gap at the top. */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <motion.div
+          className="w-full sm:w-[420px] max-h-full overflow-y-auto"
+          initial={{ opacity: 0, y: 55, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ type: 'spring', stiffness: 310, damping: 26, mass: 0.85 }}
+        >
+          <div className="bg-card/60 backdrop-blur-md border border-border rounded-xl p-4 sm:p-6 shadow-2xl">
           {/* Header */}
           <motion.div
             className="flex items-center justify-center gap-2 sm:gap-3 mb-4 sm:mb-6"
@@ -144,23 +187,27 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
           {/* Stats Grid */}
           <motion.div
-            className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base"
+            className="space-y-2 sm:space-y-3 mb-4 sm:mb-6 text-sm sm:text-base select-none"
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.28 }}
           >
-            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+            <div {...hold('level')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground">{t('levelComplete.level')}</span>
               <span className="font-bold text-foreground">{levelNumber}</span>
             </div>
 
-            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
-              <span className="text-muted-foreground">{t('levelComplete.remaining')}</span>
-              <span className="font-bold text-foreground">{remainingPercent}%</span>
-            </div>
+            {/* Remaining space is meaningless on an all-balls-locked auto-win:
+                the board fully drains to 0% once no ball is left in play. */}
+            {!wonByAllLocked && (
+              <div {...hold('remaining')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+                <span className="text-muted-foreground">{t('levelComplete.remaining')}</span>
+                <span className="font-bold text-foreground">{remainingPercent}%</span>
+              </div>
+            )}
 
             {/* Fence Efficiency Section */}
-            <div className="py-2 border-b border-border">
+            <div {...hold('fencesUsed')} className="py-2 border-b border-border">
               <div className="flex justify-between items-center mb-1">
                 <span className="text-muted-foreground flex items-center gap-1">
                   <Target className="w-3 h-3" />
@@ -197,7 +244,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
             {/* Space Optimization Section */}
             {extraPercent > 0 && (
-              <div className="py-2 border-b border-border">
+              <div {...hold('spaceBonus')} className="py-2 border-b border-border">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-muted-foreground flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
@@ -218,7 +265,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             )}
 
             {/* Base Overtime with performance multiplier */}
-            <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+            <div {...hold('baseOvertime')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {t('levelComplete.baseOvertime')}
@@ -233,7 +280,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
             {/* Thread Lock Bonus Section */}
             {hasLockBonus && (
-              <div className="flex justify-between items-center py-2 border-b border-cyan-500/30 bg-cyan-500/10 rounded px-2">
+              <div {...hold('threadLocks')} className="flex justify-between items-center py-2 border-b border-cyan-500/30 bg-cyan-500/10 rounded px-2">
                 <span className="text-cyan-400 flex items-center gap-1">
                   <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
                   {t('levelComplete.threadLocks', { count: lockedBallsCount })}
@@ -244,7 +291,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
             {/* Break Bonus Section (issue #38) */}
             {hasBreakBonus && (
-              <div className="flex justify-between items-center py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2">
+              <div {...hold('breakBonus')} className="flex justify-between items-center py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2">
                 <span className="text-amber-400 flex items-center gap-1">
                   <Hammer className="w-3 h-3 sm:w-4 sm:h-4" />
                   {t('levelComplete.breakBonus')}
@@ -253,20 +300,20 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
-            {/* Interest Gain */}
-            {hasInterest && (
-              <div className="flex justify-between items-center py-2 border-b border-primary/30 bg-primary/10 rounded px-2">
-                <span className="text-primary flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.interest')}
+            {/* Ship Early Bonus: fast clears pay a tempo bonus (time factor) */}
+            {hasShipEarlyBonus && (
+              <div {...hold('shipEarly')} className="flex justify-between items-center py-2 border-b border-teal-500/30 bg-teal-500/10 rounded px-2">
+                <span className="text-teal-400 flex items-center gap-1">
+                  <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.shipEarly', { seconds: Math.round(clearTimeSeconds) })}
                 </span>
-                <span className="font-bold text-primary">+{interestGain}h</span>
+                <span className="font-bold text-teal-400">+{shipEarlyBonus}h</span>
               </div>
             )}
 
             {/* Push Bonus Section */}
             {hasPushBonus && (
-              <div className="flex justify-between items-center py-2 border-b border-orange-500/30 bg-orange-500/10 rounded px-2">
+              <div {...hold('pushBonus')} className="flex justify-between items-center py-2 border-b border-orange-500/30 bg-orange-500/10 rounded px-2">
                 <span className="text-orange-400 flex items-center gap-1">
                   <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
                   {t('levelComplete.pushBonus')}
@@ -275,22 +322,50 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
-            {/* Total Bonus Summary */}
-            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0 || breakBonus > 0) && (
-              <div className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
-                <span className="font-semibold text-foreground">{t('levelComplete.totalBonus')}</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus}h</span>
+            {/* Pickup tokens claimed by locks (paid after the cap, like the
+                highscore bonus below - deliberately outside Total Bonus) */}
+            {pickupBonus > 0 && (
+              <div {...hold('pickupBonus')} className="flex justify-between items-center py-2 border-b border-fuchsia-500/30 bg-fuchsia-500/10 rounded px-2">
+                <span className="text-fuchsia-400 flex items-center gap-1">
+                  <Gift className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.pickupBonus')}
+                </span>
+                <span className="font-bold text-fuchsia-400">+{pickupBonus}h</span>
               </div>
             )}
 
-            <div className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
+            {/* New highscore (#45): beat this map's previous record for a bonus */}
+            {beatHighscore && (
+              <div {...hold('newHighscore')} className="flex justify-between items-center py-2 border-b rounded px-2" style={{ borderColor: '#ffd54a55', background: '#ffd54a1a', touchAction: 'pan-y' }}>
+                <span className="flex items-center gap-1" style={{ color: '#ffd54a' }}>
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.newHighscore')}
+                </span>
+                <span className="font-bold" style={{ color: '#ffd54a' }}>+{highscoreBonus}h</span>
+              </div>
+            )}
+
+            {/* Total Bonus Summary */}
+            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0 || breakBonus > 0 || shipEarlyBonus > 0) && (
+              <div {...hold('totalBonus')} className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
+                <span className="font-semibold text-foreground">{t('levelComplete.totalBonus')}</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus}h</span>
+              </div>
+            )}
+
+            <div {...hold('overtimeEarned')} className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">{t('levelComplete.overtimeEarned')}</span>
               <span className="text-xl sm:text-2xl font-bold text-primary">{displayLevelScore}h</span>
             </div>
 
-            <div className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
+            <div {...hold('totalOvertime')} className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">{t('levelComplete.totalOvertime')}</span>
               <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{displayTotalScore}h</span>
+            </div>
+
+            <div className="flex items-center justify-center gap-1.5 pt-1 text-[11px] text-muted-foreground/70">
+              <Info className="w-3 h-3" />
+              <span>{t('levelComplete.holdHint')}</span>
             </div>
           </motion.div>
 
@@ -333,7 +408,55 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             </button>
           </motion.div>
         </div>
-      </motion.div>
+        </motion.div>
+      </div>
+
+      {/* Press-and-hold stat info card: what the row means + how to earn more.
+          Tapping the backdrop or the X closes it. */}
+      <AnimatePresence>
+        {infoKey && STAT_INFO[infoKey] && (() => {
+          const { icon: StatIcon, color } = STAT_INFO[infoKey];
+          return (
+            <motion.div
+              key="stat-info"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setInfoKey(null)}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.92, y: 8 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 8, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
+              >
+                <button
+                  onClick={() => setInfoKey(null)}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center gap-3 mb-2 pr-6">
+                  <StatIcon className={`w-7 h-7 shrink-0 ${color}`} strokeWidth={1.5} />
+                  <div className="text-base font-bold text-foreground">{t(`levelComplete.info.${infoKey}.title`)}</div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-4">{t(`levelComplete.info.${infoKey}.body`)}</p>
+
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
+                  {t('levelComplete.infoTipLabel')}
+                </div>
+                <p className="text-sm text-foreground">{t(`levelComplete.info.${infoKey}.tip`)}</p>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
     </>
   );
 }

@@ -14,6 +14,7 @@
  *   - rendering: src/lib/rendering/renderFrame.ts
  */
 import { useRef, useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
 import { LevelConfig } from "@/types/level";
 
@@ -23,9 +24,11 @@ import { clearBallSphereCache } from "@/lib/ballSphereCache";
 import { clearRainGlyphCache } from "@/lib/rendering/rainGlyphCache";
 import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/rendering/renderFrame";
+import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
+import { effectivePickupChance } from "@/lib/pickups";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
-import { calculateScore, ensureScoringConfigLoaded } from "@/lib/scoring";
+import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
 import { TutorialStep } from "@/types/game";
@@ -42,6 +45,7 @@ import {
   LOCK_TOTAL_DURATION,
   BALL_WON_REGION_THRESHOLD,
   LEVEL_CLEAR_SHIMMER_MS,
+  LEVEL_CLEAR_HOLD_MS,
 } from "@/lib/gameConstants";
 import {
   generateRegionId,
@@ -60,13 +64,13 @@ import {
 import {
   SpaceGrid,
   GridRegion,
-  CellState,
   findGridRegions,
   getRemainingPercent,
   getRegionPercentage,
   removeRegion,
-  worldToGridIndex,
 } from "@/lib/spaceGrid";
+import { traceActiveContours, traceContours } from "@/lib/rendering/regionContour";
+import { maybeRampDpr } from "@/lib/rendering/adaptiveDpr";
 import { playFenceBreakSound, playDeathSound, playBallLockSound } from "@/lib/gameAudio";
 import { vibrateFenceComplete, vibrateFenceBreak } from "@/lib/gameHaptics";
 
@@ -80,11 +84,15 @@ import {
   getDevicePixelRatio,
 } from "@/lib/boardConstants";
 import { CanvasGameState } from "@/types/gameState";
+import { PickupConfig, PickupState, PickupFeedback, DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
+import { ScopeCreepConfig, DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
+import { getRenderer, RendererKind } from "@/lib/rendering/rendererSettings";
+import type { PixiGameRenderer } from "@/lib/rendering/pixi/PixiGameRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
-import { applyCutFn } from "@/lib/physics/applyCut";
+import { applyCutFn, checkSpaceWin, evaluateWinConditions } from "@/lib/physics/applyCut";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
@@ -94,6 +102,12 @@ export interface GameStateInfo {
   spaceRemaining: number;
   lockedBalls: number;
   pushMode: "none" | "prompt" | "pushing";
+  /** Current Scope Creep speed boost in percent (0 = not yet active). */
+  creepPercent: number;
+  /** Whole active-play seconds this map (1Hz; drives the Ship Early bar). */
+  activeSeconds: number;
+  /** Balls spawned on this map (scales the Ship Early windows). */
+  ballCount: number;
   onBankAndContinue?: () => void;
 }
 
@@ -108,10 +122,18 @@ interface GameCanvasProps {
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired the instant the map is won, so the shell can freeze the code background. */
   onMapComplete?: () => void;
+  /** Run-start intro: the board ASSEMBLES from shatter tiles (the reverse of
+   *  the level-clear dissolve) instead of popping in over the background code.
+   *  Passed true only for the first map of a run. */
+  introAssemble?: boolean;
   onGameStateChange?: (state: GameStateInfo) => void;
   tutorialMode?: boolean;
   tutorialStep?: TutorialStep;
   onTutorialCutSuccess?: () => void;
+  /** Fired once per ball the instant it locks, with its ball-type id (drives the
+   *  tutorial's "encountered ball types" tracking). Returns true iff this was
+   *  the first-ever lock of that type (triggers the "Info Unlocked" flash). */
+  onBallTypeLocked?: (typeId: string) => boolean;
   canvasOpacity?: number;
   fenceSpeedBase?: number;
   fenceSpeedMin?: number;
@@ -119,6 +141,10 @@ interface GameCanvasProps {
   /** Lock rule (from game-config.yml `lock:`). */
   lockWinThresholdPercent?: number;
   lockMinRegionCells?: number;
+  /** Scope Creep tuning (from game-config.yml `scope_creep:`). */
+  scopeCreep?: ScopeCreepConfig;
+  /** Pickup tuning (from game-config.yml `pickups:`). */
+  pickupConfig?: PickupConfig;
   regionColor?: string;
   accentColor?: string;
   activeModifiers: GameModifiers;
@@ -164,16 +190,20 @@ export function GameCanvas({
   onGameEnd,
   onLevelComplete,
   onMapComplete,
+  introAssemble = false,
   onGameStateChange,
   tutorialMode = false,
   tutorialStep = "completed",
   onTutorialCutSuccess,
+  onBallTypeLocked,
   canvasOpacity = 0.9,
   fenceSpeedBase = 1200,
   fenceSpeedMin = 750,
   fenceSpeedPerLevel = 50,
   lockWinThresholdPercent = BALL_WON_REGION_THRESHOLD,
   lockMinRegionCells = 0,
+  scopeCreep,
+  pickupConfig = DEFAULT_PICKUP_CONFIG,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
   activeModifiers,
@@ -185,18 +215,34 @@ export function GameCanvas({
   showPerfOverlay = false,
   freezeOnComplete = false,
 }: GameCanvasProps) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Renderer flag: read once per mount (switching = remount). Under 'pixi' the
+  // canvas gets a WebGL context via PixiGameRenderer (dynamic import, so the
+  // 2D path never pays for the pixi chunk) and renders at NATIVE device
+  // resolution. If WebGL init fails (old WebView, blocklisted GPU), we fall
+  // back to canvas2d for the session: the state change remounts the canvas
+  // element (key below) so the fallback gets a fresh, contextless canvas.
+  const [rendererKind, setRendererKind] = useState<RendererKind>(() => getRenderer());
+  const pixiRef = useRef<PixiGameRenderer | null>(null);
+  const pixiInitStartedRef = useRef(false);
+  const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
   const onLevelCompleteRef = useRef(onLevelComplete);
   useEffect(() => { onLevelCompleteRef.current = onLevelComplete; }, [onLevelComplete]);
   const onMapCompleteRef = useRef(onMapComplete);
   useEffect(() => { onMapCompleteRef.current = onMapComplete; }, [onMapComplete]);
+  // Run-intro assemble plays at most once per mount: consumed on first use so
+  // the per-level effect re-runs (and mid-run maps) never replay it.
+  const introPendingRef = useRef(introAssemble);
   const freezeOnCompleteRef = useRef(freezeOnComplete);
   useEffect(() => { freezeOnCompleteRef.current = freezeOnComplete; }, [freezeOnComplete]);
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
+  const onBallTypeLockedRef = useRef(onBallTypeLocked);
+  useEffect(() => { onBallTypeLockedRef.current = onBallTypeLocked; }, [onBallTypeLocked]);
   // Live ref so toggling the speed-label overlay takes effect without restarting
   // the render loop (the rctx is rebuilt only per level).
   const showBallSpeedsRef = useRef(showBallSpeeds);
@@ -205,10 +251,25 @@ export function GameCanvas({
   useEffect(() => { showPerfOverlayRef.current = showPerfOverlay; }, [showPerfOverlay]);
   // Keep the lock-rule config live on the game state (initGame also seeds it),
   // so tuning game-config.yml applies without waiting for the next level init.
+  // Code Review folds its bonus percentage points into the threshold here and
+  // in initGame, so the engine and readouts share one effective value.
   useEffect(() => {
-    gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent;
+    gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
     gameRef.current.lockMinRegionCells = lockMinRegionCells;
-  }, [lockWinThresholdPercent, lockMinRegionCells]);
+  }, [lockWinThresholdPercent, lockMinRegionCells, activeModifiers.lockThresholdBonus]);
+  // Same live-config treatment for the Scope Creep tuning.
+  useEffect(() => {
+    if (scopeCreep) gameRef.current.creepConfig = scopeCreep;
+  }, [scopeCreep]);
+  // Pickup tuning arrives async (game-config.yml fetch) — reseed the live game
+  // instead of putting it in the init effect's deps (that would restart the
+  // level when the config lands). Same chance/gate derivation as initGame.
+  useEffect(() => {
+    const game = gameRef.current;
+    if (!game.spaceGrid) return; // not initialised yet — initGame will seed it
+    const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);
+    game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
+  }, [pickupConfig, level, levelNumber, activeModifiers.pickupChanceBonus]);
 
   useEffect(() => {
     const game = gameRef.current;
@@ -245,6 +306,12 @@ export function GameCanvas({
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
   const [bonusPulseKey, setBonusPulseKey] = useState(0);
+  // Scope Creep: current speed boost in percent, stepped by onCreepStep (~4x/level).
+  const [creepPercent, setCreepPercent] = useState(0);
+  // Active-play clock mirrored to React at 1Hz (Ship Early countdown bar).
+  const [activeSeconds, setActiveSeconds] = useState(0);
+  // Balls spawned this map; scales the Ship Early windows (15s per ball).
+  const [ballCount, setBallCount] = useState(1);
 
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -284,6 +351,10 @@ export function GameCanvas({
     accumulator: 0,
     animationId: 0,
     lastAutoFreezeAt: 0,
+    activePlaySeconds: 0,
+    clearedActiveSeconds: null as number | null,
+    creepFactor: 1,
+    creepConfig: DEFAULT_SCOPE_CREEP,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -292,6 +363,7 @@ export function GameCanvas({
     wallShieldsRemaining: 0,
     fastestBallId: null as string | null,
     pushMode: "none" as "none" | "prompt" | "pushing",
+    pushPromptPending: false,
     bestRemainingPercent: 100,
     pushStartPercent: 100,
     levelClearedTime: 0,
@@ -324,6 +396,15 @@ export function GameCanvas({
     objectivesBroken: 0,
     breakBonus: 0,
     lastDudAt: 0,
+    pickups: [] as PickupState[],
+    pickupConfig: null as PickupConfig | null,
+    pickupSpots: [] as Vector2[],
+    lastPickupRollAt: 0,
+    pickupOvertime: 0,
+    pickupCapBonus: 0,
+    freezeCharges: 0,
+    freezeChargeSeconds: 0,
+    pickupFeedback: [] as PickupFeedback[],
   });
 
   useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging);
@@ -340,13 +421,44 @@ export function GameCanvas({
 
     const game = gameRef.current;
     game.regionColor = regionColorProp;
-    game.wallShieldsRemaining = 0;
-    setWallShieldCount(0);
+    // Second Wind capstone: N fence-hit shields granted fresh every map.
+    game.wallShieldsRemaining = Math.max(0, Math.round(activeModifiers.wallShieldsPerMap));
+    setWallShieldCount(game.wallShieldsRemaining);
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    const isPixi = rendererKind === "pixi";
+    const ctx = isPixi ? null : canvas.getContext("2d");
+    if (!isPixi && !ctx) return;
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+    }
+
+    // Pixi renderer: created once per component mount (async chunk, so the
+    // 2D path never loads it); level-effect re-runs share the instance. Any
+    // failure (chunk load, WebGL context) drops back to canvas2d for the
+    // session via the renderer state, which remounts a fresh canvas element.
+    if (isPixi && !pixiInitStartedRef.current) {
+      pixiInitStartedRef.current = true;
+      const fallback = (err: unknown) => {
+        console.warn("[renderer] WebGL init failed, falling back to canvas2d:", err);
+        try { pixiRef.current?.destroy(); } catch { /* half-initialized app */ }
+        pixiRef.current = null;
+        pixiInitStartedRef.current = false;
+        setRendererKind("canvas2d");
+      };
+      import("@/lib/rendering/pixi/PixiGameRenderer").then(({ PixiGameRenderer }) => {
+        if (pixiRef.current) return;
+        const renderer = new PixiGameRenderer();
+        pixiRef.current = renderer;
+        const size = pixiSizeRef.current ?? { w: canvas.width || 1, h: canvas.height || 1 };
+        renderer.init(canvas, size.w, size.h).then(() => {
+          const latest = pixiSizeRef.current;
+          if (latest && (latest.w !== size.w || latest.h !== size.h)) {
+            renderer.resize(latest.w, latest.h);
+          }
+        }).catch(fallback);
+      }).catch(fallback);
+    }
 
     // ── Blur canvas (legacy — now unused, kept for canvas element compatibility) ──
     let removedSamples: Vector2[] = [];
@@ -419,14 +531,68 @@ export function GameCanvas({
       rCtx.fillStyle = regionColor;
       rCtx.fillRect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
       rCtx.restore();
-      // Step 2: punch transparent holes for active region cells
-      const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
-      const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
-      for (const region of game.regions) {
-        for (const sample of (region.samplePoints ?? [])) {
-          const sx = Math.round(boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale);
-          const sy = Math.round(boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale);
-          rCtx.clearRect(sx, sy, size, size);
+      // Step 2: punch transparent holes over the ACTIVE (playable) area.
+      const grid = game.spaceGrid;
+      if (grid) {
+        // Authoritative + smooth: trace the ACTIVE/removed boundary straight from
+        // the space grid (the single source of truth, so captured space behind an
+        // obstacle can never leak a hole — the old "shadow behind the obstacle")
+        // and punch it as one anti-aliased path with rounded corners, instead of
+        // stamping hard 15px cells. Even-odd fill keeps interior captured holes
+        // (obstacles inside the playable area) intact.
+        const loops = traceActiveContours(grid);
+        rCtx.save();
+        rCtx.globalCompositeOperation = "destination-out";
+        rCtx.beginPath();
+        for (const loop of loops) {
+          for (let i = 0; i < loop.length; i++) {
+            const sx = boardRect.left + loop[i].x * boardRect.scale;
+            const sy = boardRect.top + loop[i].y * boardRect.scale;
+            if (i === 0) rCtx.moveTo(sx, sy);
+            else rCtx.lineTo(sx, sy);
+          }
+          rCtx.closePath();
+        }
+        rCtx.fill("evenodd");
+        rCtx.restore();
+      } else {
+        // Fallback (no space grid): stamp active region cells as before.
+        const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
+        const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
+        for (const region of game.regions) {
+          for (const sample of (region.samplePoints ?? [])) {
+            const sx = Math.round(boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale);
+            const sy = Math.round(boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale);
+            rCtx.clearRect(sx, sy, size, size);
+          }
+        }
+      }
+      // Step 2b: accent-tint LOCKED territory. Marks where balls were locked
+      // (vs plain fenced-off space) with a persistent accent wash. Traced from the
+      // grid's lock-captured mask, not the ray-cast lock polygon, so it's uniform
+      // behind obstacles and can't leave the "shadow behind the obstacle" wedge.
+      // source-atop keeps it on the captured fill only (never over active holes).
+      if (grid?.lockCaptured) {
+        const mask = grid.lockCaptured;
+        const gw = grid.width;
+        const lockLoops = traceContours(grid, (col, row) => mask[row * gw + col] === 1);
+        if (lockLoops.length > 0) {
+          rCtx.save();
+          rCtx.globalCompositeOperation = 'source-atop';
+          rCtx.globalAlpha = canvasOpacity * 0.3;
+          rCtx.fillStyle = accentColor;
+          rCtx.beginPath();
+          for (const loop of lockLoops) {
+            for (let i = 0; i < loop.length; i++) {
+              const sx = boardRect.left + loop[i].x * boardRect.scale;
+              const sy = boardRect.top + loop[i].y * boardRect.scale;
+              if (i === 0) rCtx.moveTo(sx, sy);
+              else rCtx.lineTo(sx, sy);
+            }
+            rCtx.closePath();
+          }
+          rCtx.fill('evenodd');
+          rCtx.restore();
         }
       }
       // Step 3: scanline overlay on captured fill only
@@ -439,6 +605,8 @@ export function GameCanvas({
         rCtx.fillRect(0, 0, regionCanvas.width, regionCanvas.height);
         rCtx.restore();
       }
+      // The Pixi renderer wraps these canvases as textures; tell it to re-upload.
+      pixiRef.current?.markStaticDirty();
     };
 
     const paintOverlayCanvas = () => {
@@ -473,7 +641,7 @@ export function GameCanvas({
     const initGame = () => {
       game.assimilations.clear();
       game.bonusCutCells.clear();
-      game.lockWinThresholdPercent = lockWinThresholdPercent;
+      game.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
       game.lockMinRegionCells = lockMinRegionCells;
       game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
@@ -485,6 +653,21 @@ export function GameCanvas({
       game.lastDudAt = 0;
       game.moneyMultiplier = 1;
       game.ballSpeedScale = activeModifiers.ballSpeedMultiplier;
+      // Pickups: fresh token state each map. A map-level pickupChance override
+      // both replaces the global chance AND bypasses the start_level gate (so a
+      // teaching map can guarantee a token, or a set-piece can suppress them).
+      game.pickups = [];
+      game.pickupFeedback = [];
+      game.lastPickupRollAt = 0;
+      game.pickupOvertime = 0;
+      game.pickupCapBonus = 0;
+      game.freezeCharges = 0;
+      game.freezeChargeSeconds = 0;
+      game.pickupSpots = (level.pickupSpots ?? []).map(s => ({ x: s.x, y: s.y }));
+      {
+        const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);
+        game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
+      }
       const data = createInitialGameData(level, levelNumber, activeModifiers);
       game.walls              = data.walls;
       game.movers             = data.movers;
@@ -503,12 +686,20 @@ export function GameCanvas({
       game.regions            = data.regions;
       if (game.spaceGrid) paintCellRegionIds(game.spaceGrid, game.regions);
       game.fastestBallId      = data.fastestBallId;
+      // Cold Boot: the map boots frozen, all balls hold still for a planning
+      // beat. Same frozenUntil path as tap-freeze; freezeReadyAt is left unset
+      // so the spawn thaw carries no re-freeze cooldown.
+      if (activeModifiers.spawnFreezeSeconds > 0) {
+        const thaw = performance.now() + activeModifiers.spawnFreezeSeconds * 1000;
+        for (const ball of game.balls) ball.frozenUntil = thaw;
+      }
       removedSamples = [];
       removedSamplesSet = new Set();
       repaintRegionCanvas();
       game.activeWall = null;
       game.gameOver = false;
       game.levelComplete = false;
+      game.pushPromptPending = false;
       game.shimmerStart = 0;
       game.shimmerFrozen = false;
       game.swipeStart = null;
@@ -518,6 +709,14 @@ export function GameCanvas({
       game.lastTime = 0;
       game.accumulator = 0;
       game.lastAutoFreezeAt = 0; // Cron Job: restart the auto-freeze clock each map
+      // Time factor: fresh active-play clock and Scope Creep state each map.
+      game.activePlaySeconds = 0;
+      game.clearedActiveSeconds = null;
+      game.creepFactor = 1;
+      game.creepConfig = scopeCreep ?? DEFAULT_SCOPE_CREEP;
+      setCreepPercent(0);
+      setActiveSeconds(0);
+      setBallCount(game.balls.length || 1);
       game.wallCount = 0;
       clearWallImpacts();
       setCutCount(0);
@@ -529,10 +728,18 @@ export function GameCanvas({
 
     const resizeCanvas = () => {
       const { width, height } = container.getBoundingClientRect();
-      const dpr = getDevicePixelRatio();
+      // Pixi renders at native device resolution (3x sanity cap saturates any
+      // panel); the 2D path keeps its capped + adaptive DPR.
+      const dpr = isPixi ? Math.min(window.devicePixelRatio || 1, 3) : getDevicePixelRatio();
       const physW = Math.round(width * dpr);
       const physH = Math.round(height * dpr);
-      canvas.width = physW; canvas.height = physH;
+      pixiSizeRef.current = { w: physW, h: physH };
+      if (isPixi && pixiRef.current?.isReady) {
+        // The WebGL renderer manages canvas.width/height itself.
+        pixiRef.current.resize(physW, physH);
+      } else {
+        canvas.width = physW; canvas.height = physH;
+      }
       canvas.style.width = `${width}px`; canvas.style.height = `${height}px`;
       game.screenSize = { width: physW, height: physH };
       game.boardRect = computeBoardRect(physW, physH);
@@ -540,6 +747,7 @@ export function GameCanvas({
       clearBallSphereCache();
       clearRainGlyphCache();
       clearBallEffectsCache();
+      clearPickupSpriteCache(); // token bakes are scale-keyed
       repaintRegionCanvas();
       paintOverlayCanvas();
       setDebugInfo({
@@ -553,24 +761,42 @@ export function GameCanvas({
       }
     };
 
-    const rctx: RenderContext = { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState, spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current };
+    const rctx: RenderContext = {
+      accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState,
+      spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current,
+      infoUnlockedLabel: t('game.infoUnlocked'),
+      pickupLabels: {
+        fork: t('game.pickupFork'),
+        capRaise: t('game.pickupCapRaise'),
+        freezeCharge: t('game.pickupFreeze'),
+      },
+    };
+    // Run-intro hold (Pixi): between the renderer becoming ready and
+    // startAssemble installing the reverse dissolve, the game loop would
+    // present normal full-scene frames — the complete board flashed for a
+    // frame or two before collapsing in. While this is set, render() presents
+    // nothing; startAssemble clears it, making the assemble the renderer's
+    // first visible frame. (The 2D path starts its assemble synchronously
+    // before any frame, so it never needs the hold.)
+    let introHold = false;
+
     const render = () => {
       rctx.showBallSpeeds = showBallSpeedsRef.current;
+      rctx.showPerfOverlay = showPerfOverlayRef.current;
+      if (!ctx) {
+        if (introHold && !game.dissolve) return;
+        // Pixi path — a no-op until the async init lands (a few skipped frames).
+        pixiRef.current?.render(game, rctx);
+        return;
+      }
       renderFrame(ctx, game, rctx);
       // Perf HUD drawn after renderFrame (which returns early on normal frames),
       // so it always lands on top. Its cost counts toward the measured render ms.
       if (showPerfOverlayRef.current) drawPerfOverlay(ctx, game);
     };
 
-    const startDissolve = (onComplete: () => void, tint?: string) => {
+    const buildDissolveTiles = (W: number, H: number): DissolveTile[] => {
       const TILE = 28;
-      const W = canvas.width, H = canvas.height;
-      const captured = document.createElement('canvas');
-      captured.width = W; captured.height = H;
-      const cctx = captured.getContext('2d')!;
-      cctx.drawImage(canvas, 0, 0);
-      if (tint) { cctx.fillStyle = tint; cctx.fillRect(0, 0, W, H); }
-
       const cols = Math.ceil(W / TILE), rows = Math.ceil(H / TILE);
       const tiles: DissolveTile[] = [];
       for (let r = 0; r < rows; r++) {
@@ -590,10 +816,57 @@ export function GameCanvas({
           });
         }
       }
-      game.dissolve = { captured, tiles, startTime: performance.now(), onComplete };
+      return tiles;
+    };
+
+    const startDissolve = (onComplete: () => void, tint?: string) => {
+      const W = canvas.width, H = canvas.height;
+      const captured = document.createElement('canvas');
+      captured.width = W; captured.height = H;
+      if (isPixi) {
+        // GPU-side snapshot: drawImage(webglCanvas) is a synchronous full-frame
+        // readback — a visible hitch right when the shatter should start.
+        pixiRef.current?.captureForDissolve(tint);
+      } else {
+        const cctx = captured.getContext('2d')!;
+        cctx.drawImage(canvas, 0, 0);
+        if (tint) { cctx.fillStyle = tint; cctx.fillRect(0, 0, W, H); }
+      }
+      game.dissolve = { captured, tiles: buildDissolveTiles(W, H), startTime: performance.now(), onComplete };
       startGameLoop(game);
     };
     startDissolveRef.current = startDissolve;
+
+    // Run-start intro: the exact reverse of startDissolve. The map's first
+    // frame is painted OFF-SCREEN (never presented), cut into the same
+    // shatter tiles, and flown IN — the board assembles over the scrolling
+    // background code instead of popping into place. Physics is held while
+    // game.dissolve is set, so play begins when the last tile lands.
+    // The capture always uses the 2D renderer (a parity port of the Pixi
+    // scene): under Pixi the tiles then ride the DissolveLayer's CanvasSource
+    // fallback, keeping the GPU snapshot machinery out of the very first
+    // frames of a fresh WebGL context.
+    const startAssemble = () => {
+      // Lift the pre-assemble hold: from here on game.dissolve carries the
+      // intro, and after it completes normal frames should present again.
+      introHold = false;
+      const W = canvas.width, H = canvas.height;
+      const captured = document.createElement('canvas');
+      captured.width = W; captured.height = H;
+      const cctx = captured.getContext('2d');
+      if (cctx) renderFrame(cctx, game, rctx);
+      game.dissolve = {
+        captured, tiles: buildDissolveTiles(W, H),
+        // Start a beat in the FUTURE: the game screen slides in for ~280ms
+        // (Index's framer-motion transition), and shards that fly during the
+        // slide are never seen. The negative-elapsed window renders nothing
+        // (tiles at full scatter, alpha clamped to 0), then the assemble
+        // plays in full view.
+        startTime: performance.now() + 450,
+        reverse: true, onComplete: () => startGameLoop(game),
+      };
+      startGameLoop(game);
+    };
 
     // Build callbacks object for extracted physics functions
     const callbacks: GameCallbacks = {
@@ -613,6 +886,9 @@ export function GameCanvas({
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
       onTutorialCutSuccess,
+      onBallTypeLocked: id => onBallTypeLockedRef.current?.(id) ?? false,
+      // Fork pickup split a ball: rescale the Ship Early countdown windows.
+      onBallCountChanged: setBallCount,
       getLives: () => livesRef.current,
       setLivesRef: n => { livesRef.current = n; },
       flashTimeoutRef,
@@ -641,34 +917,112 @@ export function GameCanvas({
           setRemainingPercent,
           onFenceBroke: () => { playFenceBreakSound(); vibrateFenceBreak(); },
         }),
-      processDestroys: () =>
+      processDestroys: () => {
         processDestroysFn(game, {
           repaintRegionCanvas,
           setRemainingPercent,
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
-        }),
+        });
+        // A destroy can capture pocket cells (destroy-recapture) and take the
+        // remaining space past the goal with no fence involved — run the same
+        // win check a completed cut runs, or the map shows CLEAR but never ends.
+        checkSpaceWin(game, level, callbacks);
+      },
+      // Per-frame safety net (see useGameLoop): guarantees a cleared map always
+      // finishes even if the space reached the goal by a path that didn't run
+      // the win check, so the top bar can never stall showing CLEAR.
+      checkWinCondition: () =>
+        evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
+      onCreepStep: setCreepPercent,
+      onActiveSecond: setActiveSeconds,
+      // Deferred push prompt: the loop already set game.pushMode; mirror it
+      // into React so the modal mounts.
+      onPushPrompt: () => setPushMode("prompt"),
+      renderEmpty: () => pixiRef.current?.presentEmpty(),
     };
-    const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration);
+    const gameLoop = createGameLoop(game, canvas, ctx, parallaxTickRef, gameLoopCallbacks, activeModifiers.autoFreezeDuration, activeModifiers.freezeNoCooldown);
     game.gameLoopFn = gameLoop;
 
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
-    startGameLoop(game);
+    let disposed = false;
+    if (introPendingRef.current) {
+      introPendingRef.current = false;
+      if (!isPixi) {
+        startAssemble(); // captures off-screen and starts the loop itself
+      } else {
+        // Pixi inits async: keep the loop (and the parallax background)
+        // running while it loads — render() no-ops until ready — then let the
+        // assemble be the renderer's first ever presented frame. The hold
+        // covers the frames between init landing and startAssemble below (the
+        // loop runs first in each rAF batch and would flash the full board).
+        introHold = true;
+        startGameLoop(game);
+        const waitForRenderer = () => {
+          if (disposed || game.dissolve) return;
+          if (pixiRef.current?.isReady) { startAssemble(); return; }
+          // A WebGL init failure re-runs this effect as canvas2d (no intro).
+          requestAnimationFrame(waitForRenderer);
+        };
+        requestAnimationFrame(waitForRenderer);
+      }
+    } else {
+      startGameLoop(game);
+    }
+
+    // Once the level has run long enough for the perf window to fill, try (once)
+    // to ramp the render resolution up if the device has frame-time headroom.
+    // Poll for a few seconds while the window fills, then give up. resizeCanvas
+    // re-applies the raised DPR ceiling. Pixi already renders at native DPR, so
+    // the ramp (whose cost model is 2D-fill-bound) is skipped entirely there.
+    let dprRampInterval: number | undefined;
+    if (!isPixi) {
+      let dprRampChecks = 0;
+      dprRampInterval = window.setInterval(() => {
+        dprRampChecks++;
+        if (maybeRampDpr(resizeCanvas) || dprRampChecks >= 8) {
+          window.clearInterval(dprRampInterval);
+        }
+      }, 1000);
+    }
 
     return () => {
+      disposed = true;
       window.removeEventListener("resize", resizeCanvas);
+      if (dprRampInterval !== undefined) window.clearInterval(dprRampInterval);
       stopGameLoop(game);
+      // Cancel any pending flash/shake/game-over timeouts so they can't fire a
+      // React setter (or onGameEnd, via the 1s game-over timeout) after unmount
+      // when the canvas is torn down mid-animation (Main Menu, Continue-remount).
+      if (flashTimeoutRef.current) { clearTimeout(flashTimeoutRef.current); flashTimeoutRef.current = null; }
+      if (shakeTimeoutRef.current) { clearTimeout(shakeTimeoutRef.current); shakeTimeoutRef.current = null; }
       clearBallRenderCache();
       clearBallSphereCache();
       clearRainGlyphCache();
       clearBallEffectsCache();
+      clearPickupSpriteCache();
       clearRenderFrameCache();
     };
-  }, [level, levelNumber, activeModifiers, fenceDurability]);
+  }, [level, levelNumber, activeModifiers, fenceDurability, rendererKind]);
+
+  // The Pixi renderer survives level changes (the effect above re-runs per
+  // level); the GPU context is torn down only when the component unmounts.
+  useEffect(() => () => {
+    pixiRef.current?.destroy();
+    pixiRef.current = null;
+    pixiInitStartedRef.current = false;
+  }, []);
 
   const handleBankAndContinue = useCallback(() => {
     const game = gameRef.current;
+    // Locking the last ball mid-push completes the level via the per-frame win
+    // check while the Bank button is still on screen; a tap then must not queue
+    // a SECOND dissolve -> onLevelComplete pipeline (the duplicate resurrected
+    // the level-complete overlay over the next screen and could re-run the
+    // assignment phase - seen in the wild as two Promotion drafts in a row).
+    if (game.levelComplete) return;
     game.levelComplete = true;
+    game.levelCompleteTime = performance.now(); // anchors the space bar fade-out
     // Clear the prompt so the loop reaches its levelComplete branch (it bails
     // early while pushMode is "prompt") and the prompt overlay is dismissed,
     // revealing the board for the shimmer.
@@ -683,32 +1037,49 @@ export function GameCanvas({
     startGameLoop(game);
     // Dev/playground freeze: play the shimmer, hold the drained frame, no overlay.
     if (freezeOnCompleteRef.current) return;
-    const { levelScore, breakdown } = calculateScore(
-      game.wallCount, level.expectedCuts, game.bestRemainingPercent,
-      level.sizeThreshold, level.points, activeModifiers.scoreMultiplier, levelNumber,
-    );
     const areaAtPushStart = game.pushStartPercent;
     const areaCleared = Math.max(0, areaAtPushStart - game.bestRemainingPercent);
     const chunkSize = areaAtPushStart * 0.25;
     const pushBonus = chunkSize > 0
       ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
       : 0;
+    // Ship Early: the tempo clock froze when the prompt opened, so push time
+    // never counts against it.
+    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+    // Fold lock + push + ship-early bonuses in before the cap (issue #43).
+    // Previously this site added lockBonus + pushBonus AFTER calculateScore,
+    // letting a banked push exceed the per-map ceiling every other path enforces.
+    const { levelScore, breakdown } = calculateScore(
+      game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
+        scoreMultiplier: activeModifiers.scoreMultiplier,
+        extraBonus: game.lockBonus + pushBonus + shipEarlyBonus,
+        spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
+        // Comp Time pickups raise THIS map's cap; overtime pickups pay after it.
+        overtimeCapBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
+        postCapBonus: game.pickupOvertime,
+      },
+    );
 
+    // Same post-sweep beat as applyCut: hold the drained board, shatter it,
+    // then mount the completion overlay.
     setTimeout(() => {
-      onLevelCompleteRef.current({
-        levelNumber, levelId: level.id, cutCount: game.wallCount,
-        expectedCuts: level.expectedCuts, basePoints: level.points,
-        levelScore: levelScore + game.lockBonus + pushBonus,
-        remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
-        thresholdPercent: level.sizeThreshold, pushBonus,
-        underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
-        spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
-        fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-        extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
-        lockedBallsCount: game.lockedBallsCount,
+      startDissolveRef.current?.(() => {
+        onLevelCompleteRef.current({
+          levelNumber, levelId: level.id, cutCount: game.wallCount,
+          expectedCuts: level.expectedCuts, basePoints: level.points,
+          levelScore,
+          remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
+          thresholdPercent: level.sizeThreshold, pushBonus,
+          underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
+          spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
+          fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
+          extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+          lockedBallsCount: game.lockedBallsCount,
+          shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+          pickupBonus: game.pickupOvertime || undefined,
+        });
       });
-      startDissolveRef.current?.(() => {});
-    }, 150 + LEVEL_CLEAR_SHIMMER_MS);
+    }, 150 + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);
   }, [level, levelNumber, activeModifiers]);
 
   useEffect(() => {
@@ -718,10 +1089,13 @@ export function GameCanvas({
         spaceRemaining: remainingPercent,
         lockedBalls: lockedBallsCount,
         pushMode,
+        creepPercent,
+        activeSeconds,
+        ballCount,
         onBankAndContinue: handleBankAndContinue,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;
@@ -779,7 +1153,7 @@ export function GameCanvas({
             }}
           />
         )}
-        <canvas ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
+        <canvas key={rendererKind} ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 pointer-events-none"

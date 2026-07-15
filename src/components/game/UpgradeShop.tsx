@@ -17,8 +17,13 @@
 import { useState, useMemo, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UpgradeConfig, TIER_COLORS, UpgradeTier } from '@/types/upgrade';
-import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info } from 'lucide-react';
+import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
+import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
+import { GameModifiers } from '@/hooks/useActiveModifiers';
+import { runwayStatus, spendChunks, SPEND_CHUNK_HOURS, RunwayPerk } from '@/lib/treasury';
+import { inflationForLevel } from '@/lib/upgradePricing';
+import { TagChip } from './TagChip';
+import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info, Vault, ShoppingCart } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
 import { CRTBackground } from './CRTBackground';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -41,16 +46,16 @@ interface UpgradeShopProps {
   showTutorial?: boolean;
   onTutorialDismiss?: () => void;
   newlyUnlockedCerts?: Certificate[];
-}
-
-/** Shuffle array using Fisher-Yates */
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
+  /** Owned upgrades of a tag needed to activate its set bonus (tagSets). */
+  tagSetThreshold?: number;
+  /** Company Card capstone: the cheapest unowned offer costs nothing. */
+  freeCheapestOffer?: boolean;
+  /** Full modifier set; drives the treasury strip (Runway + Budget Cycle). */
+  activeModifiers?: GameModifiers;
+  /** Opened "closed": the round didn't lock enough balls to earn the store. The
+   *  shelf is still shown (so the player sees what they missed) but dimmed and
+   *  non-interactive, with a "Not enough balls locked" banner; Continue only. */
+  closed?: boolean;
 }
 
 /**
@@ -96,6 +101,10 @@ export function UpgradeShop({
   showTutorial = false,
   onTutorialDismiss,
   newlyUnlockedCerts = [],
+  tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
+  freeCheapestOffer = false,
+  activeModifiers,
+  closed = false,
 }: UpgradeShopProps) {
   const { t, i18n } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -154,7 +163,8 @@ export function UpgradeShop({
     return map;
   }, [upgrades]);
 
-  // Pick random offers once on mount; restocks append to this list.
+  // Pick random offers once on mount; restocks append to this list. Picks are
+  // tag-weighted toward the player's owned archetypes (see weightedSample).
   const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() => {
     // Filter out owned and upgrades not yet unlocked by level progression
     const available = upgrades.filter(u =>
@@ -169,10 +179,11 @@ export function UpgradeShop({
       if (!u.prerequisites || u.prerequisites.length === 0) return false;
       return u.prerequisites.some(p => !ownedUpgradeIds.includes(p));
     });
-    const offers = shuffle(unlocked).slice(0, shopSlots);
+    const counts = ownedTagCounts(ownedUpgradeIds, upgrades);
+    const offers = weightedSample(unlocked, shopSlots, counts, completedLevel);
     // Add at most one locked item if there's room
     if (offers.length < shopSlots && locked.length > 0) {
-      offers.push(shuffle(locked)[0]);
+      offers.push(weightedSample(locked, 1, counts, completedLevel)[0]);
     }
     return offers;
   });
@@ -200,20 +211,47 @@ export function UpgradeShop({
   const restocksLeft = Math.max(0, shopRestockCount - restocksUsed);
 
   // Combine owned with session purchases
-  const allOwnedIds = useMemo(() => 
-    [...ownedUpgradeIds, ...purchasedThisSession], 
+  const allOwnedIds = useMemo(() =>
+    [...ownedUpgradeIds, ...purchasedThisSession],
     [ownedUpgradeIds, purchasedThisSession]
+  );
+
+  // Build readout: owned + currently selected upgrades per tag. Selections
+  // count, so picking the piece that reaches the set threshold lights the
+  // chip up before the purchase is even confirmed.
+  const buildTagCounts = useMemo(
+    () => ownedTagCounts([...allOwnedIds, ...selectedIds], upgrades),
+    [allOwnedIds, selectedIds, upgrades],
   );
 
   // Effective overtime - playerPoints (totalScore) is already reduced by onPurchase
   const effectiveOvertime = playerPoints;
 
-  // All prices flow through the discount (Bulk Licensing certificate)
+  // Company Card capstone: the cheapest PURCHASABLE offer on the shelf is
+  // free. Locked teasers are skipped - a free price on something you can't
+  // buy would waste the perk. Recomputed as restocks add offers and as
+  // purchases change what's locked.
+  const freeOfferId = useMemo(() => {
+    if (!freeCheapestOffer) return null;
+    let cheapest: UpgradeConfig | null = null;
+    for (const u of offeredUpgrades) {
+      if (allOwnedIds.includes(u.id)) continue;
+      if (isLocked(u.id, allOwnedIds)) continue;
+      if (!cheapest || u.cost < cheapest.cost) cheapest = u;
+    }
+    return cheapest?.id ?? null;
+  }, [freeCheapestOffer, offeredUpgrades, allOwnedIds, isLocked]);
+
+  // All prices flow through market-rate inflation (rises each 5-level
+  // assignment block) and then the discount (Bulk Licensing certificate).
+  const priceInflation = inflationForLevel(completedLevel);
   const priceFor = useCallback(
-    (u: UpgradeConfig) => Math.max(1, Math.round(u.cost * shopDiscountMultiplier)),
-    [shopDiscountMultiplier],
+    (u: UpgradeConfig) =>
+      u.id === freeOfferId ? 0 : Math.max(1, Math.round(u.cost * priceInflation * shopDiscountMultiplier)),
+    [shopDiscountMultiplier, freeOfferId, priceInflation],
   );
   const hasDiscount = shopDiscountMultiplier < 1;
+  const inflationPercent = Math.round((priceInflation - 1) * 100);
 
   // Budget remaining after currently selected items
   const selectedTotalCost = selectedIds.reduce((sum, id) => {
@@ -222,7 +260,24 @@ export function UpgradeShop({
   }, 0);
   const remainingBudget = effectiveOvertime - selectedTotalCost;
 
+  // Treasury strip (Runway + Budget Cycle): evaluated against the balance AFTER
+  // the current selection, so picking an item immediately shows a threshold
+  // being lost and the Budget Cycle charging up. Same functions as the engine.
+  const runwayPerks = activeModifiers ? runwayStatus(remainingBudget, activeModifiers) : [];
+  const hasBudgetCycle = !!activeModifiers &&
+    (activeModifiers.spendInstantFencePerChunk > 0 || activeModifiers.spendFenceSpeedPerChunk > 0);
+  // The spend chunk scales with the same inflation index as prices, so the
+  // spender archetype doesn't get cheaper boons as markets rise.
+  const chunkHours = Math.round(SPEND_CHUNK_HOURS * priceInflation);
+  const budgetChunks = spendChunks(selectedTotalCost, chunkHours);
+  const RUNWAY_CHIP_KEYS: Record<RunwayPerk, string> = {
+    instantFence: 'upgradeShop.runwayChipInstantFence',
+    concurrentFence: 'upgradeShop.runwayChipConcurrentFence',
+    freeze: 'upgradeShop.runwayChipFreeze',
+  };
+
   const handleItemClick = useCallback((upgrade: UpgradeConfig, alreadySelected: boolean, currentRemainingBudget: number) => {
+    if (closed) return; // store is closed this round — no purchases
     if (allOwnedIds.includes(upgrade.id)) return;
 
     // Deselect if already selected — cascades to dependents (see helper)
@@ -256,12 +311,15 @@ export function UpgradeShop({
         !isLocked(u.id, ownedAfterSelect)
       );
       if (candidates.length > 0) {
-        const restockedOffer = shuffle(candidates)[0];
+        // Restocks also lean into the build: the selection counts as owned, so
+        // buying a lock upgrade makes the fresh offer likelier to be lock too.
+        const counts = ownedTagCounts(ownedAfterSelect, upgrades);
+        const restockedOffer = weightedSample(candidates, 1, counts, completedLevel)[0];
         setOfferedUpgrades(prev => [...prev, restockedOffer]);
         setRestocksUsed(prev => prev + 1);
       }
     }
-  }, [allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades, priceFor]);
+  }, [closed, allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades, priceFor]);
 
   const handleContinue = useCallback(() => {
     for (const id of selectedIds) {
@@ -304,6 +362,26 @@ export function UpgradeShop({
           {t('upgradeShop.levelComplete', { level: completedLevel })}
         </motion.div>
 
+        {/* Closed banner — the round didn't lock enough balls to earn the store */}
+        {closed && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.08, type: 'spring', stiffness: 260, damping: 20 }}
+            className="flex items-center gap-2 rounded-lg px-4 py-2 border-2"
+            style={{
+              color: '#ff6b6b',
+              borderColor: '#ff6b6b66',
+              background: '#ff6b6b12',
+            }}
+          >
+            <Lock className="w-4 h-4 shrink-0" />
+            <span className="text-sm font-bold tracking-wide uppercase">
+              {t('upgradeShop.closedNotEnoughLocks')}
+            </span>
+          </motion.div>
+        )}
+
         {/* Waypoint banner — shown only on multiples of 5 */}
         {completedLevel % 5 === 0 && (
           <motion.div
@@ -328,7 +406,7 @@ export function UpgradeShop({
               animate={{ opacity: [1, 0.7, 1] }}
               transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
               className="text-xs font-bold tracking-[0.3em] uppercase"
-              style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: '#00ff88' }}
             >
               ⚑ &nbsp;{t('upgradeShop.checkpointReached')}&nbsp; ⚑
             </motion.p>
@@ -337,7 +415,7 @@ export function UpgradeShop({
               animate={{ textShadow: ['0 0 8px #00ff8888', '0 0 24px #00ff88cc', '0 0 8px #00ff8888'] }}
               transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
               className="text-4xl font-black tracking-widest"
-              style={{ fontFamily: 'Orbitron, sans-serif', color: '#00ff88' }}
+              style={{ fontFamily: 'Michroma, sans-serif', color: '#00ff88' }}
             >
               {t('upgradeShop.levelBanner', { level: completedLevel })}
             </motion.p>
@@ -363,8 +441,61 @@ export function UpgradeShop({
           <span className="text-muted-foreground">{t('upgradeShop.overtime')}</span>
         </motion.div>
 
+        {/* Market rates: prices rise each assignment block */}
+        {inflationPercent > 0 && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.12 }}
+            className="text-center text-[11px] tracking-widest uppercase"
+            style={{ fontFamily: "'JetBrains Mono', monospace", color: '#c9a227' }}
+          >
+            {t('upgradeShop.marketRates', { percent: inflationPercent })}
+          </motion.p>
+        )}
+
+        {/* Treasury strip: Runway thresholds + Budget Cycle charge, live against
+            the balance after the current selection (see remainingBudget above). */}
+        {!closed && (runwayPerks.length > 0 || hasBudgetCycle) && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.12 }}
+            className="flex flex-col items-center gap-1.5"
+          >
+            {runwayPerks.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-1.5">
+                {runwayPerks.map(p => (
+                  <span
+                    key={p.perk}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+                    style={p.met
+                      ? { color: '#2dd4bf', borderColor: '#2dd4bf66', background: '#2dd4bf14' }
+                      : { color: '#8a8f98', borderColor: '#8a8f9833', background: 'transparent', opacity: 0.8 }}
+                    title={t('upgradeShop.runwayTitle')}
+                  >
+                    <Vault className="w-3 h-3" />
+                    {t(RUNWAY_CHIP_KEYS[p.perk], { hours: p.thresholdHours })}
+                    {p.met ? ' ✓' : ''}
+                  </span>
+                ))}
+              </div>
+            )}
+            {hasBudgetCycle && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <ShoppingCart className={`w-3.5 h-3.5 ${budgetChunks > 0 ? 'text-cyan-400' : ''}`} />
+                <span>
+                  {budgetChunks > 0
+                    ? t('upgradeShop.budgetCycleCharged', { count: budgetChunks, spent: selectedTotalCost })
+                    : t('upgradeShop.budgetCycleProgress', { spent: selectedTotalCost, next: chunkHours })}
+                </span>
+              </div>
+            )}
+          </motion.div>
+        )}
+
         {/* Restock counter — only when the Procurement upgrades are owned */}
-        {shopRestockCount > 0 && (
+        {!closed && shopRestockCount > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -380,16 +511,45 @@ export function UpgradeShop({
           </motion.div>
         )}
 
+        {/* Build readout: per-tag piece count toward the set bonus. A ✓ chip
+            means that archetype's set bonus is active (or will be on buy). */}
+        {!closed && buildTagCounts.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.16 }}
+            className="flex flex-wrap justify-center gap-1.5"
+          >
+            {[...buildTagCounts.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([tag, count]) => {
+                const setActive = count >= tagSetThreshold;
+                return (
+                  <TagChip
+                    key={tag}
+                    tag={tag as UpgradeTag}
+                    pill
+                    ringed={setActive}
+                    sizeClass="text-[10px]"
+                    suffix={setActive ? '✓' : `${count}/${tagSetThreshold}`}
+                  />
+                );
+              })}
+          </motion.div>
+        )}
+
         {/* Press-and-hold discovery hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.18 }}
-          className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70"
-        >
-          <Info className="w-3 h-3" />
-          <span>{t('upgradeShop.holdHint')}</span>
-        </motion.div>
+        {!closed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.18 }}
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70"
+          >
+            <Info className="w-3 h-3" />
+            <span>{t('upgradeShop.holdHint')}</span>
+          </motion.div>
+        )}
 
         {/* Upgrade Tree — flex-wrap keeps every row centered (including a partial
             last row); the measured `--card-h` var (see useLayoutEffect) makes all
@@ -397,9 +557,9 @@ export function UpgradeShop({
         <motion.div
           ref={gridRef}
           initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
+          animate={{ y: 0, opacity: closed ? 0.4 : 1 }}
           transition={{ delay: 0.2 }}
-          className="flex flex-wrap justify-center gap-4 max-w-5xl"
+          className={`flex flex-wrap justify-center gap-4 max-w-5xl ${closed ? 'pointer-events-none grayscale' : ''}`}
         >
           {offeredUpgrades.map((upgrade, index) => {
                 const owned = allOwnedIds.includes(upgrade.id);
@@ -480,6 +640,13 @@ export function UpgradeShop({
                   {contentText.upgradeName(t, upgrade)}
                 </div>
 
+                {/* Archetype tag chips */}
+                {(upgrade.tags?.length ?? 0) > 0 && (
+                  <div className="flex justify-center gap-1 mb-1 flex-wrap">
+                    {upgrade.tags!.map(tag => <TagChip key={tag} tag={tag} />)}
+                  </div>
+                )}
+
                 {/* Status icon */}
                 {selected && (
                   <div className="absolute top-1 right-1">
@@ -524,10 +691,12 @@ export function UpgradeShop({
                     ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
                   `}>
                     <Clock className="w-4 h-4" />
-                    {hasDiscount && (
+                    {(hasDiscount || priceFor(upgrade) === 0) && (
                       <span className="text-xs font-normal line-through opacity-50">{t('upgradeShop.hoursValue', { hours: upgrade.cost })}</span>
                     )}
-                    {t('upgradeShop.hoursValue', { hours: priceFor(upgrade) })}
+                    {priceFor(upgrade) === 0
+                      ? t('upgradeShop.freeLabel')
+                      : t('upgradeShop.hoursValue', { hours: priceFor(upgrade) })}
                   </div>
                 )}
               </motion.button>
@@ -566,10 +735,21 @@ export function UpgradeShop({
           onClick={handleContinue}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          className="arcade-button-primary rounded-lg flex items-center gap-2 text-sm whitespace-nowrap"
+          className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 text-sm max-w-full whitespace-nowrap"
         >
-          {selectedIds.length > 0 ? t('upgradeShop.buyAndContinue', { count: selectedIds.length, cost: selectedTotalCost }) : t('upgradeShop.continue')}
-          <ArrowRight className="w-5 h-5" />
+          {selectedIds.length > 0 ? (
+            <>
+              <span>{t('upgradeShop.buyAndContinue', { count: selectedIds.length })}</span>
+              {/* Cost as an icon chip: the display font's parentheses glyphs look broken */}
+              <span className="flex items-center gap-1">
+                <Clock className="w-4 h-4 shrink-0" />
+                {t('upgradeShop.hoursValue', { hours: selectedTotalCost })}
+              </span>
+            </>
+          ) : (
+            t('upgradeShop.continue')
+          )}
+          <ArrowRight className="w-5 h-5 shrink-0" />
         </motion.button>
       </motion.div>
 
@@ -634,6 +814,12 @@ export function UpgradeShop({
                   </div>
                 </div>
 
+                {(u.tags?.length ?? 0) > 0 && (
+                  <div className="flex gap-1 mb-2 flex-wrap">
+                    {u.tags!.map(tag => <TagChip key={tag} tag={tag} sizeClass="text-[10px]" />)}
+                  </div>
+                )}
+
                 <p className="text-sm text-muted-foreground mb-4">{contentText.upgradeDesc(t, u)}</p>
 
                 {/* Unlocked by (prerequisites) */}
@@ -665,7 +851,7 @@ export function UpgradeShop({
         })()}
       </AnimatePresence>
 
-      {showTutorial && (
+      {showTutorial && !closed && (
         <TutorialOverlay
           visible
           title={t('upgradeShop.tutorialTitle')}
