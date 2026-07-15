@@ -13,6 +13,12 @@ import { isAudioMuted } from "@/lib/gameAudio";
 
 const MUSIC_DIR = "/assets/music";
 const MAIN_TRACK = `${MUSIC_DIR}/main.mp3`;
+// ~25ms of 8-bit silence. Used to prime (unlock) the idle crossfade element on
+// the first gesture WITHOUT loading a real track: priming with the actual
+// main.mp3 made a second element fetch the same file concurrently with the
+// audible one, which silenced playback on that first tap.
+const SILENT_AUDIO =
+  "data:audio/wav;base64,UklGRuwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YcgAAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
 const DEFAULT_VOLUME = 0.2; // default music level; user-adjustable in Options
 const LEVELS_PER_BAND = 5;
 let crossfadeMs = 900; // default; overridden from game-config.yml via setCrossfadeMs
@@ -70,14 +76,16 @@ function applyMute(a: HTMLAudioElement): void {
  * never had play() called inside a gesture stays silent forever. Our crossfade
  * uses two elements, but only the foreground one plays during the first gesture —
  * so the FIRST band switch (level start) would crossfade onto a never-unlocked
- * element and produce nothing. Play a muted real clip on it inside the gesture,
- * then quietly reset; that permanently unlocks the element on mobile.
+ * element and produce nothing. Play a short SILENT clip on it inside the gesture,
+ * then quietly reset; that permanently unlocks the element on mobile. Silence
+ * (not the real track) matters: loading the audible file on a second element at
+ * the same time silenced the first tap's playback.
  */
 function primeElement(a: HTMLAudioElement): void {
   try {
     a.dataset.priming = "1";
     a.muted = true;
-    if (!a.src) a.src = MAIN_TRACK; // needs a reachable resource to unlock
+    a.src = SILENT_AUDIO; // unlock with silence, never the real (audible) track
     const restore = () => {
       if (a.dataset.priming !== "1") return; // a real switchTo took this element over
       delete a.dataset.priming;
