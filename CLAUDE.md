@@ -50,6 +50,11 @@ for Capacitor/Play-Store packaging.
   YAML and the matching type in `src/types/`.
 - **i18n**: user-facing strings go through `react-i18next`; add keys to all
   locale files under `src/i18n/locales/`.
+- **Tap-and-hold for explanations.** Press-and-hold (~450ms) is the game's
+  standard gesture for revealing an info/explainer modal on an interactive or
+  status element (e.g. upgrade cards, the closed-store banner). Prefer it over
+  always-visible help text or a plain click; add a small `Info` hint icon so the
+  element reads as holdable, and dismiss the modal on backdrop tap or an X.
 - **No em-dashes in UI text.** Never use the em-dash character (`—`) in
   user-facing strings — this means the locale files in `src/i18n/locales/` and
   the `name`/`description`/other displayed fields in `public/*.yml`. Use a
