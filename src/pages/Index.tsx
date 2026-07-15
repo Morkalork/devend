@@ -30,13 +30,8 @@ import { CertificateStore } from '@/components/game/CertificateStore';
 import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
 import { LoadoutsUnlockedModal } from '@/components/game/LoadoutsUnlockedModal';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
-import { MusicDebugOverlay } from '@/components/game/MusicDebugOverlay';
 import { TapToStartGate } from '@/components/game/TapToStartGate';
 import { playMainMusic } from '@/lib/gameMusic';
-
-// Opt-in music diagnostics: append ?musicdebug=1 to the URL.
-const MUSIC_DEBUG =
-  typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('musicdebug');
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
@@ -354,8 +349,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
       />
 
       <TapToStartGate accentColor={accentHex} />
-
-      {MUSIC_DEBUG && <MusicDebugOverlay />}
     </>
   );
 }

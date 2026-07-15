@@ -112,9 +112,7 @@ function unlockDeck(): void {
   const active = pair[activeIndex];
   const inactive = pair[(1 - activeIndex) as 0 | 1];
   if (active && currentKey) {
-    const p = active.play();
-    if (p && typeof p.catch === "function") p.catch(() => { /* ignore */ });
-    recordPlay(active, p);
+    markUnlockedOnPlay(active.play());
   }
   if (inactive) primeElement(inactive);
 }
@@ -193,7 +191,7 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
   applyMute(incoming);
   const p = incoming.play();
   if (p && typeof p.catch === "function") p.catch(() => armGestureUnlock());
-  recordPlay(incoming, p);
+  markUnlockedOnPlay(p);
   // Arm the gesture unlock NOW, not only from the async play() rejection above:
   // a first click can otherwise land before the .catch() fires and be missed.
   // No-op once audio is unlocked (self-guarded).
@@ -279,21 +277,14 @@ export function setCrossfadeMs(ms: number): void {
   if (Number.isFinite(ms) && ms >= 0) crossfadeMs = ms;
 }
 
-// --- Music diagnostics (opt-in via ?musicdebug=1) ------------------------------
-// Records the outcome of the most recent play() attempt so the overlay can show
-// WHY audio isn't sounding (autoplay rejection vs. load/decode error vs. muted).
-interface LastPlay { src: string; ok: boolean; err: string; at: number; }
-let lastPlay: LastPlay | null = null;
-
-/** Wrap a play() promise so its resolve/reject outcome is captured for the HUD. */
-function recordPlay(a: HTMLAudioElement, p: Promise<void> | undefined): void {
-  const src = (a.currentSrc || a.src || "").split("/").pop() || "";
-  const at = typeof performance !== "undefined" ? Math.round(performance.now()) : 0;
+/**
+ * Flag audio as unlocked once a play() actually resolves — whether autoplay was
+ * allowed or a user gesture unblocked it. Also swallows the rejection so a
+ * blocked play() doesn't surface as an unhandled promise rejection.
+ */
+function markUnlockedOnPlay(p: Promise<void> | undefined): void {
   if (p && typeof p.then === "function") {
-    p.then(
-      () => { lastPlay = { src, ok: true, err: "", at }; audioUnlocked = true; },
-      (e) => { lastPlay = { src, ok: false, err: (e && e.name) || String(e), at }; },
-    );
+    p.then(() => { audioUnlocked = true; }, () => { /* blocked/interrupted: ignore */ });
   }
 }
 
@@ -320,50 +311,5 @@ export function startMenuMusic(): void {
   const a = pair[activeIndex];
   a.muted = musicMuted || isAudioMuted();
   a.volume = musicVolume || DEFAULT_VOLUME;
-  recordPlay(a, a.play());
-}
-
-/** Live snapshot of the deck + module flags for the on-screen music debugger. */
-export function getMusicDiagnostics(): Record<string, unknown> {
-  return {
-    audioUnlocked,
-    gestureArmed,
-    currentKey,
-    activeIndex,
-    musicVolume,
-    musicMuted,
-    globalMuted: isAudioMuted(),
-    crossfadeMs,
-    lastPlay,
-    deck: deck
-      ? deck.map((a, i) => ({
-          i,
-          active: i === activeIndex,
-          src: (a.currentSrc || a.src || "").split("/").pop() || "(none)",
-          paused: a.paused,
-          muted: a.muted,
-          volume: +a.volume.toFixed(3),
-          currentTime: +a.currentTime.toFixed(2),
-          duration: Number.isFinite(a.duration) ? +a.duration.toFixed(1) : null,
-          readyState: a.readyState, // 0 HAVE_NOTHING … 4 HAVE_ENOUGH_DATA
-          networkState: a.networkState, // 0 EMPTY 1 IDLE 2 LOADING 3 NO_SOURCE
-          error: a.error ? a.error.code : null,
-          priming: a.dataset ? a.dataset.priming ?? null : null,
-        }))
-      : null,
-  };
-}
-
-/**
- * Debug-only: force a play of the main track from within a user gesture (the
- * overlay's button), unmuted and at full music volume, recording the outcome.
- */
-export function debugForcePlayMain(): void {
-  playMainMusic();
-  const pair = ensureDeck();
-  if (!pair) return;
-  const a = pair[activeIndex];
-  a.muted = false;
-  a.volume = musicVolume || DEFAULT_VOLUME;
-  recordPlay(a, a.play());
+  markUnlockedOnPlay(a.play());
 }
