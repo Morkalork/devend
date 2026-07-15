@@ -80,11 +80,12 @@ doors:
   - id: cold_call
     name: Cold Call
     risk: Balls are 15% bigger.
-    reward: Tap-to-freeze works on every map, 4 seconds per tap.
-    clarify: Grants tap-to-freeze for the whole contract even if your build lacks it, 4 seconds per tap. The bigger balls are the price. A lifeline on chaotic maps you would otherwise struggle to control.
+    reward: "Tap-to-freeze on every map: two freezes per map, 4 seconds each."
+    clarify: "Grants tap-to-freeze even if your build lacks it: two freezes each map (refilled every map), 4 seconds per tap. The bigger balls are the price. A lifeline on chaotic maps you would otherwise struggle to control."
     modifiers:
       ballSizeMultiplier: 1.15
       ballFreezeDuration: 4
+      freezeUsesPerMap: 2
 
   - id: hard_deadline
     name: Hard Deadline
