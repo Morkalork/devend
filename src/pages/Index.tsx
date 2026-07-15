@@ -31,6 +31,7 @@ import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
 import { LoadoutsUnlockedModal } from '@/components/game/LoadoutsUnlockedModal';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 import { MusicDebugOverlay } from '@/components/game/MusicDebugOverlay';
+import { TapToStartGate } from '@/components/game/TapToStartGate';
 import { playMainMusic } from '@/lib/gameMusic';
 
 // Opt-in music diagnostics: append ?musicdebug=1 to the URL.
@@ -351,6 +352,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
         onDismiss={session.handleDismissLoadoutsUnlocked}
         accentColor={accentHex}
       />
+
+      <TapToStartGate accentColor={accentHex} />
 
       {MUSIC_DEBUG && <MusicDebugOverlay />}
     </>

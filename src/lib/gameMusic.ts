@@ -283,10 +283,36 @@ function recordPlay(a: HTMLAudioElement, p: Promise<void> | undefined): void {
   const at = typeof performance !== "undefined" ? Math.round(performance.now()) : 0;
   if (p && typeof p.then === "function") {
     p.then(
-      () => { lastPlay = { src, ok: true, err: "", at }; },
+      () => { lastPlay = { src, ok: true, err: "", at }; audioUnlocked = true; },
       (e) => { lastPlay = { src, ok: false, err: (e && e.name) || String(e), at }; },
     );
   }
+}
+
+/** True once any track has actually started playing (autoplay allowed, or unlocked). */
+export function isAudioUnlocked(): boolean {
+  return audioUnlocked;
+}
+
+/** True when autoplay was blocked and we're waiting for a first user gesture. */
+export function isAwaitingUserGesture(): boolean {
+  return gestureArmed && !audioUnlocked;
+}
+
+/**
+ * Start the menu track from within a user gesture (the tap-to-start gate). The
+ * gate's tap also trips the global unlock listener; this just guarantees the
+ * foreground element is the main loop and is playing, audibly.
+ */
+export function startMenuMusic(): void {
+  audioUnlocked = true;
+  const pair = ensureDeck();
+  if (!pair) return;
+  if (currentKey !== "main") playMainMusic();
+  const a = pair[activeIndex];
+  a.muted = musicMuted || isAudioMuted();
+  a.volume = musicVolume || DEFAULT_VOLUME;
+  recordPlay(a, a.play());
 }
 
 /** Live snapshot of the deck + module flags for the on-screen music debugger. */

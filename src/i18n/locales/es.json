@@ -603,6 +603,7 @@
   },
   "welcome": {
     "tagline": "Corta. Atrapa. Sobrevive.",
+    "tapToStart": "Toca para empezar",
     "loading": "Cargando...",
     "startGame": "Empezar juego",
     "tutorial": "Tutorial",

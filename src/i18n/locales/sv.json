@@ -603,6 +603,7 @@
   },
   "welcome": {
     "tagline": "Skär. Fånga. Överlev.",
+    "tapToStart": "Tryck för att börja",
     "loading": "Laddar...",
     "startGame": "Starta spel",
     "tutorial": "Genomgång",

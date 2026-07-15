@@ -618,6 +618,7 @@
   },
   "welcome": {
     "tagline": "Slice. Trap. Survive.",
+    "tapToStart": "Tap to start",
     "loading": "Loading...",
     "startGame": "Start Game",
     "tutorial": "Tutorial",
