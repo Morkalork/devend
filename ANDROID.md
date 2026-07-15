@@ -11,6 +11,30 @@ unchanged — no web-side rewrites were needed.
 - **Native project:** `android/` (committed; build artifacts are gitignored)
 - **Web config:** [capacitor.config.ts](capacitor.config.ts)
 
+## Native WebView tweaks (`MainActivity.java`)
+
+`MainActivity` is intentionally *not* the default empty `BridgeActivity`. It
+overrides `onCreate` to relax one WebView default:
+
+```java
+getBridge().getWebView().getSettings().setMediaPlaybackRequiresUserGesture(false);
+```
+
+**Why:** the Android System WebView defaults to
+`mediaPlaybackRequiresUserGesture = true`, mirroring the browser autoplay
+policy - audio/video won't play until the user taps something. That suppressed
+the main-menu background music on launch (`playMainMusic()` fires as soon as the
+Welcome screen mounts, before any tap), so music only kicked in once the player
+had tapped through to level 1. Setting it `false` lets the menu track autoplay
+immediately under the splash screen.
+
+This is a *native* change: `npm run android:sync` copies web assets but does not
+rebuild the APK, so you must re-run/reinstall the app from Android Studio (or
+`./gradlew installDebug`) for edits here to take effect. On the plain web/dev
+build (`npm run dev`) the browser still blocks pre-gesture autoplay - there is no
+web-side override - so menu music there starts on the first interaction instead
+(handled by the gesture-unlock listener in `src/lib/gameMusic.ts`).
+
 ## Prerequisites (one-time)
 
 | Tool | Version | Notes |

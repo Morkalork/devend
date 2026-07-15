@@ -65,9 +65,16 @@ function applyMute(a: HTMLAudioElement): void {
 }
 
 /**
- * Browsers block audio until the first user gesture. On the menu (the first
- * screen) our .play() is rejected, so arm a one-time capture-phase listener that,
- * on the first interaction anywhere, resumes the active track.
+ * Browsers block audio until the first user gesture. Our menu-screen .play() is
+ * blocked, so arm a one-time capture-phase listener that, on the first interaction
+ * anywhere, (re)plays the active track from within the gesture task.
+ *
+ * Armed EAGERLY (synchronously, the moment we first try to play while locked) —
+ * not from the play() rejection, which is async: a first click can land in the
+ * window where play() is still pending, before the .catch() would have armed us,
+ * and be missed. The play() promise flips `paused` to false immediately, so we
+ * always re-issue play() here (not only when paused) — a pending-but-doomed play
+ * needs a user-activated retry to actually start.
  */
 function armGestureUnlock(): void {
   if (audioUnlocked || gestureArmed || typeof window === "undefined") return;
@@ -78,7 +85,8 @@ function armGestureUnlock(): void {
     for (const ev of events) window.removeEventListener(ev, handler, true);
     if (deck && currentKey) {
       const a = deck[activeIndex];
-      if (a.paused) a.play().catch(() => { /* ignore */ });
+      const pr = a.play();
+      if (pr && typeof pr.catch === "function") pr.catch(() => { /* ignore */ });
     }
   };
   for (const ev of events) window.addEventListener(ev, handler, true);
@@ -136,6 +144,10 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
   applyMute(incoming);
   const p = incoming.play();
   if (p && typeof p.catch === "function") p.catch(() => armGestureUnlock());
+  // Arm the gesture unlock NOW, not only from the async play() rejection above:
+  // a first click can otherwise land before the .catch() fires and be missed.
+  // No-op once audio is unlocked (self-guarded).
+  armGestureUnlock();
 
   activeIndex = (1 - activeIndex) as 0 | 1;
 
