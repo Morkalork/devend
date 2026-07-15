@@ -245,7 +245,6 @@
     "bottomBarTutorialTitle": "The Bottom Bar",
     "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language.",
     "infoUnlocked": "Info Unlocked",
-    "noLockNoStore": "No lock, no store...",
     "pickupFork": "Ball split!",
     "pickupCapRaise": "Cap +{n}h",
     "pickupFreeze": "Freeze +1"
@@ -554,6 +553,7 @@
     "certificateUnlocked": "Certificate Unlocked!",
     "buyAndContinue": "Buy {{count}}",
     "continue": "Continue",
+    "closedNotEnoughLocks": "Not enough balls locked",
     "tutorialTitle": "THE UPGRADE SHOP",
     "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade for more info - including what unlocks it and what it unlocks."
   },

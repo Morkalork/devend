@@ -7,7 +7,6 @@
  * (TopBarDetailsPanel / BottomBarDetailsPanel).
  */
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
@@ -92,11 +91,6 @@ interface GameScreenProps {
   introAssemble?: boolean;
   /** Owned upgrades of a tag needed to activate its set bonus (build readout). */
   tagSetThreshold?: number;
-  /** True when the previous map locked no ball (and so skipped the store): the
-   *  board flashes a "No lock, no store..." notice for 1.5s on level start. */
-  showNoLockNoStoreNotice?: boolean;
-  /** Fired once when the notice is shown, so it doesn't re-fire on remount. */
-  onNoLockNoStoreNoticeShown?: () => void;
 }
 
 export function GameScreen({
@@ -138,8 +132,6 @@ export function GameScreen({
   onMapComplete,
   introAssemble = false,
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
-  showNoLockNoStoreNotice = false,
-  onNoLockNoStoreNoticeShown,
 }: GameScreenProps) {
   const { t } = useTranslation();
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
@@ -246,18 +238,6 @@ export function GameScreen({
   // Set once the map is won; freezes the scrolling-code background through the
   // clear shimmer. Resets naturally when the next map remounts this screen.
   const [mapComplete, setMapComplete] = useState(false);
-  // "No lock, no store..." flash — shown for 1.5s at the start of a map whose
-  // predecessor locked nothing (and so skipped the store). Consumed once on
-  // mount so a mid-map remount (e.g. spending a Continue) doesn't replay it.
-  const [showNoLockNotice, setShowNoLockNotice] = useState(showNoLockNoStoreNotice);
-  useEffect(() => {
-    if (!showNoLockNoStoreNotice) return;
-    onNoLockNoStoreNoticeShown?.();
-    const timer = setTimeout(() => setShowNoLockNotice(false), 1500);
-    return () => clearTimeout(timer);
-    // Mount-only: the flag is a one-shot for this level's start.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   const menuRef = useRef<HTMLDivElement>(null);
   const memParallaxTickRef = useRef<((timestamp: number) => void) | null>(null);
 
@@ -341,34 +321,7 @@ export function GameScreen({
         </div>
 
         {/* Game Canvas Area */}
-        <div className="flex-1 min-h-0 relative">
-          {/* "No lock, no store..." flash — floats just beneath the board on a
-              map whose predecessor locked nothing. Absolutely positioned so it
-              never nudges the canvas layout. */}
-          <AnimatePresence>
-            {showNoLockNotice && (
-              <motion.div
-                key="no-lock-notice"
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="absolute inset-x-0 bottom-2 z-20 flex justify-center pointer-events-none"
-              >
-                <span
-                  className="font-display text-sm font-bold tracking-widest px-4 py-1.5 rounded-md"
-                  style={{
-                    color: accentColor,
-                    backgroundColor: 'rgba(0,10,5,0.85)',
-                    border: `1px solid ${accentColor}55`,
-                    textShadow: `0 0 12px ${accentColor}`,
-                  }}
-                >
-                  {t('game.noLockNoStore')}
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <div className="flex-1 min-h-0">
           <GameCanvas
             level={level}
             levelNumber={levelNumber}

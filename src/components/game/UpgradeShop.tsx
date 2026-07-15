@@ -52,6 +52,10 @@ interface UpgradeShopProps {
   freeCheapestOffer?: boolean;
   /** Full modifier set; drives the treasury strip (Runway + Budget Cycle). */
   activeModifiers?: GameModifiers;
+  /** Opened "closed": the round didn't lock enough balls to earn the store. The
+   *  shelf is still shown (so the player sees what they missed) but dimmed and
+   *  non-interactive, with a "Not enough balls locked" banner; Continue only. */
+  closed?: boolean;
 }
 
 /**
@@ -100,6 +104,7 @@ export function UpgradeShop({
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
   freeCheapestOffer = false,
   activeModifiers,
+  closed = false,
 }: UpgradeShopProps) {
   const { t, i18n } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -272,6 +277,7 @@ export function UpgradeShop({
   };
 
   const handleItemClick = useCallback((upgrade: UpgradeConfig, alreadySelected: boolean, currentRemainingBudget: number) => {
+    if (closed) return; // store is closed this round — no purchases
     if (allOwnedIds.includes(upgrade.id)) return;
 
     // Deselect if already selected — cascades to dependents (see helper)
@@ -313,7 +319,7 @@ export function UpgradeShop({
         setRestocksUsed(prev => prev + 1);
       }
     }
-  }, [allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades, priceFor]);
+  }, [closed, allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades, priceFor]);
 
   const handleContinue = useCallback(() => {
     for (const id of selectedIds) {
@@ -355,6 +361,26 @@ export function UpgradeShop({
         >
           {t('upgradeShop.levelComplete', { level: completedLevel })}
         </motion.div>
+
+        {/* Closed banner — the round didn't lock enough balls to earn the store */}
+        {closed && (
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.08, type: 'spring', stiffness: 260, damping: 20 }}
+            className="flex items-center gap-2 rounded-lg px-4 py-2 border-2"
+            style={{
+              color: '#ff6b6b',
+              borderColor: '#ff6b6b66',
+              background: '#ff6b6b12',
+            }}
+          >
+            <Lock className="w-4 h-4 shrink-0" />
+            <span className="text-sm font-bold tracking-wide uppercase">
+              {t('upgradeShop.closedNotEnoughLocks')}
+            </span>
+          </motion.div>
+        )}
 
         {/* Waypoint banner — shown only on multiples of 5 */}
         {completedLevel % 5 === 0 && (
@@ -430,7 +456,7 @@ export function UpgradeShop({
 
         {/* Treasury strip: Runway thresholds + Budget Cycle charge, live against
             the balance after the current selection (see remainingBudget above). */}
-        {(runwayPerks.length > 0 || hasBudgetCycle) && (
+        {!closed && (runwayPerks.length > 0 || hasBudgetCycle) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -469,7 +495,7 @@ export function UpgradeShop({
         )}
 
         {/* Restock counter — only when the Procurement upgrades are owned */}
-        {shopRestockCount > 0 && (
+        {!closed && shopRestockCount > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -487,7 +513,7 @@ export function UpgradeShop({
 
         {/* Build readout: per-tag piece count toward the set bonus. A ✓ chip
             means that archetype's set bonus is active (or will be on buy). */}
-        {buildTagCounts.size > 0 && (
+        {!closed && buildTagCounts.size > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -513,15 +539,17 @@ export function UpgradeShop({
         )}
 
         {/* Press-and-hold discovery hint */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.18 }}
-          className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70"
-        >
-          <Info className="w-3 h-3" />
-          <span>{t('upgradeShop.holdHint')}</span>
-        </motion.div>
+        {!closed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.18 }}
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70"
+          >
+            <Info className="w-3 h-3" />
+            <span>{t('upgradeShop.holdHint')}</span>
+          </motion.div>
+        )}
 
         {/* Upgrade Tree — flex-wrap keeps every row centered (including a partial
             last row); the measured `--card-h` var (see useLayoutEffect) makes all
@@ -529,9 +557,9 @@ export function UpgradeShop({
         <motion.div
           ref={gridRef}
           initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
+          animate={{ y: 0, opacity: closed ? 0.4 : 1 }}
           transition={{ delay: 0.2 }}
-          className="flex flex-wrap justify-center gap-4 max-w-5xl"
+          className={`flex flex-wrap justify-center gap-4 max-w-5xl ${closed ? 'pointer-events-none grayscale' : ''}`}
         >
           {offeredUpgrades.map((upgrade, index) => {
                 const owned = allOwnedIds.includes(upgrade.id);
@@ -823,7 +851,7 @@ export function UpgradeShop({
         })()}
       </AnimatePresence>
 
-      {showTutorial && (
+      {showTutorial && !closed && (
         <TutorialOverlay
           visible
           title={t('upgradeShop.tutorialTitle')}

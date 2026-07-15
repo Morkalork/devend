@@ -188,8 +188,6 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
                 introAssemble={session.introAssemblePending}
-                showNoLockNoStoreNotice={session.noLockNoStorePending}
-                onNoLockNoStoreNoticeShown={session.markNoLockNoStoreShown}
               />
             )}
             {navigation.currentScreen === 'runDraft' && (
@@ -219,6 +217,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 tagSetThreshold={session.tagSetThreshold}
                 freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0}
                 activeModifiers={session.activeModifiers}
+                closed={session.storeClosed}
               />
             )}
             {navigation.currentScreen === 'capstoneDraft' && (

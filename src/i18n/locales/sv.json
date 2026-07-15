@@ -243,7 +243,6 @@
     "bottomBarTutorialTitle": "Den nedre listen",
     "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska.",
     "infoUnlocked": "Info upplåst",
-    "noLockNoStore": "Inget lås, ingen butik...",
     "pickupFork": "Bollen delades!",
     "pickupCapRaise": "Tak +{n}h",
     "pickupFreeze": "Frysning +1"
@@ -539,6 +538,7 @@
     "certificateUnlocked": "Certifikat upplåst!",
     "buyAndContinue": "Köp {{count}}",
     "continue": "Fortsätt",
+    "closedNotEnoughLocks": "Inte tillräckligt många bollar låsta",
     "tutorialTitle": "BUTIKEN",
     "tutorialBody": "Spendera övertidstimmar på uppgraderingar efter varje bana. Övertidsuppgraderingar mångdubblar framtida intäkter. Effekterna visas i den nedre listen på nästa bana. Håll inne en uppgradering för mer information - bland annat vad som låser upp den och vad den låser upp."
   },
