@@ -134,6 +134,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // (GameCanvas introAssemble). Armed by every fresh-run path, disarmed by the
   // first completed level so mid-run maps just appear as usual.
   const [introAssemblePending, setIntroAssemblePending] = useState(false);
+  // One-shot: set when a round was left with no locked ball, so the store was
+  // skipped. Consumed by the next map's GameScreen to flash "No lock, no store".
+  const [noLockNoStorePending, setNoLockNoStorePending] = useState(false);
 
   // Ascension mode: after the final level the player may loop back to level 1
   // with a drafted loadout. Depth 0 = first pass through the levels. Index 0 of
@@ -433,6 +436,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingLevelScore(null);
     lastDeliveredCompletionRef.current = null;
     setIntroAssemblePending(true);
+    setNoLockNoStorePending(false);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
     setAscensionDepth(0);
@@ -712,6 +716,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
+    setNoLockNoStorePending(false);
     // The first win armed the loadouts-unlocked modal; show it now (it overlays
     // whatever screen we navigate to next).
     if (pendingLoadoutsIntroRef.current) {
@@ -734,6 +739,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       if (locksThisRound >= locksRequired) {
         nav.goToUpgradeShop();
       } else {
+        // Lock nothing, earn no store: flag the next map to flash the notice.
+        if (locksThisRound === 0) setNoLockNoStorePending(true);
         finishShopPhase();
       }
     }
@@ -741,6 +748,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const handleDismissLoadoutsUnlocked = useCallback(() => {
     setShowLoadoutsUnlockedModal(false);
+  }, []);
+
+  /** GameScreen consumes the one-shot "No lock, no store" flag on mount. */
+  const markNoLockNoStoreShown = useCallback(() => {
+    setNoLockNoStorePending(false);
   }, []);
 
   /** Ascend: draft a loadout and loop back to level 1 at depth + 1. */
@@ -1029,6 +1041,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     continuesRemaining,
     gameInstanceKey,
     introAssemblePending,
+    noLockNoStorePending,
+    markNoLockNoStoreShown,
     pendingDeathResult,
     // Modifiers / bonuses
     activeModifiers,

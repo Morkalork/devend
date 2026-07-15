@@ -188,6 +188,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
                 introAssemble={session.introAssemblePending}
+                showNoLockNoStoreNotice={session.noLockNoStorePending}
+                onNoLockNoStoreNoticeShown={session.markNoLockNoStoreShown}
               />
             )}
             {navigation.currentScreen === 'runDraft' && (

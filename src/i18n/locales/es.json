@@ -243,6 +243,7 @@
     "bottomBarTutorialTitle": "La barra inferior",
     "bottomBarTutorialBody": "¡La barra inferior también se puede expandir!\n\nTócala para ver cada modificador activo explicado en lenguaje sencillo.",
     "infoUnlocked": "Información desbloqueada",
+    "noLockNoStore": "Sin bloqueo, sin tienda...",
     "pickupFork": "¡Bola dividida!",
     "pickupCapRaise": "Tope +{n}h",
     "pickupFreeze": "Congelación +1"

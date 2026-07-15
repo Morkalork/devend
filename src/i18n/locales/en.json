@@ -245,6 +245,7 @@
     "bottomBarTutorialTitle": "The Bottom Bar",
     "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language.",
     "infoUnlocked": "Info Unlocked",
+    "noLockNoStore": "No lock, no store...",
     "pickupFork": "Ball split!",
     "pickupCapRaise": "Cap +{n}h",
     "pickupFreeze": "Freeze +1"
