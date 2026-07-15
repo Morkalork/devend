@@ -115,6 +115,9 @@ export function UpgradeShop({
   const [detailId, setDetailId] = useState<string | null>(null);
   // Explains the "Not enough balls locked" banner; opened by holding it.
   const [showClosedInfo, setShowClosedInfo] = useState(false);
+  // Open tier-3 "choice" chooser (its choiceGroup id), or null. Tapping a choice
+  // card opens it; picking an option selects that variant for purchase.
+  const [chooserGroup, setChooserGroup] = useState<string | null>(null);
 
   // Press-and-hold detection: a held card opens its detail view; the timer fires
   // detailId and the flag suppresses the click-to-select that follows on release.
@@ -176,19 +179,32 @@ export function UpgradeShop({
   // Pick random offers once on mount; restocks append to this list. Picks are
   // tag-weighted toward the player's owned archetypes (see weightedSample).
   const [offeredUpgrades, setOfferedUpgrades] = useState<UpgradeConfig[]>(() => {
-    // Filter out owned and upgrades not yet unlocked by level progression
+    // Filter out owned, upgrades not yet unlocked by level progression, and any
+    // choice group whose pick is already made (a sibling owned).
     const available = upgrades.filter(u =>
       !ownedUpgradeIds.includes(u.id) &&
-      completedLevel >= (u.unlockLevel ?? 1)
+      completedLevel >= (u.unlockLevel ?? 1) &&
+      !(u.choiceGroup && upgrades.some(o => o.choiceGroup === u.choiceGroup && ownedUpgradeIds.includes(o.id)))
     );
-    const unlocked = available.filter(u => {
+    // Collapse a choice group to ONE representative card (the chooser expands the
+    // full group), so it fills a single shop slot.
+    const collapseChoiceGroups = (list: UpgradeConfig[]): UpgradeConfig[] => {
+      const seen = new Set<string>();
+      return list.filter(u => {
+        if (!u.choiceGroup) return true;
+        if (seen.has(u.choiceGroup)) return false;
+        seen.add(u.choiceGroup);
+        return true;
+      });
+    };
+    const unlocked = collapseChoiceGroups(available.filter(u => {
       if (!u.prerequisites || u.prerequisites.length === 0) return true;
       return u.prerequisites.every(p => ownedUpgradeIds.includes(p));
-    });
-    const locked = available.filter(u => {
+    }));
+    const locked = collapseChoiceGroups(available.filter(u => {
       if (!u.prerequisites || u.prerequisites.length === 0) return false;
       return u.prerequisites.some(p => !ownedUpgradeIds.includes(p));
-    });
+    }));
     const counts = ownedTagCounts(ownedUpgradeIds, upgrades);
     const offers = weightedSample(unlocked, shopSlots, counts, completedLevel);
     // Add at most one locked item if there's room
@@ -318,6 +334,8 @@ export function UpgradeShop({
         !ownedAfterSelect.includes(u.id) &&
         completedLevel >= (u.unlockLevel ?? 1) &&
         !offeredUpgrades.some(o => o.id === u.id) &&
+        // Don't restock a choice group that's already on the shelf (one card each).
+        !(u.choiceGroup && offeredUpgrades.some(o => o.choiceGroup === u.choiceGroup)) &&
         !isLocked(u.id, ownedAfterSelect)
       );
       if (candidates.length > 0) {
@@ -331,16 +349,40 @@ export function UpgradeShop({
     }
   }, [closed, allOwnedIds, selectedIds, isLocked, restocksLeft, upgrades, completedLevel, offeredUpgrades, priceFor]);
 
+  // Pick one option of a tier-3 choice group: strips any sibling first, then
+  // toggles this variant in (budget-checked). The chosen variant may not be in
+  // offeredUpgrades (only the group's representative card is), so it is looked
+  // up from the full catalogue for pricing/purchase.
+  const chooseVariant = useCallback((member: UpgradeConfig) => {
+    const group = member.choiceGroup;
+    setChooserGroup(null);
+    if (closed) return;
+    setSelectedIds(prev => {
+      const base = prev.filter(id => upgrades.find(o => o.id === id)?.choiceGroup !== group);
+      if (prev.includes(member.id)) return base; // toggled off
+      const spentOnBase = base.reduce((sum, id) => {
+        const u = offeredUpgrades.find(o => o.id === id) || upgrades.find(o => o.id === id);
+        return sum + (u ? priceFor(u) : 0);
+      }, 0);
+      if (priceFor(member) > effectiveOvertime - spentOnBase) {
+        setShakingId(member.id);
+        setTimeout(() => setShakingId(null), 600);
+        return prev; // can't afford
+      }
+      return [...base, member.id];
+    });
+  }, [closed, upgrades, offeredUpgrades, priceFor, effectiveOvertime]);
+
   const handleContinue = useCallback(() => {
     for (const id of selectedIds) {
-      const upgrade = offeredUpgrades.find(u => u.id === id);
+      const upgrade = offeredUpgrades.find(u => u.id === id) || upgrades.find(u => u.id === id);
       if (upgrade) {
         onPurchase(upgrade.id, priceFor(upgrade));
         setPurchasedThisSession(prev => [...prev, upgrade.id]);
       }
     }
     onContinue();
-  }, [selectedIds, offeredUpgrades, onPurchase, onContinue, priceFor]);
+  }, [selectedIds, offeredUpgrades, upgrades, onPurchase, onContinue, priceFor]);
 
   return (
     <>
@@ -581,17 +623,32 @@ export function UpgradeShop({
           className={`flex flex-wrap justify-center gap-4 max-w-5xl ${closed ? 'pointer-events-none grayscale' : ''}`}
         >
           {offeredUpgrades.map((upgrade, index) => {
+                // Tier-3 "choice" card: one card standing in for a mutually
+                // exclusive group. It shows the chosen option once picked, else a
+                // "choose" prompt; tapping opens the chooser.
+                const isChoice = !!upgrade.choiceGroup;
+                const choiceOptions = isChoice ? upgrades.filter(u => u.choiceGroup === upgrade.choiceGroup) : [];
+                const chosenMember = isChoice
+                  ? choiceOptions.find(u => selectedIds.includes(u.id))
+                  : undefined;
+                const displayUpgrade = chosenMember ?? upgrade;
                 const owned = allOwnedIds.includes(upgrade.id);
-                const selected = selectedIds.includes(upgrade.id);
+                const selected = isChoice ? !!chosenMember : selectedIds.includes(upgrade.id);
                 // Other selected items count toward this card's prerequisites,
                 // so a restocked Senior tier unlocks while its Junior is selected
                 const effectiveOwned = [...allOwnedIds, ...selectedIds.filter(id => id !== upgrade.id)];
                 const locked = isLocked(upgrade.id, effectiveOwned);
-                const purchasable = !owned && !locked && priceFor(upgrade) <= effectiveOvertime;
+                // Price shown: the chosen option, else the cheapest of a choice, else this card's.
+                const shownPrice = chosenMember
+                  ? priceFor(chosenMember)
+                  : isChoice
+                    ? Math.min(...choiceOptions.map(priceFor))
+                    : priceFor(upgrade);
+                const purchasable = !owned && !locked && shownPrice <= effectiveOvertime;
                 // Can't afford with remaining budget (unless already selected)
-                const cantAfford = !locked && !owned && !selected && priceFor(upgrade) > remainingBudget;
+                const cantAfford = !locked && !owned && !selected && shownPrice > remainingBudget;
                 const tierColors = TIER_COLORS[upgrade.tier];
-                const Icon = getUpgradeIcon(upgrade, upgrades);
+                const Icon = getUpgradeIcon(displayUpgrade, upgrades);
 
             return (
               <motion.div
@@ -618,7 +675,9 @@ export function UpgradeShop({
                     longPressFired.current = false;
                     return;
                   }
-                  handleItemClick(upgrade, selected, remainingBudget);
+                  // A choice card opens its chooser; a normal card toggles select.
+                  if (isChoice) setChooserGroup(upgrade.choiceGroup!);
+                  else handleItemClick(upgrade, selected, remainingBudget);
                 }}
                 disabled={owned || locked}
                 whileHover={{ scale: purchasable ? 1.05 : 1 }}
@@ -700,7 +759,9 @@ export function UpgradeShop({
                 {/* Description — grows to fit its full text (no clamp); the grid
                     keeps every card the same height as the tallest one. */}
                 <p className="text-xs text-muted-foreground">
-                  {contentText.upgradeDesc(t, upgrade)}
+                  {isChoice && !chosenMember
+                    ? t('upgradeShop.choicePrompt')
+                    : contentText.upgradeDesc(t, displayUpgrade)}
                 </p>
 
                 {/* Cost — mt-auto pins it to the card bottom regardless of how
@@ -710,12 +771,15 @@ export function UpgradeShop({
                     ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
                   `}>
                     <Clock className="w-4 h-4" />
-                    {(hasDiscount || priceFor(upgrade) === 0) && (
-                      <span className="text-xs font-normal line-through opacity-50">{t('upgradeShop.hoursValue', { hours: upgrade.cost })}</span>
+                    {(hasDiscount || shownPrice === 0) && (
+                      <span className="text-xs font-normal line-through opacity-50">{t('upgradeShop.hoursValue', { hours: displayUpgrade.cost })}</span>
                     )}
-                    {priceFor(upgrade) === 0
+                    {isChoice && !chosenMember && (
+                      <span className="text-[10px] font-normal opacity-70">{t('upgradeShop.fromLabel')}</span>
+                    )}
+                    {shownPrice === 0
                       ? t('upgradeShop.freeLabel')
-                      : t('upgradeShop.hoursValue', { hours: priceFor(upgrade) })}
+                      : t('upgradeShop.hoursValue', { hours: shownPrice })}
                   </div>
                 )}
               </motion.button>
@@ -907,6 +971,74 @@ export function UpgradeShop({
             </motion.div>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* Tier-3 choice chooser — opened by tapping a choice card. Pick ONE of the
+          group's mutually exclusive options (each costs 50% more). */}
+      <AnimatePresence>
+        {chooserGroup && (() => {
+          const options = upgrades.filter(u => u.choiceGroup === chooserGroup);
+          if (options.length === 0) return null;
+          return (
+            <motion.div
+              key="choice-chooser"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setChooserGroup(null)}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.92, y: 8 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 8, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
+              >
+                <button
+                  onClick={() => setChooserGroup(null)}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                  aria-label="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="text-base font-bold text-foreground mb-1 pr-6">
+                  {contentText.upgradeName(t, options[0])}
+                </div>
+                <p className="text-xs text-muted-foreground mb-4">{t('upgradeShop.choiceModalHint')}</p>
+                <div className="flex flex-col gap-2">
+                  {options.map(opt => {
+                    const price = priceFor(opt);
+                    const isSel = selectedIds.includes(opt.id);
+                    const affordable = price <= effectiveOvertime;
+                    const tc = TIER_COLORS[opt.tier];
+                    return (
+                      <button
+                        key={opt.id}
+                        onClick={() => chooseVariant(opt)}
+                        className={`text-left rounded-lg border-2 p-3 transition-colors
+                          ${isSel ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black ' + tc.border : ''}
+                          ${affordable ? `cursor-pointer hover:border-primary ${tc.border}` : 'opacity-60 border-muted cursor-pointer'}`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-semibold text-foreground flex-1">
+                            {contentText.upgradeDesc(t, opt)}
+                          </span>
+                          {isSel && <Check className="w-4 h-4 text-white shrink-0" />}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs font-bold text-yellow-500">
+                          <Clock className="w-3.5 h-3.5" />
+                          {price === 0 ? t('upgradeShop.freeLabel') : t('upgradeShop.hoursValue', { hours: price })}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
       </AnimatePresence>
 
       {showTutorial && !closed && (

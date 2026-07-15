@@ -10,7 +10,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameBottomBar } from './GameBottomBar';
@@ -178,6 +178,7 @@ export function GameScreen({
     cutsUsed: 0,
     spaceRemaining: 100,
     lockedBalls: 0,
+    freezeUsesRemaining: 0,
     pushMode: "none",
     creepPercent: 0,
     activeSeconds: 0,
@@ -341,6 +342,26 @@ export function GameScreen({
                 style={{ color: accentColor, textShadow: `0 0 18px ${accentColor}` }}
               >
                 {t('common.loading')}
+              </span>
+            </div>
+          )}
+          {/* Feature Freeze: tap-freezes left this map. Only shown when the
+              upgrade (or Runway's freeze) is active, and hidden once the map is
+              won. Dims to signal "out" at zero. */}
+          {activeModifiers.freezeUsesPerMap > 0 && !mapComplete && (
+            <div
+              className="absolute top-2 right-2 z-20 flex items-center gap-1 rounded-md px-2 py-1 pointer-events-none"
+              style={{
+                backgroundColor: 'rgba(0,10,5,0.7)',
+                border: `1px solid ${accentColor}44`,
+                color: accentColor,
+                opacity: gameState.freezeUsesRemaining > 0 ? 1 : 0.4,
+              }}
+              aria-label={t('game.freezeUsesLeft', { count: gameState.freezeUsesRemaining })}
+            >
+              <Snowflake className="w-3.5 h-3.5" />
+              <span className="font-display text-sm font-bold tabular-nums">
+                {gameState.freezeUsesRemaining}/{Math.round(activeModifiers.freezeUsesPerMap)}
               </span>
             </div>
           )}

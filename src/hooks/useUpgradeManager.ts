@@ -111,6 +111,13 @@ export function useUpgradeManager() {
           upgrade.cost = computed;
         }
 
+        // A tier-3 "choice" upgrade (choiceGroup) costs 50% more: the price of
+        // getting to pick between alternatives. Applies to both explicit and
+        // derived costs, so it flows to every reader (shop, Budget Cycle, ...).
+        if (upgrade.choiceGroup && typeof upgrade.cost === 'number') {
+          upgrade.cost = Math.round(upgrade.cost * 1.5);
+        }
+
         if (!upgrade.modifiers || typeof upgrade.modifiers !== 'object') {
           throw new Error(`Upgrade "${upgrade.id}" is missing modifiers object`);
         }
@@ -220,6 +227,14 @@ export function useUpgradeManager() {
     const upgrade = state.upgradeLookup.get(upgradeId);
     if (!upgrade) return true;
     if (ownedIds.includes(upgradeId)) return false;
+    // A choice-group alternative is locked once ANY sibling in its group is
+    // owned — the choice is one-and-done.
+    if (upgrade.choiceGroup) {
+      for (const ownedId of ownedIds) {
+        if (ownedId === upgradeId) continue;
+        if (state.upgradeLookup.get(ownedId)?.choiceGroup === upgrade.choiceGroup) return true;
+      }
+    }
     if (!upgrade.prerequisites || upgrade.prerequisites.length === 0) return false;
     return upgrade.prerequisites.some(prereqId => !ownedIds.includes(prereqId));
   }, [state.upgradeLookup]);

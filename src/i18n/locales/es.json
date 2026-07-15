@@ -245,7 +245,8 @@
     "infoUnlocked": "Información desbloqueada",
     "pickupFork": "¡Bola dividida!",
     "pickupCapRaise": "Tope +{n}h",
-    "pickupFreeze": "Congelación +1"
+    "pickupFreeze": "Congelación +1",
+    "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",
@@ -505,6 +506,9 @@
   "upgradeShop": {
     "storeLabel": "Tienda",
     "freeLabel": "GRATIS",
+    "choicePrompt": "Toca para elegir una de dos opciones.",
+    "fromLabel": "desde",
+    "choiceModalHint": "Elige una, solo una. Cuesta un 50% más (el precio de elegir).",
     "levelComplete": "Nivel {{level}} completado",
     "checkpointReached": "punto de control alcanzado",
     "levelBanner": "NIVEL {{level}}",

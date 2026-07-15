@@ -39,6 +39,7 @@ export function useGameInput(
   activeModifiers: GameModifiers,
   setCutCount: (n: number) => void,
   setIsPlayerDragging: (v: boolean) => void,
+  setFreezeUsesRemaining: (n: number) => void,
 ): void {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -131,11 +132,12 @@ export function useGameInput(
         const dist  = vec2Length(delta);
 
         // Feature Freeze: a tap (movement below the cut threshold) on a ball
-        // freezes it in place. Works when the upgrade is owned OR a freeze
-        // charge was claimed from a pickup token; the cut path below is
-        // unreachable for taps, so the two never conflict.
-        const hasFreezeCharge = !activeModifiers.ballFreezeDuration && (game.freezeCharges ?? 0) > 0;
-        if (dist < BASE_SWIPE_MIN_DISTANCE && (activeModifiers.ballFreezeDuration > 0 || hasFreezeCharge)) {
+        // freezes it in place. Uses are LIMITED per map (game.freezeUsesRemaining,
+        // refilled each map); once spent, a claimed pickup freeze charge is the
+        // fallback. The cut path below is unreachable for taps, so no conflict.
+        const featureFreeze = activeModifiers.ballFreezeDuration > 0 && (game.freezeUsesRemaining ?? 0) > 0;
+        const hasFreezeCharge = (game.freezeCharges ?? 0) > 0;
+        if (dist < BASE_SWIPE_MIN_DISTANCE && (featureFreeze || hasFreezeCharge)) {
           const tap = game.swipeStart;
           const now = performance.now();
           let target: Ball | null = null;
@@ -152,10 +154,11 @@ export function useGameInput(
             }
           }
           if (target) {
-            // A freeze charge (pickup token) is spent only when the Feature
-            // Freeze upgrade isn't carrying the tap.
-            if (hasFreezeCharge) game.freezeCharges -= 1;
-            const durationMs = (activeModifiers.ballFreezeDuration > 0
+            // Spend a Feature Freeze use if one is available this map, else a
+            // claimed pickup freeze charge.
+            if (featureFreeze) { game.freezeUsesRemaining -= 1; setFreezeUsesRemaining(game.freezeUsesRemaining); }
+            else game.freezeCharges -= 1;
+            const durationMs = (featureFreeze
               ? activeModifiers.ballFreezeDuration
               : game.freezeChargeSeconds || 3) * 1000;
             // Cascade Freeze: a single tap also freezes the nearest eligible

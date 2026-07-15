@@ -247,7 +247,8 @@
     "infoUnlocked": "Info Unlocked",
     "pickupFork": "Ball split!",
     "pickupCapRaise": "Cap +{n}h",
-    "pickupFreeze": "Freeze +1"
+    "pickupFreeze": "Freeze +1",
+    "freezeUsesLeft": "{{count}} freezes left this map"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
@@ -520,6 +521,9 @@
   "upgradeShop": {
     "storeLabel": "Store",
     "freeLabel": "FREE",
+    "choicePrompt": "Tap to choose one of two options.",
+    "fromLabel": "from",
+    "choiceModalHint": "Pick one, and only one. It costs 50% more (the price of choosing).",
     "levelComplete": "Level {{level}} complete",
     "checkpointReached": "checkpoint reached",
     "levelBanner": "LEVEL {{level}}",

@@ -245,7 +245,8 @@
     "infoUnlocked": "Info upplåst",
     "pickupFork": "Bollen delades!",
     "pickupCapRaise": "Tak +{n}h",
-    "pickupFreeze": "Frysning +1"
+    "pickupFreeze": "Frysning +1",
+    "freezeUsesLeft": "{{count}} frysningar kvar på denna bana"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
@@ -505,6 +506,9 @@
   "upgradeShop": {
     "storeLabel": "Butik",
     "freeLabel": "GRATIS",
+    "choicePrompt": "Tryck för att välja ett av två alternativ.",
+    "fromLabel": "från",
+    "choiceModalHint": "Välj ett, bara ett. Det kostar 50% mer (priset för att få välja).",
     "levelComplete": "Nivå {{level}} klar",
     "checkpointReached": "kontrollpunkt nådd",
     "levelBanner": "NIVÅ {{level}}",

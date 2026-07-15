@@ -57,7 +57,12 @@ export function runwayBonuses(bank: number, mods: GameModifiers): Bonuses | unde
     bonuses = bonuses ?? {};
     if (status.perk === 'instantFence') bonuses.instantFencesPerMap = (bonuses.instantFencesPerMap ?? 0) + 1;
     if (status.perk === 'concurrentFence') bonuses.additionalConcurrentFences = (bonuses.additionalConcurrentFences ?? 0) + 1;
-    if (status.perk === 'freeze') bonuses.ballFreezeDuration = (bonuses.ballFreezeDuration ?? 0) + RUNWAY_FREEZE_SECONDS;
+    if (status.perk === 'freeze') {
+      // Grant the duration AND a per-map tap-freeze use, so Runway's freeze
+      // works on its own (Feature Freeze is now use-limited, not duration-only).
+      bonuses.ballFreezeDuration = (bonuses.ballFreezeDuration ?? 0) + RUNWAY_FREEZE_SECONDS;
+      bonuses.freezeUsesPerMap = (bonuses.freezeUsesPerMap ?? 0) + 1;
+    }
   }
   return bonuses;
 }

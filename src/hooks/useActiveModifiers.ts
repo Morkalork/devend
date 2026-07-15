@@ -102,6 +102,10 @@ export interface GameModifiers {
 
   // Additive (sum) — Feature Freeze: seconds a tapped ball stays frozen (0 = upgrade not owned)
   ballFreezeDuration: number;
+  // Additive (sum) — Feature Freeze: tap-freezes allowed per map (refills each
+  // map). 0 = upgrade not owned. Tiers: 1 (Junior/Senior), then the tier-3
+  // choice sets 2 (option A) or keeps 1 (option B, longer duration instead).
+  freezeUsesPerMap: number;
   // Additive (sum) — Cascade Freeze: extra balls a single tap freezes beyond the tapped one
   ballFreezeCount: number;
   // Additive (sum) — Cron Job: seconds an auto-frozen ball stays frozen (0 = upgrade not owned).
@@ -218,6 +222,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,
   ballFreezeDuration: 0,
+  freezeUsesPerMap: 0,
   ballFreezeCount: 0,
   autoFreezeDuration: 0,
   showHighscoreProgress: 0,

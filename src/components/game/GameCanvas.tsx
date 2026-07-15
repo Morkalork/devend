@@ -101,6 +101,8 @@ export interface GameStateInfo {
   cutsUsed: number;
   spaceRemaining: number;
   lockedBalls: number;
+  /** Feature Freeze tap-freezes left this map (for the HUD counter). */
+  freezeUsesRemaining: number;
   pushMode: "none" | "prompt" | "pushing";
   /** Current Scope Creep speed boost in percent (0 = not yet active). */
   creepPercent: number;
@@ -312,6 +314,9 @@ export function GameCanvas({
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
+  // Feature Freeze tap-freezes left this map, mirrored from game.freezeUsesRemaining
+  // for the HUD counter (updated on map init and on each freeze spent).
+  const [freezeUsesRemaining, setFreezeUsesRemaining] = useState(0);
   const [bonusPulseKey, setBonusPulseKey] = useState(0);
   // Scope Creep: current speed boost in percent, stepped by onCreepStep (~4x/level).
   const [creepPercent, setCreepPercent] = useState(0);
@@ -411,10 +416,11 @@ export function GameCanvas({
     pickupCapBonus: 0,
     freezeCharges: 0,
     freezeChargeSeconds: 0,
+    freezeUsesRemaining: 0,
     pickupFeedback: [] as PickupFeedback[],
   });
 
-  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging);
+  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -670,6 +676,9 @@ export function GameCanvas({
       game.pickupCapBonus = 0;
       game.freezeCharges = 0;
       game.freezeChargeSeconds = 0;
+      // Feature Freeze tap-freezes refill to the owned per-map allowance.
+      game.freezeUsesRemaining = Math.max(0, Math.round(activeModifiers.freezeUsesPerMap));
+      setFreezeUsesRemaining(game.freezeUsesRemaining);
       game.pickupSpots = (level.pickupSpots ?? []).map(s => ({ x: s.x, y: s.y }));
       {
         const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);
@@ -1110,6 +1119,7 @@ export function GameCanvas({
         cutsUsed: cutCount,
         spaceRemaining: remainingPercent,
         lockedBalls: lockedBallsCount,
+        freezeUsesRemaining,
         pushMode,
         creepPercent,
         activeSeconds,
@@ -1117,7 +1127,7 @@ export function GameCanvas({
         onBankAndContinue: handleBankAndContinue,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, onGameStateChange, lockedBallsCount]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, onGameStateChange, lockedBallsCount, freezeUsesRemaining]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

@@ -32,6 +32,7 @@ describe("runway (hoard-side thresholds)", () => {
       instantFencesPerMap: 1,
       additionalConcurrentFences: 1,
       ballFreezeDuration: RUNWAY_FREEZE_SECONDS,
+      freezeUsesPerMap: 1,
     });
     // Mid bank: only the lower thresholds pay.
     expect(runwayBonuses(250, all)).toEqual({ instantFencesPerMap: 1, additionalConcurrentFences: 1 });

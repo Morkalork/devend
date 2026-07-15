@@ -942,48 +942,68 @@ upgrades:
 
 
   # ===============================
-  # FEATURE FREEZE (Tap-to-freeze a ball)
-  # Tap any ball to halt it in place. After it thaws, that ball briefly
-  # can't be re-frozen (cooldown = freeze duration × 2). Durations stack.
-  # Head of the freeze archetype: no longer gated behind SCRUM Master.
+  # FEATURE FREEZE (Tap-to-freeze a ball, LIMITED uses per map)
+  # Tap a ball to halt it in place. Uses are limited per map and refill each
+  # map: one freeze at Junior/Senior. Principal is a CHOICE (choiceGroup, costs
+  # 50% more) between two 1-second freezes or a single 3-second freeze. After a
+  # ball thaws it briefly cannot be re-frozen (per-ball cooldown).
+  # Head of the freeze archetype.
   # ===============================
 
   - id: feature_freeze_junior
     name: Feature Freeze
     tier: Junior
-    description: Tap a ball to freeze it in place for 2 seconds.
+    description: Tap a ball to freeze it for 1 second. One freeze per map.
     unlockLevel: 4
     icon: snowflake
     tags: [freeze]
     modifiers:
-      ballFreezeDuration: 2
+      ballFreezeDuration: 1
+      freezeUsesPerMap: 1
 
   - id: feature_freeze_senior
     name: Feature Freeze
     tier: Senior
-    description: Tapped balls now freeze for 4 seconds.
+    description: Your freeze now holds a ball for 2 seconds.
     unlockLevel: 8
     prerequisites:
       - feature_freeze_junior
     tags: [freeze]
     modifiers:
-      ballFreezeDuration: 2
+      ballFreezeDuration: 1
 
-  - id: feature_freeze_principal
+  # Principal is a CHOICE: buy ONE of the two. Each costs 50% more than a normal
+  # Principal (the price of getting to choose); owning one locks out the other.
+  - id: feature_freeze_principal_a
     name: Feature Freeze
     tier: Principal
-    description: Tapped balls now freeze for 6 seconds.
+    description: "Rapid: two freezes per map, 1 second each."
     unlockLevel: 14
     prerequisites:
       - feature_freeze_senior
+    choiceGroup: feature_freeze_principal
     tags: [freeze]
     modifiers:
-      ballFreezeDuration: 2
+      ballFreezeDuration: -1
+      freezeUsesPerMap: 1
+
+  - id: feature_freeze_principal_b
+    name: Feature Freeze
+    tier: Principal
+    description: "Deep freeze: one freeze per map, held for 3 seconds."
+    unlockLevel: 14
+    prerequisites:
+      - feature_freeze_senior
+    choiceGroup: feature_freeze_principal
+    tags: [freeze]
+    modifiers:
+      ballFreezeDuration: 1
 
 
   # ===============================
   # CASCADE FREEZE (Multi-ball freeze)
-  # Only unlocks once Feature Freeze is mastered (all three tiers) this run.
+  # Unlocks once Feature Freeze reaches Senior this run (the Principal tier is a
+  # mutually-exclusive choice, so downstream freeze lines gate on Senior).
   # A single tap freezes the tapped ball plus the nearest others in its region.
   # ===============================
 
@@ -993,7 +1013,7 @@ upgrades:
     description: A single freeze tap now freezes the 2 nearest balls.
     unlockLevel: 14
     prerequisites:
-      - feature_freeze_principal
+      - feature_freeze_senior
     icon: cloud-snow
     tags: [freeze]
     modifiers:
@@ -1013,7 +1033,7 @@ upgrades:
   - id: cascade_freeze_principal
     name: Cascade Freeze
     tier: Architect
-    description: Frozen balls now stay frozen for 8 seconds.
+    description: Your freeze taps now hold balls 2 seconds longer.
     unlockLevel: 22
     prerequisites:
       - cascade_freeze_senior
@@ -1034,7 +1054,7 @@ upgrades:
     description: Every 10 seconds, automatically freeze a random ball in place for 3 seconds.
     unlockLevel: 20
     prerequisites:
-      - feature_freeze_principal
+      - feature_freeze_senior
     icon: calendar-clock
     tags: [freeze]
     modifiers:

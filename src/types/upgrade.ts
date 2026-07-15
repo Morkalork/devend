@@ -27,6 +27,14 @@ export interface UpgradeConfig {
   cost?: number;
   unlockLevel?: number;
   prerequisites?: string[];
+  /**
+   * Tier-3 "choice" grouping: upgrades sharing a `choiceGroup` are mutually
+   * exclusive alternatives — the shop offers them as one card that expands to a
+   * chooser, buying one locks out the rest, and each costs 50% more (the price
+   * of getting to pick). See useUpgradeManager (pricing + isLocked) and
+   * UpgradeShop (the chooser card).
+   */
+  choiceGroup?: string;
   /** Only offered while ascended (Ascension mode, depth ≥ 1) */
   ascensionOnly?: boolean;
   /**

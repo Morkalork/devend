@@ -159,6 +159,9 @@ export interface CanvasGameState {
   freezeCharges: number;
   /** Seconds a freeze-charge tap holds (from the claimed token's value). */
   freezeChargeSeconds: number;
+  /** Feature Freeze tap-freezes left THIS map (refills to freezeUsesPerMap each
+   *  map). Separate from freezeCharges (pickup tokens). */
+  freezeUsesRemaining: number;
   /** Transient claim/waste markers (culled by updatePickups). */
   pickupFeedback: PickupFeedback[];
 
