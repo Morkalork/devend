@@ -9,10 +9,10 @@
  * next assignment replaces it. Mirrors RunDraftScreen's card UI; the pick
  * rides the session's dynamic modifier fold (activeDoor).
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Skull, Sparkles, Ticket, X } from 'lucide-react';
+import { Play, Skull, Sparkles, Ticket, X, Info } from 'lucide-react';
 import { DoorConfig } from '@/types/door';
 import { LevelConfig } from '@/types/level';
 import { selectBallTypesForMap } from '@/lib/ballTypes';
@@ -40,6 +40,18 @@ export function DoorDraftScreen({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // Door whose press-and-hold detail overlay is open.
   const [detailId, setDetailId] = useState<string | null>(null);
+  // Ball type whose press-and-hold detail overlay is open (explains its ability,
+  // or its plainness for red/blue).
+  const [ballDetailId, setBallDetailId] = useState<string | null>(null);
+  const ballHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelBallHold = useCallback(() => {
+    if (ballHoldTimer.current) { clearTimeout(ballHoldTimer.current); ballHoldTimer.current = null; }
+  }, []);
+  const startBallHold = useCallback((id: string) => {
+    cancelBallHold();
+    ballHoldTimer.current = setTimeout(() => setBallDetailId(id), 450);
+  }, [cancelBallHold]);
+  useEffect(() => cancelBallHold, [cancelBallHold]);
 
   // Exact spawn preview: ball-type selection is deterministic per map id.
   const balls = useMemo(
@@ -110,20 +122,32 @@ export function DoorDraftScreen({
             className="w-full rounded-lg p-3 flex flex-col sm:flex-row items-center justify-center gap-x-6 gap-y-2"
             style={{ border: `1px solid ${accentColor}44`, backgroundColor: 'rgba(255,255,255,0.03)' }}
           >
-            {/* Ball spawn preview: deterministic, so this is what WILL spawn */}
+            {/* Ball spawn preview: deterministic, so this is what WILL spawn.
+                Press and hold a ball to read about its ability. */}
             <div className="flex items-center gap-2">
-              <span className="text-[11px] uppercase tracking-wider" style={{ color: '#4a7a5a' }}>
+              <span className="flex items-center gap-1 text-[11px] uppercase tracking-wider" style={{ color: '#4a7a5a' }}>
                 {t('doorDraft.intelBalls')}
+                <Info className="w-3 h-3 opacity-70" />
               </span>
-              <div className="flex items-center gap-1.5">
-                {balls.map(b => (
-                  <span key={b.id} className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {balls.map((b, i) => (
+                  <button
+                    key={`${b.id}-${i}`}
+                    onPointerDown={() => startBallHold(b.id)}
+                    onPointerUp={cancelBallHold}
+                    onPointerLeave={cancelBallHold}
+                    onPointerCancel={cancelBallHold}
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="flex items-center gap-1 cursor-help select-none rounded px-0.5"
+                    style={{ touchAction: 'pan-y' }}
+                    aria-label={b.name}
+                  >
                     <span
                       className="inline-block w-3 h-3 rounded-full"
                       style={{ backgroundColor: b.color, boxShadow: `0 0 6px ${b.color}` }}
                     />
                     <span className="text-xs" style={{ color: '#c8ffd8' }}>{b.name}</span>
-                  </span>
+                  </button>
                 ))}
               </div>
             </div>
@@ -254,6 +278,52 @@ export function DoorDraftScreen({
                   style={{ color: '#4a7a5a', borderTop: `1px solid ${accentColor}22` }}
                 >
                   {t('doorDraft.scopeNote')}
+                </p>
+              </motion.div>
+            </motion.div>
+          );
+        })()}
+      </AnimatePresence>
+
+      {/* Press-and-hold detail overlay for a spawnable ball: its ability, or its
+          plainness for the red/blue standard balls. Tap backdrop or X to close. */}
+      <AnimatePresence>
+        {ballDetailId && (() => {
+          const ball = balls.find(b => b.id === ballDetailId);
+          if (!ball) return null;
+          return (
+            <motion.div
+              key="ball-detail"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setBallDetailId(null)}
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+            >
+              <motion.div
+                initial={{ scale: 0.92, y: 8 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.92, y: 8, opacity: 0 }}
+                onClick={(e) => e.stopPropagation()}
+                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                style={{ borderColor: `${accentColor}66` }}
+              >
+                <button
+                  onClick={() => setBallDetailId(null)}
+                  className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                  aria-label={t('doorDraft.closeDetail')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-2 mb-3 pr-6">
+                  <span
+                    className="inline-block w-5 h-5 rounded-full shrink-0"
+                    style={{ backgroundColor: ball.color, boxShadow: `0 0 10px ${ball.color}` }}
+                  />
+                  <div className="text-base font-display font-bold" style={{ color: accentColor }}>{ball.name}</div>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.9 }}>
+                  {ball.description}
                 </p>
               </motion.div>
             </motion.div>
