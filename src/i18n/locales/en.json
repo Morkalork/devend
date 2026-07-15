@@ -554,6 +554,8 @@
     "buyAndContinue": "Buy {{count}}",
     "continue": "Continue",
     "closedNotEnoughLocks": "Not enough balls locked",
+    "closedInfoTitle": "Store closed",
+    "closedInfoBody": "The store only opens when you lock enough balls during the round: at least one, or two on maps with three or more balls.\n\nSeal balls into pockets to earn your trip to the shop. Lock nothing and you skip straight to the next map.",
     "tutorialTitle": "THE UPGRADE SHOP",
     "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade for more info - including what unlocks it and what it unlocks."
   },

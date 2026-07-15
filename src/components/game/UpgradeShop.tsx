@@ -113,6 +113,8 @@ export function UpgradeShop({
   const [shakingId, setShakingId] = useState<string | null>(null);
   // Upgrade whose detail card (track relationships) is open via press-and-hold.
   const [detailId, setDetailId] = useState<string | null>(null);
+  // Explains the "Not enough balls locked" banner; opened by holding it.
+  const [showClosedInfo, setShowClosedInfo] = useState(false);
 
   // Press-and-hold detection: a held card opens its detail view; the timer fires
   // detailId and the flag suppresses the click-to-select that follows on release.
@@ -142,6 +144,14 @@ export function UpgradeShop({
     if (start && (Math.abs(e.clientX - start.x) > 10 || Math.abs(e.clientY - start.y) > 10)) {
       cancelLongPress();
     }
+  }, [cancelLongPress]);
+
+  // Press-and-hold the closed banner to open its explainer (reuses the shared
+  // hold timer/refs — the banner and the upgrade cards are never held at once).
+  const startClosedInfoHold = useCallback((e: React.PointerEvent) => {
+    pointerStart.current = { x: e.clientX, y: e.clientY };
+    cancelLongPress();
+    longPressTimer.current = setTimeout(() => setShowClosedInfo(true), 450);
   }, [cancelLongPress]);
 
   // Clear any pending hold timer if the shop unmounts mid-press.
@@ -362,23 +372,32 @@ export function UpgradeShop({
           {t('upgradeShop.levelComplete', { level: completedLevel })}
         </motion.div>
 
-        {/* Closed banner — the round didn't lock enough balls to earn the store */}
+        {/* Closed banner — the round didn't lock enough balls to earn the store.
+            Press and hold it for an explainer of why the store is shut. */}
         {closed && (
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ delay: 0.08, type: 'spring', stiffness: 260, damping: 20 }}
-            className="flex items-center gap-2 rounded-lg px-4 py-2 border-2"
+            onPointerDown={startClosedInfoHold}
+            onPointerUp={cancelLongPress}
+            onPointerLeave={cancelLongPress}
+            onPointerCancel={cancelLongPress}
+            onPointerMove={moveLongPress}
+            onContextMenu={(e) => e.preventDefault()}
+            className="flex items-center gap-2 rounded-lg px-4 py-2 border-2 cursor-help select-none"
             style={{
               color: '#ff6b6b',
               borderColor: '#ff6b6b66',
               background: '#ff6b6b12',
+              touchAction: 'pan-y',
             }}
           >
             <Lock className="w-4 h-4 shrink-0" />
             <span className="text-sm font-bold tracking-wide uppercase">
               {t('upgradeShop.closedNotEnoughLocks')}
             </span>
+            <Info className="w-3.5 h-3.5 shrink-0 opacity-70" />
           </motion.div>
         )}
 
@@ -849,6 +868,45 @@ export function UpgradeShop({
             </motion.div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* Closed-store explainer — opened by holding the "Not enough balls locked"
+          banner. Tapping the backdrop or the X closes it. */}
+      <AnimatePresence>
+        {showClosedInfo && (
+          <motion.div
+            key="closed-info"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowClosedInfo(false)}
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.92, y: 8, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+              style={{ borderColor: '#ff6b6b66' }}
+            >
+              <button
+                onClick={() => setShowClosedInfo(false)}
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-2 mb-2 pr-6">
+                <Lock className="w-5 h-5 shrink-0" style={{ color: '#ff6b6b' }} />
+                <h3 className="text-base font-bold text-foreground">{t('upgradeShop.closedInfoTitle')}</h3>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                {t('upgradeShop.closedInfoBody')}
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {showTutorial && !closed && (

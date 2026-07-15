@@ -3,7 +3,7 @@
  * still opens, but shows a "Not enough balls locked" banner and blocks purchases.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import '@/i18n'; // side-effect: initialise react-i18next synchronously
 import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -56,5 +56,22 @@ describe('UpgradeShop closed state', () => {
     // Selecting a purchasable card flips the button to the buy label.
     fireEvent.click(screen.getByText('Test Upgrade A'));
     expect(screen.getByText('Buy 1')).toBeTruthy();
+  });
+
+  it('holding the closed banner opens the explainer modal', () => {
+    vi.useFakeTimers();
+    try {
+      render(<UpgradeShop {...baseProps({ closed: true })} />);
+      const banner = screen.getByText('Not enough balls locked');
+
+      // Not shown until the hold threshold (450ms) elapses.
+      expect(screen.queryByText('Store closed')).toBeNull();
+      fireEvent.pointerDown(banner, { clientX: 10, clientY: 10 });
+      act(() => { vi.advanceTimersByTime(500); });
+
+      expect(screen.getByText('Store closed')).toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

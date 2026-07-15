@@ -539,6 +539,8 @@
     "buyAndContinue": "Comprar {{count}}",
     "continue": "Continuar",
     "closedNotEnoughLocks": "No has bloqueado suficientes bolas",
+    "closedInfoTitle": "Tienda cerrada",
+    "closedInfoBody": "La tienda solo abre cuando bloqueas suficientes bolas durante la ronda: al menos una, o dos en mapas con tres o más bolas.\n\nSella bolas en huecos para ganarte la visita a la tienda. Si no bloqueas nada, pasas directo al siguiente mapa.",
     "tutorialTitle": "LA TIENDA DE MEJORAS",
     "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa. Mantén pulsada una mejora para ver más información, incluido qué la desbloquea y qué desbloquea."
   },
