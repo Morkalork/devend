@@ -65,29 +65,68 @@ function applyMute(a: HTMLAudioElement): void {
 }
 
 /**
+ * Prime one deck element so it can be played later WITHOUT a fresh user gesture.
+ * Mobile browsers (unlike desktop) unlock media per-element: an <audio> that has
+ * never had play() called inside a gesture stays silent forever. Our crossfade
+ * uses two elements, but only the foreground one plays during the first gesture —
+ * so the FIRST band switch (level start) would crossfade onto a never-unlocked
+ * element and produce nothing. Play a muted real clip on it inside the gesture,
+ * then quietly reset; that permanently unlocks the element on mobile.
+ */
+function primeElement(a: HTMLAudioElement): void {
+  try {
+    a.dataset.priming = "1";
+    a.muted = true;
+    if (!a.src) a.src = MAIN_TRACK; // needs a reachable resource to unlock
+    const restore = () => {
+      if (a.dataset.priming !== "1") return; // a real switchTo took this element over
+      delete a.dataset.priming;
+      a.pause();
+      try { a.currentTime = 0; } catch { /* ignore */ }
+      applyMute(a);
+    };
+    const p = a.play();
+    if (p && typeof p.then === "function") p.then(restore).catch(restore);
+    else restore();
+  } catch { /* ignore */ }
+}
+
+/**
+ * First-gesture unlock: (re)start the foreground track for real AND prime the
+ * crossfade partner, so both deck elements are usable thereafter. Without priming
+ * the partner, mobile level music (a crossfade onto the fresh element) is silent
+ * even though SFX — which use Web Audio, unlocked separately — work fine.
+ */
+function unlockDeck(): void {
+  audioUnlocked = true;
+  const pair = deck;
+  if (!pair) return;
+  const active = pair[activeIndex];
+  const inactive = pair[(1 - activeIndex) as 0 | 1];
+  if (active && currentKey) {
+    const p = active.play();
+    if (p && typeof p.catch === "function") p.catch(() => { /* ignore */ });
+  }
+  if (inactive) primeElement(inactive);
+}
+
+/**
  * Browsers block audio until the first user gesture. Our menu-screen .play() is
  * blocked, so arm a one-time capture-phase listener that, on the first interaction
- * anywhere, (re)plays the active track from within the gesture task.
+ * anywhere, unlocks BOTH deck elements (see unlockDeck) from within the gesture.
  *
  * Armed EAGERLY (synchronously, the moment we first try to play while locked) —
  * not from the play() rejection, which is async: a first click can land in the
  * window where play() is still pending, before the .catch() would have armed us,
- * and be missed. The play() promise flips `paused` to false immediately, so we
- * always re-issue play() here (not only when paused) — a pending-but-doomed play
- * needs a user-activated retry to actually start.
+ * and be missed.
  */
 function armGestureUnlock(): void {
   if (audioUnlocked || gestureArmed || typeof window === "undefined") return;
   gestureArmed = true;
   const events = ["pointerdown", "keydown", "touchstart"] as const;
   const handler = () => {
-    audioUnlocked = true;
     for (const ev of events) window.removeEventListener(ev, handler, true);
-    if (deck && currentKey) {
-      const a = deck[activeIndex];
-      const pr = a.play();
-      if (pr && typeof pr.catch === "function") pr.catch(() => { /* ignore */ });
-    }
+    unlockDeck();
   };
   for (const ev of events) window.addEventListener(ev, handler, true);
 }
@@ -138,6 +177,7 @@ function switchTo(src: string, key: string, withFallback: boolean): void {
       }
     : null;
 
+  delete incoming.dataset.priming; // cancel any in-flight prime-restore on this element
   incoming.src = src;
   incoming.currentTime = 0;
   incoming.volume = 0;
