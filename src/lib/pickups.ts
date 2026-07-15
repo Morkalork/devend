@@ -155,7 +155,9 @@ function spawnPickup(game: CanvasGameState, cfg: PickupConfig): void {
     value: def.value,
     position: pos,
     spawnedAtSeconds: game.activePlaySeconds,
-    expiresAtSeconds: game.activePlaySeconds + cfg.lifetimeSeconds,
+    // Cryo Protocol: frozen tokens never expire (the render layer ices them
+    // over). Infinity also disables the pre-expiry blink for free.
+    expiresAtSeconds: game.freezePickups ? Infinity : game.activePlaySeconds + cfg.lifetimeSeconds,
   });
 }
 

@@ -45,12 +45,11 @@ capstones:
 
   - id: cryo_protocol
     name: Cryo Protocol
-    description: Tap any ball to freeze it for 3 seconds, with no cooldown. Works even without Feature Freeze.
+    description: Power-up tokens freeze over and never expire, waiting on the board until you claim them.
     tag: freeze
-    clarify: Grants tap-to-freeze for the whole run with no cooldown, even if you never buy Feature Freeze. Freezing a ball mid-flight makes any chaotic map controllable. The freeze build in a single pick.
+    clarify: Every pickup token this run ices over and stops its expiry timer, so you can set up the perfect seal to claim it instead of racing the clock. Turns pickups from a scramble into a plan.
     modifiers:
-      ballFreezeDuration: 3
-      freezeNoCooldown: 1
+      freezePickups: 1
 
   - id: golden_handshake
     name: Golden Handshake

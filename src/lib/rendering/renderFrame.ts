@@ -1209,6 +1209,33 @@ export function renderFrame(
       ctx.globalAlpha = alpha;
       ctx.drawImage(sprite, p.x - size / 2, p.y - size / 2, size, size);
       ctx.restore();
+
+      // Cryo Protocol: ice the token over so it reads as "frozen, won't expire".
+      // A pale glowing ring with a few slowly-rotating frost spikes.
+      if (game.freezePickups) {
+        const r = size / 2 + 3 * scale;
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.translate(p.x, p.y);
+        ctx.strokeStyle = "#bfefff";
+        ctx.lineWidth = Math.max(1, 1.6 * scale);
+        ctx.shadowColor = "#9fe6ff";
+        ctx.shadowBlur = 7 * scale;
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = Math.max(1, 1.2 * scale);
+        for (let k = 0; k < 6; k++) {
+          const a = (k / 6) * Math.PI * 2 + nowP / 3000;
+          const cx = Math.cos(a), cy = Math.sin(a);
+          ctx.beginPath();
+          ctx.moveTo(cx * r, cy * r);
+          ctx.lineTo(cx * (r + 3 * scale), cy * (r + 3 * scale));
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
     }
   }
 

@@ -110,6 +110,9 @@ export interface GameModifiers {
   // applied to ONE random ball, re-picked each map (0 = off, 0.5 = that ball
   // runs at half speed).
   slowOneBallFactor: number;
+  // Additive (sum) — Cryo Protocol capstone: >0 = pickup tokens are frozen and
+  // never expire (they sit on the board, iced over, until claimed or wasted).
+  freezePickups: number;
   // Additive (sum) — Cascade Freeze: extra balls a single tap freezes beyond the tapped one
   ballFreezeCount: number;
   // Additive (sum) — Cron Job: seconds an auto-frozen ball stays frozen (0 = upgrade not owned).
@@ -228,6 +231,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   ballFreezeDuration: 0,
   freezeUsesPerMap: 0,
   slowOneBallFactor: 0,
+  freezePickups: 0,
   ballFreezeCount: 0,
   autoFreezeDuration: 0,
   showHighscoreProgress: 0,

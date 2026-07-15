@@ -417,6 +417,7 @@ export function GameCanvas({
     freezeCharges: 0,
     freezeChargeSeconds: 0,
     freezeUsesRemaining: 0,
+    freezePickups: false,
     pickupFeedback: [] as PickupFeedback[],
   });
 
@@ -679,6 +680,8 @@ export function GameCanvas({
       // Feature Freeze tap-freezes refill to the owned per-map allowance.
       game.freezeUsesRemaining = Math.max(0, Math.round(activeModifiers.freezeUsesPerMap));
       setFreezeUsesRemaining(game.freezeUsesRemaining);
+      // Cryo Protocol: freeze pickup tokens so they never expire this run.
+      game.freezePickups = activeModifiers.freezePickups > 0;
       game.pickupSpots = (level.pickupSpots ?? []).map(s => ({ x: s.x, y: s.y }));
       {
         const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);

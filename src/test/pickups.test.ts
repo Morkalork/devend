@@ -118,6 +118,19 @@ describe("pickup spawning", () => {
     expect(game.pickups.every(t => t.expiresAtSeconds > game.activePlaySeconds)).toBe(true);
   });
 
+  it("freezePickups (Cryo Protocol): tokens spawn with no expiry and never cull", () => {
+    const game = makeGame();
+    game.freezePickups = true;
+    game.activePlaySeconds = 5;
+    updatePickups(game); // spawns one
+    expect(game.pickups.length).toBe(1);
+    expect(game.pickups[0].expiresAtSeconds).toBe(Infinity);
+    // Far past the normal 14s lifetime: the frozen token is still there.
+    game.activePlaySeconds = 5 + 14 + 100;
+    updatePickups(game);
+    expect(game.pickups.some(t => t.expiresAtSeconds === Infinity)).toBe(true);
+  });
+
   it("spawned tokens sit in open space away from walls", () => {
     const game = makeGame();
     for (let s = 5; s <= 60 && game.pickups.length < 2; s += 5) {

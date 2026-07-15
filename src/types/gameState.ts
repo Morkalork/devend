@@ -162,6 +162,9 @@ export interface CanvasGameState {
   /** Feature Freeze tap-freezes left THIS map (refills to freezeUsesPerMap each
    *  map). Separate from freezeCharges (pickup tokens). */
   freezeUsesRemaining: number;
+  /** Cryo Protocol: pickup tokens spawned this map never expire (rendered iced
+   *  over). Set from activeModifiers at map init. */
+  freezePickups: boolean;
   /** Transient claim/waste markers (culled by updatePickups). */
   pickupFeedback: PickupFeedback[];
 
