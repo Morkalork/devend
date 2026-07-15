@@ -35,8 +35,13 @@ export function TapToStartGate({ accentColor }: { accentColor?: string }) {
     return () => clearInterval(id);
   }, []);
 
+  // Unlock on CLICK, not pointerdown: some browsers (notably iOS Safari) only
+  // treat a completed tap (click) as a valid user-activation gesture for <audio>
+  // playback — a bare pointerdown-initiated play() is rejected with
+  // NotAllowedError even though a gesture happened. Dismiss on the same click so
+  // the element is still mounted to receive it.
   const handleStart = () => {
-    startMenuMusic(); // the tap also trips the global unlock listener; this is belt-and-suspenders
+    startMenuMusic();
     setShow(false);
   };
 
@@ -50,7 +55,7 @@ export function TapToStartGate({ accentColor }: { accentColor?: string }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onPointerDown={handleStart}
+          onClick={handleStart}
           role="button"
           aria-label={t('welcome.tapToStart')}
           className="fixed inset-0 z-[9000] flex flex-col items-center justify-center gap-10 cursor-pointer select-none"
