@@ -42,6 +42,13 @@ npm start   # runs: serve -s dist -l $PORT
 
 Requires Node 20.x (`"engines": {"node": "20.x"}` in `package.json`).
 
+> ⚠️ **Do not track binary assets (mp3s, images) with Git LFS.** Heroku deploys
+> from a GitHub source tarball that contains LFS *pointer* files, not the real
+> content, so LFS-tracked audio ships as 132-byte text and browsers reject it
+> with `NotSupportedError` (music goes silent on the deployed site while local
+> dev works). Keep `public/assets/**` as normal git blobs — there is
+> intentionally no `*.mp3 filter=lfs` rule in `.gitattributes`.
+
 ---
 
 ## Admin / Playground mode
