@@ -90,16 +90,34 @@ upgrades:
     modifiers:
       ballSpeedMultiplier: 0.90
 
-  - id: runtime_optimisation_principal
+  # Principal is a CHOICE (choiceGroup, +50% cost): a flat 15% slow, or a milder
+  # 5% slow plus one random ball crippled each map. The choiceGroup is named for
+  # the old id so the runtime-augmentation certificate (which sources it) unlocks
+  # from EITHER option (see useGameSession: cert credit uses choiceGroup).
+  - id: runtime_optimisation_principal_a
     name: Runtime Optimisation
     tier: Principal
-    description: Reduce ball speed by 15%.
+    description: Reduce all ball speed by 15%.
     unlockLevel: 5
     prerequisites:
       - runtime_optimisation_senior
+    choiceGroup: runtime_optimisation_principal
     tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.85
+
+  - id: runtime_optimisation_principal_b
+    name: Runtime Optimisation
+    tier: Principal
+    description: "Reduce ball speed by 5%, and one random ball runs 50% slower each map."
+    unlockLevel: 5
+    prerequisites:
+      - runtime_optimisation_senior
+    choiceGroup: runtime_optimisation_principal
+    tags: [safety, risk]
+    modifiers:
+      ballSpeedMultiplier: 0.95
+      slowOneBallFactor: 0.5
 
 
   # ===============================

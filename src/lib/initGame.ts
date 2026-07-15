@@ -391,6 +391,21 @@ export function createInitialGameData(
     };
   });
 
+  // Runtime Optimisation tier-3 option B: cripple ONE random ball each map. All
+  // its speed fields scale (physics normalises toward baseSpeed, so scaling only
+  // velocity would be undone).
+  const slowFactor = activeModifiers.slowOneBallFactor;
+  if (slowFactor > 0 && slowFactor < 1 && balls.length > 0) {
+    const victim = balls[Math.floor(Math.random() * balls.length)];
+    victim.speed *= slowFactor;
+    victim.baseSpeed *= slowFactor;
+    victim.topSpeed *= slowFactor;
+    victim.minimumSpeed *= slowFactor;
+    victim.velocity = { x: victim.velocity.x * slowFactor, y: victim.velocity.y * slowFactor };
+    if (victim.speedReduction !== undefined) victim.speedReduction *= slowFactor;
+    if (victim.speedRange) victim.speedRange = [victim.speedRange[0] * slowFactor, victim.speedRange[1] * slowFactor];
+  }
+
   // ── Space grid & initial region ───────────────────────────────────────
 
   const initGridSize = 15;

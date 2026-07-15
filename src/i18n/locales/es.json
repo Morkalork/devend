@@ -633,9 +633,13 @@
         "name": "Optimización en Tiempo de Ejecución",
         "description": "Reduce la velocidad de la bola un 10%."
       },
-      "runtime_optimisation_principal": {
+      "runtime_optimisation_principal_a": {
         "name": "Optimización en Tiempo de Ejecución",
-        "description": "Reduce la velocidad de la bola un 15%."
+        "description": "Reduce la velocidad de todas las bolas un 15%."
+      },
+      "runtime_optimisation_principal_b": {
+        "name": "Optimización en Tiempo de Ejecución",
+        "description": "Reduce la velocidad de la bola un 5%, y una bola al azar va un 50% más lenta cada mapa."
       },
       "memory_footprint_junior": {
         "name": "Huella de Memoria",

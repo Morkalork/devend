@@ -633,9 +633,13 @@
         "name": "Runtime-optimering",
         "description": "Minska bollhastigheten med 10%."
       },
-      "runtime_optimisation_principal": {
+      "runtime_optimisation_principal_a": {
         "name": "Runtime-optimering",
-        "description": "Minska bollhastigheten med 15%."
+        "description": "Minska alla bollars hastighet med 15%."
+      },
+      "runtime_optimisation_principal_b": {
+        "name": "Runtime-optimering",
+        "description": "Minska bollhastigheten med 5%, och en slumpmässig boll rör sig 50% långsammare varje bana."
       },
       "memory_footprint_junior": {
         "name": "Minnesavtryck",

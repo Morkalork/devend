@@ -821,8 +821,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setCurrentLives(prev => prev + extraLives);
     }
 
-    if (certSourceIds.has(upgradeId)) {
-      const unlocks = recordMaxTierPurchase(upgradeId);
+    // Upgrade-chain certs credit the "max tier". For a tier-3 choice, either
+    // option counts, so credit the choiceGroup (which is named after the cert's
+    // sourceUpgradeId) rather than the specific variant id.
+    const certKey = upgrade?.choiceGroup ?? upgradeId;
+    if (certSourceIds.has(certKey)) {
+      const unlocks = recordMaxTierPurchase(certKey);
       if (unlocks.length > 0) setShopUnlockedCerts(prev => [...prev, ...unlocks]);
     }
   }, [upgrades, certSourceIds, recordMaxTierPurchase]);
