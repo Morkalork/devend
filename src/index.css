@@ -424,6 +424,39 @@
     }
   }
 
+  /* Shimmer — a light band sweeps across the element, marking the recommended
+     action (e.g. the Continue button when a saved run exists). Needs the host
+     to clip its own corners; the sweep rides in a clipped overlay. */
+  .shimmer {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      115deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 70%
+    );
+    transform: translateX(-100%);
+    animation: shimmer-sweep 2.8s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  @keyframes shimmer-sweep {
+    0% {
+      transform: translateX(-100%);
+    }
+    55%, 100% {
+      transform: translateX(100%);
+    }
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }

@@ -30,6 +30,7 @@ import { CertificateStore } from '@/components/game/CertificateStore';
 import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
 import { LoadoutsUnlockedModal } from '@/components/game/LoadoutsUnlockedModal';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
+import { HallOfFameScreen } from '@/components/game/HallOfFameScreen';
 import { TapToStartGate } from '@/components/game/TapToStartGate';
 import { playMainMusic } from '@/lib/gameMusic';
 
@@ -40,7 +41,7 @@ const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen'
 // Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
 // driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
 // intentionally left out so the current band track keeps playing through them.
-const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'loadouts']);
+const MENU_MUSIC_SCREENS = new Set(['welcome', 'tutorial', 'options', 'achievements', 'loadouts', 'hallOfFame']);
 
 const Index = () => {
   const navigation = useScreenNavigation();
@@ -70,7 +71,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   }, [navigation.currentScreen]);
 
   const SCREEN_ORDER: Record<string, number> = {
-    welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1,
+    welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1, hallOfFame: 1,
     game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3, ascensionDraft: 3, result: 4,
   };
   const prevScreenRef = useRef(navigation.currentScreen);
@@ -115,6 +116,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             {navigation.currentScreen === 'welcome' && (
               <WelcomeScreen
                 onStartGame={() => session.handleStartGame()}
+                onContinue={session.hasSavedRun ? session.handleContinueRun : undefined}
                 onTutorial={navigation.goToTutorial}
                 onOptions={navigation.goToOptions}
                 onOpenCertificateStore={
@@ -125,6 +127,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                     : undefined
                 }
                 onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
+                onHallOfFame={session.topRuns.length > 0 ? navigation.goToHallOfFame : undefined}
                 onAchievements={() => navigation.goToAchievements()}
                 onAdmin={isAdminEnabled ? navigation.goToAdmin : undefined}
                 isLoading={session.isLoading}
@@ -261,6 +264,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 runLevelsCompleted={session.lastRunLevelsCompleted}
                 newlyUnlockedLoadouts={session.lastRunLoadoutUnlocks}
                 runRecap={session.lastRunRecap}
+                runRank={session.lastRunRank}
               />
             )}
             {navigation.currentScreen === 'certificateStore' && (
@@ -285,6 +289,16 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               <LoadoutGalleryScreen
                 loadouts={session.loadouts}
                 wonLoadoutIds={session.wonLoadoutIds}
+                onBack={navigation.goToWelcome}
+                accentColor={accentHex}
+              />
+            )}
+            {navigation.currentScreen === 'hallOfFame' && (
+              <HallOfFameScreen
+                topRuns={session.topRuns}
+                archetypeBests={session.archetypeBests}
+                mapHighscores={session.mapHighscores}
+                metaStats={session.metaStats}
                 onBack={navigation.goToWelcome}
                 accentColor={accentHex}
               />
@@ -327,6 +341,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
           onContinue={session.handleContinueFromOverlay}
           accentColor={accentHex}
           newlyUnlockedCerts={session.pendingCertUnlocks}
+          pace={session.levelPace}
         />
       )}
 

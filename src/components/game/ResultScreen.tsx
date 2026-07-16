@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { RunRecap } from '@/lib/buildRecap';
+import { RunRankInfo } from '@/lib/runLedger';
 import { UpgradeTag } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
 import { TagChip } from './TagChip';
@@ -20,6 +21,11 @@ interface ResultScreenProps {
   newlyUnlockedLoadouts?: string[];
   /** End-of-run build recap (archetype identity, capstone, personal best). */
   runRecap?: RunRecap | null;
+  /**
+   * Where this run landed on the all-time ladder (HIGHSCORES.md Phase A),
+   * plus the near-miss pace epitaph. null = ineligible or nothing banked.
+   */
+  runRank?: (RunRankInfo & { aheadThroughMaps: number | null }) | null;
 }
 
 export function ResultScreen({
@@ -33,6 +39,7 @@ export function ResultScreen({
   runLevelsCompleted = 0,
   newlyUnlockedLoadouts = [],
   runRecap = null,
+  runRank = null,
 }: ResultScreenProps) {
   const { t } = useTranslation();
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames } = result;
@@ -219,6 +226,53 @@ export function ResultScreen({
           )}
 
         </motion.div>
+
+        {/* Ladder placement (HIGHSCORES.md): the run's banked overtime and
+            where it landed on the all-time Top 10, with the near-miss gap
+            printed as the next target. */}
+        {runRank && result.totalScore !== undefined && result.totalScore > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+            className="text-center flex flex-col items-center gap-1 pt-4 border-t border-border w-full"
+          >
+            <p className="text-muted-foreground text-sm uppercase tracking-wider">
+              {t('result.bankedOvertime')}
+            </p>
+            <p className="text-4xl font-display font-bold text-foreground">
+              {result.totalScore}h
+            </p>
+            {runRank.rank === 1 && (
+              <div className="flex items-center justify-center gap-1.5 text-sm font-bold" style={{ color: '#ffd54a', textShadow: '0 0 12px #ffd54a66' }}>
+                <Medal className="w-4 h-4" />
+                <span>{t('result.newBestRun')}</span>
+              </div>
+            )}
+            {runRank.rank !== null && runRank.rank > 1 && (
+              <>
+                <p className="text-sm font-bold" style={{ color: '#ffd54a' }}>
+                  {t('result.rankAllTime', { rank: runRank.rank })}
+                </p>
+                {runRank.gapToNext !== null && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('result.gapToNext', { hours: runRank.gapToNext, rank: runRank.rank - 1 })}
+                  </p>
+                )}
+              </>
+            )}
+            {runRank.rank === null && runRank.gapToTop10 !== null && (
+              <p className="text-xs text-muted-foreground">
+                {t('result.gapToTop10', { hours: runRank.gapToTop10 })}
+              </p>
+            )}
+            {runRank.aheadThroughMaps !== null && (
+              <p className="text-xs text-muted-foreground italic">
+                {t('result.paceEpitaph', { count: runRank.aheadThroughMaps })}
+              </p>
+            )}
+          </motion.div>
+        )}
 
         {/* Build recap: what this run WAS. Name the build from its archetype
             lean, credit the capstone, and celebrate a per-archetype best. */}

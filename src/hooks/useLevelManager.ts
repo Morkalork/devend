@@ -185,6 +185,31 @@ export function useLevelManager() {
     });
   }, []);
 
+  /**
+   * Restore a previously-played sequence (by map id) and position, for resuming
+   * a saved run. Rebuilds levelSequence from allMaps so the resumed run keeps
+   * the exact variants it was playing instead of the freshly-randomized ones.
+   * Ids no longer present in the YAML are dropped; an empty result leaves the
+   * current (random) sequence untouched.
+   */
+  const restoreSequence = useCallback((levelIds: string[], index: number) => {
+    setState(prev => {
+      const byId = new Map(prev.allMaps.map(m => [m.id, m]));
+      const sequence = levelIds
+        .map(id => byId.get(id))
+        .filter((m): m is LevelConfig => m != null);
+      // If the saved ids no longer resolve (e.g. map.yml changed between
+      // sessions) keep the current sequence but still honour the saved index,
+      // so a resume never silently drops the player back to level 1.
+      if (sequence.length === 0) {
+        const clampedIndex = Math.max(0, Math.min(index, prev.levelSequence.length - 1));
+        return { ...prev, currentLevelIndex: clampedIndex };
+      }
+      const clampedIndex = Math.max(0, Math.min(index, sequence.length - 1));
+      return { ...prev, levelSequence: sequence, currentLevelIndex: clampedIndex };
+    });
+  }, []);
+
   const currentLevel = state.levelSequence[state.currentLevelIndex] || null;
   const totalLevels = state.levelSequence.length;
   const isLastLevel = state.currentLevelIndex >= state.levelSequence.length - 1;
@@ -201,5 +226,6 @@ export function useLevelManager() {
     advanceToNextLevel,
     resetToFirstLevel,
     setLevelIndex,
+    restoreSequence,
   };
 }

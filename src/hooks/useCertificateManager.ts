@@ -284,6 +284,13 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     setRunLevelsCompleted(prev => prev + weight);
   }, []);
 
+  /** Restore the run's completed-level tally when resuming a saved run. */
+  const restoreRunProgress = useCallback((levels: number) => {
+    const safe = Math.max(0, Math.floor(levels));
+    setRunLevelsCompleted(safe);
+    prevHoursRef.current = Math.floor(safe / LEVELS_PER_HOUR);
+  }, []);
+
   /** `extraHours` is the extraCertificateHours modifier (Certification Wizard). */
   const finalizeRun = useCallback((extraHours: number = 0): number => {
     const safeExtra = Number.isFinite(extraHours) ? Math.max(0, Math.round(extraHours)) : 0;
@@ -335,6 +342,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     loadCertificates,
     resetRunProgress,
     incrementRunLevel,
+    restoreRunProgress,
     finalizeRun,
     recordMaxTierPurchase,
     checkAchievementUnlocks,

@@ -23,6 +23,9 @@ import { useLoadoutManager } from './useLoadoutManager';
 import { useActiveModifiers, mergeBonuses, GameModifiers, MULTIPLICATIVE_KEYS, ModifierSource } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
 import { useCheckpointSnapshots } from './useCheckpointSnapshots';
+import { useRunSave, RunSave } from './useRunSave';
+import { useHallOfFame } from './useHallOfFame';
+import { paceDelta, aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
@@ -60,6 +63,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     advanceToNextLevel,
     resetToFirstLevel,
     setLevelIndex,
+    restoreSequence,
   } = useLevelManager();
 
   const {
@@ -176,6 +180,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     loadCertificates,
     resetRunProgress,
     incrementRunLevel,
+    restoreRunProgress,
     finalizeRun,
     runProgress,
     certBonuses,
@@ -210,12 +215,33 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     clearCheckpoints: clearRunCheckpoints,
   } = useCheckpointSnapshots();
 
+  // Full-run persistence: written each time a map begins, cleared when the run
+  // ends or a New Game starts. Powers the welcome-screen Continue button.
+  const { hasSavedRun, saveRun, clearRun, readRun } = useRunSave();
+
+  // Hall of Fame (HIGHSCORES.md Phase A): the all-time Top 10 run ledger plus
+  // the #1 run's per-map trajectory, which Record Pace races during the run.
+  const { topRuns, bestRunTrajectory, bestScore, recordRun } = useHallOfFame();
+  // Cumulative overtime after each completed map of the CURRENT run. A ref
+  // because it's appended inside handleLevelComplete's synchronous flow and
+  // persisted via the run-save snapshot (also refreshed per render).
+  const runTrajectoryRef = useRef<number[]>([]);
+  // Debug starts (?level= / forceLevel) never file on the ledger.
+  const recordEligibleRef = useRef(true);
+  // The mid-run "new personal best" banner fires once per run.
+  const pbCelebratedRef = useRef(false);
+  // Record Pace payload for the current level-complete overlay.
+  const [levelPace, setLevelPace] = useState<{ delta: number | null; newPersonalBest: boolean } | null>(null);
+  // Where the just-finished run landed on the ladder (for the result screen).
+  const [lastRunRank, setLastRunRank] = useState<(RunRankInfo & { aheadThroughMaps: number | null }) | null>(null);
+
   const {
     stats: metaStats,
     wonLoadoutIds,
     loadoutsIntroduced,
     mapHighscores,
     encounteredBallTypeIds,
+    archetypeBests,
     recordLevelReached,
     recordFencesDrawn,
     recordPerfectLevel,
@@ -443,8 +469,49 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setDraftedLoadoutIds([]);
     setLastRunSummary(null);
     setLastRunLoadoutUnlocks([]);
+    runTrajectoryRef.current = [];
+    recordEligibleRef.current = true;
+    pbCelebratedRef.current = false;
+    setLevelPace(null);
+    setLastRunRank(null);
     resetRunProgress();
   }, [resetRunProgress]);
+
+  // Latest run snapshot, refreshed every render, so the save effect can fire
+  // exactly once per map entry (keyed on the map-entry signals below) while the
+  // payload always reflects the settled post-advance state. Reading from a ref
+  // avoids re-saving on every mid-map life/score change.
+  const runSnapshotRef = useRef<Omit<RunSave, 'version' | 'savedAt'> | null>(null);
+  runSnapshotRef.current = {
+    levelSequenceIds: levels.map(l => l.id),
+    currentLevelIndex,
+    totalScore,
+    ownedUpgradeIds,
+    currentLives,
+    livesAtLevelStart,
+    continuesRemaining,
+    cumulativeLockedBalls,
+    runLevelsCompleted,
+    carryInstantFences,
+    carrySpendFences,
+    carrySpendFenceSpeed,
+    activeDoorId: activeDoor?.id ?? null,
+    capstoneId: capstone?.id ?? null,
+    ascensionDepth,
+    draftedLoadoutIds,
+    runTrajectory: runTrajectoryRef.current,
+    recordEligible: recordEligibleRef.current,
+  };
+
+  // Persist the run whenever a new map begins (map advance or a Continue-revive
+  // remount). Keyed only on the map-entry signals; the payload is read from the
+  // ref so this writes once per map, not on every in-map state change.
+  useEffect(() => {
+    if (nav.currentScreen !== 'game') return;
+    const snap = runSnapshotRef.current;
+    if (!snap || snap.levelSequenceIds.length === 0) return;
+    saveRun(snap);
+  }, [nav.currentScreen, currentLevelIndex, gameInstanceKey, saveRun]);
 
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
     // The loadout catalogue backs the run-start draft, but a load failure
@@ -465,6 +532,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     if (levelsSuccess && upgradesSuccess) {
       resetRunScopedState();
+      // New Game discards any prior save; the fresh run re-saves on its first map.
+      clearRun();
 
       const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
       const startingLives = BASE_LIVES + certBonusLives;
@@ -475,11 +544,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
       if (forceLevel !== undefined) {
         setLevelIndex(forceLevel - 1);
+        recordEligibleRef.current = false; // debug jump: never files on the ledger
       } else {
         const certStartLevel = getCertStartingLevel();
         const queryLevel = parseInt(new URLSearchParams(window.location.search).get('level') || '0', 10);
         if (queryLevel > 0) {
           window.history.replaceState(null, '', window.location.pathname);
+          recordEligibleRef.current = false; // debug jump: never files on the ledger
         }
         const startingLevel = Math.max(certStartLevel, queryLevel || 0);
         if (startingLevel > 1) {
@@ -495,7 +566,67 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       if (skipDraft || !loadoutsIntroduced) nav.startGame();
       else nav.goToRunDraft();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, loadoutsIntroduced]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced]);
+
+  /**
+   * Resume a saved run from the welcome screen. Loads the catalogues (same as a
+   * fresh start), then restores every run-scoped field from the save and drops
+   * the player at the start of the map they were on. Doors/capstones are
+   * re-hydrated from the loaded pools by id; the exact level variants are
+   * restored via restoreSequence so the resumed maps match what was saved.
+   */
+  const handleContinueRun = useCallback(async () => {
+    const save = readRun();
+    if (!save) return;
+
+    const [levelsSuccess, upgradesSuccess] = await Promise.all([
+      loadLevels(),
+      loadUpgrades(),
+      loadCertificates(),
+      loadLoadouts(),
+      loadBallTypes(),
+      loadDoors(),
+      loadCapstones(),
+    ]);
+    if (!levelsSuccess || !upgradesSuccess) return;
+
+    setTotalScore(save.totalScore);
+    setOwnedUpgradeIds(save.ownedUpgradeIds);
+    setCurrentLives(save.currentLives);
+    setLivesAtLevelStart(save.livesAtLevelStart);
+    setContinuesRemaining(save.continuesRemaining);
+    setCumulativeLockedBalls(save.cumulativeLockedBalls);
+    setCarryInstantFences(save.carryInstantFences);
+    setCarrySpendFences(save.carrySpendFences);
+    setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
+    spentThisShopVisitRef.current = 0;
+    setAscensionDepth(save.ascensionDepth);
+    setDraftedLoadoutIds(save.draftedLoadoutIds);
+    setActiveDoor(save.activeDoorId ? getDoors().find(d => d.id === save.activeDoorId) ?? null : null);
+    setCapstone(save.capstoneId ? getCapstones().find(c => c.id === save.capstoneId) ?? null : null);
+
+    // Resuming mid-run: no intro assemble, no leftover overlays/offers.
+    setIntroAssemblePending(false);
+    setStoreClosed(false);
+    setPendingLevelScore(null);
+    setShowLevelComplete(false);
+    setPendingDeathResult(null);
+    lastDeliveredCompletionRef.current = null;
+
+    // Records: the resumed run keeps its trajectory and eligibility (saves
+    // written before Phase A default to eligible with an empty trajectory).
+    runTrajectoryRef.current = save.runTrajectory ?? [];
+    recordEligibleRef.current = save.recordEligible ?? true;
+    // Don't re-flash the PB banner if the saved run had already passed it.
+    pbCelebratedRef.current = bestScore !== null && save.totalScore > bestScore;
+    setLevelPace(null);
+    setLastRunRank(null);
+
+    restoreRunProgress(save.runLevelsCompleted);
+    restoreSequence(save.levelSequenceIds, save.currentLevelIndex);
+
+    nav.goToGame();
+  }, [readRun, loadLevels, loadUpgrades, loadCertificates, loadLoadouts, restoreRunProgress, restoreSequence, nav.goToGame, bestScore]);
 
   // End-of-run build recap: name the build from its archetype lean and score
   // the banked overtime against the dominant archetype's personal best.
@@ -519,18 +650,48 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     });
   }, [tagCounts, capstone, recordArchetypeBest]);
 
+  /**
+   * File the finished run on the Hall of Fame ledger (HIGHSCORES.md Phase A)
+   * and stash its rank / near-miss gaps / pace epitaph for the result screen.
+   * Ineligible (debug-start) and empty runs file nothing.
+   */
+  const fileRunOnLedger = useCallback((finalScore: number) => {
+    const trajectory = runTrajectoryRef.current;
+    if (!recordEligibleRef.current || finalScore <= 0 || trajectory.length === 0) {
+      setLastRunRank(null);
+      return;
+    }
+    // Epitaph + rank must read the ladder BEFORE this run is filed on it.
+    const epitaph = aheadThroughMaps(trajectory, bestRunTrajectory, finalScore, bestScore);
+    const identity = computeBuildIdentity(tagCounts);
+    const info = recordRun({
+      score: finalScore,
+      levelsCompleted: trajectory.length,
+      ascensionDepth,
+      primaryTag: identity.primary,
+      secondaryTag: identity.secondary,
+      capstoneId: capstone?.id ?? null,
+      capstoneName: capstone?.name ?? null,
+      loadoutIds: draftedLoadoutIds,
+      savedAt: Date.now(),
+    }, trajectory);
+    setLastRunRank({ ...info, aheadThroughMaps: epitaph });
+  }, [bestRunTrajectory, bestScore, tagCounts, ascensionDepth, capstone, draftedLoadoutIds, recordRun]);
+
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
     captureRunRecap(totalScore);
+    fileRunOnLedger(totalScore);
+    clearRun(); // the run is over: no Continue on the welcome screen
     nav.endGame({
       ...result,
       totalScore,
       ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
       loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
-  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap]);
+  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     // On death with a Continue banked, defer finalizing and offer a revive.
@@ -647,6 +808,21 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     const levelOvertime = baseLevelScore + highscoreBonusEarned;
 
+    // Record Pace (HIGHSCORES.md): extend this run's trajectory and race the
+    // best run at the same maps-completed point. The PB banner fires once, the
+    // moment the cumulative total passes the all-time best mid-run.
+    const cumulative = totalScore + levelOvertime;
+    const mapsCompleted = runTrajectoryRef.current.length + 1;
+    runTrajectoryRef.current = [...runTrajectoryRef.current, cumulative];
+    let pace: { delta: number | null; newPersonalBest: boolean } | null = null;
+    if (recordEligibleRef.current) {
+      const delta = paceDelta(cumulative, mapsCompleted, bestRunTrajectory, bestScore);
+      const newPersonalBest = bestScore !== null && cumulative > bestScore && !pbCelebratedRef.current;
+      if (newPersonalBest) pbCelebratedRef.current = true;
+      if (delta !== null || newPersonalBest) pace = { delta, newPersonalBest };
+    }
+    setLevelPace(pace);
+
     setTotalScore(totalScore + levelOvertime);
     setPendingLevelScore({
       ...scoreData, levelScore: levelOvertime, tierMultiplier: 1,
@@ -659,7 +835,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts, bestRunTrajectory, bestScore]);
 
   /**
    * Enter the assignment draft (mandatory 1-of-3 door pick). If the door pool
@@ -791,6 +967,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
     captureRunRecap(totalScore);
+    fileRunOnLedger(totalScore);
+    clearRun(); // retiring banks and ends the run
     nav.endGame({
       isWin: true,
       remainingPercent: pendingLevelScore?.remainingPercent || 0,
@@ -806,7 +984,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
     setPendingLevelScore(null);
-  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts, captureRunRecap]);
+  }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     setTotalScore(prev => prev - price);
@@ -1056,6 +1234,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     capstoneOffers,
     capstone,
     handleSelectCapstone,
+    // Run persistence (Continue / New Game on the welcome screen)
+    hasSavedRun,
+    handleContinueRun,
+    // Records (HIGHSCORES.md Phase A/B)
+    levelPace,
+    lastRunRank,
+    topRuns,
+    archetypeBests,
     // Callbacks
     handleStartGame,
     handleConfirmLoadout,

@@ -1,17 +1,21 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, X } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, X } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { version } from '@/lib/version';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
+  /** When a saved run exists, resumes it. Absent = no save (single Start Game button). */
+  onContinue?: () => void;
   onTutorial: () => void;
   onOptions: () => void;
   onOpenCertificateStore?: () => void;
   onLoadouts?: () => void;
+  /** Opens the Performance Review (records). Absent until a run has banked. */
+  onHallOfFame?: () => void;
   onAchievements?: () => void;
   onAdmin?: () => void;
   isLoading?: boolean;
@@ -23,10 +27,12 @@ interface WelcomeScreenProps {
 
 export function WelcomeScreen({
   onStartGame,
+  onContinue,
   onTutorial,
   onOptions,
   onOpenCertificateStore,
   onLoadouts,
+  onHallOfFame,
   onAchievements,
   onAdmin,
   isLoading,
@@ -216,15 +222,31 @@ export function WelcomeScreen({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
+          {/* Continue only appears when a saved run exists; it shimmers to mark
+              it as the recommended action. New Game is always a normal button. */}
+          {onContinue && (
+            <motion.button
+              className="arcade-button-primary arcade-button-sm shimmer rounded-lg flex items-center justify-center gap-2"
+              onClick={onContinue}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+              style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
+            >
+              {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</> : t('welcome.continueGame')}
+            </motion.button>
+          )}
           <motion.button
-            className="arcade-button-primary arcade-button-sm animate-pulse-glow rounded-lg flex items-center justify-center gap-2"
+            className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 ${onContinue ? '' : 'animate-pulse-glow'}`}
             onClick={onStartGame}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
-            style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
+            style={onContinue ? undefined : { boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
           >
-            {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</> : t('welcome.startGame')}
+            {isLoading
+              ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</>
+              : (onContinue ? t('welcome.newGame') : t('welcome.startGame'))}
           </motion.button>
           <motion.button
             className="arcade-button-primary arcade-button-sm rounded-lg"
@@ -270,6 +292,18 @@ export function WelcomeScreen({
             >
               <Backpack className="w-5 h-5" />
               {t('welcome.loadouts')}
+            </motion.button>
+          )}
+          {onHallOfFame && (
+            <motion.button
+              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
+              onClick={onHallOfFame}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+            >
+              <Medal className="w-5 h-5" />
+              {t('welcome.records')}
             </motion.button>
           )}
           {onAchievements && (() => {

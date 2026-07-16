@@ -354,8 +354,15 @@
         "title": "Total Overtime",
         "body": "Your whole run's overtime so far. It is the currency you spend in the upgrade shop between levels, and what gets banked when the run ends.",
         "tip": "Spending buys power and charges Budget Cycle boons, while a fat bank feeds Runway perks and War Chest. Your build decides which way to lean."
+      },
+      "recordPace": {
+        "title": "Record Pace",
+        "body": "Compares your total overtime right now with your best run at the same point (same number of maps completed). Past your best run's end it compares against its final score.",
+        "tip": "Behind pace? Take more risks: lock greedily and push your luck. Ahead? Protect the lead."
       }
-    }
+    },
+    "recordPace": "Record Pace",
+    "newPersonalBest": "New personal best, and you are still going!"
   },
   "notFound": {
     "message": "Oops! Page not found",
@@ -401,7 +408,13 @@
     "continueLevel": "Continue (Level {{level}})",
     "restart": "Restart",
     "playAgain": "Play Again",
-    "mainMenu": "Main Menu"
+    "mainMenu": "Main Menu",
+    "bankedOvertime": "Banked Overtime",
+    "rankAllTime": "Rank #{{rank}} all time",
+    "newBestRun": "New all time best run!",
+    "gapToNext": "{{hours}}h short of #{{rank}}",
+    "gapToTop10": "{{hours}}h short of the Top 10",
+    "paceEpitaph": "You were ahead of your best run through map {{count}}."
   },
   "topBar": {
     "clear": "CLEAR",
@@ -627,6 +640,8 @@
     "tapToStart": "Tap to start",
     "loading": "Loading...",
     "startGame": "Start Game",
+    "continueGame": "Continue",
+    "newGame": "New Game",
     "tutorial": "Tutorial",
     "options": "Options",
     "certificates": "Certificates",
@@ -636,7 +651,8 @@
     "admin": "Admin",
     "certLockedTitle": "Certificates Locked",
     "certLockedBody": "Certificates are permanent bonuses you earn by mastering upgrade families across multiple runs.\n\nReach the top tier of an upgrade family, or unlock your first certificate by playing, and this store opens up.\n\nThen spend Certificate Hours (earned every 5 levels you complete) to level certificates up for lasting effects.",
-    "certLockedGotIt": "Got it"
+    "certLockedGotIt": "Got it",
+    "records": "Records"
   },
   "loadouts": {
     "title": "Loadouts",
@@ -651,5 +667,16 @@
     "unlockedModalTitle": "Loadouts Unlocked",
     "unlockedModalBody": "You won your first run! From now on, every run starts with a loadout: a curse bundled with a blessing that shapes the whole run. Win with different loadouts to unlock more.",
     "unlockedModalDismiss": "Got It"
+  },
+  "hallOfFame": {
+    "title": "Performance Review",
+    "topRuns": "All time Top 10",
+    "emptyLadder": "No runs banked yet. Finish a run and it lands here.",
+    "mapsLabel": "{{count}} maps",
+    "depthLabel": "Depth {{depth}}",
+    "archetypeBests": "Archetype bests",
+    "deepestAscension": "Deepest Ascension",
+    "mapRecords": "Map records",
+    "back": "Back"
   }
 }

@@ -351,8 +351,15 @@
         "title": "Total övertid",
         "body": "Hela omgångens övertid hittills. Det är valutan du spenderar i butiken mellan nivåerna, och det som säkras när omgången tar slut.",
         "tip": "Att spendera köper styrka och laddar budgetcykeln, medan en fet bank matar Runway-förmånerna och War Chest. Din build avgör åt vilket håll du lutar."
+      },
+      "recordPace": {
+        "title": "Rekordtakt",
+        "body": "Jämför din samlade övertid just nu med din bästa runda vid samma punkt (samma antal avklarade kartor). Bortom din bästa rundas slut jämförs mot dess slutpoäng.",
+        "tip": "Ligger du efter? Ta större risker: lås in bollar girigt och pressa din tur. Ligger du före? Försvara ledningen."
       }
-    }
+    },
+    "recordPace": "Rekordtakt",
+    "newPersonalBest": "Nytt personbästa, och du är fortfarande igång!"
   },
   "notFound": {
     "message": "Hoppsan! Sidan hittades inte",
@@ -398,7 +405,13 @@
     "continueLevel": "Fortsätt (Nivå {{level}})",
     "restart": "Starta om",
     "playAgain": "Spela igen",
-    "mainMenu": "Huvudmeny"
+    "mainMenu": "Huvudmeny",
+    "bankedOvertime": "Sparad övertid",
+    "rankAllTime": "Plats #{{rank}} genom tiderna",
+    "newBestRun": "Ny bästa runda genom tiderna!",
+    "gapToNext": "{{hours}}h från plats #{{rank}}",
+    "gapToTop10": "{{hours}}h från topp 10",
+    "paceEpitaph": "Du låg före din bästa runda till och med karta {{count}}."
   },
   "topBar": {
     "clear": "KLART",
@@ -612,6 +625,8 @@
     "tapToStart": "Tryck för att börja",
     "loading": "Laddar...",
     "startGame": "Starta spel",
+    "continueGame": "Fortsätt",
+    "newGame": "Nytt spel",
     "tutorial": "Genomgång",
     "options": "Alternativ",
     "certificates": "Certifikat",
@@ -621,7 +636,8 @@
     "admin": "Admin",
     "certLockedTitle": "Certifikat låsta",
     "certLockedBody": "Certifikat är permanenta bonusar som du tjänar genom att bemästra uppgraderingsfamiljer över flera omgångar.\n\nNå den högsta nivån i en uppgraderingsfamilj, eller lås upp ditt första certifikat genom att spela, så öppnas den här butiken.\n\nSedan kan du spendera certifikattimmar (tjänas var 5:e nivå du klarar) för att höja certifikatens nivå och få bestående effekter.",
-    "certLockedGotIt": "Uppfattat"
+    "certLockedGotIt": "Uppfattat",
+    "records": "Rekord"
   },
   "content": {
     "upgrades": {
@@ -1159,5 +1175,16 @@
     "unlockedModalTitle": "Loadouts upplåsta",
     "unlockedModalBody": "Du vann din första omgång! Från och med nu börjar varje omgång med en loadout: en förbannelse i kombination med en välsignelse som formar hela omgången. Vinn med olika loadouts för att låsa upp fler.",
     "unlockedModalDismiss": "Uppfattat"
+  },
+  "hallOfFame": {
+    "title": "Utvecklingssamtal",
+    "topRuns": "Topp 10 genom tiderna",
+    "emptyLadder": "Inga rundor sparade ännu. Avsluta en runda så hamnar den här.",
+    "mapsLabel": "{{count}} kartor",
+    "depthLabel": "Djup {{depth}}",
+    "archetypeBests": "Bästa per arketyp",
+    "deepestAscension": "Djupaste uppstigning",
+    "mapRecords": "Kartrekord",
+    "back": "Tillbaka"
   }
 }

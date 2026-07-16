@@ -87,6 +87,10 @@ export function useScreenNavigation() {
     setCurrentScreen('achievements');
   }, []);
 
+  const goToHallOfFame = useCallback(() => {
+    setCurrentScreen('hallOfFame');
+  }, []);
+
   return {
     currentScreen,
     lastResult,
@@ -105,6 +109,7 @@ export function useScreenNavigation() {
     goToLoadouts,
     goToOptions,
     goToAchievements,
+    goToHallOfFame,
     goToAdmin,
     goToMapBuilder,
     goToAnimationTest,

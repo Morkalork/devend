@@ -9,7 +9,7 @@
 import { UpgradeTag } from '@/types/upgrade';
 
 /** Deterministic tie-break order (matches the archetype docs). */
-const TAG_ORDER: UpgradeTag[] = ['lock', 'freeze', 'bank', 'tempo', 'risk', 'safety'];
+export const TAG_ORDER: UpgradeTag[] = ['lock', 'freeze', 'bank', 'tempo', 'risk', 'safety'];
 
 export interface BuildIdentity {
   /** Dominant archetype, or null when the run never leaned anywhere. */

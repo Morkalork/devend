@@ -23,6 +23,7 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   totalBonus: { icon: Sparkles, color: 'text-success' },
   overtimeEarned: { icon: Clock, color: 'text-primary' },
   totalOvertime: { icon: Clock, color: 'text-accent-foreground' },
+  recordPace: { icon: TrendingUp, color: 'text-success' },
 };
 
 interface LevelCompleteOverlayProps {
@@ -34,9 +35,14 @@ interface LevelCompleteOverlayProps {
   buttonDelay?: number;
   /** Certs newly unlocked this level — shown before the Continue button */
   newlyUnlockedCerts?: Certificate[];
+  /**
+   * Record Pace (HIGHSCORES.md): cumulative-overtime delta vs the best run at
+   * the same maps-completed point, plus the once-per-run PB banner flag.
+   */
+  pace?: { delta: number | null; newPersonalBest: boolean } | null;
 }
 
-export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts }: LevelCompleteOverlayProps) {
+export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accentColor, buttonDelay = 900, newlyUnlockedCerts, pace }: LevelCompleteOverlayProps) {
   const { t } = useTranslation();
   const [chosen, setChosen] = useState(false);
   const [buttonReady, setButtonReady] = useState(buttonDelay === 0);
@@ -358,10 +364,60 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               <span className="text-xl sm:text-2xl font-bold text-primary">{displayLevelScore}h</span>
             </div>
 
-            <div {...hold('totalOvertime')} className="flex justify-between items-center py-2 sm:py-3 bg-accent/10 rounded-lg px-2 sm:px-3">
-              <span className="font-semibold text-foreground">{t('levelComplete.totalOvertime')}</span>
-              <span className="text-xl sm:text-2xl font-bold text-accent-foreground">{displayTotalScore}h</span>
+            {/* Total Overtime: the grand running total and the hero number of
+                this screen. Uses the live accent color + a glow so it reads as
+                the focal point (the old text-accent-foreground was near-black,
+                i.e. dark-on-dark against the faint accent tint). */}
+            <div
+              {...hold('totalOvertime')}
+              className="flex justify-between items-center py-3 sm:py-4 rounded-lg px-3 sm:px-4 border"
+              style={{
+                background: accentColor ? `${accentColor}22` : 'hsl(var(--accent) / 0.15)',
+                borderColor: accentColor ? `${accentColor}66` : 'hsl(var(--accent) / 0.4)',
+                touchAction: 'pan-y',
+              }}
+            >
+              <span className="font-bold text-foreground text-base sm:text-lg">{t('levelComplete.totalOvertime')}</span>
+              <span
+                className="text-2xl sm:text-3xl font-extrabold"
+                style={{
+                  color: accentColor || 'hsl(var(--accent))',
+                  textShadow: accentColor ? `0 0 16px ${accentColor}aa` : '0 0 16px hsl(var(--accent) / 0.65)',
+                }}
+              >
+                {displayTotalScore}h
+              </span>
             </div>
+
+            {/* Record Pace: this run vs your best run at the same point. Ahead
+                is a lead to defend, behind is a licence to take risks. */}
+            {pace && pace.delta !== null && (
+              <div {...hold('recordPace')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border px-2">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  {pace.delta >= 0
+                    ? <TrendingUp className="w-3 h-3 text-success" />
+                    : <TrendingDown className="w-3 h-3 text-destructive" />}
+                  {t('levelComplete.recordPace')}
+                </span>
+                <span className={`font-bold ${pace.delta >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {pace.delta >= 0 ? `+${pace.delta}h` : `${pace.delta}h`}
+                </span>
+              </div>
+            )}
+
+            {/* Once per run: the moment the total passes the all-time best. */}
+            {pace?.newPersonalBest && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.92 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.35, type: 'spring', stiffness: 260, damping: 18 }}
+                className="flex items-center justify-center gap-2 py-2.5 rounded-lg border font-bold text-sm"
+                style={{ borderColor: '#ffd54a66', background: '#ffd54a1a', color: '#ffd54a', textShadow: '0 0 12px #ffd54a66' }}
+              >
+                <Medal className="w-4 h-4" />
+                {t('levelComplete.newPersonalBest')}
+              </motion.div>
+            )}
 
             <div className="flex items-center justify-center gap-1.5 pt-1 text-[11px] text-muted-foreground/70">
               <Info className="w-3 h-3" />

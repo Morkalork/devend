@@ -351,8 +351,15 @@
         "title": "Horas extra totales",
         "body": "Las horas extra de toda tu partida hasta ahora. Son la moneda que gastas en la tienda de mejoras entre niveles, y lo que se asegura cuando termina la partida.",
         "tip": "Gastar compra poder y carga el ciclo presupuestario, mientras que un banco abultado alimenta los beneficios de Runway y War Chest. Tu build decide hacia dónde inclinarte."
+      },
+      "recordPace": {
+        "title": "Ritmo de récord",
+        "body": "Compara tus horas extra acumuladas ahora con tu mejor partida en el mismo punto (mismo número de mapas completados). Más allá del final de tu mejor partida, compara con su puntuación final.",
+        "tip": "¿Vas por detrás? Arriesga más: encierra bolas con avaricia y fuerza tu suerte. ¿Vas por delante? Protege la ventaja."
       }
-    }
+    },
+    "recordPace": "Ritmo de récord",
+    "newPersonalBest": "¡Nuevo récord personal, y sigues jugando!"
   },
   "notFound": {
     "message": "¡Vaya! Página no encontrada",
@@ -398,7 +405,13 @@
     "continueLevel": "Continuar (Nivel {{level}})",
     "restart": "Reiniciar",
     "playAgain": "Jugar de nuevo",
-    "mainMenu": "Menú principal"
+    "mainMenu": "Menú principal",
+    "bankedOvertime": "Horas extra acumuladas",
+    "rankAllTime": "Puesto #{{rank}} de todos los tiempos",
+    "newBestRun": "¡Nueva mejor partida de todos los tiempos!",
+    "gapToNext": "A {{hours}}h del puesto #{{rank}}",
+    "gapToTop10": "A {{hours}}h del Top 10",
+    "paceEpitaph": "Ibas por delante de tu mejor partida hasta el mapa {{count}}."
   },
   "topBar": {
     "clear": "DESPEJADO",
@@ -612,6 +625,8 @@
     "tapToStart": "Toca para empezar",
     "loading": "Cargando...",
     "startGame": "Empezar juego",
+    "continueGame": "Continuar",
+    "newGame": "Partida nueva",
     "tutorial": "Tutorial",
     "options": "Opciones",
     "certificates": "Certificados",
@@ -621,7 +636,8 @@
     "admin": "Admin",
     "certLockedTitle": "Certificados bloqueados",
     "certLockedBody": "Los certificados son bonificaciones permanentes que consigues al dominar familias de mejoras a lo largo de varias partidas.\n\nAlcanza el nivel máximo de una familia de mejoras, o desbloquea tu primer certificado jugando, y esta tienda se abrirá.\n\nLuego gasta horas de certificado (se ganan cada 5 niveles que completas) para subir de nivel los certificados y obtener efectos duraderos.",
-    "certLockedGotIt": "Entendido"
+    "certLockedGotIt": "Entendido",
+    "records": "Récords"
   },
   "content": {
     "upgrades": {
@@ -1159,5 +1175,16 @@
     "unlockedModalTitle": "Equipamientos desbloqueados",
     "unlockedModalBody": "¡Ganaste tu primera partida! A partir de ahora, cada partida empieza con un equipamiento: una maldición combinada con una bendición que define toda la partida. Gana con equipamientos distintos para desbloquear más.",
     "unlockedModalDismiss": "Entendido"
+  },
+  "hallOfFame": {
+    "title": "Evaluación de desempeño",
+    "topRuns": "Top 10 de todos los tiempos",
+    "emptyLadder": "Aún no hay partidas registradas. Termina una partida y aparecerá aquí.",
+    "mapsLabel": "{{count}} mapas",
+    "depthLabel": "Profundidad {{depth}}",
+    "archetypeBests": "Mejores por arquetipo",
+    "deepestAscension": "Ascensión más profunda",
+    "mapRecords": "Récords por mapa",
+    "back": "Volver"
   }
 }
