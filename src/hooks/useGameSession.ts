@@ -221,7 +221,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Hall of Fame (HIGHSCORES.md Phase A): the all-time Top 10 run ledger plus
   // the #1 run's per-map trajectory, which Record Pace races during the run.
-  const { topRuns, bestRunTrajectory, bestScore, recordRun } = useHallOfFame();
+  const { topRuns, bestRunTrajectory, monthlyBests, bestScore, recordRun } = useHallOfFame();
   // Cumulative overtime after each completed map of the CURRENT run. A ref
   // because it's appended inside handleLevelComplete's synchronous flow and
   // persisted via the run-save snapshot (also refreshed per render).
@@ -233,7 +233,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Record Pace payload for the current level-complete overlay.
   const [levelPace, setLevelPace] = useState<{ delta: number | null; newPersonalBest: boolean } | null>(null);
   // Where the just-finished run landed on the ladder (for the result screen).
-  const [lastRunRank, setLastRunRank] = useState<(RunRankInfo & { aheadThroughMaps: number | null }) | null>(null);
+  const [lastRunRank, setLastRunRank] = useState<(RunRankInfo & { aheadThroughMaps: number | null; monthBest: boolean }) | null>(null);
 
   const {
     stats: metaStats,
@@ -1237,10 +1237,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Run persistence (Continue / New Game on the welcome screen)
     hasSavedRun,
     handleContinueRun,
-    // Records (HIGHSCORES.md Phase A/B)
+    // Records (HIGHSCORES.md Phase A/B/C)
     levelPace,
     lastRunRank,
     topRuns,
+    monthlyBests,
     archetypeBests,
     // Callbacks
     handleStartGame,

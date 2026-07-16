@@ -411,7 +411,8 @@
     "newBestRun": "Ny bästa runda genom tiderna!",
     "gapToNext": "{{hours}}h från plats #{{rank}}",
     "gapToTop10": "{{hours}}h från topp 10",
-    "paceEpitaph": "Du låg före din bästa runda till och med karta {{count}}."
+    "paceEpitaph": "Du låg före din bästa runda till och med karta {{count}}.",
+    "employeeOfMonth": "Månadens anställd!"
   },
   "topBar": {
     "clear": "KLART",
@@ -423,7 +424,8 @@
     "lives_one": "{{count}} liv kvar",
     "lives_other": "{{count}} liv kvar",
     "scopeCreepValue": "+{{percent}}%",
-    "scopeCreepTitle": "Scope creep: bollarna rör sig {{percent}}% snabbare"
+    "scopeCreepTitle": "Scope creep: bollarna rör sig {{percent}}% snabbare",
+    "runPace": "{{delta}} mot bästa rundan"
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
@@ -1185,6 +1187,7 @@
     "archetypeBests": "Bästa per arketyp",
     "deepestAscension": "Djupaste uppstigning",
     "mapRecords": "Kartrekord",
-    "back": "Tillbaka"
+    "back": "Tillbaka",
+    "employeeOfMonth": "Månadens anställd"
   }
 }

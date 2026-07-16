@@ -414,7 +414,8 @@
     "newBestRun": "New all time best run!",
     "gapToNext": "{{hours}}h short of #{{rank}}",
     "gapToTop10": "{{hours}}h short of the Top 10",
-    "paceEpitaph": "You were ahead of your best run through map {{count}}."
+    "paceEpitaph": "You were ahead of your best run through map {{count}}.",
+    "employeeOfMonth": "Employee of the Month!"
   },
   "topBar": {
     "clear": "CLEAR",
@@ -426,7 +427,8 @@
     "lives_one": "{{count}} life remaining",
     "lives_other": "{{count}} lives remaining",
     "scopeCreepValue": "+{{percent}}%",
-    "scopeCreepTitle": "Scope creep: balls moving {{percent}}% faster"
+    "scopeCreepTitle": "Scope creep: balls moving {{percent}}% faster",
+    "runPace": "{{delta}} vs best run"
   },
   "shipEarlyBar": {
     "title": "Ship Early: clear the map before the bar runs out for bonus overtime",
@@ -677,6 +679,7 @@
     "archetypeBests": "Archetype bests",
     "deepestAscension": "Deepest Ascension",
     "mapRecords": "Map records",
-    "back": "Back"
+    "back": "Back",
+    "employeeOfMonth": "Employee of the Month"
   }
 }

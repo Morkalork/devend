@@ -23,9 +23,10 @@ interface ResultScreenProps {
   runRecap?: RunRecap | null;
   /**
    * Where this run landed on the all-time ladder (HIGHSCORES.md Phase A),
-   * plus the near-miss pace epitaph. null = ineligible or nothing banked.
+   * plus the near-miss pace epitaph and the Employee-of-the-Month crown.
+   * null = ineligible or nothing banked.
    */
-  runRank?: (RunRankInfo & { aheadThroughMaps: number | null }) | null;
+  runRank?: (RunRankInfo & { aheadThroughMaps: number | null; monthBest?: boolean }) | null;
 }
 
 export function ResultScreen({
@@ -265,6 +266,14 @@ export function ResultScreen({
               <p className="text-xs text-muted-foreground">
                 {t('result.gapToTop10', { hours: runRank.gapToTop10 })}
               </p>
+            )}
+            {/* Employee of the Month: the monthly crown can be won even when
+                the all-time Top 10 is out of reach (the comeback ladder). */}
+            {runRank.monthBest && runRank.rank !== 1 && (
+              <div className="flex items-center justify-center gap-1.5 text-sm font-bold" style={{ color: '#ffb347', textShadow: '0 0 12px #ffb34766' }}>
+                <Award className="w-4 h-4" />
+                <span>{t('result.employeeOfMonth')}</span>
+              </div>
             )}
             {runRank.aheadThroughMaps !== null && (
               <p className="text-xs text-muted-foreground italic">

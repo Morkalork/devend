@@ -50,6 +50,12 @@ export function insertRun(
   };
 }
 
+/** Employee-of-the-Month ledger key ("YYYY-MM", local time) for a timestamp. */
+export function monthKey(timestamp: number): string {
+  const d = new Date(timestamp);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
 /**
  * Record Pace: the current run's cumulative overtime after `mapsCompleted`
  * maps, minus the best run at the same point. Beyond the best run's length the

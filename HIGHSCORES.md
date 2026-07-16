@@ -86,16 +86,19 @@ Welcome-screen "Records" entry (appears once a run has banked), screen title
 - **Deepest Ascension** — tracked today, shown nowhere.
 - **Map records** — the 35 `mapHighscores` as a browsable list. The existing
   1.25x beat-the-record bonus + Benchmarking bar already monetize the chase.
-Still open from Phase B: the **Benchmarking** upgrade gaining a persistent
-top-bar chip with the live run-pace delta (today it only shows per-map pace),
-and a lifetime-stats flavor footer.
+Also shipped: the **Benchmarking** upgrade shows a persistent top-bar chip
+with the run-pace delta as of the last completed map, next to its per-map
+record bar. Still open from Phase B: a lifetime-stats flavor footer.
 
-### 5. Employee of the Month (Phase C)
+### 5. Employee of the Month (Phase C, shipped)
 
 Monthly-reset best run, past months archived as plaques. All-time bests
 eventually calcify and shut lapsed players out; a monthly board means every
 1st of the month there's a fresh, winnable crown. Same score, second ledger
-keyed by `YYYY-MM`.
+keyed by `YYYY-MM` (`monthlyBests` in the hall state). The result screen
+celebrates taking the month's crown (suppressed when the run is also the new
+all-time #1, which dominates); the Performance Review screen shows the
+plaques, newest first.
 
 ### 6. Daily Stand-up (Phase D)
 
@@ -122,7 +125,7 @@ seed exists, and strictly opt-in.
 | Phase | Contents | Status |
 |---|---|---|
 | A | Ledger + trajectory, Record Pace row, PB banner, rank/gap + epitaph on result | **shipped** |
-| B | Performance Review screen | **shipped** (Benchmarking run-pace chip still open) |
-| C | Employee of the Month | designed |
+| B | Performance Review screen + Benchmarking run-pace chip | **shipped** |
+| C | Employee of the Month | **shipped** |
 | D | Daily Stand-up (seeded runs) | designed |
 | E | Share card, real leaderboards | optional |

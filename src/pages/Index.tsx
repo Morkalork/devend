@@ -189,6 +189,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 cumulativeLockedBalls={session.cumulativeLockedBalls}
                 ascensionDepth={session.ascensionDepth}
                 mapHighscores={session.mapHighscores}
+                runPaceDelta={session.levelPace?.delta ?? null}
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
                 introAssemble={session.introAssemblePending}
@@ -296,6 +297,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             {navigation.currentScreen === 'hallOfFame' && (
               <HallOfFameScreen
                 topRuns={session.topRuns}
+                monthlyBests={session.monthlyBests}
                 archetypeBests={session.archetypeBests}
                 mapHighscores={session.mapHighscores}
                 metaStats={session.metaStats}

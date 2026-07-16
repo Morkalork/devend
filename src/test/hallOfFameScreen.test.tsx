@@ -32,6 +32,7 @@ describe("HallOfFameScreen", () => {
     render(
       <HallOfFameScreen
         topRuns={runs}
+        monthlyBests={{ "2026-07": runs[0], "2026-06": runs[1] }}
         archetypeBests={{ lock: 612, freeze: 200 }}
         mapHighscores={{ "level-1": 34, "level-10": 61, "level-2b": 40 }}
         metaStats={{ ...DEFAULT_META_STATS, deepestAscension: 2 }}
@@ -40,18 +41,23 @@ describe("HallOfFameScreen", () => {
     );
 
     expect(screen.getByText("#1")).toBeTruthy();
-    // 612h appears on the ladder AND as the lock archetype best.
-    expect(screen.getAllByText("612h").length).toBe(2);
-    expect(screen.getByText("431h")).toBeTruthy();
+    // 612h appears on the ladder, as the lock archetype best, and July's plaque.
+    expect(screen.getAllByText(/^612h/).length).toBe(3);
+    // 431h: ladder row + June's plaque.
+    expect(screen.getAllByText(/^431h/).length).toBe(2);
     expect(screen.getByText("Golden Handshake")).toBeTruthy();
     expect(screen.getByText(/Depth 1/)).toBeTruthy();
-    // Generalist fallback for the tagless run.
-    expect(screen.getByText(/Generalist/i)).toBeTruthy();
+    // Generalist fallback for the tagless run (ladder + its June plaque).
+    expect(screen.getAllByText(/Generalist/i).length).toBeGreaterThan(0);
     // Archetype grid shows the empty slots too (6 tags, 2 with values).
     expect(screen.getByText("200h")).toBeTruthy();
     expect(screen.getAllByText("-").length).toBe(4);
     // Deepest ascension section.
     expect(screen.getByText("Deepest Ascension")).toBeTruthy();
+    // Employee-of-the-Month plaques, newest month first (July before June).
+    expect(screen.getByText("Employee of the Month")).toBeTruthy();
+    const months = screen.getAllByText(/^(July|June) 2026$/).map(e => e.textContent);
+    expect(months).toEqual(["July 2026", "June 2026"]);
     // Map records, naturally sorted (level-2b before level-10).
     const ids = screen.getAllByText(/^level-/).map(e => e.textContent);
     expect(ids).toEqual(["level-1", "level-2b", "level-10"]);

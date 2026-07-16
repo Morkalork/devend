@@ -16,6 +16,8 @@ import { TagChip } from './TagChip';
 
 interface HallOfFameScreenProps {
   topRuns: RunLedgerEntry[];
+  /** Employee of the Month: best run per "YYYY-MM" (HIGHSCORES.md Phase C). */
+  monthlyBests?: Record<string, RunLedgerEntry>;
   archetypeBests: Record<string, number>;
   mapHighscores: Record<string, number>;
   metaStats: MetaProgressionStats;
@@ -28,6 +30,7 @@ const RANK_COLORS = ['#ffd54a', '#c0c8d4', '#d0925a'];
 
 export function HallOfFameScreen({
   topRuns,
+  monthlyBests = {},
   archetypeBests,
   mapHighscores,
   metaStats,
@@ -50,6 +53,14 @@ export function HallOfFameScreen({
   // Map records in natural level order (level-2 before level-10).
   const mapRecords = Object.entries(mapHighscores)
     .sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }));
+
+  // Employee-of-the-Month plaques, newest month first ("YYYY-MM" keys sort
+  // lexicographically). The month label is localized from the key.
+  const plaques = Object.entries(monthlyBests).sort(([a], [b]) => b.localeCompare(a));
+  const monthLabel = (key: string) => {
+    const [y, m] = key.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString(i18n.language, { year: 'numeric', month: 'long' });
+  };
 
   return (
     <>
@@ -151,6 +162,37 @@ export function HallOfFameScreen({
               })}
             </div>
           </section>
+
+          {/* Employee of the Month plaques: one crown per calendar month, so
+              there is always a fresh, winnable ladder on the 1st. */}
+          {plaques.length > 0 && (
+            <section className="w-full">
+              <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                {t('hallOfFame.employeeOfMonth')}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {plaques.map(([month, run], i) => (
+                  <div
+                    key={month}
+                    className="rounded-lg border px-3 py-2 flex items-center gap-3"
+                    style={{
+                      borderColor: i === 0 ? '#ffb34766' : 'hsl(var(--border))',
+                      background: i === 0 ? '#ffb34712' : 'hsl(var(--card) / 0.5)',
+                    }}
+                  >
+                    <Award className="w-5 h-5 shrink-0" style={{ color: '#ffb347' }} />
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground capitalize">{monthLabel(month)}</p>
+                      <p className="text-sm font-display font-bold tabular-nums">
+                        {run.score}h
+                        <span className="ml-2 font-sans font-normal text-xs text-muted-foreground">{buildName(run)}</span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* Deepest ascension */}
           {metaStats.deepestAscension > 0 && (

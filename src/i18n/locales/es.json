@@ -411,7 +411,8 @@
     "newBestRun": "¡Nueva mejor partida de todos los tiempos!",
     "gapToNext": "A {{hours}}h del puesto #{{rank}}",
     "gapToTop10": "A {{hours}}h del Top 10",
-    "paceEpitaph": "Ibas por delante de tu mejor partida hasta el mapa {{count}}."
+    "paceEpitaph": "Ibas por delante de tu mejor partida hasta el mapa {{count}}.",
+    "employeeOfMonth": "¡Empleado del mes!"
   },
   "topBar": {
     "clear": "DESPEJADO",
@@ -423,7 +424,8 @@
     "lives_one": "{{count}} vida restante",
     "lives_other": "{{count}} vidas restantes",
     "scopeCreepValue": "+{{percent}}%",
-    "scopeCreepTitle": "Corrupción del alcance: bolas un {{percent}}% más rápidas"
+    "scopeCreepTitle": "Corrupción del alcance: bolas un {{percent}}% más rápidas",
+    "runPace": "{{delta}} vs. tu mejor partida"
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",
@@ -1185,6 +1187,7 @@
     "archetypeBests": "Mejores por arquetipo",
     "deepestAscension": "Ascensión más profunda",
     "mapRecords": "Récords por mapa",
-    "back": "Volver"
+    "back": "Volver",
+    "employeeOfMonth": "Empleado del mes"
   }
 }

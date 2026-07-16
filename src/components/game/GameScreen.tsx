@@ -75,6 +75,8 @@ interface GameScreenProps {
   ascensionDepth?: number;
   /** Best score per map id, for the Benchmarking highscore bar (#45). */
   mapHighscores?: Record<string, number>;
+  /** Run-pace delta vs the best run (HIGHSCORES.md); rides Benchmarking. */
+  runPaceDelta?: number | null;
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
@@ -124,6 +126,7 @@ export function GameScreen({
   cumulativeLockedBalls = 0,
   ascensionDepth = 0,
   mapHighscores,
+  runPaceDelta = null,
   activeLoadouts = [],
   fenceDurability = null,
   showBallSpeeds = false,
@@ -324,6 +327,7 @@ export function GameScreen({
             showHighscoreBar={showHighscoreBar}
             highscoreCurrent={projectedScore}
             highscoreTarget={highscoreTarget}
+            runPaceDelta={runPaceDelta}
             onExpand={() => setTopPanelOpen(true)}
           />
         </div>

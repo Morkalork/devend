@@ -71,4 +71,35 @@ describe("useHallOfFame", () => {
     expect(result.current.topRuns).toEqual([]);
     expect(result.current.bestScore).toBeNull();
   });
+
+  describe("Employee of the Month", () => {
+    const inMonth = (score: number, iso: string) => ({ ...entry(score), savedAt: new Date(iso).getTime() });
+
+    it("the first run of a month takes the crown; only a higher score dethrones it", () => {
+      const { result } = renderHook(() => useHallOfFame());
+      let a: { monthBest: boolean }, b: { monthBest: boolean }, c: { monthBest: boolean };
+      act(() => { a = result.current.recordRun(inMonth(300, "2026-07-10T12:00:00"), [300]); });
+      act(() => { b = result.current.recordRun(inMonth(250, "2026-07-20T12:00:00"), [250]); });
+      act(() => { c = result.current.recordRun(inMonth(350, "2026-07-30T12:00:00"), [350]); });
+
+      expect(a!.monthBest).toBe(true);   // founded the month
+      expect(b!.monthBest).toBe(false);  // below the crown
+      expect(c!.monthBest).toBe(true);   // dethroned it
+      expect(result.current.monthlyBests["2026-07"].score).toBe(350);
+    });
+
+    it("months are separate ladders and persist across reloads", () => {
+      const first = renderHook(() => useHallOfFame());
+      act(() => { first.result.current.recordRun(inMonth(500, "2026-06-15T12:00:00"), [500]); });
+      // A weaker August run still crowns August despite June's 500.
+      let aug: { monthBest: boolean };
+      act(() => { aug = first.result.current.recordRun(inMonth(200, "2026-08-02T12:00:00"), [200]); });
+      expect(aug!.monthBest).toBe(true);
+      first.unmount();
+
+      const second = renderHook(() => useHallOfFame());
+      expect(second.result.current.monthlyBests["2026-06"].score).toBe(500);
+      expect(second.result.current.monthlyBests["2026-08"].score).toBe(200);
+    });
+  });
 });
