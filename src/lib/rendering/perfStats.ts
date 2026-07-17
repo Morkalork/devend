@@ -92,6 +92,17 @@ function pick(msPeak: number): string {
  * returns early on normal frames), so it sits on top and is independent of the
  * render function's control flow.
  */
+/**
+ * JS heap readout for the perf HUD (Chromium-only performance.memory; other
+ * engines show "n/a"). Used to catch slow leaks live: watch this while the
+ * game idles - a healthy session sawtooths in place, a leak climbs steadily.
+ */
+export function heapLine(): string {
+  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number; jsHeapSizeLimit: number } }).memory;
+  if (!mem) return "n/a";
+  return `${Math.round(mem.usedJSHeapSize / 1048576)}/${Math.round(mem.jsHeapSizeLimit / 1048576)}MB`;
+}
+
 export function drawPerfOverlay(ctx: CanvasRenderingContext2D, game: CanvasGameState): void {
   const frameAvg = _frameMs.avg();
   const framePeak = _frameMs.max();
@@ -109,6 +120,7 @@ export function drawPerfOverlay(ctx: CanvasRenderingContext2D, game: CanvasGameS
     `phys  ${f1(physAvg)}  peak ${f1(physPeak)}`,
     `rend  ${f1(rendAvg)}  peak ${f1(rendPeak)}`,
     `balls ${_balls}   steps ${_steps}`,
+    `heap  ${heapLine()}`,
   ];
 
   const { left, top, scale } = game.boardRect;

@@ -24,11 +24,11 @@ import { BALL_DANGER_SPEED, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 import { getRainGlyph } from "../rainGlyphCache";
-import { getFrameStats } from "../perfStats";
+import { getFrameStats, heapLine } from "../perfStats";
 import { flameTonguesForCount } from "../renderFrame";
 import { BallLayer } from "./pixiBalls";
 import { EffectsLayer, DissolveLayer, dashedLine } from "./pixiEffects";
-import { clearCanvasTextures, clearGlowTextures, glowTexture, sweepCanvasTextures, textureFor, hashStr, mulberry } from "./textures";
+import { canvasTextureCount, clearCanvasTextures, clearGlowTextures, glowTexture, sweepCanvasTextures, textureFor, hashStr, mulberry } from "./textures";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -963,7 +963,9 @@ export class PixiGameRenderer {
     }
     const s = getFrameStats();
     this.perfText.visible = true;
-    this.perfText.text = `pixi | render avg ${s.renderAvg.toFixed(2)}ms peak ${s.renderPeak.toFixed(2)}ms | phys peak ${s.physPeak.toFixed(2)}ms | n=${s.samples}`;
+    // heap + tex: leak canaries. A healthy idle session sawtooths in place;
+    // a steady climb in either while idling is a leak worth reporting.
+    this.perfText.text = `pixi | render avg ${s.renderAvg.toFixed(2)}ms peak ${s.renderPeak.toFixed(2)}ms | phys peak ${s.physPeak.toFixed(2)}ms | n=${s.samples} | heap ${heapLine()} | tex ${canvasTextureCount()}`;
   }
 
   destroy(): void {

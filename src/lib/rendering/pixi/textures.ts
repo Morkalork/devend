@@ -84,6 +84,11 @@ export function sweepCanvasTextures(): void {
   }
 }
 
+/** Live canvas-texture count (perf HUD: a steady climb here means a leak). */
+export function canvasTextureCount(): number {
+  return _canvasTextures.size;
+}
+
 /** Drop every canvas-backed texture (GPU side); the canvases stay untouched. */
 export function clearCanvasTextures(): void {
   for (const entry of _canvasTextures.values()) releaseEntry(entry);
