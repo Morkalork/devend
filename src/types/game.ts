@@ -137,6 +137,9 @@ export interface LockFlashState {
    *  (tutorial ball-types intel). Draws a rising "Info Unlocked" flash above the
    *  ball on top of the usual lock animation. */
   firstEncounter: boolean;
+  /** True when the lock graded SUPERIOR (tight pocket; scoring-config.yml
+   *  lockQuality). Draws a rising "Superior Lock" label like firstEncounter. */
+  superior: boolean;
 }
 
 export interface DissolveTile {
@@ -244,6 +247,10 @@ export interface LevelScoreData {
   // Lock bonus from capturing balls
   lockBonus?: number;
   lockedBallsCount?: number;
+  // Superior locks (tight pockets): count and their share of lockBonus, for
+  // the results screen's Locks / Superior Locks split
+  superiorLockCount?: number;
+  superiorLockBonus?: number;
   // Bonus from smashing breakable objects (issue #38)
   breakBonus?: number;
   // Ship Early tempo bonus (folded under the cap like lock/push/break)

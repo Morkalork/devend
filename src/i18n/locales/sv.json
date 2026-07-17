@@ -243,6 +243,7 @@
     "bottomBarTutorialTitle": "Den nedre listen",
     "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska.",
     "infoUnlocked": "Info upplåst",
+    "superiorLock": "Överlägset lås!",
     "pickupFork": "Bollen delades!",
     "pickupCapRaise": "Tak +{n}h",
     "pickupFreeze": "Frysning +1",
@@ -271,6 +272,7 @@
     "baseOvertime": "Bas-övertid",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Trådlås ({{count}})",
+    "superiorLocks": "Överlägsna lås ({{count}})",
     "pushBonus": "Pressbonus",
     "pickupBonus": "Power-up-bonus",
     "shipEarly": "Tidig leverans ({{seconds}}s)",
@@ -310,8 +312,13 @@
       },
       "threadLocks": {
         "title": "Trådlås",
-        "body": "Du låser en boll genom att stänga in den i en egen liten ficka på brädet, avskuren från allt annat. Varje låst boll betalar sitt låsvärde, och tuffare bolltyper betalar mer. Att fånga flera bollar med ett enda snitt multiplicerar hela utbetalningen med antalet: 2 på en gång betalar dubbelt, 3 betalar tredubbelt.",
+        "body": "Du låser en boll genom att stänga in den i en egen liten ficka på brädet, avskuren från allt annat. Varje låst boll betalar sitt låsvärde, och tuffare bolltyper betalar mer. Att fånga flera bollar med ett enda snitt multiplicerar hela utbetalningen med antalet: 2 på en gång betalar dubbelt, 3 betalar tredubbelt. Stänger du in en boll i en extra trång ficka blir det ett överlägset lås, som betalar dubbelt.",
         "tip": "Lås en grön pengaboll tidigt: den tredubblar vad varje senare lås på banan betalar. Valla sedan ihop bollarna och stäng ett snitt runt hela gruppen."
+      },
+      "superiorLocks": {
+        "title": "Överlägsna lås",
+        "body": "Ett överlägset lås är ett lås med hantverk: fickan du stängde in bollen i var långt under halva storleken som normalt räcker för ett lås. Överlägsna lås betalar dubbelt låsvärde, och multiplikatorer från pengabollar, frysning och multifångst staplas ovanpå.",
+        "tip": "Lägg ditt förseglande snitt så nära bollen du vågar. En rymlig, slarvig ficka ger bara standardvärdet; den trånga buren är där pengarna finns."
       },
       "breakBonus": {
         "title": "Rivningsbonus",
@@ -332,7 +339,6 @@
         "title": "Power-up-bonus",
         "body": "Övertid från power-up-symboler du stängde in med ett lås. En symbol betalar bara när en boll låses i fickan som håller den: fångar du symbolens yta utan boll går den förlorad, och ohämtade symboler försvinner av sig själva.",
         "tip": "Valla en boll mot symbolen innan du förseglar fickan. Symbolövertid betalas efter taket per bana, så den räknas alltid.",
-        "claimedLabel": "Plockade på denna karta",
         "effects": {
           "overtime": {
             "name": "Övertid +{{value}}h:",

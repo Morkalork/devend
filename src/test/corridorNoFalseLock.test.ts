@@ -73,7 +73,7 @@ function makeGame(level: LevelConfig): CanvasGameState {
     levelClearedTime: 0, shimmerStart: 0, shimmerFrozen: false, gameLoopFn: null,
     isRecovering: false, recoveryEndTime: 0, initialSamplePoints: data.initialSamplePoints,
     frozenBallId: null, frozenBallVelocity: null, frozenBallPosition: null,
-    lockedBallsCount: 0, lockBonus: 0, moneyMultiplier: 1, ballSpeedScale: 1,
+    lockedBallsCount: 0, lockBonus: 0, superiorLockCount: 0, superiorLockBonus: 0, moneyMultiplier: 1, ballSpeedScale: 1,
     assimilations: new Map(), dissolve: null, bonusCutCells: new Set(),
     lockWinThresholdPercent: BALL_WON_REGION_THRESHOLD, lockMinRegionCells: 0,
     fenceDurability: null, pendingWallBreaks: [], destructibles: data.destructibles,

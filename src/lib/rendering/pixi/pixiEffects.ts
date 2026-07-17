@@ -60,6 +60,7 @@ export class EffectsLayer {
   private lockBursts = new Container();
   private lockDust = new Graphics();
   private infoTexts = new Map<string, Text>();
+  private superiorTexts = new Map<string, Text>();
   private preview = new Graphics();
   private swipe = new Graphics();
   private trajectory = new Graphics();
@@ -204,6 +205,7 @@ export class EffectsLayer {
     this.lockDust.clear();
     let burstIdx = 0;
     const liveInfo = new Set<string>();
+    const liveSuperior = new Set<string>();
 
     for (const [key, flash] of game.assimilations) {
       if (flash.contours.length === 0) continue;
@@ -335,6 +337,37 @@ export class EffectsLayer {
         const tp = w2s(flash.centroid.x, flash.centroid.y - 40 - rise);
         label.position.set(tp.x, tp.y);
       }
+
+      // Superior lock (tight pocket): same rising-label treatment in gold.
+      // When the first-encounter label is also up, this one sits below it.
+      if (flash.superior && elapsed < INFO_UNLOCKED_DURATION) {
+        liveSuperior.add(key);
+        let label = this.superiorTexts.get(key);
+        if (!label) {
+          label = new Text({
+            text: rctx.superiorLockLabel ?? "Superior Lock!",
+            style: new TextStyle({
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: Math.max(11, Math.round(13 * scale)),
+              fontWeight: "bold",
+              fill: "#ffd54a",
+            }),
+          });
+          label.anchor.set(0.5, 1);
+          this.container.addChild(label);
+          this.superiorTexts.set(key, label);
+        }
+        const FADE_IN_MS = 150, FADE_OUT_MS = 500, RISE_WORLD = 55;
+        const fadeIn = Math.min(1, elapsed / FADE_IN_MS);
+        const fadeOut = elapsed > INFO_UNLOCKED_DURATION - FADE_OUT_MS
+          ? Math.max(0, (INFO_UNLOCKED_DURATION - elapsed) / FADE_OUT_MS)
+          : 1;
+        label.alpha = Math.min(fadeIn, fadeOut);
+        const rise = RISE_WORLD * (elapsed / INFO_UNLOCKED_DURATION);
+        const yOff = flash.firstEncounter ? 18 : 40;
+        const tp = w2s(flash.centroid.x, flash.centroid.y - yOff - rise);
+        label.position.set(tp.x, tp.y);
+      }
     }
 
     for (let i = burstIdx; i < this.burstPool.length; i++) this.burstPool[i].visible = false;
@@ -342,6 +375,12 @@ export class EffectsLayer {
       if (!liveInfo.has(key)) {
         label.destroy();
         this.infoTexts.delete(key);
+      }
+    }
+    for (const [key, label] of this.superiorTexts) {
+      if (!liveSuperior.has(key)) {
+        label.destroy();
+        this.superiorTexts.delete(key);
       }
     }
   }
@@ -525,6 +564,8 @@ export class EffectsLayer {
   destroy(): void {
     for (const [, label] of this.infoTexts) label.destroy();
     this.infoTexts.clear();
+    for (const [, label] of this.superiorTexts) label.destroy();
+    this.superiorTexts.clear();
     for (const [, label] of this.pickupTexts) label.destroy();
     this.pickupTexts.clear();
     this.pickupSprites.clear(); // sprites are children — destroyed below

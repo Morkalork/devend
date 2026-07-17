@@ -17,8 +17,9 @@ pricing:
   # Keeps the flat per-map income scarce late-run. 1 disables inflation.
   blockInflation: 1.35
   # Factors are tuned against the lock-centric economy: base points is 20, so
-  # a Junior costs 40h. A no-lock clear (20h) can never afford one; locking
-  # the map's balls (10h+ each, see scoring-config.yml lockValue) can.
+  # a Junior costs 40h. A no-lock clear (20h) can never afford one, and even a
+  # sloppy lock (12h, see scoring-config.yml lockValue) leaves you short; a
+  # SUPERIOR lock (tight pocket, 24h) is what buys the first hire.
   tierFactor:
     Junior: 2.0
     Senior: 2.7

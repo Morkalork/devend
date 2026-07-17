@@ -427,6 +427,7 @@ export function triggerLevelComplete(
         fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
         extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
         lockedBallsCount: game.lockedBallsCount,
+        superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
         breakBonus: game.breakBonus,
         shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
         pickupBonus: game.pickupOvertime || undefined,

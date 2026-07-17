@@ -115,6 +115,11 @@ export interface CanvasGameState {
   /** Number of balls locked this level (for lock-bonus multiplier). */
   lockedBallsCount: number;
   lockBonus: number;
+  /** Of lockedBallsCount, how many graded SUPERIOR (tight pocket; see
+   *  scoring-config.yml lockQuality). */
+  superiorLockCount: number;
+  /** Of lockBonus, the hours earned by superior locks (for the results split). */
+  superiorLockBonus: number;
   /** Green "money ball" multiplier applied to subsequent locks this map (default 1). */
   moneyMultiplier: number;
   /** ballSpeedMultiplier captured at map init — scales ability speed constants. */
@@ -132,6 +137,9 @@ export interface CanvasGameState {
   // ── Lock rule (configurable, from game-config.yml `lock:`) ─────────────
   /** A ball locks when its region is <= this % of the win denominator. */
   lockWinThresholdPercent: number;
+  /** The BASE threshold before upgrade bonuses (lockThresholdBonus). Superior
+   *  locks grade against this, so widening the lock bar never widens theirs. */
+  lockBaseThresholdPercent: number;
   /** A region with <= this many cells always locks its ball, ignoring the %
    *  (0 = disabled). Kills balls bouncing forever in a tiny sliver. */
   lockMinRegionCells: number;

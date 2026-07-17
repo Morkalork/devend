@@ -19,7 +19,7 @@ import { LockDustParticle } from "@/types/game";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
-import { getLockValue } from "@/lib/scoring";
+import { getLockValue, getLockQuality } from "@/lib/scoring";
 import { claimPickupsInPocket } from "@/lib/pickups";
 
 /**
@@ -72,6 +72,9 @@ export function checkAndUpdateBallWonStates(
   let anyBallWon = false;
   const prevLockedCount = game.lockedBallsCount;
   const wonThisPass: typeof game.balls = [];
+  /** Balls whose lock graded SUPERIOR this pass (tight pocket). */
+  const superiorIds = new Set<string>();
+  const lockQuality = getLockQuality();
   const gridRegions = findGridRegions(game.spaceGrid);
   const gridRegionMap = buildGridRegionMap(gridRegions);
 
@@ -114,6 +117,16 @@ export function checkAndUpdateBallWonStates(
     if (preCaptureCells && !isRegionTrulySealed(game.spaceGrid, preCaptureCells, ballRegion.cellIndices)) {
       continue;
     }
+
+    // Grade the lock: a pocket at most superiorThresholdFraction of the BASE
+    // threshold is a SUPERIOR lock and pays superiorMultiplier below. Graded
+    // against the config's base threshold, not the upgrade-widened one, so
+    // lockThresholdBonus never also widens the superior bar. A sliver-floor
+    // lock is by definition tiny and always grades superior.
+    const baseThreshold = game.lockBaseThresholdPercent ?? threshold;
+    const isSuperior = lockedBySliver
+      || percentage <= baseThreshold * lockQuality.superiorThresholdFraction;
+    if (isSuperior) superiorIds.add(ball.id);
 
     ball.state = 'won';
     ball.wonTime = performance.now();
@@ -221,6 +234,7 @@ export function checkAndUpdateBallWonStates(
         ballColor: ball.color,
         particles,
         firstEncounter: isFirstEncounter,
+        superior: isSuperior,
       });
       playBallLockSound();
       vibrateBallLock();
@@ -255,7 +269,8 @@ export function checkAndUpdateBallWonStates(
     // this map (via game.moneyMultiplier). A green's own lock is never tripled
     // by itself, so each ball is tripled by every green this pass except itself.
     const greensThisPass = wonThisPass.filter(b => b.ability === 'moneyBall').length;
-    let points = 0;
+    let standardPoints = 0;
+    let superiorPoints = 0;
     for (const b of wonThisPass) {
       const selfGreen = b.ability === 'moneyBall' ? 1 : 0;
       const mult = game.moneyMultiplier * Math.pow(3, greensThisPass - selfGreen);
@@ -267,18 +282,30 @@ export function checkAndUpdateBallWonStates(
         lockedWhileFrozen && activeModifiers.frozenLockBonus > 0
           ? 1 + activeModifiers.frozenLockBonus
           : 1;
-      points += (b.lockMultiplier ?? 1) * mult * frozenMult;
+      const ballPoints = (b.lockMultiplier ?? 1) * mult * frozenMult;
+      if (superiorIds.has(b.id)) superiorPoints += ballPoints;
+      else standardPoints += ballPoints;
     }
     // Each lock-multiplier point is worth lockValue overtime hours (the
-    // economy's main income; scoring-config.yml). Still folds under the
-    // per-map cap with everything else.
-    game.lockBonus += Math.round(points * simultaneousMultiplier * getLockValue());
+    // economy's main income; scoring-config.yml), and a SUPERIOR lock's points
+    // pay superiorMultiplier on top. Rounded per tier so the results screen's
+    // Locks / Superior Locks split always sums to what was actually paid.
+    // Still folds under the per-map cap with everything else.
+    const lockValue = getLockValue();
+    const standardPay = Math.round(standardPoints * simultaneousMultiplier * lockValue);
+    const superiorPay = Math.round(superiorPoints * simultaneousMultiplier * lockValue * lockQuality.superiorMultiplier);
+    const superiorCountThisPass = wonThisPass.filter(b => superiorIds.has(b.id)).length;
+    game.lockBonus += standardPay + superiorPay;
+    game.superiorLockBonus += superiorPay;
+    game.superiorLockCount += superiorCountThisPass;
 
     // Severance Package: flat overtime per locked ball, deliberately outside
-    // the money/simultaneous multipliers so it reads as a predictable "+N per
-    // lock" (still folded under the per-map cap with the rest of lockBonus).
+    // the money/simultaneous/quality multipliers so it reads as a predictable
+    // "+N per lock" (still folded under the per-map cap with the rest of
+    // lockBonus; a superior ball's share lands in the superior split).
     if (activeModifiers.overtimePerLock > 0) {
       game.lockBonus += newlyLocked * activeModifiers.overtimePerLock;
+      game.superiorLockBonus += superiorCountThisPass * activeModifiers.overtimePerLock;
     }
 
     if (greensThisPass > 0) game.moneyMultiplier *= Math.pow(3, greensThisPass);

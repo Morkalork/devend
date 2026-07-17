@@ -15,6 +15,7 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   spaceBonus: { icon: Sparkles, color: 'text-primary' },
   baseOvertime: { icon: Clock, color: 'text-foreground' },
   threadLocks: { icon: Lock, color: 'text-cyan-400' },
+  superiorLocks: { icon: Medal, color: 'text-cyan-300' },
   breakBonus: { icon: Hammer, color: 'text-amber-400' },
   shipEarly: { icon: Timer, color: 'text-teal-400' },
   pushBonus: { icon: Zap, color: 'text-orange-400' },
@@ -127,6 +128,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     extraPercent = 0,
     lockBonus = 0,
     lockedBallsCount = 0,
+    superiorLockCount = 0,
+    superiorLockBonus = 0,
     pushBonus = 0,
     breakBonus = 0,
     shipEarlyBonus = 0,
@@ -137,9 +140,15 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     wonByAllLocked = false,
   } = scoreData;
 
+  const claimedPickups = scoreData.pickupsClaimed ?? [];
   const isOverPar = fencesOverPar > 0;
   const isSpaceDisabled = fencesOverPar >= 3;
-  const hasLockBonus = lockBonus > 0;
+  // Lock income split by quality: the standard row shows only the plain locks,
+  // superior (tight-pocket) locks get their own highlighted row below it.
+  const standardLockCount = Math.max(0, lockedBallsCount - superiorLockCount);
+  const standardLockBonus = Math.max(0, lockBonus - superiorLockBonus);
+  const hasLockBonus = standardLockCount > 0 && standardLockBonus > 0;
+  const hasSuperiorLocks = superiorLockCount > 0 && superiorLockBonus > 0;
   const hasBreakBonus = breakBonus > 0;
   const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;
@@ -284,14 +293,25 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </span>
             </div>
 
-            {/* Thread Lock Bonus Section */}
+            {/* Thread Lock Bonus Section: plain locks, then the superior
+                (tight-pocket) locks on their own brighter row so the quality
+                gap in the pay is visible at a glance. */}
             {hasLockBonus && (
               <div {...hold('threadLocks')} className="flex justify-between items-center py-2 border-b border-cyan-500/30 bg-cyan-500/10 rounded px-2">
                 <span className="text-cyan-400 flex items-center gap-1">
                   <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.threadLocks', { count: lockedBallsCount })}
+                  {t('levelComplete.threadLocks', { count: standardLockCount })}
                 </span>
-                <span className="font-bold text-cyan-400">+{lockBonus}h</span>
+                <span className="font-bold text-cyan-400">+{standardLockBonus}h</span>
+              </div>
+            )}
+            {hasSuperiorLocks && (
+              <div {...hold('superiorLocks')} className="flex justify-between items-center py-2 border-b border-cyan-300/50 bg-cyan-400/20 rounded px-2">
+                <span className="text-cyan-300 flex items-center gap-1">
+                  <Medal className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.superiorLocks', { count: superiorLockCount })}
+                </span>
+                <span className="font-bold text-cyan-300">+{superiorLockBonus}h</span>
               </div>
             )}
 
@@ -330,18 +350,27 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
             {/* Pickup tokens claimed by locks (paid after the cap, like the
                 highscore bonus below - deliberately outside Total Bonus).
-                Shown whenever ANYTHING was claimed, so non-overtime claims
-                (freeze charges, free store items) are visible and their
-                hold-info list (issue #48) is reachable. */}
-            {(pickupBonus > 0 || (scoreData.pickupsClaimed?.length ?? 0) > 0) && (
-              <div {...hold('pickupBonus')} className="flex justify-between items-center py-2 border-b border-fuchsia-500/30 bg-fuchsia-500/10 rounded px-2">
-                <span className="text-fuchsia-400 flex items-center gap-1">
-                  <Gift className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.pickupBonus')}
-                </span>
-                <span className="font-bold text-fuchsia-400">
-                  {pickupBonus > 0 ? `+${pickupBonus}h` : `x${scoreData.pickupsClaimed?.length ?? 0}`}
-                </span>
+                Every claim is listed with its effect right here, so what was
+                taken and what it did is visible without the hold card. */}
+            {(pickupBonus > 0 || claimedPickups.length > 0) && (
+              <div {...hold('pickupBonus')} className="py-2 border-b border-fuchsia-500/30 bg-fuchsia-500/10 rounded px-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-fuchsia-400 flex items-center gap-1">
+                    <Gift className="w-3 h-3 sm:w-4 sm:h-4" />
+                    {t('levelComplete.pickupBonus')}
+                  </span>
+                  <span className="font-bold text-fuchsia-400">
+                    {pickupBonus > 0 ? `+${pickupBonus}h` : `x${claimedPickups.length}`}
+                  </span>
+                </div>
+                {claimedPickups.map((c, i) => (
+                  <div key={i} className="text-xs mt-1 pl-4">
+                    <span className="font-semibold text-foreground">
+                      {t(`levelComplete.info.pickupBonus.effects.${c.effect}.name`, { value: c.value })}
+                    </span>
+                    <span className="text-muted-foreground"> {t(`levelComplete.info.pickupBonus.effects.${c.effect}.desc`, { value: c.value })}</span>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -508,27 +537,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-4">{t(`levelComplete.info.${infoKey}.body`)}</p>
-
-                {/* Issue #48: the pickup row's info lists WHAT was claimed this
-                    map, per token, not just the general explanation. */}
-                {infoKey === 'pickupBonus' && (scoreData.pickupsClaimed?.length ?? 0) > 0 && (
-                  <div className="mb-4 space-y-1.5">
-                    <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
-                      {t('levelComplete.info.pickupBonus.claimedLabel')}
-                    </div>
-                    {scoreData.pickupsClaimed!.map((c, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm">
-                        <Gift className="w-3.5 h-3.5 mt-0.5 shrink-0 text-fuchsia-400" />
-                        <div>
-                          <span className="font-semibold text-foreground">
-                            {t(`levelComplete.info.pickupBonus.effects.${c.effect}.name`, { value: c.value })}
-                          </span>
-                          <span className="text-muted-foreground"> {t(`levelComplete.info.pickupBonus.effects.${c.effect}.desc`, { value: c.value })}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
                   {t('levelComplete.infoTipLabel')}

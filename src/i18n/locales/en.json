@@ -245,6 +245,7 @@
     "bottomBarTutorialTitle": "The Bottom Bar",
     "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language.",
     "infoUnlocked": "Info Unlocked",
+    "superiorLock": "Superior Lock!",
     "pickupFork": "Ball split!",
     "pickupCapRaise": "Cap +{n}h",
     "pickupFreeze": "Freeze +1",
@@ -273,6 +274,7 @@
     "baseOvertime": "Base Overtime",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Thread Locks ({{count}})",
+    "superiorLocks": "Superior Locks ({{count}})",
     "pushBonus": "Push Bonus",
     "pickupBonus": "Power-Up Bonus",
     "breakBonus": "Demolition Bonus",
@@ -313,8 +315,13 @@
       },
       "threadLocks": {
         "title": "Thread Locks",
-        "body": "You lock a ball by sealing it into its own small pocket of the board, cut off from everything else. Each locked ball pays its lock value, and tougher ball types pay more. Trapping several balls with a single cut multiplies the whole payout by the number caught: 2 at once pays double, 3 pays triple.",
+        "body": "You lock a ball by sealing it into its own small pocket of the board, cut off from everything else. Each locked ball pays its lock value, and tougher ball types pay more. Trapping several balls with a single cut multiplies the whole payout by the number caught: 2 at once pays double, 3 pays triple. Sealing a ball into an extra tight pocket upgrades it to a Superior Lock, which pays double.",
         "tip": "Lock a green money ball early: it triples what every later lock this map pays. Then herd balls close together and close one cut around the whole group."
+      },
+      "superiorLocks": {
+        "title": "Superior Locks",
+        "body": "A Superior Lock is a lock with real craft: the pocket you sealed the ball into was well under half the size that would normally lock it. Superior locks pay double the lock value, and money-ball, frozen and multi-trap multipliers all stack on top.",
+        "tip": "Place your sealing cut as close to the ball as you dare. A roomy, lazy pocket only ever earns standard lock value; the tight cage is where the money is."
       },
       "breakBonus": {
         "title": "Demolition Bonus",
@@ -335,7 +342,6 @@
         "title": "Power-Up Bonus",
         "body": "Overtime from power-up tokens you sealed in with a lock. A token only pays when a ball locks in the pocket holding it: capture the token's area with no ball and it is wasted, and unclaimed tokens expire on their own.",
         "tip": "Herd a ball toward the token before you seal the pocket. Token overtime is paid after the per-map cap, so it always counts.",
-        "claimedLabel": "Claimed this map",
         "effects": {
           "overtime": {
             "name": "Overtime +{{value}}h:",

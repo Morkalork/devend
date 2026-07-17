@@ -243,6 +243,7 @@
     "bottomBarTutorialTitle": "La barra inferior",
     "bottomBarTutorialBody": "¡La barra inferior también se puede expandir!\n\nTócala para ver cada modificador activo explicado en lenguaje sencillo.",
     "infoUnlocked": "Información desbloqueada",
+    "superiorLock": "¡Bloqueo superior!",
     "pickupFork": "¡Bola dividida!",
     "pickupCapRaise": "Tope +{n}h",
     "pickupFreeze": "Congelación +1",
@@ -271,6 +272,7 @@
     "baseOvertime": "Horas extra base",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Bloqueos de hilo ({{count}})",
+    "superiorLocks": "Bloqueos superiores ({{count}})",
     "pushBonus": "Bono de presión",
     "pickupBonus": "Bono de potenciadores",
     "shipEarly": "Entrega temprana ({{seconds}}s)",
@@ -310,8 +312,13 @@
       },
       "threadLocks": {
         "title": "Bloqueos de hilo",
-        "body": "Bloqueas una bola sellándola en su propio rincón del tablero, aislada de todo lo demás. Cada bola bloqueada paga su valor de bloqueo, y los tipos de bola más duros pagan más. Atrapar varias bolas con un solo corte multiplica todo el pago por el número capturado: 2 a la vez paga el doble, 3 el triple.",
+        "body": "Bloqueas una bola sellándola en su propio rincón del tablero, aislada de todo lo demás. Cada bola bloqueada paga su valor de bloqueo, y los tipos de bola más duros pagan más. Atrapar varias bolas con un solo corte multiplica todo el pago por el número capturado: 2 a la vez paga el doble, 3 el triple. Sellar una bola en un rincón muy estrecho lo convierte en un bloqueo superior, que paga el doble.",
         "tip": "Bloquea una bola verde de dinero pronto: triplica lo que paga cada bloqueo posterior en este mapa. Después agrupa las bolas y cierra un solo corte alrededor del grupo."
+      },
+      "superiorLocks": {
+        "title": "Bloqueos superiores",
+        "body": "Un bloqueo superior es un bloqueo con oficio: el rincón donde sellaste la bola era mucho menor que la mitad del tamaño que normalmente basta para bloquear. Los bloqueos superiores pagan el doble del valor de bloqueo, y los multiplicadores de bola de dinero, congelación y captura múltiple se apilan encima.",
+        "tip": "Traza tu corte de sellado tan cerca de la bola como te atrevas. Un rincón amplio y perezoso solo gana el valor estándar; la jaula estrecha es donde está el dinero."
       },
       "breakBonus": {
         "title": "Bono de demolición",
@@ -332,7 +339,6 @@
         "title": "Bono de potenciadores",
         "body": "Horas extra de fichas potenciadoras que sellaste junto a un bloqueo. Una ficha solo paga cuando una bola queda bloqueada en el bolsillo que la contiene: si capturas su zona sin bola se pierde, y las fichas sin reclamar caducan solas.",
         "tip": "Guía una bola hacia la ficha antes de sellar el bolsillo. Sus horas se pagan después del tope por mapa, así que siempre cuentan.",
-        "claimedLabel": "Conseguidos en este mapa",
         "effects": {
           "overtime": {
             "name": "Horas extra +{{value}}h:",

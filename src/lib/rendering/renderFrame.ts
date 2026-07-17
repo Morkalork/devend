@@ -512,7 +512,7 @@ export function renderFrame(
   } = game;
   const { width: screenWidth, height: screenHeight } = screenSize;
   const { scale } = boardRect;
-  const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain, infoUnlockedLabel = 'Info Unlocked' } = rctx;
+  const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain, infoUnlockedLabel = 'Info Unlocked', superiorLockLabel = 'Superior Lock!' } = rctx;
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -1863,6 +1863,31 @@ export function renderFrame(
         ctx.shadowBlur = 10 * scale;
         ctx.fillStyle = accentColor;
         ctx.fillText(infoUnlockedLabel, tp.x, tp.y);
+        ctx.restore();
+      }
+
+      // Superior lock (tight pocket): same rising label treatment in gold.
+      // When the first-encounter label is also up, this one sits below it.
+      if (flash.superior && elapsed < INFO_UNLOCKED_DURATION) {
+        const FADE_IN_MS = 150, FADE_OUT_MS = 500, RISE_WORLD = 55;
+        const fadeIn = Math.min(1, elapsed / FADE_IN_MS);
+        const fadeOut = elapsed > INFO_UNLOCKED_DURATION - FADE_OUT_MS
+          ? Math.max(0, (INFO_UNLOCKED_DURATION - elapsed) / FADE_OUT_MS)
+          : 1;
+        const textAlpha = Math.min(fadeIn, fadeOut);
+        const rise = RISE_WORLD * (elapsed / INFO_UNLOCKED_DURATION);
+        const yOff = flash.firstEncounter ? 18 : 40;
+        const tp = w2s(flash.centroid.x, flash.centroid.y - yOff - rise);
+
+        ctx.save();
+        ctx.globalAlpha = textAlpha;
+        ctx.font = `bold ${Math.max(11, Math.round(13 * scale))}px 'JetBrains Mono', monospace`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.shadowColor = '#ffd54a';
+        ctx.shadowBlur = 10 * scale;
+        ctx.fillStyle = '#ffd54a';
+        ctx.fillText(superiorLockLabel, tp.x, tp.y);
         ctx.restore();
       }
     }

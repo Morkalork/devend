@@ -230,7 +230,11 @@ export function generateScoringPreview(
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
     overtimeCapHeadroom: 4.0,
-    lockValue: 10,
+    lockValue: 12,
+    lockQuality: {
+      superiorThresholdFraction: 0.4,
+      superiorMultiplier: 2.0,
+    },
     highscoreBonusMultiplier: 1.25,
     fenceEfficiency: {
       maxBonus: 1,
@@ -277,6 +281,7 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
           scoring: {
             overtimeCapHeadroom: parsed.scoring.overtimeCapHeadroom ?? DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom,
             lockValue: parsed.scoring.lockValue ?? DEFAULT_SCORING_CONFIG.scoring.lockValue,
+            lockQuality: { ...DEFAULT_SCORING_CONFIG.scoring.lockQuality, ...parsed.scoring.lockQuality },
             highscoreBonusMultiplier: parsed.scoring.highscoreBonusMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.highscoreBonusMultiplier,
             fenceEfficiency: { ...DEFAULT_SCORING_CONFIG.scoring.fenceEfficiency, ...parsed.scoring.fenceEfficiency },
             spaceOptimization: { ...DEFAULT_SCORING_CONFIG.scoring.spaceOptimization, ...parsed.scoring.spaceOptimization },
@@ -307,6 +312,21 @@ export async function ensureScoringConfigLoaded(): Promise<void> {
 export function getLockValue(): number {
   const v = loadedConfig.scoring.lockValue;
   return Number.isFinite(v) && v > 0 ? v : 1;
+}
+
+/**
+ * Superior-lock tuning from the loaded config: a lock whose pocket is at most
+ * `superiorThresholdFraction` of the BASE lock threshold pays its lock points
+ * times `superiorMultiplier` (see checkBallWonState). Guarded so a bad config
+ * degrades to "no superior tier" (fraction 0, multiplier 1) instead of NaN pay.
+ */
+export function getLockQuality(): { superiorThresholdFraction: number; superiorMultiplier: number } {
+  const q = loadedConfig.scoring.lockQuality;
+  const fraction = Number.isFinite(q?.superiorThresholdFraction) && q.superiorThresholdFraction > 0
+    ? q.superiorThresholdFraction : 0;
+  const multiplier = Number.isFinite(q?.superiorMultiplier) && q.superiorMultiplier > 0
+    ? q.superiorMultiplier : 1;
+  return { superiorThresholdFraction: fraction, superiorMultiplier: multiplier };
 }
 
 /** The beat-the-highscore score multiplier from the loaded config (#45). */

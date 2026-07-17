@@ -212,7 +212,7 @@ describe("lock-centric economy", () => {
   // player had hours saved), while lockValue makes locking close that gap.
   const scoringDoc = yaml.load(
     readFileSync(resolve(process.cwd(), "public/scoring-config.yml"), "utf8"),
-  ) as { scoring: { lockValue: number; spaceOptimization: { maxBonus: number }; shipEarly: { maxBonus: number } } };
+  ) as { scoring: { lockValue: number; lockQuality: { superiorThresholdFraction: number; superiorMultiplier: number }; spaceOptimization: { maxBonus: number }; shipEarly: { maxBonus: number } } };
   const scoring = scoringDoc.scoring;
 
   it("a flawless no-lock clear cannot afford the cheapest upgrade", () => {
@@ -232,6 +232,26 @@ describe("lock-centric economy", () => {
   it("locking pays enough to matter: one plain lock covers most of the base", () => {
     const flatBase = [...levelPoints.values()][0];
     expect(scoring.lockValue).toBeGreaterThanOrEqual(flatBase / 2);
+  });
+
+  // The map-1 teaching beat: your first great play buys your first hire. A
+  // sloppy (roomy-pocket) x1 lock plus the flat base must stay short of the
+  // cheapest upgrade, while a SUPERIOR (tight-pocket) lock closes the gap.
+  it("map 1: a sloppy lock cannot buy the cheapest upgrade, a superior lock can", () => {
+    const flatBase = [...levelPoints.values()][0];
+    const cheapest = Math.min(
+      ...upgrades.filter(u => !u.ascensionOnly).map(u => effectiveCost(u) ?? Infinity),
+    );
+    const sloppyClear = flatBase + scoring.lockValue;
+    const superiorClear = flatBase + Math.round(scoring.lockValue * scoring.lockQuality.superiorMultiplier);
+    expect(sloppyClear).toBeLessThan(cheapest);
+    expect(superiorClear).toBeGreaterThanOrEqual(cheapest);
+  });
+
+  it("superior-lock tuning is sane: a real bar and a real payoff", () => {
+    expect(scoring.lockQuality.superiorThresholdFraction).toBeGreaterThan(0);
+    expect(scoring.lockQuality.superiorThresholdFraction).toBeLessThan(1);
+    expect(scoring.lockQuality.superiorMultiplier).toBeGreaterThanOrEqual(1.5);
   });
 });
 

@@ -12,12 +12,25 @@ scoring:
 
   # Lock Value
   # Overtime hours paid per lock-multiplier point when a ball is locked away.
-  # Red/blue/grey (x1) pay 10h, yellow/purple/green (x2) 20h, black (x4) 40h,
-  # before the simultaneous-trap and money-ball multipliers. Locking IS the
-  # income: the flat map base (points: 20) alone cannot fund even a Junior
-  # upgrade (40h), so clearing without locking means an empty-handed shop
-  # visit unless you had hours saved.
-  lockValue: 10
+  # Red/blue/grey (x1) pay 12h, yellow/purple/green (x2) 24h, black (x4) 48h,
+  # before the quality, simultaneous-trap and money-ball multipliers. Locking
+  # IS the income: the flat map base (points: 20) alone cannot fund even a
+  # Junior upgrade (40h), so clearing without locking means an empty-handed
+  # shop visit unless you had hours saved.
+  lockValue: 12
+
+  # Lock Quality (Superior Locks)
+  # A lock is SUPERIOR when the sealed pocket is tight: at most
+  # superiorThresholdFraction of the BASE lock threshold (game-config.yml
+  # lock.win_threshold_percent, so upgrades that widen the lock threshold do
+  # not also widen this). Superior locks pay lockValue x superiorMultiplier
+  # per lock-multiplier point; a sliver-floor lock (min_region_cells) always
+  # grades superior. The sloppy-vs-tight gap is the skill economy: on map 1 a
+  # sloppy red lock (20 + 12 = 32h) cannot buy a Junior (40h), a superior one
+  # (20 + 24 = 44h) can.
+  lockQuality:
+    superiorThresholdFraction: 0.4
+    superiorMultiplier: 2.0
 
   # Beat-the-highscore bonus (#45)
   # When you finish a map with a higher score than its previous highscore, the

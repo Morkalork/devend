@@ -264,6 +264,7 @@ export function GameCanvas({
   // in initGame, so the engine and readouts share one effective value.
   useEffect(() => {
     gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
+    gameRef.current.lockBaseThresholdPercent = lockWinThresholdPercent;
     gameRef.current.lockMinRegionCells = lockMinRegionCells;
   }, [lockWinThresholdPercent, lockMinRegionCells, activeModifiers.lockThresholdBonus]);
   // Same live-config treatment for the Scope Creep tuning.
@@ -390,12 +391,15 @@ export function GameCanvas({
     frozenBallPosition: null as Vector2 | null,
     lockedBallsCount: 0,
     lockBonus: 0,
+    superiorLockCount: 0,
+    superiorLockBonus: 0,
     moneyMultiplier: 1,
     ballSpeedScale: 1,
     assimilations: new Map<string, LockFlashState>(),
     dissolve: null as DissolveState | null,
     bonusCutCells: new Set<string>(),
     lockWinThresholdPercent: BALL_WON_REGION_THRESHOLD,
+    lockBaseThresholdPercent: BALL_WON_REGION_THRESHOLD,
     lockMinRegionCells: 0,
     fenceDurability: null as number | null,
     pendingWallBreaks: [] as Wall[],
@@ -675,6 +679,7 @@ export function GameCanvas({
       game.assimilations.clear();
       game.bonusCutCells.clear();
       game.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
+      game.lockBaseThresholdPercent = lockWinThresholdPercent;
       game.lockMinRegionCells = lockMinRegionCells;
       game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
@@ -809,6 +814,7 @@ export function GameCanvas({
       accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState,
       spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current,
       infoUnlockedLabel: t('game.infoUnlocked'),
+      superiorLockLabel: t('game.superiorLock'),
       pickupLabels: {
         fork: t('game.pickupFork'),
         capRaise: t('game.pickupCapRaise'),
@@ -1135,6 +1141,7 @@ export function GameCanvas({
           fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
           extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
           lockedBallsCount: game.lockedBallsCount,
+          superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
           shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
           pickupBonus: game.pickupOvertime || undefined,
           pickupsClaimed: game.pickupsClaimedLog.length > 0 ? [...game.pickupsClaimedLog] : undefined,
