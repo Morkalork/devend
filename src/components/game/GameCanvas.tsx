@@ -69,7 +69,7 @@ import {
   getRegionPercentage,
   removeRegion,
 } from "@/lib/spaceGrid";
-import { traceActiveContours, traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
+import { traceActiveContours, traceContours, snapContoursToWalls, ContourPoint } from "@/lib/rendering/regionContour";
 import { maybeRampDpr } from "@/lib/rendering/adaptiveDpr";
 import { playFenceBreakSound, playDeathSound, playBallLockSound } from "@/lib/gameAudio";
 import { vibrateFenceComplete, vibrateFenceBreak } from "@/lib/gameHaptics";
@@ -594,18 +594,24 @@ export function GameCanvas({
         // Snap the traced lattice contour onto the walls that bound the pocket,
         // so the tint sits flush with the fence line instead of up to a cell
         // short/past it (the seam the lattice quantization leaves otherwise).
-        const lockLoops = snapContoursToWalls(
-          traceContours(grid, (col, row) => mask[row * gw + col] === 1),
-          game.walls,
-          grid.cellSize * 1.05,
-        );
-        if (lockLoops.length > 0) {
+        // The mask stores lock INTENSITY (balls trapped by the sealing cut):
+        // the base wash covers every locked pocket, and a second pass over the
+        // multi-lock (>= 2) pockets doubles up the accent so a double trap
+        // visibly outshines a single one - the visual twin of the x2 payout.
+        const traceAtLeast = (min: number) =>
+          snapContoursToWalls(
+            traceContours(grid, (col, row) => mask[row * gw + col] >= min),
+            game.walls,
+            grid.cellSize * 1.05,
+          );
+        const fillLoops = (loops: ContourPoint[][], alpha: number) => {
+          if (loops.length === 0) return;
           rCtx.save();
           rCtx.globalCompositeOperation = 'source-atop';
-          rCtx.globalAlpha = canvasOpacity * 0.3;
+          rCtx.globalAlpha = alpha;
           rCtx.fillStyle = accentColor;
           rCtx.beginPath();
-          for (const loop of lockLoops) {
+          for (const loop of loops) {
             for (let i = 0; i < loop.length; i++) {
               const sx = boardRect.left + loop[i].x * boardRect.scale;
               const sy = boardRect.top + loop[i].y * boardRect.scale;
@@ -616,7 +622,9 @@ export function GameCanvas({
           }
           rCtx.fill('evenodd');
           rCtx.restore();
-        }
+        };
+        fillLoops(traceAtLeast(1), canvasOpacity * 0.3);
+        fillLoops(traceAtLeast(2), canvasOpacity * 0.35);
       }
       // Step 3: scanline overlay on captured fill only
       const scanPattern = rCtx.createPattern(scanlineTile, 'repeat');

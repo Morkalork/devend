@@ -16,6 +16,7 @@ import { LevelConfig } from "@/types/level";
 import { GrowingWall, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
+import { getLockValue } from "@/lib/scoring";
 
 // Regression for the "glitchy" lock fill (screenshot: ball locked in the
 // top-right corner behind a diagonal fence). The lock tint was tagged from the
@@ -47,7 +48,10 @@ const MODS: GameModifiers = {
 
 const LEVEL: LevelConfig = {
   id: "lock-tint", level: 2, sizeThreshold: 40, expectedCuts: 5, points: 40,
-  maxBalls: 2, entities: [],
+  // randomShapes: 0 keeps the board free of RANDOM obstacles: one landing
+  // inside the test pocket walls its interior cells off from the tint flood,
+  // which made this file fail ~1 in 4 runs (the long-flaky "lockTint" test).
+  maxBalls: 2, entities: [], randomShapes: 0,
 } as unknown as LevelConfig;
 
 function makeGame(): CanvasGameState {
@@ -135,6 +139,40 @@ describe("lock tint covers the whole enclosed pocket", () => {
     expect(checked).toBeGreaterThan(80); // sanity: the probe saw the pocket
     expect(missingTint).toBe(0);
     expect(crossedTint).toBe(0);
+  });
+
+  it("a double trap pays the x2 simultaneous multiplier and marks the pocket for the brighter tint", () => {
+    const game = makeGame();
+    game.balls = game.balls.slice(0, 2);
+    const [A, B] = game.balls;
+    // BOTH balls inside the pocket triangle this time.
+    A.position = { x: 780, y: 120 }; A.velocity = { x: 80, y: 60 }; A.speed = 100;
+    B.position = { x: 800, y: 100 }; B.velocity = { x: -70, y: 90 }; B.speed = 114;
+
+    applyCutFn(completedWall({ x: 727, y: 172 }, FA, FB), game, LEVEL, 2, MODS, false, false, 0, noopCallbacks);
+    expect(A.state).toBe("won");
+    expect(B.state).toBe("won");
+    expect(game.lockedBallsCount).toBe(2);
+
+    // Pay: each ball's lock-multiplier, times the x2 simultaneous-trap
+    // multiplier ("locks more than one ball -> double the points").
+    const perBallPoints = (A.lockMultiplier ?? 1) + (B.lockMultiplier ?? 1);
+    expect(game.lockBonus).toBe(Math.round(perBallPoints * 2 * getLockValue()));
+
+    // Visual: the mask stores the lock intensity, so every pocket cell reads 2
+    // (>= 2 renders the brighter double-trap tint; a single lock stays at 1).
+    const grid = game.spaceGrid!;
+    const tint = grid.lockCaptured!;
+    let multiCells = 0;
+    for (let i = 0; i < grid.cells.length; i++) {
+      const p = gridIndexToWorld(grid, i);
+      const inBoard = p.x > 47 && p.x < 853 && p.y > 47 && p.y < 853;
+      if (inBoard && signedDist(p) > 10) {
+        expect(tint[i]).toBe(2);
+        multiCells++;
+      }
+    }
+    expect(multiCells).toBeGreaterThan(50);
   });
 
   it("the transient flash contour is built and stays inside the pocket (no overshoot)", () => {

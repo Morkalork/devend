@@ -192,8 +192,13 @@ export function applyCutFn(
   game.activeWall = null;
   playCutClaimedSound();
 
+  const lockedBefore = game.lockedBallsCount;
   const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells);
   if (anyBallWon) {
+    // How many balls this cut locked: the simultaneous-trap multiplier pays
+    // x2/x3 for multi-locks, and the tint mask below stores the same count so
+    // multi-ball pockets render brighter (pay and visual stay in sync).
+    const newlyLocked = Math.max(1, game.lockedBallsCount - lockedBefore);
     // A ball locked during this cut. It was still an active ball when the capture
     // above ran, so the region it locked in wasn't captured then and would linger
     // as an uncaptured (active) region beside the obstacle until the next cut -
@@ -221,8 +226,12 @@ export function applyCutFn(
         }
       }
       if (seeds.length > 0) {
+        // The mask stores the lock INTENSITY (balls locked by this cut), not
+        // just 0/1: pockets that trapped 2+ balls at once render a brighter
+        // tint (see GameCanvas step 2b). Never downgrade an earlier pocket.
+        const intensity = Math.min(newlyLocked, 255);
         for (const idx of floodRemovedEnclosure(grid, seeds, game.walls)) {
-          grid.lockCaptured[idx] = 1;
+          if (grid.lockCaptured[idx] < intensity) grid.lockCaptured[idx] = intensity;
         }
       }
     }
