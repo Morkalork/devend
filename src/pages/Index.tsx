@@ -160,6 +160,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
                 onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
                 onDaily={() => session.handleStartDaily()}
+                showDailyIntro={session.shouldShowDaily}
+                onDailyIntroSeen={session.markDailySeen}
                 // A streak is only shown while alive: attended today, or
                 // yesterday with today still open.
                 dailyStreak={

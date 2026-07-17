@@ -702,7 +702,10 @@
     "certLockedGotIt": "Got it",
     "records": "Records",
     "dailyStandup": "Daily Stand-up",
-    "newBadge": "NEW"
+    "newBadge": "NEW",
+    "dailyIntroTitle": "Daily Stand-up",
+    "dailyIntroBody": "Every day, every player gets the exact same run: identical levels, drafts, shops and obstacles, all from one shared daily seed.\n\nIt is a level playing field, your skill against everyone else's on the same ground. Your result lands on a separate daily leaderboard, and playing each day builds an attendance streak.\n\nToday's run always starts at level 1.",
+    "dailyIntroStart": "Start today's run"
   },
   "loadouts": {
     "title": "Loadouts",

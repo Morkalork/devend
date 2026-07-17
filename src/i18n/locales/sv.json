@@ -687,7 +687,10 @@
     "certLockedGotIt": "Uppfattat",
     "records": "Rekord",
     "dailyStandup": "Morgonmöte",
-    "newBadge": "NYTT"
+    "newBadge": "NYTT",
+    "dailyIntroTitle": "Morgonmöte",
+    "dailyIntroBody": "Varje dag får alla spelare exakt samma runda: samma banor, val, butiker och hinder, allt från ett gemensamt dagligt frö.\n\nDet är lika villkor, din skicklighet mot allas andras på samma mark. Ditt resultat hamnar på en separat daglig topplista, och att spela varje dag bygger en närvarosvit.\n\nDagens runda börjar alltid på nivå 1.",
+    "dailyIntroStart": "Starta dagens runda"
   },
   "content": {
     "upgrades": {

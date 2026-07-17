@@ -12,6 +12,7 @@ import { useState, useCallback } from 'react';
  * - `topBar`     — "what is the top bar" hint (level 2)
  * - `bottomBar`  — "what is the bottom bar" hint (level 3)
  * - `ascension`  — Ascension mode intro (first arrival at the draft screen)
+ * - `daily`      — Daily Stand-up intro (first time the button is tapped)
  *
  * "Re-enable All Tutorials" in the options screen calls resetAllTutorials().
  */
@@ -27,6 +28,7 @@ interface TutorialsSeen {
   topBar: boolean;
   bottomBar: boolean;
   ascension: boolean;
+  daily: boolean;
 }
 
 const NONE_SEEN: TutorialsSeen = {
@@ -37,6 +39,7 @@ const NONE_SEEN: TutorialsSeen = {
   topBar: false,
   bottomBar: false,
   ascension: false,
+  daily: false,
 };
 
 function loadSeen(): TutorialsSeen {
@@ -54,6 +57,7 @@ function loadSeen(): TutorialsSeen {
         topBar: !!(parsed.topBar ?? parsed.infoPanels),
         bottomBar: !!(parsed.bottomBar ?? parsed.infoPanels),
         ascension: !!parsed.ascension,
+        daily: !!parsed.daily,
       };
     }
     // Migration: very old installs stored a single boolean for the fence tutorial.
@@ -93,6 +97,7 @@ export function useTutorialManager() {
   const markTopBarSeen = useCallback(() => markSeen('topBar'), [markSeen]);
   const markBottomBarSeen = useCallback(() => markSeen('bottomBar'), [markSeen]);
   const markAscensionSeen = useCallback(() => markSeen('ascension'), [markSeen]);
+  const markDailySeen = useCallback(() => markSeen('daily'), [markSeen]);
 
   const resetAllTutorials = useCallback(() => {
     try {
@@ -115,6 +120,7 @@ export function useTutorialManager() {
     shouldShowTopBar: !seen.topBar,
     shouldShowBottomBar: !seen.bottomBar,
     shouldShowAscension: !seen.ascension,
+    shouldShowDaily: !seen.daily,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
@@ -122,6 +128,7 @@ export function useTutorialManager() {
     markTopBarSeen,
     markBottomBarSeen,
     markAscensionSeen,
+    markDailySeen,
     resetAllTutorials,
   };
 }

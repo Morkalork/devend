@@ -223,6 +223,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     shouldShowTopBar,
     shouldShowBottomBar,
     shouldShowAscension,
+    shouldShowDaily,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
@@ -230,6 +231,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     markTopBarSeen,
     markBottomBarSeen,
     markAscensionSeen,
+    markDailySeen,
     resetAllTutorials,
   } = useTutorialManager();
 
@@ -1351,6 +1353,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     showTopBarTutorial: shouldShowTopBar,
     showBottomBarTutorial: shouldShowBottomBar,
     shouldShowAscension,
+    shouldShowDaily,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
@@ -1358,6 +1361,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     markTopBarSeen,
     markBottomBarSeen,
     markAscensionSeen,
+    markDailySeen,
     // Certificates
     certificates,
     totalCertificateHours,

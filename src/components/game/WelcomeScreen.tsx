@@ -19,6 +19,10 @@ interface WelcomeScreenProps {
   onHallOfFame?: () => void;
   /** Starts today's seeded Daily Stand-up run (HIGHSCORES.md Phase D). */
   onDaily?: () => void;
+  /** First tap on Daily Stand-up shows an intro modal before the run starts. */
+  showDailyIntro?: boolean;
+  /** Marks the Daily Stand-up intro as seen (persisted tutorial flag). */
+  onDailyIntroSeen?: () => void;
   /** Attendance streak shown on the daily button (0 = hidden). */
   dailyStreak?: number;
   /** True when today's stand-up already has a banked run (shows a check). */
@@ -45,6 +49,8 @@ export function WelcomeScreen({
   onLoadouts,
   onHallOfFame,
   onDaily,
+  showDailyIntro = false,
+  onDailyIntroSeen,
   dailyStreak = 0,
   dailyDoneToday = false,
   onAchievements,
@@ -59,6 +65,7 @@ export function WelcomeScreen({
 }: WelcomeScreenProps) {
   const { t } = useTranslation();
   const [showCertInfo, setShowCertInfo] = useState(false);
+  const [showDailyInfo, setShowDailyInfo] = useState(false);
   // When certificates aren't unlocked yet the store callback is absent; instead
   // of a dead button we keep it tappable and explain how to gain access.
   const certLocked = !onOpenCertificateStore;
@@ -287,7 +294,10 @@ export function WelcomeScreen({
               className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 ${highlights?.daily ? 'menu-highlight' : ''}`}
               onClick={() => {
                 ackHighlight('daily');
-                onDaily();
+                // First visit: explain what the Daily Stand-up is before the
+                // run starts. Afterwards the button launches straight in.
+                if (showDailyIntro) setShowDailyInfo(true);
+                else onDaily();
               }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -457,6 +467,56 @@ export function WelcomeScreen({
               className="arcade-button-primary arcade-button-sm rounded-lg w-full mt-5"
             >
               {t('welcome.certLockedGotIt')}
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+    {/* First-time Daily Stand-up intro. It gates the run: the only way forward
+        is "Start", so a player always sees the explanation before playing.
+        Backdrop/X cancels (leaves the flag unset) so it returns next tap. */}
+    <AnimatePresence>
+      {showDailyInfo && (
+        <motion.div
+          key="daily-info"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={() => setShowDailyInfo(false)}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+        >
+          <motion.div
+            initial={{ scale: 0.92, y: 8 }}
+            animate={{ scale: 1, y: 0 }}
+            exit={{ scale: 0.92, y: 8, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+            style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
+          >
+            <button
+              onClick={() => setShowDailyInfo(false)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              aria-label={t('common.close')}
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-3 pr-6">
+              <CalendarDays className="w-7 h-7 shrink-0 text-primary" />
+              <div className="text-base font-bold text-foreground">{t('welcome.dailyIntroTitle')}</div>
+            </div>
+
+            <p className="text-sm text-muted-foreground whitespace-pre-line">{t('welcome.dailyIntroBody')}</p>
+
+            <button
+              onClick={() => {
+                setShowDailyInfo(false);
+                onDailyIntroSeen?.();
+                onDaily?.();
+              }}
+              className="arcade-button-primary arcade-button-sm rounded-lg w-full mt-5"
+            >
+              {t('welcome.dailyIntroStart')}
             </button>
           </motion.div>
         </motion.div>

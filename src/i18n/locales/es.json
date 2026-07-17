@@ -687,7 +687,10 @@
     "certLockedGotIt": "Entendido",
     "records": "Récords",
     "dailyStandup": "Reunión diaria",
-    "newBadge": "NUEVO"
+    "newBadge": "NUEVO",
+    "dailyIntroTitle": "Reunión diaria",
+    "dailyIntroBody": "Cada día, todos los jugadores reciben exactamente la misma partida: mismos niveles, elecciones, tiendas y obstáculos, todo a partir de una semilla diaria compartida.\n\nEs igualdad de condiciones: tu habilidad contra la de los demás sobre el mismo terreno. Tu resultado va a una clasificación diaria aparte, y jugar cada día crea una racha de asistencia.\n\nLa partida de hoy siempre empieza en el nivel 1.",
+    "dailyIntroStart": "Empezar la partida de hoy"
   },
   "content": {
     "upgrades": {
