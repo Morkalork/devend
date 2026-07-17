@@ -248,7 +248,8 @@
     "pickupFork": "Ball split!",
     "pickupCapRaise": "Cap +{n}h",
     "pickupFreeze": "Freeze +1",
-    "freezeUsesLeft": "{{count}} freezes left this map"
+    "freezeUsesLeft": "{{count}} freezes left this map",
+    "pickupFreeShopItem": "Free store item!"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
@@ -333,7 +334,30 @@
       "pickupBonus": {
         "title": "Power-Up Bonus",
         "body": "Overtime from power-up tokens you sealed in with a lock. A token only pays when a ball locks in the pocket holding it: capture the token's area with no ball and it is wasted, and unclaimed tokens expire on their own.",
-        "tip": "Herd a ball toward the token before you seal the pocket. Token overtime is paid after the per-map cap, so it always counts."
+        "tip": "Herd a ball toward the token before you seal the pocket. Token overtime is paid after the per-map cap, so it always counts.",
+        "claimedLabel": "Claimed this map",
+        "effects": {
+          "overtime": {
+            "name": "Overtime +{{value}}h:",
+            "desc": "paid on top of the map's cap."
+          },
+          "capRaise": {
+            "name": "Cap raise +{{value}}h:",
+            "desc": "raised this map's overtime cap."
+          },
+          "freezeCharge": {
+            "name": "Freeze charge ({{value}}s):",
+            "desc": "one free tap-to-freeze."
+          },
+          "fork": {
+            "name": "Ball split:",
+            "desc": "split a ball into more lock income."
+          },
+          "freeShopItem": {
+            "name": "Free store item:",
+            "desc": "the cheapest offer in your next open store is free."
+          }
+        }
       },
       "newHighscore": {
         "title": "New Highscore",
@@ -465,7 +489,7 @@
     "livesNone": "None!",
     "livesDescription": "You lose a life when a ball hits your fence while it is growing. Run out of lives and you can spend a Continue to retry the level.",
     "continues": "Continues",
-    "continuesDescription": "Run out of lives and a Continue lets you retry this level with your overtime and upgrades intact. Earn more through certificates.",
+    "continuesDescription": "Run out of lives and a Continue lets you retry this level with your overtime and upgrades intact. Runs start with none: buy the Golden Parachute upgrade, earn them through certificates, or complete level 20.",
     "loadout": "Loadout",
     "certificatePoints": "Certificate Points",
     "certPointsEarned_one": "{{count}} point earned so far.",

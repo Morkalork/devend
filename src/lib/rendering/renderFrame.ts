@@ -26,7 +26,7 @@ import { renderBallEffects, getSquishEffect } from "@/lib/ballEffects";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { getPickupSprite, pickupColor, pickupFeedbackLabel } from "./pickupSprites";
-import { PICKUP_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
+import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from "@/lib/boardConstants";
 import {
   LOCK_PULSE_DURATION,
@@ -1190,7 +1190,7 @@ export function renderFrame(
     const nowP = performance.now();
     const nowS = game.activePlaySeconds;
     for (const token of game.pickups) {
-      const sprite = getPickupSprite(token.effect, accentColor, PICKUP_RADIUS * scale);
+      const sprite = getPickupSprite(token.effect, accentColor, PICKUP_DRAW_RADIUS * scale);
       const aliveS = nowS - token.spawnedAtSeconds;
       const remainingS = token.expiresAtSeconds - nowS;
       const popT = Math.min(1, aliveS / 0.25);
@@ -1900,13 +1900,13 @@ export function renderFrame(
           ctx.strokeStyle = col;
           ctx.lineWidth = 2 * scale;
           ctx.beginPath();
-          ctx.arc(p.x, p.y, (PICKUP_RADIUS + 30 * ringT) * scale, 0, Math.PI * 2);
+          ctx.arc(p.x, p.y, (PICKUP_DRAW_RADIUS + 30 * ringT) * scale, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         }
       } else {
         const p = w2s(fb.position.x, fb.position.y);
-        const rr = PICKUP_RADIUS * scale * (1 - t);
+        const rr = PICKUP_DRAW_RADIUS * scale * (1 - t);
         if (rr <= 0.5) continue;
         ctx.save();
         ctx.globalAlpha = 0.7 * (1 - t);

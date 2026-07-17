@@ -191,6 +191,30 @@ describe("claiming (lock with the token in the pocket)", () => {
     expect(game.freezeChargeSeconds).toBe(3);
   });
 
+  it("freeShopItem banks a free-store voucher (issue #48)", () => {
+    const game = makeGame();
+    makeToken(game, 300, 300, "freeShopItem", 1);
+    claimPickupsInPocket(game, new Set([worldToGridIndex(game.spaceGrid!, 300, 300)]));
+    expect(game.freeShopItems).toBe(1);
+    expect(game.pickups.length).toBe(0);
+    expect(game.pickupFeedback[0].kind).toBe("claimed");
+  });
+
+  it("every claim lands in the per-map log with its resolved effect and value", () => {
+    const game = makeGame();
+    makeToken(game, 300, 300, "overtime", 4);
+    makeToken(game, 315, 300, "freeShopItem", 1);
+    const cells = new Set([
+      worldToGridIndex(game.spaceGrid!, 300, 300),
+      worldToGridIndex(game.spaceGrid!, 315, 300),
+    ]);
+    claimPickupsInPocket(game, cells);
+    expect(game.pickupsClaimedLog).toEqual([
+      { effect: "overtime", value: 4 },
+      { effect: "freeShopItem", value: 1 },
+    ]);
+  });
+
   it("fork splits a random free ball into two of the same type", () => {
     const game = makeGame();
     makeToken(game, 300, 300, "fork", 0);

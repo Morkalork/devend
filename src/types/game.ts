@@ -250,6 +250,12 @@ export interface LevelScoreData {
   shipEarlyBonus?: number;
   // Pickup overtime tokens claimed this map (paid AFTER the per-map cap)
   pickupBonus?: number;
+  // Every pickup claimed this map (resolved effect + value), for the overlay's
+  // hold-info list (issue #48)
+  pickupsClaimed?: { effect: string; value: number }[];
+  // Free-store-item tokens claimed this map: each makes the next OPEN store's
+  // cheapest offer free (carried by the session until consumed)
+  freeShopItemsEarned?: number;
   // Active-play seconds to first meet the win condition (drives the row label)
   clearTimeSeconds?: number;
   // Map highscore (#45): set when this map's score beat its previous highscore.

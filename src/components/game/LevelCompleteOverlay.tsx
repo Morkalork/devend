@@ -329,14 +329,19 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             )}
 
             {/* Pickup tokens claimed by locks (paid after the cap, like the
-                highscore bonus below - deliberately outside Total Bonus) */}
-            {pickupBonus > 0 && (
+                highscore bonus below - deliberately outside Total Bonus).
+                Shown whenever ANYTHING was claimed, so non-overtime claims
+                (freeze charges, free store items) are visible and their
+                hold-info list (issue #48) is reachable. */}
+            {(pickupBonus > 0 || (scoreData.pickupsClaimed?.length ?? 0) > 0) && (
               <div {...hold('pickupBonus')} className="flex justify-between items-center py-2 border-b border-fuchsia-500/30 bg-fuchsia-500/10 rounded px-2">
                 <span className="text-fuchsia-400 flex items-center gap-1">
                   <Gift className="w-3 h-3 sm:w-4 sm:h-4" />
                   {t('levelComplete.pickupBonus')}
                 </span>
-                <span className="font-bold text-fuchsia-400">+{pickupBonus}h</span>
+                <span className="font-bold text-fuchsia-400">
+                  {pickupBonus > 0 ? `+${pickupBonus}h` : `x${scoreData.pickupsClaimed?.length ?? 0}`}
+                </span>
               </div>
             )}
 
@@ -503,6 +508,27 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 </div>
 
                 <p className="text-sm text-muted-foreground mb-4">{t(`levelComplete.info.${infoKey}.body`)}</p>
+
+                {/* Issue #48: the pickup row's info lists WHAT was claimed this
+                    map, per token, not just the general explanation. */}
+                {infoKey === 'pickupBonus' && (scoreData.pickupsClaimed?.length ?? 0) > 0 && (
+                  <div className="mb-4 space-y-1.5">
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
+                      {t('levelComplete.info.pickupBonus.claimedLabel')}
+                    </div>
+                    {scoreData.pickupsClaimed!.map((c, i) => (
+                      <div key={i} className="flex items-start gap-2 text-sm">
+                        <Gift className="w-3.5 h-3.5 mt-0.5 shrink-0 text-fuchsia-400" />
+                        <div>
+                          <span className="font-semibold text-foreground">
+                            {t(`levelComplete.info.pickupBonus.effects.${c.effect}.name`, { value: c.value })}
+                          </span>
+                          <span className="text-muted-foreground"> {t(`levelComplete.info.pickupBonus.effects.${c.effect}.desc`, { value: c.value })}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
                   {t('levelComplete.infoTipLabel')}

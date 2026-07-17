@@ -84,7 +84,7 @@ import {
   getDevicePixelRatio,
 } from "@/lib/boardConstants";
 import { CanvasGameState } from "@/types/gameState";
-import { PickupConfig, PickupState, PickupFeedback, DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
+import { PickupConfig, PickupState, PickupFeedback, PickupEffect, DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
 import { ScopeCreepConfig, DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
@@ -418,6 +418,8 @@ export function GameCanvas({
     pickupCapBonus: 0,
     freezeCharges: 0,
     freezeChargeSeconds: 0,
+    freeShopItems: 0,
+    pickupsClaimedLog: [] as { effect: PickupEffect; value: number }[],
     freezeUsesRemaining: 0,
     freezePickups: false,
     pickupFeedback: [] as PickupFeedback[],
@@ -698,6 +700,8 @@ export function GameCanvas({
       game.pickupCapBonus = 0;
       game.freezeCharges = 0;
       game.freezeChargeSeconds = 0;
+      game.freeShopItems = 0;
+      game.pickupsClaimedLog = [];
       // Feature Freeze tap-freezes refill to the owned per-map allowance.
       game.freezeUsesRemaining = Math.max(0, Math.round(activeModifiers.freezeUsesPerMap));
       setFreezeUsesRemaining(game.freezeUsesRemaining);
@@ -809,6 +813,7 @@ export function GameCanvas({
         fork: t('game.pickupFork'),
         capRaise: t('game.pickupCapRaise'),
         freezeCharge: t('game.pickupFreeze'),
+        freeShopItem: t('game.pickupFreeShopItem'),
       },
     };
     // Run-intro hold (Pixi): between the renderer becoming ready and
@@ -1132,6 +1137,8 @@ export function GameCanvas({
           lockedBallsCount: game.lockedBallsCount,
           shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
           pickupBonus: game.pickupOvertime || undefined,
+          pickupsClaimed: game.pickupsClaimedLog.length > 0 ? [...game.pickupsClaimedLog] : undefined,
+          freeShopItemsEarned: game.freeShopItems || undefined,
         });
       });
     }, 150 + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);

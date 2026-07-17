@@ -246,7 +246,8 @@
     "pickupFork": "Bollen delades!",
     "pickupCapRaise": "Tak +{n}h",
     "pickupFreeze": "Frysning +1",
-    "freezeUsesLeft": "{{count}} frysningar kvar på denna bana"
+    "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
+    "pickupFreeShopItem": "Gratis butiksvara!"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
@@ -330,7 +331,30 @@
       "pickupBonus": {
         "title": "Power-up-bonus",
         "body": "Övertid från power-up-symboler du stängde in med ett lås. En symbol betalar bara när en boll låses i fickan som håller den: fångar du symbolens yta utan boll går den förlorad, och ohämtade symboler försvinner av sig själva.",
-        "tip": "Valla en boll mot symbolen innan du förseglar fickan. Symbolövertid betalas efter taket per bana, så den räknas alltid."
+        "tip": "Valla en boll mot symbolen innan du förseglar fickan. Symbolövertid betalas efter taket per bana, så den räknas alltid.",
+        "claimedLabel": "Plockade på denna karta",
+        "effects": {
+          "overtime": {
+            "name": "Övertid +{{value}}h:",
+            "desc": "betalas ovanpå kartans tak."
+          },
+          "capRaise": {
+            "name": "Takhöjning +{{value}}h:",
+            "desc": "höjde kartans övertidstak."
+          },
+          "freezeCharge": {
+            "name": "Frysladdning ({{value}}s):",
+            "desc": "en gratis frysning."
+          },
+          "fork": {
+            "name": "Bolldelning:",
+            "desc": "delade en boll till mer inlåsningsinkomst."
+          },
+          "freeShopItem": {
+            "name": "Gratis butiksvara:",
+            "desc": "billigaste erbjudandet i nästa öppna butik är gratis."
+          }
+        }
       },
       "newHighscore": {
         "title": "Nytt rekord",
@@ -462,7 +486,7 @@
     "livesNone": "Inga!",
     "livesDescription": "Du förlorar ett liv när en boll träffar ditt stängsel medan det växer. Får du slut på liv kan du spendera en Fortsättning för att göra om nivån.",
     "continues": "Fortsättningar",
-    "continuesDescription": "När du får slut på liv låter en Fortsättning dig göra om nivån med dina övertidstimmar och uppgraderingar kvar. Tjäna fler via certifikat.",
+    "continuesDescription": "När du får slut på liv låter en Fortsättning dig göra om nivån med dina övertidstimmar och uppgraderingar kvar. Rundor börjar utan några: köp uppgraderingen Golden Parachute, tjäna fler via certifikat, eller klara nivå 20.",
     "loadout": "Laddning",
     "certificatePoints": "Certifikatpoäng",
     "certPointsEarned_one": "{{count}} poäng intjänad hittills.",

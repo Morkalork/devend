@@ -117,6 +117,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [carrySpendFenceSpeed, setCarrySpendFenceSpeed] = useState(0);
   const spentThisShopVisitRef = useRef(0);
 
+  // Free-store-item pickups (issue #48): each claimed token makes the next
+  // OPEN store's cheapest offer free. Unlike the one-map carries above, this
+  // persists until actually consumed by an open store visit (closed stores
+  // don't burn it), and rides in the run save.
+  const [carryFreeShopItems, setCarryFreeShopItems] = useState(0);
+
   // Assignments (doors): every 5th completed level replaces the shop with a
   // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
   // `activeDoor` is the picked contract and lives until the NEXT assignment
@@ -467,6 +473,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarryInstantFences(0);
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
+    setCarryFreeShopItems(0);
     spentThisShopVisitRef.current = 0;
     setActiveDoor(null);
     setCapstone(null);
@@ -506,6 +513,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carryInstantFences,
     carrySpendFences,
     carrySpendFenceSpeed,
+    carryFreeShopItems,
     activeDoorId: activeDoor?.id ?? null,
     capstoneId: capstone?.id ?? null,
     ascensionDepth,
@@ -672,6 +680,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarryInstantFences(save.carryInstantFences);
     setCarrySpendFences(save.carrySpendFences);
     setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
+    setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
     spentThisShopVisitRef.current = 0;
     setAscensionDepth(save.ascensionDepth);
     setDraftedLoadoutIds(save.draftedLoadoutIds);
@@ -835,6 +844,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // shop exit re-grants them if the player spends again).
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
+    // Free-store-item pickups (issue #48): bank the map's claims; they persist
+    // until an OPEN store consumes one (unlike the one-map carries above).
+    if ((scoreData.freeShopItemsEarned ?? 0) > 0) {
+      setCarryFreeShopItems(n => n + scoreData.freeShopItemsEarned!);
+    }
 
     const projectedStats = {
       highestLevelReached: Math.max(metaStats.highestLevelReached, currentLevelNum),
@@ -1100,8 +1114,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendFences(boons.instantFences);
     setCarrySpendFenceSpeed(boons.fenceSpeedBonus);
 
+    // Free-store-item pickup (issue #48): an OPEN store visit consumes one
+    // voucher (the shop showed its cheapest offer free). Closed stores keep it.
+    if (!storeClosed && carryFreeShopItems > 0) {
+      setCarryFreeShopItems(n => Math.max(0, n - 1));
+    }
+
     finishShopPhase();
-  }, [currentLevelIndex, activeModifiers, finishShopPhase]);
+  }, [currentLevelIndex, activeModifiers, finishShopPhase, storeClosed, carryFreeShopItems]);
 
   /** Capstone draft pick: permanent for the run, then on to the assignment. */
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
@@ -1298,6 +1318,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     gameInstanceKey,
     introAssemblePending,
     storeClosed,
+    carryFreeShopItems,
     pendingDeathResult,
     // Modifiers / bonuses
     activeModifiers,

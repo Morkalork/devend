@@ -26,8 +26,12 @@ import { playPickupClaimedSound } from "@/lib/gameAudio";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { getRunRng } from "@/lib/runRng";
 
-/** Token visual radius in world units (rendering + spawn clearance). */
+/** Token placement radius in world units (spawn clearance / claim geometry). */
 export const PICKUP_RADIUS = 14;
+/** Token DRAW radius: rendered twice the placement size so tokens are hard to
+ *  miss (issue #48). Placement keeps the tighter radius so spawn spots don't
+ *  get scarcer; clearances below leave room for the bigger sprite. */
+export const PICKUP_DRAW_RADIUS = PICKUP_RADIUS * 2;
 /** Claim/waste feedback marker lifetime (ms, wall clock). */
 export const PICKUP_FEEDBACK_MS = 1100;
 /** A token starts blinking this many seconds before it expires. */
@@ -35,7 +39,7 @@ export const PICKUP_EXPIRY_WARN_SECONDS = 3;
 /** Fork claimed with no free ball left to split: consolation overtime hours. */
 export const FORK_CONSOLATION_OVERTIME = 3;
 
-const MIN_WALL_CLEARANCE = PICKUP_RADIUS + 10; // world units to any wall segment
+const MIN_WALL_CLEARANCE = PICKUP_DRAW_RADIUS + 6; // world units to any wall segment
 const MIN_BALL_CLEARANCE = 70;                 // don't spawn under a ball
 const MIN_TOKEN_SPACING  = 100;                // between simultaneous tokens
 const RANDOM_SPAWN_ATTEMPTS = 40;
@@ -258,25 +262,41 @@ function applyPickupEffect(
   callbacks?: Pick<GameCallbacks, "onBallCountChanged">,
   payoutLevel = 0,
 ): void {
+  // The per-map claim log: the level-complete overlay's hold-info lists what
+  // was actually acquired this map (issue #48), so record the RESOLVED effect
+  // and value (e.g. a fork consolation logs as overtime).
+  const log = (effect: PickupEffect, value: number) =>
+    (game.pickupsClaimedLog ??= []).push({ effect, value });
   switch (token.effect) {
     case "overtime":
       // Total Compensation: +1h per level (feedback shows the real payout).
       game.pickupOvertime = (game.pickupOvertime ?? 0) + token.value + payoutLevel;
       pushFeedback(game, token, "claimed", "overtime", token.value + payoutLevel);
+      log("overtime", token.value + payoutLevel);
       break;
     case "capRaise":
       game.pickupCapBonus = (game.pickupCapBonus ?? 0) + token.value + payoutLevel;
       pushFeedback(game, token, "claimed", "capRaise", token.value + payoutLevel);
+      log("capRaise", token.value + payoutLevel);
       break;
     case "freezeCharge":
       // Total Compensation: each level makes the charge hold 1s longer.
       game.freezeCharges = (game.freezeCharges ?? 0) + 1;
       game.freezeChargeSeconds = Math.max(game.freezeChargeSeconds ?? 0, token.value + payoutLevel);
       pushFeedback(game, token, "claimed");
+      log("freezeCharge", token.value + payoutLevel);
+      break;
+    case "freeShopItem":
+      // Issue #48: the next OPEN store's cheapest offer is free. The counter
+      // rides the score data into the session, which carries it to the shop.
+      game.freeShopItems = (game.freeShopItems ?? 0) + 1;
+      pushFeedback(game, token, "claimed");
+      log("freeShopItem", 1);
       break;
     case "fork": {
       if (forkRandomFreeBall(game, payoutLevel)) {
         pushFeedback(game, token, "claimed");
+        log("fork", payoutLevel >= FORK_TRIPLE_LEVEL ? 2 : 1);
         callbacks?.onBallCountChanged?.(game.balls.length);
       } else {
         // Claimed by the LAST lock of the map: nothing left to split, pay a
@@ -284,6 +304,7 @@ function applyPickupEffect(
         const consolation = FORK_CONSOLATION_OVERTIME + payoutLevel;
         game.pickupOvertime = (game.pickupOvertime ?? 0) + consolation;
         pushFeedback(game, token, "claimed", "overtime", consolation);
+        log("overtime", consolation);
       }
       break;
     }

@@ -35,5 +35,5 @@ export interface RenderContext {
   /** Localized pickup claim labels (same threading rationale as above).
    *  `overtime` needs none (the renderers format "+Nh" from the feedback
    *  value); capRaise may contain a `{n}` placeholder for its hours. */
-  pickupLabels?: { fork?: string; capRaise?: string; freezeCharge?: string };
+  pickupLabels?: { fork?: string; capRaise?: string; freezeCharge?: string; freeShopItem?: string };
 }

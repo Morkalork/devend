@@ -242,7 +242,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onTutorialDismiss={session.markStoreSeen}
                 newlyUnlockedCerts={session.shopUnlockedCerts}
                 tagSetThreshold={session.tagSetThreshold}
-                freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0}
+                freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0 || session.carryFreeShopItems > 0}
                 activeModifiers={session.activeModifiers}
                 closed={session.storeClosed}
               />

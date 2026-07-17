@@ -18,6 +18,7 @@ export function pickupColor(effect: PickupEffect, accent: string): string {
   switch (effect) {
     case "freezeCharge": return "#88ddff";
     case "fork":         return "#ffd93d";
+    case "freeShopItem": return "#ff9ff3";
     default:              return accent;
   }
 }
@@ -105,6 +106,25 @@ export function getPickupSprite(effect: PickupEffect, accent: string, radiusPx: 
       c.stroke();
       break;
     }
+    case "freeShopItem": {
+      // Price tag, tilted: a pentagon-ish tag outline with a punched hole.
+      c.save();
+      c.translate(cx, cy);
+      c.rotate(-Math.PI / 6);
+      c.beginPath();
+      c.moveTo(-g, -g * 0.55);
+      c.lineTo(g * 0.25, -g * 0.55);
+      c.lineTo(g, 0);
+      c.lineTo(g * 0.25, g * 0.55);
+      c.lineTo(-g, g * 0.55);
+      c.closePath();
+      c.stroke();
+      c.beginPath();
+      c.arc(-g * 0.55, 0, r * 0.12, 0, Math.PI * 2);
+      c.stroke();
+      c.restore();
+      break;
+    }
   }
 
   _cache.set(key, oc);
@@ -121,13 +141,14 @@ export function clearPickupSpriteCache(): void {
  */
 export function pickupFeedbackLabel(
   fb: PickupFeedback,
-  labels?: { fork?: string; capRaise?: string; freezeCharge?: string },
+  labels?: { fork?: string; capRaise?: string; freezeCharge?: string; freeShopItem?: string },
 ): string {
   switch (fb.effect) {
     case "overtime":     return `+${fb.value}h`;
     case "capRaise":     return (labels?.capRaise ?? "Cap +{n}h").replace("{n}", String(fb.value));
     case "freezeCharge": return labels?.freezeCharge ?? "Freeze +1";
     case "fork":         return labels?.fork ?? "Ball split!";
+    case "freeShopItem": return labels?.freeShopItem ?? "Free store item!";
   }
 }
 

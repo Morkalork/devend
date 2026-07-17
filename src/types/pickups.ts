@@ -10,7 +10,7 @@
  */
 import { Vector2 } from "@/lib/polygon";
 
-export type PickupEffect = "overtime" | "fork" | "capRaise" | "freezeCharge";
+export type PickupEffect = "overtime" | "fork" | "capRaise" | "freezeCharge" | "freeShopItem";
 
 /** A live token on the board. */
 export interface PickupState {
@@ -65,5 +65,7 @@ export const DEFAULT_PICKUP_CONFIG: PickupConfig = {
     { effect: "fork", weight: 2, value: 0 },
     { effect: "capRaise", weight: 2, value: 5 },
     { effect: "freezeCharge", weight: 2, value: 3 },
+    // One free item (the cheapest offer) in the next OPEN store (issue #48).
+    { effect: "freeShopItem", weight: 1, value: 1 },
   ],
 };

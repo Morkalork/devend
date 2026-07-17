@@ -111,6 +111,9 @@ pickups:
     freeze_charge:
       weight: 2
       value: 3          # one free tap-to-freeze, holds this many seconds
+    free_shop_item:
+      weight: 1         # rarest: the next OPEN store's cheapest offer is free
+      value: 1
 
 # CRT Word Highlight Effect
 # Every interval_seconds, a random visible word in the background gets a highlight rectangle.

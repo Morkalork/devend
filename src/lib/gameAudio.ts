@@ -494,37 +494,63 @@ export function playCutClaimedSound(): void {
   osc.start(now + 0.04); osc.stop(now + 0.28);
 }
 
-/** Bright two-note chime when a pickup token is claimed by a lock. */
+/**
+ * The pickup-claimed jingle (issue #48: "short but memorable"): a quick
+ * major-arpeggio fanfare (E5-G#5-B5-E6) with a bell layer an octave up on the
+ * last note and a sparkle tail. ~0.45s total, unmistakably "you won a prize".
+ */
 export function playPickupClaimedSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
   const now = ctx.currentTime;
-  const vol = 0.16;
+  const vol = 0.15;
 
-  // Two quick ascending sine notes (a fifth apart) with a soft sparkle tail.
-  [[988, 0], [1480, 0.09]].forEach(([freq, delay]) => {
+  // Fast ascending E-major arpeggio; each note a sine + quiet triangle layer
+  // (the triangle's odd harmonics give it a music-box edge).
+  const NOTES: Array<[number, number, number]> = [
+    [659.3, 0, 0.8],     // E5
+    [830.6, 0.055, 0.85], // G#5
+    [987.8, 0.11, 0.9],   // B5
+    [1318.5, 0.165, 1],   // E6 — the landing note rings longest
+  ];
+  for (const [freq, delay, gain] of NOTES) {
     const t = now + delay;
-    const osc = ctx.createOscillator();
-    const gn  = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    osc.connect(gn); gn.connect(masterGain!);
-    gn.gain.setValueAtTime(0, t);
-    gn.gain.linearRampToValueAtTime(vol, t + 0.012);
-    gn.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
-    osc.start(t); osc.stop(t + 0.3);
-  });
+    const ring = delay >= 0.16 ? 0.5 : 0.22;
+    for (const [type, mul, g] of [["sine", 1, 1], ["triangle", 1, 0.35]] as const) {
+      const osc = ctx.createOscillator();
+      const gn = ctx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq * mul;
+      osc.connect(gn); gn.connect(masterGain!);
+      gn.gain.setValueAtTime(0, t);
+      gn.gain.linearRampToValueAtTime(vol * gain * g, t + 0.01);
+      gn.gain.exponentialRampToValueAtTime(0.001, t + ring);
+      osc.start(t); osc.stop(t + ring + 0.02);
+    }
+  }
 
-  const nb = createNoiseBuffer(ctx, 0.2);
+  // Bell shimmer an octave above the landing note.
+  const bell = ctx.createOscillator();
+  const bg = ctx.createGain();
+  bell.type = "sine";
+  bell.frequency.value = 2637; // E7
+  bell.connect(bg); bg.connect(masterGain);
+  bg.gain.setValueAtTime(0, now + 0.165);
+  bg.gain.linearRampToValueAtTime(vol * 0.35, now + 0.18);
+  bg.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+  bell.start(now + 0.165); bell.stop(now + 0.52);
+
+  // Sparkle tail.
+  const nb = createNoiseBuffer(ctx, 0.25);
   const ns = ctx.createBufferSource();
   const nf = ctx.createBiquadFilter();
   const ng = ctx.createGain();
   ns.buffer = nb;
-  nf.type = "highpass"; nf.frequency.value = 5000;
+  nf.type = "highpass"; nf.frequency.value = 6000;
   ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
-  ng.gain.setValueAtTime(vol * 0.3, now + 0.09);
-  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
-  ns.start(now + 0.09); ns.stop(now + 0.3);
+  ng.gain.setValueAtTime(vol * 0.3, now + 0.16);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
+  ns.start(now + 0.16); ns.stop(now + 0.45);
 }
 
 /** Rising pitch sweep — energy spinning up — when the level is cleared. */

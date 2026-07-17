@@ -12,7 +12,7 @@ import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
 import { ScopeCreepConfig } from "@/lib/scopeCreep";
-import { PickupState, PickupFeedback, PickupConfig } from "@/types/pickups";
+import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 
 export interface CanvasGameState {
   // ── Space model ────────────────────────────────────────────────────────
@@ -161,6 +161,12 @@ export interface CanvasGameState {
   pickupCapBonus: number;
   /** Free tap-to-freeze charges (work without the Feature Freeze upgrade). */
   freezeCharges: number;
+  /** Free-store-item tokens claimed this map (issue #48): each makes the next
+   *  OPEN store's cheapest offer free. Carried out via LevelScoreData. */
+  freeShopItems: number;
+  /** Every pickup claimed this map (resolved effect + value), for the
+   *  level-complete overlay's hold-to-see-what-you-got list. */
+  pickupsClaimedLog: { effect: PickupEffect; value: number }[];
   /** Seconds a freeze-charge tap holds (from the claimed token's value). */
   freezeChargeSeconds: number;
   /** Feature Freeze tap-freezes left THIS map (refills to freezeUsesPerMap each

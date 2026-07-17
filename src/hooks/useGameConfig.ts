@@ -22,6 +22,7 @@ function parsePickupConfig(raw: RawPickupConfig | undefined): PickupConfig {
   const d = DEFAULT_PICKUP_CONFIG;
   const yamlKeyToEffect: Record<string, PickupEffect> = {
     overtime: 'overtime', fork: 'fork', cap_raise: 'capRaise', freeze_charge: 'freezeCharge',
+    free_shop_item: 'freeShopItem',
   };
   const effects = d.effects.map(def => {
     const rawKey = Object.keys(yamlKeyToEffect).find(k => yamlKeyToEffect[k] === def.effect)!;

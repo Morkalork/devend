@@ -28,7 +28,7 @@ import {
 import { getRemainingPercent } from "@/lib/spaceGrid";
 import { glowTexture, textureFor } from "./textures";
 import { getPickupSprite, pickupColor, pickupFeedbackLabel } from "../pickupSprites";
-import { PICKUP_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
+import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
 
 type W2S = (x: number, y: number) => { x: number; y: number };
 
@@ -110,7 +110,7 @@ export class EffectsLayer {
         }
         // Re-fetch per frame: the bake is scale-keyed and the texture cache is
         // swept — a held stale texture would render a destroyed source.
-        sprite.texture = textureFor(getPickupSprite(token.effect, accent, PICKUP_RADIUS * scale));
+        sprite.texture = textureFor(getPickupSprite(token.effect, accent, PICKUP_DRAW_RADIUS * scale));
         const aliveS = nowS - token.spawnedAtSeconds;
         const remainingS = token.expiresAtSeconds - nowS;
         const popT = Math.min(1, aliveS / 0.25);
@@ -169,12 +169,12 @@ export class EffectsLayer {
           if (ringT < 1) {
             const p = w2s(fb.position.x, fb.position.y);
             this.pickupRings
-              .circle(p.x, p.y, (PICKUP_RADIUS + 30 * ringT) * scale)
+              .circle(p.x, p.y, (PICKUP_DRAW_RADIUS + 30 * ringT) * scale)
               .stroke({ width: 2 * scale, color: col, alpha: (1 - ringT) * 0.8 });
           }
         } else {
           const p = w2s(fb.position.x, fb.position.y);
-          const rr = PICKUP_RADIUS * scale * (1 - t);
+          const rr = PICKUP_DRAW_RADIUS * scale * (1 - t);
           if (rr <= 0.5) continue;
           const alpha = 0.7 * (1 - t);
           this.pickupRings

@@ -40,6 +40,9 @@ export interface RunSave {
   carryInstantFences: number;
   carrySpendFences: number;
   carrySpendFenceSpeed: number;
+  // Free-store-item pickups awaiting the next OPEN store (issue #48).
+  // Optional: saves from before the feature default to 0.
+  carryFreeShopItems?: number;
   // Run-defining picks (re-hydrated from the loaded pools by id).
   activeDoorId: string | null;
   capstoneId: string | null;

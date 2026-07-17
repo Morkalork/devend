@@ -246,7 +246,8 @@
     "pickupFork": "¡Bola dividida!",
     "pickupCapRaise": "Tope +{n}h",
     "pickupFreeze": "Congelación +1",
-    "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa"
+    "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa",
+    "pickupFreeShopItem": "¡Artículo gratis!"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",
@@ -330,7 +331,30 @@
       "pickupBonus": {
         "title": "Bono de potenciadores",
         "body": "Horas extra de fichas potenciadoras que sellaste junto a un bloqueo. Una ficha solo paga cuando una bola queda bloqueada en el bolsillo que la contiene: si capturas su zona sin bola se pierde, y las fichas sin reclamar caducan solas.",
-        "tip": "Guía una bola hacia la ficha antes de sellar el bolsillo. Sus horas se pagan después del tope por mapa, así que siempre cuentan."
+        "tip": "Guía una bola hacia la ficha antes de sellar el bolsillo. Sus horas se pagan después del tope por mapa, así que siempre cuentan.",
+        "claimedLabel": "Conseguidos en este mapa",
+        "effects": {
+          "overtime": {
+            "name": "Horas extra +{{value}}h:",
+            "desc": "pagadas por encima del tope del mapa."
+          },
+          "capRaise": {
+            "name": "Tope +{{value}}h:",
+            "desc": "subió el tope de horas extra de este mapa."
+          },
+          "freezeCharge": {
+            "name": "Carga de congelación ({{value}}s):",
+            "desc": "un toque de congelación gratis."
+          },
+          "fork": {
+            "name": "División de bola:",
+            "desc": "dividió una bola en más ingresos por encierro."
+          },
+          "freeShopItem": {
+            "name": "Artículo gratis:",
+            "desc": "la oferta más barata de tu próxima tienda abierta es gratis."
+          }
+        }
       },
       "newHighscore": {
         "title": "Nuevo récord",
@@ -462,7 +486,7 @@
     "livesNone": "¡Ninguna!",
     "livesDescription": "Pierdes una vida cuando una bola golpea tu valla mientras crece. Si te quedas sin vidas, puedes gastar una Continuación para reintentar el nivel.",
     "continues": "Continuaciones",
-    "continuesDescription": "Cuando te quedas sin vidas, una Continuación te permite reintentar este nivel con tus horas extra y mejoras intactas. Consigue más con certificados.",
+    "continuesDescription": "Cuando te quedas sin vidas, una Continuación te permite reintentar este nivel con tus horas extra y mejoras intactas. Las partidas empiezan sin ninguna: compra la mejora Golden Parachute, consigue más con certificados, o completa el nivel 20.",
     "loadout": "Equipamiento",
     "certificatePoints": "Puntos de certificado",
     "certPointsEarned_one": "{{count}} punto ganado hasta ahora.",
