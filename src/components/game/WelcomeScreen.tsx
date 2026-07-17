@@ -5,6 +5,7 @@ import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, Calen
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { version } from '@/lib/version';
+import type { MenuHighlightFlags, MenuHighlightKey } from '@/hooks/useMenuHighlights';
 
 interface WelcomeScreenProps {
   onStartGame: () => void;
@@ -29,6 +30,10 @@ interface WelcomeScreenProps {
   accentColor?: string;
   totalCertificateHours?: number;
   completedAchievementCount?: number;
+  /** First-time highlights: which buttons get the gold ring + NEW badge. */
+  highlights?: Partial<MenuHighlightFlags>;
+  /** Called when a highlighted button is tapped, clearing its highlight. */
+  onHighlightSeen?: (key: MenuHighlightKey) => void;
 }
 
 export function WelcomeScreen({
@@ -49,12 +54,24 @@ export function WelcomeScreen({
   accentColor,
   totalCertificateHours,
   completedAchievementCount,
+  highlights,
+  onHighlightSeen,
 }: WelcomeScreenProps) {
   const { t } = useTranslation();
   const [showCertInfo, setShowCertInfo] = useState(false);
   // When certificates aren't unlocked yet the store callback is absent; instead
   // of a dead button we keep it tappable and explain how to gain access.
   const certLocked = !onOpenCertificateStore;
+  // Tapping a highlighted button acknowledges its first-time highlight.
+  const ackHighlight = (key: MenuHighlightKey) => {
+    if (highlights?.[key]) onHighlightSeen?.(key);
+  };
+  const newBadge = (
+    <span className="menu-highlight-badge">
+      <Sparkles className="w-3 h-3" />
+      {t('welcome.newBadge')}
+    </span>
+  );
 
   return (
     <>
@@ -246,29 +263,39 @@ export function WelcomeScreen({
             </motion.button>
           )}
           <motion.button
-            className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 ${onContinue ? '' : 'animate-pulse-glow'}`}
-            onClick={onStartGame}
+            className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 ${
+              highlights?.newGame ? 'menu-highlight' : onContinue ? '' : 'animate-pulse-glow'
+            }`}
+            onClick={() => {
+              ackHighlight('newGame');
+              onStartGame();
+            }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
-            style={onContinue ? undefined : { boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
+            style={onContinue || highlights?.newGame ? undefined : { boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
           >
             {isLoading
               ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</>
               : (onContinue ? t('welcome.newGame') : t('welcome.startGame'))}
+            {!isLoading && highlights?.newGame && newBadge}
           </motion.button>
           {/* Daily Stand-up: today's seeded run, same for every player. The
               flame chip is the attendance streak; the check = banked today. */}
           {onDaily && (
             <motion.button
-              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2"
-              onClick={onDaily}
+              className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 ${highlights?.daily ? 'menu-highlight' : ''}`}
+              onClick={() => {
+                ackHighlight('daily');
+                onDaily();
+              }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
             >
               <CalendarDays className="w-5 h-5" />
               {t('welcome.dailyStandup')}
+              {highlights?.daily && newBadge}
               {dailyStreak > 0 && (
                 <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
                   <Flame className="w-3 h-3" style={{ color: '#ffb347' }} />
@@ -297,14 +324,19 @@ export function WelcomeScreen({
             {t('welcome.options')}
           </motion.button>
           <motion.button
-            className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed ${certLocked ? 'opacity-50 grayscale' : ''}`}
-            onClick={() => (onOpenCertificateStore ? onOpenCertificateStore() : setShowCertInfo(true))}
+            className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed ${certLocked ? 'opacity-50 grayscale' : ''} ${highlights?.certificates ? 'menu-highlight' : ''}`}
+            onClick={() => {
+              ackHighlight('certificates');
+              if (onOpenCertificateStore) onOpenCertificateStore();
+              else setShowCertInfo(true);
+            }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             disabled={isLoading}
           >
             <Sparkles className="w-5 h-5" />
             {t('welcome.certificates')}
+            {highlights?.certificates && newBadge}
             {totalCertificateHours !== undefined && totalCertificateHours > 0 && (
               <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Hexagon className="w-3 h-3" />
@@ -326,14 +358,18 @@ export function WelcomeScreen({
           )}
           {onHallOfFame && (
             <motion.button
-              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
-              onClick={onHallOfFame}
+              className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed ${highlights?.records ? 'menu-highlight' : ''}`}
+              onClick={() => {
+                ackHighlight('records');
+                onHallOfFame();
+              }}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
             >
               <Medal className="w-5 h-5" />
               {t('welcome.records')}
+              {highlights?.records && newBadge}
             </motion.button>
           )}
           {onAchievements && (() => {
@@ -344,14 +380,18 @@ export function WelcomeScreen({
             const achievementsEnabled = (!!totalCertificateHours || !!completedAchievementCount) && !isLoading;
             return (
             <motion.button
-              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed"
-              onClick={onAchievements}
+              className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed ${highlights?.achievements && achievementsEnabled ? 'menu-highlight' : ''}`}
+              onClick={() => {
+                ackHighlight('achievements');
+                onAchievements();
+              }}
               whileHover={achievementsEnabled ? { scale: 1.02 } : undefined}
               whileTap={achievementsEnabled ? { scale: 0.98 } : undefined}
               disabled={!achievementsEnabled}
             >
               <Trophy className="w-5 h-5" />
               {t('welcome.achievements')}
+              {highlights?.achievements && achievementsEnabled && newBadge}
               {completedAchievementCount !== undefined && completedAchievementCount > 0 && (
                 <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full">
                   {completedAchievementCount}

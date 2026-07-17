@@ -686,7 +686,8 @@
     "certLockedBody": "Los certificados son bonificaciones permanentes que consigues al dominar familias de mejoras a lo largo de varias partidas.\n\nAlcanza el nivel máximo de una familia de mejoras, o desbloquea tu primer certificado jugando, y esta tienda se abrirá.\n\nLuego gasta horas de certificado (se ganan cada 5 niveles que completas) para subir de nivel los certificados y obtener efectos duraderos.",
     "certLockedGotIt": "Entendido",
     "records": "Récords",
-    "dailyStandup": "Reunión diaria"
+    "dailyStandup": "Reunión diaria",
+    "newBadge": "NUEVO"
   },
   "content": {
     "upgrades": {

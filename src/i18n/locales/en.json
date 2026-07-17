@@ -701,7 +701,8 @@
     "certLockedBody": "Certificates are permanent bonuses you earn by mastering upgrade families across multiple runs.\n\nReach the top tier of an upgrade family, or unlock your first certificate by playing, and this store opens up.\n\nThen spend Certificate Hours (earned every 5 levels you complete) to level certificates up for lasting effects.",
     "certLockedGotIt": "Got it",
     "records": "Records",
-    "dailyStandup": "Daily Stand-up"
+    "dailyStandup": "Daily Stand-up",
+    "newBadge": "NEW"
   },
   "loadouts": {
     "title": "Loadouts",

@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
 import { useGameSession } from '@/hooks/useGameSession';
+import { useMenuHighlights } from '@/hooks/useMenuHighlights';
 import { AccentColorProvider, useAccentColor } from '@/contexts/AccentColorContext';
 import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
@@ -70,6 +71,23 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   useEffect(() => {
     if (MENU_MUSIC_SCREENS.has(navigation.currentScreen)) playMainMusic();
   }, [navigation.currentScreen]);
+
+  // First-time menu highlights (gold ring + NEW badge on welcome buttons).
+  // Each trigger marks a "first" the player hasn't acknowledged by tapping yet.
+  const menuHighlights = useMenuHighlights(
+    {
+      newGame: true,
+      records: session.topRuns.length > 0,
+      certificates: session.totalCertificateHours > 0,
+      achievements: session.completedAchievementIds.length > 0,
+      daily: session.topRuns.length > 0,
+    },
+    // Prior progress = existing install; seeds already-passed firsts as seen.
+    session.hasSavedRun ||
+      session.topRuns.length > 0 ||
+      session.totalCertificateHours > 0 ||
+      session.completedAchievementIds.length > 0,
+  );
 
   // The Performance Review is reachable from the welcome screen AND the result
   // screen; its Back button returns to wherever it was opened from.
@@ -157,6 +175,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 accentColor={accentHex}
                 totalCertificateHours={session.totalCertificateHours}
                 completedAchievementCount={session.completedAchievementIds.length}
+                highlights={menuHighlights.highlights}
+                onHighlightSeen={menuHighlights.acknowledge}
               />
             )}
             {navigation.currentScreen === 'tutorial' && (
@@ -169,7 +189,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             {navigation.currentScreen === 'options' && (
               <OptionsScreen
                 onBack={navigation.goToWelcome}
-                onReEnableTutorials={session.handleReEnableAllTutorials}
+                onReEnableTutorials={() => {
+                  session.handleReEnableAllTutorials();
+                  menuHighlights.resetHighlights();
+                }}
                 onResetCertificates={session.handleResetCertificates}
                 hasCertificates={Object.keys(session.certLevelsOwned).length > 0 || session.totalCertificateHours > 0}
                 accentColor={accentHex}

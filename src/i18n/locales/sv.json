@@ -686,7 +686,8 @@
     "certLockedBody": "Certifikat är permanenta bonusar som du tjänar genom att bemästra uppgraderingsfamiljer över flera omgångar.\n\nNå den högsta nivån i en uppgraderingsfamilj, eller lås upp ditt första certifikat genom att spela, så öppnas den här butiken.\n\nSedan kan du spendera certifikattimmar (tjänas var 5:e nivå du klarar) för att höja certifikatens nivå och få bestående effekter.",
     "certLockedGotIt": "Uppfattat",
     "records": "Rekord",
-    "dailyStandup": "Morgonmöte"
+    "dailyStandup": "Morgonmöte",
+    "newBadge": "NYTT"
   },
   "content": {
     "upgrades": {

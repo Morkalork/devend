@@ -457,6 +457,51 @@
     }
   }
 
+  /* First-time menu highlight — a gold border with an expanding ring "ping",
+     deliberately louder than .shimmer. Marks a menu button where something
+     new awaits; cleared once the player taps it (useMenuHighlights). The ping
+     rides on box-shadow so the button's overflow clipping can't cut it off. */
+  .menu-highlight {
+    border-color: hsl(45 100% 62%) !important;
+    animation: highlight-ping 1.6s ease-out infinite;
+  }
+
+  @keyframes highlight-ping {
+    0% {
+      box-shadow: 0 0 0 0 hsl(45 100% 62% / 0.7), 0 0 24px hsl(45 100% 62% / 0.45);
+    }
+    70% {
+      box-shadow: 0 0 0 16px hsl(45 100% 62% / 0), 0 0 36px hsl(45 100% 62% / 0.6);
+    }
+    100% {
+      box-shadow: 0 0 0 0 hsl(45 100% 62% / 0), 0 0 24px hsl(45 100% 62% / 0.45);
+    }
+  }
+
+  /* Bouncing gold pill inside a highlighted button's label row. */
+  .menu-highlight-badge {
+    margin-left: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    background: hsl(45 100% 62%);
+    color: hsl(0 0% 8%);
+    animation: highlight-bob 1.2s ease-in-out infinite;
+  }
+
+  @keyframes highlight-bob {
+    0%, 100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-3px);
+    }
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
