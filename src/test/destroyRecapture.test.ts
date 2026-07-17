@@ -37,7 +37,7 @@ const MODS: GameModifiers = {
   startingCapturePercent: 0, fenceDurabilityBonus: 0, microManagerPerLock: 0,
   ballPathPredictionBounces: 0, ballPathPredictionBalls: 0, ballFreezeDuration: 0,
   freezeUsesPerMap: 0, slowOneBallFactor: 0, freezePickups: 0, ballFreezeCount: 0, autoFreezeDuration: 0, showHighscoreProgress: 0,
-  overtimePerLock: 0, fenceSpeedPerLock: 0, frozenLockBonus: 0,
+  overtimePerLock: 0, overtimePerSuperiorLock: 0, fenceSpeedPerLock: 0, frozenLockBonus: 0,
   simultaneousLockBonus: 0, freezeNoCooldown: 0, fenceSpeedPerFence: 0, underParInstantFence: 0,
   bankedSlowPer50h: 0, spaceBonusMultiplier: 1, overtimeCapBonus: 0, freeCheapestOffer: 0,
   wallShieldsPerMap: 0, fenceGraceMs: 0, shipEarlySecondsPerBall: 0,

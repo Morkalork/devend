@@ -308,6 +308,15 @@ export function checkAndUpdateBallWonStates(
       game.superiorLockBonus += superiorCountThisPass * activeModifiers.overtimePerLock;
     }
 
+    // Severance Package (Equity Package): extra flat overtime paid only on
+    // SUPERIOR locks, on top of overtimePerLock. Lands wholly in the superior
+    // split; rewards sealing balls into tight pockets.
+    if (activeModifiers.overtimePerSuperiorLock > 0 && superiorCountThisPass > 0) {
+      const superiorExtra = superiorCountThisPass * activeModifiers.overtimePerSuperiorLock;
+      game.lockBonus += superiorExtra;
+      game.superiorLockBonus += superiorExtra;
+    }
+
     if (greensThisPass > 0) game.moneyMultiplier *= Math.pow(3, greensThisPass);
   }
 

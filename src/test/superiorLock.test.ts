@@ -32,7 +32,7 @@ const MODS: GameModifiers = {
   startingCapturePercent: 0, fenceDurabilityBonus: 0, microManagerPerLock: 0,
   ballPathPredictionBounces: 0, ballPathPredictionBalls: 0, ballFreezeDuration: 0,
   freezeUsesPerMap: 0, slowOneBallFactor: 0, freezePickups: 0, ballFreezeCount: 0, autoFreezeDuration: 0, showHighscoreProgress: 0,
-  overtimePerLock: 0, fenceSpeedPerLock: 0, frozenLockBonus: 0,
+  overtimePerLock: 0, overtimePerSuperiorLock: 0, fenceSpeedPerLock: 0, frozenLockBonus: 0,
   simultaneousLockBonus: 0, freezeNoCooldown: 0, fenceSpeedPerFence: 0, underParInstantFence: 0,
   bankedSlowPer50h: 0, spaceBonusMultiplier: 1, overtimeCapBonus: 0, freeCheapestOffer: 0,
   wallShieldsPerMap: 0, fenceGraceMs: 0, shipEarlySecondsPerBall: 0,
@@ -162,5 +162,40 @@ describe("superior locks: tight pockets pay the quality multiplier", () => {
     expect(game.lockedBallsCount).toBe(2);
     expect(game.superiorLockBonus).toBe(superiorPay);
     expect(game.lockBonus).toBe(superiorPay + standardPay);
+  });
+
+  // Severance Package (Equity Package): overtimePerSuperiorLock pays a flat
+  // bonus ONLY on superior locks, landing wholly in the superior split.
+  it("Equity Package adds a flat bonus to a superior lock, in both totals", () => {
+    const EQUITY: GameModifiers = { ...MODS, overtimePerSuperiorLock: 20 };
+    const game = makeGame();
+    game.balls = game.balls.slice(0, 2);
+    const [A, B] = game.balls;
+    A.position = { x: 800, y: 100 }; A.velocity = { x: 80, y: 60 }; A.speed = 100;
+    B.position = { x: 300, y: 600 }; B.velocity = { x: -70, y: 90 }; B.speed = 114;
+
+    applyCutFn(completedWall({ x: 780, y: 120 }, { x: 705, y: 45 }, { x: 855, y: 195 }), game, LEVEL, 2, EQUITY, false, false, 0, noopCallbacks);
+    expect(A.state).toBe("won");
+
+    const { superiorMultiplier } = getLockQuality();
+    const base = Math.round((A.lockMultiplier ?? 1) * getLockValue() * superiorMultiplier);
+    expect(game.superiorLockCount).toBe(1);
+    expect(game.superiorLockBonus).toBe(base + 20);
+    expect(game.lockBonus).toBe(base + 20);
+  });
+
+  it("Equity Package pays nothing extra on a standard lock", () => {
+    const EQUITY: GameModifiers = { ...MODS, overtimePerSuperiorLock: 20 };
+    const game = makeGame();
+    game.balls = game.balls.slice(0, 2);
+    const [A, B] = game.balls;
+    A.position = { x: 780, y: 120 }; A.velocity = { x: 80, y: 60 }; A.speed = 100;
+    B.position = { x: 300, y: 600 }; B.velocity = { x: -70, y: 90 }; B.speed = 114;
+
+    applyCutFn(completedWall({ x: 700, y: 200 }, { x: 535, y: 45 }, { x: 855, y: 365 }), game, LEVEL, 2, EQUITY, false, false, 0, noopCallbacks);
+    expect(A.state).toBe("won");
+    expect(game.superiorLockCount).toBe(0);
+    expect(game.superiorLockBonus).toBe(0);
+    expect(game.lockBonus).toBe(Math.round((A.lockMultiplier ?? 1) * getLockValue()));
   });
 });

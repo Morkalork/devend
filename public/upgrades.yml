@@ -496,6 +496,8 @@ upgrades:
   # SEVERANCE PACKAGE (Lock payoff)
   # Head of the lock archetype: turns every locked ball into flat overtime.
   # The bonus folds under the per-map cap with the rest of the lock bonus.
+  # Principal is a CHOICE (choiceGroup, +50% cost) between a reliable flat
+  # payout and a skill line that rewards Superior Locks (tight pockets).
   # ===============================
 
   - id: severance_package_junior
@@ -518,6 +520,35 @@ upgrades:
     tags: [lock]
     modifiers:
       overtimePerLock: 5
+
+  # Principal is a CHOICE: buy ONE. Option A is a reliable flat raise; option B
+  # keeps the flat pay lower but pays a large bonus on Superior Locks (a ball
+  # sealed into a tight pocket, see scoring-config.yml). Owning one locks out
+  # the other. The choiceGroup id matches the tier so any future certificate
+  # that sources it credits from EITHER option.
+  - id: severance_package_principal_a
+    name: Severance Package
+    tier: Principal
+    description: "Golden Handshake: every ball you lock away pays 15 bonus overtime hours."
+    unlockLevel: 18
+    prerequisites:
+      - severance_package_senior
+    choiceGroup: severance_package_principal
+    tags: [lock]
+    modifiers:
+      overtimePerLock: 5
+
+  - id: severance_package_principal_b
+    name: Severance Package
+    tier: Principal
+    description: "Equity Package: locks still pay 10h, and each Superior Lock (a tight pocket) pays 20 more."
+    unlockLevel: 18
+    prerequisites:
+      - severance_package_senior
+    choiceGroup: severance_package_principal
+    tags: [lock, risk]
+    modifiers:
+      overtimePerSuperiorLock: 20
 
 
   # ===============================

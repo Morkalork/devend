@@ -30,6 +30,7 @@ export interface GameModifiers {
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
   overtimePerLock: number;   // flat overtime hours added to the lock bonus per locked ball (Severance Package)
+  overtimePerSuperiorLock: number; // extra flat overtime per SUPERIOR lock, on top of overtimePerLock (Severance Package: Equity Package)
   fenceSpeedPerLock: number; // fence-speed bonus per ball locked this map (0.04 = +4% per lock; Knowledge Transfer)
   // Additive (sum) — Frozen Assets: extra lock-bonus multiplier when a ball is
   // locked while frozen (1 = frozen locks pay double, 2 = triple; 0 = off)
@@ -202,6 +203,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   fenceDurabilityBonus: 0,
   microManagerPerLock: 0,
   overtimePerLock: 0,
+  overtimePerSuperiorLock: 0,
   fenceSpeedPerLock: 0,
   frozenLockBonus: 0,
   simultaneousLockBonus: 0,

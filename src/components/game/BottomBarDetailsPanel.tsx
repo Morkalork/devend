@@ -233,6 +233,16 @@ export function BottomBarDetailsPanel({
           : t('bottomBarDetails.overtimePerLockInactive'),
     },
     {
+      label: t('bottomBarDetails.overtimePerSuperiorLock'),
+      value: bonus(m.overtimePerSuperiorLock),
+      changed: m.overtimePerSuperiorLock !== 0,
+      keys: ['overtimePerSuperiorLock'],
+      description:
+        m.overtimePerSuperiorLock > 0
+          ? t('bottomBarDetails.overtimePerSuperiorLockActive', { hours: m.overtimePerSuperiorLock })
+          : t('bottomBarDetails.overtimePerSuperiorLockInactive'),
+    },
+    {
       label: t('bottomBarDetails.frozenLockBonus'),
       value: m.frozenLockBonus > 0 ? `x${1 + m.frozenLockBonus}` : t('bottomBarDetails.off'),
       changed: m.frozenLockBonus !== 0,
