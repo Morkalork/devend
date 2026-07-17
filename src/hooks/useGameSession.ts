@@ -45,6 +45,7 @@ import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
+import { analytics } from '@/lib/analytics';
 
 const BASE_LIVES = 3;
 /** Runs start with NO free Continue: buy Golden Parachute (the priciest shop
@@ -602,6 +603,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         }
       }
 
+      analytics.runStarted({ mode: 'new', daily: false });
+
       // A fresh run drafts a loadout first, but the loadout system only appears
       // once it's been introduced (after the first win). The first run and the
       // ?level= debug path go straight into the game.
@@ -649,6 +652,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingDeathResult(null);
 
     resetToFirstLevel(); // same seeded lineup for everyone, from level 1
+
+    analytics.runStarted({ mode: 'daily', daily: true });
 
     if (loadoutsIntroduced) nav.goToRunDraft();
     else nav.startGame();
@@ -721,6 +726,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     restoreRunProgress(save.runLevelsCompleted);
     restoreSequence(save.levelSequenceIds, save.currentLevelIndex);
 
+    analytics.runStarted({ mode: 'resume', daily: savedDaily !== null });
+
     nav.goToGame();
   }, [readRun, loadLevels, loadUpgrades, loadCertificates, loadLoadouts, restoreRunProgress, restoreSequence, nav.goToGame, bestScore]);
 
@@ -776,6 +783,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const finalizeAndShowResult = useCallback((result: GameResult) => {
     const levelsCompleted = runLevelsCompleted;
+    analytics.runEnded({
+      isWin: result.isWin,
+      levelsCompleted,
+      totalScore,
+      ascensionDepth,
+      daily: dailyKeyRef.current !== null,
+    });
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
     captureRunRecap(totalScore);
@@ -790,16 +804,24 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
+    if (!result.isWin) {
+      analytics.levelFailed({
+        level: currentLevelIndex + 1,
+        continuesLeft: continuesRemaining,
+        daily: dailyKeyRef.current !== null,
+      });
+    }
     // On death with a Continue banked, defer finalizing and offer a revive.
     if (!result.isWin && continuesRemaining > 0) {
       setPendingDeathResult(result);
       return;
     }
     finalizeAndShowResult(result);
-  }, [continuesRemaining, finalizeAndShowResult]);
+  }, [continuesRemaining, finalizeAndShowResult, currentLevelIndex]);
 
   /** Spend a Continue: refill lives and retry the current level (score + upgrades kept). */
   const handleSpendContinue = useCallback(() => {
+    analytics.continueSpent({ level: currentLevelIndex + 1 });
     setContinuesRemaining(n => Math.max(0, n - 1));
     const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
     const refilled = Math.max(1, Math.max(currentLives, startingLives));
@@ -807,7 +829,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setLivesAtLevelStart(refilled);
     setPendingDeathResult(null);
     setGameInstanceKey(k => k + 1); // remount the game view -> current level re-inits
-  }, [certBonuses, currentLives]);
+  }, [certBonuses, currentLives, currentLevelIndex]);
 
   /** Decline the revive: finalize the deferred death and show the result screen. */
   const handleDeclineContinue = useCallback(() => {
@@ -917,6 +939,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     const levelOvertime = baseLevelScore + highscoreBonusEarned;
+
+    analytics.levelCompleted({
+      level: currentLevelNum,
+      overtime: levelOvertime,
+      perfect: currentLives >= livesAtLevelStart,
+      ascensionDepth,
+      daily: dailyKeyRef.current !== null,
+    });
 
     // Contract bookkeeping (#49): what this contract's maps have produced.
     if (activeDoor) {
@@ -1054,6 +1084,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   /** Ascend: draft a loadout and loop back to level 1 at depth + 1. */
   const handleAscend = useCallback((loadoutId: string) => {
     const newDepth = ascensionDepth + 1;
+    analytics.ascensionStarted({ depth: newDepth, loadoutId });
     setDraftedLoadoutIds(prev => [...prev, loadoutId]);
     setAscensionDepth(newDepth);
     recordAscensionDepth(newDepth);
@@ -1080,6 +1111,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * delta once, mirroring handleAscend.
    */
   const handleConfirmLoadout = useCallback((loadoutId: string | null) => {
+    analytics.loadoutSelected({ loadoutId });
     if (loadoutId) {
       setDraftedLoadoutIds([loadoutId]);
       const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
@@ -1096,6 +1128,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   /** Retire: bank the run and show the result screen. */
   const handleRetire = useCallback(() => {
     const levelsCompleted = runLevelsCompleted;
+    analytics.runEnded({
+      isWin: true,
+      levelsCompleted,
+      totalScore,
+      ascensionDepth,
+      daily: dailyKeyRef.current !== null,
+    });
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
     captureRunRecap(totalScore);
@@ -1119,6 +1158,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [runLevelsCompleted, finalizeRun, activeModifiers.extraCertificateHours, nav.endGame, pendingLevelScore, currentLevel, currentLevelIndex, totalScore, ascensionDepth, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun]);
 
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
+    analytics.upgradePurchased({ upgradeId, price, level: currentLevelIndex + 1 });
     setTotalScore(prev => prev - price);
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
     // Budget Cycle: purchases land as a synchronous burst right before the
@@ -1139,7 +1179,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       const unlocks = recordMaxTierPurchase(certKey);
       if (unlocks.length > 0) setShopUnlockedCerts(prev => [...prev, ...unlocks]);
     }
-  }, [upgrades, certSourceIds, recordMaxTierPurchase]);
+  }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex]);
 
   const handleContinueFromShop = useCallback(() => {
     // Budget Cycle: this visit's spend buys next-map boons. Granted here and
@@ -1163,6 +1203,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   /** Capstone draft pick: permanent for the run, then on to the assignment. */
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
+    analytics.capstoneSelected({ capstoneId: pick.id });
     setCapstone(pick);
     proceedToAssignment();
   }, [proceedToAssignment]);
@@ -1172,11 +1213,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * one and runs until the next assignment swaps it out.
    */
   const handleSelectDoor = useCallback((door: DoorConfig) => {
+    analytics.doorSelected({ doorId: door.id, level: currentLevelIndex + 1 });
     setActiveDoor(door);
     blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 }; // new contract, fresh card (#49)
     advanceToNextLevel();
     nav.goToGame();
-  }, [advanceToNextLevel, nav.goToGame]);
+  }, [advanceToNextLevel, nav.goToGame, currentLevelIndex]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);
@@ -1204,6 +1246,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         resetToFirstLevel();
       }
     }
+
+    analytics.runStarted({ mode: 'playAgain', daily: false });
 
     if (loadoutsIntroduced) nav.goToRunDraft();
     else nav.startGame();

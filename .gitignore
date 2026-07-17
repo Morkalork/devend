@@ -34,3 +34,7 @@ android/keystore.properties
 android/local.properties
 
 devend-upload.keystore
+.env.local
+
+# PostHog setup-wizard cache (the usable skill lives in .claude/skills/)
+.posthog/
