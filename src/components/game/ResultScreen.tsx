@@ -238,14 +238,18 @@ export function ResultScreen({
             <p className="text-muted-foreground text-xs mt-1">{levelId}</p>
           </div>
 
-          <div>
-            <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
-              {t('result.arenaRemaining')}
-            </p>
-            <p className="text-5xl font-display font-bold text-foreground">
-              {remainingPercent}%
-            </p>
-          </div>
+          {/* Arena remaining is only meaningful on a win; on a loss the number
+              says nothing about the run, so the row is dropped. */}
+          {isWin && (
+            <div>
+              <p className="text-muted-foreground text-sm uppercase tracking-wider mb-1">
+                {t('result.arenaRemaining')}
+              </p>
+              <p className="text-5xl font-display font-bold text-foreground">
+                {remainingPercent}%
+              </p>
+            </div>
+          )}
 
           {/* Certificate hours earned */}
           {runLevelsCompleted > 0 && (
