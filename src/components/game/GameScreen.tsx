@@ -24,6 +24,8 @@ import { LevelConfig } from '@/types/level';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
+import { DoorConfig } from '@/types/door';
+import { CapstoneConfig } from '@/types/capstone';
 import { useGameConfig } from '@/hooks/useGameConfig';
 import { playMusicForLevel } from '@/lib/gameMusic';
 import { isSoundMuted, setSoundMuted } from '@/lib/soundSettings';
@@ -77,6 +79,9 @@ interface GameScreenProps {
   mapHighscores?: Record<string, number>;
   /** Run-pace delta vs the best run (HIGHSCORES.md); rides Benchmarking. */
   runPaceDelta?: number | null;
+  /** Active assignment + Promotion, for the top bar's contract chips (#49). */
+  activeDoor?: DoorConfig | null;
+  capstone?: CapstoneConfig | null;
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
@@ -127,6 +132,8 @@ export function GameScreen({
   ascensionDepth = 0,
   mapHighscores,
   runPaceDelta = null,
+  activeDoor = null,
+  capstone = null,
   activeLoadouts = [],
   fenceDurability = null,
   showBallSpeeds = false,
@@ -328,6 +335,8 @@ export function GameScreen({
             highscoreCurrent={projectedScore}
             highscoreTarget={highscoreTarget}
             runPaceDelta={runPaceDelta}
+            activeDoor={activeDoor}
+            capstone={capstone}
             onExpand={() => setTopPanelOpen(true)}
           />
         </div>

@@ -212,6 +212,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 ascensionDepth={session.ascensionDepth}
                 mapHighscores={session.mapHighscores}
                 runPaceDelta={session.levelPace?.delta ?? null}
+                activeDoor={session.activeDoor}
+                capstone={session.capstone}
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
                 introAssemble={session.introAssemblePending}
@@ -259,6 +261,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 nextLevel={session.nextLevel}
                 offers={session.doorOffers}
                 onSelect={session.handleSelectDoor}
+                previousContract={session.lastContractSummary}
                 accentColor={accentHex}
               />
             )}

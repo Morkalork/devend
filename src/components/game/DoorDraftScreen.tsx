@@ -27,6 +27,15 @@ interface DoorDraftScreenProps {
   offers: DoorConfig[];
   /** Called with the chosen door. */
   onSelect: (door: DoorConfig) => void;
+  /** How the just-finished contract went (#49); null on the first assignment. */
+  previousContract?: {
+    doorId: string;
+    doorName: string;
+    overtime: number;
+    maps: number;
+    locks: number;
+    livesLost: number;
+  } | null;
   accentColor?: string;
 }
 
@@ -34,6 +43,7 @@ export function DoorDraftScreen({
   nextLevel,
   offers,
   onSelect,
+  previousContract = null,
   accentColor = '#00ff88',
 }: DoorDraftScreenProps) {
   const { t } = useTranslation();
@@ -113,6 +123,37 @@ export function DoorDraftScreen({
               {t('doorDraft.subtitle', { level: nextLevel.level })}
             </p>
           </div>
+
+          {/* Contract report card (#49): how the just-finished assignment went. */}
+          {previousContract && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.12 }}
+              className="w-full rounded-lg p-3"
+              style={{ border: '1px solid #ffb34755', backgroundColor: '#ffb3470f' }}
+            >
+              <div className="flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wider mb-2" style={{ color: '#ffb347' }}>
+                <Ticket className="w-3.5 h-3.5" />
+                {t('doorDraft.contractReport', { name: previousContract.doorName })}
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm">
+                {([
+                  ['contractOvertime', `${previousContract.overtime}h`],
+                  ['contractMaps', String(previousContract.maps)],
+                  ['contractLocks', String(previousContract.locks)],
+                  ['contractLivesLost', String(previousContract.livesLost)],
+                ] as const).map(([key, value]) => (
+                  <span key={key} className="flex items-center gap-1.5">
+                    <span className="text-[11px] uppercase tracking-wider" style={{ color: '#b58a5a' }}>
+                      {t(`doorDraft.${key}`)}
+                    </span>
+                    <span className="font-display font-bold tabular-nums text-foreground">{value}</span>
+                  </span>
+                ))}
+              </div>
+            </motion.div>
+          )}
 
           {/* Next-map intel briefing */}
           <motion.div

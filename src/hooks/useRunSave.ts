@@ -43,6 +43,9 @@ export interface RunSave {
   // Free-store-item pickups awaiting the next OPEN store (issue #48).
   // Optional: saves from before the feature default to 0.
   carryFreeShopItems?: number;
+  // Running contract report card (#49): what the active door's block has
+  // produced so far. Optional; missing = zeros.
+  blockStats?: { overtime: number; maps: number; locks: number; livesLost: number };
   // Run-defining picks (re-hydrated from the loaded pools by id).
   activeDoorId: string | null;
   capstoneId: string | null;

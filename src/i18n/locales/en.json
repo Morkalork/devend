@@ -458,7 +458,12 @@
     "lives_other": "{{count}} lives remaining",
     "scopeCreepValue": "+{{percent}}%",
     "scopeCreepTitle": "Scope creep: balls moving {{percent}}% faster",
-    "runPace": "{{delta}} vs best run"
+    "runPace": "{{delta}} vs best run",
+    "contractAssignment": "Active assignment",
+    "contractPromotion": "Promotion",
+    "contractRisk": "Risk:",
+    "contractReward": "Reward:",
+    "contractClose": "Close"
   },
   "shipEarlyBar": {
     "title": "Ship Early: clear the map before the bar runs out for bonus overtime",
@@ -658,7 +663,12 @@
     "holdHint": "Hold a ticket for the full briefing.",
     "closeDetail": "Close",
     "enterButton": "Take This Ticket",
-    "pickHint": "Pick a Ticket"
+    "pickHint": "Pick a Ticket",
+    "contractReport": "Last contract: {{name}}",
+    "contractOvertime": "Overtime",
+    "contractMaps": "Maps",
+    "contractLocks": "Locks",
+    "contractLivesLost": "Lives lost"
   },
   "continue": {
     "title": "Continue?",

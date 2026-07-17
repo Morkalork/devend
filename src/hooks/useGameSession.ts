@@ -123,6 +123,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // don't burn it), and rides in the run save.
   const [carryFreeShopItems, setCarryFreeShopItems] = useState(0);
 
+  // Issue #49: how the CURRENT contract is going, accumulated across its
+  // 5-level block (a ref: bumped inside synchronous score/lives flows) and
+  // snapshotted into lastContractSummary when the next assignment draft opens,
+  // so the Assignment view can show how the finished contract went.
+  const blockStatsRef = useRef({ overtime: 0, maps: 0, locks: 0, livesLost: 0 });
+  const [lastContractSummary, setLastContractSummary] = useState<
+    { doorId: string; doorName: string; overtime: number; maps: number; locks: number; livesLost: number } | null
+  >(null);
+
   // Assignments (doors): every 5th completed level replaces the shop with a
   // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
   // `activeDoor` is the picked contract and lives until the NEXT assignment
@@ -475,6 +484,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendFenceSpeed(0);
     setCarryFreeShopItems(0);
     spentThisShopVisitRef.current = 0;
+    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
+    setLastContractSummary(null);
     setActiveDoor(null);
     setCapstone(null);
     setPendingLevelScore(null);
@@ -514,6 +525,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carrySpendFences,
     carrySpendFenceSpeed,
     carryFreeShopItems,
+    blockStats: blockStatsRef.current,
     activeDoorId: activeDoor?.id ?? null,
     capstoneId: capstone?.id ?? null,
     ascensionDepth,
@@ -681,6 +693,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendFences(save.carrySpendFences);
     setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
     setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
+    blockStatsRef.current = save.blockStats ?? { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
+    setLastContractSummary(null);
     spentThisShopVisitRef.current = 0;
     setAscensionDepth(save.ascensionDepth);
     setDraftedLoadoutIds(save.draftedLoadoutIds);
@@ -804,9 +818,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const handleLivesChange = useCallback((newLives: number) => {
     const livesLost = currentLives - newLives;
-    if (livesLost > 0) recordLivesLost(livesLost);
+    if (livesLost > 0) {
+      recordLivesLost(livesLost);
+      // Contract bookkeeping (#49): lives lost while a contract runs.
+      if (activeDoor) blockStatsRef.current.livesLost += livesLost;
+    }
     setCurrentLives(newLives);
-  }, [currentLives, recordLivesLost]);
+  }, [currentLives, recordLivesLost, activeDoor]);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     const currentLevelNum = currentLevelIndex + 1;
@@ -900,6 +918,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     const levelOvertime = baseLevelScore + highscoreBonusEarned;
 
+    // Contract bookkeeping (#49): what this contract's maps have produced.
+    if (activeDoor) {
+      blockStatsRef.current.overtime += levelOvertime;
+      blockStatsRef.current.maps += 1;
+      blockStatsRef.current.locks += scoreData.lockedBallsCount ?? 0;
+    }
+
     // Record Pace (HIGHSCORES.md): extend this run's trajectory and race the
     // best run at the same maps-completed point. The PB banner fires once, the
     // moment the cumulative total passes the all-time best mid-run.
@@ -927,7 +952,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts, bestRunTrajectory, bestScore]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts, bestRunTrajectory, bestScore, activeDoor]);
 
   /**
    * Enter the assignment draft (mandatory 1-of-3 door pick). If the door pool
@@ -935,6 +960,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * dead-ends without a screen.
    */
   const proceedToAssignment = useCallback(() => {
+    // Contract report card (#49): snapshot how the finished contract went so
+    // the draft screen can show it above the new offers.
+    if (activeDoor) {
+      setLastContractSummary({
+        doorId: activeDoor.id,
+        doorName: activeDoor.name,
+        ...blockStatsRef.current,
+      });
+    } else {
+      setLastContractSummary(null);
+    }
     const doorPool = getDoors();
     if (doorPool.length > 0) {
       // Seeded runs key the roll by the level it lands on, so every player on
@@ -944,7 +980,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       return;
     }
     nav.goToUpgradeShop();
-  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex]);
+  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex, activeDoor]);
 
   /**
    * Assignment level (every 5th): no shop. Route straight into the capstone
@@ -1032,6 +1068,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     setPendingLevelScore(null);
     setActiveDoor(null); // the pre-ascension map's door does not follow into the loop
+    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
+    setLastContractSummary(null);
     resetToFirstLevel(); // also re-randomizes the level variants for the new loop
     nav.goToGame();
   }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, nav.goToGame]);
@@ -1135,6 +1173,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const handleSelectDoor = useCallback((door: DoorConfig) => {
     setActiveDoor(door);
+    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 }; // new contract, fresh card (#49)
     advanceToNextLevel();
     nav.goToGame();
   }, [advanceToNextLevel, nav.goToGame]);
@@ -1332,6 +1371,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Doors (branching map choice)
     doorOffers,
     activeDoor,
+    // How the just-finished contract went (#49), for the assignment draft.
+    lastContractSummary,
     // The map the door draft previews (null past the final level).
     nextLevel: levels[currentLevelIndex + 1] ?? null,
     handleSelectDoor,

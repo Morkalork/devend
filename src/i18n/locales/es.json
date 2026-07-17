@@ -455,7 +455,12 @@
     "lives_other": "{{count}} vidas restantes",
     "scopeCreepValue": "+{{percent}}%",
     "scopeCreepTitle": "Corrupción del alcance: bolas un {{percent}}% más rápidas",
-    "runPace": "{{delta}} vs. tu mejor partida"
+    "runPace": "{{delta}} vs. tu mejor partida",
+    "contractAssignment": "Encargo activo",
+    "contractPromotion": "Ascenso",
+    "contractRisk": "Riesgo:",
+    "contractReward": "Recompensa:",
+    "contractClose": "Cerrar"
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",
@@ -643,7 +648,12 @@
     "holdHint": "Mantén pulsado un tique para ver el informe completo.",
     "closeDetail": "Cerrar",
     "enterButton": "Tomar este tique",
-    "pickHint": "Elige un tique"
+    "pickHint": "Elige un tique",
+    "contractReport": "Último contrato: {{name}}",
+    "contractOvertime": "Horas extra",
+    "contractMaps": "Mapas",
+    "contractLocks": "Encierros",
+    "contractLivesLost": "Vidas perdidas"
   },
   "continue": {
     "title": "¿Continuar?",

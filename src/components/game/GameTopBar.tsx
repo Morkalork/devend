@@ -5,8 +5,10 @@
  */
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, Ticket, Award, Info, X } from 'lucide-react';
 import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
+import { DoorConfig } from '@/types/door';
+import { CapstoneConfig } from '@/types/capstone';
 import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
 
@@ -87,6 +89,11 @@ interface GameTopBarProps {
   // Record Pace (HIGHSCORES.md): the run's overtime delta vs the best run as
   // of the last completed map. Rides Benchmarking too; null = nothing to race.
   runPaceDelta?: number | null;
+  // Issue #49: the running contract (assignment door) and the once-per-run
+  // Promotion (capstone), shown as distinct hold-to-detail chips in the
+  // upgrades row so the player can always see what they have.
+  activeDoor?: DoorConfig | null;
+  capstone?: CapstoneConfig | null;
   onExpand?: () => void;
 }
 
@@ -110,6 +117,8 @@ export function GameTopBar({
   highscoreCurrent = 0,
   highscoreTarget = 0,
   runPaceDelta = null,
+  activeDoor = null,
+  capstone = null,
   onExpand,
 }: GameTopBarProps) {
   const { t } = useTranslation();
@@ -119,6 +128,17 @@ export function GameTopBar({
   const [needsCarousel, setNeedsCarousel] = useState(false);
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
   const swipeStartYRef = useRef<number | null>(null);
+  // Issue #49: which contract chip's hold-detail modal is open.
+  const [contractDetail, setContractDetail] = useState<'door' | 'capstone' | null>(null);
+  const contractHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelContractHold = () => {
+    if (contractHoldTimer.current) { clearTimeout(contractHoldTimer.current); contractHoldTimer.current = null; }
+  };
+  const startContractHold = (which: 'door' | 'capstone') => {
+    cancelContractHold();
+    contractHoldTimer.current = setTimeout(() => setContractDetail(which), 450);
+  };
+  useEffect(() => cancelContractHold, []);
 
   const handleSwipeTouchStart = (e: React.TouchEvent) => {
     swipeStartYRef.current = e.touches[0].clientY;
@@ -442,11 +462,11 @@ export function GameTopBar({
         </div>
       )}
 
-      {/* Row 2: Upgrades Bar */}
-      {hasUpgrades && (
-        <div 
+      {/* Row 2: Upgrades Bar (+ contract/Promotion chips, issue #49) */}
+      {(hasUpgrades || activeDoor || capstone) && (
+        <div
           className="px-3 py-1.5"
-          style={{ 
+          style={{
             backgroundColor: 'rgba(0, 10, 5, 0.9)',
             borderBottom: `1px solid ${accentColor}33`,
           }}
@@ -459,6 +479,42 @@ export function GameTopBar({
               }`}
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
+              {/* Active assignment (door) + Promotion (capstone): styled apart
+                  from the green upgrade chips (contract orange / gold), same
+                  press-and-hold gesture for the explainer. */}
+              {activeDoor && (
+                <button
+                  className="relative flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
+                  style={{ backgroundColor: '#ffb34718', border: '1px solid #ffb34766', color: '#ffb347' }}
+                  onPointerDown={() => startContractHold('door')}
+                  onPointerUp={cancelContractHold}
+                  onPointerLeave={cancelContractHold}
+                  onPointerCancel={cancelContractHold}
+                  onContextMenu={(e) => e.preventDefault()}
+                  aria-label={contentText.doorName(t, activeDoor)}
+                >
+                  <Ticket className="w-4 h-4" strokeWidth={1.5} />
+                  <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />
+                </button>
+              )}
+              {capstone && (
+                <button
+                  className="relative flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
+                  style={{ backgroundColor: '#ffd54a18', border: '1px solid #ffd54a66', color: '#ffd54a' }}
+                  onPointerDown={() => startContractHold('capstone')}
+                  onPointerUp={cancelContractHold}
+                  onPointerLeave={cancelContractHold}
+                  onPointerCancel={cancelContractHold}
+                  onContextMenu={(e) => e.preventDefault()}
+                  aria-label={contentText.capstoneName(t, capstone)}
+                >
+                  <Award className="w-4 h-4" strokeWidth={1.5} />
+                  <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />
+                </button>
+              )}
+              {(activeDoor || capstone) && hasUpgrades && (
+                <span className="flex-shrink-0 w-px h-6" style={{ backgroundColor: `${accentColor}33` }} />
+              )}
               {groupedUpgrades.map((upgrade) => {
                 const Icon = getUpgradeIcon(upgrade, ownedUpgrades);
                 return (
@@ -526,6 +582,60 @@ export function GameTopBar({
               })}
             </div>
           </TooltipProvider>
+        </div>
+      )}
+
+      {/* Issue #49: hold-detail for the active assignment / Promotion chips.
+          Backdrop tap or the X closes it (the game's standard explainer). */}
+      {contractDetail && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+          onClick={() => setContractDetail(null)}
+        >
+          <div
+            className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+            style={{ borderColor: contractDetail === 'door' ? '#ffb34766' : '#ffd54a66' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setContractDetail(null)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              aria-label={t('topBar.contractClose')}
+            >
+              <X className="w-4 h-4" />
+            </button>
+            {contractDetail === 'door' && activeDoor && (
+              <>
+                <div className="flex items-center gap-3 mb-1 pr-6">
+                  <Ticket className="w-7 h-7 shrink-0" style={{ color: '#ffb347' }} />
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.contractAssignment')}</div>
+                    <div className="text-base font-bold text-foreground">{contentText.doorName(t, activeDoor)}</div>
+                  </div>
+                </div>
+                <p className="text-sm mt-2"><span className="text-destructive font-semibold">{t('topBar.contractRisk')}</span> <span className="text-muted-foreground">{contentText.doorRisk(t, activeDoor)}</span></p>
+                <p className="text-sm mt-1"><span className="text-success font-semibold">{t('topBar.contractReward')}</span> <span className="text-muted-foreground">{contentText.doorReward(t, activeDoor)}</span></p>
+                {activeDoor.clarify && (
+                  <p className="text-sm text-muted-foreground mt-3">{contentText.doorClarify(t, activeDoor)}</p>
+                )}
+              </>
+            )}
+            {contractDetail === 'capstone' && capstone && (
+              <>
+                <div className="flex items-center gap-3 mb-1 pr-6">
+                  <Award className="w-7 h-7 shrink-0" style={{ color: '#ffd54a' }} />
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.contractPromotion')}</div>
+                    <div className="text-base font-bold text-foreground">{contentText.capstoneName(t, capstone)}</div>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{contentText.capstoneDesc(t, capstone)}</p>
+                {capstone.clarify && (
+                  <p className="text-sm text-muted-foreground mt-3">{contentText.capstoneClarify(t, capstone)}</p>
+                )}
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

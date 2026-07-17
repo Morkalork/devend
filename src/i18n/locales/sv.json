@@ -455,7 +455,12 @@
     "lives_other": "{{count}} liv kvar",
     "scopeCreepValue": "+{{percent}}%",
     "scopeCreepTitle": "Scope creep: bollarna rör sig {{percent}}% snabbare",
-    "runPace": "{{delta}} mot bästa rundan"
+    "runPace": "{{delta}} mot bästa rundan",
+    "contractAssignment": "Aktivt uppdrag",
+    "contractPromotion": "Befordran",
+    "contractRisk": "Risk:",
+    "contractReward": "Belöning:",
+    "contractClose": "Stäng"
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
@@ -643,7 +648,12 @@
     "holdHint": "Håll in en biljett för hela genomgången.",
     "closeDetail": "Stäng",
     "enterButton": "Ta den här biljetten",
-    "pickHint": "Välj en biljett"
+    "pickHint": "Välj en biljett",
+    "contractReport": "Senaste kontraktet: {{name}}",
+    "contractOvertime": "Övertid",
+    "contractMaps": "Kartor",
+    "contractLocks": "Inlåsningar",
+    "contractLivesLost": "Förlorade liv"
   },
   "continue": {
     "title": "Fortsätta?",
