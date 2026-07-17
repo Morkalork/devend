@@ -214,7 +214,7 @@ export function CertificateStore({
         >
           {/* Header */}
           <div className="flex items-center gap-3">
-            <Medal className="w-8 h-8 text-white" />
+            <Medal className="w-8 h-8 text-primary" />
             <h1 className="text-3xl sm:text-4xl font-display font-black tracking-wider text-foreground">
               {t('certificateStore.title')}
             </h1>
@@ -225,15 +225,15 @@ export function CertificateStore({
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.1 }}
-            className="bg-white/10 border border-white/30 rounded-xl px-6 py-3 text-center"
-            style={{ boxShadow: '0 0 20px rgba(255,255,255,0.1)' }}
+            className="bg-primary/10 border border-primary/40 rounded-xl px-6 py-3 text-center"
+            style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.25), inset 0 0 20px hsl(var(--primary) / 0.05)' }}
           >
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
               {t('certificateStore.certificateHours')}
             </p>
             <div className="flex items-center justify-center gap-2">
-              <Hexagon className="w-6 h-6 text-white fill-white/20" />
-              <p className="text-4xl font-display font-bold text-white">
+              <Hexagon className="w-6 h-6 text-primary fill-primary/20" />
+              <p className="text-4xl font-display font-bold text-primary">
                 {projectedBalance}
               </p>
             </div>
@@ -261,8 +261,10 @@ export function CertificateStore({
                       initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.15 + i * 0.04 }}
-                      className="p-4 rounded-lg border-2 border-white/30 bg-white/5 cursor-pointer"
-                      style={{ boxShadow: selectedTarget != null ? '0 0 16px rgba(255,255,255,0.12)' : undefined }}
+                      className="p-4 rounded-lg border-2 border-primary/40 bg-card cursor-pointer transition-colors hover:border-primary"
+                      style={{ boxShadow: selectedTarget != null
+                        ? '0 0 24px hsl(var(--primary) / 0.35), inset 0 0 16px hsl(var(--primary) / 0.06)'
+                        : '0 0 16px hsl(var(--primary) / 0.12)' }}
                       onClick={toggleCard(cert.id)}
                     >
                       {/* Header: name + description + owned summary + chevron */}
@@ -272,11 +274,11 @@ export function CertificateStore({
                           <p className="text-xs text-muted-foreground mt-0.5">{contentText.certDesc(t, cert)}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-display font-bold text-muted-foreground tabular-nums">
+                          <span className="text-xs font-display font-bold text-primary tabular-nums">
                             {t('certificateStore.levelFraction', { owned: levelsOwned, total: cert.levels.length })}
                           </span>
                           <ChevronDown
-                            className={`w-5 h-5 text-muted-foreground transition-transform ${expanded ? 'rotate-180 text-white' : ''}`}
+                            className={`w-5 h-5 text-primary transition-transform ${expanded ? 'rotate-180' : ''}`}
                           />
                         </div>
                       </div>
@@ -292,7 +294,7 @@ export function CertificateStore({
                             className="overflow-hidden"
                           >
                             {/* Purchases happen in here — don't let taps collapse the card */}
-                            <div className="mt-3 pt-3 border-t border-white/10" onClick={(e) => e.stopPropagation()}>
+                            <div className="mt-3 pt-3 border-t border-primary/20" onClick={(e) => e.stopPropagation()}>
                               <div className="flex flex-wrap gap-2 mb-3">
                                 {cert.levels.map((level, idx) => {
                                   const levelNum = idx + 1;
@@ -307,21 +309,21 @@ export function CertificateStore({
                                       className={`
                                         flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-display font-bold transition-all
                                         ${owned
-                                          ? 'border-white/40 bg-white/10 text-white/50 cursor-default'
+                                          ? 'border-primary/30 bg-primary/10 text-primary/60 cursor-default'
                                           : selected
-                                            ? 'border-white bg-white/20 text-white cursor-pointer'
-                                            : 'border-white/20 bg-transparent text-muted-foreground hover:border-white/50 hover:text-white cursor-pointer'
+                                            ? 'border-primary bg-primary/25 text-primary cursor-pointer'
+                                            : 'border-primary/40 bg-primary/5 text-primary hover:border-primary hover:bg-primary/15 cursor-pointer'
                                         }
                                       `}
                                     >
                                       {owned ? (
                                         <Check className="w-3.5 h-3.5" />
                                       ) : (
-                                        <Hexagon className="w-3.5 h-3.5 fill-current opacity-50" />
+                                        <Hexagon className="w-3.5 h-3.5 fill-current opacity-80" />
                                       )}
                                       {t('certificateStore.levelLabel', { level: levelNum })}
                                       {!owned && (
-                                        <span className="text-xs font-normal opacity-70">{t('certificateStore.levelCost', { cost: level.cost })}</span>
+                                        <span className="text-xs font-normal opacity-80">{t('certificateStore.levelCost', { cost: level.cost })}</span>
                                       )}
                                     </button>
                                   );
@@ -329,9 +331,9 @@ export function CertificateStore({
                               </div>
 
                               {selectedTarget != null && (
-                                <div className="flex items-center justify-between gap-3 pt-2 border-t border-white/10">
+                                <div className="flex items-center justify-between gap-3 pt-2 border-t border-primary/20">
                                   <div className="text-sm text-muted-foreground">
-                                    {t('certificateStore.cost')} <span className={canAfford ? 'text-white font-bold' : 'text-destructive font-bold'}>
+                                    {t('certificateStore.cost')} <span className={canAfford ? 'text-primary font-bold' : 'text-destructive font-bold'}>
                                       {t('certificateStore.hoursValue', { hours: pendingCost })}
                                     </span>
                                     {!canAfford && (
@@ -448,18 +450,18 @@ export function CertificateStore({
                       initial={{ opacity: 0, x: -16 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.25 + i * 0.03 }}
-                      className="p-4 rounded-lg border border-white/20 bg-white/5 cursor-pointer"
-                      style={{ opacity: expanded ? 0.85 : 0.6 }}
+                      className="p-4 rounded-lg border border-primary/30 bg-primary/5 cursor-pointer transition-colors hover:border-primary/60"
+                      style={{ opacity: expanded ? 1 : 0.85 }}
                       onClick={toggleCard(cert.id)}
                     >
                       <div className="flex items-center gap-3">
-                        <Check className="w-5 h-5 text-white shrink-0" />
-                        <p className="flex-1 min-w-0 font-display font-bold text-sm text-white">{contentText.certName(t, cert)}</p>
-                        <span className="text-xs font-display font-bold text-muted-foreground tabular-nums shrink-0">
+                        <Check className="w-5 h-5 text-primary shrink-0" />
+                        <p className="flex-1 min-w-0 font-display font-bold text-sm text-foreground">{contentText.certName(t, cert)}</p>
+                        <span className="text-xs font-display font-bold text-primary/80 tabular-nums shrink-0">
                           {t('certificateStore.levelFraction', { owned: cert.levels.length, total: cert.levels.length })}
                         </span>
                         <ChevronDown
-                          className={`w-5 h-5 text-muted-foreground transition-transform shrink-0 ${expanded ? 'rotate-180 text-white' : ''}`}
+                          className={`w-5 h-5 text-primary transition-transform shrink-0 ${expanded ? 'rotate-180' : ''}`}
                         />
                       </div>
 
@@ -472,7 +474,7 @@ export function CertificateStore({
                             transition={{ duration: 0.2, ease: 'easeOut' }}
                             className="overflow-hidden"
                           >
-                            <div className="mt-3 pt-3 border-t border-white/10">
+                            <div className="mt-3 pt-3 border-t border-primary/20">
                               <p className="text-xs text-muted-foreground">{contentText.certDesc(t, cert)}</p>
                             </div>
                           </motion.div>
