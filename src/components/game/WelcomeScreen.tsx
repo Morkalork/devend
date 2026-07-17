@@ -74,9 +74,8 @@ export function WelcomeScreen({
     if (highlights?.[key]) onHighlightSeen?.(key);
   };
   const newBadge = (
-    <span className="menu-highlight-badge">
+    <span className="menu-highlight-badge" aria-label={t('welcome.newBadge')}>
       <Sparkles className="w-3 h-3" />
-      {t('welcome.newBadge')}
     </span>
   );
 

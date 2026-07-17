@@ -373,9 +373,9 @@
     transition-duration: 65ms;
   }
 
-  /* Additional 15% smaller — for welcome screen buttons */
+  /* Smaller variant — for welcome screen buttons */
   .arcade-button-sm {
-    font-size: 0.8rem;
+    font-size: 0.72rem;
     padding: 0.72rem 1.45rem;
   }
 
@@ -478,16 +478,13 @@
     }
   }
 
-  /* Bouncing gold pill inside a highlighted button's label row. */
+  /* Bouncing gold dot (sparkle only) inside a highlighted button's label row. */
   .menu-highlight-badge {
     margin-left: 0.25rem;
     display: flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.125rem 0.5rem;
+    padding: 0.2rem;
     border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 700;
     background: hsl(45 100% 62%);
     color: hsl(0 0% 8%);
     animation: highlight-bob 1.2s ease-in-out infinite;
