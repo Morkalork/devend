@@ -88,6 +88,29 @@ describe("useHallOfFame", () => {
       expect(result.current.monthlyBests["2026-07"].score).toBe(350);
     });
 
+    it("daily streak: consecutive days increment, same-day repeats hold, gaps reset", () => {
+      const { result } = renderHook(() => useHallOfFame());
+      const file = (score: number, day: string) => {
+        let r: { dayBest: boolean; dailyStreak: number };
+        act(() => { r = result.current.recordRun(entry(score), [score], day); });
+        return r!;
+      };
+
+      expect(file(100, "2026-07-14").dailyStreak).toBe(1);
+      expect(file(120, "2026-07-15").dailyStreak).toBe(2); // consecutive
+      const repeat = file(90, "2026-07-15");                // same day again
+      expect(repeat.dailyStreak).toBe(2);                   // held, not incremented
+      expect(repeat.dayBest).toBe(false);                   // below that day's 120
+      expect(file(80, "2026-07-18").dailyStreak).toBe(1);   // gap resets
+      expect(result.current.dailyBests["2026-07-15"].score).toBe(120);
+      // Normal (non-daily) runs leave the daily ledger untouched.
+      let normal: { dayBest: boolean; dailyStreak: number };
+      act(() => { normal = result.current.recordRun(entry(999), [999]); });
+      expect(normal!.dayBest).toBe(false);
+      expect(normal!.dailyStreak).toBe(0);
+      expect(result.current.dailyStreak).toEqual({ count: 1, lastKey: "2026-07-18" });
+    });
+
     it("months are separate ladders and persist across reloads", () => {
       const first = renderHook(() => useHallOfFame());
       act(() => { first.result.current.recordRun(inMonth(500, "2026-06-15T12:00:00"), [500]); });

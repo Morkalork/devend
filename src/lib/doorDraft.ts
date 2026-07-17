@@ -72,6 +72,6 @@ export async function loadDoors(): Promise<boolean> {
 }
 
 /** Draw `n` distinct doors from the pool (uniform, no replacement). */
-export function drawDoorOffers(pool: DoorConfig[], n: number): DoorConfig[] {
-  return drawRandom(pool, n);
+export function drawDoorOffers(pool: DoorConfig[], n: number, rng?: () => number): DoorConfig[] {
+  return drawRandom(pool, n, rng);
 }

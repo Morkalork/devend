@@ -26,6 +26,7 @@ import { useCheckpointSnapshots } from './useCheckpointSnapshots';
 import { useRunSave, RunSave } from './useRunSave';
 import { useHallOfFame } from './useHallOfFame';
 import { paceDelta, aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
+import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng';
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
@@ -221,7 +222,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Hall of Fame (HIGHSCORES.md Phase A): the all-time Top 10 run ledger plus
   // the #1 run's per-map trajectory, which Record Pace races during the run.
-  const { topRuns, bestRunTrajectory, monthlyBests, bestScore, recordRun } = useHallOfFame();
+  const { topRuns, bestRunTrajectory, monthlyBests, dailyBests, dailyStreak, bestScore, recordRun } = useHallOfFame();
   // Cumulative overtime after each completed map of the CURRENT run. A ref
   // because it's appended inside handleLevelComplete's synchronous flow and
   // persisted via the run-save snapshot (also refreshed per render).
@@ -233,7 +234,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Record Pace payload for the current level-complete overlay.
   const [levelPace, setLevelPace] = useState<{ delta: number | null; newPersonalBest: boolean } | null>(null);
   // Where the just-finished run landed on the ladder (for the result screen).
-  const [lastRunRank, setLastRunRank] = useState<(RunRankInfo & { aheadThroughMaps: number | null; monthBest: boolean }) | null>(null);
+  const [lastRunRank, setLastRunRank] = useState<(RunRankInfo & { aheadThroughMaps: number | null; monthBest: boolean; dayBest?: boolean; dailyStreak?: number }) | null>(null);
+  // Daily Stand-up (HIGHSCORES.md Phase D): non-null = this run is the seeded
+  // daily for that "YYYY-MM-DD" key. Mirrored in a ref for the filing path.
+  const [dailyKey, setDailyKey] = useState<string | null>(null);
+  const dailyKeyRef = useRef<string | null>(null);
 
   const {
     stats: metaStats,
@@ -501,6 +506,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     draftedLoadoutIds,
     runTrajectory: runTrajectoryRef.current,
     recordEligible: recordEligibleRef.current,
+    dailyKey,
   };
 
   // Persist the run whenever a new map begins (map advance or a Continue-revive
@@ -513,7 +519,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     saveRun(snap);
   }, [nav.currentScreen, currentLevelIndex, gameInstanceKey, saveRun]);
 
+  /** Leave any seeded-run context: normal runs roll Math.random again. */
+  const clearDailyMode = useCallback(() => {
+    setRunSeedText(null);
+    dailyKeyRef.current = null;
+    setDailyKey(null);
+  }, []);
+
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
+    // A normal run must never inherit a previous daily's seed: disarm BEFORE
+    // loading, because loadLevels() already rolls the level lineup.
+    clearDailyMode();
     // The loadout catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
@@ -566,7 +582,51 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       if (skipDraft || !loadoutsIntroduced) nav.startGame();
       else nav.goToRunDraft();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode]);
+
+  /**
+   * Daily Stand-up (HIGHSCORES.md Phase D): start today's seeded run. The seed
+   * is armed BEFORE the catalogues load (loadLevels rolls the level lineup),
+   * so every player on today's key is served the same variants, drafts, shops,
+   * obstacles and pickups. Always starts at level 1 (no cert Head Start): it
+   * is a shared run, and scores go on the daily ledger as well as the
+   * all-time one.
+   */
+  const handleStartDaily = useCallback(async () => {
+    const key = todayKey();
+    setRunSeedText(dailySeedText(key));
+    dailyKeyRef.current = key;
+    setDailyKey(key);
+
+    const [levelsSuccess, upgradesSuccess] = await Promise.all([
+      loadLevels(),
+      loadUpgrades(),
+      loadCertificates(),
+      loadLoadouts(),
+      loadBallTypes(),
+      loadDoors(),
+      loadCapstones(),
+    ]);
+    if (!levelsSuccess || !upgradesSuccess) {
+      clearDailyMode();
+      return;
+    }
+
+    resetRunScopedState();
+    clearRun();
+
+    const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
+    const startingLives = BASE_LIVES + certBonusLives;
+    setCurrentLives(startingLives);
+    setLivesAtLevelStart(startingLives);
+    setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
+    setPendingDeathResult(null);
+
+    resetToFirstLevel(); // same seeded lineup for everyone, from level 1
+
+    if (loadoutsIntroduced) nav.goToRunDraft();
+    else nav.startGame();
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, certBonuses, resetRunScopedState, clearRun, resetToFirstLevel, loadoutsIntroduced, nav.goToRunDraft, nav.startGame, clearDailyMode]);
 
   /**
    * Resume a saved run from the welcome screen. Loads the catalogues (same as a
@@ -578,6 +638,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleContinueRun = useCallback(async () => {
     const save = readRun();
     if (!save) return;
+
+    // Restore the run's seeded context (or lack of it) BEFORE loading: the
+    // shops/drafts/pickups ahead must keep rolling from the daily seed.
+    const savedDaily = save.dailyKey ?? null;
+    setRunSeedText(savedDaily ? dailySeedText(savedDaily) : null);
+    dailyKeyRef.current = savedDaily;
+    setDailyKey(savedDaily);
 
     const [levelsSuccess, upgradesSuccess] = await Promise.all([
       loadLevels(),
@@ -674,7 +741,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       capstoneName: capstone?.name ?? null,
       loadoutIds: draftedLoadoutIds,
       savedAt: Date.now(),
-    }, trajectory);
+    }, trajectory, dailyKeyRef.current);
     setLastRunRank({ ...info, aheadThroughMaps: epitaph });
   }, [bestRunTrajectory, bestScore, tagCounts, ascensionDepth, capstone, draftedLoadoutIds, recordRun]);
 
@@ -845,12 +912,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const proceedToAssignment = useCallback(() => {
     const doorPool = getDoors();
     if (doorPool.length > 0) {
-      setDoorOffers(drawDoorOffers(doorPool, ASSIGNMENT_OFFER_COUNT));
+      // Seeded runs key the roll by the level it lands on, so every player on
+      // the daily seed is offered the same contracts.
+      setDoorOffers(drawDoorOffers(doorPool, ASSIGNMENT_OFFER_COUNT, getRunRng(`doors:${currentLevelIndex + 1}`)));
       nav.goToDoorDraft();
       return;
     }
     nav.goToUpgradeShop();
-  }, [nav.goToDoorDraft, nav.goToUpgradeShop]);
+  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex]);
 
   /**
    * Assignment level (every 5th): no shop. Route straight into the capstone
@@ -863,7 +932,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // runs that resume past the exact trigger level still get theirs.
     const capstonePool = getCapstones();
     if (!capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
-      setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT));
+      setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT, getRunRng(`capstones:${currentLevelIndex + 1}`)));
       nav.goToCapstoneDraft();
       return;
     }
@@ -1044,6 +1113,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [purchaseCertLevel]);
 
   const handlePlayAgain = useCallback((startLevel?: number) => {
+    clearDailyMode(); // play-again is always a normal (unseeded) run
     resetRunScopedState();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
@@ -1067,9 +1137,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     if (loadoutsIntroduced) nav.goToRunDraft();
     else nav.startGame();
-  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, setLevelIndex, certBonuses, getCertStartingLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced]);
+  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, setLevelIndex, certBonuses, getCertStartingLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode]);
 
   const handleRestartRun = useCallback(() => {
+    clearDailyMode(); // restart is always a normal (unseeded) run
     resetRunScopedState();
     clearRunCheckpoints();
 
@@ -1083,9 +1154,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     resetToFirstLevel();
     if (loadoutsIntroduced) nav.goToRunDraft();
     else nav.startGame();
-  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, certBonuses, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced]);
+  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, certBonuses, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode]);
 
   const handleBackToWelcome = useCallback(() => {
+    // NOTE: does NOT clear the daily context; a saved daily run keeps its key
+    // and Continue restores the seed. The next new-run path disarms it.
     resetToFirstLevel();
     resetRunScopedState();
     setCurrentLives(BASE_LIVES);
@@ -1237,12 +1310,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Run persistence (Continue / New Game on the welcome screen)
     hasSavedRun,
     handleContinueRun,
-    // Records (HIGHSCORES.md Phase A/B/C)
+    // Records (HIGHSCORES.md Phase A/B/C/D)
     levelPace,
     lastRunRank,
     topRuns,
     monthlyBests,
     archetypeBests,
+    // Daily Stand-up
+    dailyKey,
+    dailyBests,
+    dailyStreak,
+    handleStartDaily,
     // Callbacks
     handleStartGame,
     handleConfirmLoadout,

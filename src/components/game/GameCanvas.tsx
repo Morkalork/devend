@@ -412,6 +412,8 @@ export function GameCanvas({
     pickupConfig: null as PickupConfig | null,
     pickupSpots: [] as Vector2[],
     lastPickupRollAt: 0,
+    pickupRollContext: 'pickups',
+    pickupRollIndex: 0,
     pickupOvertime: 0,
     pickupCapBonus: 0,
     freezeCharges: 0,
@@ -673,6 +675,10 @@ export function GameCanvas({
       game.pickups = [];
       game.pickupFeedback = [];
       game.lastPickupRollAt = 0;
+      // Seeded (daily) runs: key spawn rolls by map so every player's roll N
+      // draws identically (see updatePickups).
+      game.pickupRollContext = `pickups:${level.id}`;
+      game.pickupRollIndex = 0;
       game.pickupOvertime = 0;
       game.pickupCapBonus = 0;
       game.freezeCharges = 0;

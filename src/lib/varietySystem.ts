@@ -41,6 +41,11 @@ export function resetRunSeed(): void {
   currentRunSeed = Math.floor(Math.random() * 1000000);
 }
 
+// Seeded (daily) runs pin the seed so obstacle variation is shared (see runRng)
+export function setRunSeed(seed: number): void {
+  currentRunSeed = seed >>> 0;
+}
+
 /**
  * Get decoration config influenced by variety value
  * Low variety (0-10): Simple bumps, low density, small size

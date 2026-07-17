@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, X } from 'lucide-react';
+import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, X } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { version } from '@/lib/version';
@@ -16,6 +16,12 @@ interface WelcomeScreenProps {
   onLoadouts?: () => void;
   /** Opens the Performance Review (records). Absent until a run has banked. */
   onHallOfFame?: () => void;
+  /** Starts today's seeded Daily Stand-up run (HIGHSCORES.md Phase D). */
+  onDaily?: () => void;
+  /** Attendance streak shown on the daily button (0 = hidden). */
+  dailyStreak?: number;
+  /** True when today's stand-up already has a banked run (shows a check). */
+  dailyDoneToday?: boolean;
   onAchievements?: () => void;
   onAdmin?: () => void;
   isLoading?: boolean;
@@ -33,6 +39,9 @@ export function WelcomeScreen({
   onOpenCertificateStore,
   onLoadouts,
   onHallOfFame,
+  onDaily,
+  dailyStreak = 0,
+  dailyDoneToday = false,
   onAchievements,
   onAdmin,
   isLoading,
@@ -248,6 +257,27 @@ export function WelcomeScreen({
               ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</>
               : (onContinue ? t('welcome.newGame') : t('welcome.startGame'))}
           </motion.button>
+          {/* Daily Stand-up: today's seeded run, same for every player. The
+              flame chip is the attendance streak; the check = banked today. */}
+          {onDaily && (
+            <motion.button
+              className="arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2"
+              onClick={onDaily}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              disabled={isLoading}
+            >
+              <CalendarDays className="w-5 h-5" />
+              {t('welcome.dailyStandup')}
+              {dailyStreak > 0 && (
+                <span className="ml-1 text-xs bg-white/20 text-white px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <Flame className="w-3 h-3" style={{ color: '#ffb347' }} />
+                  {dailyStreak}
+                </span>
+              )}
+              {dailyDoneToday && <Check className="w-4 h-4 text-success" />}
+            </motion.button>
+          )}
           <motion.button
             className="arcade-button-primary arcade-button-sm rounded-lg"
             onClick={onTutorial}

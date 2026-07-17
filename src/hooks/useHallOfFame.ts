@@ -15,6 +15,7 @@ import {
   DEFAULT_HALL_STATE,
 } from '@/types/hallOfFame';
 import { insertRun, monthKey, RunRankInfo } from '@/lib/runLedger';
+import { previousDayKey } from '@/lib/runRng';
 
 function loadHall(): HallOfFameState {
   try {
@@ -28,6 +29,17 @@ function loadHall(): HallOfFameState {
         if (typeof r?.score === 'number' && r.score > 0) monthlyBests[month] = r;
       }
     }
+    const dailyBests: Record<string, RunLedgerEntry> = {};
+    if (parsed?.dailyBests && typeof parsed.dailyBests === 'object') {
+      for (const [day, run] of Object.entries(parsed.dailyBests)) {
+        const r = run as RunLedgerEntry;
+        if (typeof r?.score === 'number' && r.score > 0) dailyBests[day] = r;
+      }
+    }
+    const dailyStreak =
+      typeof parsed?.dailyStreak?.count === 'number' && typeof parsed?.dailyStreak?.lastKey === 'string'
+        ? { count: Math.max(0, Math.floor(parsed.dailyStreak.count)), lastKey: parsed.dailyStreak.lastKey }
+        : { ...DEFAULT_HALL_STATE.dailyStreak };
     return {
       topRuns: Array.isArray(parsed?.topRuns)
         ? parsed.topRuns.filter((r: RunLedgerEntry) => typeof r?.score === 'number' && r.score > 0)
@@ -36,6 +48,8 @@ function loadHall(): HallOfFameState {
         ? parsed.bestRunTrajectory.filter((n: unknown) => typeof n === 'number' && Number.isFinite(n))
         : [],
       monthlyBests,
+      dailyBests,
+      dailyStreak,
     };
   } catch {
     return { ...DEFAULT_HALL_STATE };
@@ -60,8 +74,14 @@ export function useHallOfFame() {
    * File a finished run. Returns its rank/gap info synchronously (before React
    * re-renders) so the caller can hand it straight to the result screen.
    * `monthBest` = the run took (or founded) this calendar month's crown.
+   * `dailyKey` marks a Daily Stand-up run: it additionally files on that day's
+   * ledger (`dayBest`) and advances the attendance streak (`dailyStreak`).
    */
-  const recordRun = useCallback((entry: RunLedgerEntry, trajectory: number[]): RunRankInfo & { monthBest: boolean } => {
+  const recordRun = useCallback((
+    entry: RunLedgerEntry,
+    trajectory: number[],
+    dailyKey?: string | null,
+  ): RunRankInfo & { monthBest: boolean; dayBest: boolean; dailyStreak: number } => {
     const prev = hallRef.current;
     const result = insertRun(prev.topRuns, entry);
 
@@ -72,22 +92,44 @@ export function useHallOfFame() {
       ? { ...prev.monthlyBests, [month]: entry }
       : prev.monthlyBests;
 
+    // Daily Stand-up: best-of-day ledger + attendance streak. Same-day repeats
+    // keep the streak; a gap resets it to 1 (today counts as attended).
+    let dayBest = false;
+    let dailyBests = prev.dailyBests;
+    let dailyStreak = prev.dailyStreak;
+    if (dailyKey) {
+      dayBest = entry.score > (prev.dailyBests[dailyKey]?.score ?? 0);
+      if (dayBest) dailyBests = { ...prev.dailyBests, [dailyKey]: entry };
+      if (prev.dailyStreak.lastKey !== dailyKey) {
+        dailyStreak = {
+          count: prev.dailyStreak.lastKey === previousDayKey(dailyKey) ? prev.dailyStreak.count + 1 : 1,
+          lastKey: dailyKey,
+        };
+      }
+    }
+
     const next: HallOfFameState = {
       topRuns: result.topRuns,
       // Record Pace races the reigning #1: only a new best replaces the ghost.
       bestRunTrajectory: result.info.rank === 1 ? [...trajectory] : prev.bestRunTrajectory,
       monthlyBests,
+      dailyBests,
+      dailyStreak,
     };
     hallRef.current = next;
     setHall(next);
     saveHall(next);
-    return { ...result.info, monthBest };
+    // dailyStreak is only meaningful for daily runs (0 keeps the result
+    // screen's streak line hidden on normal runs).
+    return { ...result.info, monthBest, dayBest, dailyStreak: dailyKey ? dailyStreak.count : 0 };
   }, []);
 
   return {
     topRuns: hall.topRuns,
     bestRunTrajectory: hall.bestRunTrajectory,
     monthlyBests: hall.monthlyBests,
+    dailyBests: hall.dailyBests,
+    dailyStreak: hall.dailyStreak,
     /** The all-time #1 score, or null before any run has banked. */
     bestScore: hall.topRuns[0]?.score ?? null,
     recordRun,

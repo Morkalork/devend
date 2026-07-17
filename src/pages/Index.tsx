@@ -33,6 +33,7 @@ import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 import { HallOfFameScreen } from '@/components/game/HallOfFameScreen';
 import { TapToStartGate } from '@/components/game/TapToStartGate';
 import { playMainMusic } from '@/lib/gameMusic';
+import { todayKey, previousDayKey } from '@/lib/runRng';
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
@@ -128,6 +129,15 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 }
                 onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
                 onHallOfFame={session.topRuns.length > 0 ? navigation.goToHallOfFame : undefined}
+                onDaily={() => session.handleStartDaily()}
+                // A streak is only shown while alive: attended today, or
+                // yesterday with today still open.
+                dailyStreak={
+                  session.dailyStreak.lastKey === todayKey() || session.dailyStreak.lastKey === previousDayKey(todayKey())
+                    ? session.dailyStreak.count
+                    : 0
+                }
+                dailyDoneToday={session.dailyBests[todayKey()] !== undefined}
                 onAchievements={() => navigation.goToAchievements()}
                 onAdmin={isAdminEnabled ? navigation.goToAdmin : undefined}
                 isLoading={session.isLoading}
@@ -298,6 +308,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               <HallOfFameScreen
                 topRuns={session.topRuns}
                 monthlyBests={session.monthlyBests}
+                dailyBests={session.dailyBests}
+                dailyStreak={session.dailyStreak}
                 archetypeBests={session.archetypeBests}
                 mapHighscores={session.mapHighscores}
                 metaStats={session.metaStats}

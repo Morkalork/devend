@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { ClipboardList, Play, SkipForward, Skull, Sparkles } from 'lucide-react';
 import { LoadoutConfig } from '@/types/loadout';
 import { drawOffers } from '@/lib/loadoutDraft';
+import { getRunRng } from '@/lib/runRng';
 import { CRTBackground } from './CRTBackground';
 import { contentText } from '@/i18n/content';
 
@@ -32,8 +33,9 @@ export function RunDraftScreen({
   accentColor = '#00ff88',
 }: RunDraftScreenProps) {
   const { t } = useTranslation();
-  // Drawn once per mount so re-renders don't reshuffle the offer
-  const [offers] = useState(() => drawOffers(loadouts, draftedLoadoutIds, 3));
+  // Drawn once per mount so re-renders don't reshuffle the offer. Seeded runs
+  // (Daily Stand-up) get the same offers via the run-rng context.
+  const [offers] = useState(() => drawOffers(loadouts, draftedLoadoutIds, 3, getRunRng('runDraft')));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   return (

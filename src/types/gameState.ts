@@ -151,6 +151,10 @@ export interface CanvasGameState {
   pickupSpots: Vector2[];
   /** game.activePlaySeconds of the last spawn roll. */
   lastPickupRollAt: number;
+  /** Seeded-run roll keying (HIGHSCORES.md Phase D): context = "pickups:<map>"
+   *  set at map init, index counts rolls so each draws a fresh generator. */
+  pickupRollContext: string;
+  pickupRollIndex: number;
   /** Overtime hours claimed from tokens this map — paid AFTER the per-map cap. */
   pickupOvertime: number;
   /** Comp Time tokens: hours added to THIS map's overtime cap. */

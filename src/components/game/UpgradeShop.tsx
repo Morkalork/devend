@@ -25,6 +25,7 @@ import { inflationForLevel } from '@/lib/upgradePricing';
 import { TagChip } from './TagChip';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info, Vault, ShoppingCart } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
+import { getRunRng } from '@/lib/runRng';
 import { CRTBackground } from './CRTBackground';
 import { TutorialOverlay } from './TutorialOverlay';
 import { Certificate } from '@/types/certificate';
@@ -206,10 +207,15 @@ export function UpgradeShop({
       return u.prerequisites.some(p => !ownedUpgradeIds.includes(p));
     }));
     const counts = ownedTagCounts(ownedUpgradeIds, upgrades);
-    const offers = weightedSample(unlocked, shopSlots, counts, completedLevel);
+    // Seeded runs (Daily Stand-up) roll the shelf from the run seed keyed by
+    // the level, so everyone opening this shop sees the same offers. Shelves
+    // still diverge once purchases differ (weights follow the build) - only
+    // the roll is shared, not the choices.
+    const shelfRng = getRunRng(`shop:${completedLevel}`);
+    const offers = weightedSample(unlocked, shopSlots, counts, completedLevel, shelfRng);
     // Add at most one locked item if there's room
     if (offers.length < shopSlots && locked.length > 0) {
-      offers.push(weightedSample(locked, 1, counts, completedLevel)[0]);
+      offers.push(weightedSample(locked, 1, counts, completedLevel, shelfRng)[0]);
     }
     return offers;
   });
@@ -342,7 +348,9 @@ export function UpgradeShop({
         // Restocks also lean into the build: the selection counts as owned, so
         // buying a lock upgrade makes the fresh offer likelier to be lock too.
         const counts = ownedTagCounts(ownedAfterSelect, upgrades);
-        const restockedOffer = weightedSample(candidates, 1, counts, completedLevel)[0];
+        // Seeded runs key each restock by its index, so both players' Nth
+        // restock rolls identically (their candidates may already differ).
+        const restockedOffer = weightedSample(candidates, 1, counts, completedLevel, getRunRng(`shop:${completedLevel}:restock:${restocksUsed}`))[0];
         setOfferedUpgrades(prev => [...prev, restockedOffer]);
         setRestocksUsed(prev => prev + 1);
       }

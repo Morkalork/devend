@@ -412,7 +412,10 @@
     "gapToNext": "A {{hours}}h del puesto #{{rank}}",
     "gapToTop10": "A {{hours}}h del Top 10",
     "paceEpitaph": "Ibas por delante de tu mejor partida hasta el mapa {{count}}.",
-    "employeeOfMonth": "¡Empleado del mes!"
+    "employeeOfMonth": "¡Empleado del mes!",
+    "dailyBest": "¡Mejor marca de la reunión de hoy!",
+    "dailyStreak_one": "Racha de asistencia: {{count}} día",
+    "dailyStreak_other": "Racha de asistencia: {{count}} días"
   },
   "topBar": {
     "clear": "DESPEJADO",
@@ -639,7 +642,8 @@
     "certLockedTitle": "Certificados bloqueados",
     "certLockedBody": "Los certificados son bonificaciones permanentes que consigues al dominar familias de mejoras a lo largo de varias partidas.\n\nAlcanza el nivel máximo de una familia de mejoras, o desbloquea tu primer certificado jugando, y esta tienda se abrirá.\n\nLuego gasta horas de certificado (se ganan cada 5 niveles que completas) para subir de nivel los certificados y obtener efectos duraderos.",
     "certLockedGotIt": "Entendido",
-    "records": "Récords"
+    "records": "Récords",
+    "dailyStandup": "Reunión diaria"
   },
   "content": {
     "upgrades": {
@@ -1188,6 +1192,16 @@
     "deepestAscension": "Ascensión más profunda",
     "mapRecords": "Récords por mapa",
     "back": "Volver",
-    "employeeOfMonth": "Empleado del mes"
+    "employeeOfMonth": "Empleado del mes",
+    "lifetime": "Historial",
+    "stats": {
+      "highestLevel": "Nivel más alto",
+      "fencesDrawn": "Vallas trazadas",
+      "perfectMaps": "Mapas perfectos",
+      "livesLost": "Vidas perdidas"
+    },
+    "daily": "Reunión diaria",
+    "dailyStreak_one": "Racha de asistencia de {{count}} día",
+    "dailyStreak_other": "Racha de asistencia de {{count}} días"
   }
 }

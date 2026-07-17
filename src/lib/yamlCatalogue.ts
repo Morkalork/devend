@@ -42,11 +42,15 @@ export function parseModifiers(raw: unknown): Record<string, number> | null {
   return Object.keys(modifiers).length > 0 ? modifiers : null;
 }
 
-/** Draw `n` distinct entries from the pool (uniform, no replacement). */
-export function drawRandom<T>(pool: T[], n: number): T[] {
+/**
+ * Draw `n` distinct entries from the pool (uniform, no replacement).
+ * `rng` defaults to Math.random; seeded runs pass getRunRng(...) so daily
+ * players are offered the same draws (HIGHSCORES.md Phase D).
+ */
+export function drawRandom<T>(pool: T[], n: number, rng: () => number = Math.random): T[] {
   const copy = [...pool];
   for (let i = copy.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rng() * (i + 1));
     [copy[i], copy[j]] = [copy[j], copy[i]];
   }
   return copy.slice(0, Math.max(0, n));

@@ -50,6 +50,9 @@ export interface RunSave {
   // Optional so saves written before Phase A still load; default [] / true.
   runTrajectory?: number[];
   recordEligible?: boolean;
+  // Daily Stand-up (Phase D): the seeded day this run belongs to, or null for
+  // a normal run. Optional for the same backward-compat reason; default null.
+  dailyKey?: string | null;
 }
 
 /** Payload the caller supplies; version + savedAt are stamped on write. */

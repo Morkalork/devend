@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal } from 'lucide-react';
+import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal, CalendarDays, Flame } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { RunRecap } from '@/lib/buildRecap';
 import { RunRankInfo } from '@/lib/runLedger';
@@ -26,7 +26,13 @@ interface ResultScreenProps {
    * plus the near-miss pace epitaph and the Employee-of-the-Month crown.
    * null = ineligible or nothing banked.
    */
-  runRank?: (RunRankInfo & { aheadThroughMaps: number | null; monthBest?: boolean }) | null;
+  runRank?: (RunRankInfo & {
+    aheadThroughMaps: number | null;
+    monthBest?: boolean;
+    /** Daily Stand-up: run beat today's daily best / current attendance streak. */
+    dayBest?: boolean;
+    dailyStreak?: number;
+  }) | null;
 }
 
 export function ResultScreen({
@@ -274,6 +280,19 @@ export function ResultScreen({
                 <Award className="w-4 h-4" />
                 <span>{t('result.employeeOfMonth')}</span>
               </div>
+            )}
+            {/* Daily Stand-up: today's best + the attendance streak. */}
+            {runRank.dayBest && (
+              <div className="flex items-center justify-center gap-1.5 text-sm font-bold" style={{ color: '#4ade80', textShadow: '0 0 12px #4ade8066' }}>
+                <CalendarDays className="w-4 h-4" />
+                <span>{t('result.dailyBest')}</span>
+              </div>
+            )}
+            {(runRank.dailyStreak ?? 0) > 0 && (
+              <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                <Flame className="w-3.5 h-3.5" style={{ color: '#ffb347' }} />
+                {t('result.dailyStreak', { count: runRank.dailyStreak })}
+              </p>
             )}
             {runRank.aheadThroughMaps !== null && (
               <p className="text-xs text-muted-foreground italic">

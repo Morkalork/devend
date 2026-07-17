@@ -56,6 +56,7 @@ export function weightedSample(
   n: number,
   counts: Map<string, number>,
   completedLevel?: number,
+  rng: () => number = Math.random,
 ): UpgradeConfig[] {
   const weightOf = (u: UpgradeConfig) =>
     tagWeight(u, counts) * (completedLevel !== undefined ? unlockRecencyWeight(u, completedLevel) : 1);
@@ -63,7 +64,7 @@ export function weightedSample(
   const picked: UpgradeConfig[] = [];
   while (picked.length < n && pool.length > 0) {
     const total = pool.reduce((sum, it) => sum + weightOf(it), 0);
-    let r = Math.random() * total;
+    let r = rng() * total;
     let idx = pool.length - 1;
     for (let i = 0; i < pool.length; i++) {
       r -= weightOf(pool[i]);

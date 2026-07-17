@@ -8,6 +8,7 @@
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
 import { LevelConfig, LevelData, LevelEntity } from '@/types/level';
+import { getRunRng } from '@/lib/runRng';
 
 interface LevelManagerState {
   allMaps: LevelConfig[]; // all maps from YAML
@@ -42,8 +43,15 @@ function warnOnPayCurveRegressions(allMaps: LevelConfig[]): void {
   }
 }
 
-/** Group maps by their `level` field, then pick one random map per level */
+/**
+ * Group maps by their `level` field, then pick one random map per level.
+ * Seeded runs (Daily Stand-up) roll through getRunRng, so everyone on the
+ * same seed plays the same variant lineup; normal runs stay Math.random.
+ * The generator is created fresh inside the call, keeping this safe when
+ * invoked from a React state updater (StrictMode double-invocation).
+ */
 function buildLevelSequence(allMaps: LevelConfig[]): LevelConfig[] {
+  const rng = getRunRng('levels');
   const groups = new Map<number, LevelConfig[]>();
   for (const map of allMaps) {
     const lvl = map.level;
@@ -55,7 +63,7 @@ function buildLevelSequence(allMaps: LevelConfig[]): LevelConfig[] {
   const sortedLevels = [...groups.keys()].sort((a, b) => a - b);
   return sortedLevels.map(lvl => {
     const variants = groups.get(lvl)!;
-    return variants[Math.floor(Math.random() * variants.length)];
+    return variants[Math.floor(rng() * variants.length)];
   });
 }
 

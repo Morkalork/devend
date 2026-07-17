@@ -412,7 +412,10 @@
     "gapToNext": "{{hours}}h från plats #{{rank}}",
     "gapToTop10": "{{hours}}h från topp 10",
     "paceEpitaph": "Du låg före din bästa runda till och med karta {{count}}.",
-    "employeeOfMonth": "Månadens anställd!"
+    "employeeOfMonth": "Månadens anställd!",
+    "dailyBest": "Dagens bästa på morgonmötet!",
+    "dailyStreak_one": "Närvarosvit: {{count}} dag",
+    "dailyStreak_other": "Närvarosvit: {{count}} dagar"
   },
   "topBar": {
     "clear": "KLART",
@@ -639,7 +642,8 @@
     "certLockedTitle": "Certifikat låsta",
     "certLockedBody": "Certifikat är permanenta bonusar som du tjänar genom att bemästra uppgraderingsfamiljer över flera omgångar.\n\nNå den högsta nivån i en uppgraderingsfamilj, eller lås upp ditt första certifikat genom att spela, så öppnas den här butiken.\n\nSedan kan du spendera certifikattimmar (tjänas var 5:e nivå du klarar) för att höja certifikatens nivå och få bestående effekter.",
     "certLockedGotIt": "Uppfattat",
-    "records": "Rekord"
+    "records": "Rekord",
+    "dailyStandup": "Morgonmöte"
   },
   "content": {
     "upgrades": {
@@ -1188,6 +1192,16 @@
     "deepestAscension": "Djupaste uppstigning",
     "mapRecords": "Kartrekord",
     "back": "Tillbaka",
-    "employeeOfMonth": "Månadens anställd"
+    "employeeOfMonth": "Månadens anställd",
+    "lifetime": "Livstid",
+    "stats": {
+      "highestLevel": "Högsta nivå",
+      "fencesDrawn": "Staket ritade",
+      "perfectMaps": "Perfekta kartor",
+      "livesLost": "Liv förlorade"
+    },
+    "daily": "Morgonmöte",
+    "dailyStreak_one": "{{count}} dags närvarosvit",
+    "dailyStreak_other": "{{count}} dagars närvarosvit"
   }
 }

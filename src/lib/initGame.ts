@@ -39,7 +39,9 @@ import {
   applyCircleVariation,
   applyPolygonVariation,
   resetRunSeed,
+  setRunSeed,
 } from "@/lib/varietySystem";
+import { getRunSeedText, getRunRng, hashString } from "@/lib/runRng";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -116,8 +118,15 @@ export function createInitialGameData(
   const sealedAreas: Array<{ destructible: DestructibleState; poly: Polygon }> = [];
   let objectivesTotal = 0;
 
-  // Reset run seed for new game/level (consistent variety per run)
-  resetRunSeed();
+  // Reset run seed for new game/level (consistent variety per run). Seeded
+  // (daily) runs pin it per map instead, so obstacle variation is shared by
+  // every player on the seed (HIGHSCORES.md Phase D).
+  const seedText = getRunSeedText();
+  if (seedText !== null) {
+    setRunSeed(hashString(`${seedText}::variety:${level.id}`));
+  } else {
+    resetRunSeed();
+  }
 
   const variety = level.variety ?? 0;
 
@@ -125,6 +134,7 @@ export function createInitialGameData(
     level.randomShapes ?? 20,
     level.entities || [],
     [], // balls now spawn at game-chosen positions (after obstacles), so none to avoid here
+    getRunRng(`obstacles:${level.id}`),
   );
   const allEntities = [...(level.entities || []), ...randomObstacles];
 

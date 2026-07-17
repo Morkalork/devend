@@ -58,6 +58,6 @@ export async function loadCapstones(): Promise<boolean> {
 }
 
 /** Draw `n` distinct capstones from the pool (uniform, no replacement). */
-export function drawCapstoneOffers(pool: CapstoneConfig[], n: number): CapstoneConfig[] {
-  return drawRandom(pool, n);
+export function drawCapstoneOffers(pool: CapstoneConfig[], n: number, rng?: () => number): CapstoneConfig[] {
+  return drawRandom(pool, n, rng);
 }

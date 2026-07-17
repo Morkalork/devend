@@ -37,20 +37,29 @@ function getObstacleConfig(randomShapes: number): RandomObstacleConfig | null {
   };
 }
 
+// The module's randomness source. generateRandomObstacles() swaps it for a
+// seeded generator on seeded (daily) runs, so all helpers roll through it.
+let rng: () => number = Math.random;
+// Per-generation counter for unique, deterministic obstacle ids.
+let idCounter = 0;
+function nextId(kind: string): string {
+  return `random-${kind}-${++idCounter}-${Math.floor(rng() * 1e9).toString(36)}`;
+}
+
 // Generate a random number in range
 function randomInRange(min: number, max: number): number {
-  return min + Math.random() * (max - min);
+  return min + rng() * (max - min);
 }
 
 // Pick random item from array
 function randomChoice<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+  return arr[Math.floor(rng() * arr.length)];
 }
 
 // Generate a circular bump obstacle
 function generateBump(x: number, y: number, size: number): LevelEntity {
   return {
-    id: `random-bump-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: nextId('bump'),
     kind: 'wall',
     shape: 'circle',
     cx: x,
@@ -62,7 +71,7 @@ function generateBump(x: number, y: number, size: number): LevelEntity {
 // Generate a small pebble (small circle)
 function generatePebble(x: number, y: number, size: number): LevelEntity {
   return {
-    id: `random-pebble-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: nextId('pebble'),
     kind: 'wall',
     shape: 'circle',
     cx: x,
@@ -73,11 +82,11 @@ function generatePebble(x: number, y: number, size: number): LevelEntity {
 
 // Generate a spike (3-4 pointed star shape)
 function generateSpike(x: number, y: number, size: number): LevelEntity {
-  const numPoints = Math.random() > 0.5 ? 3 : 4;
+  const numPoints = rng() > 0.5 ? 3 : 4;
   const outerRadius = size;
   const innerRadius = size * 0.4;
   const points: [number, number][] = [];
-  const startAngle = Math.random() * Math.PI * 2;
+  const startAngle = rng() * Math.PI * 2;
   
   for (let i = 0; i < numPoints * 2; i++) {
     const angle = startAngle + (i / (numPoints * 2)) * Math.PI * 2;
@@ -89,7 +98,7 @@ function generateSpike(x: number, y: number, size: number): LevelEntity {
   }
   
   return {
-    id: `random-spike-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: nextId('spike'),
     kind: 'wall',
     shape: 'polygon',
     points,
@@ -98,7 +107,7 @@ function generateSpike(x: number, y: number, size: number): LevelEntity {
 
 // Generate a triangle obstacle
 function generateTriangle(x: number, y: number, size: number): LevelEntity {
-  const startAngle = Math.random() * Math.PI * 2;
+  const startAngle = rng() * Math.PI * 2;
   const points: [number, number][] = [];
   
   for (let i = 0; i < 3; i++) {
@@ -110,7 +119,7 @@ function generateTriangle(x: number, y: number, size: number): LevelEntity {
   }
   
   return {
-    id: `random-triangle-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: nextId('triangle'),
     kind: 'wall',
     shape: 'polygon',
     points,
@@ -169,12 +178,17 @@ function tooCloseToSpawns(
 /**
  * Generate random small obstacles for a level at runtime.
  * @param randomShapes 0-100 percentage controlling density (default 20)
+ * @param randomSource optional seeded generator (Daily Stand-up) so every
+ *   player on the seed gets the same obstacle field; defaults to Math.random.
  */
 export function generateRandomObstacles(
   randomShapes: number,
   existingEntities: LevelEntity[] = [],
-  balls: { startX?: number; startY?: number }[] = []
+  balls: { startX?: number; startY?: number }[] = [],
+  randomSource: () => number = Math.random,
 ): LevelEntity[] {
+  rng = randomSource;
+  idCounter = 0;
   const config = getObstacleConfig(randomShapes);
   if (!config) return [];
   

@@ -415,7 +415,10 @@
     "gapToNext": "{{hours}}h short of #{{rank}}",
     "gapToTop10": "{{hours}}h short of the Top 10",
     "paceEpitaph": "You were ahead of your best run through map {{count}}.",
-    "employeeOfMonth": "Employee of the Month!"
+    "employeeOfMonth": "Employee of the Month!",
+    "dailyBest": "Today's stand-up best!",
+    "dailyStreak_one": "Attendance streak: {{count}} day",
+    "dailyStreak_other": "Attendance streak: {{count}} days"
   },
   "topBar": {
     "clear": "CLEAR",
@@ -654,7 +657,8 @@
     "certLockedTitle": "Certificates Locked",
     "certLockedBody": "Certificates are permanent bonuses you earn by mastering upgrade families across multiple runs.\n\nReach the top tier of an upgrade family, or unlock your first certificate by playing, and this store opens up.\n\nThen spend Certificate Hours (earned every 5 levels you complete) to level certificates up for lasting effects.",
     "certLockedGotIt": "Got it",
-    "records": "Records"
+    "records": "Records",
+    "dailyStandup": "Daily Stand-up"
   },
   "loadouts": {
     "title": "Loadouts",
@@ -680,6 +684,16 @@
     "deepestAscension": "Deepest Ascension",
     "mapRecords": "Map records",
     "back": "Back",
-    "employeeOfMonth": "Employee of the Month"
+    "employeeOfMonth": "Employee of the Month",
+    "lifetime": "Lifetime",
+    "stats": {
+      "highestLevel": "Highest level",
+      "fencesDrawn": "Fences drawn",
+      "perfectMaps": "Perfect maps",
+      "livesLost": "Lives lost"
+    },
+    "daily": "Daily Stand-up",
+    "dailyStreak_one": "{{count}} day attendance streak",
+    "dailyStreak_other": "{{count}} day attendance streak"
   }
 }

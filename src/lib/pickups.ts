@@ -24,6 +24,7 @@ import { CellState, isPositionActive, worldToGridIndex } from "@/lib/spaceGrid";
 import { createBallEffectState } from "@/lib/ballEffects";
 import { playPickupClaimedSound } from "@/lib/gameAudio";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
+import { getRunRng } from "@/lib/runRng";
 
 /** Token visual radius in world units (rendering + spawn clearance). */
 export const PICKUP_RADIUS = 14;
@@ -84,9 +85,15 @@ export function updatePickups(game: CanvasGameState): void {
 
   if (nowS - game.lastPickupRollAt < cfg.spawnCheckSeconds) return;
   game.lastPickupRollAt = nowS;
+  // Seeded (daily) runs: rolls happen at fixed active-play cadence, so keying
+  // a FRESH generator by roll index keeps spawn timing and effect choice
+  // identical for every player, even though board state (and therefore the
+  // position draws below) diverges. Normal runs get Math.random passthrough.
+  const rollIndex = (game.pickupRollIndex = (game.pickupRollIndex ?? 0) + 1);
+  const rng = getRunRng(`${game.pickupRollContext ?? 'pickups'}:roll:${rollIndex}`);
   if (game.pickups.length >= cfg.maxSimultaneous) return;
-  if (Math.random() >= cfg.spawnChance) return;
-  spawnPickup(game, cfg);
+  if (rng() >= cfg.spawnChance) return;
+  spawnPickup(game, cfg, rng);
 }
 
 /** True when a token can sit at `p`: open space, clear of walls/balls/tokens. */
@@ -112,14 +119,14 @@ function isSpotFree(game: CanvasGameState, p: Vector2): boolean {
   return true;
 }
 
-function spawnPickup(game: CanvasGameState, cfg: PickupConfig): void {
+function spawnPickup(game: CanvasGameState, cfg: PickupConfig, rng: () => number = Math.random): void {
   const grid = game.spaceGrid;
   if (!grid) return;
 
   // Weighted effect pick.
   const totalWeight = cfg.effects.reduce((s, e) => s + Math.max(0, e.weight), 0);
   if (totalWeight <= 0) return;
-  let roll = Math.random() * totalWeight;
+  let roll = rng() * totalWeight;
   let def = cfg.effects[cfg.effects.length - 1];
   for (const e of cfg.effects) {
     roll -= Math.max(0, e.weight);
@@ -127,19 +134,25 @@ function spawnPickup(game: CanvasGameState, cfg: PickupConfig): void {
   }
 
   // Position: prefer a curated map spot that is still free ("random, but
-  // thought through"), else sample random open cells.
+  // thought through"), else sample random open cells. Fisher-Yates rather
+  // than a random sort comparator, so seeded runs shuffle identically on
+  // every JS engine.
   let pos: Vector2 | null = null;
   const spots = game.pickupSpots ?? [];
   if (spots.length > 0) {
-    const shuffled = [...spots].sort(() => Math.random() - 0.5);
+    const shuffled = [...spots];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
     for (const s of shuffled) {
       if (isSpotFree(game, s)) { pos = { x: s.x, y: s.y }; break; }
     }
   }
   if (!pos) {
     for (let i = 0; i < RANDOM_SPAWN_ATTEMPTS; i++) {
-      const col = Math.floor(Math.random() * grid.width);
-      const row = Math.floor(Math.random() * grid.height);
+      const col = Math.floor(rng() * grid.width);
+      const row = Math.floor(rng() * grid.height);
       const p = {
         x: grid.originX + col * grid.cellSize + grid.cellSize / 2,
         y: grid.originY + row * grid.cellSize + grid.cellSize / 2,

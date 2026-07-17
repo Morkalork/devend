@@ -88,7 +88,8 @@ Welcome-screen "Records" entry (appears once a run has banked), screen title
   1.25x beat-the-record bonus + Benchmarking bar already monetize the chase.
 Also shipped: the **Benchmarking** upgrade shows a persistent top-bar chip
 with the run-pace delta as of the last completed map, next to its per-map
-record bar. Still open from Phase B: a lifetime-stats flavor footer.
+record bar, and the screen carries a lifetime-stats flavor footer (highest
+level, fences drawn, perfect maps, lives lost).
 
 ### 5. Employee of the Month (Phase C, shipped)
 
@@ -100,12 +101,26 @@ celebrates taking the month's crown (suppressed when the run is also the new
 all-time #1, which dominates); the Performance Review screen shows the
 plaques, newest first.
 
-### 6. Daily Stand-up (Phase D)
+### 6. Daily Stand-up (Phase D, shipped)
 
-A date-seeded run: the same level variants, ball rolls, and shop offers for
-everyone that day, with its own daily best and an attendance streak. Strongest
-habit hook and gives social comparability with no server. Cost: threading a
-seeded PRNG through the `Math.random` call sites — the one expensive item.
+A date-seeded run (UTC day, so the whole world shares one run per day with no
+server): the Daily Stand-up button on the main menu starts today's seed. Its
+best score files on a per-day ledger plus the all-time/monthly ones, and
+banking a daily on consecutive days grows an **attendance streak** (flame chip
+on the menu button, celebrated on the result screen, shown with the recent
+days on the Performance Review screen).
+
+Determinism model (`src/lib/runRng.ts`): the run seed is armed module-wide;
+every content roll draws a FRESH mulberry32 generator keyed by seed + a stable
+context ("levels", "shop:5", "doors:10", "obstacles:level-3",
+"pickups:level-3:roll:7"), which makes rolls replayable, order-independent and
+StrictMode-safe. Seeded: level lineup, loadout/door/capstone offers, shop
+shelves + restocks, random obstacles + variety geometry, pickup spawn timing
+and effect. Ball types were already deterministic per map id. NOT seeded (by
+design): live physics (spawn angles, yellow-ball speeds, fork targets) and
+anything downstream of player choices - a daily shares CONTENT, not fate.
+Daily runs always start at level 1 (no cert Head Start) so the run really is
+the same for everyone; meta power (certs, achievement bonuses) still differs.
 
 ### 7. Share card + real leaderboards (Phase E, optional)
 
@@ -125,7 +140,7 @@ seed exists, and strictly opt-in.
 | Phase | Contents | Status |
 |---|---|---|
 | A | Ledger + trajectory, Record Pace row, PB banner, rank/gap + epitaph on result | **shipped** |
-| B | Performance Review screen + Benchmarking run-pace chip | **shipped** |
+| B | Performance Review screen + Benchmarking run-pace chip + lifetime footer | **shipped** |
 | C | Employee of the Month | **shipped** |
-| D | Daily Stand-up (seeded runs) | designed |
+| D | Daily Stand-up (seeded runs, daily ledger, attendance streak) | **shipped** |
 | E | Share card, real leaderboards | optional |

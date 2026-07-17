@@ -6,7 +6,7 @@
  */
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { Medal, ArrowLeft, ArrowUpCircle, Award, Map as MapIcon } from 'lucide-react';
+import { Medal, ArrowLeft, ArrowUpCircle, Award, CalendarDays, Flame, Map as MapIcon } from 'lucide-react';
 import { RunLedgerEntry } from '@/types/hallOfFame';
 import { MetaProgressionStats } from '@/types/metaProgression';
 import { UpgradeTag } from '@/types/upgrade';
@@ -18,6 +18,9 @@ interface HallOfFameScreenProps {
   topRuns: RunLedgerEntry[];
   /** Employee of the Month: best run per "YYYY-MM" (HIGHSCORES.md Phase C). */
   monthlyBests?: Record<string, RunLedgerEntry>;
+  /** Daily Stand-up: best run per "YYYY-MM-DD" + attendance streak (Phase D). */
+  dailyBests?: Record<string, RunLedgerEntry>;
+  dailyStreak?: { count: number; lastKey: string };
   archetypeBests: Record<string, number>;
   mapHighscores: Record<string, number>;
   metaStats: MetaProgressionStats;
@@ -31,6 +34,8 @@ const RANK_COLORS = ['#ffd54a', '#c0c8d4', '#d0925a'];
 export function HallOfFameScreen({
   topRuns,
   monthlyBests = {},
+  dailyBests = {},
+  dailyStreak = { count: 0, lastKey: '' },
   archetypeBests,
   mapHighscores,
   metaStats,
@@ -61,6 +66,11 @@ export function HallOfFameScreen({
     const [y, m] = key.split('-').map(Number);
     return new Date(y, m - 1, 1).toLocaleDateString(i18n.language, { year: 'numeric', month: 'long' });
   };
+
+  // Daily Stand-up: the most recent banked days, newest first.
+  const recentDailies = Object.entries(dailyBests).sort(([a], [b]) => b.localeCompare(a)).slice(0, 7);
+  const dayLabel = (key: string) =>
+    new Date(`${key}T00:00:00Z`).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric', timeZone: 'UTC' });
 
   return (
     <>
@@ -163,6 +173,30 @@ export function HallOfFameScreen({
             </div>
           </section>
 
+          {/* Daily Stand-up: attendance streak + the last banked days. */}
+          {(recentDailies.length > 0 || dailyStreak.count > 0) && (
+            <section className="w-full">
+              <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5" />
+                {t('hallOfFame.daily')}
+              </h2>
+              {dailyStreak.count > 0 && (
+                <div className="flex items-center gap-1.5 text-sm mb-2" style={{ color: '#ffb347' }}>
+                  <Flame className="w-4 h-4" />
+                  <span className="font-bold tabular-nums">{t('hallOfFame.dailyStreak', { count: dailyStreak.count })}</span>
+                </div>
+              )}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-sm">
+                {recentDailies.map(([day, run]) => (
+                  <div key={day} className="flex justify-between border-b border-border/50 py-1">
+                    <span className="text-muted-foreground text-xs">{dayLabel(day)}</span>
+                    <span className="font-bold tabular-nums text-xs">{run.score}h</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Employee of the Month plaques: one crown per calendar month, so
               there is always a fresh, winnable ladder on the 1st. */}
           {plaques.length > 0 && (
@@ -209,6 +243,29 @@ export function HallOfFameScreen({
               </p>
             </section>
           )}
+
+          {/* Lifetime flavor stats: non-competitive garnish (HIGHSCORES.md
+              keeps grind totals OUT of the ladders; they live here only). */}
+          <section className="w-full">
+            <h2 className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+              {t('hallOfFame.lifetime')}
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              {([
+                ['highestLevel', metaStats.highestLevelReached],
+                ['fencesDrawn', metaStats.totalFencesDrawn],
+                ['perfectMaps', metaStats.totalLevelsCompletedWithoutLoss],
+                ['livesLost', metaStats.totalLivesLost],
+              ] as const).map(([key, value]) => (
+                <div key={key} className="rounded-lg border border-border bg-card/50 px-2 py-2">
+                  <p className="text-lg font-display font-bold tabular-nums">{value}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    {t(`hallOfFame.stats.${key}`)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
 
           {/* Per-map records */}
           {mapRecords.length > 0 && (

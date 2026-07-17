@@ -35,6 +35,12 @@ export interface HallOfFameState {
    * crown resets on the 1st, so there is always a winnable ladder.
    */
   monthlyBests: Record<string, RunLedgerEntry>;
+  /**
+   * Daily Stand-up (Phase D): best run per seeded day, keyed by "YYYY-MM-DD"
+   * (UTC), plus the attendance streak (consecutive days with a banked daily).
+   */
+  dailyBests: Record<string, RunLedgerEntry>;
+  dailyStreak: { count: number; lastKey: string };
 }
 
 export const HALL_STORAGE_KEY = 'jezzball_hall_v1';
@@ -44,4 +50,6 @@ export const DEFAULT_HALL_STATE: HallOfFameState = {
   topRuns: [],
   bestRunTrajectory: [],
   monthlyBests: {},
+  dailyBests: {},
+  dailyStreak: { count: 0, lastKey: '' },
 };

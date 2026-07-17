@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { ArrowUpCircle, Flag, Skull, Sparkles } from 'lucide-react';
 import { LoadoutConfig } from '@/types/loadout';
 import { drawOffers } from '@/lib/loadoutDraft';
+import { getRunRng } from '@/lib/runRng';
 import { CRTBackground } from './CRTBackground';
 import { contentText } from '@/i18n/content';
 
@@ -40,8 +41,9 @@ export function AscensionDraftScreen({
   onTutorialDismiss,
 }: AscensionDraftScreenProps) {
   const { t } = useTranslation();
-  // Drawn once per mount so re-renders don't reshuffle the offer
-  const [offers] = useState(() => drawOffers(loadouts, draftedLoadoutIds, 3));
+  // Drawn once per mount so re-renders don't reshuffle the offer. Seeded runs
+  // key the roll by depth so each ascension draws fresh but deterministically.
+  const [offers] = useState(() => drawOffers(loadouts, draftedLoadoutIds, 3, getRunRng(`ascDraft:${ascensionDepth}`)));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const nextDepth = ascensionDepth + 1;
