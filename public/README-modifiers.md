@@ -294,7 +294,7 @@ Multiplicative modifiers stack by multiplication; additive modifiers stack by ad
 | `extraLives` | `0` | Extra lives granted when the upgrade is purchased during a run. | `1` |
 | `extraShopItems` | `0` | Extra item slots shown in the shop after each map. | `1` |
 | `shopRestockCount` | `0` | Purchases per shop visit that refill their slot with a new offer (Procurement upgrades). | `1` |
-| `extraContinues` | `0` | Extra per-run revives beyond the base 1. Spend a Continue on death to retry the level with overtime + upgrades intact. Grantable by a certificate or upgrade. | `1` |
+| `extraContinues` | `0` | Per-run revives (runs start with none). Spend a Continue on death to retry the level with overtime + upgrades intact. Grantable by a certificate or upgrade (Golden Parachute); completing level 20 also awards one for free. | `1` |
 | `extraCertificateHours` | `0` | Bonus Certificate Hours banked when the run ends (Certification Wizard, Night School Diploma). | `1` |
 | `startingCapturePercent` | `0` | Board starts with this % already captured — the arena shrinks and the run starts below 100% remaining (Equity Grant certificate; clamped to 40). | `5` |
 | `fenceDurabilityBonus` | `0` | Extra ball hits Ascension fences survive before crumbling. No effect outside Ascension. | `1` |

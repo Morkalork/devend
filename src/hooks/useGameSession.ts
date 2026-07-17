@@ -47,7 +47,13 @@ import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 
 const BASE_LIVES = 3;
-const BASE_CONTINUES = 1;
+/** Runs start with NO free Continue: buy Golden Parachute (the priciest shop
+ *  offer), earn one via certificates / the Insurance Policy set bonus, or
+ *  complete level FREE_CONTINUE_LEVEL. */
+const BASE_CONTINUES = 0;
+/** Completing this level grants 1 free Continue (once per pass; an ascension
+ *  loop that reaches it again grants another). */
+const FREE_CONTINUE_LEVEL = 20;
 /** War Chest ceiling: banked overtime never slows balls by more than this. */
 const MAX_BANKED_SLOW = 0.08;
 
@@ -126,8 +132,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [capstone, setCapstone] = useState<CapstoneConfig | null>(null);
 
   // Per-run revive resource ("Continue"). Each run starts with BASE_CONTINUES
-  // (+ any certificate grant); spending one on death retries the current level
-  // with score + upgrades intact. gameInstanceKey forces GameCanvas to re-init
+  // (none; + any certificate grant); spending one on death retries the current
+  // level with score + upgrades intact. gameInstanceKey forces GameCanvas to re-init
   // the current level on revive; pendingDeathResult drives the revive overlay.
   const [continuesRemaining, setContinuesRemaining] = useState(BASE_CONTINUES);
   const [gameInstanceKey, setGameInstanceKey] = useState(0);
@@ -807,6 +813,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordFencesDrawn(scoreData.cutCount || 0);
     // Levels completed while ascended count more toward Certificate Hours
     incrementRunLevel(1 + ascensionDepth);
+
+    // Loyalty bonus: completing level FREE_CONTINUE_LEVEL awards a free
+    // Continue (runs start with none; the dedupe ref above keeps this to one
+    // grant per pass, and an ascension loop can earn it again).
+    if (currentLevelNum === FREE_CONTINUE_LEVEL) setContinuesRemaining(c => c + 1);
 
     if (currentLives >= livesAtLevelStart) recordPerfectLevel();
 

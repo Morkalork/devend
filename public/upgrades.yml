@@ -351,6 +351,27 @@ upgrades:
 
 
   # ===============================
+  # GOLDEN PARACHUTE (Continue)
+  # Runs no longer start with a free Continue - this is the buyable one.
+  # Deliberately the single most expensive upgrade in the game (explicit cost
+  # override; the runner-up is MicroManager at 200). A free Continue is also
+  # granted on completing level 20 (see useGameSession FREE_CONTINUE_LEVEL);
+  # the Insurance Policy set bonus and certificates remain the other sources.
+  # ===============================
+
+  - id: golden_parachute
+    name: Golden Parachute
+    tier: Wizard
+    description: "Gain 1 Continue: run out of lives and you retry the level with your overtime and upgrades intact."
+    unlockLevel: 5
+    icon: life-buoy
+    cost: 250
+    tags: [safety]
+    modifiers:
+      extraContinues: 1
+
+
+  # ===============================
   # PERFORMANCE BONUS (Score %)
   # ===============================
 

@@ -34,15 +34,6 @@ capstones:
     clarify: Every map starts with one fence shield. The first ball that would smash a growing fence is absorbed for free, no life lost. A safety net that refreshes each map, so you can fence aggressively in dangerous spots.
     modifiers:
       wallShieldsPerMap: 1
-
-  - id: ghost_protocol
-    name: Ghost Protocol
-    description: Fences ignore ball hits during their first 1.5 seconds of growth.
-    tag: tempo
-    clarify: For the first 1.5 seconds of its growth a fence cannot be broken, so you can start one right in a busy lane without instantly losing it. Rewards fast, frequent fencing over slow, cautious placement.
-    modifiers:
-      fenceGraceMs: 1500
-
   - id: cryo_protocol
     name: Cryo Protocol
     description: Power-up tokens freeze over and never expire, waiting on the board until you claim them.

@@ -48,6 +48,7 @@ const EXPECTED_ROOTS = [
   "cold_boot",
   "moonshot",
   "benefits_package_junior",
+  "golden_parachute",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.
@@ -172,6 +173,17 @@ describe("pricing", () => {
       .filter(u => !u.ascensionOnly)
       .reduce((sum, u) => sum + (effectiveCost(u) ?? 0), 0);
     expect(total).toBeGreaterThan(aceFullRunIncome);
+  });
+
+  it("keeps Golden Parachute the single most expensive upgrade", () => {
+    // Runs start with no free Continue; the buyable one must stay the priciest
+    // offer in the catalogue (design decision, not formula-derived).
+    const parachute = effectiveCost(byId.get("golden_parachute")!)!;
+    const pricier = upgrades
+      .filter(u => u.id !== "golden_parachute" && !u.ascensionOnly)
+      .filter(u => (effectiveCost(u) ?? 0) >= parachute)
+      .map(u => u.id);
+    expect(pricier).toEqual([]);
   });
 
   it("is monotonic within each family: later tiers never cost less", () => {

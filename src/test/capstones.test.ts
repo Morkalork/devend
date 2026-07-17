@@ -55,8 +55,13 @@ describe("capstone pool integrity", () => {
   });
 
   it("covers every archetype so any build can find its crown", () => {
+    // Deliberately uncrowned archetypes: tempo lost its capstone when Ghost
+    // Protocol was cut. Listing an exception here is a design decision;
+    // anything else missing is an accidental gap this test should catch.
+    const UNCROWNED_TAGS = ["tempo"];
+    const expected = VALID_TAGS.filter(t => !UNCROWNED_TAGS.includes(t)).sort();
     const tags = capstones.map(c => c.tag).filter(Boolean).sort();
-    expect([...new Set(tags)]).toEqual([...VALID_TAGS].sort());
+    expect([...new Set(tags)]).toEqual(expected);
   });
 });
 
