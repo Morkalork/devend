@@ -13,7 +13,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { DissolveState } from "@/types/game";
 import { RenderContext } from "../types";
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
-import { computeBallTrajectory } from "@/lib/gameUtils";
+import { computeBallTrajectory, trajectoryBallSnapshots } from "@/lib/gameUtils";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { vec2Sub, vec2Length, vec2Normalize, lineSegmentIntersection, Vector2 } from "@/lib/polygon";
 import {
@@ -446,7 +446,7 @@ export class EffectsLayer {
 
     for (const ball of tracked) {
       const startPos = ball.renderPosition ?? ball.position;
-      const waypoints = computeBallTrajectory(startPos, ball.velocity, game.walls, mods.ballPathPredictionBounces, ball.radius, game.obstaclePolygons);
+      const waypoints = computeBallTrajectory(startPos, ball.velocity, game.walls, mods.ballPathPredictionBounces, ball.radius, game.obstaclePolygons, game.movers, game.creepFactor || 1, trajectoryBallSnapshots(game.balls, ball, game.frozenBallId));
       if (waypoints.length < 2) continue;
 
       const totalSegs = waypoints.length - 1;
