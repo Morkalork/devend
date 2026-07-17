@@ -14,14 +14,21 @@ etc.) is data-driven from YAML files in `public/`.
 |------|---------|
 | Dev server | `npm run dev` |
 | Production build | `npm run build` |
-| Typecheck | `npx tsc --noEmit` |
+| Typecheck | `npx tsc --noEmit -p tsconfig.app.json` (see note below) |
 | Lint | `npm run lint` |
 | Run tests | `npm run test` |
 | Watch tests | `npm run test:watch` |
 | Android sync / open | `npm run android:sync` / `npm run android:open` |
 
-Before committing, run **`npx tsc --noEmit`** and **`npm run test`**; both
-should pass clean.
+Before committing, run **`npx tsc --noEmit -p tsconfig.app.json`** and
+**`npm run test`**; both should pass clean.
+
+> **Typecheck gotcha:** plain `npx tsc --noEmit` is a no-op here. The root
+> `tsconfig.json` has `"files": []` plus project `references`, and in
+> non-build mode `tsc` does not traverse references, so it checks zero files
+> and always "passes." Use `npx tsc --noEmit -p tsconfig.app.json` to
+> actually typecheck `src` (pure check, no build artifacts). `npx tsc -b`
+> also works but writes `*.tsbuildinfo`.
 
 ## Layout
 
