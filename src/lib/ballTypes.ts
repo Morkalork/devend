@@ -3,14 +3,18 @@
  *
  * Issue #37: ball colour now communicates a ball's special ability. The map no
  * longer dictates which balls (or speeds) are used — the game derives them from
- * the level number and a per-map maximum. This module is the single source of
- * truth for both the engine (speeds, abilities, lock multipliers) and the
- * tutorial (descriptions).
+ * the level number and a per-map maximum. This module serves the catalogue to
+ * both the engine (speeds, abilities, lock multipliers) and the tutorial
+ * (descriptions).
  *
- * The catalogue is authored in `public/balls.yml` so it can be tweaked without a
- * rebuild; `loadBallTypes()` fetches and validates it. The hardcoded list below
- * is the built-in default/fallback used until the YAML loads (or if it fails to
- * parse), so the game always has a valid catalogue.
+ * `public/balls.yml` is the ONLY authored source of the catalogue. It reaches
+ * the game twice, through the same validator:
+ *  - baked into the bundle at build time (the `?raw` import below), giving a
+ *    synchronously available default that can never drift from the YAML;
+ *  - fetched again at runtime by `loadBallTypes()`, so a deployed build's
+ *    balls.yml can still be tweaked without a rebuild.
+ * If both somehow yield nothing (malformed file), a one-ball last resort keeps
+ * the game runnable.
  *
  * Speeds are LITERAL flat world-units/second base values (issue decision: no
  * per-level scaling and no per-cut acceleration ramp). The `ballSpeedMultiplier`
@@ -18,6 +22,7 @@
  */
 
 import yaml from 'js-yaml';
+import ballsYamlRaw from '../../public/balls.yml?raw';
 
 /**
  * Hard floor on how slow the upgrade/lock stack may make a ball: its effective
@@ -88,114 +93,7 @@ export interface BallTypeDef {
   phase2?: boolean;
 }
 
-/** Built-in default catalogue — mirrors public/balls.yml; used as a fallback. */
-const DEFAULT_BALL_TYPES: BallTypeDef[] = [
-  {
-    id: 'red',
-    name: 'Red',
-    color: '#ff5b5b',
-    baseSpeed: 250,
-    minimumSpeed: 150,
-    unlockLevel: 1,
-    lockMultiplier: 1,
-    ability: 'none',
-    description: 'A standard ball. No special behaviour — just bounces.',
-  },
-  {
-    id: 'blue',
-    name: 'Blue',
-    color: '#00b4ff',
-    baseSpeed: 250,
-    minimumSpeed: 150,
-    unlockLevel: 1,
-    lockMultiplier: 1,
-    ability: 'none',
-    description: 'A standard ball, a touch faster than the red one.',
-  },
-  {
-    id: 'yellow',
-    name: 'Yellow',
-    color: '#ffd93d',
-    baseSpeed: 280,
-    minimumSpeed: 150,
-    unlockLevel: 5,
-    lockMultiplier: 2,
-    ability: 'variableSpeed',
-    description: 'Variable speed: every surface it touches shifts it between 200 and 400.',
-    speedRange: [200, 400],
-  },
-  {
-    id: 'purple',
-    name: 'Purple',
-    color: '#b06bff',
-    baseSpeed: 340,
-    minimumSpeed: 150,
-    unlockLevel: 10,
-    lockMultiplier: 2,
-    ability: 'slowOthers',
-    speedReduction: 20,
-    description: "Saps momentum: every ball it clashes with loses speed, down to the balls' minimum speed.",
-  },
-  {
-    id: 'green',
-    name: 'Green',
-    color: '#00c853',
-    baseSpeed: 300,
-    minimumSpeed: 180,
-    unlockLevel: 15,
-    lockMultiplier: 2,
-    ability: 'moneyBall',
-    description: 'Money ball: locking it away triples the gains of every later lock this round.',
-  },
-  {
-    id: 'grey',
-    name: 'Grey',
-    color: '#9aa3ad',
-    baseSpeed: 200,
-    minimumSpeed: 150,
-    unlockLevel: 15,
-    lockMultiplier: 1,
-    ability: 'slowDown',
-    description: 'Winds down: slows 10 speed every 5 seconds, down to its minimum speed.',
-  },
-  {
-    id: 'black',
-    name: 'Black',
-    color: '#2b2f3a',
-    baseSpeed: 200,
-    minimumSpeed: 150,
-    unlockLevel: 20,
-    lockMultiplier: 4,
-    ability: 'breakObjects',
-    description: 'Wrecking ball: smashes mirrors and movers after three hits, losing a multiplier each time.',
-  },
-];
-
-// ── Live catalogue (loaded from balls.yml, defaults until then) ─────────────
-
-let liveBallTypes: BallTypeDef[] = DEFAULT_BALL_TYPES;
-let ballTypeById = new Map(liveBallTypes.map(t => [t.id, t]));
-
-/** All ball types currently in effect (default or YAML-loaded). */
-export function getAllBallTypes(): BallTypeDef[] {
-  return liveBallTypes;
-}
-
-export function getBallType(id: string): BallTypeDef | undefined {
-  return ballTypeById.get(id);
-}
-
-/** Ball types currently implemented and shown to players (excludes phase-2 types). */
-export function getImplementedBallTypes(): BallTypeDef[] {
-  return liveBallTypes.filter(t => !t.phase2);
-}
-
-/** Ball types eligible to appear at the given (1-based) level number. */
-export function getEligibleBallTypes(level: number): BallTypeDef[] {
-  return liveBallTypes.filter(t => !t.phase2 && t.unlockLevel <= level);
-}
-
-// ── Loading & validation from public/balls.yml ──────────────────────────────
+// ── Parsing & validation (shared by the baked default and the runtime fetch) ─
 
 const VALID_ABILITIES: ReadonlySet<string> = new Set<BallAbility>([
   'none', 'variableSpeed', 'slowOthers', 'moneyBall', 'slowDown', 'breakObjects',
@@ -248,26 +146,78 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
   };
 }
 
+/** Parse a balls.yml document into validated defs ([] on any failure). */
+function parseCatalogue(text: string): BallTypeDef[] {
+  try {
+    const data = yaml.load(text) as { balls?: unknown[] } | null;
+    if (!data || !Array.isArray(data.balls)) return [];
+    return data.balls.map(parseBallTypeEntry).filter((b): b is BallTypeDef => b !== null);
+  } catch {
+    return [];
+  }
+}
+
 /**
- * Load the ball catalogue from public/balls.yml, replacing the in-memory list.
- * Returns true on success; on any failure the built-in defaults are kept so the
- * game still runs. Safe to call repeatedly (re-reads the file, cache-busting).
+ * Default catalogue: public/balls.yml as it looked at BUILD time, run through
+ * the same validator as the runtime fetch — one authored source, no drift.
+ * The one-ball last resort only exists for a balls.yml so malformed it yields
+ * zero valid entries; it keeps the game bootable rather than being a real
+ * catalogue.
+ */
+const LAST_RESORT: BallTypeDef[] = [{
+  id: 'red', name: 'Red', color: '#ff5b5b', baseSpeed: 250, minimumSpeed: 150,
+  unlockLevel: 1, lockMultiplier: 1, ability: 'none',
+  description: 'A standard ball. No special behaviour - just bounces.',
+}];
+
+const bakedCatalogue = parseCatalogue(ballsYamlRaw);
+const DEFAULT_BALL_TYPES: BallTypeDef[] = bakedCatalogue.length > 0 ? bakedCatalogue : LAST_RESORT;
+
+// ── Live catalogue (loaded from balls.yml, defaults until then) ─────────────
+
+let liveBallTypes: BallTypeDef[] = DEFAULT_BALL_TYPES;
+let ballTypeById = new Map(liveBallTypes.map(t => [t.id, t]));
+
+/** All ball types currently in effect (default or YAML-loaded). */
+export function getAllBallTypes(): BallTypeDef[] {
+  return liveBallTypes;
+}
+
+export function getBallType(id: string): BallTypeDef | undefined {
+  return ballTypeById.get(id);
+}
+
+/** Ball types currently implemented and shown to players (excludes phase-2 types). */
+export function getImplementedBallTypes(): BallTypeDef[] {
+  return liveBallTypes.filter(t => !t.phase2);
+}
+
+/** Ball types eligible to appear at the given (1-based) level number. */
+export function getEligibleBallTypes(level: number): BallTypeDef[] {
+  return liveBallTypes.filter(t => !t.phase2 && t.unlockLevel <= level);
+}
+
+// ── Runtime reload from the served public/balls.yml ─────────────────────────
+
+/**
+ * Re-fetch the ball catalogue from the SERVED public/balls.yml, replacing the
+ * in-memory list — this is what lets a deployed build (or the dev server, via
+ * the Playground) pick up YAML tweaks without a rebuild. Returns true on
+ * success; on any failure the build-time catalogue stays in effect. Safe to
+ * call repeatedly (re-reads the file, cache-busting).
  */
 export async function loadBallTypes(): Promise<boolean> {
   try {
     const response = await fetch('/balls.yml', { cache: 'no-store' });
     if (!response.ok) throw new Error(`Failed to load balls.yml: ${response.status}`);
-    const data = yaml.load(await response.text()) as { balls?: unknown[] } | null;
-    if (!data || !Array.isArray(data.balls)) throw new Error('Invalid balls.yml: missing `balls` array');
-
-    const parsed = data.balls.map(parseBallTypeEntry).filter((b): b is BallTypeDef => b !== null);
+    const parsed = parseCatalogue(await response.text());
     if (parsed.length === 0) throw new Error('balls.yml contained no valid ball types');
 
     liveBallTypes = parsed;
     ballTypeById = new Map(parsed.map(t => [t.id, t]));
     return true;
   } catch (err) {
-    console.warn('[ballTypes] Falling back to built-in defaults:', err);
+    console.warn('[ballTypes] Keeping the build-time catalogue:', err);
     return false;
   }
 }
