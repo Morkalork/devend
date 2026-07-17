@@ -71,6 +71,18 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
     if (MENU_MUSIC_SCREENS.has(navigation.currentScreen)) playMainMusic();
   }, [navigation.currentScreen]);
 
+  // The Performance Review is reachable from the welcome screen AND the result
+  // screen; its Back button returns to wherever it was opened from.
+  const hallReturnRef = useRef<'welcome' | 'result'>('welcome');
+  const openHallFrom = (origin: 'welcome' | 'result') => {
+    hallReturnRef.current = origin;
+    navigation.goToHallOfFame();
+  };
+  const handleHallBack = () => {
+    if (hallReturnRef.current === 'result' && navigation.lastResult) navigation.navigateTo('result');
+    else navigation.goToWelcome();
+  };
+
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1, hallOfFame: 1,
     game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3, ascensionDraft: 3, result: 4,
@@ -128,7 +140,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                     : undefined
                 }
                 onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
-                onHallOfFame={session.topRuns.length > 0 ? navigation.goToHallOfFame : undefined}
+                onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
                 onDaily={() => session.handleStartDaily()}
                 // A streak is only shown while alive: attended today, or
                 // yesterday with today still open.
@@ -277,6 +289,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 runRecap={session.lastRunRecap}
                 runRank={session.lastRunRank}
                 dailyKey={session.dailyKey}
+                onRecords={session.topRuns.length > 0 ? () => openHallFrom('result') : undefined}
               />
             )}
             {navigation.currentScreen === 'certificateStore' && (
@@ -314,7 +327,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 archetypeBests={session.archetypeBests}
                 mapHighscores={session.mapHighscores}
                 metaStats={session.metaStats}
-                onBack={navigation.goToWelcome}
+                onBack={handleHallBack}
                 accentColor={accentHex}
               />
             )}

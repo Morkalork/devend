@@ -37,6 +37,8 @@ interface ResultScreenProps {
   }) | null;
   /** The run's Daily Stand-up key, for the share card's daily tag. */
   dailyKey?: string | null;
+  /** Opens the Performance Review right from the result (back returns here). */
+  onRecords?: () => void;
 }
 
 export function ResultScreen({
@@ -52,6 +54,7 @@ export function ResultScreen({
   runRecap = null,
   runRank = null,
   dailyKey = null,
+  onRecords,
 }: ResultScreenProps) {
   const { t } = useTranslation();
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames } = result;
@@ -433,6 +436,19 @@ export function ResultScreen({
                 {t('result.playAgain')}
               </motion.button>
             )
+          )}
+          {/* Straight to the Performance Review: the rank block above teases
+              the ladder, this shows it (back returns to this screen). */}
+          {onRecords && (
+            <motion.button
+              className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+              onClick={onRecords}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <Medal className="w-5 h-5" />
+              {t('welcome.records')}
+            </motion.button>
           )}
           {/* Share the run as an image (only when something was banked). */}
           {result.totalScore !== undefined && result.totalScore > 0 && (

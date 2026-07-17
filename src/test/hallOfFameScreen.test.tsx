@@ -4,10 +4,12 @@
  * map records; the welcome button only appears once a run has banked.
  */
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import "@/i18n";
 import { HallOfFameScreen } from "@/components/game/HallOfFameScreen";
 import { WelcomeScreen } from "@/components/game/WelcomeScreen";
+import { ResultScreen } from "@/components/game/ResultScreen";
+import { GameResult } from "@/types/game";
 import { RunLedgerEntry } from "@/types/hallOfFame";
 import { DEFAULT_META_STATS } from "@/types/metaProgression";
 
@@ -61,6 +63,19 @@ describe("HallOfFameScreen", () => {
     // Map records, naturally sorted (level-2b before level-10).
     const ids = screen.getAllByText(/^level-/).map(e => e.textContent);
     expect(ids).toEqual(["level-1", "level-2b", "level-10"]);
+  });
+
+  it("the result screen offers Records when a ladder exists", () => {
+    const onRecords = vi.fn();
+    const result: GameResult = {
+      isWin: false, remainingPercent: 55, levelId: "level-3", levelNumber: 3,
+      completedAllLevels: false, totalScore: 60,
+    };
+    render(
+      <ResultScreen result={result} onMainMenu={vi.fn()} onRecords={onRecords} />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Records/ }));
+    expect(onRecords).toHaveBeenCalledTimes(1);
   });
 
   it("welcome shows the Records button only when a callback is provided", () => {
