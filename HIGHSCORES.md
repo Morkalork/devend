@@ -122,11 +122,16 @@ anything downstream of player choices - a daily shares CONTENT, not fate.
 Daily runs always start at level 1 (no cert Head Start) so the run really is
 the same for everyone; meta power (certs, achievement bonuses) still differs.
 
-### 7. Share card + real leaderboards (Phase E, optional)
+### 7. Share card (Phase E, shipped) + real leaderboards (optional)
 
-Canvas-rendered run summary for screenshots. Google Play Games Services
-leaderboards on Android / small API on the web — only worth it once the daily
-seed exists, and strictly opt-in.
+The result screen's Share button renders the run as a 1080x1350 PNG
+(`src/lib/shareCard.ts`): CRT-styled card with the score as the hero, build
+line, capstone, depth, gold rank line, and the Daily Stand-up tag. Delivered
+via the Web Share sheet where supported (mobile), else downloaded. No server:
+the card IS the leaderboard post.
+
+Still open (optional): Google Play Games Services leaderboards on Android /
+small API on the web — strictly opt-in if ever.
 
 ## Deliberately excluded
 
@@ -143,4 +148,4 @@ seed exists, and strictly opt-in.
 | B | Performance Review screen + Benchmarking run-pace chip + lifetime footer | **shipped** |
 | C | Employee of the Month | **shipped** |
 | D | Daily Stand-up (seeded runs, daily ledger, attendance streak) | **shipped** |
-| E | Share card, real leaderboards | optional |
+| E | Share card | **shipped** (real leaderboards remain optional) |

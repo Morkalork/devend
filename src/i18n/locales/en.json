@@ -418,7 +418,10 @@
     "employeeOfMonth": "Employee of the Month!",
     "dailyBest": "Today's stand-up best!",
     "dailyStreak_one": "Attendance streak: {{count}} day",
-    "dailyStreak_other": "Attendance streak: {{count}} days"
+    "dailyStreak_other": "Attendance streak: {{count}} days",
+    "share": "Share",
+    "shareLevel": "Level {{level}}",
+    "shareDaily": "Daily Stand-up {{date}}"
   },
   "topBar": {
     "clear": "CLEAR",

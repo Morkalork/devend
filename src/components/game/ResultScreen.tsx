@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal, CalendarDays, Flame } from 'lucide-react';
+import { useState } from 'react';
+import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal, CalendarDays, Flame, Share2, Check } from 'lucide-react';
 import { GameResult } from '@/types/game';
 import { RunRecap } from '@/lib/buildRecap';
 import { RunRankInfo } from '@/lib/runLedger';
+import { shareRunCard } from '@/lib/shareCard';
 import { UpgradeTag } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
 import { TagChip } from './TagChip';
@@ -33,6 +35,8 @@ interface ResultScreenProps {
     dayBest?: boolean;
     dailyStreak?: number;
   }) | null;
+  /** The run's Daily Stand-up key, for the share card's daily tag. */
+  dailyKey?: string | null;
 }
 
 export function ResultScreen({
@@ -47,9 +51,11 @@ export function ResultScreen({
   newlyUnlockedLoadouts = [],
   runRecap = null,
   runRank = null,
+  dailyKey = null,
 }: ResultScreenProps) {
   const { t } = useTranslation();
   const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames } = result;
+  const [shareState, setShareState] = useState<'idle' | 'done'>('idle');
 
   // Build name: "Freeze-Lock" from the archetype lean, or Generalist. The
   // flavour title ("Cryo Engineer") keys off the primary archetype alone.
@@ -62,6 +68,37 @@ export function ResultScreen({
   const buildTitle = runRecap?.primary
     ? t(`buildRecap.titles.${runRecap.primary}`)
     : t('buildRecap.generalistTitle');
+
+  // Share card (HIGHSCORES.md Phase E): render the run as a PNG and hand it to
+  // the Web Share sheet (mobile) or download it. The card IS the leaderboard post.
+  const handleShare = async () => {
+    const outcome = await shareRunCard(
+      {
+        score: result.totalScore ?? 0,
+        levelNumber,
+        ascensionDepth: ascensionDepth ?? 0,
+        buildLine: t('buildRecap.buildLine', { name: buildName, title: buildTitle }),
+        capstoneName: runRecap?.capstoneName ?? null,
+        rank: runRank?.rank ?? null,
+        dailyKey,
+        dailyStreak: runRank?.dailyStreak ?? 0,
+        isWin,
+      },
+      {
+        title: 'Dev/End',
+        bankedOvertime: t('result.bankedOvertime'),
+        reachedLevel: t('result.shareLevel', { level: levelNumber }),
+        rankLine: runRank?.rank ? t('result.rankAllTime', { rank: runRank.rank }) : null,
+        dailyLine: dailyKey ? t('result.shareDaily', { date: dailyKey }) : null,
+        outcome: isWin ? t('result.youWin') : t('result.gameOver'),
+      },
+      accentColor,
+    );
+    if (outcome !== 'unavailable') {
+      setShareState('done');
+      setTimeout(() => setShareState('idle'), 2500);
+    }
+  };
 
   return (
     <>
@@ -396,6 +433,18 @@ export function ResultScreen({
                 {t('result.playAgain')}
               </motion.button>
             )
+          )}
+          {/* Share the run as an image (only when something was banked). */}
+          {result.totalScore !== undefined && result.totalScore > 0 && (
+            <motion.button
+              className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"
+              onClick={handleShare}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {shareState === 'done' ? <Check className="w-5 h-5 text-success" /> : <Share2 className="w-5 h-5" />}
+              {t('result.share')}
+            </motion.button>
           )}
           <motion.button
             className="arcade-button-secondary rounded-lg flex items-center justify-center gap-2"

@@ -415,7 +415,10 @@
     "employeeOfMonth": "¡Empleado del mes!",
     "dailyBest": "¡Mejor marca de la reunión de hoy!",
     "dailyStreak_one": "Racha de asistencia: {{count}} día",
-    "dailyStreak_other": "Racha de asistencia: {{count}} días"
+    "dailyStreak_other": "Racha de asistencia: {{count}} días",
+    "share": "Compartir",
+    "shareLevel": "Nivel {{level}}",
+    "shareDaily": "Reunión diaria {{date}}"
   },
   "topBar": {
     "clear": "DESPEJADO",

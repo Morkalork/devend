@@ -415,7 +415,10 @@
     "employeeOfMonth": "Månadens anställd!",
     "dailyBest": "Dagens bästa på morgonmötet!",
     "dailyStreak_one": "Närvarosvit: {{count}} dag",
-    "dailyStreak_other": "Närvarosvit: {{count}} dagar"
+    "dailyStreak_other": "Närvarosvit: {{count}} dagar",
+    "share": "Dela",
+    "shareLevel": "Nivå {{level}}",
+    "shareDaily": "Morgonmöte {{date}}"
   },
   "topBar": {
     "clear": "KLART",
