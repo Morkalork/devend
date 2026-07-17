@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { SpaceGrid, CellState } from "@/lib/spaceGrid";
-import { traceActiveContours, traceContours } from "@/lib/rendering/regionContour";
+import { traceActiveContours, traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 
 /** Build a SpaceGrid from an ASCII map: '#' = ACTIVE, '.' = REMOVED. */
 function makeGrid(rows: string[], cellSize = 15, originX = 0, originY = 0): SpaceGrid {
@@ -77,5 +77,54 @@ describe("traceContours (arbitrary cell mask)", () => {
   it("an empty mask yields no loops", () => {
     const grid = makeGrid(["###", "###", "###"]);
     expect(traceContours(grid, () => false)).toHaveLength(0);
+  });
+});
+
+describe("snapContoursToWalls", () => {
+  const walls = [{ start: { x: 0, y: 10 }, end: { x: 100, y: 10 } }]; // horizontal line y=10
+
+  it("projects nearby points onto the wall line and leaves distant ones alone", () => {
+    const loops = [[
+      { x: 50, y: 3 },   // 7 away -> snaps to (50,10)
+      { x: 20, y: 18 },  // 8 away (other side) -> snaps to (20,10)
+      { x: 50, y: 40 },  // 30 away -> untouched
+    ]];
+    const [snapped] = snapContoursToWalls(loops, walls, 15);
+    expect(snapped[0]).toEqual({ x: 50, y: 10 });
+    expect(snapped[1]).toEqual({ x: 20, y: 10 });
+    expect(snapped[2]).toEqual({ x: 50, y: 40 });
+  });
+
+  it("clamps to segment endpoints (no snapping onto the infinite line)", () => {
+    const [snapped] = snapContoursToWalls([[{ x: 108, y: 12 }]], walls, 15);
+    // Nearest point on the SEGMENT is its end (100,10), 8.2 away.
+    expect(snapped[0].x).toBeCloseTo(100, 6);
+    expect(snapped[0].y).toBeCloseTo(10, 6);
+  });
+
+  it("picks the nearest of several walls", () => {
+    const two = [
+      { start: { x: 0, y: 10 }, end: { x: 100, y: 10 } },
+      { start: { x: 30, y: 0 }, end: { x: 30, y: 100 } },
+    ];
+    const [snapped] = snapContoursToWalls([[{ x: 27, y: 20 }]], two, 15);
+    // 3 from the vertical wall, 10 from the horizontal one -> (30,20).
+    expect(snapped[0]).toEqual({ x: 30, y: 20 });
+  });
+
+  it("no walls or non-positive radius is a passthrough", () => {
+    const loops = [[{ x: 1, y: 2 }]];
+    expect(snapContoursToWalls(loops, [], 15)).toBe(loops);
+    expect(snapContoursToWalls(loops, walls, 0)).toBe(loops);
+  });
+
+  it("a diagonal wall pulls the lattice staircase flush onto the line", () => {
+    // Wall along y = x; lattice-ish points near it must land exactly on it.
+    const diag = [{ start: { x: 0, y: 0 }, end: { x: 100, y: 100 } }];
+    const pts = [{ x: 15, y: 25 }, { x: 30, y: 22 }, { x: 45, y: 52 }];
+    const [snapped] = snapContoursToWalls([pts], diag, 15);
+    for (const p of snapped) {
+      expect(Math.abs(p.x - p.y)).toBeLessThan(1e-9); // on y = x
+    }
   });
 });

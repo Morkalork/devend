@@ -13,7 +13,7 @@ import {
   CellState,
 } from "@/lib/spaceGrid";
 import { vec2Length, lineSegmentIntersection } from "@/lib/polygon";
-import { traceContours } from "@/lib/rendering/regionContour";
+import { traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 import { effectiveBallSpeedFactor } from "@/lib/ballTypes";
 import { LockDustParticle } from "@/types/game";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
@@ -180,7 +180,13 @@ export function checkAndUpdateBallWonStates(
         if (col < gw - 1) consider(idx + 1);
       }
       for (const idx of floodRemovedEnclosure(grid, seeds, game.walls)) cellSet.add(idx);
-      const contours = traceContours(grid, (col, row) => cellSet.has(row * gw + col));
+      // Snap the lattice contour onto the pocket's bounding walls so the flash
+      // fills flush with the fence line (same treatment as the persistent tint).
+      const contours = snapContoursToWalls(
+        traceContours(grid, (col, row) => cellSet.has(row * gw + col)),
+        game.walls,
+        grid.cellSize * 1.05,
+      );
 
       // Pickups: a token sealed in with this lock is claimed (the whole point
       // of the mechanic — lead the ball to the token, then lock them together).

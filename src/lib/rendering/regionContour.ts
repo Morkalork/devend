@@ -107,6 +107,55 @@ export function traceContours(grid: SpaceGrid, inside: CellInside): ContourPoint
   return loops;
 }
 
+/** The bounding lines contours may snap to (fences, board edges, obstacles). */
+export interface WallSegment {
+  start: ContourPoint;
+  end: ContourPoint;
+}
+
+/**
+ * Pull contour points onto the wall lines that bound them.
+ *
+ * A traced contour lives on the 15px cell lattice: along a sealing fence its
+ * edge lands wherever the lattice happens to fall, up to ~a cell away from the
+ * fence's actual 6px line — visible as a seam between the lock tint and the
+ * wall (the "fuzzy line" mismatch). Projecting every point that sits within
+ * `maxDist` of a wall segment onto that segment makes the fill flush with the
+ * line it stops at; the wall's own stroke (drawn over the tint) then covers
+ * the boundary completely. Points near no wall (interior lattice detail) are
+ * untouched. Runs at repaint/lock time only, never per frame.
+ */
+export function snapContoursToWalls(
+  loops: ContourPoint[][],
+  walls: WallSegment[],
+  maxDist: number,
+): ContourPoint[][] {
+  if (walls.length === 0 || maxDist <= 0) return loops;
+  const maxSq = maxDist * maxDist;
+  return loops.map(loop =>
+    loop.map(p => {
+      let best: ContourPoint | null = null;
+      let bestSq = maxSq;
+      for (const w of walls) {
+        const dx = w.end.x - w.start.x;
+        const dy = w.end.y - w.start.y;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) continue;
+        let t = ((p.x - w.start.x) * dx + (p.y - w.start.y) * dy) / lenSq;
+        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        const qx = w.start.x + t * dx;
+        const qy = w.start.y + t * dy;
+        const dSq = (p.x - qx) * (p.x - qx) + (p.y - qy) * (p.y - qy);
+        if (dSq < bestSq) {
+          bestSq = dSq;
+          best = { x: qx, y: qy };
+        }
+      }
+      return best ?? p;
+    }),
+  );
+}
+
 function smooth(loop: ContourPoint[]): ContourPoint[] {
   let pts = loop;
   for (let i = 0; i < SMOOTH_ITERATIONS; i++) pts = chaikin(pts);

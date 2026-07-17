@@ -155,6 +155,16 @@ describe("lock tint covers the whole enclosed pocket", () => {
     expect(flash).toBeDefined();
     expect(flash!.contours.length).toBeGreaterThan(0);
 
+    // Every bounding line of the pocket: the flash must hug these exactly.
+    const segDist = (p: { x: number; y: number }, a: { x: number; y: number }, b: { x: number; y: number }) => {
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const lenSq = dx * dx + dy * dy;
+      let t = lenSq === 0 ? 0 : ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+    };
+    const wallSegs = game.walls.map(w => [w.start, w.end] as const);
+
     let pointCount = 0, deepestIntoPocket = -Infinity;
     for (const loop of flash!.contours) {
       for (const p of loop) {
@@ -167,6 +177,12 @@ describe("lock tint covers the whole enclosed pocket", () => {
         // Never deep on the main-board side of the sealing fence (overshoot).
         expect(signedDist(p)).toBeGreaterThan(-20);
         deepestIntoPocket = Math.max(deepestIntoPocket, signedDist(p));
+        // No point stranded in the seam band: after wall-snapping, a contour
+        // point either sits ON a bounding line (fence/board edge) or is well
+        // clear of all of them - the lattice-quantized "fuzzy seam" between the
+        // fill edge and the fence is gone.
+        const nearest = Math.min(...wallSegs.map(([a, b]) => segDist(p, a, b)));
+        expect(nearest < 0.001 || nearest > 15.8).toBe(true);
       }
     }
     expect(pointCount).toBeGreaterThan(8);       // a real outline, not a stub

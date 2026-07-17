@@ -69,7 +69,7 @@ import {
   getRegionPercentage,
   removeRegion,
 } from "@/lib/spaceGrid";
-import { traceActiveContours, traceContours } from "@/lib/rendering/regionContour";
+import { traceActiveContours, traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 import { maybeRampDpr } from "@/lib/rendering/adaptiveDpr";
 import { playFenceBreakSound, playDeathSound, playBallLockSound } from "@/lib/gameAudio";
 import { vibrateFenceComplete, vibrateFenceBreak } from "@/lib/gameHaptics";
@@ -591,7 +591,14 @@ export function GameCanvas({
       if (grid?.lockCaptured) {
         const mask = grid.lockCaptured;
         const gw = grid.width;
-        const lockLoops = traceContours(grid, (col, row) => mask[row * gw + col] === 1);
+        // Snap the traced lattice contour onto the walls that bound the pocket,
+        // so the tint sits flush with the fence line instead of up to a cell
+        // short/past it (the seam the lattice quantization leaves otherwise).
+        const lockLoops = snapContoursToWalls(
+          traceContours(grid, (col, row) => mask[row * gw + col] === 1),
+          game.walls,
+          grid.cellSize * 1.05,
+        );
         if (lockLoops.length > 0) {
           rCtx.save();
           rCtx.globalCompositeOperation = 'source-atop';
