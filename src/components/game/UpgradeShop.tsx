@@ -689,8 +689,17 @@ export function UpgradeShop({
                     return;
                   }
                   // A choice card opens its chooser; a normal card toggles select.
-                  if (isChoice) setChooserGroup(upgrade.choiceGroup!);
-                  else handleItemClick(upgrade, selected, remainingBudget);
+                  if (isChoice) {
+                    // #50: don't open the chooser for options that can't be
+                    // bought (unaffordable or store closed) — shake like a
+                    // normal unaffordable card so the "no" reads clearly.
+                    if (!selected && (closed || cantAfford)) {
+                      setShakingId(upgrade.id);
+                      setTimeout(() => setShakingId(null), 600);
+                      return;
+                    }
+                    setChooserGroup(upgrade.choiceGroup!);
+                  } else handleItemClick(upgrade, selected, remainingBudget);
                 }}
                 disabled={owned || locked}
                 whileHover={{ scale: purchasable ? 1.05 : 1 }}
