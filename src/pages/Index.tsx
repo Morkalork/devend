@@ -65,6 +65,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
   const { t } = useTranslation();
   const { accentHex } = useAccentColor();
   const isAdminEnabled = import.meta.env.DEV;
+  // Daily Stand-up is hidden for now (design still being thought through). Flip
+  // this to true to bring the welcome-menu button, its intro modal and its
+  // first-time highlight back; the underlying feature is otherwise intact.
+  const SHOW_DAILY_STANDUP = false;
 
   // Play the main-menu loop on menu screens. Blocked by autoplay on the very
   // first screen until a gesture, which gameMusic resumes automatically.
@@ -80,7 +84,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
       records: session.topRuns.length > 0,
       certificates: session.totalCertificateHours > 0,
       achievements: session.completedAchievementIds.length > 0,
-      daily: session.topRuns.length > 0,
+      daily: SHOW_DAILY_STANDUP && session.topRuns.length > 0,
     },
     // Prior progress = existing install; seeds already-passed firsts as seen.
     session.hasSavedRun ||
@@ -159,7 +163,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 }
                 onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
                 onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
-                onDaily={() => session.handleStartDaily()}
+                onDaily={SHOW_DAILY_STANDUP ? () => session.handleStartDaily() : undefined}
                 showDailyIntro={session.shouldShowDaily}
                 onDailyIntroSeen={session.markDailySeen}
                 // A streak is only shown while alive: attended today, or
