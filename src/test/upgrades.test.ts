@@ -273,3 +273,42 @@ describe("market-rate inflation", () => {
     expect(inflationForLevel(NaN, pricing)).toBe(1);
   });
 });
+
+describe("choice-group forks (mutually-exclusive tiers)", () => {
+  const groups = new Map<string, UpgradeConfig[]>();
+  for (const u of upgrades) {
+    if (!u.choiceGroup) continue;
+    (groups.get(u.choiceGroup) ?? groups.set(u.choiceGroup, []).get(u.choiceGroup)!).push(u);
+  }
+
+  it("every group has 2+ options that share a name, tier and unlock level", () => {
+    expect(groups.size).toBeGreaterThan(0);
+    for (const [group, opts] of groups) {
+      expect(opts.length, group).toBeGreaterThanOrEqual(2);
+      const [first] = opts;
+      for (const o of opts) {
+        expect(o.name, group).toBe(first.name);
+        expect(o.tier, group).toBe(first.tier);
+        expect(o.unlockLevel, group).toBe(first.unlockLevel);
+        // Same prerequisite, so the choice appears as one card.
+        expect(o.prerequisites, group).toEqual(first.prerequisites);
+      }
+    }
+  });
+
+  it("Garbage Collector's Architect fork splits frequency vs size", () => {
+    const opts = groups.get("garbage_collector_architect");
+    expect(opts).toBeDefined();
+    const fullSweep = opts!.find(o => o.id.endsWith("_a"))!;
+    const bigBang = opts!.find(o => o.id.endsWith("_b"))!;
+    // Full Sweep buys frequency (chance), leaves size alone.
+    expect(fullSweep.modifiers.bonusRemovalChance).toBeGreaterThan(0);
+    expect(fullSweep.modifiers.bonusRemovalAmount ?? 0).toBe(0);
+    // Big Bang buys size (amount), leaves frequency alone.
+    expect(bigBang.modifiers.bonusRemovalAmount).toBeGreaterThan(0);
+    expect(bigBang.modifiers.bonusRemovalChance ?? 0).toBe(0);
+    // Big Bang carries the extra risk tag; Full Sweep is pure tempo.
+    expect(bigBang.tags).toContain("risk");
+    expect(fullSweep.tags).not.toContain("risk");
+  });
+});

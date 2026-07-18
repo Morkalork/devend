@@ -284,6 +284,9 @@ upgrades:
 
   # ===============================
   # GARBAGE COLLECTOR (Bonus Removal)
+  # Third tier is a CHOICE (choiceGroup, +50% cost) on the same removal roll:
+  # tune it toward frequent-but-small (Full Sweep) or rare-but-huge (Big Bang).
+  # Both use the existing bonusRemovalChance/Amount modifiers.
   # ===============================
 
   - id: garbage_collector_senior
@@ -311,6 +314,33 @@ upgrades:
     modifiers:
       bonusRemovalChance: 0.10
       bonusRemovalAmount: 0.10
+
+  # Architect is a CHOICE: buy ONE. Owning one locks out the other. Full Sweep
+  # trades size for frequency; Big Bang trades frequency for size. Roughly equal
+  # expected area; the difference is variance.
+  - id: garbage_collector_architect_a
+    name: Garbage Collector 3
+    tier: Architect
+    description: "Full Sweep: the bonus removal fires far more often, though each clear stays the same size."
+    unlockLevel: 24
+    prerequisites:
+      - garbage_collector_medior
+    choiceGroup: garbage_collector_architect
+    tags: [tempo]
+    modifiers:
+      bonusRemovalChance: 0.25
+
+  - id: garbage_collector_architect_b
+    name: Garbage Collector 3
+    tier: Architect
+    description: "Big Bang: the bonus removal stays rare, but each clear rips out a much larger area."
+    unlockLevel: 24
+    prerequisites:
+      - garbage_collector_medior
+    choiceGroup: garbage_collector_architect
+    tags: [tempo, risk]
+    modifiers:
+      bonusRemovalAmount: 0.25
 
 
   # ===============================
