@@ -311,4 +311,17 @@ describe("choice-group forks (mutually-exclusive tiers)", () => {
     expect(bigBang.tags).toContain("risk");
     expect(fullSweep.tags).not.toContain("risk");
   });
+
+  it("Defensive Programming's Architect fork splits survival vs evasion", () => {
+    const opts = groups.get("defensive_programming_architect");
+    expect(opts).toBeDefined();
+    const bunker = opts!.find(o => o.id.endsWith("_a"))!;
+    const nanobots = opts!.find(o => o.id.endsWith("_b"))!;
+    // Bunker buys lives, leaves ball size alone.
+    expect(bunker.modifiers.extraLives).toBeGreaterThan(0);
+    expect(bunker.modifiers.ballSizeMultiplier ?? 1).toBe(1);
+    // Nanobots buys shrink, leaves lives alone.
+    expect(nanobots.modifiers.ballSizeMultiplier).toBeLessThan(1);
+    expect(nanobots.modifiers.extraLives ?? 0).toBe(0);
+  });
 });

@@ -981,6 +981,33 @@ upgrades:
       extraLives: 3
       ballSizeMultiplier: 0.92
 
+  # Architect is a CHOICE (choiceGroup, +50% cost) that splits the line's
+  # bundled lives+shrink into a build identity: soak the hits (Bunker) or dodge
+  # them (Nanobots). Buy ONE; owning one locks out the other. Existing modifiers.
+  - id: defensive_programming_architect_a
+    name: Defensive Programming
+    tier: Architect
+    description: "Bunker: gain 3 more extra lives, with no further shrink. Built to soak the hits."
+    unlockLevel: 25
+    prerequisites:
+      - defensive_programming_principal
+    choiceGroup: defensive_programming_architect
+    tags: [safety]
+    modifiers:
+      extraLives: 3
+
+  - id: defensive_programming_architect_b
+    name: Defensive Programming
+    tier: Architect
+    description: "Nanobots: shrink all balls another 15%, with no extra lives. Built to dodge."
+    unlockLevel: 25
+    prerequisites:
+      - defensive_programming_principal
+    choiceGroup: defensive_programming_architect
+    tags: [safety]
+    modifiers:
+      ballSizeMultiplier: 0.85
+
 
   # ===============================
   # SCRUM MASTER (Ball Path Preview)
