@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
 import { ownedTagCounts, weightedSample, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { GameModifiers } from '@/hooks/useActiveModifiers';
-import { runwayStatus, spendChunks, SPEND_CHUNK_HOURS, RunwayPerk } from '@/lib/treasury';
+import { runwayStatus, spendChunks, spendChunkCap, SPEND_CHUNK_HOURS, RunwayPerk } from '@/lib/treasury';
 import { inflationForLevel } from '@/lib/upgradePricing';
 import { TagChip } from './TagChip';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info, Vault, ShoppingCart } from 'lucide-react';
@@ -297,11 +297,16 @@ export function UpgradeShop({
   // being lost and the Budget Cycle charging up. Same functions as the engine.
   const runwayPerks = activeModifiers ? runwayStatus(remainingBudget, activeModifiers) : [];
   const hasBudgetCycle = !!activeModifiers &&
-    (activeModifiers.spendInstantFencePerChunk > 0 || activeModifiers.spendFenceSpeedPerChunk > 0);
+    (activeModifiers.spendInstantFencePerChunk > 0 || activeModifiers.spendFenceSpeedPerChunk > 0 ||
+     activeModifiers.spendCapturePerChunk > 0);
   // The spend chunk scales with the same inflation index as prices, so the
   // spender archetype doesn't get cheaper boons as markets rise.
   const chunkHours = Math.round(SPEND_CHUNK_HOURS * priceInflation);
-  const budgetChunks = spendChunks(selectedTotalCost, chunkHours);
+  const budgetChunks = spendChunks(
+    selectedTotalCost,
+    chunkHours,
+    activeModifiers ? spendChunkCap(activeModifiers) : undefined,
+  );
   const RUNWAY_CHIP_KEYS: Record<RunwayPerk, string> = {
     instantFence: 'upgradeShop.runwayChipInstantFence',
     concurrentFence: 'upgradeShop.runwayChipConcurrentFence',

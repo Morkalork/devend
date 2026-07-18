@@ -75,6 +75,8 @@ export interface GameModifiers {
   // visit (max 3 chunks; see src/lib/treasury.ts)
   spendInstantFencePerChunk: number; // instant fences on the next map per chunk
   spendFenceSpeedPerChunk: number;   // fence-speed bonus on the next map per chunk (0.05 = +5%)
+  spendCapturePerChunk: number;      // next-map board pre-capture per chunk (0.05 = +5%; Budget Cycle: Retained Earnings)
+  spendChunkCapBonus: number;        // raises the per-visit chunk ceiling above MAX_SPEND_CHUNKS (Budget Cycle: Leveraged Buyout)
   // Additive (sum) — Code Review: percentage points added to the lock
   // threshold (base 10% of the win denominator), so slightly-too-big pockets
   // still lock their ball
@@ -222,6 +224,8 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   runwayFreezeAt: 0,
   spendInstantFencePerChunk: 0,
   spendFenceSpeedPerChunk: 0,
+  spendCapturePerChunk: 0,
+  spendChunkCapBonus: 0,
   lockThresholdBonus: 0,
   spawnFreezeSeconds: 0,
   pickupChanceBonus: 0,

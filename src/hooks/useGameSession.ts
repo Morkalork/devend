@@ -39,7 +39,7 @@ import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
 import { unlockedForStart, newlyUnlocked } from '@/lib/loadoutUnlock';
-import { runwayBonuses, spendChunks, spendBoons, SPEND_CHUNK_HOURS } from '@/lib/treasury';
+import { runwayBonuses, spendChunks, spendBoons, spendChunkCap, SPEND_CHUNK_HOURS } from '@/lib/treasury';
 import { inflationForLevel } from '@/lib/upgradePricing';
 import { useAchievementManager } from './useAchievementManager';
 import { useScreenNavigation } from './useScreenNavigation';
@@ -116,6 +116,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // burst right before the shop-exit handler (state would read stale).
   const [carrySpendFences, setCarrySpendFences] = useState(0);
   const [carrySpendFenceSpeed, setCarrySpendFenceSpeed] = useState(0);
+  const [carrySpendCapture, setCarrySpendCapture] = useState(0);
   const spentThisShopVisitRef = useRef(0);
 
   // Free-store-item pickups (issue #48): each claimed token makes the next
@@ -355,13 +356,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (carrySpendFenceSpeed > 0) {
       bonuses = mergeBonuses(bonuses, { fenceGenerationSpeedMultiplier: 1 + carrySpendFenceSpeed });
     }
+    if (carrySpendCapture > 0) {
+      bonuses = mergeBonuses(bonuses, { startingCapturePercent: carrySpendCapture });
+    }
     // Door pick: the chosen risk door's bundle rides along for this map (and
     // the shop after it; see handleContinueFromShop for the expiry).
     if (activeDoor) {
       bonuses = mergeBonuses(bonuses, activeDoor.modifiers as Partial<Record<keyof GameModifiers, number>>);
     }
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, activeDoor]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -485,6 +489,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarryInstantFences(0);
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
+    setCarrySpendCapture(0);
     setCarryFreeShopItems(0);
     spentThisShopVisitRef.current = 0;
     blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
@@ -527,6 +532,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carryInstantFences,
     carrySpendFences,
     carrySpendFenceSpeed,
+    carrySpendCapture,
     carryFreeShopItems,
     blockStats: blockStatsRef.current,
     activeDoorId: activeDoor?.id ?? null,
@@ -699,6 +705,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarryInstantFences(save.carryInstantFences);
     setCarrySpendFences(save.carrySpendFences);
     setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
+    setCarrySpendCapture(save.carrySpendCapture ?? 0);
     setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
     blockStatsRef.current = save.blockStats ?? { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
     setLastContractSummary(null);
@@ -886,6 +893,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // shop exit re-grants them if the player spends again).
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
+    setCarrySpendCapture(0);
     // Free-store-item pickups (issue #48): bank the map's claims; they persist
     // until an OPEN store consumes one (unlike the one-map carries above).
     if ((scoreData.freeShopItemsEarned ?? 0) > 0) {
@@ -1188,11 +1196,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // expired at the next level completion. The chunk scales with the same
     // market-rate inflation as prices (see upgradePricing.inflationForLevel).
     const chunkHours = Math.round(SPEND_CHUNK_HOURS * inflationForLevel(currentLevelIndex + 1));
-    const chunks = spendChunks(spentThisShopVisitRef.current, chunkHours);
+    const chunks = spendChunks(spentThisShopVisitRef.current, chunkHours, spendChunkCap(activeModifiers));
     spentThisShopVisitRef.current = 0;
     const boons = spendBoons(chunks, activeModifiers);
     setCarrySpendFences(boons.instantFences);
     setCarrySpendFenceSpeed(boons.fenceSpeedBonus);
+    setCarrySpendCapture(boons.capturePercent);
 
     // Free-store-item pickup (issue #48): an OPEN store visit consumes one
     // voucher (the shop showed its cheapest offer free). Closed stores keep it.

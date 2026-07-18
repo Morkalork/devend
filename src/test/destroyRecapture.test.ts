@@ -43,7 +43,7 @@ const MODS: GameModifiers = {
   wallShieldsPerMap: 0, fenceGraceMs: 0, shipEarlySecondsPerBall: 0,
   scopeCreepImmediate: 0, shipEarlyBonusMultiplier: 1,
   runwayInstantFenceAt: 0, runwayConcurrentFenceAt: 0, runwayFreezeAt: 0,
-  spendInstantFencePerChunk: 0, spendFenceSpeedPerChunk: 0,
+  spendInstantFencePerChunk: 0, spendFenceSpeedPerChunk: 0, spendCapturePerChunk: 0, spendChunkCapBonus: 0,
   lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
 };
 

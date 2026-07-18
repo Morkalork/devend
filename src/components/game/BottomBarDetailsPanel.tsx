@@ -212,13 +212,14 @@ export function BottomBarDetailsPanel({
     },
     {
       label: t('bottomBarDetails.budgetCycle'),
-      value: m.spendInstantFencePerChunk > 0 || m.spendFenceSpeedPerChunk > 0
+      value: m.spendInstantFencePerChunk > 0 || m.spendFenceSpeedPerChunk > 0 || m.spendCapturePerChunk > 0
         ? t('bottomBarDetails.budgetCycleValue', { hours: SPEND_CHUNK_HOURS })
         : t('bottomBarDetails.off'),
-      changed: m.spendInstantFencePerChunk !== 0 || m.spendFenceSpeedPerChunk !== 0,
-      keys: ['spendInstantFencePerChunk', 'spendFenceSpeedPerChunk'],
+      changed: m.spendInstantFencePerChunk !== 0 || m.spendFenceSpeedPerChunk !== 0 ||
+        m.spendCapturePerChunk !== 0 || m.spendChunkCapBonus !== 0,
+      keys: ['spendInstantFencePerChunk', 'spendFenceSpeedPerChunk', 'spendCapturePerChunk', 'spendChunkCapBonus'],
       description:
-        m.spendInstantFencePerChunk > 0 || m.spendFenceSpeedPerChunk > 0
+        m.spendInstantFencePerChunk > 0 || m.spendFenceSpeedPerChunk > 0 || m.spendCapturePerChunk > 0
           ? t('bottomBarDetails.budgetCycleActive', { hours: SPEND_CHUNK_HOURS })
           : t('bottomBarDetails.budgetCycleInactive'),
     },

@@ -4,6 +4,7 @@ import {
   runwayStatus,
   spendChunks,
   spendBoons,
+  spendChunkCap,
   RUNWAY_FREEZE_SECONDS,
   SPEND_CHUNK_HOURS,
   MAX_SPEND_CHUNKS,
@@ -76,11 +77,31 @@ describe("budget cycle (spend-side chunks)", () => {
 
   it("composes boons from the owned tiers", () => {
     const both = mods({ spendInstantFencePerChunk: 1, spendFenceSpeedPerChunk: 0.05 });
-    expect(spendBoons(2, both)).toEqual({ instantFences: 2, fenceSpeedBonus: 0.1 });
+    expect(spendBoons(2, both)).toEqual({ instantFences: 2, fenceSpeedBonus: 0.1, capturePercent: 0 });
     // Junior only: no fence-speed kick.
-    expect(spendBoons(2, mods({ spendInstantFencePerChunk: 1 }))).toEqual({ instantFences: 2, fenceSpeedBonus: 0 });
+    expect(spendBoons(2, mods({ spendInstantFencePerChunk: 1 }))).toEqual({ instantFences: 2, fenceSpeedBonus: 0, capturePercent: 0 });
     // No chunks or no upgrades: nothing.
-    expect(spendBoons(0, both)).toEqual({ instantFences: 0, fenceSpeedBonus: 0 });
-    expect(spendBoons(3, mods())).toEqual({ instantFences: 0, fenceSpeedBonus: 0 });
+    expect(spendBoons(0, both)).toEqual({ instantFences: 0, fenceSpeedBonus: 0, capturePercent: 0 });
+    expect(spendBoons(3, mods())).toEqual({ instantFences: 0, fenceSpeedBonus: 0, capturePercent: 0 });
+  });
+
+  // Retained Earnings: a next-map board head start, one chunk's worth per chunk.
+  it("pays a board head start per chunk (Retained Earnings)", () => {
+    const earnings = mods({ spendCapturePerChunk: 0.05 });
+    expect(spendBoons(3, earnings).capturePercent).toBeCloseTo(0.15);
+    expect(spendBoons(1, earnings).capturePercent).toBeCloseTo(0.05);
+    expect(spendBoons(0, earnings).capturePercent).toBe(0);
+    // Never leaks into the score-side boons.
+    expect(spendBoons(3, earnings).instantFences).toBe(0);
+  });
+
+  // Leveraged Buyout: a raised per-visit chunk ceiling.
+  it("raises the chunk cap (Leveraged Buyout)", () => {
+    expect(spendChunkCap(mods())).toBe(MAX_SPEND_CHUNKS);
+    expect(spendChunkCap(mods({ spendChunkCapBonus: 2 }))).toBe(MAX_SPEND_CHUNKS + 2);
+    // A big splurge now counts up to the raised ceiling instead of 3.
+    expect(spendChunks(500, SPEND_CHUNK_HOURS, spendChunkCap(mods({ spendChunkCapBonus: 2 })))).toBe(5);
+    // Without the bonus it still caps at the base ceiling.
+    expect(spendChunks(500, SPEND_CHUNK_HOURS, spendChunkCap(mods()))).toBe(MAX_SPEND_CHUNKS);
   });
 });

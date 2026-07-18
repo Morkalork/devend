@@ -40,6 +40,9 @@ export interface RunSave {
   carryInstantFences: number;
   carrySpendFences: number;
   carrySpendFenceSpeed: number;
+  // Budget Cycle: Retained Earnings head-start carry. Optional: pre-feature
+  // saves default to 0 on restore.
+  carrySpendCapture?: number;
   // Free-store-item pickups awaiting the next OPEN store (issue #48).
   // Optional: saves from before the feature default to 0.
   carryFreeShopItems?: number;

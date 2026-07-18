@@ -73,10 +73,22 @@ export function runwayBonuses(bank: number, mods: GameModifiers): Bonuses | unde
  * (SPEND_CHUNK_HOURS x inflationForLevel) so boons don't get cheaper as
  * prices rise through the run.
  */
-export function spendChunks(spentHours: number, chunkHours: number = SPEND_CHUNK_HOURS): number {
+export function spendChunks(
+  spentHours: number,
+  chunkHours: number = SPEND_CHUNK_HOURS,
+  maxChunks: number = MAX_SPEND_CHUNKS,
+): number {
   if (!Number.isFinite(spentHours) || spentHours <= 0) return 0;
   const chunk = Number.isFinite(chunkHours) && chunkHours > 0 ? chunkHours : SPEND_CHUNK_HOURS;
-  return Math.min(MAX_SPEND_CHUNKS, Math.floor(spentHours / chunk));
+  const cap = Number.isFinite(maxChunks) && maxChunks > 0 ? Math.floor(maxChunks) : MAX_SPEND_CHUNKS;
+  return Math.min(cap, Math.floor(spentHours / chunk));
+}
+
+/** Per-visit chunk ceiling, including the Leveraged Buyout bonus. */
+export function spendChunkCap(mods: GameModifiers): number {
+  const bonus = Number.isFinite(mods.spendChunkCapBonus) && mods.spendChunkCapBonus > 0
+    ? Math.floor(mods.spendChunkCapBonus) : 0;
+  return MAX_SPEND_CHUNKS + bonus;
 }
 
 export interface SpendBoons {
@@ -84,6 +96,8 @@ export interface SpendBoons {
   instantFences: number;
   /** Fence-speed bonus on the next map (0.05 = +5%). */
   fenceSpeedBonus: number;
+  /** Board pre-capture on the next map (0.15 = +15%; Retained Earnings). */
+  capturePercent: number;
 }
 
 /** Next-map boons bought by the charged chunks. */
@@ -93,5 +107,7 @@ export function spendBoons(chunks: number, mods: GameModifiers): SpendBoons {
     ? mods.spendInstantFencePerChunk : 0;
   const perSpeed = Number.isFinite(mods.spendFenceSpeedPerChunk) && mods.spendFenceSpeedPerChunk > 0
     ? mods.spendFenceSpeedPerChunk : 0;
-  return { instantFences: n * perFence, fenceSpeedBonus: n * perSpeed };
+  const perCapture = Number.isFinite(mods.spendCapturePerChunk) && mods.spendCapturePerChunk > 0
+    ? mods.spendCapturePerChunk : 0;
+  return { instantFences: n * perFence, fenceSpeedBonus: n * perSpeed, capturePercent: n * perCapture };
 }

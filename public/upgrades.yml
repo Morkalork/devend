@@ -635,7 +635,10 @@ upgrades:
   # Spend-side treasury: hours spent in ONE shop visit charge next-map boons in
   # 60h chunks, max 3 counted (src/lib/treasury.ts). Pulls directly against
   # Runway's hoard thresholds: a splurge can drop the bank below a threshold
-  # while charging these.
+  # while charging these. Principal is a CHOICE (choiceGroup, +50% cost): a
+  # reliable next-map head start, or a bigger chunk ceiling for one-visit
+  # splurges. Both stay paid in board-state, never score, so the flat economy
+  # holds.
   # ===============================
 
   - id: budget_cycle_junior
@@ -660,6 +663,32 @@ upgrades:
     tags: [bank]
     modifiers:
       spendFenceSpeedPerChunk: 0.05
+
+  # Principal is a CHOICE: buy ONE. Owning one locks out the other. Both pay in
+  # board-state (never score), so they keep the treasury's flat-economy rule.
+  - id: budget_cycle_principal_a
+    name: Budget Cycle
+    tier: Principal
+    description: "Retained Earnings: each spending chunk starts the next map with 5% of the board already captured."
+    unlockLevel: 16
+    prerequisites:
+      - budget_cycle_senior
+    choiceGroup: budget_cycle_principal
+    tags: [bank]
+    modifiers:
+      spendCapturePerChunk: 0.05
+
+  - id: budget_cycle_principal_b
+    name: Budget Cycle
+    tier: Principal
+    description: "Leveraged Buyout: your spending now counts up to 5 chunks per shop visit (from 3). Splurge big in one go."
+    unlockLevel: 16
+    prerequisites:
+      - budget_cycle_senior
+    choiceGroup: budget_cycle_principal
+    tags: [bank, risk]
+    modifiers:
+      spendChunkCapBonus: 2
 
 
   # ===============================
