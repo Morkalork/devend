@@ -247,6 +247,8 @@
     "topBarTutorialBody": "The top bar is expandable!\n\nTap it to see full level details, all your active upgrades with descriptions, and certificate-hour progress.",
     "bottomBarTutorialTitle": "The Bottom Bar",
     "bottomBarTutorialBody": "The bottom bar is expandable too!\n\nTap it to view every active modifier explained in plain language.",
+    "timeLimitTutorialTitle": "Time Limit",
+    "timeLimitTutorialBody": "From now on, every map has a time limit. Clear the map before the bar empties or the run ends, no matter how many lives you have.\n\nThe bar shades from green to red as it drains. Finish with time to spare and you earn bonus overtime (Ship Early).",
     "infoUnlocked": "Info Unlocked",
     "superiorLock": "Superior Lock!",
     "pickupFork": "Ball split!",

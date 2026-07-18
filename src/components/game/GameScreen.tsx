@@ -21,7 +21,7 @@ import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
 import { LevelConfig } from '@/types/level';
-import { getMapTimeLimit } from '@/lib/mapTiming';
+import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
@@ -69,6 +69,8 @@ interface GameScreenProps {
   onTopBarTutorialSeen?: () => void;
   showBottomBarTutorial?: boolean;
   onBottomBarTutorialSeen?: () => void;
+  showTimeLimitTutorial?: boolean;
+  onTimeLimitTutorialSeen?: () => void;
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   achievementBonuses?: Partial<Record<string, number>>;
@@ -124,6 +126,8 @@ export function GameScreen({
   onTopBarTutorialSeen,
   showBottomBarTutorial = false,
   onBottomBarTutorialSeen,
+  showTimeLimitTutorial = false,
+  onTimeLimitTutorialSeen,
   accentColor: externalAccentColor,
   certificateProgress,
   achievementBonuses,
@@ -287,13 +291,17 @@ export function GameScreen({
     levelNumber === 2 && showTopBarTutorial && !showMoverOverlay && !showBreakIntro;
   const showBottomBarOverlay =
     levelNumber === 3 && showBottomBarTutorial && !showMoverOverlay && !showBreakIntro;
+  // Time-limit intro: the first timed map (level 4, just past the exempt band).
+  const showTimeLimitOverlay =
+    levelNumber === TIME_LIMIT_EXEMPT_MAX_LEVEL + 1 && showTimeLimitTutorial &&
+    !showMoverOverlay && !showBreakIntro;
   const showCreepOverlay =
     !creepIntroSeen && gameState.creepPercent > 0 &&
     !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
   const modalOverlayActive =
     topPanelOpen || bottomPanelOpen || menuOpen ||
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
-    showCreepOverlay;
+    showTimeLimitOverlay || showCreepOverlay;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -610,6 +618,15 @@ export function GameScreen({
         accentColor={accentColor}
         title={t('game.bottomBarTutorialTitle')}
         body={t('game.bottomBarTutorialBody')}
+      />
+
+      {/* Time-limit intro — first timed map (level 4), first run only */}
+      <TutorialOverlay
+        visible={showTimeLimitOverlay}
+        onDismiss={onTimeLimitTutorialSeen}
+        accentColor={accentColor}
+        title={t('game.timeLimitTutorialTitle')}
+        body={t('game.timeLimitTutorialBody')}
       />
 
       {/* Full-screen top info panel */}

@@ -44,3 +44,23 @@ describe('Daily Stand-up intro flag', () => {
     expect(result.current.shouldShowDaily).toBe(true);
   });
 });
+
+describe('Time-limit intro flag', () => {
+  it('starts shown, hides once marked (persisting), and re-arms on reset', () => {
+    const { result, unmount } = renderHook(() => useTutorialManager());
+    expect(result.current.shouldShowTimeLimit).toBe(true);
+
+    act(() => result.current.markTimeLimitSeen());
+    expect(result.current.shouldShowTimeLimit).toBe(false);
+    // Independent of the other flags.
+    expect(result.current.shouldShowDaily).toBe(true);
+    unmount();
+
+    // Persisted across a remount...
+    const remounted = renderHook(() => useTutorialManager());
+    expect(remounted.result.current.shouldShowTimeLimit).toBe(false);
+    // ...and brought back by "Re-enable All Tutorials".
+    act(() => remounted.result.current.resetAllTutorials());
+    expect(remounted.result.current.shouldShowTimeLimit).toBe(true);
+  });
+});

@@ -231,6 +231,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onTopBarTutorialSeen={session.markTopBarSeen}
                 showBottomBarTutorial={session.showBottomBarTutorial}
                 onBottomBarTutorialSeen={session.markBottomBarSeen}
+                showTimeLimitTutorial={session.shouldShowTimeLimit}
+                onTimeLimitTutorialSeen={session.markTimeLimitSeen}
                 accentColor={accentHex}
                 certificateProgress={session.certificateProgress}
                 achievementBonuses={session.achievementBonuses}

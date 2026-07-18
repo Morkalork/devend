@@ -245,6 +245,8 @@
     "topBarTutorialBody": "Den övre listen går att fälla ut!\n\nTryck på den för att se fullständiga nivådetaljer, alla dina aktiva uppgraderingar med beskrivningar och framsteg för certifikattimmar.",
     "bottomBarTutorialTitle": "Den nedre listen",
     "bottomBarTutorialBody": "Den nedre listen går också att fälla ut!\n\nTryck på den för att se varje aktiv modifierare förklarad på vanlig svenska.",
+    "timeLimitTutorialTitle": "Tidsgräns",
+    "timeLimitTutorialBody": "Från och med nu har varje karta en tidsgräns. Rensa kartan innan mätaren tar slut, annars är körningen över, oavsett hur många liv du har.\n\nMätaren går från grönt till rött när den töms. Blir du klar med tid kvar får du bonusövertid (tidig leverans).",
     "infoUnlocked": "Info upplåst",
     "superiorLock": "Överlägset lås!",
     "pickupFork": "Bollen delades!",
