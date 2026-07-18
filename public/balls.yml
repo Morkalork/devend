@@ -19,6 +19,9 @@
 #   speedRange     (variableSpeed only) [lo, hi] — a new random speed is picked on each
 #                  surface contact; the range itself shrinks when the ball is slowed
 #   phase2         true = not yet wired up; excluded from selection and the tutorial
+#   spawnIntervalSeconds (rainbow only) seconds between spit-outs (default 10)
+#   spawnChance    per-map appearance probability 0-1, rolled from the map id
+#                  (absent = always eligible). Makes rare types an occasional event.
 
 balls:
   - id: red
@@ -92,3 +95,20 @@ balls:
     lockMultiplier: 4
     ability: breakObjects
     description: "Wrecking ball: smashes mirrors and movers after three hits, losing a multiplier each time."
+
+  # Rainbow: a fast, hue-shifting ball that shows up occasionally past level 10.
+  # Every 10 seconds it spits out one random ball type available for the current
+  # level (never another rainbow). Trap it fast: the spawns pile up, and every
+  # map now has a hard time limit. `color` is the base tint; the renderers cycle
+  # its hue at runtime.
+  - id: rainbow
+    name: Rainbow
+    color: "#ff4db8"
+    baseSpeed: 360
+    minimumSpeed: 260
+    unlockLevel: 11
+    lockMultiplier: 3
+    ability: rainbow
+    spawnIntervalSeconds: 10
+    spawnChance: 0.4
+    description: "Prism ball: fast and unstable, it spits out a new ball every 10 seconds. Lock it away before the board fills up."

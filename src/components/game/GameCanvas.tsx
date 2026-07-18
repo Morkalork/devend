@@ -29,6 +29,8 @@ import { effectivePickupChance } from "@/lib/pickups";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
+import { isTimingExempt } from "@/lib/mapTiming";
+import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
 import { TutorialStep } from "@/types/game";
@@ -997,6 +999,7 @@ export function GameCanvas({
       // the win check, so the top bar can never stall showing CLEAR.
       checkWinCondition: () =>
         evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
+      spawnTimedBalls: () => tickRainbowSpawns(game, levelNumber),
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
       // Deferred push prompt: the loop already set game.pushMode; mirror it
@@ -1110,8 +1113,10 @@ export function GameCanvas({
       ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
       : 0;
     // Ship Early: the tempo clock froze when the prompt opened, so push time
-    // never counts against it.
-    const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+    // never counts against it (disabled on the tutorial band, levels 1-3).
+    const shipEarlyBonus = isTimingExempt(levelNumber)
+      ? 0
+      : getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
     // Fold lock + push + ship-early bonuses in before the cap (issue #43).
     // Previously this site added lockBonus + pushBonus AFTER calculateScore,
     // letting a banked push exceed the per-map ceiling every other path enforces.

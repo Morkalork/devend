@@ -475,8 +475,9 @@
     "contractClose": "Close"
   },
   "shipEarlyBar": {
-    "title": "Ship Early: clear the map before the bar runs out for bonus overtime",
-    "bonus": "+{{hours}}h"
+    "title": "Map deadline: clear the map before the bar runs out. Finish early for bonus overtime.",
+    "bonus": "+{{hours}}h",
+    "seconds": "{{s}}s"
   },
   "topBarDetails": {
     "levelStatusTitle": "Level {{level}} Status",

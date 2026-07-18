@@ -18,6 +18,7 @@ import {
   getSquishEffect,
 } from "@/lib/ballEffects";
 import { COLORS, FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
+import { rainbowBaseColor } from "@/lib/rendering/rainbowColor";
 import { glowTexture, textureFor, hashStr, mulberry } from "./textures";
 
 const FLAME_SHEAR_SPEED = 380;
@@ -147,16 +148,19 @@ export class BallLayer {
       v.root.position.set(sp.x, sp.y);
       v.root.alpha = assimScale;
 
+      // Rainbow balls cycle their hue (bucketed so the shared ball cache stays
+      // bounded); every colour read below uses this base, not the static color.
+      const baseColor = ball.ability === 'rainbow' ? rainbowBaseColor(ball.id, performance.now()) : ball.color;
       // ── Colour fade toward accent during the lock fade (bucketed like 2D) ──
       const fadeRaw = ball.assimColorFade ?? 0;
       const fade = fadeRaw > 0 ? Math.round(fadeRaw * 12) / 12 : 0;
       let blendedHex: string;
       if (fade === 0) {
-        blendedHex = ball.color.slice(1);
+        blendedHex = baseColor.slice(1);
       } else {
-        const r0 = parseInt(ball.color.slice(1, 3), 16);
-        const g0 = parseInt(ball.color.slice(3, 5), 16);
-        const b0 = parseInt(ball.color.slice(5, 7), 16);
+        const r0 = parseInt(baseColor.slice(1, 3), 16);
+        const g0 = parseInt(baseColor.slice(3, 5), 16);
+        const b0 = parseInt(baseColor.slice(5, 7), 16);
         const ar = parseInt(accentColor.slice(1, 3), 16);
         const ag = parseInt(accentColor.slice(3, 5), 16);
         const ab = parseInt(accentColor.slice(5, 7), 16);
@@ -223,7 +227,7 @@ export class BallLayer {
             const tp = w2s(buf[idx].x, buf[idx].y);
             v.trail
               .circle(tp.x - sp.x, tp.y - sp.y, screenRadius * fraction * 0.5)
-              .fill({ color: ball.color, alpha: fraction * 0.35 });
+              .fill({ color: baseColor, alpha: fraction * 0.35 });
           }
         }
       }
@@ -232,7 +236,7 @@ export class BallLayer {
       {
         const isFrozen = ball.frozenUntil !== undefined && now < ball.frozenUntil;
         const burning = ball.state === "active" && !isFrozen && screenRadius > 0.5;
-        const palette = flamePalette(ball.color);
+        const palette = flamePalette(baseColor);
         const rng = mulberry(hashStr(`flame-${ball.id}`));
         const flameH = screenRadius * 4.8;
         const speed = Math.hypot(ball.velocity.x, ball.velocity.y);

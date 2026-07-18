@@ -1,16 +1,16 @@
 /**
- * ShipEarlyBar — thin countdown bar for the Ship Early bonus, rendered as the
- * top row of GameBottomBar's fixed wrapper (a plain sibling in the layout
- * column would sit underneath the fixed bar and be covered by it).
+ * ShipEarlyBar — the map countdown bar, rendered as the top row of
+ * GameBottomBar's fixed wrapper (a plain sibling in the layout column would sit
+ * underneath the fixed bar and be covered by it).
  *
- * Drains as time passes across the ladder's full window (scoring-config.yml
- * shipEarly; per-ball windows, so busy maps get proportionally more time),
- * with divider ticks where the payout steps down and a value chip
- * showing the bonus still attainable. Colour cools as the bonus shrinks. It
- * hides the moment the win condition is met (push prompt open) so it never
- * nags during push-your-luck, and once every window has passed (by then the
- * Scope Creep chip has taken over as the time signal). Ticks arrive at 1Hz
- * from the game loop; a 1s linear width transition keeps the drain smooth.
+ * It drains over the map's hard time limit (mapTiming.ts; default 60s active-play
+ * seconds) and shades green -> red as it empties, so it doubles as the deadline
+ * warning. The Ship Early fast-finish bonus lives in the EARLY part of the same
+ * bar: divider ticks mark where each payout rung expires, and a value chip shows
+ * the bonus still attainable; once every window has passed the chip switches to a
+ * plain seconds-left readout. Hidden entirely on the tutorial band (levels 1-3),
+ * which has neither a time limit nor Ship Early. Ticks arrive at 1Hz from the
+ * game loop; a 1s linear width transition keeps the drain smooth.
  */
 import { useTranslation } from 'react-i18next';
 import { Timer } from 'lucide-react';
@@ -19,43 +19,39 @@ import { getShipEarlyThresholds, getShipEarlyBonus } from '@/lib/scoring';
 interface ShipEarlyBarProps {
   /** Whole active-play seconds elapsed this map (1Hz from the loop). */
   seconds: number;
-  /** Balls spawned on this map: the windows are per ball (15s/ball etc.). */
+  /** Balls spawned on this map: the Ship Early windows are per ball (15s/ball etc.). */
   ballCount: number;
-  /** Deadline Extension: extra seconds per ball added to every window. */
+  /** The map's hard time limit in active-play seconds; the bar drains over this. */
+  timeLimit: number;
+  /** Deadline Extension: extra seconds per ball added to every Ship Early window. */
   extraSecondsPerBall?: number;
   /** Hard Deadline door: scales the payout shown in the value chip. */
   bonusMultiplier?: number;
-  /** False hides the bar (win condition met, prompt open). */
+  /** False hides the bar (win condition met, prompt open, tutorial band). */
   visible: boolean;
 }
 
-/** Bar colour by attainable bonus: hot while the top rung is live, cooling down. */
-const BONUS_COLORS: Record<number, string> = {
-  3: '#2dd4bf', // teal, matches the Ship Early breakdown row
-  2: '#ffd54a',
-  1: '#ffb020',
-};
+/** Green (full) -> red (empty) by fraction of time remaining. */
+function drainColor(remaining: number): string {
+  const hue = Math.max(0, Math.min(120, 120 * remaining)); // 120 green .. 0 red
+  return `hsl(${hue}, 85%, 52%)`;
+}
 
-export function ShipEarlyBar({ seconds, ballCount, extraSecondsPerBall = 0, bonusMultiplier = 1, visible }: ShipEarlyBarProps) {
+export function ShipEarlyBar({ seconds, ballCount, timeLimit, extraSecondsPerBall = 0, bonusMultiplier = 1, visible }: ShipEarlyBarProps) {
   const { t } = useTranslation();
-  const thresholds = getShipEarlyThresholds();
-  if (!visible || thresholds.length === 0) return null;
+  if (!visible || !(timeLimit > 0)) return null;
 
-  // Windows scale with the map's workload: (withinSecondsPerBall + Deadline
-  // Extension) x ball count.
   const balls = ballCount > 0 ? ballCount : 1;
   const extra = extraSecondsPerBall > 0 ? extraSecondsPerBall : 0;
+  const thresholds = getShipEarlyThresholds();
+  // Ship Early windows scale with the map's workload: (withinSecondsPerBall +
+  // Deadline Extension) x ball count. They sit in the early part of the limit.
   const windowFor = (perBall: number) => (perBall + extra) * balls;
-  const maxWindow = Math.max(...thresholds.map(s => windowFor(s.withinSecondsPerBall)));
-  // Raw rung drives colour and visibility; the value chip shows the real payout
-  // (Hard Deadline door can multiply it).
-  const bonus = getShipEarlyBonus(seconds, balls, extra);
-  const payout = getShipEarlyBonus(seconds, balls, extra, bonusMultiplier);
-  // Every window passed: nothing left to chase, get out of the way.
-  if (bonus <= 0 || seconds >= maxWindow) return null;
 
-  const remaining = Math.max(0, 1 - seconds / maxWindow);
-  const color = BONUS_COLORS[bonus] ?? '#2dd4bf';
+  const remaining = Math.max(0, 1 - seconds / timeLimit);
+  const secondsLeft = Math.max(0, Math.ceil(timeLimit - seconds));
+  const payout = getShipEarlyBonus(seconds, balls, extra, bonusMultiplier);
+  const color = drainColor(remaining);
 
   return (
     <div
@@ -74,29 +70,34 @@ export function ShipEarlyBar({ seconds, ballCount, extraSecondsPerBall = 0, bonu
                 width: `${remaining * 100}%`,
                 background: color,
                 boxShadow: `0 0 8px ${color}aa`,
-                transition: 'width 1s linear, background-color 0.3s',
+                transition: 'width 1s linear, background-color 1s linear',
               }}
             />
           </div>
-          {/* Divider ticks where the payout steps down one hour. White and a
+          {/* Divider ticks where each Ship Early payout rung expires. White and a
               touch taller than the bar so they read as deliberate marks against
-              both the colored fill and the dark track. */}
-          {thresholds.filter(s => windowFor(s.withinSecondsPerBall) < maxWindow).map(s => (
-            <div
-              key={s.withinSecondsPerBall}
-              className="absolute -top-0.5 w-0.5 rounded-full"
-              style={{
-                left: `${(1 - windowFor(s.withinSecondsPerBall) / maxWindow) * 100}%`,
-                height: 'calc(100% + 4px)',
-                transform: 'translateX(-50%)',
-                background: 'rgba(255,255,255,0.85)',
-                boxShadow: '0 0 3px rgba(255,255,255,0.7)',
-              }}
-            />
-          ))}
+              both the colored fill and the dark track. Only rungs that fall
+              inside the time limit are shown. */}
+          {thresholds
+            .filter(s => windowFor(s.withinSecondsPerBall) < timeLimit)
+            .map(s => (
+              <div
+                key={s.withinSecondsPerBall}
+                className="absolute -top-0.5 w-0.5 rounded-full"
+                style={{
+                  left: `${(1 - windowFor(s.withinSecondsPerBall) / timeLimit) * 100}%`,
+                  height: 'calc(100% + 4px)',
+                  transform: 'translateX(-50%)',
+                  background: 'rgba(255,255,255,0.85)',
+                  boxShadow: '0 0 3px rgba(255,255,255,0.7)',
+                }}
+              />
+            ))}
         </div>
+        {/* Early on, the chip nudges you toward the fast-finish bonus; once the
+            windows pass it becomes a plain seconds-left countdown. */}
         <span className="font-display text-xs font-bold tabular-nums flex-shrink-0" style={{ color, textShadow: `0 0 8px ${color}66` }}>
-          {t('shipEarlyBar.bonus', { hours: payout })}
+          {payout > 0 ? t('shipEarlyBar.bonus', { hours: payout }) : t('shipEarlyBar.seconds', { s: secondsLeft })}
         </span>
       </div>
     </div>

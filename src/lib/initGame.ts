@@ -57,6 +57,57 @@ import {
 import { createBallEffectState } from "@/lib/ballEffects";
 import { selectBallTypesForMap, getBallType, BallTypeDef, effectiveBallSpeedFactor } from "@/lib/ballTypes";
 
+/**
+ * Build one ball of a given type at a position. Shared by map init and the
+ * rainbow ball's timed spit-out so a spawned ball is indistinguishable from an
+ * authored one. `speedScale` is the effective ball-speed factor; `radius` the
+ * scaled ball radius; `spawnActiveSeconds` anchors any spawn timer (0 at init).
+ */
+export function createBall(
+  type: BallTypeDef,
+  position: Vector2,
+  speedScale: number,
+  radius: number,
+  id: string,
+  spawnTime: number,
+  spawnActiveSeconds: number,
+): Ball {
+  const dir = getRandomDirection();
+  const speed = type.baseSpeed * speedScale;
+  const speedRange: [number, number] | undefined = type.speedRange
+    ? [type.speedRange[0] * speedScale, type.speedRange[1] * speedScale]
+    : undefined;
+  return {
+    id,
+    position,
+    velocity: { x: dir.x * speed, y: dir.y * speed },
+    radius,
+    speed,
+    baseSpeed: speed,
+    topSpeed: speed, // flat speed; the danger tint uses an absolute reference
+    color: type.color,
+    regionId: "", // assigned after regions are created (or inherited by a spawner)
+    rotation: Math.random() * Math.PI * 2,
+    flashIntensity: 0,
+    effects: createBallEffectState(),
+    state: 'active' as const,
+    wonSpinSpeed: 0,
+    wonTime: 0,
+    assimScale: 1,
+    assimColorFade: 0,
+    typeId: type.id,
+    ability: type.ability,
+    lockMultiplier: type.lockMultiplier,
+    spawnTime,
+    minimumSpeed: type.minimumSpeed * speedScale,
+    speedReduction: type.speedReduction !== undefined ? type.speedReduction * speedScale : undefined,
+    speedRange,
+    lastSpeedStepAt: 0,
+    spawnActiveSeconds,
+    rainbowSpawnCount: 0,
+  };
+}
+
 // ── Return type ────────────────────────────────────────────────────────────
 
 export interface InitialGameData {
@@ -362,44 +413,10 @@ export function createInitialGameData(
     return p;
   };
 
-  const balls: Ball[] = selectedTypes.map((type, i) => {
-    const dir    = getRandomDirection();
-    const speed  = type.baseSpeed * speedScale;
-    const ballRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
-    const position = findSpacedSpawn(ballRadius);
-
-    const speedRange: [number, number] | undefined = type.speedRange
-      ? [type.speedRange[0] * speedScale, type.speedRange[1] * speedScale]
-      : undefined;
-
-    return {
-      id:            `${type.id}-${i}`,
-      position,
-      velocity:      { x: dir.x * speed, y: dir.y * speed },
-      radius:        ballRadius,
-      speed,
-      baseSpeed:     speed,
-      topSpeed:      speed, // flat speed; the danger tint uses an absolute reference
-      color:         type.color,
-      regionId:      "", // assigned after regions are created
-      rotation:      Math.random() * Math.PI * 2,
-      flashIntensity: 0,
-      effects:       createBallEffectState(),
-      state:         'active' as const,
-      wonSpinSpeed:  0,
-      wonTime:       0,
-      assimScale:    1,
-      assimColorFade: 0,
-      typeId:        type.id,
-      ability:       type.ability,
-      lockMultiplier: type.lockMultiplier,
-      spawnTime,
-      minimumSpeed:  type.minimumSpeed * speedScale,
-      speedReduction: type.speedReduction !== undefined ? type.speedReduction * speedScale : undefined,
-      speedRange,
-      lastSpeedStepAt: 0,
-    };
-  });
+  const ballRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
+  const balls: Ball[] = selectedTypes.map((type, i) =>
+    createBall(type, findSpacedSpawn(ballRadius), speedScale, ballRadius, `${type.id}-${i}`, spawnTime, 0),
+  );
 
   // Runtime Optimisation tier-3 option B: cripple ONE random ball each map. All
   // its speed fields scale (physics normalises toward baseSpeed, so scaling only

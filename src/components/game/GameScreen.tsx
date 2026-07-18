@@ -21,6 +21,7 @@ import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
 import { LevelConfig } from '@/types/level';
+import { getMapTimeLimit } from '@/lib/mapTiming';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
@@ -144,6 +145,9 @@ export function GameScreen({
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
 }: GameScreenProps) {
   const { t } = useTranslation();
+  // Hard map deadline (null on the tutorial band, where the countdown bar and
+  // Ship Early are both suppressed). Drives the ShipEarlyBar countdown.
+  const mapTimeLimit = getMapTimeLimit(level, levelNumber);
   const { config, getBackgroundColor, getRegionColor, getAccentColor } = useGameConfig();
 
   // Background music, selected by 5-level band. Idempotent within a band, so it
@@ -437,9 +441,10 @@ export function GameScreen({
               <ShipEarlyBar
                 seconds={gameState.activeSeconds}
                 ballCount={gameState.ballCount}
+                timeLimit={mapTimeLimit ?? 0}
                 extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
                 bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
-                visible={gameState.pushMode === 'none' && !mapComplete}
+                visible={mapTimeLimit != null && gameState.pushMode === 'none' && !mapComplete}
               />
             }
             onExpand={() => setBottomPanelOpen(true)}

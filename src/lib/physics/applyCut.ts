@@ -30,6 +30,7 @@ import {
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
+import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { wasteCapturedPickups } from "@/lib/pickups";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
@@ -282,7 +283,16 @@ export function evaluateWinConditions(
   activeModifiers: GameModifiers,
   callbacks: GameCallbacks,
 ): number | null {
-  if (game.levelComplete) return null;
+  if (game.levelComplete || game.gameOver) return null;
+  // Hard map deadline: out of time is game over regardless of lives. Runs on
+  // the pausable active-play clock, so shops/holds/recovery never count. Only
+  // fires during normal play (this check is gated behind those states upstream)
+  // and before any win is registered, so beating the buzzer still wins.
+  const timeLimit = getMapTimeLimit(level, levelNumber);
+  if (timeLimit != null && game.activePlaySeconds >= timeLimit) {
+    handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+    return null;
+  }
   if (areAllBallsWon(game)) {
     triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
     return null;
@@ -371,7 +381,11 @@ export function triggerLevelComplete(
   // Ship Early: the all-balls-locked path never opens the push prompt, so the
   // tempo clock freezes here; banking after a prompt keeps the earlier value.
   if (game.clearedActiveSeconds == null) game.clearedActiveSeconds = game.activePlaySeconds;
-  const shipEarlyBonus = getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+  // Ship Early is disabled on the tutorial band (levels 1-3), which also has no
+  // time limit — early play stays pressure free.
+  const shipEarlyBonus = isTimingExempt(levelNumber)
+    ? 0
+    : getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
 
   // Locking the last ball can finish the level MID-PUSH (the per-frame win
   // check). End the push here: award the chunks banked so far and drop the

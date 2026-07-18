@@ -52,7 +52,8 @@ export type BallAbility =
   | 'slowOthers'    // purple: each ball it clashes with loses speed (down to a floor)
   | 'moneyBall'     // green: locking it triples all subsequent locks this round
   | 'slowDown'      // grey: decays to a crawl over one minute
-  | 'breakObjects'; // black: destroys mirrors/movers after repeated hits (Phase 2)
+  | 'breakObjects'  // black: destroys mirrors/movers after repeated hits (Phase 2)
+  | 'rainbow';      // rainbow: fast, shifts hue, spits out a random eligible ball on a timer
 
 export interface BallTypeDef {
   id: string;
@@ -86,6 +87,18 @@ export interface BallTypeDef {
    */
   speedRange?: [number, number];
   /**
+   * `rainbow` only: seconds between spit-outs. Every interval the ball spawns
+   * one random OTHER eligible ball type (never another rainbow). Defaults to
+   * DEFAULT_RAINBOW_SPAWN_INTERVAL.
+   */
+  spawnIntervalSeconds?: number;
+  /**
+   * Per-map appearance probability in [0,1], rolled deterministically from the
+   * map id so a given map is always the same. Absent = always eligible (1).
+   * Used to make the rainbow ball an occasional event rather than every map.
+   */
+  spawnChance?: number;
+  /**
    * Not yet wired up — excluded from selection and the tutorial until its
    * full behaviour ships. The black ball's destructible-object ability lands
    * in Phase 2.
@@ -93,10 +106,13 @@ export interface BallTypeDef {
   phase2?: boolean;
 }
 
+/** Default seconds between a rainbow ball's spit-outs. */
+export const DEFAULT_RAINBOW_SPAWN_INTERVAL = 10;
+
 // ── Parsing & validation (shared by the baked default and the runtime fetch) ─
 
 const VALID_ABILITIES: ReadonlySet<string> = new Set<BallAbility>([
-  'none', 'variableSpeed', 'slowOthers', 'moneyBall', 'slowDown', 'breakObjects',
+  'none', 'variableSpeed', 'slowOthers', 'moneyBall', 'slowDown', 'breakObjects', 'rainbow',
 ]);
 
 /** Coerce one raw YAML entry into a BallTypeDef, or null if it's unusable. */
@@ -130,6 +146,14 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     ? Math.max(0, Number(r.speedReduction))
     : undefined;
 
+  const spawnIntervalSeconds = Number.isFinite(Number(r.spawnIntervalSeconds)) && Number(r.spawnIntervalSeconds) > 0
+    ? Number(r.spawnIntervalSeconds)
+    : undefined;
+
+  const spawnChance = Number.isFinite(Number(r.spawnChance))
+    ? Math.max(0, Math.min(1, Number(r.spawnChance)))
+    : undefined;
+
   return {
     id,
     name: typeof r.name === 'string' ? r.name : id,
@@ -142,6 +166,8 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     speedReduction,
     description: typeof r.description === 'string' ? r.description : '',
     speedRange,
+    spawnIntervalSeconds,
+    spawnChance,
     phase2: r.phase2 === true,
   };
 }
@@ -195,6 +221,15 @@ export function getImplementedBallTypes(): BallTypeDef[] {
 /** Ball types eligible to appear at the given (1-based) level number. */
 export function getEligibleBallTypes(level: number): BallTypeDef[] {
   return liveBallTypes.filter(t => !t.phase2 && t.unlockLevel <= level);
+}
+
+/**
+ * Eligible types a rainbow ball may spit out at this level: everything eligible
+ * EXCEPT rainbow types themselves, so a spawned ball never spawns more (that is
+ * what keeps the count linear instead of exponential).
+ */
+export function getSpawnableBallTypes(level: number): BallTypeDef[] {
+  return getEligibleBallTypes(level).filter(t => t.ability !== 'rainbow');
 }
 
 // ── Runtime reload from the served public/balls.yml ─────────────────────────
@@ -267,11 +302,21 @@ export function selectBallTypesForMap(
     return red ? [red] : [];
   }
 
-  const count = Math.max(1, Math.min(maxBalls, eligible.length));
+  // Per-map appearance roll: a type with a spawnChance only joins this map's
+  // pool when its deterministic per-map roll passes, making rare types (the
+  // rainbow) an occasional event rather than every eligible map. Types without
+  // a spawnChance are always in. Fall back to the full eligible set if the roll
+  // happens to empty the pool.
+  const rolled = eligible.filter(t =>
+    t.spawnChance == null || mulberry32(hashString(`${mapId}:chance:${t.id}`))() < t.spawnChance,
+  );
+  const candidates = rolled.length > 0 ? rolled : eligible;
+
+  const count = Math.max(1, Math.min(maxBalls, candidates.length));
 
   // Seeded Fisher–Yates shuffle of a copy, then take `count`.
   const rng = mulberry32(hashString(mapId));
-  const pool = [...eligible];
+  const pool = [...candidates];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];

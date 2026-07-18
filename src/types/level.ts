@@ -112,6 +112,14 @@ export interface LevelConfig {
   balls?: BallConfig[];
   entities?: LevelEntity[]; // optional array of entities (obstacles, etc.)
   /**
+   * Hard map deadline in active-play seconds (issue: map time limit). When the
+   * active-play clock reaches it the map is lost, regardless of lives. Defaults
+   * to DEFAULT_MAP_TIME_LIMIT (60) when absent; a map may set a larger value.
+   * Levels 1-3 (the tutorial band) ignore it entirely. Shares the Ship Early
+   * countdown bar as its on-screen readout.
+   */
+  timeLimit?: number;
+  /**
    * Pickup spawn-chance override for this map (0-1). Setting it also bypasses
    * the global start_level gate, so a teaching map can guarantee a token
    * (1.0) or a set-piece map can suppress them (0).

@@ -39,6 +39,8 @@ export interface GameLoopCallbacks {
    * instead of stalling forever with CLEAR shown in the top bar.
    */
   checkWinCondition?: () => void;
+  /** Advance rainbow balls' timed spit-out (appends to game.balls). Once per frame. */
+  spawnTimedBalls?: () => void;
   /** Called when Scope Creep escalates to a new step (percentBoost = +X% ball speed). */
   onCreepStep?: (percentBoost: number) => void;
   /** Called once per whole active-play second (drives the Ship Early countdown bar). */
@@ -337,6 +339,11 @@ export function createGameLoop(
     // physics step) — all its timing keys off game.activePlaySeconds, so the
     // pause/prompt/menu holds above never advance a token's clock.
     updatePickups(game);
+
+    // Rainbow balls spit out a new ball on their own active-play timer. Once per
+    // frame, outside the ball loop (it appends to game.balls). Same clock as
+    // pickups, so it too pauses during holds/prompts/recovery.
+    callbacks.spawnTimedBalls?.();
 
     // Break any Ascension fences that ran out of durability (outside the
     // fixed-step loop — breaking rebuilds regions, too heavy per step)

@@ -473,7 +473,8 @@
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",
-    "bonus": "+{{hours}}h"
+    "bonus": "+{{hours}}h",
+    "seconds": "{{s}}s"
   },
   "topBarDetails": {
     "levelStatusTitle": "Estado del nivel {{level}}",

@@ -473,7 +473,8 @@
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
-    "bonus": "+{{hours}}h"
+    "bonus": "+{{hours}}h",
+    "seconds": "{{s}}s"
   },
   "topBarDetails": {
     "levelStatusTitle": "Status för nivå {{level}}",

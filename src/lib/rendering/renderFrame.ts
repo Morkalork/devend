@@ -20,6 +20,7 @@ import {
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { computeBallTrajectory, trajectoryBallSnapshots, hexToRgba } from "@/lib/gameUtils";
 import { getBallBase, getBallSpecular, getHexOverlay } from "@/lib/ballRenderCache";
+import { rainbowBaseColor } from "@/lib/rendering/rainbowColor";
 import { getBallSphere } from "@/lib/ballSphereCache";
 import { getRainGlyph } from "./rainGlyphCache";
 import { renderBallEffects, getSquishEffect } from "@/lib/ballEffects";
@@ -1520,16 +1521,19 @@ export function renderFrame(
     // per key. 13 steps (1/12) is visually indistinguishable from continuous but
     // collapses the per-clear canvas churn from ~120 to ≤13. r0/g0/b0 stay the
     // true ball color (the motion trail below uses them unblended).
+    // Rainbow balls cycle their hue (bucketed so the ball cache stays bounded);
+    // every colour read below uses this base instead of the static ball.color.
+    const baseColor = ball.ability === 'rainbow' ? rainbowBaseColor(ball.id, performance.now()) : ball.color;
     const fadeRaw = ball.assimColorFade ?? 0;
     const fade = fadeRaw > 0 ? Math.round(fadeRaw * 12) / 12 : 0;
-    const r0 = parseInt(ball.color.slice(1, 3), 16);
-    const g0 = parseInt(ball.color.slice(3, 5), 16);
-    const b0 = parseInt(ball.color.slice(5, 7), 16);
+    const r0 = parseInt(baseColor.slice(1, 3), 16);
+    const g0 = parseInt(baseColor.slice(3, 5), 16);
+    const b0 = parseInt(baseColor.slice(5, 7), 16);
     let blendedHex: string;
     if (fade === 0) {
       // No fade (the common case for every active ball): the blend is the ball's
       // own color, so skip the channel math and string building entirely.
-      blendedHex = ball.color.slice(1);
+      blendedHex = baseColor.slice(1);
     } else {
       const ar = parseInt(accentColor.slice(1, 3), 16);
       const ag = parseInt(accentColor.slice(3, 5), 16);
@@ -1545,7 +1549,7 @@ export function renderFrame(
 
     renderBallEffects(
       ctx, ball.effects, screenPos.x, screenPos.y,
-      screenRadius, accentColor, ball.color, performance.now(), scale,
+      screenRadius, accentColor, baseColor, performance.now(), scale,
     );
 
     // Motion trail. Ring buffer: overwrite slots in place with a moving head
@@ -1595,7 +1599,7 @@ export function renderFrame(
       if (ball.state === 'active' && !isFrozen && screenRadius > 0.5) {
         drawBallFlame(
           ctx, screenPos.x, screenPos.y, screenRadius, ball.id, nowF,
-          ball.velocity.x, ball.velocity.y, ballFlamePalette(ball.color), assimScale,
+          ball.velocity.x, ball.velocity.y, ballFlamePalette(baseColor), assimScale,
           flameTongues,
         );
       }

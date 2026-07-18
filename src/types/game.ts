@@ -60,6 +60,9 @@ export interface Ball {
   speedReduction?: number;   // purple (slowOthers): scaled speed each struck ball loses per hit
   speedRange?: [number, number]; // yellow: current (scaled) [lo, hi] random-speed range; shrinks when slowed
   lastSpeedStepAt?: number;  // yellow: debounce so one contact changes speed once
+  // ── Rainbow ability (timed spawner) ─────────────────────────────────────
+  spawnActiveSeconds?: number; // game.activePlaySeconds when this ball appeared (spawn-timer anchor)
+  rainbowSpawnCount?: number;  // rainbow only: how many balls it has spit out so far
 }
 
 // Diagonal growing wall - extends from origin in +/- direction
