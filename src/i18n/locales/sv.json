@@ -253,7 +253,9 @@
     "pickupCapRaise": "Tak +{n}h",
     "pickupFreeze": "Frysning +1",
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
-    "pickupFreeShopItem": "Gratis butiksvara!"
+    "pickupFreeShopItem": "Gratis butiksvara!",
+    "pickupExtraLife": "+1 liv",
+    "pickupRainbow": "Regnbågsboll!"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
@@ -364,6 +366,14 @@
           "freeShopItem": {
             "name": "Gratis butiksvara:",
             "desc": "billigaste erbjudandet i nästa öppna butik är gratis."
+          },
+          "extraLife": {
+            "name": "Extra liv:",
+            "desc": "+{{value}} liv direkt."
+          },
+          "rainbowConvert": {
+            "name": "Regnbågsboll:",
+            "desc": "förvandlade en boll till en värdefull regnbågsboll."
           }
         }
       },

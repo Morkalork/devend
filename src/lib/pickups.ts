@@ -22,6 +22,7 @@ import { PickupConfig, PickupState, PickupEffect } from "@/types/pickups";
 import { Vector2, pointToSegmentDistance } from "@/lib/polygon";
 import { CellState, isPositionActive, worldToGridIndex } from "@/lib/spaceGrid";
 import { createBallEffectState } from "@/lib/ballEffects";
+import { getBallType } from "@/lib/ballTypes";
 import { playPickupClaimedSound } from "@/lib/gameAudio";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { getRunRng } from "@/lib/runRng";
@@ -203,10 +204,13 @@ function pushFeedback(
  * `payoutLevel` is the Total Compensation upgrade level (0-3): it enhances
  * every effect (see applyPickupEffect / forkRandomFreeBall).
  */
+type PickupCallbacks = Partial<Pick<GameCallbacks,
+  "onBallCountChanged" | "getLives" | "setLivesRef" | "setDisplayLives" | "onLivesChange" | "getBankedOvertime">>;
+
 export function claimPickupsInPocket(
   game: CanvasGameState,
   pocketCells: Set<number>,
-  callbacks?: Pick<GameCallbacks, "onBallCountChanged">,
+  callbacks?: PickupCallbacks,
   payoutLevel = 0,
 ): void {
   const grid = game.spaceGrid;
@@ -259,7 +263,7 @@ const FORK_TRIPLE_LEVEL = 3;
 function applyPickupEffect(
   game: CanvasGameState,
   token: PickupState,
-  callbacks?: Pick<GameCallbacks, "onBallCountChanged">,
+  callbacks?: PickupCallbacks,
   payoutLevel = 0,
 ): void {
   // The per-map claim log: the level-complete overlay's hold-info lists what
@@ -308,7 +312,64 @@ function applyPickupEffect(
       }
       break;
     }
+    case "extraLife": {
+      // #52: grant lives on the spot, mirroring the life-loss path in reverse.
+      if (callbacks?.getLives && callbacks.setLivesRef) {
+        const next = callbacks.getLives() + token.value;
+        callbacks.setLivesRef(next);
+        callbacks.setDisplayLives?.(next);
+        callbacks.onLivesChange?.(next);
+      }
+      pushFeedback(game, token, "claimed");
+      log("extraLife", token.value);
+      break;
+    }
+    case "overtimePercent": {
+      // #52: value% of the run's banked overtime, paid after the map cap like
+      // the flat overtime token. Resolves to an overtime feedback (+Nh).
+      const banked = callbacks?.getBankedOvertime?.() ?? 0;
+      const bonus = Math.max(1, Math.round(banked * (token.value / 100)));
+      game.pickupOvertime = (game.pickupOvertime ?? 0) + bonus;
+      pushFeedback(game, token, "claimed", "overtime", bonus);
+      log("overtime", bonus);
+      break;
+    }
+    case "rainbowConvert": {
+      // #52: turn a random active ball into a rainbow ball (high lock value,
+      // but it starts spawning). Nothing to convert -> overtime consolation.
+      if (convertRandomBallToRainbow(game)) {
+        pushFeedback(game, token, "claimed");
+        log("rainbowConvert", 1);
+      } else {
+        const consolation = FORK_CONSOLATION_OVERTIME + payoutLevel;
+        game.pickupOvertime = (game.pickupOvertime ?? 0) + consolation;
+        pushFeedback(game, token, "claimed", "overtime", consolation);
+        log("overtime", consolation);
+      }
+      break;
+    }
   }
+}
+
+/**
+ * Turn one random active, non-rainbow ball into a rainbow ball (#52): it keeps
+ * its position/velocity but adopts the rainbow type's colour, lock multiplier
+ * and spawn timer (anchored to now, so its first spit is a full interval away).
+ * Returns false when there is no eligible ball.
+ */
+function convertRandomBallToRainbow(game: CanvasGameState): boolean {
+  const rainbow = getBallType("rainbow");
+  if (!rainbow) return false;
+  const targets = game.balls.filter(b => b.state === "active" && b.speed > 0 && b.ability !== "rainbow");
+  if (targets.length === 0) return false;
+  const ball = targets[Math.floor(Math.random() * targets.length)];
+  ball.typeId = rainbow.id;
+  ball.ability = "rainbow";
+  ball.color = rainbow.color;
+  ball.lockMultiplier = rainbow.lockMultiplier;
+  ball.spawnActiveSeconds = game.activePlaySeconds;
+  ball.rainbowSpawnCount = 0;
+  return true;
 }
 
 /**

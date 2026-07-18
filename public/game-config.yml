@@ -114,6 +114,16 @@ pickups:
     free_shop_item:
       weight: 1         # rarest: the next OPEN store's cheapest offer is free
       value: 1
+    # Stronger rewards (#52) so tokens stay worth chasing on later maps.
+    extra_life:
+      weight: 1
+      value: 1          # +1 life on the spot
+    overtime_percent:
+      weight: 2
+      value: 15         # pays this percent of your banked overtime, after the cap
+    rainbow_convert:
+      weight: 1
+      value: 1          # turns a random active ball into a (high-value, spawning) rainbow ball
 
 # CRT Word Highlight Effect
 # Every interval_seconds, a random visible word in the background gets a highlight rectangle.

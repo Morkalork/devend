@@ -339,6 +339,10 @@ export function GameCanvas({
     setDisplayLives(lives);
   }, [lives]);
 
+  // Banked overtime, mirrored for the overtimePercent pickup (#52).
+  const totalScoreRef = useRef(totalScore);
+  useEffect(() => { totalScoreRef.current = totalScore; }, [totalScore]);
+
   const [pushMode, setPushMode] = useState<"none" | "prompt" | "pushing">("none");
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
 
@@ -822,6 +826,8 @@ export function GameCanvas({
         capRaise: t('game.pickupCapRaise'),
         freezeCharge: t('game.pickupFreeze'),
         freeShopItem: t('game.pickupFreeShopItem'),
+        extraLife: t('game.pickupExtraLife'),
+        rainbowConvert: t('game.pickupRainbow'),
       },
     };
     // Run-intro hold (Pixi): between the renderer becoming ready and
@@ -957,6 +963,7 @@ export function GameCanvas({
       onBallCountChanged: setBallCount,
       getLives: () => livesRef.current,
       setLivesRef: n => { livesRef.current = n; },
+      getBankedOvertime: () => totalScoreRef.current,
       flashTimeoutRef,
       shakeTimeoutRef,
       repaintRegionCanvas,

@@ -236,6 +236,50 @@ describe("claiming (lock with the token in the pocket)", () => {
     expect(game.balls.length).toBe(1);
     expect(game.pickupOvertime).toBe(FORK_CONSOLATION_OVERTIME);
   });
+
+  // #52: stronger pickups
+  it("extraLife grants lives on the spot via the lives callbacks", () => {
+    const game = makeGame();
+    makeToken(game, 300, 300, "extraLife", 1);
+    let lives = 3;
+    const onLivesChange = vi.fn();
+    claimPickupsInPocket(game, new Set([worldToGridIndex(game.spaceGrid!, 300, 300)]), {
+      getLives: () => lives, setLivesRef: n => { lives = n; }, setDisplayLives: vi.fn(), onLivesChange,
+    });
+    expect(lives).toBe(4);
+    expect(onLivesChange).toHaveBeenCalledWith(4);
+    expect(game.pickupsClaimedLog).toEqual([{ effect: "extraLife", value: 1 }]);
+  });
+
+  it("overtimePercent pays a percent of banked overtime, after the cap", () => {
+    const game = makeGame();
+    makeToken(game, 300, 300, "overtimePercent", 15);
+    claimPickupsInPocket(game, new Set([worldToGridIndex(game.spaceGrid!, 300, 300)]), { getBankedOvertime: () => 200 });
+    expect(game.pickupOvertime).toBe(30); // 15% of 200
+    // Logged (and shown) as plain overtime.
+    expect(game.pickupsClaimedLog).toEqual([{ effect: "overtime", value: 30 }]);
+  });
+
+  it("rainbowConvert turns a random active ball into a rainbow ball", () => {
+    const game = makeGame();
+    makeToken(game, 300, 300, "rainbowConvert", 1);
+    claimPickupsInPocket(game, new Set([worldToGridIndex(game.spaceGrid!, 300, 300)]));
+    const rb = game.balls.find(b => b.ability === "rainbow");
+    expect(rb).toBeDefined();
+    expect(rb!.typeId).toBe("rainbow");
+    expect(rb!.rainbowSpawnCount).toBe(0);
+    expect(game.pickupsClaimedLog).toEqual([{ effect: "rainbowConvert", value: 1 }]);
+  });
+
+  it("rainbowConvert with no convertible ball pays the overtime consolation", () => {
+    const game = makeGame();
+    game.balls[0].state = "won";
+    game.balls[0].speed = 0;
+    makeToken(game, 300, 300, "rainbowConvert", 1);
+    claimPickupsInPocket(game, new Set([worldToGridIndex(game.spaceGrid!, 300, 300)]));
+    expect(game.balls.every(b => b.ability !== "rainbow")).toBe(true);
+    expect(game.pickupOvertime).toBe(FORK_CONSOLATION_OVERTIME);
+  });
 });
 
 describe("wasting (captured with no lock)", () => {

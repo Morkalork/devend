@@ -255,7 +255,9 @@
     "pickupCapRaise": "Cap +{n}h",
     "pickupFreeze": "Freeze +1",
     "freezeUsesLeft": "{{count}} freezes left this map",
-    "pickupFreeShopItem": "Free store item!"
+    "pickupFreeShopItem": "Free store item!",
+    "pickupExtraLife": "+1 Life",
+    "pickupRainbow": "Rainbow ball!"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
@@ -367,6 +369,14 @@
           "freeShopItem": {
             "name": "Free store item:",
             "desc": "the cheapest offer in your next open store is free."
+          },
+          "extraLife": {
+            "name": "Extra Life:",
+            "desc": "+{{value}} life on the spot."
+          },
+          "rainbowConvert": {
+            "name": "Rainbow ball:",
+            "desc": "turned a ball into a high-value rainbow ball."
           }
         }
       },

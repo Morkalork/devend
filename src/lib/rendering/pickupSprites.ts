@@ -16,10 +16,13 @@ const _cache = new Map<string, OffscreenCanvas>();
 /** Per-effect ring/glyph colour (accent for the money-ish effects). */
 export function pickupColor(effect: PickupEffect, accent: string): string {
   switch (effect) {
-    case "freezeCharge": return "#88ddff";
-    case "fork":         return "#ffd93d";
-    case "freeShopItem": return "#ff9ff3";
-    default:              return accent;
+    case "freezeCharge":    return "#88ddff";
+    case "fork":            return "#ffd93d";
+    case "freeShopItem":    return "#ff9ff3";
+    case "extraLife":       return "#ff6b6b";
+    case "rainbowConvert":  return "#ff4db8";
+    case "overtimePercent": return "#ffd54a";
+    default:                 return accent;
   }
 }
 
@@ -125,6 +128,39 @@ export function getPickupSprite(effect: PickupEffect, accent: string, radiusPx: 
       c.restore();
       break;
     }
+    case "extraLife": {
+      // A heart: two lobes into a point.
+      c.beginPath();
+      c.moveTo(cx, cy + g * 0.9);
+      c.bezierCurveTo(cx - g * 1.2, cy - g * 0.2, cx - g * 0.4, cy - g, cx, cy - g * 0.3);
+      c.bezierCurveTo(cx + g * 0.4, cy - g, cx + g * 1.2, cy - g * 0.2, cx, cy + g * 0.9);
+      c.closePath();
+      c.fill();
+      break;
+    }
+    case "overtimePercent": {
+      // A percent sign.
+      c.font = `bold ${Math.round(r * 1.05)}px 'JetBrains Mono', monospace`;
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText("%", cx, cy + r * 0.06);
+      break;
+    }
+    case "rainbowConvert": {
+      // A four-point sparkle/star.
+      c.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 - Math.PI / 2;
+        const nx = Math.cos(a), ny = Math.sin(a);
+        c.moveTo(cx, cy);
+        c.lineTo(cx + nx * g, cy + ny * g);
+      }
+      c.stroke();
+      c.beginPath();
+      c.arc(cx, cy, r * 0.16, 0, Math.PI * 2);
+      c.fill();
+      break;
+    }
   }
 
   _cache.set(key, oc);
@@ -141,14 +177,19 @@ export function clearPickupSpriteCache(): void {
  */
 export function pickupFeedbackLabel(
   fb: PickupFeedback,
-  labels?: { fork?: string; capRaise?: string; freezeCharge?: string; freeShopItem?: string },
+  labels?: { fork?: string; capRaise?: string; freezeCharge?: string; freeShopItem?: string; extraLife?: string; rainbowConvert?: string },
 ): string {
   switch (fb.effect) {
-    case "overtime":     return `+${fb.value}h`;
-    case "capRaise":     return (labels?.capRaise ?? "Cap +{n}h").replace("{n}", String(fb.value));
-    case "freezeCharge": return labels?.freezeCharge ?? "Freeze +1";
-    case "fork":         return labels?.fork ?? "Ball split!";
-    case "freeShopItem": return labels?.freeShopItem ?? "Free store item!";
+    case "overtime":       return `+${fb.value}h`;
+    case "capRaise":       return (labels?.capRaise ?? "Cap +{n}h").replace("{n}", String(fb.value));
+    case "freezeCharge":   return labels?.freezeCharge ?? "Freeze +1";
+    case "fork":           return labels?.fork ?? "Ball split!";
+    case "freeShopItem":   return labels?.freeShopItem ?? "Free store item!";
+    case "extraLife":      return labels?.extraLife ?? "+1 Life";
+    case "rainbowConvert": return labels?.rainbowConvert ?? "Rainbow ball!";
+    // overtimePercent resolves to an "overtime" feedback at claim time; this
+    // arm only exists for exhaustiveness.
+    case "overtimePercent": return `+${fb.value}h`;
   }
 }
 

@@ -253,7 +253,9 @@
     "pickupCapRaise": "Tope +{n}h",
     "pickupFreeze": "Congelación +1",
     "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa",
-    "pickupFreeShopItem": "¡Artículo gratis!"
+    "pickupFreeShopItem": "¡Artículo gratis!",
+    "pickupExtraLife": "+1 vida",
+    "pickupRainbow": "¡Bola arcoíris!"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",
@@ -364,6 +366,14 @@
           "freeShopItem": {
             "name": "Artículo gratis:",
             "desc": "la oferta más barata de tu próxima tienda abierta es gratis."
+          },
+          "extraLife": {
+            "name": "Vida extra:",
+            "desc": "+{{value}} vida al instante."
+          },
+          "rainbowConvert": {
+            "name": "Bola arcoíris:",
+            "desc": "convirtió una bola en una valiosa bola arcoíris."
           }
         }
       },

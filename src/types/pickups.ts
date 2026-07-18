@@ -10,7 +10,15 @@
  */
 import { Vector2 } from "@/lib/polygon";
 
-export type PickupEffect = "overtime" | "fork" | "capRaise" | "freezeCharge" | "freeShopItem";
+export type PickupEffect =
+  | "overtime"
+  | "fork"
+  | "capRaise"
+  | "freezeCharge"
+  | "freeShopItem"
+  | "extraLife"        // grants +value extra lives immediately (#52)
+  | "overtimePercent"  // pays value% of the run's banked overtime, after the cap (#52)
+  | "rainbowConvert";  // turns a random active ball into a rainbow ball (#52)
 
 /** A live token on the board. */
 export interface PickupState {
@@ -67,5 +75,9 @@ export const DEFAULT_PICKUP_CONFIG: PickupConfig = {
     { effect: "freezeCharge", weight: 2, value: 3 },
     // One free item (the cheapest offer) in the next OPEN store (issue #48).
     { effect: "freeShopItem", weight: 1, value: 1 },
+    // Stronger rewards so tokens stay worth chasing late (#52).
+    { effect: "extraLife", weight: 1, value: 1 },
+    { effect: "overtimePercent", weight: 2, value: 15 }, // value = percent of banked overtime
+    { effect: "rainbowConvert", weight: 1, value: 1 },
   ],
 };

@@ -35,6 +35,8 @@ export interface GameCallbacks {
   // Lives ref access — updateWall needs mutable live value
   getLives: () => number;
   setLivesRef: (n: number) => void;
+  /** Run's banked overtime (totalScore), for the overtimePercent pickup (#52). */
+  getBankedOvertime?: () => number;
   // Timeout refs for debouncing flash / shake
   flashTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
   shakeTimeoutRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
