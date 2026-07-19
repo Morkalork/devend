@@ -193,7 +193,12 @@ export function GameTopBar({
   const prevLivesRef = useRef(lives);
   const prevLocksRef = useRef(lockedBalls);
   const prevCreepRef = useRef(scopeCreepPercent);
-  const prevObjMetRef = useRef(!!objectiveProgress?.met);
+  // Only "accumulate" objectives (lockCount/superiorLocks) have a satisfying
+  // mid-map completion to celebrate; "limit" ones (underPar/speedClear) read as
+  // met from the start, so they never pulse and never render as "complete".
+  const objectiveComplete = objectiveProgress?.mode === 'accumulate' && !!objectiveProgress?.met;
+  const objectiveOverBudget = objectiveProgress?.mode === 'limit' && objectiveProgress?.met === false;
+  const prevObjMetRef = useRef(objectiveComplete);
   // ignore the ESLint warning — useCallback is just a stable reference here
   const flash = useCallback((set: React.Dispatch<React.SetStateAction<number>>) =>
     set(k => k + 1), []);
@@ -215,11 +220,10 @@ export function GameTopBar({
     prevCreepRef.current = scopeCreepPercent;
   }, [scopeCreepPercent, flash]);
   useEffect(() => {
-    // Pulse the objective chip the moment it becomes met (the completion cue).
-    const met = !!objectiveProgress?.met;
-    if (met && !prevObjMetRef.current) flash(setObjectiveFlashKey);
-    prevObjMetRef.current = met;
-  }, [objectiveProgress?.met, flash]);
+    // Pulse the objective chip the moment an accumulate objective completes.
+    if (objectiveComplete && !prevObjMetRef.current) flash(setObjectiveFlashKey);
+    prevObjMetRef.current = objectiveComplete;
+  }, [objectiveComplete, flash]);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -551,9 +555,9 @@ export function GameTopBar({
                 <button
                   className="relative flex-shrink-0 h-8 min-w-8 px-1.5 rounded-md flex items-center gap-1 justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
                   style={{
-                    backgroundColor: objectiveProgress?.met ? '#34d39926' : '#34d39918',
-                    border: `1px solid ${objectiveProgress?.met ? '#34d399' : '#34d39966'}`,
-                    color: '#34d399',
+                    backgroundColor: objectiveComplete ? '#34d39926' : objectiveOverBudget ? '#f8717118' : '#34d39912',
+                    border: `1px solid ${objectiveComplete ? '#34d399' : objectiveOverBudget ? '#f8717166' : '#34d39955'}`,
+                    color: objectiveOverBudget ? '#f87171' : '#34d399',
                   }}
                   onPointerDown={() => startContractHold('objective')}
                   onPointerUp={cancelContractHold}
@@ -571,7 +575,7 @@ export function GameTopBar({
                       {objectiveProgress.current}/{objectiveProgress.target}
                     </span>
                   )}
-                  {!objectiveProgress?.met && <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />}
+                  {!objectiveComplete && <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />}
                 </button>
               )}
               {(activeDoor || capstone || mapMutator || objective) && hasUpgrades && (
@@ -723,9 +727,9 @@ export function GameTopBar({
                 </div>
                 <p className="text-sm text-muted-foreground mt-2">{contentText.objectiveDesc(t, objective)}</p>
                 {objectiveProgress && (
-                  <p className="text-sm mt-2" style={{ color: objectiveProgress.met ? '#34d399' : undefined }}>
+                  <p className="text-sm mt-2" style={{ color: objectiveComplete ? '#34d399' : objectiveOverBudget ? '#f87171' : undefined }}>
                     <span className="font-semibold">{t('topBar.objectiveReward', { hours: objective.reward })}</span>
-                    {' '}<span className="tabular-nums text-muted-foreground">{objectiveProgress.current}/{objectiveProgress.target}{objectiveProgress.met ? ' ✓' : ''}</span>
+                    {' '}<span className="tabular-nums text-muted-foreground">{objectiveProgress.current}/{objectiveProgress.target}{objectiveComplete ? ' ✓' : ''}</span>
                   </p>
                 )}
                 {objective.clarify && (

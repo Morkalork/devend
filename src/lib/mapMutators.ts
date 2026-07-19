@@ -11,8 +11,9 @@
  * rotation identical for every player.
  */
 import { MapMutator, ActiveMapMutator } from "@/types/mapMutator";
-import { fetchYamlCatalogue, drawRandom } from "@/lib/yamlCatalogue";
+import { fetchYamlCatalogue } from "@/lib/yamlCatalogue";
 import { PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
+import { eligibleByLevel, weightedPick, finiteOrUndefined } from "@/lib/mapPools";
 import type { Rng } from "@/lib/runRng";
 
 const VALID_BEHAVIORS = new Set(["crunch", "overclock", "conveyor", "none"]);
@@ -42,21 +43,17 @@ function parseMutatorEntry(raw: unknown): MapMutator | null {
       if (Number.isFinite(n)) params[k] = n;
     }
   }
-  const num = (v: unknown): number | undefined => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : undefined;
-  };
   return {
     id: r.id,
     name: r.name,
     description: r.description,
     clarify: typeof r.clarify === "string" ? r.clarify : undefined,
     behavior: r.behavior as MapMutator["behavior"],
-    minLevel: num(r.minLevel),
-    maxLevel: num(r.maxLevel),
-    weight: num(r.weight),
+    minLevel: finiteOrUndefined(r.minLevel),
+    maxLevel: finiteOrUndefined(r.maxLevel),
+    weight: finiteOrUndefined(r.weight),
     params,
-    overtimePremium: num(r.overtimePremium),
+    overtimePremium: finiteOrUndefined(r.overtimePremium),
   };
 }
 
@@ -80,12 +77,7 @@ export async function loadMapMutators(): Promise<boolean> {
 
 /** Mutators eligible at this level number (range gate + procedural band). */
 export function eligibleMutators(levelNumber: number, pool: MapMutator[] = liveMutators): MapMutator[] {
-  if (levelNumber < PROCEDURAL_MIN_LEVEL) return [];
-  return pool.filter((m) => {
-    const min = m.minLevel ?? PROCEDURAL_MIN_LEVEL;
-    const max = m.maxLevel ?? Infinity;
-    return levelNumber >= min && levelNumber <= max;
-  });
+  return eligibleByLevel(levelNumber, pool, PROCEDURAL_MIN_LEVEL);
 }
 
 /**
@@ -100,23 +92,9 @@ export function selectMapMutator(
   pool: MapMutator[] = liveMutators,
   noneWeight: number = liveNoneWeight,
 ): ActiveMapMutator | null {
-  const eligible = eligibleMutators(levelNumber, pool);
-  if (eligible.length === 0) return null;
-
-  const weightOf = (m: MapMutator) => Math.max(0, m.weight ?? 1);
-  const total = eligible.reduce((s, m) => s + weightOf(m), 0) + Math.max(0, noneWeight);
-  if (total <= 0) return null;
-
-  let r = rng() * total;
-  let chosen: MapMutator | null = null;
-  for (const m of eligible) {
-    r -= weightOf(m);
-    if (r < 0) { chosen = m; break; }
-  }
-  // Fell through into the "none" bucket → vanilla map.
-  if (!chosen) return null;
-  if (chosen.behavior === "none") return null;
-
+  const chosen = weightedPick(eligibleMutators(levelNumber, pool), noneWeight, rng);
+  // null = drew the "none" bucket; a `none`-behavior entry is also a vanilla map.
+  if (!chosen || chosen.behavior === "none") return null;
   return resolveMutator(chosen, rng);
 }
 

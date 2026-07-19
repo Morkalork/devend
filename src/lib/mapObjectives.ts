@@ -13,6 +13,7 @@
 import { MapObjective, ActiveMapObjective, ObjectiveSnapshot, ObjectiveProgress } from "@/types/objective";
 import { fetchYamlCatalogue } from "@/lib/yamlCatalogue";
 import { PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
+import { eligibleByLevel, weightedPick, finiteOrUndefined } from "@/lib/mapPools";
 import type { Rng } from "@/lib/runRng";
 
 const VALID_KINDS = new Set(["lockCount", "superiorLocks", "underPar", "speedClear"]);
@@ -43,19 +44,15 @@ function parseObjectiveEntry(raw: unknown): MapObjective | null {
       if (Number.isFinite(n)) params[k] = n;
     }
   }
-  const num = (v: unknown): number | undefined => {
-    const n = Number(v);
-    return Number.isFinite(n) ? n : undefined;
-  };
   return {
     id: r.id,
     name: r.name,
     description: r.description,
     clarify: typeof r.clarify === "string" ? r.clarify : undefined,
     kind: r.kind as MapObjective["kind"],
-    minLevel: num(r.minLevel),
-    maxLevel: num(r.maxLevel),
-    weight: num(r.weight),
+    minLevel: finiteOrUndefined(r.minLevel),
+    maxLevel: finiteOrUndefined(r.maxLevel),
+    weight: finiteOrUndefined(r.weight),
     params,
     reward: Math.max(0, reward),
   };
@@ -81,12 +78,7 @@ export async function loadMapObjectives(): Promise<boolean> {
 
 /** Objectives eligible at this level number (range gate + procedural band). */
 export function eligibleObjectives(levelNumber: number, pool: MapObjective[] = liveObjectives): MapObjective[] {
-  if (levelNumber < PROCEDURAL_MIN_LEVEL) return [];
-  return pool.filter((o) => {
-    const min = o.minLevel ?? PROCEDURAL_MIN_LEVEL;
-    const max = o.maxLevel ?? Infinity;
-    return levelNumber >= min && levelNumber <= max;
-  });
+  return eligibleByLevel(levelNumber, pool, PROCEDURAL_MIN_LEVEL);
 }
 
 /**
@@ -100,19 +92,7 @@ export function selectMapObjective(
   pool: MapObjective[] = liveObjectives,
   noneWeight: number = liveNoneWeight,
 ): ActiveMapObjective | null {
-  const eligible = eligibleObjectives(levelNumber, pool);
-  if (eligible.length === 0) return null;
-
-  const weightOf = (o: MapObjective) => Math.max(0, o.weight ?? 1);
-  const total = eligible.reduce((s, o) => s + weightOf(o), 0) + Math.max(0, noneWeight);
-  if (total <= 0) return null;
-
-  let r = rng() * total;
-  for (const o of eligible) {
-    r -= weightOf(o);
-    if (r < 0) return o;
-  }
-  return null; // fell into the "none" bucket
+  return weightedPick(eligibleObjectives(levelNumber, pool), noneWeight, rng);
 }
 
 // ── Pure evaluator ───────────────────────────────────────────────────────────
@@ -126,19 +106,19 @@ export function evaluateObjective(obj: ActiveMapObjective, snap: ObjectiveSnapsh
   switch (obj.kind) {
     case "lockCount": {
       const target = Math.max(1, Math.round(obj.params?.count ?? 1));
-      return { kind: obj.kind, current: snap.lockedBalls, target, met: snap.lockedBalls >= target };
+      return { kind: obj.kind, mode: "accumulate", current: snap.lockedBalls, target, met: snap.lockedBalls >= target };
     }
     case "superiorLocks": {
       const target = Math.max(1, Math.round(obj.params?.count ?? 1));
-      return { kind: obj.kind, current: snap.superiorLocks, target, met: snap.superiorLocks >= target };
+      return { kind: obj.kind, mode: "accumulate", current: snap.superiorLocks, target, met: snap.superiorLocks >= target };
     }
     case "underPar": {
       const target = Math.max(1, snap.par + Math.round(obj.params?.delta ?? 0));
-      return { kind: obj.kind, current: snap.cuts, target, met: snap.cuts <= target };
+      return { kind: obj.kind, mode: "limit", current: snap.cuts, target, met: snap.cuts <= target };
     }
     case "speedClear": {
       const target = Math.max(1, Math.round(obj.params?.seconds ?? 30));
-      return { kind: obj.kind, current: Math.floor(snap.activeSeconds), target, met: snap.activeSeconds <= target };
+      return { kind: obj.kind, mode: "limit", current: Math.floor(snap.activeSeconds), target, met: snap.activeSeconds <= target };
     }
   }
 }

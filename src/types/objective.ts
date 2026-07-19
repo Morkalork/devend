@@ -52,9 +52,20 @@ export interface ObjectiveSnapshot {
   activeSeconds: number;
 }
 
+/**
+ * How an objective's progress reads over the map:
+ * - `accumulate` counts UP toward `target` (lockCount, superiorLocks); `met`
+ *   sticks once reached, so the HUD can celebrate completion mid-map.
+ * - `limit` must stay AT/UNDER `target` (underPar, speedClear); `met` is
+ *   provisional (true from the start, confirmed only at clear), so the HUD shows
+ *   it neutrally and only warns when it is blown, never "complete" early.
+ */
+export type ObjectiveMode = "accumulate" | "limit";
+
 /** The evaluated state of an objective against a snapshot (for the HUD + award). */
 export interface ObjectiveProgress {
   kind: ObjectiveKind;
+  mode: ObjectiveMode;
   current: number;
   target: number;
   met: boolean;

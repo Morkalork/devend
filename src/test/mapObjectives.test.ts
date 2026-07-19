@@ -64,10 +64,21 @@ describe("selectMapObjective (#55)", () => {
 });
 
 describe("evaluateObjective (#55)", () => {
-  it("lockCount: met once enough balls are locked", () => {
-    expect(evaluateObjective(LOCKDOWN, snap({ lockedBalls: 1 }))).toMatchObject({ current: 1, target: 2, met: false });
+  it("lockCount: met once enough balls are locked (accumulate mode)", () => {
+    expect(evaluateObjective(LOCKDOWN, snap({ lockedBalls: 1 }))).toMatchObject({ current: 1, target: 2, met: false, mode: "accumulate" });
     expect(evaluateObjective(LOCKDOWN, snap({ lockedBalls: 2 })).met).toBe(true);
     expect(evaluateObjective(LOCKDOWN, snap({ lockedBalls: 5 })).met).toBe(true);
+  });
+
+  it("tags accumulate vs limit mode so the HUD never shows a limit goal as complete early", () => {
+    expect(evaluateObjective(LOCKDOWN, snap({})).mode).toBe("accumulate");
+    expect(evaluateObjective(PRECISION, snap({})).mode).toBe("accumulate");
+    expect(evaluateObjective(UNDER_PAR, snap({})).mode).toBe("limit");
+    expect(evaluateObjective(SPEED, snap({})).mode).toBe("limit");
+    // A limit objective reads "met" from the start (0 cuts / 0s), which is why
+    // the HUD keys completion styling off mode, not met alone.
+    expect(evaluateObjective(UNDER_PAR, snap({ cuts: 0, par: 5 })).met).toBe(true);
+    expect(evaluateObjective(SPEED, snap({ activeSeconds: 0 })).met).toBe(true);
   });
 
   it("superiorLocks: counts only superior locks", () => {
