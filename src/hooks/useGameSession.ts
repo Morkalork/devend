@@ -34,6 +34,7 @@ import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from 
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
 import { loadMapMutators } from '@/lib/mapMutators';
+import { loadMapObjectives } from '@/lib/mapObjectives';
 import { DoorConfig } from '@/types/door';
 import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import { CapstoneConfig } from '@/types/capstone';
@@ -584,6 +585,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadCapstones(),
       // Map mutator pool (mapMutators.yml). Failure just plays maps unmutated.
       loadMapMutators(),
+      // Map objective pool (objectives.yml). Failure just plays maps without a goal.
+      loadMapObjectives(),
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
@@ -649,6 +652,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadDoors(),
       loadCapstones(),
       loadMapMutators(),
+      loadMapObjectives(),
     ]);
     if (!levelsSuccess || !upgradesSuccess) {
       clearDailyMode();
@@ -700,6 +704,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadDoors(),
       loadCapstones(),
       loadMapMutators(),
+      loadMapObjectives(),
     ]);
     if (!levelsSuccess || !upgradesSuccess) return;
 

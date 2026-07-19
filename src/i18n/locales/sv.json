@@ -482,7 +482,9 @@
     "contractRisk": "Risk:",
     "contractReward": "Belöning:",
     "contractClose": "Stäng",
-    "contractModifier": "Kartmodifierare"
+    "contractModifier": "Kartmodifierare",
+    "contractObjective": "Mål",
+    "objectiveReward": "+{{hours}}h om uppfyllt"
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",

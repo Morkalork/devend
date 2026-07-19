@@ -32,6 +32,7 @@ import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
+import { objectiveClearReward } from "@/lib/mapObjectives";
 import { wasteCapturedPickups } from "@/lib/pickups";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
@@ -405,12 +406,22 @@ export function triggerLevelComplete(
     callbacks.setPushMode("none");
   }
 
-  // Fold lock + break + push + ship-early + map-mutator premium in before the
-  // cap so a single map can't exceed the per-map ceiling (issue #43).
+  // Per-map objective bonus (issue #55): if the rolled objective is met at
+  // clear, its reward folds under the cap too. Optional and non-failing.
+  const objectiveBonus = objectiveClearReward(game.objective, {
+    lockedBalls: game.lockedBallsCount,
+    superiorLocks: game.superiorLockCount,
+    cuts: game.wallCount,
+    par: level.expectedCuts,
+    activeSeconds: game.activePlaySeconds,
+  });
+
+  // Fold lock + break + push + ship-early + map-mutator + objective bonuses in
+  // before the cap so a single map can't exceed the per-map ceiling (issue #43).
   const { levelScore, breakdown } = calculateScore(
     game.wallCount, level.expectedCuts, percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
-      extraBonus: game.lockBonus + game.breakBonus + pushBonus + shipEarlyBonus + mutatorOvertimePremium(game.mapMutator),
+      extraBonus: game.lockBonus + game.breakBonus + pushBonus + shipEarlyBonus + mutatorOvertimePremium(game.mapMutator) + objectiveBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
       // Comp Time pickups raise THIS map's cap on top of the capstone raise.
       overtimeCapBonus: activeModifiers.overtimeCapBonus + (game.pickupCapBonus ?? 0),

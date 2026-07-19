@@ -485,7 +485,9 @@
     "contractRisk": "Risk:",
     "contractReward": "Reward:",
     "contractClose": "Close",
-    "contractModifier": "Map Modifier"
+    "contractModifier": "Map Modifier",
+    "contractObjective": "Objective",
+    "objectiveReward": "+{{hours}}h if met"
   },
   "shipEarlyBar": {
     "title": "Map deadline: clear the map before the bar runs out. Finish early for bonus overtime.",

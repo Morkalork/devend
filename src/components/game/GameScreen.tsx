@@ -23,6 +23,7 @@ import { TutorialOverlay } from './TutorialOverlay';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
 import { selectMapMutator } from '@/lib/mapMutators';
+import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
 import { getRunRng } from '@/lib/runRng';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -198,6 +199,7 @@ export function GameScreen({
     cutsUsed: 0,
     spaceRemaining: 100,
     lockedBalls: 0,
+    superiorLocks: 0,
     freezeUsesRemaining: 0,
     pushMode: "none",
     creepPercent: 0,
@@ -255,6 +257,25 @@ export function GameScreen({
   const mapMutator = useMemo(
     () => selectMapMutator(levelNumber, getRunRng(`mapMutator:${level.id}`)),
     [levelNumber, level.id],
+  );
+
+  // Per-map objective (issue #55): an optional goal rolled 0-or-1 per eligible
+  // map from the run seed. Live progress is a pure read of the mirrored counters.
+  const mapObjective = useMemo(
+    () => selectMapObjective(levelNumber, getRunRng(`objective:${level.id}`)),
+    [levelNumber, level.id],
+  );
+  const objectiveProgress = useMemo(
+    () => mapObjective
+      ? evaluateObjective(mapObjective, {
+          lockedBalls: gameState.lockedBalls,
+          superiorLocks: gameState.superiorLocks,
+          cuts: gameState.cutsUsed,
+          par: level.expectedCuts,
+          activeSeconds: gameState.activeSeconds,
+        })
+      : null,
+    [mapObjective, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, gameState.activeSeconds, level.expectedCuts],
   );
   
   // Get owned upgrade details
@@ -349,6 +370,8 @@ export function GameScreen({
             threadLockRequired={level.threadLockRequired}
             scopeCreepPercent={gameState.creepPercent}
             mapMutator={mapMutator}
+            objective={mapObjective}
+            objectiveProgress={objectiveProgress}
             ownedUpgrades={ownedUpgrades}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
@@ -431,6 +454,7 @@ export function GameScreen({
             lockMinRegionCells={config.lock.min_region_cells}
             scopeCreep={scopeCreepConfig}
             mapMutator={mapMutator}
+            objective={mapObjective}
             pickupConfig={config.pickups}
             regionColor={getRegionColor()}
             accentColor={accentColor}

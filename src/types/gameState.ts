@@ -13,6 +13,7 @@ import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
 import { ScopeCreepConfig } from "@/lib/scopeCreep";
 import { ActiveMapMutator } from "@/types/mapMutator";
+import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 
 export interface CanvasGameState {
@@ -79,6 +80,10 @@ export interface CanvasGameState {
   /** Active per-map mutator (issue #54), or null. Rolled per map from the run
    *  seed; applied in the physics/scoring layer, not the GameModifiers merge. */
   mapMutator: ActiveMapMutator | null;
+  /** Active per-map objective (issue #55), or null. Optional/non-failing goal
+   *  read at clear to award a bonus under the per-map cap (evaluated purely from
+   *  existing counters). */
+  objective: ActiveMapObjective | null;
   /** Cron Job: performance.now() of the last auto-freeze (0 = clock not yet started this map). */
   lastAutoFreezeAt: number;
 

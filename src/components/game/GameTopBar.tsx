@@ -10,6 +10,7 @@ import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
 import { DoorConfig } from '@/types/door';
 import { CapstoneConfig } from '@/types/capstone';
 import { ActiveMapMutator } from '@/types/mapMutator';
+import { ActiveMapObjective, ObjectiveProgress } from '@/types/objective';
 import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
 
@@ -98,6 +99,10 @@ interface GameTopBarProps {
   // Issue #54: the per-map environmental mutator, shown as a hold-to-detail chip
   // (purple) alongside the contract/Promotion chips. null = vanilla map.
   mapMutator?: ActiveMapMutator | null;
+  // Issue #55: the per-map optional objective + its live progress, shown as a
+  // green hold-to-detail chip that pulses when met. null = no objective.
+  objective?: ActiveMapObjective | null;
+  objectiveProgress?: ObjectiveProgress | null;
   onExpand?: () => void;
 }
 
@@ -124,6 +129,8 @@ export function GameTopBar({
   activeDoor = null,
   capstone = null,
   mapMutator = null,
+  objective = null,
+  objectiveProgress = null,
   onExpand,
 }: GameTopBarProps) {
   const { t } = useTranslation();
@@ -134,12 +141,12 @@ export function GameTopBar({
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
   const swipeStartYRef = useRef<number | null>(null);
   // Issue #49: which contract chip's hold-detail modal is open.
-  const [contractDetail, setContractDetail] = useState<'door' | 'capstone' | 'mutator' | null>(null);
+  const [contractDetail, setContractDetail] = useState<'door' | 'capstone' | 'mutator' | 'objective' | null>(null);
   const contractHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelContractHold = () => {
     if (contractHoldTimer.current) { clearTimeout(contractHoldTimer.current); contractHoldTimer.current = null; }
   };
-  const startContractHold = (which: 'door' | 'capstone' | 'mutator') => {
+  const startContractHold = (which: 'door' | 'capstone' | 'mutator' | 'objective') => {
     cancelContractHold();
     contractHoldTimer.current = setTimeout(() => setContractDetail(which), 450);
   };
@@ -181,10 +188,12 @@ export function GameTopBar({
   const [livesFlashKey,  setLivesFlashKey]  = useState(0);
   const [locksFlashKey,  setLocksFlashKey]  = useState(0);
   const [creepFlashKey,  setCreepFlashKey]  = useState(0);
+  const [objectiveFlashKey, setObjectiveFlashKey] = useState(0);
   const prevSpaceRef = useRef(spaceRemaining);
   const prevLivesRef = useRef(lives);
   const prevLocksRef = useRef(lockedBalls);
   const prevCreepRef = useRef(scopeCreepPercent);
+  const prevObjMetRef = useRef(!!objectiveProgress?.met);
   // ignore the ESLint warning — useCallback is just a stable reference here
   const flash = useCallback((set: React.Dispatch<React.SetStateAction<number>>) =>
     set(k => k + 1), []);
@@ -205,6 +214,12 @@ export function GameTopBar({
     if (scopeCreepPercent > prevCreepRef.current) flash(setCreepFlashKey);
     prevCreepRef.current = scopeCreepPercent;
   }, [scopeCreepPercent, flash]);
+  useEffect(() => {
+    // Pulse the objective chip the moment it becomes met (the completion cue).
+    const met = !!objectiveProgress?.met;
+    if (met && !prevObjMetRef.current) flash(setObjectiveFlashKey);
+    prevObjMetRef.current = met;
+  }, [objectiveProgress?.met, flash]);
 
   useEffect(() => {
     const checkOverflow = () => {
@@ -467,8 +482,8 @@ export function GameTopBar({
         </div>
       )}
 
-      {/* Row 2: Upgrades Bar (+ contract/Promotion chips, issue #49; map mutator #54) */}
-      {(hasUpgrades || activeDoor || capstone || mapMutator) && (
+      {/* Row 2: Upgrades Bar (+ contract/Promotion chips #49; mutator #54; objective #55) */}
+      {(hasUpgrades || activeDoor || capstone || mapMutator || objective) && (
         <div
           className="px-3 py-1.5"
           style={{
@@ -532,7 +547,34 @@ export function GameTopBar({
                   <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />
                 </button>
               )}
-              {(activeDoor || capstone || mapMutator) && hasUpgrades && (
+              {objective && (
+                <button
+                  className="relative flex-shrink-0 h-8 min-w-8 px-1.5 rounded-md flex items-center gap-1 justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
+                  style={{
+                    backgroundColor: objectiveProgress?.met ? '#34d39926' : '#34d39918',
+                    border: `1px solid ${objectiveProgress?.met ? '#34d399' : '#34d39966'}`,
+                    color: '#34d399',
+                  }}
+                  onPointerDown={() => startContractHold('objective')}
+                  onPointerUp={cancelContractHold}
+                  onPointerLeave={cancelContractHold}
+                  onPointerCancel={cancelContractHold}
+                  onContextMenu={(e) => e.preventDefault()}
+                  aria-label={contentText.objectiveName(t, objective)}
+                >
+                  <Target className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
+                  {objectiveProgress && (
+                    <span
+                      key={objectiveFlashKey}
+                      className={`font-display text-xs font-bold tabular-nums${objectiveFlashKey > 0 ? ' animate-stat-flash' : ''}`}
+                    >
+                      {objectiveProgress.current}/{objectiveProgress.target}
+                    </span>
+                  )}
+                  {!objectiveProgress?.met && <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />}
+                </button>
+              )}
+              {(activeDoor || capstone || mapMutator || objective) && hasUpgrades && (
                 <span className="flex-shrink-0 w-px h-6" style={{ backgroundColor: `${accentColor}33` }} />
               )}
               {groupedUpgrades.map((upgrade) => {
@@ -614,7 +656,7 @@ export function GameTopBar({
         >
           <div
             className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
-            style={{ borderColor: contractDetail === 'door' ? '#ffb34766' : contractDetail === 'mutator' ? '#c084fc66' : '#ffd54a66' }}
+            style={{ borderColor: contractDetail === 'door' ? '#ffb34766' : contractDetail === 'mutator' ? '#c084fc66' : contractDetail === 'objective' ? '#34d39966' : '#ffd54a66' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -667,6 +709,27 @@ export function GameTopBar({
                 <p className="text-sm text-muted-foreground mt-2">{contentText.mutatorDesc(t, mapMutator)}</p>
                 {mapMutator.clarify && (
                   <p className="text-sm text-muted-foreground mt-3">{contentText.mutatorClarify(t, mapMutator)}</p>
+                )}
+              </>
+            )}
+            {contractDetail === 'objective' && objective && (
+              <>
+                <div className="flex items-center gap-3 mb-1 pr-6">
+                  <Target className="w-7 h-7 shrink-0" style={{ color: '#34d399' }} />
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.contractObjective')}</div>
+                    <div className="text-base font-bold text-foreground">{contentText.objectiveName(t, objective)}</div>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{contentText.objectiveDesc(t, objective)}</p>
+                {objectiveProgress && (
+                  <p className="text-sm mt-2" style={{ color: objectiveProgress.met ? '#34d399' : undefined }}>
+                    <span className="font-semibold">{t('topBar.objectiveReward', { hours: objective.reward })}</span>
+                    {' '}<span className="tabular-nums text-muted-foreground">{objectiveProgress.current}/{objectiveProgress.target}{objectiveProgress.met ? ' ✓' : ''}</span>
+                  </p>
+                )}
+                {objective.clarify && (
+                  <p className="text-sm text-muted-foreground mt-3">{contentText.objectiveClarify(t, objective)}</p>
                 )}
               </>
             )}

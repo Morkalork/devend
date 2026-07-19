@@ -62,6 +62,13 @@ export const contentText = {
   doorClarify: (t: TFunction, d: WithId & { clarify?: string }) =>
     field(t, 'doors', d.id, 'clarify', d.clarify),
 
+  /** Map objective (objectives.yml): the per-map optional goal. */
+  objectiveName: (t: TFunction, o: WithId & { name?: string }) => field(t, 'mapObjectives', o.id, 'name', o.name),
+  objectiveDesc: (t: TFunction, o: WithId & { description?: string }) =>
+    field(t, 'mapObjectives', o.id, 'description', o.description),
+  objectiveClarify: (t: TFunction, o: WithId & { clarify?: string }) =>
+    field(t, 'mapObjectives', o.id, 'clarify', o.clarify),
+
   /** Map mutator (mapMutators.yml): the per-map environmental modifier. */
   mutatorName: (t: TFunction, m: WithId & { name?: string }) => field(t, 'mapMutators', m.id, 'name', m.name),
   mutatorDesc: (t: TFunction, m: WithId & { description?: string }) =>

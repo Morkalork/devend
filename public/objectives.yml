@@ -1,0 +1,72 @@
+# Per-map objectives (issue #55): an optional secondary goal rolled 0-or-1 per
+# eligible map (level 11+) from the run seed. Different every normal run, shared
+# per Daily seed. Optional and non-failing: missing it just skips the bonus.
+# English is the source of truth (locale files may override via
+# content.mapObjectives.<id>.*). No em-dashes in displayed strings.
+#
+# noneWeight: relative odds of "no objective this map" (objectives are a spice,
+# not every map). With the weights below, roughly half of eligible maps get one.
+noneWeight: 6
+
+objectives:
+  - id: lockdown
+    name: Lockdown
+    description: Lock at least 2 balls this map.
+    clarify: Seal 2 balls in pockets before you clear. Pays a bonus on top of the normal lock overtime.
+    kind: lockCount
+    weight: 3
+    params:
+      count: 2
+    reward: 3
+
+  - id: vault
+    name: The Vault
+    description: Lock at least 4 balls this map.
+    clarify: "A greedy target: trap 4 balls before clearing. Big bonus, but it takes real pocket work."
+    kind: lockCount
+    minLevel: 15
+    weight: 2
+    params:
+      count: 4
+    reward: 6
+
+  - id: precision
+    name: Precision
+    description: Land a superior lock (a tight pocket).
+    clarify: Lock a ball in a snug pocket that grades superior. Reinforces the lock skill.
+    kind: superiorLocks
+    weight: 3
+    params:
+      count: 1
+    reward: 4
+
+  - id: surgical
+    name: Surgical
+    description: Land 2 superior locks this map.
+    clarify: Two tight-pocket locks in one map. Precision under pressure.
+    kind: superiorLocks
+    minLevel: 16
+    weight: 2
+    params:
+      count: 2
+    reward: 6
+
+  - id: under-budget
+    name: Under Budget
+    description: Clear at or under the par cut count.
+    clarify: Finish the map using no more cuts than par. Efficient play pays.
+    kind: underPar
+    weight: 2
+    params:
+      delta: 0
+    reward: 4
+
+  - id: speed-run
+    name: Speed Run
+    description: Clear the map within 35 seconds of play.
+    clarify: "Beat the clock: meet the clear condition inside 35 active seconds. Pauses do not count."
+    kind: speedClear
+    weight: 2
+    params:
+      seconds: 35
+    reward: 4

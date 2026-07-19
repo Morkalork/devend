@@ -482,7 +482,9 @@
     "contractRisk": "Riesgo:",
     "contractReward": "Recompensa:",
     "contractClose": "Cerrar",
-    "contractModifier": "Modificador de mapa"
+    "contractModifier": "Modificador de mapa",
+    "contractObjective": "Objetivo",
+    "objectiveReward": "+{{hours}}h si se cumple"
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",
