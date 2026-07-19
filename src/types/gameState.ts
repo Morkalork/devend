@@ -12,6 +12,7 @@ import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
 import { ScopeCreepConfig } from "@/lib/scopeCreep";
+import { ActiveMapMutator } from "@/types/mapMutator";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 
 export interface CanvasGameState {
@@ -64,10 +65,20 @@ export interface CanvasGameState {
   activePlaySeconds: number;
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
   clearedActiveSeconds: number | null;
-  /** Current Scope Creep displacement multiplier (1 = no creep). */
+  /**
+   * Current ball displacement multiplier: Scope Creep folded with the map
+   * mutator's speed factor (crunch/overclock). 1 = neither active. The trajectory
+   * predictor reads this too, so mutator speed changes keep the aim line in sync.
+   */
   creepFactor: number;
+  /** Last Scope-Creep-only percent pushed to the HUD chip (decoupled from the
+   *  mutator factor so the creep chip reads creep alone). -1 = not yet sent. */
+  lastCreepPct: number;
   /** Scope Creep tuning, seeded from game-config.yml at init. */
   creepConfig: ScopeCreepConfig;
+  /** Active per-map mutator (issue #54), or null. Rolled per map from the run
+   *  seed; applied in the physics/scoring layer, not the GameModifiers merge. */
+  mapMutator: ActiveMapMutator | null;
   /** Cron Job: performance.now() of the last auto-freeze (0 = clock not yet started this map). */
   lastAutoFreezeAt: number;
 

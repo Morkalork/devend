@@ -22,6 +22,8 @@ import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
+import { selectMapMutator } from '@/lib/mapMutators';
+import { getRunRng } from '@/lib/runRng';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
@@ -246,6 +248,14 @@ export function GameScreen({
     stepPercent: config.scope_creep.step_percent,
     maxSteps: config.scope_creep.max_steps,
   }), [config.scope_creep, activeModifiers.scopeCreepImmediate]);
+
+  // Per-map mutator (issue #54): one environmental modifier rolled per eligible
+  // map (level 11+) from the run seed, so it differs every normal run and is
+  // shared per Daily seed. Same seed context convention as doors.
+  const mapMutator = useMemo(
+    () => selectMapMutator(levelNumber, getRunRng(`mapMutator:${level.id}`)),
+    [levelNumber, level.id],
+  );
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
@@ -338,6 +348,7 @@ export function GameScreen({
             lockedBalls={totalLockedBalls}
             threadLockRequired={level.threadLockRequired}
             scopeCreepPercent={gameState.creepPercent}
+            mapMutator={mapMutator}
             ownedUpgrades={ownedUpgrades}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
@@ -419,6 +430,7 @@ export function GameScreen({
             lockWinThresholdPercent={config.lock.win_threshold_percent}
             lockMinRegionCells={config.lock.min_region_cells}
             scopeCreep={scopeCreepConfig}
+            mapMutator={mapMutator}
             pickupConfig={config.pickups}
             regionColor={getRegionColor()}
             accentColor={accentColor}

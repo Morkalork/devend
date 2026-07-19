@@ -152,6 +152,15 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
   ball.position.x += ball.velocity.x * moveDt;
   ball.position.y += ball.velocity.y * moveDt;
 
+  // Conveyor mutator (issue #54): a steady positional drift, not a velocity
+  // change, so it never compounds into speed and the wall resolver keeps the
+  // ball in bounds (a gentle current). Uses the raw step, independent of creep.
+  const mut = game.mapMutator;
+  if (mut && mut.behavior === "conveyor") {
+    ball.position.x += (mut.driftX || 0) * dt;
+    ball.position.y += (mut.driftY || 0) * dt;
+  }
+
   // Update rotation based on speed (medium spin rate); uses the creep-scaled
   // step so spin matches apparent speed.
   const speed = vec2Length(ball.velocity);

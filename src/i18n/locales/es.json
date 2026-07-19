@@ -481,7 +481,8 @@
     "contractPromotion": "Ascenso",
     "contractRisk": "Riesgo:",
     "contractReward": "Recompensa:",
-    "contractClose": "Cerrar"
+    "contractClose": "Cerrar",
+    "contractModifier": "Modificador de mapa"
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",

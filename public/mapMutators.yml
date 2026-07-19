@@ -1,0 +1,51 @@
+# Per-map mutators (issue #54): a rotating environmental modifier rolled once
+# per eligible map (level 11+) from the run seed. Different every normal run,
+# identical for everyone on a Daily seed. English is the source of truth here
+# (locale files may override via content.mapMutators.<id>.*). No em-dashes in
+# displayed strings (name / description / clarify), per project rule.
+#
+# noneWeight: relative odds of "no mutator this map", so some maps stay vanilla.
+noneWeight: 2
+
+mutators:
+  - id: crunch
+    name: Crunch Time
+    description: Everything speeds up with every ball you lock.
+    clarify: Each ball you lock this map ramps ball and obstacle speed a little more, up to a cap. Locking pays overtime, but raises the tempo. Lock decisively.
+    behavior: crunch
+    weight: 3
+    params:
+      perLockPercent: 7
+      maxPercent: 56
+    overtimePremium: 3
+
+  - id: conveyor
+    name: Conveyor
+    description: A steady current pushes the balls across the board.
+    clarify: A constant drift nudges every ball one way all map. Read the current and cut with it, not against it.
+    behavior: conveyor
+    weight: 3
+    params:
+      speed: 55
+    overtimePremium: 2
+
+  - id: overclock
+    name: Overclock
+    description: The whole board runs hot. Balls and movers are faster all map.
+    clarify: A flat speed boost for the entire map, from the first second. No ramp, just less time to think.
+    behavior: overclock
+    weight: 2
+    params:
+      factor: 1.18
+    overtimePremium: 2
+
+  - id: riptide
+    name: Riptide
+    description: A strong current drags everything one way.
+    clarify: Like Conveyor, but the drift is stronger. Small pockets fill fast on the downstream side.
+    behavior: conveyor
+    minLevel: 15
+    weight: 2
+    params:
+      speed: 82
+    overtimePremium: 3

@@ -14,6 +14,7 @@
 import { CanvasGameState } from "@/types/gameState";
 import { GrowingWall } from "@/types/game";
 import { creepFactor } from "@/lib/scopeCreep";
+import { mutatorSpeedFactor } from "@/lib/mapMutators";
 import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
@@ -279,11 +280,16 @@ export function createGameLoop(
       if (!game.isRecovering) {
         const prevWholeSecond = Math.floor(game.activePlaySeconds);
         game.activePlaySeconds += PHYSICS_STEP;
-        const f = creepFactor(game.activePlaySeconds, game.creepConfig);
-        if (f !== game.creepFactor) {
-          game.creepFactor = f;
-          callbacks.onCreepStep?.(Math.round((f - 1) * 100));
+        // Scope Creep drives the HUD chip alone; the map mutator's speed factor
+        // (crunch/overclock) is folded into creepFactor so ball displacement AND
+        // the aim-line predictor both see it, without muddying the creep readout.
+        const creepF = creepFactor(game.activePlaySeconds, game.creepConfig);
+        const creepPct = Math.round((creepF - 1) * 100);
+        if (creepPct !== game.lastCreepPct) {
+          game.lastCreepPct = creepPct;
+          callbacks.onCreepStep?.(creepPct);
         }
+        game.creepFactor = creepF * mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount);
         // 1Hz clock tick to React (the countdown bar tweens between ticks).
         const wholeSecond = Math.floor(game.activePlaySeconds);
         if (wholeSecond !== prevWholeSecond) {

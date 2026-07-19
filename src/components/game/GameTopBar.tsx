@@ -5,10 +5,11 @@
  */
 import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, Ticket, Award, Info, X } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, Ticket, Award, Info, X, Wind } from 'lucide-react';
 import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
 import { DoorConfig } from '@/types/door';
 import { CapstoneConfig } from '@/types/capstone';
+import { ActiveMapMutator } from '@/types/mapMutator';
 import { getUpgradeIcon } from './upgradeIcons';
 import { contentText } from '@/i18n/content';
 
@@ -94,6 +95,9 @@ interface GameTopBarProps {
   // upgrades row so the player can always see what they have.
   activeDoor?: DoorConfig | null;
   capstone?: CapstoneConfig | null;
+  // Issue #54: the per-map environmental mutator, shown as a hold-to-detail chip
+  // (purple) alongside the contract/Promotion chips. null = vanilla map.
+  mapMutator?: ActiveMapMutator | null;
   onExpand?: () => void;
 }
 
@@ -119,6 +123,7 @@ export function GameTopBar({
   runPaceDelta = null,
   activeDoor = null,
   capstone = null,
+  mapMutator = null,
   onExpand,
 }: GameTopBarProps) {
   const { t } = useTranslation();
@@ -129,12 +134,12 @@ export function GameTopBar({
   const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
   const swipeStartYRef = useRef<number | null>(null);
   // Issue #49: which contract chip's hold-detail modal is open.
-  const [contractDetail, setContractDetail] = useState<'door' | 'capstone' | null>(null);
+  const [contractDetail, setContractDetail] = useState<'door' | 'capstone' | 'mutator' | null>(null);
   const contractHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelContractHold = () => {
     if (contractHoldTimer.current) { clearTimeout(contractHoldTimer.current); contractHoldTimer.current = null; }
   };
-  const startContractHold = (which: 'door' | 'capstone') => {
+  const startContractHold = (which: 'door' | 'capstone' | 'mutator') => {
     cancelContractHold();
     contractHoldTimer.current = setTimeout(() => setContractDetail(which), 450);
   };
@@ -462,8 +467,8 @@ export function GameTopBar({
         </div>
       )}
 
-      {/* Row 2: Upgrades Bar (+ contract/Promotion chips, issue #49) */}
-      {(hasUpgrades || activeDoor || capstone) && (
+      {/* Row 2: Upgrades Bar (+ contract/Promotion chips, issue #49; map mutator #54) */}
+      {(hasUpgrades || activeDoor || capstone || mapMutator) && (
         <div
           className="px-3 py-1.5"
           style={{
@@ -512,7 +517,22 @@ export function GameTopBar({
                   <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />
                 </button>
               )}
-              {(activeDoor || capstone) && hasUpgrades && (
+              {mapMutator && (
+                <button
+                  className="relative flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
+                  style={{ backgroundColor: '#c084fc18', border: '1px solid #c084fc66', color: '#c084fc' }}
+                  onPointerDown={() => startContractHold('mutator')}
+                  onPointerUp={cancelContractHold}
+                  onPointerLeave={cancelContractHold}
+                  onPointerCancel={cancelContractHold}
+                  onContextMenu={(e) => e.preventDefault()}
+                  aria-label={contentText.mutatorName(t, mapMutator)}
+                >
+                  <Wind className="w-4 h-4" strokeWidth={1.5} />
+                  <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />
+                </button>
+              )}
+              {(activeDoor || capstone || mapMutator) && hasUpgrades && (
                 <span className="flex-shrink-0 w-px h-6" style={{ backgroundColor: `${accentColor}33` }} />
               )}
               {groupedUpgrades.map((upgrade) => {
@@ -594,7 +614,7 @@ export function GameTopBar({
         >
           <div
             className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
-            style={{ borderColor: contractDetail === 'door' ? '#ffb34766' : '#ffd54a66' }}
+            style={{ borderColor: contractDetail === 'door' ? '#ffb34766' : contractDetail === 'mutator' ? '#c084fc66' : '#ffd54a66' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -632,6 +652,21 @@ export function GameTopBar({
                 <p className="text-sm text-muted-foreground mt-2">{contentText.capstoneDesc(t, capstone)}</p>
                 {capstone.clarify && (
                   <p className="text-sm text-muted-foreground mt-3">{contentText.capstoneClarify(t, capstone)}</p>
+                )}
+              </>
+            )}
+            {contractDetail === 'mutator' && mapMutator && (
+              <>
+                <div className="flex items-center gap-3 mb-1 pr-6">
+                  <Wind className="w-7 h-7 shrink-0" style={{ color: '#c084fc' }} />
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.contractModifier')}</div>
+                    <div className="text-base font-bold text-foreground">{contentText.mutatorName(t, mapMutator)}</div>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">{contentText.mutatorDesc(t, mapMutator)}</p>
+                {mapMutator.clarify && (
+                  <p className="text-sm text-muted-foreground mt-3">{contentText.mutatorClarify(t, mapMutator)}</p>
                 )}
               </>
             )}

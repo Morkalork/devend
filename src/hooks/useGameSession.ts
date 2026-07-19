@@ -33,6 +33,7 @@ import { loadBallTypes } from '@/lib/ballTypes';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
+import { loadMapMutators } from '@/lib/mapMutators';
 import { DoorConfig } from '@/types/door';
 import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import { CapstoneConfig } from '@/types/capstone';
@@ -581,6 +582,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadDoors(),
       // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
       loadCapstones(),
+      // Map mutator pool (mapMutators.yml). Failure just plays maps unmutated.
+      loadMapMutators(),
     ]);
 
     if (levelsSuccess && upgradesSuccess) {
@@ -645,6 +648,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadBallTypes(),
       loadDoors(),
       loadCapstones(),
+      loadMapMutators(),
     ]);
     if (!levelsSuccess || !upgradesSuccess) {
       clearDailyMode();
@@ -695,6 +699,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadBallTypes(),
       loadDoors(),
       loadCapstones(),
+      loadMapMutators(),
     ]);
     if (!levelsSuccess || !upgradesSuccess) return;
 

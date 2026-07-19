@@ -62,6 +62,13 @@ export const contentText = {
   doorClarify: (t: TFunction, d: WithId & { clarify?: string }) =>
     field(t, 'doors', d.id, 'clarify', d.clarify),
 
+  /** Map mutator (mapMutators.yml): the per-map environmental modifier. */
+  mutatorName: (t: TFunction, m: WithId & { name?: string }) => field(t, 'mapMutators', m.id, 'name', m.name),
+  mutatorDesc: (t: TFunction, m: WithId & { description?: string }) =>
+    field(t, 'mapMutators', m.id, 'description', m.description),
+  mutatorClarify: (t: TFunction, m: WithId & { clarify?: string }) =>
+    field(t, 'mapMutators', m.id, 'clarify', m.clarify),
+
   loadoutName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'loadouts', l.id, 'name', l.name),
   loadoutCurse: (t: TFunction, l: WithId & { curse?: string }) => field(t, 'loadouts', l.id, 'curse', l.curse),
   loadoutBlessing: (t: TFunction, l: WithId & { blessing?: string }) =>

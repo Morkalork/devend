@@ -88,6 +88,7 @@ import {
 import { CanvasGameState } from "@/types/gameState";
 import { PickupConfig, PickupState, PickupFeedback, PickupEffect, DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
 import { ScopeCreepConfig, DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
+import { ActiveMapMutator } from "@/types/mapMutator";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
@@ -147,6 +148,8 @@ interface GameCanvasProps {
   lockMinRegionCells?: number;
   /** Scope Creep tuning (from game-config.yml `scope_creep:`). */
   scopeCreep?: ScopeCreepConfig;
+  /** Per-map mutator (issue #54), rolled per map by GameScreen; null = vanilla. */
+  mapMutator?: ActiveMapMutator | null;
   /** Pickup tuning (from game-config.yml `pickups:`). */
   pickupConfig?: PickupConfig;
   regionColor?: string;
@@ -211,6 +214,7 @@ export function GameCanvas({
   lockWinThresholdPercent = BALL_WON_REGION_THRESHOLD,
   lockMinRegionCells = 0,
   scopeCreep,
+  mapMutator = null,
   pickupConfig = DEFAULT_PICKUP_CONFIG,
   regionColor: regionColorProp = "#1a3020",
   accentColor = "#00ff88",
@@ -273,6 +277,11 @@ export function GameCanvas({
   useEffect(() => {
     if (scopeCreep) gameRef.current.creepConfig = scopeCreep;
   }, [scopeCreep]);
+  // Per-map mutator: keep the live game in sync with the roll (also set at init
+  // and per-map reset). Changing map remounts/rerolls, so this is belt-and-braces.
+  useEffect(() => {
+    gameRef.current.mapMutator = mapMutator ?? null;
+  }, [mapMutator]);
   // Pickup tuning arrives async (game-config.yml fetch) — reseed the live game
   // instead of putting it in the init effect's deps (that would restart the
   // level when the config lands). Same chance/gate derivation as initGame.
@@ -373,7 +382,9 @@ export function GameCanvas({
     activePlaySeconds: 0,
     clearedActiveSeconds: null as number | null,
     creepFactor: 1,
+    lastCreepPct: -1,
     creepConfig: DEFAULT_SCOPE_CREEP,
+    mapMutator: mapMutator ?? null,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -768,7 +779,9 @@ export function GameCanvas({
       game.activePlaySeconds = 0;
       game.clearedActiveSeconds = null;
       game.creepFactor = 1;
+      game.lastCreepPct = -1;
       game.creepConfig = scopeCreep ?? DEFAULT_SCOPE_CREEP;
+      game.mapMutator = mapMutator ?? null;
       setCreepPercent(0);
       setActiveSeconds(0);
       setBallCount(game.balls.length || 1);

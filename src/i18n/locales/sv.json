@@ -481,7 +481,8 @@
     "contractPromotion": "Befordran",
     "contractRisk": "Risk:",
     "contractReward": "Belöning:",
-    "contractClose": "Stäng"
+    "contractClose": "Stäng",
+    "contractModifier": "Kartmodifierare"
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
