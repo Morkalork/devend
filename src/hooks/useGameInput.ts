@@ -13,7 +13,6 @@ import {
   vec2Sub,
   vec2Length,
   vec2Normalize,
-  pointToSegmentDistance,
 } from "@/lib/polygon";
 import { WALL_THICKNESS, castRayWithReflections } from "@/lib/wallGeometry";
 import {
@@ -29,6 +28,7 @@ import {
   getDevicePixelRatio,
 } from "@/lib/boardConstants";
 import { isPositionActive } from "@/lib/spaceGrid";
+import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { initAudio } from "@/lib/gameAudio";
@@ -82,14 +82,25 @@ export function useGameInput(
 
       const worldPos = screenToWorld(screenX, screenY, game.boardRect);
 
-      if (!game.spaceGrid || !isPositionActive(game.spaceGrid, worldPos)) return;
+      if (!game.spaceGrid || !isPositionActive(game.spaceGrid, worldPos)) {
+        if (import.meta.env.DEV) console.warn(`[cut-refused] start cell not active at (${worldPos.x | 0},${worldPos.y | 0}) - wrongly-captured cell?`);
+        return;
+      }
 
       const region = findRegionContainingPoint(game.regions, worldPos.x, worldPos.y);
-      if (!region) return;
+      if (!region) {
+        if (import.meta.env.DEV) console.warn(`[cut-refused] no region contains (${worldPos.x | 0},${worldPos.y | 0})`);
+        return;
+      }
 
+      // Refuse only for walls that actually border the active region here. A fence
+      // stranded in captured space (never pruned from game.walls) is invisible and
+      // must not block a legal cut - see wallBlocksCutStart (ghost-wall fix).
       for (const w of game.walls) {
-        const dist = pointToSegmentDistance(worldPos, w.start, w.end);
-        if (dist < w.thickness * 2) return;
+        if (wallBlocksCutStart(worldPos, w, game.spaceGrid)) {
+          if (import.meta.env.DEV) console.warn(`[cut-refused] blocked by wall "${w.id}" at (${worldPos.x | 0},${worldPos.y | 0})`);
+          return;
+        }
       }
 
       game.swipeStart       = worldPos;
