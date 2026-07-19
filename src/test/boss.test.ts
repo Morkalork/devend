@@ -186,9 +186,27 @@ describe("boss minion mitosis grow-in (#56)", () => {
   });
 
   it("reaches full size and clears the birth flag once grown", () => {
-    const b = bud(performance.now() - 1000); // well past the birth duration
+    const b = bud(performance.now() - 1200); // well past the ~1s birth duration
     updateBall(b, 1 / 120, minionGame(b));
     expect(b.radius).toBe(12);
     expect(b.bornAt).toBeUndefined();
+  });
+
+  it("a newborn minion moves slowly at first (the split beat)", () => {
+    const now = performance.now();
+    const slow = { ...bud(now), splitAnimAt: now, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 } } as Ball;
+    const fast = { ...bud(now), splitAnimAt: undefined, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 } } as Ball;
+    updateBall(slow, 1 / 120, minionGame(slow));
+    updateBall(fast, 1 / 120, minionGame(fast));
+    expect(slow.position.x - 300).toBeLessThan(fast.position.x - 300); // split beat slows it
+    expect(slow.velocity.x).toBe(120); // stored velocity untouched (speeds back up on its own)
+  });
+
+  it("the boss decelerates mid-division, then recovers", () => {
+    const dividing = { ...activeBall("boss"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 }, splitAnimAt: performance.now() - 500 } as Ball;
+    const normal = { ...activeBall("boss2"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 } } as Ball;
+    updateBall(dividing, 1 / 120, minionGame(dividing));
+    updateBall(normal, 1 / 120, minionGame(normal));
+    expect(dividing.position.x - 300).toBeLessThan(normal.position.x - 300); // slowed at the mid-point of the split
   });
 });

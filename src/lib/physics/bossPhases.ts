@@ -84,10 +84,13 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
     child.velocity = { x: dir.x * child.speed, y: dir.y * child.speed }; // separate outward from the parent
     child.bornRadius = minionRadius;                    // full size to grow into
     child.radius = Math.max(2, minionRadius * 0.12);    // start as a tiny bud
-    child.bornAt = performance.now();
+    const nowMs = performance.now();
+    child.bornAt = nowMs;
+    child.splitAnimAt = nowMs;  // newborn: emerges slow, ramps up to full speed
     child.regionId = boss.regionId;
     game.balls.push(child);
     game.bossMinionCount = (game.bossMinionCount ?? 0) + 1;
+    boss.splitAnimAt = nowMs;   // parent decelerates mid-division, then recovers
     boss.rainbowSpawnCount = due;
   }
 }

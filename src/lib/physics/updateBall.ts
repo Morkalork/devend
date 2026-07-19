@@ -35,8 +35,8 @@ import { playWallHitSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit } from "@/lib/physics/destructibles";
 
-/** Boss minion mitosis grow-in duration (issue #56). */
-const MINION_BIRTH_MS = 320;
+/** Boss cell-division animation duration (issue #56): grow-in + speed dip. */
+const SPLIT_MS = 1000;
 
 // ---------------------------------------------------------------------------
 // Hot-loop notes
@@ -147,11 +147,30 @@ function collideBallWithWall(ball: Ball, wall: Wall): Vector2 | null {
 export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void {
   if (ball.state === 'won') return; // stopped and disintegrating
 
-  // Move ball (world units). Scope Creep scales the DISPLACEMENT, not the
-  // stored velocity, so abilities that rescale velocity to absolute targets
-  // (grey wind-down, yellow variable speed, the minimum-speed floor) stay
-  // untouched and the factor can never compound frame-over-frame.
-  const moveDt = dt * (game.creepFactor || 1);
+  const now = performance.now();
+
+  // Cell-division beat (issue #56): while a ball is in its split window it slows
+  // then speeds back up over SPLIT_MS (~1s). The boss decelerates mid-division and
+  // recovers (1 -> ~0.2 -> 1); a newborn minion emerges slow and ramps to full.
+  // Applied to DISPLACEMENT (like Scope Creep below), so the stored velocity is
+  // untouched and full speed returns on its own when the window ends.
+  let splitFactor = 1;
+  if (ball.splitAnimAt !== undefined) {
+    const t = (now - ball.splitAnimAt) / SPLIT_MS;
+    if (t >= 1 || t < 0) {
+      ball.splitAnimAt = undefined;
+    } else if (ball.isBoss) {
+      splitFactor = 1 - 0.8 * Math.sin(Math.PI * t); // 1 -> ~0.2 -> 1
+    } else {
+      splitFactor = 0.2 + 0.8 * t;                   // 0.2 -> 1 (newborn spins up)
+    }
+  }
+
+  // Move ball (world units). Scope Creep + the split beat scale the DISPLACEMENT,
+  // not the stored velocity, so abilities that rescale velocity to absolute targets
+  // (grey wind-down, yellow variable speed, the minimum-speed floor) stay untouched
+  // and the factor can never compound frame-over-frame.
+  const moveDt = dt * (game.creepFactor || 1) * splitFactor;
   ball.position.x += ball.velocity.x * moveDt;
   ball.position.y += ball.velocity.y * moveDt;
 
@@ -170,16 +189,12 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
   const rotationSpeed = speed * 0.015; // Radians per second based on speed
   ball.rotation += rotationSpeed * moveDt;
 
-  // Update ball visual effects (pulse, wall hit, ball hit decays)
-  const now = performance.now();
-
   // Mitosis birth (issue #56): a boss minion grows from a tiny bud to full size
-  // over MINION_BIRTH_MS, so it looks like it is splitting off the boss (a cell
-  // dividing) rather than popping in. Animating the real radius means BOTH
-  // renderers show it (they draw ball.radius); a nascent bud barely colliding for
-  // a third of a second is harmless.
+  // over SPLIT_MS, so it looks like it is splitting off the boss (a cell dividing)
+  // rather than popping in. Animating the real radius means BOTH renderers show it
+  // (they draw ball.radius); a nascent bud barely colliding for ~1s is harmless.
   if (ball.bornAt !== undefined && ball.bornRadius !== undefined) {
-    const t = (now - ball.bornAt) / MINION_BIRTH_MS;
+    const t = (now - ball.bornAt) / SPLIT_MS;
     if (t >= 1) {
       ball.radius = ball.bornRadius;
       ball.bornAt = undefined;
