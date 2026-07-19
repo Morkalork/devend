@@ -67,6 +67,9 @@ export interface Ball {
   isBoss?: boolean;    // the boss antagonist ("Release Candidate")
   bossHp?: number;     // hits remaining; each trap costs one until the last locks it
   bossMaxHp?: number;  // starting HP, for the health bar
+  // ── Mitosis birth (boss minion split-off, issue #56) ─────────────────────
+  bornAt?: number;     // performance.now() when spawned; drives the grow-in animation
+  bornRadius?: number; // target radius the minion grows to (its full size)
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

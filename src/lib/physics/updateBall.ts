@@ -35,6 +35,9 @@ import { playWallHitSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit } from "@/lib/physics/destructibles";
 
+/** Boss minion mitosis grow-in duration (issue #56). */
+const MINION_BIRTH_MS = 320;
+
 // ---------------------------------------------------------------------------
 // Hot-loop notes
 // ---------------------------------------------------------------------------
@@ -169,6 +172,23 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
 
   // Update ball visual effects (pulse, wall hit, ball hit decays)
   const now = performance.now();
+
+  // Mitosis birth (issue #56): a boss minion grows from a tiny bud to full size
+  // over MINION_BIRTH_MS, so it looks like it is splitting off the boss (a cell
+  // dividing) rather than popping in. Animating the real radius means BOTH
+  // renderers show it (they draw ball.radius); a nascent bud barely colliding for
+  // a third of a second is harmless.
+  if (ball.bornAt !== undefined && ball.bornRadius !== undefined) {
+    const t = (now - ball.bornAt) / MINION_BIRTH_MS;
+    if (t >= 1) {
+      ball.radius = ball.bornRadius;
+      ball.bornAt = undefined;
+    } else {
+      const e = 1 - (1 - Math.max(0, t)) * (1 - Math.max(0, t)); // easeOutQuad
+      ball.radius = Math.max(2, ball.bornRadius * (0.12 + 0.88 * e));
+    }
+  }
+
   updateBallEffects(ball.effects, dt, now);
 
   // Yellow "variable speed" ability: track whether the ball touched any surface

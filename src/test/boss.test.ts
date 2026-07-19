@@ -16,6 +16,8 @@ import { isBossGateSatisfied } from "@/lib/physics/applyCut";
 import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
 import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState";
 import { evaluateObjective } from "@/lib/mapObjectives";
+import { updateBall } from "@/lib/physics/updateBall";
+import { createRectPolygon } from "@/lib/polygon";
 import { createBallEffectState } from "@/lib/ballEffects";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
@@ -137,6 +139,8 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     expect(minions.length).toBeGreaterThanOrEqual(3);
     expect(minions.every((m) => m.typeId === boss.typeId)).toBe(true); // red only, never random
     expect(new Set(minions.map((m) => m.typeId)).size).toBe(1);        // no variety
+    // Each spawns as a tiny bud that will grow (mitosis), not full size.
+    expect(minions.every((m) => m.bornAt !== undefined && (m.bornRadius ?? 0) > m.radius)).toBe(true);
   });
 
   it("escalates the boss on a hit: faster, smaller (never below the floor)", () => {
@@ -162,5 +166,29 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     };
     expect(isBossGateSatisfied(gameWith({ objective: obj, bossDefeated: false }), level)).toBe(false);
     expect(isBossGateSatisfied(gameWith({ objective: obj, bossDefeated: true }), level)).toBe(true);
+  });
+});
+
+describe("boss minion mitosis grow-in (#56)", () => {
+  const BOARD = createRectPolygon(0, 0, 600, 400);
+  function minionGame(ball: Ball): CanvasGameState {
+    return { boardPolygon: BOARD, obstaclePolygons: [], walls: [], movers: [], regions: [], creepFactor: 1, balls: [ball], mapMutator: null } as unknown as CanvasGameState;
+  }
+  function bud(bornAt: number): Ball {
+    return { ...activeBall("m"), position: { x: 300, y: 200 }, velocity: { x: 100, y: 0 }, radius: 2, bornRadius: 12, bornAt } as Ball;
+  }
+
+  it("stays a small bud right after birth (still growing)", () => {
+    const b = bud(performance.now());
+    updateBall(b, 1 / 120, minionGame(b));
+    expect(b.radius).toBeLessThan(12);
+    expect(b.bornAt).toBeDefined();
+  });
+
+  it("reaches full size and clears the birth flag once grown", () => {
+    const b = bud(performance.now() - 1000); // well past the birth duration
+    updateBall(b, 1 / 120, minionGame(b));
+    expect(b.radius).toBe(12);
+    expect(b.bornAt).toBeUndefined();
   });
 });

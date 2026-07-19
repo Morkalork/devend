@@ -71,13 +71,20 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
     // Divide the boss's own speed scale back out so minions are normal-paced.
     const speedScale = (boss.baseSpeed / minionType.baseSpeed) / bossSpeedScale;
     const minionRadius = boss.radius / radiusScale;
-    const offset = boss.radius * 0.75;
+    // Bud from just inside the boss and push straight out, so it reads as a cell
+    // splitting off: it spawns as a tiny bud (mitosis grow-in in updateBall) and
+    // separates outward from the parent.
     const angle = Math.random() * Math.PI * 2;
-    const position = { x: boss.position.x + Math.cos(angle) * offset, y: boss.position.y + Math.sin(angle) * offset };
+    const dir = { x: Math.cos(angle), y: Math.sin(angle) };
+    const position = { x: boss.position.x + dir.x * boss.radius * 0.35, y: boss.position.y + dir.y * boss.radius * 0.35 };
     const child = createBall(
       minionType, position, speedScale, minionRadius,
       `${minionType.id}-minion-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
     );
+    child.velocity = { x: dir.x * child.speed, y: dir.y * child.speed }; // separate outward from the parent
+    child.bornRadius = minionRadius;                    // full size to grow into
+    child.radius = Math.max(2, minionRadius * 0.12);    // start as a tiny bud
+    child.bornAt = performance.now();
     child.regionId = boss.regionId;
     game.balls.push(child);
     game.bossMinionCount = (game.bossMinionCount ?? 0) + 1;
