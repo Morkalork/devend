@@ -361,7 +361,7 @@ levels:
         reward: 12
       bossBall:
         hp: 3
-        radiusScale: 2.1
+        radiusScale: 2.6
         speedScale: 1.25
         color: "#ff2d55"
         spitIntervalSeconds: 9

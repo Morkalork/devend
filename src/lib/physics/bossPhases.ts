@@ -72,23 +72,23 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
     // Divide the boss's own speed scale back out so minions are normal-paced.
     const speedScale = (boss.baseSpeed / minionType.baseSpeed) / bossSpeedScale;
     const minionRadius = boss.radius / radiusScale;
-    // Bud on the boss's RIM (half outside its body), so the split is VISIBLE
-    // against the background instead of buried inside the same-coloured boss, then
-    // grows (updateBall) and separates outward: a cell dividing, not a pop-in.
+    // The daughter cell buds from the boss: it spawns ATTACHED to the parent's
+    // body and grows there (updateBall follows the parent), then pinches off and
+    // drifts away. Not a separate ball popping in beneath it.
     const angle = Math.random() * Math.PI * 2;
     const dir = { x: Math.cos(angle), y: Math.sin(angle) };
-    const spawnDist = boss.radius; // centre on the boss edge => it bulges outward
-    const position = { x: boss.position.x + dir.x * spawnDist, y: boss.position.y + dir.y * spawnDist };
+    const position = { x: boss.position.x + dir.x * boss.radius * 0.85, y: boss.position.y + dir.y * boss.radius * 0.85 };
     const child = createBall(
       minionType, position, speedScale, minionRadius,
       `${minionType.id}-minion-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
     );
-    child.velocity = { x: dir.x * child.speed, y: dir.y * child.speed }; // separate outward from the parent
     child.bornRadius = minionRadius;                     // full size to grow into
-    child.radius = Math.max(3, minionRadius * BIRTH_START_FRAC); // a visible bud, not a speck
+    child.radius = Math.max(3, minionRadius * BIRTH_START_FRAC); // starts as a small bud
     const nowMs = performance.now();
     child.bornAt = nowMs;
-    child.splitAnimAt = nowMs;  // newborn: emerges slow, ramps up to full speed
+    child.birthParentId = boss.id;   // attached to the boss until it pinches off
+    child.birthDirX = dir.x;
+    child.birthDirY = dir.y;
     child.regionId = boss.regionId;
     game.balls.push(child);
     game.bossMinionCount = (game.bossMinionCount ?? 0) + 1;

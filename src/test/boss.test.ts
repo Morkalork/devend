@@ -139,8 +139,8 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     expect(minions.length).toBeGreaterThanOrEqual(3);
     expect(minions.every((m) => m.typeId === boss.typeId)).toBe(true); // red only, never random
     expect(new Set(minions.map((m) => m.typeId)).size).toBe(1);        // no variety
-    // Each spawns as a tiny bud that will grow (mitosis), not full size.
-    expect(minions.every((m) => m.bornAt !== undefined && (m.bornRadius ?? 0) > m.radius)).toBe(true);
+    // Each spawns as a small bud attached to the boss (mitosis), not full size.
+    expect(minions.every((m) => m.birthParentId === boss.id && (m.bornRadius ?? 0) > m.radius)).toBe(true);
   });
 
   it("escalates the boss on a hit: faster, smaller (never below the floor)", () => {
@@ -169,44 +169,56 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
   });
 });
 
-describe("boss minion mitosis grow-in (#56)", () => {
+describe("boss minion mitosis (#56 attached bud that grows then pinches off)", () => {
   const BOARD = createRectPolygon(0, 0, 600, 400);
-  function minionGame(ball: Ball): CanvasGameState {
-    return { boardPolygon: BOARD, obstaclePolygons: [], walls: [], movers: [], regions: [], creepFactor: 1, balls: [ball], mapMutator: null } as unknown as CanvasGameState;
+  function gameFor(balls: Ball[]): CanvasGameState {
+    return { boardPolygon: BOARD, obstaclePolygons: [], walls: [], movers: [], regions: [], creepFactor: 1, balls, mapMutator: null } as unknown as CanvasGameState;
   }
-  function bud(bornAt: number): Ball {
-    return { ...activeBall("m"), position: { x: 300, y: 200 }, velocity: { x: 100, y: 0 }, radius: 2, bornRadius: 12, bornAt } as Ball;
+  function parent(): Ball {
+    return { ...activeBall("boss"), id: "boss", isBoss: true, radius: 30, position: { x: 300, y: 200 } } as Ball;
+  }
+  function bud(bornAt: number, p: Ball): Ball {
+    return { ...activeBall("m"), radius: 3, bornRadius: 12, bornAt, birthParentId: p.id, birthDirX: 1, birthDirY: 0, position: { x: 340, y: 200 }, velocity: { x: 0, y: 0 } } as Ball;
   }
 
-  it("stays a small bud right after birth (still growing)", () => {
-    const b = bud(performance.now());
-    updateBall(b, 1 / 120, minionGame(b));
-    expect(b.radius).toBeLessThan(12);
-    expect(b.bornAt).toBeDefined();
+  it("stays attached to the parent's rim and grows while young", () => {
+    const p = parent();
+    const b = bud(performance.now(), p);
+    updateBall(b, 1 / 120, gameFor([p, b]));
+    expect(b.birthParentId).toBe("boss");                    // still attached
+    expect(b.radius).toBeLessThan(12);                       // still growing
+    expect(Math.hypot(b.position.x - p.position.x, b.position.y - p.position.y)).toBeCloseTo(p.radius * 0.85, 0);
   });
 
-  it("reaches full size and clears the birth flag once grown", () => {
-    const b = bud(performance.now() - 1200); // well past the ~1s birth duration
-    updateBall(b, 1 / 120, minionGame(b));
+  it("follows the parent as it moves (a bud on the cell, not a free ball)", () => {
+    const p = parent();
+    const b = bud(performance.now(), p);
+    p.position = { x: 120, y: 90 }; // parent bounced elsewhere
+    updateBall(b, 1 / 120, gameFor([p, b]));
+    expect(Math.hypot(b.position.x - 120, b.position.y - 90)).toBeCloseTo(p.radius * 0.85, 0);
+  });
+
+  it("pinches off at full size and is released outward once grown", () => {
+    const p = parent();
+    const b = bud(performance.now() - 2000, p); // past SPLIT_MS
+    updateBall(b, 1 / 120, gameFor([p, b]));
+    expect(b.birthParentId).toBeUndefined();
     expect(b.radius).toBe(12);
-    expect(b.bornAt).toBeUndefined();
+    expect(b.velocity.x).toBeGreaterThan(0); // released along its birth direction (+x)
   });
 
-  it("a newborn minion moves slowly at first (the split beat)", () => {
-    const now = performance.now();
-    const slow = { ...bud(now), splitAnimAt: now, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 } } as Ball;
-    const fast = { ...bud(now), splitAnimAt: undefined, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 } } as Ball;
-    updateBall(slow, 1 / 120, minionGame(slow));
-    updateBall(fast, 1 / 120, minionGame(fast));
-    expect(slow.position.x - 300).toBeLessThan(fast.position.x - 300); // split beat slows it
-    expect(slow.velocity.x).toBe(120); // stored velocity untouched (speeds back up on its own)
+  it("releases immediately if the parent is already gone", () => {
+    const p = parent();
+    const b = bud(performance.now(), p);
+    updateBall(b, 1 / 120, gameFor([b])); // parent not in the game
+    expect(b.birthParentId).toBeUndefined();
   });
 
   it("the boss decelerates mid-division, then recovers", () => {
-    const dividing = { ...activeBall("boss"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 }, splitAnimAt: performance.now() - 500 } as Ball;
+    const dividing = { ...activeBall("boss"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 }, splitAnimAt: performance.now() - 600 } as Ball;
     const normal = { ...activeBall("boss2"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 } } as Ball;
-    updateBall(dividing, 1 / 120, minionGame(dividing));
-    updateBall(normal, 1 / 120, minionGame(normal));
+    updateBall(dividing, 1 / 120, gameFor([dividing]));
+    updateBall(normal, 1 / 120, gameFor([normal]));
     expect(dividing.position.x - 300).toBeLessThan(normal.position.x - 300); // slowed at the mid-point of the split
   });
 });

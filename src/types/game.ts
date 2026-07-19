@@ -68,9 +68,12 @@ export interface Ball {
   bossHp?: number;     // hits remaining; each trap costs one until the last locks it
   bossMaxHp?: number;  // starting HP, for the health bar
   // ── Mitosis birth (boss minion split-off, issue #56) ─────────────────────
-  bornAt?: number;      // performance.now() when spawned; drives the grow-in animation
-  bornRadius?: number;  // target radius the minion grows to (its full size)
-  splitAnimAt?: number; // performance.now() a split began; drives the slow-then-speed beat
+  bornAt?: number;        // performance.now() when spawned; drives the grow-in animation
+  bornRadius?: number;    // target radius the minion grows to (its full size)
+  splitAnimAt?: number;   // performance.now() a split began; drives the boss's slow-then-speed beat
+  birthParentId?: string; // while set, this bud is attached to its parent and growing (mitosis)
+  birthDirX?: number;     // unit direction from the parent it buds along / is released toward
+  birthDirY?: number;
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

@@ -25,6 +25,10 @@ export function handleBallCollisions(game: CanvasGameState): void {
       // Skip collisions involving WON balls - they are stationary trophies
       if (ball1.state === 'won' || ball2.state === 'won') continue;
 
+      // Skip a boss daughter still ATTACHED and budding (issue #56): it is pegged
+      // to its parent as pure animation, so it must not perturb it or anything else.
+      if (ball1.birthParentId !== undefined || ball2.birthParentId !== undefined) continue;
+
       if (ball1.regionId !== ball2.regionId) continue;
 
       // Feature Freeze: a tap-frozen ball is immovable (infinite mass). The

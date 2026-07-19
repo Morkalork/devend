@@ -35,11 +35,11 @@ import { playWallHitSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit } from "@/lib/physics/destructibles";
 
-/** Boss cell-division animation duration (issue #56): grow-in + speed dip. */
-const SPLIT_MS = 1000;
-/** A boss minion buds at this fraction of full size (visible, not a speck) and
- *  grows to full over SPLIT_MS. Shared with the spawn in bossPhases. */
-export const BIRTH_START_FRAC = 0.4;
+/** Boss cell-division animation duration (issue #56): the bud grows + detaches. */
+const SPLIT_MS = 1200;
+/** A boss daughter cell buds at this fraction of full size and grows to full while
+ *  attached to the parent. Shared with the spawn in bossPhases. */
+export const BIRTH_START_FRAC = 0.15;
 
 // ---------------------------------------------------------------------------
 // Hot-loop notes
@@ -152,21 +152,43 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
 
   const now = performance.now();
 
-  // Cell-division beat (issue #56): while a ball is in its split window it slows
-  // then speeds back up over SPLIT_MS (~1s). The boss decelerates mid-division and
-  // recovers (1 -> ~0.2 -> 1); a newborn minion emerges slow and ramps to full.
-  // Applied to DISPLACEMENT (like Scope Creep below), so the stored velocity is
-  // untouched and full speed returns on its own when the window ends.
+  // Mitosis birth (issue #56): a daughter cell buds from the boss. While ATTACHED
+  // it grows in place on the parent's body, FOLLOWING the parent as it moves, so
+  // it clearly emerges FROM the boss (not a separate ball popping in). At the end
+  // of SPLIT_MS it pinches off and is released, drifting away on its own. Skips
+  // normal physics while attached (it is pure animation, pegged to the parent).
+  if (ball.birthParentId !== undefined) {
+    const parent = game.balls.find(b => b.id === ball.birthParentId && b.state === "active");
+    const t = ball.bornAt !== undefined ? (now - ball.bornAt) / SPLIT_MS : 1;
+    const dx = ball.birthDirX ?? 1, dy = ball.birthDirY ?? 0;
+    if (parent && t < 1) {
+      const target = ball.bornRadius ?? ball.radius;
+      ball.radius = Math.max(2, target * (BIRTH_START_FRAC + (1 - BIRTH_START_FRAC) * t)); // linear, visible grow
+      // Sit mostly on the parent, bulging outward, and track it as it moves.
+      const d = parent.radius * 0.85;
+      ball.position.x = parent.position.x + dx * d;
+      ball.position.y = parent.position.y + dy * d;
+      ball.prevPosition = { x: ball.position.x, y: ball.position.y };
+      ball.renderPosition = { x: ball.position.x, y: ball.position.y };
+      ball.regionId = parent.regionId;
+      return; // attached: skip normal physics this step
+    }
+    // Pinch off: full size, released outward under its own power.
+    ball.birthParentId = undefined;
+    ball.bornAt = undefined;
+    ball.radius = ball.bornRadius ?? ball.radius;
+    const spd = ball.speed || ball.baseSpeed || vec2Length(ball.velocity) || 1;
+    ball.velocity = { x: dx * spd, y: dy * spd };
+  }
+
+  // Cell-division beat (issue #56): the BOSS decelerates mid-division and recovers
+  // (1 -> ~0.2 -> 1) over SPLIT_MS as it buds. Applied to DISPLACEMENT (like Scope
+  // Creep below), so stored velocity is untouched and full speed returns on its own.
   let splitFactor = 1;
   if (ball.splitAnimAt !== undefined) {
     const t = (now - ball.splitAnimAt) / SPLIT_MS;
-    if (t >= 1 || t < 0) {
-      ball.splitAnimAt = undefined;
-    } else if (ball.isBoss) {
-      splitFactor = 1 - 0.8 * Math.sin(Math.PI * t); // 1 -> ~0.2 -> 1
-    } else {
-      splitFactor = 0.2 + 0.8 * t;                   // 0.2 -> 1 (newborn spins up)
-    }
+    if (t >= 1 || t < 0) ball.splitAnimAt = undefined;
+    else splitFactor = 1 - 0.8 * Math.sin(Math.PI * t); // 1 -> ~0.2 -> 1
   }
 
   // Move ball (world units). Scope Creep + the split beat scale the DISPLACEMENT,
@@ -191,21 +213,6 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
   const speed = vec2Length(ball.velocity);
   const rotationSpeed = speed * 0.015; // Radians per second based on speed
   ball.rotation += rotationSpeed * moveDt;
-
-  // Mitosis birth (issue #56): a boss minion grows from a tiny bud to full size
-  // over SPLIT_MS, so it looks like it is splitting off the boss (a cell dividing)
-  // rather than popping in. Animating the real radius means BOTH renderers show it
-  // (they draw ball.radius); a nascent bud barely colliding for ~1s is harmless.
-  if (ball.bornAt !== undefined && ball.bornRadius !== undefined) {
-    const t = (now - ball.bornAt) / SPLIT_MS;
-    if (t >= 1) {
-      ball.radius = ball.bornRadius;
-      ball.bornAt = undefined;
-    } else {
-      const e = 1 - (1 - Math.max(0, t)) * (1 - Math.max(0, t)); // easeOutQuad
-      ball.radius = Math.max(2, ball.bornRadius * (BIRTH_START_FRAC + (1 - BIRTH_START_FRAC) * e));
-    }
-  }
 
   updateBallEffects(ball.effects, dt, now);
 
