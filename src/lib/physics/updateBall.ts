@@ -37,6 +37,9 @@ import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWall
 
 /** Boss cell-division animation duration (issue #56): grow-in + speed dip. */
 const SPLIT_MS = 1000;
+/** A boss minion buds at this fraction of full size (visible, not a speck) and
+ *  grows to full over SPLIT_MS. Shared with the spawn in bossPhases. */
+export const BIRTH_START_FRAC = 0.4;
 
 // ---------------------------------------------------------------------------
 // Hot-loop notes
@@ -200,7 +203,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       ball.bornAt = undefined;
     } else {
       const e = 1 - (1 - Math.max(0, t)) * (1 - Math.max(0, t)); // easeOutQuad
-      ball.radius = Math.max(2, ball.bornRadius * (0.12 + 0.88 * e));
+      ball.radius = Math.max(2, ball.bornRadius * (BIRTH_START_FRAC + (1 - BIRTH_START_FRAC) * e));
     }
   }
 

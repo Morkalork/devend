@@ -13,6 +13,7 @@ import { LevelConfig } from "@/types/level";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 import { getBallType, getSpawnableBallTypes } from "@/lib/ballTypes";
 import { createBall } from "@/lib/initGame";
+import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
 
 let _bossAddCounter = 0;
 
@@ -71,19 +72,20 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
     // Divide the boss's own speed scale back out so minions are normal-paced.
     const speedScale = (boss.baseSpeed / minionType.baseSpeed) / bossSpeedScale;
     const minionRadius = boss.radius / radiusScale;
-    // Bud from just inside the boss and push straight out, so it reads as a cell
-    // splitting off: it spawns as a tiny bud (mitosis grow-in in updateBall) and
-    // separates outward from the parent.
+    // Bud on the boss's RIM (half outside its body), so the split is VISIBLE
+    // against the background instead of buried inside the same-coloured boss, then
+    // grows (updateBall) and separates outward: a cell dividing, not a pop-in.
     const angle = Math.random() * Math.PI * 2;
     const dir = { x: Math.cos(angle), y: Math.sin(angle) };
-    const position = { x: boss.position.x + dir.x * boss.radius * 0.35, y: boss.position.y + dir.y * boss.radius * 0.35 };
+    const spawnDist = boss.radius; // centre on the boss edge => it bulges outward
+    const position = { x: boss.position.x + dir.x * spawnDist, y: boss.position.y + dir.y * spawnDist };
     const child = createBall(
       minionType, position, speedScale, minionRadius,
       `${minionType.id}-minion-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
     );
     child.velocity = { x: dir.x * child.speed, y: dir.y * child.speed }; // separate outward from the parent
-    child.bornRadius = minionRadius;                    // full size to grow into
-    child.radius = Math.max(2, minionRadius * 0.12);    // start as a tiny bud
+    child.bornRadius = minionRadius;                     // full size to grow into
+    child.radius = Math.max(3, minionRadius * BIRTH_START_FRAC); // a visible bud, not a speck
     const nowMs = performance.now();
     child.bornAt = nowMs;
     child.splitAnimAt = nowMs;  // newborn: emerges slow, ramps up to full speed
