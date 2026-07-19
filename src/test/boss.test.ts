@@ -1,0 +1,108 @@
+/**
+ * Boss encounters (issue #56), Phase 1 slice "Release Deadline".
+ *
+ * Covers the two genuinely new pieces:
+ * - the MANDATORY-objective win gate (isBossGateSatisfied): a boss map cannot be
+ *   won until its objective is met; a non-boss map is never gated;
+ * - the phase controller (tickBossPhases): a phase fires exactly once when its
+ *   threshold is crossed, spawns its adds, and never deadlocks when nothing can
+ *   anchor a spawn.
+ */
+import { describe, it, expect, vi } from "vitest";
+vi.mock("@/lib/gameAudio", () => ({ playWallHitSound: () => {}, playCutClaimedSound: () => {}, playLevelCompleteSound: () => {} }));
+vi.mock("@/lib/gameHaptics", () => ({ vibrateBallLock: () => {}, vibrateFenceComplete: () => {}, vibrateFenceBreak: () => {} }));
+
+import { isBossGateSatisfied } from "@/lib/physics/applyCut";
+import { tickBossPhases } from "@/lib/physics/bossPhases";
+import { createBallEffectState } from "@/lib/ballEffects";
+import type { CanvasGameState } from "@/types/gameState";
+import type { LevelConfig } from "@/types/level";
+import type { Ball } from "@/types/game";
+import type { MapObjective } from "@/types/objective";
+
+const SHIP_IT: MapObjective = {
+  id: "ship-it", name: "Ship It", description: "d", kind: "lockCount", reward: 8, params: { count: 2 },
+};
+
+function gameWith(part: Partial<CanvasGameState>): CanvasGameState {
+  return {
+    lockedBallsCount: 0, superiorLockCount: 0, wallCount: 0, activePlaySeconds: 0,
+    objective: null, bossFiredPhases: [], balls: [], spaceGrid: null,
+    ...part,
+  } as unknown as CanvasGameState;
+}
+const bossLevel = (): LevelConfig => ({
+  id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 2,
+  boss: { name: "Release Deadline", intro: "x", objective: SHIP_IT, creepFromStart: true,
+          phases: [{ id: "hotfix", atSpaceRemaining: 50, spawnAdds: 1 }] },
+});
+
+function activeBall(id: string): Ball {
+  return {
+    id, typeId: "red", state: "active", speed: 100, baseSpeed: 100, topSpeed: 100, radius: 12,
+    position: { x: 300, y: 300 }, velocity: { x: 100, y: 0 }, regionId: "r", color: "#f00",
+    rotation: 0, flashIntensity: 0, effects: createBallEffectState(), wonSpinSpeed: 0, wonTime: 0,
+    assimScale: 1, assimColorFade: 0, ability: "none", lockMultiplier: 1, spawnTime: 0, minimumSpeed: 80,
+  } as unknown as Ball;
+}
+
+describe("isBossGateSatisfied (#56 mandatory win gate)", () => {
+  it("never gates a non-boss map", () => {
+    const level: LevelConfig = { id: "l", level: 12, sizeThreshold: 10, expectedCuts: 5, points: 20, maxBalls: 2 };
+    expect(isBossGateSatisfied(gameWith({ lockedBallsCount: 0 }), level)).toBe(true);
+  });
+
+  it("blocks the win until the boss objective is met, then allows it", () => {
+    const level = bossLevel();
+    // Clearing space with < 2 locks must NOT satisfy the gate.
+    expect(isBossGateSatisfied(gameWith({ objective: SHIP_IT, lockedBallsCount: 0 }), level)).toBe(false);
+    expect(isBossGateSatisfied(gameWith({ objective: SHIP_IT, lockedBallsCount: 1 }), level)).toBe(false);
+    // Meeting the objective (2 locks) opens the gate.
+    expect(isBossGateSatisfied(gameWith({ objective: SHIP_IT, lockedBallsCount: 2 }), level)).toBe(true);
+    expect(isBossGateSatisfied(gameWith({ objective: SHIP_IT, lockedBallsCount: 3 }), level)).toBe(true);
+  });
+
+  it("fails open if a boss somehow has no objective wired (never soft-locks)", () => {
+    const level = bossLevel();
+    expect(isBossGateSatisfied(gameWith({ objective: null }), level)).toBe(true);
+  });
+});
+
+describe("tickBossPhases (#56 phase controller)", () => {
+  const level: LevelConfig = {
+    id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 2,
+    boss: { name: "B", intro: "x", objective: SHIP_IT, phases: [{ id: "p", atSeconds: 3, spawnAdds: 1 }] },
+  };
+
+  it("fires once at the threshold, spawns the add, and does not re-fire", () => {
+    const game = gameWith({ activePlaySeconds: 5, balls: [activeBall("a")] });
+    tickBossPhases(game, level, 10);
+    expect(game.bossFiredPhases).toContain("p");
+    expect(game.balls.length).toBe(2); // one add spawned
+
+    tickBossPhases(game, level, 10); // same phase must not fire again
+    expect(game.balls.length).toBe(2);
+  });
+
+  it("does not fire before the threshold", () => {
+    const game = gameWith({ activePlaySeconds: 1, balls: [activeBall("a")] });
+    tickBossPhases(game, level, 10);
+    expect(game.bossFiredPhases).toEqual([]);
+    expect(game.balls.length).toBe(1);
+  });
+
+  it("never deadlocks: with no active anchor it still fires but spawns nothing", () => {
+    const won = { ...activeBall("a"), state: "won" } as Ball;
+    const game = gameWith({ activePlaySeconds: 5, balls: [won] });
+    tickBossPhases(game, level, 10);
+    expect(game.bossFiredPhases).toContain("p"); // marked fired
+    expect(game.balls.length).toBe(1);           // but nothing spawned
+  });
+
+  it("is a no-op on non-boss maps", () => {
+    const plain: LevelConfig = { id: "l", level: 11, sizeThreshold: 10, expectedCuts: 5, points: 20, maxBalls: 2 };
+    const game = gameWith({ activePlaySeconds: 99, balls: [activeBall("a")] });
+    tickBossPhases(game, plain, 11);
+    expect(game.balls.length).toBe(1);
+  });
+});

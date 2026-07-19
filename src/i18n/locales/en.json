@@ -257,7 +257,8 @@
     "freezeUsesLeft": "{{count}} freezes left this map",
     "pickupFreeShopItem": "Free store item!",
     "pickupExtraLife": "+1 Life",
-    "pickupRainbow": "Rainbow ball!"
+    "pickupRainbow": "Rainbow ball!",
+    "bossIntroTitle": "Boss Fight: {{name}}"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",

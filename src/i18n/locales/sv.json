@@ -255,7 +255,8 @@
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
     "pickupFreeShopItem": "Gratis butiksvara!",
     "pickupExtraLife": "+1 liv",
-    "pickupRainbow": "Regnbågsboll!"
+    "pickupRainbow": "Regnbågsboll!",
+    "bossIntroTitle": "Bosstrid: {{name}}"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",

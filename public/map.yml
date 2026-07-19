@@ -329,32 +329,47 @@ levels:
         height: 130
   - id: level-10
     level: 10
-    sizeThreshold: 12
+    sizeThreshold: 15
     expectedCuts: 16
     points: 20
     variety: 0
     randomShapes: 0
-    maxBalls: 3
+    maxBalls: 2
+    timeLimit: 50
+    # Boss (issue #56): the first boss, gating the Promotion. Clearing space is
+    # not enough here, the objective is a MANDATORY win gate; the deadline is the
+    # fail state. Scope Creep runs hot from second 0 and a hotfix ball lands at
+    # the halfway mark. Beating it routes into the once-per-run Promotion draft.
+    boss:
+      name: Release Deadline
+      intro: >-
+        Your first boss. Ship before the deadline or it all rolls back. Scope
+        Creep runs hot from the very first second, and clearing the board is not
+        enough on a boss: you must LOCK 2 balls to ship. A hotfix lands halfway
+        through, so keep a pocket ready.
+      creepFromStart: true
+      objective:
+        id: ship-it
+        name: Ship It
+        description: Lock 2 balls before the deadline.
+        clarify: >-
+          On a boss, clearing space alone will not complete the map. Seal 2 balls
+          in pockets to ship. Running out of time is the fail state.
+        kind: lockCount
+        reward: 8
+        params:
+          count: 2
+      phases:
+        - id: hotfix
+          atSpaceRemaining: 50
+          spawnAdds: 1
     entities:
       - id: pillar
         kind: wall
         shape: circle
         cx: 450
         cy: 450
-        radius: 75
-      - id: mirror-ne
-        kind: wall
-        shape: polygon
-        points:
-          - - 590
-            - 160
-          - - 630
-            - 120
-          - - 800
-            - 290
-          - - 760
-            - 330
-        mirror: true
+        radius: 80
       - id: floor-sweep
         kind: mover
         shape: circle
@@ -363,7 +378,7 @@ levels:
         radius: 40
         axis: horizontal
         range: 500
-        speed: 140
+        speed: 120
         phase: 0
   - id: level-11
     level: 11

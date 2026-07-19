@@ -1,3 +1,6 @@
+import type { MapObjective } from "@/types/objective";
+import type { MapMutator } from "@/types/mapMutator";
+
 export interface BallConfig {
   id: string;
   initialSpeed: number;
@@ -139,10 +142,54 @@ export interface LevelConfig {
    * src/lib/mapSlots.ts.
    */
   slots?: EntitySlot[];
+  /**
+   * Boss encounter (issue #56). When set, this is a boss map: its objective is a
+   * MANDATORY win gate, its mutator (if any) is forced, and its phases fire as
+   * the fight escalates. Authored set-piece, so it bypasses the procedural roll.
+   */
+  boss?: BossConfig;
 }
 
 export interface LevelData {
   levels: LevelConfig[];
+}
+
+// ── Boss encounters (issue #56) ──────────────────────────────────────────────
+// A boss is an authored map whose win condition is a MANDATORY objective (the
+// #55 schema, promoted from optional to a win gate), optionally with a forced
+// #54 mutator and threshold-triggered phases. Bosses live at levels 10/20/30/40
+// and, being authored, bypass the level-11 procedural roll.
+
+/** A threshold-triggered boss event (fires once when its condition is crossed). */
+export interface BossPhase {
+  id: string;
+  /** Fire when space remaining (%) drops to or below this. */
+  atSpaceRemaining?: number;
+  /** Fire when active-play seconds reaches this (alternative trigger). */
+  atSeconds?: number;
+  /** Spawn this many extra balls ("adds") when the phase fires. */
+  spawnAdds?: number;
+}
+
+/**
+ * Boss configuration for a level. `objective` is the MANDATORY win gate (a map
+ * is not cleared until the normal space threshold AND this are both met).
+ * `mutator` (optional) is forced on for the whole fight. Both reuse the #54/#55
+ * authored schemas directly (those are pure type modules, so no import cycle).
+ */
+export interface BossConfig {
+  /** Boss name (English source of truth; locale override via content.bosses.<id>). */
+  name: string;
+  /** One-time intro card body text shown when the boss map first loads. */
+  intro: string;
+  /** The mandatory objective that gates the win (a #55 MapObjective). */
+  objective: MapObjective;
+  /** Forced environmental modifier for the whole fight (a #54 MapMutator). */
+  mutator?: MapMutator;
+  /** When true, Scope Creep runs from second 0 (no grace) for extra pressure. */
+  creepFromStart?: boolean;
+  /** Phase events fired as the fight escalates. */
+  phases?: BossPhase[];
 }
 
 // ── Procedural slots (issue #53) ─────────────────────────────────────────────

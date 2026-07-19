@@ -255,7 +255,8 @@
     "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa",
     "pickupFreeShopItem": "¡Artículo gratis!",
     "pickupExtraLife": "+1 vida",
-    "pickupRainbow": "¡Bola arcoíris!"
+    "pickupRainbow": "¡Bola arcoíris!",
+    "bossIntroTitle": "Combate de jefe: {{name}}"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",

@@ -120,6 +120,11 @@ export function evaluateObjective(obj: ActiveMapObjective, snap: ObjectiveSnapsh
       const target = Math.max(1, Math.round(obj.params?.seconds ?? 30));
       return { kind: obj.kind, mode: "limit", current: Math.floor(snap.activeSeconds), target, met: snap.activeSeconds <= target };
     }
+    default:
+      // Unreachable for pool objectives (parse validates kind); guards an
+      // authored boss objective (#56) with a bad kind against a crash, treating
+      // it as not-yet-met (a loud, obvious failure) rather than silently passing.
+      return { kind: obj.kind, mode: "accumulate", current: 0, target: 1, met: false };
   }
 }
 

@@ -82,8 +82,11 @@ export interface CanvasGameState {
   mapMutator: ActiveMapMutator | null;
   /** Active per-map objective (issue #55), or null. Optional/non-failing goal
    *  read at clear to award a bonus under the per-map cap (evaluated purely from
-   *  existing counters). */
+   *  existing counters). On a boss map (issue #56) this same field holds the
+   *  MANDATORY objective that gates the win. */
   objective: ActiveMapObjective | null;
+  /** Boss phase ids already fired this map (issue #56), so each fires once. */
+  bossFiredPhases: string[];
   /** Cron Job: performance.now() of the last auto-freeze (0 = clock not yet started this map). */
   lastAutoFreezeAt: number;
 

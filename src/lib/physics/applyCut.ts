@@ -32,7 +32,7 @@ import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
-import { objectiveClearReward } from "@/lib/mapObjectives";
+import { objectiveClearReward, evaluateObjective } from "@/lib/mapObjectives";
 import { wasteCapturedPickups } from "@/lib/pickups";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
@@ -295,11 +295,33 @@ export function evaluateWinConditions(
     handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
     return null;
   }
-  if (areAllBallsWon(game)) {
+  // Boss maps (issue #56): the objective is a MANDATORY win gate. Neither the
+  // all-balls-locked path nor the space-clear path may complete the map until it
+  // is met. The deadline above still fires as the boss fail state.
+  const bossGateOk = isBossGateSatisfied(game, level);
+  if (areAllBallsWon(game) && bossGateOk) {
     triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
     return null;
   }
+  if (!bossGateOk) return null;
   return checkSpaceWin(game, level, callbacks);
+}
+
+/**
+ * On a boss map, is the mandatory objective met? True for non-boss maps (no
+ * gate). Evaluated purely from live counters, same snapshot as the clear reward.
+ */
+export function isBossGateSatisfied(game: CanvasGameState, level: LevelConfig): boolean {
+  if (!level.boss) return true;
+  const obj = game.objective;
+  if (!obj) return true; // no objective wired: fail open rather than soft-lock
+  return evaluateObjective(obj, {
+    lockedBalls: game.lockedBallsCount,
+    superiorLocks: game.superiorLockCount,
+    cuts: game.wallCount,
+    par: level.expectedCuts,
+    activeSeconds: game.activePlaySeconds,
+  }).met;
 }
 
 type SpaceWinCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setClearedPercent' | 'setPushMode'>;

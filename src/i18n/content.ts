@@ -62,6 +62,10 @@ export const contentText = {
   doorClarify: (t: TFunction, d: WithId & { clarify?: string }) =>
     field(t, 'doors', d.id, 'clarify', d.clarify),
 
+  /** Boss (map.yml boss block, issue #56): keyed on the level id. */
+  bossName: (t: TFunction, b: WithId & { name?: string }) => field(t, 'bosses', b.id, 'name', b.name),
+  bossIntro: (t: TFunction, b: WithId & { intro?: string }) => field(t, 'bosses', b.id, 'intro', b.intro),
+
   /** Map objective (objectives.yml): the per-map optional goal. */
   objectiveName: (t: TFunction, o: WithId & { name?: string }) => field(t, 'mapObjectives', o.id, 'name', o.name),
   objectiveDesc: (t: TFunction, o: WithId & { description?: string }) =>

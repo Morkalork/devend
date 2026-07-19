@@ -20,6 +20,7 @@ import { BottomBarDetailsPanel } from './BottomBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
+import { contentText } from '@/i18n/content';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
 import { selectMapMutator } from '@/lib/mapMutators';
@@ -193,6 +194,13 @@ export function GameScreen({
   const [creepIntroSeen, setCreepIntroSeen] = useState(() => {
     try { return !!localStorage.getItem('devend_creep_tutorial_seen'); } catch { return false; }
   });
+  // Boss intro seen flag, keyed per boss map so each boss teaches its rules once.
+  const [bossIntroSeen, setBossIntroSeen] = useState(false);
+  useEffect(() => {
+    if (!level.boss) { setBossIntroSeen(true); return; }
+    try { setBossIntroSeen(!!localStorage.getItem(`devend_boss_intro_${level.id}`)); }
+    catch { setBossIntroSeen(false); }
+  }, [level.boss, level.id]);
 
   // Game state for top bar
   const [gameState, setGameState] = useState<GameStateInfo>({
@@ -245,25 +253,26 @@ export function GameScreen({
   // Hard Deadline door: removes the grace window, so the first surge lands at
   // second 0 of active play.
   const scopeCreepConfig = useMemo(() => ({
-    graceSeconds: activeModifiers.scopeCreepImmediate > 0 ? 0 : config.scope_creep.grace_seconds,
+    graceSeconds: (activeModifiers.scopeCreepImmediate > 0 || level.boss?.creepFromStart) ? 0 : config.scope_creep.grace_seconds,
     stepSeconds: config.scope_creep.step_seconds,
     stepPercent: config.scope_creep.step_percent,
     maxSteps: config.scope_creep.max_steps,
-  }), [config.scope_creep, activeModifiers.scopeCreepImmediate]);
+  }), [config.scope_creep, activeModifiers.scopeCreepImmediate, level.boss]);
 
   // Per-map mutator (issue #54): one environmental modifier rolled per eligible
-  // map (level 11+) from the run seed, so it differs every normal run and is
-  // shared per Daily seed. Same seed context convention as doors.
+  // map (level 11+) from the run seed. A boss map (#56) forces its authored
+  // mutator instead of rolling.
   const mapMutator = useMemo(
-    () => selectMapMutator(levelNumber, getRunRng(`mapMutator:${level.id}`)),
-    [levelNumber, level.id],
+    () => level.boss?.mutator ?? selectMapMutator(levelNumber, getRunRng(`mapMutator:${level.id}`)),
+    [levelNumber, level.id, level.boss],
   );
 
   // Per-map objective (issue #55): an optional goal rolled 0-or-1 per eligible
-  // map from the run seed. Live progress is a pure read of the mirrored counters.
+  // map from the run seed. A boss map (#56) uses its authored objective as the
+  // MANDATORY win gate instead. Live progress is a pure read of mirrored counters.
   const mapObjective = useMemo(
-    () => selectMapObjective(levelNumber, getRunRng(`objective:${level.id}`)),
-    [levelNumber, level.id],
+    () => level.boss?.objective ?? selectMapObjective(levelNumber, getRunRng(`objective:${level.id}`)),
+    [levelNumber, level.id, level.boss],
   );
   const objectiveProgress = useMemo(
     () => mapObjective
@@ -327,12 +336,17 @@ export function GameScreen({
     levelNumber === TIME_LIMIT_EXEMPT_MAX_LEVEL + 1 && showTimeLimitTutorial &&
     !showMoverOverlay && !showBreakIntro;
   const showCreepOverlay =
-    !creepIntroSeen && gameState.creepPercent > 0 &&
+    !creepIntroSeen && gameState.creepPercent > 0 && !level.boss &&
+    !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
+  // Boss intro card (issue #56): a one-time-per-boss explainer shown when a boss
+  // map first loads, before anything else, so the fight's rules are clear.
+  const showBossOverlay =
+    !!level.boss && !bossIntroSeen &&
     !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
   const modalOverlayActive =
     topPanelOpen || bottomPanelOpen || menuOpen ||
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
-    showTimeLimitOverlay || showCreepOverlay;
+    showTimeLimitOverlay || showCreepOverlay || showBossOverlay;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -637,6 +651,20 @@ export function GameScreen({
         title={t('game.creepTutorialTitle')}
         body={t('game.creepTutorialBody')}
       />
+
+      {/* Boss intro card (issue #56) — once per boss map */}
+      {level.boss && (
+        <TutorialOverlay
+          visible={showBossOverlay}
+          onDismiss={() => {
+            setBossIntroSeen(true);
+            try { localStorage.setItem(`devend_boss_intro_${level.id}`, '1'); } catch { /* ignore */ }
+          }}
+          accentColor="#ff4d6d"
+          title={t('game.bossIntroTitle', { name: contentText.bossName(t, { id: level.id, name: level.boss.name }) })}
+          body={contentText.bossIntro(t, { id: level.id, intro: level.boss.intro })}
+        />
+      )}
 
       {/* Top bar tutorial — map 2, first run only */}
       <TutorialOverlay

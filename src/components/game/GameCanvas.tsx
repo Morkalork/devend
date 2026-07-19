@@ -31,6 +31,7 @@ import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
 import { isTimingExempt } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
+import { tickBossPhases } from "@/lib/physics/bossPhases";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
 import { TutorialStep } from "@/types/game";
@@ -396,6 +397,7 @@ export function GameCanvas({
     creepConfig: DEFAULT_SCOPE_CREEP,
     mapMutator: mapMutator ?? null,
     objective: objective ?? null,
+    bossFiredPhases: [],
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -794,6 +796,7 @@ export function GameCanvas({
       game.creepConfig = scopeCreep ?? DEFAULT_SCOPE_CREEP;
       game.mapMutator = mapMutator ?? null;
       game.objective = objective ?? null;
+      game.bossFiredPhases = [];
       setCreepPercent(0);
       setActiveSeconds(0);
       setBallCount(game.balls.length || 1);
@@ -1031,7 +1034,7 @@ export function GameCanvas({
       // the win check, so the top bar can never stall showing CLEAR.
       checkWinCondition: () =>
         evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
-      spawnTimedBalls: () => tickRainbowSpawns(game, levelNumber),
+      spawnTimedBalls: () => { tickRainbowSpawns(game, levelNumber); tickBossPhases(game, level, levelNumber); },
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
       // Deferred push prompt: the loop already set game.pushMode; mirror it
