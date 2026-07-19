@@ -31,7 +31,7 @@ import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
 import { isTimingExempt } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
-import { tickBossPhases } from "@/lib/physics/bossPhases";
+import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
 import { TutorialStep } from "@/types/game";
@@ -108,6 +108,11 @@ export interface GameStateInfo {
   lockedBalls: number;
   /** Superior (tight-pocket) locks this map, for the #55 objective HUD. */
   superiorLocks: number;
+  /** Boss ball state (issue #56), for the boss banner + defeatBoss objective. */
+  bossActive: boolean;
+  bossHp: number;
+  bossMaxHp: number;
+  bossDefeated: boolean;
   /** Feature Freeze tap-freezes left this map (for the HUD counter). */
   freezeUsesRemaining: number;
   pushMode: "none" | "prompt" | "pushing";
@@ -326,6 +331,8 @@ export function GameCanvas({
   const [screenFlash, setScreenFlash] = useState<"none" | "red">("none");
   const [isRecovering, setIsRecovering] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  // Boss ball HUD mirror (issue #56): updated on init and on every boss hit/defeat.
+  const [bossHud, setBossHud] = useState({ active: false, hp: 0, maxHp: 0, defeated: false });
   const [isPlayerDragging, setIsPlayerDragging] = useState(false);
   const [canvasOffsetTop, setCanvasOffsetTop] = useState(0);
   const [canvasOffsetLeft, setCanvasOffsetLeft] = useState(0);
@@ -398,6 +405,12 @@ export function GameCanvas({
     mapMutator: mapMutator ?? null,
     objective: objective ?? null,
     bossFiredPhases: [],
+    bossActive: false,
+    bossHp: 0,
+    bossMaxHp: 0,
+    bossDefeated: false,
+    bossMinionCount: 0,
+    bossHitAt: 0,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -765,6 +778,14 @@ export function GameCanvas({
       game.regions            = data.regions;
       if (game.spaceGrid) paintCellRegionIds(game.spaceGrid, game.regions);
       game.fastestBallId      = data.fastestBallId;
+      // Boss ball (issue #56): seed the fight/HUD state from the freshly built map.
+      game.bossActive         = data.bossActive;
+      game.bossHp             = data.bossHp;
+      game.bossMaxHp          = data.bossMaxHp;
+      game.bossDefeated       = false;
+      game.bossMinionCount    = 0;
+      game.bossHitAt          = 0;
+      setBossHud({ active: data.bossActive, hp: data.bossHp, maxHp: data.bossMaxHp, defeated: false });
       // Cold Boot: the map boots frozen, all balls hold still for a planning
       // beat. Same frozenUntil path as tap-freeze; freezeReadyAt is left unset
       // so the spawn thaw carries no re-freeze cooldown.
@@ -971,6 +992,7 @@ export function GameCanvas({
     // Build callbacks object for extracted physics functions
     const callbacks: GameCallbacks = {
       setLockedBallsCount,
+      onBossState: (hp: number, maxHp: number, defeated: boolean) => setBossHud({ active: !defeated, hp, maxHp, defeated }),
       setRemainingPercent,
       setTutorialCutMade,
       setPushMode,
@@ -1034,7 +1056,7 @@ export function GameCanvas({
       // the win check, so the top bar can never stall showing CLEAR.
       checkWinCondition: () =>
         evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
-      spawnTimedBalls: () => { tickRainbowSpawns(game, levelNumber); tickBossPhases(game, level, levelNumber); },
+      spawnTimedBalls: () => { tickRainbowSpawns(game, levelNumber); tickBossPhases(game, level, levelNumber); tickBossSpit(game, level, levelNumber); },
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
       // Deferred push prompt: the loop already set game.pushMode; mirror it
@@ -1200,6 +1222,10 @@ export function GameCanvas({
         // Superior locks change only when a ball locks, which also bumps
         // lockedBallsCount (an effect dep), so reading the live ref here stays fresh.
         superiorLocks: gameRef.current.superiorLockCount,
+        bossActive: bossHud.active,
+        bossHp: bossHud.hp,
+        bossMaxHp: bossHud.maxHp,
+        bossDefeated: bossHud.defeated,
         freezeUsesRemaining,
         pushMode,
         creepPercent,
@@ -1208,7 +1234,7 @@ export function GameCanvas({
         onBankAndContinue: handleBankAndContinue,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, onGameStateChange, lockedBallsCount, freezeUsesRemaining]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

@@ -334,35 +334,38 @@ levels:
     points: 20
     variety: 0
     randomShapes: 0
-    maxBalls: 2
-    timeLimit: 50
-    # Boss (issue #56): the first boss, gating the Promotion. Clearing space is
-    # not enough here, the objective is a MANDATORY win gate; the deadline is the
-    # fail state. Scope Creep runs hot from second 0 and a hotfix ball lands at
-    # the halfway mark. Beating it routes into the once-per-run Promotion draft.
+    maxBalls: 1
+    timeLimit: 65
+    # Boss (issue #56): the first boss, gating the Promotion. The Release Candidate
+    # is a distinct big/fast antagonist you must DEFEAT (trap it 3 times) - clearing
+    # space alone will not complete the map (mandatory win gate), and the deadline
+    # is the fail state. Scope Creep runs hot from second 0. Beating it routes into
+    # the once-per-run Promotion draft.
     boss:
       name: Release Deadline
       intro: >-
-        Your first boss. Ship before the deadline or it all rolls back. Scope
-        Creep runs hot from the very first second, and clearing the board is not
-        enough on a boss: you must LOCK 2 balls to ship. A hotfix lands halfway
-        through, so keep a pocket ready.
+        Your first boss. The Release Candidate is loose: a big, fast ball that
+        keeps breaking out of your traps and spitting hotfixes. Scope Creep runs
+        hot from the first second. Clearing the board is not enough, you must
+        DEFEAT it (trap it three times) before the deadline to ship.
       creepFromStart: true
       objective:
-        id: ship-it
-        name: Ship It
-        description: Lock 2 balls before the deadline.
+        id: defeat-rc
+        name: Defeat the Release Candidate
+        description: Trap the boss ball to ship it.
         clarify: >-
-          On a boss, clearing space alone will not complete the map. Seal 2 balls
-          in pockets to ship. Running out of time is the fail state.
-        kind: lockCount
-        reward: 8
-        params:
-          count: 2
-      phases:
-        - id: hotfix
-          atSpaceRemaining: 50
-          spawnAdds: 1
+          The Release Candidate breaks out of the first traps, getting faster and
+          smaller each time. Trap it three times to defeat it. Running out of time
+          is the fail state.
+        kind: defeatBoss
+        reward: 12
+      bossBall:
+        hp: 3
+        radiusScale: 2.1
+        speedScale: 1.25
+        color: "#ff2d55"
+        spitIntervalSeconds: 9
+        maxMinions: 4
     entities:
       - id: pillar
         kind: wall

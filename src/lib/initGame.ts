@@ -128,6 +128,10 @@ export interface InitialGameData {
   gridRegions: GridRegion[];
   regions: Region[];
   fastestBallId: string | null;
+  // Boss ball (issue #56): seeded when the level has a boss.bossBall.
+  bossActive: boolean;
+  bossHp: number;
+  bossMaxHp: number;
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
@@ -428,6 +432,28 @@ export function createInitialGameData(
     createBall(type, findSpacedSpawn(ballRadius), speedScale, ballRadius, `${type.id}-${i}`, spawnTime, 0),
   );
 
+  // Boss ball (issue #56): a distinct big/fast antagonist spawned alongside the
+  // normal balls. It must be defeated (trapped hp times) to clear a boss map.
+  let bossActive = false, bossHp = 0, bossMaxHp = 0;
+  const bossBall = level.boss?.bossBall;
+  if (bossBall) {
+    const baseType = getBallType("red") ?? selectedTypes[0];
+    if (baseType) {
+      const hp = Math.max(1, Math.round(bossBall.hp ?? 3));
+      const bossRadius = ballRadius * (bossBall.radiusScale ?? 2);
+      const boss = createBall(
+        baseType, findSpacedSpawn(bossRadius), speedScale * (bossBall.speedScale ?? 1.2),
+        bossRadius, "boss-rc", spawnTime, 0,
+      );
+      boss.isBoss = true;
+      boss.bossHp = hp;
+      boss.bossMaxHp = hp;
+      boss.color = bossBall.color ?? "#ff2d55";
+      balls.push(boss);
+      bossActive = true; bossHp = hp; bossMaxHp = hp;
+    }
+  }
+
   // Runtime Optimisation tier-3 option B: cripple ONE random ball each map. All
   // its speed fields scale (physics normalises toward baseSpeed, so scaling only
   // velocity would be undone).
@@ -636,5 +662,8 @@ export function createInitialGameData(
     gridRegions,
     regions,
     fastestBallId,
+    bossActive,
+    bossHp,
+    bossMaxHp,
   };
 }

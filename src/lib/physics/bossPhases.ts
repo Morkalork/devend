@@ -39,6 +39,52 @@ export function tickBossPhases(game: CanvasGameState, level: LevelConfig, levelN
   }
 }
 
+/**
+ * The boss spits a minion every `spitIntervalSeconds` of active play (capped at
+ * `maxMinions` total this map). Mirrors the rainbow spitter, but minions spawn at
+ * NORMAL ball speed/size (the boss's own scale is divided out) so they read as its
+ * spawn, not more bosses.
+ */
+export function tickBossSpit(game: CanvasGameState, level: LevelConfig, levelNumber: number): void {
+  const bb = level.boss?.bossBall;
+  if (!bb) return;
+  const interval = bb.spitIntervalSeconds ?? 0;
+  if (interval <= 0) return;
+  const maxMinions = bb.maxMinions ?? 4;
+  if ((game.bossMinionCount ?? 0) >= maxMinions) return;
+
+  const bosses = game.balls.filter((b) => b.isBoss && b.state === "active" && b.speed > 0);
+  if (bosses.length === 0) return;
+  const spawnable = getSpawnableBallTypes(levelNumber);
+  if (spawnable.length === 0) return;
+
+  const bossSpeedScale = bb.speedScale ?? 1.2;
+  const radiusScale = bb.radiusScale ?? 2;
+  for (const boss of bosses) {
+    if ((game.bossMinionCount ?? 0) >= maxMinions) break;
+    const anchor = boss.spawnActiveSeconds ?? 0;
+    const due = Math.floor((game.activePlaySeconds - anchor) / interval);
+    if (due <= (boss.rainbowSpawnCount ?? 0)) continue; // reuse the spawn-count field
+
+    const bossType = getBallType(boss.typeId);
+    // Divide the boss's own speed scale back out so minions are normal-paced.
+    const speedScale = bossType && bossType.baseSpeed > 0 ? (boss.baseSpeed / bossType.baseSpeed) / bossSpeedScale : 1;
+    const minionRadius = boss.radius / radiusScale;
+    const type = spawnable[Math.floor(Math.random() * spawnable.length)];
+    const offset = boss.radius * 0.75;
+    const angle = Math.random() * Math.PI * 2;
+    const position = { x: boss.position.x + Math.cos(angle) * offset, y: boss.position.y + Math.sin(angle) * offset };
+    const child = createBall(
+      type, position, speedScale, minionRadius,
+      `${type.id}-minion-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
+    );
+    child.regionId = boss.regionId;
+    game.balls.push(child);
+    game.bossMinionCount = (game.bossMinionCount ?? 0) + 1;
+    boss.rainbowSpawnCount = due;
+  }
+}
+
 /** Spawn `n` extra balls off live active balls (inherits their region + scale). */
 function spawnAdds(game: CanvasGameState, levelNumber: number, n: number): void {
   const spawnable = getSpawnableBallTypes(levelNumber);

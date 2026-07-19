@@ -20,6 +20,7 @@ import { BottomBarDetailsPanel } from './BottomBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
+import { BossBanner } from './BossBanner';
 import { contentText } from '@/i18n/content';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
@@ -208,6 +209,10 @@ export function GameScreen({
     spaceRemaining: 100,
     lockedBalls: 0,
     superiorLocks: 0,
+    bossActive: false,
+    bossHp: 0,
+    bossMaxHp: 0,
+    bossDefeated: false,
     freezeUsesRemaining: 0,
     pushMode: "none",
     creepPercent: 0,
@@ -282,9 +287,10 @@ export function GameScreen({
           cuts: gameState.cutsUsed,
           par: level.expectedCuts,
           activeSeconds: gameState.activeSeconds,
+          bossDefeated: gameState.bossDefeated,
         })
       : null,
-    [mapObjective, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, gameState.activeSeconds, level.expectedCuts],
+    [mapObjective, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, gameState.activeSeconds, level.expectedCuts, gameState.bossDefeated],
   );
   
   // Get owned upgrade details
@@ -293,7 +299,11 @@ export function GameScreen({
   // Build readout for the bottom bar: owned upgrades per archetype tag.
   const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
 
-  const accentColor = externalAccentColor || getAccentColor();
+  // Boss maps (issue #56) re-skin the whole arena danger-red: accentColor threads
+  // into the CRT background, board, fences and UI, so this one override recolours
+  // everything at once.
+  const BOSS_ACCENT = '#ff2d55';
+  const accentColor = level.boss ? BOSS_ACCENT : (externalAccentColor || getAccentColor());
 
   const [topPanelOpen, setTopPanelOpen] = useState(false);
   const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
@@ -368,7 +378,20 @@ export function GameScreen({
       
       {/* Memory Parallax Layer - between CRT and game */}
       <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />
-      
+
+      {/* Boss nameplate (issue #56): name + deadline countdown + HP bar */}
+      {level.boss && gameState.bossActive && (
+        <BossBanner
+          name={contentText.bossName(t, { id: level.id, name: level.boss.name })}
+          timeLimit={mapTimeLimit}
+          activeSeconds={gameState.activeSeconds}
+          hp={gameState.bossHp}
+          maxHp={gameState.bossMaxHp}
+          defeated={gameState.bossDefeated}
+          accentColor={accentColor}
+        />
+      )}
+
       <div className="absolute inset-0 flex flex-col z-10">
         {/* Game Top Bar - Two rows */}
         <div>

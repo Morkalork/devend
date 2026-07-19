@@ -87,6 +87,19 @@ export interface CanvasGameState {
   objective: ActiveMapObjective | null;
   /** Boss phase ids already fired this map (issue #56), so each fires once. */
   bossFiredPhases: string[];
+  // ── Boss ball HUD/fight state (issue #56) ─────────────────────────────────
+  /** True while a boss ball is in play (drives the boss banner). */
+  bossActive: boolean;
+  /** Boss hits remaining (mirrors the boss ball's bossHp). */
+  bossHp: number;
+  /** Boss starting HP, for the health bar. */
+  bossMaxHp: number;
+  /** True once the boss's last HP is trapped (the mandatory win gate reads this). */
+  bossDefeated: boolean;
+  /** Minions the boss has spit this map (capped by the boss config). */
+  bossMinionCount: number;
+  /** performance.now() of the last boss hit, for the on-screen hit telegraph. */
+  bossHitAt: number;
   /** Cron Job: performance.now() of the last auto-freeze (0 = clock not yet started this map). */
   lastAutoFreezeAt: number;
 

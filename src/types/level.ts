@@ -190,6 +190,26 @@ export interface BossConfig {
   creepFromStart?: boolean;
   /** Phase events fired as the fight escalates. */
   phases?: BossPhase[];
+  /** The boss antagonist ball. When set, a distinct boss ball spawns and must be
+   *  defeated (the objective should be `defeatBoss`). */
+  bossBall?: BossBall;
+}
+
+/** The boss antagonist ("Release Candidate"): big, fast, spits minions, and takes
+ *  `hp` traps to defeat (it breaks out of the first hp-1 traps, escalating). */
+export interface BossBall {
+  /** Traps needed to defeat it (each non-final trap makes it break out). Default 3. */
+  hp?: number;
+  /** Radius multiplier vs a normal ball (default 2). */
+  radiusScale?: number;
+  /** Speed multiplier vs a normal ball (default 1.2). */
+  speedScale?: number;
+  /** Fixed menacing colour (hex with #). Defaults to a boss red. */
+  color?: string;
+  /** Seconds between minion spits (0 = never spits). */
+  spitIntervalSeconds?: number;
+  /** Cap on total minions spit this map (default 4). */
+  maxMinions?: number;
 }
 
 // ── Procedural slots (issue #53) ─────────────────────────────────────────────

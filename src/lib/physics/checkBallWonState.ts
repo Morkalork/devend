@@ -10,9 +10,10 @@ import {
   isRegionTrulySealed,
   floodRemovedEnclosure,
   gridIndexToWorld,
+  isPositionActive,
   CellState,
 } from "@/lib/spaceGrid";
-import { vec2Length, lineSegmentIntersection } from "@/lib/polygon";
+import { vec2Length, lineSegmentIntersection, pointInPolygon, polygonBounds } from "@/lib/polygon";
 import { traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 import { effectiveBallSpeedFactor } from "@/lib/ballTypes";
 import { LockDustParticle } from "@/types/game";
@@ -21,6 +22,57 @@ import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
 import { getLockValue, getLockQuality } from "@/lib/scoring";
 import { claimPickupsInPocket } from "@/lib/pickups";
+
+// ── Boss ball helpers (issue #56) ────────────────────────────────────────────
+
+/** True when trapping this boss should merely DAMAGE it (HP to spare), not lock it. */
+export function bossTrapIsDamage(ball: Ball): boolean {
+  return !!ball.isBoss && (ball.bossHp ?? 1) > 1;
+}
+
+/** Escalate a boss after a hit: faster and smaller (a felt phase change). Pure. */
+export function escalateBoss(ball: Ball): void {
+  const up = 1.12, shrink = 0.88, minR = 12;
+  ball.speed *= up;
+  ball.baseSpeed *= up;
+  ball.topSpeed *= up;
+  ball.minimumSpeed = (ball.minimumSpeed ?? 0) * up;
+  ball.velocity = { x: ball.velocity.x * up, y: ball.velocity.y * up };
+  ball.radius = Math.max(minR, ball.radius * shrink);
+}
+
+/**
+ * A boss got trapped but still has HP: break it out. Escalate it, then reposition
+ * to a comfortably-open active spot (never a soon-to-lock sliver) and reassign its
+ * region so the ownership invariant holds (regionOwnership reconciles the rest).
+ */
+function breakBossOut(
+  game: CanvasGameState,
+  ball: Ball,
+  gridRegionMap: ReturnType<typeof buildGridRegionMap>,
+  denominator: number,
+): void {
+  escalateBoss(ball);
+  if (!game.spaceGrid || !game.boardPolygon) return;
+  const b = polygonBounds(game.boardPolygon);
+  const threshold = game.lockWinThresholdPercent ?? BALL_WON_REGION_THRESHOLD;
+  for (let i = 0; i < 100; i++) {
+    const p = { x: b.minX + Math.random() * (b.maxX - b.minX), y: b.minY + Math.random() * (b.maxY - b.minY) };
+    if (!pointInPolygon(p, game.boardPolygon)) continue;
+    if (!isPositionActive(game.spaceGrid, p)) continue;
+    const region = findGridRegionForBall(game.spaceGrid, gridRegionMap, p.x, p.y);
+    if (!region) continue;
+    // Land only in a region well above the lock threshold, so it can't re-lock at once.
+    const pct = (region.cellIndices.length / Math.max(1, denominator)) * 100;
+    if (pct <= threshold * 2) continue;
+    ball.position = { x: p.x, y: p.y };
+    ball.prevPosition = { x: p.x, y: p.y };
+    ball.renderPosition = { x: p.x, y: p.y };
+    const owner = game.regions.find((r) => pointInPolygon(p, r.polygon));
+    if (owner) ball.regionId = owner.id;
+    return;
+  }
+}
 
 /**
  * MicroManager: each locked ball slows the survivors. Caps every active ball's
@@ -58,7 +110,7 @@ export function checkAndUpdateBallWonStates(
   game: CanvasGameState,
   activeModifiers: GameModifiers,
   cumulativeLockedBalls: number,
-  callbacks: Pick<GameCallbacks, 'setLockedBallsCount' | 'onBallTypeLocked' | 'onBallCountChanged'>,
+  callbacks: Pick<GameCallbacks, 'setLockedBallsCount' | 'onBallTypeLocked' | 'onBallCountChanged' | 'onBossState'>,
   /**
    * Grid cell states from before this cut's reachability capture. When present,
    * a ball only locks in a REALLY sealed pocket (isRegionTrulySealed) — never
@@ -127,6 +179,28 @@ export function checkAndUpdateBallWonStates(
     const isSuperior = lockedBySliver
       || percentage <= baseThreshold * lockQuality.superiorThresholdFraction;
     if (isSuperior) superiorIds.add(ball.id);
+
+    // Boss ball (issue #56): a trap is a HIT, not an instant win. While it has HP
+    // to spare the boss BREAKS OUT (repositions to open space, faster and smaller)
+    // instead of locking; only its final HP actually locks and marks it defeated.
+    // It never counts as a normal lock (no lockedBallsCount bump, no lock bonus).
+    if (bossTrapIsDamage(ball)) {
+      ball.bossHp = (ball.bossHp ?? 1) - 1;
+      game.bossHp = ball.bossHp;
+      game.bossHitAt = performance.now();
+      breakBossOut(game, ball, gridRegionMap, denominator);
+      callbacks.onBossState?.(ball.bossHp, ball.bossMaxHp ?? ball.bossHp, false);
+      playBallLockSound();
+      vibrateBallLock();
+      continue;
+    }
+    if (ball.isBoss) {
+      game.bossDefeated = true;
+      game.bossHp = 0;
+      game.bossActive = false;
+      game.bossHitAt = performance.now();
+      callbacks.onBossState?.(0, ball.bossMaxHp ?? 0, true);
+    }
 
     ball.state = 'won';
     ball.wonTime = performance.now();

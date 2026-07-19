@@ -13,6 +13,9 @@ export interface GameCallbacks {
   setIsRecovering: (v: boolean) => void;
   setWallShieldCount: (n: number) => void;
   setDisplayLives: (n: number) => void;
+  /** Boss ball state changed (issue #56): a hit (hp drops) or defeat, so the boss
+   *  banner can mirror HP and flash. Optional (bare game states omit it). */
+  onBossState?: (hp: number, maxHp: number, defeated: boolean) => void;
   // Outcome callbacks (wrap refs so extracted fns don't hold stale closures)
   onLevelComplete: (data: LevelScoreData) => void;
   /** Fired the instant the map is won (before the clear shimmer), so the UI can

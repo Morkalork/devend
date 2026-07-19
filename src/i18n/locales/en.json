@@ -762,5 +762,8 @@
     "daily": "Daily Stand-up",
     "dailyStreak_one": "{{count}} day attendance streak",
     "dailyStreak_other": "{{count}} day attendance streak"
+  },
+  "boss": {
+    "defeated": "Defeated"
   }
 }

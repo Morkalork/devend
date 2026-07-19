@@ -63,6 +63,10 @@ export interface Ball {
   // ── Rainbow ability (timed spawner) ─────────────────────────────────────
   spawnActiveSeconds?: number; // game.activePlaySeconds when this ball appeared (spawn-timer anchor)
   rainbowSpawnCount?: number;  // rainbow only: how many balls it has spit out so far
+  // ── Boss ball (issue #56) ────────────────────────────────────────────────
+  isBoss?: boolean;    // the boss antagonist ("Release Candidate")
+  bossHp?: number;     // hits remaining; each trap costs one until the last locks it
+  bossMaxHp?: number;  // starting HP, for the health bar
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

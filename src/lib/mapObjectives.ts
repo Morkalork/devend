@@ -16,7 +16,7 @@ import { PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { eligibleByLevel, weightedPick, finiteOrUndefined } from "@/lib/mapPools";
 import type { Rng } from "@/lib/runRng";
 
-const VALID_KINDS = new Set(["lockCount", "superiorLocks", "underPar", "speedClear"]);
+const VALID_KINDS = new Set(["lockCount", "superiorLocks", "underPar", "speedClear", "defeatBoss"]);
 
 let liveObjectives: MapObjective[] = [];
 /** Odds weight of "no objective this map" (objectives are a spice, not every map). */
@@ -119,6 +119,10 @@ export function evaluateObjective(obj: ActiveMapObjective, snap: ObjectiveSnapsh
     case "speedClear": {
       const target = Math.max(1, Math.round(obj.params?.seconds ?? 30));
       return { kind: obj.kind, mode: "limit", current: Math.floor(snap.activeSeconds), target, met: snap.activeSeconds <= target };
+    }
+    case "defeatBoss": {
+      const done = !!snap.bossDefeated;
+      return { kind: obj.kind, mode: "accumulate", current: done ? 1 : 0, target: 1, met: done };
     }
     default:
       // Unreachable for pool objectives (parse validates kind); guards an

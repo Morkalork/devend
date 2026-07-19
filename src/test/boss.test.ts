@@ -14,6 +14,8 @@ vi.mock("@/lib/gameHaptics", () => ({ vibrateBallLock: () => {}, vibrateFenceCom
 
 import { isBossGateSatisfied } from "@/lib/physics/applyCut";
 import { tickBossPhases } from "@/lib/physics/bossPhases";
+import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState";
+import { evaluateObjective } from "@/lib/mapObjectives";
 import { createBallEffectState } from "@/lib/ballEffects";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
@@ -104,5 +106,43 @@ describe("tickBossPhases (#56 phase controller)", () => {
     const game = gameWith({ activePlaySeconds: 99, balls: [activeBall("a")] });
     tickBossPhases(game, plain, 11);
     expect(game.balls.length).toBe(1);
+  });
+});
+
+describe("boss ball fight (#56 the Release Candidate)", () => {
+  function bossBall(hp: number): Ball {
+    return { ...activeBall("boss"), isBoss: true, bossHp: hp, bossMaxHp: hp, radius: 24, speed: 120, baseSpeed: 120, minimumSpeed: 90 } as Ball;
+  }
+
+  it("a trap DAMAGES the boss while HP remains, DEFEATS it on the last", () => {
+    expect(bossTrapIsDamage(bossBall(3))).toBe(true);  // 3 -> break out
+    expect(bossTrapIsDamage(bossBall(2))).toBe(true);  // 2 -> break out
+    expect(bossTrapIsDamage(bossBall(1))).toBe(false); // 1 -> the trap that defeats it
+    expect(bossTrapIsDamage(activeBall("x"))).toBe(false); // a normal ball is never a boss
+  });
+
+  it("escalates the boss on a hit: faster, smaller (never below the floor)", () => {
+    const b = bossBall(3);
+    const r0 = b.radius, s0 = b.speed;
+    escalateBoss(b);
+    expect(b.speed).toBeGreaterThan(s0);
+    expect(b.radius).toBeLessThan(r0);
+    expect(b.radius).toBeGreaterThanOrEqual(12); // floor
+  });
+
+  it("defeatBoss objective is met only once the boss is defeated", () => {
+    const obj: MapObjective = { id: "d", name: "Defeat", description: "d", kind: "defeatBoss", reward: 12 };
+    expect(evaluateObjective(obj, { lockedBalls: 0, superiorLocks: 0, cuts: 0, par: 16, activeSeconds: 0, bossDefeated: false }).met).toBe(false);
+    expect(evaluateObjective(obj, { lockedBalls: 0, superiorLocks: 0, cuts: 0, par: 16, activeSeconds: 0, bossDefeated: true }).met).toBe(true);
+  });
+
+  it("a boss map with a defeatBoss objective gates the win on bossDefeated", () => {
+    const obj: MapObjective = { id: "d", name: "Defeat", description: "d", kind: "defeatBoss", reward: 12 };
+    const level: LevelConfig = {
+      id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 1,
+      boss: { name: "Release Deadline", intro: "x", objective: obj, bossBall: { hp: 3 } },
+    };
+    expect(isBossGateSatisfied(gameWith({ objective: obj, bossDefeated: false }), level)).toBe(false);
+    expect(isBossGateSatisfied(gameWith({ objective: obj, bossDefeated: true }), level)).toBe(true);
   });
 });

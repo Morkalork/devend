@@ -1270,5 +1270,8 @@
     "daily": "Reunión diaria",
     "dailyStreak_one": "Racha de asistencia de {{count}} día",
     "dailyStreak_other": "Racha de asistencia de {{count}} días"
+  },
+  "boss": {
+    "defeated": "Derrotado"
   }
 }

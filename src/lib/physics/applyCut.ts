@@ -321,6 +321,7 @@ export function isBossGateSatisfied(game: CanvasGameState, level: LevelConfig): 
     cuts: game.wallCount,
     par: level.expectedCuts,
     activeSeconds: game.activePlaySeconds,
+    bossDefeated: game.bossDefeated,
   }).met;
 }
 
@@ -436,6 +437,7 @@ export function triggerLevelComplete(
     cuts: game.wallCount,
     par: level.expectedCuts,
     activeSeconds: game.activePlaySeconds,
+    bossDefeated: game.bossDefeated,
   });
 
   // Fold lock + break + push + ship-early + map-mutator + objective bonuses in

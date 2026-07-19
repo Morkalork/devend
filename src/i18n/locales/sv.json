@@ -1270,5 +1270,8 @@
     "daily": "Morgonmöte",
     "dailyStreak_one": "{{count}} dags närvarosvit",
     "dailyStreak_other": "{{count}} dagars närvarosvit"
+  },
+  "boss": {
+    "defeated": "Besegrad"
   }
 }

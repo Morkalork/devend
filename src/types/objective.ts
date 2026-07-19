@@ -18,8 +18,9 @@
  * - `superiorLocks` land at least `count` SUPERIOR locks (tight pockets).
  * - `underPar`      clear using at most `par + delta` cuts (delta defaults 0).
  * - `speedClear`    clear within `seconds` of active play.
+ * - `defeatBoss`    defeat the boss ball (issue #56); met when it is trapped.
  */
-export type ObjectiveKind = "lockCount" | "superiorLocks" | "underPar" | "speedClear";
+export type ObjectiveKind = "lockCount" | "superiorLocks" | "underPar" | "speedClear" | "defeatBoss";
 
 /** One authored objective entry (public/objectives.yml). English source of truth. */
 export interface MapObjective {
@@ -50,6 +51,8 @@ export interface ObjectiveSnapshot {
   cuts: number;
   par: number;
   activeSeconds: number;
+  /** Boss defeated this map (issue #56); only the defeatBoss objective reads it. */
+  bossDefeated?: boolean;
 }
 
 /**
