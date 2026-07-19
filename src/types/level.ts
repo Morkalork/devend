@@ -131,8 +131,72 @@ export interface LevelConfig {
    * this list and falls back to a random open cell when none qualifies.
    */
   pickupSpots?: { x: number; y: number }[];
+  /**
+   * Procedural layout slots (issue #53). When present on a level >=
+   * PROCEDURAL_MIN_LEVEL, each slot resolves through the run seed into concrete
+   * entities appended to `entities`, so the board varies per run (and is shared
+   * per Daily seed). Ignored on L1-10 and on levels with no slots. See
+   * src/lib/mapSlots.ts.
+   */
+  slots?: EntitySlot[];
 }
 
 export interface LevelData {
   levels: LevelConfig[];
+}
+
+// ── Procedural slots (issue #53) ─────────────────────────────────────────────
+// A map may declare `slots` instead of (or alongside) fixed `entities`. Each
+// slot resolves, through the run seed, to one or more concrete entities: the
+// same level number produces a structurally different board each run, yet is
+// deterministic on a Daily seed (everyone plays the same generated board). Only
+// levels >= PROCEDURAL_MIN_LEVEL resolve slots; L1-10 stay authored/fixed so the
+// one-idea-per-map teaching cadence is preserved.
+
+/**
+ * A numeric field of a slot candidate. A plain number is fixed; a `[min, max]`
+ * tuple is resolved by the run RNG (inclusive of both ends; integer fields like
+ * `count` are rounded). Lets a designer mix discrete candidates with continuous
+ * jitter.
+ */
+export type SlotValue = number | [number, number];
+
+/**
+ * One authored placement a slot may resolve to. Numeric fields accept a
+ * `SlotValue` (fixed or ranged). `weight` biases the weighted pick among a
+ * slot's candidates (default 1). Polygons are intentionally unsupported here:
+ * ranged polygon vertices are hard to keep winnable, so author those as fixed
+ * `entities`.
+ */
+export interface SlotCandidate {
+  weight?: number;                       // relative pick weight (default 1)
+  kind?: "wall" | "mover";               // default "wall"
+  shape: "rect" | "circle";
+  // rect fields
+  x?: SlotValue; y?: SlotValue; width?: SlotValue; height?: SlotValue;
+  // circle fields
+  cx?: SlotValue; cy?: SlotValue; radius?: SlotValue;
+  // wall flags (walls only)
+  mirror?: boolean;
+  breakable?: boolean;
+  hitsToBreak?: number;
+  objective?: boolean;
+  fence?: boolean;
+  // mover fields (movers only)
+  axis?: "horizontal" | "vertical";
+  range?: SlotValue;
+  speed?: SlotValue;
+  phase?: SlotValue;
+}
+
+/**
+ * A single slot: rolls `chance` to appear at all, then emits `count` entities,
+ * each a weighted pick from `candidates` with its ranged fields resolved.
+ * Resolved entity ids are `${id}` (count 1) or `${id}-0`, `${id}-1`, ...
+ */
+export interface EntitySlot {
+  id: string;
+  chance?: number;         // 0-1 probability the slot yields anything (default 1)
+  count?: SlotValue;       // how many entities to emit (default 1; range → int)
+  candidates: SlotCandidate[];
 }

@@ -32,6 +32,7 @@ import {
   CellState,
 } from "@/lib/spaceGrid";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
+import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import {
   getVarietyDecorationConfig,
@@ -181,13 +182,22 @@ export function createInitialGameData(
 
   const variety = level.variety ?? 0;
 
+  // Procedural slots (issue #53): from PROCEDURAL_MIN_LEVEL on, a level's `slots`
+  // resolve through the run seed into extra entities, so the board varies per run
+  // (and is shared per Daily seed). L1-10 stay authored/fixed (teaching cadence).
+  const slotEntities =
+    level.slots && level.slots.length > 0 && levelNumber >= PROCEDURAL_MIN_LEVEL
+      ? resolveSlots(level, getRunRng(`slots:${level.id}`))
+      : [];
+  const authoredEntities = [...(level.entities || []), ...slotEntities];
+
   const randomObstacles = generateRandomObstacles(
     level.randomShapes ?? 20,
-    level.entities || [],
+    authoredEntities, // random shapes avoid both fixed and slot-resolved entities
     [], // balls now spawn at game-chosen positions (after obstacles), so none to avoid here
     getRunRng(`obstacles:${level.id}`),
   );
-  const allEntities = [...(level.entities || []), ...randomObstacles];
+  const allEntities = [...authoredEntities, ...randomObstacles];
 
   if (allEntities.length > 0) {
     let obstacleIndex = 0;

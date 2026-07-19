@@ -403,25 +403,49 @@ levels:
     points: 20
     variety: 20
     maxBalls: 3
-    entities:
-      - id: wall-1
-        kind: wall
-        shape: circle
-        cx: 250
-        cy: 250
-        radius: 80
-      - id: wall-2
-        kind: wall
-        shape: circle
-        cx: 650
-        cy: 250
-        radius: 80
-      - id: wall-3
-        kind: wall
-        shape: circle
-        cx: 450
-        cy: 650
-        radius: 80
+    # Procedural (issue #53): three pillars, each a circle or a square block,
+    # jittered within its own region so the classic tri-pillar board differs
+    # every run (and is shared per Daily seed).
+    slots:
+      - id: pillar-tl
+        candidates:
+          - shape: circle
+            weight: 2
+            cx: [200, 320]
+            cy: [200, 320]
+            radius: [62, 92]
+          - shape: rect
+            weight: 1
+            x: [170, 250]
+            'y': [170, 250]
+            width: [130, 180]
+            height: [130, 180]
+      - id: pillar-tr
+        candidates:
+          - shape: circle
+            weight: 2
+            cx: [580, 700]
+            cy: [200, 320]
+            radius: [62, 92]
+          - shape: rect
+            weight: 1
+            x: [560, 640]
+            'y': [170, 250]
+            width: [130, 180]
+            height: [130, 180]
+      - id: pillar-b
+        candidates:
+          - shape: circle
+            weight: 2
+            cx: [380, 520]
+            cy: [560, 700]
+            radius: [62, 92]
+          - shape: rect
+            weight: 1
+            x: [360, 440]
+            'y': [560, 640]
+            width: [130, 180]
+            height: [130, 180]
   - id: level-13
     level: 13
     sizeThreshold: 8
@@ -463,33 +487,43 @@ levels:
     points: 20
     variety: 25
     maxBalls: 4
-    entities:
-      - id: wall-1
-        kind: wall
-        shape: circle
-        cx: 450
-        cy: 200
-        radius: 100
-      - id: wall-2
-        kind: wall
-        shape: circle
-        cx: 450
-        cy: 700
-        radius: 100
-      - id: wall-3
-        kind: wall
-        shape: rect
-        x: 200
-        'y': 400
-        width: 100
-        height: 100
-      - id: wall-4
-        kind: wall
-        shape: rect
-        x: 600
-        'y': 400
-        width: 100
-        height: 100
+    # Procedural (issue #53): top/bottom pillars and side blocks jitter each run,
+    # with occasional extra debris in the mid band (chance + count showcase).
+    slots:
+      - id: pillar-top
+        candidates:
+          - shape: circle
+            cx: [380, 520]
+            cy: [170, 240]
+            radius: [85, 108]
+      - id: pillar-bottom
+        candidates:
+          - shape: circle
+            cx: [380, 520]
+            cy: [660, 730]
+            radius: [85, 108]
+      - id: flank-left
+        candidates:
+          - shape: rect
+            x: [150, 240]
+            'y': [370, 430]
+            width: [90, 130]
+            height: [90, 130]
+      - id: flank-right
+        candidates:
+          - shape: rect
+            x: [560, 650]
+            'y': [370, 430]
+            width: [90, 130]
+            height: [90, 130]
+      - id: debris
+        chance: 0.5
+        count: [1, 2]
+        candidates:
+          - shape: circle
+            cx: [280, 620]
+            cy: [380, 520]
+            radius: [26, 40]
   - id: level-15
     level: 15
     sizeThreshold: 5
