@@ -31,6 +31,20 @@ interface BallSphereEntry {
 
 const ROT_BUCKETS = 32;
 const TWO_PI = Math.PI * 2;
+/**
+ * Number of distinct per-ball phase variants. The cache is keyed by this hash,
+ * so it MUST be bounded: balls with unique ids spawn over a session (rainbow
+ * spitter, boss minions, issue #56), and an unbounded hash made the sphere cache
+ * grow forever, crashing the tab after ~10 minutes. A handful of variants is
+ * visually indistinguishable from a per-ball hash.
+ */
+export const HASH_BUCKETS = 12;
+
+/** Fold a per-ball id hash into one of HASH_BUCKETS phase variants, so the sphere
+ *  cache key space stays bounded as balls with unique ids spawn over a session. */
+export function sphereHashBucket(hash: number): number {
+  return ((hash % HASH_BUCKETS) + HASH_BUCKETS) % HASH_BUCKETS;
+}
 
 const ballSphereCache = new Map<string, BallSphereEntry>();
 
@@ -47,17 +61,20 @@ export function getBallSphere(
 ): BallSphereEntry {
   // Quantise rotation to a bucket, then rebuild the exact phase inputs from the
   // bucket centre so every ball at this bucket shares one sprite.
+  // Bucket the per-ball hash so the cache key space stays bounded no matter how
+  // many unique ball ids spawn over a session (the leak that crashed the tab).
+  const h = sphereHashBucket(hash);
   const norm = ((rotation % TWO_PI) + TWO_PI) % TWO_PI;
   const bucket = Math.round(norm / TWO_PI * ROT_BUCKETS) % ROT_BUCKETS;
   const rBucket = Math.round(screenRadius);
-  const key = `${rBucket}|${hash}|${bucket}`;
+  const key = `${rBucket}|${h}|${bucket}`;
   const existing = ballSphereCache.get(key);
   if (existing) return existing;
 
   const rot = (bucket / ROT_BUCKETS) * TWO_PI;
   const primaryPhase = rot;
-  const secondaryPhase = rot * 0.7 + hash * 0.5;
-  const tertiaryPhase = rot * 1.3 + hash * 0.3;
+  const secondaryPhase = rot * 0.7 + h * 0.5;
+  const tertiaryPhase = rot * 1.3 + h * 0.3;
 
   const halfSize = Math.ceil(screenRadius) + 2;
   const size = halfSize * 2;
