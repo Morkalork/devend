@@ -573,49 +573,53 @@ export function resolveBallPolygonCollisionOutward(
     return { position: newPos, velocity: newVel, collided: true };
   }
   
-  // Normal edge collision detection with improved margin
+  // Reflect off the SINGLE deepest-penetrating edge. Reflecting off EVERY edge
+  // within ballRadius (several at once near a vertex of a fine polygon, e.g. a
+  // circle's 64-gon) reflected the velocity multiple times per step, so balls
+  // bounced off curved obstacles/movers at the wrong angle and the trajectory
+  // preview (which models a single ideal reflection) never matched. (#51)
+  let bestDist = Infinity;
+  let bestClosest: Vector2 | null = null;
+  let bestEdge = -1;
   for (let i = 0; i < vertices.length; i++) {
     const j = (i + 1) % vertices.length;
-    const p1 = vertices[i];
-    const p2 = vertices[j];
-    
-    const dist = pointToSegmentDistance(newPos, p1, p2);
-    
-    if (dist < ballRadius) {
-      collided = true;
-      
-      // Get closest point on edge
-      const closestPoint = closestPointOnSegment(newPos, p1, p2);
-      const toBall = vec2Sub(newPos, closestPoint);
-      
-      // Normal points from obstacle edge toward ball (outward)
-      let normal = vec2Normalize(toBall);
-      if (vec2Length(toBall) < 0.001) {
-        // Ball exactly on edge, use centroid to determine outward direction
-        const centroid = polygonCentroid(poly);
-        const edge = vec2Sub(p2, p1);
-        const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
-        const toCenter = vec2Sub(centroid, closestPoint);
-        // Choose direction pointing away from centroid
-        if (vec2Dot(perpendicular, toCenter) > 0) {
-          normal = vec2Scale(perpendicular, -1);
-        } else {
-          normal = perpendicular;
-        }
-      }
-      
-      // Reflect velocity if moving toward obstacle
-      const velDotNormal = vec2Dot(newVel, normal);
-      if (velDotNormal < 0) {
-        newVel = vec2Sub(newVel, vec2Scale(normal, 2 * velDotNormal));
-      }
-      
-      // Push ball out of obstacle with generous margin
-      const penetration = ballRadius - dist;
-      newPos = vec2Add(newPos, vec2Scale(normal, penetration + 3));
+    const dist = pointToSegmentDistance(newPos, vertices[i], vertices[j]);
+    if (dist < ballRadius && dist < bestDist) {
+      bestDist = dist;
+      bestClosest = closestPointOnSegment(newPos, vertices[i], vertices[j]);
+      bestEdge = i;
     }
   }
-  
+
+  if (bestClosest) {
+    collided = true;
+    const p1 = vertices[bestEdge];
+    const p2 = vertices[(bestEdge + 1) % vertices.length];
+    const toBall = vec2Sub(newPos, bestClosest);
+
+    // Normal points from the edge toward the ball (outward).
+    let normal = vec2Normalize(toBall);
+    if (vec2Length(toBall) < 0.001) {
+      // Ball exactly on the edge: use the edge perpendicular pointing away from
+      // the polygon centroid.
+      const centroid = polygonCentroid(poly);
+      const edge = vec2Sub(p2, p1);
+      const perpendicular = vec2Normalize({ x: -edge.y, y: edge.x });
+      const toCenter = vec2Sub(centroid, bestClosest);
+      normal = vec2Dot(perpendicular, toCenter) > 0 ? vec2Scale(perpendicular, -1) : perpendicular;
+    }
+
+    // Reflect velocity if moving toward the obstacle.
+    const velDotNormal = vec2Dot(newVel, normal);
+    if (velDotNormal < 0) {
+      newVel = vec2Sub(newVel, vec2Scale(normal, 2 * velDotNormal));
+    }
+
+    // Push ball out of the obstacle with a small margin.
+    const penetration = ballRadius - bestDist;
+    newPos = vec2Add(newPos, vec2Scale(normal, penetration + 3));
+  }
+
   return { position: newPos, velocity: newVel, collided };
 }
 
