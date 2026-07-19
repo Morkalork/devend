@@ -13,7 +13,7 @@ vi.mock("@/lib/gameAudio", () => ({ playWallHitSound: () => {}, playCutClaimedSo
 vi.mock("@/lib/gameHaptics", () => ({ vibrateBallLock: () => {}, vibrateFenceComplete: () => {}, vibrateFenceBreak: () => {} }));
 
 import { isBossGateSatisfied } from "@/lib/physics/applyCut";
-import { tickBossPhases } from "@/lib/physics/bossPhases";
+import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
 import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState";
 import { evaluateObjective } from "@/lib/mapObjectives";
 import { createBallEffectState } from "@/lib/ballEffects";
@@ -119,6 +119,24 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     expect(bossTrapIsDamage(bossBall(2))).toBe(true);  // 2 -> break out
     expect(bossTrapIsDamage(bossBall(1))).toBe(false); // 1 -> the trap that defeats it
     expect(bossTrapIsDamage(activeBall("x"))).toBe(false); // a normal ball is never a boss
+  });
+
+  it("only spits red minions (the boss is not a rainbow ball)", () => {
+    const level: LevelConfig = {
+      id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 1,
+      boss: {
+        name: "B", intro: "x",
+        objective: { id: "d", name: "D", description: "d", kind: "defeatBoss", reward: 12 },
+        bossBall: { hp: 3, spitIntervalSeconds: 5, maxMinions: 4 },
+      },
+    };
+    const boss = bossBall(3); // typeId "red"
+    const game = gameWith({ balls: [boss], bossMinionCount: 0 });
+    for (let s = 5; s <= 20; s += 5) { game.activePlaySeconds = s; tickBossSpit(game, level); }
+    const minions = game.balls.filter((b) => b.id.includes("minion"));
+    expect(minions.length).toBeGreaterThanOrEqual(3);
+    expect(minions.every((m) => m.typeId === boss.typeId)).toBe(true); // red only, never random
+    expect(new Set(minions.map((m) => m.typeId)).size).toBe(1);        // no variety
   });
 
   it("escalates the boss on a hit: faster, smaller (never below the floor)", () => {

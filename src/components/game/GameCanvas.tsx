@@ -1056,7 +1056,7 @@ export function GameCanvas({
       // the win check, so the top bar can never stall showing CLEAR.
       checkWinCondition: () =>
         evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
-      spawnTimedBalls: () => { tickRainbowSpawns(game, levelNumber); tickBossPhases(game, level, levelNumber); tickBossSpit(game, level, levelNumber); },
+      spawnTimedBalls: () => { tickRainbowSpawns(game, levelNumber); tickBossPhases(game, level, levelNumber); tickBossSpit(game, level); },
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
       // Deferred push prompt: the loop already set game.pushMode; mirror it
