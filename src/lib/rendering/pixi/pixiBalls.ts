@@ -1,10 +1,11 @@
 /**
  * Pixi ball layer — ports renderFrame's per-ball stack (section S).
  *
- * Per ball, child order mirrors the 2D draw order: pulse glow + hit halos,
- * motion trail, flame plume, then the body sprites (base, sphere shading, hex
- * overlay, specular) wrapped in a squash-and-stretch rig, then frost and the
- * fastest-ball ring. Body sprites reuse the SAME OffscreenCanvas bakes as the
+ * Per ball, child order mirrors the 2D draw order: hit halos and motion trail,
+ * then the pulse glow, flame plume and body sprites (base, sphere shading, hex
+ * overlay, specular) together inside a squash-and-stretch rig so the whole
+ * surrounding aura deforms with the ball, then frost and the fastest-ball ring.
+ * Body sprites reuse the SAME OffscreenCanvas bakes as the
  * 2D renderer (ballRenderCache / ballSphereCache) via textureFor().
  */
 import { Container, Graphics, Sprite, Text, TextStyle } from "pixi.js";
@@ -109,8 +110,13 @@ export class BallLayer {
     specular.anchor.set(0.5);
     const frost = new Graphics();
     const ring = new Graphics();
-    squishInner.addChild(base, sphere, hex, hexMask, specular);
-    root.addChild(ring, pulse, halos, trail, ...flame, squishOuter, frost);
+    // Fastest-ball ring + pulse glow + flame all live INSIDE the squish rig
+    // (behind the body) so the ball's surrounding aura (cyan highlight ring,
+    // accent halo and fire plume) deforms with it on impact instead of staying
+    // round beside the squished body. Only the transient collision shockwaves
+    // (halos) and the motion trail stay round, outside the rig.
+    squishInner.addChild(ring, pulse, ...flame, base, sphere, hex, hexMask, specular);
+    root.addChild(halos, trail, squishOuter, frost);
     return {
       root, pulse, halos, trail, flame,
       squishOuter, squishMid, squishInner,
@@ -264,7 +270,9 @@ export class BallLayer {
       }
 
       // ── Squash & stretch rig ──
-      const squish = getSquishEffect(ball.effects);
+      // Big boss balls squish at half strength (the full 35% compression reads
+      // as too much on their large radius); everything else at full strength.
+      const squish = getSquishEffect(ball.effects, ball.isBoss ? 0.5 : 1);
       if (squish.active) {
         const ang = Math.atan2(squish.ny, squish.nx);
         v.squishOuter.rotation = ang;

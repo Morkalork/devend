@@ -1503,8 +1503,26 @@ export function renderFrame(
     // getBallSphere. Phase math lives there now.
     const ballIdHash = ball.id.charCodeAt(ball.id.length - 1) || 0;
 
+    // Squash & stretch (issue #44): computed once here so the fastest-ball ring
+    // below, and the flame plume + body sprites further down, all deform along
+    // the same impact axis as one unit. The transient collision halos and the
+    // motion trail stay round. Big boss balls squish at half strength (the full
+    // 35% compression reads as too much on their large radius).
+    const squishScale = ball.isBoss ? 0.5 : 1;
+    const squish = getSquishEffect(ball.effects, squishScale);
+    const applySquish = () => {
+      if (!squish.active) return;
+      const ang = Math.atan2(squish.ny, squish.nx);
+      ctx.translate(screenPos.x, screenPos.y);
+      ctx.rotate(ang);
+      ctx.scale(squish.scaleAlong, squish.scalePerp);
+      ctx.rotate(-ang);
+      ctx.translate(-screenPos.x, -screenPos.y);
+    };
+
     if (isFastest) {
       ctx.save();
+      applySquish(); // the cyan highlight ring squishes with the ball
       ctx.beginPath();
       ctx.arc(screenPos.x, screenPos.y, screenRadius + 15 * scale, 0, Math.PI * 2);
       ctx.strokeStyle = COLORS.fastestBallHighlight;
@@ -1549,7 +1567,7 @@ export function renderFrame(
 
     renderBallEffects(
       ctx, ball.effects, screenPos.x, screenPos.y,
-      screenRadius, accentColor, baseColor, performance.now(), scale,
+      screenRadius, accentColor, baseColor, performance.now(), scale, squishScale,
     );
 
     // Motion trail. Ring buffer: overwrite slots in place with a moving head
@@ -1589,8 +1607,18 @@ export function renderFrame(
       }
     }
 
+    // Squash & stretch (issue #44): the transform (hoisted above) is set up
+    // FIRST so the flame (drawn next) and the body sprites (base, sphere, hex,
+    // specular, frost) all squish together as one burning object; the halos and
+    // trail, drawn earlier, stay round.
+    if (squish.active) {
+      ctx.save();
+      applySquish();
+    }
+
     // Continuous flame plume: the ball is a burning object. Drawn behind the
-    // body so the tongues rise up and around it. Skipped while frozen (frost,
+    // body so the tongues rise up and around it, and inside the squish transform
+    // above so the fire aura deforms with the ball. Skipped while frozen (frost,
     // not fire) and for won/disintegrating balls (the clear wave draws their
     // drained flame instead).
     {
@@ -1603,20 +1631,6 @@ export function renderFrame(
           flameTongues,
         );
       }
-    }
-
-    // Squash & stretch (issue #44): deform ONLY the ball body along the impact
-    // normal, springing back over ~220ms. Wraps just the body sprites (base,
-    // sphere, hex, specular, frost) so the halos, trail and flame stay round.
-    const squish = getSquishEffect(ball.effects);
-    if (squish.active) {
-      const ang = Math.atan2(squish.ny, squish.nx);
-      ctx.save();
-      ctx.translate(screenPos.x, screenPos.y);
-      ctx.rotate(ang);
-      ctx.scale(squish.scaleAlong, squish.scalePerp);
-      ctx.rotate(-ang);
-      ctx.translate(-screenPos.x, -screenPos.y);
     }
 
     const { canvas: baseCanvas, halfSize: baseHalf } = getBallBase(blendedHex, screenRadius, scale);

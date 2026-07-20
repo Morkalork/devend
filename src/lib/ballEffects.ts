@@ -210,7 +210,7 @@ function triggerSquish(
  * the impact normal (nx,ny); `scalePerp` stretches perpendicular to preserve
  * area. Both are 1 when round. Apply as a rotated non-uniform scale at render.
  */
-export function getSquishEffect(state: BallEffectState): {
+export function getSquishEffect(state: BallEffectState, scale = 1): {
   active: boolean;
   scaleAlong: number;
   scalePerp: number;
@@ -220,8 +220,10 @@ export function getSquishEffect(state: BallEffectState): {
   if (state.squishAmount <= 0) {
     return { active: false, scaleAlong: 1, scalePerp: 1, nx: 1, ny: 0 };
   }
-  // Signed compression along the normal; inverse perpendicular keeps area constant.
-  const s = state.squishIntensity * state.squishAmount * CONFIG.squishMaxCompress;
+  // Signed compression along the normal; inverse perpendicular keeps area
+  // constant. `scale` dials the whole deformation down per ball (e.g. 0.5 for
+  // large boss balls, which look overblown at the full compression).
+  const s = state.squishIntensity * state.squishAmount * CONFIG.squishMaxCompress * scale;
   return {
     active: true,
     scaleAlong: 1 - s,
@@ -326,7 +328,8 @@ export function renderBallEffects(
   accentColor: string, // CRT-green or level accent
   ballColor: string,
   now: number,
-  scale: number
+  scale: number,
+  squishScale = 1, // per-ball squish dial (0.5 for big boss balls)
 ): void {
   // ===== LAYER 1: Baseline pulse glow (always active) =====
   // Blit a pre-rendered OC keyed by accentColor + screenRadius instead of
@@ -335,6 +338,18 @@ export function renderBallEffects(
   {
     const { oc: pulseOC, halfSize: pulseHalf } = getPulseGlowOC(accentColor, screenRadius, scale);
     ctx.save();
+    // Squash & stretch the accent halo along the same impact axis as the ball
+    // body, so the surrounding aura deforms with it instead of staying round.
+    // The transient collision halos below are shockwaves and stay round.
+    const squish = getSquishEffect(state, squishScale);
+    if (squish.active) {
+      const ang = Math.atan2(squish.ny, squish.nx);
+      ctx.translate(screenX, screenY);
+      ctx.rotate(ang);
+      ctx.scale(squish.scaleAlong, squish.scalePerp);
+      ctx.rotate(-ang);
+      ctx.translate(-screenX, -screenY);
+    }
     ctx.globalCompositeOperation = 'lighter';
     ctx.globalAlpha = pulse.glowAlpha; // scales the pre-rendered max-intensity OC
     ctx.drawImage(pulseOC, Math.round(screenX - pulseHalf), Math.round(screenY - pulseHalf));
