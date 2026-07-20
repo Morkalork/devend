@@ -37,9 +37,23 @@ import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWall
 
 /** Boss cell-division animation duration (issue #56): the bud grows + detaches. */
 const SPLIT_MS = 1200;
+/** Boss break-out leap duration (issue #56): the arc out of a trapped pocket. */
+const BOSS_LEAP_MS = 520;
 /** A boss daughter cell buds at this fraction of full size and grows to full while
  *  attached to the parent. Shared with the spawn in bossPhases. */
 export const BIRTH_START_FRAC = 0.15;
+
+/**
+ * Boss swell envelope over the division (t in [0,1]): a quick bulge to full,
+ * held through the middle while the bud forms, then a deflate as it pinches off.
+ * Returns 0 at both ends and 1 across the hold, so radius = base * (1 + 0.25*this).
+ */
+function bossSwell(t: number): number {
+  const IN = 0.18, OUT = 0.82;
+  if (t < IN) return t / IN;              // swell in
+  if (t > OUT) return (1 - t) / (1 - OUT); // deflate as the bud detaches
+  return 1;                               // hold at full swell
+}
 
 // ---------------------------------------------------------------------------
 // Hot-loop notes
@@ -152,6 +166,32 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
 
   const now = performance.now();
 
+  // Boss break-out leap (issue #56): after a non-fatal trap the boss ARCS out of
+  // the sealed pocket and back onto the open map, rather than teleporting. It is
+  // airborne (skips all physics/collision/region checks) and lands at leapTo,
+  // where breakBossOut already aimed its velocity into open space.
+  if (ball.bossLeapAt !== undefined) {
+    const t = (now - ball.bossLeapAt) / BOSS_LEAP_MS;
+    const fromX = ball.leapFromX ?? ball.position.x, fromY = ball.leapFromY ?? ball.position.y;
+    const toX = ball.leapToX ?? ball.position.x, toY = ball.leapToY ?? ball.position.y;
+    if (t >= 1 || t < 0) {
+      // Landed: snap to the target and resume normal physics next frame.
+      ball.position = { x: toX, y: toY };
+      ball.prevPosition = { x: toX, y: toY };
+      ball.renderPosition = { x: toX, y: toY };
+      ball.bossLeapAt = undefined;
+      ball.leapFromX = ball.leapFromY = ball.leapToX = ball.leapToY = undefined;
+      return;
+    }
+    // Straight-line interpolation plus a parabolic hop (screen up = -y) so it
+    // visibly vaults over the walls of the pocket it was sealed into.
+    const hop = Math.sin(Math.PI * t) * Math.min(90, Math.hypot(toX - fromX, toY - fromY) * 0.3);
+    ball.position.x = fromX + (toX - fromX) * t;
+    ball.position.y = fromY + (toY - fromY) * t - hop;
+    ball.renderPosition = { x: ball.position.x, y: ball.position.y };
+    return; // airborne: no walls, no region check
+  }
+
   // Mitosis birth (issue #56): a daughter cell buds from the boss. While ATTACHED
   // it grows in place on the parent's body, FOLLOWING the parent as it moves, so
   // it clearly emerges FROM the boss (not a separate ball popping in). At the end
@@ -181,14 +221,26 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     ball.velocity = { x: dx * spd, y: dy * spd };
   }
 
-  // Cell-division beat (issue #56): the BOSS decelerates mid-division and recovers
-  // (1 -> ~0.2 -> 1) over SPLIT_MS as it buds. Applied to DISPLACEMENT (like Scope
-  // Creep below), so stored velocity is untouched and full speed returns on its own.
+  // Cell-division beat (issue #56): the BOSS stops dead, swells ~25%, and births
+  // its daughter cell while immobile, then deflates and resumes. splitFactor 0
+  // freezes DISPLACEMENT (like Scope Creep below), so the stored velocity is
+  // untouched and full speed returns on its own once the division ends.
   let splitFactor = 1;
   if (ball.splitAnimAt !== undefined) {
     const t = (now - ball.splitAnimAt) / SPLIT_MS;
-    if (t >= 1 || t < 0) ball.splitAnimAt = undefined;
-    else splitFactor = 1 - 0.8 * Math.sin(Math.PI * t); // 1 -> ~0.2 -> 1
+    if (t >= 1 || t < 0) {
+      ball.splitAnimAt = undefined;
+      if (ball.splitBaseRadius !== undefined) {
+        ball.radius = ball.splitBaseRadius; // back to normal size
+        ball.splitBaseRadius = undefined;
+      }
+    } else {
+      splitFactor = 0; // dead stop while it divides
+      // Remember the pre-swell size on the first frame, then bulge to +25% and
+      // hold through the division, deflating as the bud pinches off at the end.
+      if (ball.splitBaseRadius === undefined) ball.splitBaseRadius = ball.radius;
+      ball.radius = ball.splitBaseRadius * (1 + 0.25 * bossSwell(t));
+    }
   }
 
   // Move ball (world units). Scope Creep + the split beat scale the DISPLACEMENT,

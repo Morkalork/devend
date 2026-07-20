@@ -67,10 +67,18 @@ export interface Ball {
   isBoss?: boolean;    // the boss antagonist ("Release Candidate")
   bossHp?: number;     // hits remaining; each trap costs one until the last locks it
   bossMaxHp?: number;  // starting HP, for the health bar
+  bossFullRadius?: number; // radius at full HP; shrinks toward bossMinRadius as HP drains
+  bossMinRadius?: number;  // radius at the last life = a normal ball's size
+  // Break-out leap: after a non-fatal trap the boss arcs out of the pocket back
+  // onto the open map instead of teleporting. Physics is skipped while airborne.
+  bossLeapAt?: number; // performance.now() the leap began (undefined = not leaping)
+  leapFromX?: number; leapFromY?: number; // arc start (where it was trapped)
+  leapToX?: number;   leapToY?: number;   // arc end (open-space landing spot)
   // ── Mitosis birth (boss minion split-off, issue #56) ─────────────────────
   bornAt?: number;        // performance.now() when spawned; drives the grow-in animation
   bornRadius?: number;    // target radius the minion grows to (its full size)
-  splitAnimAt?: number;   // performance.now() a split began; drives the boss's slow-then-speed beat
+  splitAnimAt?: number;   // performance.now() a split began; the boss stops dead and swells while it divides
+  splitBaseRadius?: number; // the boss's pre-swell radius, restored when the division ends
   birthParentId?: string; // while set, this bud is attached to its parent and growing (mitosis)
   birthDirX?: number;     // unit direction from the parent it buds along / is released toward
   birthDirY?: number;

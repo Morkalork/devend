@@ -30,21 +30,36 @@ export function bossTrapIsDamage(ball: Ball): boolean {
   return !!ball.isBoss && (ball.bossHp ?? 1) > 1;
 }
 
-/** Escalate a boss after a hit: faster and smaller (a felt phase change). Pure. */
+/**
+ * Escalate a boss after a hit: faster, and smaller by HP. The radius is
+ * interpolated from bossFullRadius (at full HP) down to bossMinRadius (a normal
+ * ball's size) at the last life, so shrinking to "just another ball" telegraphs
+ * that it is one trap from defeat. Call AFTER decrementing bossHp. Pure.
+ */
 export function escalateBoss(ball: Ball): void {
-  const up = 1.12, shrink = 0.88, minR = 12;
+  const up = 1.12, minR = 12;
   ball.speed *= up;
   ball.baseSpeed *= up;
   ball.topSpeed *= up;
   ball.minimumSpeed = (ball.minimumSpeed ?? 0) * up;
   ball.velocity = { x: ball.velocity.x * up, y: ball.velocity.y * up };
-  ball.radius = Math.max(minR, ball.radius * shrink);
+  const maxHp = ball.bossMaxHp ?? 1;
+  if (maxHp > 1 && ball.bossFullRadius !== undefined && ball.bossMinRadius !== undefined) {
+    // frac = 1 at full HP, 0 at the last life (bossHp 1).
+    const frac = Math.max(0, Math.min(1, ((ball.bossHp ?? 1) - 1) / (maxHp - 1)));
+    ball.radius = ball.bossMinRadius + (ball.bossFullRadius - ball.bossMinRadius) * frac;
+  } else {
+    ball.radius = Math.max(minR, ball.radius * 0.88); // fallback if unseeded
+  }
 }
 
 /**
- * A boss got trapped but still has HP: break it out. Escalate it, then reposition
- * to a comfortably-open active spot (never a soon-to-lock sliver) and reassign its
- * region so the ownership invariant holds (regionOwnership reconciles the rest).
+ * A boss got trapped but still has HP: break it out. Escalate it, then LEAP it
+ * out of the sealed pocket to a comfortably-open active spot (never a soon-to-lock
+ * sliver). The leap is set up here (arc endpoints + landing region) and animated
+ * in updateBall so the escape is VISIBLE, not a teleport; on landing the boss runs
+ * with the velocity aimed here toward open space. Region is reassigned up front so
+ * the ownership invariant holds (updateBall skips physics while it is airborne).
  */
 function breakBossOut(
   game: CanvasGameState,
@@ -52,6 +67,9 @@ function breakBossOut(
   gridRegionMap: ReturnType<typeof buildGridRegionMap>,
   denominator: number,
 ): void {
+  // Cancel any in-progress cell division; the break-out takes over the boss.
+  ball.splitAnimAt = undefined;
+  ball.splitBaseRadius = undefined;
   escalateBoss(ball);
   if (!game.spaceGrid || !game.boardPolygon) return;
   const b = polygonBounds(game.boardPolygon);
@@ -65,9 +83,16 @@ function breakBossOut(
     // Land only in a region well above the lock threshold, so it can't re-lock at once.
     const pct = (region.cellIndices.length / Math.max(1, denominator)) * 100;
     if (pct <= threshold * 2) continue;
-    ball.position = { x: p.x, y: p.y };
-    ball.prevPosition = { x: p.x, y: p.y };
-    ball.renderPosition = { x: p.x, y: p.y };
+    // Leap: keep the boss where it was trapped and arc to the open landing spot.
+    ball.leapFromX = ball.position.x; ball.leapFromY = ball.position.y;
+    ball.leapToX = p.x; ball.leapToY = p.y;
+    ball.bossLeapAt = performance.now();
+    // Aim it inward for the moment it lands, so it heads into open space.
+    const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
+    const ddx = cx - p.x, ddy = cy - p.y;
+    const dlen = Math.hypot(ddx, ddy) || 1;
+    const spd = vec2Length(ball.velocity) || ball.baseSpeed || 1;
+    ball.velocity = { x: (ddx / dlen) * spd, y: (ddy / dlen) * spd };
     const owner = game.regions.find((r) => pointInPolygon(p, r.polygon));
     if (owner) ball.regionId = owner.id;
     return;
@@ -142,6 +167,7 @@ export function checkAndUpdateBallWonStates(
   // spawns in a live region and must not be lock-checked in this same pass.
   for (const ball of [...game.balls]) {
     if (ball.state === 'won' || ball.speed === 0) continue;
+    if (ball.bossLeapAt !== undefined) continue; // mid break-out leap: not trappable
 
     // Use neighbour-search fallback: ball may sit in a REMOVED cell (e.g. its grid-cell
     // centre fractionally overlaps a mirror-polygon boundary even though the ball itself

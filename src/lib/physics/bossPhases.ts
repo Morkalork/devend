@@ -62,6 +62,9 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
   const radiusScale = bb.radiusScale ?? 2;
   for (const boss of bosses) {
     if ((game.bossMinionCount ?? 0) >= maxMinions) break;
+    // On its last life the boss no longer divides (it is down to a normal-sized
+    // ball) so the shrink-and-stop reads as "one trap from defeated".
+    if ((boss.bossHp ?? 1) <= 1) continue;
     const anchor = boss.spawnActiveSeconds ?? 0;
     const due = Math.floor((game.activePlaySeconds - anchor) / interval);
     if (due <= (boss.rainbowSpawnCount ?? 0)) continue; // reuse the spawn-count field
@@ -92,7 +95,7 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
     child.regionId = boss.regionId;
     game.balls.push(child);
     game.bossMinionCount = (game.bossMinionCount ?? 0) + 1;
-    boss.splitAnimAt = nowMs;   // parent decelerates mid-division, then recovers
+    boss.splitAnimAt = nowMs;   // parent stops dead and swells while it divides
     boss.rainbowSpawnCount = due;
   }
 }

@@ -448,6 +448,8 @@ export function createInitialGameData(
       boss.isBoss = true;
       boss.bossHp = hp;
       boss.bossMaxHp = hp;
+      boss.bossFullRadius = bossRadius; // shrinks toward a normal ball as HP drains
+      boss.bossMinRadius = ballRadius;  // last-life size = an ordinary ball
       boss.color = bossBall.color ?? "#ff2d55";
       balls.push(boss);
       bossActive = true; bossHp = hp; bossMaxHp = hp;

@@ -152,6 +152,29 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     expect(b.radius).toBeGreaterThanOrEqual(12); // floor
   });
 
+  it("shrinks toward a normal ball as HP drains, reaching normal size on the last life", () => {
+    const b = { ...bossBall(3), radius: 30, bossFullRadius: 30, bossMinRadius: 12 } as Ball;
+    b.bossHp = 2; escalateBoss(b);                     // first hit -> hp 2 (midway)
+    expect(b.radius).toBeCloseTo(12 + (30 - 12) * 0.5, 3); // 21
+    b.bossHp = 1; escalateBoss(b);                     // second hit -> hp 1 (last life)
+    expect(b.radius).toBeCloseTo(12, 3);               // exactly a normal ball's size
+  });
+
+  it("stops dividing on its last life (bossHp 1)", () => {
+    const level: LevelConfig = {
+      id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 1,
+      boss: {
+        name: "B", intro: "x",
+        objective: { id: "d", name: "D", description: "d", kind: "defeatBoss", reward: 12 },
+        bossBall: { hp: 3, spitIntervalSeconds: 5, maxMinions: 4 },
+      },
+    };
+    const boss = bossBall(1); // down to its last life
+    const game = gameWith({ balls: [boss], bossMinionCount: 0 });
+    for (let s = 5; s <= 20; s += 5) { game.activePlaySeconds = s; tickBossSpit(game, level); }
+    expect(game.balls.filter((b) => b.id.includes("minion")).length).toBe(0);
+  });
+
   it("defeatBoss objective is met only once the boss is defeated", () => {
     const obj: MapObjective = { id: "d", name: "Defeat", description: "d", kind: "defeatBoss", reward: 12 };
     expect(evaluateObjective(obj, { lockedBalls: 0, superiorLocks: 0, cuts: 0, par: 16, activeSeconds: 0, bossDefeated: false }).met).toBe(false);
@@ -214,11 +237,38 @@ describe("boss minion mitosis (#56 attached bud that grows then pinches off)", (
     expect(b.birthParentId).toBeUndefined();
   });
 
-  it("the boss decelerates mid-division, then recovers", () => {
-    const dividing = { ...activeBall("boss"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 }, splitAnimAt: performance.now() - 600 } as Ball;
+  it("breaks out with a visible arcing leap, then lands on the target", () => {
+    const now = performance.now();
+    const b = {
+      ...activeBall("boss"), isBoss: true, position: { x: 100, y: 200 }, velocity: { x: 40, y: 0 },
+      bossLeapAt: now - 260, leapFromX: 100, leapFromY: 200, leapToX: 300, leapToY: 200,
+    } as Ball;
+    updateBall(b, 1 / 120, gameFor([b]));
+    expect(b.bossLeapAt).toBeDefined();           // still airborne
+    expect(b.position.x).toBeGreaterThan(150);    // ~halfway across
+    expect(b.position.x).toBeLessThan(250);
+    expect(b.position.y).toBeLessThan(200);       // lifted above the baseline (the hop)
+    // Past the leap duration it snaps to the landing spot and clears the leap.
+    b.bossLeapAt = now - 2000;
+    updateBall(b, 1 / 120, gameFor([b]));
+    expect(b.bossLeapAt).toBeUndefined();
+    expect(b.position.x).toBeCloseTo(300, 3);
+    expect(b.position.y).toBeCloseTo(200, 3);
+  });
+
+  it("the boss stops dead and swells ~25% mid-division, then restores", () => {
+    const now = performance.now();
+    const dividing = { ...activeBall("boss"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 }, splitAnimAt: now - 600 } as Ball;
     const normal = { ...activeBall("boss2"), isBoss: true, radius: 20, position: { x: 300, y: 200 }, velocity: { x: 120, y: 0 } } as Ball;
     updateBall(dividing, 1 / 120, gameFor([dividing]));
     updateBall(normal, 1 / 120, gameFor([normal]));
-    expect(dividing.position.x - 300).toBeLessThan(normal.position.x - 300); // slowed at the mid-point of the split
+    expect(dividing.position.x).toBeCloseTo(300, 3);          // immobile while dividing
+    expect(normal.position.x).toBeGreaterThan(300);           // a normal boss keeps moving
+    expect(dividing.radius).toBeCloseTo(25, 3);               // swollen +25% at the mid-point
+    // Past SPLIT_MS it deflates back to its remembered base size.
+    dividing.splitAnimAt = now - 2000;
+    updateBall(dividing, 1 / 120, gameFor([dividing]));
+    expect(dividing.splitAnimAt).toBeUndefined();
+    expect(dividing.radius).toBeCloseTo(20, 3);
   });
 });

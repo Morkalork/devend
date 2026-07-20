@@ -29,6 +29,10 @@ export function handleBallCollisions(game: CanvasGameState): void {
       // to its parent as pure animation, so it must not perturb it or anything else.
       if (ball1.birthParentId !== undefined || ball2.birthParentId !== undefined) continue;
 
+      // Skip a boss mid break-out leap (issue #56): it is airborne, vaulting over
+      // the board, so it passes through everything until it lands.
+      if (ball1.bossLeapAt !== undefined || ball2.bossLeapAt !== undefined) continue;
+
       if (ball1.regionId !== ball2.regionId) continue;
 
       // Feature Freeze: a tap-frozen ball is immovable (infinite mass). The
