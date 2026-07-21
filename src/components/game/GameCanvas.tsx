@@ -410,9 +410,6 @@ export function GameCanvas({
     bossMaxHp: 0,
     bossDefeated: false,
     bossMinionCount: 0,
-    bossHitAt: 0,
-    bossDefeatedAt: 0,
-    bossClawbackAt: 0,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -786,7 +783,6 @@ export function GameCanvas({
       game.bossMaxHp          = data.bossMaxHp;
       game.bossDefeated       = false;
       game.bossMinionCount    = 0;
-      game.bossHitAt          = 0;
       setBossHud({ active: data.bossActive, hp: data.bossHp, maxHp: data.bossMaxHp, defeated: false });
       // Cold Boot: the map boots frozen, all balls hold still for a planning
       // beat. Same frozenUntil path as tap-freeze; freezeReadyAt is left unset

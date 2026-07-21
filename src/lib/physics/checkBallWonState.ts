@@ -1,4 +1,4 @@
-import { Ball } from "@/types/game";
+import { Ball, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
@@ -70,7 +70,6 @@ function queueBossClawback(game: CanvasGameState): void {
   }
   if (!best) return;
   if (!game.pendingWallBreaks.includes(best)) game.pendingWallBreaks.push(best);
-  game.bossClawbackAt = performance.now();
 }
 
 /**
@@ -92,33 +91,43 @@ function breakBossOut(
   ball.splitBaseRadius = undefined;
   escalateBoss(ball);
   if (!game.spaceGrid || !game.boardPolygon) return;
-  const b = polygonBounds(game.boardPolygon);
+  const grid = game.spaceGrid, board = game.boardPolygon;
+  const b = polygonBounds(board);
   const threshold = game.lockWinThresholdPercent ?? BALL_WON_REGION_THRESHOLD;
-  for (let i = 0; i < 100; i++) {
-    const p = { x: b.minX + Math.random() * (b.maxX - b.minX), y: b.minY + Math.random() * (b.maxY - b.minY) };
-    if (!pointInPolygon(p, game.boardPolygon)) continue;
-    if (!isPositionActive(game.spaceGrid, p)) continue;
-    const region = findGridRegionForBall(game.spaceGrid, gridRegionMap, p.x, p.y);
-    if (!region) continue;
-    // Land only in a region well above the lock threshold, so it can't re-lock at once.
-    const pct = (region.cellIndices.length / Math.max(1, denominator)) * 100;
-    if (pct <= threshold * 2) continue;
-    // Leap: keep the boss where it was trapped and arc to the open landing spot.
-    // updateBall runs the wind-up stop, the launch whoosh, and the landing splat.
-    ball.leapFromX = ball.position.x; ball.leapFromY = ball.position.y;
-    ball.leapToX = p.x; ball.leapToY = p.y;
-    ball.bossLeapAt = performance.now();
-    ball.bossLeapLaunched = false;
-    // Aim it inward for the moment it lands, so it heads into open space.
-    const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
-    const ddx = cx - p.x, ddy = cy - p.y;
-    const dlen = Math.hypot(ddx, ddy) || 1;
-    const spd = vec2Length(ball.velocity) || ball.baseSpeed || 1;
-    ball.velocity = { x: (ddx / dlen) * spd, y: (ddy / dlen) * spd };
-    const owner = game.regions.find((r) => pointInPolygon(p, r.polygon));
-    if (owner) ball.regionId = owner.id;
-    return;
-  }
+
+  // Sample an active landing spot whose region is above `minPct` of the win
+  // denominator (so it can't immediately re-lock). Returns null after 100 tries.
+  const findSpot = (minPct: number): Vector2 | null => {
+    for (let i = 0; i < 100; i++) {
+      const p = { x: b.minX + Math.random() * (b.maxX - b.minX), y: b.minY + Math.random() * (b.maxY - b.minY) };
+      if (!pointInPolygon(p, board)) continue;
+      if (!isPositionActive(grid, p)) continue;
+      const region = findGridRegionForBall(grid, gridRegionMap, p.x, p.y);
+      if (!region) continue;
+      const pct = (region.cellIndices.length / Math.max(1, denominator)) * 100;
+      if (pct > minPct) return p;
+    }
+    return null;
+  };
+
+  // Prefer a comfortably-open region; fall back to any active spot; and as a last
+  // resort (board almost fully captured, near defeat) leap IN PLACE. Always setting
+  // bossLeapAt is what matters: the lock-check skips a leaping boss, so it can lose
+  // at most one HP per leap instead of one per frame if no landing exists.
+  const landing = findSpot(threshold * 2) ?? findSpot(0) ?? { x: ball.position.x, y: ball.position.y };
+
+  ball.leapFromX = ball.position.x; ball.leapFromY = ball.position.y;
+  ball.leapToX = landing.x; ball.leapToY = landing.y;
+  ball.bossLeapAt = performance.now();
+  ball.bossLeapLaunched = false;
+  // Aim it inward for the moment it lands, so it heads into open space.
+  const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
+  const ddx = cx - landing.x, ddy = cy - landing.y;
+  const dlen = Math.hypot(ddx, ddy) || 1;
+  const spd = vec2Length(ball.velocity) || ball.baseSpeed || 1;
+  ball.velocity = { x: (ddx / dlen) * spd, y: (ddy / dlen) * spd };
+  const owner = game.regions.find((r) => pointInPolygon(landing, r.polygon));
+  if (owner) ball.regionId = owner.id;
 }
 
 /**
@@ -235,7 +244,6 @@ export function checkAndUpdateBallWonStates(
     if (bossTrapIsDamage(ball)) {
       ball.bossHp = (ball.bossHp ?? 1) - 1;
       game.bossHp = ball.bossHp;
-      game.bossHitAt = performance.now();
       breakBossOut(game, ball, gridRegionMap, denominator);
       // First hit ("REVERTED"): a regression re-opens a region you had captured.
       if (ball.bossHp === (ball.bossMaxHp ?? 1) - 1) queueBossClawback(game);
@@ -249,11 +257,9 @@ export function checkAndUpdateBallWonStates(
       game.bossDefeated = true;
       game.bossHp = 0;
       game.bossActive = false;
-      const defeatNow = performance.now();
-      game.bossHitAt = defeatNow;
-      game.bossDefeatedAt = defeatNow; // drives the "SHIPPED IT" flash
       // Defeating the boss SHIPS it: pop any live minions so the board clears
       // with the boss instead of leaving hotfixes bouncing after the win.
+      const defeatNow = performance.now();
       for (const m of game.balls) {
         if (m.id !== ball.id && m.state === 'active') {
           m.state = 'won';

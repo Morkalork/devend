@@ -1,18 +1,16 @@
 /**
  * Boss encounters (issue #56), Phase 1 slice "Release Deadline".
  *
- * Covers the two genuinely new pieces:
- * - the MANDATORY-objective win gate (isBossGateSatisfied): a boss map cannot be
- *   won until its objective is met; a non-boss map is never gated;
- * - the phase controller (tickBossPhases): a phase fires exactly once when its
- *   threshold is crossed, spawns its adds, and never deadlocks when nothing can
- *   anchor a spawn.
+ * Covers the boss-specific pieces: the objective evaluation (defeatBoss), the
+ * phase controller (tickBossPhases), the spit/mitosis/panic behaviour, the
+ * break-out leap, HP-based shrink, and the win path (defeating the boss ships
+ * the map). Note: defeating the boss is what completes a boss map now, so there
+ * is no separate objective-gate helper to test.
  */
 import { describe, it, expect, vi } from "vitest";
 vi.mock("@/lib/gameAudio", () => ({ playWallHitSound: () => {}, playCutClaimedSound: () => {}, playLevelCompleteSound: () => {}, playBallLockSound: () => {}, playBossJumpSound: () => {}, playBossLandSound: () => {}, playBossChargeSound: () => {} }));
 vi.mock("@/lib/gameHaptics", () => ({ vibrateBallLock: () => {}, vibrateFenceComplete: () => {}, vibrateFenceBreak: () => {} }));
 
-import { isBossGateSatisfied } from "@/lib/physics/applyCut";
 import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
 import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState";
 import { evaluateObjective } from "@/lib/mapObjectives";
@@ -35,11 +33,6 @@ function gameWith(part: Partial<CanvasGameState>): CanvasGameState {
     ...part,
   } as unknown as CanvasGameState;
 }
-const bossLevel = (): LevelConfig => ({
-  id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 2,
-  boss: { name: "Release Deadline", intro: "x", objective: SHIP_IT, creepFromStart: true,
-          phases: [{ id: "hotfix", atSpaceRemaining: 50, spawnAdds: 1 }] },
-});
 
 function activeBall(id: string): Ball {
   return {
@@ -49,28 +42,6 @@ function activeBall(id: string): Ball {
     assimScale: 1, assimColorFade: 0, ability: "none", lockMultiplier: 1, spawnTime: 0, minimumSpeed: 80,
   } as unknown as Ball;
 }
-
-describe("isBossGateSatisfied (#56 mandatory win gate)", () => {
-  it("never gates a non-boss map", () => {
-    const level: LevelConfig = { id: "l", level: 12, sizeThreshold: 10, expectedCuts: 5, points: 20, maxBalls: 2 };
-    expect(isBossGateSatisfied(gameWith({ lockedBallsCount: 0 }), level)).toBe(true);
-  });
-
-  it("blocks the win until the boss objective is met, then allows it", () => {
-    const level = bossLevel();
-    // Clearing space with < 2 locks must NOT satisfy the gate.
-    expect(isBossGateSatisfied(gameWith({ objective: SHIP_IT, lockedBallsCount: 0 }), level)).toBe(false);
-    expect(isBossGateSatisfied(gameWith({ objective: SHIP_IT, lockedBallsCount: 1 }), level)).toBe(false);
-    // Meeting the objective (2 locks) opens the gate.
-    expect(isBossGateSatisfied(gameWith({ objective: SHIP_IT, lockedBallsCount: 2 }), level)).toBe(true);
-    expect(isBossGateSatisfied(gameWith({ objective: SHIP_IT, lockedBallsCount: 3 }), level)).toBe(true);
-  });
-
-  it("fails open if a boss somehow has no objective wired (never soft-locks)", () => {
-    const level = bossLevel();
-    expect(isBossGateSatisfied(gameWith({ objective: null }), level)).toBe(true);
-  });
-});
 
 describe("tickBossPhases (#56 phase controller)", () => {
   const level: LevelConfig = {
@@ -190,15 +161,6 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     expect(evaluateObjective(obj, { lockedBalls: 0, superiorLocks: 0, cuts: 0, par: 16, activeSeconds: 0, bossDefeated: true }).met).toBe(true);
   });
 
-  it("a boss map with a defeatBoss objective gates the win on bossDefeated", () => {
-    const obj: MapObjective = { id: "d", name: "Defeat", description: "d", kind: "defeatBoss", reward: 12 };
-    const level: LevelConfig = {
-      id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 1,
-      boss: { name: "Release Deadline", intro: "x", objective: obj, bossBall: { hp: 3 } },
-    };
-    expect(isBossGateSatisfied(gameWith({ objective: obj, bossDefeated: false }), level)).toBe(false);
-    expect(isBossGateSatisfied(gameWith({ objective: obj, bossDefeated: true }), level)).toBe(true);
-  });
 });
 
 describe("boss minion mitosis (#56 attached bud that grows then pinches off)", () => {

@@ -310,10 +310,12 @@ export function GameScreen({
     const prev = prevBossHpRef.current;
     prevBossHpRef.current = hp;
     if (prev == null || hp >= prev || gameState.bossDefeated) return; // only a real pre-defeat HP drop
-    const label = hp <= 1
-      ? t('boss.panicMode')
-      : hp === gameState.bossMaxHp - 1
-        ? t('boss.reverted')          // first hit: the regression clawback fires
+    // Order matters: the first hit (hp === maxHp - 1) fires the clawback, so it
+    // shows REVERTED even for a low-HP boss where that hit is also the last life.
+    const label = hp === gameState.bossMaxHp - 1
+      ? t('boss.reverted')            // first hit: the regression clawback fires
+      : hp <= 1
+        ? t('boss.panicMode')         // last life
         : t('boss.hotfixIncoming');
     setBossPhaseLabel(label);
     const timer = setTimeout(() => setBossPhaseLabel(null), 1800);
@@ -361,7 +363,6 @@ export function GameScreen({
     && !gameState.bossDefeated && !mapComplete;
   useEffect(() => {
     if (deadlineUrgent) playHeartbeatSound();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deadlineUrgent, deadlineRemaining]);
 
   // Close menu and unpause when the game ends so the overlays appear cleanly

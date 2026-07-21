@@ -210,6 +210,13 @@ function triggerSquish(
  * the impact normal (nx,ny); `scalePerp` stretches perpendicular to preserve
  * area. Both are 1 when round. Apply as a rotated non-uniform scale at render.
  */
+/**
+ * Per-ball squish dial for big boss balls: the full ~35% compression reads as
+ * overblown on their large radius, so they squish at half strength. Shared by
+ * both renderers (Pixi rig + 2D transform) so the factor lives in one place.
+ */
+export const BOSS_SQUISH_SCALE = 0.5;
+
 export function getSquishEffect(state: BallEffectState, scale = 1): {
   active: boolean;
   scaleAlong: number;

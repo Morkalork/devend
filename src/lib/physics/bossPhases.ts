@@ -66,6 +66,10 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
   if (bosses.length === 0) return;
 
   for (const boss of bosses) {
+    // Airborne (mid break-out leap): don't start a wind-up or a panic lunge - the
+    // leap owns its position/velocity and updateBall skips physics until it lands.
+    if (boss.bossLeapAt !== undefined) continue;
+
     // Last-life panic: the boss no longer divides, but periodically LUNGES at the
     // largest open region (a regression attacking your progress).
     if ((boss.bossHp ?? 1) <= 1) {
@@ -108,9 +112,11 @@ function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: num
   const minionType = getBallType(boss.typeId);
   if (!minionType || minionType.baseSpeed <= 0) return;
   // Divide the boss's own scale back out so minions are normal-paced/sized.
-  const speedScale = (boss.baseSpeed / minionType.baseSpeed) / (bb.speedScale ?? 1.2);
+  // Guard the divisors so a stray `speedScale: 0` / `radiusScale: 0` in YAML
+  // can't produce an Infinity speed/radius.
+  const speedScale = (boss.baseSpeed / minionType.baseSpeed) / Math.max(0.05, bb.speedScale ?? 1.2);
   const base = boss.splitBaseRadius ?? boss.radius;     // unswollen size
-  const minionRadius = base / (bb.radiusScale ?? 2);
+  const minionRadius = base / Math.max(0.1, bb.radiusScale ?? 2);
   const angle = Math.random() * Math.PI * 2;
   const dir = { x: Math.cos(angle), y: Math.sin(angle) };
   const position = { x: boss.position.x + dir.x * boss.radius * 0.85, y: boss.position.y + dir.y * boss.radius * 0.85 };

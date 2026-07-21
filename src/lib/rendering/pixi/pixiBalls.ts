@@ -17,6 +17,7 @@ import {
   getWallHitEffect,
   getBallHitEffect,
   getSquishEffect,
+  BOSS_SQUISH_SCALE,
 } from "@/lib/ballEffects";
 import { COLORS, FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 import { rainbowBaseColor } from "@/lib/rendering/rainbowColor";
@@ -275,9 +276,8 @@ export class BallLayer {
       }
 
       // ── Squash & stretch rig ──
-      // Big boss balls squish at half strength (the full 35% compression reads
-      // as too much on their large radius); everything else at full strength.
-      const squish = getSquishEffect(ball.effects, ball.isBoss ? 0.5 : 1);
+      // Big boss balls squish at half strength (see BOSS_SQUISH_SCALE).
+      const squish = getSquishEffect(ball.effects, ball.isBoss ? BOSS_SQUISH_SCALE : 1);
       if (squish.active) {
         const ang = Math.atan2(squish.ny, squish.nx);
         v.squishOuter.rotation = ang;

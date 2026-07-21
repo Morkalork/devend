@@ -23,7 +23,7 @@ import { getBallBase, getBallSpecular, getHexOverlay } from "@/lib/ballRenderCac
 import { rainbowBaseColor } from "@/lib/rendering/rainbowColor";
 import { getBallSphere } from "@/lib/ballSphereCache";
 import { getRainGlyph } from "./rainGlyphCache";
-import { renderBallEffects, getSquishEffect } from "@/lib/ballEffects";
+import { renderBallEffects, getSquishEffect, BOSS_SQUISH_SCALE } from "@/lib/ballEffects";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
@@ -1507,9 +1507,9 @@ export function renderFrame(
     // Squash & stretch (issue #44): computed once here so the fastest-ball ring
     // below, and the flame plume + body sprites further down, all deform along
     // the same impact axis as one unit. The transient collision halos and the
-    // motion trail stay round. Big boss balls squish at half strength (the full
-    // 35% compression reads as too much on their large radius).
-    const squishScale = ball.isBoss ? 0.5 : 1;
+    // motion trail stay round. Big boss balls squish at half strength (see
+    // BOSS_SQUISH_SCALE).
+    const squishScale = ball.isBoss ? BOSS_SQUISH_SCALE : 1;
     const squish = getSquishEffect(ball.effects, squishScale);
     const applySquish = () => {
       if (!squish.active) return;
