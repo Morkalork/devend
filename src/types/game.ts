@@ -72,6 +72,7 @@ export interface Ball {
   // Break-out leap: after a non-fatal trap the boss arcs out of the pocket back
   // onto the open map instead of teleporting. Physics is skipped while airborne.
   bossLeapAt?: number; // performance.now() the leap began (undefined = not leaping)
+  bossLeapLaunched?: boolean; // the launch whoosh has fired (once, after the wind-up)
   leapFromX?: number; leapFromY?: number; // arc start (where it was trapped)
   leapToX?: number;   leapToY?: number;   // arc end (open-space landing spot)
   // ── Mitosis birth (boss minion split-off, issue #56) ─────────────────────
@@ -79,6 +80,11 @@ export interface Ball {
   bornRadius?: number;    // target radius the minion grows to (its full size)
   splitAnimAt?: number;   // performance.now() a split began; the boss stops dead and swells while it divides
   splitBaseRadius?: number; // the boss's pre-swell radius, restored when the division ends
+  splitDirX?: number;     // unit direction the current bud emerges (drives the birth splash)
+  splitDirY?: number;
+  spitChargeStart?: number; // performance.now() a spit wind-up (telegraph) began
+  bornSplashAt?: number;    // performance.now() the wet birth splash started (at the bud spawn)
+  lastPanicAt?: number;     // performance.now() of the boss's last last-life panic lunge
   birthParentId?: string; // while set, this bud is attached to its parent and growing (mitosis)
   birthDirX?: number;     // unit direction from the parent it buds along / is released toward
   birthDirY?: number;

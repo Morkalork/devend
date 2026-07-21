@@ -411,6 +411,8 @@ export function GameCanvas({
     bossDefeated: false,
     bossMinionCount: 0,
     bossHitAt: 0,
+    bossDefeatedAt: 0,
+    bossClawbackAt: 0,
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",

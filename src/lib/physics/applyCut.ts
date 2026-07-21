@@ -295,15 +295,22 @@ export function evaluateWinConditions(
     handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
     return null;
   }
-  // Boss maps (issue #56): the objective is a MANDATORY win gate. Neither the
-  // all-balls-locked path nor the space-clear path may complete the map until it
-  // is met. The deadline above still fires as the boss fail state.
-  const bossGateOk = isBossGateSatisfied(game, level);
-  if (areAllBallsWon(game) && bossGateOk) {
+  // Boss maps (issue #56): DEFEATING THE BOSS SHIPS IT. The moment the boss is
+  // beaten the map completes, regardless of remaining space - the fight is about
+  // the boss, not grinding the board. So on a boss map only the boss's defeat
+  // finishes the map (the space-clear path never applies); the deadline above is
+  // the fail state.
+  if (level.boss) {
+    if (game.bossDefeated) {
+      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+    }
+    return null;
+  }
+  // Non-boss maps keep the normal all-balls-locked and space-clear win paths.
+  if (areAllBallsWon(game)) {
     triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
     return null;
   }
-  if (!bossGateOk) return null;
   return checkSpaceWin(game, level, callbacks);
 }
 

@@ -469,6 +469,10 @@
   "topBar": {
     "clear": "KLART",
     "percentToGo": "{{percent}}% kvar",
+    "spaceTitle": "Brädyta",
+    "spaceLeft": "Kvar",
+    "spaceCleared": "Rensat",
+    "spaceGoalReached": "Mål uppnått",
     "recordPace": "REKORD",
     "currentlyReducingBy": "Minskar just nu med {{percent}}%",
     "continues_one": "{{count}} Fortsättning sparad",
@@ -1272,6 +1276,10 @@
     "dailyStreak_other": "{{count}} dagars närvarosvit"
   },
   "boss": {
-    "defeated": "Besegrad"
+    "defeated": "Besegrad",
+    "hotfixIncoming": "Hotfix på väg",
+    "panicMode": "Panikläge",
+    "reverted": "Återställd!",
+    "shippedIt": "Levererat!"
   }
 }

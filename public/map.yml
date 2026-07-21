@@ -1,7 +1,7 @@
 levels:
   - id: level-1
     level: 1
-    sizeThreshold: 70
+    sizeThreshold: 40
     expectedCuts: 2
     points: 20
     variety: 0
@@ -9,7 +9,7 @@ levels:
     entities: []
   - id: level-2
     level: 2
-    sizeThreshold: 70
+    sizeThreshold: 30
     expectedCuts: 4
     points: 20
     variety: 3
@@ -31,7 +31,7 @@ levels:
         height: 180
   - id: level-2b
     level: 2
-    sizeThreshold: 70
+    sizeThreshold: 40
     expectedCuts: 4
     points: 20
     variety: 3
@@ -53,7 +53,7 @@ levels:
         height: 220
   - id: level-3
     level: 3
-    sizeThreshold: 68
+    sizeThreshold: 35
     expectedCuts: 5
     points: 20
     variety: 5
@@ -68,7 +68,7 @@ levels:
         height: 200
   - id: level-3b
     level: 3
-    sizeThreshold: 68
+    sizeThreshold: 30
     expectedCuts: 5
     points: 20
     variety: 5
@@ -82,7 +82,7 @@ levels:
         radius: 176
   - id: level-4
     level: 4
-    sizeThreshold: 26
+    sizeThreshold: 30
     expectedCuts: 9
     points: 20
     variety: 0
@@ -101,7 +101,7 @@ levels:
         phase: 0.5
   - id: level-4b
     level: 4
-    sizeThreshold: 26
+    sizeThreshold: 30
     expectedCuts: 9
     points: 20
     variety: 0
@@ -121,7 +121,7 @@ levels:
         phase: 0.5
   - id: level-5
     level: 5
-    sizeThreshold: 24
+    sizeThreshold: 30
     expectedCuts: 10
     points: 20
     variety: 0
@@ -154,7 +154,7 @@ levels:
             - 600
   - id: level-5b
     level: 5
-    sizeThreshold: 24
+    sizeThreshold: 30
     expectedCuts: 10
     points: 20
     variety: 0
@@ -187,7 +187,7 @@ levels:
             - 920
   - id: level-6
     level: 6
-    sizeThreshold: 22
+    sizeThreshold: 30
     expectedCuts: 11
     points: 20
     variety: 0
@@ -212,7 +212,7 @@ levels:
         radius: 45
   - id: level-6b
     level: 6
-    sizeThreshold: 22
+    sizeThreshold: 30
     expectedCuts: 11
     points: 20
     variety: 0
@@ -237,7 +237,7 @@ levels:
         radius: 45
   - id: level-7
     level: 7
-    sizeThreshold: 20
+    sizeThreshold: 30
     expectedCuts: 12
     points: 20
     variety: 0
@@ -271,7 +271,7 @@ levels:
         radius: 35
   - id: level-8
     level: 8
-    sizeThreshold: 24
+    sizeThreshold: 30
     expectedCuts: 13
     points: 20
     variety: 5
@@ -361,11 +361,11 @@ levels:
         reward: 12
       bossBall:
         hp: 3
-        radiusScale: 2.6
-        speedScale: 1.25
+        radiusScale: 2.5
+        speedScale: 1.15
         color: "#ff2d55"
         spitIntervalSeconds: 9
-        maxMinions: 4
+        maxMinions: 3
     entities:
       - id: pillar
         kind: wall
@@ -1151,7 +1151,7 @@ levels:
         phase: 0.25
   - id: level-31
     level: 31
-    sizeThreshold: 36
+    sizeThreshold: 30
     expectedCuts: 5
     points: 20
     variety: 0
@@ -1170,7 +1170,7 @@ levels:
         hitsToBreak: 3
   - id: level-32
     level: 32
-    sizeThreshold: 34
+    sizeThreshold: 30
     expectedCuts: 6
     points: 20
     variety: 0
@@ -1210,7 +1210,7 @@ levels:
         height: 40
   - id: level-33
     level: 33
-    sizeThreshold: 32
+    sizeThreshold: 30
     expectedCuts: 8
     points: 20
     variety: 0

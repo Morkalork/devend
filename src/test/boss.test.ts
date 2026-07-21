@@ -9,7 +9,7 @@
  *   anchor a spawn.
  */
 import { describe, it, expect, vi } from "vitest";
-vi.mock("@/lib/gameAudio", () => ({ playWallHitSound: () => {}, playCutClaimedSound: () => {}, playLevelCompleteSound: () => {} }));
+vi.mock("@/lib/gameAudio", () => ({ playWallHitSound: () => {}, playCutClaimedSound: () => {}, playLevelCompleteSound: () => {}, playBallLockSound: () => {}, playBossJumpSound: () => {}, playBossLandSound: () => {}, playBossChargeSound: () => {} }));
 vi.mock("@/lib/gameHaptics", () => ({ vibrateBallLock: () => {}, vibrateFenceComplete: () => {}, vibrateFenceBreak: () => {} }));
 
 import { isBossGateSatisfied } from "@/lib/physics/applyCut";
@@ -18,7 +18,7 @@ import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState"
 import { evaluateObjective } from "@/lib/mapObjectives";
 import { updateBall } from "@/lib/physics/updateBall";
 import { createRectPolygon } from "@/lib/polygon";
-import { createBallEffectState } from "@/lib/ballEffects";
+import { createBallEffectState, getSquishEffect } from "@/lib/ballEffects";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
 import type { Ball } from "@/types/game";
@@ -134,7 +134,16 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     };
     const boss = bossBall(3); // typeId "red"
     const game = gameWith({ balls: [boss], bossMinionCount: 0 });
-    for (let s = 5; s <= 20; s += 5) { game.activePlaySeconds = s; tickBossSpit(game, level); }
+    // Each spit is now a wind-up (telegraph) then the bud; drive both per tick by
+    // rewinding the charge clock so the wind-up "elapses" synchronously.
+    for (let s = 5; s <= 30; s += 5) {
+      game.activePlaySeconds = s;
+      tickBossSpit(game, level);                       // may start a wind-up
+      if (boss.spitChargeStart !== undefined) {
+        boss.spitChargeStart -= 1000;                  // pretend the wind-up finished
+        tickBossSpit(game, level);                     // the bud emerges
+      }
+    }
     const minions = game.balls.filter((b) => b.id.includes("minion"));
     expect(minions.length).toBeGreaterThanOrEqual(3);
     expect(minions.every((m) => m.typeId === boss.typeId)).toBe(true); // red only, never random
@@ -237,23 +246,37 @@ describe("boss minion mitosis (#56 attached bud that grows then pinches off)", (
     expect(b.birthParentId).toBeUndefined();
   });
 
-  it("breaks out with a visible arcing leap, then lands on the target", () => {
+  it("breaks out with a full-stop wind-up, an arcing leap, then a landing splat", () => {
     const now = performance.now();
-    const b = {
+    const mk = (dtBack: number) => ({
       ...activeBall("boss"), isBoss: true, position: { x: 100, y: 200 }, velocity: { x: 40, y: 0 },
-      bossLeapAt: now - 260, leapFromX: 100, leapFromY: 200, leapToX: 300, leapToY: 200,
-    } as Ball;
-    updateBall(b, 1 / 120, gameFor([b]));
-    expect(b.bossLeapAt).toBeDefined();           // still airborne
-    expect(b.position.x).toBeGreaterThan(150);    // ~halfway across
-    expect(b.position.x).toBeLessThan(250);
-    expect(b.position.y).toBeLessThan(200);       // lifted above the baseline (the hop)
-    // Past the leap duration it snaps to the landing spot and clears the leap.
-    b.bossLeapAt = now - 2000;
-    updateBall(b, 1 / 120, gameFor([b]));
-    expect(b.bossLeapAt).toBeUndefined();
-    expect(b.position.x).toBeCloseTo(300, 3);
-    expect(b.position.y).toBeCloseTo(200, 3);
+      bossLeapAt: now - dtBack, leapFromX: 100, leapFromY: 200, leapToX: 300, leapToY: 200,
+    } as Ball);
+
+    // Wind-up: a full stop at the trap spot (still at the start, not moving).
+    const crouch = mk(50);
+    updateBall(crouch, 1 / 120, gameFor([crouch]));
+    expect(crouch.position.x).toBeCloseTo(100, 3);
+    expect(crouch.position.y).toBeCloseTo(200, 3);
+    expect(crouch.bossLeapAt).toBeDefined();
+
+    // Mid-arc (after the 190ms wind-up): ~halfway across and lifted by the hop.
+    const arc = mk(190 + 260);
+    updateBall(arc, 1 / 120, gameFor([arc]));
+    expect(arc.position.x).toBeGreaterThan(150);
+    expect(arc.position.x).toBeLessThan(250);
+    expect(arc.position.y).toBeLessThan(200);
+    expect(arc.bossLeapAt).toBeDefined();
+
+    // Past the full duration: lands on target, clears the leap, fires the squish.
+    const land = mk(5000);
+    updateBall(land, 1 / 120, gameFor([land]));
+    expect(land.bossLeapAt).toBeUndefined();
+    expect(land.position.x).toBeCloseTo(300, 3);
+    expect(land.position.y).toBeCloseTo(200, 3);
+    const squish = getSquishEffect(land.effects);
+    expect(squish.active).toBe(true);          // top-down landing squash
+    expect(squish.ny).toBeCloseTo(1, 3);       // compression axis points straight down
   });
 
   it("the boss stops dead and swells ~25% mid-division, then restores", () => {

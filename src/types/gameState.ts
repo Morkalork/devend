@@ -100,6 +100,10 @@ export interface CanvasGameState {
   bossMinionCount: number;
   /** performance.now() of the last boss hit, for the on-screen hit telegraph. */
   bossHitAt: number;
+  /** performance.now() the boss was defeated (drives the "SHIPPED IT" flash); 0 = alive. */
+  bossDefeatedAt: number;
+  /** performance.now() of the boss's "REVERTED" regression clawback; 0 = none yet. */
+  bossClawbackAt: number;
   /** Cron Job: performance.now() of the last auto-freeze (0 = clock not yet started this map). */
   lastAutoFreezeAt: number;
 

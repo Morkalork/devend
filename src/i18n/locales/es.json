@@ -469,6 +469,10 @@
   "topBar": {
     "clear": "DESPEJADO",
     "percentToGo": "{{percent}}% restante",
+    "spaceTitle": "Espacio del tablero",
+    "spaceLeft": "Restante",
+    "spaceCleared": "Despejado",
+    "spaceGoalReached": "Meta alcanzada",
     "recordPace": "RECORD",
     "currentlyReducingBy": "Reduciendo actualmente un {{percent}}%",
     "continues_one": "{{count}} Continuación guardada",
@@ -1272,6 +1276,10 @@
     "dailyStreak_other": "Racha de asistencia de {{count}} días"
   },
   "boss": {
-    "defeated": "Derrotado"
+    "defeated": "Derrotado",
+    "hotfixIncoming": "Hotfix en camino",
+    "panicMode": "Modo pánico",
+    "reverted": "¡Revertido!",
+    "shippedIt": "¡Publicado!"
   }
 }

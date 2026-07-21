@@ -21,6 +21,10 @@ const VOLUME = {
   ballCollide: 0.07,
   fenceBreak: 0.18,
   death: 0.24,
+  bossJump: 0.16,
+  bossLand: 0.22,
+  bossCharge: 0.14,
+  heartbeat: 0.2,
 };
 
 // Everything above this gets rolled off by the master low-pass; procedural
@@ -551,6 +555,142 @@ export function playPickupClaimedSound(): void {
   ng.gain.setValueAtTime(vol * 0.3, now + 0.16);
   ng.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
   ns.start(now + 0.16); ns.stop(now + 0.45);
+}
+
+/**
+ * Boss break-out JUMP: a quick upward "boing" (triangle sweeping up) plus a
+ * rising air whoosh. Fires the instant the boss launches out of a trap.
+ */
+export function playBossJumpSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = VOLUME.bossJump;
+
+  // Upward pitch sweep — the launch effort.
+  const osc = ctx.createOscillator();
+  const gn = ctx.createGain();
+  const flt = ctx.createBiquadFilter();
+  flt.type = 'lowpass'; flt.frequency.value = 1600;
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(160, now);
+  osc.frequency.exponentialRampToValueAtTime(640, now + 0.22);
+  osc.connect(flt); flt.connect(gn); gn.connect(masterGain);
+  gn.gain.setValueAtTime(0, now);
+  gn.gain.linearRampToValueAtTime(vol, now + 0.02);
+  gn.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
+  osc.start(now); osc.stop(now + 0.3);
+
+  // Rising air whoosh (bandpass noise sweeping up).
+  const nb = createNoiseBuffer(ctx, 0.24);
+  const ns = ctx.createBufferSource();
+  const nf = ctx.createBiquadFilter();
+  const ng = ctx.createGain();
+  ns.buffer = nb;
+  nf.type = 'bandpass';
+  nf.frequency.setValueAtTime(500, now);
+  nf.frequency.exponentialRampToValueAtTime(2600, now + 0.22);
+  nf.Q.value = 1.2;
+  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ng.gain.setValueAtTime(0, now);
+  ng.gain.linearRampToValueAtTime(vol * 0.5, now + 0.03);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+  ns.start(now); ns.stop(now + 0.26);
+}
+
+/**
+ * Deadline heartbeat: a low double-thump ("lub-dub") for the final seconds of a
+ * timed map. Called once per second while the clock is under the wire.
+ */
+export function playHeartbeatSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = VOLUME.heartbeat;
+  const thump = (at: number, gain: number) => {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    const flt = ctx.createBiquadFilter();
+    flt.type = 'lowpass'; flt.frequency.value = 160;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(85, at);
+    osc.frequency.exponentialRampToValueAtTime(45, at + 0.12);
+    osc.connect(flt); flt.connect(g); g.connect(masterGain!);
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.linearRampToValueAtTime(vol * gain, at + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
+    osc.start(at); osc.stop(at + 0.2);
+  };
+  thump(now, 1);          // lub
+  thump(now + 0.18, 0.7); // dub
+}
+
+/**
+ * Boss spit WIND-UP (the telegraph): a rising, tightening tone that ramps over
+ * the ~0.6s charge, warning that a minion is about to bud out.
+ */
+export function playBossChargeSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = VOLUME.bossCharge;
+  const dur = 0.55;
+
+  // Rising sawtooth through a sweeping band-pass: an "energy gathering" swell.
+  const osc = ctx.createOscillator();
+  const flt = ctx.createBiquadFilter();
+  const gn = ctx.createGain();
+  flt.type = 'bandpass';
+  flt.frequency.setValueAtTime(300, now);
+  flt.frequency.exponentialRampToValueAtTime(1400, now + dur);
+  flt.Q.value = 4;
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(90, now);
+  osc.frequency.exponentialRampToValueAtTime(300, now + dur);
+  osc.connect(flt); flt.connect(gn); gn.connect(masterGain);
+  gn.gain.setValueAtTime(0.0001, now);
+  gn.gain.exponentialRampToValueAtTime(vol, now + dur * 0.85);
+  gn.gain.exponentialRampToValueAtTime(0.0001, now + dur + 0.05);
+  osc.start(now); osc.stop(now + dur + 0.08);
+}
+
+/**
+ * Boss break-out LANDING: a heavy low boom plus a short dust crash. Fires the
+ * instant the boss touches down, paired with the top-down squash.
+ */
+export function playBossLandSound(): void {
+  const ctx = ensureAudioContext();
+  if (!ctx || !masterGain || isMuted) return;
+  const now = ctx.currentTime;
+  const vol = VOLUME.bossLand;
+
+  // Heavy low boom — the impact.
+  const boom = ctx.createOscillator();
+  const bg = ctx.createGain();
+  const bf = ctx.createBiquadFilter();
+  bf.type = 'lowpass'; bf.frequency.value = 220;
+  boom.type = 'sine';
+  boom.frequency.setValueAtTime(150, now);
+  boom.frequency.exponentialRampToValueAtTime(38, now + 0.18);
+  boom.connect(bf); bf.connect(bg); bg.connect(masterGain);
+  bg.gain.setValueAtTime(0, now);
+  bg.gain.linearRampToValueAtTime(vol, now + 0.006);
+  bg.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+  boom.start(now); boom.stop(now + 0.34);
+
+  // Dust/impact noise crash (lowpass, quick).
+  const nb = createNoiseBuffer(ctx, 0.18);
+  const ns = ctx.createBufferSource();
+  const nf = ctx.createBiquadFilter();
+  const ng = ctx.createGain();
+  ns.buffer = nb;
+  nf.type = 'lowpass';
+  nf.frequency.setValueAtTime(1200, now);
+  nf.frequency.exponentialRampToValueAtTime(300, now + 0.16);
+  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ng.gain.setValueAtTime(vol * 0.5, now);
+  ng.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+  ns.start(now); ns.stop(now + 0.2);
 }
 
 /** Rising pitch sweep — energy spinning up — when the level is cleared. */

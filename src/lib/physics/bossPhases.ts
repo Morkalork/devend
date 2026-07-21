@@ -9,13 +9,20 @@
  * to make harder, so the spawn is simply skipped (never a deadlock).
  */
 import { CanvasGameState } from "@/types/gameState";
-import { LevelConfig } from "@/types/level";
-import { getRemainingPercent } from "@/lib/spaceGrid";
+import { LevelConfig, BossBall } from "@/types/level";
+import { Ball } from "@/types/game";
+import { getRemainingPercent, findGridRegions, gridIndexToWorld } from "@/lib/spaceGrid";
 import { getBallType, getSpawnableBallTypes } from "@/lib/ballTypes";
 import { createBall } from "@/lib/initGame";
 import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
+import { playBossChargeSound } from "@/lib/gameAudio";
 
 let _bossAddCounter = 0;
+
+/** Wind-up (the telegraph) before a minion actually buds out. */
+const SPIT_CHARGE_MS = 600;
+/** How often the last-life boss lunges at the largest open region (panic). */
+const PANIC_DASH_MS = 2500;
 
 /**
  * Advance boss phases for one frame. Fires any phase whose threshold is newly
@@ -53,51 +60,100 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
   const interval = bb.spitIntervalSeconds ?? 0;
   if (interval <= 0) return;
   const maxMinions = bb.maxMinions ?? 4;
-  if ((game.bossMinionCount ?? 0) >= maxMinions) return;
+  const nowMs = performance.now();
 
   const bosses = game.balls.filter((b) => b.isBoss && b.state === "active" && b.speed > 0);
   if (bosses.length === 0) return;
 
-  const bossSpeedScale = bb.speedScale ?? 1.2;
-  const radiusScale = bb.radiusScale ?? 2;
   for (const boss of bosses) {
-    if ((game.bossMinionCount ?? 0) >= maxMinions) break;
-    // On its last life the boss no longer divides (it is down to a normal-sized
-    // ball) so the shrink-and-stop reads as "one trap from defeated".
-    if ((boss.bossHp ?? 1) <= 1) continue;
-    const anchor = boss.spawnActiveSeconds ?? 0;
-    const due = Math.floor((game.activePlaySeconds - anchor) / interval);
-    if (due <= (boss.rainbowSpawnCount ?? 0)) continue; // reuse the spawn-count field
+    // Last-life panic: the boss no longer divides, but periodically LUNGES at the
+    // largest open region (a regression attacking your progress).
+    if ((boss.bossHp ?? 1) <= 1) {
+      maybePanicDash(game, boss, nowMs);
+      continue;
+    }
 
-    // The minion is the boss's own ball type (red), NOT a random spawnable type.
-    const minionType = getBallType(boss.typeId);
-    if (!minionType || minionType.baseSpeed <= 0) continue;
-    // Divide the boss's own speed scale back out so minions are normal-paced.
-    const speedScale = (boss.baseSpeed / minionType.baseSpeed) / bossSpeedScale;
-    const minionRadius = boss.radius / radiusScale;
-    // The daughter cell buds from the boss: it spawns ATTACHED to the parent's
-    // body and grows there (updateBall follows the parent), then pinches off and
-    // drifts away. Not a separate ball popping in beneath it.
-    const angle = Math.random() * Math.PI * 2;
-    const dir = { x: Math.cos(angle), y: Math.sin(angle) };
-    const position = { x: boss.position.x + dir.x * boss.radius * 0.85, y: boss.position.y + dir.y * boss.radius * 0.85 };
-    const child = createBall(
-      minionType, position, speedScale, minionRadius,
-      `${minionType.id}-minion-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
-    );
-    child.bornRadius = minionRadius;                     // full size to grow into
-    child.radius = Math.max(3, minionRadius * BIRTH_START_FRAC); // starts as a small bud
-    const nowMs = performance.now();
-    child.bornAt = nowMs;
-    child.birthParentId = boss.id;   // attached to the boss until it pinches off
-    child.birthDirX = dir.x;
-    child.birthDirY = dir.y;
-    child.regionId = boss.regionId;
-    game.balls.push(child);
-    game.bossMinionCount = (game.bossMinionCount ?? 0) + 1;
-    boss.splitAnimAt = nowMs;   // parent stops dead and swells while it divides
+    // Wind-up in progress (the telegraph): the boss has already stopped and is
+    // swelling. When the charge completes, the daughter cell actually buds out.
+    if (boss.spitChargeStart !== undefined) {
+      if (nowMs - boss.spitChargeStart >= SPIT_CHARGE_MS) {
+        boss.spitChargeStart = undefined;
+        spawnMinion(game, bb, boss, nowMs);
+      }
+      continue;
+    }
+
+    if ((game.bossMinionCount ?? 0) >= maxMinions) continue;
+
+    // Phase escalation ("HOTFIX INCOMING"): the spit interval shrinks once the
+    // boss has taken a hit, so it divides faster the closer it is to defeat.
+    const maxHp = boss.bossMaxHp ?? 1;
+    const hpFrac = maxHp > 1 ? Math.max(0, ((boss.bossHp ?? 1) - 1) / (maxHp - 1)) : 1;
+    const effInterval = interval * (0.55 + 0.45 * hpFrac);
+    const anchor = boss.spawnActiveSeconds ?? 0;
+    const due = Math.floor((game.activePlaySeconds - anchor) / effInterval);
+    if (due <= (boss.rainbowSpawnCount ?? 0)) continue; // reuse the spawn-count field
     boss.rainbowSpawnCount = due;
+
+    // Begin the telegraph: stop + swell (reuses the division beat) plus a rising
+    // charge cue. The spawn itself lands SPIT_CHARGE_MS later, above.
+    boss.spitChargeStart = nowMs;
+    boss.splitAnimAt = nowMs;
+    playBossChargeSound();
   }
+}
+
+/** Bud a red minion out of the boss (mitosis): attached, grows, then pinches off. */
+function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: number): void {
+  const minionType = getBallType(boss.typeId);
+  if (!minionType || minionType.baseSpeed <= 0) return;
+  // Divide the boss's own scale back out so minions are normal-paced/sized.
+  const speedScale = (boss.baseSpeed / minionType.baseSpeed) / (bb.speedScale ?? 1.2);
+  const base = boss.splitBaseRadius ?? boss.radius;     // unswollen size
+  const minionRadius = base / (bb.radiusScale ?? 2);
+  const angle = Math.random() * Math.PI * 2;
+  const dir = { x: Math.cos(angle), y: Math.sin(angle) };
+  const position = { x: boss.position.x + dir.x * boss.radius * 0.85, y: boss.position.y + dir.y * boss.radius * 0.85 };
+  const child = createBall(
+    minionType, position, speedScale, minionRadius,
+    `${minionType.id}-minion-${++_bossAddCounter}`, nowMs, game.activePlaySeconds,
+  );
+  child.bornRadius = minionRadius;                       // full size to grow into
+  child.radius = Math.max(3, minionRadius * BIRTH_START_FRAC); // starts as a small bud
+  child.bornAt = nowMs;
+  child.birthParentId = boss.id;   // attached to the boss until it pinches off
+  child.birthDirX = dir.x;
+  child.birthDirY = dir.y;
+  child.regionId = boss.regionId;
+  game.balls.push(child);
+  game.bossMinionCount = (game.bossMinionCount ?? 0) + 1;
+  boss.splitDirX = dir.x;          // side the bud emerges (drives the birth splash)
+  boss.splitDirY = dir.y;
+  boss.bornSplashAt = nowMs;       // wet splash starts NOW, not at the charge start
+}
+
+/** Last-life lunge: aim the boss at the centroid of the largest active region. */
+function maybePanicDash(game: CanvasGameState, boss: Ball, nowMs: number): void {
+  if (!game.spaceGrid) return;
+  if (nowMs - (boss.lastPanicAt ?? 0) < PANIC_DASH_MS) return;
+  boss.lastPanicAt = nowMs;
+  const regions = findGridRegions(game.spaceGrid);
+  if (regions.length === 0) return;
+  let biggest = regions[0];
+  for (const r of regions) if (r.cellIndices.length > biggest.cellIndices.length) biggest = r;
+  // Sampled centroid of the biggest region (avoid scanning every cell).
+  let sx = 0, sy = 0, n = 0;
+  const stride = Math.max(1, Math.floor(biggest.cellIndices.length / 40));
+  for (let i = 0; i < biggest.cellIndices.length; i += stride) {
+    const w = gridIndexToWorld(game.spaceGrid, biggest.cellIndices[i]);
+    sx += w.x; sy += w.y; n++;
+  }
+  if (n === 0) return;
+  const dx = sx / n - boss.position.x, dy = sy / n - boss.position.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const spd = (Math.hypot(boss.velocity.x, boss.velocity.y) || boss.baseSpeed) * 1.35;
+  boss.velocity = { x: (dx / len) * spd, y: (dy / len) * spd };
+  boss.speed = spd;
 }
 
 /** Spawn `n` extra balls off live active balls (inherits their region + scale). */

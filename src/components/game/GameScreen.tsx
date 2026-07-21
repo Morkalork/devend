@@ -22,6 +22,7 @@ import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
 import { BossBanner } from './BossBanner';
 import { contentText } from '@/i18n/content';
+import { playHeartbeatSound } from '@/lib/gameAudio';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
 import { selectMapMutator } from '@/lib/mapMutators';
@@ -299,6 +300,39 @@ export function GameScreen({
   // Build readout for the bottom bar: owned upgrades per archetype tag.
   const tagCounts = useMemo(() => ownedTagCounts(ownedUpgradeIds, upgrades), [ownedUpgradeIds, upgrades]);
 
+  // ── Boss escalation feedback (issue #56) ─────────────────────────────────
+  // Phase banner: flash "HOTFIX INCOMING" / "PANIC MODE" as the boss loses HP.
+  const [bossPhaseLabel, setBossPhaseLabel] = useState<string | null>(null);
+  const prevBossHpRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!level.boss || !gameState.bossActive) { prevBossHpRef.current = null; return; }
+    const hp = gameState.bossHp;
+    const prev = prevBossHpRef.current;
+    prevBossHpRef.current = hp;
+    if (prev == null || hp >= prev || gameState.bossDefeated) return; // only a real pre-defeat HP drop
+    const label = hp <= 1
+      ? t('boss.panicMode')
+      : hp === gameState.bossMaxHp - 1
+        ? t('boss.reverted')          // first hit: the regression clawback fires
+        : t('boss.hotfixIncoming');
+    setBossPhaseLabel(label);
+    const timer = setTimeout(() => setBossPhaseLabel(null), 1800);
+    return () => clearTimeout(timer);
+  }, [gameState.bossHp, gameState.bossMaxHp, gameState.bossActive, gameState.bossDefeated, level.boss, t]);
+
+  // "SHIPPED IT" flash the moment the boss is defeated (before the clear wave).
+  const [shippedIt, setShippedIt] = useState(false);
+  const prevDefeatedRef = useRef(false);
+  useEffect(() => {
+    if (gameState.bossDefeated && !prevDefeatedRef.current) {
+      prevDefeatedRef.current = true;
+      setShippedIt(true);
+      const timer = setTimeout(() => setShippedIt(false), 1600);
+      return () => clearTimeout(timer);
+    }
+    if (!gameState.bossDefeated) prevDefeatedRef.current = false;
+  }, [gameState.bossDefeated]);
+
   // Boss maps (issue #56) re-skin the whole arena danger-red: accentColor threads
   // into the CRT background, board, fences and UI, so this one override recolours
   // everything at once.
@@ -316,6 +350,19 @@ export function GameScreen({
   const [mapComplete, setMapComplete] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const memParallaxTickRef = useRef<((timestamp: number) => void) | null>(null);
+
+  // Deadline tension ramp (issue #56): in the final 10s of a timed map a red
+  // vignette pulses and a heartbeat thumps once per second (the effect re-fires
+  // as the whole-second countdown changes).
+  const deadlineRemaining = mapTimeLimit != null
+    ? Math.max(0, Math.ceil(mapTimeLimit - gameState.activeSeconds))
+    : null;
+  const deadlineUrgent = deadlineRemaining != null && deadlineRemaining > 0 && deadlineRemaining <= 10
+    && !gameState.bossDefeated && !mapComplete;
+  useEffect(() => {
+    if (deadlineUrgent) playHeartbeatSound();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deadlineUrgent, deadlineRemaining]);
 
   // Close menu and unpause when the game ends so the overlays appear cleanly
   const handleGameEnd = useCallback((result: GameResult) => {
@@ -392,6 +439,39 @@ export function GameScreen({
         />
       )}
 
+      {/* Deadline tension: pulsing red vignette in the final seconds. */}
+      {deadlineUrgent && (
+        <div
+          className="pointer-events-none absolute inset-0 z-20 animate-pulse"
+          style={{ boxShadow: 'inset 0 0 140px 40px rgba(255, 30, 60, 0.55)' }}
+        />
+      )}
+
+      {/* Boss phase banner: HOTFIX INCOMING / PANIC MODE as HP drops. */}
+      {bossPhaseLabel && !gameState.bossDefeated && (
+        <div className="pointer-events-none absolute left-1/2 top-1/3 z-40 -translate-x-1/2 -translate-y-1/2">
+          <span
+            className="font-display text-2xl font-bold uppercase tracking-widest animate-pulse"
+            style={{ color: '#ff2d55', textShadow: '0 0 18px #ff2d55, 0 0 6px #000' }}
+          >
+            {bossPhaseLabel}
+          </span>
+        </div>
+      )}
+
+      {/* SHIPPED IT: the boss-defeat payoff flash. */}
+      {shippedIt && (
+        <div className="pointer-events-none absolute inset-0 z-40 flex items-center justify-center">
+          <div className="absolute inset-0" style={{ background: 'radial-gradient(circle, rgba(74,222,128,0.18) 0%, transparent 60%)' }} />
+          <span
+            className="font-display text-4xl sm:text-5xl font-bold uppercase tracking-widest animate-pulse"
+            style={{ color: '#4ade80', textShadow: '0 0 24px #4ade80, 0 0 8px #000' }}
+          >
+            {t('boss.shippedIt')}
+          </span>
+        </div>
+      )}
+
       <div className="absolute inset-0 flex flex-col z-10">
         {/* Game Top Bar - Two rows */}
         <div>
@@ -402,7 +482,7 @@ export function GameScreen({
             lives={lives}
             continuesRemaining={continuesRemaining}
             spaceRemaining={gameState.spaceRemaining}
-            spaceRequired={100 - level.sizeThreshold}
+            spaceRequired={level.sizeThreshold}
             lockedBalls={totalLockedBalls}
             threadLockRequired={level.threadLockRequired}
             scopeCreepPercent={gameState.creepPercent}
@@ -726,7 +806,7 @@ export function GameScreen({
         lives={lives}
         continuesRemaining={continuesRemaining}
         spaceRemaining={gameState.spaceRemaining}
-        spaceRequired={100 - level.sizeThreshold}
+        spaceRequired={level.sizeThreshold}
         lockedBalls={totalLockedBalls}
         threadLockRequired={level.threadLockRequired}
         ownedUpgrades={ownedUpgrades}

@@ -152,6 +152,20 @@ export function GameTopBar({
   };
   useEffect(() => cancelContractHold, []);
 
+  // Space readout hold-detail: exact remaining/cleared numbers behind the
+  // CLEAR / "% to go" chip (handy mid Push Your Luck, when the chip just says
+  // CLEAR but the board is still shrinking).
+  const [spaceDetail, setSpaceDetail] = useState(false);
+  const spaceHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelSpaceHold = () => {
+    if (spaceHoldTimer.current) { clearTimeout(spaceHoldTimer.current); spaceHoldTimer.current = null; }
+  };
+  const startSpaceHold = () => {
+    cancelSpaceHold();
+    spaceHoldTimer.current = setTimeout(() => setSpaceDetail(true), 450);
+  };
+  useEffect(() => cancelSpaceHold, []);
+
   const handleSwipeTouchStart = (e: React.TouchEvent) => {
     swipeStartYRef.current = e.touches[0].clientY;
   };
@@ -386,8 +400,17 @@ export function GameTopBar({
           </span>
         </div>
 
-        {/* Space */}
-        <div className="flex items-center gap-1.5 min-w-0">
+        {/* Space — hold or tap for exact remaining/cleared numbers */}
+        <button
+          className="relative flex items-center gap-1.5 min-w-0 bg-transparent border-0 p-0 focus:outline-none"
+          onPointerDown={startSpaceHold}
+          onPointerUp={cancelSpaceHold}
+          onPointerLeave={cancelSpaceHold}
+          onPointerCancel={cancelSpaceHold}
+          onClick={(e) => { e.stopPropagation(); setSpaceDetail(true); }}
+          onContextMenu={(e) => e.preventDefault()}
+          aria-label={t('topBar.spaceTitle')}
+        >
           <Target className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
           <span
             key={spaceFlashKey}
@@ -401,7 +424,8 @@ export function GameTopBar({
               ? t('topBar.clear')
               : t('topBar.percentToGo', { percent: displaySpace - spaceRequired })}
           </span>
-        </div>
+          <Info className="w-3 h-3 flex-shrink-0 opacity-50" style={{ color: accentColor }} />
+        </button>
 
         {/* Thread Locks */}
         <div className="flex items-center gap-1.5 min-w-0">
@@ -650,6 +674,57 @@ export function GameTopBar({
           </TooltipProvider>
         </div>
       )}
+
+      {/* Hold-detail for the Space readout: exact remaining/cleared numbers.
+          Reads live, so during Push Your Luck you can watch the board shrink.
+          Backdrop tap or the X closes it (the game's standard explainer). */}
+      {spaceDetail && (() => {
+        const remaining = Math.max(0, Math.min(100, Math.round(spaceRemaining)));
+        const cleared = 100 - remaining;
+        const goalMet = spaceRemaining <= spaceRequired;
+        const toGo = Math.max(0, Math.round(spaceRemaining - spaceRequired));
+        return (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
+            onClick={() => setSpaceDetail(false)}
+          >
+            <div
+              className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+              style={{ borderColor: `${accentColor}66` }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setSpaceDetail(false)}
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                aria-label={t('topBar.contractClose')}
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-3 mb-3 pr-6">
+                <Target className="w-7 h-7 shrink-0" style={{ color: accentColor }} />
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceTitle')}</div>
+                  <div className="text-base font-bold" style={{ color: goalMet ? accentColor : 'hsl(var(--foreground))' }}>
+                    {goalMet ? t('topBar.spaceGoalReached') : t('topBar.percentToGo', { percent: toGo })}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceLeft')}</div>
+                  <div className="font-display text-3xl font-bold tabular-nums" style={{ color: accentColor, textShadow: `0 0 12px ${accentColor}66` }}>
+                    {remaining}%
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceCleared')}</div>
+                  <div className="font-display text-3xl font-bold tabular-nums text-foreground">{cleared}%</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Issue #49: hold-detail for the active assignment / Promotion chips.
           Backdrop tap or the X closes it (the game's standard explainer). */}

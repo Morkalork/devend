@@ -31,7 +31,7 @@ import {
   findContainingRegion,
   constrainBallToRegion,
 } from "@/lib/regionOwnership";
-import { playWallHitSound } from "@/lib/gameAudio";
+import { playWallHitSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit } from "@/lib/physics/destructibles";
 
@@ -39,6 +39,10 @@ import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWall
 const SPLIT_MS = 1200;
 /** Boss break-out leap duration (issue #56): the arc out of a trapped pocket. */
 const BOSS_LEAP_MS = 520;
+/** Full stop at the trap spot before the jump launches (wind-up beat). */
+const BOSS_LEAP_CROUCH_MS = 190;
+/** Landing impact speed fed to the squish so the top-down splat saturates. */
+const BOSS_LAND_IMPACT_SPEED = 340;
 /** A boss daughter cell buds at this fraction of full size and grows to full while
  *  attached to the parent. Shared with the spawn in bossPhases. */
 export const BIRTH_START_FRAC = 0.15;
@@ -166,23 +170,39 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
 
   const now = performance.now();
 
-  // Boss break-out leap (issue #56): after a non-fatal trap the boss ARCS out of
-  // the sealed pocket and back onto the open map, rather than teleporting. It is
-  // airborne (skips all physics/collision/region checks) and lands at leapTo,
+  // Boss break-out leap (issue #56): after a non-fatal trap the boss comes to a
+  // FULL STOP, then ARCS out of the sealed pocket back onto the open map (a whoosh
+  // on launch, a top-down squash + thud on landing), rather than teleporting. It
+  // is airborne (skips all physics/collision/region checks) and lands at leapTo,
   // where breakBossOut already aimed its velocity into open space.
   if (ball.bossLeapAt !== undefined) {
-    const t = (now - ball.bossLeapAt) / BOSS_LEAP_MS;
+    const elapsed = now - ball.bossLeapAt;
     const fromX = ball.leapFromX ?? ball.position.x, fromY = ball.leapFromY ?? ball.position.y;
     const toX = ball.leapToX ?? ball.position.x, toY = ball.leapToY ?? ball.position.y;
-    if (t >= 1 || t < 0) {
-      // Landed: snap to the target and resume normal physics next frame.
+    // Wind-up: a full stop at the trap spot before the jump launches.
+    if (elapsed < BOSS_LEAP_CROUCH_MS) {
+      ball.position.x = fromX; ball.position.y = fromY;
+      ball.prevPosition = { x: fromX, y: fromY };
+      ball.renderPosition = { x: fromX, y: fromY };
+      return;
+    }
+    const t = (elapsed - BOSS_LEAP_CROUCH_MS) / BOSS_LEAP_MS;
+    if (t >= 1) {
+      // Land: snap to the target, then a TOP-DOWN squash (impact normal points
+      // straight down, so it splats vertically regardless of the leap direction)
+      // plus a thud; resume normal physics next frame.
       ball.position = { x: toX, y: toY };
       ball.prevPosition = { x: toX, y: toY };
       ball.renderPosition = { x: toX, y: toY };
       ball.bossLeapAt = undefined;
+      ball.bossLeapLaunched = undefined;
       ball.leapFromX = ball.leapFromY = ball.leapToX = ball.leapToY = undefined;
+      triggerWallHit(ball.effects, now, 0, BOSS_LAND_IMPACT_SPEED, BOSS_LAND_IMPACT_SPEED);
+      playBossLandSound();
       return;
     }
+    // First airborne frame: the launch whoosh.
+    if (!ball.bossLeapLaunched) { ball.bossLeapLaunched = true; playBossJumpSound(); }
     // Straight-line interpolation plus a parabolic hop (screen up = -y) so it
     // visibly vaults over the walls of the pocket it was sealed into.
     const hop = Math.sin(Math.PI * t) * Math.min(90, Math.hypot(toX - fromX, toY - fromY) * 0.3);

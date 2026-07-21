@@ -54,6 +54,26 @@ export function escalateBoss(ball: Ball): void {
 }
 
 /**
+ * Boss "REVERTED" regression (issue #56): queue the fence that sealed the most
+ * space to break, re-opening that captured region (a regression clawing back your
+ * progress). Reuses the existing fence-break pipeline (game.pendingWallBreaks),
+ * which restores the cells and rebuilds regions safely on the next frame.
+ */
+function queueBossClawback(game: CanvasGameState): void {
+  let best: (typeof game.walls)[number] | null = null;
+  for (const w of game.walls) {
+    if (w.isBoardEdge) continue;
+    if (w.id && w.id.startsWith("obstacle-")) continue;
+    const rc = w.rasterCells;
+    if (!rc || rc.length === 0) continue;
+    if (!best || rc.length > (best.rasterCells?.length ?? 0)) best = w;
+  }
+  if (!best) return;
+  if (!game.pendingWallBreaks.includes(best)) game.pendingWallBreaks.push(best);
+  game.bossClawbackAt = performance.now();
+}
+
+/**
  * A boss got trapped but still has HP: break it out. Escalate it, then LEAP it
  * out of the sealed pocket to a comfortably-open active spot (never a soon-to-lock
  * sliver). The leap is set up here (arc endpoints + landing region) and animated
@@ -84,9 +104,11 @@ function breakBossOut(
     const pct = (region.cellIndices.length / Math.max(1, denominator)) * 100;
     if (pct <= threshold * 2) continue;
     // Leap: keep the boss where it was trapped and arc to the open landing spot.
+    // updateBall runs the wind-up stop, the launch whoosh, and the landing splat.
     ball.leapFromX = ball.position.x; ball.leapFromY = ball.position.y;
     ball.leapToX = p.x; ball.leapToY = p.y;
     ball.bossLeapAt = performance.now();
+    ball.bossLeapLaunched = false;
     // Aim it inward for the moment it lands, so it heads into open space.
     const cx = (b.minX + b.maxX) / 2, cy = (b.minY + b.maxY) / 2;
     const ddx = cx - p.x, ddy = cy - p.y;
@@ -215,8 +237,11 @@ export function checkAndUpdateBallWonStates(
       game.bossHp = ball.bossHp;
       game.bossHitAt = performance.now();
       breakBossOut(game, ball, gridRegionMap, denominator);
+      // First hit ("REVERTED"): a regression re-opens a region you had captured.
+      if (ball.bossHp === (ball.bossMaxHp ?? 1) - 1) queueBossClawback(game);
       callbacks.onBossState?.(ball.bossHp, ball.bossMaxHp ?? ball.bossHp, false);
-      playBallLockSound();
+      // The break-out's own jump/land sounds carry the audio (fired from
+      // updateBall); the elaborate lock jingle is reserved for real locks.
       vibrateBallLock();
       continue;
     }
@@ -224,7 +249,19 @@ export function checkAndUpdateBallWonStates(
       game.bossDefeated = true;
       game.bossHp = 0;
       game.bossActive = false;
-      game.bossHitAt = performance.now();
+      const defeatNow = performance.now();
+      game.bossHitAt = defeatNow;
+      game.bossDefeatedAt = defeatNow; // drives the "SHIPPED IT" flash
+      // Defeating the boss SHIPS it: pop any live minions so the board clears
+      // with the boss instead of leaving hotfixes bouncing after the win.
+      for (const m of game.balls) {
+        if (m.id !== ball.id && m.state === 'active') {
+          m.state = 'won';
+          m.wonTime = defeatNow;
+          m.velocity = { x: 0, y: 0 };
+          m.speed = 0;
+        }
+      }
       callbacks.onBossState?.(0, ball.bossMaxHp ?? 0, true);
     }
 
