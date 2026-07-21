@@ -21,6 +21,7 @@ import {
 import { COLORS, FREEZE_COOLDOWN_MULTIPLIER } from "@/lib/gameConstants";
 import { rainbowBaseColor } from "@/lib/rendering/rainbowColor";
 import { glowTexture, textureFor, hashStr, mulberry } from "./textures";
+import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 
 const FLAME_SHEAR_SPEED = 380;
 const FLAME_LIFE_MS = 620;
@@ -64,6 +65,7 @@ interface BallView {
   hexMask: Graphics;
   specular: Sprite;
   frost: Graphics;
+  splash: Graphics;
   ring: Graphics;
   label: Text | null;
 }
@@ -109,6 +111,9 @@ export class BallLayer {
     const specular = new Sprite();
     specular.anchor.set(0.5);
     const frost = new Graphics();
+    // Birth splash: wet droplets sprayed on top of the body (not squished), so it
+    // sits outside the rig and in front of everything.
+    const splash = new Graphics();
     const ring = new Graphics();
     // Fastest-ball ring + pulse glow + flame all live INSIDE the squish rig
     // (behind the body) so the ball's surrounding aura (cyan highlight ring,
@@ -116,9 +121,9 @@ export class BallLayer {
     // round beside the squished body. Only the transient collision shockwaves
     // (halos) and the motion trail stay round, outside the rig.
     squishInner.addChild(ring, pulse, ...flame, base, sphere, hex, hexMask, specular);
-    root.addChild(halos, trail, squishOuter, frost);
+    root.addChild(halos, trail, squishOuter, frost, splash);
     return {
-      root, pulse, halos, trail, flame,
+      root, pulse, halos, trail, flame, splash,
       squishOuter, squishMid, squishInner,
       base, sphere, hex, hexMask, specular, frost,
       ring, label: null,
@@ -327,6 +332,29 @@ export class BallLayer {
           v.frost
             .arc(0, 0, screenRadius + 5 * scale, -Math.PI / 2, -Math.PI / 2 + frac * Math.PI * 2)
             .stroke({ width: Math.max(2, 3 * scale), color: frost, alpha: 0.95 });
+        }
+      }
+
+      // ── Boss birth splash (wet droplets sprayed as a minion buds out) ──
+      v.splash.clear();
+      if (ball.isBoss && ball.bornSplashAt !== undefined && ball.splitDirX !== undefined) {
+        const sf = bossSplashFrame(
+          screenRadius, ball.splitDirX, ball.splitDirY ?? 0,
+          ball.bornSplashAt, now, scale, Math.round(ball.bornSplashAt),
+        );
+        if (sf.active) {
+          if (sf.ringAlpha > 0.01) {
+            v.splash
+              .circle(sf.ringX, sf.ringY, sf.ringR)
+              .stroke({ width: sf.ringWidth, color: baseColor, alpha: sf.ringAlpha });
+          }
+          for (const d of sf.droplets) {
+            v.splash
+              .circle(d.x, d.y, d.r)
+              .fill({ color: baseColor, alpha: d.alpha })
+              .circle(d.x + d.hx, d.y + d.hy, d.r * 0.35)
+              .fill({ color: 0xffffff, alpha: d.alpha * 0.7 });
+          }
         }
       }
 

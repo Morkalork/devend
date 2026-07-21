@@ -24,6 +24,7 @@ import { rainbowBaseColor } from "@/lib/rendering/rainbowColor";
 import { getBallSphere } from "@/lib/ballSphereCache";
 import { getRainGlyph } from "./rainGlyphCache";
 import { renderBallEffects, getSquishEffect } from "@/lib/ballEffects";
+import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { getPickupSprite, pickupColor, pickupFeedbackLabel } from "./pickupSprites";
@@ -1722,6 +1723,35 @@ export function renderFrame(
     }
 
     if (squish.active) ctx.restore(); // squash & stretch transform
+
+    // Boss birth splash: wet droplets sprayed as a minion buds out. Drawn in the
+    // ball's own screen space (outside the squish transform) so it reads as fluid
+    // flung off the boss, not a deformed body layer.
+    if (ball.isBoss && ball.bornSplashAt !== undefined && ball.splitDirX !== undefined) {
+      const sf = bossSplashFrame(
+        screenRadius, ball.splitDirX, ball.splitDirY ?? 0,
+        ball.bornSplashAt, performance.now(), scale, Math.round(ball.bornSplashAt),
+      );
+      if (sf.active) {
+        if (sf.ringAlpha > 0.01) {
+          ctx.beginPath();
+          ctx.arc(screenPos.x + sf.ringX, screenPos.y + sf.ringY, sf.ringR, 0, Math.PI * 2);
+          ctx.strokeStyle = hexToRgba(baseColor, sf.ringAlpha);
+          ctx.lineWidth = sf.ringWidth;
+          ctx.stroke();
+        }
+        for (const d of sf.droplets) {
+          ctx.beginPath();
+          ctx.arc(screenPos.x + d.x, screenPos.y + d.y, d.r, 0, Math.PI * 2);
+          ctx.fillStyle = hexToRgba(baseColor, d.alpha);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(screenPos.x + d.x + d.hx, screenPos.y + d.y + d.hy, d.r * 0.35, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255,255,255,${d.alpha * 0.7})`;
+          ctx.fill();
+        }
+      }
+    }
 
     ctx.restore(); // globalAlpha
 
