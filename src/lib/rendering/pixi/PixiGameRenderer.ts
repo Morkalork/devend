@@ -292,6 +292,7 @@ export class PixiGameRenderer {
       tmp.filters = [grey];
       this.app.renderer.render({ container: tmp, target: drainedRT });
       tmp.destroy();
+      grey.destroy(); // Pixi does not free a display object's filters on destroy()
       // Both sprites are full-frame and pixel-aligned; only the drained one is
       // cropped (rect mask) — the live one simply shows wherever it isn't
       // covered. NB: don't crop by mutating texture.frame — the sprite keeps
@@ -976,6 +977,10 @@ export class PixiGameRenderer {
     this.dissolve.destroy();
     clearCanvasTextures();
     clearGlowTextures();
+    // app.destroy(children:true) frees the stage tree but NOT filters attached to
+    // it; the bloom allocates internal render targets, so free it explicitly.
+    this.bloom?.destroy();
+    this.bloom = null;
     if (this.ready) {
       this.app.destroy(false, { children: true });
     }

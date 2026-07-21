@@ -26,6 +26,7 @@ import { getBallType } from "@/lib/ballTypes";
 import { playPickupClaimedSound } from "@/lib/gameAudio";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { getRunRng } from "@/lib/runRng";
+import { MAX_LIVE_BALLS } from "@/lib/gameConstants";
 
 /** Token placement radius in world units (spawn clearance / claim geometry). */
 export const PICKUP_RADIUS = 14;
@@ -404,6 +405,7 @@ function forkRandomFreeBall(game: CanvasGameState, payoutLevel = 0): boolean {
   const cloneCount = payoutLevel >= FORK_TRIPLE_LEVEL ? 2 : 1;
   const spawned: Ball[] = [];
   for (let i = 0; i < cloneCount; i++) {
+    if (game.balls.length >= MAX_LIVE_BALLS) break; // hard safety cap (memory + CPU)
     const angle = Math.random() * Math.PI * 2;
     const clone: Ball = {
       ...src,

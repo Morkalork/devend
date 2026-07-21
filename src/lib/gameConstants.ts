@@ -17,6 +17,11 @@ export const BASE_BALL_RADIUS          = 18;      // World units
 export const BALL_SPEED_INCREASE       = 1.03;    // Post-wall speed ramp
 export const BASE_SWIPE_MIN_DISTANCE   = 5;       // World units
 export const ARENA_MARGIN              = 0.05;    // 5% margin from board edges
+// Hard safety ceiling on live balls (game.balls length). Spawners (rainbow spit,
+// Fork) never push past this, so a long session on a rainbow map with a weak/absent
+// time limit can't grow game.balls without bound (memory + O(n^2) collision CPU).
+// Far above any real map's ball count, so it never affects normal play.
+export const MAX_LIVE_BALLS            = 64;
 export const MINIMUM_WALL_TIME         = 0.35;    // seconds
 export const RECOVERY_WINDOW_MS        = 700;     // Recovery time after failed wall
 export const BALL_WON_REGION_THRESHOLD = 10;      // DEFAULT lock threshold: ball is WON if its region is <= this % of the win denominator. Overridable per game via game-config.yml `lock.win_threshold_percent` (see checkBallWonState.ts).

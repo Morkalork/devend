@@ -14,6 +14,7 @@
 import { CanvasGameState } from '@/types/gameState';
 import { getBallType, getSpawnableBallTypes, DEFAULT_RAINBOW_SPAWN_INTERVAL } from '@/lib/ballTypes';
 import { createBall } from '@/lib/initGame';
+import { MAX_LIVE_BALLS } from '@/lib/gameConstants';
 
 let _rainbowCounter = 0;
 
@@ -36,6 +37,7 @@ export function tickRainbowSpawns(game: CanvasGameState, levelNumber: number): v
   if (spawnable.length === 0) return;
 
   for (const rb of rainbows) {
+    if (game.balls.length >= MAX_LIVE_BALLS) break; // hard safety cap (memory + CPU)
     const rainbowType = getBallType(rb.typeId);
     const interval = rainbowType?.spawnIntervalSeconds ?? DEFAULT_RAINBOW_SPAWN_INTERVAL;
     const anchor = rb.spawnActiveSeconds ?? 0;
@@ -48,6 +50,7 @@ export function tickRainbowSpawns(game: CanvasGameState, levelNumber: number): v
     const speedScale = rainbowType && rainbowType.baseSpeed > 0 ? rb.baseSpeed / rainbowType.baseSpeed : 1;
     const toSpawn = Math.min(due - already, MAX_CATCHUP_SPAWNS);
     for (let k = 0; k < toSpawn; k++) {
+      if (game.balls.length >= MAX_LIVE_BALLS) break; // hard safety cap
       const type = spawnable[Math.floor(Math.random() * spawnable.length)];
       // A small offset off the parent avoids a zero-distance collision solve;
       // the parent sits in valid active space, so just beside it is valid too.

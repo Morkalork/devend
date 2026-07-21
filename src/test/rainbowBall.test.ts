@@ -11,6 +11,7 @@ import {
   getBallType,
 } from "@/lib/ballTypes";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
+import { MAX_LIVE_BALLS } from "@/lib/gameConstants";
 import { Ball } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 
@@ -106,5 +107,24 @@ describe("rainbow timed spawner", () => {
     rb.state = "won"; // trapped
     tickRainbowSpawns(game, 20);
     expect(game.balls.length).toBe(1); // no new balls from a locked rainbow
+  });
+
+  it("never grows game.balls past the hard safety cap (long weak-time-limit map)", () => {
+    const rb = rainbowBall();
+    const interval = getBallType("rainbow")!.spawnIntervalSeconds!;
+    const game = gameWith([rb], 0);
+    // Simulate a very long map: advance far past the cap's worth of intervals and
+    // tick repeatedly. Without the cap this would grow linearly forever.
+    for (let s = 1; s <= 5000; s++) {
+      game.activePlaySeconds = s * interval;
+      tickRainbowSpawns(game, 20);
+      if (game.balls.length >= MAX_LIVE_BALLS) break;
+    }
+    // Keep ticking well past the point the cap is hit; it must not exceed it.
+    for (let i = 0; i < 50; i++) {
+      game.activePlaySeconds += interval * 10;
+      tickRainbowSpawns(game, 20);
+    }
+    expect(game.balls.length).toBe(MAX_LIVE_BALLS);
   });
 });
