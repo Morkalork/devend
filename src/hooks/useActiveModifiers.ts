@@ -126,11 +126,6 @@ export interface GameModifiers {
   // progress bar in the HUD (a second bar under the capture readout). Gated in
   // upgrades.yml behind the ball-size upgrade.
   showHighscoreProgress: number;
-
-  // Additive (sum) — Treasure chests (#38): run-wide bonus to every ball's mass
-  // in the breakable force model (a "heavier balls" chest adds to this). Read by
-  // ballMass; snapshotted onto game at map init so it applies all run.
-  ballDensityBonus: number;
 }
 
 /**
@@ -246,7 +241,6 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   ballFreezeCount: 0,
   autoFreezeDuration: 0,
   showHighscoreProgress: 0,
-  ballDensityBonus: 0,
 };
 
 /**

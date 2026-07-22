@@ -110,10 +110,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // map under par. Re-evaluated at every level completion (so it lasts exactly
   // one map) and cleared on run start/restart.
   const [carryInstantFences, setCarryInstantFences] = useState(0);
-  // Run-wide bonuses accumulated from smashed treasure chests (issue #38):
-  // "slower balls" (ballSpeedMultiplier) and "heavier balls" (ballDensityBonus).
-  // Merged into the modifier chain so they persist across the rest of the run.
-  const [chestBonuses, setChestBonuses] = useState<Partial<Record<keyof GameModifiers, number>>>({});
+  // Run-wide ability charges earned by smashing treasure chests (issue #38):
+  // { abilityId -> count }. Banked across maps for the rest of the run; the
+  // ability bar reads them, pressing a button spends one.
+  const [abilityCharges, setAbilityCharges] = useState<Record<string, number>>({});
 
   // Budget Cycle: boons carried into the NEXT map, charged by hours spent in
   // the shop visit just left (see src/lib/treasury.ts). Set on shop exit,
@@ -276,7 +276,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const {
     stats: metaStats,
     wonLoadoutIds,
-    loadoutsIntroduced,
     mapHighscores,
     encounteredBallTypeIds,
     archetypeBests,
@@ -293,6 +292,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     introduceLoadouts,
     resetProgression,
   } = useMetaProgression();
+
+  // Issue #38: loadouts are no longer gated behind the first win — the Sprint
+  // Planning draft appears on every run and the menu Loadouts entry is always
+  // wired. (The meta flag is still advanced above for bookkeeping.)
+  const loadoutsIntroduced = true;
 
   const {
     achievements,
@@ -372,10 +376,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (activeDoor) {
       bonuses = mergeBonuses(bonuses, activeDoor.modifiers as Partial<Record<keyof GameModifiers, number>>);
     }
-    // Treasure chests: run-wide bonuses smashed out of chests earlier this run.
-    bonuses = mergeBonuses(bonuses, chestBonuses);
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor, chestBonuses]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -497,7 +499,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setTotalScore(0);
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
-    setChestBonuses({});
+    setAbilityCharges({});
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
     setCarrySpendCapture(0);
@@ -553,6 +555,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     runTrajectory: runTrajectoryRef.current,
     recordEligible: recordEligibleRef.current,
     dailyKey,
+    abilityCharges,
   };
 
   // Persist the run whenever a new map begins (map advance or a Continue-revive
@@ -680,9 +683,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     analytics.runStarted({ mode: 'daily', daily: true });
 
-    if (loadoutsIntroduced) nav.goToRunDraft();
-    else nav.startGame();
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, certBonuses, resetRunScopedState, clearRun, resetToFirstLevel, loadoutsIntroduced, nav.goToRunDraft, nav.startGame, clearDailyMode]);
+    // Daily Stand-up is a seeded, identical-for-everyone challenge: it skips the
+    // loadout draft (which normal runs always show now, #38) to stay clean.
+    nav.startGame();
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, certBonuses, resetRunScopedState, clearRun, resetToFirstLevel, nav.startGame, clearDailyMode]);
 
   /**
    * Resume a saved run from the welcome screen. Loads the catalogues (same as a
@@ -722,6 +726,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setContinuesRemaining(save.continuesRemaining);
     setCumulativeLockedBalls(save.cumulativeLockedBalls);
     setCarryInstantFences(save.carryInstantFences);
+    setAbilityCharges(save.abilityCharges ?? {});
     setCarrySpendFences(save.carrySpendFences);
     setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
@@ -876,10 +881,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCurrentLives(newLives);
   }, [currentLives, recordLivesLost, activeDoor]);
 
-  // A smashed treasure chest awarded a run-scoped ball bonus (issue #38):
-  // accumulate it so it persists into every later map this run.
-  const handleChestRunBonus = useCallback((bonus: Partial<Record<keyof GameModifiers, number>>) => {
-    setChestBonuses(prev => mergeBonuses(prev, bonus) ?? prev);
+  // A smashed chest granted one charge of an ability (issue #38): bank it
+  // run-wide so it persists into every later map this run.
+  const handleGrantAbility = useCallback((abilityId: string) => {
+    setAbilityCharges(prev => ({ ...prev, [abilityId]: (prev[abilityId] ?? 0) + 1 }));
+  }, []);
+
+  // The player pressed an ability button: spend one charge (floored at 0).
+  const handleSpendAbility = useCallback((abilityId: string) => {
+    setAbilityCharges(prev => {
+      const have = prev[abilityId] ?? 0;
+      if (have <= 0) return prev;
+      return { ...prev, [abilityId]: have - 1 };
+    });
   }, []);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
@@ -945,7 +959,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Skipped runs (no drafted loadout) and repeat wins with the same loadout
     // do not advance the count.
     if (isLastLevel) {
-      if (introduceLoadouts()) pendingLoadoutsIntroRef.current = true;
+      // Loadouts are always available now (#38), so no first-win reveal modal;
+      // still advance the meta flag for bookkeeping.
+      introduceLoadouts();
       const startLoadoutId = draftedLoadoutIds[0];
       if (startLoadoutId) {
         const { added, prevCount, newCount } = recordLoadoutWin(startLoadoutId);
@@ -1485,7 +1501,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleSpendContinue,
     handleDeclineContinue,
     handleLivesChange,
-    handleChestRunBonus,
+    handleGrantAbility,
+    handleSpendAbility,
+    abilityCharges,
     handleLevelComplete,
     handleContinueFromOverlay,
     handleDismissLoadoutsUnlocked,

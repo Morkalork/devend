@@ -257,10 +257,9 @@
     "pickupExtraLife": "+1 vida",
     "pickupRainbow": "¡Bola arcoíris!",
     "chestReward": {
-      "slowBalls": "Bolas más lentas",
-      "heavyBalls": "Bolas más pesadas",
-      "overtime": "Horas extra",
-      "extraLife": "Vida extra"
+      "freezeAll": "Congelar todo",
+      "slowAll": "Ralentizar todo",
+      "clearFences": "Quitar vallas"
     },
     "bossIntroTitle": "Combate de jefe: {{name}}"
   },

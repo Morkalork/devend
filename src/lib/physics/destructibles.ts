@@ -24,7 +24,7 @@ import {
 import { getBallType } from "@/lib/ballTypes";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { getRunRng } from "@/lib/runRng";
-import { rollChestReward, makeChestLoot, CHEST_REWARDS } from "@/lib/chests";
+import { rollChestReward, makeChestLoot } from "@/lib/chests";
 import { Polygon, pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
 import {
   CellState,
@@ -72,12 +72,9 @@ const DAMAGE_K = 1 / Math.pow(NOMINAL_SPEED, DAMAGE_EXP);
 const MIN_CHIP_DAMAGE = 0.15;    // a crawling graze still chips a little
 const MAX_HIT_DAMAGE = 2.0;      // cap so one rocket can't trivialise everything
 
-/**
- * Relative mass of a ball: (density + run bonus) × (radius / base radius)².
- * `densityBonus` is the run-wide "heavier balls" chest bonus (issue #38).
- */
-export function ballMass(ball: Ball, densityBonus = 0): number {
-  const density = (getBallType(ball.typeId)?.density ?? 1) + Math.max(0, densityBonus);
+/** Relative mass of a ball: density × (radius / base radius)². */
+export function ballMass(ball: Ball): number {
+  const density = getBallType(ball.typeId)?.density ?? 1;
   const r = ball.radius / BASE_BALL_RADIUS;
   return density * r * r;
 }
@@ -85,10 +82,9 @@ export function ballMass(ball: Ball, densityBonus = 0): number {
 /**
  * Damage one impact deals to a breakable, from the ball's mass and its closing
  * speed along the surface normal (a glancing hit does less than a head-on one).
- * `densityBonus` folds in any run-wide "heavier balls" chest bonus.
  */
-export function ballImpactDamage(ball: Ball, normalSpeed: number, densityBonus = 0): number {
-  const raw = DAMAGE_K * ballMass(ball, densityBonus) * Math.pow(Math.max(0, normalSpeed), DAMAGE_EXP);
+export function ballImpactDamage(ball: Ball, normalSpeed: number): number {
+  const raw = DAMAGE_K * ballMass(ball) * Math.pow(Math.max(0, normalSpeed), DAMAGE_EXP);
   return Math.max(MIN_CHIP_DAMAGE, Math.min(MAX_HIT_DAMAGE, raw));
 }
 
@@ -102,11 +98,11 @@ export interface DestroyCallbacks {
   setRemainingPercent: (percent: number) => void;
   onObjectDestroyed?: () => void;
   /**
-   * A treasure chest was smashed (issue #38). Map-scoped effects are applied on
-   * `game` here; this bubbles the reward up so run-scoped effects (extra life,
-   * run-wide slower/heavier balls) can persist in the session.
+   * A treasure chest was smashed (issue #38): the player earns one charge of the
+   * rolled ability. This bubbles the ability id up so the session can bank the
+   * charge run-wide (GameCanvas -> onGrantAbility).
    */
-  onChestReward?: (rewardId: string, value: number) => void;
+  onChestReward?: (rewardId: string) => void;
 }
 
 // ── Lookups ─────────────────────────────────────────────────────────────────
@@ -407,9 +403,10 @@ function toppleSupportedBy(game: CanvasGameState, supporterId: string, now: numb
 
 /**
  * Rebuild regions from the grid, KEEPING every active region (including newly
- * opened, ball-less space — it's now capturable, not a stray sliver).
+ * opened, ball-less space — it's now capturable, not a stray sliver). Exported
+ * so the Clear All Fences ability (src/lib/abilities.ts) can reuse it.
  */
-function rebuildRegionsKeepAll(game: CanvasGameState): void {
+export function rebuildRegionsKeepAll(game: CanvasGameState): void {
   const grid = game.spaceGrid!;
   const gridRegions = findGridRegions(grid);
   game.gridRegions = gridRegions;
@@ -434,41 +431,21 @@ function rebuildRegionsKeepAll(game: CanvasGameState): void {
 
 // ── Treasure chests (#38) ────────────────────────────────────────────────────
 
-/** Slow every active ball toward its speed floor by `factor` (chest slowBalls). */
-function slowAllBalls(game: CanvasGameState, factor: number): void {
-  for (const b of game.balls) {
-    if (b.state !== 'active') continue;
-    const sp = Math.hypot(b.velocity.x, b.velocity.y);
-    if (sp <= 0) continue;
-    const target = Math.max(b.minimumSpeed ?? 0, sp * factor);
-    const s = target / sp;
-    b.velocity.x *= s; b.velocity.y *= s; b.speed = target;
-  }
-}
-
 /**
- * Roll and grant a smashed chest's reward (#38). Map-scoped rewards apply here;
- * run-scoped ones bubble via callbacks.onChestReward so the session can persist
- * them. Seeded per chest id, so daily / record runs resolve identically.
+ * Roll and grant a smashed chest's reward (#38): ONE charge of an activatable
+ * ability. The charge banks run-wide, so it bubbles via callbacks.onChestReward
+ * to the session (GameCanvas -> onGrantAbility). Seeded per chest id, so daily /
+ * record runs resolve identically. The loot gem is coloured by the ability.
  */
 function grantChestReward(game: CanvasGameState, d: DestructibleState, callbacks: DestroyCallbacks): void {
   const rng = getRunRng(`chest:${d.id}`);
   const rewardId = rollChestReward(d.chestRewards, rng);
-  const def = CHEST_REWARDS[rewardId];
   if (d.obstaclePolygon) {
     const c = polygonCentroid(d.obstaclePolygon);
     (game.chestLoot ??= []).push(makeChestLoot(`loot-${d.id}`, rewardId, c.x, c.y, game.activePlaySeconds));
   }
   (game.chestRewardsLog ??= []).push(rewardId);
-  // Map-scoped effects apply right here; run-scoped ones bubble below.
-  if (rewardId === 'overtime') {
-    game.pickupOvertime = (game.pickupOvertime ?? 0) + def.value; // paid post-cap
-  } else if (rewardId === 'heavyBalls') {
-    game.ballDensityBonus = (game.ballDensityBonus ?? 0) + def.value; // this map now
-  } else if (rewardId === 'slowBalls') {
-    slowAllBalls(game, def.value); // current balls now
-  }
-  callbacks.onChestReward?.(rewardId, def.value);
+  callbacks.onChestReward?.(rewardId);
 }
 
 // ── Processing queued destructions ──────────────────────────────────────────

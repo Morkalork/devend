@@ -62,6 +62,9 @@ export interface RunSave {
   // Daily Stand-up (Phase D): the seeded day this run belongs to, or null for
   // a normal run. Optional for the same backward-compat reason; default null.
   dailyKey?: string | null;
+  // Chest-earned ability charges banked this run (#38): { abilityId -> count }.
+  // Optional; pre-feature saves default to {} on restore.
+  abilityCharges?: Record<string, number>;
 }
 
 /** Payload the caller supplies; version + savedAt are stamped on write. */

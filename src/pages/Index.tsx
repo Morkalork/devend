@@ -218,7 +218,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 lives={session.currentLives}
                 continuesRemaining={session.continuesRemaining}
                 onLivesChange={session.handleLivesChange}
-                onChestRunBonus={session.handleChestRunBonus}
+                onGrantAbility={session.handleGrantAbility}
+                onSpendAbility={session.handleSpendAbility}
+                abilityCharges={session.abilityCharges}
                 onGameEnd={session.handleGameEnd}
                 onLevelComplete={session.handleLevelComplete}
                 onBallTypeLocked={session.recordBallTypeEncountered}

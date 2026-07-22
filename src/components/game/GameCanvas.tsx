@@ -27,6 +27,7 @@ import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/r
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
 import { CHEST_REWARDS, ChestRewardId } from "@/lib/chests";
+import { fireAbility } from "@/lib/abilities";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
@@ -124,6 +125,8 @@ export interface GameStateInfo {
   /** Balls spawned on this map (scales the Ship Early windows). */
   ballCount: number;
   onBankAndContinue?: () => void;
+  /** Fire a chest-earned ability by id (Freeze All / Slow All / Clear Fences). */
+  onUseAbility?: (abilityId: string) => void;
 }
 
 interface GameCanvasProps {
@@ -133,9 +136,11 @@ interface GameCanvasProps {
   totalScore: number;
   lives: number;
   onLivesChange: (newLives: number) => void;
-  /** A smashed treasure chest awarded a run-scoped bonus (issue #38): the
-   *  session accumulates it so it persists into later maps. */
-  onChestRunBonus?: (bonus: Partial<GameModifiers>) => void;
+  /** A smashed chest granted one charge of an ability (issue #38): the session
+   *  banks it run-wide so it persists into later maps. */
+  onGrantAbility?: (abilityId: string) => void;
+  /** The player spent one ability charge (pressed the ability button). */
+  onSpendAbility?: (abilityId: string) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired the instant the map is won, so the shell can freeze the code background. */
@@ -213,7 +218,8 @@ export function GameCanvas({
   totalScore,
   lives,
   onLivesChange,
-  onChestRunBonus,
+  onGrantAbility,
+  onSpendAbility,
   onGameEnd,
   onLevelComplete,
   onMapComplete,
@@ -332,6 +338,12 @@ export function GameCanvas({
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
+  // Repaint hook exposed for the ability bar's Clear All Fences (which fires
+  // synchronously on a button press, outside the game loop's callbacks).
+  const repaintRegionCanvasRef = useRef<() => void>(() => {});
+  // Short lockout so a rapid double-press can't fire an ability twice off one
+  // charge before React re-renders and disables the button.
+  const abilityLockoutRef = useRef(0);
   // Treasure-chest reward toast: a brief rising label naming what a smashed
   // chest gave. Keyed so re-triggering restarts the CSS animation.
   const [chestToast, setChestToast] = useState<{ key: number; label: string; color: string } | null>(null);
@@ -467,7 +479,8 @@ export function GameCanvas({
     lastDudAt: 0,
     chestLoot: [] as import("@/types/game").ChestLoot[],
     chestRewardsLog: [] as string[],
-    ballDensityBonus: 0,
+    abilitySlowUntil: 0,
+    abilitySlowMult: 1,
     pickups: [] as PickupState[],
     pickupConfig: null as PickupConfig | null,
     pickupSpots: [] as Vector2[],
@@ -701,6 +714,8 @@ export function GameCanvas({
       // The Pixi renderer wraps these canvases as textures; tell it to re-upload.
       pixiRef.current?.markStaticDirty();
     };
+    // Expose the repaint to the ability bar's Clear All Fences handler.
+    repaintRegionCanvasRef.current = repaintRegionCanvas;
 
     const paintOverlayCanvas = () => {
       const oc = overlayCanvasRef.current;
@@ -748,9 +763,8 @@ export function GameCanvas({
       game.lastDudAt = 0;
       game.chestLoot = [];
       game.chestRewardsLog = [];
-      // Run-wide "heavier balls" chest bonus rides in via activeModifiers; each
-      // map starts from that snapshot and any chest smashed THIS map adds on top.
-      game.ballDensityBonus = activeModifiers.ballDensityBonus;
+      game.abilitySlowUntil = 0;
+      game.abilitySlowMult = 1;
       game.moneyMultiplier = 1;
       game.ballSpeedScale = activeModifiers.ballSpeedMultiplier;
       // Pickups: fresh token state each map. A map-level pickupChance override
@@ -1063,25 +1077,12 @@ export function GameCanvas({
           repaintRegionCanvas,
           setRemainingPercent,
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
-          // A chest was smashed: map-scoped effects already applied on `game`.
-          // Grant extra life here (like the pickup path) and bubble run-scoped
-          // ball tweaks to the session so they persist into later maps.
-          onChestReward: (rewardId, value) => {
+          // A chest was smashed: the player earns one charge of the rolled
+          // ability. Bank it run-wide in the session, and show a brief toast.
+          onChestReward: (rewardId) => {
             playPickupClaimedSound();
-            if (rewardId === 'extraLife') {
-              const next = livesRef.current + value;
-              livesRef.current = next;
-              setDisplayLives(next);
-              onLivesChange(next);
-            } else if (rewardId === 'slowBalls') {
-              onChestRunBonus?.({ ballSpeedMultiplier: value });
-            } else if (rewardId === 'heavyBalls') {
-              onChestRunBonus?.({ ballDensityBonus: value });
-            }
-            // A brief rising toast naming the reward (works in both renderers).
-            const label = rewardId === 'overtime'
-              ? `+${value}h ${t('game.chestReward.overtime')}`
-              : t(`game.chestReward.${rewardId}`);
+            onGrantAbility?.(rewardId);
+            const label = t(`game.chestReward.${rewardId}`);
             const color = CHEST_REWARDS[rewardId as ChestRewardId]?.color ?? '#ffd76b';
             setChestToast({ key: performance.now(), label, color });
             if (chestToastTimer.current) clearTimeout(chestToastTimer.current);
@@ -1259,6 +1260,22 @@ export function GameCanvas({
     }, 150 + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);
   }, [level, levelNumber, activeModifiers]);
 
+  // Ability bar (#38): fire the pressed ability on the live game and spend one
+  // banked charge in the session. The button is disabled at 0 charges; the
+  // lockout guards a rapid double-press from firing twice off one charge.
+  const handleUseAbility = useCallback((abilityId: string) => {
+    const now = performance.now();
+    if (now - abilityLockoutRef.current < 250) return;
+    const game = gameRef.current;
+    const fired = fireAbility(abilityId, game, now, {
+      repaintRegionCanvas: () => repaintRegionCanvasRef.current(),
+      setRemainingPercent,
+    });
+    if (!fired) return;
+    abilityLockoutRef.current = now;
+    onSpendAbility?.(abilityId);
+  }, [onSpendAbility]);
+
   useEffect(() => {
     if (onGameStateChange) {
       onGameStateChange({
@@ -1278,9 +1295,10 @@ export function GameCanvas({
         activeSeconds,
         ballCount,
         onBankAndContinue: handleBankAndContinue,
+        onUseAbility: handleUseAbility,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

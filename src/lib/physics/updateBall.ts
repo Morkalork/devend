@@ -421,7 +421,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       // Black ball wears down movers (its heavy mass makes short work of them).
       if (ball.ability === 'breakObjects') {
         const d = findMoverDestructible(game, mover.id);
-        if (d) registerObjectHit(game, d, ball.id, now, ballImpactDamage(ball, vec2Length(ball.velocity), game.ballDensityBonus ?? 0));
+        if (d) registerObjectHit(game, d, ball.id, now, ballImpactDamage(ball, vec2Length(ball.velocity)));
       }
     }
   }
@@ -504,7 +504,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
             const el = Math.hypot(ex, ey) || 1;
             const nvx = -ey / el, nvy = ex / el;
             const vn = Math.abs(ball.velocity.x * nvx + ball.velocity.y * nvy);
-            const dmg = ballImpactDamage(ball, vn, game.ballDensityBonus ?? 0);
+            const dmg = ballImpactDamage(ball, vn);
             if (d.kind === 'breakable') {
               registerObjectHit(game, d, ball.id, now, dmg, impactPoint ?? undefined);
             } else if (d.kind === 'mirror' && ball.ability === 'breakObjects') {

@@ -259,10 +259,9 @@
     "pickupExtraLife": "+1 Life",
     "pickupRainbow": "Rainbow ball!",
     "chestReward": {
-      "slowBalls": "Slower Balls",
-      "heavyBalls": "Heavier Balls",
-      "overtime": "Overtime",
-      "extraLife": "Extra Life"
+      "freezeAll": "Freeze All",
+      "slowAll": "Slow All",
+      "clearFences": "Clear Fences"
     },
     "bossIntroTitle": "Boss Fight: {{name}}"
   },

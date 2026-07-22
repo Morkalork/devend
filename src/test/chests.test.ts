@@ -36,8 +36,8 @@ describe("chest reward roll", () => {
   it("respects an authored pool (hybrid) and ignores unknown ids", () => {
     const r = rng(7);
     for (let i = 0; i < 200; i++) {
-      const id = rollChestReward(["slowBalls", "heavyBalls", "nonsense"], r);
-      expect(["slowBalls", "heavyBalls"]).toContain(id);
+      const id = rollChestReward(["freezeAll", "slowAll", "nonsense"], r);
+      expect(["freezeAll", "slowAll"]).toContain(id);
     }
   });
 
@@ -53,21 +53,19 @@ describe("chest reward roll", () => {
     expect(a).toEqual(b);
   });
 
-  it("weights matter: overtime (w3) is drawn more often than extraLife (w1)", () => {
+  it("weights matter: freezeAll (w3) is drawn more often than clearFences (w2)", () => {
     const r = rng(99);
-    let ot = 0, life = 0;
-    for (let i = 0; i < 4000; i++) {
-      const id = rollChestReward(["overtime", "extraLife"], r);
-      if (id === "overtime") ot++; else if (id === "extraLife") life++;
+    let freeze = 0, clear = 0;
+    for (let i = 0; i < 6000; i++) {
+      const id = rollChestReward(["freezeAll", "clearFences"], r);
+      if (id === "freezeAll") freeze++; else if (id === "clearFences") clear++;
     }
-    expect(ot).toBeGreaterThan(life * 1.8); // ~3:1 expected
+    expect(freeze).toBeGreaterThan(clear); // 3:2 expected
   });
 
-  it("every reward has a colour and a sane scope", () => {
+  it("every reward has a colour", () => {
     for (const id of ALL_CHEST_REWARD_IDS) {
-      const d = CHEST_REWARDS[id];
-      expect(d.color).toMatch(/^#[0-9a-fA-F]{6}$/);
-      expect(["run", "map"]).toContain(d.scope);
+      expect(CHEST_REWARDS[id].color).toMatch(/^#[0-9a-fA-F]{6}$/);
     }
   });
 });
@@ -97,7 +95,7 @@ describe("loot gem physics", () => {
 
   it("falls, bounces off the floor, and loses height each bounce (rubber ball)", () => {
     const world = flat(800);
-    let loot = [makeChestLoot("l1", "overtime", 450, 400, 0)];
+    let loot = [makeChestLoot("l1", "freezeAll", 450, 400, 0)];
     loot[0].vx = 0; loot[0].vy = 0; // straight drop for a clean test
     let peaksAfterBounce: number[] = [];
     let bounced = 0, prevVy = 0;
@@ -117,7 +115,7 @@ describe("loot gem physics", () => {
 
   it("settles on the floor and never sinks through it", () => {
     const world = flat(800);
-    let loot = [makeChestLoot("l1", "slowBalls", 450, 780, 0)];
+    let loot = [makeChestLoot("l1", "slowAll", 450, 780, 0)];
     for (let s = 0; s < 600; s++) {
       loot = updateChestLoot(loot, 1 / 120, world, s / 120);
       if (loot.length === 0) break;
@@ -131,7 +129,7 @@ describe("loot gem physics", () => {
       segments: [{ x1: 400, y1: 500, x2: 500, y2: 500 }],
       floorY: 800,
     };
-    let loot = [makeChestLoot("l1", "heavyBalls", 450, 300, 0)];
+    let loot = [makeChestLoot("l1", "clearFences", 450, 300, 0)];
     loot[0].vx = 0; loot[0].vy = 0; // straight drop onto the shelf
     // The deepest point it reaches is the surface it bounces on (it is culled
     // by its TTL before a rubber bounce fully settles, so track max-y instead).
@@ -151,7 +149,7 @@ describe("loot gem physics", () => {
       segments: [{ x1: 600, y1: 500, x2: 700, y2: 500 }],
       floorY: 800,
     };
-    let loot = [makeChestLoot("l1", "overtime", 450, 300, 0)];
+    let loot = [makeChestLoot("l1", "freezeAll", 450, 300, 0)];
     loot[0].vx = 0; loot[0].vy = 0;
     let deepest = 0;
     for (let s = 0; s < 400; s++) {
@@ -164,13 +162,13 @@ describe("loot gem physics", () => {
 
   it("is culled once its lifetime elapses", () => {
     const world = flat(800);
-    let loot = [makeChestLoot("l1", "extraLife", 450, 400, 0)];
+    let loot = [makeChestLoot("l1", "freezeAll", 450, 400, 0)];
     loot = updateChestLoot(loot, 1 / 120, world, LOOT_TTL_SECONDS + 0.1);
     expect(loot.length).toBe(0);
   });
 
   it("fades out only in the final third of its life", () => {
-    const g = makeChestLoot("l1", "overtime", 0, 0, 0);
+    const g = makeChestLoot("l1", "freezeAll", 0, 0, 0);
     expect(chestLootAlpha(g, 0)).toBe(1);
     expect(chestLootAlpha(g, LOOT_TTL_SECONDS * 0.5)).toBe(1);
     expect(chestLootAlpha(g, LOOT_TTL_SECONDS * 0.9)).toBeLessThan(1);

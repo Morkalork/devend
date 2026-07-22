@@ -257,10 +257,9 @@
     "pickupExtraLife": "+1 liv",
     "pickupRainbow": "Regnbågsboll!",
     "chestReward": {
-      "slowBalls": "Långsammare bollar",
-      "heavyBalls": "Tyngre bollar",
-      "overtime": "Övertid",
-      "extraLife": "Extraliv"
+      "freezeAll": "Frys alla",
+      "slowAll": "Sakta ner alla",
+      "clearFences": "Rensa staket"
     },
     "bossIntroTitle": "Bosstrid: {{name}}"
   },

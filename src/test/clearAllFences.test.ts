@@ -1,3 +1,10 @@
+/**
+ * Clear All Fences ability (#38, the risky one): removing all player fences must
+ * reopen non-locked captured space (remaining % rises) while KEEPING locked-ball
+ * pockets captured and the locked balls + their points intact. Built on a real
+ * grid via createInitialGameData + a couple of cuts that lock a ball, mirroring
+ * destroyRecapture.test.ts.
+ */
 import { describe, it, expect, vi } from "vitest";
 vi.mock("@/lib/gameAudio", () => ({
   playBallLockSound: () => {}, playWallHitSound: () => {}, playBallCollideSound: () => {},
@@ -10,18 +17,13 @@ vi.mock("@/lib/gameHaptics", () => ({
 
 import { createInitialGameData } from "@/lib/initGame";
 import { applyCutFn } from "@/lib/physics/applyCut";
+import { clearAllFences } from "@/lib/abilities";
+import { CellState, getRemainingPercent } from "@/lib/spaceGrid";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { LevelConfig } from "@/types/level";
 import { GrowingWall, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
-
-// The "Info Unlocked" flash (first-ever lock of a ball type) is driven by
-// GameCallbacks.onBallTypeLocked's return value, threaded through
-// checkBallWonState.ts into the lock's assimilation state (LockFlashState.
-// firstEncounter). This pins that wiring against the real cut/lock pipeline:
-// the callback's return value - not some default - decides the flag, and the
-// callback fires with the correct ball-type id.
 
 const MODS: GameModifiers = {
   ballSpeedMultiplier: 1, ballSizeMultiplier: 1, fenceGenerationSpeedMultiplier: 1,
@@ -42,9 +44,14 @@ const MODS: GameModifiers = {
   lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
 };
 
+// Obstacle top-left; no random shapes (cell-coverage test, per the flaky-locktint
+// lesson) so capture is deterministic.
 const LEVEL: LevelConfig = {
-  id: "info-unlocked", level: 2, sizeThreshold: 40, expectedCuts: 5, points: 40,
-  maxBalls: 2, entities: [],
+  id: "clear-fences", level: 2, sizeThreshold: 40, expectedCuts: 5, points: 40,
+  maxBalls: 2, variety: 0, randomShapes: 0,
+  entities: [
+    { id: "wall-1", kind: "wall", shape: "rect", x: -11, y: -11, width: 400, height: 180 },
+  ],
 } as unknown as LevelConfig;
 
 function makeGame(): CanvasGameState {
@@ -71,19 +78,13 @@ function makeGame(): CanvasGameState {
     fenceDurability: null, pendingWallBreaks: [], destructibles: data.destructibles,
     pendingDestroys: [], objectDebris: [], stackObjects: data.stackObjects,
     fallingObjects: [], objectivesTotal: data.objectivesTotal, objectivesBroken: 0,
-    breakBonus: 0, lastDudAt: 0,
+    breakBonus: 0, lastDudAt: 0, activePlaySeconds: 0,
   } as unknown as CanvasGameState;
 }
 
-function callbacksWithLockHandler(onBallTypeLocked: (typeId: string) => boolean) {
-  return new Proxy({}, {
-    get: (_t, prop) => {
-      if (prop === "then") return undefined;
-      if (prop === "onBallTypeLocked") return onBallTypeLocked;
-      return () => {};
-    },
-  }) as never;
-}
+const noopCallbacks = new Proxy({}, {
+  get: (_t, prop) => (prop === "then" ? undefined : () => {}),
+}) as never;
 
 function completedWall(origin: Vector2, a: Vector2, b: Vector2): GrowingWall {
   return {
@@ -95,63 +96,75 @@ function completedWall(origin: Vector2, a: Vector2, b: Vector2): GrowingWall {
   };
 }
 
-// Diagonal fence sealing the top-right corner triangle - locks whichever ball
-// sits in it (same geometry as lockTintCoverage.test.ts).
-const FA = { x: 600, y: 45 }, FB = { x: 855, y: 300 };
-
-function lockAPocketBall(onBallTypeLocked: (typeId: string) => boolean) {
-  const game = makeGame();
+/** Seal the top-left pocket with two cuts; the pocket ball locks. */
+function sealPocket(game: CanvasGameState): void {
   game.balls = game.balls.slice(0, 2);
-  const [pocketBall, otherBall] = game.balls;
-  pocketBall.position = { x: 780, y: 120 };
-  pocketBall.velocity = { x: 80, y: 60 };
-  pocketBall.speed = 100;
-  otherBall.position = { x: 300, y: 600 };
-  otherBall.velocity = { x: -70, y: 90 };
-  otherBall.speed = 114;
-
-  applyCutFn(
-    completedWall({ x: 727, y: 172 }, FA, FB), game, LEVEL, 2, MODS,
-    false, false, 0, callbacksWithLockHandler(onBallTypeLocked),
-  );
-  return { game, pocketBall };
+  const [A, B] = game.balls;
+  A.position = { x: 200, y: 210 }; A.velocity = { x: 80, y: 60 }; A.speed = 100;
+  B.position = { x: 620, y: 420 }; B.velocity = { x: -70, y: 90 }; B.speed = 114;
+  applyCutFn(completedWall({ x: 64, y: 500 }, { x: 64, y: 169 }, { x: 64, y: 855 }), game, LEVEL, 2, MODS, false, false, 0, noopCallbacks);
+  applyCutFn(completedWall({ x: 175, y: 320 }, { x: 285, y: 169 }, { x: 64, y: 472 }), game, LEVEL, 2, MODS, false, false, 0, noopCallbacks);
 }
 
-describe("Info Unlocked flash: onBallTypeLocked return value drives LockFlashState.firstEncounter", () => {
-  it("firstEncounter is true when onBallTypeLocked reports a new type", () => {
-    const seen: string[] = [];
-    const { game, pocketBall } = lockAPocketBall(typeId => { seen.push(typeId); return true; });
-    expect(pocketBall.state).toBe("won");
-    expect(seen).toEqual([pocketBall.typeId]);
-    const flash = game.assimilations.get(pocketBall.id);
-    expect(flash?.firstEncounter).toBe(true);
-  });
+const isFenceWall = (id: string) => !id.startsWith("board-") && !id.startsWith("obstacle-");
 
-  it("firstEncounter is false when onBallTypeLocked reports an already-known type", () => {
-    const { game, pocketBall } = lockAPocketBall(() => false);
-    expect(pocketBall.state).toBe("won");
-    const flash = game.assimilations.get(pocketBall.id);
-    expect(flash?.firstEncounter).toBe(false);
-  });
-
-  it("firstEncounter defaults to false when no callback is supplied (bare tools/tests)", () => {
+describe("Clear All Fences (#38)", () => {
+  it("removes all player fences but keeps board and obstacle walls", () => {
     const game = makeGame();
-    game.balls = game.balls.slice(0, 2);
-    const [pocketBall, otherBall] = game.balls;
-    pocketBall.position = { x: 780, y: 120 };
-    pocketBall.velocity = { x: 80, y: 60 };
-    pocketBall.speed = 100;
-    otherBall.position = { x: 300, y: 600 };
-    otherBall.velocity = { x: -70, y: 90 };
-    otherBall.speed = 114;
-    const bareCallbacks = new Proxy({}, {
-      get: (_t, prop) => (prop === "then" || prop === "onBallTypeLocked" ? undefined : () => {}),
-    }) as never;
-    applyCutFn(
-      completedWall({ x: 727, y: 172 }, FA, FB), game, LEVEL, 2, MODS,
-      false, false, 0, bareCallbacks,
-    );
-    expect(pocketBall.state).toBe("won");
-    expect(game.assimilations.get(pocketBall.id)?.firstEncounter).toBe(false);
+    sealPocket(game);
+    expect(game.walls.some(w => isFenceWall(w.id))).toBe(true); // fences exist first
+    const boardCount = game.walls.filter(w => w.id.startsWith("board-")).length;
+    const obstacleCount = game.walls.filter(w => w.id.startsWith("obstacle-")).length;
+
+    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+
+    expect(game.walls.some(w => isFenceWall(w.id))).toBe(false); // all fences gone
+    expect(game.walls.filter(w => w.id.startsWith("board-")).length).toBe(boardCount);
+    expect(game.walls.filter(w => w.id.startsWith("obstacle-")).length).toBe(obstacleCount);
+  });
+
+  it("reopens captured space so remaining % rises", () => {
+    const game = makeGame();
+    sealPocket(game);
+    const before = getRemainingPercent(game.spaceGrid!);
+    expect(before).toBeLessThan(100); // the seal captured space
+
+    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+
+    const after = getRemainingPercent(game.spaceGrid!);
+    expect(after).toBeGreaterThan(before); // non-locked space reopened
+  });
+
+  it("keeps locked balls locked and their pocket cells captured", () => {
+    const game = makeGame();
+    sealPocket(game);
+    expect(game.balls[0].state).toBe("won"); // pocket ball locked
+    const lockedCount = game.lockedBallsCount;
+    const lockBonus = game.lockBonus;
+    // Snapshot the locked-pocket cells (lockCaptured >= 1) that must stay REMOVED.
+    const lockCap = game.spaceGrid!.lockCaptured!;
+    const pocketCells: number[] = [];
+    for (let i = 0; i < lockCap.length; i++) if (lockCap[i] >= 1) pocketCells.push(i);
+    expect(pocketCells.length).toBeGreaterThan(0);
+
+    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+
+    // Points + locked ball untouched.
+    expect(game.balls[0].state).toBe("won");
+    expect(game.lockedBallsCount).toBe(lockedCount);
+    expect(game.lockBonus).toBe(lockBonus);
+    // Every locked-pocket cell is still captured (REMOVED), never reopened.
+    for (const idx of pocketCells) {
+      expect(game.spaceGrid!.cells[idx]).toBe(CellState.REMOVED);
+    }
+  });
+
+  it("is a no-op when there are no fences to clear", () => {
+    const game = makeGame();
+    const wallsBefore = game.walls.length;
+    const pctBefore = getRemainingPercent(game.spaceGrid!);
+    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+    expect(game.walls.length).toBe(wallsBefore);
+    expect(getRemainingPercent(game.spaceGrid!)).toBe(pctBefore);
   });
 });

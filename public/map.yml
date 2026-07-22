@@ -287,7 +287,7 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
-        chestRewards: [slowBalls, overtime]
+        chestRewards: [freezeAll, slowAll]
   - id: level-8
     level: 8
     sizeThreshold: 30
@@ -532,7 +532,7 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
-        chestRewards: [heavyBalls, overtime]
+        chestRewards: [slowAll, clearFences]
   - id: level-14
     level: 14
     sizeThreshold: 8

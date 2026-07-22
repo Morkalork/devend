@@ -15,6 +15,7 @@ import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { GameTopBar } from './GameTopBar';
 import { GameBottomBar } from './GameBottomBar';
 import { ShipEarlyBar } from './ShipEarlyBar';
+import { AbilityBar } from './AbilityBar';
 import { TopBarDetailsPanel } from './TopBarDetailsPanel';
 import { BottomBarDetailsPanel } from './BottomBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
@@ -59,8 +60,12 @@ interface GameScreenProps {
   /** Per-run revives banked; shown in the HUD. */
   continuesRemaining?: number;
   onLivesChange: (newLives: number) => void;
-  /** Run-scoped bonus from a smashed treasure chest (issue #38). */
-  onChestRunBonus?: (bonus: Partial<GameModifiers>) => void;
+  /** A chest granted one charge of an ability; the session banks it run-wide (#38). */
+  onGrantAbility?: (abilityId: string) => void;
+  /** The player spent one ability charge (pressed the ability button). */
+  onSpendAbility?: (abilityId: string) => void;
+  /** Run-wide banked ability charges: { abilityId -> count }, for the ability bar. */
+  abilityCharges?: Record<string, number>;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired once per ball the instant it locks, with its ball-type id (drives the
@@ -121,7 +126,9 @@ export function GameScreen({
   lives,
   continuesRemaining = 0,
   onLivesChange,
-  onChestRunBonus,
+  onGrantAbility,
+  onSpendAbility,
+  abilityCharges,
   onGameEnd,
   onLevelComplete,
   onBallTypeLocked,
@@ -552,7 +559,8 @@ export function GameScreen({
             totalScore={totalScore}
             lives={lives}
             onLivesChange={onLivesChange}
-            onChestRunBonus={onChestRunBonus}
+            onGrantAbility={onGrantAbility}
+            onSpendAbility={onSpendAbility}
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
             onBallTypeLocked={onBallTypeLocked}
@@ -604,14 +612,23 @@ export function GameScreen({
             tagCounts={tagCounts}
             tagSetThreshold={tagSetThreshold}
             topSlot={
-              <ShipEarlyBar
-                seconds={gameState.activeSeconds}
-                ballCount={gameState.ballCount}
-                timeLimit={mapTimeLimit ?? 0}
-                extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
-                bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
-                visible={mapTimeLimit != null && gameState.pushMode === 'none' && !mapComplete}
-              />
+              <>
+                {!mapComplete && gameState.onUseAbility && (
+                  <AbilityBar
+                    charges={abilityCharges ?? {}}
+                    accentColor={accentColor}
+                    onUse={gameState.onUseAbility}
+                  />
+                )}
+                <ShipEarlyBar
+                  seconds={gameState.activeSeconds}
+                  ballCount={gameState.ballCount}
+                  timeLimit={mapTimeLimit ?? 0}
+                  extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
+                  bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
+                  visible={mapTimeLimit != null && gameState.pushMode === 'none' && !mapComplete}
+                />
+              </>
             }
             onExpand={() => setBottomPanelOpen(true)}
           />

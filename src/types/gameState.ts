@@ -245,11 +245,10 @@ export interface CanvasGameState {
   lastDudAt: number;
   /** Bouncing loot gems from smashed treasure chests (issue #38; cosmetic). */
   chestLoot?: ChestLoot[];
-  /** Reward ids collected from chests this map, for the completion overlay. */
+  /** Ability ids granted by chests this map, for the completion overlay. */
   chestRewardsLog?: string[];
-  /**
-   * Run-wide ball-mass bonus snapshotted from activeModifiers at map init, plus
-   * any "heavier balls" chest smashed this map. Read by the force model.
-   */
-  ballDensityBonus?: number;
+  /** Slow All ability (#38): active-play second the global slow expires at. */
+  abilitySlowUntil?: number;
+  /** Slow All ability: creepFactor multiplier while the slow is active (<1). */
+  abilitySlowMult?: number;
 }

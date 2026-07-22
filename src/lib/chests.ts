@@ -1,46 +1,36 @@
 /**
  * Treasure chests ("destruct-ups", issue #38).
  *
- * A chest is a breakable obstacle that, when SMASHED, instantly grants a run
- * bonus (no token to lock — breaking is the reward). Selection is HYBRID: a
- * chest may author its own reward pool (`chestRewards`); otherwise the full
- * default pool is used. The pick is seeded (getRunRng) so daily / record runs
- * resolve identically for everyone.
+ * A chest is a breakable obstacle that, when SMASHED, grants the player ONE
+ * charge of an activatable ability (Freeze All / Slow All / Clear All Fences).
+ * Charges bank run-wide in the ability bar beneath the board; pressing a button
+ * spends one charge and fires the effect (see src/lib/abilities.ts). Earning
+ * abilities is the whole reason to seek out and break chests.
  *
- * Reward scopes:
- *  - 'run': persists for the rest of the run (bubbled up as a GameModifier
- *    bonus in useGameSession) AND applied to the current map immediately.
- *  - 'map': paid/applied this map only (e.g. bonus overtime hours).
+ * Selection is HYBRID: a chest may author its own pool (`chestRewards`);
+ * otherwise the full default pool is used. The pick is seeded (getRunRng) so
+ * daily / record runs resolve identically for everyone.
  *
  * When a chest breaks it also spits a little loot gem that falls under gravity
- * and bounces like a rubber ball (high restitution, so it settles slowly — see
- * updateChestLoot). Purely cosmetic; the bonus already applied on the break.
+ * and bounces like a rubber ball (see updateChestLoot), coloured by the ability.
  */
 import { ChestLoot } from "@/types/game";
 
-export type ChestRewardId = "slowBalls" | "heavyBalls" | "overtime" | "extraLife";
+/** A chest reward is one charge of an activatable ability (see abilities.ts). */
+export type ChestRewardId = "freezeAll" | "slowAll" | "clearFences";
 
 export interface ChestRewardDef {
   id: ChestRewardId;
   /** Relative roll weight within a pool. */
   weight: number;
-  /** Magnitude — meaning is per-effect (see comments). */
-  value: number;
-  /** 'run' persists for the rest of the run; 'map' applies this map only. */
-  scope: "run" | "map";
   /** Loot-gem colour (hex with #). */
   color: string;
 }
 
 export const CHEST_REWARDS: Record<ChestRewardId, ChestRewardDef> = {
-  // Run-wide x0.9 ball speed (compounds); balls get easier to trap all run.
-  slowBalls: { id: "slowBalls", weight: 3, value: 0.9, scope: "run", color: "#7fd4ff" },
-  // Run-wide +0.4 ball density; balls smash breakables (and chests) harder.
-  heavyBalls: { id: "heavyBalls", weight: 3, value: 0.4, scope: "run", color: "#ff9e6b" },
-  // +N overtime hours this map (paid after the cap, like an overtime token).
-  overtime: { id: "overtime", weight: 3, value: 15, scope: "map", color: "#ffd76b" },
-  // +1 life on the spot.
-  extraLife: { id: "extraLife", weight: 1, value: 1, scope: "run", color: "#7dff9e" },
+  freezeAll:   { id: "freezeAll",   weight: 3, color: "#7fd4ff" },
+  slowAll:     { id: "slowAll",     weight: 3, color: "#a0d8ff" },
+  clearFences: { id: "clearFences", weight: 2, color: "#ffd76b" },
 };
 
 export const ALL_CHEST_REWARD_IDS = Object.keys(CHEST_REWARDS) as ChestRewardId[];
