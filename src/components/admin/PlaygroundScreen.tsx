@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { getRenderer, setRenderer, RendererKind } from '@/lib/rendering/rendererSettings';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight, Circle, Plus, Trash2 } from 'lucide-react';
+import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight, Circle, Plus, Trash2, Pencil } from 'lucide-react';
 import yaml from 'js-yaml';
 import { GameScreen } from '@/components/game/GameScreen';
 import type { GameStateInfo } from '@/components/game/GameCanvas';
@@ -169,6 +169,9 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   // via GameStateInfo, so the test panel can trigger any ability on demand.
   const abilityFireRef = useRef<((id: string) => void) | undefined>(undefined);
   const [abilitiesReady, setAbilitiesReady] = useState(false);
+  // Mobile: the level-edit sidebar is a slide-in drawer (on desktop it's a
+  // static side column). `editorOpen` toggles the drawer on small screens.
+  const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     fetch('/map.yml')
@@ -535,7 +538,16 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         )}
 
         {/* Controls overlay — only visible when a level is selected (floating toolbar handles the no-level case) */}
-        {selectedLevel && <div style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 50, display: 'flex', alignItems: 'center', gap: 8 }}>
+        {selectedLevel && <div style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 50, display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 8, maxWidth: 'calc(100% - 32px)' }}>
+          {/* Mobile-only: open the level-edit drawer. */}
+          <button
+            onClick={() => setEditorOpen(true)}
+            title="Edit level"
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#a855f722', color: '#a855f7', border: '1px solid #a855f755' }}
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
           <button
             onClick={hardReset}
             title="Reset game"
@@ -546,15 +558,15 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           </button>
           <button
             onClick={() => setLevelPickerOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90 min-w-0 max-w-[42vw] md:max-w-none"
             style={{
               backgroundColor: selectedLevel ? '#a855f722' : '#1a1f1a',
               color: selectedLevel ? '#a855f7' : accent,
               border: `1px solid ${selectedLevel ? '#a855f7' : accent}55`,
             }}
           >
-            <Layers className="w-4 h-4" />
-            {selectedLevel ? `L${selectedLevel.level}: ${selectedLevel.id}` : 'Level'}
+            <Layers className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{selectedLevel ? `L${selectedLevel.level}: ${selectedLevel.id}` : 'Level'}</span>
           </button>
           <button
             onClick={goToNextLevel}
@@ -578,16 +590,21 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         </div>}
       </div>
 
-      {/* ── Level sidebar (always visible when a real level is selected) ── */}
+      {/* ── Level sidebar ── a static side column on desktop; a slide-in drawer
+          on mobile (so the board keeps the full width) toggled by editorOpen. ── */}
       {selectedLevel && editDraft && (
-        <div
-          className="flex flex-col flex-shrink-0"
-          style={{
-            width: 320,
-            backgroundColor: '#0a0f0a',
-            borderLeft: '1px solid #a855f733',
-          }}
-        >
+        <>
+          {/* Mobile-only dim backdrop while the drawer is open. */}
+          {editorOpen && (
+            <div className="md:hidden fixed inset-0 bg-black/50 z-[55]" onClick={() => setEditorOpen(false)} />
+          )}
+          <div
+            className={`flex flex-col flex-shrink-0 fixed inset-y-0 right-0 w-[88%] max-w-[340px] z-[60] transition-transform duration-200 ${editorOpen ? 'translate-x-0' : 'translate-x-full'} md:static md:inset-auto md:right-auto md:w-[320px] md:max-w-none md:z-auto md:translate-x-0 md:transition-none`}
+            style={{
+              backgroundColor: '#0a0f0a',
+              borderLeft: '1px solid #a855f733',
+            }}
+          >
           {/* Header */}
           <div
             className="flex items-center gap-2 px-3 py-2 flex-shrink-0"
@@ -600,6 +617,15 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             >
               L{selectedLevel.level}: {selectedLevel.id}
             </span>
+            {/* Mobile-only close button. */}
+            <button
+              onClick={() => setEditorOpen(false)}
+              className="md:hidden flex-shrink-0 p-1 rounded"
+              style={{ color: '#a855f7' }}
+              title="Close editor"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           {/* Scrollable body: LevelPanel + EntityPanel */}
@@ -666,7 +692,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       {/* ── Floating toolbar (only when in default playground mode, no level selected) ── */}
