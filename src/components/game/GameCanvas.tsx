@@ -127,6 +127,17 @@ export interface GameStateInfo {
   onBankAndContinue?: () => void;
   /** Fire a chest-earned ability by id (Freeze All / Slow All / Clear Fences). */
   onUseAbility?: (abilityId: string) => void;
+  /** Active time-based abilities, for the countdown bar (drain in active-play seconds). */
+  abilityTimers?: AbilityTimer[];
+}
+
+/** A running time-based ability, for the countdown bar (#38). */
+export interface AbilityTimer {
+  kind: string;
+  name: string;
+  color: string;
+  startSec: number; // activePlaySeconds when it started
+  endSec: number;   // activePlaySeconds when it expires
 }
 
 interface GameCanvasProps {
@@ -344,6 +355,9 @@ export function GameCanvas({
   // Short lockout so a rapid double-press can't fire an ability twice off one
   // charge before React re-renders and disables the button.
   const abilityLockoutRef = useRef(0);
+  // Running time-based abilities, surfaced to the countdown bar. Only changes
+  // when an ability fires or expires (not per frame), so no render churn.
+  const [abilityTimers, setAbilityTimers] = useState<AbilityTimer[]>([]);
   // Treasure-chest reward toast: a brief rising label naming what a smashed
   // chest gave. Keyed so re-triggering restarts the CSS animation.
   const [chestToast, setChestToast] = useState<{ key: number; label: string; color: string } | null>(null);
@@ -374,6 +388,13 @@ export function GameCanvas({
   const [creepPercent, setCreepPercent] = useState(0);
   // Active-play clock mirrored to React at 1Hz (Ship Early countdown bar).
   const [activeSeconds, setActiveSeconds] = useState(0);
+  // Drop finished ability timers each active-second tick (keeps the bar honest).
+  useEffect(() => {
+    setAbilityTimers(prev => {
+      const live = prev.filter(t => t.endSec > activeSeconds);
+      return live.length === prev.length ? prev : live;
+    });
+  }, [activeSeconds]);
   // Balls spawned this map; scales the Ship Early windows (15s per ball).
   const [ballCount, setBallCount] = useState(1);
 
@@ -860,6 +881,7 @@ export function GameCanvas({
       game.bossFiredPhases = [];
       setCreepPercent(0);
       setActiveSeconds(0);
+      setAbilityTimers([]);
       setBallCount(game.balls.length || 1);
       game.wallCount = 0;
       clearWallImpacts();
@@ -1281,6 +1303,17 @@ export function GameCanvas({
     if (!fired) return;
     abilityLockoutRef.current = now;
     onSpendAbility?.(abilityId);
+    // Time-based abilities (those with a duration) get a countdown-bar timer,
+    // keyed by kind so re-firing the same one resets its window.
+    const def = getAbility(abilityId);
+    if (def && def.durationSeconds && def.durationSeconds > 0) {
+      const startSec = game.activePlaySeconds;
+      const timer: AbilityTimer = {
+        kind: def.kind, name: def.name, color: def.color,
+        startSec, endSec: startSec + def.durationSeconds,
+      };
+      setAbilityTimers(prev => [...prev.filter(t => t.kind !== def.kind), timer]);
+    }
   }, [onSpendAbility]);
 
   useEffect(() => {
@@ -1303,9 +1336,10 @@ export function GameCanvas({
         ballCount,
         onBankAndContinue: handleBankAndContinue,
         onUseAbility: handleUseAbility,
+        abilityTimers,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

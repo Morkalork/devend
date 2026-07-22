@@ -16,6 +16,7 @@ import { GameTopBar } from './GameTopBar';
 import { GameBottomBar } from './GameBottomBar';
 import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
+import { AbilityCountdownBar } from './AbilityCountdownBar';
 import { TopBarDetailsPanel } from './TopBarDetailsPanel';
 import { BottomBarDetailsPanel } from './BottomBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
@@ -631,6 +632,11 @@ export function GameScreen({
                   extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
                   bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
                   visible={mapTimeLimit != null && gameState.pushMode === 'none' && !mapComplete}
+                />
+                <AbilityCountdownBar
+                  timers={gameState.abilityTimers ?? []}
+                  activeSeconds={gameState.activeSeconds}
+                  visible={!mapComplete}
                 />
               </>
             }
