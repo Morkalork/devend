@@ -70,12 +70,14 @@ export class EffectsLayer {
   private pickupSprites = new Map<string, Sprite>();
   private pickupRings = new Graphics();
   private pickupTexts = new Map<string, Text>();
+  private abilityFx = new Graphics();
 
   constructor() {
     this.lockDust.blendMode = "add";
     // Pickup tokens go FIRST (under the lock flash — a claimed token vanishes
     // beneath the pocket fill); feedback rings/labels ride on top of the rest.
-    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.preview, this.swipe, this.trajectory, this.pickupRings);
+    // The ability burst goes last so its flash/rings sit above everything.
+    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.preview, this.swipe, this.trajectory, this.pickupRings, this.abilityFx);
     this.overlayContainer.addChild(this.spaceBar);
   }
 
@@ -90,6 +92,35 @@ export class EffectsLayer {
     this.syncSwipeTrail(game, w2s, scale, accent, now);
     this.syncTrajectory(game, rctx, w2s, scale);
     this.syncSpaceBar(game, rctx, scale, accent, now);
+    this.syncAbilityFx(game, w2s, scale, now);
+  }
+
+  // ── Ability-fired burst (#38): board flash + rings tinted by the ability ──
+  private syncAbilityFx(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const g = this.abilityFx;
+    g.clear();
+    if (!game.abilityFx || game.abilityFx.length === 0) return;
+    const { boardRect } = game;
+    const maxR = 0.6 * Math.hypot(boardRect.width, boardRect.height);
+    let anyExpired = false;
+    for (const fx of game.abilityFx) {
+      const elapsed = now - fx.startTime;
+      if (elapsed >= fx.durationMs) { anyExpired = true; continue; }
+      const t = elapsed / fx.durationMs;
+      const cs = w2s(fx.center.x, fx.center.y);
+      // Board flash — the guaranteed "something happened" cue.
+      g.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height)
+        .fill({ color: fx.color, alpha: 0.20 * (1 - t) });
+      // Staggered rings from the board centre (outward, or inward for Magnet).
+      for (let k = 0; k < 3; k++) {
+        const ph = t - k * 0.15;
+        if (ph <= 0) continue;
+        const r = (fx.expand ? ph : 1 - ph) * maxR;
+        if (r <= 0) continue;
+        g.circle(cs.x, cs.y, r).stroke({ width: Math.max(2, 3 * scale), color: fx.color, alpha: 0.85 * (1 - t) });
+      }
+    }
+    if (anyExpired) game.abilityFx = game.abilityFx.filter(fx => now - fx.startTime < fx.durationMs);
   }
 
   // ── Pickup tokens + claim/waste feedback (renderFrame's pickup sections) ──

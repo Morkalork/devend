@@ -6,7 +6,7 @@
  */
 
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
-import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject, ChestLoot } from "@/types/game";
+import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject, ChestLoot, AbilityFx } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
@@ -251,4 +251,12 @@ export interface CanvasGameState {
   abilitySlowUntil?: number;
   /** Slow All ability: creepFactor multiplier while the slow is active (<1). */
   abilitySlowMult?: number;
+  /** Fence Overclock ability: active-play second the fence rush expires at. */
+  abilityFenceRushUntil?: number;
+  /** Fence Overclock: fence-growth-speed multiplier while active (>1 = faster). */
+  abilityFenceRushMult?: number;
+  /** Fence Shield ability: active-play second growing fences stop taking hits at. */
+  abilityFenceShieldUntil?: number;
+  /** Transient ability-fired flash/ring bursts (#38); rendered then culled. */
+  abilityFx?: AbilityFx[];
 }

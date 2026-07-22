@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { getRenderer, setRenderer, RendererKind } from '@/lib/rendering/rendererSettings';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight, Circle, Plus, Trash2 } from 'lucide-react';
 import yaml from 'js-yaml';
 import { GameScreen } from '@/components/game/GameScreen';
+import type { GameStateInfo } from '@/components/game/GameCanvas';
+import { getAllAbilities, loadAbilities } from '@/lib/abilities';
 import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useColorProgression } from '@/hooks/useColorProgression';
 import { LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
@@ -159,6 +161,14 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   // click the board to reload. `frozen` arms the click-to-reload catcher.
   const [freezeOnClear, setFreezeOnClear] = useState(false);
   const [frozen, setFrozen] = useState(false);
+  // Chest-earned ability charges (#38). In the real game these live in the run
+  // session; the Playground keeps its own local inventory so smashing a chest
+  // banks a charge and the ability bar shows up here too.
+  const [abilityCharges, setAbilityCharges] = useState<Record<string, number>>({});
+  // Direct-fire ability tester: capture the live fire callback GameCanvas exposes
+  // via GameStateInfo, so the test panel can trigger any ability on demand.
+  const abilityFireRef = useRef<((id: string) => void) | undefined>(undefined);
+  const [abilitiesReady, setAbilitiesReady] = useState(false);
 
   useEffect(() => {
     fetch('/map.yml')
@@ -173,6 +183,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     // Load the ball catalogue (balls.yml) so the picker lists the latest types,
     // then restart so the running game reflects the loaded catalogue.
     loadBallTypes().then(() => { setBallCatalog([...getAllBallTypes()]); setGameKey(k => k + 1); });
+    // Pick up abilities.yml edits too, so the tester lists the latest catalogue.
+    loadAbilities().then(() => setGameKey(k => k + 1));
   }, []);
 
   // The level the game is running (base for the ball override below).
@@ -368,9 +380,11 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   }, []);
 
   const hardReset = useCallback(() => {
+    // Reset the modifiers and restart the run, but KEEP the selected map -
+    // clearing it here kicked you back to the default playground level. To
+    // return to the default playground, use the Level picker's Playground entry.
     setApplied({});
     setDraft({});
-    setSelectedLevel(null);
     setGameKey(k => k + 1);
   }, []);
 
@@ -432,6 +446,16 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           upgrades={[]}
           lives={99}
           onLivesChange={() => {}}
+          onGrantAbility={(id) => setAbilityCharges(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }))}
+          onSpendAbility={(id) => setAbilityCharges(prev => {
+            const have = prev[id] ?? 0;
+            return have <= 0 ? prev : { ...prev, [id]: have - 1 };
+          })}
+          abilityCharges={abilityCharges}
+          onGameStateChange={(s) => {
+            abilityFireRef.current = s.onUseAbility;
+            setAbilitiesReady(!!s.onUseAbility); // React bails if unchanged, so no churn
+          }}
           onGameEnd={onBack}
           onLevelComplete={() => setGameKey(k => k + 1)}
           freezeOnClear={freezeOnClear}
@@ -444,6 +468,33 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           showBallSpeeds={showBallSpeeds}
           showPerfOverlay={showPerfOverlay}
         />
+
+        {/* Dev: ability tester - fire ANY ability on demand (no charge needed),
+            so each effect can be tried directly without waiting on a chest. */}
+        {abilitiesReady && (
+          <div
+            className="absolute left-1/2 flex flex-wrap justify-center gap-2 px-3 py-2 rounded-lg shadow-lg"
+            style={{
+              bottom: 96, transform: 'translateX(-50%)', zIndex: 55, maxWidth: '90%',
+              backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)',
+            }}
+          >
+            <span className="w-full text-center text-[10px] font-semibold tracking-wider" style={{ color: accent, opacity: 0.7 }}>
+              ABILITY TESTER
+            </span>
+            {getAllAbilities().map(a => (
+              <button
+                key={a.id}
+                onClick={() => abilityFireRef.current?.(a.id)}
+                title={`Fire ${a.name} (${a.kind})`}
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold transition-transform active:scale-95"
+                style={{ color: a.color, border: `1px solid ${a.color}`, background: `${a.color}1f` }}
+              >
+                {a.name}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Dev: freeze-on-clear toggle (always visible) */}
         <button

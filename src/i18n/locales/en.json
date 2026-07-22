@@ -258,11 +258,6 @@
     "pickupFreeShopItem": "Free store item!",
     "pickupExtraLife": "+1 Life",
     "pickupRainbow": "Rainbow ball!",
-    "chestReward": {
-      "freezeAll": "Freeze All",
-      "slowAll": "Slow All",
-      "clearFences": "Clear Fences"
-    },
     "bossIntroTitle": "Boss Fight: {{name}}"
   },
   "interactiveTutorial": {

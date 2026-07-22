@@ -286,8 +286,7 @@ levels:
         height: 56
         chest: true
         breakable: true
-        hitsToBreak: 2
-        chestRewards: [freezeAll, slowAll]
+        hitsToBreak: 2
   - id: level-8
     level: 8
     sizeThreshold: 30
@@ -531,8 +530,7 @@ levels:
         height: 56
         chest: true
         breakable: true
-        hitsToBreak: 2
-        chestRewards: [slowAll, clearFences]
+        hitsToBreak: 2
   - id: level-14
     level: 14
     sizeThreshold: 8

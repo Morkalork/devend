@@ -1,0 +1,85 @@
+# Destruct-up rewards (issue #38): the abilities a smashed treasure chest can
+# grant. Each entry is ONE CHARGE of an activatable ability, banked run-wide and
+# spent from the ability bar beneath the board. Earning these is the whole reason
+# to seek out and break chests.
+#
+# A chest rolls (weighted, seeded) among every reward whose `startLevel` is <=
+# the current level. A chest in map.yml may set `chestRewards: [ids]` to narrow
+# its own pool (intersected with what is unlocked). `kind` selects the coded
+# effect; you can add new named variants / retune freely here, but a genuinely
+# NEW kind needs a small code addition in src/lib/abilityEffects.ts.
+#
+# Fields:
+#   id              unique key (also the id used in a chest's chestRewards pool)
+#   name            display name shown in the bar / toast / level-complete summary
+#   kind            effect kind: freeze | slow | clearFences
+#   color           gem + button colour (hex WITH a leading '#', quote it)
+#   weight          relative roll weight within an eligible pool
+#   startLevel      lowest level at which this reward may appear in a chest
+#   durationSeconds (freeze / slow) how long the effect lasts
+#   factor          (slow only) creepFactor multiplier while active (<1 = slower)
+
+abilities:
+  - id: freezeAll
+    name: Freeze All
+    kind: freeze
+    color: "#7fd4ff"
+    weight: 3
+    startLevel: 1
+    durationSeconds: 3
+
+  - id: slowAll
+    name: Slow All
+    kind: slow
+    color: "#a0d8ff"
+    weight: 3
+    startLevel: 1
+    durationSeconds: 5
+    factor: 0.45
+
+  - id: clearFences
+    name: Clear Fences
+    kind: clearFences
+    color: "#ffd76b"
+    weight: 2
+    startLevel: 7
+
+  # Magnet: pull every active ball toward the board centre so they cluster -
+  # set up a big multi-lock or wall off a large empty area. One-shot.
+  - id: magnet
+    name: Magnet
+    kind: magnet
+    color: "#b98cff"
+    weight: 2
+    startLevel: 4
+
+  # Shockwave: push every active ball away from the centre, scattering a
+  # cluster and driving balls to the edges. One-shot.
+  - id: shockwave
+    name: Shockwave
+    kind: shockwave
+    color: "#ff9e6b"
+    weight: 2
+    startLevel: 4
+    factor: 1.25
+
+  # Fence Overclock: your cuts build much faster for a few seconds - carve the
+  # board aggressively (great right after a Freeze or Slow).
+  - id: fenceOverclock
+    name: Fence Overclock
+    kind: fenceRush
+    color: "#6bffb0"
+    weight: 2
+    startLevel: 10
+    durationSeconds: 4
+    factor: 6
+
+  # Fence Shield: your growing fence ignores ball hits for a few seconds, so a
+  # cut through a busy lane survives instead of shattering.
+  - id: fenceShield
+    name: Fence Shield
+    kind: fenceShield
+    color: "#7fd4ff"
+    weight: 2
+    startLevel: 10
+    durationSeconds: 5

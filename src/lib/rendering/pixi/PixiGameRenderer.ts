@@ -21,7 +21,8 @@ import { DissolveState } from "@/types/game";
 import { Vector2, Polygon, clipLineAgainstPolygons } from "@/lib/polygon";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { BALL_DANGER_SPEED, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
-import { chestLootAlpha, CHEST_REWARDS, ChestRewardId } from "@/lib/chests";
+import { chestLootAlpha } from "@/lib/chests";
+import { getAbility } from "@/lib/abilities";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 import { getRainGlyph } from "../rainGlyphCache";
@@ -754,7 +755,7 @@ export class PixiGameRenderer {
         if (a <= 0) continue;
         const sp = w2s(gem.x, gem.y);
         const r = 9 * scale;
-        const col = CHEST_REWARDS[gem.reward as ChestRewardId]?.color ?? "#ffd76b";
+        const col = getAbility(gem.reward)?.color ?? "#ffd76b";
         g.poly([sp.x, sp.y - r, sp.x + r, sp.y, sp.x, sp.y + r, sp.x - r, sp.y]).fill({ color: col, alpha: a });
         g.poly([sp.x, sp.y - r, sp.x + r, sp.y, sp.x, sp.y + r, sp.x - r, sp.y]).stroke({ width: Math.max(1, 1.2 * scale), color: 0xffffff, alpha: a * 0.5 });
       }

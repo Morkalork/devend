@@ -26,8 +26,8 @@ import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/rendering/renderFrame";
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
-import { CHEST_REWARDS, ChestRewardId } from "@/lib/chests";
-import { fireAbility } from "@/lib/abilities";
+import { getAbility } from "@/lib/abilities";
+import { fireAbility } from "@/lib/abilityEffects";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
@@ -481,6 +481,10 @@ export function GameCanvas({
     chestRewardsLog: [] as string[],
     abilitySlowUntil: 0,
     abilitySlowMult: 1,
+    abilityFenceRushUntil: 0,
+    abilityFenceRushMult: 1,
+    abilityFenceShieldUntil: 0,
+    abilityFx: [] as import("@/types/game").AbilityFx[],
     pickups: [] as PickupState[],
     pickupConfig: null as PickupConfig | null,
     pickupSpots: [] as Vector2[],
@@ -765,6 +769,10 @@ export function GameCanvas({
       game.chestRewardsLog = [];
       game.abilitySlowUntil = 0;
       game.abilitySlowMult = 1;
+      game.abilityFenceRushUntil = 0;
+      game.abilityFenceRushMult = 1;
+      game.abilityFenceShieldUntil = 0;
+      game.abilityFx = [];
       game.moneyMultiplier = 1;
       game.ballSpeedScale = activeModifiers.ballSpeedMultiplier;
       // Pickups: fresh token state each map. A map-level pickupChance override
@@ -1082,13 +1090,12 @@ export function GameCanvas({
           onChestReward: (rewardId) => {
             playPickupClaimedSound();
             onGrantAbility?.(rewardId);
-            const label = t(`game.chestReward.${rewardId}`);
-            const color = CHEST_REWARDS[rewardId as ChestRewardId]?.color ?? '#ffd76b';
-            setChestToast({ key: performance.now(), label, color });
+            const def = getAbility(rewardId);
+            setChestToast({ key: performance.now(), label: def?.name ?? rewardId, color: def?.color ?? '#ffd76b' });
             if (chestToastTimer.current) clearTimeout(chestToastTimer.current);
             chestToastTimer.current = setTimeout(() => setChestToast(null), 1700);
           },
-        });
+        }, levelNumber);
         // A destroy can capture pocket cells (destroy-recapture) and take the
         // remaining space past the goal with no fence involved — run the same
         // win check a completed cut runs, or the map shows CLEAR but never ends.

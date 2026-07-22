@@ -21,7 +21,7 @@ import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updatePickups } from "@/lib/pickups";
 import { updateChestLoot } from "@/lib/chests";
-import { abilitySpeedFactor } from "@/lib/abilities";
+import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts } from "@/lib/wallImpactEffects";
 import { recordFrame } from "@/lib/rendering/perfStats";
 

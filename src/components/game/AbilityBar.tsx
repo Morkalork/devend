@@ -3,18 +3,23 @@
  *
  * Abilities are earned by smashing treasure chests; charges bank run-wide in the
  * session. This shows one button per ability the player has a charge of (the bar
- * is empty until the first chest is smashed). Pressing fires the effect and
- * spends one charge. Rendered inside the fixed GameBottomBar wrapper (as part of
- * its topSlot), so it stops click propagation to avoid opening the details panel.
+ * is empty until the first chest is smashed), in catalogue order. Pressing fires
+ * the effect and spends one charge. Rendered inside the fixed GameBottomBar
+ * wrapper (topSlot), so it stops click propagation to avoid opening the panel.
+ * Name + colour come from the ability catalogue (public/abilities.yml); the icon
+ * is chosen by the ability's effect KIND.
  */
-import { Snowflake, Gauge, Eraser } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-import { ABILITY_IDS, AbilityId } from '@/lib/abilities';
+import { Snowflake, Gauge, Eraser, Sparkles, Magnet, Waves, Zap, ShieldCheck } from 'lucide-react';
+import { getAllAbilities, AbilityKind } from '@/lib/abilities';
 
-const ICONS: Record<AbilityId, typeof Snowflake> = {
-  freezeAll: Snowflake,
-  slowAll: Gauge,
+const ICON_BY_KIND: Record<AbilityKind, typeof Snowflake> = {
+  freeze: Snowflake,
+  slow: Gauge,
   clearFences: Eraser,
+  magnet: Magnet,
+  shockwave: Waves,
+  fenceRush: Zap,
+  fenceShield: ShieldCheck,
 };
 
 interface AbilityBarProps {
@@ -26,8 +31,7 @@ interface AbilityBarProps {
 }
 
 export function AbilityBar({ charges, accentColor, onUse }: AbilityBarProps) {
-  const { t } = useTranslation();
-  const owned = ABILITY_IDS.filter(id => (charges[id] ?? 0) > 0);
+  const owned = getAllAbilities().filter(a => (charges[a.id] ?? 0) > 0);
   if (owned.length === 0) return null;
 
   return (
@@ -35,23 +39,24 @@ export function AbilityBar({ charges, accentColor, onUse }: AbilityBarProps) {
       className="pointer-events-auto flex flex-wrap justify-center gap-2 px-3 py-1.5"
       style={{ backgroundColor: 'rgba(0,0,0,0.55)', fontFamily: "'JetBrains Mono', monospace" }}
     >
-      {owned.map(id => {
-        const Icon = ICONS[id];
-        const count = charges[id] ?? 0;
+      {owned.map(a => {
+        const Icon = ICON_BY_KIND[a.kind] ?? Sparkles;
+        const count = charges[a.id] ?? 0;
+        const color = a.color || accentColor;
         return (
           <button
-            key={id}
-            onClick={(e) => { e.stopPropagation(); onUse(id); }}
+            key={a.id}
+            onClick={(e) => { e.stopPropagation(); onUse(a.id); }}
             className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold transition-transform active:scale-95"
             style={{
-              color: accentColor,
-              border: `1px solid ${accentColor}`,
-              background: `${accentColor}1f`,
-              boxShadow: `0 0 8px ${accentColor}44`,
+              color,
+              border: `1px solid ${color}`,
+              background: `${color}1f`,
+              boxShadow: `0 0 8px ${color}44`,
             }}
           >
             <Icon className="w-4 h-4" />
-            <span>{t(`game.chestReward.${id}`)}</span>
+            <span>{a.name}</span>
             <span className="opacity-75">x{count}</span>
           </button>
         );

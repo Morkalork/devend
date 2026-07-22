@@ -30,6 +30,7 @@ import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
+import { loadAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
@@ -589,6 +590,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
       // it does not gate starting a run — same treatment as loadouts.
       loadBallTypes(),
+      loadAbilities(),
       // Door pool (doors.yml). On failure assignment levels fall back to the shop.
       loadDoors(),
       // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
@@ -659,6 +661,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadCertificates(),
       loadLoadouts(),
       loadBallTypes(),
+      loadAbilities(),
       loadDoors(),
       loadCapstones(),
       loadMapMutators(),
@@ -712,6 +715,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadCertificates(),
       loadLoadouts(),
       loadBallTypes(),
+      loadAbilities(),
       loadDoors(),
       loadCapstones(),
       loadMapMutators(),
@@ -1356,7 +1360,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Load the ball catalogue (balls.yml) once on mount so the Tutorial reflects
   // edits even before a run starts. handleStartGame reloads it per run.
-  useEffect(() => { loadBallTypes(); }, []);
+  useEffect(() => { loadBallTypes(); loadAbilities(); }, []);
 
   // Sync completed achievements into cert manager for achievement-locked certs
   useEffect(() => {

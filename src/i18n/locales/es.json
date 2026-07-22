@@ -256,11 +256,6 @@
     "pickupFreeShopItem": "¡Artículo gratis!",
     "pickupExtraLife": "+1 vida",
     "pickupRainbow": "¡Bola arcoíris!",
-    "chestReward": {
-      "freezeAll": "Congelar todo",
-      "slowAll": "Ralentizar todo",
-      "clearFences": "Quitar vallas"
-    },
     "bossIntroTitle": "Combate de jefe: {{name}}"
   },
   "interactiveTutorial": {

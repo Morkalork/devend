@@ -1,63 +1,14 @@
 /**
- * Treasure chests ("destruct-ups", issue #38).
+ * Treasure chests ("destruct-ups", issue #38) - loot-gem physics.
  *
  * A chest is a breakable obstacle that, when SMASHED, grants the player ONE
- * charge of an activatable ability (Freeze All / Slow All / Clear All Fences).
- * Charges bank run-wide in the ability bar beneath the board; pressing a button
- * spends one charge and fires the effect (see src/lib/abilities.ts). Earning
- * abilities is the whole reason to seek out and break chests.
- *
- * Selection is HYBRID: a chest may author its own pool (`chestRewards`);
- * otherwise the full default pool is used. The pick is seeded (getRunRng) so
- * daily / record runs resolve identically for everyone.
- *
- * When a chest breaks it also spits a little loot gem that falls under gravity
- * and bounces like a rubber ball (see updateChestLoot), coloured by the ability.
+ * charge of an activatable ability. Charges bank run-wide in the ability bar
+ * beneath the board. The reward roster + the seeded, level-gated roll live in
+ * the catalogue (src/lib/abilities.ts, loaded from public/abilities.yml); this
+ * module only owns the cosmetic loot gem a broken chest spits out (it falls
+ * under gravity and bounces like a rubber ball; coloured by the ability).
  */
 import { ChestLoot } from "@/types/game";
-
-/** A chest reward is one charge of an activatable ability (see abilities.ts). */
-export type ChestRewardId = "freezeAll" | "slowAll" | "clearFences";
-
-export interface ChestRewardDef {
-  id: ChestRewardId;
-  /** Relative roll weight within a pool. */
-  weight: number;
-  /** Loot-gem colour (hex with #). */
-  color: string;
-}
-
-export const CHEST_REWARDS: Record<ChestRewardId, ChestRewardDef> = {
-  freezeAll:   { id: "freezeAll",   weight: 3, color: "#7fd4ff" },
-  slowAll:     { id: "slowAll",     weight: 3, color: "#a0d8ff" },
-  clearFences: { id: "clearFences", weight: 2, color: "#ffd76b" },
-};
-
-export const ALL_CHEST_REWARD_IDS = Object.keys(CHEST_REWARDS) as ChestRewardId[];
-
-/** Narrow an arbitrary string to a known reward id. */
-export function isChestRewardId(id: string): id is ChestRewardId {
-  return id in CHEST_REWARDS;
-}
-
-/**
- * Roll one reward id from a chest's pool (or the full default pool when the
- * chest authors none), weighted, using the supplied RNG. Unknown ids in an
- * authored pool are ignored; an empty/invalid pool falls back to the full set.
- */
-export function rollChestReward(pool: string[] | undefined, rng: () => number): ChestRewardId {
-  const ids = (pool && pool.length > 0 ? pool : ALL_CHEST_REWARD_IDS).filter(isChestRewardId);
-  const list = ids.length > 0 ? ids : ALL_CHEST_REWARD_IDS;
-  const defs = list.map(id => CHEST_REWARDS[id]);
-  const total = defs.reduce((s, d) => s + Math.max(0, d.weight), 0);
-  if (total <= 0) return list[0];
-  let roll = rng() * total;
-  for (const d of defs) {
-    roll -= Math.max(0, d.weight);
-    if (roll < 0) return d.id;
-  }
-  return defs[defs.length - 1].id;
-}
 
 // ── Loot gem physics ─────────────────────────────────────────────────────────
 
@@ -78,7 +29,7 @@ export const LOOT_TTL_SECONDS = 3.0;
  */
 export function makeChestLoot(
   id: string,
-  reward: ChestRewardId,
+  reward: string,
   x: number,
   y: number,
   bornActiveSeconds: number,

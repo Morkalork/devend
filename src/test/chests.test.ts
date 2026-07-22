@@ -4,71 +4,12 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  rollChestReward,
   makeChestLoot,
   updateChestLoot,
   surfaceFloorUnder,
   chestLootAlpha,
-  CHEST_REWARDS,
-  ALL_CHEST_REWARD_IDS,
   LOOT_TTL_SECONDS,
 } from "@/lib/chests";
-
-/** Deterministic RNG (mulberry32) for repeatable rolls. */
-function rng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a |= 0; a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-describe("chest reward roll", () => {
-  it("only ever returns a known reward id", () => {
-    const r = rng(1);
-    for (let i = 0; i < 200; i++) {
-      expect(ALL_CHEST_REWARD_IDS).toContain(rollChestReward(undefined, r));
-    }
-  });
-
-  it("respects an authored pool (hybrid) and ignores unknown ids", () => {
-    const r = rng(7);
-    for (let i = 0; i < 200; i++) {
-      const id = rollChestReward(["freezeAll", "slowAll", "nonsense"], r);
-      expect(["freezeAll", "slowAll"]).toContain(id);
-    }
-  });
-
-  it("an empty or all-invalid pool falls back to the full set", () => {
-    const r = rng(3);
-    expect(ALL_CHEST_REWARD_IDS).toContain(rollChestReward([], r));
-    expect(ALL_CHEST_REWARD_IDS).toContain(rollChestReward(["bogus"], r));
-  });
-
-  it("is deterministic for a given seed (seeded daily/record runs stay identical)", () => {
-    const a = Array.from({ length: 20 }, (() => { const g = rng(42); return () => rollChestReward(undefined, g); })());
-    const b = Array.from({ length: 20 }, (() => { const g = rng(42); return () => rollChestReward(undefined, g); })());
-    expect(a).toEqual(b);
-  });
-
-  it("weights matter: freezeAll (w3) is drawn more often than clearFences (w2)", () => {
-    const r = rng(99);
-    let freeze = 0, clear = 0;
-    for (let i = 0; i < 6000; i++) {
-      const id = rollChestReward(["freezeAll", "clearFences"], r);
-      if (id === "freezeAll") freeze++; else if (id === "clearFences") clear++;
-    }
-    expect(freeze).toBeGreaterThan(clear); // 3:2 expected
-  });
-
-  it("every reward has a colour", () => {
-    for (const id of ALL_CHEST_REWARD_IDS) {
-      expect(CHEST_REWARDS[id].color).toMatch(/^#[0-9a-fA-F]{6}$/);
-    }
-  });
-});
 
 describe("surfaceFloorUnder", () => {
   it("returns the highest surface spanning x that sits below the point", () => {

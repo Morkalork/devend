@@ -1,163 +1,149 @@
 /**
- * Player-activatable abilities ("ability bar", issue #38).
+ * Ability catalogue (destruct-up rewards, issue #38).
  *
- * Abilities are EARNED by smashing treasure chests (destruct-ups): each chest
- * grants one charge of the rolled ability, banked run-wide in the session. The
- * ability bar beneath the board shows the player's charges; pressing a button
- * spends one charge and fires the effect here.
+ * The abilities a smashed chest can grant, loaded from public/abilities.yml the
+ * same way ball types load from balls.yml:
+ *  - baked into the bundle at build time (the `?raw` import), so the game always
+ *    has a valid catalogue, and
+ *  - re-fetched at runtime by `loadAbilities()`, so a deployed build (or the dev
+ *    server) picks up YAML tweaks without a rebuild.
  *
- * Three abilities:
- *  - freezeAll:    freeze every active ball for a few seconds (reuses the
- *                  per-ball frozenUntil freeze primitive; physics skips them).
- *  - slowAll:      globally slow every ball for a few seconds by folding a
- *                  factor into game.creepFactor (self-reverting, pause-safe).
- *  - clearFences:  remove all player fences and reopen ALL non-locked captured
- *                  space (remaining % rises) while locked pockets stay captured.
- *
- * Tuning lives here as constants (matching the sibling chests.ts / destructibles
- * .ts convention), so a single file owns each ability's numbers + logic.
+ * This module is the catalogue + the (seeded, level-gated) reward roll only. The
+ * effect LOGIC lives in src/lib/abilityEffects.ts (split so the chest/destroy
+ * code can import the roll here without an import cycle through the effects,
+ * which reach back into destructibles.ts for the region rebuild).
  */
-import { CanvasGameState } from "@/types/gameState";
-import { ChestRewardId } from "@/lib/chests";
-import { pointInPolygon } from "@/lib/polygon";
-import {
-  CellState,
-  restoreCells,
-  getRemainingPercent,
-  gridIndexToWorld,
-  captureUnreachableCells,
-} from "@/lib/spaceGrid";
-import { rebuildRegionsKeepAll } from "@/lib/physics/destructibles";
+import yaml from "js-yaml";
+import abilitiesYamlRaw from "../../public/abilities.yml?raw";
 
-/** An ability id is the same string as its chest reward id. */
-export type AbilityId = ChestRewardId; // "freezeAll" | "slowAll" | "clearFences"
+/** The coded effect an ability triggers. A new kind needs code in abilityEffects.ts. */
+export type AbilityKind = "freeze" | "slow" | "clearFences" | "magnet" | "shockwave" | "fenceRush" | "fenceShield";
+const VALID_KINDS = new Set<AbilityKind>(["freeze", "slow", "clearFences", "magnet", "shockwave", "fenceRush", "fenceShield"]);
 
-/** All ability ids, in bar display order. */
-export const ABILITY_IDS: AbilityId[] = ["freezeAll", "slowAll", "clearFences"];
+/** An ability id is a catalogue key (dynamic, so just a string). */
+export type AbilityId = string;
 
-// ── Tuning ───────────────────────────────────────────────────────────────────
-/** Freeze All: how long every ball stays frozen (ms, performance.now clock). */
-export const FREEZE_ALL_MS = 3000;
-/** Slow All: creepFactor multiplier applied to every ball while active (<1). */
-export const SLOW_ALL_FACTOR = 0.45;
-/** Slow All: how long the global slow lasts (active-play seconds). */
-export const SLOW_ALL_SECONDS = 5;
+export interface AbilityDef {
+  id: string;
+  name: string;
+  kind: AbilityKind;
+  /** Gem + button colour (hex with '#'). */
+  color: string;
+  /** Relative roll weight within an eligible pool. */
+  weight: number;
+  /** Lowest level at which this reward may appear in a chest. */
+  startLevel: number;
+  /** freeze / slow: effect duration in seconds. */
+  durationSeconds?: number;
+  /** slow: creepFactor multiplier while active (<1). */
+  factor?: number;
+}
 
-// ── Freeze All ───────────────────────────────────────────────────────────────
+function parseAbilityEntry(raw: unknown): AbilityDef | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const id = typeof r.id === "string" ? r.id : null;
+  const color = typeof r.color === "string" ? r.color : null;
+  const kind = typeof r.kind === "string" && VALID_KINDS.has(r.kind as AbilityKind)
+    ? (r.kind as AbilityKind)
+    : null;
+  if (!id || !color || !kind) return null;
 
-/** Freeze every active ball for FREEZE_ALL_MS (won balls are already still). */
-export function freezeAllBalls(game: CanvasGameState, now: number): void {
-  for (const b of game.balls) {
-    if (b.state !== "active") continue;
-    b.frozenUntil = now + FREEZE_ALL_MS;
-    b.freezeReadyAt = now + FREEZE_ALL_MS; // no re-freeze churn during the hold
+  const weight = Number.isFinite(Number(r.weight)) && Number(r.weight) > 0 ? Number(r.weight) : 1;
+  const startLevel = Number.isFinite(Number(r.startLevel)) ? Math.max(1, Math.round(Number(r.startLevel))) : 1;
+  const durationSeconds = Number.isFinite(Number(r.durationSeconds)) && Number(r.durationSeconds) > 0
+    ? Number(r.durationSeconds)
+    : undefined;
+  const factor = Number.isFinite(Number(r.factor)) && Number(r.factor) > 0 ? Number(r.factor) : undefined;
+
+  return {
+    id,
+    name: typeof r.name === "string" ? r.name : id,
+    kind,
+    color,
+    weight,
+    startLevel,
+    durationSeconds,
+    factor,
+  };
+}
+
+/** Parse an abilities.yml document into validated defs ([] on any failure). */
+function parseCatalogue(text: string): AbilityDef[] {
+  try {
+    const data = yaml.load(text) as { abilities?: unknown[] } | null;
+    if (!data || !Array.isArray(data.abilities)) return [];
+    return data.abilities.map(parseAbilityEntry).filter((a): a is AbilityDef => a !== null);
+  } catch {
+    return [];
   }
 }
 
-// ── Slow All ─────────────────────────────────────────────────────────────────
+// Last resort so a malformed abilities.yml still keeps the game bootable.
+const LAST_RESORT: AbilityDef[] = [
+  { id: "freezeAll", name: "Freeze All", kind: "freeze", color: "#7fd4ff", weight: 3, startLevel: 1, durationSeconds: 3 },
+];
 
-/** Start a global slow: every ball moves at SLOW_ALL_FACTOR for SLOW_ALL_SECONDS. */
-export function applySlowAll(game: CanvasGameState): void {
-  game.abilitySlowUntil = game.activePlaySeconds + SLOW_ALL_SECONDS;
-  game.abilitySlowMult = SLOW_ALL_FACTOR;
+const bakedCatalogue = parseCatalogue(abilitiesYamlRaw);
+const DEFAULT_ABILITIES: AbilityDef[] = bakedCatalogue.length > 0 ? bakedCatalogue : LAST_RESORT;
+
+// ── Live catalogue (loaded from abilities.yml, defaults until then) ──────────
+let liveAbilities: AbilityDef[] = DEFAULT_ABILITIES;
+let abilityById = new Map(liveAbilities.map(a => [a.id, a]));
+
+/** All abilities currently in effect (default or YAML-loaded), in author order. */
+export function getAllAbilities(): AbilityDef[] {
+  return liveAbilities;
+}
+
+export function getAbility(id: string): AbilityDef | undefined {
+  return abilityById.get(id);
+}
+
+/** Abilities eligible to appear in a chest at the given (1-based) level. */
+export function getEligibleAbilities(level: number): AbilityDef[] {
+  return liveAbilities.filter(a => a.startLevel <= level);
 }
 
 /**
- * The Slow All displacement multiplier for the current frame (1 when inactive).
- * Folded into game.creepFactor in useGameLoop so ball movement AND the aim-line
- * predictor both see it. Self-reverting: it just expires by clock comparison.
+ * Roll one ability id for a smashed chest: weighted, among every ability
+ * unlocked at `level`, optionally narrowed to the chest's authored `pool`. Falls
+ * back to the full eligible set (then the whole catalogue) if a narrowing leaves
+ * nothing. Returns null only if the catalogue is somehow empty.
  */
-export function abilitySpeedFactor(game: CanvasGameState): number {
-  if (game.abilitySlowUntil !== undefined && game.activePlaySeconds < game.abilitySlowUntil) {
-    return game.abilitySlowMult ?? 1;
+export function rollAbilityReward(pool: string[] | undefined, level: number, rng: () => number): string | null {
+  let eligible = getEligibleAbilities(level);
+  if (eligible.length === 0) eligible = liveAbilities; // level below every startLevel
+  if (pool && pool.length > 0) {
+    const narrowed = eligible.filter(a => pool.includes(a.id));
+    if (narrowed.length > 0) eligible = narrowed;
   }
-  return 1;
-}
-
-// ── Clear All Fences (full reset) ─────────────────────────────────────────────
-
-export interface ClearFencesCallbacks {
-  repaintRegionCanvas: () => void;
-  setRemainingPercent: (percent: number) => void;
+  if (eligible.length === 0) return null;
+  const total = eligible.reduce((s, a) => s + Math.max(0, a.weight), 0);
+  if (total <= 0) return eligible[0].id;
+  let roll = rng() * total;
+  for (const a of eligible) {
+    roll -= Math.max(0, a.weight);
+    if (roll < 0) return a.id;
+  }
+  return eligible[eligible.length - 1].id;
 }
 
 /**
- * Remove every player-drawn fence and reopen ALL non-locked captured space, so
- * an overwhelmed player gets the open board back to re-cut. Locked-ball pockets
- * (and their points) are preserved; remaining % rises. Reuses the space-grid +
- * region-rebuild machinery (see destructibles.ts).
+ * Re-fetch the ability catalogue from the SERVED public/abilities.yml. Returns
+ * true on success; on any failure the build-time catalogue stays in effect.
  */
-export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCallbacks): void {
-  const grid = game.spaceGrid;
-  if (!grid) return;
-
-  // 1. Drop player fences, keep board + obstacle walls. A fence is any wall that
-  //    is neither a board edge nor an obstacle edge. Reassign the array so
-  //    reference-keyed render caches (glow / fence-clip) invalidate.
-  const before = game.walls.length;
-  game.walls = game.walls.filter(w => {
-    const isBoard = w.isBoardEdge ?? w.id.startsWith("board-");
-    return isBoard || w.id.startsWith("obstacle-");
-  });
-  if (game.walls.length === before) return; // nothing to clear
-
-  // 2. Cells to PRESERVE = locked pockets. grid.lockCaptured marks them (>=1);
-  //    union with won balls' authoritative assimilation cells for precision.
-  const preserve = new Set<number>();
-  const lockCap = grid.lockCaptured;
-  if (lockCap) {
-    for (let i = 0; i < lockCap.length; i++) if (lockCap[i] >= 1) preserve.add(i);
-  }
-  for (const a of game.assimilations.values()) {
-    for (const idx of a.cellIndices) preserve.add(idx);
-  }
-
-  // 3. Reopen every REMOVED cell that is inside the board, not inside a solid
-  //    obstacle/mirror, and not a preserved locked-pocket cell.
-  const boardPoly = game.boardPolygon;
-  const reopened: number[] = [];
-  for (let row = 0; row < grid.height; row++) {
-    for (let col = 0; col < grid.width; col++) {
-      const idx = row * grid.width + col;
-      if (grid.cells[idx] !== CellState.REMOVED || preserve.has(idx)) continue;
-      const wx = grid.originX + col * grid.cellSize + grid.cellSize / 2;
-      const wy = grid.originY + row * grid.cellSize + grid.cellSize / 2;
-      const p = { x: wx, y: wy };
-      if (boardPoly && !pointInPolygon(p, boardPoly)) continue; // board-outside margin
-      let inSolid = false;
-      for (const op of game.obstaclePolygons) if (pointInPolygon(p, op)) { inSolid = true; break; }
-      if (!inSolid) for (const mp of game.mirrorPolygons) if (pointInPolygon(p, mp)) { inSolid = true; break; }
-      if (inSolid) continue; // obstacle / mirror footprint
-      reopened.push(idx);
-    }
-  }
-  if (reopened.length > 0) {
-    restoreCells(grid, reopened);
-    // Register reopened cells as board-grid sample points so they render again,
-    // but do NOT bump initialActiveCount: we WANT remaining % to rise (the reset).
-    for (const idx of reopened) game.initialSamplePoints.push(gridIndexToWorld(grid, idx));
-  }
-
-  // 4. Re-seal anything still unreachable by an active ball (avoids uncapturable
-  //    islands; won balls don't count), then rebuild regions + reassign balls.
-  captureUnreachableCells(grid, game.balls, game.walls);
-  rebuildRegionsKeepAll(game);
-
-  callbacks.repaintRegionCanvas();
-  callbacks.setRemainingPercent(Math.round(getRemainingPercent(grid)));
-}
-
-/** Dispatch a pressed ability by id. Returns false for an unknown id. */
-export function fireAbility(
-  id: string,
-  game: CanvasGameState,
-  now: number,
-  clearCallbacks: ClearFencesCallbacks,
-): boolean {
-  switch (id) {
-    case "freezeAll": freezeAllBalls(game, now); return true;
-    case "slowAll": applySlowAll(game); return true;
-    case "clearFences": clearAllFences(game, clearCallbacks); return true;
-    default: return false;
+export async function loadAbilities(): Promise<boolean> {
+  try {
+    const response = await fetch("/abilities.yml", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Failed to load abilities.yml: ${response.status}`);
+    const parsed = parseCatalogue(await response.text());
+    if (parsed.length === 0) throw new Error("abilities.yml contained no valid abilities");
+    liveAbilities = parsed;
+    abilityById = new Map(parsed.map(a => [a.id, a]));
+    return true;
+  } catch (err) {
+    console.warn("[abilities] Keeping the build-time catalogue:", err);
+    return false;
   }
 }

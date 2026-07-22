@@ -17,7 +17,7 @@ vi.mock("@/lib/gameHaptics", () => ({
 
 import { createInitialGameData } from "@/lib/initGame";
 import { applyCutFn } from "@/lib/physics/applyCut";
-import { clearAllFences } from "@/lib/abilities";
+import { clearAllFences } from "@/lib/abilityEffects";
 import { CellState, getRemainingPercent } from "@/lib/spaceGrid";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { LevelConfig } from "@/types/level";

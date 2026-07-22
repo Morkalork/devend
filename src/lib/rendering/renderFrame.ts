@@ -27,7 +27,8 @@ import { renderBallEffects, getSquishEffect, BOSS_SQUISH_SCALE } from "@/lib/bal
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
-import { chestLootAlpha, CHEST_REWARDS, ChestRewardId } from "@/lib/chests";
+import { chestLootAlpha } from "@/lib/chests";
+import { getAbility } from "@/lib/abilities";
 import { getPickupSprite, pickupColor, pickupFeedbackLabel } from "./pickupSprites";
 import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from "@/lib/boardConstants";
@@ -1214,7 +1215,7 @@ export function renderFrame(
       if (a <= 0) continue;
       const sp = w2s(g.x, g.y);
       const r = 9 * scale;
-      const col = CHEST_REWARDS[g.reward as ChestRewardId]?.color ?? '#ffd76b';
+      const col = getAbility(g.reward)?.color ?? '#ffd76b';
       ctx.save();
       ctx.globalAlpha = a;
       ctx.translate(sp.x, sp.y);
@@ -2044,6 +2045,42 @@ export function renderFrame(
         ctx.restore();
       }
     }
+  }
+
+  // ── Ability-fired burst (#38) ─────────────────────────────────────────────
+  // A board flash + rings tinted by the ability, so the player always sees it
+  // fire even when nothing on the board visibly changed. Expanding rings for
+  // most abilities; converging for Magnet (expand === false).
+  if (game.abilityFx && game.abilityFx.length > 0) {
+    const nowFx = performance.now();
+    let anyFxExpired = false;
+    const maxR = 0.6 * Math.hypot(boardRect.width, boardRect.height);
+    for (const fx of game.abilityFx) {
+      const elapsed = nowFx - fx.startTime;
+      if (elapsed >= fx.durationMs) { anyFxExpired = true; continue; }
+      const t = elapsed / fx.durationMs;
+      const cs = w2s(fx.center.x, fx.center.y);
+      ctx.save();
+      // Board flash — the guaranteed "something happened" cue.
+      ctx.fillStyle = hexToRgba(fx.color, 0.20 * (1 - t));
+      ctx.fillRect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
+      // Staggered rings from the board centre.
+      ctx.strokeStyle = hexToRgba(fx.color, 0.85 * (1 - t));
+      ctx.lineWidth = Math.max(2, 3 * scale);
+      ctx.shadowColor = fx.color;
+      ctx.shadowBlur = 12 * scale;
+      for (let k = 0; k < 3; k++) {
+        const ph = t - k * 0.15;
+        if (ph <= 0) continue;
+        const r = (fx.expand ? ph : 1 - ph) * maxR;
+        if (r <= 0) continue;
+        ctx.beginPath();
+        ctx.arc(cs.x, cs.y, r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+    if (anyFxExpired) game.abilityFx = game.abilityFx.filter(fx => nowFx - fx.startTime < fx.durationMs);
   }
 
   // ── Pickup claim / waste feedback ─────────────────────────────────────────

@@ -24,7 +24,8 @@ import {
 import { getBallType } from "@/lib/ballTypes";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { getRunRng } from "@/lib/runRng";
-import { rollChestReward, makeChestLoot } from "@/lib/chests";
+import { makeChestLoot } from "@/lib/chests";
+import { rollAbilityReward } from "@/lib/abilities";
 import { Polygon, pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
 import {
   CellState,
@@ -437,9 +438,12 @@ export function rebuildRegionsKeepAll(game: CanvasGameState): void {
  * to the session (GameCanvas -> onGrantAbility). Seeded per chest id, so daily /
  * record runs resolve identically. The loot gem is coloured by the ability.
  */
-function grantChestReward(game: CanvasGameState, d: DestructibleState, callbacks: DestroyCallbacks): void {
+function grantChestReward(game: CanvasGameState, d: DestructibleState, callbacks: DestroyCallbacks, levelNumber: number): void {
   const rng = getRunRng(`chest:${d.id}`);
-  const rewardId = rollChestReward(d.chestRewards, rng);
+  // Random among abilities unlocked at this level, optionally narrowed to the
+  // chest's authored pool (see abilities.ts / public/abilities.yml).
+  const rewardId = rollAbilityReward(d.chestRewards, levelNumber, rng);
+  if (!rewardId) return; // empty catalogue (should never happen)
   if (d.obstaclePolygon) {
     const c = polygonCentroid(d.obstaclePolygon);
     (game.chestLoot ??= []).push(makeChestLoot(`loot-${d.id}`, rewardId, c.x, c.y, game.activePlaySeconds));
@@ -450,7 +454,7 @@ function grantChestReward(game: CanvasGameState, d: DestructibleState, callbacks
 
 // ── Processing queued destructions ──────────────────────────────────────────
 
-export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallbacks): void {
+export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallbacks, levelNumber = 1): void {
   const pending = game.pendingDestroys;
   game.pendingDestroys = [];
   if (pending.length === 0) return;
@@ -498,7 +502,7 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
     game.breakMultiplier = (game.breakMultiplier ?? 1) * BREAK_MULTIPLIER_PER;
 
     // Treasure chest (#38): a smash rolls a reward and grants it instantly.
-    if (d.chest) grantChestReward(game, d, callbacks);
+    if (d.chest) grantChestReward(game, d, callbacks, levelNumber);
 
     // A gate breakable re-opens its sealed (locked) area as capturable space.
     if (d.sealedCells && d.sealedCells.length > 0 && game.spaceGrid) {

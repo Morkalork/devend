@@ -266,9 +266,25 @@ export interface ObjectDebrisState {
 /**
  * A loot gem flung from a smashed treasure chest (issue #38). Falls under
  * gravity and bounces off the board floor like a rubber ball (see chests.ts).
- * `reward` is a ChestRewardId (kept as a string here to avoid a types↔lib
- * import cycle). Cosmetic only — the bonus applied on the break.
+ * `reward` is an ability id (a catalogue key; kept as a string here to avoid a
+ * types↔lib import cycle). Cosmetic only — the ability charge is granted on the
+ * break, and the gem is coloured by the ability.
  */
+/**
+ * A transient full-board flash + ring burst played when a player ability fires
+ * (issue #38), so the player always sees *something* happen even if their
+ * current situation (one ball, already at the edge) shows no ball change.
+ * `expand` = rings emanate outward (most abilities); false = converge inward
+ * (Magnet). Rendered in both renderers, culled by lifetime.
+ */
+export interface AbilityFx {
+  color: string;       // hex with '#', the ability's colour
+  expand: boolean;     // true = rings grow outward, false = converge inward
+  startTime: number;   // performance.now() at trigger
+  durationMs: number;
+  center: Vector2;     // world-space board centre
+}
+
 export interface ChestLoot {
   id: string;
   reward: string;

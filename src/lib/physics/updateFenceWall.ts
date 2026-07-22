@@ -5,6 +5,7 @@ import { GameCallbacks } from "./gameCallbacks";
 import { handleGameOverFn, handlePushFailedFn } from "./handleGameOver";
 import { circleCapsuleCollision, lineSegmentIntersection, pointInPolygon, vec2Distance, vec2Normalize, vec2Sub, vec2Add, vec2Scale } from "@/lib/polygon";
 import { getWallSpeedBase } from "@/lib/gameUtils";
+import { abilityFenceRushFactor, abilityFenceShieldActive } from "@/lib/abilityEffects";
 import { MINIMUM_WALL_TIME, RECOVERY_WINDOW_MS } from "@/lib/gameConstants";
 import { playFenceBreakSound } from "@/lib/gameAudio";
 import { vibrateFenceBreak } from "@/lib/gameHaptics";
@@ -33,7 +34,9 @@ export function updateFenceWallFn(
   const lockTempo = 1
     + activeModifiers.fenceSpeedPerLock * game.lockedBallsCount
     + activeModifiers.fenceSpeedPerFence * game.wallCount;
-  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo;
+  // Fence Overclock ability (#38): cuts build much faster for a few seconds
+  // (still capped below at longestHalf / MINIMUM_WALL_TIME).
+  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo * abilityFenceRushFactor(game);
 
   let totalStartPath = 0;
   for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
@@ -177,6 +180,10 @@ export function updateFenceWallFn(
   ) {
     return;
   }
+
+  // Fence Shield ability (#38): the growing fence phases through balls for the
+  // ability's window, so a cut through a busy lane survives ball hits.
+  if (abilityFenceShieldActive(game)) return;
 
   for (const ball of balls) {
     let hit = false;

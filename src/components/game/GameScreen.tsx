@@ -105,6 +105,8 @@ interface GameScreenProps {
   showBallSpeeds?: boolean;
   /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
   showPerfOverlay?: boolean;
+  /** Admin/Playground: forwarded live game state (for the ability tester panel). */
+  onGameStateChange?: (state: GameStateInfo) => void;
   /** Admin/Playground: on clear, freeze on the drained frame instead of completing. */
   freezeOnClear?: boolean;
   /** Admin/Playground: fired the instant the map is won (before the shimmer). */
@@ -159,6 +161,7 @@ export function GameScreen({
   fenceDurability = null,
   showBallSpeeds = false,
   showPerfOverlay = false,
+  onGameStateChange,
   freezeOnClear = false,
   onMapComplete,
   introAssemble = false,
@@ -241,7 +244,8 @@ export function GameScreen({
 
   const handleGameStateChange = useCallback((state: GameStateInfo) => {
     setGameState(state);
-  }, []);
+    onGameStateChange?.(state); // forward to a parent (Playground ability tester)
+  }, [onGameStateChange]);
 
   // Map-highscore bar (#45): only with the Benchmarking upgrade and a stored
   // highscore for this map. `projectedScore` is the score the map would pay if

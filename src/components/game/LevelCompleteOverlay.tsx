@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
+import { getAbility } from '@/lib/abilities';
 import { contentText } from '@/i18n/content';
 
 // Press-and-hold info cards: each stat row explains its mechanic and how to
@@ -395,7 +396,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 </div>
                 {Object.entries(chestRewardCounts).map(([id, n]) => (
                   <div key={id} className="text-xs mt-1 pl-4">
-                    <span className="font-semibold text-foreground">{t(`game.chestReward.${id}`)}</span>
+                    <span className="font-semibold text-foreground">{getAbility(id)?.name ?? id}</span>
                     {n > 1 && <span className="text-muted-foreground"> x{n}</span>}
                   </div>
                 ))}
