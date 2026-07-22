@@ -54,6 +54,21 @@ describe("overtime cap", () => {
     const raised = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, overtimeCapBonus: 20 }).levelScore;
     expect(raised).toBe(cap + 20);
   });
+
+  it("demolition multiplier scales the whole pre-cap payout, still under the cap (#38)", () => {
+    const base = 40;
+    const cap = getOvertimeCap(base, HEADROOM); // 80
+    // Default (no destructibles broken) is byte-identical to omitting the option.
+    const plain = calculateScore(5, 5, 10, 30, base, { extraBonus: 10 }).levelScore;
+    expect(calculateScore(5, 5, 10, 30, base, { extraBonus: 10, payoutMultiplier: 1 }).levelScore).toBe(plain);
+    // A ×1.15 multiplier lifts a below-cap payout (it multiplies base + bonuses).
+    const boosted = calculateScore(5, 5, 10, 30, base, { extraBonus: 10, payoutMultiplier: 1.15 }).levelScore;
+    expect(boosted).toBeGreaterThan(plain);
+    expect(boosted).toBeLessThanOrEqual(cap);
+    // It never breaches the per-map cap: a big multiplier on a big stack clamps.
+    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, payoutMultiplier: 1.52 }).levelScore;
+    expect(capped).toBe(cap);
+  });
 });
 
 describe("pay scales with base points (scoring function, not the flat map)", () => {

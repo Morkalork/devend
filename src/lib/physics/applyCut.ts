@@ -48,9 +48,16 @@ function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
 }
 
 function areAllBallsWon(game: CanvasGameState): boolean {
-  const activeBalls = game.balls.filter(b => b.speed > 0 || b.state === 'won');
-  if (activeBalls.length === 0) return false;
-  return activeBalls.every(b => b.state === 'won');
+  // Single allocation-free scan (runs every frame via the win-condition check):
+  // true iff at least one ball counts and every counting ball is won.
+  let any = false;
+  for (const b of game.balls) {
+    if (b.speed > 0 || b.state === 'won') {
+      any = true;
+      if (b.state !== 'won') return false;
+    }
+  }
+  return any;
 }
 
 function getGridRemainingPercent(game: CanvasGameState): number {
@@ -440,6 +447,8 @@ export function triggerLevelComplete(
       overtimeCapBonus: activeModifiers.overtimeCapBonus + (game.pickupCapBonus ?? 0),
       // Overtime pickups pay after the cap (a claimed token always pays).
       postCapBonus: game.pickupOvertime ?? 0,
+      // Demolition multiplier: compounds ×1.15 per destructible smashed.
+      payoutMultiplier: game.breakMultiplier ?? 1,
     },
   );
   const lockDelay = game.assimilations.size > 0 ? LOCK_TOTAL_DURATION + 200 : 0;
@@ -468,6 +477,8 @@ export function triggerLevelComplete(
         lockedBallsCount: game.lockedBallsCount,
         superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
         breakBonus: game.breakBonus,
+        breakMultiplier: game.breakMultiplier,
+        chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,
         shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
         pickupBonus: game.pickupOvertime || undefined,
         // triggerLevelComplete is only reached via the all-balls-locked win, so

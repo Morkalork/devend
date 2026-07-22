@@ -27,6 +27,7 @@ import { renderBallEffects, getSquishEffect, BOSS_SQUISH_SCALE } from "@/lib/bal
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { renderWallWithEffects } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+import { chestLootAlpha, CHEST_REWARDS, ChestRewardId } from "@/lib/chests";
 import { getPickupSprite, pickupColor, pickupFeedbackLabel } from "./pickupSprites";
 import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } from "@/lib/pickups";
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from "@/lib/boardConstants";
@@ -407,7 +408,7 @@ function traceDentedPath(
   w2s: (x: number, y: number) => { x: number; y: number },
   verts: { x: number; y: number }[],
   baseAmp: number,
-  dents: { x: number; y: number }[],
+  dents: { x: number; y: number; s: number }[],
   dentDepth: number,
   dentRadius: number,
   rng: () => number,
@@ -431,11 +432,13 @@ function traceDentedPath(
       const baseX = a.x + ex * t, baseY = a.y + ey * t;
       let wx = baseX, wy = baseY;
 
-      // Strongest nearby impact wins.
+      // Strongest nearby impact wins. Pow'd falloff makes a pointed crater at
+      // the hit rather than a broad, generic-looking scoop; each impact's own
+      // strength (how hard the ball hit) scales its depth.
       let dent = 0;
       for (const imp of dents) {
         const dd = Math.hypot(wx - imp.x, wy - imp.y);
-        if (dd < dentRadius) dent = Math.max(dent, 1 - dd / dentRadius);
+        if (dd < dentRadius) dent = Math.max(dent, Math.pow(1 - dd / dentRadius, 1.7) * imp.s);
       }
 
       if (dent > 0) {
@@ -466,6 +469,40 @@ function traceDentedPath(
     }
   }
   ctx.closePath();
+}
+
+/** Lid seam + clasp overlay so a breakable chest reads as treasure (#38). */
+function drawChestDecor(
+  ctx: CanvasRenderingContext2D,
+  w2s: (x: number, y: number) => { x: number; y: number },
+  poly: { vertices: { x: number; y: number }[] },
+  scale: number,
+): void {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const v of poly.vertices) {
+    if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+    if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+  }
+  const tl = w2s(minX, minY), br = w2s(maxX, maxY);
+  const x0 = Math.min(tl.x, br.x), x1 = Math.max(tl.x, br.x);
+  const y0 = Math.min(tl.y, br.y), y1 = Math.max(tl.y, br.y);
+  const lidY = y0 + (y1 - y0) * 0.36;
+  const cx = (x0 + x1) / 2;
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.shadowBlur = 0;
+  // Lid seam across the chest.
+  ctx.strokeStyle = 'rgba(120,80,20,0.85)';
+  ctx.lineWidth = Math.max(1.5, 2 * scale);
+  ctx.beginPath(); ctx.moveTo(x0, lidY); ctx.lineTo(x1, lidY); ctx.stroke();
+  // Clasp: a bright metal plate centred on the seam.
+  const cw = Math.max(5, 8 * scale), ch = Math.max(6, 11 * scale);
+  ctx.fillStyle = 'rgba(255,236,170,0.95)';
+  ctx.fillRect(cx - cw / 2, lidY - ch * 0.35, cw, ch);
+  ctx.strokeStyle = 'rgba(120,80,20,0.9)';
+  ctx.lineWidth = Math.max(1, 1.2 * scale);
+  ctx.strokeRect(cx - cw / 2, lidY - ch * 0.35, cw, ch);
+  ctx.restore();
 }
 
 /** Bold jagged damage outline in the object's colour (mirrors/movers). */
@@ -790,21 +827,65 @@ export function renderFrame(
     for (const d of game.destructibles) {
       if (d.kind !== 'breakable' || d.destroyed || !d.obstaclePolygon) continue;
       const poly = d.obstaclePolygon;
-      const amber = d.objective ? '#ffb454' : '#ffcf7a';
-      const dmg = d.maxHits > 0 ? Math.min(1, d.hits / d.maxHits) : 0;
+      // Chests read as gold treasure; ordinary breakables stay amber.
+      const amber = d.chest ? '#ffd76b' : (d.objective ? '#ffb454' : '#ffcf7a');
       const rng = _mulberry(_hashStr(`break-${d.id}`));
       ctx.save();
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      // baseAmp 0 when pristine → clean (but board-pinned) outline.
-      traceDentedPath(ctx, w2s, poly.vertices, d.hits > 0 ? 1.5 + dmg * 4 : 0, d.dents ?? [], 16, 34, rng, bounds);
-      ctx.fillStyle = d.hits > 0 ? hexToRgba(amber, 0.2 * (1 - dmg * 0.7)) : 'rgba(255,180,84,0.12)';
+      // The object stays intact-looking (clean outline, steady fill) until the
+      // final hit breaks it; damage shows ONLY as local dents/craters where the
+      // balls actually struck, not as the whole body fraying/fading.
+      traceDentedPath(ctx, w2s, poly.vertices, 0, d.dents ?? [], 28, 30, rng, bounds);
+      ctx.fillStyle = hexToRgba(amber, 0.14);
       ctx.fill();
-      ctx.lineWidth = Math.max(2, WALL_THICKNESS * scale * (1 - dmg * 0.25));
-      ctx.strokeStyle = d.hits > 0 ? hexToRgba(amber, 0.95) : amber;
+      ctx.lineWidth = Math.max(2, WALL_THICKNESS * scale);
+      ctx.strokeStyle = amber;
       ctx.shadowColor = amber;
-      ctx.shadowBlur = (d.hits > 0 ? 8 : 7) * scale;
+      ctx.shadowBlur = 7 * scale;
       ctx.stroke();
+
+      // A dark crater dimple + short cracks at each impact, nudged inward off
+      // the edge so it reads as a gouge in the object's face, not a floating dot.
+      if (d.dents && d.dents.length) {
+        let cx = 0, cy = 0;
+        for (const v of poly.vertices) { cx += v.x; cy += v.y; }
+        cx /= poly.vertices.length; cy /= poly.vertices.length;
+        const crng = _mulberry(_hashStr(`crater-${d.id}`));
+        ctx.shadowBlur = 0;
+        for (const imp of d.dents) {
+          let ix = cx - imp.x, iy = cy - imp.y;
+          const il = Math.hypot(ix, iy) || 1; ix /= il; iy /= il;
+          const sp = w2s(imp.x + ix * 9, imp.y + iy * 9);
+          const r = 13 * scale * imp.s; // harder hit → bigger crater
+          const grad = ctx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, r);
+          grad.addColorStop(0, 'rgba(30,18,4,0.55)');
+          grad.addColorStop(1, 'rgba(58,36,8,0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath(); ctx.arc(sp.x, sp.y, r, 0, Math.PI * 2); ctx.fill();
+          // Cracks radiate INTO the object (a cone around the inward normal),
+          // jagged with a mid kink so they read as fractures, not spokes; their
+          // length scales with the force of this hit.
+          const baseAng = Math.atan2(iy, ix);
+          ctx.strokeStyle = 'rgba(38,23,6,0.55)';
+          ctx.lineWidth = Math.max(1, 1.6 * scale);
+          for (let k = 0; k < 4; k++) {
+            const a = baseAng + (crng() - 0.5) * 1.6;
+            const len = (18 + crng() * 22) * scale * imp.s;
+            const dx = Math.cos(a), dy = Math.sin(a);
+            const kink = (crng() - 0.5) * len * 0.28;
+            const mx = sp.x + dx * len * 0.55 - dy * kink;
+            const my = sp.y + dy * len * 0.55 + dx * kink;
+            ctx.beginPath();
+            ctx.moveTo(sp.x, sp.y);
+            ctx.lineTo(mx, my);
+            ctx.lineTo(sp.x + dx * len, sp.y + dy * len);
+            ctx.stroke();
+          }
+        }
+      }
+      // Treasure chests get a lid seam + clasp so they read as loot, not a block.
+      if (d.chest) drawChestDecor(ctx, w2s, poly, scale);
       ctx.restore();
     }
     ctx.restore(); // breakable board clip
@@ -1123,6 +1204,30 @@ export function renderFrame(
     }
     if (anyExpired) {
       game.objectDebris = game.objectDebris.filter(dd => nowD - dd.startTime < dd.durationMs);
+    }
+  }
+
+  // ── Treasure-chest loot gems (issue #38) ──────────────────────────────────
+  if (game.chestLoot && game.chestLoot.length > 0) {
+    for (const g of game.chestLoot) {
+      const a = chestLootAlpha(g, game.activePlaySeconds);
+      if (a <= 0) continue;
+      const sp = w2s(g.x, g.y);
+      const r = 9 * scale;
+      const col = CHEST_REWARDS[g.reward as ChestRewardId]?.color ?? '#ffd76b';
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(sp.x, sp.y);
+      ctx.rotate(Math.PI / 4); // a diamond-oriented gem
+      ctx.fillStyle = col;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 8 * scale;
+      ctx.fillRect(-r, -r, r * 2, r * 2);
+      ctx.shadowBlur = 0;
+      ctx.globalAlpha = a * 0.85;
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillRect(-r * 0.55, -r * 0.55, r * 0.5, r * 0.5); // corner shine
+      ctx.restore();
     }
   }
 

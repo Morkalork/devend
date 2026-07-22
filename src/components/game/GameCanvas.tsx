@@ -26,6 +26,7 @@ import { clearBallEffectsCache } from "@/lib/ballEffects";
 import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/rendering/renderFrame";
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
+import { CHEST_REWARDS, ChestRewardId } from "@/lib/chests";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
@@ -74,7 +75,7 @@ import {
 } from "@/lib/spaceGrid";
 import { traceActiveContours, traceContours, snapContoursToWalls, ContourPoint } from "@/lib/rendering/regionContour";
 import { maybeRampDpr } from "@/lib/rendering/adaptiveDpr";
-import { playFenceBreakSound, playDeathSound, playBallLockSound } from "@/lib/gameAudio";
+import { playFenceBreakSound, playDeathSound, playBallLockSound, playPickupClaimedSound } from "@/lib/gameAudio";
 import { vibrateFenceComplete, vibrateFenceBreak } from "@/lib/gameHaptics";
 
 import {
@@ -132,6 +133,9 @@ interface GameCanvasProps {
   totalScore: number;
   lives: number;
   onLivesChange: (newLives: number) => void;
+  /** A smashed treasure chest awarded a run-scoped bonus (issue #38): the
+   *  session accumulates it so it persists into later maps. */
+  onChestRunBonus?: (bonus: Partial<GameModifiers>) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired the instant the map is won, so the shell can freeze the code background. */
@@ -209,6 +213,7 @@ export function GameCanvas({
   totalScore,
   lives,
   onLivesChange,
+  onChestRunBonus,
   onGameEnd,
   onLevelComplete,
   onMapComplete,
@@ -327,6 +332,11 @@ export function GameCanvas({
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
+  // Treasure-chest reward toast: a brief rising label naming what a smashed
+  // chest gave. Keyed so re-triggering restarts the CSS animation.
+  const [chestToast, setChestToast] = useState<{ key: number; label: string; color: string } | null>(null);
+  const chestToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (chestToastTimer.current) clearTimeout(chestToastTimer.current); }, []);
   const [displayLives, setDisplayLives] = useState(lives);
   const [screenFlash, setScreenFlash] = useState<"none" | "red">("none");
   const [isRecovering, setIsRecovering] = useState(false);
@@ -453,7 +463,11 @@ export function GameCanvas({
     objectivesTotal: 0,
     objectivesBroken: 0,
     breakBonus: 0,
+    breakMultiplier: 1,
     lastDudAt: 0,
+    chestLoot: [] as import("@/types/game").ChestLoot[],
+    chestRewardsLog: [] as string[],
+    ballDensityBonus: 0,
     pickups: [] as PickupState[],
     pickupConfig: null as PickupConfig | null,
     pickupSpots: [] as Vector2[],
@@ -730,7 +744,13 @@ export function GameCanvas({
       game.fallingObjects = [];
       game.objectivesBroken = 0;
       game.breakBonus = 0;
+      game.breakMultiplier = 1;
       game.lastDudAt = 0;
+      game.chestLoot = [];
+      game.chestRewardsLog = [];
+      // Run-wide "heavier balls" chest bonus rides in via activeModifiers; each
+      // map starts from that snapshot and any chest smashed THIS map adds on top.
+      game.ballDensityBonus = activeModifiers.ballDensityBonus;
       game.moneyMultiplier = 1;
       game.ballSpeedScale = activeModifiers.ballSpeedMultiplier;
       // Pickups: fresh token state each map. A map-level pickupChance override
@@ -1043,6 +1063,30 @@ export function GameCanvas({
           repaintRegionCanvas,
           setRemainingPercent,
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
+          // A chest was smashed: map-scoped effects already applied on `game`.
+          // Grant extra life here (like the pickup path) and bubble run-scoped
+          // ball tweaks to the session so they persist into later maps.
+          onChestReward: (rewardId, value) => {
+            playPickupClaimedSound();
+            if (rewardId === 'extraLife') {
+              const next = livesRef.current + value;
+              livesRef.current = next;
+              setDisplayLives(next);
+              onLivesChange(next);
+            } else if (rewardId === 'slowBalls') {
+              onChestRunBonus?.({ ballSpeedMultiplier: value });
+            } else if (rewardId === 'heavyBalls') {
+              onChestRunBonus?.({ ballDensityBonus: value });
+            }
+            // A brief rising toast naming the reward (works in both renderers).
+            const label = rewardId === 'overtime'
+              ? `+${value}h ${t('game.chestReward.overtime')}`
+              : t(`game.chestReward.${rewardId}`);
+            const color = CHEST_REWARDS[rewardId as ChestRewardId]?.color ?? '#ffd76b';
+            setChestToast({ key: performance.now(), label, color });
+            if (chestToastTimer.current) clearTimeout(chestToastTimer.current);
+            chestToastTimer.current = setTimeout(() => setChestToast(null), 1700);
+          },
         });
         // A destroy can capture pocket cells (destroy-recapture) and take the
         // remaining space past the goal with no fence involved — run the same
@@ -1178,11 +1222,13 @@ export function GameCanvas({
     const { levelScore, breakdown } = calculateScore(
       game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
         scoreMultiplier: activeModifiers.scoreMultiplier,
-        extraBonus: game.lockBonus + pushBonus + shipEarlyBonus,
+        extraBonus: game.lockBonus + game.breakBonus + pushBonus + shipEarlyBonus,
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
         // Comp Time pickups raise THIS map's cap; overtime pickups pay after it.
         overtimeCapBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
         postCapBonus: game.pickupOvertime,
+        // Demolition multiplier: chests/breakables smashed before the push.
+        payoutMultiplier: game.breakMultiplier ?? 1,
       },
     );
 
@@ -1203,8 +1249,10 @@ export function GameCanvas({
           lockedBallsCount: game.lockedBallsCount,
           superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
           shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+          breakBonus: game.breakBonus, breakMultiplier: game.breakMultiplier,
           pickupBonus: game.pickupOvertime || undefined,
           pickupsClaimed: game.pickupsClaimedLog.length > 0 ? [...game.pickupsClaimedLog] : undefined,
+          chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,
           freeShopItemsEarned: game.freeShopItems || undefined,
         });
       });
@@ -1296,6 +1344,20 @@ export function GameCanvas({
           className="absolute inset-0 pointer-events-none"
           style={{ zIndex: 3, opacity: 1 }}
         />
+        {chestToast && (
+          <div
+            key={chestToast.key}
+            className="absolute left-1/2 top-[18%] z-40 pointer-events-none animate-chest-toast whitespace-nowrap font-mono font-bold text-sm sm:text-base px-3 py-1.5 rounded-md"
+            style={{
+              color: chestToast.color,
+              background: 'rgba(10,14,20,0.72)',
+              border: `1px solid ${chestToast.color}`,
+              boxShadow: `0 0 14px ${chestToast.color}66`,
+            }}
+          >
+            {chestToast.label}
+          </div>
+        )}
       </div>
 
       <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: "15%" }} />

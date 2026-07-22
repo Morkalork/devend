@@ -512,6 +512,18 @@
     }
   }
 
+  /* Treasure-chest reward toast: rise up, hold, then fade out. */
+  .animate-chest-toast {
+    animation: chest-toast 1.7s ease-out forwards;
+  }
+
+  @keyframes chest-toast {
+    0%   { opacity: 0; transform: translate(-50%, 12px) scale(0.9); }
+    12%  { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    75%  { opacity: 1; transform: translate(-50%, -6px) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -22px) scale(0.98); }
+  }
+
   .animate-shake {
     animation: shake 0.4s ease-in-out;
   }

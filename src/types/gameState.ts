@@ -6,7 +6,7 @@
  */
 
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
-import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject } from "@/types/game";
+import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject, ChestLoot } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
@@ -235,6 +235,21 @@ export interface CanvasGameState {
   objectivesBroken: number;
   /** Bonus overtime hours earned by smashing breakable objects this level. */
   breakBonus: number;
+  /**
+   * Demolition multiplier (issue #38): starts at 1 and compounds ×1.15 for each
+   * destructible smashed this map, scaling the whole pre-cap payout to offset
+   * the ship-early time spent breaking things. Optional; treated as 1 if unset.
+   */
+  breakMultiplier?: number;
   /** True for one frame after a cut "duds" against a breakable structure. */
   lastDudAt: number;
+  /** Bouncing loot gems from smashed treasure chests (issue #38; cosmetic). */
+  chestLoot?: ChestLoot[];
+  /** Reward ids collected from chests this map, for the completion overlay. */
+  chestRewardsLog?: string[];
+  /**
+   * Run-wide ball-mass bonus snapshotted from activeModifiers at map init, plus
+   * any "heavier balls" chest smashed this map. Read by the force model.
+   */
+  ballDensityBonus?: number;
 }

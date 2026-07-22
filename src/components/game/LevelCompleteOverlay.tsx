@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { contentText } from '@/i18n/content';
@@ -132,6 +132,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     superiorLockBonus = 0,
     pushBonus = 0,
     breakBonus = 0,
+    breakMultiplier = 1,
     shipEarlyBonus = 0,
     pickupBonus = 0,
     clearTimeSeconds = 0,
@@ -141,6 +142,9 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   } = scoreData;
 
   const claimedPickups = scoreData.pickupsClaimed ?? [];
+  // Treasure-chest rewards smashed this map (#38): collapse duplicates to counts.
+  const chestRewards = scoreData.chestRewards ?? [];
+  const chestRewardCounts = chestRewards.reduce<Record<string, number>>((m, id) => { m[id] = (m[id] ?? 0) + 1; return m; }, {});
   const isOverPar = fencesOverPar > 0;
   const isSpaceDisabled = fencesOverPar >= 3;
   // Lock income split by quality: the standard row shows only the plain locks,
@@ -322,7 +326,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   <Hammer className="w-3 h-3 sm:w-4 sm:h-4" />
                   {t('levelComplete.breakBonus')}
                 </span>
-                <span className="font-bold text-amber-400">+{breakBonus}h</span>
+                <span className="font-bold text-amber-400">
+                  {breakMultiplier > 1 && (
+                    <span className="mr-2 text-amber-300">&times;{breakMultiplier.toFixed(2)}</span>
+                  )}
+                  +{breakBonus}h
+                </span>
               </div>
             )}
 
@@ -369,6 +378,25 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                       {t(`levelComplete.info.pickupBonus.effects.${c.effect}.name`, { value: c.value })}
                     </span>
                     <span className="text-muted-foreground"> {t(`levelComplete.info.pickupBonus.effects.${c.effect}.desc`, { value: c.value })}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Treasure chests smashed this map (issue #38): what was hauled. */}
+            {chestRewards.length > 0 && (
+              <div className="py-2 border-b border-yellow-500/30 bg-yellow-500/10 rounded px-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-yellow-300 flex items-center gap-1">
+                    <Gem className="w-3 h-3 sm:w-4 sm:h-4" />
+                    {t('levelComplete.chestBonus')}
+                  </span>
+                  <span className="font-bold text-yellow-300">x{chestRewards.length}</span>
+                </div>
+                {Object.entries(chestRewardCounts).map(([id, n]) => (
+                  <div key={id} className="text-xs mt-1 pl-4">
+                    <span className="font-semibold text-foreground">{t(`game.chestReward.${id}`)}</span>
+                    {n > 1 && <span className="text-muted-foreground"> x{n}</span>}
                   </div>
                 ))}
               </div>

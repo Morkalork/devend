@@ -21,6 +21,7 @@ import { DissolveState } from "@/types/game";
 import { Vector2, Polygon, clipLineAgainstPolygons } from "@/lib/polygon";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { BALL_DANGER_SPEED, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
+import { chestLootAlpha, CHEST_REWARDS, ChestRewardId } from "@/lib/chests";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 import { getRainGlyph } from "../rainGlyphCache";
@@ -580,16 +581,70 @@ export class PixiGameRenderer {
     for (const d of game.destructibles) {
       if (d.kind !== "breakable" || d.destroyed || !d.obstaclePolygon) continue;
       const poly = d.obstaclePolygon;
-      const amber = d.objective ? "#ffb454" : "#ffcf7a";
-      const dmg = d.maxHits > 0 ? Math.min(1, d.hits / d.maxHits) : 0;
-      const pts = dentedOutline(poly.vertices, d.hits > 0 ? 1.5 + dmg * 4 : 0, d.dents ?? [], 16, 34, mulberry(hashStr(`break-${d.id}`)), bounds);
+      // Chests read as gold treasure; ordinary breakables stay amber.
+      const amber = d.chest ? "#ffd76b" : (d.objective ? "#ffb454" : "#ffcf7a");
+      // The object stays intact-looking until the final hit breaks it; damage
+      // shows ONLY as local dents/craters where the balls actually struck.
+      const pts = dentedOutline(poly.vertices, 0, d.dents ?? [], 28, 30, mulberry(hashStr(`break-${d.id}`)), bounds);
       const flat: number[] = [];
       for (const p of pts) {
         const sp = w2s(p.x, p.y);
         flat.push(sp.x, sp.y);
       }
-      g.poly(flat).fill({ color: amber, alpha: d.hits > 0 ? 0.2 * (1 - dmg * 0.7) : 0.12 });
-      g.poly(flat).stroke({ width: Math.max(2, WALL_THICKNESS * scale * (1 - dmg * 0.25)), color: amber, alpha: d.hits > 0 ? 0.95 : 1, join: "round", cap: "round" });
+      g.poly(flat).fill({ color: amber, alpha: 0.14 });
+      g.poly(flat).stroke({ width: Math.max(2, WALL_THICKNESS * scale), color: amber, alpha: 1, join: "round", cap: "round" });
+
+      // A dark crater dimple + short cracks at each impact, nudged inward off
+      // the edge so it reads as a gouge in the object's face, not a floating dot.
+      if (d.dents && d.dents.length) {
+        let cx = 0, cy = 0;
+        for (const v of poly.vertices) { cx += v.x; cy += v.y; }
+        cx /= poly.vertices.length; cy /= poly.vertices.length;
+        const crng = mulberry(hashStr(`crater-${d.id}`));
+        for (const imp of d.dents) {
+          let ix = cx - imp.x, iy = cy - imp.y;
+          const il = Math.hypot(ix, iy) || 1; ix /= il; iy /= il;
+          const sp = w2s(imp.x + ix * 9, imp.y + iy * 9);
+          const r = 13 * scale * imp.s; // harder hit → bigger crater
+          g.circle(sp.x, sp.y, r).fill({ color: 0x3a2408, alpha: 0.24 });
+          g.circle(sp.x, sp.y, r * 0.55).fill({ color: 0x24160a, alpha: 0.45 });
+          // Cracks radiate INTO the object (a cone around the inward normal),
+          // jagged with a mid kink so they read as fractures, not spokes; their
+          // length scales with the force of this hit.
+          const baseAng = Math.atan2(iy, ix);
+          for (let k = 0; k < 4; k++) {
+            const a = baseAng + (crng() - 0.5) * 1.6;
+            const len = (18 + crng() * 22) * scale * imp.s;
+            const dx = Math.cos(a), dy = Math.sin(a);
+            const kink = (crng() - 0.5) * len * 0.28;
+            const mx = sp.x + dx * len * 0.55 - dy * kink;
+            const my = sp.y + dy * len * 0.55 + dx * kink;
+            g.moveTo(sp.x, sp.y)
+              .lineTo(mx, my)
+              .lineTo(sp.x + dx * len, sp.y + dy * len)
+              .stroke({ width: Math.max(1, 1.6 * scale), color: 0x2a1a06, alpha: 0.55 });
+          }
+        }
+      }
+
+      // Treasure chests get a lid seam + clasp so they read as loot, not a block.
+      if (d.chest) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const v of poly.vertices) {
+          if (v.x < minX) minX = v.x; if (v.x > maxX) maxX = v.x;
+          if (v.y < minY) minY = v.y; if (v.y > maxY) maxY = v.y;
+        }
+        const tl = w2s(minX, minY), br = w2s(maxX, maxY);
+        const x0 = Math.min(tl.x, br.x), x1 = Math.max(tl.x, br.x);
+        const y0 = Math.min(tl.y, br.y), y1 = Math.max(tl.y, br.y);
+        const lidY = y0 + (y1 - y0) * 0.36;
+        const cx2 = (x0 + x1) / 2;
+        g.moveTo(x0, lidY).lineTo(x1, lidY)
+          .stroke({ width: Math.max(1.5, 2 * scale), color: 0x785014, alpha: 0.85, cap: "round" });
+        const cw = Math.max(5, 8 * scale), ch = Math.max(6, 11 * scale);
+        g.rect(cx2 - cw / 2, lidY - ch * 0.35, cw, ch).fill({ color: 0xffecaa, alpha: 0.95 });
+        g.rect(cx2 - cw / 2, lidY - ch * 0.35, cw, ch).stroke({ width: Math.max(1, 1.2 * scale), color: 0x785014, alpha: 0.9 });
+      }
     }
   }
 
@@ -690,6 +745,19 @@ export class PixiGameRenderer {
         g.poly(flat).stroke({ width: 2 * scale, color: fo.color, alpha });
       }
       if (expired) game.fallingObjects = game.fallingObjects.filter(fo => now - fo.startTime < fo.durationMs);
+    }
+
+    // Treasure-chest loot gems: bouncing diamonds tinted by their reward (#38).
+    if (game.chestLoot && game.chestLoot.length > 0) {
+      for (const gem of game.chestLoot) {
+        const a = chestLootAlpha(gem, game.activePlaySeconds);
+        if (a <= 0) continue;
+        const sp = w2s(gem.x, gem.y);
+        const r = 9 * scale;
+        const col = CHEST_REWARDS[gem.reward as ChestRewardId]?.color ?? "#ffd76b";
+        g.poly([sp.x, sp.y - r, sp.x + r, sp.y, sp.x, sp.y + r, sp.x - r, sp.y]).fill({ color: col, alpha: a });
+        g.poly([sp.x, sp.y - r, sp.x + r, sp.y, sp.x, sp.y + r, sp.x - r, sp.y]).stroke({ width: Math.max(1, 1.2 * scale), color: 0xffffff, alpha: a * 0.5 });
+      }
     }
   }
 
@@ -1001,7 +1069,7 @@ function countActive(game: CanvasGameState): number {
 function dentedOutline(
   verts: { x: number; y: number }[],
   baseAmp: number,
-  dents: { x: number; y: number }[],
+  dents: { x: number; y: number; s: number }[],
   dentDepth: number,
   dentRadius: number,
   rng: () => number,
@@ -1027,7 +1095,7 @@ function dentedOutline(
       let dent = 0;
       for (const imp of dents) {
         const dd = Math.hypot(wx - imp.x, wy - imp.y);
-        if (dd < dentRadius) dent = Math.max(dent, 1 - dd / dentRadius);
+        if (dd < dentRadius) dent = Math.max(dent, Math.pow(1 - dd / dentRadius, 1.7) * imp.s);
       }
       if (dent > 0) {
         const tox = cx - wx, toy = cy - wy;

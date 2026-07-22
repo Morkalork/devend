@@ -59,6 +59,8 @@ interface GameScreenProps {
   /** Per-run revives banked; shown in the HUD. */
   continuesRemaining?: number;
   onLivesChange: (newLives: number) => void;
+  /** Run-scoped bonus from a smashed treasure chest (issue #38). */
+  onChestRunBonus?: (bonus: Partial<GameModifiers>) => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired once per ball the instant it locks, with its ball-type id (drives the
@@ -119,6 +121,7 @@ export function GameScreen({
   lives,
   continuesRemaining = 0,
   onLivesChange,
+  onChestRunBonus,
   onGameEnd,
   onLevelComplete,
   onBallTypeLocked,
@@ -549,6 +552,7 @@ export function GameScreen({
             totalScore={totalScore}
             lives={lives}
             onLivesChange={onLivesChange}
+            onChestRunBonus={onChestRunBonus}
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
             onBallTypeLocked={onBallTypeLocked}

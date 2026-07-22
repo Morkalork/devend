@@ -256,6 +256,12 @@
     "pickupFreeShopItem": "¡Artículo gratis!",
     "pickupExtraLife": "+1 vida",
     "pickupRainbow": "¡Bola arcoíris!",
+    "chestReward": {
+      "slowBalls": "Bolas más lentas",
+      "heavyBalls": "Bolas más pesadas",
+      "overtime": "Horas extra",
+      "extraLife": "Vida extra"
+    },
     "bossIntroTitle": "Combate de jefe: {{name}}"
   },
   "interactiveTutorial": {
@@ -283,6 +289,7 @@
     "superiorLocks": "Bloqueos superiores ({{count}})",
     "pushBonus": "Bono de presión",
     "pickupBonus": "Bono de potenciadores",
+    "chestBonus": "Botín obtenido",
     "shipEarly": "Entrega temprana ({{seconds}}s)",
     "newHighscore": "Nuevo récord",
     "totalBonus": "Bonificación total",

@@ -33,7 +33,7 @@ import {
 } from "@/lib/regionOwnership";
 import { playWallHitSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
-import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit } from "@/lib/physics/destructibles";
+import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage } from "@/lib/physics/destructibles";
 
 /** Boss cell-division animation duration (issue #56): the bud grows + detaches. */
 const SPLIT_MS = 1200;
@@ -361,27 +361,38 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     console.warn("[PHYSICS] Ball escaped board, recovered to:", ball.position);
   }
 
-  // Resolve collisions with board boundary (always use original board, not region bounding box)
+  // Resolve collisions with board boundary (always use original board, not region bounding box).
+  // Broad-phase: the board is an axis-aligned rectangle, so a ball further than
+  // radius+margin from every edge cannot be touching one. Skip the resolver in
+  // that (very common) case - it allocates ~19 short-lived objects even on a MISS,
+  // and it runs per ball per 120Hz step, so this is the biggest per-step GC source.
   if (game.boardPolygon) {
-    const boardResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, game.boardPolygon);
-    ball.position = boardResult.position;
-    ball.velocity = boardResult.velocity;
-    if (boardResult.collided) surfaceHit = true;
+    const bb = getObstacleBounds(game.boardPolygon); // cached AABB (== the rect edges)
+    const m = ball.radius + 2;
+    const nearBoardEdge =
+      ball.position.x <= bb.minX + m || ball.position.x >= bb.maxX - m ||
+      ball.position.y <= bb.minY + m || ball.position.y >= bb.maxY - m;
+    if (nearBoardEdge) {
+      const boardResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, game.boardPolygon);
+      ball.position = boardResult.position;
+      ball.velocity = boardResult.velocity;
+      if (boardResult.collided) surfaceHit = true;
 
-    // Register wall impact for visual effect
-    if (boardResult.collided && boardResult.impactEdge) {
-      const spd = vec2Length(ball.velocity);
-      const impactStrength = Math.min(1, spd / 400);
-      registerWallImpact(
-        boardResult.impactEdge.start,
-        boardResult.impactEdge.end,
-        boardResult.impactEdge.point,
-        impactStrength
-      );
-      // Trigger wall hit effect on ball
-      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
-      // Play wall hit sound
-      playWallHitSound(impactStrength);
+      // Register wall impact for visual effect
+      if (boardResult.collided && boardResult.impactEdge) {
+        const spd = vec2Length(ball.velocity);
+        const impactStrength = Math.min(1, spd / 400);
+        registerWallImpact(
+          boardResult.impactEdge.start,
+          boardResult.impactEdge.end,
+          boardResult.impactEdge.point,
+          impactStrength
+        );
+        // Trigger wall hit effect on ball
+        triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
+        // Play wall hit sound
+        playWallHitSound(impactStrength);
+      }
     }
   }
 
@@ -405,12 +416,12 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       ball.position = result.position;
       ball.velocity = result.velocity;
       surfaceHit = true;
-      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
+      triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
       playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));
-      // Black ball wears down movers.
+      // Black ball wears down movers (its heavy mass makes short work of them).
       if (ball.ability === 'breakObjects') {
         const d = findMoverDestructible(game, mover.id);
-        if (d) registerObjectHit(game, d, ball.id, performance.now());
+        if (d) registerObjectHit(game, d, ball.id, now, ballImpactDamage(ball, vec2Length(ball.velocity), game.ballDensityBonus ?? 0));
       }
     }
   }
@@ -441,7 +452,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       surfaceHit = true;
 
       // Trigger wall hit effect on ball
-      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
+      triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
 
       // Play wall hit sound for obstacle collision
       const spd = vec2Length(ball.velocity);
@@ -465,15 +476,14 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
       registerWallImpact(wall.start, wall.end, impactPoint, impactStrength);
-      triggerWallHit(ball.effects, performance.now(), ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
+      triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
       playWallHitSound(impactStrength);
 
       // Ascension fence durability: each (debounced) hit wears the fence down.
       // Exhausted fences are queued and broken after the physics step.
       if (wall.hitsLeft !== undefined) {
-        const dn = performance.now();
-        if (wall.lastDamageAt === undefined || dn - wall.lastDamageAt > 250) {
-          wall.lastDamageAt = dn;
+        if (wall.lastDamageAt === undefined || now - wall.lastDamageAt > 250) {
+          wall.lastDamageAt = now;
           wall.hitsLeft--;
           if (wall.hitsLeft <= 0) game.pendingWallBreaks.push(wall);
         }
@@ -487,10 +497,18 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
         if (oid) {
           const d = findObstacleDestructibleById(game, oid);
           if (d) {
+            // Force of the hit = closing speed along the wall normal × ball mass.
+            // (Reflection preserves the normal-speed magnitude, so post-bounce
+            // velocity gives the same |vₙ| as the incoming ball.)
+            const ex = wall.end.x - wall.start.x, ey = wall.end.y - wall.start.y;
+            const el = Math.hypot(ex, ey) || 1;
+            const nvx = -ey / el, nvy = ex / el;
+            const vn = Math.abs(ball.velocity.x * nvx + ball.velocity.y * nvy);
+            const dmg = ballImpactDamage(ball, vn, game.ballDensityBonus ?? 0);
             if (d.kind === 'breakable') {
-              registerObjectHit(game, d, ball.id, now, ball.ability === 'breakObjects' ? 2 : 1, impactPoint ?? undefined);
+              registerObjectHit(game, d, ball.id, now, dmg, impactPoint ?? undefined);
             } else if (d.kind === 'mirror' && ball.ability === 'breakObjects') {
-              registerObjectHit(game, d, ball.id, now, 1, impactPoint ?? undefined);
+              registerObjectHit(game, d, ball.id, now, dmg, impactPoint ?? undefined);
             }
           }
         }

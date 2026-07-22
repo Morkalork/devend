@@ -74,6 +74,13 @@ export interface BallTypeDef {
   lockMultiplier: number;
   ability: BallAbility;
   /**
+   * Relative weight of the ball (issue #38 force model). Impact damage against
+   * breakables scales with mass = density x (radius/BASE_BALL_RADIUS)^2, so a
+   * heavy grey/black hits far harder than a light yellow at the same speed.
+   * Defaults to 1 (a standard red/blue) when absent.
+   */
+  density: number;
+  /**
    * `slowOthers` (purple) only: how much speed each ball it clashes with loses
    * per hit (clamped to that ball's `minimumSpeed`). Defaults to 0.
    */
@@ -146,6 +153,11 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     ? Math.max(0, Number(r.speedReduction))
     : undefined;
 
+  // Weight for the breakable force model. Defaults to 1 (standard ball).
+  const density = Number.isFinite(Number(r.density)) && Number(r.density) > 0
+    ? Number(r.density)
+    : 1;
+
   const spawnIntervalSeconds = Number.isFinite(Number(r.spawnIntervalSeconds)) && Number(r.spawnIntervalSeconds) > 0
     ? Number(r.spawnIntervalSeconds)
     : undefined;
@@ -163,6 +175,7 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     unlockLevel: Number.isFinite(Number(r.unlockLevel)) ? Math.max(1, Math.round(Number(r.unlockLevel))) : 1,
     lockMultiplier: Number.isFinite(Number(r.lockMultiplier)) ? Number(r.lockMultiplier) : 1,
     ability,
+    density,
     speedReduction,
     description: typeof r.description === 'string' ? r.description : '',
     speedRange,
@@ -192,7 +205,7 @@ function parseCatalogue(text: string): BallTypeDef[] {
  */
 const LAST_RESORT: BallTypeDef[] = [{
   id: 'red', name: 'Red', color: '#ff5b5b', baseSpeed: 250, minimumSpeed: 150,
-  unlockLevel: 1, lockMultiplier: 1, ability: 'none',
+  unlockLevel: 1, lockMultiplier: 1, ability: 'none', density: 1,
   description: 'A standard ball. No special behaviour - just bounces.',
 }];
 

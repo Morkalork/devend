@@ -258,6 +258,12 @@
     "pickupFreeShopItem": "Free store item!",
     "pickupExtraLife": "+1 Life",
     "pickupRainbow": "Rainbow ball!",
+    "chestReward": {
+      "slowBalls": "Slower Balls",
+      "heavyBalls": "Heavier Balls",
+      "overtime": "Overtime",
+      "extraLife": "Extra Life"
+    },
     "bossIntroTitle": "Boss Fight: {{name}}"
   },
   "interactiveTutorial": {
@@ -286,6 +292,7 @@
     "pushBonus": "Push Bonus",
     "pickupBonus": "Power-Up Bonus",
     "breakBonus": "Demolition Bonus",
+    "chestBonus": "Treasure Hauled",
     "shipEarly": "Ship Early ({{seconds}}s)",
     "newHighscore": "New Highscore",
     "totalBonus": "Total Bonus",

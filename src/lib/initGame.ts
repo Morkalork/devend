@@ -287,8 +287,10 @@ export function createInitialGameData(
         // Breakable obstacles + stack graph (issue #38). Mirrors are handled by
         // the #37 path above and don't participate in break-stacks.
         if (!isMirror) {
-          obstacleEntities.push({ id: entity.id, polygon: obstaclePolygon, breakable: !!entity.breakable });
-          if (entity.breakable) {
+          // A treasure chest is a breakable too, even if `breakable` is omitted.
+          const isBreakable = !!entity.breakable || !!entity.chest;
+          obstacleEntities.push({ id: entity.id, polygon: obstaclePolygon, breakable: isBreakable });
+          if (isBreakable) {
             const dest: DestructibleState = {
               id: entity.id,
               kind: 'breakable',
@@ -299,6 +301,8 @@ export function createInitialGameData(
               obstaclePolygon,
               objective: !!entity.objective,
               fenceStyle: !!entity.fence,
+              chest: !!entity.chest,
+              chestRewards: entity.chestRewards,
             };
             destructibles.push(dest);
             if (entity.objective) objectivesTotal++;

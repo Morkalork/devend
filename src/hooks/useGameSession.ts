@@ -110,6 +110,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // map under par. Re-evaluated at every level completion (so it lasts exactly
   // one map) and cleared on run start/restart.
   const [carryInstantFences, setCarryInstantFences] = useState(0);
+  // Run-wide bonuses accumulated from smashed treasure chests (issue #38):
+  // "slower balls" (ballSpeedMultiplier) and "heavier balls" (ballDensityBonus).
+  // Merged into the modifier chain so they persist across the rest of the run.
+  const [chestBonuses, setChestBonuses] = useState<Partial<Record<keyof GameModifiers, number>>>({});
 
   // Budget Cycle: boons carried into the NEXT map, charged by hours spent in
   // the shop visit just left (see src/lib/treasury.ts). Set on shop exit,
@@ -368,8 +372,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (activeDoor) {
       bonuses = mergeBonuses(bonuses, activeDoor.modifiers as Partial<Record<keyof GameModifiers, number>>);
     }
+    // Treasure chests: run-wide bonuses smashed out of chests earlier this run.
+    bonuses = mergeBonuses(bonuses, chestBonuses);
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor, chestBonuses]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -491,6 +497,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setTotalScore(0);
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
+    setChestBonuses({});
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
     setCarrySpendCapture(0);
@@ -868,6 +875,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
     setCurrentLives(newLives);
   }, [currentLives, recordLivesLost, activeDoor]);
+
+  // A smashed treasure chest awarded a run-scoped ball bonus (issue #38):
+  // accumulate it so it persists into every later map this run.
+  const handleChestRunBonus = useCallback((bonus: Partial<Record<keyof GameModifiers, number>>) => {
+    setChestBonuses(prev => mergeBonuses(prev, bonus) ?? prev);
+  }, []);
 
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
     const currentLevelNum = currentLevelIndex + 1;
@@ -1472,6 +1485,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleSpendContinue,
     handleDeclineContinue,
     handleLivesChange,
+    handleChestRunBonus,
     handleLevelComplete,
     handleContinueFromOverlay,
     handleDismissLoadoutsUnlocked,

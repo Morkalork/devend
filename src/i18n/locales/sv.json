@@ -256,6 +256,12 @@
     "pickupFreeShopItem": "Gratis butiksvara!",
     "pickupExtraLife": "+1 liv",
     "pickupRainbow": "Regnbågsboll!",
+    "chestReward": {
+      "slowBalls": "Långsammare bollar",
+      "heavyBalls": "Tyngre bollar",
+      "overtime": "Övertid",
+      "extraLife": "Extraliv"
+    },
     "bossIntroTitle": "Bosstrid: {{name}}"
   },
   "interactiveTutorial": {
@@ -283,6 +289,7 @@
     "superiorLocks": "Överlägsna lås ({{count}})",
     "pushBonus": "Pressbonus",
     "pickupBonus": "Power-up-bonus",
+    "chestBonus": "Skatt bärgad",
     "shipEarly": "Tidig leverans ({{seconds}}s)",
     "newHighscore": "Nytt rekord",
     "totalBonus": "Total bonus",

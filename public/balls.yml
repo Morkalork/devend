@@ -13,6 +13,9 @@
 #   minimumSpeed   speed floor; slow-down/slow-others/range effects never go below this
 #   unlockLevel    minimum level number at which this type may appear
 #   lockMultiplier lock-bonus multiplier when this ball is locked away
+#   density        relative weight for the breakable force model (default 1). Impact
+#                  damage = density x (radius/18)^2 x speed^1.6, so a heavy grey/black
+#                  cracks breakables in fewer hits than a light yellow at the same speed
 #   ability        one of: none | variableSpeed | slowOthers | moneyBall | slowDown | breakObjects
 #   speedReduction (slowOthers only) speed each struck ball loses per hit (down to its minimumSpeed)
 #   description    one-line ability summary shown in the tutorial
@@ -31,6 +34,7 @@ balls:
     minimumSpeed: 150
     unlockLevel: 1
     lockMultiplier: 1
+    density: 1
     ability: none
     description: A standard ball. No special behaviour - just bounces.
 
@@ -41,6 +45,7 @@ balls:
     minimumSpeed: 150
     unlockLevel: 2
     lockMultiplier: 1
+    density: 1
     ability: none
     description: A standard ball, a touch faster than the red one.
 
@@ -51,6 +56,7 @@ balls:
     baseSpeed: 280
     unlockLevel: 4
     lockMultiplier: 2
+    density: 0.6
     ability: variableSpeed
     description: "Variable speed: every surface it touches shifts it between 200 and 400."
     speedRange: [200, 400]
@@ -62,6 +68,7 @@ balls:
     minimumSpeed: 150
     unlockLevel: 7
     lockMultiplier: 2
+    density: 0.9
     ability: slowOthers
     speedReduction: 20
     description: "Saps momentum: every ball it clashes with loses speed, down to the balls' minimum speed."
@@ -73,6 +80,7 @@ balls:
     minimumSpeed: 180
     unlockLevel: 13
     lockMultiplier: 2
+    density: 1.1
     ability: moneyBall
     description: "Money ball: locking it away triples the gains of every later lock this round."
 
@@ -83,6 +91,7 @@ balls:
     minimumSpeed: 150
     unlockLevel: 10
     lockMultiplier: 1
+    density: 1.6
     ability: slowDown
     description: "Winds down: slows down 10 speedUnits ever 5 seconds. Down to minimum speed."
 
@@ -93,8 +102,9 @@ balls:
     minimumSpeed: 150
     unlockLevel: 17
     lockMultiplier: 4
+    density: 2.6
     ability: breakObjects
-    description: "Wrecking ball: smashes mirrors and movers after three hits, losing a multiplier each time."
+    description: "Wrecking ball: heavy enough to smash mirrors and movers in just a hit or two, losing a multiplier each time."
 
   # Rainbow: a fast, hue-shifting ball that shows up occasionally past level 10.
   # Every 10 seconds it spits out one random ball type available for the current
@@ -108,6 +118,7 @@ balls:
     minimumSpeed: 260
     unlockLevel: 11
     lockMultiplier: 3
+    density: 0.8
     ability: rainbow
     spawnIntervalSeconds: 10
     spawnChance: 0.4

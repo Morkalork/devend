@@ -244,31 +244,50 @@ levels:
     randomShapes: 0
     maxBalls: 2
     entities:
-      - id: mirror-diag
+      # THE VAULT (design pattern 1): a breakable gate seals a locked reserve
+      # of space up top. Those cells start removed (uncuttable); smash the gate
+      # with any ball to reopen the vault as capturable ground, plus bonus hours.
+      - id: vault-gate
         kind: wall
-        shape: polygon
-        points:
-          - - 320
-            - 280
-          - - 360
-            - 240
-          - - 660
-            - 540
-          - - 620
-            - 580
-        mirror: true
+        shape: rect
+        x: 40
+        'y': 250
+        width: 820
+        height: 22
+        breakable: true
+        objective: true
+        fence: true
+        hitsToBreak: 3
+        reveals:
+          x: 50
+          'y': 55
+          width: 800
+          height: 185
       - id: nub-sw
         kind: wall
         shape: circle
-        cx: 200
-        cy: 700
+        cx: 250
+        cy: 640
         radius: 35
-      - id: nub-ne
+      - id: nub-se
         kind: wall
         shape: circle
-        cx: 700
-        cy: 200
+        cx: 650
+        cy: 640
         radius: 35
+      # Treasure chest (destruct-up): a gold breakable that, when smashed,
+      # instantly grants a run bonus (slower balls, or bonus hours, here).
+      - id: chest-7
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 430
+        width: 56
+        height: 56
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+        chestRewards: [slowBalls, overtime]
   - id: level-8
     level: 8
     sizeThreshold: 30
@@ -472,18 +491,21 @@ levels:
     variety: 25
     maxBalls: 4
     entities:
-      - id: wall-1
+      # FORCE CACHE (design pattern 2): a hardened objective with a high
+      # integrity budget. How cheaply it cracks depends on the map's ball
+      # roster - a fast or heavy hit does far more damage than a slow, light
+      # one, so committing balls to smashing it is a genuine risk/reward gamble.
+      # (You can't fence-anchor on it either, so it shapes your cuts too.)
+      - id: cache
         kind: wall
-        shape: polygon
-        points:
-          - - 450
-            - 300
-          - - 550
-            - 450
-          - - 450
-            - 600
-          - - 350
-            - 450
+        shape: rect
+        x: 400
+        'y': 400
+        width: 100
+        height: 100
+        breakable: true
+        objective: true
+        hitsToBreak: 7
       - id: wall-2
         kind: wall
         shape: rect
@@ -498,6 +520,19 @@ levels:
         'y': 400
         width: 100
         height: 100
+      # Treasure chest (destruct-up): the heavier-balls reward here synergises
+      # with this map's force cache (heavier balls crack the cache faster).
+      - id: chest-13
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 560
+        width: 56
+        height: 56
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+        chestRewards: [heavyBalls, overtime]
   - id: level-14
     level: 14
     sizeThreshold: 8
@@ -787,16 +822,61 @@ levels:
     randomShapes: 0
     maxBalls: 2
     entities:
-      - id: mover-h
-        kind: mover
-        shape: circle
-        cx: 450
-        cy: 300
-        radius: 50
-        axis: horizontal
-        range: 400
-        speed: 140
-        phase: 0
+      # KEYSTONE TOPPLE (design pattern 3): smash the one load-bearing
+      # breakable at the base and the stack resting on it topples and shatters
+      # in a chain, reopening a whole column of space at once. One hit cascades.
+      - id: keystone
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 500
+        width: 140
+        height: 40
+        breakable: true
+        objective: true
+        hitsToBreak: 3
+      - id: stack-1
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 460
+        width: 140
+        height: 40
+      - id: stack-2
+        kind: wall
+        shape: rect
+        x: 395
+        'y': 420
+        width: 110
+        height: 40
+      - id: stack-3
+        kind: wall
+        shape: rect
+        x: 410
+        'y': 380
+        width: 80
+        height: 40
+      # Treasure chest (destruct-up) HIDDEN behind a breakable cover: clear the
+      # cover first, then smash the chest. Full default reward pool (any reward).
+      - id: chest-cover-21
+        kind: wall
+        shape: rect
+        x: 150
+        'y': 566
+        width: 96
+        height: 20
+        breakable: true
+        hitsToBreak: 2
+      - id: chest-21
+        kind: wall
+        shape: rect
+        x: 160
+        'y': 590
+        width: 76
+        height: 62
+        chest: true
+        breakable: true
+        hitsToBreak: 2
   - id: level-22
     level: 22
     sizeThreshold: 16

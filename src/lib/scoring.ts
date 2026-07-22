@@ -352,6 +352,13 @@ export interface ScoreOptions {
   /** Pickup overtime tokens: paid AFTER the cap clamp, like the highscore
    *  bonus, so a claimed token always pays even on a capped map (default 0). */
   postCapBonus?: number;
+  /**
+   * Demolition multiplier (issue #38): breaking destructibles multiplies the
+   * whole pre-cap payout (×1.15 per break, compounding), to offset the
+   * ship-early time you sacrifice by stopping to smash things. Still clamped by
+   * the per-map cap. Default 1 (no destructibles broken).
+   */
+  payoutMultiplier?: number;
 }
 
 /**
@@ -377,7 +384,7 @@ export function calculateScore(
   levelScore: number;
   breakdown: ScoreBreakdown;
 } {
-  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0 } = options;
+  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0, payoutMultiplier = 1 } = options;
   const requiredRemovedRatio = (100 - thresholdPercent) / 100;
   const actualRemovedRatio = (100 - remainingPercent) / 100;
 
@@ -389,7 +396,12 @@ export function calculateScore(
   const safeMultiplier = Number.isFinite(scoreMultiplier) && scoreMultiplier > 0 ? scoreMultiplier : 1;
   const safeExtra = Number.isFinite(extraBonus) && extraBonus > 0 ? extraBonus : 0;
   const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
-  const rawScore = multipliedBase + breakdown.totalBonus + safeExtra;
+  // Demolition multiplier scales the ENTIRE pre-cap payout (base + all bonuses),
+  // so breaking things offsets the lock/ship-early income you gave up. Guarded
+  // to leave the default path (×1) byte-identical.
+  const safePayout = Number.isFinite(payoutMultiplier) && payoutMultiplier > 0 ? payoutMultiplier : 1;
+  const preCap = multipliedBase + breakdown.totalBonus + safeExtra;
+  const rawScore = safePayout === 1 ? preCap : Math.floor(preCap * safePayout);
   // Stock Options capstone: a flat raise on the per-map ceiling. Everything
   // still folds under a cap, it's just a higher one for the rest of the run.
   const safeCapBonus = Number.isFinite(overtimeCapBonus) && overtimeCapBonus > 0 ? overtimeCapBonus : 0;

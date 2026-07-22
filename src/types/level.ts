@@ -60,6 +60,17 @@ export interface WallEntity extends BaseEntity {
    * uncuttable) and are re-opened as capturable space when the breakable breaks.
    */
   reveals?: { x: number; y: number; width: number; height: number };
+  /**
+   * Treasure chest (destruct-up, issue #38). A breakable that, when smashed,
+   * instantly grants a run bonus. Implies `breakable`. Often hidden behind a
+   * plain breakable wall the player must clear first.
+   */
+  chest?: boolean;
+  /**
+   * Hybrid reward pool for a chest: the smash rolls (seeded) within these
+   * reward ids. Absent/empty = roll from the full default pool. See chests.ts.
+   */
+  chestRewards?: string[];
 }
 
 // Combined entity type with shape

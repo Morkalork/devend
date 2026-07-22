@@ -29,9 +29,16 @@ const MAX_CATCHUP_SPAWNS = 4;
  * @param levelNumber current logical level, for eligibility of the spit-out.
  */
 export function tickRainbowSpawns(game: CanvasGameState, levelNumber: number): void {
-  // Snapshot first: never iterate balls we may append this frame.
+  // Cheap pre-check so the common case (no rainbow ball, i.e. almost every map)
+  // costs one scan and ZERO allocation - this runs every frame.
+  let anyRainbow = false;
+  for (const b of game.balls) {
+    if (b.ability === 'rainbow' && b.state === 'active' && b.speed > 0) { anyRainbow = true; break; }
+  }
+  if (!anyRainbow) return;
+
+  // Snapshot the rainbows: never iterate balls we may append this frame.
   const rainbows = game.balls.filter(b => b.ability === 'rainbow' && b.state === 'active' && b.speed > 0);
-  if (rainbows.length === 0) return;
 
   const spawnable = getSpawnableBallTypes(levelNumber);
   if (spawnable.length === 0) return;

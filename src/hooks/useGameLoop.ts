@@ -20,6 +20,7 @@ import { updateBall } from "@/lib/physics/updateBall";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updatePickups } from "@/lib/pickups";
+import { updateChestLoot } from "@/lib/chests";
 import { updateWallImpacts } from "@/lib/wallImpactEffects";
 import { recordFrame } from "@/lib/rendering/perfStats";
 
@@ -345,6 +346,17 @@ export function createGameLoop(
     // physics step) — all its timing keys off game.activePlaySeconds, so the
     // pause/prompt/menu holds above never advance a token's clock.
     updatePickups(game);
+
+    // Treasure-chest loot gems: bounce them under gravity onto the first
+    // surface below (obstacle top, fence, or floor). Same per-frame cadence as
+    // pickups; culls itself on its active-play lifetime. game.walls already
+    // holds obstacle edges, fences and board edges, so it IS the surface set.
+    if (game.chestLoot && game.chestLoot.length > 0 && game.boardPolygon) {
+      let floorY = -Infinity;
+      for (const v of game.boardPolygon.vertices) if (v.y > floorY) floorY = v.y;
+      const segments = game.walls.map(w => ({ x1: w.start.x, y1: w.start.y, x2: w.end.x, y2: w.end.y }));
+      game.chestLoot = updateChestLoot(game.chestLoot, Math.min(dt, 0.05), { segments, floorY }, game.activePlaySeconds);
+    }
 
     // Rainbow balls spit out a new ball on their own active-play timer. Once per
     // frame, outside the ball loop (it appends to game.balls). Same clock as

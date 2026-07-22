@@ -194,6 +194,17 @@ export interface DissolveState {
  * A breakable object: a mirror/mover (black ball only, issue #37) or a
  * breakable obstacle (any ball; issue #38). Hits accumulate to maxHits.
  */
+/**
+ * A recorded impact on a breakable: where the ball struck (world space) and how
+ * hard, as a depth multiplier (~0.5 light chip .. ~1.3 heavy smash) so the dent
+ * and its cracks scale with the force of that particular hit.
+ */
+export interface ImpactDent {
+  x: number;
+  y: number;
+  s: number;   // depth/size multiplier for this hit
+}
+
 export interface DestructibleState {
   id: string;                  // stable id (the level entity id)
   kind: 'mirror' | 'mover' | 'breakable';
@@ -207,9 +218,11 @@ export interface DestructibleState {
   // ── Breakable obstacles (issue #38) ──────────────────────────────────────
   obstaclePolygon?: Polygon;   // breakable: reference into obstaclePolygons
   objective?: boolean;         // breakable: smashing it awards more bonus
-  dents?: Vector2[];           // world-space impact points — rendered as inward dents
+  dents?: ImpactDent[];        // world-space impact points — rendered as inward dents
   fenceStyle?: boolean;        // breakable: render as a barrier/fence line, not a block
   sealedCells?: number[];      // breakable gate: grid cells of the sealed area to reopen on break
+  chest?: boolean;             // treasure chest (#38): smashing it grants a run bonus
+  chestRewards?: string[];     // chest: hybrid reward pool (empty/absent = full default pool)
 }
 
 /**
@@ -250,6 +263,23 @@ export interface ObjectDebrisState {
   particles: ObjectDebrisParticle[];
 }
 
+/**
+ * A loot gem flung from a smashed treasure chest (issue #38). Falls under
+ * gravity and bounces off the board floor like a rubber ball (see chests.ts).
+ * `reward` is a ChestRewardId (kept as a string here to avoid a types↔lib
+ * import cycle). Cosmetic only — the bonus applied on the break.
+ */
+export interface ChestLoot {
+  id: string;
+  reward: string;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  bornActiveSeconds: number;   // active-play clock at spawn (lifetime anchor)
+  settled: boolean;            // true once it has come to rest on the floor
+}
+
 export interface LevelScoreData {
   levelNumber: number;
   levelId: string;
@@ -281,6 +311,8 @@ export interface LevelScoreData {
   superiorLockBonus?: number;
   // Bonus from smashing breakable objects (issue #38)
   breakBonus?: number;
+  // Demolition multiplier applied to the map payout (×1.15 per smash, issue #38)
+  breakMultiplier?: number;
   // Ship Early tempo bonus (folded under the cap like lock/push/break)
   shipEarlyBonus?: number;
   // Pickup overtime tokens claimed this map (paid AFTER the per-map cap)
@@ -288,6 +320,8 @@ export interface LevelScoreData {
   // Every pickup claimed this map (resolved effect + value), for the overlay's
   // hold-info list (issue #48)
   pickupsClaimed?: { effect: string; value: number }[];
+  // Treasure-chest reward ids smashed this map, for the overlay summary (#38)
+  chestRewards?: string[];
   // Free-store-item tokens claimed this map: each makes the next OPEN store's
   // cheapest offer free (carried by the session until consumed)
   freeShopItemsEarned?: number;
