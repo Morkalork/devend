@@ -32,6 +32,9 @@ import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS, PICKUP_EXPIRY_WARN_SECONDS } fr
 
 type W2S = (x: number, y: number) => { x: number; y: number };
 
+/** How long the Magnet target marker stays on screen (ms). */
+const MAGNET_MARKER_MS = 1100;
+
 /** Dashed polyline helper (Pixi has no setLineDash). */
 export function dashedLine(
   g: Graphics,
@@ -99,28 +102,49 @@ export class EffectsLayer {
   private syncAbilityFx(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
     const g = this.abilityFx;
     g.clear();
-    if (!game.abilityFx || game.abilityFx.length === 0) return;
     const { boardRect } = game;
-    const maxR = 0.6 * Math.hypot(boardRect.width, boardRect.height);
-    let anyExpired = false;
-    for (const fx of game.abilityFx) {
-      const elapsed = now - fx.startTime;
-      if (elapsed >= fx.durationMs) { anyExpired = true; continue; }
-      const t = elapsed / fx.durationMs;
-      const cs = w2s(fx.center.x, fx.center.y);
-      // Board flash — the guaranteed "something happened" cue.
-      g.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height)
-        .fill({ color: fx.color, alpha: 0.20 * (1 - t) });
-      // Staggered rings from the board centre (outward, or inward for Magnet).
-      for (let k = 0; k < 3; k++) {
-        const ph = t - k * 0.15;
-        if (ph <= 0) continue;
-        const r = (fx.expand ? ph : 1 - ph) * maxR;
-        if (r <= 0) continue;
-        g.circle(cs.x, cs.y, r).stroke({ width: Math.max(2, 3 * scale), color: fx.color, alpha: 0.85 * (1 - t) });
+
+    if (game.abilityFx && game.abilityFx.length > 0) {
+      const maxR = 0.6 * Math.hypot(boardRect.width, boardRect.height);
+      let anyExpired = false;
+      for (const fx of game.abilityFx) {
+        const elapsed = now - fx.startTime;
+        if (elapsed >= fx.durationMs) { anyExpired = true; continue; }
+        const t = elapsed / fx.durationMs;
+        const cs = w2s(fx.center.x, fx.center.y);
+        // Board flash — the guaranteed "something happened" cue.
+        g.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height)
+          .fill({ color: fx.color, alpha: 0.20 * (1 - t) });
+        // Staggered rings from the board centre (outward, or inward for Magnet).
+        for (let k = 0; k < 3; k++) {
+          const ph = t - k * 0.15;
+          if (ph <= 0) continue;
+          const r = (fx.expand ? ph : 1 - ph) * maxR;
+          if (r <= 0) continue;
+          g.circle(cs.x, cs.y, r).stroke({ width: Math.max(2, 3 * scale), color: fx.color, alpha: 0.85 * (1 - t) });
+        }
+      }
+      if (anyExpired) game.abilityFx = game.abilityFx.filter(fx => now - fx.startTime < fx.durationMs);
+    }
+
+    // Magnet target marker: a fading orange horseshoe at the pulled-to point.
+    if (game.magnetMarker) {
+      const el = now - game.magnetMarker.startTime;
+      if (el < MAGNET_MARKER_MS) {
+        const t = el / MAGNET_MARKER_MS;
+        const sp = w2s(game.magnetMarker.x, game.magnetMarker.y);
+        const R = (13 + t * 4) * scale, H = R, band = Math.max(3, R * 0.55), alpha = 1 - t;
+        g.moveTo(sp.x - R, sp.y + H)
+          .lineTo(sp.x - R, sp.y)
+          .arc(sp.x, sp.y, R, Math.PI, 2 * Math.PI, false)
+          .lineTo(sp.x + R, sp.y + H)
+          .stroke({ width: band, color: 0xff8c1a, alpha, cap: 'butt', join: 'round' });
+        const cap = band * 0.85;
+        g.moveTo(sp.x - R, sp.y + H).lineTo(sp.x - R, sp.y + H - cap)
+          .moveTo(sp.x + R, sp.y + H).lineTo(sp.x + R, sp.y + H - cap)
+          .stroke({ width: band, color: 0xffe3b8, alpha });
       }
     }
-    if (anyExpired) game.abilityFx = game.abilityFx.filter(fx => now - fx.startTime < fx.durationMs);
   }
 
   // ── Pickup tokens + claim/waste feedback (renderFrame's pickup sections) ──

@@ -262,4 +262,6 @@ export interface CanvasGameState {
   /** A targeted ability (Magnet) armed and awaiting a board tap; else null. Read
    *  by the input handler to consume the next tap as the target point. */
   armedAbility?: string | null;
+  /** Where a Magnet was last fired: a fading magnet icon is drawn here (#38). */
+  magnetMarker?: { x: number; y: number; startTime: number };
 }

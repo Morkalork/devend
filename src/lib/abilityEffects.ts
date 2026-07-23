@@ -256,6 +256,8 @@ export function fireTargetedAbility(id: string, game: CanvasGameState, now: numb
   if (def.kind === "magnet") {
     magnetPull(game, target);
     pushAbilityFx(game, def.color, false, now, target); // converge on the chosen point
+    // A fading magnet icon marks exactly where the player pulled the balls to.
+    game.magnetMarker = { x: target.x, y: target.y, startTime: now };
     return true;
   }
   return false;

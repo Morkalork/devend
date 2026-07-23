@@ -888,6 +888,7 @@ export function GameCanvas({
       setAbilityTimers([]);
       setArmedAbility(null);
       game.armedAbility = null;
+      game.magnetMarker = undefined;
       setBallCount(game.balls.length || 1);
       game.wallCount = 0;
       clearWallImpacts();

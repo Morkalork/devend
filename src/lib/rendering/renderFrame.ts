@@ -506,6 +506,43 @@ function drawChestDecor(
   ctx.restore();
 }
 
+/** How long the Magnet target marker stays on screen (ms). */
+const MAGNET_MARKER_MS = 1100;
+const MAGNET_ORANGE = '#ff8c1a';
+const MAGNET_TIP = '#ffe3b8';
+
+/**
+ * A horseshoe-magnet glyph at (sx,sy): an orange U (curve up, legs down) with
+ * lighter pole tips. Marks where a Magnet pulled the balls to (issue #38).
+ */
+function drawMagnetGlyph(ctx: CanvasRenderingContext2D, sx: number, sy: number, R: number, alpha: number): void {
+  const H = R * 1.0;                 // leg length
+  const band = Math.max(3, R * 0.55); // U thickness
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'butt';
+  ctx.lineWidth = band;
+  ctx.strokeStyle = MAGNET_ORANGE;
+  ctx.shadowColor = MAGNET_ORANGE;
+  ctx.shadowBlur = R * 0.7;
+  ctx.beginPath();
+  ctx.moveTo(sx - R, sy + H);                 // left leg bottom
+  ctx.lineTo(sx - R, sy);                      // up to the curve
+  ctx.arc(sx, sy, R, Math.PI, 2 * Math.PI, false); // upper semicircle -> (sx+R, sy)
+  ctx.lineTo(sx + R, sy + H);                  // down the right leg
+  ctx.stroke();
+  // Lighter pole tips at the leg ends.
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = MAGNET_TIP;
+  const cap = band * 0.85;
+  ctx.beginPath();
+  ctx.moveTo(sx - R, sy + H); ctx.lineTo(sx - R, sy + H - cap);
+  ctx.moveTo(sx + R, sy + H); ctx.lineTo(sx + R, sy + H - cap);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** Bold jagged damage outline in the object's colour (mirrors/movers). */
 function drawDamageCracks(
   ctx: CanvasRenderingContext2D,
@@ -2081,6 +2118,18 @@ export function renderFrame(
       ctx.restore();
     }
     if (anyFxExpired) game.abilityFx = game.abilityFx.filter(fx => nowFx - fx.startTime < fx.durationMs);
+  }
+
+  // ── Magnet target marker (#38) ────────────────────────────────────────────
+  // A fading orange horseshoe-magnet icon at the point the player pulled to.
+  if (game.magnetMarker) {
+    const el = performance.now() - game.magnetMarker.startTime;
+    if (el < MAGNET_MARKER_MS) {
+      const t = el / MAGNET_MARKER_MS;
+      const sp = w2s(game.magnetMarker.x, game.magnetMarker.y);
+      const R = (13 + t * 4) * scale;          // grows slightly as it fades
+      drawMagnetGlyph(ctx, sp.x, sp.y, R, 1 - t);
+    }
   }
 
   // ── Pickup claim / waste feedback ─────────────────────────────────────────
