@@ -106,6 +106,9 @@ interface GameScreenProps {
   showBallSpeeds?: boolean;
   /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
   showPerfOverlay?: boolean;
+  /** Admin/Playground: hide the bottom modifier-stats bar on mobile to free board
+   *  space (still shown on desktop). */
+  bottomStatsHiddenOnMobile?: boolean;
   /** Admin/Playground: forwarded live game state (for the ability tester panel). */
   onGameStateChange?: (state: GameStateInfo) => void;
   /** Admin/Playground: on clear, freeze on the drained frame instead of completing. */
@@ -162,6 +165,7 @@ export function GameScreen({
   fenceDurability = null,
   showBallSpeeds = false,
   showPerfOverlay = false,
+  bottomStatsHiddenOnMobile = false,
   onGameStateChange,
   freezeOnClear = false,
   onMapComplete,
@@ -611,6 +615,7 @@ export function GameScreen({
             mid-sweep. */}
         <div style={{ visibility: mapComplete ? 'hidden' : 'visible' }}>
           <GameBottomBar
+            statsHiddenOnMobile={bottomStatsHiddenOnMobile}
             activeModifiers={activeModifiers}
             accentColor={accentColor}
             lockedBalls={totalLockedBalls}

@@ -470,6 +470,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           activeModifiers={activeModifiers}
           showBallSpeeds={showBallSpeeds}
           showPerfOverlay={showPerfOverlay}
+          bottomStatsHiddenOnMobile
         />
 
         {/* Dev: ability tester - fire ANY ability on demand (no charge needed),

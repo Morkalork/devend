@@ -22,10 +22,14 @@ interface GameBottomBarProps {
    *  it stacks with the bar instead of being covered by it. */
   topSlot?: React.ReactNode;
   onExpand?: () => void;
+  /** Playground: hide the modifier-stats block on mobile to free board space
+   *  (values are still visible on desktop). topSlot (ability/ship-early bars)
+   *  stays. */
+  statsHiddenOnMobile?: boolean;
 }
 
 export const GameBottomBar = React.forwardRef<HTMLDivElement, GameBottomBarProps>(
-function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCounts, tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD, topSlot, onExpand }, ref) {
+function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCounts, tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD, topSlot, onExpand, statsHiddenOnMobile = false }, ref) {
   const { t } = useTranslation();
   const swipeStartYRef = useRef<number | null>(null);
 
@@ -79,7 +83,7 @@ function GameBottomBar({ activeModifiers, accentColor, lockedBalls = 0, tagCount
     >
       {topSlot}
       <div
-        className="mx-auto max-w-4xl px-3 py-2"
+        className={`mx-auto max-w-4xl px-3 py-2${statsHiddenOnMobile ? ' hidden md:block' : ''}`}
         style={{
           backgroundColor: 'rgba(0, 0, 0, 0.80)',
           borderTop: `1px solid ${accentColor}40`,
