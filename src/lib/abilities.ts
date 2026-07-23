@@ -37,6 +37,12 @@ export interface AbilityDef {
   durationSeconds?: number;
   /** slow: creepFactor multiplier while active (<1). */
   factor?: number;
+  /** true = arm on tap, then the player taps the board to pick a point (magnet). */
+  targeted?: boolean;
+  /** Info modal: one-line "what it does". */
+  description?: string;
+  /** Info modal: one-line "how to use it". */
+  howTo?: string;
 }
 
 function parseAbilityEntry(raw: unknown): AbilityDef | null {
@@ -65,6 +71,9 @@ function parseAbilityEntry(raw: unknown): AbilityDef | null {
     startLevel,
     durationSeconds,
     factor,
+    targeted: r.targeted === true,
+    description: typeof r.description === "string" ? r.description : undefined,
+    howTo: typeof r.howTo === "string" ? r.howTo : undefined,
   };
 }
 

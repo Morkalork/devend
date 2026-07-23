@@ -18,6 +18,9 @@
 #   startLevel      lowest level at which this reward may appear in a chest
 #   durationSeconds (freeze / slow) how long the effect lasts
 #   factor          (slow only) creepFactor multiplier while active (<1 = slower)
+#   targeted        true = tap to arm, then tap the board to pick a point (magnet)
+#   description     one-line "what it does" (shown in the info modal)
+#   howTo           one-line "how to use it" (shown in the info modal)
 
 abilities:
   - id: freezeAll
@@ -27,6 +30,8 @@ abilities:
     weight: 3
     startLevel: 1
     durationSeconds: 3
+    description: "Freezes every ball on the map in place for a few seconds."
+    howTo: "Tap to freeze all balls, then cut freely while they are held."
 
   - id: slowAll
     name: Slow All
@@ -36,6 +41,8 @@ abilities:
     startLevel: 1
     durationSeconds: 5
     factor: 0.45
+    description: "Slows every ball for a few seconds, making them easier to trap."
+    howTo: "Tap to slow all balls, then line up your cuts."
 
   - id: clearFences
     name: Clear Fences
@@ -43,15 +50,20 @@ abilities:
     color: "#ffd76b"
     weight: 2
     startLevel: 7
+    description: "Shatters all your fences and reopens the space they captured. Locked balls stay locked and keep their points."
+    howTo: "Tap to reset your fences when a map gets away from you."
 
-  # Magnet: pull every active ball toward the board centre so they cluster -
-  # set up a big multi-lock or wall off a large empty area. One-shot.
+  # Magnet: pull every active ball toward a point YOU pick so they cluster -
+  # set up a big multi-lock or wall off a large empty area. One-shot, targeted.
   - id: magnet
     name: Magnet
     kind: magnet
     color: "#b98cff"
     weight: 2
     startLevel: 4
+    targeted: true
+    description: "Pulls every ball toward a spot you choose, to gather them for a big trap."
+    howTo: "Tap to activate, then tap the board where you want the balls pulled."
 
   # Shockwave: push every active ball away from the centre, scattering a
   # cluster and driving balls to the edges. One-shot.
@@ -62,6 +74,8 @@ abilities:
     weight: 2
     startLevel: 4
     factor: 1.25
+    description: "Blasts every ball outward from the centre, scattering a cluster."
+    howTo: "Tap to push the balls apart and clear a space."
 
   # Fence Overclock: your cuts build much faster for a few seconds - carve the
   # board aggressively (great right after a Freeze or Slow).
@@ -73,6 +87,8 @@ abilities:
     startLevel: 10
     durationSeconds: 4
     factor: 6
+    description: "Your fences build almost instantly for a few seconds."
+    howTo: "Tap, then draw cuts fast while it lasts (great after a Freeze)."
 
   # Fence Shield: your growing fence ignores ball hits for a few seconds, so a
   # cut through a busy lane survives instead of shattering.
@@ -83,3 +99,5 @@ abilities:
     weight: 2
     startLevel: 10
     durationSeconds: 5
+    description: "Your growing fence ignores ball hits for a few seconds."
+    howTo: "Tap, then draw a cut through a busy area without it breaking."

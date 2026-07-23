@@ -159,12 +159,13 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
 // ── Magnet / Shockwave (one-shot velocity redirects) ─────────────────────────
 
 /**
- * Magnet: redirect every active ball straight toward the board centre (keeping
- * its speed), so they converge and cluster - a setup tool for a big multi-lock
- * or walling off a large empty region. One-shot.
+ * Magnet: redirect every active ball straight toward `target` (keeping its
+ * speed), so they converge and cluster - a setup tool for a big multi-lock or
+ * walling off a large empty region. One-shot. Target defaults to the board
+ * centre; the player picks a point (the ability is `targeted`).
  */
-export function magnetPull(game: CanvasGameState): void {
-  const c = boardCenter(game);
+export function magnetPull(game: CanvasGameState, target?: { x: number; y: number }): void {
+  const c = target ?? boardCenter(game);
   for (const b of game.balls) {
     if (b.state !== "active") continue;
     const sp = Math.hypot(b.velocity.x, b.velocity.y);
@@ -240,8 +241,24 @@ const ABILITY_FX_MS = 650;
  * fire, even when their situation shows no ball change. `expand` = rings grow
  * outward; false = converge inward (Magnet's gather).
  */
-function pushAbilityFx(game: CanvasGameState, color: string, expand: boolean, now: number): void {
-  (game.abilityFx ??= []).push({ color, expand, startTime: now, durationMs: ABILITY_FX_MS, center: boardCenter(game) });
+function pushAbilityFx(game: CanvasGameState, color: string, expand: boolean, now: number, center?: { x: number; y: number }): void {
+  (game.abilityFx ??= []).push({ color, expand, startTime: now, durationMs: ABILITY_FX_MS, center: center ?? boardCenter(game) });
+}
+
+/**
+ * Fire a TARGETED ability at a board point the player picked (Magnet). Runs the
+ * effect toward `target` and plays the burst centred there. Returns false for a
+ * non-targeted / unknown id.
+ */
+export function fireTargetedAbility(id: string, game: CanvasGameState, now: number, target: { x: number; y: number }): boolean {
+  const def = getAbility(id);
+  if (!def || !def.targeted) return false;
+  if (def.kind === "magnet") {
+    magnetPull(game, target);
+    pushAbilityFx(game, def.color, false, now, target); // converge on the chosen point
+    return true;
+  }
+  return false;
 }
 
 /**

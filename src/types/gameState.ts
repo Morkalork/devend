@@ -259,4 +259,7 @@ export interface CanvasGameState {
   abilityFenceShieldUntil?: number;
   /** Transient ability-fired flash/ring bursts (#38); rendered then culled. */
   abilityFx?: AbilityFx[];
+  /** A targeted ability (Magnet) armed and awaiting a board tap; else null. Read
+   *  by the input handler to consume the next tap as the target point. */
+  armedAbility?: string | null;
 }

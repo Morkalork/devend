@@ -40,6 +40,9 @@ export function useGameInput(
   setCutCount: (n: number) => void,
   setIsPlayerDragging: (v: boolean) => void,
   setFreezeUsesRemaining: (n: number) => void,
+  /** Targeted-ability tap handler (Magnet): consumes the next board tap as the
+   *  point. Read from a ref so the listeners can stay wired once. */
+  onAbilityTargetRef?: RefObject<((id: string | null, pos: { x: number; y: number } | null) => void) | null>,
 ): void {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -68,6 +71,19 @@ export function useGameInput(
         game.swipePointerId   = null;
         setIsPlayerDragging(false);
         if (navigator.vibrate) navigator.vibrate(30);
+        return;
+      }
+
+      // Targeted ability armed (Magnet): consume this tap as the target point.
+      // A tap outside the board cancels. Handled before the cut/guard logic so
+      // it works during normal play regardless of active cell / region.
+      if (game.armedAbility && onAbilityTargetRef?.current) {
+        const c = getCanvasCoords(e);
+        if (isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
+          onAbilityTargetRef.current(game.armedAbility, screenToWorld(c.screenX, c.screenY, game.boardRect));
+        } else {
+          onAbilityTargetRef.current(null, null);
+        }
         return;
       }
 
@@ -274,5 +290,5 @@ export function useGameInput(
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown]);
+  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, onAbilityTargetRef]);
 }

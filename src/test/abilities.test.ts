@@ -21,6 +21,7 @@ import {
   applyFenceShield,
   abilityFenceShieldActive,
   fireAbility,
+  fireTargetedAbility,
 } from "@/lib/abilityEffects";
 import { CanvasGameState } from "@/types/gameState";
 import { Ball } from "@/types/game";
@@ -155,6 +156,23 @@ describe("magnet", () => {
     const game = { balls: [b], boardPolygon: BOARD_POLY } as unknown as CanvasGameState;
     magnetPull(game);
     expect(b.velocity).toEqual({ x: 100, y: 0 });
+  });
+
+  it("pulls toward a chosen target point (targeted fire)", () => {
+    // Ball left of a target to its right -> should end up moving right.
+    const b = movingBall("a", 100, 450, 0, 100);
+    const game = { balls: [b], boardPolygon: BOARD_POLY } as unknown as CanvasGameState;
+    const ok = fireTargetedAbility("magnet", game, 1000, { x: 700, y: 450 });
+    expect(ok).toBe(true);
+    expect(b.velocity.x).toBeGreaterThan(0);           // now heading toward (700,450)
+    expect(Math.abs(b.velocity.y)).toBeLessThan(1);
+    expect(game.abilityFx?.length).toBe(1);            // burst plays at the point
+    expect(game.abilityFx![0].expand).toBe(false);     // converging
+  });
+
+  it("fireTargetedAbility rejects a non-targeted ability", () => {
+    const game = { balls: [], boardPolygon: BOARD_POLY } as unknown as CanvasGameState;
+    expect(fireTargetedAbility("shockwave", game, 1000, { x: 1, y: 1 })).toBe(false);
   });
 });
 

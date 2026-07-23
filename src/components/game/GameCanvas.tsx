@@ -27,7 +27,7 @@ import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/r
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
 import { getAbility } from "@/lib/abilities";
-import { fireAbility } from "@/lib/abilityEffects";
+import { fireAbility, fireTargetedAbility } from "@/lib/abilityEffects";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
@@ -129,6 +129,8 @@ export interface GameStateInfo {
   onUseAbility?: (abilityId: string) => void;
   /** Active time-based abilities, for the countdown bar (drain in active-play seconds). */
   abilityTimers?: AbilityTimer[];
+  /** A targeted ability (Magnet) armed and awaiting a board tap; else null. */
+  armedAbility?: string | null;
 }
 
 /** A running time-based ability, for the countdown bar (#38). Wall-clock
@@ -357,9 +359,16 @@ export function GameCanvas({
   // Short lockout so a rapid double-press can't fire an ability twice off one
   // charge before React re-renders and disables the button.
   const abilityLockoutRef = useRef(0);
+  // Latest targeted-ability tap handler, read by the input hook (which is wired
+  // once, before the handler is defined below).
+  const handleAbilityTargetRef = useRef<((id: string | null, pos: { x: number; y: number } | null) => void) | null>(null);
   // Running time-based abilities, surfaced to the countdown bar. Only changes
   // when an ability fires or expires (not per frame), so no render churn.
   const [abilityTimers, setAbilityTimers] = useState<AbilityTimer[]>([]);
+  // A targeted ability (Magnet) armed and waiting for a board tap. Mirrored onto
+  // the game ref so the input handler can consume the next tap as the target.
+  const [armedAbility, setArmedAbility] = useState<string | null>(null);
+  useEffect(() => { gameRef.current.armedAbility = armedAbility; }, [armedAbility]);
   // Treasure-chest reward toast: a brief rising label naming what a smashed
   // chest gave. Keyed so re-triggering restarts the CSS animation.
   const [chestToast, setChestToast] = useState<{ key: number; label: string; color: string } | null>(null);
@@ -518,7 +527,7 @@ export function GameCanvas({
     pickupFeedback: [] as PickupFeedback[],
   });
 
-  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining);
+  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -877,6 +886,8 @@ export function GameCanvas({
       setCreepPercent(0);
       setActiveSeconds(0);
       setAbilityTimers([]);
+      setArmedAbility(null);
+      game.armedAbility = null;
       setBallCount(game.balls.length || 1);
       game.wallCount = 0;
       clearWallImpacts();
@@ -1291,6 +1302,12 @@ export function GameCanvas({
     const now = performance.now();
     if (now - abilityLockoutRef.current < 250) return;
     const game = gameRef.current;
+    // Targeted abilities (Magnet) arm on tap and wait for a board tap; re-tapping
+    // the armed ability cancels. The charge is spent when the target is picked.
+    if (getAbility(abilityId)?.targeted) {
+      setArmedAbility(prev => (prev === abilityId ? null : abilityId));
+      return;
+    }
     const fired = fireAbility(abilityId, game, now, {
       repaintRegionCanvas: () => repaintRegionCanvasRef.current(),
       setRemainingPercent,
@@ -1315,6 +1332,17 @@ export function GameCanvas({
     }
   }, [onSpendAbility, accentColor]);
 
+  // A board tap while a targeted ability is armed (Magnet): fire it at the point
+  // and spend the charge; a tap outside the board (id/pos null) just cancels.
+  const handleAbilityTarget = useCallback((abilityId: string | null, worldPos: { x: number; y: number } | null) => {
+    setArmedAbility(null);
+    gameRef.current.armedAbility = null;
+    if (!abilityId || !worldPos) return;
+    const fired = fireTargetedAbility(abilityId, gameRef.current, performance.now(), worldPos);
+    if (fired) onSpendAbility?.(abilityId);
+  }, [onSpendAbility]);
+  useEffect(() => { handleAbilityTargetRef.current = handleAbilityTarget; }, [handleAbilityTarget]);
+
   useEffect(() => {
     if (onGameStateChange) {
       onGameStateChange({
@@ -1336,9 +1364,10 @@ export function GameCanvas({
         onBankAndContinue: handleBankAndContinue,
         onUseAbility: handleUseAbility,
         abilityTimers,
+        armedAbility,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers]);
+  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;
@@ -1414,6 +1443,18 @@ export function GameCanvas({
             }}
           >
             {chestToast.label}
+          </div>
+        )}
+        {armedAbility && (
+          <div
+            className="absolute left-1/2 top-[12%] -translate-x-1/2 z-40 pointer-events-none whitespace-nowrap font-mono font-bold text-xs sm:text-sm px-3 py-1.5 rounded-md animate-pulse"
+            style={{
+              color: getAbility(armedAbility)?.color ?? '#b98cff',
+              background: 'rgba(10,14,20,0.8)',
+              border: `1px solid ${getAbility(armedAbility)?.color ?? '#b98cff'}`,
+            }}
+          >
+            Tap the board to attract balls
           </div>
         )}
       </div>

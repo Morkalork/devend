@@ -628,6 +628,7 @@ export function GameScreen({
                     charges={abilityCharges ?? {}}
                     accentColor={accentColor}
                     onUse={gameState.onUseAbility}
+                    armedAbilityId={gameState.armedAbility}
                   />
                 )}
                 <ShipEarlyBar
