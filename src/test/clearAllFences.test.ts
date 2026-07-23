@@ -159,6 +159,16 @@ describe("Clear All Fences (#38)", () => {
     }
   });
 
+  it("shatters the cleared fences into debris (not a silent vanish)", () => {
+    const game = makeGame();
+    sealPocket(game);
+    game.objectDebris = [];
+    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {}, fenceColor: '#00ff88' });
+    expect(game.objectDebris.length).toBeGreaterThan(0);
+    // Each burst carries flying shard particles.
+    expect(game.objectDebris[0].particles.length).toBeGreaterThan(0);
+  });
+
   it("is a no-op when there are no fences to clear", () => {
     const game = makeGame();
     const wallsBefore = game.walls.length;

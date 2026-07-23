@@ -1294,6 +1294,7 @@ export function GameCanvas({
     const fired = fireAbility(abilityId, game, now, {
       repaintRegionCanvas: () => repaintRegionCanvasRef.current(),
       setRemainingPercent,
+      fenceColor: accentColor,
     });
     if (!fired) return;
     abilityLockoutRef.current = now;
@@ -1312,7 +1313,7 @@ export function GameCanvas({
         setAbilityTimers(prev => prev.filter(t => !(t.kind === def.kind && t.endMs === endMs)));
       }, durationMs);
     }
-  }, [onSpendAbility]);
+  }, [onSpendAbility, accentColor]);
 
   useEffect(() => {
     if (onGameStateChange) {

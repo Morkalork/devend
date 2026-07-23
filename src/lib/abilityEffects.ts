@@ -21,7 +21,7 @@ import {
   gridIndexToWorld,
   captureUnreachableCells,
 } from "@/lib/spaceGrid";
-import { rebuildRegionsKeepAll } from "@/lib/physics/destructibles";
+import { rebuildRegionsKeepAll, spawnFenceShatter } from "@/lib/physics/destructibles";
 
 // Fallback params if a YAML entry omits them.
 const DEFAULT_FREEZE_SECONDS = 3;
@@ -74,7 +74,13 @@ export function abilitySpeedFactor(game: CanvasGameState): number {
 export interface ClearFencesCallbacks {
   repaintRegionCanvas: () => void;
   setRemainingPercent: (percent: number) => void;
+  /** Colour the cleared fences shatter into (usually the level accent). */
+  fenceColor?: string;
 }
+
+/** Cap on fence-shatter bursts spawned at once, so a very cut-up board can't
+ *  flood the debris renderer. */
+const MAX_FENCE_SHATTERS = 40;
 
 /**
  * Remove every player-drawn fence and reopen ALL non-locked captured space, so
@@ -89,12 +95,20 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
   // 1. Drop player fences, keep board + obstacle walls. A fence is any wall that
   //    is neither a board edge nor an obstacle edge. Reassign the array so
   //    reference-keyed render caches (glow / fence-clip) invalidate.
-  const before = game.walls.length;
-  game.walls = game.walls.filter(w => {
-    const isBoard = w.isBoardEdge ?? w.id.startsWith("board-");
-    return isBoard || w.id.startsWith("obstacle-");
-  });
-  if (game.walls.length === before) return; // nothing to clear
+  const isFence = (w: typeof game.walls[number]) =>
+    !(w.isBoardEdge ?? w.id.startsWith("board-")) && !w.id.startsWith("obstacle-");
+  const fences = game.walls.filter(isFence);
+  if (fences.length === 0) return; // nothing to clear
+  game.walls = game.walls.filter(w => !isFence(w));
+
+  // Shatter the cleared fences into flying shards (like the map-clear shatter),
+  // so they break apart instead of just vanishing.
+  const now = performance.now();
+  const color = callbacks.fenceColor ?? "#00ff88";
+  game.objectDebris ??= [];
+  for (const w of fences.slice(0, MAX_FENCE_SHATTERS)) {
+    game.objectDebris.push(spawnFenceShatter(w.start, w.end, color, now));
+  }
 
   // 2. Cells to PRESERVE = locked pockets. grid.lockCaptured marks them (>=1);
   //    union with won balls' authoritative assimilation cells for precision.

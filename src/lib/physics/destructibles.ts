@@ -245,6 +245,38 @@ function spawnDebris(
 }
 
 /**
+ * Shatter a fence line into flying shards: particles are seeded ALONG the
+ * segment and fly off to either side (perpendicular) with a little spread, then
+ * fall and fade like the object debris. Used by the Clear All Fences ability so
+ * cleared fences break apart instead of vanishing (issue #38). Reuses the
+ * ObjectDebris renderer in both renderers.
+ */
+export function spawnFenceShatter(start: Vector2, end: Vector2, color: string, now: number): ObjectDebrisState {
+  const dx = end.x - start.x, dy = end.y - start.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const ux = dx / len, uy = dy / len;   // unit along the fence
+  const nx = -uy, ny = ux;              // unit perpendicular
+  const N = Math.max(3, Math.min(18, Math.round(len / 22))); // ~one shard / 22 units
+  const particles: ObjectDebrisParticle[] = [];
+  for (let i = 0; i < N; i++) {
+    const t = (i + 0.5) / N;
+    const side = Math.random() < 0.5 ? 1 : -1;
+    const speed = 60 + Math.random() * 150;
+    const along = (Math.random() - 0.5) * 70;
+    particles.push({
+      x: start.x + dx * t,
+      y: start.y + dy * t,
+      vx: nx * side * speed + ux * along,
+      vy: ny * side * speed + uy * along - 20, // slight upward pop
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 12,
+      size: 4 + Math.random() * 7,
+    });
+  }
+  return { startTime: now, durationMs: DEBRIS_DURATION_MS, color, particles };
+}
+
+/**
  * A small burst of chips knocked off the struck face on a (non-fatal) hit.
  * `ax,ay` is the outward unit direction (object centre → impact); chips spray
  * in a cone around it with a slight upward pop, then fall under gravity.
