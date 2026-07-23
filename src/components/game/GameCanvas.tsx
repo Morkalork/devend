@@ -35,6 +35,7 @@ import { isTimingExempt } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
+import { AbilityIcon } from "./AbilityIcon";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
 import { TutorialStep } from "@/types/game";
 import {
@@ -369,6 +370,10 @@ export function GameCanvas({
   // the game ref so the input handler can consume the next tap as the target.
   const [armedAbility, setArmedAbility] = useState<string | null>(null);
   useEffect(() => { gameRef.current.armedAbility = armedAbility; }, [armedAbility]);
+  // A fading icon shown at the board centre when a (non-targeted) ability fires.
+  const [abilityIconFx, setAbilityIconFx] = useState<{ key: number; kind: string; color: string; xPct: number; yPct: number } | null>(null);
+  const abilityIconTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (abilityIconTimer.current) clearTimeout(abilityIconTimer.current); }, []);
   // Treasure-chest reward toast: a brief rising label naming what a smashed
   // chest gave. Keyed so re-triggering restarts the CSS animation.
   const [chestToast, setChestToast] = useState<{ key: number; label: string; color: string } | null>(null);
@@ -889,6 +894,7 @@ export function GameCanvas({
       setArmedAbility(null);
       game.armedAbility = null;
       game.magnetMarker = undefined;
+      setAbilityIconFx(null);
       setBallCount(game.balls.length || 1);
       game.wallCount = 0;
       clearWallImpacts();
@@ -1317,11 +1323,20 @@ export function GameCanvas({
     if (!fired) return;
     abilityLockoutRef.current = now;
     onSpendAbility?.(abilityId);
+    const def = getAbility(abilityId);
+    // Icon burst at the board centre so each ability reads at a glance.
+    if (def) {
+      const br = game.boardRect, ss = game.screenSize;
+      const xPct = ss.width ? ((br.left + br.width / 2) / ss.width) * 100 : 50;
+      const yPct = ss.height ? ((br.top + br.height / 2) / ss.height) * 100 : 50;
+      setAbilityIconFx({ key: now, kind: def.kind, color: def.color, xPct, yPct });
+      if (abilityIconTimer.current) clearTimeout(abilityIconTimer.current);
+      abilityIconTimer.current = setTimeout(() => setAbilityIconFx(null), 1100);
+    }
     // Time-based abilities (those with a duration) get a countdown-bar timer,
     // keyed by kind so re-firing the same one resets its window. Wall-clock so
     // the bar drains to exactly zero when the effect ends; a per-timer timeout
     // removes it right then (no 1Hz cull lag).
-    const def = getAbility(abilityId);
     if (def && def.durationSeconds && def.durationSeconds > 0) {
       const durationMs = def.durationSeconds * 1000;
       const endMs = now + durationMs;
@@ -1444,6 +1459,20 @@ export function GameCanvas({
             }}
           >
             {chestToast.label}
+          </div>
+        )}
+        {abilityIconFx && (
+          <div
+            key={abilityIconFx.key}
+            className="absolute z-40 pointer-events-none animate-ability-icon"
+            style={{
+              left: `${abilityIconFx.xPct}%`,
+              top: `${abilityIconFx.yPct}%`,
+              color: abilityIconFx.color,
+              filter: `drop-shadow(0 0 10px ${abilityIconFx.color})`,
+            }}
+          >
+            <AbilityIcon kind={abilityIconFx.kind} className="w-16 h-16 sm:w-20 sm:h-20" />
           </div>
         )}
         {armedAbility && (

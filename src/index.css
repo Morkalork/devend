@@ -512,6 +512,19 @@
     }
   }
 
+  /* Ability-fired centre icon: pop in, hold, fade out. Positioned via left/top
+     percentages; the transform keeps it centred on that point. */
+  .animate-ability-icon {
+    animation: ability-icon-pop 1.1s ease-out forwards;
+  }
+
+  @keyframes ability-icon-pop {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    15%  { opacity: 1; transform: translate(-50%, -50%) scale(1.12); }
+    60%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.15); }
+  }
+
   /* Treasure-chest reward toast: rise up, hold, then fade out. */
   .animate-chest-toast {
     animation: chest-toast 1.7s ease-out forwards;
