@@ -42,7 +42,10 @@ export interface CanvasGameState {
   // ── Entities ───────────────────────────────────────────────────────────
   balls: Ball[];
   movers: MoverState[];
-  activeWall: GrowingWall | null;
+  /** Fences currently growing. Usually one; the concurrent-fence limit
+   *  (1 + additionalConcurrentFences, +1 while Fence Overclock is active) lets
+   *  more than one grow at once (#38). */
+  activeWalls: GrowingWall[];
 
   // ── Game flags ─────────────────────────────────────────────────────────
   gameOver: boolean;

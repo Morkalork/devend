@@ -437,7 +437,7 @@ export function GameCanvas({
     basePlayableArea: 0,
     balls: [],
     movers: [],
-    activeWall: null as GrowingWall | null,
+    activeWalls: [] as GrowingWall[],
     gameOver: false,
     levelComplete: false,
     swipeStart: null as Vector2 | null,
@@ -866,7 +866,7 @@ export function GameCanvas({
       removedSamples = [];
       removedSamplesSet = new Set();
       repaintRegionCanvas();
-      game.activeWall = null;
+      game.activeWalls = [];
       game.gameOver = false;
       game.levelComplete = false;
       game.pushPromptPending = false;
@@ -1102,8 +1102,15 @@ export function GameCanvas({
       applyCutFn(wall, game, level, levelNumber, activeModifiers, tutorialMode, tutorialCutMade, cumulativeLockedBalls, callbacks);
     };
 
-    const updateWall = (dt: number) =>
-      updateFenceWallFn(dt, game, level, levelNumber, activeModifiers, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel, callbacks);
+    const updateWall = (dt: number) => {
+      // Grow every concurrent fence. A snapshot, because a ball/mover hit clears
+      // all active walls (a failed cut) and flips recovery - stop there.
+      for (const wall of [...game.activeWalls]) {
+        if (wall.isComplete) continue;
+        updateFenceWallFn(dt, game, level, levelNumber, activeModifiers, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel, callbacks, wall);
+        if (game.isRecovering || game.gameOver || game.levelComplete) break;
+      }
+    };
 
     const gameLoopCallbacks: GameLoopCallbacks = {
       updateWall: (dt: number) => updateWall(dt),

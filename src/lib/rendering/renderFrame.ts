@@ -578,7 +578,7 @@ export function renderFrame(
     regions,
     walls,
     balls,
-    activeWall: wall,
+    activeWalls,
     screenSize,
     boardRect,
     backgroundColor: _backgroundColor,
@@ -1385,7 +1385,7 @@ export function renderFrame(
   }
 
   // ── Cut preview line during drag ──────────────────────────────────────────
-  if (swipeStart && swipeRegionId && currentSwipePos && !wall) {
+  if (swipeStart && swipeRegionId && currentSwipePos) {
     const delta = vec2Sub(currentSwipePos, swipeStart);
     const dist = vec2Length(delta);
 
@@ -2188,8 +2188,8 @@ export function renderFrame(
     }
   }
 
-  // ── Growing wall (active fence) ───────────────────────────────────────────
-  if (wall) {
+  // ── Growing wall(s) (active fences) ───────────────────────────────────────
+  for (const wall of activeWalls) {
     const activeRegion = regions.find((r) => r.id === wall.activeRegionId);
 
     ctx.save();

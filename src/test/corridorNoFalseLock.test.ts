@@ -62,7 +62,7 @@ function makeGame(level: LevelConfig): CanvasGameState {
     walls: data.walls, obstaclePolygons: data.obstaclePolygons, mirrorPolygons: data.mirrorPolygons,
     boardPolygon: data.boardPolygon, originalArea: data.originalArea,
     basePlayableArea: data.basePlayableArea, balls: data.balls, movers: data.movers,
-    activeWall: null, gameOver: false, levelComplete: false,
+    activeWalls: [], gameOver: false, levelComplete: false,
     swipeStart: null, swipeRegionId: null, currentSwipePos: null, swipePointerId: null,
     swipeTrail: null, lastTime: 0, accumulator: 0, animationId: 0, lastAutoFreezeAt: 0,
     screenSize: { width: 900, height: 900 },

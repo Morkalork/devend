@@ -130,7 +130,7 @@ export function applyCutFn(
     }
     for (const seg of allSegs) {
       if (wouldWallTrapBallCheck(seg.start, seg.end, game)) {
-        game.activeWall = null;
+        game.activeWalls = game.activeWalls.filter(w => w !== wall);
         return;
       }
     }
@@ -199,7 +199,7 @@ export function applyCutFn(
   callbacks.repaintRegionCanvas();
   reassignBallsToRegions(game.balls, game.regions, game.walls);
   validateAllBallOwnership(game.balls, game.regions, game.walls);
-  game.activeWall = null;
+  game.activeWalls = game.activeWalls.filter(w => w !== wall);
   playCutClaimedSound();
 
   const lockedBefore = game.lockedBallsCount;

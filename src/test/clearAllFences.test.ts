@@ -61,7 +61,7 @@ function makeGame(): CanvasGameState {
     walls: data.walls, obstaclePolygons: data.obstaclePolygons, mirrorPolygons: data.mirrorPolygons,
     boardPolygon: data.boardPolygon, originalArea: data.originalArea,
     basePlayableArea: data.basePlayableArea, balls: data.balls, movers: data.movers,
-    activeWall: null, gameOver: false, levelComplete: false,
+    activeWalls: [], gameOver: false, levelComplete: false,
     swipeStart: null, swipeRegionId: null, currentSwipePos: null, swipePointerId: null,
     swipeTrail: null, lastTime: 0, accumulator: 0, animationId: 0, lastAutoFreezeAt: 0,
     screenSize: { width: 900, height: 900 },
@@ -176,5 +176,17 @@ describe("Clear All Fences (#38)", () => {
     clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
     expect(game.walls.length).toBe(wallsBefore);
     expect(getRemainingPercent(game.spaceGrid!)).toBe(pctBefore);
+  });
+});
+
+describe("concurrent fences (#38)", () => {
+  it("applyCut finalizes ONLY its own wall, leaving the other still growing", () => {
+    const game = makeGame();
+    const w1 = completedWall({ x: 64, y: 500 }, { x: 64, y: 169 }, { x: 64, y: 855 });
+    const w2 = completedWall({ x: 800, y: 500 }, { x: 800, y: 169 }, { x: 800, y: 855 });
+    game.activeWalls = [w1, w2];
+    applyCutFn(w1, game, LEVEL, 2, MODS, false, false, 0, noopCallbacks);
+    // w1 is committed and removed; w2 keeps growing.
+    expect(game.activeWalls).toEqual([w2]);
   });
 });

@@ -411,9 +411,13 @@ export function createGameLoop(
     // Cheap and allocation-free; the overlay only paints when toggled on.
     recordFrame(dt * 1000, _physMs, performance.now() - _renderStart, _physSteps, game.balls.length);
 
-    // Apply completed wall cut immediately (skip if level already finishing)
-    if (!game.levelComplete && game.activeWall && game.activeWall.isComplete) {
-      callbacks.applyCut(game.activeWall);
+    // Apply every completed wall cut immediately (skip if level already
+    // finishing). applyCut removes the wall from activeWalls, so iterate a snapshot.
+    if (!game.levelComplete && game.activeWalls.length > 0) {
+      for (const w of [...game.activeWalls]) {
+        if (game.levelComplete) break;
+        if (w.isComplete) callbacks.applyCut(w);
+      }
     }
 
     schedule();

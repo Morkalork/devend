@@ -31,7 +31,15 @@ import { isPositionActive } from "@/lib/spaceGrid";
 import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+import { abilityFenceRushFactor } from "@/lib/abilityEffects";
 import { initAudio } from "@/lib/gameAudio";
+
+/** How many fences may grow at once: 1, plus the additionalConcurrentFences
+ *  modifier, plus one while Fence Overclock is active (#38). */
+function concurrentFenceLimit(game: CanvasGameState, activeModifiers: GameModifiers): number {
+  const extra = Math.max(0, Math.round(activeModifiers.additionalConcurrentFences));
+  return 1 + extra + (abilityFenceRushFactor(game) > 1 ? 1 : 0);
+}
 
 export function useGameInput(
   canvasRef: RefObject<HTMLCanvasElement | null>,
@@ -89,8 +97,10 @@ export function useGameInput(
 
       // game.dissolve also covers the run-intro assemble: no cuts while the
       // board is still flying together (physics is held until it lands).
-      if (game.gameOver || game.levelComplete || game.dissolve || game.activeWall || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
+      if (game.gameOver || game.levelComplete || game.dissolve || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
         return;
+      // At the concurrent-fence limit, no new cut can start.
+      if (game.activeWalls.length >= concurrentFenceLimit(game, activeModifiers)) return;
 
       const { screenX, screenY } = getCanvasCoords(e);
 
@@ -148,7 +158,7 @@ export function useGameInput(
         game.swipeStart &&
         game.swipeRegionId &&
         game.currentSwipePos &&
-        !game.activeWall &&
+        game.activeWalls.length < concurrentFenceLimit(game, activeModifiers) &&
         !game.gameOver &&
         !game.levelComplete &&
         !game.isRecovering &&
@@ -241,7 +251,7 @@ export function useGameInput(
 
             const isInstant = game.wallCount <= activeModifiers.instantFencesPerMap;
 
-            game.activeWall = {
+            game.activeWalls.push({
               origin:             { ...game.swipeStart },
               direction,
               startWaypoints,
@@ -256,7 +266,7 @@ export function useGameInput(
               isComplete:         isInstant,
               activeRegionId:     game.swipeRegionId!,
               startTime:          isInstant ? undefined : performance.now(),
-            } as GrowingWall;
+            } as GrowingWall);
 
             // Issue #35: record the swipe gesture so it can be drawn as a brief
             // fading afterglow, connecting the drawn fence to the player's input.

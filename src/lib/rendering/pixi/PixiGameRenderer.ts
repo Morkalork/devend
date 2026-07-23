@@ -926,22 +926,29 @@ export class PixiGameRenderer {
   private syncActiveFence(game: CanvasGameState, w2s: W2S, scale: number, accent: string, now: number): void {
     const g = this.activeFence;
     g.clear();
-    const wall = game.activeWall;
+    const walls = game.activeWalls;
     let bloomIdx = 0;
 
-    if (wall) {
-      // Mask: active region minus obstacle holes.
+    if (walls.length > 0) {
+      // Mask: the UNION of every active wall's region, minus obstacle holes.
+      // Each wall only draws within its own region, so a union mask clips them
+      // all correctly without per-wall masks.
       const m = this.activeFenceMaskG;
       m.clear();
-      const activeRegion = game.regions.find(r => r.id === wall.activeRegionId);
-      if (activeRegion && activeRegion.polygon.vertices.length > 0) {
-        const flat: number[] = [];
-        for (const v of activeRegion.polygon.vertices) {
-          const sp = w2s(v.x, v.y);
-          flat.push(sp.x, sp.y);
+      let anyRegion = false;
+      for (const wall of walls) {
+        const activeRegion = game.regions.find(r => r.id === wall.activeRegionId);
+        if (activeRegion && activeRegion.polygon.vertices.length > 0) {
+          const flat: number[] = [];
+          for (const v of activeRegion.polygon.vertices) {
+            const sp = w2s(v.x, v.y);
+            flat.push(sp.x, sp.y);
+          }
+          m.poly(flat).fill(0xffffff);
+          anyRegion = true;
         }
-        m.poly(flat).fill(0xffffff);
-      } else {
+      }
+      if (!anyRegion) {
         m.rect(game.boardRect.left, game.boardRect.top, game.boardRect.width, game.boardRect.height).fill(0xffffff);
       }
       for (const poly of game.obstaclePolygons) {
@@ -954,7 +961,6 @@ export class PixiGameRenderer {
       }
       g.mask = m;
 
-      const lw = wall.thickness * scale;
       const arm = (waypoints: Vector2[], segIdx: number, cur: Vector2, width: number, color: number | string, alpha: number) => {
         const o = w2s(waypoints[0].x, waypoints[0].y);
         g.moveTo(o.x, o.y);
@@ -966,40 +972,44 @@ export class PixiGameRenderer {
         g.lineTo(tip.x, tip.y);
         g.stroke({ width, color, alpha, cap: "round", join: "round" });
       };
-      const bothArms = (width: number, color: number | string, alpha: number) => {
-        arm(wall.startWaypoints, wall.startSegmentIndex, wall.startPoint, width, color, alpha);
-        arm(wall.endWaypoints, wall.endSegmentIndex, wall.endPoint, width, color, alpha);
-      };
-      bothArms(lw * 3.5, accent, 0.10);
-      bothArms(lw * 2.0, accent, 0.20);
-      bothArms(lw * 1.5, 0xffffff, 1);
-      bothArms(lw * 1.0, accent, 1);
 
-      // Pulsating tip blooms.
-      if (!wall.isComplete) {
-        const throb = 0.5 + 0.5 * Math.sin(now * 0.009);
-        const shimmer = 0.5 + 0.5 * Math.sin(now * 0.023);
-        const coreR = wall.thickness * 0.65 * scale;
-        for (const tip of [wall.startPoint, wall.endPoint]) {
-          const ts = w2s(tip.x, tip.y);
-          let bloom = this.tipBlooms[bloomIdx];
-          if (!bloom) {
-            bloom = new Sprite(glowTexture("tip"));
-            bloom.anchor.set(0.5);
-            bloom.blendMode = "add";
-            this.boardScope.addChild(bloom);
-            this.tipBlooms.push(bloom);
+      for (const wall of walls) {
+        const lw = wall.thickness * scale;
+        const bothArms = (width: number, color: number | string, alpha: number) => {
+          arm(wall.startWaypoints, wall.startSegmentIndex, wall.startPoint, width, color, alpha);
+          arm(wall.endWaypoints, wall.endSegmentIndex, wall.endPoint, width, color, alpha);
+        };
+        bothArms(lw * 3.5, accent, 0.10);
+        bothArms(lw * 2.0, accent, 0.20);
+        bothArms(lw * 1.5, 0xffffff, 1);
+        bothArms(lw * 1.0, accent, 1);
+
+        // Pulsating tip blooms.
+        if (!wall.isComplete) {
+          const throb = 0.5 + 0.5 * Math.sin(now * 0.009);
+          const shimmer = 0.5 + 0.5 * Math.sin(now * 0.023);
+          const coreR = wall.thickness * 0.65 * scale;
+          for (const tip of [wall.startPoint, wall.endPoint]) {
+            const ts = w2s(tip.x, tip.y);
+            let bloom = this.tipBlooms[bloomIdx];
+            if (!bloom) {
+              bloom = new Sprite(glowTexture("tip"));
+              bloom.anchor.set(0.5);
+              bloom.blendMode = "add";
+              this.boardScope.addChild(bloom);
+              this.tipBlooms.push(bloom);
+            }
+            const bloomR = coreR * (3.5 + throb * 2.5);
+            bloom.visible = true;
+            bloom.tint = accent;
+            bloom.alpha = 0.5 + 0.5 * throb;
+            bloom.position.set(ts.x, ts.y);
+            bloom.width = bloom.height = bloomR * 2;
+            bloomIdx++;
+            // White-hot tip core with an accent corona.
+            g.circle(ts.x, ts.y, coreR * (1.6 + shimmer * 0.6)).fill({ color: accent, alpha: 0.35 + shimmer * 0.25 });
+            g.circle(ts.x, ts.y, coreR).fill({ color: 0xffffff, alpha: 1 });
           }
-          const bloomR = coreR * (3.5 + throb * 2.5);
-          bloom.visible = true;
-          bloom.tint = accent;
-          bloom.alpha = 0.5 + 0.5 * throb;
-          bloom.position.set(ts.x, ts.y);
-          bloom.width = bloom.height = bloomR * 2;
-          bloomIdx++;
-          // White-hot tip core with an accent corona.
-          g.circle(ts.x, ts.y, coreR * (1.6 + shimmer * 0.6)).fill({ color: accent, alpha: 0.35 + shimmer * 0.25 });
-          g.circle(ts.x, ts.y, coreR).fill({ color: 0xffffff, alpha: 1 });
         }
       }
     } else {

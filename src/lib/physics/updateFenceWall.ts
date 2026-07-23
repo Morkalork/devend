@@ -1,4 +1,5 @@
 import { CanvasGameState } from "@/types/gameState";
+import { GrowingWall } from "@/types/game";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
@@ -20,12 +21,13 @@ export function updateFenceWallFn(
   fenceSpeedMin: number,
   fenceSpeedPerLevel: number,
   callbacks: GameCallbacks,
+  wall: GrowingWall,
 ): void {
-  const { activeWall: wall, regions, balls } = game;
+  const { regions, balls } = game;
   if (!wall || wall.isComplete) return;
 
   const activeRegion = regions.find(r => r.id === wall.activeRegionId);
-  if (!activeRegion) { game.activeWall = null; return; }
+  if (!activeRegion) { game.activeWalls = game.activeWalls.filter(w => w !== wall); return; }
 
   const wallSpeedBase = getWallSpeedBase(levelNumber, fenceSpeedBase, fenceSpeedMin, fenceSpeedPerLevel);
   // Knowledge Transfer: every ball locked this map speeds up fence generation
@@ -157,7 +159,7 @@ export function updateFenceWallFn(
     callbacks.setLivesRef(newLives);
     callbacks.setDisplayLives(newLives);
     callbacks.onLivesChange(newLives);
-    game.activeWall = null;
+    game.activeWalls = [];
     if (newLives <= 0) {
       handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
       return;
@@ -221,7 +223,7 @@ export function updateFenceWallFn(
     if (game.wallShieldsRemaining > 0) {
       game.wallShieldsRemaining--;
       callbacks.setWallShieldCount(game.wallShieldsRemaining);
-      game.activeWall = null;
+      game.activeWalls = [];
       game.isRecovering = true;
       game.recoveryEndTime = performance.now() + RECOVERY_WINDOW_MS;
       callbacks.setIsRecovering(true);
@@ -237,7 +239,7 @@ export function updateFenceWallFn(
 
     // Push mode — fail the push, not the life
     if (game.pushMode === "pushing") {
-      game.activeWall = null;
+      game.activeWalls = [];
       if (callbacks.flashTimeoutRef.current) clearTimeout(callbacks.flashTimeoutRef.current);
       if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
       callbacks.setScreenFlash("red");
@@ -254,7 +256,7 @@ export function updateFenceWallFn(
     callbacks.setLivesRef(newLives);
     callbacks.setDisplayLives(newLives);
     callbacks.onLivesChange(newLives);
-    game.activeWall = null;
+    game.activeWalls = [];
 
     if (newLives <= 0) {
       game.frozenBallId = null;

@@ -444,8 +444,8 @@ export class EffectsLayer {
   private syncCutPreview(game: CanvasGameState, w2s: W2S, scale: number, accent: string): void {
     const g = this.preview;
     g.clear();
-    const { swipeStart, swipeRegionId, currentSwipePos, activeWall } = game;
-    if (!swipeStart || !swipeRegionId || !currentSwipePos || activeWall) return;
+    const { swipeStart, swipeRegionId, currentSwipePos } = game;
+    if (!swipeStart || !swipeRegionId || !currentSwipePos) return;
     const delta = vec2Sub(currentSwipePos, swipeStart);
     if (vec2Length(delta) < 5) return;
 
