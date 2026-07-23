@@ -362,6 +362,7 @@ export function GameScreen({
 
   const [topPanelOpen, setTopPanelOpen] = useState(false);
   const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
+  const [abilityInfoOpen, setAbilityInfoOpen] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -421,7 +422,7 @@ export function GameScreen({
     !!level.boss && !bossIntroSeen &&
     !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
   const modalOverlayActive =
-    topPanelOpen || bottomPanelOpen || menuOpen ||
+    topPanelOpen || bottomPanelOpen || menuOpen || abilityInfoOpen ||
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay;
 
@@ -629,6 +630,7 @@ export function GameScreen({
                     accentColor={accentColor}
                     onUse={gameState.onUseAbility}
                     armedAbilityId={gameState.armedAbility}
+                    onInfoOpenChange={setAbilityInfoOpen}
                   />
                 )}
                 <ShipEarlyBar

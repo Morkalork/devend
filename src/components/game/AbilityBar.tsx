@@ -39,9 +39,11 @@ interface AbilityBarProps {
   onUse: (abilityId: string) => void;
   /** The ability currently armed and awaiting a board tap (targeted; e.g. Magnet). */
   armedAbilityId?: string | null;
+  /** Signals when the info modal opens/closes, so the shell can pause the game. */
+  onInfoOpenChange?: (open: boolean) => void;
 }
 
-export function AbilityBar({ charges, accentColor, onUse, armedAbilityId }: AbilityBarProps) {
+export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfoOpenChange }: AbilityBarProps) {
   const owned = getAllAbilities().filter(a => (charges[a.id] ?? 0) > 0);
 
   const [infoAbility, setInfoAbility] = useState<AbilityDef | null>(null);
@@ -60,6 +62,13 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId }: Abil
     if (fresh) { markAbilitySeen(fresh.id); setInfoAbility(fresh); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownedKey]);
+
+  // Tell the shell whether the explainer is open, so it can pause the game while
+  // a modal is up. Cleanup signals closed on unmount too.
+  useEffect(() => {
+    onInfoOpenChange?.(!!infoAbility);
+    return () => onInfoOpenChange?.(false);
+  }, [infoAbility, onInfoOpenChange]);
 
   if (owned.length === 0 && !infoAbility) return null;
 
