@@ -8,7 +8,7 @@
  * Screens slide left/right with framer-motion based on SCREEN_ORDER.
  * Admin screens are lazy-loaded and only available in dev builds.
  */
-import { lazy, Suspense, useRef, useEffect } from 'react';
+import { lazy, Suspense, useRef, useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useScreenNavigation } from '@/hooks/useScreenNavigation';
@@ -64,7 +64,14 @@ type Session = ReturnType<typeof useGameSession>;
 function IndexContent({ navigation, session }: { navigation: Navigation; session: Session }) {
   const { t } = useTranslation();
   const { accentHex } = useAccentColor();
-  const isAdminEnabled = import.meta.env.DEV;
+  // Admin is on automatically in local dev; on the deployed build it's unlocked
+  // by a secret gesture (tap the welcome-screen ball 10 times), so the Playground
+  // is reachable on dev without shipping an admin button to real players.
+  const [adminUnlocked, setAdminUnlocked] = useState(import.meta.env.DEV);
+  const handleSecretAdminUnlock = useCallback(() => {
+    setAdminUnlocked(true);
+    navigation.goToAdmin();
+  }, [navigation]);
   // Daily Stand-up is hidden for now (design still being thought through). Flip
   // this to true to bring the welcome-menu button, its intro modal and its
   // first-time highlight back; the underlying feature is otherwise intact.
@@ -175,7 +182,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 }
                 dailyDoneToday={session.dailyBests[todayKey()] !== undefined}
                 onAchievements={() => navigation.goToAchievements()}
-                onAdmin={isAdminEnabled ? navigation.goToAdmin : undefined}
+                onAdmin={adminUnlocked ? navigation.goToAdmin : undefined}
+                onSecretUnlock={adminUnlocked ? undefined : handleSecretAdminUnlock}
                 isLoading={session.isLoading}
                 error={session.error}
                 accentColor={accentHex}
@@ -380,17 +388,17 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               />
             )}
 
-            {isAdminEnabled && navigation.currentScreen === 'admin' && (
+            {adminUnlocked && navigation.currentScreen === 'admin' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <AdminScreen onBack={navigation.goToWelcome} onMapBuilder={navigation.goToMapBuilder} onAnimationTest={navigation.goToAnimationTest} />
               </Suspense>
             )}
-            {isAdminEnabled && navigation.currentScreen === 'mapBuilder' && (
+            {adminUnlocked && navigation.currentScreen === 'mapBuilder' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <MapBuilder onBack={navigation.goToAdmin} />
               </Suspense>
             )}
-            {isAdminEnabled && navigation.currentScreen === 'animationTest' && (
+            {adminUnlocked && navigation.currentScreen === 'animationTest' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <PlaygroundScreen onBack={navigation.goToAdmin} accentColor={accentHex} />
               </Suspense>

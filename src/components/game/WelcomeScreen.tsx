@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, Loader2, Sparkles, Hexagon, Trophy, Backpack, Medal, CalendarDays, Flame, Check, X } from 'lucide-react';
@@ -29,6 +29,8 @@ interface WelcomeScreenProps {
   dailyDoneToday?: boolean;
   onAchievements?: () => void;
   onAdmin?: () => void;
+  /** Secret gesture: tapping the animated ball 10x unlocks admin (deployed dev). */
+  onSecretUnlock?: () => void;
   isLoading?: boolean;
   error?: string | null;
   accentColor?: string;
@@ -55,6 +57,7 @@ export function WelcomeScreen({
   dailyDoneToday = false,
   onAchievements,
   onAdmin,
+  onSecretUnlock,
   isLoading,
   error,
   accentColor,
@@ -64,6 +67,22 @@ export function WelcomeScreen({
   onHighlightSeen,
 }: WelcomeScreenProps) {
   const { t } = useTranslation();
+  // Secret admin unlock: 10 taps on the animated ball (deployed dev). Taps must
+  // come in quick succession - a >1.2s gap resets the count, so it's deliberate.
+  const secretTapsRef = useRef(0);
+  const secretTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSecretTap = () => {
+    if (!onSecretUnlock) return;
+    if (secretTimerRef.current) clearTimeout(secretTimerRef.current);
+    secretTapsRef.current += 1;
+    if (secretTapsRef.current >= 10) {
+      secretTapsRef.current = 0;
+      onSecretUnlock();
+      return;
+    }
+    secretTimerRef.current = setTimeout(() => { secretTapsRef.current = 0; }, 1200);
+  };
+  useEffect(() => () => { if (secretTimerRef.current) clearTimeout(secretTimerRef.current); }, []);
   const [showCertInfo, setShowCertInfo] = useState(false);
   const [showDailyInfo, setShowDailyInfo] = useState(false);
   // When certificates aren't unlocked yet the store callback is absent; instead
@@ -131,11 +150,13 @@ export function WelcomeScreen({
           </motion.p>
         </motion.div>
 
-        {/* Animated spinning ball preview with multi-axis illusion */}
+        {/* Animated spinning ball preview with multi-axis illusion. Doubles as a
+            secret admin unlock: 10 quick taps (deployed dev only). */}
         <motion.div
-          className="relative w-20 h-20 mt-4"
+          className="relative w-20 h-20 mt-4 select-none"
           animate={{ y: [0, -8, 0] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          onClick={handleSecretTap}
         >
           {/* Outer glow */}
           <div 
