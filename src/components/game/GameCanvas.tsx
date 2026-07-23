@@ -131,13 +131,15 @@ export interface GameStateInfo {
   abilityTimers?: AbilityTimer[];
 }
 
-/** A running time-based ability, for the countdown bar (#38). */
+/** A running time-based ability, for the countdown bar (#38). Wall-clock
+ *  (performance.now) so the bar can drain to exactly zero the instant the
+ *  effect ends, instead of lagging to the next whole-second cull tick. */
 export interface AbilityTimer {
   kind: string;
   name: string;
   color: string;
-  startSec: number; // activePlaySeconds when it started
-  endSec: number;   // activePlaySeconds when it expires
+  endMs: number;      // performance.now() at which it expires
+  durationMs: number; // total length, for the fill ratio
 }
 
 interface GameCanvasProps {
@@ -388,13 +390,6 @@ export function GameCanvas({
   const [creepPercent, setCreepPercent] = useState(0);
   // Active-play clock mirrored to React at 1Hz (Ship Early countdown bar).
   const [activeSeconds, setActiveSeconds] = useState(0);
-  // Drop finished ability timers each active-second tick (keeps the bar honest).
-  useEffect(() => {
-    setAbilityTimers(prev => {
-      const live = prev.filter(t => t.endSec > activeSeconds);
-      return live.length === prev.length ? prev : live;
-    });
-  }, [activeSeconds]);
   // Balls spawned this map; scales the Ship Early windows (15s per ball).
   const [ballCount, setBallCount] = useState(1);
 
@@ -1304,15 +1299,18 @@ export function GameCanvas({
     abilityLockoutRef.current = now;
     onSpendAbility?.(abilityId);
     // Time-based abilities (those with a duration) get a countdown-bar timer,
-    // keyed by kind so re-firing the same one resets its window.
+    // keyed by kind so re-firing the same one resets its window. Wall-clock so
+    // the bar drains to exactly zero when the effect ends; a per-timer timeout
+    // removes it right then (no 1Hz cull lag).
     const def = getAbility(abilityId);
     if (def && def.durationSeconds && def.durationSeconds > 0) {
-      const startSec = game.activePlaySeconds;
-      const timer: AbilityTimer = {
-        kind: def.kind, name: def.name, color: def.color,
-        startSec, endSec: startSec + def.durationSeconds,
-      };
+      const durationMs = def.durationSeconds * 1000;
+      const endMs = now + durationMs;
+      const timer: AbilityTimer = { kind: def.kind, name: def.name, color: def.color, endMs, durationMs };
       setAbilityTimers(prev => [...prev.filter(t => t.kind !== def.kind), timer]);
+      window.setTimeout(() => {
+        setAbilityTimers(prev => prev.filter(t => !(t.kind === def.kind && t.endMs === endMs)));
+      }, durationMs);
     }
   }, [onSpendAbility]);
 

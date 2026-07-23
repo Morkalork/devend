@@ -640,7 +640,6 @@ export function GameScreen({
                 />
                 <AbilityCountdownBar
                   timers={gameState.abilityTimers ?? []}
-                  activeSeconds={gameState.activeSeconds}
                   visible={!mapComplete}
                 />
               </>
