@@ -34,9 +34,9 @@ export function updateFenceWallFn(
   const lockTempo = 1
     + activeModifiers.fenceSpeedPerLock * game.lockedBallsCount
     + activeModifiers.fenceSpeedPerFence * game.wallCount;
-  // Fence Overclock ability (#38): cuts build much faster for a few seconds
-  // (still capped below at longestHalf / MINIMUM_WALL_TIME).
-  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo * abilityFenceRushFactor(game);
+  // Fence Overclock ability (#38): cuts build much faster for a few seconds.
+  const rush = abilityFenceRushFactor(game);
+  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo * rush;
 
   let totalStartPath = 0;
   for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
@@ -47,7 +47,12 @@ export function updateFenceWallFn(
     totalEndPath += vec2Distance(wall.endWaypoints[i], wall.endWaypoints[i + 1]);
   }
   const longestHalf = Math.max(totalStartPath, totalEndPath);
-  const wallSpeedFinal = Math.min(wallSpeedEffective, longestHalf / MINIMUM_WALL_TIME);
+  // The 0.35s minimum build time keeps normal cuts from being degenerate-instant,
+  // but it also swallows Overclock's speed-up (short cuts already sit at the
+  // floor). Lower the floor by the rush factor too, so Overclock actually makes
+  // cuts near-instant instead of just nudging the longest ones.
+  const minWallTime = MINIMUM_WALL_TIME / rush;
+  const wallSpeedFinal = Math.min(wallSpeedEffective, longestHalf / minWallTime);
 
   const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
   let growth: number;
