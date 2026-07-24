@@ -3,12 +3,17 @@
     "allow": [
       "Bash",
       "PowerShell",
-      "PowerShell($env:*)",
       "WebFetch",
       "WebSearch",
-      "Npx",
-      "Skill(update-config)",
-      "Skill(update-config:*)"
+      "Skill(update-config:*)",
+      "Read",
+      "Skill",
+      "PowerShell(git fetch origin dev)",
+      "PowerShell(git add src/components/game/ResultScreen.tsx)",
+      "PowerShell(git commit -m \"ux: drop the Arena Remaining stat from the lose screen\")",
+      "PowerShell(git add src/components/game/WelcomeScreen.tsx src/index.css)",
+      "PowerShell(git commit -m \"ux: smaller welcome-menu button text, icon-only NEW badge\")",
+      "PowerShell(git push origin dev)"
     ]
   },
   "enabledPlugins": {
