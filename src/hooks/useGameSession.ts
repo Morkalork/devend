@@ -30,7 +30,7 @@ import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
-import { GameFeature, featuresUnlockedAtLevel } from '@/lib/features';
+import { GameFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
 import { loadAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
@@ -594,6 +594,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // it does not gate starting a run — same treatment as loadouts.
       loadBallTypes(),
       loadAbilities(),
+      loadFeatures(),
       // Door pool (doors.yml). On failure assignment levels fall back to the shop.
       loadDoors(),
       // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
@@ -665,6 +666,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadLoadouts(),
       loadBallTypes(),
       loadAbilities(),
+      loadFeatures(),
       loadDoors(),
       loadCapstones(),
       loadMapMutators(),
@@ -719,6 +721,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       loadLoadouts(),
       loadBallTypes(),
       loadAbilities(),
+      loadFeatures(),
       loadDoors(),
       loadCapstones(),
       loadMapMutators(),

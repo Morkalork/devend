@@ -1,0 +1,23 @@
+# Unlockable game features (the "Feature Unlocked" system).
+#
+# A feature stays hidden until the player completes `unlockLevel` on the real
+# run (ascension depth 0), at which point a one-time "Feature Unlocked" modal
+# appears and the feature is remembered forever.
+#
+# Fields:
+#   id          stable key; also the i18n namespace (features.<id>.name / .body)
+#   unlockLevel completing this level number unlocks the feature
+#   icon        lucide-react icon NAME shown in the modal. Must be listed in the
+#               FeatureUnlockedModal icon map; an unmapped name falls back to a
+#               default badge.
+#   color       accent colour (hex with '#')
+#
+# To add a feature: add an entry here, add its features.<id>.name / .body to
+# every locale in src/i18n/locales, and gate its UI on isFeatureUnlocked('<id>').
+
+features:
+  # Loadouts: earned by beating the first boss on level 10.
+  - id: loadouts
+    unlockLevel: 10
+    icon: Backpack
+    color: "#00ff88"

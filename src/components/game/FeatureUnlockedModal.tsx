@@ -7,7 +7,15 @@
  */
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
+import { Backpack, Sparkles, LucideIcon } from 'lucide-react';
 import { GameFeature } from '@/lib/features';
+
+// Resolves the `icon` NAME from features.yml to a lucide component. Add an entry
+// here when a feature uses a new icon; unmapped names fall back to Sparkles.
+const FEATURE_ICONS: Record<string, LucideIcon> = {
+  Backpack,
+  Sparkles,
+};
 
 interface FeatureUnlockedModalProps {
   /** The feature to announce, or null when nothing is pending. */
@@ -18,7 +26,7 @@ interface FeatureUnlockedModalProps {
 export function FeatureUnlockedModal({ feature, onDismiss }: FeatureUnlockedModalProps) {
   const { t } = useTranslation();
   const accentColor = feature?.color ?? '#00ff88';
-  const Icon = feature?.icon;
+  const Icon = (feature && FEATURE_ICONS[feature.icon]) || Sparkles;
 
   return (
     <AnimatePresence>

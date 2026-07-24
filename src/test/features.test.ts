@@ -5,13 +5,17 @@
  */
 import { describe, it, expect } from "vitest";
 import {
-  GAME_FEATURES,
+  getAllFeatures,
   getFeature,
   featuresUnlockedAtLevel,
   seedLegacyFeatureUnlocks,
 } from "@/lib/features";
 
-describe("feature catalogue", () => {
+describe("feature catalogue (loaded from public/features.yml)", () => {
+  it("parses the baked YAML into a non-empty catalogue", () => {
+    expect(getAllFeatures().length).toBeGreaterThan(0);
+  });
+
   it("ships loadouts as the first unlockable feature, tied to level 10", () => {
     const loadouts = getFeature("loadouts");
     expect(loadouts).toBeDefined();
@@ -22,12 +26,12 @@ describe("feature catalogue", () => {
     expect(getFeature("does-not-exist")).toBeUndefined();
   });
 
-  it("every feature has a stable id, an unlock level, an icon and a colour", () => {
-    for (const f of GAME_FEATURES) {
+  it("every feature has a stable id, an unlock level, an icon name and a colour", () => {
+    for (const f of getAllFeatures()) {
       expect(typeof f.id).toBe("string");
       expect(f.id.length).toBeGreaterThan(0);
       expect(Number.isFinite(f.unlockLevel)).toBe(true);
-      expect(f.icon).toBeTruthy();
+      expect(typeof f.icon).toBe("string");
       expect(f.color).toMatch(/^#/);
     }
   });
