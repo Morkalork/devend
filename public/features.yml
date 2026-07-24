@@ -6,7 +6,9 @@
 #
 # Fields:
 #   id          stable key; also the i18n namespace (features.<id>.name / .body)
-#   unlockLevel completing this level number unlocks the feature
+#   unlockLevel completing this level number unlocks the feature. OPTIONAL: omit
+#               it for features unlocked by an in-game EVENT instead of a level
+#               (those are armed from code, e.g. certificates on the first hour).
 #   icon        lucide-react icon NAME shown in the modal. Must be listed in the
 #               FeatureUnlockedModal icon map; an unmapped name falls back to a
 #               default badge.
@@ -18,6 +20,18 @@
 # every locale in src/i18n/locales, and gate its UI on isFeatureUnlocked('<id>').
 
 features:
+  # Achievements: unlocked by completing level 5.
+  - id: achievements
+    unlockLevel: 5
+    icon: Trophy
+    color: "#ffd24a"
+
+  # Certificates: unlocked the first time the player earns a certificate hour
+  # (an EVENT, not a level - armed in code from handleCertificateHourEarned).
+  - id: certificates
+    icon: Award
+    color: "#7fd4ff"
+
   # Loadouts: earned by beating the first boss on level 10.
   - id: loadouts
     unlockLevel: 10

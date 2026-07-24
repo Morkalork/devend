@@ -1257,6 +1257,14 @@
   "features": {
     "unlockedHeader": "Función desbloqueada",
     "dismiss": "Entendido",
+    "achievements": {
+      "name": "Logros",
+      "body": "¡Superaste el nivel 5! Los logros ahora registran tus hitos mientras juegas, desde partidas impecables hasta rachas largas. Consulta tu progreso cuando quieras desde el menú principal."
+    },
+    "certificates": {
+      "name": "Certificados",
+      "body": "¡Acumulaste tu primera hora de certificado! Gasta horas en la tienda de Certificados en mejoras permanentes que se mantienen en cada partida. Acumulas más horas al superar niveles."
+    },
     "loadouts": {
       "name": "Equipamientos",
       "body": "¡Derrotaste al primer jefe! A partir de ahora, cada partida empieza con una selección de equipamiento: una maldición combinada con una bendición que define toda la partida. Gana con equipamientos distintos para desbloquear más."

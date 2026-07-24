@@ -749,6 +749,14 @@
   "features": {
     "unlockedHeader": "Feature Unlocked",
     "dismiss": "Got It",
+    "achievements": {
+      "name": "Achievements",
+      "body": "You cleared level 5! Achievements now track your milestones as you play, from clean clears to deep runs. Check your progress any time from the main menu."
+    },
+    "certificates": {
+      "name": "Certificates",
+      "body": "You banked your first certificate hour! Spend hours in the Certificate store on permanent upgrades that carry across every run. More hours bank as you clear levels."
+    },
     "loadouts": {
       "name": "Loadouts",
       "body": "You beat the first boss! From now on, every run starts with a loadout draft: a curse bundled with a blessing that shapes the whole run. Win with different loadouts to unlock more."

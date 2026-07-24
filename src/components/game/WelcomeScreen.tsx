@@ -403,11 +403,10 @@ export function WelcomeScreen({
             </motion.button>
           )}
           {onAchievements && (() => {
-            // Available once the player has earned anything to look at — cert
-            // hours OR completed achievements. Gating on cert hours alone hid
-            // the screen from players who'd completed achievements but never
-            // banked an hour (while still showing the completed-count badge).
-            const achievementsEnabled = (!!totalCertificateHours || !!completedAchievementCount) && !isLoading;
+            // onAchievements is only wired once the Achievements feature is
+            // unlocked (clearing level 5), so its mere presence means "ready";
+            // just guard against the loading state.
+            const achievementsEnabled = !isLoading;
             return (
             <motion.button
               className={`arcade-button-primary arcade-button-sm rounded-lg flex items-center justify-center gap-2 disabled:opacity-20 disabled:grayscale disabled:cursor-not-allowed ${highlights?.achievements && achievementsEnabled ? 'menu-highlight' : ''}`}

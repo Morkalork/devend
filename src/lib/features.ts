@@ -24,8 +24,12 @@ import featuresYamlRaw from "../../public/features.yml?raw";
 export interface GameFeature {
   /** Stable id; also the i18n namespace (`features.<id>.name` / `.body`). */
   id: string;
-  /** Completing this level number, at ascension depth 0, unlocks the feature. */
-  unlockLevel: number;
+  /**
+   * Completing this level number, at ascension depth 0, unlocks the feature.
+   * OPTIONAL: event-unlocked features (e.g. certificates on the first hour)
+   * omit it and are armed from code instead of by level completion.
+   */
+  unlockLevel?: number;
   /** lucide-react icon NAME; resolved to a component in FeatureUnlockedModal. */
   icon: string;
   /** Accent colour for the unlock modal (hex with '#'). */
@@ -36,8 +40,8 @@ function parseFeatureEntry(raw: unknown): GameFeature | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   const id = typeof r.id === "string" ? r.id : null;
-  const unlockLevel = Number.isFinite(Number(r.unlockLevel)) ? Math.max(1, Math.round(Number(r.unlockLevel))) : null;
-  if (!id || unlockLevel === null) return null;
+  if (!id) return null;
+  const unlockLevel = Number.isFinite(Number(r.unlockLevel)) ? Math.max(1, Math.round(Number(r.unlockLevel))) : undefined;
   return {
     id,
     unlockLevel,

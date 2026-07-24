@@ -162,11 +162,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onTutorial={navigation.goToTutorial}
                 onOptions={navigation.goToOptions}
                 onOpenCertificateStore={
-                  Object.values(session.maxTierCounts).some(c => c > 0) ||
-                  session.unlockedCertIds.length > 0 ||
-                  Object.keys(session.certLevelsOwned).length > 0
-                    ? session.handleOpenCertificateStore
-                    : undefined
+                  session.isFeatureUnlocked('certificates') ? session.handleOpenCertificateStore : undefined
                 }
                 onLoadouts={session.loadoutsIntroduced ? session.handleOpenLoadouts : undefined}
                 onHallOfFame={session.topRuns.length > 0 ? () => openHallFrom('welcome') : undefined}
@@ -181,7 +177,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                     : 0
                 }
                 dailyDoneToday={session.dailyBests[todayKey()] !== undefined}
-                onAchievements={() => navigation.goToAchievements()}
+                onAchievements={session.isFeatureUnlocked('achievements') ? () => navigation.goToAchievements() : undefined}
                 onAdmin={adminUnlocked ? navigation.goToAdmin : undefined}
                 onSecretUnlock={adminUnlocked ? undefined : handleSecretAdminUnlock}
                 isLoading={session.isLoading}

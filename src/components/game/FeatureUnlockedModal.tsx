@@ -7,7 +7,7 @@
  */
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Backpack, Sparkles, LucideIcon } from 'lucide-react';
+import { Backpack, Sparkles, Trophy, Award, LucideIcon } from 'lucide-react';
 import { GameFeature } from '@/lib/features';
 
 // Resolves the `icon` NAME from features.yml to a lucide component. Add an entry
@@ -15,6 +15,8 @@ import { GameFeature } from '@/lib/features';
 const FEATURE_ICONS: Record<string, LucideIcon> = {
   Backpack,
   Sparkles,
+  Trophy,
+  Award,
 };
 
 interface FeatureUnlockedModalProps {

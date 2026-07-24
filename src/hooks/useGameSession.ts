@@ -30,7 +30,7 @@ import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
-import { GameFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
+import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
 import { loadAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
@@ -190,14 +190,21 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // End-of-run build recap (archetype identity, capstone, per-archetype best).
   const [lastRunRecap, setLastRunRecap] = useState<RunRecap | null>(null);
 
-  // One-time "Feature Unlocked" modal (see features.ts). Armed at the level
-  // whose completion earns a feature, surfaced when leaving the level-complete
-  // overlay (so it doesn't stack on top of it).
+  // One-time "Feature Unlocked" modals (see features.ts). Features are armed as
+  // they unlock (by a level completion, or an in-game event like the first
+  // certificate hour) into a queue, then surfaced one at a time when leaving the
+  // level-complete overlay (so they don't stack on top of it). unlockedFeature
+  // is the one currently showing.
   const [unlockedFeature, setUnlockedFeature] = useState<GameFeature | null>(null);
-  const pendingFeatureUnlockRef = useRef<GameFeature | null>(null);
+  const pendingFeatureUnlocksRef = useRef<GameFeature[]>([]);
+  // Event-unlocked features (e.g. certificates) are armed from callbacks defined
+  // before unlockFeature is in scope; this ref bridges to the real arming fn.
+  const armFeatureUnlockRef = useRef<(id: string) => void>(() => {});
 
   const handleCertificateHourEarned = useCallback(() => {
-    // Visual flash handled by consumer; cert manager calls this on point award
+    // Visual flash handled by consumer; cert manager calls this on point award.
+    // The first hour ever earned reveals the Certificates system (features.ts).
+    armFeatureUnlockRef.current('certificates');
   }, []);
 
   const {
@@ -277,6 +284,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   const {
     stats: metaStats,
+    isLoaded: metaLoaded,
     wonLoadoutIds,
     mapHighscores,
     encounteredBallTypeIds,
@@ -301,6 +309,37 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // beating the first boss on level 10 (see features.ts). Until then the Sprint
   // Planning draft is skipped and the menu Loadouts entry stays hidden.
   const loadoutsIntroduced = isFeatureUnlocked('loadouts');
+
+  // Unlock a feature and, if it was newly unlocked, queue its "Feature Unlocked"
+  // modal (surfaced when leaving the level-complete overlay). Idempotent.
+  const armFeatureUnlock = useCallback((id: string) => {
+    if (!unlockFeature(id)) return;
+    const feature = getFeature(id);
+    if (feature) pendingFeatureUnlocksRef.current.push(feature);
+  }, [unlockFeature]);
+  // Bridge for callbacks defined before armFeatureUnlock is in scope (e.g. the
+  // certificate-hour handler).
+  useEffect(() => { armFeatureUnlockRef.current = armFeatureUnlock; }, [armFeatureUnlock]);
+
+  // Back-fill feature unlocks for existing saves so players who earned access
+  // under the old ad-hoc gates keep it, WITHOUT a surprise modal (silent: no
+  // queue push). Runs once, after meta progression has loaded. New players
+  // unlock live via armFeatureUnlock (which does show the modal).
+  const featureReconcileDoneRef = useRef(false);
+  useEffect(() => {
+    if (featureReconcileDoneRef.current || !metaLoaded) return;
+    featureReconcileDoneRef.current = true;
+    // Reached level 5+ => cleared level 5 => achievements were available.
+    if (metaStats.highestLevelReached >= 5) unlockFeature('achievements');
+    // Reached level 11+ => beat the level-10 boss => loadouts were available.
+    // (Complements the loadoutsIntroduced first-win seed in useMetaProgression.)
+    if (metaStats.highestLevelReached >= 11) unlockFeature('loadouts');
+    const hadCertificates =
+      totalCertificateHours > 0 ||
+      unlockedCertIds.length > 0 ||
+      Object.keys(certLevelsOwned).length > 0;
+    if (hadCertificates) unlockFeature('certificates');
+  }, [metaLoaded, metaStats.highestLevelReached, totalCertificateHours, unlockedCertIds, certLevelsOwned, unlockFeature]);
 
   const {
     achievements,
@@ -963,13 +1002,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     checkAndCompleteAchievements(projectedStats);
 
     // Feature unlocks (features.ts): completing certain levels, on the real
-    // first run (depth 0), reveals a new system. Beating the first boss on
-    // level 10 unlocks loadouts. unlockFeature returns true only the first
-    // time; arm the "Feature Unlocked" modal, surfaced when leaving the
-    // level-complete overlay (so it doesn't stack on top of it).
+    // first run (depth 0), reveals a new system. Level 5 unlocks achievements;
+    // beating the first boss on level 10 unlocks loadouts. armFeatureUnlock
+    // queues the "Feature Unlocked" modal (surfaced when leaving the
+    // level-complete overlay). (Certificates unlock on an event, not a level.)
     if (ascensionDepth === 0) {
       for (const feature of featuresUnlockedAtLevel(currentLevelNum)) {
-        if (unlockFeature(feature.id)) pendingFeatureUnlockRef.current = feature;
+        armFeatureUnlock(feature.id);
       }
     }
 
@@ -1051,7 +1090,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, unlockFeature, loadouts, bestRunTrajectory, bestScore, activeDoor]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore, activeDoor]);
 
   /**
    * Enter the assignment draft (mandatory 1-of-3 door pick). If the door pool
@@ -1121,11 +1160,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
-    // A level just unlocked a feature; show the "Feature Unlocked" modal now (it
-    // overlays whatever screen we navigate to next).
-    if (pendingFeatureUnlockRef.current) {
-      setUnlockedFeature(pendingFeatureUnlockRef.current);
-      pendingFeatureUnlockRef.current = null;
+    // Features unlocked this round; show the first "Feature Unlocked" modal now
+    // (it overlays whatever screen we navigate to next). Dismissing advances the
+    // queue, so multiple unlocks (e.g. achievements + certificates at level 5)
+    // show one after another.
+    if (pendingFeatureUnlocksRef.current.length > 0) {
+      setUnlockedFeature(pendingFeatureUnlocksRef.current.shift()!);
     }
     if (isLastLevel) {
       // Beat the final level: offer the ascend-or-retire choice. The pending
@@ -1147,7 +1187,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, nav.goToAscensionDraft, nav.goToUpgradeShop]);
 
   const handleDismissFeatureUnlocked = useCallback(() => {
-    setUnlockedFeature(null);
+    // Advance to the next queued unlock, or close if none remain.
+    setUnlockedFeature(pendingFeatureUnlocksRef.current.shift() ?? null);
   }, []);
 
   /** Ascend: draft a loadout and loop back to level 1 at depth + 1. */
@@ -1468,6 +1509,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activeLoadouts,
     wonLoadoutIds,
     loadoutsIntroduced,
+    isFeatureUnlocked,
     unlockedFeature,
     fenceDurability,
     // Continue (per-run revive)
