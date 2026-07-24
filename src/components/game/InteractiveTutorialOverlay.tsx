@@ -325,11 +325,20 @@ export function InteractiveTutorialOverlay({
         )}
       </AnimatePresence>
 
-      {/* Footer badge. Centered via a flex wrapper, NOT left-1/2 + translate:
-          this is a motion.div animating `scale`, and framer-motion writes its
-          own `transform` that would clobber a Tailwind -translate-x-1/2, leaving
-          the badge shifted right of centre. */}
-      <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4">
+      {/* Footer badge, anchored just inside the bottom of the BOARD (the play
+          area is empty there during the tutorial) so it never overlaps the stats
+          bar that sits below the canvas. Centered over the board via a flex
+          wrapper, NOT left-1/2 + translate: this is a motion.div animating
+          `scale`, and framer-motion writes its own `transform` that would
+          clobber a Tailwind -translate-x-1/2, leaving it shifted right. */}
+      <div
+        className="absolute flex justify-center px-4"
+        style={{
+          left: canvasOffsetLeft,
+          width: canvasWidth,
+          top: canvasOffsetTop + canvasHeight - 52,
+        }}
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
