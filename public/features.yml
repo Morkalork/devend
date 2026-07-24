@@ -10,7 +10,9 @@
 #   icon        lucide-react icon NAME shown in the modal. Must be listed in the
 #               FeatureUnlockedModal icon map; an unmapped name falls back to a
 #               default badge.
-#   color       accent colour (hex with '#')
+#   color       accent colour of the "Feature Unlocked" modal (hex with '#').
+#               Tints the modal border + glow, the icon badge, and the feature
+#               name heading. Does NOT affect the feature's own in-game UI.
 #
 # To add a feature: add an entry here, add its features.<id>.name / .body to
 # every locale in src/i18n/locales, and gate its UI on isFeatureUnlocked('<id>').
