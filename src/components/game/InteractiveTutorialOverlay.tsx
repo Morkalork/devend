@@ -325,13 +325,14 @@ export function InteractiveTutorialOverlay({
         )}
       </AnimatePresence>
 
-      {/* Footer badge */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="absolute bottom-4 left-1/2 -translate-x-1/2"
-      >
-        <div
+      {/* Footer badge. Centered via a flex wrapper, NOT left-1/2 + translate:
+          this is a motion.div animating `scale`, and framer-motion writes its
+          own `transform` that would clobber a Tailwind -translate-x-1/2, leaving
+          the badge shifted right of centre. */}
+      <div className="absolute bottom-4 left-0 right-0 flex justify-center px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
           className="rounded-full px-4 py-2 text-xs font-black uppercase tracking-widest"
           style={{
             fontFamily: 'Michroma, sans-serif',
@@ -341,8 +342,8 @@ export function InteractiveTutorialOverlay({
           }}
         >
           {t('interactiveTutorial.drawAFenceToContinue')}
-        </div>
-      </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }
