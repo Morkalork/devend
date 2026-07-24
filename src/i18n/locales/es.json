@@ -419,10 +419,10 @@
     "music": "Música",
     "effects": "Efectos",
     "reEnableTutorials": "Reactivar todos los tutoriales",
-    "resetCertificates": "Restablecer certificados y puntuación",
+    "totalReset": "Restablecimiento total",
     "back": "Atrás",
-    "resetConfirmTitle": "¿Restablecer todo el progreso?",
-    "resetConfirmBody": "Esto restablecerá tu saldo de puntuación y todos los certificados que posees. Esta acción no se puede deshacer.",
+    "resetConfirmTitle": "¿Restablecimiento total?",
+    "resetConfirmBody": "Esto elimina TODO el estado del juego: tu saldo de puntuación, certificados, logros, récords, funciones desbloqueadas, la partida guardada y el progreso de los tutoriales. Se conservan los ajustes de idioma y sonido. Esta acción no se puede deshacer.",
     "cancel": "Cancelar",
     "reset": "Restablecer"
   },

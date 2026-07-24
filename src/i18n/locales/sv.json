@@ -419,10 +419,10 @@
     "music": "Musik",
     "effects": "Effekter",
     "reEnableTutorials": "Återaktivera alla genomgångar",
-    "resetCertificates": "Nollställ certifikat & poäng",
+    "totalReset": "Total nollställning",
     "back": "Tillbaka",
-    "resetConfirmTitle": "Nollställa alla framsteg?",
-    "resetConfirmBody": "Detta nollställer ditt poängsaldo och alla ägda certifikat. Åtgärden kan inte ångras.",
+    "resetConfirmTitle": "Total nollställning?",
+    "resetConfirmBody": "Detta raderar ALLT spelläge: ditt poängsaldo, certifikat, prestationer, rekord, upplåsta funktioner, sparad omgång och genomgångsframsteg. Språk- och ljudinställningar behålls. Åtgärden kan inte ångras.",
     "cancel": "Avbryt",
     "reset": "Nollställ"
   },

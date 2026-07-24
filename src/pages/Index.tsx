@@ -203,8 +203,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                   session.handleReEnableAllTutorials();
                   menuHighlights.resetHighlights();
                 }}
-                onResetCertificates={session.handleResetCertificates}
-                hasCertificates={Object.keys(session.certLevelsOwned).length > 0 || session.totalCertificateHours > 0}
+                onTotalReset={session.handleTotalReset}
                 accentColor={accentHex}
               />
             )}

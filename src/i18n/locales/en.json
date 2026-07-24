@@ -422,10 +422,10 @@
     "music": "Music",
     "effects": "Effects",
     "reEnableTutorials": "Re-enable All Tutorials",
-    "resetCertificates": "Reset Certificates & Score",
+    "totalReset": "Total Reset",
     "back": "Back",
-    "resetConfirmTitle": "Reset All Progress?",
-    "resetConfirmBody": "This will reset your score balance and all owned certificates. This action cannot be undone.",
+    "resetConfirmTitle": "Total Reset?",
+    "resetConfirmBody": "This deletes ALL game state: your score balance, certificates, achievements, records, unlocked features, saved run, and tutorial progress. Language and sound settings are kept. This action cannot be undone.",
     "cancel": "Cancel",
     "reset": "Reset"
   },

@@ -31,6 +31,7 @@ import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
+import { performTotalReset } from '@/lib/totalReset';
 import { loadAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
@@ -1408,9 +1409,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     resetAllTutorials();
   }, [resetAllTutorials]);
 
-  const handleResetCertificates = useCallback(() => {
+  // Total Reset: a complete deletion of ALL game state (progression, unlocks,
+  // scores, saved run, tutorials-seen, ...), returning the install to a
+  // brand-new state. Clears storage and reloads; the in-memory resets below are
+  // belt-and-suspenders in case a host blocks the reload.
+  const handleTotalReset = useCallback(() => {
     resetCertData();
     resetProgression();
+    performTotalReset();
   }, [resetCertData, resetProgression]);
 
   // Load the ball catalogue (balls.yml) once on mount so the Tutorial reflects
@@ -1578,6 +1584,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleOpenCertificateStore,
     handleOpenLoadouts,
     handleReEnableAllTutorials,
-    handleResetCertificates,
+    handleTotalReset,
   };
 }

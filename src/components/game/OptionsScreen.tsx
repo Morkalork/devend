@@ -15,16 +15,14 @@ import { playWallHitSound } from '@/lib/gameAudio';
 interface OptionsScreenProps {
   onBack: () => void;
   onReEnableTutorials: () => void;
-  onResetCertificates: () => void;
-  hasCertificates: boolean;
+  onTotalReset: () => void;
   accentColor?: string;
 }
 
 export function OptionsScreen({
   onBack,
   onReEnableTutorials,
-  onResetCertificates,
-  hasCertificates,
+  onTotalReset,
   accentColor,
 }: OptionsScreenProps) {
   const { t, i18n } = useTranslation();
@@ -64,7 +62,7 @@ export function OptionsScreen({
   };
 
   const handleConfirmReset = () => {
-    onResetCertificates();
+    onTotalReset();
     setShowConfirm(false);
   };
 
@@ -229,18 +227,16 @@ export function OptionsScreen({
             {t('options.reEnableTutorials')}
           </motion.button>
 
-          {/* Reset certificates */}
-          {hasCertificates && (
-            <motion.button
-              className="arcade-button-danger rounded-lg flex items-center justify-center gap-2"
-              onClick={handleResetClick}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <Trash2 className="w-5 h-5" />
-              {t('options.resetCertificates')}
-            </motion.button>
-          )}
+          {/* Total Reset: complete deletion of all game state */}
+          <motion.button
+            className="arcade-button-danger rounded-lg flex items-center justify-center gap-2"
+            onClick={handleResetClick}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            <Trash2 className="w-5 h-5" />
+            {t('options.totalReset')}
+          </motion.button>
 
           {/* Back Button */}
           <motion.button
