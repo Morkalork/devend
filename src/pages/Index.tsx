@@ -34,6 +34,7 @@ import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 import { HallOfFameScreen } from '@/components/game/HallOfFameScreen';
 import { TapToStartGate } from '@/components/game/TapToStartGate';
 import { playMainMusic } from '@/lib/gameMusic';
+import { backActionForScreen } from '@/lib/screenBack';
 import { todayKey, previousDayKey } from '@/lib/runRng';
 
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
@@ -107,10 +108,66 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
     hallReturnRef.current = origin;
     navigation.goToHallOfFame();
   };
-  const handleHallBack = () => {
+  const handleHallBack = useCallback(() => {
     if (hallReturnRef.current === 'result' && navigation.lastResult) navigation.navigateTo('result');
     else navigation.goToWelcome();
-  };
+  }, [navigation]);
+
+  // ── BACK-command handling (Android back gesture / browser back) ────────────
+  // The app is a screen state-machine with no per-screen history, so a raw back
+  // would pop the page and exit the game. We keep a history "guard" entry and,
+  // on popstate, route the back INTO the game (see backActionForScreen). Works
+  // in both a browser and the Capacitor WebView (both drive the hardware back
+  // through window history).
+  const gameBackRef = useRef<(() => void) | null>(null);
+  const guardArmedRef = useRef(false);
+  const armBackGuard = useCallback(() => {
+    window.history.pushState({ devendBackGuard: true }, '');
+    guardArmedRef.current = true;
+  }, []);
+
+  // Returns true if the back was handled internally (so the guard is re-armed);
+  // false only on the root screen, where the next back is allowed to exit.
+  const handleBack = useCallback((): boolean => {
+    switch (backActionForScreen(navigation.currentScreen)) {
+      case 'exit':
+        return false;
+      case 'welcome':
+        navigation.goToWelcome();
+        return true;
+      case 'admin':
+        navigation.goToAdmin();
+        return true;
+      case 'hall':
+        handleHallBack();
+        return true;
+      case 'game':
+        gameBackRef.current?.();
+        return true;
+      case 'consume':
+        return true;
+    }
+  }, [navigation, handleHallBack]);
+  const handleBackRef = useRef(handleBack);
+  handleBackRef.current = handleBack;
+
+  useEffect(() => {
+    armBackGuard();
+    const onPopState = () => {
+      guardArmedRef.current = false;        // the guard entry was just consumed
+      if (handleBackRef.current()) armBackGuard();
+      // else (root): leave it un-armed so a second back actually exits.
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-arm the guard whenever we navigate off the root, so back keeps being
+  // intercepted after the player leaves (or returns to) the main menu.
+  useEffect(() => {
+    if (navigation.currentScreen !== 'welcome' && !guardArmedRef.current) armBackGuard();
+  }, [navigation.currentScreen, armBackGuard]);
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1, hallOfFame: 1,
@@ -212,6 +269,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 // Bumping gameInstanceKey (spending a Continue) remounts this so
                 // the current level re-inits fresh with score + upgrades intact.
                 key={`game-${session.gameInstanceKey}`}
+                backRef={gameBackRef}
                 level={session.currentLevel}
                 levelNumber={session.currentLevelIndex + 1}
                 totalLevels={session.totalLevels}

@@ -6,7 +6,7 @@
  * Tapping the top/bottom bars opens their full-screen counterparts
  * (TopBarDetailsPanel / BottomBarDetailsPanel).
  */
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
@@ -52,6 +52,10 @@ interface CertificateHourProgress {
 type InGameStep = 'fence' | 'done';
 
 interface GameScreenProps {
+  /** Registers a BACK handler while the game screen is active: the popstate
+   *  guard in Index calls it so a back gesture opens/closes the pause menu
+   *  instead of exiting the app. */
+  backRef?: MutableRefObject<(() => void) | null>;
   level: LevelConfig;
   levelNumber: number;
   totalLevels: number;
@@ -124,6 +128,7 @@ interface GameScreenProps {
 }
 
 export function GameScreen({
+  backRef,
   level,
   levelNumber,
   totalLevels,
@@ -368,6 +373,21 @@ export function GameScreen({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+
+  // Handle a BACK gesture while the game is active (wired via backRef from the
+  // popstate guard in Index): close an open pause overlay/menu, otherwise open
+  // the menu (Resume / Restart / Main Menu). This is what stops back from
+  // exiting the app mid-run.
+  useEffect(() => {
+    if (!backRef) return;
+    backRef.current = () => {
+      if (menuOpen) setMenuOpen(false);
+      else if (isPaused) setIsPaused(false);
+      else setMenuOpen(true);
+    };
+    return () => { backRef.current = null; };
+  }, [backRef, menuOpen, isPaused]);
+
   const [soundMuted, setSoundMutedState] = useState(() => isSoundMuted());
   // Set once the map is won; freezes the scrolling-code background through the
   // clear shimmer. Resets naturally when the next map remounts this screen.
