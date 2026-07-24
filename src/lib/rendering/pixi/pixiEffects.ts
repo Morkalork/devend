@@ -64,6 +64,7 @@ export class EffectsLayer {
   private lockBursts = new Container();
   private lockDust = new Graphics();
   private superiorFx = new Graphics(); // gold pulse + rings for superior locks
+  private superiorStars = new Graphics(); // persistent gold star badge (superior)
   private infoTexts = new Map<string, Text>();
   private preview = new Graphics();
   private swipe = new Graphics();
@@ -82,7 +83,7 @@ export class EffectsLayer {
     // beneath the pocket fill); feedback rings/labels ride on top of the rest.
     // The ability burst goes last so its flash/rings sit above everything.
     this.superiorFx.blendMode = "add";
-    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.superiorFx, this.preview, this.swipe, this.trajectory, this.pickupRings, this.abilityFx);
+    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.superiorFx, this.superiorStars, this.preview, this.swipe, this.trajectory, this.pickupRings, this.abilityFx);
     this.overlayContainer.addChild(this.spaceBar);
   }
 
@@ -308,6 +309,7 @@ export class EffectsLayer {
     this.lockFill.clear();
     this.lockDust.clear();
     this.superiorFx.clear();
+    this.superiorStars.clear();
     let burstIdx = 0;
     const liveInfo = new Set<string>();
 
@@ -427,6 +429,25 @@ export class EffectsLayer {
             .circle(c.x, c.y, radius)
             .stroke({ width: Math.max(1, 3.5 * scale * (1 - rt * 0.6)), color: "#ffd54a", alpha: ringAlpha });
         }
+      }
+
+      // Once the superior animation finishes, a gold star fades in at the pocket
+      // centre and STAYS as a permanent "superior lock" badge (mirrors the
+      // Canvas2D path). A faint additive halo (superiorFx) gives it the glow.
+      if (flash.superior && elapsed >= SUPERIOR_LOCK_DURATION) {
+        const STAR_FADE_MS = 400;
+        const st = Math.min(1, (elapsed - SUPERIOR_LOCK_DURATION) / STAR_FADE_MS);
+        const ease = 1 - Math.pow(1 - st, 3);
+        const c = w2s(flash.centroid.x, flash.centroid.y);
+        const outerR = 13 * scale * (0.6 + 0.4 * ease);
+        const innerR = outerR * 0.45;
+        this.superiorFx
+          .star(c.x, c.y, 5, outerR * 1.5, innerR * 1.5, -Math.PI / 2)
+          .fill({ color: "#ffd54a", alpha: 0.25 * ease });
+        this.superiorStars
+          .star(c.x, c.y, 5, outerR, innerR, -Math.PI / 2)
+          .fill({ color: "#ffdd66", alpha: ease })
+          .stroke({ width: Math.max(1, 1.5 * scale), color: "#a9761a", alpha: ease });
       }
     }
 

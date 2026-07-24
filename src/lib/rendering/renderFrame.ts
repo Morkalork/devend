@@ -2095,6 +2095,38 @@ export function renderFrame(
         }
         ctx.restore();
       }
+
+      // Once the superior animation finishes, a gold star fades in at the pocket
+      // centre and STAYS as a permanent "superior lock" badge (assimilations
+      // persist for the level), so the difference reads at a glance forever.
+      if (flash.superior && elapsed >= SUPERIOR_LOCK_DURATION) {
+        const STAR_FADE_MS = 400;
+        const st = Math.min(1, (elapsed - SUPERIOR_LOCK_DURATION) / STAR_FADE_MS);
+        const ease = 1 - Math.pow(1 - st, 3);              // easeOutCubic
+        const c = w2s(flash.centroid.x, flash.centroid.y);
+        const outerR = 13 * scale * (0.6 + 0.4 * ease);    // slight pop-in
+        const innerR = outerR * 0.45;
+        ctx.save();
+        ctx.globalAlpha = ease;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const r = i % 2 === 0 ? outerR : innerR;
+          const a = -Math.PI / 2 + (i * Math.PI) / 5;      // point up
+          const px = c.x + Math.cos(a) * r;
+          const py = c.y + Math.sin(a) * r;
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.shadowColor = '#ffd54a';
+        ctx.shadowBlur = 10 * scale;
+        ctx.fillStyle = '#ffdd66';
+        ctx.fill();
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = Math.max(1, 1.5 * scale);
+        ctx.strokeStyle = '#a9761a';                       // darker gold outline
+        ctx.stroke();
+        ctx.restore();
+      }
     }
   }
 
