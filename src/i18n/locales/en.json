@@ -250,6 +250,13 @@
     "timeLimitTutorialTitle": "Time Limit",
     "timeLimitTutorialBody": "From now on, every map has a time limit. Clear the map before the bar empties or the run ends, no matter how many lives you have.\n\nThe bar shades from green to red as it drains. Finish with time to spare and you earn bonus overtime (Ship Early).",
     "infoUnlocked": "Info Unlocked",
+    "lockInfo": {
+      "title": "Superior Lock",
+      "normalTitle": "Standard Lock",
+      "normalBody": "Seal a ball into its own pocket, cut off from the rest of the board. It pays its lock value; tougher ball types pay more.",
+      "superiorTitle": "Superior Lock",
+      "superiorBody": "Seal a ball into an extra tight pocket, well under half the size that would normally lock it. It pays double and is marked with this gold star."
+    },
     "pickupFork": "Ball split!",
     "pickupCapRaise": "Cap +{n}h",
     "pickupFreeze": "Freeze +1",

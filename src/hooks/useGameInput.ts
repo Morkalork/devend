@@ -19,6 +19,7 @@ import {
   BASE_SWIPE_MIN_DISTANCE,
   FREEZE_COOLDOWN_MULTIPLIER,
   FREEZE_TAP_SLOP,
+  SUPERIOR_LOCK_DURATION,
 } from "@/lib/gameConstants";
 import {
   BOARD_WIDTH,
@@ -51,6 +52,9 @@ export function useGameInput(
   /** Targeted-ability tap handler (Magnet): consumes the next board tap as the
    *  point. Read from a ref so the listeners can stay wired once. */
   onAbilityTargetRef?: RefObject<((id: string | null, pos: { x: number; y: number } | null) => void) | null>,
+  /** Press-and-hold on a superior-lock star: opens the lock explainer. Read from
+   *  a ref so the listeners stay wired once. */
+  onSuperiorInfoRef?: RefObject<(() => void) | null>,
 ): void {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -63,6 +67,36 @@ export function useGameInput(
       // at native DPR, above the 2D path's capped ratio) and mid-DPR-ramp.
       const dpr = rect.width > 0 ? canvas.width / rect.width : getDevicePixelRatio();
       return { screenX: (e.clientX - rect.left) * dpr, screenY: (e.clientY - rect.top) * dpr };
+    };
+
+    // Press-and-hold on a superior-lock star (the persistent gold badge) opens
+    // the lock explainer. The star is canvas-drawn, so hit-test the pointer in
+    // world space against superior pockets whose star has already faded in.
+    const HOLD_MS = 450;                 // matches the standard explainer gesture
+    const STAR_HIT_RADIUS = 28;          // world units, generous for touch
+    const HOLD_MOVE_SLOP = 12;           // world units; moving past this cancels
+    let holdTimer: ReturnType<typeof setTimeout> | null = null;
+    let holdPointerId: number | null = null;
+    let holdStartWorld: { x: number; y: number } | null = null;
+
+    const clearHold = () => {
+      if (holdTimer !== null) { clearTimeout(holdTimer); holdTimer = null; }
+      holdPointerId = null;
+      holdStartWorld = null;
+    };
+
+    // Nearest superior-lock star under a world point, or null. Only counts stars
+    // that have finished fading in (elapsed >= SUPERIOR_LOCK_DURATION).
+    const superiorStarAt = (game: CanvasGameState, world: { x: number; y: number }): boolean => {
+      const now = performance.now();
+      for (const [, flash] of game.assimilations) {
+        if (!flash.superior) continue;
+        if (now - flash.startTime < SUPERIOR_LOCK_DURATION) continue;
+        const dx = world.x - flash.centroid.x;
+        const dy = world.y - flash.centroid.y;
+        if (dx * dx + dy * dy <= STAR_HIT_RADIUS * STAR_HIT_RADIUS) return true;
+      }
+      return false;
     };
 
     const handlePointerDown = (e: PointerEvent) => {
@@ -99,6 +133,28 @@ export function useGameInput(
       // board is still flying together (physics is held until it lands).
       if (game.gameOver || game.levelComplete || game.dissolve || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
         return;
+
+      // Press-and-hold on a superior-lock star opens the lock explainer. Checked
+      // before the cut logic so the press arms a hold instead of a fence.
+      {
+        const c = getCanvasCoords(e);
+        if (isPointInBoard(c.screenX, c.screenY, game.boardRect) && onSuperiorInfoRef?.current) {
+          const w = screenToWorld(c.screenX, c.screenY, game.boardRect);
+          if (superiorStarAt(game, w)) {
+            clearHold();
+            holdPointerId = e.pointerId;
+            holdStartWorld = w;
+            holdTimer = setTimeout(() => {
+              holdTimer = null;
+              if (navigator.vibrate) navigator.vibrate(20);
+              onSuperiorInfoRef.current?.();
+              clearHold();
+            }, HOLD_MS);
+            return; // a star press arms the hold, never a cut
+          }
+        }
+      }
+
       // At the concurrent-fence limit, no new cut can start.
       if (game.activeWalls.length >= concurrentFenceLimit(game, activeModifiers)) return;
 
@@ -139,6 +195,15 @@ export function useGameInput(
     const handlePointerMove = (e: PointerEvent) => {
       const game = gameRef.current;
       if (!game) return;
+
+      // A superior-star hold is cancelled once the finger drifts past the slop.
+      if (holdStartWorld !== null && e.pointerId === holdPointerId) {
+        const c = getCanvasCoords(e);
+        const w = screenToWorld(c.screenX, c.screenY, game.boardRect);
+        const dx = w.x - holdStartWorld.x, dy = w.y - holdStartWorld.y;
+        if (dx * dx + dy * dy > HOLD_MOVE_SLOP * HOLD_MOVE_SLOP) clearHold();
+      }
+
       if (!game.swipeStart || !game.swipeRegionId || game.gameOver || game.levelComplete) return;
       if (e.pointerId !== game.swipePointerId) return;
 
@@ -153,6 +218,10 @@ export function useGameInput(
     const handlePointerUp = () => {
       const game = gameRef.current;
       if (!game) return;
+
+      // Releasing before the hold fires cancels the star explainer (a star press
+      // never set swipeStart, so the cut block below is a no-op for it).
+      clearHold();
 
       if (
         game.swipeStart &&
@@ -292,6 +361,7 @@ export function useGameInput(
     canvas.addEventListener("pointerleave", handlePointerUp);
 
     return () => {
+      clearHold();
       canvas.removeEventListener("pointerdown",  handlePointerDown);
       canvas.removeEventListener("pointermove",  handlePointerMove);
       canvas.removeEventListener("pointerup",    handlePointerUp);
@@ -300,5 +370,5 @@ export function useGameInput(
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, onAbilityTargetRef]);
+  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, onAbilityTargetRef, onSuperiorInfoRef]);
 }

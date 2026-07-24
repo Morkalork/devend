@@ -12,6 +12,7 @@ import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake } from 'lucide-react';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
+import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { GameTopBar } from './GameTopBar';
 import { GameBottomBar } from './GameBottomBar';
 import { ShipEarlyBar } from './ShipEarlyBar';
@@ -363,6 +364,7 @@ export function GameScreen({
   const [topPanelOpen, setTopPanelOpen] = useState(false);
   const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
   const [abilityInfoOpen, setAbilityInfoOpen] = useState(false);
+  const [superiorInfoOpen, setSuperiorInfoOpen] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -422,7 +424,7 @@ export function GameScreen({
     !!level.boss && !bossIntroSeen &&
     !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
   const modalOverlayActive =
-    topPanelOpen || bottomPanelOpen || menuOpen || abilityInfoOpen ||
+    topPanelOpen || bottomPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen ||
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay;
 
@@ -571,6 +573,7 @@ export function GameScreen({
             onLivesChange={onLivesChange}
             onGrantAbility={onGrantAbility}
             onSpendAbility={onSpendAbility}
+            onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
             onGameEnd={handleGameEnd}
             onLevelComplete={handleLevelComplete}
             onBallTypeLocked={onBallTypeLocked}
@@ -651,6 +654,9 @@ export function GameScreen({
           />
         </div>
       </div>
+
+      {/* Superior-lock explainer (opened by holding a superior lock's star) */}
+      {superiorInfoOpen && <SuperiorLockInfoModal onClose={() => setSuperiorInfoOpen(false)} />}
 
       {/* Pause overlay */}
       {isPaused && (

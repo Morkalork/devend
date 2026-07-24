@@ -248,6 +248,13 @@
     "timeLimitTutorialTitle": "Límite de tiempo",
     "timeLimitTutorialBody": "A partir de ahora, cada mapa tiene un límite de tiempo. Completa el mapa antes de que la barra se agote o la partida termina, sin importar cuántas vidas tengas.\n\nLa barra pasa de verde a rojo al vaciarse. Si terminas con tiempo de sobra, ganas horas extra (entrega temprana).",
     "infoUnlocked": "Información desbloqueada",
+    "lockInfo": {
+      "title": "Bloqueo superior",
+      "normalTitle": "Bloqueo estándar",
+      "normalBody": "Sella una bola en su propio hueco, aislada del resto del tablero. Paga su valor de bloqueo; los tipos de bola más duros pagan más.",
+      "superiorTitle": "Bloqueo superior",
+      "superiorBody": "Sella una bola en un hueco muy ajustado, bastante menos de la mitad del tamaño que normalmente la bloquearía. Paga el doble y se marca con esta estrella dorada."
+    },
     "pickupFork": "¡Bola dividida!",
     "pickupCapRaise": "Tope +{n}h",
     "pickupFreeze": "Congelación +1",

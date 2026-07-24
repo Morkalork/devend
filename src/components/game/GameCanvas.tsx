@@ -157,6 +157,8 @@ interface GameCanvasProps {
   onGrantAbility?: (abilityId: string) => void;
   /** The player spent one ability charge (pressed the ability button). */
   onSpendAbility?: (abilityId: string) => void;
+  /** Press-and-hold on a superior-lock star: open the lock explainer modal. */
+  onRequestSuperiorInfo?: () => void;
   onGameEnd: (result: GameResult) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired the instant the map is won, so the shell can freeze the code background. */
@@ -236,6 +238,7 @@ export function GameCanvas({
   onLivesChange,
   onGrantAbility,
   onSpendAbility,
+  onRequestSuperiorInfo,
   onGameEnd,
   onLevelComplete,
   onMapComplete,
@@ -363,6 +366,8 @@ export function GameCanvas({
   // Latest targeted-ability tap handler, read by the input hook (which is wired
   // once, before the handler is defined below).
   const handleAbilityTargetRef = useRef<((id: string | null, pos: { x: number; y: number } | null) => void) | null>(null);
+  // Superior-lock-star hold handler (opens the explainer), read by the input hook.
+  const handleSuperiorInfoRef = useRef<(() => void) | null>(null);
   // Running time-based abilities, surfaced to the countdown bar. Only changes
   // when an ability fires or expires (not per frame), so no render churn.
   const [abilityTimers, setAbilityTimers] = useState<AbilityTimer[]>([]);
@@ -532,7 +537,7 @@ export function GameCanvas({
     pickupFeedback: [] as PickupFeedback[],
   });
 
-  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef);
+  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1364,6 +1369,7 @@ export function GameCanvas({
     if (fired) onSpendAbility?.(abilityId);
   }, [onSpendAbility]);
   useEffect(() => { handleAbilityTargetRef.current = handleAbilityTarget; }, [handleAbilityTarget]);
+  useEffect(() => { handleSuperiorInfoRef.current = onRequestSuperiorInfo ?? null; }, [onRequestSuperiorInfo]);
 
   useEffect(() => {
     if (onGameStateChange) {
