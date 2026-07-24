@@ -166,7 +166,8 @@ export interface LockFlashState {
    *  ball on top of the usual lock animation. */
   firstEncounter: boolean;
   /** True when the lock graded SUPERIOR (tight pocket; scoring-config.yml
-   *  lockQuality). Draws a rising "Superior Lock" label like firstEncounter. */
+   *  lockQuality). Triggers a distinct gold pocket-throb + expanding gold rings
+   *  (a longer SUPERIOR_LOCK_DURATION celebration), not a text label. */
   superior: boolean;
 }
 

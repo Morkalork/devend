@@ -4,6 +4,7 @@ export const LOCK_FLOOD_DURATION  = 380;  // ms — fill explodes across region
 export const LOCK_DUST_DURATION   = 900;  // ms — longest particle lifetime
 export const LOCK_TOTAL_DURATION  = LOCK_PULSE_DURATION + LOCK_FLOOD_DURATION;
 export const INFO_UNLOCKED_DURATION = 1600; // ms — "Info Unlocked" flash on a first-time ball-type lock
+export const SUPERIOR_LOCK_DURATION = 1400; // ms — distinct gold pulse + rings celebrating a superior lock
 export const BALL_DISINTEGRATE_MS = 420;  // ms — ball shrinks to nothing
 export const DISSOLVE_DURATION    = 1000; // ms — board dissolve after level complete
 export const LEVEL_CLEAR_SHIMMER_MS = 1000; // ms — celebratory shimmer sweeping down the cleared board

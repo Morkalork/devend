@@ -250,7 +250,6 @@
     "timeLimitTutorialTitle": "Time Limit",
     "timeLimitTutorialBody": "From now on, every map has a time limit. Clear the map before the bar empties or the run ends, no matter how many lives you have.\n\nThe bar shades from green to red as it drains. Finish with time to spare and you earn bonus overtime (Ship Early).",
     "infoUnlocked": "Info Unlocked",
-    "superiorLock": "Superior Lock!",
     "pickupFork": "Ball split!",
     "pickupCapRaise": "Cap +{n}h",
     "pickupFreeze": "Freeze +1",

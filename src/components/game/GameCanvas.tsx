@@ -944,7 +944,6 @@ export function GameCanvas({
       accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState,
       spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current,
       infoUnlockedLabel: t('game.infoUnlocked'),
-      superiorLockLabel: t('game.superiorLock'),
       pickupLabels: {
         fork: t('game.pickupFork'),
         capRaise: t('game.pickupCapRaise'),

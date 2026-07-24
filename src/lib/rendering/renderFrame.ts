@@ -7,6 +7,7 @@
  */
 
 import { CanvasGameState } from "@/types/gameState";
+import { LockFlashState } from "@/types/game";
 import { RenderContext } from "./types";
 import {
   vec2Sub,
@@ -37,6 +38,7 @@ import {
   LOCK_FLOOD_DURATION,
   LOCK_DUST_DURATION,
   INFO_UNLOCKED_DURATION,
+  SUPERIOR_LOCK_DURATION,
   COLORS,
   FREEZE_COOLDOWN_MULTIPLIER,
   SWIPE_TRAIL_DURATION,
@@ -589,7 +591,7 @@ export function renderFrame(
   } = game;
   const { width: screenWidth, height: screenHeight } = screenSize;
   const { scale } = boardRect;
-  const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain, infoUnlockedLabel = 'Info Unlocked', superiorLockLabel = 'Superior Lock!' } = rctx;
+  const { accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain, infoUnlockedLabel = 'Info Unlocked' } = rctx;
 
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -1923,6 +1925,48 @@ export function renderFrame(
     const acB = parseInt(accentColor.slice(5, 7), 16);
     const now = performance.now();
 
+    // Fill a flash pocket's smooth contour loops (traced + Chaikin-rounded at
+    // lock time, exactly like the persistent captured-territory tint). Bounded
+    // to the real cells so it can't overshoot toward a nearby object, and smooth
+    // so there's no 15px staircase. Even-odd handles enclosed obstacle holes.
+    // Shared by the accent lock pulse and the gold superior-lock throb.
+    const fillFlashContours = (flash: LockFlashState, r: number, g: number, b: number, alpha: number) => {
+      ctx.save();
+      // Interior movers aren't grid cells, so a pocket cell can sit under one —
+      // CLIP them out (board minus movers). Clipping, not an even-odd subpath: a
+      // mover OUTSIDE the pocket must stay untouched, not get filled.
+      if (game.movers.length > 0) {
+        const clip = new Path2D();
+        clip.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
+        for (const mover of game.movers) {
+          const vs = mover.polygon.vertices;
+          if (vs.length < 3) continue;
+          const m0 = w2s(vs[0].x, vs[0].y);
+          clip.moveTo(m0.x, m0.y);
+          for (let i = 1; i < vs.length; i++) {
+            const mv = w2s(vs[i].x, vs[i].y);
+            clip.lineTo(mv.x, mv.y);
+          }
+          clip.closePath();
+        }
+        ctx.clip(clip, 'evenodd');
+      }
+      ctx.beginPath();
+      for (const loop of flash.contours) {
+        if (loop.length < 3) continue;
+        const p0 = w2s(loop[0].x, loop[0].y);
+        ctx.moveTo(p0.x, p0.y);
+        for (let i = 1; i < loop.length; i++) {
+          const p = w2s(loop[i].x, loop[i].y);
+          ctx.lineTo(p.x, p.y);
+        }
+        ctx.closePath();
+      }
+      ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+      ctx.fill('evenodd');
+      ctx.restore();
+    };
+
     for (const [, flash] of game.assimilations) {
       if (flash.contours.length === 0) continue;
       const elapsed = now - flash.startTime;
@@ -1951,44 +1995,7 @@ export function renderFrame(
 
       ctx.save();
       if (flash.contours.length > 0 && fillAlpha > 0) {
-        // Fill the pocket's smooth contour loops (traced + Chaikin-rounded at lock
-        // time, exactly like the persistent captured-territory tint). Bounded to
-        // the real cells so it can't overshoot toward a nearby object, and smooth
-        // so there's no 15px staircase. Even-odd handles enclosed obstacle holes.
-        ctx.save();
-        // Interior movers aren't grid cells, so a pocket cell can sit under one —
-        // CLIP them out (board minus movers). Clipping, not an even-odd subpath:
-        // a mover OUTSIDE the pocket must stay untouched, not get filled.
-        if (game.movers.length > 0) {
-          const clip = new Path2D();
-          clip.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
-          for (const mover of game.movers) {
-            const vs = mover.polygon.vertices;
-            if (vs.length < 3) continue;
-            const m0 = w2s(vs[0].x, vs[0].y);
-            clip.moveTo(m0.x, m0.y);
-            for (let i = 1; i < vs.length; i++) {
-              const mv = w2s(vs[i].x, vs[i].y);
-              clip.lineTo(mv.x, mv.y);
-            }
-            clip.closePath();
-          }
-          ctx.clip(clip, 'evenodd');
-        }
-        ctx.beginPath();
-        for (const loop of flash.contours) {
-          if (loop.length < 3) continue;
-          const p0 = w2s(loop[0].x, loop[0].y);
-          ctx.moveTo(p0.x, p0.y);
-          for (let i = 1; i < loop.length; i++) {
-            const p = w2s(loop[i].x, loop[i].y);
-            ctx.lineTo(p.x, p.y);
-          }
-          ctx.closePath();
-        }
-        ctx.fillStyle = `rgba(${acR}, ${acG}, ${acB}, ${fillAlpha})`;
-        ctx.fill('evenodd');
-        ctx.restore();
+        fillFlashContours(flash, acR, acG, acB, fillAlpha);
       }
 
       if (elapsed >= LOCK_PULSE_DURATION && glowAlpha > 0) {
@@ -2057,28 +2064,35 @@ export function renderFrame(
         ctx.restore();
       }
 
-      // Superior lock (tight pocket): same rising label treatment in gold.
-      // When the first-encounter label is also up, this one sits below it.
-      if (flash.superior && elapsed < INFO_UNLOCKED_DURATION) {
-        const FADE_IN_MS = 150, FADE_OUT_MS = 500, RISE_WORLD = 55;
-        const fadeIn = Math.min(1, elapsed / FADE_IN_MS);
-        const fadeOut = elapsed > INFO_UNLOCKED_DURATION - FADE_OUT_MS
-          ? Math.max(0, (INFO_UNLOCKED_DURATION - elapsed) / FADE_OUT_MS)
-          : 1;
-        const textAlpha = Math.min(fadeIn, fadeOut);
-        const rise = RISE_WORLD * (elapsed / INFO_UNLOCKED_DURATION);
-        const yOff = flash.firstEncounter ? 18 : 40;
-        const tp = w2s(flash.centroid.x, flash.centroid.y - yOff - rise);
+      // Superior lock (tight pocket): a DISTINCT celebration instead of a label.
+      // The pocket area throbs gold several times (a decaying-envelope pulse),
+      // and concentric gold rings expand from the centroid. Reads as "extra
+      // special" and stays diegetic (on the board, not floating text).
+      if (flash.superior && elapsed < SUPERIOR_LOCK_DURATION && flash.contours.length > 0) {
+        const life = elapsed / SUPERIOR_LOCK_DURATION;      // 0..1
+        const envelope = Math.pow(1 - life, 1.2);           // fades over the window
+        const throb = Math.abs(Math.sin(life * Math.PI * 4)); // ~4 pulses
+        const goldAlpha = envelope * throb * 0.55;
+        if (goldAlpha > 0.01) fillFlashContours(flash, 255, 213, 74, goldAlpha);
 
+        // Two staggered gold rings sweeping outward from the pocket centre.
+        const c = w2s(flash.centroid.x, flash.centroid.y);
         ctx.save();
-        ctx.globalAlpha = textAlpha;
-        ctx.font = `bold ${Math.max(11, Math.round(13 * scale))}px 'JetBrains Mono', monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'bottom';
-        ctx.shadowColor = '#ffd54a';
-        ctx.shadowBlur = 10 * scale;
-        ctx.fillStyle = '#ffd54a';
-        ctx.fillText(superiorLockLabel, tp.x, tp.y);
+        ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < 2; i++) {
+          const rt = (life - i * 0.14) / 0.72;              // staggered 0..1
+          if (rt <= 0 || rt >= 1) continue;
+          const radius = (18 + rt * 150) * scale;
+          const ringAlpha = Math.pow(1 - rt, 1.3) * 0.9;
+          ctx.globalAlpha = ringAlpha;
+          ctx.strokeStyle = '#ffd54a';
+          ctx.lineWidth = Math.max(1, 3.5 * scale * (1 - rt * 0.6));
+          ctx.shadowColor = '#ffd54a';
+          ctx.shadowBlur = 8 * scale;
+          ctx.beginPath();
+          ctx.arc(c.x, c.y, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         ctx.restore();
       }
     }

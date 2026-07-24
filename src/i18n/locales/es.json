@@ -248,7 +248,6 @@
     "timeLimitTutorialTitle": "Límite de tiempo",
     "timeLimitTutorialBody": "A partir de ahora, cada mapa tiene un límite de tiempo. Completa el mapa antes de que la barra se agote o la partida termina, sin importar cuántas vidas tengas.\n\nLa barra pasa de verde a rojo al vaciarse. Si terminas con tiempo de sobra, ganas horas extra (entrega temprana).",
     "infoUnlocked": "Información desbloqueada",
-    "superiorLock": "¡Bloqueo superior!",
     "pickupFork": "¡Bola dividida!",
     "pickupCapRaise": "Tope +{n}h",
     "pickupFreeze": "Congelación +1",

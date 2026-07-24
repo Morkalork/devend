@@ -10,7 +10,7 @@
  */
 import { CanvasSource, Container, Graphics, Rectangle, Sprite, Text, TextStyle, Texture, TextureSource } from "pixi.js";
 import { CanvasGameState } from "@/types/gameState";
-import { DissolveState } from "@/types/game";
+import { DissolveState, LockFlashState } from "@/types/game";
 import { RenderContext } from "../types";
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { computeBallTrajectory, trajectoryBallSnapshots } from "@/lib/gameUtils";
@@ -21,6 +21,7 @@ import {
   LOCK_FLOOD_DURATION,
   LOCK_DUST_DURATION,
   INFO_UNLOCKED_DURATION,
+  SUPERIOR_LOCK_DURATION,
   SWIPE_TRAIL_DURATION,
   DISSOLVE_DURATION,
   SPACE_BAR_FADE_MS,
@@ -62,8 +63,8 @@ export class EffectsLayer {
   private lockFill = new Graphics();
   private lockBursts = new Container();
   private lockDust = new Graphics();
+  private superiorFx = new Graphics(); // gold pulse + rings for superior locks
   private infoTexts = new Map<string, Text>();
-  private superiorTexts = new Map<string, Text>();
   private preview = new Graphics();
   private swipe = new Graphics();
   private trajectory = new Graphics();
@@ -80,7 +81,8 @@ export class EffectsLayer {
     // Pickup tokens go FIRST (under the lock flash — a claimed token vanishes
     // beneath the pocket fill); feedback rings/labels ride on top of the rest.
     // The ability burst goes last so its flash/rings sit above everything.
-    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.preview, this.swipe, this.trajectory, this.pickupRings, this.abilityFx);
+    this.superiorFx.blendMode = "add";
+    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.superiorFx, this.preview, this.swipe, this.trajectory, this.pickupRings, this.abilityFx);
     this.overlayContainer.addChild(this.spaceBar);
   }
 
@@ -251,6 +253,53 @@ export class EffectsLayer {
     }
   }
 
+  // Fill a flash pocket's smooth contour loops onto a Graphics (traced +
+  // Chaikin-rounded at lock time — same as the persistent tint): bounded to the
+  // real cells (no overshoot toward a nearby object) and smooth (no 15px
+  // staircase). Pixi has no even-odd multi-loop fill, so classify loops by
+  // orientation: fill the outer boundary(ies), cut the hole loops + interior
+  // movers. Shared by the accent lock pulse and the gold superior throb.
+  private fillFlashContours(
+    g: Graphics, flash: LockFlashState,
+    game: CanvasGameState, w2s: W2S, color: string, alpha: number,
+  ): void {
+    const loops = flash.contours;
+    // Signed area (world coords; w2s is orientation-preserving). The loop with
+    // the largest |area| is an outer boundary; its sign flags outers.
+    const areas = loops.map(loop => {
+      let a = 0;
+      for (let i = 0; i < loop.length; i++) {
+        const p = loop[i], q = loop[(i + 1) % loop.length];
+        a += p.x * q.y - q.x * p.y;
+      }
+      return a;
+    });
+    let outerSign = 1, maxAbs = 0;
+    for (const a of areas) {
+      if (Math.abs(a) > maxAbs) { maxAbs = Math.abs(a); outerSign = Math.sign(a) || 1; }
+    }
+    const toScreen = (loop: typeof loops[number]): number[] => {
+      const pts: number[] = [];
+      for (const v of loop) { const sp = w2s(v.x, v.y); pts.push(sp.x, sp.y); }
+      return pts;
+    };
+    for (let i = 0; i < loops.length; i++) {
+      if (loops[i].length >= 3 && Math.sign(areas[i]) === outerSign) g.poly(toScreen(loops[i]));
+    }
+    g.fill({ color, alpha });
+    for (let i = 0; i < loops.length; i++) {
+      if (loops[i].length >= 3 && Math.sign(areas[i]) !== outerSign) g.poly(toScreen(loops[i])).cut();
+    }
+    // Interior movers aren't grid cells, so they fall inside a loop — cut them.
+    for (const mover of game.movers) {
+      const vs = mover.polygon.vertices;
+      if (vs.length < 3) continue;
+      const hole: number[] = [];
+      for (const v of vs) { const sp = w2s(v.x, v.y); hole.push(sp.x, sp.y); }
+      g.poly(hole).cut();
+    }
+  }
+
   // ── Lock flash / assimilations (renderFrame section T) ────────────────────
   private syncLockFlashes(
     game: CanvasGameState, rctx: RenderContext, w2s: W2S,
@@ -258,9 +307,9 @@ export class EffectsLayer {
   ): void {
     this.lockFill.clear();
     this.lockDust.clear();
+    this.superiorFx.clear();
     let burstIdx = 0;
     const liveInfo = new Set<string>();
-    const liveSuperior = new Set<string>();
 
     for (const [key, flash] of game.assimilations) {
       if (flash.contours.length === 0) continue;
@@ -278,47 +327,10 @@ export class EffectsLayer {
         glowAlpha = (1 - ft) * 0.9;
       }
 
-      // Fill the pocket's smooth contour loops (traced + Chaikin-rounded at lock
-      // time — same as the persistent tint): bounded to the real cells (no
-      // overshoot toward a nearby object) and smooth (no 15px staircase). Pixi
-      // has no even-odd multi-loop fill, so classify loops by orientation: fill
-      // the outer boundary(ies), cut the hole loops and interior movers.
+      // Fill the pocket's smooth contour loops in the accent colour (the lock
+      // pulse). Gold superior throb below reuses the same helper.
       if (flash.contours.length > 0 && fillAlpha > 0) {
-        const loops = flash.contours;
-        // Signed area (world coords; w2s is orientation-preserving). The loop
-        // with the largest |area| is an outer boundary; its sign flags outers.
-        const areas = loops.map(loop => {
-          let a = 0;
-          for (let i = 0; i < loop.length; i++) {
-            const p = loop[i], q = loop[(i + 1) % loop.length];
-            a += p.x * q.y - q.x * p.y;
-          }
-          return a;
-        });
-        let outerSign = 1, maxAbs = 0;
-        for (const a of areas) {
-          if (Math.abs(a) > maxAbs) { maxAbs = Math.abs(a); outerSign = Math.sign(a) || 1; }
-        }
-        const toScreen = (loop: typeof loops[number]): number[] => {
-          const pts: number[] = [];
-          for (const v of loop) { const sp = w2s(v.x, v.y); pts.push(sp.x, sp.y); }
-          return pts;
-        };
-        for (let i = 0; i < loops.length; i++) {
-          if (loops[i].length >= 3 && Math.sign(areas[i]) === outerSign) this.lockFill.poly(toScreen(loops[i]));
-        }
-        this.lockFill.fill({ color: accent, alpha: fillAlpha });
-        for (let i = 0; i < loops.length; i++) {
-          if (loops[i].length >= 3 && Math.sign(areas[i]) !== outerSign) this.lockFill.poly(toScreen(loops[i])).cut();
-        }
-        // Interior movers aren't grid cells, so they fall inside a loop — cut them.
-        for (const mover of game.movers) {
-          const vs = mover.polygon.vertices;
-          if (vs.length < 3) continue;
-          const hole: number[] = [];
-          for (const v of vs) { const sp = w2s(v.x, v.y); hole.push(sp.x, sp.y); }
-          this.lockFill.poly(hole).cut();
-        }
+        this.fillFlashContours(this.lockFill, flash, game, w2s, accent, fillAlpha);
       }
 
       // Expanding burst at the centroid.
@@ -393,35 +405,28 @@ export class EffectsLayer {
         label.position.set(tp.x, tp.y);
       }
 
-      // Superior lock (tight pocket): same rising-label treatment in gold.
-      // When the first-encounter label is also up, this one sits below it.
-      if (flash.superior && elapsed < INFO_UNLOCKED_DURATION) {
-        liveSuperior.add(key);
-        let label = this.superiorTexts.get(key);
-        if (!label) {
-          label = new Text({
-            text: rctx.superiorLockLabel ?? "Superior Lock!",
-            style: new TextStyle({
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: Math.max(11, Math.round(13 * scale)),
-              fontWeight: "bold",
-              fill: "#ffd54a",
-            }),
-          });
-          label.anchor.set(0.5, 1);
-          this.container.addChild(label);
-          this.superiorTexts.set(key, label);
+      // Superior lock (tight pocket): a DISTINCT celebration instead of a label.
+      // The pocket area throbs gold several times (decaying-envelope pulse) and
+      // concentric gold rings expand from the centroid — mirrors renderFrame's
+      // Canvas2D path so both renderers match.
+      if (flash.superior && elapsed < SUPERIOR_LOCK_DURATION && flash.contours.length > 0) {
+        const life = elapsed / SUPERIOR_LOCK_DURATION;
+        const envelope = Math.pow(1 - life, 1.2);
+        const throb = Math.abs(Math.sin(life * Math.PI * 4));
+        const goldAlpha = envelope * throb * 0.55;
+        if (goldAlpha > 0.01) {
+          this.fillFlashContours(this.superiorFx, flash, game, w2s, "#ffd54a", goldAlpha);
         }
-        const FADE_IN_MS = 150, FADE_OUT_MS = 500, RISE_WORLD = 55;
-        const fadeIn = Math.min(1, elapsed / FADE_IN_MS);
-        const fadeOut = elapsed > INFO_UNLOCKED_DURATION - FADE_OUT_MS
-          ? Math.max(0, (INFO_UNLOCKED_DURATION - elapsed) / FADE_OUT_MS)
-          : 1;
-        label.alpha = Math.min(fadeIn, fadeOut);
-        const rise = RISE_WORLD * (elapsed / INFO_UNLOCKED_DURATION);
-        const yOff = flash.firstEncounter ? 18 : 40;
-        const tp = w2s(flash.centroid.x, flash.centroid.y - yOff - rise);
-        label.position.set(tp.x, tp.y);
+        const c = w2s(flash.centroid.x, flash.centroid.y);
+        for (let i = 0; i < 2; i++) {
+          const rt = (life - i * 0.14) / 0.72;
+          if (rt <= 0 || rt >= 1) continue;
+          const radius = (18 + rt * 150) * scale;
+          const ringAlpha = Math.pow(1 - rt, 1.3) * 0.9;
+          this.superiorFx
+            .circle(c.x, c.y, radius)
+            .stroke({ width: Math.max(1, 3.5 * scale * (1 - rt * 0.6)), color: "#ffd54a", alpha: ringAlpha });
+        }
       }
     }
 
@@ -430,12 +435,6 @@ export class EffectsLayer {
       if (!liveInfo.has(key)) {
         label.destroy();
         this.infoTexts.delete(key);
-      }
-    }
-    for (const [key, label] of this.superiorTexts) {
-      if (!liveSuperior.has(key)) {
-        label.destroy();
-        this.superiorTexts.delete(key);
       }
     }
   }
@@ -619,8 +618,6 @@ export class EffectsLayer {
   destroy(): void {
     for (const [, label] of this.infoTexts) label.destroy();
     this.infoTexts.clear();
-    for (const [, label] of this.superiorTexts) label.destroy();
-    this.superiorTexts.clear();
     for (const [, label] of this.pickupTexts) label.destroy();
     this.pickupTexts.clear();
     this.pickupSprites.clear(); // sprites are children — destroyed below
