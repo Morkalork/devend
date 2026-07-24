@@ -1254,6 +1254,14 @@
     "unlockedModalBody": "Du vann din första omgång! Från och med nu börjar varje omgång med en loadout: en förbannelse i kombination med en välsignelse som formar hela omgången. Vinn med olika loadouts för att låsa upp fler.",
     "unlockedModalDismiss": "Uppfattat"
   },
+  "features": {
+    "unlockedHeader": "Funktion upplåst",
+    "dismiss": "Uppfattat",
+    "loadouts": {
+      "name": "Loadouts",
+      "body": "Du besegrade den första bossen! Från och med nu börjar varje omgång med ett loadout-val: en förbannelse i kombination med en välsignelse som formar hela omgången. Vinn med olika loadouts för att låsa upp fler."
+    }
+  },
   "hallOfFame": {
     "title": "Utvecklingssamtal",
     "topRuns": "Topp 10 genom tiderna",

@@ -64,6 +64,12 @@ export interface UnlockState {
    * builds" celebration. A tag absent here has never headlined a run.
    */
   archetypeBests: Record<string, number>;
+  /**
+   * Ids of game features the player has permanently unlocked (see features.ts,
+   * the general "Feature Unlocked" system). A feature absent here is still
+   * hidden. The first entry is 'loadouts', earned by beating the level-10 boss.
+   */
+  unlockedFeatureIds: string[];
 }
 
 export const DEFAULT_META_STATS: MetaProgressionStats = {

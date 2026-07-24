@@ -29,7 +29,7 @@ import { ContinuePrompt } from '@/components/game/ContinuePrompt';
 import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
 import { CertificateStore } from '@/components/game/CertificateStore';
 import { LoadoutGalleryScreen } from '@/components/game/LoadoutGalleryScreen';
-import { LoadoutsUnlockedModal } from '@/components/game/LoadoutsUnlockedModal';
+import { FeatureUnlockedModal } from '@/components/game/FeatureUnlockedModal';
 import { AchievementsScreen } from '@/components/game/AchievementsScreen';
 import { HallOfFameScreen } from '@/components/game/HallOfFameScreen';
 import { TapToStartGate } from '@/components/game/TapToStartGate';
@@ -430,10 +430,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
         )}
       </AnimatePresence>
 
-      <LoadoutsUnlockedModal
-        visible={session.showLoadoutsUnlockedModal}
-        onDismiss={session.handleDismissLoadoutsUnlocked}
-        accentColor={accentHex}
+      <FeatureUnlockedModal
+        feature={session.unlockedFeature}
+        onDismiss={session.handleDismissFeatureUnlocked}
       />
 
       <TapToStartGate accentColor={accentHex} />

@@ -1,30 +1,30 @@
 /**
- * LoadoutsUnlockedModal — one-time announcement shown after the player's first
- * win, when the loadout system is revealed. From now on every run starts with
- * the Sprint Planning loadout draft. Dismiss with a tap or the button.
+ * FeatureUnlockedModal — the general "Feature Unlocked" announcement. Shown
+ * once, mid-run, when the player earns a new game feature (see features.ts).
+ * The header is always "Feature Unlocked"; the icon, name and body come from
+ * the feature (icon/colour from the catalogue, strings from i18n
+ * `features.<id>.*`). Dismiss with a tap or the button.
  */
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { Backpack } from 'lucide-react';
+import { GameFeature } from '@/lib/features';
 
-interface LoadoutsUnlockedModalProps {
-  visible: boolean;
+interface FeatureUnlockedModalProps {
+  /** The feature to announce, or null when nothing is pending. */
+  feature: GameFeature | null;
   onDismiss: () => void;
-  accentColor?: string;
 }
 
-export function LoadoutsUnlockedModal({
-  visible,
-  onDismiss,
-  accentColor = '#00ff88',
-}: LoadoutsUnlockedModalProps) {
+export function FeatureUnlockedModal({ feature, onDismiss }: FeatureUnlockedModalProps) {
   const { t } = useTranslation();
+  const accentColor = feature?.color ?? '#00ff88';
+  const Icon = feature?.icon;
 
   return (
     <AnimatePresence>
-      {visible && (
+      {feature && (
         <motion.div
-          key="loadouts-unlocked"
+          key="feature-unlocked"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -44,23 +44,31 @@ export function LoadoutsUnlockedModal({
               boxShadow: `0 0 40px ${accentColor}44`,
             }}
           >
-            <div
-              className="w-14 h-14 rounded-full flex items-center justify-center"
-              style={{ border: `2px solid ${accentColor}`, backgroundColor: `${accentColor}22` }}
+            <span
+              className="text-xs font-semibold uppercase tracking-[0.3em]"
+              style={{ color: `${accentColor}aa` }}
             >
-              <Backpack className="w-8 h-8" style={{ color: accentColor }} />
-            </div>
+              {t('features.unlockedHeader')}
+            </span>
+            {Icon && (
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center"
+                style={{ border: `2px solid ${accentColor}`, backgroundColor: `${accentColor}22` }}
+              >
+                <Icon className="w-8 h-8" style={{ color: accentColor }} />
+              </div>
+            )}
             <h2
               className="font-display font-black text-xl uppercase tracking-wider"
               style={{ color: accentColor }}
             >
-              {t('loadouts.unlockedModalTitle')}
+              {t(`features.${feature.id}.name`)}
             </h2>
             <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8' }}>
-              {t('loadouts.unlockedModalBody')}
+              {t(`features.${feature.id}.body`)}
             </p>
             <button className="arcade-button-primary rounded-lg mt-1" onClick={onDismiss}>
-              {t('loadouts.unlockedModalDismiss')}
+              {t('features.dismiss')}
             </button>
           </motion.div>
         </motion.div>

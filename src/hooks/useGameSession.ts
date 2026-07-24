@@ -30,6 +30,7 @@ import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng
 import { useCertificateManager } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
+import { GameFeature, featuresUnlockedAtLevel } from '@/lib/features';
 import { loadAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
@@ -189,11 +190,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // End-of-run build recap (archetype identity, capstone, per-archetype best).
   const [lastRunRecap, setLastRunRecap] = useState<RunRecap | null>(null);
 
-  // One-time "loadouts unlocked" modal, shown after the first win reveals the
-  // loadout system. Armed at the winning level, surfaced when leaving the
-  // level-complete overlay (so it doesn't stack on top of it).
-  const [showLoadoutsUnlockedModal, setShowLoadoutsUnlockedModal] = useState(false);
-  const pendingLoadoutsIntroRef = useRef(false);
+  // One-time "Feature Unlocked" modal (see features.ts). Armed at the level
+  // whose completion earns a feature, surfaced when leaving the level-complete
+  // overlay (so it doesn't stack on top of it).
+  const [unlockedFeature, setUnlockedFeature] = useState<GameFeature | null>(null);
+  const pendingFeatureUnlockRef = useRef<GameFeature | null>(null);
 
   const handleCertificateHourEarned = useCallback(() => {
     // Visual flash handled by consumer; cert manager calls this on point award
@@ -291,13 +292,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordBallTypeEncountered,
     recordArchetypeBest,
     introduceLoadouts,
+    unlockFeature,
+    isFeatureUnlocked,
     resetProgression,
   } = useMetaProgression();
 
-  // Issue #38: loadouts are no longer gated behind the first win — the Sprint
-  // Planning draft appears on every run and the menu Loadouts entry is always
-  // wired. (The meta flag is still advanced above for bookkeeping.)
-  const loadoutsIntroduced = true;
+  // Loadouts are gated behind the general feature-unlock system: earned by
+  // beating the first boss on level 10 (see features.ts). Until then the Sprint
+  // Planning draft is skipped and the menu Loadouts entry stays hidden.
+  const loadoutsIntroduced = isFeatureUnlocked('loadouts');
 
   const {
     achievements,
@@ -956,15 +959,23 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     };
     checkAndCompleteAchievements(projectedStats);
 
-    // Beating the final level = a win. The very first win reveals the loadout
-    // system (the modal is surfaced when leaving the level-complete overlay).
-    // Credit the run-start loadout (index 0) toward unique wins, and remember
-    // any loadouts that just unlocked so the result screen can celebrate them.
-    // Skipped runs (no drafted loadout) and repeat wins with the same loadout
-    // do not advance the count.
+    // Feature unlocks (features.ts): completing certain levels, on the real
+    // first run (depth 0), reveals a new system. Beating the first boss on
+    // level 10 unlocks loadouts. unlockFeature returns true only the first
+    // time; arm the "Feature Unlocked" modal, surfaced when leaving the
+    // level-complete overlay (so it doesn't stack on top of it).
+    if (ascensionDepth === 0) {
+      for (const feature of featuresUnlockedAtLevel(currentLevelNum)) {
+        if (unlockFeature(feature.id)) pendingFeatureUnlockRef.current = feature;
+      }
+    }
+
+    // Beating the final level = a win. Credit the run-start loadout (index 0)
+    // toward unique wins, and remember any loadouts that just unlocked so the
+    // result screen can celebrate them. Skipped runs (no drafted loadout) and
+    // repeat wins with the same loadout do not advance the count.
     if (isLastLevel) {
-      // Loadouts are always available now (#38), so no first-win reveal modal;
-      // still advance the meta flag for bookkeeping.
+      // Legacy bookkeeping flag (loadouts now unlock via the feature system).
       introduceLoadouts();
       const startLoadoutId = draftedLoadoutIds[0];
       if (startLoadoutId) {
@@ -1037,7 +1048,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, loadouts, bestRunTrajectory, bestScore, activeDoor]);
+  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, unlockFeature, loadouts, bestRunTrajectory, bestScore, activeDoor]);
 
   /**
    * Enter the assignment draft (mandatory 1-of-3 door pick). If the door pool
@@ -1107,11 +1118,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
-    // The first win armed the loadouts-unlocked modal; show it now (it overlays
-    // whatever screen we navigate to next).
-    if (pendingLoadoutsIntroRef.current) {
-      pendingLoadoutsIntroRef.current = false;
-      setShowLoadoutsUnlockedModal(true);
+    // A level just unlocked a feature; show the "Feature Unlocked" modal now (it
+    // overlays whatever screen we navigate to next).
+    if (pendingFeatureUnlockRef.current) {
+      setUnlockedFeature(pendingFeatureUnlockRef.current);
+      pendingFeatureUnlockRef.current = null;
     }
     if (isLastLevel) {
       // Beat the final level: offer the ascend-or-retire choice. The pending
@@ -1132,8 +1143,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, nav.goToAscensionDraft, nav.goToUpgradeShop]);
 
-  const handleDismissLoadoutsUnlocked = useCallback(() => {
-    setShowLoadoutsUnlockedModal(false);
+  const handleDismissFeatureUnlocked = useCallback(() => {
+    setUnlockedFeature(null);
   }, []);
 
   /** Ascend: draft a loadout and loop back to level 1 at depth + 1. */
@@ -1454,7 +1465,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activeLoadouts,
     wonLoadoutIds,
     loadoutsIntroduced,
-    showLoadoutsUnlockedModal,
+    unlockedFeature,
     fenceDurability,
     // Continue (per-run revive)
     continuesRemaining,
@@ -1510,7 +1521,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     abilityCharges,
     handleLevelComplete,
     handleContinueFromOverlay,
-    handleDismissLoadoutsUnlocked,
+    handleDismissFeatureUnlocked,
     handleAscend,
     handleRetire,
     handlePurchaseUpgrade,

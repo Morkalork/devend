@@ -1254,6 +1254,14 @@
     "unlockedModalBody": "¡Ganaste tu primera partida! A partir de ahora, cada partida empieza con un equipamiento: una maldición combinada con una bendición que define toda la partida. Gana con equipamientos distintos para desbloquear más.",
     "unlockedModalDismiss": "Entendido"
   },
+  "features": {
+    "unlockedHeader": "Función desbloqueada",
+    "dismiss": "Entendido",
+    "loadouts": {
+      "name": "Equipamientos",
+      "body": "¡Derrotaste al primer jefe! A partir de ahora, cada partida empieza con una selección de equipamiento: una maldición combinada con una bendición que define toda la partida. Gana con equipamientos distintos para desbloquear más."
+    }
+  },
   "hallOfFame": {
     "title": "Evaluación de desempeño",
     "topRuns": "Top 10 de todos los tiempos",

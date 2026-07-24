@@ -15,6 +15,7 @@ import {
   UNLOCK_STATE_STORAGE_KEY,
 } from '@/types/metaProgression';
 import { bestHighscore, isHighscoreRecord } from '@/lib/highscore';
+import { seedLegacyFeatureUnlocks } from '@/lib/features';
 
 /**
  * Load meta stats from localStorage
@@ -55,7 +56,7 @@ function saveMetaStats(stats: MetaProgressionStats): void {
 function emptyUnlockState(): UnlockState {
   return {
     unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: false, mapHighscores: {},
-    encounteredBallTypeIds: [], archetypeBests: {},
+    encounteredBallTypeIds: [], archetypeBests: {}, unlockedFeatureIds: [],
   };
 }
 
@@ -79,6 +80,13 @@ function loadUnlockState(): UnlockState {
         if (typeof v === 'number' && Number.isFinite(v) && v > 0) archetypeBests[tag] = v;
       }
     }
+    // Migrate legacy unlock flags into the general feature list so players who
+    // already earned a feature (e.g. loadouts, via the old first-win flag) keep
+    // it under the new "Feature Unlocked" system.
+    const featureIds = seedLegacyFeatureUnlocks(
+      Array.isArray(parsed.unlockedFeatureIds) ? parsed.unlockedFeatureIds : [],
+      parsed.loadoutsIntroduced === true,
+    );
     return {
       unlockedIds: Array.isArray(parsed.unlockedIds) ? parsed.unlockedIds : [],
       wonLoadoutIds: Array.isArray(parsed.wonLoadoutIds) ? parsed.wonLoadoutIds : [],
@@ -86,6 +94,7 @@ function loadUnlockState(): UnlockState {
       mapHighscores,
       encounteredBallTypeIds: Array.isArray(parsed.encounteredBallTypeIds) ? parsed.encounteredBallTypeIds : [],
       archetypeBests,
+      unlockedFeatureIds: featureIds,
     };
   } catch {
     return emptyUnlockState();
@@ -126,6 +135,7 @@ export function useMetaProgression() {
   const [mapHighscores, setMapHighscores] = useState<Record<string, number>>({});
   const [encounteredBallTypeIds, setEncounteredBallTypeIds] = useState<string[]>([]);
   const [archetypeBests, setArchetypeBests] = useState<Record<string, number>>({});
+  const [unlockedFeatureIds, setUnlockedFeatureIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // Refs mirror the persisted unlock state so recordLoadoutWin /
@@ -137,6 +147,7 @@ export function useMetaProgression() {
   const mapHighscoresRef = useRef<Record<string, number>>({});
   const encounteredBallTypeIdsRef = useRef<string[]>([]);
   const archetypeBestsRef = useRef<Record<string, number>>({});
+  const unlockedFeatureIdsRef = useRef<string[]>([]);
 
   // Persist the full unlock state from the refs (single source, so no save site
   // can forget a field).
@@ -148,6 +159,7 @@ export function useMetaProgression() {
       mapHighscores: mapHighscoresRef.current,
       encounteredBallTypeIds: encounteredBallTypeIdsRef.current,
       archetypeBests: archetypeBestsRef.current,
+      unlockedFeatureIds: unlockedFeatureIdsRef.current,
     });
   }, []);
 
@@ -162,12 +174,14 @@ export function useMetaProgression() {
     setMapHighscores(loadedUnlocks.mapHighscores);
     setEncounteredBallTypeIds(loadedUnlocks.encounteredBallTypeIds);
     setArchetypeBests(loadedUnlocks.archetypeBests);
+    setUnlockedFeatureIds(loadedUnlocks.unlockedFeatureIds);
     unlockedIdsRef.current = loadedUnlocks.unlockedIds;
     wonLoadoutIdsRef.current = loadedUnlocks.wonLoadoutIds;
     loadoutsIntroducedRef.current = loadedUnlocks.loadoutsIntroduced;
     mapHighscoresRef.current = loadedUnlocks.mapHighscores;
     encounteredBallTypeIdsRef.current = loadedUnlocks.encounteredBallTypeIds;
     archetypeBestsRef.current = loadedUnlocks.archetypeBests;
+    unlockedFeatureIdsRef.current = loadedUnlocks.unlockedFeatureIds;
     setIsLoaded(true);
   }, []);
 
@@ -342,6 +356,25 @@ export function useMetaProgression() {
   }, [persistUnlockState]);
 
   /**
+   * Permanently unlock a game feature (see features.ts). Returns true only the
+   * first time a given id is unlocked, so the caller can surface the one-time
+   * "Feature Unlocked" modal. Idempotent for an already-unlocked feature.
+   */
+  const unlockFeature = useCallback((id: string): boolean => {
+    if (unlockedFeatureIdsRef.current.includes(id)) return false;
+    const next = [...unlockedFeatureIdsRef.current, id];
+    unlockedFeatureIdsRef.current = next;
+    setUnlockedFeatureIds(next);
+    persistUnlockState();
+    return true;
+  }, [persistUnlockState]);
+
+  /** Whether a feature id has been permanently unlocked. */
+  const isFeatureUnlocked = useCallback((id: string): boolean => {
+    return unlockedFeatureIds.includes(id);
+  }, [unlockedFeatureIds]);
+
+  /**
    * Reset all progression (for debugging)
    */
   const resetProgression = useCallback(() => {
@@ -352,12 +385,14 @@ export function useMetaProgression() {
     setMapHighscores({});
     setEncounteredBallTypeIds([]);
     setArchetypeBests({});
+    setUnlockedFeatureIds([]);
     unlockedIdsRef.current = [];
     wonLoadoutIdsRef.current = [];
     loadoutsIntroducedRef.current = false;
     mapHighscoresRef.current = {};
     encounteredBallTypeIdsRef.current = [];
     archetypeBestsRef.current = {};
+    unlockedFeatureIdsRef.current = [];
     saveMetaStats({ ...DEFAULT_META_STATS });
     saveUnlockState(emptyUnlockState());
   }, []);
@@ -370,6 +405,7 @@ export function useMetaProgression() {
     mapHighscores,
     encounteredBallTypeIds,
     archetypeBests,
+    unlockedFeatureIds,
     updateStats,
     recordLevelReached,
     recordFencesDrawn,
@@ -382,6 +418,8 @@ export function useMetaProgression() {
     recordBallTypeEncountered,
     recordArchetypeBest,
     introduceLoadouts,
+    unlockFeature,
+    isFeatureUnlocked,
     resetProgression,
   };
 }

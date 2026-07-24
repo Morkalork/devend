@@ -746,6 +746,14 @@
     "unlockedModalBody": "You won your first run! From now on, every run starts with a loadout: a curse bundled with a blessing that shapes the whole run. Win with different loadouts to unlock more.",
     "unlockedModalDismiss": "Got It"
   },
+  "features": {
+    "unlockedHeader": "Feature Unlocked",
+    "dismiss": "Got It",
+    "loadouts": {
+      "name": "Loadouts",
+      "body": "You beat the first boss! From now on, every run starts with a loadout draft: a curse bundled with a blessing that shapes the whole run. Win with different loadouts to unlock more."
+    }
+  },
   "hallOfFame": {
     "title": "Performance Review",
     "topRuns": "All time Top 10",
