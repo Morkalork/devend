@@ -30,13 +30,15 @@ const NODE_SPACING_WORLD = 17;
 // 1.6 lanes = ~0.42·thickness, comfortably inside the band's half-width.
 const LANE_FRAC = 0.26;
 // Node radii as a fraction of thickness (world units).
-const VIA_R_FRAC = 0.18;
-const PAD_R_FRAC = 0.14;
+const VIA_R_FRAC = 0.26;
+const PAD_R_FRAC = 0.2;
 // Probability a node sprouts a perpendicular branch stub.
-const BRANCH_PROB = 0.42;
-// Slight translucency applied to the wall's white core so the circuit shows
-// through. 1 = opaque (old look), lower = more see-through.
-export const WALL_CORE_ALPHA = 0.82;
+const BRANCH_PROB = 0.45;
+// Translucency of the wall body so the circuit reads through it. The white core
+// AND the accent centerline are both dimmed — otherwise the opaque centerline
+// hides the traces. 1 = opaque (old look), lower = more see-through.
+export const WALL_CORE_ALPHA = 0.6;
+export const WALL_CENTERLINE_ALPHA = 0.64;
 
 // ── Deterministic RNG (mulberry32) ──────────────────────────────────────────
 function hashCoords(a: number, b: number, c: number, d: number): number {
@@ -198,11 +200,12 @@ function mixHex(hex: string, tr: number, tg: number, tb: number, t: number): str
 }
 
 export interface CircuitPalette {
-  trace: string;   // dim vein colour
+  trace: string;   // dark etched vein (high contrast on the translucent wall)
   traceAlpha: number;
-  via: string;     // dark solder ring
+  traceWidthFrac: number; // trace line width as a fraction of wall thickness
+  via: string;     // dark solder ring for definition
   viaAlpha: number;
-  spark: string;   // bright via centre (drawn additively where possible)
+  spark: string;   // bright glowing via centre (drawn additively where possible)
   sparkAlpha: number;
 }
 
@@ -212,12 +215,13 @@ export function circuitPalette(accentHex: string): CircuitPalette {
   const cached = _paletteCache.get(accentHex);
   if (cached) return cached;
   const p: CircuitPalette = {
-    trace: mixHex(accentHex, 0, 0, 0, 0.55),      // accent → darker vein
-    traceAlpha: 0.5,
-    via: mixHex(accentHex, 0, 0, 0, 0.35),        // darker solder ring
-    viaAlpha: 0.75,
-    spark: mixHex(accentHex, 255, 255, 255, 0.75), // near-white bright centre
-    sparkAlpha: 0.9,
+    trace: mixHex(accentHex, 0, 0, 0, 0.62),       // deep etched groove
+    traceAlpha: 0.72,
+    traceWidthFrac: 0.2,
+    via: mixHex(accentHex, 0, 0, 0, 0.6),          // dark solder ring
+    viaAlpha: 0.85,
+    spark: mixHex(accentHex, 255, 255, 255, 0.85), // near-white glowing centre
+    sparkAlpha: 1,
   };
   _paletteCache.set(accentHex, p);
   return p;

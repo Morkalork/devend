@@ -6,6 +6,7 @@ import { Vector2, pointToSegmentDistance } from './polygon';
 import {
   WALL_CIRCUITS_ENABLED,
   WALL_CORE_ALPHA,
+  WALL_CENTERLINE_ALPHA,
   buildWallSkeleton,
   circuitPalette,
 } from './rendering/wallSkeleton';
@@ -250,14 +251,20 @@ export function renderWallWithEffects(
   buildPath(); ctx.lineWidth = baseWidth * (1.6 + glowBoost * 1.8); ctx.globalAlpha = 0.18 + glowBoost * 0.25; ctx.stroke();
   ctx.restore();
 
-  // Circuit traces (beneath the core so they read as internal structure).
+  // White-bright core + accent centerline. Both are nudged translucent when a
+  // circuit is present so the etched traces/nodes drawn on top read as circuitry
+  // seen through the wall (rather than being hidden by the opaque centerline).
+  buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = skel ? WALL_CORE_ALPHA : 1; ctx.stroke();
+  buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.globalAlpha = skel ? WALL_CENTERLINE_ALPHA : 1; ctx.stroke();
+
+  // Circuit traces etched on top of the translucent wall body.
   if (skel && pal) {
     ctx.save();
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = pal.trace;
     ctx.globalAlpha = pal.traceAlpha;
-    ctx.lineWidth = Math.max(1, baseWidth * 0.16);
+    ctx.lineWidth = Math.max(1, baseWidth * pal.traceWidthFrac);
     for (const tr of skel.traces) {
       ctx.beginPath();
       ctx.moveTo(tr[0], tr[1]);
@@ -266,11 +273,6 @@ export function renderWallWithEffects(
     }
     ctx.restore();
   }
-
-  // White-bright core + accent centerline. The core is nudged translucent when
-  // a circuit is present so the traces/nodes show through the wall.
-  buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = skel ? WALL_CORE_ALPHA : 1; ctx.stroke();
-  buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.globalAlpha = 1; ctx.stroke();
 
   // Fresh-wall bloom
   if (glowBoost > 0.05) {

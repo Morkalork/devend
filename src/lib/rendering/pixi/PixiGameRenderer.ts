@@ -28,6 +28,7 @@ import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEf
 import {
   WALL_CIRCUITS_ENABLED,
   WALL_CORE_ALPHA,
+  WALL_CENTERLINE_ALPHA,
   buildWallSkeleton,
   circuitPalette,
   clearWallSkeletonCache,
@@ -853,17 +854,15 @@ export class PixiGameRenderer {
         strokePath(gGlow, pts, baseWidth * (1 + maxGlow * 2), accent, maxGlow * 0.65);
       }
 
-      // Circuit "skeleton" beneath a slightly-translucent core (see wallSkeleton.ts).
+      // Circuit "skeleton" etched on a translucent wall body (see wallSkeleton.ts).
       const skel = WALL_CIRCUITS_ENABLED
         ? buildWallSkeleton(s.x, s.y, e.x, e.y, scale, baseWidth / scale, ws.x, ws.y, we.x, we.y)
         : null;
       const pal = skel ? circuitPalette(accent) : null;
-      if (skel && pal) {
-        for (const tr of skel.traces) strokePath(gCore, tr, Math.max(1, baseWidth * 0.16), pal.trace, pal.traceAlpha);
-      }
       strokePath(gCore, pts, baseWidth, 0xffffff, skel ? WALL_CORE_ALPHA : 1);
-      strokePath(gCore, pts, baseWidth * 0.7, accent, 1);
+      strokePath(gCore, pts, baseWidth * 0.7, accent, skel ? WALL_CENTERLINE_ALPHA : 1);
       if (skel && pal) {
+        for (const tr of skel.traces) strokePath(gCore, tr, Math.max(1, baseWidth * pal.traceWidthFrac), pal.trace, pal.traceAlpha);
         for (const nd of skel.nodes) {
           gCore.circle(nd.x, nd.y, nd.r).fill({ color: pal.via, alpha: pal.viaAlpha });
           gCore.circle(nd.x, nd.y, nd.r * (nd.kind === 'via' ? 0.5 : 0.58)).fill({ color: pal.spark, alpha: pal.sparkAlpha });
