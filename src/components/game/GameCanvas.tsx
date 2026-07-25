@@ -388,6 +388,17 @@ export function GameCanvas({
   const [screenFlash, setScreenFlash] = useState<"none" | "red">("none");
   const [isRecovering, setIsRecovering] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
+  // False while the run-intro assemble is still flying the board in; flipped
+  // true when the board has fully materialized (so the tutorial overlay waits
+  // for it). A normal start has no assemble, so it's materialized immediately.
+  const [boardMaterialized, setBoardMaterialized] = useState(!introAssemble);
+  // Safety net: never leave the tutorial hidden if the assemble's onComplete
+  // doesn't fire (e.g. a renderer hiccup). The assemble lands well under 3s.
+  useEffect(() => {
+    if (boardMaterialized) return;
+    const id = window.setTimeout(() => setBoardMaterialized(true), 3000);
+    return () => window.clearTimeout(id);
+  }, [boardMaterialized]);
   // Boss ball HUD mirror (issue #56): updated on init and on every boss hit/defeat.
   const [bossHud, setBossHud] = useState({ active: false, hp: 0, maxHp: 0, defeated: false });
   const [isPlayerDragging, setIsPlayerDragging] = useState(false);
@@ -1060,7 +1071,8 @@ export function GameCanvas({
         // (tiles at full scatter, alpha clamped to 0), then the assemble
         // plays in full view.
         startTime: performance.now() + 450,
-        reverse: true, onComplete: () => startGameLoop(game),
+        // The board has finished flying in: reveal the tutorial overlay now.
+        reverse: true, onComplete: () => { setBoardMaterialized(true); startGameLoop(game); },
       };
       startGameLoop(game);
       // Fade the shell's "Loading..." overlay out just as the first tiles fly
@@ -1519,7 +1531,7 @@ export function GameCanvas({
             Tap the board to attract balls
           </div>
         )}
-        {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && (
+        {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && boardMaterialized && (
           <InteractiveTutorialOverlay
             tutorialStep={tutorialStep}
             isPlayerDragging={isPlayerDragging}
