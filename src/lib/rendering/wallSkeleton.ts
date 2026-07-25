@@ -21,6 +21,11 @@
 // ── Master toggle + tunables ────────────────────────────────────────────────
 export const WALL_CIRCUITS_ENABLED = true;
 
+// Render-only line-thickening. The physics `thickness` (ball collisions, seal
+// gaps, cut rasterization) is left untouched; only the DRAWN wall body + its
+// circuit are scaled up, giving the skeleton room to read. 1 = no change.
+export const WALL_RENDER_THICKEN = 1.6;
+
 // Segments shorter than this (screen px) get no circuit — too small to read.
 const MIN_SEGMENT_PX = 46;
 // Spacing between circuit features along the wall (world units).

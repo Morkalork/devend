@@ -29,6 +29,7 @@ import {
   WALL_CIRCUITS_ENABLED,
   WALL_CORE_ALPHA,
   WALL_CENTERLINE_ALPHA,
+  WALL_RENDER_THICKEN,
   buildWallSkeleton,
   circuitPalette,
   clearWallSkeletonCache,
@@ -827,6 +828,9 @@ export class PixiGameRenderer {
       ws: Vector2, we: Vector2,
       baseWidth: number, glowBoost: number,
     ) => {
+      // Thicken the drawn line only (physics thickness untouched) so the circuit
+      // skeleton has room to read.
+      if (WALL_CIRCUITS_ENABLED) baseWidth *= WALL_RENDER_THICKEN;
       // renderWallWithEffects recipe, including the mass-spring impact wobble:
       // sample the ripple displacement along the wall when an impact is nearby.
       let pts: number[];

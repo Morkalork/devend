@@ -7,6 +7,7 @@ import {
   WALL_CIRCUITS_ENABLED,
   WALL_CORE_ALPHA,
   WALL_CENTERLINE_ALPHA,
+  WALL_RENDER_THICKEN,
   buildWallSkeleton,
   circuitPalette,
 } from './rendering/wallSkeleton';
@@ -203,6 +204,10 @@ export function renderWallWithEffects(
   const sdy = endScreen.y - startScreen.y;
   const slen = Math.sqrt(sdx * sdx + sdy * sdy);
   if (slen < 0.001) return;
+
+  // Thicken the drawn line only (physics thickness is untouched) so the circuit
+  // skeleton has room to read.
+  if (WALL_CIRCUITS_ENABLED) baseWidth *= WALL_RENDER_THICKEN;
 
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
