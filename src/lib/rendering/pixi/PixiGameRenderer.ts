@@ -25,6 +25,13 @@ import { chestLootAlpha } from "@/lib/chests";
 import { getAbility } from "@/lib/abilities";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
+import {
+  WALL_CIRCUITS_ENABLED,
+  WALL_CORE_ALPHA,
+  buildWallSkeleton,
+  circuitPalette,
+  clearWallSkeletonCache,
+} from "@/lib/rendering/wallSkeleton";
 import { getRainGlyph } from "../rainGlyphCache";
 import { getFrameStats, heapLine } from "../perfStats";
 import { flameTonguesForCount } from "../renderFrame";
@@ -845,8 +852,23 @@ export class PixiGameRenderer {
       if (maxGlow > 0.05) {
         strokePath(gGlow, pts, baseWidth * (1 + maxGlow * 2), accent, maxGlow * 0.65);
       }
-      strokePath(gCore, pts, baseWidth, 0xffffff, 1);
+
+      // Circuit "skeleton" beneath a slightly-translucent core (see wallSkeleton.ts).
+      const skel = WALL_CIRCUITS_ENABLED
+        ? buildWallSkeleton(s.x, s.y, e.x, e.y, scale, baseWidth / scale, ws.x, ws.y, we.x, we.y)
+        : null;
+      const pal = skel ? circuitPalette(accent) : null;
+      if (skel && pal) {
+        for (const tr of skel.traces) strokePath(gCore, tr, Math.max(1, baseWidth * 0.16), pal.trace, pal.traceAlpha);
+      }
+      strokePath(gCore, pts, baseWidth, 0xffffff, skel ? WALL_CORE_ALPHA : 1);
       strokePath(gCore, pts, baseWidth * 0.7, accent, 1);
+      if (skel && pal) {
+        for (const nd of skel.nodes) {
+          gCore.circle(nd.x, nd.y, nd.r).fill({ color: pal.via, alpha: pal.viaAlpha });
+          gCore.circle(nd.x, nd.y, nd.r * (nd.kind === 'via' ? 0.5 : 0.58)).fill({ color: pal.spark, alpha: pal.sparkAlpha });
+        }
+      }
     };
 
     for (let wi = game.walls.length - 1; wi >= 0; wi--) {
@@ -1056,6 +1078,7 @@ export class PixiGameRenderer {
     this.dissolve.destroy();
     clearCanvasTextures();
     clearGlowTextures();
+    clearWallSkeletonCache();
     // app.destroy(children:true) frees the stage tree but NOT filters attached to
     // it; the bloom allocates internal render targets, so free it explicitly.
     this.bloom?.destroy();

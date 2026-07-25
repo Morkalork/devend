@@ -3,6 +3,12 @@
 // from the hit point and settles organically, replacing the old sinusoidal approximation.
 
 import { Vector2, pointToSegmentDistance } from './polygon';
+import {
+  WALL_CIRCUITS_ENABLED,
+  WALL_CORE_ALPHA,
+  buildWallSkeleton,
+  circuitPalette,
+} from './rendering/wallSkeleton';
 
 export const N_NODES = 16;   // spring nodes per impact
 const SPRING_K   = 180;      // spring restoring stiffness
@@ -224,6 +230,18 @@ export function renderWallWithEffects(
     for (let i = 1; i < centers.length; i++) ctx.lineTo(centers[i].x, centers[i].y);
   };
 
+  // Circuit "skeleton" laid along the straight segment (see wallSkeleton.ts).
+  // Deterministic + cached, so it's stable per wall. Traces sit BENEATH the
+  // (slightly translucent) core; the bright solder nodes are punched on top.
+  const skel = WALL_CIRCUITS_ENABLED
+    ? buildWallSkeleton(
+        startScreen.x, startScreen.y, endScreen.x, endScreen.y,
+        scale, baseWidth / scale,
+        wallStart.x, wallStart.y, wallEnd.x, wallEnd.y,
+      )
+    : null;
+  const pal = skel ? circuitPalette(baseColor) : null;
+
   // Outer glow via additive compositing (amplified for freshly drawn walls)
   ctx.save();
   ctx.globalCompositeOperation = 'lighter';
@@ -232,9 +250,27 @@ export function renderWallWithEffects(
   buildPath(); ctx.lineWidth = baseWidth * (1.6 + glowBoost * 1.8); ctx.globalAlpha = 0.18 + glowBoost * 0.25; ctx.stroke();
   ctx.restore();
 
-  // White-bright core + accent centerline
-  buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = 1; ctx.stroke();
-  buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.stroke();
+  // Circuit traces (beneath the core so they read as internal structure).
+  if (skel && pal) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = pal.trace;
+    ctx.globalAlpha = pal.traceAlpha;
+    ctx.lineWidth = Math.max(1, baseWidth * 0.16);
+    for (const tr of skel.traces) {
+      ctx.beginPath();
+      ctx.moveTo(tr[0], tr[1]);
+      for (let i = 2; i < tr.length; i += 2) ctx.lineTo(tr[i], tr[i + 1]);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // White-bright core + accent centerline. The core is nudged translucent when
+  // a circuit is present so the traces/nodes show through the wall.
+  buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = skel ? WALL_CORE_ALPHA : 1; ctx.stroke();
+  buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.globalAlpha = 1; ctx.stroke();
 
   // Fresh-wall bloom
   if (glowBoost > 0.05) {
@@ -257,6 +293,23 @@ export function renderWallWithEffects(
     ctx.strokeStyle = baseColor;
     ctx.globalAlpha = maxGlow * 0.65;
     ctx.stroke();
+    ctx.restore();
+  }
+
+  // Solder vias / pads on top: a dark ring with an additive bright centre, so
+  // each reads as a glowing circuit node embedded in the wall.
+  if (skel && pal) {
+    ctx.save();
+    for (const nd of skel.nodes) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = pal.viaAlpha;
+      ctx.fillStyle = pal.via;
+      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = pal.sparkAlpha;
+      ctx.fillStyle = pal.spark;
+      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r * (nd.kind === 'via' ? 0.5 : 0.58), 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
   }
 

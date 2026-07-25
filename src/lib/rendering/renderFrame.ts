@@ -47,6 +47,7 @@ import {
   SPACE_BAR_FADE_MS,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
+import { clearWallSkeletonCache } from "./wallSkeleton";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -153,6 +154,7 @@ export function clearRenderFrameCache(): void {
   _obstacleHolesCache.key = '';
   _obstacleHolesCache.polys = null;
   _obstacleHolesCache.path = null;
+  clearWallSkeletonCache();
 }
 
 export function createRainParticles(count: number): import("./types").RainParticle[] {
