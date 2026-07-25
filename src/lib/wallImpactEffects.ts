@@ -312,3 +312,89 @@ export function clearWallImpacts(): void {
 export function getActiveImpactCount(): number {
   return activeImpacts.length;
 }
+
+// ── Obstacle bulge (radial) ─────────────────────────────────────────────────
+// Walls are line segments, so their bulge is directional along the wall normal
+// and tapers at the ends. A polygon obstacle has short edges and vertices at
+// those ends, so that model would zero out. Instead an obstacle hit registers a
+// RADIAL bulge: a soft dome centred on the hit point that pushes the boundary
+// outward (away from the ball). Shares the rise/relax envelope with walls.
+
+const OBS_BULGE_MAX_WORLD = 6;   // peak outward push (world units) at full strength
+const OBS_BULGE_SIGMA     = 26;  // radial falloff (world units)
+const MAX_OBS_IMPACTS     = 10;
+
+interface ObstacleImpact {
+  point: Vector2;         // hit point (world)
+  nx: number; ny: number; // outward push direction (unit, away from ball)
+  strength: number;
+  startTime: number;
+  amp: number;            // current amplitude (world units), refreshed each frame
+}
+
+let obstacleImpacts: ObstacleImpact[] = [];
+
+export function registerObstacleImpact(
+  hitPoint: Vector2,
+  outwardNx: number,
+  outwardNy: number,
+  strength = 1,
+): void {
+  const s = Math.max(0.4, Math.min(1, strength));
+  // Light debounce: a ball pressing an edge re-registers every step; refresh the
+  // nearest recent impact instead of stacking many overlapping domes.
+  for (const o of obstacleImpacts) {
+    const dx = o.point.x - hitPoint.x, dy = o.point.y - hitPoint.y;
+    if (dx * dx + dy * dy < 100) { // within 10 world units
+      o.startTime = performance.now();
+      o.strength = Math.max(o.strength, s);
+      o.nx = outwardNx; o.ny = outwardNy;
+      return;
+    }
+  }
+  obstacleImpacts.push({
+    point: { ...hitPoint },
+    nx: outwardNx, ny: outwardNy,
+    strength: s,
+    startTime: performance.now(),
+    amp: 0,
+  });
+  if (obstacleImpacts.length > MAX_OBS_IMPACTS) obstacleImpacts.shift();
+}
+
+export function updateObstacleImpacts(): boolean {
+  if (obstacleImpacts.length === 0) return false;
+  const now = performance.now();
+  obstacleImpacts = obstacleImpacts.filter(o => {
+    const elapsed = now - o.startTime;
+    o.amp = OBS_BULGE_MAX_WORLD * o.strength * bulgeEnvelope(elapsed);
+    return elapsed < BULGE_DURATION;
+  });
+  return obstacleImpacts.length > 0;
+}
+
+export function anyObstacleImpactsActive(): boolean {
+  return obstacleImpacts.length > 0;
+}
+
+/** Screen-space bulge displacement of a boundary point near obstacle hits. */
+export function obstacleBulgeAt(
+  worldX: number, worldY: number, scale: number,
+): { dx: number; dy: number } {
+  let dx = 0, dy = 0;
+  for (const o of obstacleImpacts) {
+    if (o.amp <= 0.001) continue;
+    const ex = worldX - o.point.x, ey = worldY - o.point.y;
+    const d2 = ex * ex + ey * ey;
+    if (d2 > (OBS_BULGE_SIGMA * 3) ** 2) continue;
+    const bump = Math.exp(-d2 / (2 * OBS_BULGE_SIGMA * OBS_BULGE_SIGMA));
+    const disp = o.amp * bump * scale;
+    dx += o.nx * disp;
+    dy += o.ny * disp;
+  }
+  return { dx, dy };
+}
+
+export function clearObstacleImpacts(): void {
+  obstacleImpacts = [];
+}

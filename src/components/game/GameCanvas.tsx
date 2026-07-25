@@ -59,7 +59,8 @@ import {
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
 import {
   registerWallImpact,
-  clearWallImpacts
+  clearWallImpacts,
+  clearObstacleImpacts
 } from "@/lib/wallImpactEffects";
 import {
   REGION_SAMPLE_GRID_SIZE,
@@ -914,6 +915,7 @@ export function GameCanvas({
       setBallCount(game.balls.length || 1);
       game.wallCount = 0;
       clearWallImpacts();
+      clearObstacleImpacts();
       setCutCount(0);
       // Not always 100: startingCapturePercent (Equity Grant) starts the run lower
       setRemainingPercent(game.spaceGrid ? Math.round(getRemainingPercent(game.spaceGrid)) : 100);

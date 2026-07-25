@@ -22,7 +22,7 @@ import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updatePickups } from "@/lib/pickups";
 import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
-import { updateWallImpacts } from "@/lib/wallImpactEffects";
+import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
 import { recordFrame } from "@/lib/rendering/perfStats";
 
 export interface GameLoopCallbacks {
@@ -402,8 +402,9 @@ export function createGameLoop(
 
     const _physMs = performance.now() - _physStart;
 
-    // Update wall impact visual effects (time-based)
+    // Update wall + obstacle impact visual effects (time-based)
     updateWallImpacts();
+    updateObstacleImpacts();
 
     const _renderStart = performance.now();
     callbacks.render();

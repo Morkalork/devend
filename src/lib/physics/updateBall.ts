@@ -23,7 +23,7 @@ import {
   Polygon,
 } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
-import { registerWallImpact } from "@/lib/wallImpactEffects";
+import { registerWallImpact, registerObstacleImpact } from "@/lib/wallImpactEffects";
 import {
   REGION_SAMPLE_GRID_SIZE,
   isBallInRegion,
@@ -476,7 +476,12 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       surfaceHit = true;
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
-      registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position);
+      const isObstacleWall = wall.id.startsWith("obstacle-");
+      // Fences/board edges bulge as walls; obstacles get a radial bulge below
+      // (a wall bulge here would also be invisible and could leak onto nearby fences).
+      if (!isObstacleWall) {
+        registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position);
+      }
       triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
       playWallHitSound(impactStrength);
 
@@ -493,7 +498,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       // Destructible obstacles are bounced by these edge walls, so hits are
       // counted here (the polygon-collision path rarely fires). Mirrors: black
       // ball only (#37). Breakables: any ball, black counts double (#38).
-      if (wall.id.startsWith("obstacle-")) {
+      if (isObstacleWall) {
         const oid = obstacleIdFromWallId(wall.id);
         if (oid) {
           const d = findObstacleDestructibleById(game, oid);
@@ -511,6 +516,17 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
             } else if (d.kind === 'mirror' && ball.ability === 'breakObjects') {
               registerObjectHit(game, d, ball.id, now, dmg, impactPoint ?? undefined);
             }
+          }
+          // Gentle bulge for plain green obstacles only (mirrors + breakables,
+          // which have their own crack/dent visuals, are excluded; movers never
+          // reach this path). Push the boundary outward, away from the ball.
+          if (!wall.isMirror && d?.kind !== 'breakable' && d?.kind !== 'mirror') {
+            const ex = wall.end.x - wall.start.x, ey = wall.end.y - wall.start.y;
+            const el = Math.hypot(ex, ey) || 1;
+            let onx = -ey / el, ony = ex / el;
+            const sd = (ball.position.x - impactPoint.x) * onx + (ball.position.y - impactPoint.y) * ony;
+            if (sd > 0) { onx = -onx; ony = -ony; }
+            registerObstacleImpact(impactPoint, onx, ony, impactStrength);
           }
         }
       }

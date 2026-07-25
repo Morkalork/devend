@@ -26,7 +26,7 @@ import { getBallSphere } from "@/lib/ballSphereCache";
 import { getRainGlyph } from "./rainGlyphCache";
 import { renderBallEffects, getSquishEffect, BOSS_SQUISH_SCALE } from "@/lib/ballEffects";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
-import { renderWallWithEffects } from "@/lib/wallImpactEffects";
+import { renderWallWithEffects, anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { chestLootAlpha } from "@/lib/chests";
 import { getAbility } from "@/lib/abilities";
@@ -571,6 +571,38 @@ function drawDamageCracks(
   ctx.restore();
 }
 
+/**
+ * Trace a green obstacle outline with a live bulge near ball hits. Each edge is
+ * subdivided so the dome reads smoothly even on low-poly obstacles; away from a
+ * hit the samples are collinear, so the outline is pixel-identical to the flat
+ * cached version.
+ */
+function traceBulgedObstacle(
+  ctx: CanvasRenderingContext2D,
+  verts: { x: number; y: number }[],
+  w2s: (x: number, y: number) => { x: number; y: number },
+  scale: number,
+): void {
+  ctx.beginPath();
+  let first = true;
+  const emit = (wx: number, wy: number) => {
+    const sp = w2s(wx, wy);
+    const b = obstacleBulgeAt(wx, wy, scale);
+    const x = sp.x + b.dx, y = sp.y + b.dy;
+    if (first) { ctx.moveTo(x, y); first = false; } else ctx.lineTo(x, y);
+  };
+  for (let i = 0; i < verts.length; i++) {
+    const a = verts[i], b = verts[(i + 1) % verts.length];
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const sub = Math.max(1, Math.round(Math.hypot(dx, dy) / 10)); // ~1 sample / 10 world units
+    for (let s = 0; s < sub; s++) {
+      const t = s / sub;
+      emit(a.x + dx * t, a.y + dy * t);
+    }
+  }
+  ctx.closePath();
+}
+
 // ── Main render entry point ───────────────────────────────────────────────
 
 export function renderFrame(
@@ -845,7 +877,28 @@ export function renderFrame(
         c.stroke();
       }
     }
-    if (_obstacleGlowOC) ctx.drawImage(_obstacleGlowOC, 0, 0);
+    if (anyObstacleImpactsActive()) {
+      // A bulge is active: draw the green obstacles live so the boundary can
+      // flex near hits (the cache is flat). Only the plain green obstacles;
+      // mirrors/breakables keep their own look.
+      const mirrorSet = new Set(game.mirrorPolygons);
+      const breakableSet = new Set(game.destructibles.filter(d => d.kind === 'breakable' && d.obstaclePolygon).map(d => d.obstaclePolygon));
+      ctx.save();
+      ctx.strokeStyle = accentColor;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = WALL_THICKNESS * scale;
+      ctx.shadowColor = accentColor;
+      ctx.shadowBlur = 6 * scale;
+      for (const poly of game.obstaclePolygons) {
+        if (mirrorSet.has(poly) || breakableSet.has(poly)) continue;
+        traceBulgedObstacle(ctx, poly.vertices, w2s, scale);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else if (_obstacleGlowOC) {
+      ctx.drawImage(_obstacleGlowOC, 0, 0);
+    }
   }
 
   // ── Breakable obstacles (issue #38) ───────────────────────────────────────

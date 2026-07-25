@@ -24,7 +24,7 @@ import { BALL_DANGER_SPEED, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 import { chestLootAlpha } from "@/lib/chests";
 import { getAbility } from "@/lib/abilities";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
-import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
+import { getEffectsAtPoint, hasNearbyImpacts, N_NODES, anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import {
   WALL_CIRCUITS_ENABLED,
   WALL_CORE_ALPHA,
@@ -103,6 +103,7 @@ export class PixiGameRenderer {
   // Cache keys for static layers.
   private staticDirty = true;
   private obstaclesKey = "";
+  private obstaclesBulged = false;
   private mirrorsKey = "";
   private fenceMaskKey = "";
   private wallClipSegs = new WeakMap<Wall, { start: Vector2; end: Vector2 }[]>();
@@ -556,19 +557,38 @@ export class PixiGameRenderer {
 
   // ── Static obstacle outlines (section F) ──────────────────────────────────
   private syncObstacles(game: CanvasGameState, w2s: W2S, scale: number, accent: string): void {
+    const bulging = anyObstacleImpactsActive();
     const key = `${accent}_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}`;
-    if (this.obstaclesKey === key) return;
-    this.obstaclesKey = key;
+    // Cached unless the level/layout changed, a bulge is animating, or one just
+    // ended (redraw once flat). While bulging, force a redraw every frame.
+    if (!bulging && !this.obstaclesBulged && this.obstaclesKey === key) return;
+    this.obstaclesBulged = bulging;
+    this.obstaclesKey = bulging ? "__bulging__" : key;
     const g = this.obstacles;
     g.clear();
     const mirrorSet = new Set(game.mirrorPolygons);
     const breakableSet = new Set(game.destructibles.filter(d => d.kind === "breakable" && d.obstaclePolygon).map(d => d.obstaclePolygon));
     for (const poly of game.obstaclePolygons) {
       if (mirrorSet.has(poly as Polygon) || breakableSet.has(poly as Polygon)) continue;
+      // Subdivide edges + sample the bulge so the dome is smooth on low-poly
+      // obstacles; away from hits the samples stay collinear (flat outline).
       const pts: number[] = [];
-      for (const v of poly.vertices) {
-        const sp = w2s(v.x, v.y);
-        pts.push(sp.x, sp.y);
+      const verts = poly.vertices;
+      for (let i = 0; i < verts.length; i++) {
+        const a = verts[i], b = verts[(i + 1) % verts.length];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const sub = bulging ? Math.max(1, Math.round(Math.hypot(dx, dy) / 10)) : 1;
+        for (let s = 0; s < sub; s++) {
+          const t = s / sub;
+          const wx = a.x + dx * t, wy = a.y + dy * t;
+          const sp = w2s(wx, wy);
+          if (bulging) {
+            const off = obstacleBulgeAt(wx, wy, scale);
+            pts.push(sp.x + off.dx, sp.y + off.dy);
+          } else {
+            pts.push(sp.x, sp.y);
+          }
+        }
       }
       g.poly(pts).stroke({ width: WALL_THICKNESS * scale * 2.2, color: accent, alpha: 0.18, join: "round", cap: "round" });
       g.poly(pts).stroke({ width: WALL_THICKNESS * scale, color: accent, alpha: 1, join: "round", cap: "round" });
