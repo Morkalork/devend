@@ -62,12 +62,16 @@ export function InteractiveTutorialOverlay({
     showLine: false,
   });
 
-  // Calculate hand animation positions based on canvas size and position
-  // Center the gesture in the middle of the canvas
-  const startX = canvasOffsetLeft + canvasWidth * 0.4;
-  const startY = canvasOffsetTop + canvasHeight * 0.45;
-  const endX = startX + 140;
-  const endY = startY + 90;
+  // Calculate hand animation positions. Centre the gesture's span in the canvas:
+  // start at the centre MINUS half the drag distance, so the whole swipe (start
+  // -> end) is centred rather than starting at centre and running off to one
+  // side (which left it offset right-and-down).
+  const DRAG_WIDTH = 140;
+  const DRAG_HEIGHT = 90;
+  const startX = canvasOffsetLeft + canvasWidth / 2 - DRAG_WIDTH / 2;
+  const startY = canvasOffsetTop + canvasHeight / 2 - DRAG_HEIGHT / 2;
+  const endX = startX + DRAG_WIDTH;
+  const endY = startY + DRAG_HEIGHT;
 
   // Easing function for smooth motion
   const easeInOutCubic = (t: number): number => {
