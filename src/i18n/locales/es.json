@@ -266,8 +266,7 @@
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",
-    "dragInstruction": "Arrastra en cualquier lugar dentro del área para crear un muro que corte. ¡No dejes que la bola toque el muro mientras crece!",
-    "drawAFenceToContinue": "TRAZA UNA VALLA PARA CONTINUAR"
+    "dragInstruction": "Arrastra en cualquier lugar dentro del área para crear un muro que corte. ¡No dejes que la bola toque el muro mientras crece!"
   },
   "levelComplete": {
     "title": "¡Nivel completado!",

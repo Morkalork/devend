@@ -266,8 +266,7 @@
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
-    "dragInstruction": "Dra var som helst inom området för att skapa en skärande mur. Låt inte bollen träffa muren medan den växer!",
-    "drawAFenceToContinue": "RITA ETT STÄNGSEL FÖR ATT FORTSÄTTA"
+    "dragInstruction": "Dra var som helst inom området för att skapa en skärande mur. Låt inte bollen träffa muren medan den växer!"
   },
   "levelComplete": {
     "title": "Nivå klar!",

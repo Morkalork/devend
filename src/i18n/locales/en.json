@@ -268,8 +268,7 @@
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
-    "dragInstruction": "Drag anywhere inside the area to create a slicing wall. Don't let the ball hit the wall while it's growing!",
-    "drawAFenceToContinue": "DRAW A FENCE TO CONTINUE"
+    "dragInstruction": "Drag anywhere inside the area to create a slicing wall. Don't let the ball hit the wall while it's growing!"
   },
   "levelComplete": {
     "title": "Level Complete!",
