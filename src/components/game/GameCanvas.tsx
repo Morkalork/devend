@@ -1416,17 +1416,37 @@ export function GameCanvas({
       const container = containerRef.current;
       if (!container) return;
       const rect = container.getBoundingClientRect();
-      setCanvasOffsetTop(rect.top);
-      setCanvasOffsetLeft(rect.left);
-      setCanvasCssWidth(rect.width);
-      setCanvasCssHeight(rect.height);
+      // The tutorial overlay renders `absolute inset-0` INSIDE this container, so
+      // it shares the container's coordinate space (and any page-transition
+      // transform). Give it the ACTUAL board box relative to the container's
+      // top-left: the board is letterboxed inside the container and pushed down
+      // by the reserved top-UI band (computeBoardRect). game.boardRect is in
+      // physical px; convert to the container's CSS px with its CSS/phys ratio.
+      const game = gameRef.current;
+      const br = game?.boardRect;
+      const ss = game?.screenSize;
+      if (br && ss && ss.width > 0 && ss.height > 0 && br.width > 0) {
+        const kx = rect.width / ss.width;   // physical -> CSS
+        const ky = rect.height / ss.height;
+        setCanvasOffsetLeft(br.left * kx);
+        setCanvasOffsetTop(br.top * ky);
+        setCanvasCssWidth(br.width * kx);
+        setCanvasCssHeight(br.height * ky);
+      } else {
+        setCanvasOffsetTop(0);
+        setCanvasOffsetLeft(0);
+        setCanvasCssWidth(rect.width);
+        setCanvasCssHeight(rect.height);
+      }
     };
     updateCanvasPosition();
     window.addEventListener("resize", updateCanvasPosition);
-    const timeoutId = setTimeout(updateCanvasPosition, 100);
+    // Re-read a few times while the board settles (it is computed after mount,
+    // and its size/offset only stabilises once the container has its final box).
+    const timeouts = [100, 300, 600, 1000].map(ms => setTimeout(updateCanvasPosition, ms));
     return () => {
       window.removeEventListener("resize", updateCanvasPosition);
-      clearTimeout(timeoutId);
+      timeouts.forEach(clearTimeout);
     };
   }, []);
 
@@ -1499,6 +1519,16 @@ export function GameCanvas({
             Tap the board to attract balls
           </div>
         )}
+        {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && (
+          <InteractiveTutorialOverlay
+            tutorialStep={tutorialStep}
+            isPlayerDragging={isPlayerDragging}
+            canvasWidth={canvasCssWidth}
+            canvasHeight={canvasCssHeight}
+            canvasOffsetTop={canvasOffsetTop}
+            canvasOffsetLeft={canvasOffsetLeft}
+          />
+        )}
       </div>
 
       <div className="flex-shrink-0 px-4 py-3 flex justify-center items-center" style={{ minHeight: "15%" }} />
@@ -1513,16 +1543,6 @@ export function GameCanvas({
         />
       )}
 
-      {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && (
-        <InteractiveTutorialOverlay
-          tutorialStep={tutorialStep}
-          isPlayerDragging={isPlayerDragging}
-          canvasWidth={canvasCssWidth}
-          canvasHeight={canvasCssHeight}
-          canvasOffsetTop={canvasOffsetTop}
-          canvasOffsetLeft={canvasOffsetLeft}
-        />
-      )}
     </div>
   );
 }

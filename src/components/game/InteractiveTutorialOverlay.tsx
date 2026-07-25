@@ -233,7 +233,7 @@ export function InteractiveTutorialOverlay({
 
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-50">
+    <div className="absolute inset-0 pointer-events-none z-50">
       {/* Instruction text - top */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
