@@ -1,6 +1,8 @@
 // Wall Impact Effects System
-// Mass-spring chain physics for wall wobble: a ripple propagates outward
-// from the hit point and settles organically, replacing the old sinusoidal approximation.
+// A gentle, DIRECTED bulge where a ball strikes a wall: the line eases outward
+// (away from the ball) at the hit point, peaks, then relaxes smoothly. No
+// oscillation — this replaces the earlier mass-spring ripple. Both renderers
+// sample getEffectsAtPoint, so the bulge is shared between them.
 
 import { Vector2, pointToSegmentDistance } from './polygon';
 import {
@@ -12,45 +14,50 @@ import {
   circuitPalette,
 } from './rendering/wallSkeleton';
 
-export const N_NODES = 16;   // spring nodes per impact
-const SPRING_K   = 180;      // spring restoring stiffness
-const DAMPING    = 0.85;     // per-frame velocity multiplier (0→instant stop, 1→no damping)
-const COUPLING_C = 0.4;      // neighbour displacement coupling strength
-const INITIAL_VEL_SCALE = 28; // maps impact strength (0-1) → initial node velocity
-const GLOW_DURATION   = 120; // ms
-const GLOW_MAX        = 0.85;
-const EFFECT_RADIUS   = 50;  // world units — spatial spread for glow lookup
-const MAX_IMPACTS     = 12;
+// Renderers sample this many points along a wall when a bulge is nearby.
+export const N_NODES = 16;
 
-interface SpringNode {
-  d: number; // displacement (world units perpendicular to wall)
-  v: number; // velocity
-}
+const BULGE_MAX_WORLD = 6;    // peak outward push (world units) at full strength
+const BULGE_TAU       = 85;   // ms to peak (soft, quick rise)
+const BULGE_DURATION  = 520;  // ms total life (smooth relax)
+const BULGE_SIGMA     = 40;   // spatial spread of the bump along the wall (world units)
+const EDGE_TAPER      = 22;   // world units: bulge fades to 0 approaching the wall ends
+const GLOW_DURATION   = 130;  // ms — brief hit flash
+const GLOW_MAX        = 0.85;
+const EFFECT_RADIUS   = 60;   // world units — cull radius / glow falloff
+const MAX_IMPACTS     = 14;
 
 export interface WallImpact {
   id: string;
   impactPoint: Vector2;
+  impactT: number;      // fractional position of the hit along the wall (0..1)
   strength: number;
+  dir: number;          // +/-1: which way along the normal the wall bulges (away from ball)
   startTime: number;
-  lastUpdateTime: number;
   glowIntensity: number;
-  nodes: SpringNode[];
+  amp: number;          // current bulge amplitude (world units), refreshed each frame
   wallStart: Vector2;
   wallEnd: Vector2;
   wallLen: number;
-  // cached wall tangent/normal
   tx: number; ty: number; // unit tangent
-  nx: number; ny: number; // unit normal (outward)
+  nx: number; ny: number; // unit normal
 }
 
 let activeImpacts: WallImpact[] = [];
 let impactIdCounter = 0;
+
+// Smooth impulse envelope: 0 at t=0, peaks to 1 at t=τ, decays gently after.
+function bulgeEnvelope(elapsedMs: number): number {
+  const x = elapsedMs / BULGE_TAU;
+  return x * Math.exp(1 - x);
+}
 
 export function registerWallImpact(
   wallStart: Vector2,
   wallEnd: Vector2,
   impactPoint: Vector2,
   impactStrength = 1,
+  ballPos?: Vector2,
 ): void {
   const strength = Math.max(0.4, Math.min(1, impactStrength));
 
@@ -64,30 +71,31 @@ export function registerWallImpact(
   const nx = -ty;
   const ny =  tx;
 
-  // Find which node is nearest the impact point along the wall
   const impactT = Math.max(0, Math.min(1,
     ((impactPoint.x - wallStart.x) * tx + (impactPoint.y - wallStart.y) * ty) / wallLen,
   ));
-  const nearestNode = Math.round(impactT * (N_NODES - 1));
 
-  const nodes: SpringNode[] = Array.from({ length: N_NODES }, () => ({ d: 0, v: 0 }));
-  nodes[nearestNode].v = INITIAL_VEL_SCALE * strength;
+  // Bulge AWAY from the ball: if the ball sits on the +normal side, push -normal.
+  let dir = 1;
+  if (ballPos) {
+    const side = (ballPos.x - impactPoint.x) * nx + (ballPos.y - impactPoint.y) * ny;
+    dir = side > 0 ? -1 : 1;
+  }
 
-  const impact: WallImpact = {
+  activeImpacts.push({
     id: `impact-${++impactIdCounter}`,
     impactPoint: { ...impactPoint },
+    impactT,
     strength,
+    dir,
     startTime: performance.now(),
-    lastUpdateTime: performance.now(),
     glowIntensity: GLOW_MAX * strength,
-    nodes,
+    amp: 0,
     wallStart: { ...wallStart },
     wallEnd: { ...wallEnd },
     wallLen,
     tx, ty, nx, ny,
-  };
-
-  activeImpacts.push(impact);
+  });
   if (activeImpacts.length > MAX_IMPACTS) activeImpacts.shift();
 }
 
@@ -98,10 +106,8 @@ export function updateWallImpacts(): boolean {
 
   activeImpacts = activeImpacts.filter(impact => {
     const elapsed = now - impact.startTime;
-    const dt = Math.min((now - impact.lastUpdateTime) / 1000, 0.05);
-    impact.lastUpdateTime = now;
 
-    // Glow decays quickly
+    // Glow decays quickly (a brief flash at the hit point).
     if (elapsed < GLOW_DURATION) {
       const p = elapsed / GLOW_DURATION;
       impact.glowIntensity = GLOW_MAX * impact.strength * (1 - p * p);
@@ -109,36 +115,16 @@ export function updateWallImpacts(): boolean {
       impact.glowIntensity = 0;
     }
 
-    // Spring-chain physics: Euler step
-    const { nodes } = impact;
-    const accel = new Float32Array(N_NODES);
+    // Bulge amplitude follows the smooth rise/relax envelope.
+    impact.amp = BULGE_MAX_WORLD * impact.strength * bulgeEnvelope(elapsed);
 
-    for (let i = 0; i < N_NODES; i++) {
-      const restoring = -SPRING_K * nodes[i].d;
-      const leftCoupling  = i > 0          ? COUPLING_C * (nodes[i - 1].d - nodes[i].d) : 0;
-      const rightCoupling = i < N_NODES - 1 ? COUPLING_C * (nodes[i + 1].d - nodes[i].d) : 0;
-      accel[i] = restoring + leftCoupling + rightCoupling;
-    }
-
-    let maxActivity = 0;
-    for (let i = 0; i < N_NODES; i++) {
-      nodes[i].v = nodes[i].v * DAMPING + accel[i] * dt;
-      nodes[i].d += nodes[i].v * dt;
-      maxActivity = Math.max(maxActivity, Math.abs(nodes[i].v), Math.abs(nodes[i].d));
-    }
-
-    // Pin endpoint nodes — wall ends are anchored to intersecting walls, not free to move
-    nodes[0].d = 0; nodes[0].v = 0;
-    nodes[N_NODES - 1].d = 0; nodes[N_NODES - 1].v = 0;
-
-    // Remove when all motion settles and glow is gone
-    return maxActivity > 0.01 || impact.glowIntensity > 0.01;
+    return elapsed < BULGE_DURATION;
   });
 
   return activeImpacts.length > 0;
 }
 
-/** Ripple displacement + glow at a world point (also used by the Pixi renderer). */
+/** Gentle bulge displacement + glow at a world point (also used by the Pixi renderer). */
 export function getEffectsAtPoint(
   queryPoint: Vector2,
   scale: number,
@@ -148,31 +134,27 @@ export function getEffectsAtPoint(
   let totalGlow = 0;
 
   for (const impact of activeImpacts) {
-    // Squared distance for quick rejection
-    const qx = queryPoint.x - impact.wallStart.x;
-    const qy = queryPoint.y - impact.wallStart.y;
-    // Distance from query point to impact (approximate — use impact point for glow)
-    const distToImpact = Math.sqrt(
-      (queryPoint.x - impact.impactPoint.x) ** 2 +
-      (queryPoint.y - impact.impactPoint.y) ** 2,
+    const distToImpact = Math.hypot(
+      queryPoint.x - impact.impactPoint.x,
+      queryPoint.y - impact.impactPoint.y,
     );
     if (distToImpact > EFFECT_RADIUS * 3) continue;
 
-    // Project query point onto wall to find its fractional position → node index
-    const tAlong = Math.max(0, Math.min(1,
-      (qx * impact.tx + qy * impact.ty) / impact.wallLen,
-    ));
-    const nodeF = tAlong * (N_NODES - 1);
-    const nodeA = Math.floor(nodeF);
-    const nodeB = Math.min(nodeA + 1, N_NODES - 1);
-    const blend = nodeF - nodeA;
-    const disp = impact.nodes[nodeA].d * (1 - blend) + impact.nodes[nodeB].d * blend;
+    // Signed distance along the wall from the hit point.
+    const alongWorld = (queryPoint.x - impact.wallStart.x) * impact.tx
+                     + (queryPoint.y - impact.wallStart.y) * impact.ty;
+    const d = alongWorld - impact.impactT * impact.wallLen;
 
-    // Apply displacement perpendicular to wall
+    // Gaussian bump centred on the hit, tapered to 0 near the wall's ends so the
+    // bulge never detaches from a junction.
+    const bump = Math.exp(-(d * d) / (2 * BULGE_SIGMA * BULGE_SIGMA));
+    const distToEnd = Math.min(alongWorld, impact.wallLen - alongWorld);
+    const taper = Math.max(0, Math.min(1, distToEnd / EDGE_TAPER));
+    const disp = impact.dir * impact.amp * bump * taper;
+
     totalDx += impact.nx * disp * scale;
     totalDy += impact.ny * disp * scale;
 
-    // Glow spatial falloff
     const falloff = Math.exp(-(distToImpact * distToImpact) / (2 * EFFECT_RADIUS * EFFECT_RADIUS));
     totalGlow = Math.max(totalGlow, impact.glowIntensity * falloff);
   }

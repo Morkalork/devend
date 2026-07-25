@@ -386,7 +386,8 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
           boardResult.impactEdge.start,
           boardResult.impactEdge.end,
           boardResult.impactEdge.point,
-          impactStrength
+          impactStrength,
+          ball.position,
         );
         // Trigger wall hit effect on ball
         triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
@@ -475,7 +476,7 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
       surfaceHit = true;
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
-      registerWallImpact(wall.start, wall.end, impactPoint, impactStrength);
+      registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position);
       triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
       playWallHitSound(impactStrength);
 
