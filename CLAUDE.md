@@ -42,8 +42,9 @@ Before committing, run **`npx tsc --noEmit -p tsconfig.app.json`** and
   `scoring-config.yml`, `loadouts.yml`, `certificates.yml`, `balls.yml`, …),
   loaded at runtime with `js-yaml`.
 
-See **ARCHITECTURE.md** for the game design and data model, and **ANDROID.md**
-for Capacitor/Play-Store packaging.
+See **ARCHITECTURE.md** for the game design and data model, **LEVELDESIGN.md**
+for the map-authoring conventions (the three that make a map fun/challenging/
+purposeful), and **ANDROID.md** for Capacitor/Play-Store packaging.
 
 ## Conventions
 
