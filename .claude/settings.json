@@ -13,7 +13,8 @@
       "PowerShell(git commit -m \"ux: drop the Arena Remaining stat from the lose screen\")",
       "PowerShell(git add src/components/game/WelcomeScreen.tsx src/index.css)",
       "PowerShell(git commit -m \"ux: smaller welcome-menu button text, icon-only NEW badge\")",
-      "PowerShell(git push origin dev)"
+      "PowerShell(git push origin dev)",
+      "Bash(npx tsc *)"
     ]
   },
   "enabledPlugins": {
