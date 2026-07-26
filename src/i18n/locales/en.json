@@ -606,6 +606,19 @@
     "tapToContinue": "TAP ANYWHERE TO CONTINUE",
     "replayFromOptions": "Tutorials can be replayed from OPTIONS"
   },
+  "winConditions": {
+    "title": "How to win",
+    "menuItem": "How to win",
+    "targetBoss": "the boss",
+    "targetBall": "a ball",
+    "areaWin": "Lock {{target}} inside the {{area}} area for a {{mult}}x payout.",
+    "areaFail": "Trap {{target}} outside the area and you lose a life.",
+    "boss": "Defeat the boss to ship it.",
+    "clear": "Clear {{percent}}% of the board.",
+    "lock": "Lock at least {{count}} balls.",
+    "time": "Finish within {{seconds}}s.",
+    "fences": "You get only {{count}} fences (running out costs a life)."
+  },
   "upgradeShop": {
     "storeLabel": "Store",
     "freeLabel": "FREE",

@@ -591,6 +591,19 @@
     "tapToContinue": "TOCA EN CUALQUIER LUGAR PARA CONTINUAR",
     "replayFromOptions": "Los tutoriales se pueden volver a ver desde OPCIONES"
   },
+  "winConditions": {
+    "title": "Cómo ganar",
+    "menuItem": "Cómo ganar",
+    "targetBoss": "al jefe",
+    "targetBall": "una bola",
+    "areaWin": "Encierra {{target}} dentro del área {{area}} para un pago de {{mult}}x.",
+    "areaFail": "Atrapar {{target}} fuera del área te cuesta una vida.",
+    "boss": "Derrota al jefe para lanzarlo.",
+    "clear": "Despeja el {{percent}}% del tablero.",
+    "lock": "Encierra al menos {{count}} bolas.",
+    "time": "Termina en {{seconds}}s.",
+    "fences": "Solo tienes {{count}} vallas (quedarte sin ellas cuesta una vida)."
+  },
   "upgradeShop": {
     "storeLabel": "Tienda",
     "freeLabel": "GRATIS",

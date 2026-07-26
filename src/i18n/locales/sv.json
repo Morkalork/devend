@@ -591,6 +591,19 @@
     "tapToContinue": "TRYCK VAR SOM HELST FÖR ATT FORTSÄTTA",
     "replayFromOptions": "Genomgångar kan spelas upp igen från ALTERNATIV"
   },
+  "winConditions": {
+    "title": "Så vinner du",
+    "menuItem": "Så vinner du",
+    "targetBoss": "bossen",
+    "targetBall": "en boll",
+    "areaWin": "Lås in {{target}} i {{area}}-området för {{mult}}x utbetalning.",
+    "areaFail": "Fånga {{target}} utanför området så förlorar du ett liv.",
+    "boss": "Besegra bossen för att skeppa den.",
+    "clear": "Rensa {{percent}}% av spelplanen.",
+    "lock": "Lås in minst {{count}} bollar.",
+    "time": "Klara det inom {{seconds}}s.",
+    "fences": "Du får bara {{count}} staket (att få slut kostar ett liv)."
+  },
   "upgradeShop": {
     "storeLabel": "Butik",
     "freeLabel": "GRATIS",

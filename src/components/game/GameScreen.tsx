@@ -10,8 +10,9 @@ import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObjec
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
+import { winConditionsBody } from '@/lib/winConditions';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { GameTopBar } from './GameTopBar';
@@ -375,6 +376,11 @@ export function GameScreen({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  // "How to win" modal: shown at the start of every map (win conditions now vary
+  // by map), and reopenable from the top-left menu. Dismissing it lets the board
+  // dissolve in behind it (the overlay's backdrop fades on tap).
+  const [winModalOpen, setWinModalOpen] = useState(true);
+  useEffect(() => { setWinModalOpen(true); }, [level.id]);
 
   // Handle a BACK gesture while the game is active (wired via backRef from the
   // popstate guard in Index): close an open pause overlay/menu, otherwise open
@@ -445,10 +451,11 @@ export function GameScreen({
   const showBossOverlay =
     !!level.boss && !bossIntroSeen &&
     !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
+  const showWinModal = winModalOpen && !mapComplete;
   const modalOverlayActive =
     topPanelOpen || bottomPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen ||
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
-    showTimeLimitOverlay || showCreepOverlay || showBossOverlay;
+    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -781,6 +788,19 @@ export function GameScreen({
               {soundMuted ? t('game.soundOff') : t('game.soundOn')}
             </button>
             <button
+              onClick={() => { setMenuOpen(false); setWinModalOpen(true); }}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
+              style={{ color: accentColor, backgroundColor: 'transparent' }}
+              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <Target className="w-4 h-4" />
+              {t('winConditions.menuItem')}
+            </button>
+            <button
               onClick={() => { setMenuOpen(false); onRestart(); }}
               className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
               style={{ color: accentColor, backgroundColor: 'transparent' }}
@@ -885,6 +905,17 @@ export function GameScreen({
         accentColor={accentColor}
         title={t('game.timeLimitTutorialTitle')}
         body={t('game.timeLimitTutorialBody')}
+      />
+
+      {/* "How to win" — every map start (win conditions vary by map); dismissing
+          it lets the board dissolve in. Reopenable from the top-left menu.
+          Rendered last so it sits above any one-time teaching overlay. */}
+      <TutorialOverlay
+        visible={showWinModal}
+        onDismiss={() => setWinModalOpen(false)}
+        accentColor={accentColor}
+        title={t('winConditions.title')}
+        body={winConditionsBody(t, level, levelNumber)}
       />
 
       {/* Full-screen top info panel */}

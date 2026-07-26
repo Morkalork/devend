@@ -355,6 +355,14 @@ export function GameCanvas({
       game.swipePointerId = null;
     } else {
       game.lastTime = 0; // reset to avoid a dt spike on the first resumed frame
+      // A run-intro assemble armed while paused (e.g. behind the "How to win"
+      // modal) has a wall-clock startTime that elapsed during the pause, so it
+      // would snap instead of flying in. Rebase a still-pending assemble
+      // (game.dissolve is nulled on completion) to now, so it dissolves in fresh
+      // when the modal is dismissed.
+      if (game.dissolve && game.dissolve.reverse) {
+        game.dissolve.startTime = performance.now();
+      }
       startGameLoop(game);
     }
   }, [paused]);
