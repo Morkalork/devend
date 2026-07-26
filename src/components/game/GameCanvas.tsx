@@ -57,6 +57,7 @@ import {
   generateRegionId,
 } from "@/lib/gameUtils";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
+import { rotatePoint } from "@/lib/mapRotation";
 import {
   registerWallImpact,
   clearWallImpacts,
@@ -843,12 +844,15 @@ export function GameCanvas({
       setFreezeUsesRemaining(game.freezeUsesRemaining);
       // Cryo Protocol: freeze pickup tokens so they never expire this run.
       game.freezePickups = activeModifiers.freezePickups > 0;
-      game.pickupSpots = (level.pickupSpots ?? []).map(s => ({ x: s.x, y: s.y }));
       {
         const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);
         game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
       }
       const data = createInitialGameData(level, levelNumber, activeModifiers);
+      // Pickup spots are authored in the standard orientation; rotate them into
+      // the same frame as the (rotated) obstacles so tokens still land where the
+      // designer intended relative to the layout.
+      game.pickupSpots = (level.pickupSpots ?? []).map(s => rotatePoint(s.x, s.y, data.mapRotation));
       game.walls              = data.walls;
       game.movers             = data.movers;
       game.obstaclePolygons   = data.obstaclePolygons;

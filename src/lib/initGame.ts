@@ -33,6 +33,7 @@ import {
 } from "@/lib/spaceGrid";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
 import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
+import { pickMapRotation, rotateEntities, MapRotation } from "@/lib/mapRotation";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import {
   getVarietyDecorationConfig,
@@ -132,6 +133,8 @@ export interface InitialGameData {
   bossActive: boolean;
   bossHp: number;
   bossMaxHp: number;
+  /** Which of the four orientations this map was built in (0 = standard). */
+  mapRotation: MapRotation;
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
@@ -193,7 +196,15 @@ export function createInitialGameData(
     level.slots && level.slots.length > 0 && levelNumber >= PROCEDURAL_MIN_LEVEL
       ? resolveSlots(level, getRunRng(`slots:${level.id}`))
       : [];
-  const authoredEntities = [...(level.entities || []), ...slotEntities];
+  // Show the (square) board in one of four orientations. Rotate the concrete
+  // authored + slot geometry before random shapes are placed, so everything
+  // downstream (walls, obstacles, movers, spawns) lives in the rotated frame.
+  // L1-3 stay standard. Pick once; pickup spots reuse `mapRotation` (below).
+  const mapRotation: MapRotation = pickMapRotation(level.id, levelNumber);
+  const authoredEntities = rotateEntities(
+    [...(level.entities || []), ...slotEntities],
+    mapRotation,
+  );
 
   const randomObstacles = generateRandomObstacles(
     level.randomShapes ?? 20,
@@ -671,5 +682,6 @@ export function createInitialGameData(
     bossActive,
     bossHp,
     bossMaxHp,
+    mapRotation,
   };
 }
