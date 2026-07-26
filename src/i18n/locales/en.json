@@ -262,6 +262,7 @@
     "pickupFreeze": "Freeze +1",
     "freezeUsesLeft": "{{count}} freezes left this map",
     "fenceBudgetLeft": "{{count}} fences left this map",
+    "beatCrunchTime": "Crunch Time",
     "pickupFreeShopItem": "Free store item!",
     "pickupExtraLife": "+1 Life",
     "pickupRainbow": "Rainbow ball!",

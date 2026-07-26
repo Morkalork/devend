@@ -390,6 +390,11 @@ export function GameCanvas({
   const [chestToast, setChestToast] = useState<{ key: number; label: string; color: string } | null>(null);
   const chestToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (chestToastTimer.current) clearTimeout(chestToastTimer.current); }, []);
+  // Map-beat telegraph banner (LEVELDESIGN.md Turn): a warning shown ahead of a
+  // beat firing so the player is not ambushed. `announce` is an i18n key.
+  const [beatBanner, setBeatBanner] = useState<{ key: number; announce: string } | null>(null);
+  const beatBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current); }, []);
   const [displayLives, setDisplayLives] = useState(lives);
   const [screenFlash, setScreenFlash] = useState<"none" | "red">("none");
   const [isRecovering, setIsRecovering] = useState(false);
@@ -480,6 +485,7 @@ export function GameCanvas({
     objective: objective ?? null,
     bossFiredPhases: [],
     firedBeats: [],
+    warnedBeats: [],
     beatSpeedMult: 1,
     lockZones: [],
     bossActive: false,
@@ -920,7 +926,9 @@ export function GameCanvas({
       game.objective = objective ?? null;
       game.bossFiredPhases = [];
       game.firedBeats = [];
+      game.warnedBeats = [];
       game.beatSpeedMult = 1;
+      setBeatBanner(null);
       setCreepPercent(0);
       setActiveSeconds(0);
       setAbilityTimers([]);
@@ -1185,7 +1193,16 @@ export function GameCanvas({
       // the win check, so the top bar can never stall showing CLEAR.
       checkWinCondition: () =>
         evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
-      spawnTimedBalls: () => { tickRainbowSpawns(game, levelNumber); tickBossPhases(game, level, levelNumber); tickBossSpit(game, level); tickMapBeats(game, level, levelNumber); },
+      spawnTimedBalls: () => {
+        tickRainbowSpawns(game, levelNumber);
+        tickBossPhases(game, level, levelNumber);
+        tickBossSpit(game, level);
+        tickMapBeats(game, level, levelNumber, (announce) => {
+          setBeatBanner({ key: performance.now(), announce });
+          if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
+          beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
+        });
+      },
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
       // Deferred push prompt: the loop already set game.pushMode; mirror it
@@ -1525,6 +1542,21 @@ export function GameCanvas({
             }}
           >
             {chestToast.label}
+          </div>
+        )}
+        {beatBanner && (
+          <div
+            key={beatBanner.key}
+            className="absolute left-1/2 -translate-x-1/2 top-[13%] z-40 pointer-events-none animate-pulse whitespace-nowrap font-mono font-bold text-base sm:text-lg px-4 py-2 rounded-md flex items-center gap-2"
+            style={{
+              color: '#ffcf7a',
+              background: 'rgba(30,10,4,0.82)',
+              border: '1px solid #ffb45499',
+              boxShadow: '0 0 18px #ff8a5b55',
+            }}
+          >
+            <span aria-hidden>⚠</span>
+            {t(beatBanner.announce)}
           </div>
         )}
         {abilityIconFx && (

@@ -104,9 +104,13 @@ seconds), so the endgame differs from the opening. Beginning (setup), Turn
     closes, or a threat the player must have out-earned by then.
 - **YAML:** `beats` (available on ANY map) with a trigger (`atSpaceRemaining` /
   `atSeconds`) and effects `spawnAdds` / `breakId` (force-break a support, which
-  topples/reveals) / `speedSpike`; or `boss.phases` on boss maps; a `mover` whose
-  cycle opens a neck. See the topple caveat under Interactions when using
-  `breakId` on a stacked support of a rotatable map.
+  topples/reveals) / `speedSpike`. **Telegraph** a beat with `announce` (an i18n
+  key) + optional `leadMs`: a warning banner shows ahead of a time beat (or as a
+  space beat lands), so the Turn is fair, not an ambush. `breakId` self-
+  telegraphs (the wall visibly breaks), so it needs no `announce`. Or use
+  `boss.phases` on boss maps; a `mover` whose cycle opens a neck. See the topple
+  caveat under Interactions when using `breakId` on a stacked support of a
+  rotatable map. (Shipped example: level-7 "Crunch Time" speed spike.)
 - **Example premises:** *Deadline* (at 40% remaining a support topples and adds
   spill in, lock your money before then); *Migration* (a slow mover cracks open
   a sealed vault halfway through, get there in time).

@@ -16,17 +16,43 @@ import { LevelConfig, MapBeat } from "@/types/level";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 import { spawnAdds } from "@/lib/physics/bossPhases";
 
-export function tickMapBeats(game: CanvasGameState, level: LevelConfig, levelNumber: number): void {
+/** Default lead time (ms) for a time-triggered beat's telegraph warning. */
+const DEFAULT_LEAD_MS = 1600;
+
+/**
+ * @param onWarn called with a beat's `announce` label when its telegraph should
+ *   show (once per beat). For time beats this fires `leadMs` before the effect;
+ *   for space beats it coincides with the effect (crossings are player-driven).
+ */
+export function tickMapBeats(
+  game: CanvasGameState,
+  level: LevelConfig,
+  levelNumber: number,
+  onWarn?: (announce: string) => void,
+): void {
   const beats = level.beats;
   if (!beats || beats.length === 0) return;
   if (!game.firedBeats) game.firedBeats = [];
+  if (!game.warnedBeats) game.warnedBeats = [];
 
   const spaceRemaining = game.spaceGrid ? getRemainingPercent(game.spaceGrid) : 100;
 
   for (const beat of beats) {
-    if (game.firedBeats.includes(beat.id)) continue;
     const bySpace = beat.atSpaceRemaining != null && spaceRemaining <= beat.atSpaceRemaining;
     const byTime = beat.atSeconds != null && game.activePlaySeconds >= beat.atSeconds;
+
+    // Telegraph: warn ahead of a time beat by leadMs; a space beat warns as it
+    // fires. Fires once, only when the beat carries an `announce` label.
+    if (beat.announce && !game.warnedBeats.includes(beat.id)) {
+      const leadSec = (beat.leadMs ?? DEFAULT_LEAD_MS) / 1000;
+      const warnByTime = beat.atSeconds != null && game.activePlaySeconds >= beat.atSeconds - leadSec;
+      if (warnByTime || bySpace) {
+        game.warnedBeats.push(beat.id);
+        onWarn?.(beat.announce);
+      }
+    }
+
+    if (game.firedBeats.includes(beat.id)) continue;
     if (!bySpace && !byTime) continue;
 
     game.firedBeats.push(beat.id);

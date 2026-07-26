@@ -8,6 +8,7 @@ function makeGame(overrides: Partial<CanvasGameState> = {}): CanvasGameState {
     spaceGrid: null,
     activePlaySeconds: 0,
     firedBeats: [],
+    warnedBeats: [],
     beatSpeedMult: 1,
     destructibles: [],
     pendingDestroys: [],
@@ -77,5 +78,37 @@ describe("tickMapBeats", () => {
     tickMapBeats(g, level([{ id: "b4", speedSpike: 1 }]), 5);
     expect(g.firedBeats).toEqual([]);
     expect(g.beatSpeedMult).toBe(1);
+  });
+
+  it("telegraphs a time beat ahead of firing (leadMs), without firing early", () => {
+    const g = makeGame({ activePlaySeconds: 23 });
+    const warns: string[] = [];
+    const lv = level([{ id: "crunch", atSeconds: 24, speedSpike: 0.2, announce: "game.beatCrunchTime", leadMs: 2000 }]);
+
+    // 23s: inside the 2s lead window (>= 22), before the 24s effect.
+    tickMapBeats(g, lv, 5, a => warns.push(a));
+    expect(warns).toEqual(["game.beatCrunchTime"]);
+    expect(g.warnedBeats).toContain("crunch");
+    expect(g.firedBeats).toEqual([]);        // not fired yet
+    expect(g.beatSpeedMult).toBe(1);
+
+    // Re-tick still before 24s: warning must not repeat.
+    tickMapBeats(g, lv, 5, a => warns.push(a));
+    expect(warns).toHaveLength(1);
+
+    // Reach 24s: the effect fires.
+    g.activePlaySeconds = 24;
+    tickMapBeats(g, lv, 5, a => warns.push(a));
+    expect(g.firedBeats).toContain("crunch");
+    expect(g.beatSpeedMult).toBeCloseTo(1.2);
+    expect(warns).toHaveLength(1);           // still only one warning
+  });
+
+  it("does not telegraph a beat without an announce label", () => {
+    const g = makeGame({ activePlaySeconds: 24 });
+    const warns: string[] = [];
+    tickMapBeats(g, level([{ id: "silent", atSeconds: 24, spawnAdds: 1 }]), 5, a => warns.push(a));
+    expect(warns).toEqual([]);
+    expect(g.warnedBeats).toEqual([]);
   });
 });

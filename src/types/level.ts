@@ -197,6 +197,19 @@ export interface MapBeat {
   breakId?: string;
   /** One-time ball-speed spike, as a fraction added for the rest of the map (0.2 = +20%). */
   speedSpike?: number;
+  /**
+   * Telegraph label (an i18n key) shown as a warning banner when the beat is
+   * about to fire, so the player is not ambushed (LEVELDESIGN.md: telegraph the
+   * Turn). Absent = no banner (e.g. a breakId beat self-telegraphs by the wall
+   * visibly breaking).
+   */
+  announce?: string;
+  /**
+   * Lead time (ms) to show the `announce` warning BEFORE the effect fires. Only
+   * applies to time-triggered beats (atSeconds); space-triggered beats are
+   * player-driven, so their warning shows as the effect lands. Default 1600.
+   */
+  leadMs?: number;
 }
 
 /**

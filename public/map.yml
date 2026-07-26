@@ -248,6 +248,14 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    # A Turn (LEVELDESIGN convention 3): balls speed up 20% at 24s of active
+    # play, telegraphed 2s ahead, so deciding about the vault gets more urgent.
+    beats:
+      - id: crunch
+        atSeconds: 24
+        speedSpike: 0.2
+        announce: game.beatCrunchTime
+        leadMs: 2000
     entities:
       # THE VAULT (design pattern 1): a breakable gate seals a locked reserve
       # of space up top. Those cells start removed (uncuttable); smash the gate

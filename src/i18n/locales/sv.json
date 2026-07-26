@@ -260,6 +260,7 @@
     "pickupFreeze": "Frysning +1",
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
     "fenceBudgetLeft": "{{count}} staket kvar på denna bana",
+    "beatCrunchTime": "Slutspurt",
     "pickupFreeShopItem": "Gratis butiksvara!",
     "pickupExtraLife": "+1 liv",
     "pickupRainbow": "Regnbågsboll!",

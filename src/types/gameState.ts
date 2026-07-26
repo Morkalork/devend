@@ -93,6 +93,8 @@ export interface CanvasGameState {
   bossFiredPhases: string[];
   /** Map-beat ids already fired this map (LEVELDESIGN.md Turn), so each fires once. */
   firedBeats: string[];
+  /** Map-beat ids whose telegraph warning has shown, so each warns once. */
+  warnedBeats: string[];
   /** Bonus-lock zones for this map, in world space, already rotated (mapRotation). */
   lockZones: LockZone[];
   /** Cumulative ball-speed multiplier from map-beat speed spikes (1 = none).
