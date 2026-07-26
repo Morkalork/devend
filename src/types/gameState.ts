@@ -90,6 +90,11 @@ export interface CanvasGameState {
   objective: ActiveMapObjective | null;
   /** Boss phase ids already fired this map (issue #56), so each fires once. */
   bossFiredPhases: string[];
+  /** Map-beat ids already fired this map (LEVELDESIGN.md Turn), so each fires once. */
+  firedBeats: string[];
+  /** Cumulative ball-speed multiplier from map-beat speed spikes (1 = none).
+   *  Folded into creepFactor each frame like the mutator/ability factors. */
+  beatSpeedMult: number;
   // ── Boss ball HUD/fight state (issue #56) ─────────────────────────────────
   /** True while a boss ball is in play (drives the boss banner). */
   bossActive: boolean;

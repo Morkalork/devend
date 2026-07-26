@@ -101,9 +101,11 @@ seconds), so the endgame differs from the opening. Beginning (setup), Turn
   - **Telegraph it** (a cracking wall, a warning) so it is fair.
   - Make it *change the plan*: new space to claim, a chamber that opens or
     closes, or a threat the player must have out-earned by then.
-- **YAML:** `boss.phases` with `atSpaceRemaining` / `atSeconds` / `spawnAdds`;
-  a `mover` whose cycle opens a neck; a stacked `breakable` support (see the
-  topple caveat under Interactions).
+- **YAML:** `beats` (available on ANY map) with a trigger (`atSpaceRemaining` /
+  `atSeconds`) and effects `spawnAdds` / `breakId` (force-break a support, which
+  topples/reveals) / `speedSpike`; or `boss.phases` on boss maps; a `mover` whose
+  cycle opens a neck. See the topple caveat under Interactions when using
+  `breakId` on a stacked support of a rotatable map.
 - **Example premises:** *Deadline* (at 40% remaining a support topples and adds
   spill in, lock your money before then); *Migration* (a slow mover cracks open
   a sealed vault halfway through, get there in time).

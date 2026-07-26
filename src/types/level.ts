@@ -159,6 +159,32 @@ export interface LevelConfig {
    * the fight escalates. Authored set-piece, so it bypasses the procedural roll.
    */
   boss?: BossConfig;
+  /**
+   * Scripted "Turn" beats (LEVELDESIGN.md convention 3): threshold-triggered
+   * one-shot events so the endgame differs from the opening. Generalizes boss
+   * phases to ANY map. Each beat fires once when its space-remaining or
+   * active-seconds threshold is crossed.
+   */
+  beats?: MapBeat[];
+}
+
+/**
+ * A scripted map beat: fires ONCE when its threshold is crossed and applies its
+ * effects. Any combination of effects may be set. The trigger mirrors BossPhase
+ * (atSpaceRemaining / atSeconds).
+ */
+export interface MapBeat {
+  id: string;
+  /** Fire when space remaining (%) drops to or below this. */
+  atSpaceRemaining?: number;
+  /** Fire when active-play seconds reaches this (alternative/added trigger). */
+  atSeconds?: number;
+  /** Spawn this many extra balls ("adds") off live balls. */
+  spawnAdds?: number;
+  /** Force-break the destructible entity with this id (topples / reveals / rewards). */
+  breakId?: string;
+  /** One-time ball-speed spike, as a fraction added for the rest of the map (0.2 = +20%). */
+  speedSpike?: number;
 }
 
 export interface LevelData {

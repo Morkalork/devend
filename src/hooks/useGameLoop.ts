@@ -293,7 +293,7 @@ export function createGameLoop(
         }
         // The Slow All ability (#38) folds in here too, so ball displacement and
         // the aim-line predictor both see it; it self-reverts by clock expiry.
-        game.creepFactor = creepF * mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount) * abilitySpeedFactor(game);
+        game.creepFactor = creepF * mutatorSpeedFactor(game.mapMutator, game.lockedBallsCount) * abilitySpeedFactor(game) * (game.beatSpeedMult || 1);
         // 1Hz clock tick to React (the countdown bar tweens between ticks).
         const wholeSecond = Math.floor(game.activePlaySeconds);
         if (wholeSecond !== prevWholeSecond) {

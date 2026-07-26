@@ -34,6 +34,7 @@ import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/
 import { isTimingExempt } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
+import { tickMapBeats } from "@/lib/physics/mapBeats";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { AbilityIcon } from "./AbilityIcon";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
@@ -475,6 +476,8 @@ export function GameCanvas({
     mapMutator: mapMutator ?? null,
     objective: objective ?? null,
     bossFiredPhases: [],
+    firedBeats: [],
+    beatSpeedMult: 1,
     bossActive: false,
     bossHp: 0,
     bossMaxHp: 0,
@@ -909,6 +912,8 @@ export function GameCanvas({
       game.mapMutator = mapMutator ?? null;
       game.objective = objective ?? null;
       game.bossFiredPhases = [];
+      game.firedBeats = [];
+      game.beatSpeedMult = 1;
       setCreepPercent(0);
       setActiveSeconds(0);
       setAbilityTimers([]);
@@ -1170,7 +1175,7 @@ export function GameCanvas({
       // the win check, so the top bar can never stall showing CLEAR.
       checkWinCondition: () =>
         evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks),
-      spawnTimedBalls: () => { tickRainbowSpawns(game, levelNumber); tickBossPhases(game, level, levelNumber); tickBossSpit(game, level); },
+      spawnTimedBalls: () => { tickRainbowSpawns(game, levelNumber); tickBossPhases(game, level, levelNumber); tickBossSpit(game, level); tickMapBeats(game, level, levelNumber); },
       onCreepStep: setCreepPercent,
       onActiveSecond: setActiveSeconds,
       // Deferred push prompt: the loop already set game.pushMode; mirror it

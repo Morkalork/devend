@@ -163,7 +163,7 @@ function maybePanicDash(game: CanvasGameState, boss: Ball, nowMs: number): void 
 }
 
 /** Spawn `n` extra balls off live active balls (inherits their region + scale). */
-function spawnAdds(game: CanvasGameState, levelNumber: number, n: number): void {
+export function spawnAdds(game: CanvasGameState, levelNumber: number, n: number): void {
   const spawnable = getSpawnableBallTypes(levelNumber);
   if (spawnable.length === 0) return;
   // Only balls still in play can anchor a valid spawn position.
