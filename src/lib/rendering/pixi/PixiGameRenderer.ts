@@ -983,6 +983,7 @@ export class PixiGameRenderer {
           const rf = rootAt((cum[sIdx] + cum[(sIdx + 1) % world.length]) / 2);
           if (rf.a < 0.02) continue;
           const skel = buildWallSkeleton(ss.x, ss.y, es.x, es.y, scale, baseWidth / scale, ws.x, ws.y, we.x, we.y);
+          if (!skel) continue; // short segments (e.g. a locked pocket's walls) carry no circuit
           for (const tr of skel.traces) strokePath(gCore, tr, Math.max(1, baseWidth * pal.traceWidthFrac * rf.w), pal.trace, pal.traceAlpha * rf.a);
           for (const nd of skel.nodes) {
             gCore.circle(nd.x, nd.y, nd.r * rf.w).fill({ color: pal.via, alpha: pal.viaAlpha * rf.a });

@@ -285,6 +285,7 @@ export function renderWallPolyline(
       const rf = rootAt((cum[s] + cum[s + 1]) / 2);
       if (rf.a < 0.02) continue;
       const skel = buildWallSkeleton(ss.x, ss.y, es.x, es.y, scale, baseWidth / scale, ws.x, ws.y, we.x, we.y);
+      if (!skel) continue; // short segments (e.g. a locked pocket's walls) carry no circuit
       ctx.strokeStyle = pal.trace;
       ctx.globalAlpha = pal.traceAlpha * rf.a;
       ctx.lineWidth = Math.max(1, baseWidth * pal.traceWidthFrac * rf.w);
