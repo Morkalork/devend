@@ -26,7 +26,8 @@ import { getBallSphere } from "@/lib/ballSphereCache";
 import { getRainGlyph } from "./rainGlyphCache";
 import { renderBallEffects, getSquishEffect, BOSS_SQUISH_SCALE } from "@/lib/ballEffects";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
-import { renderWallWithEffects, anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
+import { renderWallWithEffects, renderWallPolyline, anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
+import { buildFenceChains, chainFlareEnds } from "./wallChains";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { chestLootAlpha } from "@/lib/chests";
 import { getAbility } from "@/lib/abilities";
@@ -47,7 +48,7 @@ import {
   SPACE_BAR_FADE_MS,
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
-import { clearWallSkeletonCache } from "./wallSkeleton";
+import { clearWallSkeletonCache, WALL_RENDER_THICKEN, WALL_CORE_ALPHA, WALL_CENTERLINE_ALPHA } from "./wallSkeleton";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -681,6 +682,35 @@ export function renderFrame(
   ctx.drawImage(boardGridCanvas, 0, 0);
   ctx.drawImage(regionCanvas, 0, 0);
 
+  // ── Bonus-lock zones (greed hook) ─────────────────────────────────────────
+  // A gold floor marking with a ×N label, so the player can see the prize
+  // pocket. Drawn beneath the walls/balls as a marking on the board.
+  if (game.lockZones && game.lockZones.length > 0) {
+    ctx.save();
+    for (const z of game.lockZones) {
+      const tl = w2s(z.x, z.y);
+      const zw = z.width * scale;
+      const zh = z.height * scale;
+      ctx.fillStyle = 'rgba(255, 215, 107, 0.10)';
+      ctx.fillRect(tl.x, tl.y, zw, zh);
+      ctx.strokeStyle = 'rgba(255, 215, 107, 0.70)';
+      ctx.lineWidth = Math.max(1, 2 * scale);
+      ctx.setLineDash([8 * scale, 6 * scale]);
+      ctx.strokeRect(tl.x, tl.y, zw, zh);
+      ctx.setLineDash([]);
+      const fontPx = Math.max(12, Math.min(zw, zh) * 0.28);
+      ctx.font = `bold ${fontPx}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowColor = 'rgba(120, 80, 20, 0.9)';
+      ctx.shadowBlur = 4 * scale;
+      ctx.fillStyle = 'rgba(255, 233, 168, 0.9)';
+      ctx.fillText(`×${z.multiplier}`, tl.x + zw / 2, tl.y + zh / 2);
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+  }
+
   // ── Wall shadow quads ─────────────────────────────────────────────────────
   {
     const shadowW = 7 * scale;
@@ -851,7 +881,10 @@ export function renderFrame(
   // the physics edge but visually appeared to enter the obstacle interior.
   // Static for the whole level → prerendered once to an OffscreenCanvas
   // (the glow stroke uses shadowBlur, which is too expensive per frame).
-  {
+  // NOTE: defined here but INVOKED after the fence + board-edge passes below,
+  // so obstacle outlines paint on top of fences and a painted fence tucks
+  // under the obstacle wall at the junction instead of drawing over it.
+  const drawObstacleOutlines = () => {
     const layerKey = `${accentColor}_${Math.round(boardRect.left)}_${Math.round(boardRect.top)}_${Math.round(scale * 10000)}_${screenWidth}x${screenHeight}`;
     if (_obstacleGlowKey !== layerKey || _obstacleGlowPolys !== game.obstaclePolygons) {
       _obstacleGlowKey = layerKey;
@@ -899,7 +932,7 @@ export function renderFrame(
     } else if (_obstacleGlowOC) {
       ctx.drawImage(_obstacleGlowOC, 0, 0);
     }
-  }
+  };
 
   // ── Breakable obstacles (issue #38) ───────────────────────────────────────
   // All breakables (blocks and border-attached gates) use the same look: a
@@ -1025,6 +1058,10 @@ export function renderFrame(
     return segs;
   };
 
+  // Fences are stroked LAST (after the board edge + obstacles below), so the
+  // fence's green covers the wall's white border at the join — green meets
+  // green, reading as one organism instead of two pieces split by a white seam.
+  const drawFences = () => {
   if (game.boardPolygon) {
     ctx.save();
     // Board polygon with obstacle holes — static per level, cached as Path2D.
@@ -1059,24 +1096,41 @@ export function renderFrame(
     }
 
     const nowMs = performance.now();
+    // Stroke each connected fence run as ONE continuous path, so shared vertices
+    // (arm centres, bounce points) read as clean round joins instead of a chain
+    // of per-segment caps. Fences terminate ON walls without crossing obstacle
+    // interiors, so the board-polygon clip above handles any cap overshoot and
+    // no per-segment obstacle clipping is needed here.
+    const fenceChains = buildFenceChains(walls).map(chain => ({
+      chain,
+      screenPts: chain.points.map(p => w2s(p.x, p.y)),
+      freshness: chain.createdAt ? Math.max(0, 1 - (nowMs - chain.createdAt) / 400) : 0,
+      // Flare the fence into the walls at both ends over ~3.5 drawn widths, so
+      // it splashes onto the wall and merges instead of butting a point. Only
+      // ends that land on a wall flare; a fence-to-fence end stays plain so it
+      // doesn't overflow past the fence it meets.
+      taperLen: 3.5 * chain.thickness * scale * WALL_RENDER_THICKEN,
+      flareEnds: chainFlareEnds(chain.points, game.boardPolygon, obstacles),
+    }));
+    // Pass A: glow + white core per fence (green skipped, painted in Pass B).
+    for (const f of fenceChains) {
+      renderWallPolyline(ctx, f.screenPts, f.chain.points, scale, accentColor, f.chain.thickness * scale, f.freshness, false, f.taperLen, f.flareEnds, false, true);
+    }
+    // Pass B: every green centerline on top (painted once), so where fences
+    // cross (fence-to-fence tees) the green connects over the other fence's
+    // white border and the junction reads as merged, not just overlapped.
+    for (const f of fenceChains) {
+      renderWallPolyline(ctx, f.screenPts, f.chain.points, scale, accentColor, f.chain.thickness * scale, f.freshness, false, f.taperLen, f.flareEnds, true);
+    }
+
+    // Per-segment overlays that don't chain: weld each outer end into the wall
+    // it met, and the Ascension crumble damage overlay.
     for (let wi = walls.length - 1; wi >= 0; wi--) {
       const w = walls[wi];
       if (!w.id.startsWith("wall-")) continue;
-      const wallLineWidth = w.thickness * scale;
-      const freshness = w.createdAt ? Math.max(0, 1 - (nowMs - w.createdAt) / 400) : 0;
-      if (obstacles.length > 0) {
-        const segments = getClippedSegs(w);
-        for (const seg of segments) {
-          strokeSegment(w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, wallLineWidth, freshness);
-        }
-      } else {
-        strokeSegment(w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, wallLineWidth, freshness);
-      }
-
-      // Ascension durability: crumble overlay — damaged fences darken and turn
-      // increasingly gap-toothed as their remaining hits run out.
       const damage = w.maxHits && w.hitsLeft !== undefined ? 1 - w.hitsLeft / w.maxHits : 0;
       if (damage > 0) {
+        const wallLineWidth = w.thickness * scale;
         ctx.save();
         ctx.strokeStyle = `rgba(0, 0, 0, ${(0.25 + 0.45 * damage).toFixed(3)})`;
         ctx.lineWidth = wallLineWidth * 0.9;
@@ -1100,23 +1154,29 @@ export function renderFrame(
     }
     ctx.restore();
   }
+  };
 
-  // ── Pass 2: board-edge walls, drawn on top (clipped to boardRect only) ────
-  for (let wi = walls.length - 1; wi >= 0; wi--) {
-    const w = walls[wi];
-    if (w.isMirror) continue;
-    if (!w.id.startsWith("board-")) continue;
-    const wallLineWidth = w.thickness * scale;
-    if (obstacles.length > 0) {
-      const segments = getClippedSegs(w);
-      for (const seg of segments) {
-        strokeSegment(w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, wallLineWidth);
-      }
-    } else {
-      strokeSegment(w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, wallLineWidth);
+  // ── Board-edge wall (drawn UNDER the fences below) ────────────────────────
+  // One continuous closed loop from the board polygon so corners are clean
+  // joins, not per-segment caps.
+  if (game.boardPolygon) {
+    const bpv = game.boardPolygon.vertices;
+    const screenPts = bpv.map(v => w2s(v.x, v.y));
+    renderWallPolyline(ctx, screenPts, bpv, scale, accentColor, WALL_THICKNESS * scale, 0, true);
+  } else {
+    for (let wi = walls.length - 1; wi >= 0; wi--) {
+      const w = walls[wi];
+      if (w.isMirror) continue;
+      if (!w.id.startsWith("board-")) continue;
+      strokeSegment(w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, w.thickness * scale);
     }
   }
   ctx.restore();
+
+  // Obstacle outlines, then the fences on top — so a fence's green covers the
+  // wall/obstacle white border at the join and the greens read as merged.
+  drawObstacleOutlines();
+  drawFences();
 
   // ── Hard-clear outside boardRect (first pass) ────────────────────────────
   {

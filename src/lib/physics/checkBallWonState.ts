@@ -1,5 +1,6 @@
 import { Ball, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
+import { bonusLockMultiplierAt } from "@/lib/lockZones";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import {
@@ -425,7 +426,10 @@ export function checkAndUpdateBallWonStates(
         lockedWhileFrozen && activeModifiers.frozenLockBonus > 0
           ? 1 + activeModifiers.frozenLockBonus
           : 1;
-      const ballPoints = (b.lockMultiplier ?? 1) * mult * frozenMult;
+      // Bonus-lock zone (the greed hook): a ball locked inside a map-authored
+      // zone pays its multiplier on top of everything else.
+      const zoneMult = bonusLockMultiplierAt(b.position.x, b.position.y, game.lockZones ?? []);
+      const ballPoints = (b.lockMultiplier ?? 1) * mult * frozenMult * zoneMult;
       if (superiorIds.has(b.id)) superiorPoints += ballPoints;
       else standardPoints += ballPoints;
     }

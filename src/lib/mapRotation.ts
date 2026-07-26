@@ -19,7 +19,7 @@
 
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
-import type { LevelEntity } from "@/types/level";
+import type { LevelEntity, LockZone } from "@/types/level";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -120,6 +120,13 @@ export function rotateEntity(entity: LevelEntity, r: MapRotation): LevelEntity {
 /** Rotate a whole entity list (no-op at r === 0). */
 export function rotateEntities(entities: LevelEntity[], r: MapRotation): LevelEntity[] {
   return r === 0 ? entities : entities.map(e => rotateEntity(e, r));
+}
+
+/** Rotate a bonus-lock zone (a rect + its multiplier) into the target orientation. */
+export function rotateLockZone(zone: LockZone, r: MapRotation): LockZone {
+  if (r === 0) return zone;
+  const rect = rotateRect(zone.x, zone.y, zone.width, zone.height, r);
+  return { ...rect, multiplier: zone.multiplier };
 }
 
 /**

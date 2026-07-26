@@ -13,6 +13,7 @@ import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
 import { ScopeCreepConfig } from "@/lib/scopeCreep";
 import { ActiveMapMutator } from "@/types/mapMutator";
+import { LockZone } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 
@@ -92,6 +93,8 @@ export interface CanvasGameState {
   bossFiredPhases: string[];
   /** Map-beat ids already fired this map (LEVELDESIGN.md Turn), so each fires once. */
   firedBeats: string[];
+  /** Bonus-lock zones for this map, in world space, already rotated (mapRotation). */
+  lockZones: LockZone[];
   /** Cumulative ball-speed multiplier from map-beat speed spikes (1 = none).
    *  Folded into creepFactor each frame like the mutator/ability factors. */
   beatSpeedMult: number;

@@ -166,6 +166,11 @@ export interface LevelConfig {
    * active-seconds threshold is crossed.
    */
   beats?: MapBeat[];
+  /**
+   * Bonus-lock zones (LEVELDESIGN.md convention 2): rects where locking pays a
+   * multiplier. The authorable form of the greed hook.
+   */
+  lockZones?: LockZone[];
 }
 
 /**
@@ -185,6 +190,21 @@ export interface MapBeat {
   breakId?: string;
   /** One-time ball-speed spike, as a fraction added for the rest of the map (0.2 = +20%). */
   speedSpike?: number;
+}
+
+/**
+ * A bonus-lock zone (LEVELDESIGN.md convention 2, the greed hook): a rect where
+ * locking a ball pays `multiplier` times the normal lock points. Author one as a
+ * guarded, high-value pocket so the player faces "go for the vault, or play
+ * safe?". Rotated with the map like all other geometry.
+ */
+export interface LockZone {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Lock-points multiplier for balls locked inside (e.g. 2 = double). */
+  multiplier: number;
 }
 
 export interface LevelData {

@@ -20,6 +20,7 @@ import { RenderContext, RainState } from "../types";
 import { DissolveState } from "@/types/game";
 import { Vector2, Polygon, clipLineAgainstPolygons } from "@/lib/polygon";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
+import { buildFenceChains, buildFenceTaper, taperFactor, chainFlareEnds } from "../wallChains";
 import { BALL_DANGER_SPEED, LEVEL_CLEAR_SHIMMER_MS } from "@/lib/gameConstants";
 import { chestLootAlpha } from "@/lib/chests";
 import { getAbility } from "@/lib/abilities";
@@ -63,6 +64,10 @@ export class PixiGameRenderer {
   private regionSprite: Sprite | null = null;
   private mirrorCracks = new Graphics();
   private bloom: Filter | null = null;
+  private lockZonesContainer = new Container(); // bonus-lock zone markings + labels
+  private lockZonesG = new Graphics();
+  private lockZoneLabels: Text[] = [];
+  private lockZonesKey = "";
   private movers = new Graphics();
   private obstacles = new Graphics();
   private breakables = new Graphics();
@@ -132,15 +137,20 @@ export class PixiGameRenderer {
     this.wallsScope.addChild(this.wallGlow, this.wallCore);
     this.wallsScope.mask = this.fenceMask;
 
+    this.lockZonesContainer.addChild(this.lockZonesG);
     this.boardScope.addChild(
       this.rainLayer,
       this.boardBase,
+      this.lockZonesContainer, // gold floor markings beneath movers/walls
       this.movers,
-      this.obstacles,
       this.breakables,
+      // Board edge + obstacle outlines sit BELOW the fences, so a fence's green
+      // covers the wall's white border at the join and the greens read as one
+      // merged organism (the fence's own white already fades out at the join).
+      this.obstacles,
+      this.edgeWalls,
       this.wallsScope,
       this.fenceMask, // sibling of the container it masks
-      this.edgeWalls,
       this.rim,
       this.danger,
       this.mirrors,
@@ -257,6 +267,7 @@ export class PixiGameRenderer {
 
     {
       this.syncRain(game, rctx, scale, now);
+      this.syncLockZones(game, w2s, scale);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
       this.syncBreakables(game, w2s, scale);
@@ -556,6 +567,50 @@ export class PixiGameRenderer {
   }
 
   // ── Static obstacle outlines (section F) ──────────────────────────────────
+  // ── Bonus-lock zones (greed hook) ─────────────────────────────────────────
+  // Static per map: a gold floor tint + dashed border + ×N label, rebuilt only
+  // when the zone set / boardRect / scale changes.
+  private syncLockZones(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const zones = game.lockZones ?? [];
+    const key = zones.map(z => `${z.x},${z.y},${z.width},${z.height},${z.multiplier}`).join("|")
+      + `_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 1000)}`;
+    if (this.lockZonesKey === key) return;
+    this.lockZonesKey = key;
+
+    const g = this.lockZonesG;
+    g.clear();
+    for (const t of this.lockZoneLabels) { t.parent?.removeChild(t); t.destroy(); }
+    this.lockZoneLabels = [];
+
+    for (const z of zones) {
+      const tl = w2s(z.x, z.y);
+      const zw = z.width * scale;
+      const zh = z.height * scale;
+      g.rect(tl.x, tl.y, zw, zh).fill({ color: 0xffd76b, alpha: 0.10 });
+      dashedLine(g, tl.x, tl.y, tl.x + zw, tl.y, 8 * scale, 6 * scale);
+      dashedLine(g, tl.x + zw, tl.y, tl.x + zw, tl.y + zh, 8 * scale, 6 * scale);
+      dashedLine(g, tl.x + zw, tl.y + zh, tl.x, tl.y + zh, 8 * scale, 6 * scale);
+      dashedLine(g, tl.x, tl.y + zh, tl.x, tl.y, 8 * scale, 6 * scale);
+      g.stroke({ width: Math.max(1, 2 * scale), color: 0xffd76b, alpha: 0.7 });
+
+      const fontPx = Math.max(12, Math.min(zw, zh) * 0.28);
+      const label = new Text({
+        text: `×${z.multiplier}`,
+        style: new TextStyle({
+          fontFamily: "sans-serif",
+          fontWeight: "bold",
+          fontSize: fontPx,
+          fill: 0xffe9a8,
+          stroke: { color: 0x78501e, width: Math.max(1, scale) },
+        }),
+      });
+      label.anchor.set(0.5);
+      label.position.set(tl.x + zw / 2, tl.y + zh / 2);
+      this.lockZonesContainer.addChild(label);
+      this.lockZoneLabels.push(label);
+    }
+  }
+
   private syncObstacles(game: CanvasGameState, w2s: W2S, scale: number, accent: string): void {
     const bulging = anyObstacleImpactsActive();
     const key = `${accent}_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}`;
@@ -836,87 +891,179 @@ export class PixiGameRenderer {
       return segs;
     };
 
-    const strokePath = (g: Graphics, pts: number[], width: number, color: number | string, alpha: number) => {
+    const strokePath = (g: Graphics, pts: number[], width: number, color: number | string, alpha: number, closed = false, cap: "round" | "butt" = "round") => {
       g.moveTo(pts[0], pts[1]);
       for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
-      g.stroke({ width, color, alpha, cap: "round", join: "round" });
+      if (closed) g.closePath();
+      g.stroke({ width, color, alpha, cap, join: "round" });
     };
 
-    const strokeWall = (
+    // Stroke a whole connected wall run (fence chain or the board loop) as ONE
+    // continuous path, so shared vertices become clean round joins instead of a
+    // pile of per-segment caps. `world` has >= 2 points; pass `closed` for a loop.
+    const strokeWallPath = (
       gGlow: Graphics, gCore: Graphics,
-      s: { x: number; y: number }, e: { x: number; y: number },
-      ws: Vector2, we: Vector2,
+      world: Vector2[],
       baseWidth: number, glowBoost: number,
+      closed = false,
+      taperLen = 0,
+      flareEnds: [boolean, boolean] = [true, true],
+      greenOnly = false,
+      skipGreen = false,
     ) => {
+      if (world.length < 2) return;
       // Thicken the drawn line only (physics thickness untouched) so the circuit
       // skeleton has room to read.
       if (WALL_CIRCUITS_ENABLED) baseWidth *= WALL_RENDER_THICKEN;
-      // renderWallWithEffects recipe, including the mass-spring impact wobble:
-      // sample the ripple displacement along the wall when an impact is nearby.
+
+      const scr = world.map(p => w2s(p.x, p.y));
+
+      // Arc lengths along the run, for the root taper near the ends.
+      const cum: number[] = [0];
+      for (let i = 1; i < scr.length; i++) {
+        cum[i] = cum[i - 1] + Math.hypot(scr[i].x - scr[i - 1].x, scr[i].y - scr[i - 1].y);
+      }
+      const totalLen = cum[scr.length - 1];
+      const rootAt = (pos: number) =>
+        taperLen > 0 ? taperFactor(Math.min(pos, totalLen - pos), taperLen) : { w: 1, a: 1 };
+
+      // Impact wobble: resample the run if any sub-segment is near an impact.
+      let hasImpact = false;
+      for (let i = 0; i < world.length - 1; i++) {
+        if (hasNearbyImpacts(world[i], world[i + 1])) { hasImpact = true; break; }
+      }
       let pts: number[];
       let maxGlow = 0;
-      if (hasNearbyImpacts(ws, we)) {
+      if (!hasImpact) {
         pts = [];
-        const sdx = e.x - s.x, sdy = e.y - s.y;
-        for (let i = 0; i <= N_NODES; i++) {
-          const t = i / N_NODES;
-          const { dx, dy, glow } = getEffectsAtPoint(
-            { x: ws.x + (we.x - ws.x) * t, y: ws.y + (we.y - ws.y) * t }, scale,
-          );
-          pts.push(s.x + sdx * t + dx, s.y + sdy * t + dy);
-          if (glow > maxGlow) maxGlow = glow;
-        }
+        for (const p of scr) pts.push(p.x, p.y);
       } else {
-        pts = [s.x, s.y, e.x, e.y];
-      }
-      strokePath(gGlow, pts, baseWidth * (2.8 + glowBoost * 2.5), accent, 0.10 + glowBoost * 0.22);
-      strokePath(gGlow, pts, baseWidth * (1.6 + glowBoost * 1.8), accent, 0.18 + glowBoost * 0.25);
-      if (glowBoost > 0.05) {
-        strokePath(gGlow, pts, baseWidth * (3.5 + glowBoost * 3), accent, glowBoost * 0.18);
-      }
-      if (maxGlow > 0.05) {
-        strokePath(gGlow, pts, baseWidth * (1 + maxGlow * 2), accent, maxGlow * 0.65);
+        pts = [];
+        for (let sIdx = 0; sIdx < world.length - 1; sIdx++) {
+          const ws = world[sIdx], we = world[sIdx + 1];
+          const ss = scr[sIdx], es = scr[sIdx + 1];
+          const sdx = es.x - ss.x, sdy = es.y - ss.y;
+          for (let i = sIdx === 0 ? 0 : 1; i <= N_NODES; i++) {
+            const t = i / N_NODES;
+            const { dx, dy, glow } = getEffectsAtPoint(
+              { x: ws.x + (we.x - ws.x) * t, y: ws.y + (we.y - ws.y) * t }, scale,
+            );
+            pts.push(ss.x + sdx * t + dx, ss.y + sdy * t + dy);
+            if (glow > maxGlow) maxGlow = glow;
+          }
+        }
       }
 
-      // Circuit "skeleton" (see wallSkeleton.ts) drawn into the core Graphics
-      // FIRST, so the colored border strokes below sit on top and veil it to a
-      // faint hint coming through.
-      const skel = WALL_CIRCUITS_ENABLED
-        ? buildWallSkeleton(s.x, s.y, e.x, e.y, scale, baseWidth / scale, ws.x, ws.y, we.x, we.y)
-        : null;
-      const pal = skel ? circuitPalette(accent) : null;
-      if (skel && pal) {
-        for (const tr of skel.traces) strokePath(gCore, tr, Math.max(1, baseWidth * pal.traceWidthFrac), pal.trace, pal.traceAlpha);
-        for (const nd of skel.nodes) {
-          gCore.circle(nd.x, nd.y, nd.r).fill({ color: pal.via, alpha: pal.viaAlpha });
-          gCore.circle(nd.x, nd.y, nd.r * (nd.kind === 'via' ? 0.5 : 0.58)).fill({ color: pal.spark, alpha: pal.sparkAlpha });
+      // The green-only pass just relays the centerline on top (so fence-to-fence
+      // junctions merge — see the second fence pass below); skip glow + skeleton.
+      // Fence glow (taperLen > 0) uses butt end-caps so it doesn't bulge past a
+      // fence-to-fence end (joins stay round). Wall ends are masked anyway.
+      if (!greenOnly) {
+        const gcap = taperLen > 0 ? "butt" : "round";
+        strokePath(gGlow, pts, baseWidth * (2.8 + glowBoost * 2.5), accent, 0.10 + glowBoost * 0.22, closed, gcap);
+        strokePath(gGlow, pts, baseWidth * (1.6 + glowBoost * 1.8), accent, 0.18 + glowBoost * 0.25, closed, gcap);
+        if (glowBoost > 0.05) {
+          strokePath(gGlow, pts, baseWidth * (3.5 + glowBoost * 3), accent, glowBoost * 0.18, closed, gcap);
+        }
+        if (maxGlow > 0.05) {
+          strokePath(gGlow, pts, baseWidth * (1 + maxGlow * 2), accent, maxGlow * 0.65, closed, gcap);
         }
       }
-      strokePath(gCore, pts, baseWidth, 0xffffff, skel ? WALL_CORE_ALPHA : 1);
-      strokePath(gCore, pts, baseWidth * 0.7, accent, skel ? WALL_CENTERLINE_ALPHA : 1);
+
+      // Circuit "skeleton" (see wallSkeleton.ts) drawn per sub-segment into the
+      // core Graphics FIRST, so the colored border strokes veil it to a hint.
+      const pal = WALL_CIRCUITS_ENABLED ? circuitPalette(accent) : null;
+      if (pal && !greenOnly) {
+        const n = closed ? world.length : world.length - 1;
+        for (let sIdx = 0; sIdx < n; sIdx++) {
+          const ws = world[sIdx], we = world[(sIdx + 1) % world.length];
+          const ss = scr[sIdx], es = scr[(sIdx + 1) % world.length];
+          // Fade + narrow the skeleton near the ends so it doesn't poke past the
+          // rooted core.
+          const rf = rootAt((cum[sIdx] + cum[(sIdx + 1) % world.length]) / 2);
+          if (rf.a < 0.02) continue;
+          const skel = buildWallSkeleton(ss.x, ss.y, es.x, es.y, scale, baseWidth / scale, ws.x, ws.y, we.x, we.y);
+          for (const tr of skel.traces) strokePath(gCore, tr, Math.max(1, baseWidth * pal.traceWidthFrac * rf.w), pal.trace, pal.traceAlpha * rf.a);
+          for (const nd of skel.nodes) {
+            gCore.circle(nd.x, nd.y, nd.r * rf.w).fill({ color: pal.via, alpha: pal.viaAlpha * rf.a });
+            gCore.circle(nd.x, nd.y, nd.r * rf.w * (nd.kind === 'via' ? 0.5 : 0.58)).fill({ color: pal.spark, alpha: pal.sparkAlpha * rf.a });
+          }
+        }
+      }
+
+      // White-bright core + accent centerline. With a join flare, stroke short
+      // pieces so it widens into a splash where it meets the wall at each end.
+      const coreAlpha = pal ? WALL_CORE_ALPHA : 1;
+      const centerAlpha = pal ? WALL_CENTERLINE_ALPHA : 1;
+      if (taperLen > 0) {
+        // Overshoot ~1 drawn width so the core end lands past the mask boundary,
+        // so the flare fills flush to the wall with no cap.
+        const pieces = buildFenceTaper(scr, taperLen, baseWidth, flareEnds);
+        // Near the wall the white border smoothly hands off to the wall's own
+        // white (over ~1 wall-width, so no blunt notch), and the green centerline
+        // widens to fill the flare as the white falls away — so the splash reads
+        // as solid green merging in, not an empty glow blob. Away from the wall
+        // it's the normal tube: full white core + 0.7x green centerline.
+        const whiteFade = baseWidth * 1.0;
+        const whiteFracAt = (dw: number) => { const s = Math.max(0, Math.min(1, dw / whiteFade)); return s * s * (3 - 2 * s); };
+        if (!greenOnly) {
+          for (const pc of pieces) {
+            const wf = whiteFracAt(pc.dw);
+            if (wf <= 0.002) continue;
+            strokePath(gCore, [pc.x1, pc.y1, pc.x2, pc.y2], baseWidth * pc.w, 0xffffff, coreAlpha * wf, false, pc.butt ? "butt" : "round");
+          }
+        }
+        if (!skipGreen) for (const pc of pieces) strokePath(gCore, [pc.x1, pc.y1, pc.x2, pc.y2], baseWidth * pc.w * (1 - 0.3 * whiteFracAt(pc.dw)), accent, centerAlpha, false, pc.butt ? "butt" : "round");
+      } else {
+        if (!greenOnly) strokePath(gCore, pts, baseWidth, 0xffffff, coreAlpha, closed);
+        if (!skipGreen) strokePath(gCore, pts, baseWidth * 0.7, accent, centerAlpha, closed);
+      }
     };
 
+    // Fences: one continuous path per connected run (arms joined through the
+    // centre) so shared vertices are clean joins, not a chain of caps. Fences
+    // stop ON walls without crossing obstacle interiors, so the fenceMask above
+    // handles cap overshoot and no per-segment obstacle clipping is needed.
+    const fenceChains = buildFenceChains(game.walls).map(chain => ({
+      chain,
+      freshness: chain.createdAt ? Math.max(0, 1 - (now - chain.createdAt) / 400) : 0,
+      // Flare the fence into the walls at both ends over ~3.5 drawn widths, so
+      // it splashes onto the wall and merges instead of butting a point. Only
+      // ends that land on a wall flare; a fence-to-fence end stays plain so it
+      // doesn't overflow past the fence it meets.
+      taperLen: 3.5 * chain.thickness * scale * WALL_RENDER_THICKEN,
+      flareEnds: chainFlareEnds(chain.points, game.boardPolygon, game.obstaclePolygons),
+    }));
+    // Pass A: glow + white core per fence (green skipped, painted in Pass B).
+    for (const f of fenceChains) {
+      strokeWallPath(glow, core, f.chain.points, f.chain.thickness * scale, f.freshness, false, f.taperLen, f.flareEnds, false, true);
+    }
+    // Pass B: every green centerline on top (painted once), so where fences
+    // cross (fence-to-fence tees) the green connects over the other fence's
+    // white border and the junction reads as merged, not just overlapped.
+    for (const f of fenceChains) {
+      strokeWallPath(glow, core, f.chain.points, f.chain.thickness * scale, f.freshness, false, f.taperLen, f.flareEnds, true);
+    }
+
+    // Board edge: one continuous closed loop from the board polygon so corners
+    // are clean joins. Falls back to per-segment if no polygon is available.
+    if (game.boardPolygon) {
+      strokeWallPath(edges, edges, game.boardPolygon.vertices, WALL_THICKNESS * scale, 0, true);
+    } else {
+      for (const w of game.walls) {
+        if (w.isMirror || !w.id.startsWith("board-")) continue;
+        strokeWallPath(edges, edges, [w.start, w.end], w.thickness * scale, 0);
+      }
+    }
+
+    // Per-segment overlay that can't be chained: the Ascension crumble damage.
     for (let wi = game.walls.length - 1; wi >= 0; wi--) {
       const w = game.walls[wi];
-      const isFence = w.id.startsWith("wall-");
-      const isEdge = !w.isMirror && w.id.startsWith("board-");
-      if (!isFence && !isEdge) continue;
+      if (!w.id.startsWith("wall-")) continue;
       const baseWidth = w.thickness * scale;
-      const freshness = isFence && w.createdAt ? Math.max(0, 1 - (now - w.createdAt) / 400) : 0;
-      const gGlow = isFence ? glow : edges;
-      const gCore = isFence ? core : edges;
-      const segs = getSegs(w);
-      if (segs) {
-        for (const seg of segs) {
-          strokeWall(gGlow, gCore, w2s(seg.start.x, seg.start.y), w2s(seg.end.x, seg.end.y), seg.start, seg.end, baseWidth, freshness);
-        }
-      } else {
-        strokeWall(gGlow, gCore, w2s(w.start.x, w.start.y), w2s(w.end.x, w.end.y), w.start, w.end, baseWidth, freshness);
-      }
-
-      // Ascension durability crumble overlay.
-      const damage = isFence && w.maxHits && w.hitsLeft !== undefined ? 1 - w.hitsLeft / w.maxHits : 0;
+      const damage = w.maxHits && w.hitsLeft !== undefined ? 1 - w.hitsLeft / w.maxHits : 0;
       if (damage > 0) {
+        const segs = getSegs(w);
         const drawSeg = (a: Vector2, b: Vector2) => {
           const s = w2s(a.x, a.y);
           const e = w2s(b.x, b.y);

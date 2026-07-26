@@ -74,8 +74,9 @@ identity and its purpose.
     balls into your workspace), a hazard lane you must cut across, or a long
     fence drawn over live ball paths.
   - Always leave a real safe path, or it is not a choice.
-- **YAML:** `entities` with `breakable: true` + `chest: true` + `chestRewards`,
-  or a `reveals` rect on a breakable gate; a `mover` as the guard.
+- **YAML:** a `lockZones` entry (a rect + `multiplier`) marks the pay-more
+  pocket; `entities` with `breakable: true` + `chest: true` + `chestRewards`, or
+  a `reveals` rect on a breakable gate; a `mover` as the guard.
 - **Example premises:** *Bonus Pool* (a central chest behind a breakable;
   smashing it frees two fast balls at you); *Corner Office* (a superior-lock
   pocket guarded by a mover you must time).
