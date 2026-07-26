@@ -65,14 +65,18 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
   const bosses = game.balls.filter((b) => b.isBoss && b.state === "active" && b.speed > 0);
   if (bosses.length === 0) return;
 
+  // An area-gated boss (Colored Area win) has no HP: it never panics and keeps
+  // spawning adds, so managing (locking) them is the second layer of challenge.
+  const areaGated = (game.coloredAreas?.length ?? 0) > 0;
+
   for (const boss of bosses) {
     // Airborne (mid break-out leap): don't start a wind-up or a panic lunge - the
     // leap owns its position/velocity and updateBall skips physics until it lands.
     if (boss.bossLeapAt !== undefined) continue;
 
-    // Last-life panic: the boss no longer divides, but periodically LUNGES at the
-    // largest open region (a regression attacking your progress).
-    if ((boss.bossHp ?? 1) <= 1) {
+    // Last-life panic: an HP boss LUNGES at the largest region at its last life.
+    // An area-gated boss has no HP, so it never panics — it just keeps spitting.
+    if ((boss.bossHp ?? 1) <= 1 && !areaGated) {
       maybePanicDash(game, boss, nowMs);
       continue;
     }
@@ -87,7 +91,11 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
       continue;
     }
 
-    if ((game.bossMinionCount ?? 0) >= maxMinions) continue;
+    // Cap on ACTIVE (unlocked) minions, not total spawned: locking a minion frees
+    // a slot so a fresh one spawns, keeping the pressure ongoing (the whole reason
+    // to lock adds away). A total cap would let you clear them once and be done.
+    const activeMinions = game.balls.filter(b => b.isMinion && b.state === "active").length;
+    if (activeMinions >= maxMinions) continue;
 
     // Phase escalation ("HOTFIX INCOMING"): the spit interval shrinks once the
     // boss has taken a hit, so it divides faster the closer it is to defeat.
@@ -124,6 +132,7 @@ function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: num
     minionType, position, speedScale, minionRadius,
     `${minionType.id}-minion-${++_bossAddCounter}`, nowMs, game.activePlaySeconds,
   );
+  child.isMinion = true;                                 // for the active-minion spawn cap
   child.bornRadius = minionRadius;                       // full size to grow into
   child.radius = Math.max(3, minionRadius * BIRTH_START_FRAC); // starts as a small bud
   child.bornAt = nowMs;

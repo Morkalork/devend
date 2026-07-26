@@ -65,6 +65,7 @@ export interface Ball {
   rainbowSpawnCount?: number;  // rainbow only: how many balls it has spit out so far
   // ── Boss ball (issue #56) ────────────────────────────────────────────────
   isBoss?: boolean;    // the boss antagonist ("Release Candidate")
+  isMinion?: boolean;  // a boss-spawned add (for the active-minion spawn cap)
   bossHp?: number;     // hits remaining; each trap costs one until the last locks it
   bossMaxHp?: number;  // starting HP, for the health bar
   bossFullRadius?: number; // radius at full HP; shrinks toward bossMinRadius as HP drains

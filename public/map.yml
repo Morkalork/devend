@@ -400,12 +400,16 @@ levels:
         kind: defeatBoss
         reward: 12
       bossBall:
-        # No HP: the boss is a single big ball you win by fencing into the var
-        # area (the Colored Area gate decides it). hp 1 => no HP pips in the HUD.
+        # No HP: the boss is won by fencing it into the var area (the Colored Area
+        # gate decides it). hp 1 => no HP pips in the HUD. It KEEPS spawning adds
+        # (maxMinions = the concurrent cap, refilled as you lock them away), so
+        # managing the minions is the second layer while you corner the boss.
         hp: 1
         radiusScale: 2.5
         speedScale: 1.15
         color: "#ff2d55"
+        spitIntervalSeconds: 6
+        maxMinions: 4
     entities:
       - id: pillar
         kind: wall
