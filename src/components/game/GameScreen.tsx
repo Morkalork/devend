@@ -10,7 +10,8 @@ import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObjec
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence } from 'lucide-react';
+import { fencesLeft } from '@/lib/fenceBudget';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { GameTopBar } from './GameTopBar';
@@ -231,6 +232,7 @@ export function GameScreen({
   // Game state for top bar
   const [gameState, setGameState] = useState<GameStateInfo>({
     cutsUsed: 0,
+    completedCuts: 0,
     spaceRemaining: 100,
     lockedBalls: 0,
     superiorLocks: 0,
@@ -584,6 +586,30 @@ export function GameScreen({
               </span>
             </div>
           )}
+          {/* Fence budget / WIP Limit: completed fences left this map. Warns
+              (amber) at 2 or fewer, dims at zero. Only shown when the map sets
+              a budget and it isn't already won. */}
+          {level.fenceBudget != null && !mapComplete && (() => {
+            const left = fencesLeft(level.fenceBudget, gameState.completedCuts ?? 0);
+            const col = left <= 2 ? '#ff8a5b' : accentColor;
+            return (
+              <div
+                className="absolute top-2 left-2 z-20 flex items-center gap-1 rounded-md px-2 py-1 pointer-events-none"
+                style={{
+                  backgroundColor: 'rgba(0,10,5,0.7)',
+                  border: `1px solid ${col}44`,
+                  color: col,
+                  opacity: left > 0 ? 1 : 0.4,
+                }}
+                aria-label={t('game.fenceBudgetLeft', { count: left })}
+              >
+                <Fence className="w-3.5 h-3.5" />
+                <span className="font-display text-sm font-bold tabular-nums">
+                  {left}/{level.fenceBudget}
+                </span>
+              </div>
+            );
+          })()}
           <GameCanvas
             level={level}
             levelNumber={levelNumber}

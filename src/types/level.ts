@@ -171,6 +171,13 @@ export interface LevelConfig {
    * multiplier. The authorable form of the greed hook.
    */
   lockZones?: LockZone[];
+  /**
+   * Fence budget / "WIP Limit" (LEVELDESIGN.md modifier): the max number of
+   * COMPLETED fences allowed on this map. Running out before the map is
+   * finished loses a life and restarts the map. Only successful partitions
+   * count (a fence a ball destroys mid-draw is free). Absent = unlimited.
+   */
+  fenceBudget?: number;
 }
 
 /**

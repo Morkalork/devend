@@ -13,6 +13,8 @@ export interface GameCallbacks {
   setIsRecovering: (v: boolean) => void;
   setWallShieldCount: (n: number) => void;
   setDisplayLives: (n: number) => void;
+  /** Completed-fence count changed (for the fence-budget HUD). */
+  setCompletedCuts?: (n: number) => void;
   /** Boss ball state changed (issue #56): a hit (hp drops) or defeat, so the boss
    *  banner can mirror HP and flash. Optional (bare game states omit it). */
   onBossState?: (hp: number, maxHp: number, defeated: boolean) => void;

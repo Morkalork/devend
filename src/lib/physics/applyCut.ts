@@ -5,6 +5,7 @@ import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import { checkAndUpdateBallWonStates, applyMicroManagerSpeedCap } from "./checkBallWonState";
 import { handleGameOverFn } from "./handleGameOver";
+import { fenceBudgetExhausted } from "@/lib/fenceBudget";
 import {
   pointToSegmentDistance,
   lineSegmentIntersection,
@@ -260,11 +261,26 @@ export function applyCutFn(
   // ball below MIN_BALL_SPEED_FACTOR of normal (issue #42).
   applyMicroManagerSpeedCap(balls, activeModifiers, cumulativeLockedBalls + game.lockedBallsCount);
 
+  // This fence completed and partitioned the space: it counts toward the fence
+  // budget (only successful cuts do).
+  game.completedCuts += 1;
+  callbacks.setCompletedCuts?.(game.completedCuts);
+
   const percent = evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks);
 
   if (percent !== null && tutorialMode && !tutorialCutMade && percent < 100) {
     callbacks.setTutorialCutMade(true);
     callbacks.onTutorialCutSuccess?.();
+  }
+
+  // Fence budget / WIP Limit: the last allowed fence just completed and it did
+  // not finish the map -> lose a life + restart (evaluateWinConditions ran
+  // first, so a winning final cut wins instead of failing here).
+  if (fenceBudgetExhausted(level.fenceBudget, game.completedCuts, {
+    levelComplete: game.levelComplete, gameOver: game.gameOver,
+    pushMode: game.pushMode, pushPromptPending: game.pushPromptPending,
+  })) {
+    handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
   }
 }
 

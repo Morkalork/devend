@@ -259,6 +259,7 @@
     "pickupCapRaise": "Tak +{n}h",
     "pickupFreeze": "Frysning +1",
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
+    "fenceBudgetLeft": "{{count}} staket kvar på denna bana",
     "pickupFreeShopItem": "Gratis butiksvara!",
     "pickupExtraLife": "+1 liv",
     "pickupRainbow": "Regnbågsboll!",

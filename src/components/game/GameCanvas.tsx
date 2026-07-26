@@ -110,6 +110,8 @@ import { processDestroysFn } from "@/lib/physics/destructibles";
 
 export interface GameStateInfo {
   cutsUsed: number;
+  /** Completed fences (successful partitions) this map, for the fence-budget HUD. */
+  completedCuts: number;
   spaceRemaining: number;
   lockedBalls: number;
   /** Superior (tight-pocket) locks this map, for the #55 objective HUD. */
@@ -359,6 +361,7 @@ export function GameCanvas({
 
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
+  const [completedCuts, setCompletedCuts] = useState(0);
   const [wallShieldCount, setWallShieldCount] = useState(0);
   // Repaint hook exposed for the ability bar's Clear All Fences (which fires
   // synchronously on a button press, outside the game loop's callbacks).
@@ -489,6 +492,7 @@ export function GameCanvas({
     backgroundColor: "#0a1a10",
     regionColor: "#1a3020",
     wallCount: 0,
+    completedCuts: 0,
     wallShieldsRemaining: 0,
     fastestBallId: null as string | null,
     pushMode: "none" as "none" | "prompt" | "pushing",
@@ -926,6 +930,8 @@ export function GameCanvas({
       setAbilityIconFx(null);
       setBallCount(game.balls.length || 1);
       game.wallCount = 0;
+      game.completedCuts = 0;
+      setCompletedCuts(0);
       clearWallImpacts();
       clearObstacleImpacts();
       setCutCount(0);
@@ -1106,6 +1112,7 @@ export function GameCanvas({
       setIsShaking,
       setIsRecovering,
       setWallShieldCount,
+      setCompletedCuts,
       setDisplayLives,
       onLevelComplete: d => onLevelCompleteRef.current(d),
       onMapComplete: () => onMapCompleteRef.current?.(),
@@ -1401,6 +1408,7 @@ export function GameCanvas({
     if (onGameStateChange) {
       onGameStateChange({
         cutsUsed: cutCount,
+        completedCuts,
         spaceRemaining: remainingPercent,
         lockedBalls: lockedBallsCount,
         // Superior locks change only when a ball locks, which also bumps
@@ -1421,7 +1429,7 @@ export function GameCanvas({
         armedAbility,
       });
     }
-  }, [cutCount, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

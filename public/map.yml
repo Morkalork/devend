@@ -123,6 +123,9 @@ levels:
     level: 5
     sizeThreshold: 30
     expectedCuts: 10
+    # Fence budget / WIP Limit: only completed fences count; running out loses a
+    # life and restarts. Generous margin over expectedCuts for a first challenge.
+    fenceBudget: 14
     points: 20
     variety: 0
     randomShapes: 0
@@ -189,6 +192,8 @@ levels:
     level: 6
     sizeThreshold: 30
     expectedCuts: 11
+    # Fence budget / WIP Limit (see level-5). Slightly tighter margin.
+    fenceBudget: 15
     points: 20
     variety: 0
     randomShapes: 10
@@ -286,7 +291,7 @@ levels:
         height: 56
         chest: true
         breakable: true
-        hitsToBreak: 2
+        hitsToBreak: 2
   - id: level-8
     level: 8
     sizeThreshold: 30
@@ -530,7 +535,7 @@ levels:
         height: 56
         chest: true
         breakable: true
-        hitsToBreak: 2
+        hitsToBreak: 2
   - id: level-14
     level: 14
     sizeThreshold: 8

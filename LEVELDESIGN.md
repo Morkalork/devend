@@ -121,24 +121,25 @@ Modifiers sharpen the three conventions. Use them to give specific maps a
 character; do not stack all of them, and never turn every map into the same
 gimmick (variety is the whole point).
 
-### Fence budget / "WIP Limit"  *(PROPOSED, not yet implemented)*
+### Fence budget / "WIP Limit"
 
-A per-map cap on the number of fences you may successfully complete. Running out
-before the map is finished costs a life and restarts the map. On-theme: a
-work-in-progress limit / sprint capacity.
+A per-map cap on the number of fences you may successfully complete
+(`fenceBudget` on a level). Running out before the map is finished costs a life
+and restarts the map. On-theme: a work-in-progress limit / sprint capacity.
+Amplifies Conventions 1 and 2: fences become precious, so *where* you spend them
+(necks) and *whether* you spend two on the vault becomes a real decision.
 
-Design rules that make it fair (see the discussion that spawned it):
-- **Per-map, opt-in** (a `fenceBudget` field), NOT a global rule. Efficiency is a
-  *flavor* of map, not the whole game.
-- **Only completed partitions count.** A fence a ball destroys mid-draw is free,
-  otherwise it is double jeopardy with the existing "ball destroys your
-  in-progress fence" tension.
+Rules (as implemented):
+- **Per-map, opt-in.** Efficiency is a *flavor* of map, not the whole game.
+- **Only completed partitions count** (`game.completedCuts`). A fence a ball
+  destroys mid-draw never completes, so it is free, no double jeopardy with the
+  existing "ball destroys your in-progress fence" tension.
 - **Budget = `expectedCuts` + a margin.** Generous early (a soft skill gate),
-  tight on designated efficiency maps.
-- **Telegraph it** (a fence meter; a "2 left" warning) and let the player bank
-  what they already locked if they run out.
-- It amplifies Conventions 1 and 2: fences become precious, so *where* you spend
-  them (necks) and *whether* you spend two on the vault becomes a real decision.
+  tighter on designated efficiency maps. Shipped on level-5 (14) and level-6 (15).
+- **Telegraphed** via a HUD fence chip that warns (amber) at 2 or fewer and dims
+  at zero.
+- Failure reuses the standard map-loss path (`handleGameOverFn`), so lives /
+  restart / run-end are handled exactly like any other loss.
 
 ### Time limit / "Deadline"
 

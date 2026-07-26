@@ -122,6 +122,8 @@ export interface CanvasGameState {
 
   // ── Scoring / progression ──────────────────────────────────────────────
   wallCount: number;
+  /** COMPLETED fences (successful partitions) this map, for the fence budget. */
+  completedCuts: number;
   wallShieldsRemaining: number;
   fastestBallId: string | null;
 

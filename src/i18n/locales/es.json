@@ -259,6 +259,7 @@
     "pickupCapRaise": "Tope +{n}h",
     "pickupFreeze": "Congelación +1",
     "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa",
+    "fenceBudgetLeft": "{{count}} vallas restantes en este mapa",
     "pickupFreeShopItem": "¡Artículo gratis!",
     "pickupExtraLife": "+1 vida",
     "pickupRainbow": "¡Bola arcoíris!",
