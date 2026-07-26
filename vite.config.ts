@@ -36,6 +36,35 @@ function mapApiPlugin(): Plugin {
   };
 }
 
+/**
+ * Dev-only: force a full page reload (instead of an in-place hot-swap) when a
+ * game-engine module changes.
+ *
+ * The game is imperative WebGL: a PixiJS renderer holding a GPU context, driven
+ * by a requestAnimationFrame loop, plus module-level singleton state. React Fast
+ * Refresh re-runs GameCanvas's effects in place but keeps the old renderer
+ * instance, so after a hot-swap the loop renders against half-updated modules,
+ * throws, and (there's no try/catch before it reschedules) the rAF loop stops
+ * for good — the tab looks frozen. A clean reload restarts everything and shows
+ * the new code. UI-only modules (menus, modals, i18n) still Fast-Refresh.
+ */
+function fullReloadGameEngine(): Plugin {
+  return {
+    name: "full-reload-game-engine",
+    apply: "serve",
+    handleHotUpdate({ file, server }) {
+      const norm = file.replace(/\\/g, "/");
+      const isEngine =
+        /\/src\/(lib|hooks)\//.test(norm) ||
+        /\/src\/components\/game\/GameCanvas\.tsx$/.test(norm);
+      if (isEngine) {
+        server.ws.send({ type: "full-reload" });
+        return []; // handled: skip the default (freezing) HMR for this file
+      }
+    },
+  };
+}
+
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
@@ -46,6 +75,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
+    mode === "development" && fullReloadGameEngine(),
     react(),
     mode === "development" && mapApiPlugin(),
   ].filter(Boolean),
