@@ -878,13 +878,13 @@ export class PixiGameRenderer {
         strokePath(gGlow, pts, baseWidth * (1 + maxGlow * 2), accent, maxGlow * 0.65);
       }
 
-      // Circuit "skeleton" etched on a translucent wall body (see wallSkeleton.ts).
+      // Circuit "skeleton" (see wallSkeleton.ts) drawn into the core Graphics
+      // FIRST, so the colored border strokes below sit on top and veil it to a
+      // faint hint coming through.
       const skel = WALL_CIRCUITS_ENABLED
         ? buildWallSkeleton(s.x, s.y, e.x, e.y, scale, baseWidth / scale, ws.x, ws.y, we.x, we.y)
         : null;
       const pal = skel ? circuitPalette(accent) : null;
-      strokePath(gCore, pts, baseWidth, 0xffffff, skel ? WALL_CORE_ALPHA : 1);
-      strokePath(gCore, pts, baseWidth * 0.7, accent, skel ? WALL_CENTERLINE_ALPHA : 1);
       if (skel && pal) {
         for (const tr of skel.traces) strokePath(gCore, tr, Math.max(1, baseWidth * pal.traceWidthFrac), pal.trace, pal.traceAlpha);
         for (const nd of skel.nodes) {
@@ -892,6 +892,8 @@ export class PixiGameRenderer {
           gCore.circle(nd.x, nd.y, nd.r * (nd.kind === 'via' ? 0.5 : 0.58)).fill({ color: pal.spark, alpha: pal.sparkAlpha });
         }
       }
+      strokePath(gCore, pts, baseWidth, 0xffffff, skel ? WALL_CORE_ALPHA : 1);
+      strokePath(gCore, pts, baseWidth * 0.7, accent, skel ? WALL_CENTERLINE_ALPHA : 1);
     };
 
     for (let wi = game.walls.length - 1; wi >= 0; wi--) {

@@ -219,8 +219,8 @@ export function renderWallWithEffects(
   };
 
   // Circuit "skeleton" laid along the straight segment (see wallSkeleton.ts).
-  // Deterministic + cached, so it's stable per wall. Traces sit BENEATH the
-  // (slightly translucent) core; the bright solder nodes are punched on top.
+  // Deterministic + cached, so it's stable per wall. Drawn BENEATH the colored
+  // border (below), so only a hint bleeds through the mostly-opaque core.
   const skel = WALL_CIRCUITS_ENABLED
     ? buildWallSkeleton(
         startScreen.x, startScreen.y, endScreen.x, endScreen.y,
@@ -238,13 +238,8 @@ export function renderWallWithEffects(
   buildPath(); ctx.lineWidth = baseWidth * (1.6 + glowBoost * 1.8); ctx.globalAlpha = 0.18 + glowBoost * 0.25; ctx.stroke();
   ctx.restore();
 
-  // White-bright core + accent centerline. Both are nudged translucent when a
-  // circuit is present so the etched traces/nodes drawn on top read as circuitry
-  // seen through the wall (rather than being hidden by the opaque centerline).
-  buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = skel ? WALL_CORE_ALPHA : 1; ctx.stroke();
-  buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.globalAlpha = skel ? WALL_CENTERLINE_ALPHA : 1; ctx.stroke();
-
-  // Circuit traces etched on top of the translucent wall body.
+  // Circuit skeleton — glowing conductor traces + solder nodes, drawn UNDER the
+  // border so the colored core/centerline veil it down to a faint hint.
   if (skel && pal) {
     ctx.save();
     ctx.lineCap = 'round';
@@ -258,8 +253,23 @@ export function renderWallWithEffects(
       for (let i = 2; i < tr.length; i += 2) ctx.lineTo(tr[i], tr[i + 1]);
       ctx.stroke();
     }
+    for (const nd of skel.nodes) {
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = pal.viaAlpha;
+      ctx.fillStyle = pal.via;
+      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2); ctx.fill();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = pal.sparkAlpha;
+      ctx.fillStyle = pal.spark;
+      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r * (nd.kind === 'via' ? 0.5 : 0.58), 0, Math.PI * 2); ctx.fill();
+    }
     ctx.restore();
   }
+
+  // White-bright core + accent centerline — the colored border, kept mostly
+  // opaque so the circuit beneath reads only as a hint coming through.
+  buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = skel ? WALL_CORE_ALPHA : 1; ctx.stroke();
+  buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.globalAlpha = skel ? WALL_CENTERLINE_ALPHA : 1; ctx.stroke();
 
   // Fresh-wall bloom
   if (glowBoost > 0.05) {
@@ -282,23 +292,6 @@ export function renderWallWithEffects(
     ctx.strokeStyle = baseColor;
     ctx.globalAlpha = maxGlow * 0.65;
     ctx.stroke();
-    ctx.restore();
-  }
-
-  // Solder vias / pads on top: a dark ring with an additive bright centre, so
-  // each reads as a glowing circuit node embedded in the wall.
-  if (skel && pal) {
-    ctx.save();
-    for (const nd of skel.nodes) {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.globalAlpha = pal.viaAlpha;
-      ctx.fillStyle = pal.via;
-      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r, 0, Math.PI * 2); ctx.fill();
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = pal.sparkAlpha;
-      ctx.fillStyle = pal.spark;
-      ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r * (nd.kind === 'via' ? 0.5 : 0.58), 0, Math.PI * 2); ctx.fill();
-    }
     ctx.restore();
   }
 

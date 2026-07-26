@@ -39,11 +39,11 @@ const VIA_R_FRAC = 0.26;
 const PAD_R_FRAC = 0.2;
 // Probability a node sprouts a perpendicular branch stub.
 const BRANCH_PROB = 0.45;
-// Translucency of the wall body so the circuit reads through it. The white core
-// AND the accent centerline are both dimmed — otherwise the opaque centerline
-// hides the traces. 1 = opaque (old look), lower = more see-through.
-export const WALL_CORE_ALPHA = 0.6;
-export const WALL_CENTERLINE_ALPHA = 0.64;
+// The colored border sits ON TOP of the circuit and is kept mostly opaque, so
+// only a HINT of the skeleton bleeds through from underneath (a PCB under
+// frosted colored glass). Lower these for a stronger show-through.
+export const WALL_CORE_ALPHA = 0.82;
+export const WALL_CENTERLINE_ALPHA = 0.82;
 
 // ── Deterministic RNG (mulberry32) ──────────────────────────────────────────
 function hashCoords(a: number, b: number, c: number, d: number): number {
@@ -219,13 +219,15 @@ const _paletteCache = new Map<string, CircuitPalette>();
 export function circuitPalette(accentHex: string): CircuitPalette {
   const cached = _paletteCache.get(accentHex);
   if (cached) return cached;
+  // Drawn BENEATH the border, so the skeleton is a glowing conductor (light
+  // coming through the glass), not a dark etched groove on top.
   const p: CircuitPalette = {
-    trace: mixHex(accentHex, 0, 0, 0, 0.62),       // deep etched groove
-    traceAlpha: 0.72,
-    traceWidthFrac: 0.2,
-    via: mixHex(accentHex, 0, 0, 0, 0.6),          // dark solder ring
-    viaAlpha: 0.85,
-    spark: mixHex(accentHex, 255, 255, 255, 0.85), // near-white glowing centre
+    trace: mixHex(accentHex, 255, 255, 255, 0.4),  // brightened conductor
+    traceAlpha: 0.9,
+    traceWidthFrac: 0.18,
+    via: mixHex(accentHex, 255, 255, 255, 0.3),    // bright solder ring
+    viaAlpha: 0.95,
+    spark: mixHex(accentHex, 255, 255, 255, 0.92), // near-white glowing centre
     sparkAlpha: 1,
   };
   _paletteCache.set(accentHex, p);
