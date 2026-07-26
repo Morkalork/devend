@@ -58,7 +58,9 @@ export function BossBanner({ name, timeLimit, activeSeconds, hp, maxHp, defeated
             {t('boss.defeated')}
           </span>
         ) : (
-          Array.from({ length: Math.max(0, maxHp) }).map((_, i) => (
+          // No HP pips for a single-life boss (e.g. a Colored-Area boss you just
+          // fence into the zone); the health bar only shows for multi-hit bosses.
+          maxHp > 1 && Array.from({ length: maxHp }).map((_, i) => (
             <span
               key={i}
               className="h-2 w-4 rounded-sm transition-all duration-200"

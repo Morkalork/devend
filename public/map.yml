@@ -384,10 +384,10 @@ levels:
     boss:
       name: Release Deadline
       intro: >-
-        Your first boss. The Release Candidate is loose: a big, fast ball spitting
-        hotfixes, with Scope Creep hot from the first second. Clearing the board is
-        not enough: fence it into the pink var area (top right) to ship it. Trap it
-        anywhere else and you lose a life. Beat the deadline.
+        Your first boss. The Release Candidate is loose: a big, fast ball, with
+        Scope Creep hot from the first second. Clearing the board is not enough:
+        fence it into the pink var area (top right) to ship it. Trap it anywhere
+        else and you lose a life. Beat the deadline.
       creepFromStart: true
       objective:
         id: defeat-rc
@@ -400,14 +400,12 @@ levels:
         kind: defeatBoss
         reward: 12
       bossBall:
-        # hp only tunes behaviour now (spits minions while > 1); the Colored Area
-        # gate decides defeat, and with a gate present the boss never breaks out.
-        hp: 3
+        # No HP: the boss is a single big ball you win by fencing into the var
+        # area (the Colored Area gate decides it). hp 1 => no HP pips in the HUD.
+        hp: 1
         radiusScale: 2.5
         speedScale: 1.15
         color: "#ff2d55"
-        spitIntervalSeconds: 9
-        maxMinions: 3
     entities:
       - id: pillar
         kind: wall
