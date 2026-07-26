@@ -109,8 +109,13 @@ export function createGameLoop(
   // rather than every physics tick (up to 120Hz) so it can't flood the console
   // and tank performance if the invariant ever does break.
   let frozenBreachLogged = false;
+  // Safety net: a single thrown frame must NOT kill the rAF loop (that reads as
+  // a hard freeze, since schedule() below never runs). The wrapper `gameLoop`
+  // catches, logs once, and reschedules, so a render/physics bug degrades to a
+  // bad frame plus a console error instead of freezing the whole game.
+  let loopErrorLogged = false;
 
-  const gameLoop = (timestamp: number): void => {
+  const gameLoopBody = (timestamp: number): void => {
     // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning
     // one. Frozen once the map is over (level complete / game over) so the
     // background code goes still with the board; it resumes when the next map's
@@ -422,6 +427,18 @@ export function createGameLoop(
     }
 
     schedule();
+  };
+
+  const gameLoop = (timestamp: number): void => {
+    try {
+      gameLoopBody(timestamp);
+    } catch (err) {
+      if (!loopErrorLogged) {
+        loopErrorLogged = true;
+        console.error("[gameLoop] frame threw; keeping the loop alive:", err);
+      }
+      schedule();
+    }
   };
 
   return gameLoop;
