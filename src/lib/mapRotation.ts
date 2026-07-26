@@ -19,7 +19,7 @@
 
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
-import type { LevelEntity, LockZone } from "@/types/level";
+import type { LevelEntity, LockZone, ColoredArea } from "@/types/level";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -127,6 +127,13 @@ export function rotateLockZone(zone: LockZone, r: MapRotation): LockZone {
   if (r === 0) return zone;
   const rect = rotateRect(zone.x, zone.y, zone.width, zone.height, r);
   return { ...rect, multiplier: zone.multiplier };
+}
+
+/** Rotate a Colored Area (a rect + its kind) into the target orientation. */
+export function rotateColoredArea(area: ColoredArea, r: MapRotation): ColoredArea {
+  if (r === 0) return area;
+  const rect = rotateRect(area.x, area.y, area.width, area.height, r);
+  return { ...rect, kind: area.kind };
 }
 
 /**

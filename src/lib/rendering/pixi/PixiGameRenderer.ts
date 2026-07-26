@@ -35,6 +35,7 @@ import {
   circuitPalette,
   clearWallSkeletonCache,
 } from "@/lib/rendering/wallSkeleton";
+import { areaStyle } from "@/lib/coloredAreas";
 import { getRainGlyph } from "../rainGlyphCache";
 import { getFrameStats, heapLine } from "../perfStats";
 import { flameTonguesForCount } from "../renderFrame";
@@ -64,10 +65,13 @@ export class PixiGameRenderer {
   private regionSprite: Sprite | null = null;
   private mirrorCracks = new Graphics();
   private bloom: Filter | null = null;
-  private lockZonesContainer = new Container(); // bonus-lock zone markings + labels
+  private lockZonesContainer = new Container(); // bonus-lock zone + colored-area markings + labels
   private lockZonesG = new Graphics();
   private lockZoneLabels: Text[] = [];
   private lockZonesKey = "";
+  private coloredAreasG = new Graphics();
+  private coloredAreaLabels: Text[] = [];
+  private coloredAreasKey = "";
   private movers = new Graphics();
   private obstacles = new Graphics();
   private breakables = new Graphics();
@@ -137,7 +141,7 @@ export class PixiGameRenderer {
     this.wallsScope.addChild(this.wallGlow, this.wallCore);
     this.wallsScope.mask = this.fenceMask;
 
-    this.lockZonesContainer.addChild(this.lockZonesG);
+    this.lockZonesContainer.addChild(this.lockZonesG, this.coloredAreasG);
     this.boardScope.addChild(
       this.rainLayer,
       this.boardBase,
@@ -268,6 +272,7 @@ export class PixiGameRenderer {
     {
       this.syncRain(game, rctx, scale, now);
       this.syncLockZones(game, w2s, scale);
+      this.syncColoredAreas(game, w2s, scale);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
       this.syncBreakables(game, w2s, scale);
@@ -608,6 +613,53 @@ export class PixiGameRenderer {
       label.position.set(tl.x + zw / 2, tl.y + zh / 2);
       this.lockZonesContainer.addChild(label);
       this.lockZoneLabels.push(label);
+    }
+  }
+
+  // ── Colored Areas (required win-gate) ─────────────────────────────────────
+  // Static per map: a light-coloured zone with its kind (var/let/const) +
+  // multiplier at centre. Rebuilt only when the areas / boardRect / scale change.
+  private syncColoredAreas(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const areas = game.coloredAreas ?? [];
+    const key = areas.map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind}`).join("|")
+      + `_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 1000)}`;
+    if (this.coloredAreasKey === key) return;
+    this.coloredAreasKey = key;
+
+    const g = this.coloredAreasG;
+    g.clear();
+    for (const t of this.coloredAreaLabels) { t.parent?.removeChild(t); t.destroy(); }
+    this.coloredAreaLabels = [];
+
+    for (const a of areas) {
+      const st = areaStyle(a.kind);
+      const tl = w2s(a.x, a.y);
+      const aw = a.width * scale;
+      const ah = a.height * scale;
+      g.rect(tl.x, tl.y, aw, ah).fill({ color: st.color, alpha: 0.12 });
+      dashedLine(g, tl.x, tl.y, tl.x + aw, tl.y, 9 * scale, 6 * scale);
+      dashedLine(g, tl.x + aw, tl.y, tl.x + aw, tl.y + ah, 9 * scale, 6 * scale);
+      dashedLine(g, tl.x + aw, tl.y + ah, tl.x, tl.y + ah, 9 * scale, 6 * scale);
+      dashedLine(g, tl.x, tl.y + ah, tl.x, tl.y, 9 * scale, 6 * scale);
+      g.stroke({ width: Math.max(1, 2 * scale), color: st.color, alpha: 0.75 });
+
+      const cx = tl.x + aw / 2, cy = tl.y + ah / 2;
+      const labelPx = Math.max(13, Math.min(aw, ah) * 0.2);
+      const stroke = { color: 0x000000, width: Math.max(1, scale) };
+      const kindText = new Text({
+        text: st.label,
+        style: new TextStyle({ fontFamily: "monospace", fontWeight: "bold", fontSize: labelPx, fill: st.color, stroke }),
+      });
+      kindText.anchor.set(0.5, 1);
+      kindText.position.set(cx, cy + labelPx * 0.25);
+      const multText = new Text({
+        text: `×${st.multiplier}`,
+        style: new TextStyle({ fontFamily: "monospace", fontWeight: "bold", fontSize: labelPx * 0.6, fill: st.color, stroke }),
+      });
+      multText.anchor.set(0.5, 0);
+      multText.position.set(cx, cy + labelPx * 0.35);
+      this.lockZonesContainer.addChild(kindText, multText);
+      this.coloredAreaLabels.push(kindText, multText);
     }
   }
 

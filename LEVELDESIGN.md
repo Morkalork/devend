@@ -82,6 +82,28 @@ identity and its purpose.
   pocket guarded by a mover you must time).
 - **Pitfall:** exactly ONE hook per map. Two focal points equal no focus.
 
+### Colored Areas (a required win-gate greed hook)
+
+Where `lockZones` is an *optional* bonus pocket, a **Colored Area** is a typed,
+labelled zone that is a **required win gate**: you win the map by locking a
+TARGET ball inside one, and locking the target *outside* fails the map (lose a
+life, restart). Locking inside also pays the kind's multiplier. Three kinds,
+easiest to hardest (draw `var` biggest, `const` smallest):
+
+| kind | colour | multiplier |
+|------|--------|------------|
+| `var` | light pink | 1.5x |
+| `let` | light orange | 2x |
+| `const` | light teal | 3x |
+
+- **Target ball:** boss map -> the boss ball; otherwise any ball. The area is
+  the map's SOLE win path (space-clear does not win a Colored-Area map).
+- **Fail:** the target can no longer reach an area (boss trapped outside, or
+  every ball locked with none inside) -> lose a life + restart.
+- **YAML:** `coloredAreas: [{ x, y, width, height, kind }]`. Shipped example:
+  the level-10 boss is defeated by fencing it into a top-right `var` area
+  (replacing "trap it 3 times").
+
 ---
 
 ## Convention 3: The Turn (the board evolves, it does not just shrink)

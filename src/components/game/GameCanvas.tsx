@@ -58,7 +58,7 @@ import {
   generateRegionId,
 } from "@/lib/gameUtils";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
-import { rotatePoint, rotateLockZone } from "@/lib/mapRotation";
+import { rotatePoint, rotateLockZone, rotateColoredArea } from "@/lib/mapRotation";
 import {
   registerWallImpact,
   clearWallImpacts,
@@ -488,6 +488,8 @@ export function GameCanvas({
     warnedBeats: [],
     beatSpeedMult: 1,
     lockZones: [],
+    coloredAreas: [],
+    coloredAreaSatisfied: false,
     bossActive: false,
     bossHp: 0,
     bossMaxHp: 0,
@@ -869,6 +871,9 @@ export function GameCanvas({
       game.pickupSpots = (level.pickupSpots ?? []).map(s => rotatePoint(s.x, s.y, data.mapRotation));
       // Bonus-lock zones (greed hook): rotate into the same frame as the board.
       game.lockZones = (level.lockZones ?? []).map(z => rotateLockZone(z, data.mapRotation));
+      // Colored Areas (required win-gate): rotate into the board's frame.
+      game.coloredAreas = (level.coloredAreas ?? []).map(a => rotateColoredArea(a, data.mapRotation));
+      game.coloredAreaSatisfied = false;
       game.walls              = data.walls;
       game.movers             = data.movers;
       game.obstaclePolygons   = data.obstaclePolygons;

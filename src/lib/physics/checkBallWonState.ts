@@ -1,6 +1,7 @@
 import { Ball, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { bonusLockMultiplierAt } from "@/lib/lockZones";
+import { coloredAreaAt, coloredAreaMultiplierAt } from "@/lib/coloredAreas";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import {
@@ -242,7 +243,17 @@ export function checkAndUpdateBallWonStates(
     // to spare the boss BREAKS OUT (repositions to open space, faster and smaller)
     // instead of locking; only its final HP actually locks and marks it defeated.
     // It never counts as a normal lock (no lockedBallsCount bump, no lock bonus).
-    if (bossTrapIsDamage(ball)) {
+    // Colored Area win gate (LEVELDESIGN.md): the target ball's lock LOCATION
+    // decides the map. With a gate present the boss does NOT break out — one trap
+    // settles it: trapped INSIDE the area defeats it (win); OUTSIDE locks it but
+    // leaves the gate unsatisfied, so evaluateWinConditions fails the map. Boss
+    // map -> the boss is the target; otherwise any ball is.
+    const areas = game.coloredAreas ?? [];
+    const areaGate = areas.length > 0;
+    const inArea = areaGate && coloredAreaAt(ball.position.x, ball.position.y, areas) !== null;
+    const isAreaTarget = game.balls.some(x => x.isBoss) ? ball.isBoss : true;
+
+    if (bossTrapIsDamage(ball) && !areaGate) {
       ball.bossHp = (ball.bossHp ?? 1) - 1;
       game.bossHp = ball.bossHp;
       breakBossOut(game, ball, gridRegionMap, denominator);
@@ -254,7 +265,7 @@ export function checkAndUpdateBallWonStates(
       vibrateBallLock();
       continue;
     }
-    if (ball.isBoss) {
+    if (ball.isBoss && (!areaGate || inArea)) {
       game.bossDefeated = true;
       game.bossHp = 0;
       game.bossActive = false;
@@ -270,6 +281,10 @@ export function checkAndUpdateBallWonStates(
         }
       }
       callbacks.onBossState?.(0, ball.bossMaxHp ?? 0, true);
+    }
+    // A target ball locked inside a Colored Area satisfies the win gate.
+    if (areaGate && isAreaTarget && inArea) {
+      game.coloredAreaSatisfied = true;
     }
 
     ball.state = 'won';
@@ -426,9 +441,12 @@ export function checkAndUpdateBallWonStates(
         lockedWhileFrozen && activeModifiers.frozenLockBonus > 0
           ? 1 + activeModifiers.frozenLockBonus
           : 1;
-      // Bonus-lock zone (the greed hook): a ball locked inside a map-authored
-      // zone pays its multiplier on top of everything else.
-      const zoneMult = bonusLockMultiplierAt(b.position.x, b.position.y, game.lockZones ?? []);
+      // Bonus-lock zone / Colored Area: a ball locked inside a map-authored zone
+      // pays its multiplier on top of everything else (the larger of the two).
+      const zoneMult = Math.max(
+        bonusLockMultiplierAt(b.position.x, b.position.y, game.lockZones ?? []),
+        coloredAreaMultiplierAt(b.position.x, b.position.y, game.coloredAreas ?? []),
+      );
       const ballPoints = (b.lockMultiplier ?? 1) * mult * frozenMult * zoneMult;
       if (superiorIds.has(b.id)) superiorPoints += ballPoints;
       else standardPoints += ballPoints;

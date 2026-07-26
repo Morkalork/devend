@@ -172,6 +172,11 @@ export interface LevelConfig {
    */
   lockZones?: LockZone[];
   /**
+   * Colored Areas: typed, REQUIRED win-gate zones (var/let/const). Lock a target
+   * ball inside to win; the target locked outside fails the map. See ColoredArea.
+   */
+  coloredAreas?: ColoredArea[];
+  /**
    * Fence budget / "WIP Limit" (LEVELDESIGN.md modifier): the max number of
    * COMPLETED fences allowed on this map. Running out before the map is
    * finished loses a life and restarts the map. Only successful partitions
@@ -225,6 +230,24 @@ export interface LockZone {
   height: number;
   /** Lock-points multiplier for balls locked inside (e.g. 2 = double). */
   multiplier: number;
+}
+
+/**
+ * A Colored Area: a typed, labelled zone that is a REQUIRED win gate. You win a
+ * map by locking a target ball inside one (boss map: the boss; else any ball);
+ * locking the target outside fails the map (lose a life, restart). Locking
+ * inside also pays the kind's multiplier. Three kinds, easiest to hardest:
+ *   var (light pink, 1.5x) < let (light orange, 2x) < const (light teal, 3x).
+ * By convention a var area is drawn largest (easiest), a const smallest.
+ */
+export type AreaKind = "var" | "let" | "const";
+
+export interface ColoredArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  kind: AreaKind;
 }
 
 export interface LevelData {

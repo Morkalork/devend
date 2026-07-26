@@ -49,6 +49,7 @@ import {
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 import { clearWallSkeletonCache, WALL_RENDER_THICKEN, WALL_CORE_ALPHA, WALL_CENTERLINE_ALPHA } from "./wallSkeleton";
+import { areaStyle } from "@/lib/coloredAreas";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -706,6 +707,39 @@ export function renderFrame(
       ctx.shadowBlur = 4 * scale;
       ctx.fillStyle = 'rgba(255, 233, 168, 0.9)';
       ctx.fillText(`×${z.multiplier}`, tl.x + zw / 2, tl.y + zh / 2);
+      ctx.shadowBlur = 0;
+    }
+    ctx.restore();
+  }
+
+  // ── Colored Areas (required win-gate) ─────────────────────────────────────
+  // A light-coloured zone with its kind (var/let/const) + multiplier at centre,
+  // so the player can see where to trap the target ball.
+  if (game.coloredAreas && game.coloredAreas.length > 0) {
+    ctx.save();
+    ctx.textAlign = 'center';
+    for (const a of game.coloredAreas) {
+      const st = areaStyle(a.kind);
+      const tl = w2s(a.x, a.y);
+      const aw = a.width * scale;
+      const ah = a.height * scale;
+      ctx.fillStyle = hexToRgba(st.color, 0.12);
+      ctx.fillRect(tl.x, tl.y, aw, ah);
+      ctx.strokeStyle = hexToRgba(st.color, 0.75);
+      ctx.lineWidth = Math.max(1, 2 * scale);
+      ctx.setLineDash([9 * scale, 6 * scale]);
+      ctx.strokeRect(tl.x, tl.y, aw, ah);
+      ctx.setLineDash([]);
+      const cx = tl.x + aw / 2, cy = tl.y + ah / 2;
+      const labelPx = Math.max(13, Math.min(aw, ah) * 0.2);
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 3 * scale;
+      ctx.fillStyle = hexToRgba(st.color, 0.95);
+      ctx.textBaseline = 'alphabetic';
+      ctx.font = `bold ${labelPx}px monospace`;
+      ctx.fillText(st.label, cx, cy + labelPx * 0.15);
+      ctx.font = `bold ${labelPx * 0.6}px monospace`;
+      ctx.fillText(`×${st.multiplier}`, cx, cy + labelPx * 1.05);
       ctx.shadowBlur = 0;
     }
     ctx.restore();

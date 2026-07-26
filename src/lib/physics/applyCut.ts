@@ -318,6 +318,24 @@ export function evaluateWinConditions(
     handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
     return null;
   }
+  // Colored Area win gate (LEVELDESIGN.md): when a map has colored areas, the
+  // ONLY win is a TARGET ball locked inside one. Satisfied -> win. If no target
+  // ball can still reach an area (the boss trapped outside, or every ball locked
+  // with none inside) -> lose a life + restart. Otherwise keep playing.
+  if ((game.coloredAreas ?? []).length > 0) {
+    if (game.coloredAreaSatisfied) {
+      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+      return null;
+    }
+    const hasBoss = game.balls.some(b => b.isBoss);
+    const activeTargets = game.balls.some(b =>
+      b.state !== "won" && b.speed > 0 && (!hasBoss || b.isBoss));
+    if (!activeTargets) {
+      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+      return null;
+    }
+    return null; // the area is the sole win gate; keep playing until it's decided
+  }
   // Boss maps (issue #56): DEFEATING THE BOSS SHIPS IT. The moment the boss is
   // beaten the map completes, regardless of remaining space - the fight is about
   // the boss, not grinding the board. So on a boss map only the boss's defeat

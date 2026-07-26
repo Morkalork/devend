@@ -367,30 +367,41 @@ levels:
     randomShapes: 0
     maxBalls: 1
     timeLimit: 65
+    # Colored Area (required win-gate): trap the boss INSIDE this pink var area to
+    # ship it; trapping it outside fails the map (lose a life, restart). var is the
+    # easiest kind (1.5x). ~20% of the board, top-right in the standard orientation.
+    coloredAreas:
+      - kind: var
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
     # Boss (issue #56): the first boss, gating the Promotion. The Release Candidate
-    # is a distinct big/fast antagonist you must DEFEAT (trap it 3 times) - clearing
-    # space alone will not complete the map (mandatory win gate), and the deadline
-    # is the fail state. Scope Creep runs hot from second 0. Beating it routes into
-    # the once-per-run Promotion draft.
+    # is a big/fast antagonist you must DEFEAT by fencing it into the var area above;
+    # clearing space alone will not complete the map (the area is the win gate), and
+    # the deadline is the fail state. Scope Creep runs hot from second 0. Beating it
+    # routes into the once-per-run Promotion draft.
     boss:
       name: Release Deadline
       intro: >-
-        Your first boss. The Release Candidate is loose: a big, fast ball that
-        keeps breaking out of your traps and spitting hotfixes. Scope Creep runs
-        hot from the first second. Clearing the board is not enough, you must
-        DEFEAT it (trap it three times) before the deadline to ship.
+        Your first boss. The Release Candidate is loose: a big, fast ball spitting
+        hotfixes, with Scope Creep hot from the first second. Clearing the board is
+        not enough: fence it into the pink var area (top right) to ship it. Trap it
+        anywhere else and you lose a life. Beat the deadline.
       creepFromStart: true
       objective:
         id: defeat-rc
         name: Defeat the Release Candidate
-        description: Trap the boss ball to ship it.
+        description: Fence the boss into the var area to ship it.
         clarify: >-
-          The Release Candidate breaks out of the first traps, getting faster and
-          smaller each time. Trap it three times to defeat it. Running out of time
-          is the fail state.
+          Trap the Release Candidate inside the pink var area to defeat it. Trapping
+          it outside the area fails the map (you lose a life and the map restarts).
+          Running out of time also fails.
         kind: defeatBoss
         reward: 12
       bossBall:
+        # hp only tunes behaviour now (spits minions while > 1); the Colored Area
+        # gate decides defeat, and with a gate present the boss never breaks out.
         hp: 3
         radiusScale: 2.5
         speedScale: 1.15
