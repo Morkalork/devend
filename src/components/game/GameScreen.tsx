@@ -378,8 +378,12 @@ export function GameScreen({
   const [isPaused, setIsPaused] = useState(false);
   // "How to win" modal: shown at the start of every map (win conditions now vary
   // by map), and reopenable from the top-left menu. Dismissing it lets the board
-  // dissolve in behind it (the overlay's backdrop fades on tap).
-  const [winModalOpen, setWinModalOpen] = useState(true);
+  // dissolve in behind it (the overlay's backdrop fades on tap). Starts false and
+  // is armed by the level-id effect (which runs on mount too): this makes `paused`
+  // transition false -> true so GameCanvas's pause effect actually fires and stops
+  // the loop — initialising true would leave the loop running on the first map,
+  // because the pause effect early-returns before the loop exists and never re-runs.
+  const [winModalOpen, setWinModalOpen] = useState(false);
   useEffect(() => { setWinModalOpen(true); }, [level.id]);
 
   // Handle a BACK gesture while the game is active (wired via backRef from the
