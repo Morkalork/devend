@@ -592,8 +592,8 @@
     "replayFromOptions": "Los tutoriales se pueden volver a ver desde OPCIONES"
   },
   "winConditions": {
-    "title": "Cómo ganar",
-    "menuItem": "Cómo ganar",
+    "title": "Criterios de Aceptación",
+    "menuItem": "Criterios de Aceptación",
     "targetBoss": "al jefe",
     "targetBall": "una bola",
     "areaWin": "Encierra {{target}} dentro del área {{area}} para un pago de {{mult}}x.",

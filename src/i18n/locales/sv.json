@@ -592,8 +592,8 @@
     "replayFromOptions": "Genomgångar kan spelas upp igen från ALTERNATIV"
   },
   "winConditions": {
-    "title": "Så vinner du",
-    "menuItem": "Så vinner du",
+    "title": "Acceptanskriterier",
+    "menuItem": "Acceptanskriterier",
     "targetBoss": "bossen",
     "targetBall": "en boll",
     "areaWin": "Lås in {{target}} i {{area}}-området för {{mult}}x utbetalning.",

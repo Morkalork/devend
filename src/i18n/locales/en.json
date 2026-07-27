@@ -607,8 +607,8 @@
     "replayFromOptions": "Tutorials can be replayed from OPTIONS"
   },
   "winConditions": {
-    "title": "How to win",
-    "menuItem": "How to win",
+    "title": "Acceptance Criteria",
+    "menuItem": "Acceptance Criteria",
     "targetBoss": "the boss",
     "targetBall": "a ball",
     "areaWin": "Lock {{target}} inside the {{area}} area for a {{mult}}x payout.",
