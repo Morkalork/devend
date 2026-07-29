@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle } from 'lucide-react';
 import { LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
 import { MapCanvas } from './MapCanvas';
@@ -19,6 +19,14 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const [error, setError] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  // Copy/paste clipboard for objects (walls or balls). Ctrl+C fills it from the
+  // current selection, Ctrl+V pastes an offset copy into the current level, so a
+  // copy can also be pasted onto a different level.
+  const clipboardRef = useRef<
+    | { kind: 'entity'; data: LevelEntity }
+    | { kind: 'ball'; data: BallConfig }
+    | null
+  >(null);
 
   // Load levels from map.yml
   useEffect(() => {
@@ -222,6 +230,61 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     setSelectedBallId(null);
   }, [currentLevel, updateLevel]);
 
+  // Copy the selected object (entity or ball) into the clipboard.
+  const copySelection = useCallback(() => {
+    if (!currentLevel) return;
+    if (selectedEntityId) {
+      const entity = (currentLevel.entities || []).find(e => e.id === selectedEntityId);
+      if (entity) clipboardRef.current = { kind: 'entity', data: JSON.parse(JSON.stringify(entity)) };
+    } else if (selectedBallId) {
+      const ball = currentLevel.balls.find(b => b.id === selectedBallId);
+      if (ball) clipboardRef.current = { kind: 'ball', data: JSON.parse(JSON.stringify(ball)) };
+    }
+  }, [currentLevel, selectedEntityId, selectedBallId]);
+
+  // Paste the clipboard object into the current level as a new, offset copy.
+  // Repeated pastes cascade (each advances the clipboard position) so they
+  // don't stack perfectly on top of one another.
+  const pasteClipboard = useCallback(() => {
+    if (!currentLevel) return;
+    const clip = clipboardRef.current;
+    if (!clip) return;
+
+    if (clip.kind === 'entity') {
+      const newEntity: LevelEntity = JSON.parse(JSON.stringify(clip.data));
+      newEntity.id = `wall-${Date.now()}`;
+      // Offset the copy so it's visually distinct from the source.
+      if (newEntity.shape === 'rect') {
+        (newEntity as WallRectEntity).x += 30;
+        (newEntity as WallRectEntity).y += 30;
+      } else if (newEntity.shape === 'circle') {
+        (newEntity as WallCircleEntity).cx += 30;
+        (newEntity as WallCircleEntity).cy += 30;
+      } else if (newEntity.shape === 'polygon') {
+        (newEntity as WallPolygonEntity).points = (newEntity as WallPolygonEntity).points.map(
+          ([x, y]) => [x + 30, y + 30],
+        );
+      }
+      updateLevel({
+        ...currentLevel,
+        entities: [...(currentLevel.entities || []), newEntity],
+      });
+      setSelectedEntityId(newEntity.id);
+      setSelectedBallId(null);
+      // Cascade the next paste from this copy's position.
+      clipboardRef.current = { kind: 'entity', data: JSON.parse(JSON.stringify(newEntity)) };
+    } else {
+      const newBall: BallConfig = JSON.parse(JSON.stringify(clip.data));
+      newBall.id = `ball-${Date.now()}`;
+      updateLevel({
+        ...currentLevel,
+        balls: [...currentLevel.balls, newBall],
+      });
+      setSelectedBallId(newBall.id);
+      setSelectedEntityId(null);
+    }
+  }, [currentLevel, updateLevel]);
+
   // Delete ball (prevent if last one)
   const deleteBall = useCallback((ballId: string) => {
     if (!currentLevel || currentLevel.balls.length <= 1) return;
@@ -304,13 +367,28 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     alert('YAML copied to clipboard!');
   }, [levels]);
 
-  // Keyboard shortcuts: Delete/Backspace to remove selected entity or ball
+  // Keyboard shortcuts: Delete/Backspace to remove the selected object, and
+  // Ctrl/Cmd+C / Ctrl/Cmd+V to copy and paste it. Typing in a field falls
+  // through to native behaviour (so copy/paste there edits the field value).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle if typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
-      if (e.key === 'Delete' || e.key === 'Backspace') {
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+
+      if (mod && key === 'c') {
+        if (selectedEntityId || selectedBallId) {
+          e.preventDefault();
+          copySelection();
+        }
+      } else if (mod && key === 'v') {
+        if (clipboardRef.current) {
+          e.preventDefault();
+          pasteClipboard();
+        }
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         if (selectedEntityId) {
           deleteEntity(selectedEntityId);
@@ -321,7 +399,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedEntityId, selectedBallId, deleteEntity, deleteBall, currentLevel]);
+  }, [selectedEntityId, selectedBallId, deleteEntity, deleteBall, currentLevel, copySelection, pasteClipboard]);
 
   if (isLoading) {
     return (
