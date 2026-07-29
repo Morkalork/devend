@@ -1,10 +1,11 @@
 /**
  * GameScreen — the in-game layout: GameTopBar above, GameCanvas in the
- * middle, GameBottomBar below, plus background layers, the in-game menu and
- * tutorial overlays.
+ * middle, the live action bars (ability controls, Ship Early countdown,
+ * ability timers) pinned to the bottom, plus background layers, the in-game
+ * menu and tutorial overlays.
  *
- * Tapping the top/bottom bars opens their full-screen counterparts
- * (TopBarDetailsPanel / BottomBarDetailsPanel).
+ * The top bar's Specs button (and tapping the bar) opens the full-screen
+ * TopBarDetailsPanel: the run's build, upgrades, assignment and attributes.
  */
 import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObject } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,12 +17,10 @@ import { winConditionsBody } from '@/lib/winConditions';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { GameTopBar } from './GameTopBar';
-import { GameBottomBar } from './GameBottomBar';
 import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
 import { AbilityCountdownBar } from './AbilityCountdownBar';
 import { TopBarDetailsPanel } from './TopBarDetailsPanel';
-import { BottomBarDetailsPanel } from './BottomBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -113,9 +112,6 @@ interface GameScreenProps {
   showBallSpeeds?: boolean;
   /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
   showPerfOverlay?: boolean;
-  /** Admin/Playground: hide the bottom modifier-stats bar on mobile to free board
-   *  space (still shown on desktop). */
-  bottomStatsHiddenOnMobile?: boolean;
   /** Admin/Playground: forwarded live game state (for the ability tester panel). */
   onGameStateChange?: (state: GameStateInfo) => void;
   /** Admin/Playground: on clear, freeze on the drained frame instead of completing. */
@@ -173,7 +169,6 @@ export function GameScreen({
   fenceDurability = null,
   showBallSpeeds = false,
   showPerfOverlay = false,
-  bottomStatsHiddenOnMobile = false,
   onGameStateChange,
   freezeOnClear = false,
   onMapComplete,
@@ -370,7 +365,6 @@ export function GameScreen({
   const accentColor = level.boss ? BOSS_ACCENT : (externalAccentColor || getAccentColor());
 
   const [topPanelOpen, setTopPanelOpen] = useState(false);
-  const [bottomPanelOpen, setBottomPanelOpen] = useState(false);
   const [abilityInfoOpen, setAbilityInfoOpen] = useState(false);
   const [superiorInfoOpen, setSuperiorInfoOpen] = useState(false);
 
@@ -457,7 +451,7 @@ export function GameScreen({
     !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
   const showWinModal = winModalOpen && !mapComplete;
   const modalOverlayActive =
-    topPanelOpen || bottomPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen ||
+    topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen ||
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal;
 
@@ -542,20 +536,13 @@ export function GameScreen({
             lockedBalls={totalLockedBalls}
             threadLockRequired={level.threadLockRequired}
             scopeCreepPercent={gameState.creepPercent}
-            mapMutator={mapMutator}
-            objective={mapObjective}
-            objectiveProgress={objectiveProgress}
-            ownedUpgrades={ownedUpgrades}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
-            microManagerPerLock={activeModifiers.microManagerPerLock}
             ascensionDepth={ascensionDepth}
             showHighscoreBar={showHighscoreBar}
             highscoreCurrent={projectedScore}
             highscoreTarget={highscoreTarget}
             runPaceDelta={runPaceDelta}
-            activeDoor={activeDoor}
-            capstone={capstone}
             onExpand={() => setTopPanelOpen(true)}
           />
         </div>
@@ -667,47 +654,39 @@ export function GameScreen({
           />
         </div>
 
-        {/* Stats Panel at bottom. The Ship Early countdown rides in its fixed
-            wrapper as the top row (the bar is position:fixed, so a sibling in
-            the flex column would be covered by it). Once the map is won the
-            panel goes visibility:hidden instantly - the bars below the board
-            must never outlive the board (a fade lagged behind the wave
-            on-device), but the layout box stays so the canvas doesn't resize
-            mid-sweep. */}
-        <div style={{ visibility: mapComplete ? 'hidden' : 'visible' }}>
-          <GameBottomBar
-            statsHiddenOnMobile={bottomStatsHiddenOnMobile}
-            activeModifiers={activeModifiers}
-            accentColor={accentColor}
-            lockedBalls={totalLockedBalls}
-            tagCounts={tagCounts}
-            tagSetThreshold={tagSetThreshold}
-            topSlot={
-              <>
-                {!mapComplete && gameState.onUseAbility && (
-                  <AbilityBar
-                    charges={abilityCharges ?? {}}
-                    accentColor={accentColor}
-                    onUse={gameState.onUseAbility}
-                    armedAbilityId={gameState.armedAbility}
-                    onInfoOpenChange={setAbilityInfoOpen}
-                  />
-                )}
-                <ShipEarlyBar
-                  seconds={gameState.activeSeconds}
-                  ballCount={gameState.ballCount}
-                  timeLimit={mapTimeLimit ?? 0}
-                  extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
-                  bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
-                  visible={mapTimeLimit != null && gameState.pushMode === 'none' && !mapComplete}
-                />
-                <AbilityCountdownBar
-                  timers={gameState.abilityTimers ?? []}
-                  visible={!mapComplete}
-                />
-              </>
-            }
-            onExpand={() => setBottomPanelOpen(true)}
+        {/* Live action bars pinned to the bottom in their own fixed wrapper (a
+            plain sibling in the flex column would sit under the board). Ability
+            controls, the Ship Early countdown and ability timers ride here; the
+            modifier stats they used to sit beside now live in the Specs panel.
+            Once the map is won they go visibility:hidden instantly - they must
+            never outlive the board (a fade lagged behind the wave on-device).
+            The wrapper is click-through; only the AbilityBar re-enables taps. */}
+        <div
+          className="fixed bottom-0 left-0 right-0 z-20 pointer-events-none"
+          style={{ visibility: mapComplete ? 'hidden' : 'visible' }}
+        >
+          {!mapComplete && gameState.onUseAbility && (
+            <div className="pointer-events-auto">
+              <AbilityBar
+                charges={abilityCharges ?? {}}
+                accentColor={accentColor}
+                onUse={gameState.onUseAbility}
+                armedAbilityId={gameState.armedAbility}
+                onInfoOpenChange={setAbilityInfoOpen}
+              />
+            </div>
+          )}
+          <ShipEarlyBar
+            seconds={gameState.activeSeconds}
+            ballCount={gameState.ballCount}
+            timeLimit={mapTimeLimit ?? 0}
+            extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
+            bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
+            visible={mapTimeLimit != null && gameState.pushMode === 'none' && !mapComplete}
+          />
+          <AbilityCountdownBar
+            timers={gameState.abilityTimers ?? []}
+            visible={!mapComplete}
           />
         </div>
       </div>
@@ -922,7 +901,8 @@ export function GameScreen({
         body={winConditionsBody(t, level, levelNumber)}
       />
 
-      {/* Full-screen top info panel */}
+      {/* Full-screen Specs panel: build, objectives, assignment, status,
+          upgrades and the full attribute breakdown. */}
       <TopBarDetailsPanel
         visible={topPanelOpen}
         onClose={() => setTopPanelOpen(false)}
@@ -941,16 +921,15 @@ export function GameScreen({
         microManagerPerLock={activeModifiers.microManagerPerLock}
         ascensionDepth={ascensionDepth}
         activeLoadouts={activeLoadouts}
-      />
-
-      {/* Full-screen bottom stats panel */}
-      <BottomBarDetailsPanel
-        visible={bottomPanelOpen}
-        onClose={() => setBottomPanelOpen(false)}
+        tagCounts={tagCounts}
+        tagSetThreshold={tagSetThreshold}
         activeModifiers={activeModifiers}
         modifierSources={modifierSources}
-        accentColor={accentColor}
-        lockedBalls={totalLockedBalls}
+        activeDoor={activeDoor}
+        capstone={capstone}
+        mapMutator={mapMutator}
+        objective={mapObjective}
+        objectiveProgress={objectiveProgress}
       />
     </>
   );

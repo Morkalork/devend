@@ -1,19 +1,18 @@
 /**
- * BottomBarDetailsPanel — full-screen expansion of GameBottomBar: every
- * active modifier explained in plain language.
+ * ModifierBreakdown — the "attributes" readout: every active GameModifier
+ * explained in plain language, with the sources that contribute to it. Renders
+ * as a list of <section>s (no full-screen wrapper), so it can sit inside the
+ * Specs panel (TopBarDetailsPanel). Formerly the body of BottomBarDetailsPanel.
  */
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { X } from 'lucide-react';
 import { GameModifiers, ModifierSource, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
 import { SPEND_CHUNK_HOURS } from '@/lib/treasury';
 import { effectiveBallSpeedFactor } from '@/lib/ballTypes';
 import { getShipEarlyThresholds } from '@/lib/scoring';
 import { contentText } from '@/i18n/content';
 
-interface BottomBarDetailsPanelProps {
-  visible: boolean;
-  onClose: () => void;
+interface ModifierBreakdownProps {
   activeModifiers: GameModifiers;
   modifierSources?: ModifierSource[];
   accentColor?: string;
@@ -80,16 +79,13 @@ function formatContribution(key: keyof GameModifiers, v: number): string {
   return v >= 0 ? `+${v}` : `${v}`;
 }
 
-export function BottomBarDetailsPanel({
-  visible,
-  onClose,
+export function ModifierBreakdown({
   activeModifiers,
   modifierSources = [],
   accentColor = '#00ff88',
   lockedBalls = 0,
-}: BottomBarDetailsPanelProps) {
+}: ModifierBreakdownProps) {
   const { t } = useTranslation();
-  if (!visible) return null;
 
   const m = activeModifiers;
   const pct = (v: number) => `${Math.round(v * 100)}%`;
@@ -509,156 +505,121 @@ export function BottomBarDetailsPanel({
   const inactiveRows = rows.filter(r => !r.changed);
 
   return (
-    <div
-      className="fixed inset-0 z-[80] flex flex-col"
-      style={{ backgroundColor: 'rgba(0, 10, 5, 0.97)', fontFamily: "'JetBrains Mono', monospace" }}
-    >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-        style={{ borderBottom: `2px solid ${accentColor}44` }}
-      >
-        <h1
-          className="text-xl font-black tracking-widest uppercase"
-          style={{ fontFamily: 'Michroma, sans-serif', color: accentColor, textShadow: `0 0 20px ${accentColor}55` }}
-        >
-          {t('bottomBarDetails.activeModifiers')}
-        </h1>
-        <button
-          onClick={onClose}
-          className="flex items-center justify-center w-11 h-11 rounded-lg transition-all hover:scale-110 active:scale-95"
-          style={{
-            backgroundColor: `${accentColor}22`,
-            border: `2px solid ${accentColor}99`,
-            color: accentColor,
-            boxShadow: `0 0 12px ${accentColor}44`,
-          }}
-          aria-label={t('bottomBarDetails.closePanel')}
-        >
-          <X className="w-6 h-6" />
-        </button>
-      </div>
-
-      {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
-
-        {/* Ship Early countdown: always shown so the on-board timer bar (with its
-            white one-hour tick marks) is explained regardless of modifiers. */}
-        {shipEarlyTopBonus > 0 && (
-          <section>
-            <p style={sectionHeadStyle}>{t('bottomBarDetails.timingHead')}</p>
-            <div
-              className="rounded-lg p-4"
-              style={{ backgroundColor: `${accentColor}0d`, border: `1px solid ${accentColor}44` }}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="font-bold text-sm" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
-                  {t('bottomBarDetails.shipEarlyCountdown')}
-                </span>
-                <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
-                  {t('bottomBarDetails.shipEarlyCountdownValue', { hours: shipEarlyTopBonus })}
-                </span>
-              </div>
-              <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
-                {t('bottomBarDetails.shipEarlyCountdownDesc', { hours: shipEarlyTopBonus })}
-              </p>
-            </div>
-          </section>
-        )}
-
-        {/* Active (non-default) modifiers */}
-        {activeRows.length > 0 && (
-          <section>
-            <p style={sectionHeadStyle}>{t('bottomBarDetails.modifiedCount', { count: activeRows.length })}</p>
-            <div className="space-y-3">
-              {activeRows.map(row => {
-                const contributors = modifierSources
-                  .map(s => ({ s, c: contributionFor(s, row.keys) }))
-                  .filter((x): x is { s: ModifierSource; c: { key: keyof GameModifiers; value: number } } => x.c !== null);
-                return (
-                  <div
-                    key={row.label}
-                    className="rounded-lg p-4"
-                    style={{
-                      backgroundColor: `${accentColor}0d`,
-                      border: `1px solid ${accentColor}44`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-bold text-sm" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
-                        {row.label}
-                      </span>
-                      <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
-                        {row.value}
-                      </span>
-                    </div>
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
-                      {row.description}
-                    </p>
-
-                    {contributors.length > 0 && (
-                      <div className="mt-2.5 pt-2.5 space-y-1" style={{ borderTop: `1px solid ${accentColor}22` }}>
-                        <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Michroma, sans-serif' }}>
-                          {t('bottomBarDetails.fromSources')}
-                        </p>
-                        {contributors.map(({ s, c }) => (
-                          <div key={`${s.kind}-${s.id}`} className="flex items-center justify-between gap-3">
-                            <span className="text-xs" style={{ color: '#c8ffd8' }}>{sourceName(t, s)}</span>
-                            <span className="text-xs font-bold tabular-nums" style={{ color: accentColor }}>
-                              {formatContribution(c.key, c.value)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        {activeRows.length === 0 && (
+    <div className="space-y-7">
+      {/* Ship Early countdown: always shown so the on-board timer bar (with its
+          white one-hour tick marks) is explained regardless of modifiers. */}
+      {shipEarlyTopBonus > 0 && (
+        <section>
+          <p style={sectionHeadStyle}>{t('bottomBarDetails.timingHead')}</p>
           <div
-            className="rounded-lg p-5 text-center"
-            style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: `1px solid ${accentColor}22` }}
+            className="rounded-lg p-4"
+            style={{ backgroundColor: `${accentColor}0d`, border: `1px solid ${accentColor}44` }}
           >
-            <p className="text-sm" style={{ color: '#4a7a5a' }}>
-              {t('bottomBarDetails.noModifiers')}
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="font-bold text-sm" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
+                {t('bottomBarDetails.shipEarlyCountdown')}
+              </span>
+              <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
+                {t('bottomBarDetails.shipEarlyCountdownValue', { hours: shipEarlyTopBonus })}
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+              {t('bottomBarDetails.shipEarlyCountdownDesc', { hours: shipEarlyTopBonus })}
             </p>
           </div>
-        )}
+        </section>
+      )}
 
-        {/* Base / inactive modifiers */}
-        {inactiveRows.length > 0 && (
-          <section>
-            <p style={sectionHeadStyle}>{t('bottomBarDetails.atDefault')}</p>
-            <div className="space-y-2">
-              {inactiveRows.map(row => (
+      {/* Active (non-default) modifiers */}
+      {activeRows.length > 0 && (
+        <section>
+          <p style={sectionHeadStyle}>{t('bottomBarDetails.modifiedCount', { count: activeRows.length })}</p>
+          <div className="space-y-3">
+            {activeRows.map(row => {
+              const contributors = modifierSources
+                .map(s => ({ s, c: contributionFor(s, row.keys) }))
+                .filter((x): x is { s: ModifierSource; c: { key: keyof GameModifiers; value: number } } => x.c !== null);
+              return (
                 <div
                   key={row.label}
-                  className="rounded-lg p-3"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${accentColor}18` }}
+                  className="rounded-lg p-4"
+                  style={{
+                    backgroundColor: `${accentColor}0d`,
+                    border: `1px solid ${accentColor}44`,
+                  }}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-bold" style={{ color: `${accentColor}bb` }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-sm" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
                       {row.label}
                     </span>
-                    <span className="text-sm tabular-nums" style={{ color: `${accentColor}aa` }}>
+                    <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
                       {row.value}
                     </span>
                   </div>
-                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.6 }}>
+                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
                     {row.description}
                   </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
 
-        <div className="h-4" />
-      </div>
+                  {contributors.length > 0 && (
+                    <div className="mt-2.5 pt-2.5 space-y-1" style={{ borderTop: `1px solid ${accentColor}22` }}>
+                      <p className="text-[10px] uppercase tracking-widest" style={{ color: `${accentColor}99`, fontFamily: 'Michroma, sans-serif' }}>
+                        {t('bottomBarDetails.fromSources')}
+                      </p>
+                      {contributors.map(({ s, c }) => (
+                        <div key={`${s.kind}-${s.id}`} className="flex items-center justify-between gap-3">
+                          <span className="text-xs" style={{ color: '#c8ffd8' }}>{sourceName(t, s)}</span>
+                          <span className="text-xs font-bold tabular-nums" style={{ color: accentColor }}>
+                            {formatContribution(c.key, c.value)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {activeRows.length === 0 && (
+        <div
+          className="rounded-lg p-5 text-center"
+          style={{ backgroundColor: 'rgba(255,255,255,0.04)', border: `1px solid ${accentColor}22` }}
+        >
+          <p className="text-sm" style={{ color: '#4a7a5a' }}>
+            {t('bottomBarDetails.noModifiers')}
+          </p>
+        </div>
+      )}
+
+      {/* Base / inactive modifiers */}
+      {inactiveRows.length > 0 && (
+        <section>
+          <p style={sectionHeadStyle}>{t('bottomBarDetails.atDefault')}</p>
+          <div className="space-y-2">
+            {inactiveRows.map(row => (
+              <div
+                key={row.label}
+                className="rounded-lg p-3"
+                style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${accentColor}18` }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm font-bold" style={{ color: `${accentColor}bb` }}>
+                    {row.label}
+                  </span>
+                  <span className="text-sm tabular-nums" style={{ color: `${accentColor}aa` }}>
+                    {row.value}
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.6 }}>
+                  {row.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

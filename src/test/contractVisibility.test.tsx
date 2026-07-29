@@ -1,14 +1,14 @@
 /**
- * Issue #49: the active assignment/Promotion are visible as hold-to-detail
- * chips in the game top bar, and the next assignment draft shows a report
+ * Issue #49 / #61: the active assignment/Promotion are visible in the Specs
+ * panel (TopBarDetailsPanel), and the next assignment draft shows a report
  * card for the contract that just ended.
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { render, screen, act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import fs from "fs";
 import path from "path";
 import "@/i18n";
-import { GameTopBar } from "@/components/game/GameTopBar";
+import { TopBarDetailsPanel } from "@/components/game/TopBarDetailsPanel";
 import { DoorDraftScreen } from "@/components/game/DoorDraftScreen";
 import { DoorConfig } from "@/types/door";
 import { CapstoneConfig } from "@/types/capstone";
@@ -29,43 +29,29 @@ const capstone: CapstoneConfig = {
   clarify: "", modifiers: {},
 } as CapstoneConfig;
 
-describe("top-bar contract chips", () => {
-  const barProps = {
+describe("Specs panel assignment section", () => {
+  const panelProps = {
+    visible: true, onClose: () => {},
     levelNumber: 7, cutsUsed: 1, parCuts: 10, lives: 3,
     spaceRemaining: 80, spaceRequired: 60, lockedBalls: 0,
     ownedUpgrades: [],
   };
 
-  it("holding the assignment chip opens its risk/reward detail", () => {
-    vi.useFakeTimers();
-    try {
-      render(<GameTopBar {...barProps} activeDoor={door} capstone={capstone} />);
-      const chip = screen.getByRole("button", { name: "Crunch Sprint" });
-      fireEvent.pointerDown(chip);
-      act(() => { vi.advanceTimersByTime(500); });
-      expect(screen.getByText("Balls move 15% faster.")).toBeTruthy();
-      expect(screen.getByText("Earn 40% more overtime.")).toBeTruthy();
-    } finally {
-      vi.useRealTimers();
-    }
+  it("shows the assignment's risk/reward", () => {
+    render(<TopBarDetailsPanel {...panelProps} activeDoor={door} capstone={capstone} />);
+    expect(screen.getByText("Balls move 15% faster.")).toBeTruthy();
+    expect(screen.getByText("Earn 40% more overtime.")).toBeTruthy();
   });
 
-  it("holding the Promotion chip opens its description", () => {
-    vi.useFakeTimers();
-    try {
-      render(<GameTopBar {...barProps} activeDoor={null} capstone={capstone} />);
-      fireEvent.pointerDown(screen.getByRole("button", { name: "Stock Options" }));
-      act(() => { vi.advanceTimersByTime(500); });
-      expect(screen.getByText("The per-map overtime cap rises by 20h.")).toBeTruthy();
-    } finally {
-      vi.useRealTimers();
-    }
+  it("shows the Promotion's description", () => {
+    render(<TopBarDetailsPanel {...panelProps} activeDoor={null} capstone={capstone} />);
+    expect(screen.getByText("The per-map overtime cap rises by 20h.")).toBeTruthy();
   });
 
-  it("renders no chips without an active door or capstone", () => {
-    render(<GameTopBar {...barProps} />);
-    expect(screen.queryByRole("button", { name: "Crunch Sprint" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Stock Options" })).toBeNull();
+  it("shows nothing from the assignment without an active door or capstone", () => {
+    render(<TopBarDetailsPanel {...panelProps} />);
+    expect(screen.queryByText("Balls move 15% faster.")).toBeNull();
+    expect(screen.queryByText("The per-map overtime cap rises by 20h.")).toBeNull();
   });
 });
 

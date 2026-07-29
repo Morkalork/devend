@@ -1,62 +1,12 @@
 /**
  * GameTopBar — compact status bar above the board: level, cuts vs par,
- * lives, space cleared, locked balls, owned upgrade icons and
- * certificate-hour progress. Tapping it opens TopBarDetailsPanel.
+ * lives, space cleared, locked balls, certificate-hour progress, and a Specs
+ * button. Tapping the bar (or Specs) opens TopBarDetailsPanel, which holds the
+ * run's build, upgrades, assignment and attributes.
  */
-import { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, Ticket, Award, Info, X, Wind } from 'lucide-react';
-import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
-import { DoorConfig } from '@/types/door';
-import { CapstoneConfig } from '@/types/capstone';
-import { ActiveMapMutator } from '@/types/mapMutator';
-import { ActiveMapObjective, ObjectiveProgress } from '@/types/objective';
-import { getUpgradeIcon } from './upgradeIcons';
-import { contentText } from '@/i18n/content';
-
-/**
- * Tier rank shown as a small signal-strength meter (1–3 bars) in the corner
- * of each upgrade icon. Architect/Wizard cap out at the full three bars.
- */
-const TIER_BARS: Record<UpgradeTier, number> = {
-  Junior: 1,
-  Senior: 2,
-  Principal: 3,
-  Architect: 3,
-  Wizard: 3,
-};
-
-/** Strict tier ordering, used to pick the highest tier owned within a family. */
-const TIER_RANK: Record<UpgradeTier, number> = {
-  Junior: 1,
-  Senior: 2,
-  Principal: 3,
-  Architect: 4,
-  Wizard: 5,
-};
-
-/**
- * Collapse owned upgrades to one entry per family (shared `name`), keeping the
- * highest tier bought. Owning Junior + Senior + Principal of the same upgrade
- * shows a single icon whose tier meter reflects the top tier, rather than three
- * separate icons. Family order follows first appearance in the owned list.
- */
-function groupUpgradesByFamily(owned: UpgradeConfig[]): UpgradeConfig[] {
-  const byFamily = new Map<string, UpgradeConfig>();
-  for (const upgrade of owned) {
-    const existing = byFamily.get(upgrade.name);
-    if (!existing || TIER_RANK[upgrade.tier] > TIER_RANK[existing.tier]) {
-      byFamily.set(upgrade.name, upgrade);
-    }
-  }
-  return [...byFamily.values()];
-}
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X } from 'lucide-react';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -78,10 +28,8 @@ interface GameTopBarProps {
   threadLockRequired?: number;
   /** Scope Creep speed boost in percent (0 = inactive, chip hidden). */
   scopeCreepPercent?: number;
-  ownedUpgrades: UpgradeConfig[];
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
-  microManagerPerLock?: number;
   ascensionDepth?: number;
   // Map highscore progress (#45): shown only with the Benchmarking upgrade and
   // when this map has a stored highscore. current = live projected score.
@@ -91,18 +39,7 @@ interface GameTopBarProps {
   // Record Pace (HIGHSCORES.md): the run's overtime delta vs the best run as
   // of the last completed map. Rides Benchmarking too; null = nothing to race.
   runPaceDelta?: number | null;
-  // Issue #49: the running contract (assignment door) and the once-per-run
-  // Promotion (capstone), shown as distinct hold-to-detail chips in the
-  // upgrades row so the player can always see what they have.
-  activeDoor?: DoorConfig | null;
-  capstone?: CapstoneConfig | null;
-  // Issue #54: the per-map environmental mutator, shown as a hold-to-detail chip
-  // (purple) alongside the contract/Promotion chips. null = vanilla map.
-  mapMutator?: ActiveMapMutator | null;
-  // Issue #55: the per-map optional objective + its live progress, shown as a
-  // green hold-to-detail chip that pulses when met. null = no objective.
-  objective?: ActiveMapObjective | null;
-  objectiveProgress?: ObjectiveProgress | null;
+  /** Opens the Specs panel (TopBarDetailsPanel). */
   onExpand?: () => void;
 }
 
@@ -117,40 +54,17 @@ export function GameTopBar({
   lockedBalls,
   threadLockRequired,
   scopeCreepPercent = 0,
-  ownedUpgrades,
   accentColor = '#00ff88',
   certificateProgress,
-  microManagerPerLock = 0,
   ascensionDepth = 0,
   showHighscoreBar = false,
   highscoreCurrent = 0,
   highscoreTarget = 0,
   runPaceDelta = null,
-  activeDoor = null,
-  capstone = null,
-  mapMutator = null,
-  objective = null,
-  objectiveProgress = null,
   onExpand,
 }: GameTopBarProps) {
   const { t } = useTranslation();
-  // One icon per upgrade family (highest tier owned), not one per bought tier.
-  const groupedUpgrades = useMemo(() => groupUpgradesByFamily(ownedUpgrades), [ownedUpgrades]);
-  const upgradesContainerRef = useRef<HTMLDivElement>(null);
-  const [needsCarousel, setNeedsCarousel] = useState(false);
-  const [openTooltipId, setOpenTooltipId] = useState<string | null>(null);
   const swipeStartYRef = useRef<number | null>(null);
-  // Issue #49: which contract chip's hold-detail modal is open.
-  const [contractDetail, setContractDetail] = useState<'door' | 'capstone' | 'mutator' | 'objective' | null>(null);
-  const contractHoldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const cancelContractHold = () => {
-    if (contractHoldTimer.current) { clearTimeout(contractHoldTimer.current); contractHoldTimer.current = null; }
-  };
-  const startContractHold = (which: 'door' | 'capstone' | 'mutator' | 'objective') => {
-    cancelContractHold();
-    contractHoldTimer.current = setTimeout(() => setContractDetail(which), 450);
-  };
-  useEffect(() => cancelContractHold, []);
 
   // Space readout hold-detail: exact remaining/cleared numbers behind the
   // CLEAR / "% to go" chip (handy mid Push Your Luck, when the chip just says
@@ -202,17 +116,10 @@ export function GameTopBar({
   const [livesFlashKey,  setLivesFlashKey]  = useState(0);
   const [locksFlashKey,  setLocksFlashKey]  = useState(0);
   const [creepFlashKey,  setCreepFlashKey]  = useState(0);
-  const [objectiveFlashKey, setObjectiveFlashKey] = useState(0);
   const prevSpaceRef = useRef(spaceRemaining);
   const prevLivesRef = useRef(lives);
   const prevLocksRef = useRef(lockedBalls);
   const prevCreepRef = useRef(scopeCreepPercent);
-  // Only "accumulate" objectives (lockCount/superiorLocks) have a satisfying
-  // mid-map completion to celebrate; "limit" ones (underPar/speedClear) read as
-  // met from the start, so they never pulse and never render as "complete".
-  const objectiveComplete = objectiveProgress?.mode === 'accumulate' && !!objectiveProgress?.met;
-  const objectiveOverBudget = objectiveProgress?.mode === 'limit' && objectiveProgress?.met === false;
-  const prevObjMetRef = useRef(objectiveComplete);
   // ignore the ESLint warning — useCallback is just a stable reference here
   const flash = useCallback((set: React.Dispatch<React.SetStateAction<number>>) =>
     set(k => k + 1), []);
@@ -233,43 +140,6 @@ export function GameTopBar({
     if (scopeCreepPercent > prevCreepRef.current) flash(setCreepFlashKey);
     prevCreepRef.current = scopeCreepPercent;
   }, [scopeCreepPercent, flash]);
-  useEffect(() => {
-    // Pulse the objective chip the moment an accumulate objective completes.
-    if (objectiveComplete && !prevObjMetRef.current) flash(setObjectiveFlashKey);
-    prevObjMetRef.current = objectiveComplete;
-  }, [objectiveComplete, flash]);
-
-  useEffect(() => {
-    const checkOverflow = () => {
-      const container = upgradesContainerRef.current;
-      if (container) {
-        setNeedsCarousel(container.scrollWidth > container.clientWidth);
-      }
-    };
-    checkOverflow();
-    window.addEventListener('resize', checkOverflow);
-    return () => window.removeEventListener('resize', checkOverflow);
-  }, [groupedUpgrades]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (openTooltipId) {
-        const target = e.target as HTMLElement;
-        if (!target.closest('[data-upgrade-icon]')) {
-          setOpenTooltipId(null);
-        }
-      }
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, [openTooltipId]);
-
-  const handleUpgradeClick = (upgradeId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setOpenTooltipId(prev => prev === upgradeId ? null : upgradeId);
-  };
-
-  const hasUpgrades = groupedUpgrades.length > 0;
 
   const lockReq = threadLockRequired ?? 0;
   const lockMet = lockedBalls >= lockReq;
@@ -510,8 +380,9 @@ export function GameTopBar({
         </div>
       )}
 
-      {/* Row 2: Upgrades Bar (+ contract/Promotion chips #49; mutator #54; objective #55) */}
-      {(hasUpgrades || activeDoor || capstone || mapMutator || objective) && (
+      {/* Row 3: Specs — opens the full run sheet (build, upgrades, assignment,
+          attributes). Replaces the old per-upgrade icon row (#61). */}
+      {onExpand && (
         <div
           className="px-3 py-1.5"
           style={{
@@ -519,159 +390,19 @@ export function GameTopBar({
             borderBottom: `1px solid ${accentColor}33`,
           }}
         >
-          <TooltipProvider delayDuration={0}>
-            <div
-              ref={upgradesContainerRef}
-              className={`flex items-center gap-2 ${
-                needsCarousel ? 'overflow-x-auto scrollbar-hide touch-pan-x' : 'justify-center'
-              }`}
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {/* Active assignment (door) + Promotion (capstone): styled apart
-                  from the green upgrade chips (contract orange / gold), same
-                  press-and-hold gesture for the explainer. */}
-              {activeDoor && (
-                <button
-                  className="relative flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
-                  style={{ backgroundColor: '#ffb34718', border: '1px solid #ffb34766', color: '#ffb347' }}
-                  onPointerDown={() => startContractHold('door')}
-                  onPointerUp={cancelContractHold}
-                  onPointerLeave={cancelContractHold}
-                  onPointerCancel={cancelContractHold}
-                  onContextMenu={(e) => e.preventDefault()}
-                  aria-label={contentText.doorName(t, activeDoor)}
-                >
-                  <Ticket className="w-4 h-4" strokeWidth={1.5} />
-                  <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />
-                </button>
-              )}
-              {capstone && (
-                <button
-                  className="relative flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
-                  style={{ backgroundColor: '#ffd54a18', border: '1px solid #ffd54a66', color: '#ffd54a' }}
-                  onPointerDown={() => startContractHold('capstone')}
-                  onPointerUp={cancelContractHold}
-                  onPointerLeave={cancelContractHold}
-                  onPointerCancel={cancelContractHold}
-                  onContextMenu={(e) => e.preventDefault()}
-                  aria-label={contentText.capstoneName(t, capstone)}
-                >
-                  <Award className="w-4 h-4" strokeWidth={1.5} />
-                  <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />
-                </button>
-              )}
-              {mapMutator && (
-                <button
-                  className="relative flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
-                  style={{ backgroundColor: '#c084fc18', border: '1px solid #c084fc66', color: '#c084fc' }}
-                  onPointerDown={() => startContractHold('mutator')}
-                  onPointerUp={cancelContractHold}
-                  onPointerLeave={cancelContractHold}
-                  onPointerCancel={cancelContractHold}
-                  onContextMenu={(e) => e.preventDefault()}
-                  aria-label={contentText.mutatorName(t, mapMutator)}
-                >
-                  <Wind className="w-4 h-4" strokeWidth={1.5} />
-                  <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />
-                </button>
-              )}
-              {objective && (
-                <button
-                  className="relative flex-shrink-0 h-8 min-w-8 px-1.5 rounded-md flex items-center gap-1 justify-center transition-all duration-200 hover:scale-110 focus:outline-none"
-                  style={{
-                    backgroundColor: objectiveComplete ? '#34d39926' : objectiveOverBudget ? '#f8717118' : '#34d39912',
-                    border: `1px solid ${objectiveComplete ? '#34d399' : objectiveOverBudget ? '#f8717166' : '#34d39955'}`,
-                    color: objectiveOverBudget ? '#f87171' : '#34d399',
-                  }}
-                  onPointerDown={() => startContractHold('objective')}
-                  onPointerUp={cancelContractHold}
-                  onPointerLeave={cancelContractHold}
-                  onPointerCancel={cancelContractHold}
-                  onContextMenu={(e) => e.preventDefault()}
-                  aria-label={contentText.objectiveName(t, objective)}
-                >
-                  <Target className="w-4 h-4 flex-shrink-0" strokeWidth={1.5} />
-                  {objectiveProgress && (
-                    <span
-                      key={objectiveFlashKey}
-                      className={`font-display text-xs font-bold tabular-nums${objectiveFlashKey > 0 ? ' animate-stat-flash' : ''}`}
-                    >
-                      {objectiveProgress.current}/{objectiveProgress.target}
-                    </span>
-                  )}
-                  {!objectiveComplete && <Info className="absolute -top-1 -right-1 w-3 h-3 opacity-70" />}
-                </button>
-              )}
-              {(activeDoor || capstone || mapMutator || objective) && hasUpgrades && (
-                <span className="flex-shrink-0 w-px h-6" style={{ backgroundColor: `${accentColor}33` }} />
-              )}
-              {groupedUpgrades.map((upgrade) => {
-                const Icon = getUpgradeIcon(upgrade, ownedUpgrades);
-                return (
-                <Tooltip
-                  key={upgrade.id}
-                  open={openTooltipId === upgrade.id}
-                  onOpenChange={(open) => {
-                    if (!open && openTooltipId === upgrade.id) setOpenTooltipId(null);
-                  }}
-                >
-                  <TooltipTrigger asChild>
-                    <button
-                      data-upgrade-icon
-                      onClick={(e) => handleUpgradeClick(upgrade.id, e)}
-                      className="relative flex-shrink-0 h-8 w-8 rounded-md flex items-center justify-center transition-all duration-200 hover:scale-110 focus:outline-none focus:ring-1 text-[10px] font-bold"
-                      style={{
-                        backgroundColor: `${accentColor}18`,
-                        border: `1px solid ${accentColor}55`,
-                        boxShadow: openTooltipId === upgrade.id ? `0 0 12px ${accentColor}88` : 'none',
-                        color: accentColor,
-                      }}
-                      aria-label={contentText.upgradeName(t, upgrade)}
-                    >
-                      {Icon
-                        ? <Icon className="w-4 h-4" strokeWidth={1.5} />
-                        : contentText.upgradeName(t, upgrade).substring(0, 3).toUpperCase()}
-                      {/* Tier meter: 1–3 ascending bars in the top-right corner */}
-                      <span className="absolute top-[3px] right-[3px] flex items-end gap-[1px]" aria-hidden="true">
-                        {Array.from({ length: TIER_BARS[upgrade.tier] }).map((_, i) => (
-                          <span
-                            key={i}
-                            className="w-[2px] rounded-[1px]"
-                            style={{ height: `${3 + i * 2}px`, backgroundColor: accentColor }}
-                          />
-                        ))}
-                      </span>
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent
-                    side="bottom"
-                    sideOffset={10}
-                    className="max-w-[220px] z-50"
-                    style={{
-                      backgroundColor: 'rgba(0, 20, 10, 0.95)',
-                      border: `1px solid ${accentColor}77`,
-                      boxShadow: `0 0 24px ${accentColor}44`,
-                    }}
-                  >
-                    <div className="space-y-1.5">
-                      <p className="font-display font-bold text-base" style={{ color: accentColor }}>
-                        {contentText.upgradeName(t, upgrade)} [{contentText.tier(t, upgrade.tier)}]
-                      </p>
-                      <p className="text-sm leading-relaxed" style={{ color: 'hsl(var(--foreground) / 0.85)' }}>
-                        {contentText.upgradeDesc(t, upgrade)}
-                      </p>
-                      {upgrade.id.startsWith('micro_manager_') && microManagerPerLock > 0 && (
-                        <p className="text-sm font-bold tabular-nums" style={{ color: accentColor }}>
-                          {t('topBar.currentlyReducingBy', { percent: Math.min(50, Math.round(lockedBalls * microManagerPerLock * 100)) })}
-                        </p>
-                      )}
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-                );
-              })}
-            </div>
-          </TooltipProvider>
+          <button
+            onClick={(e) => { e.stopPropagation(); onExpand(); }}
+            className="w-full h-8 rounded-md flex items-center justify-center gap-2 transition-all duration-200 hover:brightness-125 focus:outline-none"
+            style={{
+              backgroundColor: `${accentColor}18`,
+              border: `1px solid ${accentColor}55`,
+              color: accentColor,
+            }}
+            aria-label={t('topBar.specs')}
+          >
+            <ClipboardList className="w-4 h-4" strokeWidth={1.5} />
+            <span className="font-display text-sm font-bold tracking-widest uppercase">{t('topBar.specs')}</span>
+          </button>
         </div>
       )}
 
@@ -725,96 +456,6 @@ export function GameTopBar({
           </div>
         );
       })()}
-
-      {/* Issue #49: hold-detail for the active assignment / Promotion chips.
-          Backdrop tap or the X closes it (the game's standard explainer). */}
-      {contractDetail && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6"
-          onClick={() => setContractDetail(null)}
-        >
-          <div
-            className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
-            style={{ borderColor: contractDetail === 'door' ? '#ffb34766' : contractDetail === 'mutator' ? '#c084fc66' : contractDetail === 'objective' ? '#34d39966' : '#ffd54a66' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={() => setContractDetail(null)}
-              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-              aria-label={t('topBar.contractClose')}
-            >
-              <X className="w-4 h-4" />
-            </button>
-            {contractDetail === 'door' && activeDoor && (
-              <>
-                <div className="flex items-center gap-3 mb-1 pr-6">
-                  <Ticket className="w-7 h-7 shrink-0" style={{ color: '#ffb347' }} />
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.contractAssignment')}</div>
-                    <div className="text-base font-bold text-foreground">{contentText.doorName(t, activeDoor)}</div>
-                  </div>
-                </div>
-                <p className="text-sm mt-2"><span className="text-destructive font-semibold">{t('topBar.contractRisk')}</span> <span className="text-muted-foreground">{contentText.doorRisk(t, activeDoor)}</span></p>
-                <p className="text-sm mt-1"><span className="text-success font-semibold">{t('topBar.contractReward')}</span> <span className="text-muted-foreground">{contentText.doorReward(t, activeDoor)}</span></p>
-                {activeDoor.clarify && (
-                  <p className="text-sm text-muted-foreground mt-3">{contentText.doorClarify(t, activeDoor)}</p>
-                )}
-              </>
-            )}
-            {contractDetail === 'capstone' && capstone && (
-              <>
-                <div className="flex items-center gap-3 mb-1 pr-6">
-                  <Award className="w-7 h-7 shrink-0" style={{ color: '#ffd54a' }} />
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.contractPromotion')}</div>
-                    <div className="text-base font-bold text-foreground">{contentText.capstoneName(t, capstone)}</div>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">{contentText.capstoneDesc(t, capstone)}</p>
-                {capstone.clarify && (
-                  <p className="text-sm text-muted-foreground mt-3">{contentText.capstoneClarify(t, capstone)}</p>
-                )}
-              </>
-            )}
-            {contractDetail === 'mutator' && mapMutator && (
-              <>
-                <div className="flex items-center gap-3 mb-1 pr-6">
-                  <Wind className="w-7 h-7 shrink-0" style={{ color: '#c084fc' }} />
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.contractModifier')}</div>
-                    <div className="text-base font-bold text-foreground">{contentText.mutatorName(t, mapMutator)}</div>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">{contentText.mutatorDesc(t, mapMutator)}</p>
-                {mapMutator.clarify && (
-                  <p className="text-sm text-muted-foreground mt-3">{contentText.mutatorClarify(t, mapMutator)}</p>
-                )}
-              </>
-            )}
-            {contractDetail === 'objective' && objective && (
-              <>
-                <div className="flex items-center gap-3 mb-1 pr-6">
-                  <Target className="w-7 h-7 shrink-0" style={{ color: '#34d399' }} />
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.contractObjective')}</div>
-                    <div className="text-base font-bold text-foreground">{contentText.objectiveName(t, objective)}</div>
-                  </div>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">{contentText.objectiveDesc(t, objective)}</p>
-                {objectiveProgress && (
-                  <p className="text-sm mt-2" style={{ color: objectiveComplete ? '#34d399' : objectiveOverBudget ? '#f87171' : undefined }}>
-                    <span className="font-semibold">{t('topBar.objectiveReward', { hours: objective.reward })}</span>
-                    {' '}<span className="tabular-nums text-muted-foreground">{objectiveProgress.current}/{objectiveProgress.target}{objectiveComplete ? ' ✓' : ''}</span>
-                  </p>
-                )}
-                {objective.clarify && (
-                  <p className="text-sm text-muted-foreground mt-3">{contentText.objectiveClarify(t, objective)}</p>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
