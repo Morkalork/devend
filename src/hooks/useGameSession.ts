@@ -56,6 +56,9 @@ import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
 
 const BASE_LIVES = 3;
+/** Warm Cache: cap the cleared-map fence-speed ramp so a deep run can't run away
+ *  (10 maps × the coefficient is the ceiling). */
+const WARM_CACHE_RAMP_CAP = 10;
 /** Runs start with NO free Continue: buy Golden Parachute (the priciest shop
  *  offer), earn one via certificates / the Insurance Policy set bonus, or
  *  complete level FREE_CONTINUE_LEVEL. */
@@ -449,8 +452,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (Object.keys(assignmentRewardMods).length > 0) {
       bonuses = mergeBonuses(bonuses, assignmentRewardMods as Partial<Record<keyof GameModifiers, number>>);
     }
+    // Warm Cache loadout: fence growth snowballs with each map cleared this run.
+    // Translate the per-cleared-map coefficient into a fenceGenerationSpeedMultiplier
+    // boost, capped so a deep run can't run away with it.
+    if (baseModifiers.fenceSpeedPerMapCleared > 0 && runLevelsCompleted > 0) {
+      const rampMaps = Math.min(runLevelsCompleted, WARM_CACHE_RAMP_CAP);
+      bonuses = mergeBonuses(bonuses, {
+        fenceGenerationSpeedMultiplier: 1 + baseModifiers.fenceSpeedPerMapCleared * rampMaps,
+      });
+    }
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor, assignmentRewardMods]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor, assignmentRewardMods, runLevelsCompleted]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]

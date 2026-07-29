@@ -44,6 +44,11 @@ export interface GameModifiers {
   // Additive (sum) — Continuous Delivery: fence-speed bonus per fence already
   // completed this map (0.04 = +4% per fence; resets each map)
   fenceSpeedPerFence: number;
+  // Additive (sum) — Warm Cache loadout (#60 follow-up): fence-speed bonus per
+  // map already CLEARED this run (0.10 = +10% per cleared map). Unlike the
+  // per-map ramps above, this accumulates across the run, so a run snowballs.
+  // Translated into fenceGenerationSpeedMultiplier in useGameSession (capped).
+  fenceSpeedPerMapCleared: number;
   // Additive (sum) — Clean Release: instant fences granted on the NEXT map
   // after finishing a map under par (folded per-map by useGameSession)
   underParInstantFence: number;
@@ -214,6 +219,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   simultaneousLockBonus: 0,
   freezeNoCooldown: 0,
   fenceSpeedPerFence: 0,
+  fenceSpeedPerMapCleared: 0,
   underParInstantFence: 0,
   bankedSlowPer50h: 0,
   overtimeCapBonus: 0,

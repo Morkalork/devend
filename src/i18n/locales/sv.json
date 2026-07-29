@@ -1270,6 +1270,31 @@
         "name": "Agil transformation",
         "curse": "Stängsel växer 15% långsammare.",
         "blessing": "Butiken erbjuder 1 extra uppgradering och fyller på två gånger per besök."
+      },
+      "hotfix_in_prod": {
+        "name": "Hotfix i Prod",
+        "curse": "Scope creep börjar direkt, ingen frist.",
+        "blessing": "Tidig leverans ger 2,5x med längre fönster, och en skrapning bryter inte längre ditt stängsel."
+      },
+      "bus_factor": {
+        "name": "Bussfaktorn",
+        "curse": "Ingen Push Your Luck, och bollarna är 20% större.",
+        "blessing": "Lås ger +4 övertid (överlägsna lås dubbelt) och saktar övriga bollar med 3%."
+      },
+      "series_a": {
+        "name": "Serie A",
+        "curse": "Tjäna 30% mindre övertid.",
+        "blessing": "Börja varje bana med 15% intaget. Butiken erbjuder 2 fler föremål, fyller på två gånger och det billigaste är gratis."
+      },
+      "warm_cache": {
+        "name": "Varm Cache",
+        "curse": "Stängsel växer 25% långsammare.",
+        "blessing": "Stängsel växer snabbare för varje bana du klarar under körningen."
+      },
+      "move_fast_break_things": {
+        "name": "Rör dig snabbt, ha sönder saker",
+        "curse": "Betala ett liv, och bollarna rör sig 20% snabbare.",
+        "blessing": "Push Your Luck-utbetalningar tredubblas."
       }
     }
   },

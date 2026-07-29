@@ -138,3 +138,71 @@ loadouts:
       fenceGenerationSpeedMultiplier: 0.85
       extraShopItems: 1
       shopRestockCount: 2
+
+  # ── Playstyle loadouts: each defines a distinct run fantasy, not just a stat
+  # tweak (gambler / trapper / speedrunner / snowball / engine-builder).
+
+  # Speedrunner: the map is frantic from second one, but tempo is score. The
+  # fence-grace softens the chaos, so it reads as a "safety net" for aggressive
+  # play. Beginner-friendliest of the set, so it unlocks first.
+  - id: hotfix_in_prod
+    name: Hotfix in Prod
+    curse: Scope Creep starts immediately, no grace period.
+    blessing: Ship Early pays 2.5x with a longer window, and a graze no longer breaks your fence.
+    uniqueWinsRequired: 1
+    modifiers:
+      scopeCreepImmediate: 1
+      shipEarlyBonusMultiplier: 2.5
+      shipEarlySecondsPerBall: 6
+      fenceGraceMs: 400
+
+  # Trapper: stop clearing space, hunt balls. Push is off, so value comes from
+  # pockets; the board slows as you lock, snowballing control.
+  - id: bus_factor
+    name: The Bus Factor
+    curse: No Push Your Luck, and balls are 20% bigger.
+    blessing: "Locks pay +4 overtime (superior locks double) and slow every other ball by 3%."
+    uniqueWinsRequired: 2
+    modifiers:
+      disablePushYourLuck: 1
+      ballSizeMultiplier: 1.2
+      overtimePerLock: 4
+      overtimePerSuperiorLock: 4
+      microManagerPerLock: 0.03
+
+  # Engine-builder: you cannot bank your way to victory, so you build one. The
+  # pre-capture makes maps quicker, cycling shops faster.
+  - id: series_a
+    name: Series A
+    curse: Earn 30% less overtime.
+    blessing: Start each map 15% captured. The shop offers 2 more items, restocks twice, and the cheapest is free.
+    uniqueWinsRequired: 2
+    modifiers:
+      scoreMultiplier: 0.7
+      startingCapturePercent: 15
+      extraShopItems: 2
+      shopRestockCount: 2
+      freeCheapestOffer: 1
+
+  # Snowball: an in-run cold start. Fences open rough and speed up for every map
+  # you clear this run (capped), so a deep run becomes a machine.
+  - id: warm_cache
+    name: Warm Cache
+    curse: Fences grow 25% slower.
+    blessing: Fences grow faster for every map you clear this run.
+    uniqueWinsRequired: 3
+    modifiers:
+      fenceGenerationSpeedMultiplier: 0.75
+      fenceSpeedPerMapCleared: 0.10
+
+  # Gambler: no safety net. Push Your Luck is the whole run, on a board that
+  # punishes greed.
+  - id: move_fast_break_things
+    name: Move Fast, Break Things
+    curse: Pay a life, and balls move 20% faster.
+    blessing: Push Your Luck payouts pay triple.
+    uniqueWinsRequired: 4
+    modifiers:
+      extraLives: -1
+      ballSpeedMultiplier: 1.2
+      pushBonusMultiplier: 3.0

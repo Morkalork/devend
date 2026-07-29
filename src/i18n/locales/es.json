@@ -1270,6 +1270,31 @@
         "name": "Transformación Ágil",
         "curse": "Las vallas crecen un 15% más lento.",
         "blessing": "La tienda ofrece 1 mejora extra y se reabastece dos veces por visita."
+      },
+      "hotfix_in_prod": {
+        "name": "Hotfix en Producción",
+        "curse": "La Corrupción del alcance empieza de inmediato, sin periodo de gracia.",
+        "blessing": "La entrega temprana paga 2.5x con una ventana más larga, y un roce ya no rompe tu valla."
+      },
+      "bus_factor": {
+        "name": "El Factor Autobús",
+        "curse": "Sin arriesgarse, y las bolas son un 20% más grandes.",
+        "blessing": "Los bloqueos dan +4 horas extra (los superiores el doble) y ralentizan al resto un 3%."
+      },
+      "series_a": {
+        "name": "Serie A",
+        "curse": "Gana un 30% menos de horas extra.",
+        "blessing": "Empieza cada mapa con un 15% capturado. La tienda ofrece 2 objetos más, se reabastece dos veces y el más barato es gratis."
+      },
+      "warm_cache": {
+        "name": "Caché Caliente",
+        "curse": "Las vallas crecen un 25% más lento.",
+        "blessing": "Las vallas crecen más rápido por cada mapa que completes en esta partida."
+      },
+      "move_fast_break_things": {
+        "name": "Muévete Rápido y Rompe Cosas",
+        "curse": "Paga una vida, y las bolas se mueven un 20% más rápido.",
+        "blessing": "Los pagos de arriesgarse se triplican."
       }
     }
   },
