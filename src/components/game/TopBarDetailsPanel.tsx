@@ -10,7 +10,8 @@ import { X, Ticket, Award, Wind } from 'lucide-react';
 import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
-import { DoorConfig } from '@/types/door';
+import { AssignmentConfig } from '@/types/assignment';
+import type { AssignmentProgress } from '@/lib/assignments';
 import { CapstoneConfig } from '@/types/capstone';
 import { ActiveMapMutator } from '@/types/mapMutator';
 import { ActiveMapObjective, ObjectiveProgress } from '@/types/objective';
@@ -56,7 +57,9 @@ interface TopBarDetailsPanelProps {
   modifierSources?: ModifierSource[];
   // Assignment: the running contract, once-per-run Promotion, per-map mutator
   // and optional objective (folded in from the old top-bar chips, #61).
-  activeDoor?: DoorConfig | null;
+  activeDoor?: AssignmentConfig | null;
+  /** Live mission progress for the active assignment (completed maps + current). */
+  assignmentProgress?: AssignmentProgress | null;
   capstone?: CapstoneConfig | null;
   mapMutator?: ActiveMapMutator | null;
   objective?: ActiveMapObjective | null;
@@ -86,6 +89,7 @@ export function TopBarDetailsPanel({
   activeModifiers,
   modifierSources = [],
   activeDoor = null,
+  assignmentProgress = null,
   capstone = null,
   mapMutator = null,
   objective = null,
@@ -300,10 +304,32 @@ export function TopBarDetailsPanel({
                     <Ticket className="w-4 h-4 flex-shrink-0" style={{ color: '#ffb347' }} />
                     <span className="font-bold text-sm" style={{ color: '#ffb347' }}>{contentText.doorName(t, activeDoor)}</span>
                   </div>
-                  <p className="text-xs"><span className="text-destructive font-semibold">{t('topBar.contractRisk')}</span> <span style={{ color: '#c8ffd8', opacity: 0.7 }}>{contentText.doorRisk(t, activeDoor)}</span></p>
-                  <p className="text-xs mt-1"><span className="text-success font-semibold">{t('topBar.contractReward')}</span> <span style={{ color: '#c8ffd8', opacity: 0.7 }}>{contentText.doorReward(t, activeDoor)}</span></p>
+                  {activeDoor.constraint && (
+                    <p className="text-xs"><span className="text-destructive font-semibold">{t('topBar.contractRisk')}</span> <span style={{ color: '#c8ffd8', opacity: 0.7 }}>{contentText.assignmentConstraint(t, activeDoor)}</span></p>
+                  )}
+                  <p className="text-xs mt-1"><span className="text-success font-semibold">{t('topBarDetails.mission')}</span> <span style={{ color: '#c8ffd8', opacity: 0.7 }}>{contentText.assignmentMission(t, activeDoor)}</span></p>
+                  {/* Live mission progress: current metric and each tier's status. */}
+                  {assignmentProgress && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span style={{ color: '#c8ffd8', opacity: 0.7 }}>
+                          {assignmentProgress.mode === 'everyMap' ? t('topBarDetails.missionMapsPassed') : t('topBarDetails.missionProgress')}
+                        </span>
+                        <span className="font-bold tabular-nums" style={{ color: '#ffb347' }}>
+                          {assignmentProgress.current}{assignmentProgress.nextThreshold !== null ? ` / ${assignmentProgress.nextThreshold}` : ''}
+                        </span>
+                      </div>
+                      {assignmentProgress.tiers.map(tier => (
+                        <div key={tier.threshold} className="flex items-center justify-between text-[11px]" style={{ opacity: tier.reached ? 1 : 0.6 }}>
+                          <span style={{ color: tier.reached ? '#34d399' : '#c8ffd8' }}>
+                            {tier.reached ? '✓ ' : ''}<span className="tabular-nums font-bold">{tier.threshold}</span> {tier.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {activeDoor.clarify && (
-                    <p className="text-xs mt-2" style={{ color: '#c8ffd8', opacity: 0.6 }}>{contentText.doorClarify(t, activeDoor)}</p>
+                    <p className="text-xs mt-2" style={{ color: '#c8ffd8', opacity: 0.6 }}>{contentText.assignmentClarify(t, activeDoor)}</p>
                   )}
                 </div>
               )}

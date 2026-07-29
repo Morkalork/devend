@@ -18,6 +18,7 @@
  * picker) or the in-run Continue revive (a per-run resource spent on death).
  */
 import { useCallback, useEffect, useState } from 'react';
+import type { AssignmentMapResult } from '@/types/assignment';
 
 const RUN_SAVE_KEY = 'jezzball_run_v1';
 const RUN_SAVE_VERSION = 1;
@@ -49,6 +50,12 @@ export interface RunSave {
   // Running contract report card (#49): what the active door's block has
   // produced so far. Optional; missing = zeros.
   blockStats?: { overtime: number; maps: number; locks: number; livesLost: number };
+  // Per-map mission results across the active assignment's block (#60), for
+  // resuming multi-map mission progress. Optional; missing = empty.
+  blockResults?: AssignmentMapResult[];
+  // Assignment reward modifiers granted for the rest of the run (#60), re-applied
+  // on resume. Optional; missing = none.
+  assignmentRewardModifiers?: Record<string, number>;
   // Run-defining picks (re-hydrated from the loaded pools by id).
   activeDoorId: string | null;
   capstoneId: string | null;

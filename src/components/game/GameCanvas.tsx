@@ -1199,7 +1199,7 @@ export function GameCanvas({
         // A destroy can capture pocket cells (destroy-recapture) and take the
         // remaining space past the goal with no fence involved — run the same
         // win check a completed cut runs, or the map shows CLEAR but never ends.
-        checkSpaceWin(game, level, callbacks);
+        checkSpaceWin(game, level, callbacks, levelNumber, activeModifiers);
       },
       // Per-frame safety net (see useGameLoop): guarantees a cleared map always
       // finishes even if the space reached the goal by a path that didn't run

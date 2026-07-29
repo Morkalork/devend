@@ -54,13 +54,15 @@ export const contentText = {
   capstoneClarify: (t: TFunction, c: WithId & { clarify?: string }) =>
     field(t, 'capstones', c.id, 'clarify', c.clarify),
 
-  /** Door (doors.yml): risk/reward gate between maps. */
-  doorName: (t: TFunction, d: WithId & { name?: string }) => field(t, 'doors', d.id, 'name', d.name),
-  doorRisk: (t: TFunction, d: WithId & { risk?: string }) => field(t, 'doors', d.id, 'risk', d.risk),
-  doorReward: (t: TFunction, d: WithId & { reward?: string }) =>
-    field(t, 'doors', d.id, 'reward', d.reward),
-  doorClarify: (t: TFunction, d: WithId & { clarify?: string }) =>
-    field(t, 'doors', d.id, 'clarify', d.clarify),
+  /** Assignment (assignments.yml, #60): the multi-map mission gate. Keeps the
+   *  `doorName` accessor since the session threads it as the internal door. */
+  doorName: (t: TFunction, d: WithId & { name?: string }) => field(t, 'assignments', d.id, 'name', d.name),
+  assignmentConstraint: (t: TFunction, a: WithId & { constraint?: { text?: string } }) =>
+    field(t, 'assignments', a.id, 'constraint', a.constraint?.text),
+  assignmentMission: (t: TFunction, a: WithId & { mission?: { text?: string } }) =>
+    field(t, 'assignments', a.id, 'mission', a.mission?.text),
+  assignmentClarify: (t: TFunction, a: WithId & { clarify?: string }) =>
+    field(t, 'assignments', a.id, 'clarify', a.clarify),
 
   /** Boss (map.yml boss block, issue #56): keyed on the level id. */
   bossName: (t: TFunction, b: WithId & { name?: string }) => field(t, 'bosses', b.id, 'name', b.name),

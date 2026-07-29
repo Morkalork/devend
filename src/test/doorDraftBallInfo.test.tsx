@@ -8,15 +8,23 @@ import '@/i18n'; // side-effect: initialise react-i18next synchronously
 import { DoorDraftScreen } from '@/components/game/DoorDraftScreen';
 import { selectBallTypesForMap } from '@/lib/ballTypes';
 import { LevelConfig } from '@/types/level';
-import { DoorConfig } from '@/types/door';
+import { AssignmentConfig } from '@/types/assignment';
 
 const nextLevel = {
   id: 'assign-test', level: 5, sizeThreshold: 25, expectedCuts: 14, points: 40, maxBalls: 2,
 } as unknown as LevelConfig;
 
-const offers = [
-  { id: 'd1', name: 'Test Door', risk: 'A risk', reward: 'A reward', clarify: '', modifiers: {} },
-] as unknown as DoorConfig[];
+const offers: AssignmentConfig[] = [
+  {
+    id: 'd1', name: 'Test Assignment',
+    constraint: { text: 'A risk' },
+    mission: {
+      text: 'A mission',
+      track: { mode: 'cumulative', kind: 'lockCount' },
+      tiers: [{ threshold: 5, label: '+1 life', reward: { type: 'lives', count: 1 } }],
+    },
+  },
+];
 
 afterEach(cleanup);
 

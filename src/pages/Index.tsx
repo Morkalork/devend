@@ -24,6 +24,7 @@ import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { DoorDraftScreen } from '@/components/game/DoorDraftScreen';
 import { CapstoneDraftScreen } from '@/components/game/CapstoneDraftScreen';
+import { TierDraftScreen } from '@/components/game/TierDraftScreen';
 import { RunDraftScreen } from '@/components/game/RunDraftScreen';
 import { ContinuePrompt } from '@/components/game/ContinuePrompt';
 import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
@@ -308,6 +309,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 mapHighscores={session.mapHighscores}
                 runPaceDelta={session.levelPace?.delta ?? null}
                 activeDoor={session.activeDoor}
+                blockResults={session.blockResults}
                 capstone={session.capstone}
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
@@ -356,7 +358,16 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 nextLevel={session.nextLevel}
                 offers={session.doorOffers}
                 onSelect={session.handleSelectDoor}
+                onSkip={session.handleSkipAssignment}
                 previousContract={session.lastContractSummary}
+                accentColor={accentHex}
+              />
+            )}
+            {navigation.currentScreen === 'tierDraft' && session.pendingTierDraft && (
+              <TierDraftScreen
+                offers={session.pendingTierDraft.offers}
+                tier={session.pendingTierDraft.tier}
+                onSelect={session.handleSelectTierUpgrade}
                 accentColor={accentHex}
               />
             )}

@@ -35,7 +35,8 @@ import { getRunRng } from '@/lib/runRng';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig } from '@/types/loadout';
-import { DoorConfig } from '@/types/door';
+import { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
+import { evaluateAssignment } from '@/lib/assignments';
 import { CapstoneConfig } from '@/types/capstone';
 import { useGameConfig } from '@/hooks/useGameConfig';
 import { playMusicForLevel } from '@/lib/gameMusic';
@@ -103,7 +104,9 @@ interface GameScreenProps {
   /** Run-pace delta vs the best run (HIGHSCORES.md); rides Benchmarking. */
   runPaceDelta?: number | null;
   /** Active assignment + Promotion, for the top bar's contract chips (#49). */
-  activeDoor?: DoorConfig | null;
+  activeDoor?: AssignmentConfig | null;
+  /** Per-map mission results this block (#60), for live progress in the Specs panel. */
+  blockResults?: AssignmentMapResult[];
   capstone?: CapstoneConfig | null;
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
@@ -164,6 +167,7 @@ export function GameScreen({
   mapHighscores,
   runPaceDelta = null,
   activeDoor = null,
+  blockResults = [],
   capstone = null,
   activeLoadouts = [],
   fenceDurability = null,
@@ -316,6 +320,22 @@ export function GameScreen({
       : null,
     [mapObjective, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, gameState.activeSeconds, level.expectedCuts, gameState.bossDefeated],
   );
+
+  // Live assignment mission progress (issue #60): completed maps this block plus
+  // a provisional snapshot of the in-progress map, so the Specs panel tracks the
+  // multi-map task as it plays.
+  const assignmentProgress = useMemo(() => {
+    if (!activeDoor) return null;
+    const liveMap: AssignmentMapResult = {
+      locks: gameState.lockedBalls,
+      superiorLocks: gameState.superiorLocks,
+      cutsDelta: gameState.cutsUsed - level.expectedCuts,
+      clearSeconds: gameState.activeSeconds,
+      ballCount: gameState.ballCount,
+      allBallsLocked: gameState.ballCount > 0 && gameState.lockedBalls >= gameState.ballCount,
+    };
+    return evaluateAssignment(activeDoor, [...blockResults, liveMap]);
+  }, [activeDoor, blockResults, gameState.lockedBalls, gameState.superiorLocks, gameState.cutsUsed, gameState.activeSeconds, gameState.ballCount, level.expectedCuts]);
   
   // Get owned upgrade details
   const ownedUpgrades = upgrades.filter(u => ownedUpgradeIds.includes(u.id));
@@ -926,6 +946,7 @@ export function GameScreen({
         activeModifiers={activeModifiers}
         modifierSources={modifierSources}
         activeDoor={activeDoor}
+        assignmentProgress={assignmentProgress}
         capstone={capstone}
         mapMutator={mapMutator}
         objective={mapObjective}

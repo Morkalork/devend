@@ -36,9 +36,12 @@ import { loadAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
+import { assignmentRewardForBlock, eligibleTierUpgrades } from '@/lib/assignments';
+import { drawRandom } from '@/lib/yamlCatalogue';
 import { loadMapMutators } from '@/lib/mapMutators';
 import { loadMapObjectives } from '@/lib/mapObjectives';
-import { DoorConfig } from '@/types/door';
+import { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
+import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
 import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
@@ -140,16 +143,31 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // so the Assignment view can show how the finished contract went.
   const blockStatsRef = useRef({ overtime: 0, maps: 0, locks: 0, livesLost: 0 });
   const [lastContractSummary, setLastContractSummary] = useState<
-    { doorId: string; doorName: string; overtime: number; maps: number; locks: number; livesLost: number } | null
+    {
+      doorId: string; doorName: string; overtime: number; maps: number; locks: number; livesLost: number;
+      // Issue #60: how the mission resolved. `rewardLabel` is the reached tier's
+      // label (null = mission missed); `missionText` recaps the task.
+      missionText?: string; rewardLabel?: string | null;
+    } | null
   >(null);
+  // Issue #60: per-map results captured across the active assignment's block,
+  // for multi-map mission evaluation (the live HUD reads completed maps + the
+  // in-progress map; the block-end reward grant reads completed maps only).
+  const [blockResults, setBlockResults] = useState<AssignmentMapResult[]>([]);
+  // Issue #60: run-scoped modifier bundles granted by completed assignment
+  // rewards (scope: 'run'). Merged into the run's modifiers like a capstone.
+  const [assignmentRewardMods, setAssignmentRewardMods] = useState<Record<string, number>>({});
+  // Issue #60: a tier-draft reward owed by the just-finished assignment, shown
+  // as a 1-of-3 upgrade pick before the next assignment draft. null = none owed.
+  const [pendingTierDraft, setPendingTierDraft] = useState<{ tier: UpgradeTier; offers: UpgradeConfig[] } | null>(null);
 
   // Assignments (doors): every 5th completed level replaces the shop with a
   // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
   // `activeDoor` is the picked contract and lives until the NEXT assignment
   // replaces it (all 5 maps + their shops, so shop-facing rewards like extra
   // slots pay out across the whole block). Cleared on ascend and run resets.
-  const [doorOffers, setDoorOffers] = useState<DoorConfig[]>([]);
-  const [activeDoor, setActiveDoor] = useState<DoorConfig | null>(null);
+  const [doorOffers, setDoorOffers] = useState<AssignmentConfig[]>([]);
+  const [activeDoor, setActiveDoor] = useState<AssignmentConfig | null>(null);
 
   // Capstone ("Promotion"): the once-per-run exclusive perk, drafted 1-of-3
   // at the first assignment at/past the trigger level. Permanent for the run
@@ -415,13 +433,24 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (carrySpendCapture > 0) {
       bonuses = mergeBonuses(bonuses, { startingCapturePercent: carrySpendCapture });
     }
-    // Door pick: the chosen risk door's bundle rides along for this map (and
-    // the shop after it; see handleContinueFromShop for the expiry).
-    if (activeDoor) {
-      bonuses = mergeBonuses(bonuses, activeDoor.modifiers as Partial<Record<keyof GameModifiers, number>>);
+    // Accepted assignment: its constraint (curse modifiers + the no-Push flag)
+    // rides along for the whole block (#60). Skipped assignments (activeDoor
+    // null) add nothing.
+    if (activeDoor?.constraint) {
+      if (activeDoor.constraint.modifiers) {
+        bonuses = mergeBonuses(bonuses, activeDoor.constraint.modifiers as Partial<Record<keyof GameModifiers, number>>);
+      }
+      if (activeDoor.constraint.disablePushYourLuck) {
+        bonuses = mergeBonuses(bonuses, { disablePushYourLuck: 1 });
+      }
+    }
+    // Assignment rewards granted for the rest of the run (#60), folded like a
+    // capstone bundle.
+    if (Object.keys(assignmentRewardMods).length > 0) {
+      bonuses = mergeBonuses(bonuses, assignmentRewardMods as Partial<Record<keyof GameModifiers, number>>);
     }
     return bonuses;
-  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor]);
+  }, [baseModifiers, totalScore, carryInstantFences, carrySpendFences, carrySpendFenceSpeed, carrySpendCapture, activeDoor, assignmentRewardMods]);
   const finalBonuses = useMemo(
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
@@ -487,8 +516,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       sources.push({ kind: 'tagSet', id: s.tag, name: s.name, modifiers: s.modifiers });
     }
 
-    if (activeDoor) {
-      sources.push({ kind: 'door', id: activeDoor.id, name: activeDoor.name, modifiers: activeDoor.modifiers });
+    if (activeDoor?.constraint?.modifiers) {
+      sources.push({ kind: 'door', id: activeDoor.id, name: activeDoor.name, modifiers: activeDoor.constraint.modifiers });
+    }
+
+    if (Object.keys(assignmentRewardMods).length > 0) {
+      sources.push({ kind: 'door', id: 'assignment-reward', name: 'Assignment reward', modifiers: assignmentRewardMods });
     }
 
     if (capstone) {
@@ -505,7 +538,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     return sources;
-  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, activeDoor, capstone, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [ownedUpgradeIds, upgrades, certificates, certLevelsOwned, achievements, activatedAchievementIds, activeLoadouts, activeTagSets, activeDoor, assignmentRewardMods, capstone, ascensionDepth, ascensionConfig.speedRampPerDepth]);
 
   // Loadouts offered in the run-start draft: unlocked once the player has
   // enough unique wins (see loadoutUnlock). Ascension uses the full catalogue.
@@ -551,6 +584,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     spentThisShopVisitRef.current = 0;
     blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
     setLastContractSummary(null);
+    setBlockResults([]);
+    setAssignmentRewardMods({});
+    setPendingTierDraft(null);
     setActiveDoor(null);
     setCapstone(null);
     setPendingLevelScore(null);
@@ -592,6 +628,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     carrySpendCapture,
     carryFreeShopItems,
     blockStats: blockStatsRef.current,
+    blockResults,
+    assignmentRewardModifiers: assignmentRewardMods,
     activeDoorId: activeDoor?.id ?? null,
     capstoneId: capstone?.id ?? null,
     ascensionDepth,
@@ -782,6 +820,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
     setCarryFreeShopItems(save.carryFreeShopItems ?? 0);
     blockStatsRef.current = save.blockStats ?? { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
+    setBlockResults(save.blockResults ?? []);
+    setAssignmentRewardMods(save.assignmentRewardModifiers ?? {});
+    setPendingTierDraft(null);
     setLastContractSummary(null);
     spentThisShopVisitRef.current = 0;
     setAscensionDepth(save.ascensionDepth);
@@ -1062,6 +1103,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       blockStatsRef.current.overtime += levelOvertime;
       blockStatsRef.current.maps += 1;
       blockStatsRef.current.locks += scoreData.lockedBallsCount ?? 0;
+      // Mission bookkeeping (#60): capture this map's metrics for the multi-map
+      // condition. `wonByAllLocked` is the auto-win from trapping every ball.
+      const mapResult: AssignmentMapResult = {
+        locks: scoreData.lockedBallsCount ?? 0,
+        superiorLocks: scoreData.superiorLockCount ?? 0,
+        cutsDelta: scoreData.cutCount - scoreData.expectedCuts,
+        clearSeconds: scoreData.clearTimeSeconds ?? 9999,
+        ballCount: scoreData.wonByAllLocked ? (scoreData.lockedBallsCount ?? 0) : 0,
+        allBallsLocked: scoreData.wonByAllLocked ?? false,
+      };
+      setBlockResults(prev => [...prev, mapResult]);
     }
 
     // Record Pace (HIGHSCORES.md): extend this run's trajectory and race the
@@ -1094,42 +1146,26 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore, activeDoor]);
 
   /**
-   * Enter the assignment draft (mandatory 1-of-3 door pick). If the door pool
-   * failed to load, fall back to the regular shop so the level exit never
-   * dead-ends without a screen.
+   * Enter the assignment draft (1-of-3, or skip). If the pool failed to load,
+   * fall back to the regular shop so the level exit never dead-ends.
    */
   const proceedToAssignment = useCallback(() => {
-    // Contract report card (#49): snapshot how the finished contract went so
-    // the draft screen can show it above the new offers.
-    if (activeDoor) {
-      setLastContractSummary({
-        doorId: activeDoor.id,
-        doorName: activeDoor.name,
-        ...blockStatsRef.current,
-      });
-    } else {
-      setLastContractSummary(null);
-    }
     const doorPool = getDoors();
     if (doorPool.length > 0) {
       // Seeded runs key the roll by the level it lands on, so every player on
-      // the daily seed is offered the same contracts.
+      // the daily seed is offered the same assignments.
       setDoorOffers(drawDoorOffers(doorPool, ASSIGNMENT_OFFER_COUNT, getRunRng(`doors:${currentLevelIndex + 1}`)));
       nav.goToDoorDraft();
       return;
     }
     nav.goToUpgradeShop();
-  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex, activeDoor]);
+  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex]);
 
   /**
-   * Assignment level (every 5th): no shop. Route straight into the capstone
+   * After the finished assignment's reward is granted, route into the capstone
    * draft when the Promotion is due, otherwise into the assignment draft.
    */
-  const beginAssignmentPhase = useCallback(() => {
-    setPendingLevelScore(null);
-    // Capstone ("Promotion"): the first assignment at/past the trigger level
-    // routes through the mandatory 1-of-3 perk draft, once per run. ">=" so
-    // runs that resume past the exact trigger level still get theirs.
+  const routeAfterAssignmentReward = useCallback(() => {
     const capstonePool = getCapstones();
     if (!capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
       setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT, getRunRng(`capstones:${currentLevelIndex + 1}`)));
@@ -1138,6 +1174,79 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
     proceedToAssignment();
   }, [capstone, currentLevelIndex, nav.goToCapstoneDraft, proceedToAssignment]);
+
+  /**
+   * Grant the just-finished assignment's reward (issue #60): the reward of the
+   * highest mission tier reached over the block (completed maps only). Lives and
+   * overtime are banked immediately; run-scoped modifier bundles fold in like a
+   * capstone; a tier-draft reward is queued (returns true) so the caller shows
+   * the 1-of-3 upgrade pick before the next draft. Also writes the report card.
+   */
+  const grantAssignmentReward = useCallback((): { tierDraftOwed: boolean } => {
+    if (!activeDoor) {
+      setLastContractSummary(null);
+      return { tierDraftOwed: false };
+    }
+    const outcome = assignmentRewardForBlock(activeDoor, blockResults);
+    let rewardLabel: string | null = null;
+    let tierDraftOwed = false;
+    if (outcome) {
+      const r = outcome.reward;
+      rewardLabel = activeDoor.mission.tiers[outcome.tierIndex]?.label ?? null;
+      switch (r.type) {
+        case 'lives':
+          setCurrentLives(prev => prev + r.count);
+          break;
+        case 'overtime':
+          setTotalScore(prev => prev + r.hours);
+          break;
+        case 'modifiers':
+          // "Enhance an owned upgrade" rewards only pay when that upgrade is owned.
+          if (!r.requiresUpgradeId || ownedUpgradeIds.includes(r.requiresUpgradeId)) {
+            setAssignmentRewardMods(prev => ({
+              ...mergeBonuses(prev, r.modifiers as Partial<Record<keyof GameModifiers, number>>),
+            }) as Record<string, number>);
+          } else {
+            rewardLabel = null; // gate not met: nothing granted
+          }
+          break;
+        case 'tierDraft': {
+          const pool = eligibleTierUpgrades(upgrades, r.tier, ownedUpgradeIds);
+          const offers = drawRandom(pool, 3, getRunRng(`tierDraft:${currentLevelIndex + 1}`));
+          if (offers.length > 0) {
+            setPendingTierDraft({ tier: r.tier, offers });
+            tierDraftOwed = true;
+          } else {
+            rewardLabel = null; // no eligible upgrades to grant
+          }
+          break;
+        }
+      }
+    }
+    setLastContractSummary({
+      doorId: activeDoor.id,
+      doorName: activeDoor.name,
+      ...blockStatsRef.current,
+      missionText: activeDoor.mission.text,
+      rewardLabel,
+    });
+    return { tierDraftOwed };
+  }, [activeDoor, blockResults, ownedUpgradeIds, upgrades, currentLevelIndex]);
+
+  /**
+   * Assignment level (every 5th): no shop. Grant the finished assignment's
+   * reward, then (if a tier draft is owed) show the 1-of-3 upgrade pick, else
+   * route into the capstone or assignment draft.
+   */
+  const beginAssignmentPhase = useCallback(() => {
+    setPendingLevelScore(null);
+    const { tierDraftOwed } = grantAssignmentReward();
+    if (tierDraftOwed) {
+      nav.goToTierDraft();
+      return;
+    }
+    routeAfterAssignmentReward();
+  }, [grantAssignmentReward, routeAfterAssignmentReward, nav.goToTierDraft]);
 
   /**
    * Post-shop bookkeeping shared by the shop's Continue button and the
@@ -1211,7 +1320,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingLevelScore(null);
     setActiveDoor(null); // the pre-ascension map's door does not follow into the loop
     blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
+    setBlockResults([]); // fresh mission block for the new loop (#60)
+    setPendingTierDraft(null);
     setLastContractSummary(null);
+    // Assignment reward modifiers persist across ascension (part of the run's build).
     resetToFirstLevel(); // also re-randomizes the level variants for the new loop
     nav.goToGame();
   }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, nav.goToGame]);
@@ -1324,13 +1436,41 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * Assignment pick (mandatory): the chosen contract replaces the previous
    * one and runs until the next assignment swaps it out.
    */
-  const handleSelectDoor = useCallback((door: DoorConfig) => {
+  const handleSelectDoor = useCallback((door: AssignmentConfig) => {
     analytics.doorSelected({ doorId: door.id, level: currentLevelIndex + 1 });
     setActiveDoor(door);
     blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 }; // new contract, fresh card (#49)
+    setBlockResults([]); // new mission block (#60)
     advanceToNextLevel();
     nav.goToGame();
   }, [advanceToNextLevel, nav.goToGame, currentLevelIndex]);
+
+  /**
+   * Skip the assignment (issue #60): take on no constraint and no mission for
+   * the next block. Neutral by design, which is what makes accepting a real
+   * choice. Clears any active assignment and its block accumulators.
+   */
+  const handleSkipAssignment = useCallback(() => {
+    analytics.doorSelected({ doorId: 'skip', level: currentLevelIndex + 1 });
+    setActiveDoor(null);
+    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
+    setBlockResults([]);
+    advanceToNextLevel();
+    nav.goToGame();
+  }, [advanceToNextLevel, nav.goToGame, currentLevelIndex]);
+
+  /**
+   * Tier-draft reward pick (issue #60): grant the chosen upgrade, then continue
+   * to the capstone or assignment draft.
+   */
+  const handleSelectTierUpgrade = useCallback((upgradeId: string) => {
+    setOwnedUpgradeIds(prev => (prev.includes(upgradeId) ? prev : [...prev, upgradeId]));
+    const upgrade = upgrades.find(u => u.id === upgradeId);
+    const extraLives = upgrade?.modifiers?.extraLives;
+    if (typeof extraLives === 'number' && extraLives !== 0) setCurrentLives(prev => prev + extraLives);
+    setPendingTierDraft(null);
+    routeAfterAssignmentReward();
+  }, [upgrades, routeAfterAssignmentReward]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);
@@ -1537,6 +1677,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Doors (branching map choice)
     doorOffers,
     activeDoor,
+    // Mission block state (#60): per-map results for the live progress readout,
+    // and the owed tier-draft reward (1-of-3 upgrade pick).
+    blockResults,
+    pendingTierDraft,
+    handleSkipAssignment,
+    handleSelectTierUpgrade,
     // How the just-finished contract went (#49), for the assignment draft.
     lastContractSummary,
     // The map the door draft previews (null past the final level).

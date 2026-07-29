@@ -10,7 +10,7 @@ import path from "path";
 import "@/i18n";
 import { TopBarDetailsPanel } from "@/components/game/TopBarDetailsPanel";
 import { DoorDraftScreen } from "@/components/game/DoorDraftScreen";
-import { DoorConfig } from "@/types/door";
+import { AssignmentConfig } from "@/types/assignment";
 import { CapstoneConfig } from "@/types/capstone";
 import { LevelConfig } from "@/types/level";
 import { useScreenNavigation } from "@/hooks/useScreenNavigation";
@@ -18,11 +18,16 @@ import { useGameSession } from "@/hooks/useGameSession";
 
 afterEach(cleanup);
 
-const door: DoorConfig = {
+const door: AssignmentConfig = {
   id: "crunch_sprint", name: "Crunch Sprint",
-  risk: "Balls move 15% faster.", reward: "Earn 40% more overtime.",
-  clarify: "", modifiers: {},
-} as DoorConfig;
+  constraint: { text: "Balls move 15% faster.", modifiers: { ballSpeedMultiplier: 1.15 } },
+  mission: {
+    text: "Lock 20 balls over 5 maps.",
+    track: { mode: "cumulative", kind: "lockCount" },
+    tiers: [{ threshold: 20, label: "+2 lives", reward: { type: "lives", count: 2 } }],
+  },
+  clarify: "",
+};
 const capstone: CapstoneConfig = {
   id: "stock_options", name: "Stock Options",
   description: "The per-map overtime cap rises by 20h.", tag: "risk",
@@ -37,10 +42,10 @@ describe("Specs panel assignment section", () => {
     ownedUpgrades: [],
   };
 
-  it("shows the assignment's risk/reward", () => {
+  it("shows the assignment's constraint and mission", () => {
     render(<TopBarDetailsPanel {...panelProps} activeDoor={door} capstone={capstone} />);
     expect(screen.getByText("Balls move 15% faster.")).toBeTruthy();
-    expect(screen.getByText("Earn 40% more overtime.")).toBeTruthy();
+    expect(screen.getByText("Lock 20 balls over 5 maps.")).toBeTruthy();
   });
 
   it("shows the Promotion's description", () => {

@@ -55,6 +55,10 @@ export function useScreenNavigation() {
     setCurrentScreen('capstoneDraft');
   }, []);
 
+  const goToTierDraft = useCallback(() => {
+    setCurrentScreen('tierDraft');
+  }, []);
+
   const goToAscensionDraft = useCallback(() => {
     setCurrentScreen('ascensionDraft');
   }, []);
@@ -104,6 +108,7 @@ export function useScreenNavigation() {
     goToRunDraft,
     goToDoorDraft,
     goToCapstoneDraft,
+    goToTierDraft,
     goToAscensionDraft,
     goToCertificateStore,
     goToLoadouts,

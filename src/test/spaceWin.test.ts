@@ -41,13 +41,16 @@ function mkCallbacks() {
   };
 }
 
+// Push Your Luck enabled (disablePushYourLuck 0), so the prompt still opens.
+const PUSH_MODS = { disablePushYourLuck: 0 } as GameModifiers;
+
 describe("checkSpaceWin (top bar CLEAR must equal an actual win)", () => {
   it("opens the prompt on an EXACT landing (remaining == threshold)", () => {
     // Regression: the HUD shows CLEAR at remaining <= threshold, but the win
     // used strictly-less — an exact landing celebrated without finishing.
     const game = mkGame(25);
     const cb = mkCallbacks();
-    checkSpaceWin(game, LEVEL, cb);
+    checkSpaceWin(game, LEVEL, cb as unknown as GameCallbacks, 5, PUSH_MODS);
     expect(game.pushMode).toBe("prompt");
     expect(cb.calls.pushMode).toEqual(["prompt"]);
     expect(game.clearedActiveSeconds).toBe(12);
@@ -56,14 +59,14 @@ describe("checkSpaceWin (top bar CLEAR must equal an actual win)", () => {
   it("opens the prompt below the threshold", () => {
     const game = mkGame(24);
     const cb = mkCallbacks();
-    checkSpaceWin(game, LEVEL, cb);
+    checkSpaceWin(game, LEVEL, cb as unknown as GameCallbacks, 5, PUSH_MODS);
     expect(game.pushMode).toBe("prompt");
   });
 
   it("does nothing above the threshold", () => {
     const game = mkGame(26);
     const cb = mkCallbacks();
-    const percent = checkSpaceWin(game, LEVEL, cb);
+    const percent = checkSpaceWin(game, LEVEL, cb as unknown as GameCallbacks, 5, PUSH_MODS);
     expect(percent).toBe(26);
     expect(game.pushMode).toBe("none");
     expect(cb.calls.pushMode).toEqual([]);
@@ -77,7 +80,7 @@ describe("checkSpaceWin (top bar CLEAR must equal an actual win)", () => {
     ]) {
       const game = mkGame(20, overrides);
       const cb = mkCallbacks();
-      checkSpaceWin(game, LEVEL, cb);
+      checkSpaceWin(game, LEVEL, cb as unknown as GameCallbacks, 5, PUSH_MODS);
       expect(cb.calls.pushMode).toEqual([]);
     }
   });
@@ -85,7 +88,7 @@ describe("checkSpaceWin (top bar CLEAR must equal an actual win)", () => {
   it("while pushing, only tracks the best remaining", () => {
     const game = mkGame(18, { pushMode: "pushing", bestRemainingPercent: 22 });
     const cb = mkCallbacks();
-    checkSpaceWin(game, LEVEL, cb);
+    checkSpaceWin(game, LEVEL, cb as unknown as GameCallbacks, 5, PUSH_MODS);
     expect(game.bestRemainingPercent).toBe(18);
     expect(cb.calls.pushMode).toEqual([]);
   });
@@ -95,7 +98,7 @@ describe("checkSpaceWin (top bar CLEAR must equal an actual win)", () => {
       assimilations: new Map([["a", { startTime: performance.now() } as never]]),
     });
     const cb = mkCallbacks();
-    checkSpaceWin(game, LEVEL, cb);
+    checkSpaceWin(game, LEVEL, cb as unknown as GameCallbacks, 5, PUSH_MODS);
     expect(game.pushPromptPending).toBe(true);
     expect(game.pushMode).toBe("none");
     expect(cb.calls.pushMode).toEqual([]);
@@ -105,12 +108,12 @@ describe("checkSpaceWin (top bar CLEAR must equal an actual win)", () => {
     const level = { sizeThreshold: 25, threadLockRequired: 1 } as LevelConfig;
     const short = mkGame(25);
     const cb1 = mkCallbacks();
-    checkSpaceWin(short, level, cb1);
+    checkSpaceWin(short, level, cb1 as unknown as GameCallbacks, 5, PUSH_MODS);
     expect(short.pushMode).toBe("none");
 
     const met = mkGame(25, { lockedBallsCount: 1 });
     const cb2 = mkCallbacks();
-    checkSpaceWin(met, level, cb2);
+    checkSpaceWin(met, level, cb2 as unknown as GameCallbacks, 5, PUSH_MODS);
     expect(met.pushMode).toBe("prompt");
   });
 });

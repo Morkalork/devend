@@ -103,6 +103,9 @@ export interface GameModifiers {
   ballPathPredictionBounces: number; // how many bounces ahead to show
   ballPathPredictionBalls: number;   // how many balls to track (by speed desc; ≥100 = all)
 
+  // Additive (sum) — Assignment constraint (#60): >0 disables Push Your Luck for
+  // the block (the map banks straight through instead of prompting to push).
+  disablePushYourLuck: number;
   // Additive (sum) — Feature Freeze: seconds a tapped ball stays frozen (0 = upgrade not owned)
   ballFreezeDuration: number;
   // Additive (sum) — Feature Freeze: tap-freezes allowed per map (refills each
@@ -234,6 +237,7 @@ const DEFAULT_MODIFIERS: GameModifiers = {
   spaceBonusMultiplier: 1,
   ballPathPredictionBounces: 0,
   ballPathPredictionBalls: 0,
+  disablePushYourLuck: 0,
   ballFreezeDuration: 0,
   freezeUsesPerMap: 0,
   slowOneBallFactor: 0,

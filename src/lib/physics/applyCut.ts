@@ -352,10 +352,9 @@ export function evaluateWinConditions(
     triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
     return null;
   }
-  return checkSpaceWin(game, level, callbacks);
+  return checkSpaceWin(game, level, callbacks, levelNumber, activeModifiers);
 }
 
-type SpaceWinCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setClearedPercent' | 'setPushMode'>;
 
 /**
  * Recompute the remaining space and open the push-your-luck prompt when the
@@ -373,7 +372,9 @@ type SpaceWinCallbacks = Pick<GameCallbacks, 'setRemainingPercent' | 'setCleared
 export function checkSpaceWin(
   game: CanvasGameState,
   level: LevelConfig,
-  callbacks: SpaceWinCallbacks,
+  callbacks: GameCallbacks,
+  levelNumber: number,
+  activeModifiers: GameModifiers,
 ): number {
   const percent = Math.round(getGridRemainingPercent(game));
   callbacks.setRemainingPercent(percent);
@@ -386,6 +387,12 @@ export function checkSpaceWin(
   // completed by shrinking the board, exactly as normal.
   const lockReq = level.threadLockRequired ?? 0;
   if (percent <= level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none" && !game.pushPromptPending && !game.levelComplete) {
+    // Assignment constraint (#60): Push Your Luck disabled for this block, so
+    // the win banks straight through instead of opening the prompt.
+    if (activeModifiers.disablePushYourLuck > 0) {
+      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+      return percent;
+    }
     // The frame is already drawn (loop render + the post-cut render above) and
     // pushMode is still "none" here, so these would be pixel-identical repaints.
     // The two redundant full renders spiked this frame to 4 redraws and caused a

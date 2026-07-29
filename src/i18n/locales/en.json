@@ -550,7 +550,10 @@
     "activeUpgradesCount": "Active Upgrades ({{count}})",
     "currentlyReducingBallSpeed": "Currently reducing ball speed by {{percent}}%",
     "activeUpgrades": "Active Upgrades",
-    "noUpgrades": "No upgrades purchased yet. Visit the upgrade shop between levels to power up your run."
+    "noUpgrades": "No upgrades purchased yet. Visit the upgrade shop between levels to power up your run.",
+    "mission": "Mission:",
+    "missionProgress": "Progress",
+    "missionMapsPassed": "Maps passed"
   },
   "tutorial": {
     "back": "Back",
@@ -725,7 +728,11 @@
     "contractOvertime": "Overtime",
     "contractMaps": "Maps",
     "contractLocks": "Locks",
-    "contractLivesLost": "Lives lost"
+    "contractLivesLost": "Lives lost",
+    "skipButton": "Skip assignment",
+    "tierArrow": "→",
+    "missionReward": "Reward earned: {{reward}}",
+    "missionMissed": "Mission missed, no reward."
   },
   "continue": {
     "title": "Continue?",
@@ -816,5 +823,13 @@
     "panicMode": "Panic Mode",
     "reverted": "Reverted!",
     "shippedIt": "Shipped It!"
+  },
+  "tierDraft": {
+    "title": "Assignment Reward",
+    "subtitle": "Pick one {{tier}} upgrade",
+    "holdHint": "Press and hold a card for details.",
+    "confirmButton": "Take Upgrade",
+    "pickHint": "Select an upgrade",
+    "closeDetail": "Close details"
   }
 }

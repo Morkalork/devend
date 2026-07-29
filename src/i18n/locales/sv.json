@@ -547,7 +547,10 @@
     "activeUpgradesCount": "Aktiva uppgraderingar ({{count}})",
     "currentlyReducingBallSpeed": "Minskar just nu bollhastigheten med {{percent}}%",
     "activeUpgrades": "Aktiva uppgraderingar",
-    "noUpgrades": "Inga uppgraderingar köpta ännu. Besök butiken mellan nivåerna för att stärka din omgång."
+    "noUpgrades": "Inga uppgraderingar köpta ännu. Besök butiken mellan nivåerna för att stärka din omgång.",
+    "mission": "Uppdrag:",
+    "missionProgress": "Framsteg",
+    "missionMapsPassed": "Klarade banor"
   },
   "tutorial": {
     "back": "Tillbaka",
@@ -710,7 +713,11 @@
     "contractOvertime": "Övertid",
     "contractMaps": "Kartor",
     "contractLocks": "Inlåsningar",
-    "contractLivesLost": "Förlorade liv"
+    "contractLivesLost": "Förlorade liv",
+    "skipButton": "Hoppa över uppdrag",
+    "tierArrow": "→",
+    "missionReward": "Belöning intjänad: {{reward}}",
+    "missionMissed": "Uppdrag missat, ingen belöning."
   },
   "continue": {
     "title": "Fortsätta?",
@@ -1324,5 +1331,13 @@
     "panicMode": "Panikläge",
     "reverted": "Återställd!",
     "shippedIt": "Levererat!"
+  },
+  "tierDraft": {
+    "title": "Uppdragsbelöning",
+    "subtitle": "Välj en {{tier}}-uppgradering",
+    "holdHint": "Håll in ett kort för detaljer.",
+    "confirmButton": "Ta uppgradering",
+    "pickHint": "Välj en uppgradering",
+    "closeDetail": "Stäng detaljer"
   }
 }

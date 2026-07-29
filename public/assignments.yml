@@ -1,0 +1,140 @@
+# Assignments (issue #60) — the every-5th-level "Next Assignment" draft.
+#
+# Every 5th completed level (offeredAfterLevel) replaces the shop with a draft:
+# pick ONE of three assignments, or SKIP. Skipping is neutral. Accepting takes
+# on the assignment's CONSTRAINT (a modifier curse and/or a behavioral rule like
+# disabling Push Your Luck) for the whole 5-map block, and sets a MISSION: a task
+# tracked across those maps. Clearing a mission tier pays a REWARD at block end.
+#
+# mission.track.mode:
+#   cumulative  a running metric summed over the block (total locks / total
+#               superior locks), or the count of maps that met a pass/fail
+#               condition (underPar, speedClear, allBallsLocked).
+#   everyMap    the count of maps whose per-map condition was met; tier
+#               thresholds are maps-passed (out of 5).
+# mission.track.kind: lockCount | superiorLocks | underPar | speedClear | allBallsLocked
+# tiers: ascending thresholds; the highest reached pays. reward.type:
+#   lives     { count }           overtime  { hours }
+#   modifiers { blessing, modifiers, scope: run|block }   (good/bad bundle; can
+#             deepen a key to "enhance" a top-tier upgrade's effect)
+#   tierDraft { tier }            a free 1-of-3 upgrade pick (tough missions only)
+#
+# Balance: overtime rewards fold under the per-map cap elsewhere; keep constraints
+# survivable across five maps. tierDraft is reserved for constrained, hard
+# missions (the top tier). No em-dashes in displayed strings.
+offeredAfterLevel: 5
+
+assignments:
+
+  - id: lock_quota
+    name: Lock Quota
+    constraint:
+      text: Balls move 10% faster.
+      modifiers:
+        ballSpeedMultiplier: 1.1
+    mission:
+      text: Lock balls across the next 5 maps.
+      track: { mode: cumulative, kind: lockCount }
+      tiers:
+        - { threshold: 12, label: "+30 overtime", reward: { type: overtime, hours: 30 } }
+        - { threshold: 20, label: "+2 lives", reward: { type: lives, count: 2 } }
+    clarify: A gentle, always-on speed tax for a payout that scales with how many balls you seal over the block. Locking two or three a map clears the first tier comfortably.
+
+  - id: daily_standup
+    name: Daily Standup
+    constraint:
+      text: Balls are 10% bigger.
+      modifiers:
+        ballSizeMultiplier: 1.1
+    mission:
+      text: Lock at least 2 balls in each of the next 5 maps.
+      track: { mode: everyMap, kind: lockCount, params: { count: 2 } }
+      tiers:
+        - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 5, label: "+3 lives", reward: { type: lives, count: 3 } }
+    clarify: Consistency over volume. You need two locks on a map for it to count; hit that in three of the five maps for the first reward, all five for the best.
+
+  - id: precision_review
+    name: Precision Review
+    constraint:
+      text: Fences grow 10% slower.
+      modifiers:
+        fenceGenerationSpeedMultiplier: 0.9
+    mission:
+      text: Land superior locks across the next 5 maps.
+      track: { mode: cumulative, kind: superiorLocks }
+      tiers:
+        - { threshold: 4, label: "+40 overtime", reward: { type: overtime, hours: 40 } }
+        - { threshold: 8, label: "Score +15%, fences 5% slower", reward: { type: modifiers, blessing: "Overtime up 15%, but fences grow 5% slower for the rest of the run.", modifiers: { scoreMultiplier: 1.15, fenceGenerationSpeedMultiplier: 0.95 }, scope: run } }
+    clarify: Rewards tight-pocket locks. Slower fences make snug pockets harder to seal, which is the point. The top tier is a lasting good-and-bad attribute swing.
+
+  - id: under_budget
+    name: Under Budget
+    constraint:
+      text: Earn 10% less overtime.
+      modifiers:
+        scoreMultiplier: 0.9
+    mission:
+      text: Clear at or under par cuts in each of the next 5 maps.
+      track: { mode: everyMap, kind: underPar, params: { delta: 0 } }
+      tiers:
+        - { threshold: 3, label: "+40 overtime", reward: { type: overtime, hours: 40 } }
+        - { threshold: 5, label: "+3 lives", reward: { type: lives, count: 3 } }
+    clarify: Efficient cutting only. A map counts when you finish at or under its par. The overtime cut hurts now; clean play across the block pays it back and then some.
+
+  - id: sprint_review
+    name: Sprint Review
+    constraint:
+      text: Scope Creep starts immediately, no grace period.
+      modifiers:
+        scopeCreepImmediate: 1
+    mission:
+      text: Clear each of the next 5 maps within 40 seconds.
+      track: { mode: everyMap, kind: speedClear, params: { seconds: 40 } }
+      tiers:
+        - { threshold: 3, label: "+50 overtime", reward: { type: overtime, hours: 50 } }
+        - { threshold: 5, label: "Overtime +20% for the run", reward: { type: modifiers, blessing: "Overtime up 20% for the rest of the run.", modifiers: { scoreMultiplier: 1.2 }, scope: run } }
+    clarify: Built for fast, instinctive cutters. Balls surge from the first second, so there is no calm window; clear inside 40 active seconds to bank a map toward the reward.
+
+  - id: cost_cutting
+    name: Cost Cutting
+    constraint:
+      text: Fences grow 12% slower.
+      modifiers:
+        fenceGenerationSpeedMultiplier: 0.88
+    mission:
+      text: Land superior locks across the next 5 maps.
+      track: { mode: cumulative, kind: superiorLocks }
+      tiers:
+        - { threshold: 5, label: "+50 overtime", reward: { type: overtime, hours: 50 } }
+        - { threshold: 10, label: "Space Optimization pays +50%", reward: { type: modifiers, blessing: "Space Optimization bonuses pay 50% more for the rest of the run.", modifiers: { spaceBonusMultiplier: 1.5 }, scope: run } }
+    clarify: A deeper superior-lock grind. The top tier permanently sharpens your Space Optimization payout, rewarding tight, efficient territory for the rest of the run.
+
+  - id: lockdown_protocol
+    name: Lockdown Protocol
+    constraint:
+      text: No Push Your Luck. Balls move 10% faster.
+      modifiers:
+        ballSpeedMultiplier: 1.1
+      disablePushYourLuck: true
+    mission:
+      text: Lock every ball in each of the next 5 maps.
+      track: { mode: everyMap, kind: allBallsLocked }
+      tiers:
+        - { threshold: 3, label: "Ball size -10%, speed +10%", reward: { type: modifiers, blessing: "Balls run 10% smaller but 10% faster for the rest of the run.", modifiers: { ballSizeMultiplier: 0.9, ballSpeedMultiplier: 1.1 }, scope: run } }
+        - { threshold: 5, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
+    clarify: The marquee mission. Push Your Luck is off, so each map banks the moment it is won, and you must trap every ball to bank that map. Sweep all five for a free Senior upgrade.
+
+  - id: crunch_delivery
+    name: Crunch Delivery
+    constraint:
+      text: No Push Your Luck.
+      disablePushYourLuck: true
+    mission:
+      text: Lock balls across the next 5 maps.
+      track: { mode: cumulative, kind: lockCount }
+      tiers:
+        - { threshold: 20, label: "+3 lives", reward: { type: lives, count: 3 } }
+        - { threshold: 30, label: "+80 overtime", reward: { type: overtime, hours: 80 } }
+        - { threshold: 40, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
+    clarify: A pure volume grind with no push safety net. Three tiers, so you rarely walk away empty; a heavy 40-lock block earns a free Principal upgrade.

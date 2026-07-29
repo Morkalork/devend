@@ -16,7 +16,7 @@ import { PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { eligibleByLevel, weightedPick, finiteOrUndefined } from "@/lib/mapPools";
 import type { Rng } from "@/lib/runRng";
 
-const VALID_KINDS = new Set(["lockCount", "superiorLocks", "underPar", "speedClear", "defeatBoss"]);
+const VALID_KINDS = new Set(["lockCount", "superiorLocks", "underPar", "speedClear", "defeatBoss", "allBallsLocked"]);
 
 let liveObjectives: MapObjective[] = [];
 /** Odds weight of "no objective this map" (objectives are a spice, not every map). */
@@ -123,6 +123,12 @@ export function evaluateObjective(obj: ActiveMapObjective, snap: ObjectiveSnapsh
     case "defeatBoss": {
       const done = !!snap.bossDefeated;
       return { kind: obj.kind, mode: "accumulate", current: done ? 1 : 0, target: 1, met: done };
+    }
+    case "allBallsLocked": {
+      // Lock every ball that spawned this map. Target is the map's ball count;
+      // with no balls known yet (0) it reads as not-met rather than a free pass.
+      const target = Math.max(1, Math.round(snap.ballCount ?? 0));
+      return { kind: obj.kind, mode: "accumulate", current: snap.lockedBalls, target, met: (snap.ballCount ?? 0) > 0 && snap.lockedBalls >= target };
     }
     default:
       // Unreachable for pool objectives (parse validates kind); guards an

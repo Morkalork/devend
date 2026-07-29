@@ -547,7 +547,10 @@
     "activeUpgradesCount": "Mejoras activas ({{count}})",
     "currentlyReducingBallSpeed": "Reduciendo actualmente la velocidad de la bola un {{percent}}%",
     "activeUpgrades": "Mejoras activas",
-    "noUpgrades": "Aún no has comprado mejoras. Visita la tienda de mejoras entre niveles para potenciar tu partida."
+    "noUpgrades": "Aún no has comprado mejoras. Visita la tienda de mejoras entre niveles para potenciar tu partida.",
+    "mission": "Misión:",
+    "missionProgress": "Progreso",
+    "missionMapsPassed": "Mapas superados"
   },
   "tutorial": {
     "back": "Atrás",
@@ -710,7 +713,11 @@
     "contractOvertime": "Horas extra",
     "contractMaps": "Mapas",
     "contractLocks": "Encierros",
-    "contractLivesLost": "Vidas perdidas"
+    "contractLivesLost": "Vidas perdidas",
+    "skipButton": "Saltar asignación",
+    "tierArrow": "→",
+    "missionReward": "Recompensa obtenida: {{reward}}",
+    "missionMissed": "Misión fallida, sin recompensa."
   },
   "continue": {
     "title": "¿Continuar?",
@@ -1324,5 +1331,13 @@
     "panicMode": "Modo pánico",
     "reverted": "¡Revertido!",
     "shippedIt": "¡Publicado!"
+  },
+  "tierDraft": {
+    "title": "Recompensa de asignación",
+    "subtitle": "Elige una mejora de {{tier}}",
+    "holdHint": "Mantén pulsada una carta para ver detalles.",
+    "confirmButton": "Tomar mejora",
+    "pickHint": "Selecciona una mejora",
+    "closeDetail": "Cerrar detalles"
   }
 }

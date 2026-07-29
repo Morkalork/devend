@@ -12,8 +12,8 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Skull, Sparkles, Ticket, X, Info } from 'lucide-react';
-import { DoorConfig } from '@/types/door';
+import { Play, Skull, Sparkles, Ticket, X, Info, Target, ChevronsUp, SkipForward } from 'lucide-react';
+import { AssignmentConfig } from '@/types/assignment';
 import { LevelConfig } from '@/types/level';
 import { selectBallTypesForMap } from '@/lib/ballTypes';
 import { CRTBackground } from './CRTBackground';
@@ -23,11 +23,13 @@ import { contentText } from '@/i18n/content';
 interface DoorDraftScreenProps {
   /** The map behind the doors (the run's next level). */
   nextLevel: LevelConfig;
-  /** Rolled doors; picking one is mandatory. */
-  offers: DoorConfig[];
-  /** Called with the chosen door. */
-  onSelect: (door: DoorConfig) => void;
-  /** How the just-finished contract went (#49); null on the first assignment. */
+  /** Rolled assignments; pick one or skip. */
+  offers: AssignmentConfig[];
+  /** Called with the chosen assignment. */
+  onSelect: (door: AssignmentConfig) => void;
+  /** Called when the player skips the assignment (neutral, no constraint). */
+  onSkip?: () => void;
+  /** How the just-finished assignment went (#49/#60); null on the first draft. */
   previousContract?: {
     doorId: string;
     doorName: string;
@@ -35,6 +37,8 @@ interface DoorDraftScreenProps {
     maps: number;
     locks: number;
     livesLost: number;
+    missionText?: string;
+    rewardLabel?: string | null;
   } | null;
   accentColor?: string;
 }
@@ -43,6 +47,7 @@ export function DoorDraftScreen({
   nextLevel,
   offers,
   onSelect,
+  onSkip,
   previousContract = null,
   accentColor = '#00ff88',
 }: DoorDraftScreenProps) {
@@ -152,6 +157,19 @@ export function DoorDraftScreen({
                   </span>
                 ))}
               </div>
+              {/* Mission outcome (#60): the reward earned, or a "missed" note. */}
+              {previousContract.missionText !== undefined && (
+                <div className="mt-2 pt-2 flex items-center justify-center gap-2 text-xs" style={{ borderTop: '1px solid #ffb34733' }}>
+                  {previousContract.rewardLabel ? (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#ffd54a' }} />
+                      <span style={{ color: '#ffd54a' }}>{t('doorDraft.missionReward', { reward: previousContract.rewardLabel })}</span>
+                    </>
+                  ) : (
+                    <span style={{ color: '#b58a5a', opacity: 0.85 }}>{t('doorDraft.missionMissed')}</span>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
 
@@ -218,17 +236,31 @@ export function DoorDraftScreen({
                 onLongPress={() => setDetailId(door.id)}
                 name={contentText.doorName(t, door)}
               >
-                <div className="flex items-start gap-2 mb-2">
-                  <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                  <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>
-                    {contentText.doorRisk(t, door)}
+                {/* Constraint taken on by accepting (red). Absent = pure upside. */}
+                {door.constraint && (
+                  <div className="flex items-start gap-2 mb-2">
+                    <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>
+                      {contentText.assignmentConstraint(t, door)}
+                    </p>
+                  </div>
+                )}
+                {/* Mission task + its reward tiers. */}
+                <div className="flex items-start gap-2 mb-1.5">
+                  <Target className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
+                    {contentText.assignmentMission(t, door)}
                   </p>
                 </div>
-                <div className="flex items-start gap-2">
-                  <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
-                    {contentText.doorReward(t, door)}
-                  </p>
+                <div className="space-y-0.5 pl-6">
+                  {door.mission.tiers.map(tier => (
+                    <div key={tier.threshold} className="flex items-center gap-1.5 text-[11px]" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                      <ChevronsUp className="w-3 h-3 flex-shrink-0" style={{ color: accentColor }} />
+                      <span className="tabular-nums font-bold" style={{ color: accentColor }}>{tier.threshold}</span>
+                      <span className="opacity-70">{t('doorDraft.tierArrow')}</span>
+                      <span>{tier.label}</span>
+                    </div>
+                  ))}
                 </div>
               </DraftCard>
             ))}
@@ -239,20 +271,34 @@ export function DoorDraftScreen({
             {t('doorDraft.holdHint')}
           </p>
 
-          {/* Confirm */}
-          <motion.button
+          {/* Accept + Skip. Accepting takes on the constraint; skip is neutral. */}
+          <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.45 }}
-            className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
-            disabled={!selectedId}
-            onClick={confirm}
-            whileHover={selectedId ? { scale: 1.02 } : undefined}
-            whileTap={selectedId ? { scale: 0.98 } : undefined}
+            className="flex flex-col sm:flex-row items-center gap-2"
           >
-            <Play className="w-5 h-5" />
-            {selectedId ? t('doorDraft.enterButton') : t('doorDraft.pickHint')}
-          </motion.button>
+            <motion.button
+              className="arcade-button-primary rounded-lg flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!selectedId}
+              onClick={confirm}
+              whileHover={selectedId ? { scale: 1.02 } : undefined}
+              whileTap={selectedId ? { scale: 0.98 } : undefined}
+            >
+              <Play className="w-5 h-5" />
+              {selectedId ? t('doorDraft.enterButton') : t('doorDraft.pickHint')}
+            </motion.button>
+            {onSkip && (
+              <button
+                onClick={onSkip}
+                className="rounded-lg flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-bold transition-colors"
+                style={{ color: '#8aa89a', border: '1px solid #4a7a5a55', backgroundColor: 'transparent' }}
+              >
+                <SkipForward className="w-4 h-4" />
+                {t('doorDraft.skipButton')}
+              </button>
+            )}
+          </motion.div>
         </motion.div>
       </div>
 
@@ -263,7 +309,7 @@ export function DoorDraftScreen({
           const door = offers.find(d => d.id === detailId);
           if (!door) return null;
           const title = contentText.doorName(t, door);
-          const clarify = contentText.doorClarify(t, door);
+          const clarify = contentText.assignmentClarify(t, door);
 
           return (
             <motion.div
@@ -296,15 +342,27 @@ export function DoorDraftScreen({
                   <div className="text-base font-display font-bold" style={{ color: accentColor }}>{title}</div>
                 </div>
 
-                {/* Risk / reward recap */}
+                {/* Constraint / mission recap */}
                 <div className="space-y-2 mb-3">
+                  {door.constraint && (
+                    <div className="flex items-start gap-2">
+                      <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                      <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.assignmentConstraint(t, door)}</p>
+                    </div>
+                  )}
                   <div className="flex items-start gap-2">
-                    <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.doorRisk(t, door)}</p>
+                    <Target className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.assignmentMission(t, door)}</p>
                   </div>
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.doorReward(t, door)}</p>
+                  <div className="space-y-0.5 pl-6">
+                    {door.mission.tiers.map(tier => (
+                      <div key={tier.threshold} className="flex items-center gap-1.5 text-[11px]" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                        <ChevronsUp className="w-3 h-3 flex-shrink-0" style={{ color: accentColor }} />
+                        <span className="tabular-nums font-bold" style={{ color: accentColor }}>{tier.threshold}</span>
+                        <span className="opacity-70">{t('doorDraft.tierArrow')}</span>
+                        <span>{tier.label}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
 
