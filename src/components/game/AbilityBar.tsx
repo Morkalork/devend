@@ -14,6 +14,7 @@
  * propagation so they don't open the details panel.
  */
 import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Snowflake, Gauge, Eraser, Sparkles, Magnet, Waves, Zap, ShieldCheck } from 'lucide-react';
 import { getAllAbilities, getAbility, AbilityKind, AbilityDef } from '@/lib/abilities';
 import { hasSeenAbility, markAbilitySeen } from '@/lib/abilitySeen';
@@ -45,6 +46,20 @@ interface AbilityBarProps {
 
 export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfoOpenChange }: AbilityBarProps) {
   const owned = getAllAbilities().filter(a => (charges[a.id] ?? 0) > 0);
+
+  // Blink an ability's button when its charge count RISES (a fresh grant or a
+  // count-up, e.g. a just-tapped chest gem): easy to spot even in a full bar
+  // (#38 rework). Keyed by a per-id nonce that bumps each gain so the flash
+  // replays. Initialised from the first charges so a level start never blinks.
+  const [blink, setBlink] = useState<Record<string, number>>({});
+  const prevChargesRef = useRef<Record<string, number>>(charges);
+  useEffect(() => {
+    const prev = prevChargesRef.current;
+    const gained = getAllAbilities().map(a => a.id).filter(id => (charges[id] ?? 0) > (prev[id] ?? 0));
+    prevChargesRef.current = charges;
+    if (gained.length === 0) return;
+    setBlink(b => { const n = { ...b }; for (const id of gained) n[id] = (n[id] ?? 0) + 1; return n; });
+  }, [charges]);
 
   const [infoAbility, setInfoAbility] = useState<AbilityDef | null>(null);
   // Long-press state (single active press at a time).
@@ -102,7 +117,7 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
                 onPointerLeave={clearPress}
                 onPointerCancel={clearPress}
                 onContextMenu={(e) => e.preventDefault()}
-                className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold transition-transform active:scale-95"
+                className="relative flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold transition-transform active:scale-95"
                 style={{
                   color,
                   border: `1px solid ${color}`,
@@ -111,6 +126,16 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
                   touchAction: 'none',
                 }}
               >
+                {blink[a.id] ? (
+                  <motion.span
+                    key={`blink-${a.id}-${blink[a.id]}`}
+                    className="pointer-events-none absolute -inset-px rounded-md"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: [0, 1, 0.3, 1, 0] }}
+                    transition={{ duration: 0.85, times: [0, 0.15, 0.4, 0.65, 1] }}
+                    style={{ boxShadow: `0 0 14px 3px ${color}, inset 0 0 10px ${color}` }}
+                  />
+                ) : null}
                 <Icon className="w-4 h-4" />
                 <span>{a.name}</span>
                 <span className="opacity-75">x{count}</span>

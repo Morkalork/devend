@@ -386,6 +386,8 @@ export function GameCanvas({
   const handleAbilityTargetRef = useRef<((id: string | null, pos: { x: number; y: number } | null) => void) | null>(null);
   // Superior-lock-star hold handler (opens the explainer), read by the input hook.
   const handleSuperiorInfoRef = useRef<(() => void) | null>(null);
+  // Chest loot-gem tap handler (collects the reward), read by the input hook.
+  const handleLootCollectRef = useRef<((rewardId: string) => void) | null>(null);
   // Running time-based abilities, surfaced to the countdown bar. Only changes
   // when an ability fires or expires (not per frame), so no render churn.
   const [abilityTimers, setAbilityTimers] = useState<AbilityTimer[]>([]);
@@ -579,7 +581,7 @@ export function GameCanvas({
     pickupFeedback: [] as PickupFeedback[],
   });
 
-  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef);
+  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleLootCollectRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1190,16 +1192,8 @@ export function GameCanvas({
           repaintRegionCanvas,
           setRemainingPercent,
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
-          // A chest was smashed: the player earns one charge of the rolled
-          // ability. Bank it run-wide in the session, and show a brief toast.
-          onChestReward: (rewardId) => {
-            playPickupClaimedSound();
-            onGrantAbility?.(rewardId);
-            const def = getAbility(rewardId);
-            setChestToast({ key: performance.now(), label: def?.name ?? rewardId, color: def?.color ?? '#ffd76b' });
-            if (chestToastTimer.current) clearTimeout(chestToastTimer.current);
-            chestToastTimer.current = setTimeout(() => setChestToast(null), 1700);
-          },
+          // A smashed chest drops a loot gem; the reward is granted only when the
+          // player taps it in time (handleLootCollect), not here.
         }, levelNumber);
         // A destroy can capture pocket cells (destroy-recapture) and take the
         // remaining space past the goal with no fence involved — run the same
@@ -1438,6 +1432,20 @@ export function GameCanvas({
   }, [onSpendAbility]);
   useEffect(() => { handleAbilityTargetRef.current = handleAbilityTarget; }, [handleAbilityTarget]);
   useEffect(() => { handleSuperiorInfoRef.current = onRequestSuperiorInfo ?? null; }, [onRequestSuperiorInfo]);
+
+  // A tap collected a chest loot gem (#38 rework): bank the ability run-wide,
+  // log it for the level recap, and flash the reward toast. The input layer has
+  // already removed the gem from game.chestLoot.
+  const handleLootCollect = useCallback((rewardId: string) => {
+    playPickupClaimedSound();
+    (gameRef.current.chestRewardsLog ??= []).push(rewardId);
+    onGrantAbility?.(rewardId);
+    const def = getAbility(rewardId);
+    setChestToast({ key: performance.now(), label: def?.name ?? rewardId, color: def?.color ?? '#ffd76b' });
+    if (chestToastTimer.current) clearTimeout(chestToastTimer.current);
+    chestToastTimer.current = setTimeout(() => setChestToast(null), 1700);
+  }, [onGrantAbility]);
+  useEffect(() => { handleLootCollectRef.current = handleLootCollect; }, [handleLootCollect]);
 
   useEffect(() => {
     if (onGameStateChange) {

@@ -600,6 +600,10 @@
     "tapToContinue": "TRYCK VAR SOM HELST FÖR ATT FORTSÄTTA",
     "replayFromOptions": "Genomgångar kan spelas upp igen från ALTERNATIV"
   },
+  "abilityInfo": {
+    "howToUse": "SÅ HÄR ANVÄNDER DU",
+    "collectHint": "Krossa en låda för att släppa den här, tryck sedan på ädelstenen inom 2 sekunder för att ta den. Missar du den är den borta."
+  },
   "winConditions": {
     "title": "Acceptanskriterier",
     "menuItem": "Acceptanskriterier",

@@ -98,12 +98,6 @@ export interface DestroyCallbacks {
   repaintRegionCanvas: () => void;
   setRemainingPercent: (percent: number) => void;
   onObjectDestroyed?: () => void;
-  /**
-   * A treasure chest was smashed (issue #38): the player earns one charge of the
-   * rolled ability. This bubbles the ability id up so the session can bank the
-   * charge run-wide (GameCanvas -> onGrantAbility).
-   */
-  onChestReward?: (rewardId: string) => void;
 }
 
 // ── Lookups ─────────────────────────────────────────────────────────────────
@@ -465,23 +459,22 @@ export function rebuildRegionsKeepAll(game: CanvasGameState): void {
 // ── Treasure chests (#38) ────────────────────────────────────────────────────
 
 /**
- * Roll and grant a smashed chest's reward (#38): ONE charge of an activatable
- * ability. The charge banks run-wide, so it bubbles via callbacks.onChestReward
- * to the session (GameCanvas -> onGrantAbility). Seeded per chest id, so daily /
- * record runs resolve identically. The loot gem is coloured by the ability.
+ * Roll a smashed chest's reward (#38) and drop a loot gem carrying it. The
+ * reward is NOT granted here: the player must TAP the gem within its lifetime
+ * (LOOT_TTL_SECONDS) to collect it, else it is lost (see lootAtPoint + the
+ * input layer's collect path). Seeded per chest id, so daily / record runs roll
+ * identically; whether the reward is actually banked then depends on the tap.
+ * The loot gem is coloured by the ability.
  */
-function grantChestReward(game: CanvasGameState, d: DestructibleState, callbacks: DestroyCallbacks, levelNumber: number): void {
+function grantChestReward(game: CanvasGameState, d: DestructibleState, levelNumber: number): void {
+  if (!d.obstaclePolygon) return;
   const rng = getRunRng(`chest:${d.id}`);
   // Random among abilities unlocked at this level, optionally narrowed to the
   // chest's authored pool (see abilities.ts / public/abilities.yml).
   const rewardId = rollAbilityReward(d.chestRewards, levelNumber, rng);
   if (!rewardId) return; // empty catalogue (should never happen)
-  if (d.obstaclePolygon) {
-    const c = polygonCentroid(d.obstaclePolygon);
-    (game.chestLoot ??= []).push(makeChestLoot(`loot-${d.id}`, rewardId, c.x, c.y, game.activePlaySeconds));
-  }
-  (game.chestRewardsLog ??= []).push(rewardId);
-  callbacks.onChestReward?.(rewardId);
+  const c = polygonCentroid(d.obstaclePolygon);
+  (game.chestLoot ??= []).push(makeChestLoot(`loot-${d.id}`, rewardId, c.x, c.y, game.activePlaySeconds));
 }
 
 // ── Processing queued destructions ──────────────────────────────────────────
@@ -533,8 +526,8 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
     // break things offsets the ship-early time it cost (issue #38).
     game.breakMultiplier = (game.breakMultiplier ?? 1) * BREAK_MULTIPLIER_PER;
 
-    // Treasure chest (#38): a smash rolls a reward and grants it instantly.
-    if (d.chest) grantChestReward(game, d, callbacks, levelNumber);
+    // Treasure chest (#38): a smash rolls a reward and drops a gem to tap.
+    if (d.chest) grantChestReward(game, d, levelNumber);
 
     // A gate breakable re-opens its sealed (locked) area as capturable space.
     if (d.sealedCells && d.sealedCells.length > 0 && game.spaceGrid) {

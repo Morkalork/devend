@@ -8,7 +8,9 @@ import {
   updateChestLoot,
   surfaceFloorUnder,
   chestLootAlpha,
+  lootAtPoint,
   LOOT_TTL_SECONDS,
+  LOOT_TAP_RADIUS,
 } from "@/lib/chests";
 
 describe("surfaceFloorUnder", () => {
@@ -114,5 +116,31 @@ describe("loot gem physics", () => {
     expect(chestLootAlpha(g, LOOT_TTL_SECONDS * 0.5)).toBe(1);
     expect(chestLootAlpha(g, LOOT_TTL_SECONDS * 0.9)).toBeLessThan(1);
     expect(chestLootAlpha(g, LOOT_TTL_SECONDS)).toBeCloseTo(0, 5);
+  });
+});
+
+describe("lootAtPoint (tap-to-collect hit-test)", () => {
+  it("returns a gem when the tap is within the touch radius", () => {
+    const loot = [makeChestLoot("l1", "freezeAll", 450, 400, 0)];
+    expect(lootAtPoint(loot, 450, 400, 0)?.id).toBe("l1");         // dead centre
+    expect(lootAtPoint(loot, 450 + LOOT_TAP_RADIUS - 1, 400, 0)?.id).toBe("l1"); // inside
+  });
+
+  it("returns null when the tap is outside the touch radius", () => {
+    const loot = [makeChestLoot("l1", "freezeAll", 450, 400, 0)];
+    expect(lootAtPoint(loot, 450 + LOOT_TAP_RADIUS + 5, 400, 0)).toBeNull();
+  });
+
+  it("ignores gems whose lifetime has already elapsed (missed window)", () => {
+    const loot = [makeChestLoot("l1", "freezeAll", 450, 400, 0)];
+    expect(lootAtPoint(loot, 450, 400, LOOT_TTL_SECONDS + 0.01)).toBeNull();
+  });
+
+  it("picks the nearest gem when several overlap the tap", () => {
+    const loot = [
+      makeChestLoot("far", "freezeAll", 460, 400, 0),
+      makeChestLoot("near", "slowAll", 452, 400, 0),
+    ];
+    expect(lootAtPoint(loot, 450, 400, 0)?.id).toBe("near");
   });
 });

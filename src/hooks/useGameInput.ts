@@ -33,6 +33,7 @@ import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { abilityFenceRushFactor } from "@/lib/abilityEffects";
+import { lootAtPoint } from "@/lib/chests";
 import { initAudio } from "@/lib/gameAudio";
 
 /** How many fences may grow at once: 1, plus the additionalConcurrentFences
@@ -55,6 +56,10 @@ export function useGameInput(
   /** Press-and-hold on a superior-lock star: opens the lock explainer. Read from
    *  a ref so the listeners stay wired once. */
   onSuperiorInfoRef?: RefObject<(() => void) | null>,
+  /** Tap on a chest loot gem: collect its reward. The input layer hit-tests and
+   *  removes the gem; this grants it run-wide. Read from a ref (listeners stay
+   *  wired once). */
+  onLootCollectRef?: RefObject<((rewardId: string) => void) | null>,
 ): void {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -133,6 +138,22 @@ export function useGameInput(
       // board is still flying together (physics is held until it lands).
       if (game.gameOver || game.levelComplete || game.dissolve || game.pushMode === "prompt" || game.pushPromptPending || game.isRecovering)
         return;
+
+      // Tap a chest loot gem to collect its reward (#38 rework). Checked before
+      // the cut logic so a tap on a gem collects instead of starting a fence.
+      // Miss the gem's short life and the reward is lost (no auto-collect).
+      if (onLootCollectRef?.current && game.chestLoot && game.chestLoot.length > 0) {
+        const c = getCanvasCoords(e);
+        if (isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
+          const w = screenToWorld(c.screenX, c.screenY, game.boardRect);
+          const gem = lootAtPoint(game.chestLoot, w.x, w.y, game.activePlaySeconds);
+          if (gem) {
+            game.chestLoot = game.chestLoot.filter(g => g !== gem);
+            onLootCollectRef.current(gem.reward);
+            return; // a gem tap collects, never starts a cut
+          }
+        }
+      }
 
       // Press-and-hold on a superior-lock star opens the lock explainer. Checked
       // before the cut logic so the press arms a hold instead of a fence.
@@ -370,5 +391,5 @@ export function useGameInput(
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, onAbilityTargetRef, onSuperiorInfoRef]);
+  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, onAbilityTargetRef, onSuperiorInfoRef, onLootCollectRef]);
 }

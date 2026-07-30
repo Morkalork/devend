@@ -1404,6 +1404,19 @@ export function renderFrame(
       const sp = w2s(g.x, g.y);
       const r = 9 * scale;
       const col = getAbility(g.reward)?.color ?? '#ffd76b';
+      // Pulsing "tap me" ring: the reward is only granted if the player TAPS the
+      // gem before it expires, so it must read as interactive (#38 rework).
+      const pulse = 0.5 + 0.5 * Math.sin(game.activePlaySeconds * 8);
+      ctx.save();
+      ctx.globalAlpha = a * (0.3 + 0.45 * pulse);
+      ctx.strokeStyle = col;
+      ctx.lineWidth = 2 * scale;
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 10 * scale;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, r * (1.7 + 0.45 * pulse), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
       ctx.save();
       ctx.globalAlpha = a;
       ctx.translate(sp.x, sp.y);

@@ -20,8 +20,35 @@ const LOOT_RESTITUTION = 0.75;
 const LOOT_FLOOR_FRICTION = 0.86;
 /** Below this bounce speed the gem is considered at rest. */
 const LOOT_REST_SPEED = 40;
-/** How long a gem lives before it is culled (active-play seconds). */
-export const LOOT_TTL_SECONDS = 3.0;
+/**
+ * How long a gem lives (active-play seconds). This is also the window to TAP it:
+ * a smashed chest's reward is only granted if the player taps the gem it drops
+ * before it expires (#38 rework). Miss the window and the reward is lost.
+ */
+export const LOOT_TTL_SECONDS = 2.0;
+/** World-unit radius for a tap to count as hitting a gem (generous for touch). */
+export const LOOT_TAP_RADIUS = 30;
+
+/**
+ * The nearest still-live loot gem within tap range of a world point, or null.
+ * Pure hit-test used by the input layer to turn a board tap into a collect.
+ */
+export function lootAtPoint(
+  loot: ChestLoot[],
+  x: number,
+  y: number,
+  nowActiveSeconds: number,
+): ChestLoot | null {
+  let best: ChestLoot | null = null;
+  let bestD = LOOT_TAP_RADIUS * LOOT_TAP_RADIUS;
+  for (const g of loot) {
+    if (nowActiveSeconds - g.bornActiveSeconds >= LOOT_TTL_SECONDS) continue; // expired
+    const dx = g.x - x, dy = g.y - y;
+    const d = dx * dx + dy * dy;
+    if (d <= bestD) { best = g; bestD = d; }
+  }
+  return best;
+}
 
 /**
  * Spawn a bouncing loot gem at a broken chest. `bornActiveSeconds` anchors the

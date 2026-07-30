@@ -892,6 +892,9 @@ export class PixiGameRenderer {
         const sp = w2s(gem.x, gem.y);
         const r = 9 * scale;
         const col = getAbility(gem.reward)?.color ?? "#ffd76b";
+        // Pulsing "tap me" ring: the gem must be tapped to collect it (#38 rework).
+        const pulse = 0.5 + 0.5 * Math.sin(game.activePlaySeconds * 8);
+        g.circle(sp.x, sp.y, r * (1.7 + 0.45 * pulse)).stroke({ width: Math.max(1, 2 * scale), color: col, alpha: a * (0.3 + 0.45 * pulse) });
         g.poly([sp.x, sp.y - r, sp.x + r, sp.y, sp.x, sp.y + r, sp.x - r, sp.y]).fill({ color: col, alpha: a });
         g.poly([sp.x, sp.y - r, sp.x + r, sp.y, sp.x, sp.y + r, sp.x - r, sp.y]).stroke({ width: Math.max(1, 1.2 * scale), color: 0xffffff, alpha: a * 0.5 });
       }

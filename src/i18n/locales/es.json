@@ -600,6 +600,10 @@
     "tapToContinue": "TOCA EN CUALQUIER LUGAR PARA CONTINUAR",
     "replayFromOptions": "Los tutoriales se pueden volver a ver desde OPCIONES"
   },
+  "abilityInfo": {
+    "howToUse": "CÓMO USAR",
+    "collectHint": "Rompe una caja para soltar esto y toca la gema en menos de 2 segundos para recogerla. Si la pierdes, desaparece."
+  },
   "winConditions": {
     "title": "Criterios de Aceptación",
     "menuItem": "Criterios de Aceptación",

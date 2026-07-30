@@ -3,7 +3,8 @@
  * long-pressing an ability button, and auto-shown once the first time an ability
  * is acquired. Shows what it does and how to use it; dismiss on backdrop or X.
  */
-import { X } from 'lucide-react';
+import { X, Hand } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { AbilityDef } from '@/lib/abilities';
 
 interface AbilityInfoModalProps {
@@ -12,6 +13,7 @@ interface AbilityInfoModalProps {
 }
 
 export function AbilityInfoModal({ ability, onClose }: AbilityInfoModalProps) {
+  const { t } = useTranslation();
   const color = ability.color || '#ffffff';
   return (
     <div
@@ -45,11 +47,19 @@ export function AbilityInfoModal({ ability, onClose }: AbilityInfoModalProps) {
           {ability.howTo && (
             <div>
               <div className="text-[10px] font-bold tracking-wider mb-1" style={{ color, opacity: 0.8 }}>
-                HOW TO USE
+                {t('abilityInfo.howToUse')}
               </div>
               <p className="text-muted-foreground leading-snug">{ability.howTo}</p>
             </div>
           )}
+          {/* How chest rewards are collected (#38 rework): tap the dropped gem. */}
+          <div
+            className="flex items-start gap-2 rounded-md px-2.5 py-2"
+            style={{ backgroundColor: `${color}14`, border: `1px solid ${color}33` }}
+          >
+            <Hand className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color }} />
+            <p className="text-muted-foreground leading-snug text-[13px]">{t('abilityInfo.collectHint')}</p>
+          </div>
         </div>
       </div>
     </div>

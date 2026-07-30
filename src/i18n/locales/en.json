@@ -615,6 +615,10 @@
     "tapToContinue": "TAP ANYWHERE TO CONTINUE",
     "replayFromOptions": "Tutorials can be replayed from OPTIONS"
   },
+  "abilityInfo": {
+    "howToUse": "HOW TO USE",
+    "collectHint": "Smash a box to drop this, then tap the gem within 2 seconds to grab it. Miss it and it is gone."
+  },
   "winConditions": {
     "title": "Acceptance Criteria",
     "menuItem": "Acceptance Criteria",
