@@ -719,6 +719,14 @@
     "missionReward": "Recompensa obtenida: {{reward}}",
     "missionMissed": "Misión fallida, sin recompensa."
   },
+  "assignmentSummary": {
+    "title": "Asignación completada",
+    "progress": "Progreso: {{current}} / {{target}}",
+    "reachedBadge": "Alcanzado",
+    "rewardEarnedLabel": "Has ganado",
+    "missed": "No alcanzaste la misión, así que esta vez no hay recompensa.",
+    "continueButton": "Continuar"
+  },
   "continue": {
     "title": "¿Continuar?",
     "body_one": "Gasta 1 Continuación para reintentar este nivel con tus horas extra y mejoras intactas. Quedan {{count}}.",

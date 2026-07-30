@@ -719,6 +719,14 @@
     "missionReward": "Belöning intjänad: {{reward}}",
     "missionMissed": "Uppdrag missat, ingen belöning."
   },
+  "assignmentSummary": {
+    "title": "Uppdrag slutfört",
+    "progress": "Framsteg: {{current}} / {{target}}",
+    "reachedBadge": "Uppnått",
+    "rewardEarnedLabel": "Du tjänade",
+    "missed": "Du klarade inte uppdraget, så ingen belöning den här gången.",
+    "continueButton": "Fortsätt"
+  },
   "continue": {
     "title": "Fortsätta?",
     "body_one": "Spendera 1 Fortsättning för att göra om nivån med dina övertidstimmar och uppgraderingar kvar. {{count}} kvar.",

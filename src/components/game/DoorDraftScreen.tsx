@@ -12,7 +12,7 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Play, Skull, Sparkles, Ticket, X, Info, Target, ChevronsUp, SkipForward } from 'lucide-react';
+import { Play, Skull, Ticket, X, Info, Target, ChevronsUp, SkipForward } from 'lucide-react';
 import { AssignmentConfig } from '@/types/assignment';
 import { LevelConfig } from '@/types/level';
 import { selectBallTypesForMap } from '@/lib/ballTypes';
@@ -29,17 +29,6 @@ interface DoorDraftScreenProps {
   onSelect: (door: AssignmentConfig) => void;
   /** Called when the player skips the assignment (neutral, no constraint). */
   onSkip?: () => void;
-  /** How the just-finished assignment went (#49/#60); null on the first draft. */
-  previousContract?: {
-    doorId: string;
-    doorName: string;
-    overtime: number;
-    maps: number;
-    locks: number;
-    livesLost: number;
-    missionText?: string;
-    rewardLabel?: string | null;
-  } | null;
   accentColor?: string;
 }
 
@@ -48,7 +37,6 @@ export function DoorDraftScreen({
   offers,
   onSelect,
   onSkip,
-  previousContract = null,
   accentColor = '#00ff88',
 }: DoorDraftScreenProps) {
   const { t } = useTranslation();
@@ -129,49 +117,9 @@ export function DoorDraftScreen({
             </p>
           </div>
 
-          {/* Contract report card (#49): how the just-finished assignment went. */}
-          {previousContract && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.12 }}
-              className="w-full rounded-lg p-3"
-              style={{ border: '1px solid #ffb34755', backgroundColor: '#ffb3470f' }}
-            >
-              <div className="flex items-center justify-center gap-1.5 text-[11px] uppercase tracking-wider mb-2" style={{ color: '#ffb347' }}>
-                <Ticket className="w-3.5 h-3.5" />
-                {t('doorDraft.contractReport', { name: previousContract.doorName })}
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm">
-                {([
-                  ['contractOvertime', `${previousContract.overtime}h`],
-                  ['contractMaps', String(previousContract.maps)],
-                  ['contractLocks', String(previousContract.locks)],
-                  ['contractLivesLost', String(previousContract.livesLost)],
-                ] as const).map(([key, value]) => (
-                  <span key={key} className="flex items-center gap-1.5">
-                    <span className="text-[11px] uppercase tracking-wider" style={{ color: '#b58a5a' }}>
-                      {t(`doorDraft.${key}`)}
-                    </span>
-                    <span className="font-display font-bold tabular-nums text-foreground">{value}</span>
-                  </span>
-                ))}
-              </div>
-              {/* Mission outcome (#60): the reward earned, or a "missed" note. */}
-              {previousContract.missionText !== undefined && (
-                <div className="mt-2 pt-2 flex items-center justify-center gap-2 text-xs" style={{ borderTop: '1px solid #ffb34733' }}>
-                  {previousContract.rewardLabel ? (
-                    <>
-                      <Sparkles className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#ffd54a' }} />
-                      <span style={{ color: '#ffd54a' }}>{t('doorDraft.missionReward', { reward: previousContract.rewardLabel })}</span>
-                    </>
-                  ) : (
-                    <span style={{ color: '#b58a5a', opacity: 0.85 }}>{t('doorDraft.missionMissed')}</span>
-                  )}
-                </div>
-              )}
-            </motion.div>
-          )}
+          {/* The just-finished assignment is recapped on the dedicated
+              "Assignment Complete" summary screen (#63) shown right before this
+              draft, so it is not repeated here. */}
 
           {/* Next-map intel briefing */}
           <motion.div

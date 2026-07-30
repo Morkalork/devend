@@ -163,6 +163,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Issue #60: a tier-draft reward owed by the just-finished assignment, shown
   // as a 1-of-3 upgrade pick before the next assignment draft. null = none owed.
   const [pendingTierDraft, setPendingTierDraft] = useState<{ tier: UpgradeTier; offers: UpgradeConfig[] } | null>(null);
+  // Issue #63: when the "Assignment Complete" summary is showing, whether its
+  // Continue should route into the run finale (ascension) rather than the next
+  // block's drafts. Set for the final block; cleared for mid-run boundaries.
+  const [summaryIsFinal, setSummaryIsFinal] = useState(false);
 
   // Assignments (doors): every 5th completed level replaces the shop with a
   // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
@@ -1258,13 +1262,43 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const beginAssignmentPhase = useCallback(() => {
     setPendingLevelScore(null);
-    const { tierDraftOwed } = grantAssignmentReward();
-    if (tierDraftOwed) {
-      nav.goToTierDraft();
+    const hadAssignment = !!activeDoor;
+    grantAssignmentReward();
+    if (hadAssignment) {
+      // #63: recap how the finished mission went on its own screen before the
+      // next draft. Continuing from it routes into the tier pick / next draft.
+      setSummaryIsFinal(false);
+      nav.goToAssignmentSummary();
+      return;
+    }
+    // No assignment this block (skipped, or the first block): the summary would
+    // be empty, so route straight into the next draft.
+    routeAfterAssignmentReward();
+  }, [activeDoor, grantAssignmentReward, routeAfterAssignmentReward, nav.goToAssignmentSummary]);
+
+  /**
+   * Route out of the "Assignment Complete" summary: into the run finale for the
+   * final block, otherwise into the capstone/assignment draft. (#63)
+   */
+  const routeAfterSummary = useCallback(() => {
+    if (summaryIsFinal) {
+      nav.goToAscensionDraft();
       return;
     }
     routeAfterAssignmentReward();
-  }, [grantAssignmentReward, routeAfterAssignmentReward, nav.goToTierDraft]);
+  }, [summaryIsFinal, routeAfterAssignmentReward, nav.goToAscensionDraft]);
+
+  /**
+   * Continue button on the assignment summary: a tier-draft reward is picked
+   * first (summary-first, then pick), otherwise straight on to the next phase.
+   */
+  const handleContinueFromSummary = useCallback(() => {
+    if (pendingTierDraft) {
+      nav.goToTierDraft();
+      return;
+    }
+    routeAfterSummary();
+  }, [pendingTierDraft, routeAfterSummary, nav.goToTierDraft]);
 
   /**
    * Post-shop bookkeeping shared by the shop's Continue button and the
@@ -1296,9 +1330,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setUnlockedFeature(pendingFeatureUnlocksRef.current.shift()!);
     }
     if (isLastLevel) {
-      // Beat the final level: offer the ascend-or-retire choice. The pending
-      // level score is kept so handleRetire can put it on the result screen.
-      nav.goToAscensionDraft();
+      // Beat the final level: grant the final block's assignment reward and, if
+      // there was an assignment, recap it (#63) before the ascend-or-retire
+      // choice. The pending level score is kept so handleRetire can put it on
+      // the result screen.
+      const hadAssignment = !!activeDoor;
+      grantAssignmentReward();
+      if (hadAssignment) {
+        setSummaryIsFinal(true);
+        nav.goToAssignmentSummary();
+      } else {
+        nav.goToAscensionDraft();
+      }
     } else if (isAssignmentLevel(currentLevelIndex + 1)) {
       beginAssignmentPhase();
     } else {
@@ -1312,7 +1355,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setStoreClosed(locksThisRound < locksRequired);
       nav.goToUpgradeShop();
     }
-  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, nav.goToAscensionDraft, nav.goToUpgradeShop]);
+  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, activeDoor, grantAssignmentReward, nav.goToAssignmentSummary, nav.goToAscensionDraft, nav.goToUpgradeShop]);
 
   const handleDismissFeatureUnlocked = useCallback(() => {
     // Advance to the next queued unlock, or close if none remain.
@@ -1487,8 +1530,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const extraLives = upgrade?.modifiers?.extraLives;
     if (typeof extraLives === 'number' && extraLives !== 0) setCurrentLives(prev => prev + extraLives);
     setPendingTierDraft(null);
-    routeAfterAssignmentReward();
-  }, [upgrades, routeAfterAssignmentReward]);
+    routeAfterSummary();
+  }, [upgrades, routeAfterSummary]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);
@@ -1701,8 +1744,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     pendingTierDraft,
     handleSkipAssignment,
     handleSelectTierUpgrade,
-    // How the just-finished contract went (#49), for the assignment draft.
+    // How the just-finished contract went (#49): block stats + reward, used by
+    // both the assignment draft report and the #63 summary screen.
     lastContractSummary,
+    // Assignment-complete summary (#63): Continue routes on to the tier pick /
+    // next draft / finale.
+    handleContinueFromSummary,
     // The map the door draft previews (null past the final level).
     nextLevel: levels[currentLevelIndex + 1] ?? null,
     handleSelectDoor,

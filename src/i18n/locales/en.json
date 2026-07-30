@@ -734,6 +734,14 @@
     "missionReward": "Reward earned: {{reward}}",
     "missionMissed": "Mission missed, no reward."
   },
+  "assignmentSummary": {
+    "title": "Assignment Complete",
+    "progress": "Progress: {{current}} / {{target}}",
+    "reachedBadge": "Reached",
+    "rewardEarnedLabel": "You earned",
+    "missed": "You fell short of the mission, so no reward this time.",
+    "continueButton": "Continue"
+  },
   "continue": {
     "title": "Continue?",
     "body_one": "Spend 1 Continue to retry this level with your overtime and upgrades intact. {{count}} left.",

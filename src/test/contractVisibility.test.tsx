@@ -1,7 +1,7 @@
 /**
- * Issue #49 / #61: the active assignment/Promotion are visible in the Specs
- * panel (TopBarDetailsPanel), and the next assignment draft shows a report
- * card for the contract that just ended.
+ * Issue #49 / #61 / #63: the active assignment/Promotion are visible in the
+ * Specs panel (TopBarDetailsPanel), and the finished contract is recapped on a
+ * dedicated "Assignment Complete" summary screen at each block boundary.
  */
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { render, screen, act, cleanup, renderHook, waitFor } from "@testing-library/react";
@@ -9,10 +9,9 @@ import fs from "fs";
 import path from "path";
 import "@/i18n";
 import { TopBarDetailsPanel } from "@/components/game/TopBarDetailsPanel";
-import { DoorDraftScreen } from "@/components/game/DoorDraftScreen";
+import { AssignmentSummaryScreen } from "@/components/game/AssignmentSummaryScreen";
 import { AssignmentConfig } from "@/types/assignment";
 import { CapstoneConfig } from "@/types/capstone";
-import { LevelConfig } from "@/types/level";
 import { useScreenNavigation } from "@/hooks/useScreenNavigation";
 import { useGameSession } from "@/hooks/useGameSession";
 
@@ -60,20 +59,35 @@ describe("Specs panel assignment section", () => {
   });
 });
 
-describe("assignment report card", () => {
-  it("shows the finished contract's stats above the new offers", () => {
-    const nextLevel = { id: "assign-x", level: 10, sizeThreshold: 25, expectedCuts: 14, points: 40, maxBalls: 2 } as unknown as LevelConfig;
+describe("assignment summary screen (#63)", () => {
+  it("recaps the finished mission, block stats, and the reward earned", () => {
     render(
-      <DoorDraftScreen
-        nextLevel={nextLevel}
-        offers={[door]}
-        onSelect={vi.fn()}
-        previousContract={{ doorId: "crunch_sprint", doorName: "Crunch Sprint", overtime: 150, maps: 5, locks: 10, livesLost: 1 }}
+      <AssignmentSummaryScreen
+        assignment={door}
+        results={[]}
+        blockStats={{ overtime: 150, maps: 5, locks: 10, livesLost: 1 }}
+        rewardLabel="+2 lives"
+        onContinue={vi.fn()}
       />
     );
-    expect(screen.getByText(/Last contract: Crunch Sprint/)).toBeTruthy();
+    expect(screen.getByText("Assignment Complete")).toBeTruthy();
+    expect(screen.getByText("Lock 20 balls over 5 maps.")).toBeTruthy();
     expect(screen.getByText("150h")).toBeTruthy();
-    expect(screen.getByText("10")).toBeTruthy();
+    // The reward label appears in both the callout and the tier ladder row.
+    expect(screen.getAllByText("+2 lives").length).toBeGreaterThan(0);
+  });
+
+  it("shows a closure note when the mission was missed (no reward)", () => {
+    render(
+      <AssignmentSummaryScreen
+        assignment={door}
+        results={[]}
+        blockStats={{ overtime: 0, maps: 5, locks: 3, livesLost: 2 }}
+        rewardLabel={null}
+        onContinue={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/fell short of the mission/)).toBeTruthy();
   });
 });
 
@@ -123,9 +137,13 @@ describe("contract stats accumulate across the block (session integration)", () 
     await act(async () => { result.current.session.handleSelectDoor(result.current.session.doorOffers[0]); });
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("game"));
 
-    // Maps 6-9 through shops; map 10 ends the contract's block. Level 10 is
-    // also the Promotion trigger, so pick the capstone to reach the draft.
+    // Maps 6-9 through shops; map 10 ends the contract's block. The finished
+    // mission is recapped on its own screen first (#63); continuing from it
+    // routes into the Promotion draft (level 10 is the trigger), then the
+    // next assignment draft.
     for (let i = 0; i < 5; i++) await finishMap(30, 2);
+    await waitFor(() => expect(result.current.nav.currentScreen).toBe("assignmentSummary"));
+    await act(async () => { result.current.session.handleContinueFromSummary(); });
     if (result.current.nav.currentScreen === "capstoneDraft") {
       await act(async () => { result.current.session.handleSelectCapstone(result.current.session.capstoneOffers[0]); });
     }

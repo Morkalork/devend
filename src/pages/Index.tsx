@@ -25,6 +25,7 @@ import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { DoorDraftScreen } from '@/components/game/DoorDraftScreen';
 import { CapstoneDraftScreen } from '@/components/game/CapstoneDraftScreen';
 import { TierDraftScreen } from '@/components/game/TierDraftScreen';
+import { AssignmentSummaryScreen } from '@/components/game/AssignmentSummaryScreen';
 import { RunDraftScreen } from '@/components/game/RunDraftScreen';
 import { ContinuePrompt } from '@/components/game/ContinuePrompt';
 import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
@@ -359,8 +360,16 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 offers={session.doorOffers}
                 onSelect={session.handleSelectDoor}
                 onSkip={session.handleSkipAssignment}
-                previousContract={session.lastContractSummary}
                 accentColor={accentHex}
+              />
+            )}
+            {navigation.currentScreen === 'assignmentSummary' && session.activeDoor && session.lastContractSummary && (
+              <AssignmentSummaryScreen
+                assignment={session.activeDoor}
+                results={session.blockResults}
+                blockStats={session.lastContractSummary}
+                rewardLabel={session.lastContractSummary.rewardLabel ?? null}
+                onContinue={session.handleContinueFromSummary}
               />
             )}
             {navigation.currentScreen === 'tierDraft' && session.pendingTierDraft && (
