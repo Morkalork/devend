@@ -7,6 +7,14 @@
 // GameCanvas mounts, so switching requires a remount: the Playground toggle
 // bumps its gameKey, a real game needs a reload.
 //
+// POLICY (decided): canvas2d is the FALLBACK ONLY. It stays load-bearing for
+// three reasons - the WebGL-init fallback (old Android WebViews), the intro
+// fly-in capture (renderFrame draws the tile snapshot even under Pixi), and
+// being the reference the Pixi layer was ported from. But it is NOT held at
+// visual parity: new board cosmetics go Pixi-FIRST, and the 2D path only needs
+// a plain/functional version (playable + legible), not a pixel match. Don't
+// spend effort making the two identical.
+//
 // Precedence: ?renderer= query param (one-shot, also persisted) > localStorage
 // > default. Persisting the query override makes `?renderer=canvas2d` sticky
 // for on-device Android testing where editing localStorage is awkward.
