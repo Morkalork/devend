@@ -75,6 +75,10 @@ export class EffectsLayer {
   private pickupSprites = new Map<string, Sprite>();
   private pickupRings = new Graphics();
   private pickupTexts = new Map<string, Text>();
+  // Persistent "you banked this power-up" badges left in a lock area (#59).
+  private pickupMarkerLayer = new Container();
+  private pickupMarkerSprites = new Map<string, Sprite>();
+  private pickupMarkerRings = new Graphics();
   private abilityFx = new Graphics();
 
   constructor() {
@@ -83,7 +87,7 @@ export class EffectsLayer {
     // beneath the pocket fill); feedback rings/labels ride on top of the rest.
     // The ability burst goes last so its flash/rings sit above everything.
     this.superiorFx.blendMode = "add";
-    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.superiorFx, this.superiorStars, this.preview, this.swipe, this.trajectory, this.pickupRings, this.abilityFx);
+    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.superiorFx, this.superiorStars, this.pickupMarkerRings, this.pickupMarkerLayer, this.preview, this.swipe, this.trajectory, this.pickupRings, this.abilityFx);
     this.overlayContainer.addChild(this.spaceBar);
   }
 
@@ -93,6 +97,7 @@ export class EffectsLayer {
     const accent = rctx.accentColor;
 
     this.syncPickups(game, rctx, w2s, scale, accent, now);
+    this.syncPickupMarkers(game, w2s, scale, accent);
     this.syncLockFlashes(game, rctx, w2s, scale, accent, now);
     this.syncCutPreview(game, w2s, scale, accent);
     this.syncSwipeTrail(game, w2s, scale, accent, now);
@@ -250,6 +255,50 @@ export class EffectsLayer {
       if (!liveTexts.has(id)) {
         label.destroy();
         this.pickupTexts.delete(id);
+      }
+    }
+  }
+
+  // ── Claimed power-up badges (#59): a persistent icon left in each lock area
+  // where a power-up was sealed, on a dark disc + glow so it reads on the
+  // captured fill. Pops in over ~0.3s (active clock), then stays for the map.
+  private syncPickupMarkers(
+    game: CanvasGameState, w2s: W2S, scale: number, accent: string,
+  ): void {
+    this.pickupMarkerRings.clear();
+    const live = new Set<string>();
+    const markers = game.pickupLockMarkers;
+    if (markers && markers.length > 0) {
+      const nowS = game.activePlaySeconds;
+      for (let i = 0; i < markers.length; i++) {
+        const mk = markers[i];
+        const id = `m${i}`;
+        live.add(id);
+        let sprite = this.pickupMarkerSprites.get(id);
+        if (!sprite) {
+          sprite = new Sprite();
+          sprite.anchor.set(0.5);
+          this.pickupMarkerLayer.addChild(sprite);
+          this.pickupMarkerSprites.set(id, sprite);
+        }
+        sprite.texture = textureFor(getPickupSprite(mk.effect, accent, PICKUP_DRAW_RADIUS * 0.8 * scale));
+        const popT = Math.min(1, Math.max(0, (nowS - mk.bornActiveSeconds) / 0.3));
+        const pop = 0.4 + 0.6 * (1 - Math.pow(1 - popT, 3)); // easeOutCubic, min 0.4
+        const overshoot = popT < 1 ? 1 + 0.25 * Math.sin(popT * Math.PI) : 1;
+        const p = w2s(mk.x, mk.y);
+        sprite.position.set(p.x, p.y);
+        sprite.scale.set(pop * overshoot);
+        sprite.alpha = 0.95;
+        const col = pickupColor(mk.effect, accent);
+        const r = PICKUP_DRAW_RADIUS * 0.8 * scale * pop * overshoot;
+        this.pickupMarkerRings.circle(p.x, p.y, r).fill({ color: 0x000000, alpha: 0.45 });
+        this.pickupMarkerRings.circle(p.x, p.y, r).stroke({ width: Math.max(1, 1.4 * scale), color: col, alpha: 0.9 });
+      }
+    }
+    for (const [id, sprite] of this.pickupMarkerSprites) {
+      if (!live.has(id)) {
+        sprite.destroy();
+        this.pickupMarkerSprites.delete(id);
       }
     }
   }

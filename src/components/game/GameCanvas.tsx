@@ -859,6 +859,7 @@ export function GameCanvas({
       // teaching map can guarantee a token, or a set-piece can suppress them).
       game.pickups = [];
       game.pickupFeedback = [];
+      game.pickupLockMarkers = [];
       game.lastPickupRollAt = 0;
       // Seeded (daily) runs: key spawn rolls by map so every player's roll N
       // draws identically (see updatePickups).

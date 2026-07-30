@@ -1548,6 +1548,37 @@ export function renderFrame(
     }
   }
 
+  // ── Claimed power-up badges (issue #59) ───────────────────────────────────
+  // A persistent icon left in the lock area for every power-up sealed by a lock,
+  // so the player can see what they banked. Pops in over ~0.3s (active clock),
+  // then stays for the rest of the map on a soft glow so it reads on the dark
+  // captured fill.
+  if (game.pickupLockMarkers && game.pickupLockMarkers.length > 0) {
+    for (const mk of game.pickupLockMarkers) {
+      const sprite = getPickupSprite(mk.effect, accentColor, PICKUP_DRAW_RADIUS * 0.8 * scale);
+      const popT = Math.min(1, Math.max(0, (game.activePlaySeconds - mk.bornActiveSeconds) / 0.3));
+      const pop = 0.4 + 0.6 * (1 - Math.pow(1 - popT, 3)); // easeOutCubic, min 0.4
+      const overshoot = popT < 1 ? 1 + 0.25 * Math.sin(popT * Math.PI) : 1; // brief pop
+      const p = w2s(mk.x, mk.y);
+      const size = sprite.width * pop * overshoot;
+      const col = pickupColor(mk.effect, accentColor);
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, size * 0.7, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fill();
+      ctx.strokeStyle = col;
+      ctx.lineWidth = Math.max(1, 1.4 * scale);
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 8 * scale;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.drawImage(sprite, p.x - size / 2, p.y - size / 2, size, size);
+      ctx.restore();
+    }
+  }
+
   // ── Cut preview line during drag ──────────────────────────────────────────
   if (swipeStart && swipeRegionId && currentSwipePos) {
     const delta = vec2Sub(currentSwipePos, swipeStart);

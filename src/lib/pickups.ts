@@ -223,6 +223,12 @@ export function claimPickupsInPocket(
     const idx = worldToGridIndex(grid, token.position.x, token.position.y);
     if (idx >= 0 && pocketCells.has(idx)) {
       applyPickupEffect(game, token, callbacks, level);
+      // Leave a persistent badge in the lock area so the player can see the
+      // power-up they banked (issue #59).
+      (game.pickupLockMarkers ??= []).push({
+        effect: token.effect, x: token.position.x, y: token.position.y,
+        bornActiveSeconds: game.activePlaySeconds,
+      });
       claimedAny = true;
     } else {
       remaining.push(token);

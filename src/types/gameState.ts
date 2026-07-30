@@ -241,6 +241,11 @@ export interface CanvasGameState {
   freezePickups: boolean;
   /** Transient claim/waste markers (culled by updatePickups). */
   pickupFeedback: PickupFeedback[];
+  /** Persistent badges left in a lock area for each power-up CLAIMED by a lock
+   *  (issue #59): their icon stays put in the pocket for the rest of the map so
+   *  you can see what you banked. Reset each map. `bornActiveSeconds` anchors a
+   *  brief pop-in on the active-play clock. */
+  pickupLockMarkers?: { effect: PickupEffect; x: number; y: number; bornActiveSeconds: number }[];
 
   // ── Destructible mirrors/movers (Phase 2: black ball) ──────────────────
   /** All mirrors/movers that can be broken by the black ball. */
