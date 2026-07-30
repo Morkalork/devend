@@ -51,6 +51,13 @@ export interface CanvasGameState {
   // ── Game flags ─────────────────────────────────────────────────────────
   gameOver: boolean;
   levelComplete: boolean;
+  /**
+   * Mirror of the React `paused` prop (a modal/menu is up). The loop self-halts
+   * on the next frame while set, so physics never advances behind a modal even
+   * when the loop was (re)started by the intro assemble AFTER the pause effect
+   * already ran. The pause effect restarts the loop when this clears.
+   */
+  paused: boolean;
 
   // ── Input / swipe ──────────────────────────────────────────────────────
   swipeStart: Vector2 | null;

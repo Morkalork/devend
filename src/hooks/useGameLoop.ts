@@ -187,6 +187,14 @@ export function createGameLoop(
       return;
     }
 
+    // A modal/menu is up (game.paused mirrors the React `paused` prop): hold
+    // physics here so nothing advances behind it. This is the self-halt that
+    // catches the board finishing its intro assemble behind a still-open modal
+    // (e.g. the "how to win" card), where the loop was (re)started after the
+    // pause effect had already run. The pause effect reschedules on close.
+    // Level-complete/game-over keep their own end-of-map animations below.
+    if (game.paused && !game.levelComplete && !game.gameOver) return;
+
     if (game.gameOver || game.pushMode === "prompt") return;
 
     // After level complete, keep rendering until all lock animations finish and

@@ -345,6 +345,10 @@ export function GameCanvas({
 
   useEffect(() => {
     const game = gameRef.current;
+    // Mirror onto the ref FIRST (before any early return): the loop body reads
+    // game.paused to self-halt, which covers the case where the intro assemble
+    // starts the loop after this effect has already run for the initial mount.
+    game.paused = paused;
     if (!game.gameLoopFn || game.gameOver || game.levelComplete) return;
     if (paused) {
       stopGameLoop(game);
@@ -475,6 +479,7 @@ export function GameCanvas({
     activeWalls: [] as GrowingWall[],
     gameOver: false,
     levelComplete: false,
+    paused: false,
     swipeStart: null as Vector2 | null,
     swipeRegionId: null as string | null,
     currentSwipePos: null as Vector2 | null,
