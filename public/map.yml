@@ -2,7 +2,7 @@ levels:
   - id: level-1
     level: 1
     sizeThreshold: 40
-    expectedCuts: 2
+    expectedCuts: 3
     points: 20
     variety: 0
     maxBalls: 1
@@ -54,7 +54,7 @@ levels:
   - id: level-3
     level: 3
     sizeThreshold: 35
-    expectedCuts: 5
+    expectedCuts: 4
     points: 20
     variety: 5
     maxBalls: 2
@@ -69,7 +69,7 @@ levels:
   - id: level-3b
     level: 3
     sizeThreshold: 30
-    expectedCuts: 5
+    expectedCuts: 4
     points: 20
     variety: 5
     maxBalls: 2
@@ -83,7 +83,7 @@ levels:
   - id: level-4
     level: 4
     sizeThreshold: 30
-    expectedCuts: 9
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 10
@@ -102,7 +102,7 @@ levels:
   - id: level-4b
     level: 4
     sizeThreshold: 30
-    expectedCuts: 9
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 10
@@ -122,10 +122,10 @@ levels:
   - id: level-5
     level: 5
     sizeThreshold: 30
-    expectedCuts: 10
+    expectedCuts: 4
     # Fence budget / WIP Limit: only completed fences count; running out loses a
     # life and restarts. Generous margin over expectedCuts for a first challenge.
-    fenceBudget: 14
+    fenceBudget: 8
     points: 20
     variety: 0
     randomShapes: 0
@@ -158,7 +158,7 @@ levels:
   - id: level-5b
     level: 5
     sizeThreshold: 30
-    expectedCuts: 10
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 0
@@ -191,9 +191,9 @@ levels:
   - id: level-6
     level: 6
     sizeThreshold: 30
-    expectedCuts: 11
+    expectedCuts: 4
     # Fence budget / WIP Limit (see level-5). Slightly tighter margin.
-    fenceBudget: 15
+    fenceBudget: 8
     points: 20
     variety: 0
     randomShapes: 10
@@ -218,7 +218,7 @@ levels:
   - id: level-6b
     level: 6
     sizeThreshold: 30
-    expectedCuts: 11
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 10
@@ -243,7 +243,7 @@ levels:
   - id: level-7
     level: 7
     sizeThreshold: 30
-    expectedCuts: 12
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 0
@@ -303,7 +303,7 @@ levels:
   - id: level-8
     level: 8
     sizeThreshold: 30
-    expectedCuts: 13
+    expectedCuts: 6
     points: 20
     variety: 5
     maxBalls: 4
@@ -317,7 +317,7 @@ levels:
   - id: level-9
     level: 9
     sizeThreshold: 18
-    expectedCuts: 14
+    expectedCuts: 7
     points: 20
     variety: 0
     randomShapes: 0
@@ -361,7 +361,7 @@ levels:
   - id: level-10
     level: 10
     sizeThreshold: 15
-    expectedCuts: 16
+    expectedCuts: 8
     points: 20
     variety: 0
     randomShapes: 0
@@ -461,7 +461,7 @@ levels:
   - id: level-12
     level: 12
     sizeThreshold: 10
-    expectedCuts: 22
+    expectedCuts: 10
     points: 20
     variety: 20
     maxBalls: 3
@@ -511,7 +511,7 @@ levels:
   - id: level-13
     level: 13
     sizeThreshold: 8
-    expectedCuts: 24
+    expectedCuts: 14
     points: 20
     variety: 25
     maxBalls: 4
@@ -560,7 +560,7 @@ levels:
   - id: level-14
     level: 14
     sizeThreshold: 8
-    expectedCuts: 26
+    expectedCuts: 14
     points: 20
     variety: 25
     maxBalls: 4
@@ -604,7 +604,7 @@ levels:
   - id: level-15
     level: 15
     sizeThreshold: 5
-    expectedCuts: 28
+    expectedCuts: 19
     points: 20
     variety: 30
     maxBalls: 4
@@ -642,7 +642,7 @@ levels:
   - id: level-16
     level: 16
     sizeThreshold: 7
-    expectedCuts: 30
+    expectedCuts: 16
     points: 20
     variety: 28
     maxBalls: 4
@@ -676,7 +676,7 @@ levels:
   - id: level-17
     level: 17
     sizeThreshold: 7
-    expectedCuts: 32
+    expectedCuts: 17
     points: 20
     variety: 30
     maxBalls: 4
@@ -714,7 +714,7 @@ levels:
   - id: level-18
     level: 18
     sizeThreshold: 6
-    expectedCuts: 35
+    expectedCuts: 18
     points: 20
     variety: 30
     maxBalls: 4
@@ -754,7 +754,7 @@ levels:
   - id: level-19
     level: 19
     sizeThreshold: 5
-    expectedCuts: 38
+    expectedCuts: 19
     points: 20
     variety: 35
     threadLockRequired: 1
@@ -815,7 +815,7 @@ levels:
   - id: level-20
     level: 20
     sizeThreshold: 24
-    expectedCuts: 11
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 0
@@ -840,7 +840,7 @@ levels:
   - id: level-21
     level: 21
     sizeThreshold: 18
-    expectedCuts: 11
+    expectedCuts: 7
     points: 20
     variety: 0
     randomShapes: 0
@@ -904,7 +904,7 @@ levels:
   - id: level-22
     level: 22
     sizeThreshold: 16
-    expectedCuts: 11
+    expectedCuts: 6
     points: 20
     variety: 0
     randomShapes: 0
@@ -933,7 +933,7 @@ levels:
   - id: level-23
     level: 23
     sizeThreshold: 15
-    expectedCuts: 12
+    expectedCuts: 6
     points: 20
     variety: 0
     randomShapes: 0
@@ -972,7 +972,7 @@ levels:
   - id: level-24
     level: 24
     sizeThreshold: 14
-    expectedCuts: 13
+    expectedCuts: 8
     points: 20
     variety: 0
     randomShapes: 0
@@ -1008,7 +1008,7 @@ levels:
   - id: level-25
     level: 25
     sizeThreshold: 13
-    expectedCuts: 13
+    expectedCuts: 8
     points: 20
     variety: 0
     randomShapes: 0
@@ -1047,7 +1047,7 @@ levels:
   - id: level-26
     level: 26
     sizeThreshold: 12
-    expectedCuts: 14
+    expectedCuts: 7
     points: 20
     variety: 0
     randomShapes: 0
@@ -1074,7 +1074,7 @@ levels:
   - id: level-27
     level: 27
     sizeThreshold: 11
-    expectedCuts: 15
+    expectedCuts: 8
     points: 20
     variety: 0
     randomShapes: 0
@@ -1109,7 +1109,7 @@ levels:
   - id: level-28
     level: 28
     sizeThreshold: 10
-    expectedCuts: 16
+    expectedCuts: 10
     points: 20
     variety: 0
     randomShapes: 0
@@ -1146,7 +1146,7 @@ levels:
   - id: level-29
     level: 29
     sizeThreshold: 9
-    expectedCuts: 17
+    expectedCuts: 12
     points: 20
     variety: 0
     randomShapes: 0
@@ -1201,7 +1201,7 @@ levels:
   - id: level-30
     level: 30
     sizeThreshold: 8
-    expectedCuts: 19
+    expectedCuts: 13
     points: 20
     variety: 0
     randomShapes: 0
@@ -1256,7 +1256,7 @@ levels:
   - id: level-31
     level: 31
     sizeThreshold: 30
-    expectedCuts: 5
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 0
@@ -1275,7 +1275,7 @@ levels:
   - id: level-32
     level: 32
     sizeThreshold: 30
-    expectedCuts: 6
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 0
@@ -1315,7 +1315,7 @@ levels:
   - id: level-33
     level: 33
     sizeThreshold: 30
-    expectedCuts: 8
+    expectedCuts: 4
     points: 20
     variety: 0
     randomShapes: 0
@@ -1340,7 +1340,7 @@ levels:
   - id: level-34
     level: 34
     sizeThreshold: 28
-    expectedCuts: 9
+    expectedCuts: 5
     points: 20
     variety: 0
     randomShapes: 0
@@ -1382,7 +1382,7 @@ levels:
   - id: level-35
     level: 35
     sizeThreshold: 24
-    expectedCuts: 10
+    expectedCuts: 6
     points: 20
     variety: 0
     randomShapes: 0
