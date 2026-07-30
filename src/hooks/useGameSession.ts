@@ -328,8 +328,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   } = useMetaProgression();
 
   // Loadouts are gated behind the general feature-unlock system: earned by
-  // beating the first boss on level 10 (see features.ts). Until then the Sprint
-  // Planning draft is skipped and the menu Loadouts entry stays hidden.
+  // beating the game for the first time (completing the final level; see the
+  // isLastLevel win path below). Until then the Sprint Planning draft is skipped
+  // and the menu Loadouts entry stays hidden.
   const loadoutsIntroduced = isFeatureUnlocked('loadouts');
 
   // Unlock a feature and, if it was newly unlocked, queue its "Feature Unlocked"
@@ -1056,10 +1057,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     checkAndCompleteAchievements(projectedStats);
 
     // Feature unlocks (features.ts): completing certain levels, on the real
-    // first run (depth 0), reveals a new system. Level 5 unlocks achievements;
-    // beating the first boss on level 10 unlocks loadouts. armFeatureUnlock
-    // queues the "Feature Unlocked" modal (surfaced when leaving the
-    // level-complete overlay). (Certificates unlock on an event, not a level.)
+    // first run (depth 0), reveals a new system. Level 5 unlocks achievements.
+    // armFeatureUnlock queues the "Feature Unlocked" modal (surfaced when
+    // leaving the level-complete overlay). (Certificates and loadouts unlock on
+    // an event, not a level - see below and handleCertificateHourEarned.)
     if (ascensionDepth === 0) {
       for (const feature of featuresUnlockedAtLevel(currentLevelNum)) {
         armFeatureUnlock(feature.id);
@@ -1071,6 +1072,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // result screen can celebrate them. Skipped runs (no drafted loadout) and
     // repeat wins with the same loadout do not advance the count.
     if (isLastLevel) {
+      // First full completion unlocks the Loadouts feature: the "Feature
+      // Unlocked" modal surfaces over the ascension draft that follows, right as
+      // the player first meets loadouts (the ascension pick). Idempotent, so
+      // later wins are no-ops.
+      armFeatureUnlock('loadouts');
       // Legacy bookkeeping flag (loadouts now unlock via the feature system).
       introduceLoadouts();
       const startLoadoutId = draftedLoadoutIds[0];

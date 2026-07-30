@@ -1,7 +1,8 @@
 /**
  * Feature-unlock system (features.ts): the catalogue that drives the general
- * "Feature Unlocked" modal. Loadouts is the first feature, earned by beating
- * the level-10 boss; legacy players who already had loadouts keep them.
+ * "Feature Unlocked" modal. Loadouts unlocks on an EVENT (beating the game for
+ * the first time, armed in code); legacy players who already had loadouts keep
+ * them.
  */
 import { describe, it, expect } from "vitest";
 import {
@@ -16,10 +17,10 @@ describe("feature catalogue (loaded from public/features.yml)", () => {
     expect(getAllFeatures().length).toBeGreaterThan(0);
   });
 
-  it("ships loadouts, tied to beating the level-10 boss", () => {
+  it("ships loadouts as an EVENT-unlocked feature (beating the game; no unlock level)", () => {
     const loadouts = getFeature("loadouts");
     expect(loadouts).toBeDefined();
-    expect(loadouts!.unlockLevel).toBe(10);
+    expect(loadouts!.unlockLevel).toBeUndefined();
   });
 
   it("ships achievements, tied to clearing level 5", () => {
@@ -54,13 +55,11 @@ describe("featuresUnlockedAtLevel", () => {
     expect(featuresUnlockedAtLevel(5).map(f => f.id)).toContain("achievements");
   });
 
-  it("returns loadouts exactly when completing level 10", () => {
-    expect(featuresUnlockedAtLevel(10).map(f => f.id)).toContain("loadouts");
-  });
-
-  it("never returns event-unlocked features (certificates) for any level", () => {
-    for (let level = 1; level <= 30; level++) {
-      expect(featuresUnlockedAtLevel(level).map(f => f.id)).not.toContain("certificates");
+  it("never returns event-unlocked features (certificates, loadouts) for any level", () => {
+    for (let level = 1; level <= 40; level++) {
+      const ids = featuresUnlockedAtLevel(level).map(f => f.id);
+      expect(ids).not.toContain("certificates");
+      expect(ids).not.toContain("loadouts");
     }
   });
 

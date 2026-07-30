@@ -32,8 +32,9 @@ features:
     icon: Award
     color: "#7fd4ff"
 
-  # Loadouts: earned by beating the first boss on level 10.
+  # Loadouts: earned by beating the game for the first time (completing the final
+  # level). An EVENT, not a level - armed in code from the last-level win, so it
+  # tracks the real final level even if the map length changes.
   - id: loadouts
-    unlockLevel: 10
     icon: Backpack
     color: "#00ff88"
