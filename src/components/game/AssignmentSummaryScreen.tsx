@@ -22,7 +22,7 @@ import { CRTBackground } from './CRTBackground';
 interface AssignmentSummaryScreenProps {
   assignment: AssignmentConfig;
   results: AssignmentMapResult[];
-  blockStats: { overtime: number; maps: number; locks: number; livesLost: number };
+  blockStats: { locks: number; livesLost: number };
   /** The reached tier's reward label, or null when the mission was missed. */
   rewardLabel: string | null;
   onContinue: () => void;
@@ -118,11 +118,10 @@ export function AssignmentSummaryScreen({
             </div>
           </div>
 
-          {/* Block stats */}
+          {/* Block stats: only what's relevant to the mission (locks landed) and
+              the cost paid (lives lost). Overtime + map count were noise (#63). */}
           <div className="w-full flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm">
             {([
-              ['contractOvertime', `${blockStats.overtime}h`],
-              ['contractMaps', String(blockStats.maps)],
               ['contractLocks', String(blockStats.locks)],
               ['contractLivesLost', String(blockStats.livesLost)],
             ] as const).map(([key, value]) => (

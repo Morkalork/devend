@@ -65,14 +65,15 @@ describe("assignment summary screen (#63)", () => {
       <AssignmentSummaryScreen
         assignment={door}
         results={[]}
-        blockStats={{ overtime: 150, maps: 5, locks: 10, livesLost: 1 }}
+        blockStats={{ locks: 10, livesLost: 1 }}
         rewardLabel="+2 lives"
         onContinue={vi.fn()}
       />
     );
     expect(screen.getByText("Assignment Complete")).toBeTruthy();
     expect(screen.getByText("Lock 20 balls over 5 maps.")).toBeTruthy();
-    expect(screen.getByText("150h")).toBeTruthy();
+    // Locks landed is shown; overtime + map count were trimmed as noise (#63).
+    expect(screen.getByText("10")).toBeTruthy();
     // The reward label appears in both the callout and the tier ladder row.
     expect(screen.getAllByText("+2 lives").length).toBeGreaterThan(0);
   });
@@ -82,7 +83,7 @@ describe("assignment summary screen (#63)", () => {
       <AssignmentSummaryScreen
         assignment={door}
         results={[]}
-        blockStats={{ overtime: 0, maps: 5, locks: 3, livesLost: 2 }}
+        blockStats={{ locks: 3, livesLost: 2 }}
         rewardLabel={null}
         onContinue={vi.fn()}
       />

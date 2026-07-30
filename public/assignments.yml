@@ -17,11 +17,18 @@
 #   lives     { count }           overtime  { hours }
 #   modifiers { blessing, modifiers, scope: run|block }   (good/bad bundle; can
 #             deepen a key to "enhance" a top-tier upgrade's effect)
-#   tierDraft { tier }            a free 1-of-3 upgrade pick (tough missions only)
+#   tierDraft { tier }            a free 1-of-3 upgrade pick (Junior..Architect)
 #
-# Balance: overtime rewards fold under the per-map cap elsewhere; keep constraints
-# survivable across five maps. tierDraft is reserved for constrained, hard
-# missions (the top tier). No em-dashes in displayed strings.
+# Balance (reassessed): rewards sit on ONE value scale so every assignment is
+# worth the effort. Anchor: 1 life ~= 50 overtime (a Fault Tolerance life costs
+# ~50h in the shop). The roster leans on LIVES and free UPGRADE PICKS, which read
+# as clearly valuable; small flat-overtime payouts (~30h) were dropped because
+# they never compared to a couple of lives. Per tier slot:
+#   first tier  ~= +2 lives (a solid, comparable floor for taking the mission).
+#   top tier    ~= a tierDraft or +3 lives, scaling UP with the constraint +
+#                  mission difficulty (Senior -> Principal -> Architect pick).
+# tierDraft is the mastery payoff and only sits on constrained assignments. Keep
+# constraints survivable across five maps. No em-dashes in displayed strings.
 offeredAfterLevel: 5
 
 assignments:
@@ -36,9 +43,9 @@ assignments:
       text: Lock balls across the next 5 maps.
       track: { mode: cumulative, kind: lockCount }
       tiers:
-        - { threshold: 12, label: "+30 overtime", reward: { type: overtime, hours: 30 } }
-        - { threshold: 20, label: "+2 lives", reward: { type: lives, count: 2 } }
-    clarify: A gentle, always-on speed tax for a payout that scales with how many balls you seal over the block. Locking two or three a map clears the first tier comfortably.
+        - { threshold: 12, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 20, label: "+3 lives", reward: { type: lives, count: 3 } }
+    clarify: A gentle, always-on speed tax for a payout that scales with how many balls you seal over the block. Locking two or three a map clears the first tier comfortably; a heavier block banks a third life.
 
   - id: daily_standup
     name: Daily Standup
@@ -51,8 +58,8 @@ assignments:
       track: { mode: everyMap, kind: lockCount, params: { count: 2 } }
       tiers:
         - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
-        - { threshold: 5, label: "+3 lives", reward: { type: lives, count: 3 } }
-    clarify: Consistency over volume. You need two locks on a map for it to count; hit that in three of the five maps for the first reward, all five for the best.
+        - { threshold: 5, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
+    clarify: Consistency over volume. A map counts once you lock two balls in it; hit that in three of five maps for a pair of lives, all five for a free Senior upgrade.
 
   - id: precision_review
     name: Precision Review
@@ -64,9 +71,9 @@ assignments:
       text: Land superior locks across the next 5 maps.
       track: { mode: cumulative, kind: superiorLocks }
       tiers:
-        - { threshold: 4, label: "+40 overtime", reward: { type: overtime, hours: 40 } }
-        - { threshold: 8, label: "Score +15%, fences 5% slower", reward: { type: modifiers, blessing: "Overtime up 15%, but fences grow 5% slower for the rest of the run.", modifiers: { scoreMultiplier: 1.15, fenceGenerationSpeedMultiplier: 0.95 }, scope: run } }
-    clarify: Rewards tight-pocket locks. Slower fences make snug pockets harder to seal, which is the point. The top tier is a lasting good-and-bad attribute swing.
+        - { threshold: 4, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 8, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
+    clarify: Rewards tight-pocket locks. Slower fences make snug pockets harder to seal, which is the point. Land eight superior locks over the block for a free Senior upgrade.
 
   - id: under_budget
     name: Under Budget
@@ -78,9 +85,9 @@ assignments:
       text: Clear at or under par cuts in each of the next 5 maps.
       track: { mode: everyMap, kind: underPar, params: { delta: 0 } }
       tiers:
-        - { threshold: 3, label: "+40 overtime", reward: { type: overtime, hours: 40 } }
+        - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
         - { threshold: 5, label: "+3 lives", reward: { type: lives, count: 3 } }
-    clarify: Efficient cutting only. A map counts when you finish at or under its par. The overtime cut hurts now; clean play across the block pays it back and then some.
+    clarify: Efficient cutting only. A map counts when you finish at or under its par. The overtime cut stings now; clean play across the block pays it back in lives.
 
   - id: sprint_review
     name: Sprint Review
@@ -92,9 +99,9 @@ assignments:
       text: Clear each of the next 5 maps within 40 seconds.
       track: { mode: everyMap, kind: speedClear, params: { seconds: 40 } }
       tiers:
-        - { threshold: 3, label: "+50 overtime", reward: { type: overtime, hours: 50 } }
-        - { threshold: 5, label: "Overtime +20% for the run", reward: { type: modifiers, blessing: "Overtime up 20% for the rest of the run.", modifiers: { scoreMultiplier: 1.2 }, scope: run } }
-    clarify: Built for fast, instinctive cutters. Balls surge from the first second, so there is no calm window; clear inside 40 active seconds to bank a map toward the reward.
+        - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 5, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
+    clarify: Built for fast, instinctive cutters. Balls surge from the first second, so there is no calm window. Clear inside 40 active seconds; sweep all five maps for a free Principal upgrade.
 
   - id: cost_cutting
     name: Cost Cutting
@@ -106,9 +113,9 @@ assignments:
       text: Land superior locks across the next 5 maps.
       track: { mode: cumulative, kind: superiorLocks }
       tiers:
-        - { threshold: 5, label: "+50 overtime", reward: { type: overtime, hours: 50 } }
-        - { threshold: 10, label: "Space Optimization pays +50%", reward: { type: modifiers, blessing: "Space Optimization bonuses pay 50% more for the rest of the run.", modifiers: { spaceBonusMultiplier: 1.5 }, scope: run } }
-    clarify: A deeper superior-lock grind. The top tier permanently sharpens your Space Optimization payout, rewarding tight, efficient territory for the rest of the run.
+        - { threshold: 5, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 10, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
+    clarify: A deeper superior-lock grind under a heavier fence tax. Five superior locks bank a pair of lives; ten over the block earns a free Principal upgrade.
 
   - id: lockdown_protocol
     name: Lockdown Protocol
@@ -121,9 +128,9 @@ assignments:
       text: Lock every ball in each of the next 5 maps.
       track: { mode: everyMap, kind: allBallsLocked }
       tiers:
-        - { threshold: 3, label: "Ball size -10%, speed +10%", reward: { type: modifiers, blessing: "Balls run 10% smaller but 10% faster for the rest of the run.", modifiers: { ballSizeMultiplier: 0.9, ballSpeedMultiplier: 1.1 }, scope: run } }
-        - { threshold: 5, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-    clarify: The marquee mission. Push Your Luck is off, so each map banks the moment it is won, and you must trap every ball to bank that map. Sweep all five for a free Senior upgrade.
+        - { threshold: 3, label: "+3 lives", reward: { type: lives, count: 3 } }
+        - { threshold: 5, label: "Pick an Architect upgrade", reward: { type: tierDraft, tier: Architect } }
+    clarify: The marquee mission. Push Your Luck is off, so each map banks the moment it is won, and you must trap every ball to bank that map. Three of five pays three lives; sweep all five for a free Architect upgrade.
 
   - id: crunch_delivery
     name: Crunch Delivery
@@ -134,7 +141,7 @@ assignments:
       text: Lock balls across the next 5 maps.
       track: { mode: cumulative, kind: lockCount }
       tiers:
-        - { threshold: 20, label: "+3 lives", reward: { type: lives, count: 3 } }
-        - { threshold: 30, label: "+80 overtime", reward: { type: overtime, hours: 80 } }
+        - { threshold: 20, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 30, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
         - { threshold: 40, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
-    clarify: A pure volume grind with no push safety net. Three tiers, so you rarely walk away empty; a heavy 40-lock block earns a free Principal upgrade.
+    clarify: A pure volume grind with no push safety net. Three tiers, so you rarely walk away empty. A couple of lives, then a free Senior upgrade, then a Principal for a heavy 40-lock block.
