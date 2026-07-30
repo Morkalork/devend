@@ -454,31 +454,29 @@ export function GameScreen({
   // Any modal/panel/menu that overlays the board should freeze the sim and
   // resume it on close (issue #41). The interactive fence tutorial is NOT a
   // modal — it needs the game running — so it is deliberately excluded.
-  const showBreakOverlay = showBreakIntro && !showMoverOverlay;
-  // The bar tutorials are split across maps so they never stack on level 1's
-  // Level Cleared overlay: top bar on map 2, bottom bar on map 3.
-  const showTopBarOverlay =
-    levelNumber === 2 && showTopBarTutorial && !showMoverOverlay && !showBreakIntro;
-  const showBottomBarOverlay =
-    levelNumber === 3 && showBottomBarTutorial && !showMoverOverlay && !showBreakIntro;
+  //
+  // Each explainer trigger below is RAW (independent of the others). They are
+  // rendered through a single-slot QUEUE (see the return body): only one modal
+  // ever shows at a time, and dismissing it flips its own trigger off so the
+  // next queued modal appears. This replaces the old ad-hoc `!showX` guards,
+  // which only de-conflicted some pairs and still let e.g. the per-map "how to
+  // win" modal stack on top of a one-time teaching overlay.
+  const showBreakOverlay = showBreakIntro;
+  const showTopBarOverlay = levelNumber === 2 && showTopBarTutorial;
+  const showBottomBarOverlay = levelNumber === 3 && showBottomBarTutorial;
   // Time-limit intro: the first timed map (level 4, just past the exempt band).
-  const showTimeLimitOverlay =
-    levelNumber === TIME_LIMIT_EXEMPT_MAX_LEVEL + 1 && showTimeLimitTutorial &&
-    !showMoverOverlay && !showBreakIntro;
-  const showCreepOverlay =
-    !creepIntroSeen && gameState.creepPercent > 0 && !level.boss &&
-    !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
+  const showTimeLimitOverlay = levelNumber === TIME_LIMIT_EXEMPT_MAX_LEVEL + 1 && showTimeLimitTutorial;
+  const showCreepOverlay = !creepIntroSeen && gameState.creepPercent > 0 && !level.boss;
   // Boss intro card (issue #56): a one-time-per-boss explainer shown when a boss
   // map first loads, before anything else, so the fight's rules are clear.
-  const showBossOverlay =
-    !!level.boss && !bossIntroSeen &&
-    !showMoverOverlay && !showBreakOverlay && !showTopBarOverlay && !showBottomBarOverlay;
+  const showBossOverlay = !!level.boss && !bossIntroSeen;
   const showWinModal = winModalOpen && !mapComplete;
-  const modalOverlayActive =
-    topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen ||
+  // Any queued explainer modal is up (used to gate building the queue + to pause).
+  const anyExplainerModal =
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
-    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal ||
-    fenceIntroOpen;
+    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal || fenceIntroOpen;
+  const modalOverlayActive =
+    topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen || anyExplainerModal;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -838,104 +836,77 @@ export function GameScreen({
         )}
       </div>
 
-      {/* Draw-A-Fence step 1 (#62): centered, paused explainer. Shown after the
-          "how to win" modal so they don't stack; dismissing it resumes the game
-          and reveals the board with the draw-hint animation (step 2). */}
-      <TutorialOverlay
-        visible={fenceIntroOpen && !showWinModal}
-        onDismiss={() => setFenceIntroOpen(false)}
-        accentColor={accentColor}
-        title={t('interactiveTutorial.drawAFence')}
-        body={t('interactiveTutorial.dragInstruction')}
-      />
-
-      {/* Mover tutorial overlay — shown on first level with moving obstacles */}
-      <TutorialOverlay
-        visible={showMoverOverlay}
-        onDismiss={() => {
-          setMoverTutorialDismissed(true);
-          onMoverTutorialSeen?.();
-        }}
-        accentColor="#ff8800"
-        title={t('game.moverTutorialTitle')}
-        body={t('game.moverTutorialBody')}
-      />
-
-      {/* Breaking-obstacles tutorial — first break-objective level (issue #38) */}
-      <TutorialOverlay
-        visible={showBreakOverlay}
-        onDismiss={() => {
-          setShowBreakIntro(false);
-          try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ }
-        }}
-        accentColor="#ffb454"
-        title={t('game.breakTutorialTitle')}
-        body={t('game.breakTutorialBody')}
-      />
-
-      {/* Scope Creep explainer — first time a speed surge lands, any map */}
-      <TutorialOverlay
-        visible={showCreepOverlay}
-        onDismiss={() => {
-          setCreepIntroSeen(true);
-          try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ }
-        }}
-        accentColor="#ff6b6b"
-        title={t('game.creepTutorialTitle')}
-        body={t('game.creepTutorialBody')}
-      />
-
-      {/* Boss intro card (issue #56) — once per boss map */}
-      {level.boss && (
-        <TutorialOverlay
-          visible={showBossOverlay}
-          onDismiss={() => {
-            setBossIntroSeen(true);
-            try { localStorage.setItem(`devend_boss_intro_${level.id}`, '1'); } catch { /* ignore */ }
-          }}
-          accentColor="#ff4d6d"
-          title={t('game.bossIntroTitle', { name: contentText.bossName(t, { id: level.id, name: level.boss.name }) })}
-          body={contentText.bossIntro(t, { id: level.id, intro: level.boss.intro })}
-        />
-      )}
-
-      {/* Top bar tutorial — map 2, first run only */}
-      <TutorialOverlay
-        visible={showTopBarOverlay}
-        onDismiss={onTopBarTutorialSeen}
-        accentColor={accentColor}
-        title={t('game.topBarTutorialTitle')}
-        body={t('game.topBarTutorialBody')}
-      />
-
-      {/* Bottom bar tutorial — map 3, first run only */}
-      <TutorialOverlay
-        visible={showBottomBarOverlay}
-        onDismiss={onBottomBarTutorialSeen}
-        accentColor={accentColor}
-        title={t('game.bottomBarTutorialTitle')}
-        body={t('game.bottomBarTutorialBody')}
-      />
-
-      {/* Time-limit intro — first timed map (level 4), first run only */}
-      <TutorialOverlay
-        visible={showTimeLimitOverlay}
-        onDismiss={onTimeLimitTutorialSeen}
-        accentColor={accentColor}
-        title={t('game.timeLimitTutorialTitle')}
-        body={t('game.timeLimitTutorialBody')}
-      />
-
-      {/* "How to win" — every map start (win conditions vary by map); dismissing
-          it lets the board dissolve in. Reopenable from the top-left menu.
-          Rendered last so it sits above any one-time teaching overlay. */}
-      <TutorialOverlay
-        visible={showWinModal}
-        onDismiss={() => setWinModalOpen(false)}
-        accentColor={accentColor}
-        title={t('winConditions.title')}
-        body={winConditionsBody(t, level, levelNumber)}
-      />
+      {/* Explainer modal QUEUE: only ONE shows at a time. Ordered by priority;
+          dismissing the active one flips its trigger off, so the next queued
+          modal appears (a natural queue). The game stays paused via
+          modalOverlayActive until the whole queue is cleared. Boss context
+          first, then the per-map "how to win", then one-time teaching overlays,
+          and finally the Draw-A-Fence coach (#62). */}
+      {anyExplainerModal && (() => {
+        type Explainer = { show: boolean; accentColor: string; title: string; body: string; onDismiss: () => void };
+        const queue: Explainer[] = [
+          ...(level.boss ? [{
+            show: showBossOverlay,
+            accentColor: '#ff4d6d',
+            title: t('game.bossIntroTitle', { name: contentText.bossName(t, { id: level.id, name: level.boss.name }) }),
+            body: contentText.bossIntro(t, { id: level.id, intro: level.boss.intro }),
+            onDismiss: () => {
+              setBossIntroSeen(true);
+              try { localStorage.setItem(`devend_boss_intro_${level.id}`, '1'); } catch { /* ignore */ }
+            },
+          }] : []),
+          {
+            show: showWinModal, accentColor,
+            title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber),
+            onDismiss: () => setWinModalOpen(false),
+          },
+          {
+            show: showMoverOverlay, accentColor: '#ff8800',
+            title: t('game.moverTutorialTitle'), body: t('game.moverTutorialBody'),
+            onDismiss: () => { setMoverTutorialDismissed(true); onMoverTutorialSeen?.(); },
+          },
+          {
+            show: showBreakOverlay, accentColor: '#ffb454',
+            title: t('game.breakTutorialTitle'), body: t('game.breakTutorialBody'),
+            onDismiss: () => { setShowBreakIntro(false); try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ } },
+          },
+          {
+            show: showTimeLimitOverlay, accentColor,
+            title: t('game.timeLimitTutorialTitle'), body: t('game.timeLimitTutorialBody'),
+            onDismiss: () => onTimeLimitTutorialSeen?.(),
+          },
+          {
+            show: showTopBarOverlay, accentColor,
+            title: t('game.topBarTutorialTitle'), body: t('game.topBarTutorialBody'),
+            onDismiss: () => onTopBarTutorialSeen?.(),
+          },
+          {
+            show: showBottomBarOverlay, accentColor,
+            title: t('game.bottomBarTutorialTitle'), body: t('game.bottomBarTutorialBody'),
+            onDismiss: () => onBottomBarTutorialSeen?.(),
+          },
+          {
+            show: showCreepOverlay, accentColor: '#ff6b6b',
+            title: t('game.creepTutorialTitle'), body: t('game.creepTutorialBody'),
+            onDismiss: () => { setCreepIntroSeen(true); try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ } },
+          },
+          {
+            show: fenceIntroOpen, accentColor,
+            title: t('interactiveTutorial.drawAFence'), body: t('interactiveTutorial.dragInstruction'),
+            onDismiss: () => setFenceIntroOpen(false),
+          },
+        ];
+        const active = queue.find(m => m.show);
+        return active ? (
+          <TutorialOverlay
+            visible
+            onDismiss={active.onDismiss}
+            accentColor={active.accentColor}
+            title={active.title}
+            body={active.body}
+          />
+        ) : null;
+      })()}
 
       {/* Full-screen Specs panel: build, objectives, assignment, status,
           upgrades and the full attribute breakdown. */}
