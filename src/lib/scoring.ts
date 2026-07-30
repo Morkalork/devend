@@ -104,16 +104,16 @@ export function calculateSpaceBonus(
 }
 
 /**
- * Calculate the Ship Early tempo bonus: a config-driven ladder that pays more
- * overtime the faster the win condition was first met, measured in ACTIVE-play
+ * Calculate the Ship Early tempo reward as a PERCENT (0-100) of the map's
+ * earned overtime, paid ABOVE the per-map cap (so finishing fast is a real,
+ * visible bonus rather than 3 flat hours the cap swallows). A config-driven
+ * ladder keyed to how fast the win condition was first met, in ACTIVE-play
  * seconds (pauses, menus and the push prompt do not count). Windows are PER
- * BALL, so a busy map earns proportionally more time than a one-ball map.
- * Awards the best rung whose window was met, clamped at `maxBonus`;
- * null/undefined means "no clear time recorded" and pays nothing. Mirrors
- * calculateSpaceBonus so instinctive speed and tactical precision are
- * parallel, competing payoffs.
+ * BALL, so a busy map gets proportionally more time. Awards the best rung whose
+ * window was met, clamped at `maxPercent`; null/undefined = "no clear time
+ * recorded" and pays nothing.
  */
-export function calculateShipEarlyBonus(
+export function calculateShipEarlyPercent(
   clearedActiveSeconds: number | null | undefined,
   ballCount: number,
   config: ScoringConfig,
@@ -124,28 +124,28 @@ export function calculateShipEarlyBonus(
   const balls = Number.isFinite(ballCount) && ballCount > 0 ? ballCount : 1;
   // Deadline Extension: extra per-ball seconds added to every window.
   const extra = Number.isFinite(extraSecondsPerBall) && extraSecondsPerBall > 0 ? extraSecondsPerBall : 0;
-  // Hard Deadline door: scales the payout AFTER the maxBonus clamp (the door
-  // doubles what the ladder pays, it does not unlock higher rungs).
+  // Hard Deadline door: scales the payout AFTER the maxPercent clamp (the door
+  // widens what the ladder pays, it does not unlock higher rungs).
   const mult = Number.isFinite(bonusMultiplier) && bonusMultiplier > 0 ? bonusMultiplier : 1;
 
-  const { maxBonus, thresholds } = config.scoring.shipEarly;
-  let bonus = 0;
+  const { maxPercent, thresholds } = config.scoring.shipEarly;
+  let percent = 0;
   for (const step of thresholds) {
     if (clearedActiveSeconds <= (step.withinSecondsPerBall + extra) * balls) {
-      bonus = Math.max(bonus, step.bonus);
+      percent = Math.max(percent, step.percent);
     }
   }
-  return Math.round(Math.min(bonus, maxBonus) * mult);
+  return Math.min(percent, maxPercent) * mult;
 }
 
-/** Ship Early bonus from the preloaded config (see loadScoringConfig). */
-export function getShipEarlyBonus(
+/** Ship Early reward percent (0-100) from the preloaded config. */
+export function getShipEarlyPercent(
   clearedActiveSeconds: number | null | undefined,
   ballCount: number,
   extraSecondsPerBall: number = 0,
   bonusMultiplier: number = 1,
 ): number {
-  return calculateShipEarlyBonus(clearedActiveSeconds, ballCount, loadedConfig, extraSecondsPerBall, bonusMultiplier);
+  return calculateShipEarlyPercent(clearedActiveSeconds, ballCount, loadedConfig, extraSecondsPerBall, bonusMultiplier);
 }
 
 /** The Ship Early ladder from the preloaded config (drives the countdown bar). */
@@ -249,11 +249,11 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
       ],
     },
     shipEarly: {
-      maxBonus: 3,
+      maxPercent: 30,
       thresholds: [
-        { withinSecondsPerBall: 6, bonus: 3 },
-        { withinSecondsPerBall: 10, bonus: 2 },
-        { withinSecondsPerBall: 15, bonus: 1 },
+        { withinSecondsPerBall: 6, percent: 30 },
+        { withinSecondsPerBall: 10, percent: 20 },
+        { withinSecondsPerBall: 15, percent: 10 },
       ],
     },
     performanceMultiplier: {
@@ -352,6 +352,9 @@ export interface ScoreOptions {
   /** Pickup overtime tokens: paid AFTER the cap clamp, like the highscore
    *  bonus, so a claimed token always pays even on a capped map (default 0). */
   postCapBonus?: number;
+  /** Ship Early tempo reward as a PERCENT (0-100) of the capped map overtime,
+   *  paid ABOVE the cap so finishing fast is a real bonus (default 0). */
+  shipEarlyPercent?: number;
   /**
    * Demolition multiplier (issue #38): breaking destructibles multiplies the
    * whole pre-cap payout (×1.15 per break, compounding), to offset the
@@ -383,8 +386,10 @@ export function calculateScore(
 ): {
   levelScore: number;
   breakdown: ScoreBreakdown;
+  /** The ship-early hours actually paid (capped overtime x shipEarlyPercent). */
+  shipEarlyBonus: number;
 } {
-  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0, payoutMultiplier = 1 } = options;
+  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0, payoutMultiplier = 1, shipEarlyPercent = 0 } = options;
   const requiredRemovedRatio = (100 - thresholdPercent) / 100;
   const actualRemovedRatio = (100 - remainingPercent) / 100;
 
@@ -409,7 +414,13 @@ export function calculateScore(
   // Pickup overtime lands OUTSIDE the cap (a deliberate, small inflation valve:
   // tokens must feel rewarding even on a capped map — see game-config.yml).
   const safePostCap = Number.isFinite(postCapBonus) && postCapBonus > 0 ? Math.round(postCapBonus) : 0;
-  const levelScore = Math.max(0, Math.min(rawScore, cap)) + safePostCap;
+  const capped = Math.max(0, Math.min(rawScore, cap));
+  // Ship Early tempo reward: a percent of the CAPPED map overtime, paid ABOVE
+  // the cap (issue: finishing fast must be a real motivator, not a flat +3h the
+  // cap eats). Scales with the map's value automatically.
+  const safeShipEarlyPct = Number.isFinite(shipEarlyPercent) && shipEarlyPercent > 0 ? shipEarlyPercent : 0;
+  const shipEarlyBonus = Math.round(capped * safeShipEarlyPct / 100);
+  const levelScore = capped + safePostCap + shipEarlyBonus;
 
-  return { levelScore, breakdown };
+  return { levelScore, breakdown, shipEarlyBonus };
 }

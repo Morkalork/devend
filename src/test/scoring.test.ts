@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   calculateScore,
   calculateSpaceBonus,
-  calculateShipEarlyBonus,
+  calculateShipEarlyPercent,
   getOvertimeCap,
   DEFAULT_SCORING_CONFIG,
 } from "@/lib/scoring";
@@ -127,29 +127,29 @@ describe("space bonus ladder rewards clearing more", () => {
   });
 });
 
-describe("ship early bonus ladder rewards fast clears", () => {
+describe("ship early percent ladder rewards fast clears", () => {
   const cfg = DEFAULT_SCORING_CONFIG;
-  // Default per-ball ladder: 6s -> +3, 10s -> +2, 15s -> +1 (per ball).
-  const at = (seconds: number | null | undefined, balls = 1) => calculateShipEarlyBonus(seconds, balls, cfg);
+  // Default per-ball ladder: 6s -> 30%, 10s -> 20%, 15s -> 10% (per ball).
+  const at = (seconds: number | null | undefined, balls = 1) => calculateShipEarlyPercent(seconds, balls, cfg);
 
   it("pays the best rung whose per-ball window was met (1 ball)", () => {
-    expect(at(3)).toBe(3);
-    expect(at(6)).toBe(3);     // boundary is inclusive
-    expect(at(6.01)).toBe(2);
-    expect(at(10)).toBe(2);
-    expect(at(10.5)).toBe(1);
-    expect(at(15)).toBe(1);
+    expect(at(3)).toBe(30);
+    expect(at(6)).toBe(30);     // boundary is inclusive
+    expect(at(6.01)).toBe(20);
+    expect(at(10)).toBe(20);
+    expect(at(10.5)).toBe(10);
+    expect(at(15)).toBe(10);
   });
 
   it("scales the windows with the map's ball count (15s per ball)", () => {
-    // A 4-ball map: 24s -> +3, 40s -> +2, 60s -> +1.
-    expect(at(24, 4)).toBe(3);
-    expect(at(24.01, 4)).toBe(2);
-    expect(at(40, 4)).toBe(2);
-    expect(at(60, 4)).toBe(1);
+    // A 4-ball map: 24s -> 30%, 40s -> 20%, 60s -> 10%.
+    expect(at(24, 4)).toBe(30);
+    expect(at(24.01, 4)).toBe(20);
+    expect(at(40, 4)).toBe(20);
+    expect(at(60, 4)).toBe(10);
     expect(at(60.1, 4)).toBe(0);
     // A 2-ball map halves that: 30s is the last window.
-    expect(at(30, 2)).toBe(1);
+    expect(at(30, 2)).toBe(10);
     expect(at(30.1, 2)).toBe(0);
   });
 
@@ -164,35 +164,35 @@ describe("ship early bonus ladder rewards fast clears", () => {
 
   it("Deadline Extension widens every window by its per-ball seconds", () => {
     // +2s/ball: 1-ball windows become 8/12/17.
-    expect(calculateShipEarlyBonus(8, 1, cfg, 2)).toBe(3);
-    expect(calculateShipEarlyBonus(8.01, 1, cfg, 2)).toBe(2);
-    expect(calculateShipEarlyBonus(17, 1, cfg, 2)).toBe(1);
-    expect(calculateShipEarlyBonus(17.1, 1, cfg, 2)).toBe(0);
+    expect(calculateShipEarlyPercent(8, 1, cfg, 2)).toBe(30);
+    expect(calculateShipEarlyPercent(8.01, 1, cfg, 2)).toBe(20);
+    expect(calculateShipEarlyPercent(17, 1, cfg, 2)).toBe(10);
+    expect(calculateShipEarlyPercent(17.1, 1, cfg, 2)).toBe(0);
     // Scales with ball count: 4 balls at +6s/ball -> last window 84s.
-    expect(calculateShipEarlyBonus(84, 4, cfg, 6)).toBe(1);
-    expect(calculateShipEarlyBonus(84.1, 4, cfg, 6)).toBe(0);
+    expect(calculateShipEarlyPercent(84, 4, cfg, 6)).toBe(10);
+    expect(calculateShipEarlyPercent(84.1, 4, cfg, 6)).toBe(0);
     // Garbage extension is ignored.
-    expect(calculateShipEarlyBonus(15, 1, cfg, NaN)).toBe(1);
-    expect(calculateShipEarlyBonus(15.1, 1, cfg, -3)).toBe(0);
+    expect(calculateShipEarlyPercent(15, 1, cfg, NaN)).toBe(10);
+    expect(calculateShipEarlyPercent(15.1, 1, cfg, -3)).toBe(0);
   });
 
-  it("Hard Deadline doubles the payout without unlocking higher rungs", () => {
-    // x2 applies AFTER the maxBonus clamp: 3 -> 6, 2 -> 4, 1 -> 2, 0 stays 0.
-    expect(calculateShipEarlyBonus(6, 1, cfg, 0, 2)).toBe(6);
-    expect(calculateShipEarlyBonus(10, 1, cfg, 0, 2)).toBe(4);
-    expect(calculateShipEarlyBonus(15, 1, cfg, 0, 2)).toBe(2);
-    expect(calculateShipEarlyBonus(15.1, 1, cfg, 0, 2)).toBe(0);
-    // Stacks with Deadline Extension: widened window, then doubled payout.
-    expect(calculateShipEarlyBonus(8, 1, cfg, 2, 2)).toBe(6);
+  it("Hard Deadline scales the percent without unlocking higher rungs", () => {
+    // x2 applies AFTER the maxPercent clamp: 30 -> 60, 20 -> 40, 10 -> 20, 0 stays 0.
+    expect(calculateShipEarlyPercent(6, 1, cfg, 0, 2)).toBe(60);
+    expect(calculateShipEarlyPercent(10, 1, cfg, 0, 2)).toBe(40);
+    expect(calculateShipEarlyPercent(15, 1, cfg, 0, 2)).toBe(20);
+    expect(calculateShipEarlyPercent(15.1, 1, cfg, 0, 2)).toBe(0);
+    // Stacks with Deadline Extension: widened window, then scaled percent.
+    expect(calculateShipEarlyPercent(8, 1, cfg, 2, 2)).toBe(60);
     // Garbage multipliers are ignored.
-    expect(calculateShipEarlyBonus(6, 1, cfg, 0, NaN)).toBe(3);
-    expect(calculateShipEarlyBonus(6, 1, cfg, 0, -2)).toBe(3);
-    expect(calculateShipEarlyBonus(6, 1, cfg, 0, 0)).toBe(3);
+    expect(calculateShipEarlyPercent(6, 1, cfg, 0, NaN)).toBe(30);
+    expect(calculateShipEarlyPercent(6, 1, cfg, 0, -2)).toBe(30);
+    expect(calculateShipEarlyPercent(6, 1, cfg, 0, 0)).toBe(30);
   });
 
   it("guards against a bad ball count (treated as 1 ball)", () => {
-    expect(at(6, 0)).toBe(3);
-    expect(at(6, NaN)).toBe(3);
+    expect(at(6, 0)).toBe(30);
+    expect(at(6, NaN)).toBe(30);
     expect(at(15.1, 0)).toBe(0);
   });
 
@@ -205,26 +205,29 @@ describe("ship early bonus ladder rewards fast clears", () => {
     }
   });
 
-  it("clamps to maxBonus with a hot config", () => {
+  it("clamps to maxPercent with a hot config", () => {
     const hot = {
       scoring: {
         ...cfg.scoring,
-        shipEarly: { maxBonus: 2, thresholds: [{ withinSecondsPerBall: 30, bonus: 99 }] },
+        shipEarly: { maxPercent: 20, thresholds: [{ withinSecondsPerBall: 30, percent: 99 }] },
       },
     };
-    expect(calculateShipEarlyBonus(10, 1, hot)).toBe(2);
+    expect(calculateShipEarlyPercent(10, 1, hot)).toBe(20);
   });
 
-  it("folds under the per-map cap like lock/push bonuses (#43)", () => {
+  it("pays a percent of the CAPPED map overtime, ABOVE the cap", () => {
     const base = 40;
     const cap = getOvertimeCap(base, HEADROOM); // 80
-    const shipEarly = calculateShipEarlyBonus(5, 1, cfg); // 3
-    // Even riding a huge lock stack, the total clamps at the cap.
-    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 + shipEarly }).levelScore;
-    expect(capped).toBe(cap);
-    // A normal run counts it in full under the cap.
-    const normal = calculateScore(5, 5, 10, 30, base, { extraBonus: shipEarly }).levelScore;
-    expect(normal).toBe(base + 1 + shipEarly);
+    // Even riding a huge lock stack, the base clamps at the cap, and ship-early
+    // adds 30% of the cap ON TOP of it.
+    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, shipEarlyPercent: 30 });
+    expect(capped.levelScore).toBe(cap + Math.round(cap * 0.30));
+    expect(capped.shipEarlyBonus).toBe(Math.round(cap * 0.30));
+    // A normal (uncapped) map: 10% of the earned overtime on top.
+    const normal = calculateScore(5, 5, 10, 30, base, { shipEarlyPercent: 10 });
+    const earned = base + 1; // at par (x1) + one space-bonus rung
+    expect(normal.levelScore).toBe(earned + Math.round(earned * 0.10));
+    expect(normal.shipEarlyBonus).toBe(Math.round(earned * 0.10));
   });
 });
 

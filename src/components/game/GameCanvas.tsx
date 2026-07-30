@@ -30,8 +30,8 @@ import { getAbility } from "@/lib/abilities";
 import { fireAbility, fireTargetedAbility } from "@/lib/abilityEffects";
 import { drawPerfOverlay } from "@/lib/rendering/perfStats";
 import { RenderContext, RainState } from "@/lib/rendering/types";
-import { calculateScore, ensureScoringConfigLoaded, getShipEarlyBonus } from "@/lib/scoring";
-import { isTimingExempt } from "@/lib/mapTiming";
+import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent } from "@/lib/scoring";
+import { isTimingExempt, getMapTimeLimit } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
 import { tickMapBeats } from "@/lib/physics/mapBeats";
@@ -165,6 +165,8 @@ interface GameCanvasProps {
   /** Press-and-hold on a superior-lock star: open the lock explainer modal. */
   onRequestSuperiorInfo?: () => void;
   onGameEnd: (result: GameResult) => void;
+  /** Out of time with lives to spare: the session should restart this level. */
+  onMapTimedOut?: () => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired the instant the map is won, so the shell can freeze the code background. */
   onMapComplete?: () => void;
@@ -234,6 +236,17 @@ function stopGameLoop(game: CanvasGameState): void {
   game.animationId = 0;
 }
 
+// Countdown color bands -> time-pressure tiers, matching ShipEarlyBar's green ->
+// red drain: tier 0 fresh (>66% left), 1 yellow, 2 orange, 3 red (<=15% left).
+// Each downward crossing fires a crunch-style toast (i18n keys, index by tier).
+const TIME_TIER_ANNOUNCE: readonly (string | null)[] = [null, 'game.timeTier1', 'game.timeTier2', 'game.timeTier3'];
+function timeTierFor(remainingFraction: number): number {
+  if (remainingFraction > 0.66) return 0;
+  if (remainingFraction > 0.33) return 1;
+  if (remainingFraction > 0.15) return 2;
+  return 3;
+}
+
 export function GameCanvas({
   level,
   levelNumber,
@@ -245,6 +258,7 @@ export function GameCanvas({
   onSpendAbility,
   onRequestSuperiorInfo,
   onGameEnd,
+  onMapTimedOut,
   onLevelComplete,
   onMapComplete,
   introAssemble = false,
@@ -301,6 +315,8 @@ export function GameCanvas({
   useEffect(() => { freezeOnCompleteRef.current = freezeOnComplete; }, [freezeOnComplete]);
   const onGameEndRef = useRef(onGameEnd);
   useEffect(() => { onGameEndRef.current = onGameEnd; }, [onGameEnd]);
+  const onMapTimedOutRef = useRef(onMapTimedOut);
+  useEffect(() => { onMapTimedOutRef.current = onMapTimedOut; }, [onMapTimedOut]);
   const onBallTypeLockedRef = useRef(onBallTypeLocked);
   useEffect(() => { onBallTypeLockedRef.current = onBallTypeLocked; }, [onBallTypeLocked]);
   const onCanvasReadyRef = useRef(onCanvasReady);
@@ -409,6 +425,9 @@ export function GameCanvas({
   const [beatBanner, setBeatBanner] = useState<{ key: number; announce: string } | null>(null);
   const beatBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current); }, []);
+  // Highest time-pressure tier reached this map (0 fresh .. 3 final), so each
+  // downward crossing of a countdown color band toasts exactly once (#timeTier).
+  const lastTimeTierRef = useRef(0);
   const [displayLives, setDisplayLives] = useState(lives);
   const [screenFlash, setScreenFlash] = useState<"none" | "red">("none");
   const [isRecovering, setIsRecovering] = useState(false);
@@ -950,6 +969,7 @@ export function GameCanvas({
       game.warnedBeats = [];
       game.beatSpeedMult = 1;
       setBeatBanner(null);
+      lastTimeTierRef.current = 0; // fresh map: re-arm the time-tier toasts
       setCreepPercent(0);
       setActiveSeconds(0);
       setAbilityTimers([]);
@@ -1148,6 +1168,7 @@ export function GameCanvas({
       freezeOnComplete: () => freezeOnCompleteRef.current,
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
+      onMapTimedOut: () => onMapTimedOutRef.current?.(),
       onTutorialCutSuccess,
       onBallTypeLocked: id => onBallTypeLockedRef.current?.(id) ?? false,
       // Fork pickup split a ball: rescale the Ship Early countdown windows.
@@ -1217,7 +1238,23 @@ export function GameCanvas({
         });
       },
       onCreepStep: setCreepPercent,
-      onActiveSecond: setActiveSeconds,
+      onActiveSecond: (s: number) => {
+        setActiveSeconds(s);
+        // Time-tier toast (#timeTier): each time the countdown drops into a
+        // lower color band, flash the same crunch-style banner to add pressure.
+        const tl = getMapTimeLimit(level, levelNumber);
+        if (tl == null) return;
+        const tier = timeTierFor(Math.max(0, 1 - s / tl));
+        if (tier > lastTimeTierRef.current) {
+          lastTimeTierRef.current = tier;
+          const announce = TIME_TIER_ANNOUNCE[tier];
+          if (announce) {
+            setBeatBanner({ key: performance.now(), announce });
+            if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
+            beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
+          }
+        }
+      },
       // Deferred push prompt: the loop already set game.pushMode; mirror it
       // into React so the modal mounts.
       onPushPrompt: () => setPushMode("prompt"),
@@ -1330,20 +1367,22 @@ export function GameCanvas({
       : 0;
     // Ship Early: the tempo clock froze when the prompt opened, so push time
     // never counts against it (disabled on the tutorial band, levels 1-3).
-    const shipEarlyBonus = isTimingExempt(levelNumber)
+    const shipEarlyPercent = isTimingExempt(levelNumber)
       ? 0
-      : getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
-    // Fold lock + push + ship-early bonuses in before the cap (issue #43).
-    // Previously this site added lockBonus + pushBonus AFTER calculateScore,
-    // letting a banked push exceed the per-map ceiling every other path enforces.
-    const { levelScore, breakdown } = calculateScore(
+      : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+    // Fold lock + push in before the cap (issue #43); ship-early pays a percent
+    // above the cap. Previously this site added lockBonus + pushBonus AFTER
+    // calculateScore, letting a banked push exceed the per-map ceiling.
+    const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
       game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
         scoreMultiplier: activeModifiers.scoreMultiplier,
-        extraBonus: game.lockBonus + game.breakBonus + pushBonus + shipEarlyBonus,
+        extraBonus: game.lockBonus + game.breakBonus + pushBonus,
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
         // Comp Time pickups raise THIS map's cap; overtime pickups pay after it.
         overtimeCapBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
         postCapBonus: game.pickupOvertime,
+        // Finishing fast pays a percent of the capped overtime, above the cap.
+        shipEarlyPercent,
         // Demolition multiplier: chests/breakables smashed before the push.
         payoutMultiplier: game.breakMultiplier ?? 1,
       },

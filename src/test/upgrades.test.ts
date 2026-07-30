@@ -212,17 +212,18 @@ describe("lock-centric economy", () => {
   // player had hours saved), while lockValue makes locking close that gap.
   const scoringDoc = yaml.load(
     readFileSync(resolve(process.cwd(), "public/scoring-config.yml"), "utf8"),
-  ) as { scoring: { lockValue: number; lockQuality: { superiorThresholdFraction: number; superiorMultiplier: number }; spaceOptimization: { maxBonus: number }; shipEarly: { maxBonus: number } } };
+  ) as { scoring: { lockValue: number; lockQuality: { superiorThresholdFraction: number; superiorMultiplier: number }; spaceOptimization: { maxBonus: number }; shipEarly: { maxPercent: number } } };
   const scoring = scoringDoc.scoring;
 
   it("a flawless no-lock clear cannot afford the cheapest upgrade", () => {
     const flatBase = [...levelPoints.values()][0];
     // Every non-lock hour a perfect clear can scrape together: flat base,
-    // under-par (+1), the full space ladder, the full Ship Early ladder, and
-    // a generous push-your-luck allowance (chunks pay ~1h each).
+    // under-par (+1), the full space ladder, and a generous push-your-luck
+    // allowance (chunks pay ~1h each). Ship Early then adds its top PERCENT of
+    // that overtime on top (paid above the cap).
     const PUSH_ALLOWANCE = 4;
-    const bestNoLockIncome =
-      flatBase + 1 + scoring.spaceOptimization.maxBonus + scoring.shipEarly.maxBonus + PUSH_ALLOWANCE;
+    const preShip = flatBase + 1 + scoring.spaceOptimization.maxBonus + PUSH_ALLOWANCE;
+    const bestNoLockIncome = preShip + Math.round(preShip * scoring.shipEarly.maxPercent / 100);
     const cheapest = Math.min(
       ...upgrades.filter(u => !u.ascensionOnly).map(u => effectiveCost(u) ?? Infinity),
     );

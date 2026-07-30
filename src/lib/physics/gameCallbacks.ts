@@ -28,6 +28,10 @@ export interface GameCallbacks {
   freezeOnComplete?: () => boolean;
   onGameEnd: (result: GameResult) => void;
   onLivesChange: (n: number) => void;
+  /** Time ran out with lives to spare: the map is lost for ONE life and must be
+   *  restarted fresh (the session remounts the current level). Only fired when
+   *  a life remains; at zero lives the normal game-over path runs instead. */
+  onMapTimedOut?: () => void;
   onTutorialCutSuccess?: () => void;
   /** Fired once per ball the instant it locks, with its ball-type id (#tutorial
    *  encountered-ball-types tracking). Returns true iff this was the player's

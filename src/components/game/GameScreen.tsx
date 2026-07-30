@@ -75,6 +75,8 @@ interface GameScreenProps {
   /** Run-wide banked ability charges: { abilityId -> count }, for the ability bar. */
   abilityCharges?: Record<string, number>;
   onGameEnd: (result: GameResult) => void;
+  /** Out of time with lives left: restart the current level (session remount). */
+  onMapTimedOut?: () => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired once per ball the instant it locks, with its ball-type id (drives the
    *  tutorial's "encountered ball types" tracking). Returns true iff this was
@@ -143,6 +145,7 @@ export function GameScreen({
   onSpendAbility,
   abilityCharges,
   onGameEnd,
+  onMapTimedOut,
   onLevelComplete,
   onBallTypeLocked,
   onMainMenu,
@@ -642,6 +645,7 @@ export function GameScreen({
             onSpendAbility={onSpendAbility}
             onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
             onGameEnd={handleGameEnd}
+            onMapTimedOut={onMapTimedOut}
             onLevelComplete={handleLevelComplete}
             onBallTypeLocked={onBallTypeLocked}
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}

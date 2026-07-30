@@ -14,7 +14,7 @@
  */
 import { useTranslation } from 'react-i18next';
 import { Timer } from 'lucide-react';
-import { getShipEarlyThresholds, getShipEarlyBonus } from '@/lib/scoring';
+import { getShipEarlyThresholds, getShipEarlyPercent } from '@/lib/scoring';
 
 interface ShipEarlyBarProps {
   /** Whole active-play seconds elapsed this map (1Hz from the loop). */
@@ -50,7 +50,9 @@ export function ShipEarlyBar({ seconds, ballCount, timeLimit, extraSecondsPerBal
 
   const remaining = Math.max(0, 1 - seconds / timeLimit);
   const secondsLeft = Math.max(0, Math.ceil(timeLimit - seconds));
-  const payout = getShipEarlyBonus(seconds, balls, extra, bonusMultiplier);
+  // Ship Early now pays a PERCENT of the map's overtime (above the cap), so the
+  // chip advertises the percent still attainable rather than a flat hours figure.
+  const payoutPercent = Math.round(getShipEarlyPercent(seconds, balls, extra, bonusMultiplier));
   const color = drainColor(remaining);
 
   return (
@@ -97,7 +99,7 @@ export function ShipEarlyBar({ seconds, ballCount, timeLimit, extraSecondsPerBal
         {/* Early on, the chip nudges you toward the fast-finish bonus; once the
             windows pass it becomes a plain seconds-left countdown. */}
         <span className="font-display text-xs font-bold tabular-nums flex-shrink-0" style={{ color, textShadow: `0 0 8px ${color}66` }}>
-          {payout > 0 ? t('shipEarlyBar.bonus', { hours: payout }) : t('shipEarlyBar.seconds', { s: secondsLeft })}
+          {payoutPercent > 0 ? t('shipEarlyBar.bonus', { percent: payoutPercent }) : t('shipEarlyBar.seconds', { s: secondsLeft })}
         </span>
       </div>
     </div>

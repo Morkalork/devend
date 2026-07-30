@@ -979,6 +979,17 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (result) finalizeAndShowResult(result);
   }, [pendingDeathResult, finalizeAndShowResult]);
 
+  /**
+   * Ran out of time with lives to spare: the timeout already docked one life
+   * (via onLivesChange), so just restart the current map fresh by remounting
+   * the game view. The run only ends when the last life is spent (handled by
+   * the physics game-over path at zero lives).
+   */
+  const handleMapTimedOut = useCallback(() => {
+    setLivesAtLevelStart(currentLives);
+    setGameInstanceKey(k => k + 1);
+  }, [currentLives]);
+
   const handleLivesChange = useCallback((newLives: number) => {
     const livesLost = currentLives - newLives;
     if (livesLost > 0) {
@@ -1775,6 +1786,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleStartGame,
     handleConfirmLoadout,
     handleGameEnd,
+    handleMapTimedOut,
     handleSpendContinue,
     handleDeclineContinue,
     handleLivesChange,

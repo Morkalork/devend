@@ -13,7 +13,9 @@ export interface SpaceThreshold {
 export interface ShipEarlyThreshold {
   /** Window in ACTIVE-play seconds PER BALL (a 4-ball map gets 4x this). */
   withinSecondsPerBall: number;
-  bonus: number;
+  /** Reward as a PERCENT (0-100) of the map's earned overtime, paid above the
+   *  per-map cap. Finishing in the tightest window pays the most. */
+  percent: number;
 }
 
 export interface ScoringConfig {
@@ -51,7 +53,8 @@ export interface ScoringConfig {
     // prompt opens (or the last ball locks), so push-your-luck time is never
     // taxed. Folds under the cap.
     shipEarly: {
-      maxBonus: number;
+      /** Cap on the percent (0-100) any window can pay. */
+      maxPercent: number;
       thresholds: ShipEarlyThreshold[];
     };
     performanceMultiplier: {

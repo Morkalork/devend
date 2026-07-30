@@ -285,6 +285,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onSpendAbility={session.handleSpendAbility}
                 abilityCharges={session.abilityCharges}
                 onGameEnd={session.handleGameEnd}
+                onMapTimedOut={session.handleMapTimedOut}
                 onLevelComplete={session.handleLevelComplete}
                 onBallTypeLocked={session.recordBallTypeEncountered}
                 onMainMenu={session.handleBackToWelcome}

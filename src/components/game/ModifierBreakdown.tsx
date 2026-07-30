@@ -94,7 +94,7 @@ export function ModifierBreakdown({
   // Ship Early countdown: always-explained here so the on-board timer bar has a
   // reference. Top rung drives the "up to +Nh" chip; the ladder derives from
   // config so the copy can't drift from the actual payouts.
-  const shipEarlyTopBonus = getShipEarlyThresholds().reduce((mx, s) => Math.max(mx, s.bonus), 0);
+  const shipEarlyTopPercent = getShipEarlyThresholds().reduce((mx, s) => Math.max(mx, s.percent), 0);
 
   const microFactor =
     m.microManagerPerLock > 0 && lockedBalls > 0
@@ -508,7 +508,7 @@ export function ModifierBreakdown({
     <div className="space-y-7">
       {/* Ship Early countdown: always shown so the on-board timer bar (with its
           white one-hour tick marks) is explained regardless of modifiers. */}
-      {shipEarlyTopBonus > 0 && (
+      {shipEarlyTopPercent > 0 && (
         <section>
           <p style={sectionHeadStyle}>{t('bottomBarDetails.timingHead')}</p>
           <div
@@ -520,11 +520,11 @@ export function ModifierBreakdown({
                 {t('bottomBarDetails.shipEarlyCountdown')}
               </span>
               <span className="font-bold text-base tabular-nums" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}88` }}>
-                {t('bottomBarDetails.shipEarlyCountdownValue', { hours: shipEarlyTopBonus })}
+                {t('bottomBarDetails.shipEarlyCountdownValue', { percent: shipEarlyTopPercent })}
               </span>
             </div>
             <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
-              {t('bottomBarDetails.shipEarlyCountdownDesc', { hours: shipEarlyTopBonus })}
+              {t('bottomBarDetails.shipEarlyCountdownDesc', { percent: shipEarlyTopPercent })}
             </p>
           </div>
         </section>

@@ -161,8 +161,8 @@
     "fenceGraceInactive": "Ingen skonfrist för staket.",
     "timingHead": "Nedräkning för tidig leverans",
     "shipEarlyCountdown": "Nedräkningstimer",
-    "shipEarlyCountdownValue": "upp till +{{hours}}h",
-    "shipEarlyCountdownDesc": "En nedräkningsstapel sitter ovanför den här panelen medan du spelar. Klara kartan innan den töms för upp till +{{hours}}h övertid för tidig leverans: ju snabbare du blir klar, desto mer betalar den. Utbetalningen sjunker en timme vid varje vitt streck på stapeln. Fönstren skalar med antalet bollar på kartan, och bara aktivt spel räknas - pauser, menyer och pressfrågan förbrukar inte klockan.",
+    "shipEarlyCountdownValue": "upp till +{{percent}}%",
+    "shipEarlyCountdownDesc": "En nedräkningsstapel sitter ovanför den här panelen medan du spelar. Klara kartan innan den töms för att tjäna upp till +{{percent}}% av kartans övertid som bonus för tidig leverans, betald OVANPÅ det vanliga taket: ju snabbare du blir klar, desto mer betalar den. Utbetalningen sjunker vid varje vitt streck på stapeln. Fönstren skalar med antalet bollar på kartan, och bara aktivt spel räknas - pauser, menyer och pressfrågan förbrukar inte klockan.",
     "shipEarlyWindow": "Tidig leverans-fönster",
     "shipEarlyWindowValue": "+{{seconds}}s/boll",
     "shipEarlyWindowActive": "Varje bonusfönster för tidig leverans varar {{seconds}} sekunder längre per boll på kartan (Deadline Extension).",
@@ -261,6 +261,9 @@
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
     "fenceBudgetLeft": "{{count}} staket kvar på denna bana",
     "beatCrunchTime": "Slutspurt",
+    "timeTier1": "Deadline närmar sig",
+    "timeTier2": "Tiden börjar rinna ut",
+    "timeTier3": "Sista sekunderna",
     "pickupFreeShopItem": "Gratis butiksvara!",
     "pickupExtraLife": "+1 liv",
     "pickupRainbow": "Regnbågsboll!",
@@ -502,7 +505,7 @@
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
-    "bonus": "+{{hours}}h",
+    "bonus": "+{{percent}}%",
     "seconds": "{{s}}s"
   },
   "topBarDetails": {

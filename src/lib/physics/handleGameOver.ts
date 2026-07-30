@@ -2,7 +2,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
-import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
+import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
 import { isTimingExempt } from "@/lib/mapTiming";
 import { playDeathSound } from "@/lib/gameAudio";
 import { vibrateDeath } from "@/lib/gameHaptics";
@@ -43,16 +43,18 @@ export function handleGameOverFn(
     // Ship Early: the threshold was met before the push began, so the earned
     // tempo bonus survives a failed push (pushing is never taxed). Disabled on
     // the tutorial band (levels 1-3).
-    const shipEarlyBonus = isTimingExempt(levelNumber)
+    const shipEarlyPercent = isTimingExempt(levelNumber)
       ? 0
-      : getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
-    // Fold lock + push + ship-early bonuses in before the cap (issue #43).
-    const { levelScore, breakdown } = calculateScore(
+      : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+    // Fold lock + push in before the cap (issue #43); ship-early pays a percent
+    // above the cap (the tempo bonus survives a failed push, never taxed).
+    const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
       game.wallCount, level.expectedCuts, pushStartPercent, level.sizeThreshold, level.points, {
         scoreMultiplier: activeModifiers.scoreMultiplier,
-        extraBonus: game.lockBonus + pushBonus + shipEarlyBonus,
+        extraBonus: game.lockBonus + pushBonus,
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
         overtimeCapBonus: activeModifiers.overtimeCapBonus,
+        shipEarlyPercent,
       },
     );
 
@@ -108,16 +110,18 @@ export function handlePushFailedFn(
     : 0;
   // Ship Early: threshold met before the push, so the bonus survives the fail
   // (disabled on the tutorial band, levels 1-3).
-  const shipEarlyBonus = isTimingExempt(levelNumber)
+  const shipEarlyPercent = isTimingExempt(levelNumber)
     ? 0
-    : getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
-  // Fold lock + push + ship-early bonuses in before the cap (issue #43).
-  const { levelScore, breakdown } = calculateScore(
+    : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+  // Fold lock + push in before the cap (issue #43); ship-early pays a percent
+  // above the cap (the tempo bonus survives a failed push, never taxed).
+  const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
     game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
-      extraBonus: game.lockBonus + pushBonus + shipEarlyBonus,
+      extraBonus: game.lockBonus + pushBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
       overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      shipEarlyPercent,
     },
   );
 

@@ -16,6 +16,13 @@ export const DEFAULT_MAP_TIME_LIMIT = 60;
 /** Levels with number <= this are exempt from the time limit and Ship Early. */
 export const TIME_LIMIT_EXEMPT_MAX_LEVEL = 3;
 
+/** Difficulty ramp: cut this many seconds off the DEFAULT timer... */
+export const TIMER_RAMP_STEP_SECONDS = 10;
+/** ...after every this many maps (level number). */
+export const TIMER_RAMP_EVERY_MAPS = 10;
+/** The ramp never drops the default timer below this floor. */
+export const MIN_MAP_TIME_LIMIT = 30;
+
 /** True for the tutorial band that ignores both the time limit and Ship Early. */
 export function isTimingExempt(levelNumber: number): boolean {
   return levelNumber <= TIME_LIMIT_EXEMPT_MAX_LEVEL;
@@ -23,8 +30,12 @@ export function isTimingExempt(levelNumber: number): boolean {
 
 /**
  * Effective time limit (active-play seconds) for a map, or null when the level
- * is exempt. A map may set a larger `timeLimit`; absent/invalid falls back to
- * DEFAULT_MAP_TIME_LIMIT.
+ * is exempt.
+ *
+ * An explicit per-map `timeLimit` is honored AS AUTHORED (boss timers, a
+ * deliberately generous map). The DEFAULT timer instead ramps DOWN with depth:
+ * TIMER_RAMP_STEP_SECONDS is cut after every TIMER_RAMP_EVERY_MAPS maps
+ * (10s per 10 maps), floored at MIN_MAP_TIME_LIMIT, so later maps get tighter.
  */
 export function getMapTimeLimit(
   level: Pick<LevelConfig, 'timeLimit'>,
@@ -32,5 +43,7 @@ export function getMapTimeLimit(
 ): number | null {
   if (isTimingExempt(levelNumber)) return null;
   const t = level.timeLimit;
-  return typeof t === 'number' && t > 0 ? t : DEFAULT_MAP_TIME_LIMIT;
+  if (typeof t === 'number' && t > 0) return t; // authored timer, used as-is
+  const steps = Math.floor((levelNumber - 1) / TIMER_RAMP_EVERY_MAPS);
+  return Math.max(MIN_MAP_TIME_LIMIT, DEFAULT_MAP_TIME_LIMIT - steps * TIMER_RAMP_STEP_SECONDS);
 }

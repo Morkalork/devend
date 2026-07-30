@@ -30,7 +30,7 @@ import {
 } from "@/lib/regionOwnership";
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
-import { calculateScore, getShipEarlyBonus } from "@/lib/scoring";
+import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
@@ -309,13 +309,32 @@ export function evaluateWinConditions(
   callbacks: GameCallbacks,
 ): number | null {
   if (game.levelComplete || game.gameOver) return null;
-  // Hard map deadline: out of time is game over regardless of lives. Runs on
-  // the pausable active-play clock, so shops/holds/recovery never count. Only
-  // fires during normal play (this check is gated behind those states upstream)
-  // and before any win is registered, so beating the buzzer still wins.
+  // Hard map deadline. Runs on the pausable active-play clock, so
+  // shops/holds/recovery never count; fires only during normal play and before
+  // any win registers, so beating the buzzer still wins. Out of time costs ONE
+  // life and restarts the map fresh (not a whole-run loss); the run ends only
+  // when the last life is spent.
   const timeLimit = getMapTimeLimit(level, levelNumber);
   if (timeLimit != null && game.activePlaySeconds >= timeLimit) {
-    handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+    const newLives = callbacks.getLives() - 1;
+    callbacks.setLivesRef(newLives);
+    callbacks.setDisplayLives(newLives);
+    callbacks.onLivesChange(newLives);
+    if (newLives <= 0) {
+      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+      return null;
+    }
+    // A life remains: freeze the loop, flash red, then remount this level.
+    game.gameOver = true;
+    if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
+    callbacks.setScreenFlash("red");
+    callbacks.setIsShaking(true);
+    callbacks.shakeTimeoutRef.current = setTimeout(() => {
+      callbacks.shakeTimeoutRef.current = null;
+      callbacks.setScreenFlash("none");
+      callbacks.setIsShaking(false);
+      callbacks.onMapTimedOut?.();
+    }, 700);
     return null;
   }
   // Colored Area win gate (LEVELDESIGN.md): when a map has colored areas, the
@@ -445,9 +464,9 @@ export function triggerLevelComplete(
   if (game.clearedActiveSeconds == null) game.clearedActiveSeconds = game.activePlaySeconds;
   // Ship Early is disabled on the tutorial band (levels 1-3), which also has no
   // time limit — early play stays pressure free.
-  const shipEarlyBonus = isTimingExempt(levelNumber)
+  const shipEarlyPercent = isTimingExempt(levelNumber)
     ? 0
-    : getShipEarlyBonus(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+    : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
 
   // Locking the last ball can finish the level MID-PUSH (the per-frame win
   // check). End the push here: award the chunks banked so far and drop the
@@ -477,17 +496,20 @@ export function triggerLevelComplete(
     bossDefeated: game.bossDefeated,
   });
 
-  // Fold lock + break + push + ship-early + map-mutator + objective bonuses in
-  // before the cap so a single map can't exceed the per-map ceiling (issue #43).
-  const { levelScore, breakdown } = calculateScore(
+  // Fold lock + break + push + map-mutator + objective bonuses in before the cap
+  // so a single map can't exceed the per-map ceiling (issue #43); ship-early is
+  // paid as a percent ABOVE the cap (see shipEarlyPercent).
+  const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
     game.wallCount, level.expectedCuts, percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
-      extraBonus: game.lockBonus + game.breakBonus + pushBonus + shipEarlyBonus + mutatorOvertimePremium(game.mapMutator) + objectiveBonus,
+      extraBonus: game.lockBonus + game.breakBonus + pushBonus + mutatorOvertimePremium(game.mapMutator) + objectiveBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
       // Comp Time pickups raise THIS map's cap on top of the capstone raise.
       overtimeCapBonus: activeModifiers.overtimeCapBonus + (game.pickupCapBonus ?? 0),
       // Overtime pickups pay after the cap (a claimed token always pays).
       postCapBonus: game.pickupOvertime ?? 0,
+      // Finishing fast pays a percent of the capped overtime, above the cap.
+      shipEarlyPercent,
       // Demolition multiplier: compounds ×1.15 per destructible smashed.
       payoutMultiplier: game.breakMultiplier ?? 1,
     },

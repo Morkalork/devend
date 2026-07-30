@@ -67,22 +67,22 @@ scoring:
   # prompt opening, or the last ball locking). Windows are PER BALL: a map's
   # actual window = withinSecondsPerBall x its ball count, so busy maps get
   # proportionally more time (e.g. 15s/ball => a 4-ball map has 60s for the
-  # +1h rung, a 2-ball map 30s). Pauses, menus and the push prompt itself do
-  # not count, so push-your-luck time is never taxed. Note: if the threshold
-  # is crossed by destroying objects, the clock runs until the next cut
-  # confirms it (the existing win rule). Awards the best rung whose window
-  # was met, capped at maxBonus; folds under the per-map cap. The tempo
-  # counterpart to spaceOptimization: speed and precision are parallel,
-  # competing payoffs.
+  # +10% rung, a 2-ball map 30s). Pauses, menus and the push prompt itself do
+  # not count, so push-your-luck time is never taxed.
+  #
+  # The reward is a PERCENT of the map's earned overtime, paid ABOVE the per-map
+  # cap (so on a 100h map a blazing clear adds ~30h, not a flat 3h the cap eats).
+  # Awards the best rung whose window was met, clamped at maxPercent. The tempo
+  # counterpart to spaceOptimization: speed and precision are parallel payoffs.
   shipEarly:
-    maxBonus: 3
+    maxPercent: 30
     thresholds:
       - withinSecondsPerBall: 6   # blazing clear
-        bonus: 3
+        percent: 30
       - withinSecondsPerBall: 10
-        bonus: 2
+        percent: 20
       - withinSecondsPerBall: 15
-        bonus: 1
+        percent: 10
 
   # Performance Multiplier
   # Scales base points based on fences vs par

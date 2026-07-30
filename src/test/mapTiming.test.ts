@@ -19,9 +19,13 @@ describe("map time limit", () => {
     expect(isTimingExempt(TIME_LIMIT_EXEMPT_MAX_LEVEL + 1)).toBe(false);
   });
 
-  it("defaults to 60s once past the tutorial band", () => {
-    expect(getMapTimeLimit({}, 4)).toBe(DEFAULT_MAP_TIME_LIMIT);
-    expect(getMapTimeLimit({}, 40)).toBe(DEFAULT_MAP_TIME_LIMIT);
+  it("defaults to 60s just past the tutorial band, then ramps down 10s per 10 maps", () => {
+    expect(getMapTimeLimit({}, 4)).toBe(DEFAULT_MAP_TIME_LIMIT); // 60
+    expect(getMapTimeLimit({}, 10)).toBe(60); // still first 10 maps
+    expect(getMapTimeLimit({}, 11)).toBe(50); // after 10 maps
+    expect(getMapTimeLimit({}, 21)).toBe(40);
+    expect(getMapTimeLimit({}, 31)).toBe(30);
+    expect(getMapTimeLimit({}, 41)).toBe(30); // floored at MIN_MAP_TIME_LIMIT
     expect(DEFAULT_MAP_TIME_LIMIT).toBe(60);
   });
 

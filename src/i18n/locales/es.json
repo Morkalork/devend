@@ -161,8 +161,8 @@
     "fenceGraceInactive": "Sin periodo de gracia de valla.",
     "timingHead": "Cuenta atrás de entrega temprana",
     "shipEarlyCountdown": "Temporizador de cuenta atrás",
-    "shipEarlyCountdownValue": "hasta +{{hours}}h",
-    "shipEarlyCountdownDesc": "Mientras juegas, una barra de cuenta atrás aparece sobre este panel. Supera el mapa antes de que se vacíe para ganar hasta +{{hours}}h de horas extra por entrega temprana: cuanto antes termines, más paga. El pago baja una hora en cada marca blanca de la barra. Sus ventanas escalan con el número de bolas del mapa, y solo cuenta el juego activo: las pausas, los menús y la pantalla de presión no gastan el reloj.",
+    "shipEarlyCountdownValue": "hasta +{{percent}}%",
+    "shipEarlyCountdownDesc": "Mientras juegas, una barra de cuenta atrás aparece sobre este panel. Supera el mapa antes de que se vacíe para ganar hasta +{{percent}}% de las horas extra del mapa como bono por entrega temprana, pagado POR ENCIMA del tope habitual: cuanto antes termines, más paga. El pago baja en cada marca blanca de la barra. Sus ventanas escalan con el número de bolas del mapa, y solo cuenta el juego activo: las pausas, los menús y la pantalla de presión no gastan el reloj.",
     "shipEarlyWindow": "Ventana de entrega temprana",
     "shipEarlyWindowValue": "+{{seconds}}s/bola",
     "shipEarlyWindowActive": "Cada ventana de bonificación de entrega temprana dura {{seconds}} segundos extra por bola en el mapa (Deadline Extension).",
@@ -261,6 +261,9 @@
     "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa",
     "fenceBudgetLeft": "{{count}} vallas restantes en este mapa",
     "beatCrunchTime": "Recta Final",
+    "timeTier1": "Se acerca la entrega",
+    "timeTier2": "Queda poco tiempo",
+    "timeTier3": "Últimos segundos",
     "pickupFreeShopItem": "¡Artículo gratis!",
     "pickupExtraLife": "+1 vida",
     "pickupRainbow": "¡Bola arcoíris!",
@@ -502,7 +505,7 @@
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",
-    "bonus": "+{{hours}}h",
+    "bonus": "+{{percent}}%",
     "seconds": "{{s}}s"
   },
   "topBarDetails": {
