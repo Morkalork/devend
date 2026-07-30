@@ -197,6 +197,10 @@ export function GameScreen({
   const [inGameStep, setInGameStep] = useState<InGameStep>(
     showInGameTutorial && levelNumber === 1 ? 'fence' : 'done'
   );
+  // Draw-A-Fence tutorial is two steps (#62): a centered, PAUSED explainer modal
+  // first, then (once dismissed) the running board with the draw-hint animation.
+  // The modal was previously an overlay on the LIVE board, which hid it.
+  const [fenceIntroOpen, setFenceIntroOpen] = useState(showInGameTutorial && levelNumber === 1);
 
   const levelHasMovers = (level.entities ?? []).some(e => e.kind === 'mover');
   const [moverTutorialDismissed, setMoverTutorialDismissed] = useState(false);
@@ -473,7 +477,8 @@ export function GameScreen({
   const modalOverlayActive =
     topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen ||
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
-    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal;
+    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal ||
+    fenceIntroOpen;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -647,8 +652,8 @@ export function GameScreen({
             freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}
             paused={isPaused || modalOverlayActive}
-            tutorialMode={inGameStep === 'fence'}
-            tutorialStep={inGameStep === 'fence' ? 'waitingForSuccessfulCut' : 'completed'}
+            tutorialMode={inGameStep === 'fence' && !fenceIntroOpen}
+            tutorialStep={inGameStep === 'fence' && !fenceIntroOpen ? 'waitingForSuccessfulCut' : 'completed'}
             onTutorialCutSuccess={() => {
               setInGameStep('done');
               onFenceSeen?.();
@@ -832,6 +837,17 @@ export function GameScreen({
           </div>
         )}
       </div>
+
+      {/* Draw-A-Fence step 1 (#62): centered, paused explainer. Shown after the
+          "how to win" modal so they don't stack; dismissing it resumes the game
+          and reveals the board with the draw-hint animation (step 2). */}
+      <TutorialOverlay
+        visible={fenceIntroOpen && !showWinModal}
+        onDismiss={() => setFenceIntroOpen(false)}
+        accentColor={accentColor}
+        title={t('interactiveTutorial.drawAFence')}
+        body={t('interactiveTutorial.dragInstruction')}
+      />
 
       {/* Mover tutorial overlay — shown on first level with moving obstacles */}
       <TutorialOverlay

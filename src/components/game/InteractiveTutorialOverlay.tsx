@@ -1,6 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import { TutorialStep } from '@/types/game';
 
 interface InteractiveTutorialOverlayProps {
@@ -42,7 +41,6 @@ export function InteractiveTutorialOverlay({
   canvasOffsetTop,
   canvasOffsetLeft,
 }: InteractiveTutorialOverlayProps) {
-  const { t } = useTranslation();
   const [showHand, setShowHand] = useState(true);
   const [loopCount, setLoopCount] = useState(0);
   const reshowTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -234,35 +232,9 @@ export function InteractiveTutorialOverlay({
 
   return (
     <div className="absolute inset-0 pointer-events-none z-50">
-      {/* Instruction text - top */}
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        className="absolute top-4 left-0 right-0 flex justify-center px-4"
-      >
-        <div
-          className="rounded-xl px-6 py-4 max-w-md text-center"
-          style={{
-            background: '#0a0f0a',
-            border: '2px solid #00ff88',
-            boxShadow: '0 0 24px rgba(0,255,136,0.15)',
-          }}
-        >
-          <p
-            className="text-sm sm:text-base font-black tracking-widest uppercase"
-            style={{ fontFamily: 'Michroma, sans-serif', color: '#00ff88' }}
-          >
-            {t('interactiveTutorial.drawAFence')}
-          </p>
-          <p
-            className="text-xs sm:text-sm mt-2 leading-relaxed"
-            style={{ fontFamily: "'JetBrains Mono', monospace", color: '#c8ffd8' }}
-          >
-            {t('interactiveTutorial.dragInstruction')}
-          </p>
-        </div>
-      </motion.div>
+      {/* Step 2 of the draw tutorial (#62): the explainer was a centered, paused
+          modal (step 1); here the board is clear and only the draw-hint hand
+          animation plays, so the player sees where and how to slice. */}
 
       {/* Magic Hand Animation */}
       <AnimatePresence>
