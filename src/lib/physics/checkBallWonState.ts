@@ -1,7 +1,7 @@
 import { Ball, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { bonusLockMultiplierAt } from "@/lib/lockZones";
-import { coloredAreaAt, coloredAreaMultiplierAt } from "@/lib/coloredAreas";
+import { coloredAreaAt, coloredAreaMultiplierAt, regionWithinAreas } from "@/lib/coloredAreas";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import {
@@ -219,7 +219,18 @@ export function checkAndUpdateBallWonStates(
     const percentage = (regionCells / denominator) * 100;
     const lockedByPercent = percentage <= threshold;
     const lockedBySliver = minCells > 0 && regionCells <= minCells;
-    if (!lockedByPercent && !lockedBySliver) continue;
+
+    // Boss + Colored Area (level-10 fix): fencing the boss INTO the pink area
+    // ships it - its whole region sealed WITHIN the area - without needing the
+    // normal shrink-to-lock. The area is far larger than the lock threshold, so a
+    // fenced-in boss would otherwise never register as "locked" and thus never
+    // be defeated. This settles it the moment its region is contained.
+    const areas = game.coloredAreas ?? [];
+    const areaGate = areas.length > 0;
+    const bossContainedInArea = ball.isBoss && areaGate
+      && regionWithinAreas(game.spaceGrid, ballRegion.cellIndices, areas);
+
+    if (!lockedByPercent && !lockedBySliver && !bossContainedInArea) continue;
 
     // Require a REAL seal: a small region that only became small because the
     // capture severed a sub-ball-width gap still opens onto living space, so the
@@ -248,9 +259,10 @@ export function checkAndUpdateBallWonStates(
     // settles it: trapped INSIDE the area defeats it (win); OUTSIDE locks it but
     // leaves the gate unsatisfied, so evaluateWinConditions fails the map. Boss
     // map -> the boss is the target; otherwise any ball is.
-    const areas = game.coloredAreas ?? [];
-    const areaGate = areas.length > 0;
-    const inArea = areaGate && coloredAreaAt(ball.position.x, ball.position.y, areas) !== null;
+    // A contained boss (region sealed within the area) counts as inside even if
+    // its exact centre sits a hair past the rect edge on a boundary cell.
+    const inArea = (areaGate && coloredAreaAt(ball.position.x, ball.position.y, areas) !== null)
+      || bossContainedInArea;
     const isAreaTarget = game.balls.some(x => x.isBoss) ? ball.isBoss : true;
 
     if (bossTrapIsDamage(ball) && !areaGate) {

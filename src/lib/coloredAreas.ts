@@ -11,6 +11,7 @@
  * + evaluateWinConditions, and rendering in the two renderers.
  */
 import type { AreaKind, ColoredArea } from "@/types/level";
+import { gridIndexToWorld, type SpaceGrid } from "@/lib/spaceGrid";
 
 export interface AreaStyle {
   /** Centred label = the kind keyword. */
@@ -40,6 +41,26 @@ export function pointInArea(x: number, y: number, a: ColoredArea): boolean {
 export function coloredAreaAt(x: number, y: number, areas: ColoredArea[]): ColoredArea | null {
   for (const a of areas) if (pointInArea(x, y, a)) return a;
   return null;
+}
+
+/**
+ * True when EVERY cell of a region sits inside some colored area, i.e. the
+ * region is fully sealed within the area(s). Used by the boss win gate: fencing
+ * the boss into the area ships it, no shrink-to-lock needed (LEVELDESIGN.md /
+ * issue #56). Early-exits on the first out-of-area cell, so it is cheap while
+ * the region still spans the board. An empty region/area set is not contained.
+ */
+export function regionWithinAreas(
+  grid: SpaceGrid,
+  cellIndices: number[],
+  areas: ColoredArea[],
+): boolean {
+  if (areas.length === 0 || cellIndices.length === 0) return false;
+  for (const idx of cellIndices) {
+    const w = gridIndexToWorld(grid, idx);
+    if (coloredAreaAt(w.x, w.y, areas) === null) return false;
+  }
+  return true;
 }
 
 /** Lock-points multiplier at a world point: the max among containing areas, or 1. */
