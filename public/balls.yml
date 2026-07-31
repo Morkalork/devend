@@ -123,3 +123,19 @@ balls:
     spawnIntervalSeconds: 10
     spawnChance: 0.4
     description: "Prism ball: fast and unstable, it spits out a new ball every 10 seconds. Lock it away before the board fills up."
+
+  # White: a rare, bright "decision" ball (issue #57). TAP it to discard it for
+  # nothing (one fewer ball to deal with), or LOCK it for the biggest single-lock
+  # bonus in the game. Appears occasionally past level 12, and ball-generating
+  # bosses spit one out about a quarter of the time. Never a map's only ball.
+  - id: white
+    name: White
+    color: "#ffffff"
+    baseSpeed: 320
+    minimumSpeed: 180
+    unlockLevel: 12
+    lockMultiplier: 5
+    density: 0.8
+    ability: tappable
+    spawnChance: 0.12
+    description: "Bright and yours to judge: tap it to throw it away for nothing, or lock it for the biggest single bonus in the game."

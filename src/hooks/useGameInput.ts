@@ -33,6 +33,7 @@ import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { abilityFenceRushFactor } from "@/lib/abilityEffects";
+import { isTappableBall } from "@/lib/ballTypes";
 import { lootAtPoint } from "@/lib/chests";
 import { initAudio } from "@/lib/gameAudio";
 
@@ -60,6 +61,9 @@ export function useGameInput(
    *  removes the gem; this grants it run-wide. Read from a ref (listeners stay
    *  wired once). */
   onLootCollectRef?: RefObject<((rewardId: string) => void) | null>,
+  /** Tap on a white "tappable" ball (#57): the input layer removes it; this runs
+   *  the side effects (pop, ball-count, sound). Read from a ref. */
+  onTapRemoveRef?: RefObject<((info: { x: number; y: number; color: string }) => void) | null>,
 ): void {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -258,6 +262,33 @@ export function useGameInput(
         const delta = vec2Sub(game.currentSwipePos, game.swipeStart);
         const dist  = vec2Length(delta);
 
+        // Tappable ball (#57): a tap on a WHITE ball removes it for no points -
+        // a relief valve, or the alternative to working for its big lock.
+        // Checked BEFORE the freeze block (which skips white balls) and
+        // regardless of freeze charges: tap-to-remove is the white ball's own
+        // interaction, decided by ball type.
+        if (dist < BASE_SWIPE_MIN_DISTANCE && onTapRemoveRef?.current) {
+          const tap = game.swipeStart;
+          let target: Ball | null = null;
+          let bestDist = Infinity;
+          for (const ball of game.balls) {
+            if (ball.state !== "active") continue;
+            if (ball.regionId !== game.swipeRegionId) continue;
+            if (!isTappableBall(ball.ability)) continue;
+            const d = vec2Length(vec2Sub(ball.position, tap));
+            if (d <= ball.radius + FREEZE_TAP_SLOP && d < bestDist) { bestDist = d; target = ball; }
+          }
+          if (target) {
+            const removed = { x: target.position.x, y: target.position.y, color: target.color };
+            game.balls = game.balls.filter(b => b !== target);
+            onTapRemoveRef.current(removed);
+            game.swipeStart = null; game.swipeRegionId = null;
+            game.currentSwipePos = null; game.swipePointerId = null;
+            setIsPlayerDragging(false);
+            return;
+          }
+        }
+
         // Feature Freeze: a tap (movement below the cut threshold) on a ball
         // freezes it in place. Uses are LIMITED per map (game.freezeUsesRemaining,
         // refilled each map); once spent, a claimed pickup freeze charge is the
@@ -272,6 +303,7 @@ export function useGameInput(
           for (const ball of game.balls) {
             if (ball.state !== "active") continue;
             if (ball.regionId !== game.swipeRegionId) continue;
+            if (isTappableBall(ball.ability)) continue;                       // white balls: tap removes, never freezes (#57)
             if (ball.frozenUntil && now < ball.frozenUntil) continue;        // already frozen
             if (ball.freezeReadyAt && now < ball.freezeReadyAt) continue;    // on cooldown
             const d = vec2Length(vec2Sub(ball.position, tap));
@@ -294,6 +326,7 @@ export function useGameInput(
             const eligible = game.balls.filter(b =>
               b.state === "active" &&
               b.regionId === game.swipeRegionId &&
+              !isTappableBall(b.ability) &&
               !(b.frozenUntil && now < b.frozenUntil) &&
               !(b.freezeReadyAt && now < b.freezeReadyAt)
             );
@@ -391,5 +424,5 @@ export function useGameInput(
     // canvasRef.current is intentional: re-attach listeners if the canvas
     // element is replaced (e.g. HMR). The ref object itself never changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, onAbilityTargetRef, onSuperiorInfoRef, onLootCollectRef]);
+  }, [canvasRef.current, activeModifiers.instantFencesPerMap, activeModifiers.ballFreezeDuration, activeModifiers.ballFreezeCount, activeModifiers.freezeNoCooldown, onAbilityTargetRef, onSuperiorInfoRef, onLootCollectRef, onTapRemoveRef]);
 }

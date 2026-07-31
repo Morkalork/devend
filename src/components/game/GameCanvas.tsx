@@ -406,6 +406,8 @@ export function GameCanvas({
   const handleSuperiorInfoRef = useRef<(() => void) | null>(null);
   // Chest loot-gem tap handler (collects the reward), read by the input hook.
   const handleLootCollectRef = useRef<((rewardId: string) => void) | null>(null);
+  // White ball tapped away (#57): pop + ball-count sync, read by the input hook.
+  const handleTapRemoveRef = useRef<((info: { x: number; y: number; color: string }) => void) | null>(null);
   // Running time-based abilities, surfaced to the countdown bar. Only changes
   // when an ability fires or expires (not per frame), so no render churn.
   const [abilityTimers, setAbilityTimers] = useState<AbilityTimer[]>([]);
@@ -606,7 +608,7 @@ export function GameCanvas({
     pickupFeedback: [] as PickupFeedback[],
   });
 
-  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleLootCollectRef);
+  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleLootCollectRef, handleTapRemoveRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -870,6 +872,7 @@ export function GameCanvas({
       game.breakMultiplier = 1;
       game.lastDudAt = 0;
       game.chestLoot = [];
+      game.ballPops = [];
       game.chestRewardsLog = [];
       game.abilitySlowUntil = 0;
       game.abilitySlowMult = 1;
@@ -1496,6 +1499,18 @@ export function GameCanvas({
     chestToastTimer.current = setTimeout(() => setChestToast(null), 1700);
   }, [onGrantAbility]);
   useEffect(() => { handleLootCollectRef.current = handleLootCollect; }, [handleLootCollect]);
+
+  // A white "tappable" ball was tapped away (#57): the input layer already
+  // removed it from game.balls. Play a pop, resync the ball count (Ship Early
+  // windows scale by it), and let the per-frame win check pick up the change.
+  const handleTapRemove = useCallback((info: { x: number; y: number; color: string }) => {
+    const game = gameRef.current;
+    (game.ballPops ??= []).push({ ...info, startTime: performance.now() });
+    setBallCount(game.balls.length || 1);
+    playFenceBreakSound();
+    vibrateFenceBreak();
+  }, []);
+  useEffect(() => { handleTapRemoveRef.current = handleTapRemove; }, [handleTapRemove]);
 
   useEffect(() => {
     if (onGameStateChange) {

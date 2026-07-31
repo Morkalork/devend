@@ -7,9 +7,11 @@
  * the map). Note: defeating the boss is what completes a boss map now, so there
  * is no separate objective-gate helper to test.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@/lib/gameAudio", () => ({ playWallHitSound: () => {}, playCutClaimedSound: () => {}, playLevelCompleteSound: () => {}, playBallLockSound: () => {}, playBossJumpSound: () => {}, playBossLandSound: () => {}, playBossChargeSound: () => {} }));
 vi.mock("@/lib/gameHaptics", () => ({ vibrateBallLock: () => {}, vibrateFenceComplete: () => {}, vibrateFenceBreak: () => {} }));
+// Safety net: a Math.random spy in the spit tests must never leak into others.
+afterEach(() => vi.restoreAllMocks());
 
 import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
 import { bossTrapIsDamage, escalateBoss } from "@/lib/physics/checkBallWonState";
@@ -94,33 +96,52 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     expect(bossTrapIsDamage(activeBall("x"))).toBe(false); // a normal ball is never a boss
   });
 
-  it("only spits red minions (the boss is not a rainbow ball)", () => {
-    const level: LevelConfig = {
-      id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 1,
-      boss: {
-        name: "B", intro: "x",
-        objective: { id: "d", name: "D", description: "d", kind: "defeatBoss", reward: 12 },
-        bossBall: { hp: 3, spitIntervalSeconds: 5, maxMinions: 4 },
-      },
-    };
-    const boss = bossBall(3); // typeId "red"
+  const bossLevel: LevelConfig = {
+    id: "level-10", level: 10, sizeThreshold: 15, expectedCuts: 16, points: 20, maxBalls: 1,
+    boss: {
+      name: "B", intro: "x",
+      objective: { id: "d", name: "D", description: "d", kind: "defeatBoss", reward: 12 },
+      bossBall: { hp: 3, spitIntervalSeconds: 5, maxMinions: 4 },
+    },
+  };
+
+  /** Drive several spits (wind-up + bud) and return the spawned minions. */
+  function spitMinions(boss: Ball): Ball[] {
     const game = gameWith({ balls: [boss], bossMinionCount: 0 });
-    // Each spit is now a wind-up (telegraph) then the bud; drive both per tick by
-    // rewinding the charge clock so the wind-up "elapses" synchronously.
     for (let s = 5; s <= 30; s += 5) {
       game.activePlaySeconds = s;
-      tickBossSpit(game, level);                       // may start a wind-up
+      tickBossSpit(game, bossLevel);                   // may start a wind-up
       if (boss.spitChargeStart !== undefined) {
         boss.spitChargeStart -= 1000;                  // pretend the wind-up finished
-        tickBossSpit(game, level);                     // the bud emerges
+        tickBossSpit(game, bossLevel);                 // the bud emerges
       }
     }
-    const minions = game.balls.filter((b) => b.id.includes("minion"));
+    return game.balls.filter((b) => b.id.includes("minion"));
+  }
+
+  it("spits its own minion type (red), never a random one, when the white roll misses", () => {
+    // Force the 25% white roll to MISS so every minion is the boss's own type.
+    const rnd = vi.spyOn(Math, "random").mockReturnValue(0.5);
+    const boss = bossBall(3); // typeId "red"
+    const minions = spitMinions(boss);
+    rnd.mockRestore();
     expect(minions.length).toBeGreaterThanOrEqual(3);
     expect(minions.every((m) => m.typeId === boss.typeId)).toBe(true); // red only, never random
     expect(new Set(minions.map((m) => m.typeId)).size).toBe(1);        // no variety
     // Each spawns as a small bud attached to the boss (mitosis), not full size.
     expect(minions.every((m) => m.birthParentId === boss.id && (m.bornRadius ?? 0) > m.radius)).toBe(true);
+  });
+
+  it("spits a WHITE tappable minion when the 25% roll hits (#57)", () => {
+    // Force the white roll to HIT (< 0.25).
+    const rnd = vi.spyOn(Math, "random").mockReturnValue(0.1);
+    const boss = bossBall(3); // typeId "red"
+    const minions = spitMinions(boss);
+    rnd.mockRestore();
+    expect(minions.length).toBeGreaterThanOrEqual(1);
+    // The rolled minions are the white tappable ball, still budded off the boss.
+    expect(minions.every((m) => m.typeId === "white" && m.ability === "tappable")).toBe(true);
+    expect(minions.every((m) => m.birthParentId === boss.id)).toBe(true);
   });
 
   it("escalates the boss on a hit: faster, smaller (never below the floor)", () => {

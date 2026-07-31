@@ -1579,6 +1579,30 @@ export function renderFrame(
     }
   }
 
+  // ── White-ball tap-away pops (#57) ────────────────────────────────────────
+  // A quick expanding ring where a tapped-away white ball vanished.
+  if (game.ballPops && game.ballPops.length > 0) {
+    const nowPop = performance.now();
+    const POP_MS = 450;
+    let anyExpired = false;
+    for (const pop of game.ballPops) {
+      const t = (nowPop - pop.startTime) / POP_MS;
+      if (t >= 1) { anyExpired = true; continue; }
+      const sp = w2s(pop.x, pop.y);
+      ctx.save();
+      ctx.globalAlpha = 1 - t;
+      ctx.strokeStyle = pop.color;
+      ctx.lineWidth = Math.max(1, 3 * (1 - t) * scale);
+      ctx.shadowColor = pop.color;
+      ctx.shadowBlur = 12 * scale;
+      ctx.beginPath();
+      ctx.arc(sp.x, sp.y, (9 + 26 * t) * scale, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (anyExpired) game.ballPops = game.ballPops.filter(p => nowPop - p.startTime < POP_MS);
+  }
+
   // ── Cut preview line during drag ──────────────────────────────────────────
   if (swipeStart && swipeRegionId && currentSwipePos) {
     const delta = vec2Sub(currentSwipePos, swipeStart);

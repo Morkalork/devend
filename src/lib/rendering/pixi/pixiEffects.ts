@@ -80,6 +80,8 @@ export class EffectsLayer {
   private pickupMarkerSprites = new Map<string, Sprite>();
   private pickupMarkerRings = new Graphics();
   private abilityFx = new Graphics();
+  // Expanding rings where white "tappable" balls were tapped away (#57).
+  private ballPops = new Graphics();
 
   constructor() {
     this.lockDust.blendMode = "add";
@@ -87,7 +89,7 @@ export class EffectsLayer {
     // beneath the pocket fill); feedback rings/labels ride on top of the rest.
     // The ability burst goes last so its flash/rings sit above everything.
     this.superiorFx.blendMode = "add";
-    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.superiorFx, this.superiorStars, this.pickupMarkerRings, this.pickupMarkerLayer, this.preview, this.swipe, this.trajectory, this.pickupRings, this.abilityFx);
+    this.container.addChild(this.pickupLayer, this.lockFill, this.lockBursts, this.lockDust, this.superiorFx, this.superiorStars, this.pickupMarkerRings, this.pickupMarkerLayer, this.preview, this.swipe, this.trajectory, this.pickupRings, this.ballPops, this.abilityFx);
     this.overlayContainer.addChild(this.spaceBar);
   }
 
@@ -98,6 +100,7 @@ export class EffectsLayer {
 
     this.syncPickups(game, rctx, w2s, scale, accent, now);
     this.syncPickupMarkers(game, w2s, scale, accent);
+    this.syncBallPops(game, w2s, scale, now);
     this.syncLockFlashes(game, rctx, w2s, scale, accent, now);
     this.syncCutPreview(game, w2s, scale, accent);
     this.syncSwipeTrail(game, w2s, scale, accent, now);
@@ -348,6 +351,25 @@ export class EffectsLayer {
       for (const v of vs) { const sp = w2s(v.x, v.y); hole.push(sp.x, sp.y); }
       g.poly(hole).cut();
     }
+  }
+
+  // ── White-ball tap-away pops (#57): a quick expanding ring where a tapped
+  // white ball vanished. game.ballPops is culled here once each pop finishes.
+  private syncBallPops(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const g = this.ballPops;
+    g.clear();
+    const pops = game.ballPops;
+    if (!pops || pops.length === 0) return;
+    const POP_MS = 450;
+    let anyExpired = false;
+    for (const pop of pops) {
+      const t = (now - pop.startTime) / POP_MS;
+      if (t >= 1) { anyExpired = true; continue; }
+      const sp = w2s(pop.x, pop.y);
+      g.circle(sp.x, sp.y, (9 + 26 * t) * scale)
+        .stroke({ width: Math.max(1, 3 * (1 - t) * scale), color: pop.color, alpha: 1 - t });
+    }
+    if (anyExpired) game.ballPops = pops.filter(p => now - p.startTime < POP_MS);
   }
 
   // ── Lock flash / assimilations (renderFrame section T) ────────────────────

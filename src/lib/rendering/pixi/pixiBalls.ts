@@ -217,6 +217,17 @@ export class BallLayer {
         }
       }
 
+      // White "tappable" ball (#57): a bright pulsing white halo so it clearly
+      // reads as the special tap-or-lock ball, and a whiter baseline glow.
+      if (ball.ability === 'tappable') {
+        const tp = 0.5 + 0.5 * Math.sin(performance.now() / 240);
+        v.halos
+          .circle(0, 0, screenRadius * (1.3 + 0.22 * tp))
+          .stroke({ width: Math.max(1.5, 2.5 * scale), color: 0xffffff, alpha: 0.3 + 0.45 * tp });
+        v.pulse.tint = 0xffffff;
+        v.pulse.alpha = Math.max(v.pulse.alpha, 0.45 + 0.35 * tp);
+      }
+
       // ── Motion trail (same ring buffer + mutation contract as the 2D path) ──
       {
         let buf = ball.trailPositions;

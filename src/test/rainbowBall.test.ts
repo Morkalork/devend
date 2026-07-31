@@ -45,13 +45,16 @@ describe("rainbow ball catalogue", () => {
     expect(rb!.baseSpeed).toBeGreaterThan(getBallType("red")!.baseSpeed);
   });
 
-  it("spit-out pool is the level's eligible types minus rainbow itself", () => {
+  it("spit-out pool is the level's eligible types minus rainbow and tappable", () => {
     const spawnable = getSpawnableBallTypes(12);
     expect(spawnable.length).toBeGreaterThan(0);
     expect(spawnable.every(t => t.ability !== "rainbow")).toBe(true);
-    // Exactly the eligible set with the rainbow removed.
-    const eligibleNonRainbow = getEligibleBallTypes(12).filter(t => t.ability !== "rainbow");
-    expect(spawnable.map(t => t.id).sort()).toEqual(eligibleNonRainbow.map(t => t.id).sort());
+    // White (tappable) balls are a deliberate, rare mechanic - never spat (#57).
+    expect(spawnable.every(t => t.ability !== "tappable")).toBe(true);
+    // Exactly the eligible set with rainbow AND tappable removed.
+    const eligibleSpawnable = getEligibleBallTypes(12)
+      .filter(t => t.ability !== "rainbow" && t.ability !== "tappable");
+    expect(spawnable.map(t => t.id).sort()).toEqual(eligibleSpawnable.map(t => t.id).sort());
   });
 });
 

@@ -246,6 +246,9 @@ export interface CanvasGameState {
    *  you can see what you banked. Reset each map. `bornActiveSeconds` anchors a
    *  brief pop-in on the active-play clock. */
   pickupLockMarkers?: { effect: PickupEffect; x: number; y: number; bornActiveSeconds: number }[];
+  /** Short-lived bursts where a white "tappable" ball was tapped away (#57),
+   *  for a quick pop-and-vanish. `startTime` is performance.now(). */
+  ballPops?: { x: number; y: number; color: string; startTime: number }[];
 
   // ── Destructible mirrors/movers (Phase 2: black ball) ──────────────────
   /** All mirrors/movers that can be broken by the black ball. */

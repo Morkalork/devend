@@ -117,7 +117,12 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
 
 /** Bud a red minion out of the boss (mitosis): attached, grows, then pinches off. */
 function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: number): void {
-  const minionType = getBallType(boss.typeId);
+  // Ball-generating bosses spit a WHITE "tappable" ball ~25% of the time (#57):
+  // tap it away to relieve pressure, or lock it for the big bonus. The white
+  // type falls back to the boss's own minion type if it isn't in the catalogue.
+  const wantWhite = Math.random() < 0.25;
+  const white = wantWhite ? getBallType('white') : null;
+  const minionType = (white && white.baseSpeed > 0) ? white : getBallType(boss.typeId);
   if (!minionType || minionType.baseSpeed <= 0) return;
   // Divide the boss's own scale back out so minions are normal-paced/sized.
   // Guard the divisors so a stray `speedScale: 0` / `radiusScale: 0` in YAML

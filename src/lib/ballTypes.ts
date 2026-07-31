@@ -53,7 +53,8 @@ export type BallAbility =
   | 'moneyBall'     // green: locking it triples all subsequent locks this round
   | 'slowDown'      // grey: decays to a crawl over one minute
   | 'breakObjects'  // black: destroys mirrors/movers after repeated hits (Phase 2)
-  | 'rainbow';      // rainbow: fast, shifts hue, spits out a random eligible ball on a timer
+  | 'rainbow'       // rainbow: fast, shifts hue, spits out a random eligible ball on a timer
+  | 'tappable';     // white: TAP to remove it for nothing, or LOCK it for a huge bonus (#57)
 
 export interface BallTypeDef {
   id: string;
@@ -119,8 +120,13 @@ export const DEFAULT_RAINBOW_SPAWN_INTERVAL = 10;
 // ── Parsing & validation (shared by the baked default and the runtime fetch) ─
 
 const VALID_ABILITIES: ReadonlySet<string> = new Set<BallAbility>([
-  'none', 'variableSpeed', 'slowOthers', 'moneyBall', 'slowDown', 'breakObjects', 'rainbow',
+  'none', 'variableSpeed', 'slowOthers', 'moneyBall', 'slowDown', 'breakObjects', 'rainbow', 'tappable',
 ]);
+
+/** White "tappable" ball (#57): tap to discard for nothing, or lock for a big bonus. */
+export function isTappableBall(ability: BallAbility): boolean {
+  return ability === 'tappable';
+}
 
 /** Coerce one raw YAML entry into a BallTypeDef, or null if it's unusable. */
 function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
@@ -242,7 +248,9 @@ export function getEligibleBallTypes(level: number): BallTypeDef[] {
  * what keeps the count linear instead of exponential).
  */
 export function getSpawnableBallTypes(level: number): BallTypeDef[] {
-  return getEligibleBallTypes(level).filter(t => t.ability !== 'rainbow');
+  // Never spit rainbow (would compound) nor tappable (#57): white balls are a
+  // deliberate, rare mechanic, not something a rainbow should flood the map with.
+  return getEligibleBallTypes(level).filter(t => t.ability !== 'rainbow' && t.ability !== 'tappable');
 }
 
 // ── Runtime reload from the served public/balls.yml ─────────────────────────
@@ -334,5 +342,13 @@ export function selectBallTypesForMap(
     const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  return pool.slice(0, count);
+  const picked = pool.slice(0, count);
+  // A tappable (white) ball must never be a map's ONLY ball (#57): tapping it
+  // away would empty the board and trivially win. Force a plain red into the
+  // first slot if every pick is tappable (e.g. a 1-ball map that rolled white).
+  if (picked.length > 0 && picked.every(t => isTappableBall(t.ability))) {
+    const red = getBallType('red');
+    if (red) picked[0] = red;
+  }
+  return picked;
 }
