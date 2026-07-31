@@ -400,6 +400,31 @@ function detachObstacle(game: CanvasGameState, id: string, poly: Polygon): numbe
 }
 
 /**
+ * Register newly-reopened grid cells as board-grid sample points, skipping any
+ * already present. initGame samples every board cell that isn't inside an
+ * obstacle POLYGON - which INCLUDES the band of cells the grid seals as REMOVED
+ * around each obstacle's edges (they're outside the polygon, so the init sampler
+ * keeps them). Re-adding those seal-band cells when the obstacle is destroyed
+ * would paint the board grid twice over that footprint; the doubled squares read
+ * as a denser patch: the "artifacts in the grid background" of issue #65. Dedupe
+ * so every reopened cell is drawn exactly once. Cell centres land on a fixed
+ * half-integer lattice, so a rounded key matches the init points exactly.
+ */
+export function pushReopenedSamplePoints(game: CanvasGameState, cells: number[]): void {
+  const grid = game.spaceGrid;
+  if (!grid || cells.length === 0) return;
+  const key = (p: Vector2) => `${Math.round(p.x * 2)},${Math.round(p.y * 2)}`;
+  const seen = new Set(game.initialSamplePoints.map(key));
+  for (const idx of cells) {
+    const p = gridIndexToWorld(grid, idx);
+    const k = key(p);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    game.initialSamplePoints.push(p);
+  }
+}
+
+/**
  * Restore cells to ACTIVE, keep the percentage baseline sane, and register them
  * as sample points so the board grid texture is painted over the newly-opened
  * area (otherwise it renders as a bare patch).
@@ -409,7 +434,7 @@ function reopenCells(game: CanvasGameState, cells: number[]): void {
   if (!grid) return;
   restoreCells(grid, cells);
   grid.initialActiveCount += cells.length; // keep remaining% ≤ 100
-  for (const idx of cells) game.initialSamplePoints.push(gridIndexToWorld(grid, idx));
+  pushReopenedSamplePoints(game, cells);
 }
 
 /** Topple every obstacle resting on `supporterId` (recursively): detach + fall. */

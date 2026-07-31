@@ -18,10 +18,9 @@ import {
   CellState,
   restoreCells,
   getRemainingPercent,
-  gridIndexToWorld,
   captureUnreachableCells,
 } from "@/lib/spaceGrid";
-import { rebuildRegionsKeepAll, spawnFenceShatter } from "@/lib/physics/destructibles";
+import { rebuildRegionsKeepAll, spawnFenceShatter, pushReopenedSamplePoints } from "@/lib/physics/destructibles";
 
 // Fallback params if a YAML entry omits them.
 const DEFAULT_FREEZE_SECONDS = 3;
@@ -144,7 +143,9 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
     restoreCells(grid, reopened);
     // Register reopened cells as board-grid sample points so they render again,
     // but do NOT bump initialActiveCount: we WANT remaining % to rise (the reset).
-    for (const idx of reopened) game.initialSamplePoints.push(gridIndexToWorld(grid, idx));
+    // Dedupe (issue #65): seal-band cells are already sampled, re-adding doubles
+    // the grid squares there into a visible denser patch.
+    pushReopenedSamplePoints(game, reopened);
   }
 
   // 4. Re-seal anything still unreachable by an active ball (avoids uncapturable
