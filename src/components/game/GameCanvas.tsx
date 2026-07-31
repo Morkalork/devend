@@ -130,6 +130,8 @@ export interface GameStateInfo {
   activeSeconds: number;
   /** Balls spawned on this map (scales the Ship Early windows). */
   ballCount: number;
+  /** True once a power-up has appeared this map, for the one-time explainer (#59). */
+  pickupPresent: boolean;
   onBankAndContinue?: () => void;
   /** Fire a chest-earned ability by id (Freeze All / Slow All / Clear Fences). */
   onUseAbility?: (abilityId: string) => void;
@@ -466,6 +468,10 @@ export function GameCanvas({
   const [activeSeconds, setActiveSeconds] = useState(0);
   // Balls spawned this map; scales the Ship Early windows (15s per ball).
   const [ballCount, setBallCount] = useState(1);
+  // True once a power-up has appeared on the board this map (#59): drives the
+  // one-time "Power-Ups" explainer. Latches on (the intro only needs one shot)
+  // and resets on map init.
+  const [pickupPresent, setPickupPresent] = useState(false);
 
   const flashTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shakeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -970,6 +976,7 @@ export function GameCanvas({
       game.beatSpeedMult = 1;
       setBeatBanner(null);
       lastTimeTierRef.current = 0; // fresh map: re-arm the time-tier toasts
+      setPickupPresent(false);
       setCreepPercent(0);
       setActiveSeconds(0);
       setAbilityTimers([]);
@@ -1240,6 +1247,9 @@ export function GameCanvas({
       onCreepStep: setCreepPercent,
       onActiveSecond: (s: number) => {
         setActiveSeconds(s);
+        // Latch "a power-up appeared" for the one-time explainer (#59). Setting
+        // the same `true` again is a no-op, so this is cheap at 1Hz.
+        if (game.pickups && game.pickups.length > 0) setPickupPresent(true);
         // Time-tier toast (#timeTier): each time the countdown drops into a
         // lower color band, flash the same crunch-style banner to add pressure.
         const tl = getMapTimeLimit(level, levelNumber);
@@ -1506,13 +1516,14 @@ export function GameCanvas({
         creepPercent,
         activeSeconds,
         ballCount,
+        pickupPresent,
         onBankAndContinue: handleBankAndContinue,
         onUseAbility: handleUseAbility,
         abilityTimers,
         armedAbility,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

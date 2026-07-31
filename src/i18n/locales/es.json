@@ -241,6 +241,8 @@
     "moverTutorialBody": "Los obstáculos naranjas se mueven de un lado a otro por un carril fijo.\n\nLas bolas rebotan en ellos, pero si tu valla en crecimiento toca uno, pierdes una vida.\n\n¡Vigila las líneas del carril y cronometra bien tus vallas!",
     "creepTutorialTitle": "⚠ Corrupción del alcance",
     "creepTutorialBody": "El proyecto lleva demasiado tiempo en marcha: las bolas acaban de acelerar, y seguirán acelerando cada pocos segundos hasta alcanzar un tope.\n\nLa corrupción del alcance solo castiga la espera: termina el mapa dentro de la ventana de calma y nunca la verás.\n\nEl indicador rojo de la barra superior muestra el aumento actual.",
+    "pickupTutorialTitle": "✦ Potenciadores",
+    "pickupTutorialBody": "Los potenciadores aparecen en el tablero por poco tiempo. Encierra una bola en un bolsillo vallado que cubra uno para reclamar su mejora: horas extra, una vida adicional, dividir una bola y más.\n\nSi se desvanece antes de atraparlo, desaparece.",
     "topBarTutorialTitle": "La barra superior",
     "topBarTutorialBody": "La barra superior muestra tu nivel, vidas y objetivos.\n\nTócala, o el botón Ficha, para abrir tu hoja de partida completa: estilo, mejoras, asignación y progreso de horas de certificado.",
     "bottomBarTutorialTitle": "Tu ficha",
@@ -386,6 +388,10 @@
           "rainbowConvert": {
             "name": "Bola arcoíris:",
             "desc": "convirtió una bola en una valiosa bola arcoíris."
+          },
+          "overtimePercent": {
+            "name": "Horas extra +{{value}}%:",
+            "desc": "pagó parte de tus horas extra acumuladas, además del tope."
           }
         }
       },

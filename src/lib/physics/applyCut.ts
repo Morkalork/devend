@@ -544,6 +544,8 @@ export function triggerLevelComplete(
         chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,
         shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
         pickupBonus: game.pickupOvertime || undefined,
+        // Every power-up claimed this map (#59), so the finish screen lists them.
+        pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
         // triggerLevelComplete is only reached via the all-balls-locked win, so
         // the board drained to 0% remaining - flag it so the results screen
         // hides the now-meaningless Remaining row.

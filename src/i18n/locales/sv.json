@@ -241,6 +241,8 @@
     "moverTutorialBody": "Orangea hinder rör sig fram och tillbaka på ett fast spår.\n\nBollar studsar mot dem - men om ditt växande stängsel rör vid ett förlorar du ett liv.\n\nHåll koll på spårlinjerna och tajma dina stängsel noga!",
     "creepTutorialTitle": "⚠ Scope creep",
     "creepTutorialBody": "Projektet har pågått för länge: bollarna blev just snabbare, och de fortsätter accelerera med några sekunders mellanrum tills de når ett tak.\n\nScope creep straffar bara väntan: klara kartan inom lugnfönstret så ser du den aldrig.\n\nDen röda mätaren i övre listen visar nuvarande fartökning.",
+    "pickupTutorialTitle": "✦ Power-ups",
+    "pickupTutorialBody": "Power-ups dyker upp på planen en kort stund. Stäng in en boll i en inhägnad ficka som täcker en för att ta dess bonus - extra övertid, ett extra liv, en bolldelning med mera.\n\nHinner den blekna innan du fångar den är den borta.",
     "topBarTutorialTitle": "Den övre listen",
     "topBarTutorialBody": "Den övre listen visar din nivå, dina liv och dina mål.\n\nTryck på den, eller på Specs-knappen, för att öppna hela ditt körschema: bygge, uppgraderingar, uppdrag och framsteg för certifikattimmar.",
     "bottomBarTutorialTitle": "Dina specs",
@@ -386,6 +388,10 @@
           "rainbowConvert": {
             "name": "Regnbågsboll:",
             "desc": "förvandlade en boll till en värdefull regnbågsboll."
+          },
+          "overtimePercent": {
+            "name": "Övertid +{{value}}%:",
+            "desc": "betalade en del av din sparade övertid, utöver taket."
           }
         }
       },

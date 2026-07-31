@@ -71,6 +71,7 @@ export function handleGameOverFn(
       lockedBallsCount: game.lockedBallsCount,
       superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
       shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+      pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
     });
     callbacks.startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
     return;
@@ -138,6 +139,7 @@ export function handlePushFailedFn(
     lockedBallsCount: game.lockedBallsCount,
     superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
     shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
+    pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
   });
   callbacks.startDissolve(() => {}, 'rgba(160, 0, 0, 0.55)');
 }

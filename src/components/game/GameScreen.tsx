@@ -228,6 +228,12 @@ export function GameScreen({
   const [creepIntroSeen, setCreepIntroSeen] = useState(() => {
     try { return !!localStorage.getItem('devend_creep_tutorial_seen'); } catch { return false; }
   });
+  // Power-up explainer (#59) — shown once, the first time a power-up appears on
+  // the board (around level 8). Persisted in localStorage; the game pauses
+  // beneath it like the other modal tutorials.
+  const [pickupIntroSeen, setPickupIntroSeen] = useState(() => {
+    try { return !!localStorage.getItem('devend_pickup_intro_seen'); } catch { return false; }
+  });
   // Boss intro seen flag, keyed per boss map so each boss teaches its rules once.
   const [bossIntroSeen, setBossIntroSeen] = useState(false);
   useEffect(() => {
@@ -252,6 +258,7 @@ export function GameScreen({
     creepPercent: 0,
     activeSeconds: 0,
     ballCount: 1,
+    pickupPresent: false,
     onBankAndContinue: undefined,
   });
 
@@ -470,6 +477,9 @@ export function GameScreen({
   // Time-limit intro: the first timed map (level 4, just past the exempt band).
   const showTimeLimitOverlay = levelNumber === TIME_LIMIT_EXEMPT_MAX_LEVEL + 1 && showTimeLimitTutorial;
   const showCreepOverlay = !creepIntroSeen && gameState.creepPercent > 0 && !level.boss;
+  // Power-up explainer (#59): first time a power-up shows up on the board (not on
+  // boss maps, which are teaching their own rules).
+  const showPickupOverlay = !pickupIntroSeen && gameState.pickupPresent && !level.boss;
   // Boss intro card (issue #56): a one-time-per-boss explainer shown when a boss
   // map first loads, before anything else, so the fight's rules are clear.
   const showBossOverlay = !!level.boss && !bossIntroSeen;
@@ -477,7 +487,7 @@ export function GameScreen({
   // Any queued explainer modal is up (used to gate building the queue + to pause).
   const anyExplainerModal =
     showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
-    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal || fenceIntroOpen;
+    showTimeLimitOverlay || showCreepOverlay || showPickupOverlay || showBossOverlay || showWinModal || fenceIntroOpen;
   const modalOverlayActive =
     topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen || anyExplainerModal;
 
@@ -893,6 +903,11 @@ export function GameScreen({
             show: showCreepOverlay, accentColor: '#ff6b6b',
             title: t('game.creepTutorialTitle'), body: t('game.creepTutorialBody'),
             onDismiss: () => { setCreepIntroSeen(true); try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ } },
+          },
+          {
+            show: showPickupOverlay, accentColor: '#e879f9',
+            title: t('game.pickupTutorialTitle'), body: t('game.pickupTutorialBody'),
+            onDismiss: () => { setPickupIntroSeen(true); try { localStorage.setItem('devend_pickup_intro_seen', '1'); } catch { /* ignore */ } },
           },
           {
             show: fenceIntroOpen, accentColor,
