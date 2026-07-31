@@ -29,7 +29,20 @@ export interface Wall {
   lastDamageAt?: number;
   /** Grid cells this segment's rasterization removed — restored if it breaks. */
   rasterCells?: number[];
+  // ── Black-ball fence fracture (issue #64) ──────────────────────────────────
+  /** Hits taken from black balls / boss chains (0..3). At 3 the fence shatters. */
+  blackHits?: number;
+  /** ms timestamp of the last black-fracture tick (debounce, like lastDamageAt). */
+  blackHitAt?: number;
 }
+
+/** Fences the player drew: not board edges, not obstacle boundaries. */
+export function isPlayerFence(wall: Wall): boolean {
+  return !(wall.isBoardEdge ?? wall.id.startsWith("board-")) && !wall.id.startsWith("obstacle-");
+}
+
+/** Black balls / boss chains crack a fence apart after this many hits (#64). */
+export const FENCE_FRACTURE_HITS = 3;
 
 export interface WallVertex {
   x: number;

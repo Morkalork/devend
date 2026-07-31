@@ -8,10 +8,10 @@
  * (canvas repaints, React state setters, etc.) that cannot live here.
  */
 
-import { LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity } from "@/types/level";
+import { LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity } from "@/types/level";
 import { MoverState, buildMoverPolygon } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
-import { Ball, Region, Vector2, DestructibleState, StackObject } from "@/types/game";
+import { Ball, Region, Vector2, DestructibleState, StackObject, ChainState, PhasingObjectState } from "@/types/game";
 import { Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
@@ -58,6 +58,8 @@ import {
 } from "@/lib/gameUtils";
 import { createBallEffectState } from "@/lib/ballEffects";
 import { selectBallTypesForMap, getBallType, BallTypeDef, effectiveBallSpeedFactor } from "@/lib/ballTypes";
+import { BIG_BALL_MIN_LEVEL, BIG_BALL_CHANCE, BIG_BALL_RADIUS_SCALE, BIG_BALL_LOCK_BONUS, CHAINED_MIN_LEVEL, CHAINED_CHANCE, canAnchorChain } from "@/lib/ballGifts";
+import { makeChain } from "@/lib/physics/chain";
 
 /**
  * Build one ball of a given type at a position. Shared by map init and the
@@ -133,6 +135,9 @@ export interface InitialGameData {
   bossActive: boolean;
   bossHp: number;
   bossMaxHp: number;
+  /** Chains + phasing obstacles built for this map (issue #64). */
+  chains: ChainState[];
+  phasingObjects: PhasingObjectState[];
   /** Which of the four orientations this map was built in (0 = standard). */
   mapRotation: MapRotation;
 }
@@ -175,6 +180,8 @@ export function createInitialGameData(
   // Sealed areas gated by a breakable (issue #38): carved out at init, re-opened
   // when their gate breaks. Paired with their descriptor to record cell indices.
   const sealedAreas: Array<{ destructible: DestructibleState; poly: Polygon }> = [];
+  // Phasing obstacles (#64): fade solid<->intangible on a cycle.
+  const phasingObjects: PhasingObjectState[] = [];
   let objectivesTotal = 0;
 
   // Reset run seed for new game/level (consistent variety per run). Seeded
@@ -294,6 +301,21 @@ export function createInitialGameData(
         obstaclePolygons.push(obstaclePolygon);
         const obstacleWalls = createWallsFromPolygon(obstaclePolygon, `obstacle-${entity.id}`, isMirror);
         allWalls.push(...obstacleWalls);
+
+        // Phasing obstacle (#64): register it so the phasing tick can toggle its
+        // collision + fire the phase-out shockwave. It stays a normal obstacle
+        // (polygon + edge walls); the tick just skips it while phased out.
+        if ((entity as WallEntity).isPhasing) {
+          phasingObjects.push({
+            id: entity.id,
+            polygon: obstaclePolygon,
+            wallIds: obstacleWalls.map(w => w.id),
+            startedAt: 0,
+            cycleSeconds: Math.max(2, (entity as WallEntity).phaseCycleSeconds ?? 10),
+            phase: "in",
+            alpha: 1,
+          });
+        }
 
         // Breakable obstacles + stack graph (issue #38). Mirrors are handled by
         // the #37 path above and don't participate in break-stacks.
@@ -443,12 +465,28 @@ export function createInitialGameData(
   };
 
   const ballRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
-  const balls: Ball[] = selectedTypes.map((type, i) =>
-    createBall(type, findSpacedSpawn(ballRadius), speedScale, ballRadius, `${type.id}-${i}`, spawnTime, 0),
-  );
+  // Big-ball gift (#64): from L11 each ball has a 5% chance to spawn enlarged
+  // (~1.3x, harder to fence, worth a touch more on lock). Seeded per map so
+  // Daily runs share it. Rolled BEFORE placement so the spacing uses its radius.
+  const enlargeRng = getRunRng(`enlarge:${level.id}`);
+  const balls: Ball[] = selectedTypes.map((type, i) => {
+    const enlarged = levelNumber >= BIG_BALL_MIN_LEVEL && enlargeRng() < BIG_BALL_CHANCE;
+    const r = enlarged ? ballRadius * BIG_BALL_RADIUS_SCALE : ballRadius;
+    const ball = createBall(type, findSpacedSpawn(r), speedScale, r, `${type.id}-${i}`, spawnTime, 0);
+    if (enlarged) {
+      ball.enlarged = true;
+      ball.lockMultiplier = ball.lockMultiplier + BIG_BALL_LOCK_BONUS;
+    }
+    return ball;
+  });
 
-  // Boss ball (issue #56): a distinct big/fast antagonist spawned alongside the
-  // normal balls. It must be defeated (trapped hp times) to clear a boss map.
+  // Chains built this map (#64): the boss pair's fence-breaking chain (below)
+  // and the yellow/purple gift chains (further down) both land here.
+  const chains: ChainState[] = [];
+
+  // Boss ball (issue #56, extended #64): a distinct big/fast antagonist. `count`
+  // 2 spawns an interlinked PAIR (L20/L35); each must be trapped hp times to
+  // defeat. It must be defeated (fenced into the area) to clear a boss map.
   let bossActive = false, bossHp = 0, bossMaxHp = 0;
   const bossBall = level.boss?.bossBall;
   if (bossBall) {
@@ -456,17 +494,26 @@ export function createInitialGameData(
     if (baseType) {
       const hp = Math.max(1, Math.round(bossBall.hp ?? 3));
       const bossRadius = ballRadius * (bossBall.radiusScale ?? 2);
-      const boss = createBall(
-        baseType, findSpacedSpawn(bossRadius), speedScale * (bossBall.speedScale ?? 1.2),
-        bossRadius, "boss-rc", spawnTime, 0,
-      );
-      boss.isBoss = true;
-      boss.bossHp = hp;
-      boss.bossMaxHp = hp;
-      boss.bossFullRadius = bossRadius; // shrinks toward a normal ball as HP drains
-      boss.bossMinRadius = ballRadius;  // last-life size = an ordinary ball
-      boss.color = bossBall.color ?? "#ff2d55";
-      balls.push(boss);
+      const count = Math.max(1, Math.round(bossBall.count ?? 1));
+      const bosses: Ball[] = [];
+      for (let bi = 0; bi < count; bi++) {
+        const boss = createBall(
+          baseType, findSpacedSpawn(bossRadius), speedScale * (bossBall.speedScale ?? 1.2),
+          bossRadius, count > 1 ? `boss-rc-${bi}` : "boss-rc", spawnTime, 0,
+        );
+        boss.isBoss = true;
+        boss.bossHp = hp;
+        boss.bossMaxHp = hp;
+        boss.bossFullRadius = bossRadius; // shrinks toward a normal ball as HP drains
+        boss.bossMinRadius = ballRadius;  // last-life size = an ordinary ball
+        boss.color = bossBall.color ?? "#ff2d55";
+        balls.push(boss);
+        bosses.push(boss);
+      }
+      // Interlinked pair: one fence-breaking chain between the two boss balls.
+      if (bossBall.chained && bosses.length >= 2) {
+        chains.push(makeChain(bosses[0], bosses[1], true));
+      }
       bossActive = true; bossHp = hp; bossMaxHp = hp;
     }
   }
@@ -484,6 +531,23 @@ export function createInitialGameData(
     victim.velocity = { x: victim.velocity.x * slowFactor, y: victim.velocity.y * slowFactor };
     if (victim.speedReduction !== undefined) victim.speedReduction *= slowFactor;
     if (victim.speedRange) victim.speedRange = [victim.speedRange[0] * slowFactor, victim.speedRange[1] * slowFactor];
+  }
+
+  // Chained-ball gift (#64): from L21, each yellow/purple ball has a 5% chance
+  // to be chained to another (any-colour) ball on the map. Ordinary chains only
+  // tether + snag (they never break fences). Seeded per map, boss balls excluded.
+  if (levelNumber >= CHAINED_MIN_LEVEL) {
+    const chainRng = getRunRng(`chain:${level.id}`);
+    const pool = balls.filter(b => !b.isBoss);
+    const used = new Set<string>();
+    for (const anchor of pool) {
+      if (used.has(anchor.id) || !canAnchorChain(anchor.ability)) continue;
+      if (chainRng() >= CHAINED_CHANCE) continue;
+      const partner = pool.find(b => b.id !== anchor.id && !used.has(b.id));
+      if (!partner) continue;
+      used.add(anchor.id); used.add(partner.id);
+      chains.push(makeChain(anchor, partner, false));
+    }
   }
 
   // ── Space grid & initial region ───────────────────────────────────────
@@ -682,6 +746,8 @@ export function createInitialGameData(
     bossActive,
     bossHp,
     bossMaxHp,
+    chains,
+    phasingObjects,
     mapRotation,
   };
 }

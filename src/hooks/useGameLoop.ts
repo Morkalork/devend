@@ -17,6 +17,8 @@ import { creepFactor } from "@/lib/scopeCreep";
 import { mutatorSpeedFactor } from "@/lib/mapMutators";
 import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
+import { tickChains } from "@/lib/physics/chain";
+import { tickPhasing } from "@/lib/physics/phasing";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updatePickups } from "@/lib/pickups";
@@ -326,6 +328,9 @@ export function createGameLoop(
       }
 
       updateMoversFn(PHYSICS_STEP, game);
+      // Phasing obstacles (#64): update solid<->intangible BEFORE ball physics so
+      // the phased-out collision skips this step read the current phase.
+      tickPhasing(game, game.activePlaySeconds);
 
       for (const ball of game.balls) {
         // WON balls keep full physics but visually disintegrate
@@ -354,6 +359,9 @@ export function createGameLoop(
         updateBall(ball, PHYSICS_STEP, game);
       }
       handleBallCollisions(game);
+      // Chains (#64): solve the verlet rope AFTER ball physics so it reads the
+      // balls' new positions, tethers/snags them, and sweeps fences.
+      tickChains(game, PHYSICS_STEP, performance.now());
       callbacks.updateWall(PHYSICS_STEP);
       game.accumulator -= PHYSICS_STEP;
     }

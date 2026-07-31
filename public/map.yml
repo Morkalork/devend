@@ -814,29 +814,67 @@ levels:
         radius: 50
   - id: level-20
     level: 20
-    sizeThreshold: 24
-    expectedCuts: 4
+    sizeThreshold: 18
+    expectedCuts: 6
     points: 20
     variety: 0
     randomShapes: 0
     maxBalls: 1
+    timeLimit: 75
+    # Colored Area win gate: fence BOTH chained boss halves into this var area.
+    coloredAreas:
+      - kind: var
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
+    # Boss (issue #64): a chained PAIR. The chain between them shreds any fence it
+    # sweeps and snags on the phasing pillars (pinning the pair); a pillar's
+    # phase-out shoves them loose again. Introduces chained balls + phasing objects.
+    boss:
+      name: Merge Conflict
+      intro: >-
+        Two commits tangled by a chain that shreds every fence it sweeps. Fence
+        BOTH halves into the pink var area to resolve them. The chain snags on the
+        phasing pillars, pinning the pair, but each pillar blinks out on a timer and
+        the burst flings them loose. A freeze buys you a clean window.
+      creepFromStart: true
+      objective:
+        id: defeat-merge
+        name: Resolve the Merge Conflict
+        description: Fence both chained halves into the var area.
+        clarify: >-
+          Trap BOTH boss balls inside the pink var area to win. Their chain breaks
+          any fence it sweeps across and snags on the phasing pillars; when a pillar
+          phases out it shoves the pair free. Running out of time fails the map.
+        kind: defeatBoss
+        reward: 16
+      bossBall:
+        hp: 1
+        count: 2
+        chained: true
+        radiusScale: 1.6
+        speedScale: 1.1
+        color: "#ff7a3d"
+        spitIntervalSeconds: 0
+        maxMinions: 0
     entities:
-      - id: wall-mirror-top
+      - id: phase-pillar-l
         kind: wall
-        mirror: true
-        shape: rect
-        x: 50
-        'y': 95
-        width: 800
-        height: 25
-      - id: wall-mirror-bot
+        shape: circle
+        cx: 300
+        cy: 430
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 10
+      - id: phase-pillar-r
         kind: wall
-        mirror: true
-        shape: rect
-        x: 50
-        'y': 780
-        width: 800
-        height: 25
+        shape: circle
+        cx: 600
+        cy: 620
+        radius: 55
+        isPhasing: true
+        phaseCycleSeconds: 12
   - id: level-21
     level: 21
     sizeThreshold: 18
@@ -1200,59 +1238,61 @@ levels:
         phase: 0.67
   - id: level-30
     level: 30
-    sizeThreshold: 8
-    expectedCuts: 13
+    sizeThreshold: 12
+    expectedCuts: 9
     points: 20
     variety: 0
     randomShapes: 0
-    maxBalls: 3
+    maxBalls: 1
+    timeLimit: 80
+    coloredAreas:
+      - kind: var
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
+    # Boss (issue #64): a fast, heavy BLACK boss that periodically wipes every
+    # fence. Introduces black balls (which fracture your fences in 3 hits) already
+    # foreshadowed from ~L25. Its stop-and-vibrate wind-up is the fence window.
+    boss:
+      name: Force Push
+      intro: >-
+        A heavy black build that wrecks your work: every 30 seconds it stops,
+        vibrates, and shatters EVERY fence you have drawn. It is fast, so pin it
+        down. The moment it freezes to wind up a wipe is your window to fence it
+        into the pink var area. A freeze holds it right there.
+      creepFromStart: false
+      objective:
+        id: defeat-force-push
+        name: Contain the Force Push
+        description: Fence the black boss into the var area.
+        clarify: >-
+          Trap the black boss inside the pink var area to win. Every 30 seconds it
+          stops and vibrates, then destroys all of your fences; that stationary
+          wind-up is your chance to fence it. Running out of time fails the map.
+        kind: defeatBoss
+        reward: 16
+      bossBall:
+        hp: 1
+        radiusScale: 2.2
+        speedScale: 1.45
+        color: "#2b2f3a"
+        fenceWipeSeconds: 30
+        spitIntervalSeconds: 0
+        maxMinions: 0
     entities:
-      - id: mirror-h-top
+      - id: pillar-a
         kind: wall
-        mirror: true
-        shape: rect
-        x: 80
-        'y': 310
-        width: 500
-        height: 22
-      - id: mirror-v-right
+        shape: circle
+        cx: 300
+        cy: 500
+        radius: 60
+      - id: pillar-b
         kind: wall
-        mirror: true
-        shape: rect
-        x: 680
-        'y': 380
-        width: 22
-        height: 460
-      - id: mover-left
-        kind: mover
         shape: circle
-        cx: 220
-        cy: 180
-        radius: 44
-        axis: horizontal
-        range: 300
-        speed: 158
-        phase: 0.5
-      - id: mover-center
-        kind: mover
-        shape: circle
-        cx: 380
+        cx: 620
         cy: 560
-        radius: 46
-        axis: horizontal
-        range: 360
-        speed: 168
-        phase: 0
-      - id: mover-right
-        kind: mover
-        shape: circle
-        cx: 750
-        cy: 420
-        radius: 44
-        axis: vertical
-        range: 260
-        speed: 152
-        phase: 0.25
+        radius: 55
   - id: level-31
     level: 31
     sizeThreshold: 30
@@ -1381,59 +1421,65 @@ levels:
         height: 40
   - id: level-35
     level: 35
-    sizeThreshold: 24
-    expectedCuts: 6
+    sizeThreshold: 18
+    expectedCuts: 7
     points: 20
     variety: 0
     randomShapes: 0
-    maxBalls: 2
+    maxBalls: 1
+    timeLimit: 90
+    coloredAreas:
+      - kind: var
+        x: 500
+        'y': 45
+        width: 355
+        height: 335
+    # Boss (issue #64): all three gimmicks at once. A chained pair (fence-shredding
+    # chain + phasing arena) that also wipes every fence on a timer and spits
+    # OVERSIZED hotfixes. The capstone boss.
+    boss:
+      name: Production Outage
+      intro: >-
+        Everything at once. A chained pair that shreds your fences, wipes the whole
+        board every 25 seconds, and spits oversized hotfixes, on an arena of phasing
+        pillars. Fence BOTH halves into the pink var area to recover. Snag them on a
+        pillar, save a freeze for the wipe, and ship it.
+      creepFromStart: true
+      objective:
+        id: defeat-outage
+        name: Resolve the Outage
+        description: Fence both chained halves into the var area.
+        clarify: >-
+          Trap BOTH boss balls inside the pink var area. Their chain breaks fences
+          and snags on the phasing pillars; every 25 seconds the boss wipes every
+          fence (telegraphed by a stop and a vibrate). Running out of time fails.
+        kind: defeatBoss
+        reward: 24
+      bossBall:
+        hp: 1
+        count: 2
+        chained: true
+        radiusScale: 1.7
+        speedScale: 1.15
+        color: "#ff3b30"
+        fenceWipeSeconds: 25
+        spitIntervalSeconds: 9
+        maxMinions: 3
+        spawnEnlargedMinions: true
     entities:
-      - id: gate-1
+      - id: phase-pillar-a
         kind: wall
-        shape: rect
-        x: 40
-        'y': 460
-        width: 820
-        height: 24
-        breakable: true
-        objective: true
-        fence: true
-        hitsToBreak: 5
-        reveals:
-          x: 50
-          'y': 55
-          width: 800
-          height: 398
-      - id: mirror-1
+        shape: circle
+        cx: 300
+        cy: 430
+        radius: 52
+        isPhasing: true
+        phaseCycleSeconds: 10
+      - id: phase-pillar-b
         kind: wall
-        shape: rect
-        x: 150
-        'y': 560
-        width: 24
-        height: 170
-        mirror: true
-      - id: mirror-2
-        kind: wall
-        shape: rect
-        x: 726
-        'y': 560
-        width: 24
-        height: 170
-        mirror: true
-      - id: target-1
-        kind: wall
-        shape: rect
-        x: 390
-        'y': 720
-        width: 120
-        height: 40
-        breakable: true
-        objective: true
-        hitsToBreak: 3
-      - id: box-1
-        kind: wall
-        shape: rect
-        x: 400
-        'y': 680
-        width: 100
-        height: 40
+        shape: circle
+        cx: 600
+        cy: 620
+        radius: 52
+        isPhasing: true
+        phaseCycleSeconds: 13

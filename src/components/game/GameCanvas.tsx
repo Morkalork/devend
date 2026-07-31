@@ -33,7 +33,8 @@ import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent } from "@/lib/scoring";
 import { isTimingExempt, getMapTimeLimit } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
-import { tickBossPhases, tickBossSpit } from "@/lib/physics/bossPhases";
+import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
+import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats } from "@/lib/physics/mapBeats";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import { AbilityIcon } from "./AbilityIcon";
@@ -537,6 +538,8 @@ export function GameCanvas({
     bossMaxHp: 0,
     bossDefeated: false,
     bossMinionCount: 0,
+    chains: [],
+    phasingObjects: [],
     screenSize: { width: 0, height: 0 },
     boardRect: { left: 0, top: 0, width: 0, height: 0, scale: 1 } as BoardRect,
     backgroundColor: "#0a1a10",
@@ -941,6 +944,9 @@ export function GameCanvas({
       game.bossMaxHp          = data.bossMaxHp;
       game.bossDefeated       = false;
       game.bossMinionCount    = 0;
+      // Chains + phasing (#64): built at init, reset per map.
+      game.chains             = data.chains ?? [];
+      game.phasingObjects     = data.phasingObjects ?? [];
       setBossHud({ active: data.bossActive, hp: data.bossHp, maxHp: data.bossMaxHp, defeated: false });
       // Cold Boot: the map boots frozen, all balls hold still for a planning
       // beat. Same frozenUntil path as tap-freeze; freezeReadyAt is left unset
@@ -1241,6 +1247,10 @@ export function GameCanvas({
         tickRainbowSpawns(game, levelNumber);
         tickBossPhases(game, level, levelNumber);
         tickBossSpit(game, level);
+        // Boss fence-wipe attack (#64): telegraphs, then clears every fence.
+        tickBossFenceWipe(game, level, () =>
+          clearAllFences(game, { repaintRegionCanvas, setRemainingPercent, fenceColor: "#ff5b5b" }),
+        );
         tickMapBeats(game, level, levelNumber, (announce) => {
           setBeatBanner({ key: performance.now(), announce });
           if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);

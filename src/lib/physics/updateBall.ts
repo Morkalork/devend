@@ -34,6 +34,8 @@ import {
 import { playWallHitSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
 import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage } from "@/lib/physics/destructibles";
+import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
+import { collectPhasedOut } from "@/lib/physics/phasing";
 
 /** Boss cell-division animation duration (issue #56): the bud grows + detaches. */
 const SPLIT_MS = 1200;
@@ -427,11 +429,16 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     }
   }
 
+  // Phasing obstacles (#64): while phased out, balls pass through them. Cheap
+  // no-op (null) on the common map with no phasing objects.
+  const phasedOut = collectPhasedOut(game);
+
   // CRITICAL: Check obstacle polygon penetration before edge collisions.
   // Obstacles are static, so a cached AABB (inflated by the ball radius)
   // rejects far-away polygons before the per-edge resolver runs — circle
   // obstacles are 64-gons, so this skips 64 segment tests per miss.
   for (const obstacle of game.obstaclePolygons) {
+    if (phasedOut && phasedOut.polys.has(obstacle)) continue;
     const b = getObstacleBounds(obstacle);
     const reach = ball.radius + 1;
     if (
@@ -468,6 +475,8 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     // The prefix check is cached: a string scan per wall per ball per step adds up.
     if (wall.isBoardEdge === undefined) wall.isBoardEdge = wall.id.startsWith("board-");
     if (wall.isBoardEdge) continue;
+    // A phased-out obstacle's edge walls are intangible this frame (#64).
+    if (phasedOut && phasedOut.walls.has(wall.id)) continue;
 
     const impactPoint = collideBallWithWall(ball, wall);
 
@@ -493,6 +502,13 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
           wall.hitsLeft--;
           if (wall.hitsLeft <= 0) game.pendingWallBreaks.push(wall);
         }
+      }
+
+      // Black-ball fence fracture (#64): a black wrecking ball cracks the player's
+      // own fences apart in three hits (each hit fractures). Only player fences
+      // (not board edges, already skipped, nor obstacle boundaries below).
+      if (!isObstacleWall && ball.ability === 'breakObjects') {
+        registerFenceFracture(game, wall, now);
       }
 
       // Destructible obstacles are bounced by these edge walls, so hits are

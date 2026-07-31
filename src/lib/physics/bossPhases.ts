@@ -16,6 +16,7 @@ import { getBallType, getSpawnableBallTypes } from "@/lib/ballTypes";
 import { createBall } from "@/lib/initGame";
 import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
 import { playBossChargeSound } from "@/lib/gameAudio";
+import { BIG_BALL_RADIUS_SCALE } from "@/lib/ballGifts";
 
 let _bossAddCounter = 0;
 
@@ -23,6 +24,8 @@ let _bossAddCounter = 0;
 const SPIT_CHARGE_MS = 600;
 /** How often the last-life boss lunges at the largest open region (panic). */
 const PANIC_DASH_MS = 2500;
+/** Boss-30/35 fence-wipe telegraph: the boss stops + vibrates this long, then wipes. */
+export const FENCE_WIPE_CHARGE_MS = 1000;
 
 /**
  * Advance boss phases for one frame. Fires any phase whose threshold is newly
@@ -129,7 +132,9 @@ function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: num
   // can't produce an Infinity speed/radius.
   const speedScale = (boss.baseSpeed / minionType.baseSpeed) / Math.max(0.05, bb.speedScale ?? 1.2);
   const base = boss.splitBaseRadius ?? boss.radius;     // unswollen size
-  const minionRadius = base / Math.max(0.1, bb.radiusScale ?? 2);
+  // Boss-35 spits enlarged minions (the big-ball gift made hostile).
+  const enlarge = bb.spawnEnlargedMinions ? BIG_BALL_RADIUS_SCALE : 1;
+  const minionRadius = (base / Math.max(0.1, bb.radiusScale ?? 2)) * enlarge;
   const angle = Math.random() * Math.PI * 2;
   const dir = { x: Math.cos(angle), y: Math.sin(angle) };
   const position = { x: boss.position.x + dir.x * boss.radius * 0.85, y: boss.position.y + dir.y * boss.radius * 0.85 };
@@ -138,6 +143,7 @@ function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: num
     `${minionType.id}-minion-${++_bossAddCounter}`, nowMs, game.activePlaySeconds,
   );
   child.isMinion = true;                                 // for the active-minion spawn cap
+  if (bb.spawnEnlargedMinions) child.enlarged = true;
   child.bornRadius = minionRadius;                       // full size to grow into
   child.radius = Math.max(3, minionRadius * BIRTH_START_FRAC); // starts as a small bud
   child.bornAt = nowMs;
@@ -174,6 +180,42 @@ function maybePanicDash(game: CanvasGameState, boss: Ball, nowMs: number): void 
   const spd = (Math.hypot(boss.velocity.x, boss.velocity.y) || boss.baseSpeed) * 1.35;
   boss.velocity = { x: (dx / len) * spd, y: (dy / len) * spd };
   boss.speed = spd;
+}
+
+/**
+ * Boss fence-wipe attack (issue #64, L30/L35). Every `fenceWipeSeconds` the boss
+ * STOPS and vibrates for FENCE_WIPE_CHARGE_MS (a telegraphed, stationary window -
+ * the player's chance to fence it), then destroys every player fence via the
+ * supplied `doWipe` (the game loop passes clearAllFences bound to its callbacks).
+ * A pair is driven by its first boss and both freeze during the wind-up.
+ */
+export function tickBossFenceWipe(
+  game: CanvasGameState, level: LevelConfig, doWipe: () => void, nowMs = performance.now(),
+): void {
+  const bb = level.boss?.bossBall;
+  if (!bb || !bb.fenceWipeSeconds || bb.fenceWipeSeconds <= 0) return;
+  const bosses = game.balls.filter(b => b.isBoss && b.state === "active");
+  const boss = bosses.find(b => b.bossLeapAt === undefined);
+  if (!boss) return;
+
+  // Mid wind-up: fire the wipe when the vibrate completes.
+  if (boss.fenceWipeChargeStart !== undefined) {
+    if (nowMs - boss.fenceWipeChargeStart >= FENCE_WIPE_CHARGE_MS) {
+      boss.fenceWipeChargeStart = undefined;
+      boss.lastFenceWipeAt = game.activePlaySeconds;
+      doWipe();
+    }
+    return;
+  }
+
+  // Anchor the first interval to map start.
+  if (boss.lastFenceWipeAt === undefined) { boss.lastFenceWipeAt = game.activePlaySeconds; return; }
+  if (game.activePlaySeconds - boss.lastFenceWipeAt >= bb.fenceWipeSeconds) {
+    boss.fenceWipeChargeStart = nowMs;
+    // Stop + vibrate: freeze every boss for the wind-up (the mitigation window).
+    for (const b of bosses) b.frozenUntil = nowMs + FENCE_WIPE_CHARGE_MS;
+    playBossChargeSound();
+  }
 }
 
 /** Spawn `n` extra balls off live active balls (inherits their region + scale). */

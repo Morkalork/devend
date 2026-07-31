@@ -95,16 +95,19 @@ balls:
     ability: slowDown
     description: "Winds down: slows down 10 speedUnits ever 5 seconds. Down to minimum speed."
 
+  # Black: a heavy wrecking ball (issue #64). Besides smashing mirrors and movers,
+  # it now fractures the player's own fences: three hits crack a fence apart. It
+  # is foreshadowed a few levels before the level-30 boss built around it.
   - id: black
     name: Black
     color: "#2b2f3a"
     baseSpeed: 200
     minimumSpeed: 150
-    unlockLevel: 17
+    unlockLevel: 25
     lockMultiplier: 4
     density: 2.6
     ability: breakObjects
-    description: "Wrecking ball: heavy enough to smash mirrors and movers in just a hit or two, losing a multiplier each time."
+    description: "Wrecking ball: heavy enough to smash obstacles, and it cracks your own fences apart in three hits."
 
   # Rainbow: a fast, hue-shifting ball that shows up occasionally past level 10.
   # Every 10 seconds it spits out one random ball type available for the current

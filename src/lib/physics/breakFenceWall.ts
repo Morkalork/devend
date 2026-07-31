@@ -15,7 +15,7 @@
  * grid, so the two sides become one region again.
  */
 import { CanvasGameState } from "@/types/gameState";
-import { Wall } from "@/lib/wallGeometry";
+import { Wall, isPlayerFence, FENCE_FRACTURE_HITS } from "@/lib/wallGeometry";
 import {
   isPositionActive,
   restoreCells,
@@ -108,6 +108,27 @@ function rebuildRegionsFromGrid(game: CanvasGameState): void {
 
   reassignBallsToRegions(game.balls, game.regions, game.walls);
   paintCellRegionIds(grid, game.regions);
+}
+
+const FRACTURE_DEBOUNCE_MS = 250; // one pass can't count as several fracture hits
+
+/**
+ * Register one fracture hit on a player fence from a black ball or a boss chain
+ * (issue #64). Debounced per wall. After FENCE_FRACTURE_HITS the fence is queued
+ * to break (subject to the void rule in processWallBreaksFn). No-op on board
+ * edges / obstacle boundaries. Returns true when this hit actually landed (for
+ * feedback), so callers can play a crack sound. `now` is performance.now().
+ */
+export function registerFenceFracture(game: CanvasGameState, wall: Wall, now: number): boolean {
+  if (!isPlayerFence(wall)) return false;
+  if (wall.blackHits !== undefined && wall.blackHits >= FENCE_FRACTURE_HITS) return false;
+  if (wall.blackHitAt !== undefined && now - wall.blackHitAt < FRACTURE_DEBOUNCE_MS) return false;
+  wall.blackHitAt = now;
+  wall.blackHits = (wall.blackHits ?? 0) + 1;
+  if (wall.blackHits >= FENCE_FRACTURE_HITS && !game.pendingWallBreaks.includes(wall)) {
+    game.pendingWallBreaks.push(wall);
+  }
+  return true;
 }
 
 export function processWallBreaksFn(game: CanvasGameState, callbacks: WallBreakCallbacks): void {

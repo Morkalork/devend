@@ -74,6 +74,8 @@ export class PixiGameRenderer {
   private coloredAreasKey = "";
   private movers = new Graphics();
   private obstacles = new Graphics();
+  private phasing = new Graphics();   // phasing obstacles (#64), redrawn every frame
+  private chains = new Graphics();    // ball/boss chains (#64)
   private breakables = new Graphics();
   private mirrors = new Graphics();
   private debris = new Graphics();
@@ -152,6 +154,7 @@ export class PixiGameRenderer {
       // covers the wall's white border at the join and the greens read as one
       // merged organism (the fence's own white already fades out at the join).
       this.obstacles,
+      this.phasing,
       this.edgeWalls,
       this.wallsScope,
       this.fenceMask, // sibling of the container it masks
@@ -160,6 +163,7 @@ export class PixiGameRenderer {
       this.mirrors,
       this.mirrorCracks,
       this.debris,
+      this.chains,
       this.effects.container,
       this.balls.container,
       this.activeFence,
@@ -275,6 +279,8 @@ export class PixiGameRenderer {
       this.syncColoredAreas(game, w2s, scale);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
+      this.syncPhasing(game, w2s, scale);
+      this.syncChains(game, w2s, scale);
       this.syncBreakables(game, w2s, scale);
       this.syncMirrors(game, w2s, scale);
       this.syncMirrorCracks(game, w2s, scale);
@@ -665,9 +671,11 @@ export class PixiGameRenderer {
 
   private syncObstacles(game: CanvasGameState, w2s: W2S, scale: number, accent: string): void {
     const bulging = anyObstacleImpactsActive();
+    const phasingCount = game.phasingObjects?.length ?? 0;
     const key = `${accent}_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}`;
     // Cached unless the level/layout changed, a bulge is animating, or one just
-    // ended (redraw once flat). While bulging, force a redraw every frame.
+    // ended (redraw once flat). While bulging, force a redraw every frame. Phasing
+    // obstacles are drawn every frame by syncPhasing, so exclude them here.
     if (!bulging && !this.obstaclesBulged && this.obstaclesKey === key) return;
     this.obstaclesBulged = bulging;
     this.obstaclesKey = bulging ? "__bulging__" : key;
@@ -675,8 +683,10 @@ export class PixiGameRenderer {
     g.clear();
     const mirrorSet = new Set(game.mirrorPolygons);
     const breakableSet = new Set(game.destructibles.filter(d => d.kind === "breakable" && d.obstaclePolygon).map(d => d.obstaclePolygon));
+    const phasingSet = phasingCount > 0 ? new Set(game.phasingObjects.map(p => p.polygon)) : null;
     for (const poly of game.obstaclePolygons) {
       if (mirrorSet.has(poly as Polygon) || breakableSet.has(poly as Polygon)) continue;
+      if (phasingSet && phasingSet.has(poly as Polygon)) continue;
       // Subdivide edges + sample the bulge so the dome is smooth on low-poly
       // obstacles; away from hits the samples stay collinear (flat outline).
       const pts: number[] = [];
@@ -699,6 +709,49 @@ export class PixiGameRenderer {
       }
       g.poly(pts).stroke({ width: WALL_THICKNESS * scale * 2.2, color: accent, alpha: 0.18, join: "round", cap: "round" });
       g.poly(pts).stroke({ width: WALL_THICKNESS * scale, color: accent, alpha: 1, join: "round", cap: "round" });
+    }
+  }
+
+  // ── Phasing obstacles (#64): solid when in, ghost outline when out ─────────
+  private syncPhasing(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const g = this.phasing;
+    g.clear();
+    const objs = game.phasingObjects;
+    if (!objs || objs.length === 0) return;
+    const col = 0x66ccff; // cyan phasing tint, distinct from the green obstacles
+    for (const obj of objs) {
+      const pts: number[] = [];
+      for (const v of obj.polygon.vertices) { const sp = w2s(v.x, v.y); pts.push(sp.x, sp.y); }
+      const a = Math.max(0, Math.min(1, obj.alpha));
+      if (a >= 0.5) {
+        // Present/fading: filled block with a bright border, dimming as it fades.
+        g.poly(pts).fill({ color: col, alpha: 0.12 * a });
+        g.poly(pts).stroke({ width: WALL_THICKNESS * scale, color: col, alpha: 0.4 + 0.6 * a, join: "round" });
+      } else {
+        // Phased out: a faint thin ghost so its footprint stays readable.
+        g.poly(pts).stroke({ width: WALL_THICKNESS * scale * 0.5, color: col, alpha: 0.1 + 0.3 * a, join: "round" });
+      }
+    }
+  }
+
+  // ── Chains (#64): a rope between two balls ─────────────────────────────────
+  private syncChains(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const g = this.chains;
+    g.clear();
+    const chains = game.chains;
+    if (!chains || chains.length === 0) return;
+    for (const ch of chains) {
+      if (ch.nodes.length < 2) continue;
+      const scr = ch.nodes.map(n => w2s(n.x, n.y));
+      const col = ch.breaksFences ? 0xff5b5b : 0xb7c0d8; // boss chain red-hot, gift chain steel
+      const line = (width: number, color: number, alpha: number) => {
+        g.moveTo(scr[0].x, scr[0].y);
+        for (let i = 1; i < scr.length; i++) g.lineTo(scr[i].x, scr[i].y);
+        g.stroke({ width, color, alpha, join: "round", cap: "round" });
+      };
+      line(6 * scale, 0x000000, 0.5);      // dark rope under-stroke
+      line(3.5 * scale, col, 0.95);        // bright core
+      for (const sp of scr) g.circle(sp.x, sp.y, 2.4 * scale).fill({ color: col, alpha: 0.9 }); // link nubs
     }
   }
 
@@ -1117,7 +1170,10 @@ export class PixiGameRenderer {
       const w = game.walls[wi];
       if (!w.id.startsWith("wall-")) continue;
       const baseWidth = w.thickness * scale;
-      const damage = w.maxHits && w.hitsLeft !== undefined ? 1 - w.hitsLeft / w.maxHits : 0;
+      const ascDamage = w.maxHits && w.hitsLeft !== undefined ? 1 - w.hitsLeft / w.maxHits : 0;
+      // Black-ball / boss-chain fracture (#64): each of the 3 hits deepens the crack.
+      const blackDamage = w.blackHits ? Math.min(1, w.blackHits / 3) : 0;
+      const damage = Math.max(ascDamage, blackDamage);
       if (damage > 0) {
         const segs = getSegs(w);
         const drawSeg = (a: Vector2, b: Vector2) => {

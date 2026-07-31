@@ -89,6 +89,47 @@ export interface Ball {
   birthParentId?: string; // while set, this bud is attached to its parent and growing (mitosis)
   birthDirX?: number;     // unit direction from the parent it buds along / is released toward
   birthDirY?: number;
+  // ── Enlarged "big ball" gift (issue #64) ─────────────────────────────────
+  enlarged?: boolean;     // rolled at spawn (5% past L11): radius x1.3, harder to fence
+  // ── Boss pair (issue #64) ────────────────────────────────────────────────
+  bossShipped?: boolean;  // this boss ball was locked into the win area; a pair
+                          // is only defeated once EVERY boss ball is shipped
+  // ── Boss periodic fence-wipe attack (issue #64) ──────────────────────────
+  lastFenceWipeAt?: number; // game.activePlaySeconds of the last fence wipe (L30/L35)
+  fenceWipeChargeStart?: number; // performance.now() the wipe wind-up (vibrate telegraph) began
+}
+
+/**
+ * A chain linking two balls (issue #64). A short verlet rope: `nodes` are the
+ * live positions (node 0 pinned to ball A, last to ball B), `prev` the previous
+ * frame's positions (verlet integration). A boss chain (`breaksFences`) sweeps
+ * and shatters player fences; an ordinary chain (yellow/purple gift) only
+ * tethers + snags on obstacles.
+ */
+export interface ChainState {
+  aId: string;
+  bId: string;
+  nodes: Vector2[];
+  prev: Vector2[];
+  breaksFences: boolean;
+  /** Max distance the two balls may drift apart (the taut chain length). */
+  restLength: number;
+}
+
+/**
+ * A phasing obstacle (issue #64): the same obstacle polygon toggling between a
+ * solid (`in`) and intangible (`out`) phase on a repeating cycle. While `out`,
+ * balls/fences/chains pass through it; the in->out transition fires a shockwave.
+ */
+export interface PhasingObjectState {
+  id: string;
+  polygon: Polygon;
+  wallIds: string[];   // ids of this obstacle's edge walls (skipped while out)
+  startedAt: number;   // game.activePlaySeconds when the cycle anchor began
+  cycleSeconds: number;
+  phase: 'in' | 'out';
+  alpha: number;       // 1 = fully solid, 0 = fully phased out (drives render + collision)
+  firedOutAt?: number; // guard so the phase-out shockwave fires once per cycle
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

@@ -278,21 +278,29 @@ export function checkAndUpdateBallWonStates(
       continue;
     }
     if (ball.isBoss && (!areaGate || inArea)) {
-      game.bossDefeated = true;
-      game.bossHp = 0;
-      game.bossActive = false;
-      // Defeating the boss SHIPS it: pop any live minions so the board clears
-      // with the boss instead of leaving hotfixes bouncing after the win.
-      const defeatNow = performance.now();
-      for (const m of game.balls) {
-        if (m.id !== ball.id && m.state === 'active') {
-          m.state = 'won';
-          m.wonTime = defeatNow;
-          m.velocity = { x: 0, y: 0 };
-          m.speed = 0;
+      // Ship this boss ball. A PAIR (#64) is only defeated once BOTH balls are
+      // shipped, so a single trap can't end the map or pop its partner.
+      ball.bossShipped = true;
+      const bossBalls = game.balls.filter(b => b.isBoss);
+      const allShipped = bossBalls.every(b => b.bossShipped && (b.id === ball.id || b.state === 'won'));
+      if (allShipped && !game.bossDefeated) {
+        game.bossDefeated = true;
+        game.bossHp = 0;
+        game.bossActive = false;
+        // Defeating the boss SHIPS it: pop any live minions (and the just-locked
+        // partner) so the board clears with the boss instead of leaving hotfixes
+        // bouncing after the win.
+        const defeatNow = performance.now();
+        for (const m of game.balls) {
+          if (m.id !== ball.id && m.state === 'active') {
+            m.state = 'won';
+            m.wonTime = defeatNow;
+            m.velocity = { x: 0, y: 0 };
+            m.speed = 0;
+          }
         }
+        callbacks.onBossState?.(0, ball.bossMaxHp ?? 0, true);
       }
-      callbacks.onBossState?.(0, ball.bossMaxHp ?? 0, true);
     }
     // A target ball locked inside a Colored Area satisfies the win gate.
     if (areaGate && isAreaTarget && inArea) {

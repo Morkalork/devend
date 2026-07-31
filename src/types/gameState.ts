@@ -6,7 +6,7 @@
  */
 
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
-import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject, ChestLoot, AbilityFx } from "@/types/game";
+import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject, ChestLoot, AbilityFx, ChainState, PhasingObjectState } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
@@ -124,6 +124,12 @@ export interface CanvasGameState {
   bossMinionCount: number;
   /** Cron Job: performance.now() of the last auto-freeze (0 = clock not yet started this map). */
   lastAutoFreezeAt: number;
+
+  // ── Chains + phasing (issue #64) ─────────────────────────────────────────
+  /** Chains linking ball pairs (boss pair chain + yellow/purple gift chains). */
+  chains: ChainState[];
+  /** Phasing obstacles toggling solid<->intangible on a cycle. */
+  phasingObjects: PhasingObjectState[];
 
   // ── Layout ─────────────────────────────────────────────────────────────
   screenSize: { width: number; height: number };

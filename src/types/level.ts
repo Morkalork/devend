@@ -71,6 +71,15 @@ export interface WallEntity extends BaseEntity {
    * reward ids. Absent/empty = roll from the full default pool. See chests.ts.
    */
   chestRewards?: string[];
+  /**
+   * Phasing object (issue #64). When true the obstacle fades IN (solid) and OUT
+   * (intangible) on a repeating cycle. While phased out, balls and fences pass
+   * through it, and the phase-out emits a shockwave that flings any snagged /
+   * entangled balls free (the boss-20 chain release loop).
+   */
+  isPhasing?: boolean;
+  /** Seconds for one full in/out phasing cycle (default 10). */
+  phaseCycleSeconds?: number;
 }
 
 // Combined entity type with shape
@@ -310,6 +319,15 @@ export interface BossBall {
   spitIntervalSeconds?: number;
   /** Cap on total minions spit this map (default 4). */
   maxMinions?: number;
+  // ── Multi-boss + attacks (issue #64) ─────────────────────────────────────
+  /** How many boss balls spawn (default 1). 2 = an interlinked pair (L20/L35). */
+  count?: number;
+  /** Link the spawned boss balls together with a fence-breaking chain (a pair). */
+  chained?: boolean;
+  /** Periodic "wipe all player fences" attack: seconds between wipes (0 = never). */
+  fenceWipeSeconds?: number;
+  /** When true, spit minions are enlarged (radius x1.3) like the big-ball gift. */
+  spawnEnlargedMinions?: boolean;
 }
 
 // ── Procedural slots (issue #53) ─────────────────────────────────────────────
