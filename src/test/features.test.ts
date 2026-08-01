@@ -35,6 +35,12 @@ describe("feature catalogue (loaded from public/features.yml)", () => {
     expect(certificates!.unlockLevel).toBeUndefined();
   });
 
+  it("ships the panic Shockwave, tied to beating the first boss (clearing level 10)", () => {
+    const panic = getFeature("panicShockwave");
+    expect(panic).toBeDefined();
+    expect(panic!.unlockLevel).toBe(10);
+  });
+
   it("getFeature returns undefined for an unknown id", () => {
     expect(getFeature("does-not-exist")).toBeUndefined();
   });
@@ -53,6 +59,11 @@ describe("feature catalogue (loaded from public/features.yml)", () => {
 describe("featuresUnlockedAtLevel", () => {
   it("returns achievements exactly when clearing level 5", () => {
     expect(featuresUnlockedAtLevel(5).map(f => f.id)).toContain("achievements");
+  });
+
+  it("returns the panic Shockwave exactly when clearing level 10 (the first boss)", () => {
+    expect(featuresUnlockedAtLevel(10).map(f => f.id)).toContain("panicShockwave");
+    expect(featuresUnlockedAtLevel(9).map(f => f.id)).not.toContain("panicShockwave");
   });
 
   it("never returns event-unlocked features (certificates, loadouts) for any level", () => {

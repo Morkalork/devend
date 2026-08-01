@@ -1635,6 +1635,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // edits even before a run starts. handleStartGame reloads it per run.
   useEffect(() => { loadBallTypes(); loadAbilities(); }, []);
 
+  // Panic Button (features.yml 'panicShockwave', unlocked by beating the first
+  // boss at level 10): once unlocked, every map starts topped up to at least one
+  // free Shockwave charge - the game's "get the balls moving again" safety valve.
+  // Keyed on the level index so it re-tops each new map; idempotent and never
+  // lowers a bigger stack, so chest-earned charges are left untouched. Runs the
+  // moment the feature flips unlocked too (deps include isFeatureUnlocked).
+  useEffect(() => {
+    if (!isFeatureUnlocked('panicShockwave')) return;
+    setAbilityCharges(prev =>
+      (prev.shockwave ?? 0) >= 1 ? prev : { ...prev, shockwave: 1 },
+    );
+  }, [currentLevelIndex, isFeatureUnlocked, setAbilityCharges]);
+
   // Sync completed achievements into cert manager for achievement-locked certs
   useEffect(() => {
     if (completedAchievementIds.length > 0) {

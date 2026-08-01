@@ -185,6 +185,17 @@ describe("shockwave", () => {
     expect(Math.abs(b.velocity.x)).toBeLessThan(1);
     expect(Math.hypot(b.velocity.x, b.velocity.y)).toBeCloseTo(125, 3); // 100 x 1.25 boost
   });
+
+  it("re-energises a stalled ball to its baseSpeed instead of nudging its crawl", () => {
+    // A ball that has slowed to a crawl (speed 8) but whose baseSpeed is 200.
+    const b = movingBall("a", 450, 100, 0, -8); // above centre, crawling upward
+    b.baseSpeed = 200;
+    const game = { balls: [b], boardPolygon: BOARD_POLY } as unknown as CanvasGameState;
+    shockwavePush(game, 1.25);
+    // Floored at baseSpeed x boost (250), NOT 8 x 1.25 = 10 - this is the safety valve.
+    expect(Math.hypot(b.velocity.x, b.velocity.y)).toBeCloseTo(250, 3);
+    expect(b.velocity.y).toBeLessThan(0); // still blasted away from the centre
+  });
 });
 
 describe("fence overclock", () => {

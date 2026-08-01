@@ -1347,6 +1347,10 @@
     "loadouts": {
       "name": "Equipamientos",
       "body": "¡Completaste el juego! A partir de ahora, cada partida empieza con una selección de equipamiento: una maldición combinada con una bendición que define toda la partida. Gana con equipamientos distintos para desbloquear más."
+    },
+    "panicShockwave": {
+      "name": "Boton de panico",
+      "body": "Venciste al primer jefe! A partir de ahora, cada mapa empieza con una Onda de choque gratis. Uselo para dispersar las bolas y ponerlas en movimiento cuando se vuelvan muy lentas. Los cofres aun pueden darte mas."
     }
   },
   "hallOfFame": {

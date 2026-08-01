@@ -38,3 +38,12 @@ features:
   - id: loadouts
     icon: Backpack
     color: "#00ff88"
+
+  # Panic Shockwave: beating the first boss (completing level 10) grants a free
+  # Shockwave charge at the start of every map from then on, a safety valve to
+  # get the balls moving again when they slow to a crawl. Topped up to one each
+  # map (chest-earned charges stack on top), armed from the level-10 completion.
+  - id: panicShockwave
+    unlockLevel: 10
+    icon: Zap
+    color: "#ff9e6b"

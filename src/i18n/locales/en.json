@@ -814,6 +814,10 @@
     "loadouts": {
       "name": "Loadouts",
       "body": "You beat the game! From now on, every run starts with a loadout draft: a curse bundled with a blessing that shapes the whole run. Win with different loadouts to unlock more."
+    },
+    "panicShockwave": {
+      "name": "Panic Button",
+      "body": "You beat the first boss! From now on, every map starts with a free Shockwave. Fire it to blast the balls apart and get them moving again whenever they slow to a crawl. Chests can still grant more."
     }
   },
   "hallOfFame": {

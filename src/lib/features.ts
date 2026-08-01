@@ -65,6 +65,7 @@ function parseCatalogue(text: string): GameFeature[] {
 // loadouts still unlockable at the level-10 boss.
 const LAST_RESORT: GameFeature[] = [
   { id: "loadouts", unlockLevel: 10, icon: "Backpack", color: "#00ff88" },
+  { id: "panicShockwave", unlockLevel: 10, icon: "Zap", color: "#ff9e6b" },
 ];
 
 const bakedCatalogue = parseCatalogue(featuresYamlRaw);

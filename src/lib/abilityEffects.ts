@@ -185,14 +185,19 @@ const DEFAULT_SHOCKWAVE_BOOST = 1.25;
  * Shockwave: redirect every active ball straight AWAY from the board centre,
  * scattering a cluster and driving balls toward the edges, with a small outward
  * speed kick (`boost`) so the burst reads clearly. One-shot. Balls sitting on
- * the centre get a varied outward direction. `speed` never drops below the
- * ball's floor (the boost only ever speeds up).
+ * the centre get a varied outward direction.
+ *
+ * Crucially it also RE-ENERGISES a stalled ball: the outward speed is floored at
+ * the ball's baseSpeed (times the boost), so a ball that has slowed to a crawl
+ * is relaunched at full speed rather than nudged along at its dying pace. This
+ * is what makes Shockwave the game's "get the balls moving again" safety valve.
  */
 export function shockwavePush(game: CanvasGameState, boost = DEFAULT_SHOCKWAVE_BOOST): void {
   const c = boardCenter(game);
   game.balls.forEach((b, i) => {
     if (b.state !== "active") return;
-    const sp = (Math.hypot(b.velocity.x, b.velocity.y) || b.baseSpeed || 100) * Math.max(1, boost);
+    const cur = Math.hypot(b.velocity.x, b.velocity.y);
+    const sp = Math.max(cur, b.baseSpeed || 100) * Math.max(1, boost);
     let dx = b.position.x - c.x, dy = b.position.y - c.y;
     let d = Math.hypot(dx, dy);
     if (d < 1) {
