@@ -459,7 +459,7 @@ export function GameCanvas({
   const [canvasCssWidth, setCanvasCssWidth] = useState(0);
   const [canvasCssHeight, setCanvasCssHeight] = useState(0);
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
-  const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0 });
+  const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0, boardTopPct: 5 });
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
   // Feature Freeze tap-freezes left this map, mirrored from game.freezeUsesRemaining
   // for the HUD counter (updated on map init and on each freeze spent).
@@ -1034,6 +1034,9 @@ export function GameCanvas({
         boardWidth: Math.round(game.boardRect.width),
         boardHeight: Math.round(game.boardRect.height),
         scale: Math.round(game.boardRect.scale * 1000) / 1000,
+        // The board's top edge as a % of the container height (dpr cancels out).
+        // Top-anchored toasts use this to sit ABOVE the board, never over it.
+        boardTopPct: physH > 0 ? (game.boardRect.top / physH) * 100 : 5,
       });
       if (!gameInitializedRef.current) {
         gameInitializedRef.current = true;
@@ -1649,8 +1652,13 @@ export function GameCanvas({
         {beatBanner && (
           <div
             key={beatBanner.key}
-            className="absolute left-1/2 -translate-x-1/2 top-[13%] z-40 pointer-events-none animate-pulse whitespace-nowrap font-mono font-bold text-base sm:text-lg px-4 py-2 rounded-md flex items-center gap-2"
+            // Anchored just ABOVE the board's top edge (translateY(-100%)) so the
+            // toast sits in the gutter over the HUD, never covering the map. Kept
+            // compact (chest-toast sizing) so it fits the thin band above the board.
+            className="absolute left-1/2 z-40 pointer-events-none animate-pulse whitespace-nowrap font-mono font-bold text-sm sm:text-base px-3 py-1.5 rounded-md flex items-center gap-2"
             style={{
+              top: `${debugInfo.boardTopPct}%`,
+              transform: 'translate(-50%, calc(-100% - 4px))',
               color: '#ffcf7a',
               background: 'rgba(30,10,4,0.82)',
               border: '1px solid #ffb45499',
