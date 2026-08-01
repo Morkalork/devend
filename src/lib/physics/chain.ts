@@ -26,6 +26,14 @@ const DAMP = 0.98;          // verlet velocity damping
 const SNAG_FRICTION = 0.9;  // per-frame velocity kept by both balls while snagged
 const SOLID_ALPHA = 0.5;    // a phasing object below this alpha is intangible
 
+// Elastic tether tuning. The rope behaves like a spring past its rest length
+// rather than a rigid rod, so a wall bounce is absorbed over several frames
+// instead of snapping back as a sudden fling. A hard clamp only engages at the
+// extreme so constant-speed balls can't drift apart forever.
+const STRETCH_MAX = 1.5;    // hard limit as a multiple of restLength
+const SPRING_PULL = 0.18;   // fraction of the overshoot reeled in per step
+const SPEED_CAP = 1.05;     // chained balls run at most this * their natural top
+
 /** Build a chain linking two balls, its nodes seeded along the current gap. */
 export function makeChain(a: Ball, b: Ball, breaksFences: boolean, nodeCount = CHAIN_NODES): ChainState {
   const nodes: Vector2[] = [];
@@ -89,20 +97,70 @@ function dampBall(ball: Ball, f: number): void {
   ball.speed = Math.hypot(ball.velocity.x, ball.velocity.y);
 }
 
-/** Keep the two balls within the taut chain length (a distance joint). */
-function tether(a: Ball, b: Ball, maxLen: number): void {
+/**
+ * Redirect a ball's outward (chain-stretching) velocity into a tangential swing,
+ * conserving its speed. This is what stops the pair going static: a taut chain
+ * never *removes* speed, it turns it, so the two balls orbit each other like a
+ * bolas instead of being braked to a standstill. `ox,oy` is the outward unit
+ * (from the partner toward this ball); inward/tangential motion is left alone.
+ */
+function swing(ball: Ball, ox: number, oy: number): void {
+  const s = Math.hypot(ball.velocity.x, ball.velocity.y);
+  if (s < 1e-6) return;
+  const radial = ball.velocity.x * ox + ball.velocity.y * oy; // + = stretching
+  if (radial <= 0) return;                                    // slack side, leave it
+  // Tangent perpendicular to the chain, aligned with the ball's current swing.
+  let tx = -oy, ty = ox;
+  if (ball.velocity.x * tx + ball.velocity.y * ty < 0) { tx = -tx; ty = -ty; }
+  // Zeroing the radial part while conserving speed puts all of it into the swing.
+  ball.velocity.x = tx * s; ball.velocity.y = ty * s;
+  ball.speed = s;
+}
+
+/**
+ * Elastic tether. Past the rest length the rope reels the pair together by a
+ * fraction of the overshoot (a soft spring, not a rigid rod) and converts the
+ * stretching motion into a swing so neither ball loses speed. A hard clamp
+ * engages only at STRETCH_MAX so the pair can never separate past the chain.
+ */
+function tether(a: Ball, b: Ball, restLen: number): void {
   const dx = b.position.x - a.position.x, dy = b.position.y - a.position.y;
   const d = Math.hypot(dx, dy);
-  if (d <= maxLen || d < 1e-6) return;
-  const ux = dx / d, uy = dy / d;
-  const excess = d - maxLen;
-  a.position.x += ux * excess * 0.5; a.position.y += uy * excess * 0.5;
-  b.position.x -= ux * excess * 0.5; b.position.y -= uy * excess * 0.5;
-  // Cancel the separating part of each ball's velocity so it doesn't fight the joint.
-  const va = a.velocity.x * ux + a.velocity.y * uy; // a moving toward b is +
-  if (va < 0) { a.velocity.x -= ux * va; a.velocity.y -= uy * va; }
-  const vb = b.velocity.x * ux + b.velocity.y * uy; // b moving away from a is +
-  if (vb > 0) { b.velocity.x -= ux * vb; b.velocity.y -= uy * vb; }
+  if (d <= restLen || d < 1e-6) return;
+  const ux = dx / d, uy = dy / d; // unit A -> B
+
+  // Soft positional spring: reel in a fraction of the overshoot per step.
+  const pull = (d - restLen) * SPRING_PULL;
+  a.position.x += ux * pull * 0.5; a.position.y += uy * pull * 0.5;
+  b.position.x -= ux * pull * 0.5; b.position.y -= uy * pull * 0.5;
+
+  // Swing instead of brake: A's outward is -u (away from B), B's outward is +u.
+  swing(a, -ux, -uy);
+  swing(b, ux, uy);
+
+  // Hard safety limit: if still past the max stretch after the soft pull, clamp
+  // the remainder so the balls can't drift out of reach of each other.
+  const cur = Math.hypot(b.position.x - a.position.x, b.position.y - a.position.y);
+  const maxLen = restLen * STRETCH_MAX;
+  if (cur > maxLen) {
+    const nx = (b.position.x - a.position.x) / cur, ny = (b.position.y - a.position.y) / cur;
+    const excess = cur - maxLen;
+    a.position.x += nx * excess * 0.5; a.position.y += ny * excess * 0.5;
+    b.position.x -= nx * excess * 0.5; b.position.y -= ny * excess * 0.5;
+  }
+}
+
+/**
+ * Bleed a chained ball's speed back down to its natural top. The chain keeps the
+ * pair colliding, and the elastic swap in handleBallCollisions plus the
+ * minimum-speed floor pump energy in with no upper bound; this trims the excess
+ * so the pair can't run away. It never speeds a ball up.
+ */
+function capSpeed(ball: Ball): void {
+  const top = Math.max(ball.topSpeed || 0, ball.speedRange ? ball.speedRange[1] : 0) * SPEED_CAP;
+  if (top <= 0) return;
+  const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
+  if (cur > top) dampBall(ball, top / cur);
 }
 
 /** Boss chains: break any player fence a chain segment sweeps across. */
@@ -172,8 +230,9 @@ export function tickChains(game: CanvasGameState, dt: number, now: number): void
       for (let i = 1; i < n - 1; i++) if (pushOutOfSolids(ch.nodes[i], solids)) snagged = true;
     }
 
-    // 5. Tether the two balls, then apply snag friction.
+    // 5. Tether the two balls, cap runaway speed, then apply snag friction.
     tether(a, b, ch.restLength);
+    if (!pinned) { capSpeed(a); capSpeed(b); }
     if (snagged && !pinned) { dampBall(a, SNAG_FRICTION); dampBall(b, SNAG_FRICTION); }
 
     // 6. Boss chains sweep fences apart.

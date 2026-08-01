@@ -42,14 +42,52 @@ describe("makeChain", () => {
 });
 
 describe("tickChains tether", () => {
-  it("stops the two balls drifting farther apart than the chain length", () => {
+  it("never lets the two balls drift past the chain's max stretch", () => {
     const a = ball("a", 0, 0), b = ball("b", 100, 0);
     const ch = makeChain(a, b, false); // restLength ~125
     // Yank B well past the rest length.
     b.position = { x: 600, y: 0 };
     const g = game({ balls: [a, b], chains: [ch] });
     tickChains(g, 1 / 120, 0);
+    // The elastic tether allows some stretch but a hard clamp caps it (1.5x rest).
+    expect(dist(a, b)).toBeLessThanOrEqual(ch.restLength * 1.5 + 1);
+  });
+
+  it("elastically reels an over-stretched pair back toward the rest length", () => {
+    const a = ball("a", 0, 0), b = ball("b", 100, 0);
+    const ch = makeChain(a, b, false);
+    b.position = { x: 600, y: 0 };
+    const g = game({ balls: [a, b], chains: [ch] });
+    for (let i = 0; i < 60; i++) tickChains(g, 1 / 120, i * 10);
+    // The spring settles the gap back down to (near) the rest length over time.
     expect(dist(a, b)).toBeLessThanOrEqual(ch.restLength + 1);
+  });
+
+  it("redirects a pair pulling apart into a swing instead of braking them static", () => {
+    const a = ball("a", 0, 0), b = ball("b", 100, 0);
+    const ch = makeChain(a, b, false); // restLength ~125
+    // Taut, both balls driving straight apart along the chain axis.
+    a.velocity = { x: -100, y: 0 }; a.speed = 100;
+    b.position = { x: 200, y: 0 }; b.velocity = { x: 100, y: 0 }; b.speed = 100;
+    const g = game({ balls: [a, b], chains: [ch] });
+    tickChains(g, 1 / 120, 0);
+    // Neither ball is braked toward zero: each keeps (essentially) its full speed,
+    // just turned tangential to the chain.
+    expect(Math.hypot(a.velocity.x, a.velocity.y)).toBeCloseTo(100, 5);
+    expect(Math.hypot(b.velocity.x, b.velocity.y)).toBeCloseTo(100, 5);
+  });
+
+  it("does not let the chain pump a pair's speed above their natural top", () => {
+    // Two balls closing head-on repeatedly (the elastic swap + speed floor pump).
+    const a = ball("a", 0, 0), b = ball("b", 60, 0);
+    a.velocity = { x: 400, y: 0 }; a.speed = 400; // already over their 100 top
+    b.velocity = { x: -400, y: 0 }; b.speed = 400;
+    const ch = makeChain(a, b, false);
+    const g = game({ balls: [a, b], chains: [ch] });
+    tickChains(g, 1 / 120, 0);
+    // capSpeed trims each ball back toward its topSpeed (100), with small headroom.
+    expect(Math.hypot(a.velocity.x, a.velocity.y)).toBeLessThanOrEqual(100 * 1.05 + 1e-6);
+    expect(Math.hypot(b.velocity.x, b.velocity.y)).toBeLessThanOrEqual(100 * 1.05 + 1e-6);
   });
 
   it("drops the chain once a ball is locked away", () => {
