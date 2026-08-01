@@ -7,6 +7,9 @@ levels:
     variety: 0
     maxBalls: 1
     entities: []
+  # PILOT REDESIGN (LEVELDESIGN.md): "Split Shift" - two server racks joined by a
+  # single central aisle (neck). Topology (C1): pinch the aisle to trap a ball in
+  # a rack. Still the teaching band, so no greed hook / Turn yet.
   - id: level-2
     level: 2
     sizeThreshold: 30
@@ -15,42 +18,46 @@ levels:
     variety: 3
     maxBalls: 2
     entities:
-      - id: bite-tl
+      - id: divider-top
         kind: wall
         shape: rect
-        x: -41
-        'y': -41
-        width: 500
-        height: 180
-      - id: bite-b
+        x: 440
+        'y': -20
+        width: 20
+        height: 410
+      - id: divider-bottom
         kind: wall
         shape: rect
-        x: 350
-        'y': 720
-        width: 200
-        height: 180
+        x: 440
+        'y': 510
+        width: 20
+        height: 410
+  # Sibling of Split Shift, rotated: the aisle runs horizontally instead.
   - id: level-2b
     level: 2
-    sizeThreshold: 40
+    sizeThreshold: 30
     expectedCuts: 4
     points: 20
     variety: 3
     maxBalls: 2
     entities:
-      - id: bite-r
-        kind: wall
-        shape: rect
-        x: 760
-        'y': -20
-        width: 160
-        height: 520
-      - id: bite-bl
+      - id: divider-left
         kind: wall
         shape: rect
         x: -20
-        'y': 700
-        width: 420
-        height: 220
+        'y': 440
+        width: 410
+        height: 20
+      - id: divider-right
+        kind: wall
+        shape: rect
+        x: 510
+        'y': 440
+        width: 410
+        height: 20
+  # PILOT REDESIGN: "Corner Office" - a central block carves four rooms; one tight
+  # top-right pocket is a 2x lock zone (C2, the greed hook). Seal a ball there for
+  # double (a snug, risky cut) or bank the safe rooms.
   - id: level-3
     level: 3
     sizeThreshold: 35
@@ -58,67 +65,143 @@ levels:
     points: 20
     variety: 5
     maxBalls: 2
+    lockZones:
+      - x: 670
+        'y': 60
+        width: 170
+        height: 170
+        multiplier: 2
     entities:
-      - id: pillar
+      - id: core
         kind: wall
         shape: rect
-        x: 350
-        'y': 350
-        width: 200
-        height: 200
+        x: 340
+        'y': 340
+        width: 220
+        height: 220
+  # Sibling of Corner Office: round core, the 2x pocket in the top-left instead.
   - id: level-3b
     level: 3
-    sizeThreshold: 30
+    sizeThreshold: 35
     expectedCuts: 4
     points: 20
     variety: 5
     maxBalls: 2
+    lockZones:
+      - x: 60
+        'y': 60
+        width: 170
+        height: 170
+        multiplier: 2
     entities:
-      - id: pillar
+      - id: core
         kind: wall
         shape: circle
         cx: 450
         cy: 450
-        radius: 176
+        radius: 150
+  # PILOT REDESIGN: "Bonus Pool" - all three conventions. A sweeper patrols the
+  # upper lane (C1 timing); a chest sits below it, so grabbing the bonus costs a
+  # cut across the lane (C2 greed hook). THE TURN (C3): at 45% space remaining the
+  # balls surge 20%, telegraphed, so the endgame plays differently from the open.
   - id: level-4
     level: 4
     sizeThreshold: 30
-    expectedCuts: 4
+    expectedCuts: 5
     points: 20
     variety: 0
     randomShapes: 10
     maxBalls: 2
+    beats:
+      - id: surge
+        atSpaceRemaining: 45
+        speedSpike: 0.2
+        announce: game.beatCrunchTime
     entities:
+      - id: post-left
+        kind: wall
+        shape: rect
+        x: 210
+        'y': 560
+        width: 26
+        height: 180
+      - id: post-right
+        kind: wall
+        shape: rect
+        x: 664
+        'y': 560
+        width: 26
+        height: 180
       - id: sweeper
         kind: mover
         shape: circle
         cx: 450
-        cy: 450
+        cy: 280
         radius: 45
         axis: horizontal
-        range: 520
-        speed: 110
+        range: 500
+        speed: 120
         phase: 0.5
+      - id: chest-4
+        kind: wall
+        shape: rect
+        x: 422
+        'y': 430
+        width: 56
+        height: 56
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+  # Sibling of Bonus Pool: the sweeper runs vertically, chest off to the side.
   - id: level-4b
     level: 4
     sizeThreshold: 30
-    expectedCuts: 4
+    expectedCuts: 5
     points: 20
     variety: 0
     randomShapes: 10
     maxBalls: 2
+    beats:
+      - id: surge
+        atSpaceRemaining: 45
+        speedSpike: 0.2
+        announce: game.beatCrunchTime
     entities:
+      - id: post-top
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 210
+        width: 180
+        height: 26
+      - id: post-bottom
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 664
+        width: 180
+        height: 26
       - id: sweeper
         kind: mover
         shape: rect
-        x: 410
+        x: 620
         'y': 390
         width: 80
         height: 120
         axis: vertical
         range: 460
-        speed: 100
+        speed: 110
         phase: 0.5
+      - id: chest-4b
+        kind: wall
+        shape: rect
+        x: 250
+        'y': 422
+        width: 56
+        height: 56
+        chest: true
+        breakable: true
+        hitsToBreak: 2
   - id: level-5
     level: 5
     sizeThreshold: 30
