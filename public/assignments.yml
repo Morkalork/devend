@@ -43,9 +43,9 @@ assignments:
       text: Lock balls across the next 5 maps.
       track: { mode: cumulative, kind: lockCount }
       tiers:
-        - { threshold: 12, label: "+2 lives", reward: { type: lives, count: 2 } }
-        - { threshold: 20, label: "+3 lives", reward: { type: lives, count: 3 } }
-    clarify: A gentle, always-on speed tax for a payout that scales with how many balls you seal over the block. Locking two or three a map clears the first tier comfortably; a heavier block banks a third life.
+        - { threshold: 12, label: "+25 overtime", reward: { type: overtime, hours: 25 } }
+        - { threshold: 20, label: "+40 overtime", reward: { type: overtime, hours: 40 } }
+    clarify: A gentle, always-on speed tax for a payout that scales with how many balls you seal over the block. Locking two or three a map clears the first tier comfortably; a heavier block banks a bigger overtime bonus.
 
   - id: daily_standup
     name: Daily Standup
@@ -57,9 +57,9 @@ assignments:
       text: Lock at least 2 balls in each of the next 5 maps.
       track: { mode: everyMap, kind: lockCount, params: { count: 2 } }
       tiers:
-        - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 3, label: "+25 overtime", reward: { type: overtime, hours: 25 } }
         - { threshold: 5, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-    clarify: Consistency over volume. A map counts once you lock two balls in it; hit that in three of five maps for a pair of lives, all five for a free Senior upgrade.
+    clarify: Consistency over volume. A map counts once you lock two balls in it; hit that in three of five maps for an overtime bonus, all five for a free Senior upgrade.
 
   - id: precision_review
     name: Precision Review
@@ -71,7 +71,7 @@ assignments:
       text: Land superior locks across the next 5 maps.
       track: { mode: cumulative, kind: superiorLocks }
       tiers:
-        - { threshold: 4, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 4, label: "+25 overtime", reward: { type: overtime, hours: 25 } }
         - { threshold: 8, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
     clarify: Rewards tight-pocket locks. Slower fences make snug pockets harder to seal, which is the point. Land eight superior locks over the block for a free Senior upgrade.
 
@@ -85,9 +85,9 @@ assignments:
       text: Clear at or under par cuts in each of the next 5 maps.
       track: { mode: everyMap, kind: underPar, params: { delta: 0 } }
       tiers:
-        - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
-        - { threshold: 5, label: "+3 lives", reward: { type: lives, count: 3 } }
-    clarify: Efficient cutting only. A map counts when you finish at or under its par. The overtime cut stings now; clean play across the block pays it back in lives.
+        - { threshold: 3, label: "+25 overtime", reward: { type: overtime, hours: 25 } }
+        - { threshold: 5, label: "+45 overtime", reward: { type: overtime, hours: 45 } }
+    clarify: Efficient cutting only. A map counts when you finish at or under its par. The overtime cut stings now; clean play across the block pays it back and then some.
 
   - id: sprint_review
     name: Sprint Review
@@ -99,7 +99,7 @@ assignments:
       text: Clear each of the next 5 maps within 40 seconds.
       track: { mode: everyMap, kind: speedClear, params: { seconds: 40 } }
       tiers:
-        - { threshold: 3, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 3, label: "+30 overtime", reward: { type: overtime, hours: 30 } }
         - { threshold: 5, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
     clarify: Built for fast, instinctive cutters. Balls surge from the first second, so there is no calm window. Clear inside 40 active seconds; sweep all five maps for a free Principal upgrade.
 
@@ -113,9 +113,9 @@ assignments:
       text: Land superior locks across the next 5 maps.
       track: { mode: cumulative, kind: superiorLocks }
       tiers:
-        - { threshold: 5, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 5, label: "+30 overtime", reward: { type: overtime, hours: 30 } }
         - { threshold: 10, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
-    clarify: A deeper superior-lock grind under a heavier fence tax. Five superior locks bank a pair of lives; ten over the block earns a free Principal upgrade.
+    clarify: A deeper superior-lock grind under a heavier fence tax. Five superior locks bank an overtime bonus; ten over the block earns a free Principal upgrade.
 
   - id: lockdown_protocol
     name: Lockdown Protocol
@@ -141,7 +141,7 @@ assignments:
       text: Lock balls across the next 5 maps.
       track: { mode: cumulative, kind: lockCount }
       tiers:
-        - { threshold: 20, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 20, label: "+30 overtime", reward: { type: overtime, hours: 30 } }
         - { threshold: 30, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
         - { threshold: 40, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
-    clarify: A pure volume grind with no push safety net. Three tiers, so you rarely walk away empty. A couple of lives, then a free Senior upgrade, then a Principal for a heavy 40-lock block.
+    clarify: A pure volume grind with no push safety net. Three tiers, so you rarely walk away empty. An overtime bonus, then a free Senior upgrade, then a Principal for a heavy 40-lock block.

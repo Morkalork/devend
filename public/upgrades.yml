@@ -372,24 +372,24 @@ upgrades:
   - id: fault_tolerance_senior
     name: Fault Tolerance
     tier: Senior
-    description: Gain 2 extra lives.
+    description: Gain 1 more extra life.
     unlockLevel: 10
     prerequisites:
       - fault_tolerance_junior
     tags: [safety]
     modifiers:
-      extraLives: 2
+      extraLives: 1
 
   - id: fault_tolerance_architect
     name: Fault Tolerance
     tier: Architect
-    description: Gain 3 extra lives.
+    description: Gain 1 more extra life.
     unlockLevel: 15
     prerequisites:
       - fault_tolerance_senior
     tags: [safety]
     modifiers:
-      extraLives: 3
+      extraLives: 1
 
 
   # ===============================
@@ -954,58 +954,58 @@ upgrades:
 
 
   # ===============================
-  # DEFENSIVE PROGRAMMING (Lives + Ball Size)
+  # DEFENSIVE PROGRAMMING (Ball Size)
   # ===============================
+  # Lives are deliberately NOT sold here: Fault Tolerance is the one life line,
+  # so this is the pure shrink-the-balls defence (a different kind of safety).
 
   - id: defensive_programming_junior
     name: Defensive Programming
     tier: Junior
-    description: Gain 1 extra life and shrink all balls by 8%. Safety first.
+    description: Shrink all balls by 8%. Safety first.
     unlockLevel: 5
     icon: shield
     tags: [safety]
     modifiers:
-      extraLives: 1
       ballSizeMultiplier: 0.92
 
   - id: defensive_programming_senior
     name: Defensive Programming
     tier: Senior
-    description: Gain 2 more extra lives and shrink all balls by an additional 8%.
+    description: Shrink all balls by an additional 8%.
     unlockLevel: 10
     prerequisites:
       - defensive_programming_junior
     tags: [safety]
     modifiers:
-      extraLives: 2
       ballSizeMultiplier: 0.92
 
   - id: defensive_programming_principal
     name: Defensive Programming
     tier: Principal
-    description: Gain 3 more extra lives and shrink all balls by an additional 8%.
+    description: Shrink all balls by an additional 8%.
     unlockLevel: 20
     prerequisites:
       - defensive_programming_senior
     tags: [safety]
     modifiers:
-      extraLives: 3
       ballSizeMultiplier: 0.92
 
-  # Architect is a CHOICE (choiceGroup, +50% cost) that splits the line's
-  # bundled lives+shrink into a build identity: soak the hits (Bunker) or dodge
-  # them (Nanobots). Buy ONE; owning one locks out the other. Existing modifiers.
+  # Architect is a CHOICE (choiceGroup, +50% cost) that splits the line into a
+  # build identity: soak the hits (Bunker: a per-map shield that eats one ball
+  # strike, no life spent) or dodge them (Nanobots: more shrink). Buy ONE;
+  # owning one locks out the other.
   - id: defensive_programming_architect_a
     name: Defensive Programming
     tier: Architect
-    description: "Bunker: gain 3 more extra lives, with no further shrink. Built to soak the hits."
+    description: "Bunker: each map starts with a shield that absorbs one ball hit for free. Built to soak the hits."
     unlockLevel: 25
     prerequisites:
       - defensive_programming_principal
     choiceGroup: defensive_programming_architect
     tags: [safety]
     modifiers:
-      extraLives: 3
+      wallShieldsPerMap: 1
 
   - id: defensive_programming_architect_b
     name: Defensive Programming

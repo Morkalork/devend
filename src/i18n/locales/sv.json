@@ -847,11 +847,11 @@
       },
       "fault_tolerance_senior": {
         "name": "Feltolerans",
-        "description": "Få 2 extra liv."
+        "description": "Få 1 extra liv till."
       },
       "fault_tolerance_architect": {
         "name": "Feltolerans",
-        "description": "Få 3 extra liv."
+        "description": "Få 1 extra liv till."
       },
       "performance_bonus_junior": {
         "name": "Prestationsbonus",
@@ -959,15 +959,15 @@
       },
       "defensive_programming_junior": {
         "name": "Defensiv programmering",
-        "description": "Få 1 extra liv och krymp alla bollar med 8%. Säkerheten först."
+        "description": "Krymp alla bollar med 8%. Säkerheten först."
       },
       "defensive_programming_senior": {
         "name": "Defensiv programmering",
-        "description": "Få 2 extra liv till och krymp alla bollar med ytterligare 8%."
+        "description": "Krymp alla bollar med ytterligare 8%."
       },
       "defensive_programming_principal": {
         "name": "Defensiv programmering",
-        "description": "Få 3 extra liv till och krymp alla bollar med ytterligare 8%."
+        "description": "Krymp alla bollar med ytterligare 8%."
       },
       "defensive_programming_ascension_junior": {
         "name": "Defensiv programmering",

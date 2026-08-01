@@ -847,11 +847,11 @@
       },
       "fault_tolerance_senior": {
         "name": "Tolerancia a Fallos",
-        "description": "Obtén 2 vidas extra."
+        "description": "Obtén 1 vida extra más."
       },
       "fault_tolerance_architect": {
         "name": "Tolerancia a Fallos",
-        "description": "Obtén 3 vidas extra."
+        "description": "Obtén 1 vida extra más."
       },
       "performance_bonus_junior": {
         "name": "Bonificación por Rendimiento",
@@ -983,15 +983,15 @@
       },
       "defensive_programming_junior": {
         "name": "Programación Defensiva",
-        "description": "Gana 1 vida extra y reduce todas las bolas un 8%. La seguridad primero."
+        "description": "Reduce todas las bolas un 8%. La seguridad primero."
       },
       "defensive_programming_senior": {
         "name": "Programación Defensiva",
-        "description": "Gana 2 vidas extra más y reduce todas las bolas un 8% adicional."
+        "description": "Reduce todas las bolas un 8% adicional."
       },
       "defensive_programming_principal": {
         "name": "Programación Defensiva",
-        "description": "Gana 3 vidas extra más y reduce todas las bolas un 8% adicional."
+        "description": "Reduce todas las bolas un 8% adicional."
       },
       "defensive_programming_ascension_junior": {
         "name": "Programación Defensiva",

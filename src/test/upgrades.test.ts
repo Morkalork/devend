@@ -336,11 +336,13 @@ describe("choice-group forks (mutually-exclusive tiers)", () => {
     expect(opts).toBeDefined();
     const bunker = opts!.find(o => o.id.endsWith("_a"))!;
     const nanobots = opts!.find(o => o.id.endsWith("_b"))!;
-    // Bunker buys lives, leaves ball size alone.
-    expect(bunker.modifiers.extraLives).toBeGreaterThan(0);
+    // Bunker soaks a hit each map (a per-map shield), leaves ball size alone.
+    // Lives were decoupled from this line: Fault Tolerance is the one life line.
+    expect(bunker.modifiers.wallShieldsPerMap).toBeGreaterThan(0);
     expect(bunker.modifiers.ballSizeMultiplier ?? 1).toBe(1);
-    // Nanobots buys shrink, leaves lives alone.
+    expect(bunker.modifiers.extraLives ?? 0).toBe(0);
+    // Nanobots buys shrink, no shield.
     expect(nanobots.modifiers.ballSizeMultiplier).toBeLessThan(1);
-    expect(nanobots.modifiers.extraLives ?? 0).toBe(0);
+    expect(nanobots.modifiers.wallShieldsPerMap ?? 0).toBe(0);
   });
 });
