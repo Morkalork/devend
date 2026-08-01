@@ -55,14 +55,27 @@ export function getPerformanceMultiplier(
 }
 
 /**
- * Calculate under-par bonus: +1h if under par, 0 otherwise.
+ * Under-par bonus: a config-driven ladder that pays more overtime the further
+ * you beat par (mirrors calculateSpaceBonus). `fenceEfficiency.steps` is an
+ * ascending ladder of `{ fencesUnder, bonus }` rungs; we award the highest rung
+ * whose `fencesUnder` floor is met, clamped to `maxBonus`. A single-rung config
+ * ({ fencesUnder: 1, bonus: 1 }) reproduces the legacy binary +1h. This only
+ * bites once par is set to a map's real solve count, so efficient cutting is a
+ * genuine skill payoff rather than a freebie everyone collects.
  */
 export function calculateUnderParBonus(
   usedFences: number,
   parFences: number,
-  _config: ScoringConfig
+  config: ScoringConfig
 ): number {
-  return usedFences < parFences ? 1 : 0;
+  const fencesUnder = parFences - usedFences;
+  if (fencesUnder <= 0) return 0;
+  const { maxBonus, steps } = config.scoring.fenceEfficiency;
+  let bonus = 0;
+  for (const step of steps) {
+    if (fencesUnder >= step.fencesUnder) bonus = Math.max(bonus, step.bonus);
+  }
+  return Math.min(bonus, maxBonus);
 }
 
 /**
@@ -237,8 +250,12 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     },
     highscoreBonusMultiplier: 1.25,
     fenceEfficiency: {
-      maxBonus: 1,
-      steps: [{ fencesUnder: 1, bonus: 1 }],
+      maxBonus: 4,
+      steps: [
+        { fencesUnder: 1, bonus: 1 },
+        { fencesUnder: 2, bonus: 2 },
+        { fencesUnder: 4, bonus: 4 },
+      ],
     },
     spaceOptimization: {
       maxBonus: 3,
@@ -259,9 +276,9 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
     performanceMultiplier: {
       underPar: 1.0,
       atPar: 1.0,
-      overPar1: 0.75,
-      overPar2: 0.6,
-      overPar3Plus: 0.4,
+      overPar1: 0.6,
+      overPar2: 0.4,
+      overPar3Plus: 0.2,
     },
   },
 };

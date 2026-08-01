@@ -41,12 +41,20 @@ scoring:
   highscoreBonusMultiplier: 1.25
 
   # Under-Par Bonus
-  # +1h if any fences under par
+  # Under-Par Bonus (efficiency ladder)
+  # Pays more overtime the further you beat par: +1h at 1 under, +2h at 2 under,
+  # +4h at 4+ under. Only meaningful now that par is set to a map's real solve
+  # count (see LEVELDESIGN.md / expectedCuts), so tight, efficient cutting is a
+  # real skill payoff instead of the old flat +1h everyone collected.
   fenceEfficiency:
-    maxBonus: 1
+    maxBonus: 4
     steps:
       - fencesUnder: 1
         bonus: 1
+      - fencesUnder: 2
+        bonus: 2
+      - fencesUnder: 4
+        bonus: 4
 
   # Space Optimization Bonus
   # Ascending ladder: the more you clear past the level's requirement, the more
@@ -87,10 +95,12 @@ scoring:
         percent: 10
 
   # Performance Multiplier
-  # Scales base points based on fences vs par
+  # Scales base points based on fences vs par. Now that par is set to a map's
+  # real solve count, going over means you were genuinely inefficient, so the
+  # penalty bites harder than before (was 0.75 / 0.6 / 0.4).
   performanceMultiplier:
     underPar: 1.0     # At or under par: full base
     atPar: 1.0        # At par: full base
-    overPar1: 0.75    # 1 over par
-    overPar2: 0.6     # 2 over par
-    overPar3Plus: 0.4  # 3+ over par: also disables space bonus
+    overPar1: 0.6     # 1 over par
+    overPar2: 0.4     # 2 over par
+    overPar3Plus: 0.2  # 3+ over par: also disables space bonus

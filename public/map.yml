@@ -430,7 +430,7 @@ levels:
   - id: level-11
     level: 11
     sizeThreshold: 10
-    expectedCuts: 12
+    expectedCuts: 5
     points: 20
     variety: 18
     maxBalls: 4
@@ -461,7 +461,7 @@ levels:
   - id: level-12
     level: 12
     sizeThreshold: 10
-    expectedCuts: 10
+    expectedCuts: 6
     points: 20
     variety: 20
     maxBalls: 3
@@ -511,7 +511,7 @@ levels:
   - id: level-13
     level: 13
     sizeThreshold: 8
-    expectedCuts: 14
+    expectedCuts: 7
     points: 20
     variety: 25
     maxBalls: 4
@@ -560,7 +560,7 @@ levels:
   - id: level-14
     level: 14
     sizeThreshold: 8
-    expectedCuts: 14
+    expectedCuts: 7
     points: 20
     variety: 25
     maxBalls: 4
@@ -604,7 +604,7 @@ levels:
   - id: level-15
     level: 15
     sizeThreshold: 5
-    expectedCuts: 19
+    expectedCuts: 8
     points: 20
     variety: 30
     maxBalls: 4
@@ -642,7 +642,7 @@ levels:
   - id: level-16
     level: 16
     sizeThreshold: 7
-    expectedCuts: 16
+    expectedCuts: 7
     points: 20
     variety: 28
     maxBalls: 4
@@ -676,7 +676,7 @@ levels:
   - id: level-17
     level: 17
     sizeThreshold: 7
-    expectedCuts: 17
+    expectedCuts: 8
     points: 20
     variety: 30
     maxBalls: 4
@@ -714,7 +714,7 @@ levels:
   - id: level-18
     level: 18
     sizeThreshold: 6
-    expectedCuts: 18
+    expectedCuts: 8
     points: 20
     variety: 30
     maxBalls: 4
@@ -754,7 +754,7 @@ levels:
   - id: level-19
     level: 19
     sizeThreshold: 5
-    expectedCuts: 19
+    expectedCuts: 9
     points: 20
     variety: 35
     threadLockRequired: 1
@@ -1147,7 +1147,7 @@ levels:
   - id: level-28
     level: 28
     sizeThreshold: 10
-    expectedCuts: 10
+    expectedCuts: 6
     points: 20
     variety: 0
     randomShapes: 0
@@ -1184,7 +1184,7 @@ levels:
   - id: level-29
     level: 29
     sizeThreshold: 9
-    expectedCuts: 12
+    expectedCuts: 7
     points: 20
     variety: 0
     randomShapes: 0

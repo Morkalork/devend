@@ -3,6 +3,8 @@ import {
   calculateScore,
   calculateSpaceBonus,
   calculateShipEarlyPercent,
+  calculateUnderParBonus,
+  getPerformanceMultiplier,
   getOvertimeCap,
   DEFAULT_SCORING_CONFIG,
 } from "@/lib/scoring";
@@ -124,6 +126,34 @@ describe("space bonus ladder rewards clearing more", () => {
     const big = calculateSpaceBonus(REQ * 1.55, REQ, 3, cfg);
     expect(big.bonus).toBe(0);
     expect(big.bonusRaw).toBe(3);
+  });
+});
+
+describe("par bites: under-par ladder + steeper over-par penalty", () => {
+  const cfg = DEFAULT_SCORING_CONFIG;
+
+  it("pays nothing at or over par", () => {
+    expect(calculateUnderParBonus(5, 5, cfg)).toBe(0);
+    expect(calculateUnderParBonus(6, 5, cfg)).toBe(0);
+  });
+
+  it("climbs the ladder the further you beat par", () => {
+    expect(calculateUnderParBonus(4, 5, cfg)).toBe(1); // 1 under
+    expect(calculateUnderParBonus(3, 5, cfg)).toBe(2); // 2 under
+    expect(calculateUnderParBonus(1, 5, cfg)).toBe(4); // 4 under
+  });
+
+  it("clamps the under-par bonus to maxBonus", () => {
+    expect(calculateUnderParBonus(0, 20, cfg)).toBe(cfg.scoring.fenceEfficiency.maxBonus);
+  });
+
+  it("penalises the base harder for each fence over par", () => {
+    const mult = (used: number) => getPerformanceMultiplier(used, 5, cfg).multiplier;
+    expect(mult(5)).toBe(1.0); // at par
+    expect(mult(4)).toBe(1.0); // under par: full base (the bonus, not the multiplier, rewards it)
+    expect(mult(6)).toBe(0.6); // 1 over
+    expect(mult(7)).toBe(0.4); // 2 over
+    expect(mult(9)).toBe(0.2); // 3+ over
   });
 });
 
