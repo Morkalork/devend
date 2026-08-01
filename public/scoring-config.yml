@@ -25,9 +25,11 @@ scoring:
   # lock.win_threshold_percent, so upgrades that widen the lock threshold do
   # not also widen this). Superior locks pay lockValue x superiorMultiplier
   # per lock-multiplier point; a sliver-floor lock (min_region_cells) always
-  # grades superior. The sloppy-vs-tight gap is the skill economy: on map 1 a
-  # sloppy red lock (20 + 12 = 32h) cannot buy a Junior (40h), a superior one
-  # (20 + 24 = 44h) can.
+  # grades superior. The sloppy-vs-tight gap is the skill economy: a sloppy red
+  # lock pays 20 + 12 = 32h, a superior one 20 + 24 = 44h. The three level-1
+  # "first hire" Juniors are discounted to 30h (upgrades.yml) so a sloppy lock
+  # already opens the store on map 1; the gap still gates the formula-priced
+  # 40h+ hires on later maps.
   lockQuality:
     superiorThresholdFraction: 0.4
     superiorMultiplier: 2.0

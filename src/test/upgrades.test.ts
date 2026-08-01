@@ -215,7 +215,7 @@ describe("lock-centric economy", () => {
   ) as { scoring: { lockValue: number; lockQuality: { superiorThresholdFraction: number; superiorMultiplier: number }; spaceOptimization: { maxBonus: number }; shipEarly: { maxPercent: number } } };
   const scoring = scoringDoc.scoring;
 
-  it("a flawless no-lock clear cannot afford the cheapest upgrade", () => {
+  it("a flawless no-lock clear cannot afford the cheapest FORMULA-PRICED upgrade", () => {
     const flatBase = [...levelPoints.values()][0];
     // Every non-lock hour a perfect clear can scrape together: flat base,
     // under-par (+1), the full space ladder, and a generous push-your-luck
@@ -224,10 +224,15 @@ describe("lock-centric economy", () => {
     const PUSH_ALLOWANCE = 4;
     const preShip = flatBase + 1 + scoring.spaceOptimization.maxBonus + PUSH_ALLOWANCE;
     const bestNoLockIncome = preShip + Math.round(preShip * scoring.shipEarly.maxPercent / 100);
-    const cheapest = Math.min(
-      ...upgrades.filter(u => !u.ascensionOnly).map(u => effectiveCost(u) ?? Infinity),
+    // The guardrail is on the lock-priced economy proper. The three level-1
+    // "first hire" Juniors carry an explicit discounted cost as a deliberate
+    // on-ramp (a great clear, lock or not, can grab one); they're excluded here.
+    const cheapestFormula = Math.min(
+      ...upgrades
+        .filter(u => !u.ascensionOnly && typeof u.cost !== "number")
+        .map(u => effectiveCost(u) ?? Infinity),
     );
-    expect(bestNoLockIncome).toBeLessThan(cheapest);
+    expect(bestNoLockIncome).toBeLessThan(cheapestFormula);
   });
 
   it("locking pays enough to matter: one plain lock covers most of the base", () => {
@@ -235,18 +240,31 @@ describe("lock-centric economy", () => {
     expect(scoring.lockValue).toBeGreaterThanOrEqual(flatBase / 2);
   });
 
-  // The map-1 teaching beat: your first great play buys your first hire. A
-  // sloppy (roomy-pocket) x1 lock plus the flat base must stay short of the
-  // cheapest upgrade, while a SUPERIOR (tight-pocket) lock closes the gap.
-  it("map 1: a sloppy lock cannot buy the cheapest upgrade, a superior lock can", () => {
+  // The map-1 teaching beat: a single normal lock opens the store. A sloppy
+  // (roomy-pocket) x1 lock plus the flat base must afford a discounted level-1
+  // "first hire", while the FORMULA-priced Juniors still need a SUPERIOR lock -
+  // so the sloppy-vs-tight skill gap persists for the economy proper.
+  it("map 1: a normal lock buys a discounted first-hire; formula Juniors still need a superior lock", () => {
     const flatBase = [...levelPoints.values()][0];
-    const cheapest = Math.min(
-      ...upgrades.filter(u => !u.ascensionOnly).map(u => effectiveCost(u) ?? Infinity),
-    );
     const sloppyClear = flatBase + scoring.lockValue;
     const superiorClear = flatBase + Math.round(scoring.lockValue * scoring.lockQuality.superiorMultiplier);
-    expect(sloppyClear).toBeLessThan(cheapest);
-    expect(superiorClear).toBeGreaterThanOrEqual(cheapest);
+
+    // The discounted on-ramp: cheapest explicit-cost Junior unlocking at level 1.
+    const cheapestFirstHire = Math.min(
+      ...upgrades
+        .filter(u => !u.ascensionOnly && typeof u.cost === "number" && (u.unlockLevel ?? 1) === 1)
+        .map(u => u.cost as number),
+    );
+    expect(sloppyClear).toBeGreaterThanOrEqual(cheapestFirstHire);
+
+    // The lock-priced economy still gates on quality.
+    const cheapestFormula = Math.min(
+      ...upgrades
+        .filter(u => !u.ascensionOnly && typeof u.cost !== "number")
+        .map(u => effectiveCost(u) ?? Infinity),
+    );
+    expect(sloppyClear).toBeLessThan(cheapestFormula);
+    expect(superiorClear).toBeGreaterThanOrEqual(cheapestFormula);
   });
 
   it("superior-lock tuning is sane: a real bar and a real payoff", () => {
