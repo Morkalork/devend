@@ -18,7 +18,8 @@ import { mutatorSpeedFactor } from "@/lib/mapMutators";
 import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
 import { tickChains } from "@/lib/physics/chain";
-import { tickPhasing } from "@/lib/physics/phasing";
+import { tickPhasing, collectPhasedOut } from "@/lib/physics/phasing";
+import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
 import { updatePickups } from "@/lib/pickups";
@@ -286,6 +287,12 @@ export function createGameLoop(
       }
     }
 
+    // Rebuild the wall spatial index once per frame. `game.walls` is immutable
+    // across this frame's substeps (movers carry their own polygons; fences
+    // only commit/break at frame boundaries), so one build serves every
+    // substep and every ball. Cheap and reuses its buffers frame to frame.
+    game.wallGrid = rebuildWallGrid(game.wallGrid ?? null, game.walls, game.boardPolygon);
+
     let _physSteps = 0;
     const _physStart = performance.now();
     while (game.accumulator >= PHYSICS_STEP) {
@@ -332,6 +339,9 @@ export function createGameLoop(
       // the phased-out collision skips this step read the current phase.
       tickPhasing(game, game.activePlaySeconds);
 
+      // Intangible phased-out obstacles are identical for every ball this step,
+      // so compute the set once here instead of per ball inside updateBall.
+      const phasedOut = collectPhasedOut(game);
       for (const ball of game.balls) {
         // WON balls keep full physics but visually disintegrate
         if (ball.state === 'won') {
@@ -356,7 +366,7 @@ export function createGameLoop(
         // Feature Freeze: tap-frozen balls hold position until their timer ends.
         if (ball.frozenUntil && performance.now() < ball.frozenUntil) continue;
 
-        updateBall(ball, PHYSICS_STEP, game);
+        updateBall(ball, PHYSICS_STEP, game, phasedOut);
       }
       handleBallCollisions(game);
       // Chains (#64): solve the verlet rope AFTER ball physics so it reads the

@@ -36,6 +36,14 @@ import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage } from "@/lib/physics/destructibles";
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
 import { collectPhasedOut } from "@/lib/physics/phasing";
+import { queryWallsNear } from "@/lib/physics/wallGrid";
+
+/** Slack added to the wall-index query radius (world units). Comfortably
+ *  covers the "+2" collision margin plus any small push-out drift within the
+ *  wall loop, so the queried candidate set is never missing a reachable wall. */
+const WALL_QUERY_SLACK = 32;
+/** Reused candidate buffer for the wall broad-phase (single-threaded loop). */
+const _wallScratch: Wall[] = [];
 
 /** Boss cell-division animation duration (issue #56): the bud grows + detaches. */
 const SPLIT_MS = 1200;
@@ -166,8 +174,20 @@ function collideBallWithWall(ball: Ball, wall: Wall): Vector2 | null {
 // Main export
 // ---------------------------------------------------------------------------
 
-/** Update ball position and bounce off all walls (all in world coordinates). */
-export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void {
+/**
+ * Update ball position and bounce off all walls (all in world coordinates).
+ *
+ * `phasedOut` is the intangible-obstacle set for this frame (#64). It is
+ * identical for every ball in a step, so the game loop computes it ONCE and
+ * passes it in; the default keeps standalone callers (tests) working. On a
+ * phasing map this avoids re-allocating the set per ball per substep.
+ */
+export function updateBall(
+  ball: Ball,
+  dt: number,
+  game: CanvasGameState,
+  phasedOut: ReturnType<typeof collectPhasedOut> = collectPhasedOut(game),
+): void {
   if (ball.state === 'won') return; // stopped and disintegrating
 
   const now = performance.now();
@@ -429,9 +449,9 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     }
   }
 
-  // Phasing obstacles (#64): while phased out, balls pass through them. Cheap
-  // no-op (null) on the common map with no phasing objects.
-  const phasedOut = collectPhasedOut(game);
+  // Phasing obstacles (#64): while phased out, balls pass through them. The
+  // set is passed in (computed once per step by the loop); null on the common
+  // map with no phasing objects.
 
   // CRITICAL: Check obstacle polygon penetration before edge collisions.
   // Obstacles are static, so a cached AABB (inflated by the ball radius)
@@ -469,8 +489,22 @@ export function updateBall(ball: Ball, dt: number, game: CanvasGameState): void 
     }
   }
 
-  // UNIFIED WALL MODEL: Balls bounce off all walls (board edges, obstacles, user walls)
-  for (const wall of game.walls) {
+  // UNIFIED WALL MODEL: Balls bounce off all walls (board edges, obstacles, user walls).
+  // Broad-phase: with the spatial index present, test only the walls near the
+  // ball. queryWallsNear returns a superset in ascending game.walls order, so
+  // the resolution below is bit-identical to scanning every wall (see
+  // wallGrid.ts). No grid (e.g. unit tests calling updateBall directly) -> full scan.
+  const wallGrid = game.wallGrid;
+  const candidateWalls = wallGrid
+    ? queryWallsNear(
+        wallGrid,
+        ball.position.x,
+        ball.position.y,
+        ball.radius + wallGrid.maxThickness / 2 + WALL_QUERY_SLACK,
+        _wallScratch,
+      )
+    : game.walls;
+  for (const wall of candidateWalls) {
     // Skip board edge walls (already handled by boardPolygon collision above).
     // The prefix check is cached: a string scan per wall per ball per step adds up.
     if (wall.isBoardEdge === undefined) wall.isBoardEdge = wall.id.startsWith("board-");

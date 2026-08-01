@@ -8,6 +8,7 @@
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
 import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject, ChestLoot, AbilityFx, ChainState, PhasingObjectState } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
+import { WallGrid } from "@/lib/physics/wallGrid";
 import { Polygon, Vector2 } from "@/lib/polygon";
 import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
@@ -29,6 +30,9 @@ export interface CanvasGameState {
   // ── Geometry ───────────────────────────────────────────────────────────
   /** All walls: board edges, obstacles, and user-drawn fences. */
   walls: Wall[];
+  /** Spatial index over `walls`, rebuilt once per frame for the ball collision
+   *  broad-phase (see wallGrid.ts). Absent until the first frame builds it. */
+  wallGrid?: WallGrid | null;
   /** Obstacle polygons used to clip user-drawn walls. */
   obstaclePolygons: Polygon[];
   /** Mirror obstacle polygons (rendered in distinct cyan). */
