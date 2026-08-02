@@ -723,12 +723,17 @@ export function renderFrame(
       const tl = w2s(a.x, a.y);
       const aw = a.width * scale;
       const ah = a.height * scale;
-      ctx.fillStyle = hexToRgba(st.color, 0.12);
+      const lit = !!a.satisfied;
+      // Used win-gate: a brighter fill + a solid, glowing border reads as
+      // "filled" vs the dashed, dim "target here" prompt.
+      ctx.fillStyle = hexToRgba(st.color, lit ? 0.32 : 0.12);
       ctx.fillRect(tl.x, tl.y, aw, ah);
-      ctx.strokeStyle = hexToRgba(st.color, 0.75);
-      ctx.lineWidth = Math.max(1, 2 * scale);
-      ctx.setLineDash([9 * scale, 6 * scale]);
+      ctx.strokeStyle = hexToRgba(st.color, lit ? 1 : 0.75);
+      ctx.lineWidth = Math.max(1, (lit ? 3 : 2) * scale);
+      ctx.setLineDash(lit ? [] : [9 * scale, 6 * scale]);
+      if (lit) { ctx.shadowColor = st.color; ctx.shadowBlur = 10 * scale; }
       ctx.strokeRect(tl.x, tl.y, aw, ah);
+      ctx.shadowBlur = 0;
       ctx.setLineDash([]);
       const cx = tl.x + aw / 2, cy = tl.y + ah / 2;
       const labelPx = Math.max(13, Math.min(aw, ah) * 0.2);

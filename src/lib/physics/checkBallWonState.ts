@@ -302,9 +302,15 @@ export function checkAndUpdateBallWonStates(
         callbacks.onBossState?.(0, ball.bossMaxHp ?? 0, true);
       }
     }
-    // A target ball locked inside a Colored Area satisfies the win gate.
+    // A target ball locked inside a Colored Area satisfies the win gate. Mark
+    // the specific area used so the renderers light it up (fall back to the sole
+    // area for the boss-contained-on-a-boundary-cell case, where the centre can
+    // sit a hair outside the rect).
     if (areaGate && isAreaTarget && inArea) {
       game.coloredAreaSatisfied = true;
+      const hit = coloredAreaAt(ball.position.x, ball.position.y, areas)
+        ?? (areas.length === 1 ? areas[0] : null);
+      if (hit) hit.satisfied = true;
     }
 
     ball.state = 'won';

@@ -627,7 +627,9 @@ export class PixiGameRenderer {
   // multiplier at centre. Rebuilt only when the areas / boardRect / scale change.
   private syncColoredAreas(game: CanvasGameState, w2s: W2S, scale: number): void {
     const areas = game.coloredAreas ?? [];
-    const key = areas.map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind}`).join("|")
+    // `satisfied` is in the key so the (otherwise static) graphics rebuild the
+    // instant a ball locks inside and the zone lights up.
+    const key = areas.map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind},${a.satisfied ? 1 : 0}`).join("|")
       + `_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 1000)}`;
     if (this.coloredAreasKey === key) return;
     this.coloredAreasKey = key;
@@ -642,12 +644,21 @@ export class PixiGameRenderer {
       const tl = w2s(a.x, a.y);
       const aw = a.width * scale;
       const ah = a.height * scale;
-      g.rect(tl.x, tl.y, aw, ah).fill({ color: st.color, alpha: 0.12 });
-      dashedLine(g, tl.x, tl.y, tl.x + aw, tl.y, 9 * scale, 6 * scale);
-      dashedLine(g, tl.x + aw, tl.y, tl.x + aw, tl.y + ah, 9 * scale, 6 * scale);
-      dashedLine(g, tl.x + aw, tl.y + ah, tl.x, tl.y + ah, 9 * scale, 6 * scale);
-      dashedLine(g, tl.x, tl.y + ah, tl.x, tl.y, 9 * scale, 6 * scale);
-      g.stroke({ width: Math.max(1, 2 * scale), color: st.color, alpha: 0.75 });
+      const lit = !!a.satisfied;
+      // Used win-gate: a brighter fill + a solid, glowing border reads as "this
+      // zone is filled" vs the dashed, dim "target here" prompt.
+      g.rect(tl.x, tl.y, aw, ah).fill({ color: st.color, alpha: lit ? 0.32 : 0.12 });
+      if (lit) {
+        g.rect(tl.x - 3 * scale, tl.y - 3 * scale, aw + 6 * scale, ah + 6 * scale)
+          .stroke({ width: Math.max(1, 2 * scale), color: st.color, alpha: 0.4 });
+        g.rect(tl.x, tl.y, aw, ah).stroke({ width: Math.max(2, 3 * scale), color: st.color, alpha: 1 });
+      } else {
+        dashedLine(g, tl.x, tl.y, tl.x + aw, tl.y, 9 * scale, 6 * scale);
+        dashedLine(g, tl.x + aw, tl.y, tl.x + aw, tl.y + ah, 9 * scale, 6 * scale);
+        dashedLine(g, tl.x + aw, tl.y + ah, tl.x, tl.y + ah, 9 * scale, 6 * scale);
+        dashedLine(g, tl.x, tl.y + ah, tl.x, tl.y, 9 * scale, 6 * scale);
+        g.stroke({ width: Math.max(1, 2 * scale), color: st.color, alpha: 0.75 });
+      }
 
       const cx = tl.x + aw / 2, cy = tl.y + ah / 2;
       const labelPx = Math.max(13, Math.min(aw, ah) * 0.2);

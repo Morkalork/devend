@@ -257,6 +257,12 @@ export interface ColoredArea {
   width: number;
   height: number;
   kind: AreaKind;
+  /**
+   * Runtime only (set by checkBallWonState, not authored): true once a target
+   * ball has been locked inside this area, so the renderers light it up to show
+   * the win-gate has been used. Reset per map (game.coloredAreas is rebuilt).
+   */
+  satisfied?: boolean;
 }
 
 export interface LevelData {
