@@ -696,10 +696,19 @@ export function GameCanvas({
       stCtx.fillRect(0, 3, 4, 1);
     })();
 
+    let boardGridKey = "";
+    let boardGridSamplesRef: Vector2[] | null = null;
     const paintBoardGrid = () => {
       const gCtx = boardGridCanvas.getContext("2d");
       if (!gCtx) return;
       const { width: sw, height: sh } = game.screenSize;
+      // The board grid is static per map: nothing about it changes as the player
+      // cuts. Skip the thousands of fillRects unless its inputs (size, board
+      // transform, colour, opacity, or the sample set itself) actually changed.
+      const key = `${sw}x${sh}|${game.boardRect.scale}|${game.boardRect.left}|${game.boardRect.top}|${game.regionColor}|${canvasOpacity}`;
+      if (key === boardGridKey && boardGridSamplesRef === game.initialSamplePoints) return;
+      boardGridKey = key;
+      boardGridSamplesRef = game.initialSamplePoints;
       if (boardGridCanvas.width !== sw || boardGridCanvas.height !== sh) {
         boardGridCanvas.width = sw; boardGridCanvas.height = sh;
       }

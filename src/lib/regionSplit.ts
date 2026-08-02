@@ -89,9 +89,10 @@ export function findSubRegionsGrid(
     if (visited.has(i)) continue;
     const component: Vector2[] = [];
     const queue = [i];
+    let qh = 0; // head pointer: Array.shift() is O(n), so this BFS was O(n^2)
     visited.add(i);
-    while (queue.length > 0) {
-      const curr = queue.shift()!;
+    while (qh < queue.length) {
+      const curr = queue[qh++];
       component.push(samplePoints[curr]);
       for (const neighbor of adjacency[curr]) {
         if (!visited.has(neighbor)) { visited.add(neighbor); queue.push(neighbor); }

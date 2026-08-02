@@ -197,7 +197,6 @@ export function applyCutFn(
   if (game.spaceGrid) paintCellRegionIds(game.spaceGrid, game.regions);
 
   callbacks.collectAndDrawRemovedSamples();
-  callbacks.repaintRegionCanvas();
   reassignBallsToRegions(game.balls, game.regions, game.walls);
   validateAllBallOwnership(game.balls, game.regions, game.walls);
   game.activeWalls = game.activeWalls.filter(w => w !== wall);
@@ -246,7 +245,6 @@ export function applyCutFn(
         }
       }
     }
-    callbacks.repaintRegionCanvas();
   }
 
   // Pickups: any token whose cell got captured WITHOUT a lock claiming it is
@@ -254,6 +252,11 @@ export function applyCutFn(
   // Runs after the lock pass, so a properly sealed token was already claimed.
   wasteCapturedPickups(game);
 
+  // Paint the region canvas ONCE per cut, here at the end, reflecting the FINAL
+  // grid (post-capture, post-lock), then present. It used to repaint mid-cut AND
+  // again after a lock's recapture - two full contour-trace + GPU-texture passes
+  // on the hitchiest frame. One pass halves that work on lock frames.
+  callbacks.repaintRegionCanvas();
   callbacks.render();
 
   // Issue #37: ball speeds are flat — no per-cut acceleration ramp. Only the
