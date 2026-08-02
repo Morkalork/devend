@@ -302,12 +302,15 @@ export function checkAndUpdateBallWonStates(
         callbacks.onBossState?.(0, ball.bossMaxHp ?? 0, true);
       }
     }
-    // A target ball locked inside a Colored Area satisfies the win gate. Mark
-    // the specific area used so the renderers light it up (fall back to the sole
-    // area for the boss-contained-on-a-boundary-cell case, where the centre can
-    // sit a hair outside the rect).
+    // Only the TARGET ball's lock inside satisfies the WIN gate.
     if (areaGate && isAreaTarget && inArea) {
       game.coloredAreaSatisfied = true;
+    }
+    // Visual "used" light-up: ANY ball locked inside an area lights it, so the
+    // player sees the zone is occupied - not only the win-target (the boss,
+    // whose lock also ends the map). Fall back to the sole area for the
+    // boss-contained-on-a-boundary-cell case (centre a hair outside the rect).
+    if (areaGate && inArea) {
       const hit = coloredAreaAt(ball.position.x, ball.position.y, areas)
         ?? (areas.length === 1 ? areas[0] : null);
       if (hit) hit.satisfied = true;

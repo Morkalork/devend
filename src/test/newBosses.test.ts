@@ -23,6 +23,8 @@ import { getBallType, getEligibleBallTypes } from "@/lib/ballTypes";
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
 import { tickBossFenceWipe } from "@/lib/physics/bossPhases";
 import { createInitialGameData } from "@/lib/initGame";
+import { checkAndUpdateBallWonStates } from "@/lib/physics/checkBallWonState";
+import { CellState, worldToGridIndex } from "@/lib/spaceGrid";
 import { Ball } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { Wall } from "@/lib/wallGeometry";
@@ -97,6 +99,69 @@ describe("boss pair spawn (#64)", () => {
     const data = createInitialGameData(LVL, 20, MODS);
     expect(data.phasingObjects.length).toBe(1);
     expect(data.phasingObjects[0].wallIds.length).toBeGreaterThan(0);
+  });
+});
+
+describe("colored area lights up when a ball locks inside it", () => {
+  const AREA_LEVEL = {
+    id: "area-lit", level: 10, sizeThreshold: 15, expectedCuts: 8, points: 20,
+    maxBalls: 1, variety: 0, randomShapes: 0,
+    coloredAreas: [{ kind: "var", x: 500, y: 45, width: 355, height: 335 }],
+    boss: {
+      name: "B", intro: "x",
+      objective: { id: "d", name: "d", description: "d", kind: "defeatBoss", reward: 10 },
+      bossBall: { hp: 1, radiusScale: 2, color: "#ff0000" },
+    },
+  } as unknown as LevelConfig;
+
+  it("marks the area used for a NON-target (minion) lock, without satisfying the win gate", () => {
+    const data = createInitialGameData(AREA_LEVEL, 10, MODS);
+    const game = { ...data } as unknown as CanvasGameState;
+    game.coloredAreaSatisfied = false;
+    game.lockZones = game.lockZones ?? [];
+    game.lockBonus = game.lockBonus ?? 0;
+    game.superiorLockBonus = game.superiorLockBonus ?? 0;
+    game.superiorLockCount = game.superiorLockCount ?? 0;
+    game.lockedBallsCount = game.lockedBallsCount ?? 0;
+    game.assimilations = game.assimilations ?? new Map();
+    // GameCanvas populates game.coloredAreas at map load (initGame does not), so
+    // set it here as the runtime does.
+    game.coloredAreas = (AREA_LEVEL.coloredAreas ?? []).map(a => ({ ...a }));
+    const grid = game.spaceGrid!;
+
+    // A non-boss minion parked inside the var area (centre ~677,212).
+    const mx = 677, my = 212;
+    const minion = {
+      id: "minion", isBoss: false, state: "active",
+      position: { x: mx, y: my }, velocity: { x: 60, y: 0 }, speed: 60,
+      radius: 14, lockMultiplier: 1, typeId: "red", ability: "none",
+    } as unknown as Ball;
+    game.balls = [...game.balls, minion];
+
+    // Seal it into a tiny 3x3 island by carving a REMOVED ring around it, so its
+    // region falls below the lock threshold and it locks this pass.
+    const idx = worldToGridIndex(grid, mx, my);
+    const col = idx % grid.width, row = Math.floor(idx / grid.width);
+    for (let dr = -2; dr <= 2; dr++) {
+      for (let dc = -2; dc <= 2; dc++) {
+        if (Math.max(Math.abs(dc), Math.abs(dr)) !== 2) continue; // the ring
+        const c = col + dc, r = row + dr;
+        if (c >= 0 && c < grid.width && r >= 0 && r < grid.height) {
+          grid.cells[r * grid.width + c] = CellState.REMOVED;
+        }
+      }
+    }
+
+    const noop = () => {};
+    checkAndUpdateBallWonStates(
+      game, MODS, 0,
+      { setLockedBallsCount: noop, onBallTypeLocked: () => false, onBallCountChanged: noop, onBossState: noop },
+      null,
+    );
+
+    expect(minion.state).toBe("won");                    // it actually locked
+    expect(game.coloredAreas![0].satisfied).toBe(true);  // ...so the zone lit up
+    expect(game.coloredAreaSatisfied).toBe(false);       // but the win gate (the boss) is NOT satisfied
   });
 });
 
