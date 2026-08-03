@@ -23,6 +23,7 @@ import {
   createRectPolygon,
   createPolygonFromShape,
   pointToSegmentDistance,
+  lineSegmentIntersection,
 } from "@/lib/polygon";
 import { createWallsFromPolygon } from "@/lib/wallGeometry";
 import {
@@ -475,6 +476,22 @@ export function createInitialGameData(
     return p;
   };
 
+  // A chain must never be born already snagged on an object (#70). The rope
+  // drapes over solid obstacles, so if the straight tether between the two
+  // balls crosses (or ends inside) any obstacle at creation the pair spawns
+  // permanently stuck. This returns true only when that segment is clear of
+  // every obstacle (mirrors are in obstaclePolygons too, so they're covered).
+  const chainSegmentClear = (a: Vector2, b: Vector2): boolean => {
+    for (const obstacle of obstaclePolygons) {
+      const v = obstacle.vertices;
+      for (let i = 0; i < v.length; i++) {
+        if (lineSegmentIntersection(a, b, v[i], v[(i + 1) % v.length])) return false;
+      }
+      if (pointInPolygon(a, obstacle) || pointInPolygon(b, obstacle)) return false;
+    }
+    return true;
+  };
+
   const ballRadius = BASE_BALL_RADIUS * activeModifiers.ballSizeMultiplier;
   // Big-ball gift (#64): from L11 each ball has a 5% chance to spawn enlarged
   // (~1.3x, harder to fence, worth a touch more on lock). Seeded per map so
@@ -506,10 +523,20 @@ export function createInitialGameData(
       const hp = Math.max(1, Math.round(bossBall.hp ?? 3));
       const bossRadius = ballRadius * (bossBall.radiusScale ?? 2);
       const count = Math.max(1, Math.round(bossBall.count ?? 1));
+      // Pre-pick spawn spots. For a chained pair, re-roll the second boss until
+      // the straight tether to the first is clear of every obstacle (#70), so
+      // the pair is never born already snagged on a pillar/mirror.
+      const bossPositions: Vector2[] = [];
+      for (let bi = 0; bi < count; bi++) bossPositions.push(findSpacedSpawn(bossRadius));
+      if (bossBall.chained && count >= 2) {
+        for (let attempt = 0; attempt < 30 && !chainSegmentClear(bossPositions[0], bossPositions[1]); attempt++) {
+          bossPositions[1] = findSpacedSpawn(bossRadius);
+        }
+      }
       const bosses: Ball[] = [];
       for (let bi = 0; bi < count; bi++) {
         const boss = createBall(
-          baseType, findSpacedSpawn(bossRadius), speedScale * (bossBall.speedScale ?? 1.2),
+          baseType, bossPositions[bi], speedScale * (bossBall.speedScale ?? 1.2),
           bossRadius, count > 1 ? `boss-rc-${bi}` : "boss-rc", spawnTime, 0,
         );
         boss.isBoss = true;
@@ -554,7 +581,11 @@ export function createInitialGameData(
     for (const anchor of pool) {
       if (used.has(anchor.id) || !canAnchorChain(anchor.ability)) continue;
       if (chainRng() >= CHAINED_CHANCE) continue;
-      const partner = pool.find(b => b.id !== anchor.id && !used.has(b.id));
+      // Only pair with a partner whose straight tether to the anchor is clear of
+      // obstacles (#70): a chain born crossing a mirror/pillar snags forever.
+      const partner = pool.find(
+        b => b.id !== anchor.id && !used.has(b.id) && chainSegmentClear(anchor.position, b.position),
+      );
       if (!partner) continue;
       used.add(anchor.id); used.add(partner.id);
       chains.push(makeChain(anchor, partner, false));

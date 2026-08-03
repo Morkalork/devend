@@ -25,6 +25,7 @@ import { tickBossFenceWipe } from "@/lib/physics/bossPhases";
 import { createInitialGameData } from "@/lib/initGame";
 import { checkAndUpdateBallWonStates } from "@/lib/physics/checkBallWonState";
 import { CellState, worldToGridIndex } from "@/lib/spaceGrid";
+import { lineSegmentIntersection, pointInPolygon } from "@/lib/polygon";
 import { Ball } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { Wall } from "@/lib/wallGeometry";
@@ -99,6 +100,30 @@ describe("boss pair spawn (#64)", () => {
     const data = createInitialGameData(LVL, 20, MODS);
     expect(data.phasingObjects.length).toBe(1);
     expect(data.phasingObjects[0].wallIds.length).toBeGreaterThan(0);
+  });
+
+  it("the boss pair's tether is never born crossing an obstacle (#70)", () => {
+    // A big central obstacle: a naive placement would routinely put the two
+    // bosses on opposite sides with the tether slicing through it. The spawn
+    // must re-roll until the straight tether is clear.
+    const LVL = { ...PAIR_LEVEL, id: "chain-clear-test", entities: [
+      { id: "block", kind: "wall", shape: "rect", x: 300, y: 300, width: 400, height: 400 },
+    ] } as unknown as LevelConfig;
+    for (let seed = 0; seed < 20; seed++) {
+      const data = createInitialGameData(LVL, 20, MODS);
+      const ch = data.chains[0];
+      const a = ch.nodes[0], b = ch.nodes[ch.nodes.length - 1];
+      for (const obstacle of data.obstaclePolygons) {
+        const v = obstacle.vertices;
+        for (let i = 0; i < v.length; i++) {
+          expect(
+            lineSegmentIntersection(a, b, v[i], v[(i + 1) % v.length]),
+            `tether ${JSON.stringify(a)}->${JSON.stringify(b)} crosses an obstacle edge`,
+          ).toBeNull();
+        }
+        expect(pointInPolygon(a, obstacle) || pointInPolygon(b, obstacle)).toBe(false);
+      }
+    }
   });
 });
 
