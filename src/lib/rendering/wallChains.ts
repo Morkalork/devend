@@ -153,7 +153,6 @@ function withExtendedEnds(pts: { x: number; y: number }[], os0: number, os1: num
 export function chainFlareEnds(
   points: Vector2[],
   boardPolygon: Polygon | undefined,
-  obstacles: Polygon[],
   eps = 2,
 ): [boolean, boolean] {
   const onBoundary = (p: Vector2, verts: Vector2[]) => {
@@ -162,12 +161,13 @@ export function chainFlareEnds(
     }
     return false;
   };
-  const isWall = (p: Vector2) => {
-    if (boardPolygon && onBoundary(p, boardPolygon.vertices)) return true;
-    for (const o of obstacles) if (onBoundary(p, o.vertices)) return true;
-    return false;
-  };
-  return [isWall(points[0]), isWall(points[points.length - 1])];
+  // ONLY flare into the board edge: its outward overshoot lands in the clipped
+  // border margin, so the fence reads as merged. An interior OBSTACLE has no
+  // such margin, so flaring there pushes the overshoot INTO the visible object
+  // (the fence looks like it pokes past the surface). Obstacle-terminating ends
+  // therefore butt cleanly at the surface (flare = false) instead.
+  const onBoardEdge = (p: Vector2) => !!boardPolygon && onBoundary(p, boardPolygon.vertices);
+  return [onBoardEdge(points[0]), onBoardEdge(points[points.length - 1])];
 }
 
 /**

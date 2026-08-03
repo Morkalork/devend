@@ -1147,12 +1147,12 @@ export class PixiGameRenderer {
     const fenceChains = buildFenceChains(game.walls).map(chain => ({
       chain,
       freshness: chain.createdAt ? Math.max(0, 1 - (now - chain.createdAt) / 400) : 0,
-      // Flare the fence into the walls at both ends over ~3.5 drawn widths, so
-      // it splashes onto the wall and merges instead of butting a point. Only
-      // ends that land on a wall flare; a fence-to-fence end stays plain so it
-      // doesn't overflow past the fence it meets.
+      // Flare the fence into the board edge at both ends over ~3.5 drawn widths,
+      // so it splashes onto the edge and merges instead of butting a point. Only
+      // board-edge ends flare; a fence-to-fence OR fence-to-obstacle end stays
+      // plain so it doesn't overflow past (INTO) what it meets.
       taperLen: 3.5 * chain.thickness * scale * WALL_RENDER_THICKEN,
-      flareEnds: chainFlareEnds(chain.points, game.boardPolygon, game.obstaclePolygons),
+      flareEnds: chainFlareEnds(chain.points, game.boardPolygon),
     }));
     // Pass A: glow + white core per fence (green skipped, painted in Pass B).
     for (const f of fenceChains) {

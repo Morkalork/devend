@@ -128,10 +128,16 @@ describe("chainFlareEnds", () => {
   const square: Polygon = { vertices: [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 100, y: 100 }, { x: 0, y: 100 }] };
 
   it("flags ends that sit on the board boundary", () => {
-    expect(chainFlareEnds([{ x: 0, y: 50 }, { x: 100, y: 50 }], square, [])).toEqual([true, true]);
+    expect(chainFlareEnds([{ x: 0, y: 50 }, { x: 100, y: 50 }], square)).toEqual([true, true]);
   });
 
   it("does not flag an end that lands in the interior (on another fence)", () => {
-    expect(chainFlareEnds([{ x: 0, y: 50 }, { x: 50, y: 50 }], square, [])).toEqual([true, false]);
+    expect(chainFlareEnds([{ x: 0, y: 50 }, { x: 50, y: 50 }], square)).toEqual([true, false]);
+  });
+
+  it("does not flare an interior end (an obstacle contact would overshoot into it)", () => {
+    // Only the board-edge end flares; the interior end butts cleanly. Obstacles
+    // are no longer passed in, so a fence meeting an interior bar never flares.
+    expect(chainFlareEnds([{ x: 0, y: 50 }, { x: 50, y: 40 }], square)).toEqual([true, false]);
   });
 });
