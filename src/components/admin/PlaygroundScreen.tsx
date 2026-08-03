@@ -478,26 +478,30 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             so each effect can be tried directly without waiting on a chest. */}
         {abilitiesReady && (
           <div
-            className="absolute left-1/2 flex flex-wrap justify-center gap-2 px-3 py-2 rounded-lg shadow-lg"
+            className="absolute left-1/2 flex flex-col gap-1 px-3 py-2 rounded-lg shadow-lg"
             style={{
-              bottom: 96, transform: 'translateX(-50%)', zIndex: 55, maxWidth: '90%',
+              bottom: 96, transform: 'translateX(-50%)', zIndex: 55, maxWidth: '92%',
               backgroundColor: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)',
             }}
           >
-            <span className="w-full text-center text-[10px] font-semibold tracking-wider" style={{ color: accent, opacity: 0.7 }}>
+            <span className="text-center text-[10px] font-semibold tracking-wider" style={{ color: accent, opacity: 0.7 }}>
               ABILITY TESTER
             </span>
-            {getAllAbilities().map(a => (
-              <button
-                key={a.id}
-                onClick={() => abilityFireRef.current?.(a.id)}
-                title={`Fire ${a.name} (${a.kind})`}
-                className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold transition-transform active:scale-95"
-                style={{ color: a.color, border: `1px solid ${a.color}`, background: `${a.color}1f` }}
-              >
-                {a.name}
-              </button>
-            ))}
+            {/* Single horizontal row that side-scrolls, so the tester stays a thin
+                strip instead of a tall block covering the board. */}
+            <div className="flex flex-nowrap gap-2 overflow-x-auto" style={{ scrollbarWidth: 'thin' }}>
+              {getAllAbilities().map(a => (
+                <button
+                  key={a.id}
+                  onClick={() => abilityFireRef.current?.(a.id)}
+                  title={`Fire ${a.name} (${a.kind})`}
+                  className="flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2.5 py-1 text-xs font-bold transition-transform active:scale-95"
+                  style={{ color: a.color, border: `1px solid ${a.color}`, background: `${a.color}1f` }}
+                >
+                  {a.name}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
