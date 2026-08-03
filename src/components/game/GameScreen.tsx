@@ -222,6 +222,16 @@ export function GameScreen({
     setShowBreakIntro(!seen);
   }, [levelHasBreakObjective, level.id]);
 
+  // "Wire the Integration" intro — shown the first time a circuit map loads.
+  const levelHasCircuit = !!level.circuit;
+  const [showCircuitIntro, setShowCircuitIntro] = useState(false);
+  useEffect(() => {
+    if (!levelHasCircuit) { setShowCircuitIntro(false); return; }
+    let seen = false;
+    try { seen = !!localStorage.getItem('devend_circuit_tutorial_seen'); } catch { /* ignore */ }
+    setShowCircuitIntro(!seen);
+  }, [levelHasCircuit, level.id]);
+
   // Scope Creep explainer — shown once, the first time a speed surge actually
   // lands (the red Gauge chip appears). Persisted in localStorage; the game
   // pauses beneath it like the other modal tutorials.
@@ -472,6 +482,7 @@ export function GameScreen({
   // which only de-conflicted some pairs and still let e.g. the per-map "how to
   // win" modal stack on top of a one-time teaching overlay.
   const showBreakOverlay = showBreakIntro;
+  const showCircuitOverlay = showCircuitIntro;
   const showTopBarOverlay = levelNumber === 2 && showTopBarTutorial;
   const showBottomBarOverlay = levelNumber === 3 && showBottomBarTutorial;
   // Time-limit intro: the first timed map (level 4, just past the exempt band).
@@ -486,7 +497,7 @@ export function GameScreen({
   const showWinModal = winModalOpen && !mapComplete;
   // Any queued explainer modal is up (used to gate building the queue + to pause).
   const anyExplainerModal =
-    showMoverOverlay || showBreakOverlay || showTopBarOverlay || showBottomBarOverlay ||
+    showMoverOverlay || showBreakOverlay || showCircuitOverlay || showTopBarOverlay || showBottomBarOverlay ||
     showTimeLimitOverlay || showCreepOverlay || showPickupOverlay || showBossOverlay || showWinModal || fenceIntroOpen;
   const modalOverlayActive =
     topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen || anyExplainerModal;
@@ -883,6 +894,11 @@ export function GameScreen({
             show: showBreakOverlay, accentColor: '#ffb454',
             title: t('game.breakTutorialTitle'), body: t('game.breakTutorialBody'),
             onDismiss: () => { setShowBreakIntro(false); try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ } },
+          },
+          {
+            show: showCircuitOverlay, accentColor: '#7fe3d4',
+            title: t('game.circuitTutorialTitle'), body: t('game.circuitTutorialBody'),
+            onDismiss: () => { setShowCircuitIntro(false); try { localStorage.setItem('devend_circuit_tutorial_seen', '1'); } catch { /* ignore */ } },
           },
           {
             show: showTimeLimitOverlay, accentColor,

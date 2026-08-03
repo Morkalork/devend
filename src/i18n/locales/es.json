@@ -243,6 +243,8 @@
     "creepTutorialBody": "El proyecto lleva demasiado tiempo en marcha: las bolas acaban de acelerar, y seguirán acelerando cada pocos segundos hasta alcanzar un tope.\n\nLa corrupción del alcance solo castiga la espera: termina el mapa dentro de la ventana de calma y nunca la verás.\n\nEl indicador rojo de la barra superior muestra el aumento actual.",
     "pickupTutorialTitle": "✦ Potenciadores",
     "pickupTutorialBody": "Los potenciadores aparecen en el tablero por poco tiempo. Encierra una bola en un bolsillo vallado que cubra uno para reclamar su mejora: horas extra, una vida adicional, dividir una bola y más.\n\nSi se desvanece antes de atraparlo, desaparece.",
+    "circuitTutorialTitle": "✦ Conecta la Integracion",
+    "circuitTutorialBody": "¿Ves los nodos turquesa que laten? Traza una valla a traves de cada uno para conectar el circuito.\n\nCuando todos los nodos se encienden, la boveda sellada (el recuadro punteado) se abre: espacio nuevo para capturar y un bolsillo de bonificacion que paga extra por las bolas que encierres dentro.\n\nPasar un corte por un nodo suele costar una linea mas larga y arriesgada, asi que es una decision, no un regalo.",
     "topBarTutorialTitle": "La barra superior",
     "topBarTutorialBody": "La barra superior muestra tu nivel, vidas y objetivos.\n\nTócala, o el botón Ficha, para abrir tu hoja de partida completa: estilo, mejoras, asignación y progreso de horas de certificado.",
     "bottomBarTutorialTitle": "Tu ficha",

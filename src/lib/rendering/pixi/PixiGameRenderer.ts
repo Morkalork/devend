@@ -73,7 +73,6 @@ export class PixiGameRenderer {
   private coloredAreaLabels: Text[] = [];
   private coloredAreasKey = "";
   private circuitG = new Graphics(); // "Wire the Integration" terminals + vault hint
-  private circuitKey = "";
   private movers = new Graphics();
   private obstacles = new Graphics();
   private phasing = new Graphics();   // phasing obstacles (#64), redrawn every frame
@@ -279,7 +278,7 @@ export class PixiGameRenderer {
       this.syncRain(game, rctx, scale, now);
       this.syncLockZones(game, w2s, scale);
       this.syncColoredAreas(game, w2s, scale);
-      this.syncCircuit(game, w2s, scale);
+      this.syncCircuit(game, w2s, scale, now);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
       this.syncPhasing(game, w2s, scale);
@@ -685,22 +684,17 @@ export class PixiGameRenderer {
 
   // "Wire the Integration": terminal nodes (dim -> bright as fences route
   // through them) + a dashed hint of the sealed vault, connected by a beam once
-  // complete. `lit`/`complete` are in the cache key so it re-syncs on change.
-  private syncCircuit(game: CanvasGameState, w2s: W2S, scale: number): void {
-    const c = game.circuit;
-    const key = c
-      ? c.terminals.map(t => `${t.x},${t.y},${t.radius},${t.lit ? 1 : 0}`).join("|")
-        + `_${c.complete ? 1 : 0}_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 1000)}`
-      : "none";
-    if (this.circuitKey === key) return;
-    this.circuitKey = key;
-
+  // complete. Redrawn every frame so the nodes PULSE (a breathing glow ring) and
+  // read at a glance; unlit nodes pulse too so they're easy to spot.
+  private syncCircuit(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
     const g = this.circuitG;
     g.clear();
+    const c = game.circuit;
     if (!c) return;
 
     const LIT = 0x7fe3d4;   // teal, matches the const/vault palette
-    const DIM = 0x3f6f66;
+    const DIM = 0x59b3a3;   // muted teal, still clearly visible when unlit
+    const pulse = 0.5 + 0.5 * Math.sin(now / 340); // 0..1 breathing
 
     // Sealed vault hint (dashed) until the circuit opens it; after, syncLockZones
     // tints the opened pocket (bonusZone is pushed to game.lockZones).
@@ -712,7 +706,7 @@ export class PixiGameRenderer {
       dashedLine(g, tl.x + aw, tl.y, tl.x + aw, tl.y + ah, 9 * scale, 6 * scale);
       dashedLine(g, tl.x + aw, tl.y + ah, tl.x, tl.y + ah, 9 * scale, 6 * scale);
       dashedLine(g, tl.x, tl.y + ah, tl.x, tl.y, 9 * scale, 6 * scale);
-      g.stroke({ width: Math.max(1, 2 * scale), color: LIT, alpha: 0.4 });
+      g.stroke({ width: Math.max(1, 2 * scale), color: LIT, alpha: 0.3 + 0.2 * pulse });
     }
 
     // Beam connecting the terminals once wired.
@@ -723,18 +717,22 @@ export class PixiGameRenderer {
         const p = w2s(c.terminals[i].x, c.terminals[i].y);
         g.lineTo(p.x, p.y);
       }
-      g.stroke({ width: Math.max(1.5, 2 * scale), color: LIT, alpha: 0.6 });
+      g.stroke({ width: Math.max(1.5, 2 * scale), color: LIT, alpha: 0.5 + 0.3 * pulse });
     }
 
-    // Terminal nodes.
+    // Terminal nodes: a breathing outer glow ring + solid ring + core dot.
     for (const t of c.terminals) {
       const p = w2s(t.x, t.y);
       const on = t.lit || c.complete;
       const color = on ? LIT : DIM;
-      const rr = Math.max(7, t.radius * scale);
-      g.circle(p.x, p.y, rr).stroke({ width: Math.max(2, 2.5 * scale), color, alpha: on ? 1 : 0.6 });
-      g.circle(p.x, p.y, Math.max(2, 3 * scale)).fill({ color, alpha: on ? 1 : 0.6 });
-      if (on) g.circle(p.x, p.y, rr + 3 * scale).stroke({ width: Math.max(1, scale), color, alpha: 0.35 });
+      const rr = Math.max(8, t.radius * scale);
+      // Pulsing halo: radius and alpha oscillate so the node draws the eye.
+      const haloR = rr + (4 + 6 * pulse) * scale;
+      g.circle(p.x, p.y, haloR).stroke({ width: Math.max(1.5, 2 * scale), color, alpha: (on ? 0.55 : 0.4) * (0.35 + 0.65 * pulse) });
+      // Solid ring.
+      g.circle(p.x, p.y, rr).stroke({ width: Math.max(2.5, 3 * scale), color, alpha: on ? 1 : 0.85 });
+      // Core dot, brightness breathing.
+      g.circle(p.x, p.y, Math.max(2.5, 3.5 * scale)).fill({ color, alpha: (on ? 1 : 0.9) * (0.55 + 0.45 * pulse) });
     }
   }
 
