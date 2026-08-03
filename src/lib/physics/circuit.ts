@@ -69,9 +69,15 @@ function completeCircuit(game: CanvasGameState, callbacks: GameCallbacks): void 
   const grid = game.spaceGrid;
   if (grid && c.revealCells.length > 0) {
     // Same reopen -> recapture -> rebuild -> repaint a vault gate uses
-    // (destructibles.ts). The reopened cells become capturable ground; any that
-    // no ball can reach are recaptured so the remaining-% stays honest.
+    // (destructibles.ts). The reopened cells become capturable ground.
     reopenCells(game, c.revealCells);
+    // The vault is a DESIGNED open pocket the player must be able to fence into
+    // (to trap a ball there for the multiplier). Mark its cells keep-active so
+    // the unreachable-recapture below - and every later cut's recapture - never
+    // re-seals them when no ball happens to be near, which would make the vault
+    // uncuttable. Other genuinely-unreachable cells still recapture as usual.
+    if (!grid.keepActive) grid.keepActive = new Uint8Array(grid.cells.length);
+    for (const idx of c.revealCells) grid.keepActive[idx] = 1;
     captureUnreachableCells(grid, game.balls, game.walls);
     rebuildRegionsKeepAll(game);
     wasteCapturedPickups(game);

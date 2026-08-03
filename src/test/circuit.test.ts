@@ -13,6 +13,8 @@ import yaml from "js-yaml";
 import { tickCircuitOnCut } from "@/lib/physics/circuit";
 import { bonusLockMultiplierAt } from "@/lib/lockZones";
 import { rotateCircuit } from "@/lib/mapRotation";
+import { createSpaceGrid, captureUnreachableCells, isPositionActive, worldToGridIndex, CellState } from "@/lib/spaceGrid";
+import { createRectPolygon } from "@/lib/polygon";
 import type { CanvasGameState, CircuitRuntime } from "@/types/gameState";
 import type { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import type { GrowingWall, Vector2 } from "@/types/game";
@@ -120,6 +122,51 @@ describe("singleCut hard mode", () => {
     tickCircuitOnCut(game, fence({ x: 0, y: 150 }, { x: 500, y: 150 }), noopCallbacks); // hits only the first
     expect(c.complete).toBe(false);
     expect(c.terminals.some(t => t.lit)).toBe(false); // nothing persists
+  });
+});
+
+describe("opened vault stays cuttable even when unreachable (keep-active)", () => {
+  // Isolate one 'vault' cell far from the ball so it's unreachable; the fix must
+  // keep it ACTIVE (cuttable) so the player can fence into the bonus pocket.
+  function isolatedVaultGrid() {
+    const grid = createSpaceGrid(createRectPolygon(0, 0, 300, 300), [], 15);
+    for (let i = 0; i < grid.cells.length; i++) grid.cells[i] = CellState.REMOVED;
+    grid.activeCount = 0;
+    const on = (x: number, y: number) => { const idx = worldToGridIndex(grid, x, y); grid.cells[idx] = CellState.ACTIVE; grid.activeCount++; return idx; };
+    on(45, 45); // the ball's cell (reachable)
+    const vaultIdx = on(255, 255); // an isolated cell (unreachable from the ball)
+    return { grid, vaultIdx };
+  }
+  const ball = { position: { x: 45, y: 45 }, radius: 10, state: "active", speed: 60 };
+
+  it("WITHOUT keep-active, an unreachable cell is recaptured (the reported bug)", () => {
+    const { grid, vaultIdx } = isolatedVaultGrid();
+    captureUnreachableCells(grid, [ball], []);
+    expect(grid.cells[vaultIdx]).toBe(CellState.REMOVED); // sealed -> uncuttable
+  });
+
+  it("WITH keep-active, the vault cell stays ACTIVE and cuttable", () => {
+    const { grid, vaultIdx } = isolatedVaultGrid();
+    grid.keepActive = new Uint8Array(grid.cells.length);
+    grid.keepActive[vaultIdx] = 1;
+    captureUnreachableCells(grid, [ball], []);
+    expect(grid.cells[vaultIdx]).toBe(CellState.ACTIVE);
+    expect(isPositionActive(grid, { x: 255, y: 255 })).toBe(true); // a cut may start here
+  });
+
+  it("completing the circuit reopens its vault and marks it keep-active", () => {
+    const grid = createSpaceGrid(createRectPolygon(0, 0, 300, 300), [], 15);
+    const vaultIdx = worldToGridIndex(grid, 255, 255);
+    grid.cells[vaultIdx] = CellState.REMOVED; grid.activeCount--; // sealed vault cell
+    const c = makeCircuit({ revealCells: [vaultIdx] });
+    const game = {
+      circuit: c, lockZones: [], spaceGrid: grid, balls: [], regions: [], walls: [], initialSamplePoints: [],
+    } as unknown as CanvasGameState;
+    tickCircuitOnCut(game, fence({ x: 100, y: 0 }, { x: 100, y: 200 }), noopCallbacks);
+    tickCircuitOnCut(game, fence({ x: 300, y: 200 }, { x: 300, y: 400 }), noopCallbacks);
+    expect(c.complete).toBe(true);
+    expect(grid.keepActive?.[vaultIdx]).toBe(1);     // protected on completion
+    expect(grid.cells[vaultIdx]).toBe(CellState.ACTIVE); // reopened + kept (even with no ball)
   });
 });
 

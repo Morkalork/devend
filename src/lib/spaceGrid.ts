@@ -55,6 +55,13 @@ export interface SpaceGrid {
    * created on first lock if absent.
    */
   lockCaptured?: Uint8Array;
+  /**
+   * Cells that must NEVER be auto-recaptured as "unreachable" (1 = keep active).
+   * Set for the circuit bonus vault: it is a DESIGNED open pocket the player must
+   * be able to fence into, even when no ball can currently reach it. Absent =
+   * nothing protected (normal recapture).
+   */
+  keepActive?: Uint8Array;
 }
 
 export interface GridRegion {
@@ -451,11 +458,13 @@ export function captureUnreachableCells(
   const { width, height, cells, cellSize } = grid;
   const n = cells.length;
 
+  const keep = grid.keepActive;
   const activeBalls = balls.filter(b => b.state !== 'won' && b.speed > 0);
   if (activeBalls.length === 0) {
-    // No ball left in play — everything remaining is captured territory.
+    // No ball left in play — everything remaining is captured territory (except
+    // any designed keep-active pocket, e.g. an opened circuit vault).
     for (let i = 0; i < n; i++) {
-      if (cells[i] === CellState.ACTIVE) { cells[i] = CellState.REMOVED; grid.activeCount--; }
+      if (cells[i] === CellState.ACTIVE && !keep?.[i]) { cells[i] = CellState.REMOVED; grid.activeCount--; }
     }
     return;
   }
@@ -556,9 +565,9 @@ export function captureUnreachableCells(
     if (col < width - 1) spread(cur + 1);
   }
 
-  // 5. Capture every ACTIVE cell no ball can reach.
+  // 5. Capture every ACTIVE cell no ball can reach (keep-active pockets stay).
   for (let i = 0; i < n; i++) {
-    if (cells[i] === CellState.ACTIVE && !reachable[i]) { cells[i] = CellState.REMOVED; grid.activeCount--; }
+    if (cells[i] === CellState.ACTIVE && !reachable[i] && !keep?.[i]) { cells[i] = CellState.REMOVED; grid.activeCount--; }
   }
 }
 
