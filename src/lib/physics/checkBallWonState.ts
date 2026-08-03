@@ -176,6 +176,16 @@ export function checkAndUpdateBallWonStates(
    * the check (locks as before).
    */
   preCaptureCells: Uint8Array | null = null,
+  /**
+   * Grid regions + cell->region map already computed for THIS grid state (by
+   * applyCut's reachability capture, whose grid cells are unchanged before this
+   * runs). Reuses them to skip a redundant findGridRegions + ~3600-entry Map
+   * build. Omit to compute here (other callers / tests).
+   */
+  precomputed: {
+    gridRegions: ReturnType<typeof findGridRegions>;
+    gridRegionMap: ReturnType<typeof buildGridRegionMap>;
+  } | null = null,
 ): boolean {
   if (!game.spaceGrid) return false;
 
@@ -185,8 +195,8 @@ export function checkAndUpdateBallWonStates(
   /** Balls whose lock graded SUPERIOR this pass (tight pocket). */
   const superiorIds = new Set<string>();
   const lockQuality = getLockQuality();
-  const gridRegions = findGridRegions(game.spaceGrid);
-  const gridRegionMap = buildGridRegionMap(gridRegions);
+  const gridRegions = precomputed ? precomputed.gridRegions : findGridRegions(game.spaceGrid);
+  const gridRegionMap = precomputed ? precomputed.gridRegionMap : buildGridRegionMap(gridRegions);
 
   // Snapshot the win denominator inputs ONCE before the loop. Computing these
   // per-ball makes the win threshold order-dependent: as earlier balls lock,

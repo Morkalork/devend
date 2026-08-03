@@ -79,8 +79,11 @@ function wouldWallTrapBallCheck(start: Vector2, end: Vector2, game: CanvasGameSt
  * A won ball counts as no ball, so a region a ball just locked in is captured.
  * game.gridRegions is left holding only the surviving (ball-bearing) regions.
  */
-function captureUnreachableSpace(game: CanvasGameState): void {
-  if (!game.spaceGrid) return;
+function captureUnreachableSpace(game: CanvasGameState): {
+  gridRegions: ReturnType<typeof findGridRegions>;
+  gridRegionMap: ReturnType<typeof buildGridRegionMap>;
+} | null {
+  if (!game.spaceGrid) return null;
   // Wall segments let the capture verify borderline corridors geometrically
   // instead of severing every gap the cell grid can't resolve (false locks).
   captureUnreachableCells(game.spaceGrid, game.balls, game.walls);
@@ -97,6 +100,10 @@ function captureUnreachableSpace(game: CanvasGameState): void {
     if (ballRegion) regionsWithBalls.add(ballRegion);
   }
   game.gridRegions = [...regionsWithBalls];
+  // Return the FULL region set + map: checkBallWonState needs the same thing and
+  // the grid cells don't change before it runs, so it reuses these instead of
+  // recomputing findGridRegions + a ~3600-entry Map every cut.
+  return { gridRegions, gridRegionMap };
 }
 
 export function applyCutFn(
@@ -170,7 +177,9 @@ export function applyCutFn(
   // one the capture "closed" across a gap the ball merely can't fit through.
   const preCaptureCells = game.spaceGrid ? Uint8Array.from(game.spaceGrid.cells) : null;
 
-  captureUnreachableSpace(game);
+  // The grid regions this computes are still valid at the lock check below (no
+  // code between mutates grid cells), so hand them off to avoid recomputing.
+  const capturedRegions = captureUnreachableSpace(game);
 
   // Update sample-based regions for rendering
   const updatedRegions: Region[] = [];
@@ -206,7 +215,7 @@ export function applyCutFn(
   playCutClaimedSound();
 
   const lockedBefore = game.lockedBallsCount;
-  const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells);
+  const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions);
   if (anyBallWon) {
     // How many balls this cut locked: the simultaneous-trap multiplier pays
     // x2/x3 for multi-locks, and the tint mask below stores the same count so
