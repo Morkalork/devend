@@ -74,6 +74,23 @@ export function isBallCellInRegion(grid: SpaceGrid, position: Vector2, regionId:
 }
 
 /**
+ * O(1) region lookup via the grid's painted cell ownership, or null on a miss
+ * (REMOVED/unpainted cell, e.g. near a wall) so the caller falls back to the
+ * sample scan. Only valid when cellRegionIds was painted from the SAME `byId`
+ * regions (paintCellRegionIds ran for the current region set).
+ */
+function regionFromGridCell(
+  grid: SpaceGrid,
+  position: Vector2,
+  byId: Map<string, Region>,
+): Region | null {
+  const index = worldToGridIndex(grid, position.x, position.y);
+  if (index < 0 || grid.cells[index] !== CellState.ACTIVE) return null;
+  const rid = grid.cellRegionIds[index];
+  return rid !== null ? (byId.get(rid) ?? null) : null;
+}
+
+/**
  * Result of a region ownership validation
  */
 export interface OwnershipValidationResult {
@@ -142,7 +159,9 @@ export function findContainingRegion(
 export function validateBallOwnership(
   ball: Ball,
   regions: Region[],
-  walls: Wall[]
+  walls: Wall[],
+  /** See reassignBallsToRegions: enables the O(1) grid fast-accept for Case 2. */
+  grid: SpaceGrid | null = null,
 ): OwnershipValidationResult {
   const assignedRegion = regions.find(r => r.id === ball.regionId);
   
@@ -174,8 +193,12 @@ export function validateBallOwnership(
     };
   }
   
-  // Case 2: Check if ball is actually in its assigned region
-  const isInAssigned = isBallInRegion(ball.position, assignedRegion, walls);
+  // Case 2: Check if ball is actually in its assigned region. The grid
+  // fast-accept short-circuits the sample scan when the ball sits in a cell
+  // painted with its own region id (the common case right after reassignment).
+  const isInAssigned =
+    (grid !== null && isBallCellInRegion(grid, ball.position, assignedRegion.id))
+    || isBallInRegion(ball.position, assignedRegion, walls);
   
   if (isInAssigned) {
     return {
@@ -300,13 +323,15 @@ export function findNearestValidPosition(
 export function validateAllBallOwnership(
   balls: Ball[],
   regions: Region[],
-  walls: Wall[]
+  walls: Wall[],
+  /** See reassignBallsToRegions: enables the O(1) grid fast-accept. */
+  grid: SpaceGrid | null = null,
 ): { allValid: boolean; corrections: OwnershipValidationResult[] } {
   const corrections: OwnershipValidationResult[] = [];
   let allValid = true;
-  
+
   for (const ball of balls) {
-    const result = validateBallOwnership(ball, regions, walls);
+    const result = validateBallOwnership(ball, regions, walls, grid);
     
     if (!result.isValid) {
       allValid = false;
@@ -335,11 +360,22 @@ export function validateAllBallOwnership(
 export function reassignBallsToRegions(
   balls: Ball[],
   regions: Region[],
-  walls: Wall[]
+  walls: Wall[],
+  /**
+   * Space grid whose cellRegionIds were painted from THESE regions (i.e.
+   * paintCellRegionIds already ran for the current region set). When given, a
+   * ball's region is an O(1) cell lookup instead of the O(regions x samples x
+   * walls) sample scan; unpainted cells fall back to the scan. Omit it when the
+   * grid isn't yet repainted for the new regions.
+   */
+  grid: SpaceGrid | null = null,
 ): void {
+  const byId = grid ? new Map(regions.map(r => [r.id, r])) : null;
   for (const ball of balls) {
-    const containingRegion = findContainingRegion(ball.position, regions, walls);
-    
+    const containingRegion =
+      (grid && byId ? regionFromGridCell(grid, ball.position, byId) : null)
+      ?? findContainingRegion(ball.position, regions, walls);
+
     if (containingRegion) {
       if (ball.regionId !== containingRegion.id) {
         ball.regionId = containingRegion.id;

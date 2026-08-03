@@ -197,8 +197,11 @@ export function applyCutFn(
   if (game.spaceGrid) paintCellRegionIds(game.spaceGrid, game.regions);
 
   callbacks.collectAndDrawRemovedSamples();
-  reassignBallsToRegions(game.balls, game.regions, game.walls);
-  validateAllBallOwnership(game.balls, game.regions, game.walls);
+  // paintCellRegionIds ran just above for the new regions, so the grid gives
+  // each ball's region in O(1) here (falling back to the sample scan near walls)
+  // instead of the O(balls x regions x samples x walls) scan this used to be.
+  reassignBallsToRegions(game.balls, game.regions, game.walls, game.spaceGrid);
+  validateAllBallOwnership(game.balls, game.regions, game.walls, game.spaceGrid);
   game.activeWalls = game.activeWalls.filter(w => w !== wall);
   playCutClaimedSound();
 
