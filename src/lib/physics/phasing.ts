@@ -5,31 +5,44 @@
  * transition fires a localized shockwave that flings nearby balls free, which is
  * how a boss-20 pair snagged on the obstacle gets released.
  *
- * One cycle (default 10s): ~62% solid, a short fade-out, ~24% out, a short
- * fade-in. `alpha` (1=solid, 0=gone) drives both collision and rendering; the
- * two states are visually distinct (solid block vs ghost outline).
+ * One cycle (default 10s): ~55% solid, then intangible for the rest (a fade-out,
+ * a fully-gone stretch, and a fade back in). `phase` is the SOURCE OF TRUTH for
+ * tangibility: `phase === "out"` means the ball / fence / chain passes through
+ * it, and it renders as a ghost. Crucially the object turns intangible the
+ * instant it *visibly* begins to phase out (issue #69) — never a window where it
+ * looks like it's dissolving but still bounces things. `alpha` (1=solid, 0=gone)
+ * only drives how faint the render is, not collision.
  */
 import { CanvasGameState } from "@/types/gameState";
 import { PhasingObjectState } from "@/types/game";
 import { polygonCentroid } from "@/lib/polygon";
 
-const FADE = 0.08;        // fraction of the cycle each fade takes
-const OUT_FRACTION = 0.3; // fraction of the cycle spent (fully or fading) out
+const FADE = 0.1;             // fraction of the cycle each cosmetic fade takes
+const SOLID_FRACTION = 0.55;  // fraction of the cycle the object is solid (tangible)
 
 /** Shockwave a phase-out gives balls within this many world units of the object. */
 export const PHASE_SHOCKWAVE_RADIUS = 220;
 const PHASE_SHOCKWAVE_BOOST = 1.35;
 
-/** Compute the phase + alpha for a cycle position t in [0,1). */
+/**
+ * Compute the phase + alpha for a cycle position t in [0,1).
+ *
+ * `phase` flips to "out" (intangible) the moment the fade-out starts, so the
+ * object stops colliding exactly when it starts to look like it's dissolving.
+ * On the way back it stays intangible until it is at least half re-formed, so a
+ * ball can't get caught inside a pillar that pops solid under it.
+ */
 function phaseAt(t: number): { phase: "in" | "out"; alpha: number } {
-  // Layout across the cycle: [ solid | fade-out | out | fade-in ]
-  const outStart = 1 - OUT_FRACTION;          // begin fading out
+  // Layout across the cycle: [ solid | fade-out | fully out | fade-in ]
+  const outStart = SOLID_FRACTION;            // begin fading out AND go intangible
   const outFull = outStart + FADE;            // fully out
   const inStart = 1 - FADE;                   // begin fading back in
   if (t < outStart) return { phase: "in", alpha: 1 };
-  if (t < outFull) return { phase: "in", alpha: 1 - (t - outStart) / FADE };
+  if (t < outFull) return { phase: "out", alpha: 1 - (t - outStart) / FADE };
   if (t < inStart) return { phase: "out", alpha: 0 };
-  return { phase: "in", alpha: (t - inStart) / FADE };
+  // Fade back in: intangible (still a ghost) until it is at least half solid.
+  const a = (t - inStart) / FADE;
+  return { phase: a >= 0.5 ? "in" : "out", alpha: a };
 }
 
 /**
@@ -84,7 +97,10 @@ export function collectPhasedOut(game: CanvasGameState): { polys: Set<import("@/
   const polys = new Set<import("@/lib/polygon").Polygon>();
   const walls = new Set<string>();
   for (const obj of game.phasingObjects) {
-    if (obj.phase === "out" || obj.alpha < 0.5) {
+    // `phase === "out"` is the single source of truth for intangibility (#69):
+    // it is set the instant the object begins to fade out and cleared only once
+    // it is at least half re-formed, so collision always matches the ghost look.
+    if (obj.phase === "out") {
       polys.add(obj.polygon);
       for (const id of obj.wallIds) walls.add(id);
     }

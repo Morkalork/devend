@@ -24,7 +24,6 @@ const MIN_REST = 70;        // never taut below this (world units)
 const GRAVITY = 26;         // gentle sag (world units / s^2)
 const DAMP = 0.98;          // verlet velocity damping
 const SNAG_FRICTION = 0.9;  // per-frame velocity kept by both balls while snagged
-const SOLID_ALPHA = 0.5;    // a phasing object below this alpha is intangible
 
 // Elastic tether tuning. The rope behaves like a spring past its rest length
 // rather than a rigid rod, so a wall bounce is absorbed over several frames
@@ -59,8 +58,10 @@ function isFrozen(ball: Ball, now: number): boolean {
 /** Obstacle polygons that are currently tangible (phased-out ones excluded). */
 function solidObstacles(game: CanvasGameState): Polygon[] {
   const out = new Set<Polygon>(game.obstaclePolygons);
+  // `phase === "out"` is the source of truth for intangibility (#69): a pillar
+  // mid-fade no longer snags the rope, matching the ball collision + the ghost.
   for (const p of game.phasingObjects) {
-    if (p.phase === "out" || p.alpha < SOLID_ALPHA) out.delete(p.polygon);
+    if (p.phase === "out") out.delete(p.polygon);
   }
   return [...out];
 }

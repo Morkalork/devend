@@ -790,13 +790,18 @@ export class PixiGameRenderer {
       const pts: number[] = [];
       for (const v of obj.polygon.vertices) { const sp = w2s(v.x, v.y); pts.push(sp.x, sp.y); }
       const a = Math.max(0, Math.min(1, obj.alpha));
-      if (a >= 0.5) {
-        // Present/fading: filled block with a bright border, dimming as it fades.
+      // `phase` is the source of truth (#69): solid = tangible block, out = ghost.
+      // Rendering off `phase` (not an alpha threshold) means the object reads as a
+      // pass-through ghost the instant it stops colliding, never a solid-looking
+      // block you still bounce off mid-fade.
+      if (obj.phase === "in") {
+        // Solid / re-forming: filled block with a bright border, dimming as it forms.
         g.poly(pts).fill({ color: col, alpha: 0.12 * a });
         g.poly(pts).stroke({ width: WALL_THICKNESS * scale, color: col, alpha: 0.4 + 0.6 * a, join: "round" });
       } else {
-        // Phased out: a faint thin ghost so its footprint stays readable.
-        g.poly(pts).stroke({ width: WALL_THICKNESS * scale * 0.5, color: col, alpha: 0.1 + 0.3 * a, join: "round" });
+        // Phased out (intangible): a faint dashed-looking thin ghost so its
+        // footprint stays readable while clearly signalling "you pass through".
+        g.poly(pts).stroke({ width: WALL_THICKNESS * scale * 0.5, color: col, alpha: 0.12 + 0.28 * a, join: "round" });
       }
     }
   }

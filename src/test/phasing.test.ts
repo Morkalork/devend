@@ -40,12 +40,27 @@ describe("phasing cycle", () => {
     tickPhasing(g, 0);        // start of cycle
     expect(obj.phase).toBe("in");
     expect(obj.alpha).toBe(1);
-    tickPhasing(g, 8.5);      // deep into the out window (cycle 10s, out ~0.7..0.92)
+    tickPhasing(g, 8);        // deep into the out window (cycle 10s, solid < 5.5s)
     expect(obj.phase).toBe("out");
     expect(obj.alpha).toBeLessThan(0.5);
     tickPhasing(g, 10);       // back to the next cycle start
     expect(obj.phase).toBe("in");
     expect(obj.alpha).toBeGreaterThan(0.5);
+  });
+
+  it("turns intangible the instant it BEGINS to fade out (#69)", () => {
+    // Regression for #69: the object must stop colliding as soon as it visibly
+    // starts dissolving, not only once it is more than half gone. At t just past
+    // the solid window the alpha is still high (looks present) but phase is "out".
+    const obj = phasingObj();
+    const g = game([obj]);
+    tickPhasing(g, 5.7);              // cycle 10s, solid ends at 5.5s -> mid fade-out
+    expect(obj.phase).toBe("out");    // already intangible...
+    expect(obj.alpha).toBeGreaterThan(0.5); // ...even though it still looks present
+    // collectPhasedOut agrees: the pillar's polygon + walls are pass-through now.
+    const res = collectPhasedOut(g);
+    expect(res).not.toBeNull();
+    expect(res!.polys.has(obj.polygon)).toBe(true);
   });
 });
 
