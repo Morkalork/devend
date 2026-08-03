@@ -199,6 +199,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // When a round is left without the locks the store requires, we still open the
   // store but show it "closed" (see UpgradeShop `closed`) rather than skipping it.
   const [storeClosed, setStoreClosed] = useState(false);
+  // Locks made this round vs. required (for the closed-store "X/Y" banner, #67).
+  const [storeLockProgress, setStoreLockProgress] = useState<{ have: number; need: number }>({ have: 0, need: 1 });
 
   // Ascension mode: after the final level the player may loop back to level 1
   // with a drafted loadout. Depth 0 = first pass through the levels. Index 0 of
@@ -1364,6 +1366,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       const ballsOnMap = currentLevel?.maxBalls ?? currentLevel?.balls?.length ?? 1;
       const locksRequired = ballsOnMap >= 3 ? 2 : 1;
       setStoreClosed(locksThisRound < locksRequired);
+      setStoreLockProgress({ have: locksThisRound, need: locksRequired });
       nav.goToUpgradeShop();
     }
   }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, activeDoor, grantAssignmentReward, nav.goToAssignmentSummary, nav.goToAscensionDraft, nav.goToUpgradeShop]);
@@ -1748,6 +1751,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     gameInstanceKey,
     introAssemblePending,
     storeClosed,
+    storeLockProgress,
     carryFreeShopItems,
     pendingDeathResult,
     // Modifiers / bonuses

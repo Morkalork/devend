@@ -346,6 +346,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0 || session.carryFreeShopItems > 0}
                 activeModifiers={session.activeModifiers}
                 closed={session.storeClosed}
+                locksHave={session.storeLockProgress.have}
+                locksNeed={session.storeLockProgress.need}
               />
             )}
             {navigation.currentScreen === 'capstoneDraft' && (

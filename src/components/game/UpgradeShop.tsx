@@ -57,6 +57,9 @@ interface UpgradeShopProps {
    *  shelf is still shown (so the player sees what they missed) but dimmed and
    *  non-interactive, with a "Not enough balls locked" banner; Continue only. */
   closed?: boolean;
+  /** Locks made this round vs. required, shown as "X/Y" on the closed banner. */
+  locksHave?: number;
+  locksNeed?: number;
 }
 
 /**
@@ -106,6 +109,8 @@ export function UpgradeShop({
   freeCheapestOffer = false,
   activeModifiers,
   closed = false,
+  locksHave,
+  locksNeed,
 }: UpgradeShopProps) {
   const { t, i18n } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -452,6 +457,14 @@ export function UpgradeShop({
             <span className="text-sm font-bold tracking-wide uppercase">
               {t('upgradeShop.closedNotEnoughLocks')}
             </span>
+            {typeof locksNeed === 'number' && (
+              <span
+                className="text-sm font-bold tabular-nums shrink-0 rounded px-1.5 py-0.5"
+                style={{ background: '#ff6b6b26' }}
+              >
+                {locksHave ?? 0}/{locksNeed}
+              </span>
+            )}
             <Info className="w-3.5 h-3.5 shrink-0 opacity-70" />
           </motion.div>
         )}
