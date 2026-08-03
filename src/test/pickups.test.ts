@@ -24,7 +24,7 @@ const CFG: PickupConfig = {
   spawnChance: 1, // every roll spawns (when below the cap)
   maxSimultaneous: 2,
   lifetimeSeconds: 14,
-  effects: [{ effect: "overtime", weight: 1, value: 4 }],
+  effects: [{ effect: "overtime", weight: 1, value: 1 }], // value = x map base points (#68)
 };
 
 function makeBall(id: string, x: number, y: number): Ball {
@@ -50,6 +50,7 @@ function makeGame(): CanvasGameState {
     pickupConfig: CFG,
     pickupSpots: [],
     lastPickupRollAt: 0,
+    mapBasePoints: 20,
     pickupOvertime: 0,
     pickupCapBonus: 0,
     freezeCharges: 0,
@@ -157,10 +158,10 @@ describe("pickup spawning", () => {
 describe("claiming (lock with the token in the pocket)", () => {
   it("overtime token pays into pickupOvertime and is removed", () => {
     const game = makeGame();
-    const token = makeToken(game, 300, 300);
+    const token = makeToken(game, 300, 300, "overtime", 1);
     const idx = worldToGridIndex(game.spaceGrid!, 300, 300);
     claimPickupsInPocket(game, new Set([idx]));
-    expect(game.pickupOvertime).toBe(4);
+    expect(game.pickupOvertime).toBe(20); // value 1 x mapBasePoints 20 (#68)
     expect(game.pickups.length).toBe(0);
     expect(game.pickupFeedback.length).toBe(1);
     expect(game.pickupFeedback[0].kind).toBe("claimed");
@@ -202,7 +203,7 @@ describe("claiming (lock with the token in the pocket)", () => {
 
   it("every claim lands in the per-map log with its resolved effect and value", () => {
     const game = makeGame();
-    makeToken(game, 300, 300, "overtime", 4);
+    makeToken(game, 300, 300, "overtime", 1);
     makeToken(game, 315, 300, "freeShopItem", 1);
     const cells = new Set([
       worldToGridIndex(game.spaceGrid!, 300, 300),
@@ -210,7 +211,7 @@ describe("claiming (lock with the token in the pocket)", () => {
     ]);
     claimPickupsInPocket(game, cells);
     expect(game.pickupsClaimedLog).toEqual([
-      { effect: "overtime", value: 4 },
+      { effect: "overtime", value: 20 }, // value 1 x mapBasePoints 20 (#68)
       { effect: "freeShopItem", value: 1 },
     ]);
   });
@@ -310,10 +311,10 @@ describe("Total Compensation (pickup payout enhancer)", () => {
 
   it("overtime and capRaise tokens pay +1h per level", () => {
     const game = makeGame();
-    makeToken(game, 300, 300, "overtime", 4);
+    makeToken(game, 300, 300, "overtime", 1);
     claimAt(game, 300, 300, 2);
-    expect(game.pickupOvertime).toBe(6);
-    expect(game.pickupFeedback[0].value).toBe(6); // the label shows the real payout
+    expect(game.pickupOvertime).toBe(22); // 1 x mapBasePoints 20, + 2 (Total Compensation)
+    expect(game.pickupFeedback[0].value).toBe(22); // the label shows the real payout
     makeToken(game, 600, 600, "capRaise", 5);
     claimAt(game, 600, 600, 3);
     expect(game.pickupCapBonus).toBe(8);

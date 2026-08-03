@@ -279,12 +279,16 @@ function applyPickupEffect(
   const log = (effect: PickupEffect, value: number) =>
     (game.pickupsClaimedLog ??= []).push({ effect, value });
   switch (token.effect) {
-    case "overtime":
-      // Total Compensation: +1h per level (feedback shows the real payout).
-      game.pickupOvertime = (game.pickupOvertime ?? 0) + token.value + payoutLevel;
-      pushFeedback(game, token, "claimed", "overtime", token.value + payoutLevel);
-      log("overtime", token.value + payoutLevel);
+    case "overtime": {
+      // Proportionate to the map (#68): pay token.value x the map's base points,
+      // not a flat pittance (a +3h token was meaningless on a 100h+ map). Total
+      // Compensation still adds its +1h/level on top.
+      const otBonus = Math.max(1, Math.round((game.mapBasePoints ?? 20) * token.value)) + payoutLevel;
+      game.pickupOvertime = (game.pickupOvertime ?? 0) + otBonus;
+      pushFeedback(game, token, "claimed", "overtime", otBonus);
+      log("overtime", otBonus);
       break;
+    }
     case "capRaise":
       game.pickupCapBonus = (game.pickupCapBonus ?? 0) + token.value + payoutLevel;
       pushFeedback(game, token, "claimed", "capRaise", token.value + payoutLevel);

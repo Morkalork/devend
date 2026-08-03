@@ -564,6 +564,7 @@ export function GameCanvas({
     frozenBallVelocity: null as Vector2 | null,
     frozenBallPosition: null as Vector2 | null,
     lockedBallsCount: 0,
+    mapBasePoints: 20,
     lockBonus: 0,
     superiorLockCount: 0,
     superiorLockBonus: 0,
@@ -885,6 +886,8 @@ export function GameCanvas({
       game.fallingObjects = [];
       game.objectivesBroken = 0;
       game.breakBonus = 0;
+      // This map's overtime scale, for sizing overtime pickups proportionately (#68).
+      game.mapBasePoints = level.points ?? 20;
       game.breakMultiplier = 1;
       game.lastDudAt = 0;
       game.chestLoot = [];

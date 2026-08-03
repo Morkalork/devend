@@ -206,6 +206,9 @@ export interface CanvasGameState {
   frozenBallPosition: Vector2 | null;
 
   // ── Lock bonus ─────────────────────────────────────────────────────────
+  /** This map's base points (level.points), the map's overtime scale. Used to
+   *  size overtime pickups proportionately to the map instead of a flat pittance. */
+  mapBasePoints: number;
   /** Number of balls locked this level (for lock-bonus multiplier). */
   lockedBallsCount: number;
   lockBonus: number;
