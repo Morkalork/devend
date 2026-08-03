@@ -263,6 +263,7 @@
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
     "fenceBudgetLeft": "{{count}} staket kvar på denna bana",
     "beatCrunchTime": "Slutspurt",
+    "circuitComplete": "Integrationen Levererad",
     "timeTier1": "Deadline närmar sig",
     "timeTier2": "Tiden börjar rinna ut",
     "timeTier3": "Sista sekunderna",

@@ -429,7 +429,7 @@ export function pushReopenedSamplePoints(game: CanvasGameState, cells: number[])
  * as sample points so the board grid texture is painted over the newly-opened
  * area (otherwise it renders as a bare patch).
  */
-function reopenCells(game: CanvasGameState, cells: number[]): void {
+export function reopenCells(game: CanvasGameState, cells: number[]): void {
   const grid = game.spaceGrid;
   if (!grid) return;
   restoreCells(grid, cells);

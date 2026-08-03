@@ -35,6 +35,7 @@ import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
 import { wasteCapturedPickups } from "@/lib/pickups";
+import { tickCircuitOnCut } from "@/lib/physics/circuit";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 
@@ -263,6 +264,11 @@ export function applyCutFn(
   // wasted (empty-space capture, or the fence was drawn straight over it).
   // Runs after the lock pass, so a properly sealed token was already claimed.
   wasteCapturedPickups(game);
+
+  // "Wire the Integration": light any circuit terminals this fence routed
+  // through; completing the circuit opens its sealed bonus vault (reopens space
+  // + repaints), reflected by the single paint below.
+  tickCircuitOnCut(game, wall, callbacks);
 
   // Paint the region canvas ONCE per cut, here at the end, reflecting the FINAL
   // grid (post-capture, post-lock), then present. It used to repaint mid-cut AND

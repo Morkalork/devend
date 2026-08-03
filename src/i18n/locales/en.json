@@ -265,6 +265,7 @@
     "freezeUsesLeft": "{{count}} freezes left this map",
     "fenceBudgetLeft": "{{count}} fences left this map",
     "beatCrunchTime": "Crunch Time",
+    "circuitComplete": "Integration Shipped",
     "timeTier1": "Deadline Approaching",
     "timeTier2": "Time Running Low",
     "timeTier3": "Final Seconds",

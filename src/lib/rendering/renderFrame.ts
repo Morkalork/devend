@@ -750,6 +750,46 @@ export function renderFrame(
     ctx.restore();
   }
 
+  // ── "Wire the Integration" circuit (terminals + sealed-vault hint) ─────────
+  if (game.circuit) {
+    const c = game.circuit;
+    const LIT = "#7fe3d4", DIM = "#3f6f66";
+    ctx.save();
+    if (!c.complete) {
+      const z = c.bonusZone;
+      const tl = w2s(z.x, z.y);
+      ctx.strokeStyle = hexToRgba(LIT, 0.4);
+      ctx.lineWidth = Math.max(1, 2 * scale);
+      ctx.setLineDash([9 * scale, 6 * scale]);
+      ctx.strokeRect(tl.x, tl.y, z.width * scale, z.height * scale);
+      ctx.setLineDash([]);
+    }
+    if (c.complete && c.terminals.length >= 2) {
+      ctx.strokeStyle = hexToRgba(LIT, 0.6);
+      ctx.lineWidth = Math.max(1.5, 2 * scale);
+      ctx.beginPath();
+      const p0 = w2s(c.terminals[0].x, c.terminals[0].y);
+      ctx.moveTo(p0.x, p0.y);
+      for (let i = 1; i < c.terminals.length; i++) {
+        const p = w2s(c.terminals[i].x, c.terminals[i].y);
+        ctx.lineTo(p.x, p.y);
+      }
+      ctx.stroke();
+    }
+    for (const t of c.terminals) {
+      const p = w2s(t.x, t.y);
+      const on = t.lit || c.complete;
+      const color = on ? LIT : DIM;
+      const rr = Math.max(7, t.radius * scale);
+      ctx.strokeStyle = hexToRgba(color, on ? 1 : 0.6);
+      ctx.lineWidth = Math.max(2, 2.5 * scale);
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = hexToRgba(color, on ? 1 : 0.6);
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(2, 3 * scale), 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
   // ── Wall shadow quads ─────────────────────────────────────────────────────
   {
     const shadowW = 7 * scale;

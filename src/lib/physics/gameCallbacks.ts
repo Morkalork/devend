@@ -41,6 +41,9 @@ export interface GameCallbacks {
   /** Fired when the ball count changes mid-map (a Fork pickup split a ball),
    *  so the Ship Early countdown bar rescales its per-ball windows. */
   onBallCountChanged?: (count: number) => void;
+  /** Fired when a "Wire the Integration" circuit completes and its vault opens,
+   *  so the UI can flash the telegraph banner + play a sound. Optional. */
+  onCircuitComplete?: (announce?: string) => void;
   // Lives ref access — updateWall needs mutable live value
   getLives: () => number;
   setLivesRef: (n: number) => void;

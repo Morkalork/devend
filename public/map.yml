@@ -383,13 +383,24 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
+  # PILOT: "Wire the Integration" showcase. Two terminals flank the hub, so you
+  # must route a cut through each (the hub blocks a single line across both) to
+  # wire the circuit and open the sealed corner vault (a 2x lock pocket).
   - id: level-8
     level: 8
     sizeThreshold: 30
-    expectedCuts: 6
+    expectedCuts: 7
     points: 20
     variety: 5
     maxBalls: 4
+    circuit:
+      terminals:
+        - { x: 235, y: 450 }
+        - { x: 665, y: 450 }
+      radius: 28
+      reveals: { x: 615, y: 615, width: 245, height: 245 }
+      lockMultiplier: 2
+      announce: game.circuitComplete
     entities:
       - id: hub
         kind: wall

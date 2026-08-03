@@ -533,6 +533,7 @@ export function GameCanvas({
     lockZones: [],
     coloredAreas: [],
     coloredAreaSatisfied: false,
+    circuit: null,
     bossActive: false,
     bossHp: 0,
     bossMaxHp: 0,
@@ -933,6 +934,8 @@ export function GameCanvas({
       // Colored Areas (required win-gate): rotate into the board's frame.
       game.coloredAreas = (level.coloredAreas ?? []).map(a => rotateColoredArea(a, data.mapRotation));
       game.coloredAreaSatisfied = false;
+      // "Wire the Integration" circuit (already rotated + sealed in initGame).
+      game.circuit = data.circuit;
       game.walls              = data.walls;
       game.movers             = data.movers;
       game.obstaclePolygons   = data.obstaclePolygons;
@@ -1204,6 +1207,13 @@ export function GameCanvas({
       onBallTypeLocked: id => onBallTypeLockedRef.current?.(id) ?? false,
       // Fork pickup split a ball: rescale the Ship Early countdown windows.
       onBallCountChanged: setBallCount,
+      // A circuit completed and its vault opened: flash the telegraph banner.
+      onCircuitComplete: (announce?: string) => {
+        if (!announce) return;
+        setBeatBanner({ key: performance.now(), announce });
+        if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
+        beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
+      },
       getLives: () => livesRef.current,
       setLivesRef: n => { livesRef.current = n; },
       getBankedOvertime: () => totalScoreRef.current,

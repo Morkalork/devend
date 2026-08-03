@@ -19,7 +19,7 @@
 
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
-import type { LevelEntity, LockZone, ColoredArea } from "@/types/level";
+import type { LevelEntity, LockZone, ColoredArea, CircuitConfig } from "@/types/level";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -134,6 +134,16 @@ export function rotateColoredArea(area: ColoredArea, r: MapRotation): ColoredAre
   if (r === 0) return area;
   const rect = rotateRect(area.x, area.y, area.width, area.height, r);
   return { ...rect, kind: area.kind };
+}
+
+/** Rotate a circuit (its terminal points + the reveal rect) into the orientation. */
+export function rotateCircuit(circuit: CircuitConfig, r: MapRotation): CircuitConfig {
+  if (r === 0) return circuit;
+  return {
+    ...circuit,
+    terminals: circuit.terminals.map(t => rotatePoint(t.x, t.y, r)),
+    reveals: rotateRect(circuit.reveals.x, circuit.reveals.y, circuit.reveals.width, circuit.reveals.height, r),
+  };
 }
 
 /**

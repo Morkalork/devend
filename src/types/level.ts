@@ -186,6 +186,12 @@ export interface LevelConfig {
    */
   coloredAreas?: ColoredArea[];
   /**
+   * "Wire the Integration" circuit (a greed hook keyed on fence PLACEMENT):
+   * route fences through the terminals to complete it and open a sealed bonus
+   * vault. One per map. See CircuitConfig.
+   */
+  circuit?: CircuitConfig;
+  /**
    * Fence budget / "WIP Limit" (LEVELDESIGN.md modifier): the max number of
    * COMPLETED fences allowed on this map. Running out before the map is
    * finished loses a life and restarts the map. Only successful partitions
@@ -239,6 +245,33 @@ export interface LockZone {
   height: number;
   /** Lock-points multiplier for balls locked inside (e.g. 2 = double). */
   multiplier: number;
+}
+
+/** A circuit terminal: a world point a fence must pass through to light it. */
+export interface CircuitTerminal {
+  x: number;
+  y: number;
+}
+
+/**
+ * "Wire the Integration" (LEVELDESIGN.md convention 2, greed hook on PLACEMENT):
+ * a set of terminals the player lights by routing fences through them. When all
+ * are lit the circuit COMPLETES and opens a sealed bonus vault (`reveals` rect)
+ * that also pays `lockMultiplier` on locks inside it. Rotated with the map.
+ */
+export interface CircuitConfig {
+  /** 2+ nodes; a fence passing within `radius` of one lights it. */
+  terminals: CircuitTerminal[];
+  /** World-unit distance a fence segment must pass within to light a terminal. */
+  radius: number;
+  /** Hard mode: all terminals must be threaded by a SINGLE fence (default false). */
+  singleCut?: boolean;
+  /** The bonus vault opened on completion: sealed (uncuttable) until then. */
+  reveals: { x: number; y: number; width: number; height: number };
+  /** Lock-points multiplier paid inside the revealed vault (default 2). */
+  lockMultiplier?: number;
+  /** Telegraph i18n key flashed when the circuit completes. */
+  announce?: string;
 }
 
 /**

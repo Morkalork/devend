@@ -33,7 +33,8 @@ import {
 } from "@/lib/spaceGrid";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
 import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
-import { pickMapRotation, rotateEntities, MapRotation } from "@/lib/mapRotation";
+import { pickMapRotation, rotateEntities, rotateCircuit, MapRotation } from "@/lib/mapRotation";
+import type { CircuitRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import {
   getVarietyDecorationConfig,
@@ -140,6 +141,8 @@ export interface InitialGameData {
   phasingObjects: PhasingObjectState[];
   /** Which of the four orientations this map was built in (0 = standard). */
   mapRotation: MapRotation;
+  /** "Wire the Integration" circuit runtime, or null when the map has none. */
+  circuit: CircuitRuntime | null;
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
@@ -212,6 +215,14 @@ export function createInitialGameData(
     [...(level.entities || []), ...slotEntities],
     mapRotation,
   );
+
+  // "Wire the Integration" circuit (rotated into the map's frame). Its reveal
+  // rect is sealed like a vault gate below (uncuttable until the circuit
+  // completes and reopens it).
+  const circuit = level.circuit ? rotateCircuit(level.circuit, mapRotation) : null;
+  const circuitRevealPoly = circuit
+    ? createRectPolygon(circuit.reveals.x, circuit.reveals.y, circuit.reveals.x + circuit.reveals.width, circuit.reveals.y + circuit.reveals.height)
+    : null;
 
   const randomObstacles = generateRandomObstacles(
     level.randomShapes ?? 20,
@@ -556,7 +567,7 @@ export function createInitialGameData(
   const initBounds   = polygonBounds(boardPolygon);
   const initSamplePoints: Vector2[] = [];
 
-  const sealedPolys = sealedAreas.map(s => s.poly);
+  const sealedPolys = [...sealedAreas.map(s => s.poly), ...(circuitRevealPoly ? [circuitRevealPoly] : [])];
   const insideSealed = (p: Vector2) => sealedPolys.some(poly => pointInPolygon(p, poly));
 
   for (let x = initBounds.minX + initGridSize / 2; x < initBounds.maxX; x += initGridSize) {
@@ -595,6 +606,40 @@ export function createInitialGameData(
     }
     sealed.destructible.sealedCells = cells;
   }
+
+  // Same sealing for the circuit's bonus vault: record its cells so completing
+  // the circuit reopens exactly them (reuses the vault reopen path).
+  let circuitRuntime: CircuitRuntime | null = null;
+  if (circuit && circuitRevealPoly) {
+    const b = polygonBounds(circuitRevealPoly);
+    const cells: number[] = [];
+    const c0 = Math.max(0, Math.floor((b.minX - spaceGrid.originX) / spaceGrid.cellSize));
+    const c1 = Math.min(spaceGrid.width - 1, Math.ceil((b.maxX - spaceGrid.originX) / spaceGrid.cellSize));
+    const r0 = Math.max(0, Math.floor((b.minY - spaceGrid.originY) / spaceGrid.cellSize));
+    const r1 = Math.min(spaceGrid.height - 1, Math.ceil((b.maxY - spaceGrid.originY) / spaceGrid.cellSize));
+    for (let row = r0; row <= r1; row++) {
+      for (let col = c0; col <= c1; col++) {
+        const idx = row * spaceGrid.width + col;
+        if (spaceGrid.cells[idx] !== CellState.REMOVED) continue;
+        const wx = spaceGrid.originX + col * spaceGrid.cellSize + spaceGrid.cellSize / 2;
+        const wy = spaceGrid.originY + row * spaceGrid.cellSize + spaceGrid.cellSize / 2;
+        if (pointInPolygon({ x: wx, y: wy }, circuitRevealPoly)) cells.push(idx);
+      }
+    }
+    circuitRuntime = {
+      terminals: circuit.terminals.map(t => ({ x: t.x, y: t.y, radius: circuit.radius, lit: false })),
+      singleCut: !!circuit.singleCut,
+      complete: false,
+      revealCells: cells,
+      bonusZone: {
+        x: circuit.reveals.x, y: circuit.reveals.y,
+        width: circuit.reveals.width, height: circuit.reveals.height,
+        multiplier: circuit.lockMultiplier ?? 2,
+      },
+      announce: circuit.announce,
+    };
+  }
+
   const gridRegions = findGridRegions(spaceGrid);
 
   // Inflate the percentage baseline so the remaining% starts at targetRemaining
@@ -749,5 +794,6 @@ export function createInitialGameData(
     chains,
     phasingObjects,
     mapRotation,
+    circuit: circuitRuntime,
   };
 }

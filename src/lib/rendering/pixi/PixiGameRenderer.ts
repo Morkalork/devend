@@ -72,6 +72,8 @@ export class PixiGameRenderer {
   private coloredAreasG = new Graphics();
   private coloredAreaLabels: Text[] = [];
   private coloredAreasKey = "";
+  private circuitG = new Graphics(); // "Wire the Integration" terminals + vault hint
+  private circuitKey = "";
   private movers = new Graphics();
   private obstacles = new Graphics();
   private phasing = new Graphics();   // phasing obstacles (#64), redrawn every frame
@@ -143,7 +145,7 @@ export class PixiGameRenderer {
     this.wallsScope.addChild(this.wallGlow, this.wallCore);
     this.wallsScope.mask = this.fenceMask;
 
-    this.lockZonesContainer.addChild(this.lockZonesG, this.coloredAreasG);
+    this.lockZonesContainer.addChild(this.lockZonesG, this.coloredAreasG, this.circuitG);
     this.boardScope.addChild(
       this.rainLayer,
       this.boardBase,
@@ -277,6 +279,7 @@ export class PixiGameRenderer {
       this.syncRain(game, rctx, scale, now);
       this.syncLockZones(game, w2s, scale);
       this.syncColoredAreas(game, w2s, scale);
+      this.syncCircuit(game, w2s, scale);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
       this.syncPhasing(game, w2s, scale);
@@ -677,6 +680,61 @@ export class PixiGameRenderer {
       multText.position.set(cx, cy + labelPx * 0.35);
       this.lockZonesContainer.addChild(kindText, multText);
       this.coloredAreaLabels.push(kindText, multText);
+    }
+  }
+
+  // "Wire the Integration": terminal nodes (dim -> bright as fences route
+  // through them) + a dashed hint of the sealed vault, connected by a beam once
+  // complete. `lit`/`complete` are in the cache key so it re-syncs on change.
+  private syncCircuit(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const c = game.circuit;
+    const key = c
+      ? c.terminals.map(t => `${t.x},${t.y},${t.radius},${t.lit ? 1 : 0}`).join("|")
+        + `_${c.complete ? 1 : 0}_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 1000)}`
+      : "none";
+    if (this.circuitKey === key) return;
+    this.circuitKey = key;
+
+    const g = this.circuitG;
+    g.clear();
+    if (!c) return;
+
+    const LIT = 0x7fe3d4;   // teal, matches the const/vault palette
+    const DIM = 0x3f6f66;
+
+    // Sealed vault hint (dashed) until the circuit opens it; after, syncLockZones
+    // tints the opened pocket (bonusZone is pushed to game.lockZones).
+    if (!c.complete) {
+      const z = c.bonusZone;
+      const tl = w2s(z.x, z.y);
+      const aw = z.width * scale, ah = z.height * scale;
+      dashedLine(g, tl.x, tl.y, tl.x + aw, tl.y, 9 * scale, 6 * scale);
+      dashedLine(g, tl.x + aw, tl.y, tl.x + aw, tl.y + ah, 9 * scale, 6 * scale);
+      dashedLine(g, tl.x + aw, tl.y + ah, tl.x, tl.y + ah, 9 * scale, 6 * scale);
+      dashedLine(g, tl.x, tl.y + ah, tl.x, tl.y, 9 * scale, 6 * scale);
+      g.stroke({ width: Math.max(1, 2 * scale), color: LIT, alpha: 0.4 });
+    }
+
+    // Beam connecting the terminals once wired.
+    if (c.complete && c.terminals.length >= 2) {
+      const p0 = w2s(c.terminals[0].x, c.terminals[0].y);
+      g.moveTo(p0.x, p0.y);
+      for (let i = 1; i < c.terminals.length; i++) {
+        const p = w2s(c.terminals[i].x, c.terminals[i].y);
+        g.lineTo(p.x, p.y);
+      }
+      g.stroke({ width: Math.max(1.5, 2 * scale), color: LIT, alpha: 0.6 });
+    }
+
+    // Terminal nodes.
+    for (const t of c.terminals) {
+      const p = w2s(t.x, t.y);
+      const on = t.lit || c.complete;
+      const color = on ? LIT : DIM;
+      const rr = Math.max(7, t.radius * scale);
+      g.circle(p.x, p.y, rr).stroke({ width: Math.max(2, 2.5 * scale), color, alpha: on ? 1 : 0.6 });
+      g.circle(p.x, p.y, Math.max(2, 3 * scale)).fill({ color, alpha: on ? 1 : 0.6 });
+      if (on) g.circle(p.x, p.y, rr + 3 * scale).stroke({ width: Math.max(1, scale), color, alpha: 0.35 });
     }
   }
 

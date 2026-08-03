@@ -18,6 +18,32 @@ import { LockZone, ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 
+/** A circuit terminal in world space with its runtime lit state. */
+export interface CircuitRuntimeTerminal {
+  x: number;
+  y: number;
+  radius: number;
+  lit: boolean;
+}
+
+/**
+ * "Wire the Integration" runtime state: terminals the player lights by routing
+ * fences through them, and the sealed bonus vault opened when all are lit.
+ */
+export interface CircuitRuntime {
+  terminals: CircuitRuntimeTerminal[];
+  /** Hard mode: all terminals must be threaded by ONE fence. */
+  singleCut: boolean;
+  /** All terminals lit and the vault opened. */
+  complete: boolean;
+  /** Grid cells of the sealed bonus vault, reopened on completion. */
+  revealCells: number[];
+  /** Lock zone pushed onto game.lockZones when the vault opens (its multiplier). */
+  bonusZone: LockZone;
+  /** i18n telegraph key flashed on completion (optional). */
+  announce?: string;
+}
+
 export interface CanvasGameState {
   // ── Space model ────────────────────────────────────────────────────────
   /** Authoritative 2D grid model for space ownership. */
@@ -112,6 +138,8 @@ export interface CanvasGameState {
   coloredAreas: ColoredArea[];
   /** A target ball has been locked inside a required Colored Area (the win gate). */
   coloredAreaSatisfied: boolean;
+  /** "Wire the Integration" circuit runtime for this map (null = no circuit). */
+  circuit: CircuitRuntime | null;
   /** Cumulative ball-speed multiplier from map-beat speed spikes (1 = none).
    *  Folded into creepFactor each frame like the mutator/ability factors. */
   beatSpeedMult: number;
