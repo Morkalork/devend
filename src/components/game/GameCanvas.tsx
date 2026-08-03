@@ -704,8 +704,11 @@ export function GameCanvas({
       const { width: sw, height: sh } = game.screenSize;
       // The board grid is static per map: nothing about it changes as the player
       // cuts. Skip the thousands of fillRects unless its inputs (size, board
-      // transform, colour, opacity, or the sample set itself) actually changed.
-      const key = `${sw}x${sh}|${game.boardRect.scale}|${game.boardRect.left}|${game.boardRect.top}|${game.regionColor}|${canvasOpacity}`;
+      // transform, colour, opacity, or the sample set) actually changed. NOTE the
+      // sample COUNT is in the key: a vault reveal (pushReopenedSamplePoints)
+      // grows game.initialSamplePoints IN PLACE (same reference), so a reference
+      // check alone would miss it and the reopened area would render no grid.
+      const key = `${sw}x${sh}|${game.boardRect.scale}|${game.boardRect.left}|${game.boardRect.top}|${game.regionColor}|${canvasOpacity}|${game.initialSamplePoints.length}`;
       if (key === boardGridKey && boardGridSamplesRef === game.initialSamplePoints) return;
       boardGridKey = key;
       boardGridSamplesRef = game.initialSamplePoints;
