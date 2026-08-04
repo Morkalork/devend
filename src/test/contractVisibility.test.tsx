@@ -145,6 +145,14 @@ describe("contract stats accumulate across the block (session integration)", () 
     for (let i = 0; i < 5; i++) await finishMap(30, 2);
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("assignmentSummary"));
     await act(async () => { result.current.session.handleContinueFromSummary(); });
+    // Continuing from the summary transitions asynchronously into the Promotion
+    // draft (level 10 trigger) before the next assignment draft. Wait for it to
+    // settle into one of the two draft screens BEFORE the conditional check -
+    // reading currentScreen synchronously here raced the transition and could
+    // skip the capstone select, then hang forever waiting for doorDraft.
+    await waitFor(() =>
+      expect(["capstoneDraft", "doorDraft"]).toContain(result.current.nav.currentScreen),
+    );
     if (result.current.nav.currentScreen === "capstoneDraft") {
       await act(async () => { result.current.session.handleSelectCapstone(result.current.session.capstoneOffers[0]); });
     }
