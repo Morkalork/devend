@@ -19,6 +19,7 @@ import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDO
 import { updateBall } from "@/lib/physics/updateBall";
 import { tickChains } from "@/lib/physics/chain";
 import { tickPhasing, collectPhasedOut } from "@/lib/physics/phasing";
+import { tickCharges } from "@/lib/physics/charge";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
 import { updateMoversFn } from "@/lib/physics/updateMovers";
@@ -39,6 +40,8 @@ export interface GameLoopCallbacks {
   processWallBreaks?: () => void;
   /** Called when a black ball destroyed a mirror/mover this frame. */
   processDestroys?: () => void;
+  /** Fired when a "Deploy Charge" detonates this frame, to flash the payoff banner. */
+  onChargeBlown?: (announce?: string) => void;
   /**
    * Per-frame safety net: evaluate the win conditions so a map that reached the
    * goal by ANY path (not just a completed cut or destroy) always finishes,
@@ -396,6 +399,12 @@ export function createGameLoop(
     // frame, outside the ball loop (it appends to game.balls). Same clock as
     // pickups, so it too pauses during holds/prompts/recovery.
     callbacks.spawnTimedBalls?.();
+
+    // "Deploy Charge": detonate any armed fuse whose telegraph delay elapsed.
+    // Runs BEFORE the wall-break + destroy passes below because a blast pushes
+    // its target slab onto pendingDestroys and shredded fences onto
+    // pendingWallBreaks, and we want both applied this same frame.
+    tickCharges(game, { onChargeBlown: callbacks.onChargeBlown });
 
     // Break any Ascension fences that ran out of durability (outside the
     // fixed-step loop — breaking rebuilds regions, too heavy per step)

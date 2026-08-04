@@ -34,8 +34,8 @@ import {
 } from "@/lib/spaceGrid";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
 import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
-import { pickMapRotation, rotateEntities, rotateCircuit, MapRotation } from "@/lib/mapRotation";
-import type { CircuitRuntime } from "@/types/gameState";
+import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, MapRotation } from "@/lib/mapRotation";
+import type { CircuitRuntime, ChargeRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import {
   getVarietyDecorationConfig,
@@ -144,6 +144,8 @@ export interface InitialGameData {
   mapRotation: MapRotation;
   /** "Wire the Integration" circuit runtime, or null when the map has none. */
   circuit: CircuitRuntime | null;
+  /** "Deploy Charge" fuses for this map (empty when none). */
+  charges: ChargeRuntime[];
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
@@ -224,6 +226,23 @@ export function createInitialGameData(
   const circuitRevealPoly = circuit
     ? createRectPolygon(circuit.reveals.x, circuit.reveals.y, circuit.reveals.x + circuit.reveals.width, circuit.reveals.y + circuit.reveals.height)
     : null;
+
+  // "Deploy Charge" fuses (rotated into the map's frame). Each references its
+  // target obstacle by id; no grid sealing needed (the target reopens its own
+  // footprint through the breakable-destroy path when the charge detonates).
+  const charges: ChargeRuntime[] = (level.charges ?? []).map(cfg => {
+    const rc = rotateCharge(cfg, mapRotation);
+    return {
+      fuse: { x: rc.fuse.x, y: rc.fuse.y },
+      radius: rc.radius,
+      targetId: rc.targetId,
+      blastRadius: rc.blastRadius ?? 220,
+      delaySeconds: rc.delaySeconds ?? 1.2,
+      armedAt: null,
+      blown: false,
+      announce: rc.announce,
+    };
+  });
 
   const randomObstacles = generateRandomObstacles(
     level.randomShapes ?? 20,
@@ -826,5 +845,6 @@ export function createInitialGameData(
     phasingObjects,
     mapRotation,
     circuit: circuitRuntime,
+    charges,
   };
 }

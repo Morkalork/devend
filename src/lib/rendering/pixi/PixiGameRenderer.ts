@@ -73,6 +73,7 @@ export class PixiGameRenderer {
   private coloredAreaLabels: Text[] = [];
   private coloredAreasKey = "";
   private circuitG = new Graphics(); // "Wire the Integration" terminals + vault hint
+  private chargeG = new Graphics(); // "Deploy Charge" fuse markers + arm/blast telegraph
   private movers = new Graphics();
   private obstacles = new Graphics();
   private phasing = new Graphics();   // phasing obstacles (#64), redrawn every frame
@@ -144,7 +145,7 @@ export class PixiGameRenderer {
     this.wallsScope.addChild(this.wallGlow, this.wallCore);
     this.wallsScope.mask = this.fenceMask;
 
-    this.lockZonesContainer.addChild(this.lockZonesG, this.coloredAreasG, this.circuitG);
+    this.lockZonesContainer.addChild(this.lockZonesG, this.coloredAreasG, this.circuitG, this.chargeG);
     this.boardScope.addChild(
       this.rainLayer,
       this.boardBase,
@@ -279,6 +280,7 @@ export class PixiGameRenderer {
       this.syncLockZones(game, w2s, scale);
       this.syncColoredAreas(game, w2s, scale);
       this.syncCircuit(game, w2s, scale, now);
+      this.syncCharges(game, w2s, scale, now);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
       this.syncPhasing(game, w2s, scale);
@@ -733,6 +735,42 @@ export class PixiGameRenderer {
       g.circle(p.x, p.y, rr).stroke({ width: Math.max(2.5, 3 * scale), color, alpha: on ? 1 : 0.85 });
       // Core dot, brightness breathing.
       g.circle(p.x, p.y, Math.max(2.5, 3.5 * scale)).fill({ color, alpha: (on ? 1 : 0.9) * (0.55 + 0.45 * pulse) });
+    }
+  }
+
+  // ── "Deploy Charge" fuses: a marker on the slab, pulsing while armed ────────
+  private syncCharges(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const g = this.chargeG;
+    g.clear();
+    const charges = game.charges;
+    if (!charges || charges.length === 0) return;
+
+    const DIM = 0xffb454;  // amber, matches the breakable slab palette
+    const HOT = 0xff5b3d;  // hot orange while armed / about to blow
+
+    for (const c of charges) {
+      if (c.blown) continue;
+      const p = w2s(c.fuse.x, c.fuse.y);
+      const rr = Math.max(7, c.radius * scale);
+
+      if (c.armedAt === null) {
+        // Idle fuse: a steady amber ring + a small "spark" core so it reads as
+        // interactive (route a fence past it), calmer than the armed state.
+        const breath = 0.5 + 0.5 * Math.sin(now / 420);
+        g.circle(p.x, p.y, rr).stroke({ width: Math.max(2, 2.5 * scale), color: DIM, alpha: 0.85 });
+        g.circle(p.x, p.y, Math.max(2.5, 3.5 * scale)).fill({ color: DIM, alpha: 0.6 + 0.4 * breath });
+      } else {
+        // Armed: the closer to detonation, the faster + hotter it flashes, and a
+        // shrinking countdown ring telegraphs the imminent blast + its radius.
+        const frac = Math.min(1, Math.max(0, (game.activePlaySeconds - c.armedAt) / c.delaySeconds));
+        const flash = 0.5 + 0.5 * Math.sin(now / (60 + 160 * (1 - frac)));
+        // Countdown ring collapsing from the blast radius toward the fuse.
+        const blastR = c.blastRadius * scale;
+        g.circle(p.x, p.y, blastR * (1 - frac)).stroke({ width: Math.max(1.5, 2 * scale), color: HOT, alpha: 0.25 + 0.35 * flash });
+        // The fuse itself, flashing hotter as it winds up.
+        g.circle(p.x, p.y, rr).stroke({ width: Math.max(2.5, 3 * scale), color: HOT, alpha: 0.6 + 0.4 * flash });
+        g.circle(p.x, p.y, Math.max(3, 4 * scale)).fill({ color: HOT, alpha: 0.7 + 0.3 * flash });
+      }
     }
   }
 

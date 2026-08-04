@@ -192,6 +192,12 @@ export interface LevelConfig {
    */
   circuit?: CircuitConfig;
   /**
+   * "Deploy Charge" fuses (a player-authored Turn keyed on fence PLACEMENT):
+   * route a fence over a fuse to arm it, and after a telegraphed beat it blasts
+   * away its target obstacle slab, reshaping the board. See ChargeConfig.
+   */
+  charges?: ChargeConfig[];
+  /**
    * Fence budget / "WIP Limit" (LEVELDESIGN.md modifier): the max number of
    * COMPLETED fences allowed on this map. Running out before the map is
    * finished loses a life and restarts the map. Only successful partitions
@@ -271,6 +277,30 @@ export interface CircuitConfig {
   /** Lock-points multiplier paid inside the revealed vault (default 2). */
   lockMultiplier?: number;
   /** Telegraph i18n key flashed when the circuit completes. */
+  announce?: string;
+}
+
+/**
+ * "Deploy Charge" (LEVELDESIGN.md convention 3, a player-authored Turn): a fuse
+ * sits on/beside an obstacle slab. Routing a fence within `radius` of the fuse
+ * ARMS it; after `delaySeconds` of telegraph it DETONATES, destroying the target
+ * obstacle (reopening its footprint as capturable space), flinging nearby balls,
+ * and fracturing the player's own fences inside `blastRadius`. The target must be
+ * a breakable obstacle entity (it carries a destructible descriptor). Rotated
+ * with the map.
+ */
+export interface ChargeConfig {
+  /** The fuse point a fence must pass within `radius` of to arm the charge. */
+  fuse: { x: number; y: number };
+  /** World-unit distance a fence segment must pass within to arm the fuse. */
+  radius: number;
+  /** Id of the breakable obstacle entity destroyed when the charge detonates. */
+  targetId: string;
+  /** Balls flung + player fences fractured within this of the blast (default 220). */
+  blastRadius?: number;
+  /** Telegraphed wind-up in active-play seconds between arming and blast (default 1.2). */
+  delaySeconds?: number;
+  /** Telegraph i18n key flashed when the charge detonates. */
   announce?: string;
 }
 

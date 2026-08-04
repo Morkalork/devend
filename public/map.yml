@@ -733,6 +733,12 @@ levels:
         cx: 650
         cy: 650
         radius: 60
+  # DEPLOY CHARGE showcase: a wall bar splits the board top/bottom, plugged in
+  # the middle by a hardened slab. Route a fence past the fuse below it to arm
+  # the charge; after a short wind-up it blasts the slab away, opening the neck
+  # between the halves (fresh space to capture) - but the blast also flings any
+  # ball caught near it loose and shreds your own fences in the radius, so pick
+  # your moment.
   - id: level-16
     level: 16
     sizeThreshold: 7
@@ -741,20 +747,32 @@ levels:
     variety: 28
     maxBalls: 4
     entities:
-      - id: wall-cross-h
+      - id: bar-left
         kind: wall
         shape: rect
         x: 50
         'y': 415
-        width: 800
+        width: 320
         height: 35
-      - id: wall-cross-v
+      - id: bar-right
         kind: wall
         shape: rect
-        x: 415
-        'y': 50
-        width: 35
-        height: 800
+        x: 530
+        'y': 415
+        width: 320
+        height: 35
+      # The hardened slab plugging the gap between the bar halves. Its high
+      # integrity budget means balls won't casually crack it: the fuse is the
+      # way through. Blowing it reopens its footprint as capturable space.
+      - id: slab-plug
+        kind: wall
+        shape: rect
+        x: 370
+        'y': 405
+        width: 160
+        height: 55
+        breakable: true
+        hitsToBreak: 40
       - id: wall-c-tl
         kind: wall
         shape: circle
@@ -767,6 +785,13 @@ levels:
         cx: 650
         cy: 650
         radius: 50
+    charges:
+      - fuse: { x: 450, y: 520 }
+        radius: 30
+        targetId: slab-plug
+        blastRadius: 200
+        delaySeconds: 1.2
+        announce: game.chargeBlown
   - id: level-17
     level: 17
     sizeThreshold: 7

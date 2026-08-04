@@ -534,6 +534,7 @@ export function GameCanvas({
     coloredAreas: [],
     coloredAreaSatisfied: false,
     circuit: null,
+    charges: [],
     bossActive: false,
     bossHp: 0,
     bossMaxHp: 0,
@@ -939,6 +940,8 @@ export function GameCanvas({
       game.coloredAreaSatisfied = false;
       // "Wire the Integration" circuit (already rotated + sealed in initGame).
       game.circuit = data.circuit;
+      // "Deploy Charge" fuses (already rotated in initGame).
+      game.charges = data.charges ?? [];
       game.walls              = data.walls;
       game.movers             = data.movers;
       game.obstaclePolygons   = data.obstaclePolygons;
@@ -1217,6 +1220,12 @@ export function GameCanvas({
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
       },
+      // A Deploy Charge fuse was armed by a routed fence: flash the wind-up cue.
+      onChargeArmed: () => {
+        setBeatBanner({ key: performance.now(), announce: "game.chargeArmed" });
+        if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
+        beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 1600);
+      },
       getLives: () => livesRef.current,
       setLivesRef: n => { livesRef.current = n; },
       getBankedOvertime: () => totalScoreRef.current,
@@ -1247,6 +1256,12 @@ export function GameCanvas({
       updateWall: (dt: number) => updateWall(dt),
       applyCut: (wall) => applyCut(wall),
       render,
+      // A Deploy Charge detonated its slab: flash the payoff banner.
+      onChargeBlown: (announce?: string) => {
+        setBeatBanner({ key: performance.now(), announce: announce ?? "game.chargeBlown" });
+        if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
+        beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
+      },
       processWallBreaks: () =>
         processWallBreaksFn(game, {
           repaintRegionCanvas,

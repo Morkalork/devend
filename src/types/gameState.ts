@@ -44,6 +44,29 @@ export interface CircuitRuntime {
   announce?: string;
 }
 
+/**
+ * "Deploy Charge" runtime state: a fuse the player arms by routing a fence over
+ * it, which after a telegraphed delay detonates its target obstacle slab.
+ */
+export interface ChargeRuntime {
+  /** Fuse point (world space). */
+  fuse: { x: number; y: number };
+  /** Arm distance: a fence segment within this of the fuse arms it. */
+  radius: number;
+  /** Id of the breakable obstacle destroyed on detonation. */
+  targetId: string;
+  /** Balls flung + player fences fractured within this of the blast. */
+  blastRadius: number;
+  /** Telegraphed wind-up (active-play seconds) between arming and detonation. */
+  delaySeconds: number;
+  /** active-play seconds when the fuse was armed, or null while unarmed. */
+  armedAt: number | null;
+  /** True once it has detonated (spent). */
+  blown: boolean;
+  /** i18n telegraph key flashed on detonation (optional). */
+  announce?: string;
+}
+
 export interface CanvasGameState {
   // ── Space model ────────────────────────────────────────────────────────
   /** Authoritative 2D grid model for space ownership. */
@@ -140,6 +163,8 @@ export interface CanvasGameState {
   coloredAreaSatisfied: boolean;
   /** "Wire the Integration" circuit runtime for this map (null = no circuit). */
   circuit: CircuitRuntime | null;
+  /** "Deploy Charge" fuses for this map (empty = none). */
+  charges: ChargeRuntime[];
   /** Cumulative ball-speed multiplier from map-beat speed spikes (1 = none).
    *  Folded into creepFactor each frame like the mutator/ability factors. */
   beatSpeedMult: number;
