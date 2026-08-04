@@ -695,6 +695,10 @@ levels:
             cx: [280, 620]
             cy: [380, 520]
             radius: [26, 40]
+  # DATA STREAM showcase: a glowing seam runs across the open top band, above the
+  # corner nodes. Draw a fence ALONG it (a wide, loose top seal) to harvest it for
+  # bonus overtime, scaled by how much you cover; each span pays once. It is a
+  # greed call: a tight seal banks nothing, tracing the seam loosens your cut.
   - id: level-15
     level: 15
     sizeThreshold: 5
@@ -702,6 +706,14 @@ levels:
     points: 20
     variety: 30
     maxBalls: 4
+    dataStream:
+      path:
+        - { x: 300, y: 160 }
+        - { x: 450, y: 160 }
+        - { x: 600, y: 160 }
+      width: 40
+      reward: { kind: overtime, value: 30 }
+      announce: game.streamHarvested
     entities:
       - id: wall-1
         kind: wall

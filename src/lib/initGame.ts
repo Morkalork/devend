@@ -34,8 +34,8 @@ import {
 } from "@/lib/spaceGrid";
 import { generateRandomObstacles } from "@/lib/randomObstacles";
 import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
-import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, MapRotation } from "@/lib/mapRotation";
-import type { CircuitRuntime, ChargeRuntime } from "@/types/gameState";
+import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, rotateDataStream, MapRotation } from "@/lib/mapRotation";
+import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import {
   getVarietyDecorationConfig,
@@ -146,6 +146,8 @@ export interface InitialGameData {
   circuit: CircuitRuntime | null;
   /** "Deploy Charge" fuses for this map (empty when none). */
   charges: ChargeRuntime[];
+  /** "Data Stream" seam for this map, or null when none. */
+  dataStream: DataStreamRuntime | null;
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
@@ -243,6 +245,21 @@ export function createInitialGameData(
       announce: rc.announce,
     };
   });
+
+  // "Data Stream" seam (rotated into the map's frame). One harvest flag per
+  // seam segment; the mechanic (dataStream.ts) sets them as fences run along it.
+  let dataStream: DataStreamRuntime | null = null;
+  if (level.dataStream && level.dataStream.path.length >= 2) {
+    const rs = rotateDataStream(level.dataStream, mapRotation);
+    dataStream = {
+      path: rs.path.map(p => ({ x: p.x, y: p.y })),
+      width: rs.width,
+      reward: { kind: rs.reward.kind, value: rs.reward.value },
+      harvested: new Array(rs.path.length - 1).fill(false),
+      freezeProgress: 0,
+      announce: rs.announce,
+    };
+  }
 
   const randomObstacles = generateRandomObstacles(
     level.randomShapes ?? 20,
@@ -846,5 +863,6 @@ export function createInitialGameData(
     mapRotation,
     circuit: circuitRuntime,
     charges,
+    dataStream,
   };
 }

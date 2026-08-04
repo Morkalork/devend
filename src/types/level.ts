@@ -198,6 +198,12 @@ export interface LevelConfig {
    */
   charges?: ChargeConfig[];
   /**
+   * "Data Stream" seam (a greed hook keyed on fence PLACEMENT): draw a fence
+   * ALONG the glowing vein to harvest it for scaled overtime / a freeze charge.
+   * One per map. See DataStreamConfig.
+   */
+  dataStream?: DataStreamConfig;
+  /**
    * Fence budget / "WIP Limit" (LEVELDESIGN.md modifier): the max number of
    * COMPLETED fences allowed on this map. Running out before the map is
    * finished loses a life and restarts the map. Only successful partitions
@@ -301,6 +307,31 @@ export interface ChargeConfig {
   /** Telegraphed wind-up in active-play seconds between arming and blast (default 1.2). */
   delaySeconds?: number;
   /** Telegraph i18n key flashed when the charge detonates. */
+  announce?: string;
+}
+
+/** What a harvested Data Stream pays. `value` is the payout for covering the
+ *  WHOLE seam; partial coverage pays proportionally. */
+export interface DataStreamReward {
+  kind: "overtime" | "freezeCharge";
+  value: number;
+}
+
+/**
+ * "Data Stream" (LEVELDESIGN.md convention 2, a greed hook on fence PLACEMENT):
+ * a glowing vein across the board. A fence drawn ALONG the seam (running within
+ * `width` of it, not merely crossing it) harvests the spans it covers, paying
+ * `reward` scaled by how much of the seam is covered. The seam is laid so
+ * tracing it costs a looser seal or a hazard lane. Rotated with the map.
+ */
+export interface DataStreamConfig {
+  /** The seam polyline (2+ world points). Each segment is harvested once. */
+  path: { x: number; y: number }[];
+  /** A fence running within this of a seam segment harvests that segment. */
+  width: number;
+  /** What full coverage pays (partial coverage pays proportionally). */
+  reward: DataStreamReward;
+  /** Telegraph i18n key flashed when a span is harvested. */
   announce?: string;
 }
 

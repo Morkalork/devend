@@ -67,6 +67,21 @@ export interface ChargeRuntime {
   announce?: string;
 }
 
+/**
+ * "Data Stream" runtime state: the seam polyline and which of its segments the
+ * player has already harvested by running a fence along them.
+ */
+export interface DataStreamRuntime {
+  path: { x: number; y: number }[];
+  width: number;
+  reward: { kind: "overtime" | "freezeCharge"; value: number };
+  /** One flag per seam segment (path.length - 1); true once harvested. */
+  harvested: boolean[];
+  /** Accumulated coverage fraction toward the next whole freeze charge. */
+  freezeProgress: number;
+  announce?: string;
+}
+
 export interface CanvasGameState {
   // ── Space model ────────────────────────────────────────────────────────
   /** Authoritative 2D grid model for space ownership. */
@@ -165,6 +180,8 @@ export interface CanvasGameState {
   circuit: CircuitRuntime | null;
   /** "Deploy Charge" fuses for this map (empty = none). */
   charges: ChargeRuntime[];
+  /** "Data Stream" seam for this map (null = none). */
+  dataStream: DataStreamRuntime | null;
   /** Cumulative ball-speed multiplier from map-beat speed spikes (1 = none).
    *  Folded into creepFactor each frame like the mutator/ability factors. */
   beatSpeedMult: number;

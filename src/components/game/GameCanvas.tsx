@@ -535,6 +535,7 @@ export function GameCanvas({
     coloredAreaSatisfied: false,
     circuit: null,
     charges: [],
+    dataStream: null,
     bossActive: false,
     bossHp: 0,
     bossMaxHp: 0,
@@ -942,6 +943,8 @@ export function GameCanvas({
       game.circuit = data.circuit;
       // "Deploy Charge" fuses (already rotated in initGame).
       game.charges = data.charges ?? [];
+      // "Data Stream" seam (already rotated in initGame).
+      game.dataStream = data.dataStream ?? null;
       game.walls              = data.walls;
       game.movers             = data.movers;
       game.obstaclePolygons   = data.obstaclePolygons;
@@ -1223,6 +1226,12 @@ export function GameCanvas({
       // A Deploy Charge fuse was armed by a routed fence: flash the wind-up cue.
       onChargeArmed: () => {
         setBeatBanner({ key: performance.now(), announce: "game.chargeArmed" });
+        if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
+        beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 1600);
+      },
+      // A Data Stream span was harvested by a fence running along it.
+      onStreamHarvested: (_hours, announce) => {
+        setBeatBanner({ key: performance.now(), announce: announce ?? "game.streamHarvested" });
         if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
         beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 1600);
       },

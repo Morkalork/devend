@@ -50,6 +50,9 @@ export interface GameCallbacks {
   /** Fired when a "Deploy Charge" detonates its target slab, for the payoff
    *  banner. Optional. */
   onChargeBlown?: (announce?: string) => void;
+  /** Fired when a "Data Stream" span is harvested by a fence: `hours` is the
+   *  overtime paid this cut (0 for a freeze-charge seam). Optional. */
+  onStreamHarvested?: (hours: number, announce?: string) => void;
   // Lives ref access — updateWall needs mutable live value
   getLives: () => number;
   setLivesRef: (n: number) => void;

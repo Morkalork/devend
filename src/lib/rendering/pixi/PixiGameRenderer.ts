@@ -74,6 +74,7 @@ export class PixiGameRenderer {
   private coloredAreasKey = "";
   private circuitG = new Graphics(); // "Wire the Integration" terminals + vault hint
   private chargeG = new Graphics(); // "Deploy Charge" fuse markers + arm/blast telegraph
+  private dataStreamG = new Graphics(); // "Data Stream" seam (dim vein, bright when harvested)
   private movers = new Graphics();
   private obstacles = new Graphics();
   private phasing = new Graphics();   // phasing obstacles (#64), redrawn every frame
@@ -145,7 +146,7 @@ export class PixiGameRenderer {
     this.wallsScope.addChild(this.wallGlow, this.wallCore);
     this.wallsScope.mask = this.fenceMask;
 
-    this.lockZonesContainer.addChild(this.lockZonesG, this.coloredAreasG, this.circuitG, this.chargeG);
+    this.lockZonesContainer.addChild(this.lockZonesG, this.coloredAreasG, this.circuitG, this.chargeG, this.dataStreamG);
     this.boardScope.addChild(
       this.rainLayer,
       this.boardBase,
@@ -281,6 +282,7 @@ export class PixiGameRenderer {
       this.syncColoredAreas(game, w2s, scale);
       this.syncCircuit(game, w2s, scale, now);
       this.syncCharges(game, w2s, scale, now);
+      this.syncDataStream(game, w2s, scale, now);
       this.syncMovers(game, w2s, scale, now);
       this.syncObstacles(game, w2s, scale, accent);
       this.syncPhasing(game, w2s, scale);
@@ -772,6 +774,37 @@ export class PixiGameRenderer {
         g.circle(p.x, p.y, Math.max(3, 4 * scale)).fill({ color: HOT, alpha: 0.7 + 0.3 * flash });
       }
     }
+  }
+
+  // ── "Data Stream" seam: a glowing vein, spans brighten once harvested ──────
+  private syncDataStream(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const g = this.dataStreamG;
+    g.clear();
+    const ds = game.dataStream;
+    if (!ds || ds.path.length < 2) return;
+
+    const DIM = 0x9b7bff; // violet vein, distinct from the teal circuit + amber fuse
+    const HOT = 0xd6c2ff; // brightened once a span is harvested
+    const flow = 0.5 + 0.5 * Math.sin(now / 300); // gentle data-flow shimmer
+
+    for (let i = 0; i < ds.path.length - 1; i++) {
+      const a = w2s(ds.path[i].x, ds.path[i].y);
+      const b = w2s(ds.path[i + 1].x, ds.path[i + 1].y);
+      const done = ds.harvested[i];
+      const color = done ? HOT : DIM;
+      // Harvested spans read solid + bright; unharvested pulse as a dashed lure.
+      if (done) {
+        g.moveTo(a.x, a.y).lineTo(b.x, b.y).stroke({ width: Math.max(2.5, 3.5 * scale), color, alpha: 0.9, cap: "round" });
+      } else {
+        dashedLine(g, a.x, a.y, b.x, b.y, 12 * scale, 8 * scale);
+        g.stroke({ width: Math.max(2, 3 * scale), color, alpha: 0.4 + 0.4 * flow, cap: "round" });
+      }
+      // Node dots at each vertex so the seam reads as a routed path.
+      g.circle(a.x, a.y, Math.max(2, 2.5 * scale)).fill({ color, alpha: done ? 0.95 : 0.5 + 0.4 * flow });
+    }
+    const last = ds.path[ds.path.length - 1];
+    const lp = w2s(last.x, last.y);
+    g.circle(lp.x, lp.y, Math.max(2, 2.5 * scale)).fill({ color: ds.harvested[ds.harvested.length - 1] ? HOT : DIM, alpha: 0.7 });
   }
 
   private syncObstacles(game: CanvasGameState, w2s: W2S, scale: number, accent: string): void {

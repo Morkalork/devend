@@ -19,7 +19,7 @@
 
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
-import type { LevelEntity, LockZone, ColoredArea, CircuitConfig, ChargeConfig } from "@/types/level";
+import type { LevelEntity, LockZone, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig } from "@/types/level";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -151,6 +151,12 @@ export function rotateCircuit(circuit: CircuitConfig, r: MapRotation): CircuitCo
 export function rotateCharge(charge: ChargeConfig, r: MapRotation): ChargeConfig {
   if (r === 0) return charge;
   return { ...charge, fuse: rotatePoint(charge.fuse.x, charge.fuse.y, r) };
+}
+
+/** Rotate a Data Stream (its seam polyline) into the target orientation. */
+export function rotateDataStream(ds: DataStreamConfig, r: MapRotation): DataStreamConfig {
+  if (r === 0) return ds;
+  return { ...ds, path: ds.path.map(p => rotatePoint(p.x, p.y, r)) };
 }
 
 /**
