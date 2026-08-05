@@ -266,7 +266,7 @@
       "superiorBody": "Seal a ball into an extra tight pocket, well under half the size that would normally lock it. It pays double and is marked with this gold star."
     },
     "lockExplainer": {
-      "line": "A locked ball earns you more points and opens the store.",
+      "line": "Fence a ball into a tight pocket to lock it for extra points.",
       "dismiss": "Got it"
     },
     "pickupFork": "Ball split!",
