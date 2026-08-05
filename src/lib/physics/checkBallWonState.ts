@@ -1,7 +1,11 @@
 import { Ball, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { bonusLockMultiplierAt } from "@/lib/lockZones";
-import { coloredAreaAt, coloredAreaMultiplierAt, regionWithinAreas } from "@/lib/coloredAreas";
+import { coloredAreaAt, coloredAreaMultiplierAt, regionWithinAreas, regionCoversAreas } from "@/lib/coloredAreas";
+
+/** A lock counts as "inside" a colored area once it covers this fraction of the
+ *  area's cells (issue: the whole-region-inside rule was too hard). */
+const AREA_COVER_FRACTION = 0.7;
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import {
@@ -238,6 +242,10 @@ export function checkAndUpdateBallWonStates(
     // be defeated. This settles it the moment its region is contained.
     const areas = game.coloredAreas ?? [];
     const areaGate = areas.length > 0;
+    // Boss ship condition stays STRICT (whole region sealed within the area):
+    // a not-yet-fenced boss roams the open board, whose region trivially covers
+    // the area, so coverage alone can't gate the boss's lock or it would "win"
+    // before you fence it (level-10 fix).
     const bossContainedInArea = ball.isBoss && areaGate
       && regionWithinAreas(game.spaceGrid, ballRegion.cellIndices, areas);
 
@@ -272,7 +280,13 @@ export function checkAndUpdateBallWonStates(
     // map -> the boss is the target; otherwise any ball is.
     // A contained boss (region sealed within the area) counts as inside even if
     // its exact centre sits a hair past the rect edge on a boundary cell.
+    // A locked ball counts as INSIDE the area if its centre is in it OR its
+    // sealed pocket covers >=70% of the AREA's cells. The pocket may spill
+    // outside the zone; it just has to cover most of it (issue: the old rule was
+    // too strict). Only reached after the lock gate above, so `ballRegion` is a
+    // real seal, not the open board.
     const inArea = (areaGate && coloredAreaAt(ball.position.x, ball.position.y, areas) !== null)
+      || (areaGate && regionCoversAreas(game.spaceGrid, ballRegion.cellIndices, areas, AREA_COVER_FRACTION))
       || bossContainedInArea;
     const isAreaTarget = game.balls.some(x => x.isBoss) ? ball.isBoss : true;
 

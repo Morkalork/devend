@@ -6,6 +6,7 @@ import {
   coloredAreaAt,
   coloredAreaMultiplierAt,
   regionWithinAreas,
+  regionCoversAreas,
 } from "@/lib/coloredAreas";
 import { rotateColoredArea } from "@/lib/mapRotation";
 import { createSpaceGrid, worldToGridIndex } from "@/lib/spaceGrid";
@@ -70,6 +71,39 @@ describe("regionWithinAreas (boss fenced-into-area win, level-10 fix)", () => {
   it("is false for an empty region or with no areas", () => {
     expect(regionWithinAreas(grid, [], [a])).toBe(false);
     expect(regionWithinAreas(grid, cellsAt([[600, 100]]), [])).toBe(false);
+  });
+});
+
+describe("regionCoversAreas (win gate: cover >=70% of the AREA, not 70% of the pocket)", () => {
+  const grid = createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15);
+  const a = area(0, 0, 60, 60, "var"); // 4x4 = 16 cells (centres 7.5, 22.5, 37.5, 52.5)
+  const centres = [7.5, 22.5, 37.5, 52.5];
+  const areaCells: number[] = [];
+  for (const y of centres) for (const x of centres) areaCells.push(worldToGridIndex(grid, x, y));
+
+  it("true when the pocket covers the whole area, even spilling far outside it", () => {
+    const region = [...areaCells, worldToGridIndex(grid, 500, 500), worldToGridIndex(grid, 820, 820)];
+    expect(regionCoversAreas(grid, region, [a], 0.7)).toBe(true);
+  });
+
+  it("true at >=70% coverage of the area (12 of 16 cells)", () => {
+    expect(regionCoversAreas(grid, areaCells.slice(0, 12), [a], 0.7)).toBe(true);
+  });
+
+  it("false below 70% coverage of the area (8 of 16 cells)", () => {
+    expect(regionCoversAreas(grid, areaCells.slice(0, 8), [a], 0.7)).toBe(false);
+  });
+
+  it("a mostly-non-area pocket still passes if it covers the area (denominator is the AREA)", () => {
+    const outside: number[] = [];
+    for (let i = 0; i < 100; i++) outside.push(worldToGridIndex(grid, 200 + (i % 10) * 15, 300 + Math.floor(i / 10) * 15));
+    // ~14% of this pocket is area cells, but it covers 100% of the area -> passes.
+    expect(regionCoversAreas(grid, [...areaCells, ...outside], [a], 0.7)).toBe(true);
+  });
+
+  it("false for an empty region or with no areas", () => {
+    expect(regionCoversAreas(grid, [], [a], 0.7)).toBe(false);
+    expect(regionCoversAreas(grid, areaCells, [], 0.7)).toBe(false);
   });
 });
 

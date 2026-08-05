@@ -45,10 +45,9 @@ export function coloredAreaAt(x: number, y: number, areas: ColoredArea[]): Color
 
 /**
  * True when EVERY cell of a region sits inside some colored area, i.e. the
- * region is fully sealed within the area(s). Used by the boss win gate: fencing
- * the boss into the area ships it, no shrink-to-lock needed (LEVELDESIGN.md /
- * issue #56). Early-exits on the first out-of-area cell, so it is cheap while
- * the region still spans the board. An empty region/area set is not contained.
+ * region is fully sealed within the area(s). Early-exits on the first
+ * out-of-area cell. An empty region/area set is not contained.
+ * (Retained as a geometry utility; the win gate now uses regionCoversAreas.)
  */
 export function regionWithinAreas(
   grid: SpaceGrid,
@@ -61,6 +60,44 @@ export function regionWithinAreas(
     if (coloredAreaAt(w.x, w.y, areas) === null) return false;
   }
   return true;
+}
+
+/**
+ * True when a locked region COVERS at least `minFraction` of the colored area's
+ * cells (issue: colored-area win gate should be forgiving). The denominator is
+ * the AREA, not the region: your pocket may spill outside the zone, it just has
+ * to capture most of the zone. This is what settles the win gate + a fenced-in
+ * boss, without the pocket having to fit entirely inside the area.
+ *
+ * Counts grid cells whose CENTRE lies inside an area rect as that area's cells;
+ * of those, the fraction present in the region's cell set must be >= minFraction.
+ */
+export function regionCoversAreas(
+  grid: SpaceGrid,
+  cellIndices: number[],
+  areas: ColoredArea[],
+  minFraction: number,
+): boolean {
+  if (areas.length === 0 || cellIndices.length === 0) return false;
+  const region = new Set(cellIndices);
+  const { originX, originY, cellSize, width, height } = grid;
+  let total = 0, covered = 0;
+  for (const a of areas) {
+    const c0 = Math.max(0, Math.floor((a.x - originX) / cellSize));
+    const c1 = Math.min(width - 1, Math.floor((a.x + a.width - originX) / cellSize));
+    const r0 = Math.max(0, Math.floor((a.y - originY) / cellSize));
+    const r1 = Math.min(height - 1, Math.floor((a.y + a.height - originY) / cellSize));
+    for (let row = r0; row <= r1; row++) {
+      for (let col = c0; col <= c1; col++) {
+        const wx = originX + col * cellSize + cellSize / 2;
+        const wy = originY + row * cellSize + cellSize / 2;
+        if (!pointInArea(wx, wy, a)) continue;
+        total++;
+        if (region.has(row * width + col)) covered++;
+      }
+    }
+  }
+  return total > 0 && covered / total >= minFraction;
 }
 
 /** Lock-points multiplier at a world point: the max among containing areas, or 1. */
