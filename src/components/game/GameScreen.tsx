@@ -24,6 +24,7 @@ import { TopBarDetailsPanel } from './TopBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
+import { MoverArt, BreakArt, CircuitArt, PickupArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
 import { contentText } from '@/i18n/content';
 import { playHeartbeatSound } from '@/lib/gameAudio';
@@ -868,7 +869,7 @@ export function GameScreen({
           first, then the per-map "how to win", then one-time teaching overlays,
           and finally the Draw-A-Fence coach (#62). */}
       {anyExplainerModal && (() => {
-        type Explainer = { show: boolean; accentColor: string; title: string; body: string; onDismiss: () => void };
+        type Explainer = { show: boolean; accentColor: string; title: string; body: string; onDismiss: () => void; graphic?: React.ReactNode };
         const queue: Explainer[] = [
           ...(level.boss ? [{
             show: showBossOverlay,
@@ -887,17 +888,17 @@ export function GameScreen({
           },
           {
             show: showMoverOverlay, accentColor: '#ff8800',
-            title: t('game.moverTutorialTitle'), body: t('game.moverTutorialBody'),
+            title: t('game.moverTutorialTitle'), body: t('game.moverTutorialBody'), graphic: <MoverArt />,
             onDismiss: () => { setMoverTutorialDismissed(true); onMoverTutorialSeen?.(); },
           },
           {
             show: showBreakOverlay, accentColor: '#ffb454',
-            title: t('game.breakTutorialTitle'), body: t('game.breakTutorialBody'),
+            title: t('game.breakTutorialTitle'), body: t('game.breakTutorialBody'), graphic: <BreakArt />,
             onDismiss: () => { setShowBreakIntro(false); try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ } },
           },
           {
             show: showCircuitOverlay, accentColor: '#7fe3d4',
-            title: t('game.circuitTutorialTitle'), body: t('game.circuitTutorialBody'),
+            title: t('game.circuitTutorialTitle'), body: t('game.circuitTutorialBody'), graphic: <CircuitArt />,
             onDismiss: () => { setShowCircuitIntro(false); try { localStorage.setItem('devend_circuit_tutorial_seen', '1'); } catch { /* ignore */ } },
           },
           {
@@ -922,7 +923,7 @@ export function GameScreen({
           },
           {
             show: showPickupOverlay, accentColor: '#e879f9',
-            title: t('game.pickupTutorialTitle'), body: t('game.pickupTutorialBody'),
+            title: t('game.pickupTutorialTitle'), body: t('game.pickupTutorialBody'), graphic: <PickupArt />,
             onDismiss: () => { setPickupIntroSeen(true); try { localStorage.setItem('devend_pickup_intro_seen', '1'); } catch { /* ignore */ } },
           },
           {
@@ -939,6 +940,7 @@ export function GameScreen({
             accentColor={active.accentColor}
             title={active.title}
             body={active.body}
+            graphic={active.graphic}
           />
         ) : null;
       })()}

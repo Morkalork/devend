@@ -6,6 +6,8 @@ interface TutorialOverlayProps {
   onDismiss: () => void;
   title: string;
   body: string;
+  /** Optional illustration shown between the title and the (shorter) body. */
+  graphic?: React.ReactNode;
   arrowDirection?: 'up' | 'down' | 'none';
   showTapHint?: boolean;
   spotlightArea?: 'top' | 'bottom';
@@ -18,6 +20,7 @@ export function TutorialOverlay({
   onDismiss,
   title,
   body,
+  graphic,
   arrowDirection = 'none',
   showTapHint = true,
   spotlightArea,
@@ -95,6 +98,8 @@ export function TutorialOverlay({
       >
         {title}
       </h2>
+
+      {graphic && <div className="flex justify-center">{graphic}</div>}
 
       <p
         className="text-sm sm:text-base text-center leading-relaxed"
