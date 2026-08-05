@@ -761,15 +761,16 @@ export function renderFrame(
       const p = w2s(t.x, t.y);
       const color = t.lit ? LIT : DIM;
       const rr = Math.max(8, t.radius * scale);
-      // Pulsing halo.
-      ctx.strokeStyle = hexToRgba(color, (t.lit ? 0.55 : 0.4) * (0.35 + 0.65 * pulse));
+      // Non-active (unlit) nodes pulsate slightly; a lit node holds steady.
+      // Halo.
+      ctx.strokeStyle = hexToRgba(color, t.lit ? 0.4 : 0.4 * (0.35 + 0.65 * pulse));
       ctx.lineWidth = Math.max(1.5, 2 * scale);
-      ctx.beginPath(); ctx.arc(p.x, p.y, rr + (4 + 6 * pulse) * scale, 0, Math.PI * 2); ctx.stroke();
-      // Solid ring + core.
-      ctx.strokeStyle = hexToRgba(color, t.lit ? 1 : 0.85);
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr + (t.lit ? 4 : 4 + 6 * pulse) * scale, 0, Math.PI * 2); ctx.stroke();
+      // Solid ring (slight size + alpha breathe while non-active) + core.
+      ctx.strokeStyle = hexToRgba(color, t.lit ? 1 : 0.7 + 0.3 * pulse);
       ctx.lineWidth = Math.max(2.5, 3 * scale);
-      ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = hexToRgba(color, (t.lit ? 1 : 0.9) * (0.55 + 0.45 * pulse));
+      ctx.beginPath(); ctx.arc(p.x, p.y, rr + (t.lit ? 0 : 1.5 * pulse * scale), 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = hexToRgba(color, t.lit ? 1 : 0.6 + 0.4 * pulse);
       ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(2.5, 3.5 * scale), 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();

@@ -704,22 +704,26 @@ export class PixiGameRenderer {
       const ball = game.balls.find(b => b.id === t.ballId);
       const booted = !ball || ball.state !== "dormant";
       const color = t.lit ? LIT : DIM;
+      // NON-ACTIVE (unlit) nodes pulsate slightly; a lit node holds steady, so the
+      // pulse reads as "this one still needs wiring". `br` is the breathe factor.
+      const br = t.lit ? 1 : pulse;
 
       // Link line to its still-sleeping ball (telegraphs which node wakes it).
       if (ball && !booted) {
         const bp = w2s(ball.position.x, ball.position.y);
         dashedLine(g, p.x, p.y, bp.x, bp.y, 8 * scale, 6 * scale);
-        g.stroke({ width: Math.max(1, 1.5 * scale), color, alpha: 0.2 + 0.25 * pulse });
+        g.stroke({ width: Math.max(1, 1.5 * scale), color, alpha: 0.2 + 0.25 * br });
       }
 
       const rr = Math.max(8, t.radius * scale);
-      // Pulsing halo: radius and alpha oscillate so the node draws the eye.
-      const haloR = rr + (4 + 6 * pulse) * scale;
-      g.circle(p.x, p.y, haloR).stroke({ width: Math.max(1.5, 2 * scale), color, alpha: (t.lit ? 0.55 : 0.4) * (0.35 + 0.65 * pulse) });
-      // Solid ring.
-      g.circle(p.x, p.y, rr).stroke({ width: Math.max(2.5, 3 * scale), color, alpha: t.lit ? 1 : 0.85 });
-      // Core dot, brightness breathing.
-      g.circle(p.x, p.y, Math.max(2.5, 3.5 * scale)).fill({ color, alpha: (t.lit ? 1 : 0.9) * (0.55 + 0.45 * pulse) });
+      // Halo: pulses (radius + alpha) while non-active, steady + faint once lit.
+      const haloR = rr + (t.lit ? 4 : 4 + 6 * pulse) * scale;
+      g.circle(p.x, p.y, haloR).stroke({ width: Math.max(1.5, 2 * scale), color, alpha: t.lit ? 0.4 : 0.4 * (0.35 + 0.65 * pulse) });
+      // Solid ring: a slight size + alpha breathe while non-active, steady when lit.
+      const ringR = rr + (t.lit ? 0 : 1.5 * pulse * scale);
+      g.circle(p.x, p.y, ringR).stroke({ width: Math.max(2.5, 3 * scale), color, alpha: t.lit ? 1 : 0.7 + 0.3 * pulse });
+      // Core dot: steady when lit, breathing when not.
+      g.circle(p.x, p.y, Math.max(2.5, 3.5 * scale)).fill({ color, alpha: t.lit ? 1 : 0.6 + 0.4 * pulse });
     }
   }
 
