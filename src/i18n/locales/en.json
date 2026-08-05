@@ -267,7 +267,9 @@
     },
     "lockExplainer": {
       "title": "About Locks",
-      "lead": "You cleared that map without locking a single ball. Shrinking the board wins it, but locking balls is where the real payoff is, so that was overtime left on the table.",
+      "lead": "You won that map without locking a ball, that's overtime missed.",
+      "standard": "Seal a ball in its own tight pocket to lock it and bank its value.",
+      "superior": "Extra tight = Superior Lock (gold star), pays double.",
       "dismiss": "Got it"
     },
     "pickupFork": "Ball split!",

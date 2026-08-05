@@ -265,7 +265,9 @@
     },
     "lockExplainer": {
       "title": "Sobre los cierres",
-      "lead": "Completaste ese mapa sin encerrar ni una sola bola. Reducir el tablero lo gana, pero encerrar bolas es donde está la recompensa de verdad, asi que dejaste horas extra sobre la mesa.",
+      "lead": "Ganaste ese mapa sin encerrar una bola: horas extra perdidas.",
+      "standard": "Sella una bola en su propio hueco ajustado para encerrarla y cobrar su valor.",
+      "superior": "Aun mas ajustado = Cierre Superior (estrella dorada), paga el doble.",
       "dismiss": "Entendido"
     },
     "pickupFork": "¡Bola dividida!",

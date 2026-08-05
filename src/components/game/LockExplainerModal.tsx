@@ -40,24 +40,13 @@ export function LockExplainerModal({ onClose }: LockExplainerModalProps) {
             {t('game.lockExplainer.title')}
           </span>
         </div>
-        <div className="px-4 py-4 space-y-4 text-sm">
+        <div className="px-4 py-4 space-y-2.5 text-sm">
           <p className="text-foreground leading-snug">{t('game.lockExplainer.lead')}</p>
-          <div>
-            <div className="text-[10px] font-bold tracking-wider mb-1 text-muted-foreground">
-              {t('game.lockInfo.normalTitle')}
-            </div>
-            <p className="text-foreground leading-snug">{t('game.lockInfo.normalBody')}</p>
-          </div>
-          <div>
-            <div
-              className="text-[10px] font-bold tracking-wider mb-1 flex items-center gap-1"
-              style={{ color: GOLD }}
-            >
-              <Star className="w-3 h-3" style={{ fill: GOLD, color: GOLD }} />
-              {t('game.lockInfo.superiorTitle')}
-            </div>
-            <p className="text-foreground leading-snug">{t('game.lockInfo.superiorBody')}</p>
-          </div>
+          <p className="text-foreground leading-snug">{t('game.lockExplainer.standard')}</p>
+          <p className="leading-snug flex items-start gap-1" style={{ color: GOLD }}>
+            <Star className="w-3 h-3 mt-0.5 shrink-0" style={{ fill: GOLD, color: GOLD }} />
+            <span>{t('game.lockExplainer.superior')}</span>
+          </p>
         </div>
         <div className="px-4 pb-4">
           <button

@@ -265,7 +265,9 @@
     },
     "lockExplainer": {
       "title": "Om lås",
-      "lead": "Du klarade den kartan utan att låsa en enda boll. Att krympa brädet vinner den, men att låsa bollar är där den riktiga vinsten finns, så det där var övertid du lämnade på bordet.",
+      "lead": "Du vann kartan utan att låsa en boll, det var övertid du missade.",
+      "standard": "Försegla en boll i en egen trång ficka för att låsa den och håva in dess värde.",
+      "superior": "Ännu trängre = Superlås (guldstjärna), betalar dubbelt.",
       "dismiss": "Uppfattat"
     },
     "pickupFork": "Bollen delades!",
