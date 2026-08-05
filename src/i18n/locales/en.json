@@ -266,10 +266,7 @@
       "superiorBody": "Seal a ball into an extra tight pocket, well under half the size that would normally lock it. It pays double and is marked with this gold star."
     },
     "lockExplainer": {
-      "title": "About Locks",
-      "lead": "You won that map without locking a ball, that's overtime missed.",
-      "standard": "Seal a ball in its own tight pocket to lock it and bank its value.",
-      "superior": "Extra tight = Superior Lock (gold star), pays double.",
+      "line": "A locked ball earns you more points and opens the store.",
       "dismiss": "Got it"
     },
     "pickupFork": "Ball split!",

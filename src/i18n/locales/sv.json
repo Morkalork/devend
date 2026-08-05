@@ -264,10 +264,7 @@
       "superiorBody": "Försegla en boll i en extra trång ficka, långt under hälften av storleken som normalt skulle låsa den. Den betalar dubbelt och markeras med den här guldstjärnan."
     },
     "lockExplainer": {
-      "title": "Om lås",
-      "lead": "Du vann kartan utan att låsa en boll, det var övertid du missade.",
-      "standard": "Försegla en boll i en egen trång ficka för att låsa den och håva in dess värde.",
-      "superior": "Ännu trängre = Superlås (guldstjärna), betalar dubbelt.",
+      "line": "En låst boll ger dig mer poäng och öppnar butiken.",
       "dismiss": "Uppfattat"
     },
     "pickupFork": "Bollen delades!",
