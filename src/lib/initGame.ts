@@ -221,13 +221,10 @@ export function createInitialGameData(
     mapRotation,
   );
 
-  // "Wire the Integration" circuit (rotated into the map's frame). Its reveal
-  // rect is sealed like a vault gate below (uncuttable until the circuit
-  // completes and reopens it).
+  // "Wire the Integration" circuit (issue #73, rotated into the map's frame).
+  // Each terminal boots a dormant ball; the balls + runtime are built below,
+  // once the space grid exists (they reserve grid cells while asleep).
   const circuit = level.circuit ? rotateCircuit(level.circuit, mapRotation) : null;
-  const circuitRevealPoly = circuit
-    ? createRectPolygon(circuit.reveals.x, circuit.reveals.y, circuit.reveals.x + circuit.reveals.width, circuit.reveals.y + circuit.reveals.height)
-    : null;
 
   // "Deploy Charge" fuses (rotated into the map's frame). Each references its
   // target obstacle by id; no grid sealing needed (the target reopens its own
@@ -634,7 +631,7 @@ export function createInitialGameData(
   const initBounds   = polygonBounds(boardPolygon);
   const initSamplePoints: Vector2[] = [];
 
-  const sealedPolys = [...sealedAreas.map(s => s.poly), ...(circuitRevealPoly ? [circuitRevealPoly] : [])];
+  const sealedPolys = [...sealedAreas.map(s => s.poly)];
   const insideSealed = (p: Vector2) => sealedPolys.some(poly => pointInPolygon(p, poly));
 
   for (let x = initBounds.minX + initGridSize / 2; x < initBounds.maxX; x += initGridSize) {
@@ -674,37 +671,44 @@ export function createInitialGameData(
     sealed.destructible.sealedCells = cells;
   }
 
-  // Same sealing for the circuit's bonus vault: record its cells so completing
-  // the circuit reopens exactly them (reuses the vault reopen path).
+  // Circuit dormant balls (#73): spawn one asleep per terminal at its authored
+  // spot, and reserve the pocket around it as uncapturable (keepActive) so that
+  // space can't be cleared until the player wires the terminal to boot the ball
+  // (then traps it like a normal ball). No vault - the payoff IS the ball.
   let circuitRuntime: CircuitRuntime | null = null;
-  if (circuit && circuitRevealPoly) {
-    const b = polygonBounds(circuitRevealPoly);
-    const cells: number[] = [];
-    const c0 = Math.max(0, Math.floor((b.minX - spaceGrid.originX) / spaceGrid.cellSize));
-    const c1 = Math.min(spaceGrid.width - 1, Math.ceil((b.maxX - spaceGrid.originX) / spaceGrid.cellSize));
-    const r0 = Math.max(0, Math.floor((b.minY - spaceGrid.originY) / spaceGrid.cellSize));
-    const r1 = Math.min(spaceGrid.height - 1, Math.ceil((b.maxY - spaceGrid.originY) / spaceGrid.cellSize));
-    for (let row = r0; row <= r1; row++) {
-      for (let col = c0; col <= c1; col++) {
-        const idx = row * spaceGrid.width + col;
-        if (spaceGrid.cells[idx] !== CellState.REMOVED) continue;
-        const wx = spaceGrid.originX + col * spaceGrid.cellSize + spaceGrid.cellSize / 2;
-        const wy = spaceGrid.originY + row * spaceGrid.cellSize + spaceGrid.cellSize / 2;
-        if (pointInPolygon({ x: wx, y: wy }, circuitRevealPoly)) cells.push(idx);
+  if (circuit && circuit.terminals.length > 0) {
+    if (!spaceGrid.keepActive) spaceGrid.keepActive = new Uint8Array(spaceGrid.cells.length);
+    const keep = spaceGrid.keepActive;
+    const redType = getBallType("red");
+    const terminals = circuit.terminals.map((t, i) => {
+      const cfg = t.ball;
+      const type = (cfg.typeId ? getBallType(cfg.typeId) : undefined) ?? selectedTypes[0] ?? redType!;
+      const id = `dormant-${i}`;
+      const ball = createBall(type, { x: cfg.x, y: cfg.y }, speedScale, ballRadius, id, spawnTime, 0);
+      ball.state = "dormant";
+      ball.speed = 0;
+      ball.velocity = { x: 0, y: 0 };
+      // Reserve every ACTIVE cell within reserveRadius as uncapturable while asleep.
+      const rr = cfg.reserveRadius ?? 70;
+      const reserved: number[] = [];
+      const c0 = Math.max(0, Math.floor((cfg.x - rr - spaceGrid.originX) / spaceGrid.cellSize));
+      const c1 = Math.min(spaceGrid.width - 1, Math.ceil((cfg.x + rr - spaceGrid.originX) / spaceGrid.cellSize));
+      const r0 = Math.max(0, Math.floor((cfg.y - rr - spaceGrid.originY) / spaceGrid.cellSize));
+      const r1 = Math.min(spaceGrid.height - 1, Math.ceil((cfg.y + rr - spaceGrid.originY) / spaceGrid.cellSize));
+      for (let row = r0; row <= r1; row++) {
+        for (let col = c0; col <= c1; col++) {
+          const idx = row * spaceGrid.width + col;
+          if (spaceGrid.cells[idx] !== CellState.ACTIVE) continue;
+          const wx = spaceGrid.originX + col * spaceGrid.cellSize + spaceGrid.cellSize / 2;
+          const wy = spaceGrid.originY + row * spaceGrid.cellSize + spaceGrid.cellSize / 2;
+          if ((wx - cfg.x) ** 2 + (wy - cfg.y) ** 2 <= rr * rr) { keep[idx] = 1; reserved.push(idx); }
+        }
       }
-    }
-    circuitRuntime = {
-      terminals: circuit.terminals.map(t => ({ x: t.x, y: t.y, radius: circuit.radius, lit: false })),
-      singleCut: !!circuit.singleCut,
-      complete: false,
-      revealCells: cells,
-      bonusZone: {
-        x: circuit.reveals.x, y: circuit.reveals.y,
-        width: circuit.reveals.width, height: circuit.reveals.height,
-        multiplier: circuit.lockMultiplier ?? 2,
-      },
-      announce: circuit.announce,
-    };
+      ball.dormantReserveCells = reserved;
+      balls.push(ball);
+      return { x: t.x, y: t.y, radius: circuit.radius, lit: false, ballId: id };
+    });
+    circuitRuntime = { terminals, announce: circuit.announce };
   }
 
   const gridRegions = findGridRegions(spaceGrid);

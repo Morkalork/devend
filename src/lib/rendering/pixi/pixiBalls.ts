@@ -379,6 +379,19 @@ export class BallLayer {
           .stroke({ width: 3 * scale, color: COLORS.fastestBallHighlight, alpha: 1 });
       }
 
+      // ── Dormant ball (#73): dim it and wrap it in a pulsing teal "cage" ring so
+      // it reads as an un-booted sleeper linked to the circuit, not a live ball. ──
+      if (ball.state === "dormant") {
+        v.root.alpha = assimScale * 0.5;
+        v.pulse.alpha = 0; // no live glow while asleep
+        const tp = 0.5 + 0.5 * Math.sin(performance.now() / 600);
+        v.ring
+          .circle(0, 0, screenRadius + 5 * scale)
+          .stroke({ width: Math.max(1.5, 2 * scale), color: 0x7fe3d4, alpha: 0.3 + 0.3 * tp })
+          .circle(0, 0, screenRadius + 10 * scale)
+          .stroke({ width: Math.max(1, 1.5 * scale), color: 0x7fe3d4, alpha: 0.15 + 0.2 * tp });
+      }
+
       // ── Admin speed label ──
       if (showBallSpeeds && ball.state === "active") {
         if (!v.label) {

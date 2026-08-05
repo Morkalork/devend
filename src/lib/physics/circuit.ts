@@ -1,16 +1,19 @@
 /**
- * "Wire the Integration" (the greed hook on fence PLACEMENT). A map's circuit
- * has terminals the player lights by routing fences THROUGH them; when all are
- * lit the circuit completes and opens a sealed bonus vault (reuses the vault
- * reveal path) that also pays a lock multiplier. Run once per committed cut.
+ * "Wire the Integration" (issue #73 rewrite). Each circuit terminal is linked to
+ * a DORMANT ball; routing a fence within a terminal's radius LIGHTS it and BOOTS
+ * that ball - it springs to life (starts bouncing) and releases the uncapturable
+ * pocket it reserved while asleep, so that space can be cleared once you trap it.
+ *
+ * Run once per committed cut. Incremental and independent: each terminal boots
+ * its own ball, so you wake them one at a time at your own pace (route -> boot ->
+ * trap), instead of juggling a circuit puzzle and live balls at once.
  */
 import type { CanvasGameState } from "@/types/gameState";
 import type { GrowingWall, Vector2 } from "@/types/game";
 import type { GameCallbacks } from "./gameCallbacks";
 import { pointToSegmentDistance } from "@/lib/polygon";
-import { getRemainingPercent, captureUnreachableCells } from "@/lib/spaceGrid";
-import { reopenCells, rebuildRegionsKeepAll } from "./destructibles";
-import { wasteCapturedPickups } from "@/lib/pickups";
+import { findRegionContainingPoint } from "@/lib/gameUtils";
+import { playBossChargeSound } from "@/lib/gameAudio";
 
 /** The line segments of a just-committed cut (both grown halves of the fence). */
 function cutSegments(wall: GrowingWall): Array<[Vector2, Vector2]> {
@@ -33,61 +36,50 @@ function segmentsHitPoint(segs: Array<[Vector2, Vector2]>, x: number, y: number,
 }
 
 /**
- * Update the circuit after a fence commits: light the terminals this cut routes
- * through and, if that completes the circuit, open the vault. No-op on maps
- * without a circuit or once it is already complete.
+ * Light any circuit terminals this just-committed fence routes through and boot
+ * their dormant balls. No-op on maps without a circuit or once all are lit.
  */
 export function tickCircuitOnCut(game: CanvasGameState, wall: GrowingWall, callbacks: GameCallbacks): void {
   const c = game.circuit;
-  if (!c || c.complete) return;
+  if (!c || c.terminals.every(t => t.lit)) return;
 
   const segs = cutSegments(wall);
   if (segs.length === 0) return;
 
-  if (c.singleCut) {
-    // Hard mode: ONE fence must thread every terminal. Partial threading of a
-    // single cut lights nothing (no persistence), so it stays all-or-nothing.
-    if (!c.terminals.every(t => segmentsHitPoint(segs, t.x, t.y, t.radius))) return;
-    for (const t of c.terminals) t.lit = true;
-  } else {
-    // Cumulative: light any still-unlit terminal this fence passes through.
-    for (const t of c.terminals) {
-      if (!t.lit && segmentsHitPoint(segs, t.x, t.y, t.radius)) t.lit = true;
-    }
-    if (!c.terminals.every(t => t.lit)) return;
+  for (const t of c.terminals) {
+    if (t.lit) continue;
+    if (!segmentsHitPoint(segs, t.x, t.y, t.radius)) continue;
+    t.lit = true;
+    if (wakeBall(game, t.ballId)) callbacks.onCircuitComplete?.(c.announce);
   }
-
-  completeCircuit(game, callbacks);
 }
 
-/** All terminals lit: open the sealed vault (reuse the reveal path) + tint it. */
-function completeCircuit(game: CanvasGameState, callbacks: GameCallbacks): void {
-  const c = game.circuit;
-  if (!c) return;
-  c.complete = true;
+/**
+ * Boot a dormant ball: release its reserved pocket, set it active, and launch it
+ * with a starting velocity. Returns true when a dormant ball was actually woken.
+ */
+function wakeBall(game: CanvasGameState, ballId: string): boolean {
+  const ball = game.balls.find(b => b.id === ballId);
+  if (!ball || ball.state !== "dormant") return false;
 
-  const grid = game.spaceGrid;
-  if (grid && c.revealCells.length > 0) {
-    // Same reopen -> recapture -> rebuild -> repaint a vault gate uses
-    // (destructibles.ts). The reopened cells become capturable ground.
-    reopenCells(game, c.revealCells);
-    // The vault is a DESIGNED open pocket the player must be able to fence into
-    // (to trap a ball there for the multiplier). Mark its cells keep-active so
-    // the unreachable-recapture below - and every later cut's recapture - never
-    // re-seals them when no ball happens to be near, which would make the vault
-    // uncuttable. Other genuinely-unreachable cells still recapture as usual.
-    if (!grid.keepActive) grid.keepActive = new Uint8Array(grid.cells.length);
-    for (const idx of c.revealCells) grid.keepActive[idx] = 1;
-    captureUnreachableCells(grid, game.balls, game.walls);
-    rebuildRegionsKeepAll(game);
-    wasteCapturedPickups(game);
-    callbacks.repaintRegionCanvas();
-    callbacks.setRemainingPercent(Math.round(getRemainingPercent(grid)));
+  // Release the uncapturable pocket it held so that space can be cleared again.
+  const keep = game.spaceGrid?.keepActive;
+  if (keep && ball.dormantReserveCells) {
+    for (const idx of ball.dormantReserveCells) keep[idx] = 0;
   }
+  ball.dormantReserveCells = undefined;
 
-  // The revealed pocket now pays its lock multiplier: bonusLockMultiplierAt
-  // reads game.lockZones in checkBallWonState, so this needs no scoring change.
-  game.lockZones = [...game.lockZones, c.bonusZone];
+  ball.state = "active";
+  // Spring to life from its sleeping spot in a random direction at base speed.
+  const ang = Math.random() * Math.PI * 2;
+  const sp = ball.baseSpeed || ball.topSpeed || 200;
+  ball.velocity = { x: Math.cos(ang) * sp, y: Math.sin(ang) * sp };
+  ball.speed = sp;
+  ball.spawnTime = performance.now();
+  // Re-home its region id from its current position (it was stale while asleep).
+  const region = findRegionContainingPoint(game.regions, ball.position.x, ball.position.y);
+  if (region) ball.regionId = region.id;
 
-  callbacks.onCircuitComplete?.(c.announce);
+  playBossChargeSound(); // a rising "powering on" cue
+  return true;
 }

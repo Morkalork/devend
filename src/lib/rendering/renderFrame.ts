@@ -750,47 +750,26 @@ export function renderFrame(
     ctx.restore();
   }
 
-  // ── "Wire the Integration" circuit (pulsing terminals + sealed-vault hint) ─
+  // ── "Wire the Integration" circuit (#73): pulsing terminals, each linked to a
+  // dormant ball (canvas2d fallback; the Pixi path draws the link line + cage). ─
   if (game.circuit) {
     const c = game.circuit;
     const LIT = "#7fe3d4", DIM = "#59b3a3";
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() / 340); // breathing 0..1
     ctx.save();
-    if (!c.complete) {
-      const z = c.bonusZone;
-      const tl = w2s(z.x, z.y);
-      ctx.strokeStyle = hexToRgba(LIT, 0.3 + 0.2 * pulse);
-      ctx.lineWidth = Math.max(1, 2 * scale);
-      ctx.setLineDash([9 * scale, 6 * scale]);
-      ctx.strokeRect(tl.x, tl.y, z.width * scale, z.height * scale);
-      ctx.setLineDash([]);
-    }
-    if (c.complete && c.terminals.length >= 2) {
-      ctx.strokeStyle = hexToRgba(LIT, 0.5 + 0.3 * pulse);
-      ctx.lineWidth = Math.max(1.5, 2 * scale);
-      ctx.beginPath();
-      const p0 = w2s(c.terminals[0].x, c.terminals[0].y);
-      ctx.moveTo(p0.x, p0.y);
-      for (let i = 1; i < c.terminals.length; i++) {
-        const p = w2s(c.terminals[i].x, c.terminals[i].y);
-        ctx.lineTo(p.x, p.y);
-      }
-      ctx.stroke();
-    }
     for (const t of c.terminals) {
       const p = w2s(t.x, t.y);
-      const on = t.lit || c.complete;
-      const color = on ? LIT : DIM;
+      const color = t.lit ? LIT : DIM;
       const rr = Math.max(8, t.radius * scale);
       // Pulsing halo.
-      ctx.strokeStyle = hexToRgba(color, (on ? 0.55 : 0.4) * (0.35 + 0.65 * pulse));
+      ctx.strokeStyle = hexToRgba(color, (t.lit ? 0.55 : 0.4) * (0.35 + 0.65 * pulse));
       ctx.lineWidth = Math.max(1.5, 2 * scale);
       ctx.beginPath(); ctx.arc(p.x, p.y, rr + (4 + 6 * pulse) * scale, 0, Math.PI * 2); ctx.stroke();
       // Solid ring + core.
-      ctx.strokeStyle = hexToRgba(color, on ? 1 : 0.85);
+      ctx.strokeStyle = hexToRgba(color, t.lit ? 1 : 0.85);
       ctx.lineWidth = Math.max(2.5, 3 * scale);
       ctx.beginPath(); ctx.arc(p.x, p.y, rr, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = hexToRgba(color, (on ? 1 : 0.9) * (0.55 + 0.45 * pulse));
+      ctx.fillStyle = hexToRgba(color, (t.lit ? 1 : 0.9) * (0.55 + 0.45 * pulse));
       ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(2.5, 3.5 * scale), 0, Math.PI * 2); ctx.fill();
     }
     ctx.restore();

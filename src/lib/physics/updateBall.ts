@@ -189,6 +189,7 @@ export function updateBall(
   phasedOut: ReturnType<typeof collectPhasedOut> = collectPhasedOut(game),
 ): void {
   if (ball.state === 'won') return; // stopped and disintegrating
+  if (ball.state === 'dormant') return; // un-booted (#73): no physics until woken
 
   const now = performance.now();
 

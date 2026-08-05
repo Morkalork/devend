@@ -203,13 +203,14 @@ export function checkAndUpdateBallWonStates(
   // `activeBalls` shrinks and later balls in the same pass get a different
   // verdict, so two balls in symmetric regions could disagree.
   const currentActive = countActiveCells(game.spaceGrid);
-  const activeBalls = game.balls.filter(b => b.state !== 'won' && b.speed > 0).length;
+  const activeBalls = game.balls.filter(b => b.state !== 'won' && b.state !== 'dormant' && b.speed > 0).length;
   const denominator = Math.max(currentActive, Math.floor(game.spaceGrid.initialActiveCount / Math.max(1, activeBalls)));
 
   // Snapshot: a claimed Fork pickup appends a new ball mid-loop; the clone
   // spawns in a live region and must not be lock-checked in this same pass.
   for (const ball of [...game.balls]) {
     if (ball.state === 'won' || ball.speed === 0) continue;
+    if (ball.state === 'dormant') continue; // un-booted (#73): not trappable until woken
     if (ball.bossLeapAt !== undefined) continue; // mid break-out leap: not trappable
 
     // Use neighbour-search fallback: ball may sit in a REMOVED cell (e.g. its grid-cell

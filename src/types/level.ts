@@ -259,30 +259,41 @@ export interface LockZone {
   multiplier: number;
 }
 
-/** A circuit terminal: a world point a fence must pass through to light it. */
-export interface CircuitTerminal {
+/** The dormant ball a circuit terminal boots when lit (issue #73). */
+export interface DormantBallConfig {
+  /** Where the ball sleeps (and springs to life from). World units. */
   x: number;
   y: number;
+  /** Ball-type id (default: the map's normal selection picks one). */
+  typeId?: string;
+  /** Radius of the uncapturable pocket it reserves while asleep (default 70). */
+  reserveRadius?: number;
 }
 
 /**
- * "Wire the Integration" (LEVELDESIGN.md convention 2, greed hook on PLACEMENT):
- * a set of terminals the player lights by routing fences through them. When all
- * are lit the circuit COMPLETES and opens a sealed bonus vault (`reveals` rect)
- * that also pays `lockMultiplier` on locks inside it. Rotated with the map.
+ * A circuit terminal: a world point a fence routes through to LIGHT it, which
+ * boots the dormant ball linked to it (issue #73).
+ */
+export interface CircuitTerminal {
+  x: number;
+  y: number;
+  /** The dormant ball this terminal wakes when a fence lights it. */
+  ball: DormantBallConfig;
+}
+
+/**
+ * "Wire the Integration" (issue #73 rewrite): a set of terminals, each linked to
+ * a DORMANT ball. Routing a fence within `radius` of a terminal lights it and
+ * WAKES that terminal's ball (incremental - each terminal is independent). A
+ * dormant ball reserves an uncapturable pocket, so you cannot clear its space
+ * until you boot it and then trap it. Rotated with the map.
  */
 export interface CircuitConfig {
-  /** 2+ nodes; a fence passing within `radius` of one lights it. */
+  /** 1+ terminals, each booting its own dormant ball. */
   terminals: CircuitTerminal[];
   /** World-unit distance a fence segment must pass within to light a terminal. */
   radius: number;
-  /** Hard mode: all terminals must be threaded by a SINGLE fence (default false). */
-  singleCut?: boolean;
-  /** The bonus vault opened on completion: sealed (uncuttable) until then. */
-  reveals: { x: number; y: number; width: number; height: number };
-  /** Lock-points multiplier paid inside the revealed vault (default 2). */
-  lockMultiplier?: number;
-  /** Telegraph i18n key flashed when the circuit completes. */
+  /** Telegraph i18n key flashed when a terminal boots its ball (optional). */
   announce?: string;
 }
 

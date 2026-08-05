@@ -23,7 +23,11 @@ export interface Region {
   samplePoints?: Vector2[]; // Grid sample points for accurate rendering
 }
 
-export type BallState = 'active' | 'won';
+// 'dormant' (issue #73): an un-booted ball the player must WAKE by wiring its
+// circuit terminal. While dormant it does not move, collide, block fences, or
+// lock, and it reserves an uncapturable pocket so its space can't be cleared
+// until it is woken and then trapped like a normal ball.
+export type BallState = 'active' | 'won' | 'dormant';
 
 export interface Ball {
   id: string;
@@ -38,7 +42,10 @@ export interface Ball {
   rotation: number; // current rotation angle in radians for spinning effect
   flashIntensity: number; // 0-1, LEGACY - kept for compatibility, use effects instead
   effects: BallEffectState; // Visual effect state for pulse, wall hit, ball hit
-  state: BallState; // 'active' = normal, 'won' = captured in small region
+  state: BallState; // 'active' = normal, 'won' = captured in small region, 'dormant' = un-booted (#73)
+  // Dormant balls (#73): the grid cells this ball reserves as uncapturable while
+  // asleep (kept ACTIVE via grid.keepActive). Released when the ball is woken.
+  dormantReserveCells?: number[];
   wonSpinSpeed: number; // Spin speed when in WON state
   wonTime: number;      // timestamp when entering WON state
   assimScale: number;   // visual scale factor for assimilation animation (default 1.0)

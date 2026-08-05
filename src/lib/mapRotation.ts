@@ -136,13 +136,17 @@ export function rotateColoredArea(area: ColoredArea, r: MapRotation): ColoredAre
   return { ...rect, kind: area.kind };
 }
 
-/** Rotate a circuit (its terminal points + the reveal rect) into the orientation. */
+/** Rotate a circuit (each terminal point + its linked dormant ball) into the
+ *  orientation (issue #73). */
 export function rotateCircuit(circuit: CircuitConfig, r: MapRotation): CircuitConfig {
   if (r === 0) return circuit;
   return {
     ...circuit,
-    terminals: circuit.terminals.map(t => rotatePoint(t.x, t.y, r)),
-    reveals: rotateRect(circuit.reveals.x, circuit.reveals.y, circuit.reveals.width, circuit.reveals.height, r),
+    terminals: circuit.terminals.map(t => {
+      const p = rotatePoint(t.x, t.y, r);
+      const b = rotatePoint(t.ball.x, t.ball.y, r);
+      return { ...t, x: p.x, y: p.y, ball: { ...t.ball, x: b.x, y: b.y } };
+    }),
   };
 }
 

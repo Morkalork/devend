@@ -56,7 +56,9 @@ function areAllBallsWon(game: CanvasGameState): boolean {
   // true iff at least one ball counts and every counting ball is won.
   let any = false;
   for (const b of game.balls) {
-    if (b.speed > 0 || b.state === 'won') {
+    // A dormant ball (#73) counts and is NOT won, so the lock-all win can't fire
+    // until every dormant ball has been booted (and then trapped).
+    if (b.speed > 0 || b.state === 'won' || b.state === 'dormant') {
       any = true;
       if (b.state !== 'won') return false;
     }
@@ -124,6 +126,7 @@ export function applyCutFn(
 
   for (const ball of balls) {
     if (ball.state === 'won') continue;
+    if (ball.state === 'dormant') continue; // un-booted (#73): fences pass through it
     if (isBallOnCutLine(ball, wall)) {
       handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
       return;

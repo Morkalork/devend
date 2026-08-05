@@ -383,24 +383,30 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
-  # PILOT: "Wire the Integration" showcase. Two terminals flank the hub, so you
-  # must route a cut through each (the hub blocks a single line across both) to
-  # wire the circuit and open the sealed corner vault (a 2x lock pocket).
+  # PILOT: "Wire the Integration" (#73). The map seeds two DORMANT balls (asleep,
+  # un-lockable) that each reserve an uncapturable pocket, so you can't clear the
+  # board without them. Route a fence past a terminal to BOOT its ball; it springs
+  # loose, its space frees up, and you trap it. Boot them one at a time to control
+  # the tempo. One live ball is already in play so the map reads normally.
   - id: level-8
     level: 8
-    sizeThreshold: 30
+    sizeThreshold: 10
     expectedCuts: 7
     points: 20
     variety: 5
-    maxBalls: 4
+    maxBalls: 1
     circuit:
-      terminals:
-        - { x: 235, y: 450 }
-        - { x: 665, y: 450 }
       radius: 28
-      reveals: { x: 615, y: 615, width: 245, height: 245 }
-      lockMultiplier: 2
       announce: game.circuitComplete
+      # Terminals are off-set in BOTH axes so no single straight fence can thread
+      # both: you boot the sleepers one at a time, at your own pace.
+      terminals:
+        - x: 235
+          y: 250
+          ball: { x: 235, y: 480, reserveRadius: 110 }
+        - x: 665
+          y: 620
+          ball: { x: 665, y: 390, reserveRadius: 110 }
     entities:
       - id: hub
         kind: wall

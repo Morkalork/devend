@@ -686,57 +686,40 @@ export class PixiGameRenderer {
     }
   }
 
-  // "Wire the Integration": terminal nodes (dim -> bright as fences route
-  // through them) + a dashed hint of the sealed vault, connected by a beam once
-  // complete. Redrawn every frame so the nodes PULSE (a breathing glow ring) and
-  // read at a glance; unlit nodes pulse too so they're easy to spot.
+  // "Wire the Integration" (#73): each terminal node (dim -> bright once a fence
+  // routes through it) with a faint link line to the DORMANT ball it boots, so
+  // the player sees which node wakes which sleeper. Redrawn every frame to pulse.
   private syncCircuit(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
     const g = this.circuitG;
     g.clear();
     const c = game.circuit;
     if (!c) return;
 
-    const LIT = 0x7fe3d4;   // teal, matches the const/vault palette
+    const LIT = 0x7fe3d4;   // teal, matches the const palette
     const DIM = 0x59b3a3;   // muted teal, still clearly visible when unlit
     const pulse = 0.5 + 0.5 * Math.sin(now / 340); // 0..1 breathing
 
-    // Sealed vault hint (dashed) until the circuit opens it; after, syncLockZones
-    // tints the opened pocket (bonusZone is pushed to game.lockZones).
-    if (!c.complete) {
-      const z = c.bonusZone;
-      const tl = w2s(z.x, z.y);
-      const aw = z.width * scale, ah = z.height * scale;
-      dashedLine(g, tl.x, tl.y, tl.x + aw, tl.y, 9 * scale, 6 * scale);
-      dashedLine(g, tl.x + aw, tl.y, tl.x + aw, tl.y + ah, 9 * scale, 6 * scale);
-      dashedLine(g, tl.x + aw, tl.y + ah, tl.x, tl.y + ah, 9 * scale, 6 * scale);
-      dashedLine(g, tl.x, tl.y + ah, tl.x, tl.y, 9 * scale, 6 * scale);
-      g.stroke({ width: Math.max(1, 2 * scale), color: LIT, alpha: 0.3 + 0.2 * pulse });
-    }
-
-    // Beam connecting the terminals once wired.
-    if (c.complete && c.terminals.length >= 2) {
-      const p0 = w2s(c.terminals[0].x, c.terminals[0].y);
-      g.moveTo(p0.x, p0.y);
-      for (let i = 1; i < c.terminals.length; i++) {
-        const p = w2s(c.terminals[i].x, c.terminals[i].y);
-        g.lineTo(p.x, p.y);
-      }
-      g.stroke({ width: Math.max(1.5, 2 * scale), color: LIT, alpha: 0.5 + 0.3 * pulse });
-    }
-
-    // Terminal nodes: a breathing outer glow ring + solid ring + core dot.
     for (const t of c.terminals) {
       const p = w2s(t.x, t.y);
-      const on = t.lit || c.complete;
-      const color = on ? LIT : DIM;
+      const ball = game.balls.find(b => b.id === t.ballId);
+      const booted = !ball || ball.state !== "dormant";
+      const color = t.lit ? LIT : DIM;
+
+      // Link line to its still-sleeping ball (telegraphs which node wakes it).
+      if (ball && !booted) {
+        const bp = w2s(ball.position.x, ball.position.y);
+        dashedLine(g, p.x, p.y, bp.x, bp.y, 8 * scale, 6 * scale);
+        g.stroke({ width: Math.max(1, 1.5 * scale), color, alpha: 0.2 + 0.25 * pulse });
+      }
+
       const rr = Math.max(8, t.radius * scale);
       // Pulsing halo: radius and alpha oscillate so the node draws the eye.
       const haloR = rr + (4 + 6 * pulse) * scale;
-      g.circle(p.x, p.y, haloR).stroke({ width: Math.max(1.5, 2 * scale), color, alpha: (on ? 0.55 : 0.4) * (0.35 + 0.65 * pulse) });
+      g.circle(p.x, p.y, haloR).stroke({ width: Math.max(1.5, 2 * scale), color, alpha: (t.lit ? 0.55 : 0.4) * (0.35 + 0.65 * pulse) });
       // Solid ring.
-      g.circle(p.x, p.y, rr).stroke({ width: Math.max(2.5, 3 * scale), color, alpha: on ? 1 : 0.85 });
+      g.circle(p.x, p.y, rr).stroke({ width: Math.max(2.5, 3 * scale), color, alpha: t.lit ? 1 : 0.85 });
       // Core dot, brightness breathing.
-      g.circle(p.x, p.y, Math.max(2.5, 3.5 * scale)).fill({ color, alpha: (on ? 1 : 0.9) * (0.55 + 0.45 * pulse) });
+      g.circle(p.x, p.y, Math.max(2.5, 3.5 * scale)).fill({ color, alpha: (t.lit ? 1 : 0.9) * (0.55 + 0.45 * pulse) });
     }
   }
 

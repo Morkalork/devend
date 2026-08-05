@@ -18,29 +18,25 @@ import { LockZone, ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 
-/** A circuit terminal in world space with its runtime lit state. */
+/** A circuit terminal in world space with its runtime lit state (issue #73). */
 export interface CircuitRuntimeTerminal {
   x: number;
   y: number;
   radius: number;
   lit: boolean;
+  /** Id of the dormant ball this terminal boots when lit. */
+  ballId: string;
 }
 
 /**
- * "Wire the Integration" runtime state: terminals the player lights by routing
- * fences through them, and the sealed bonus vault opened when all are lit.
+ * "Wire the Integration" runtime state (issue #73 rewrite): terminals the player
+ * lights by routing fences through them; each lit terminal WAKES its dormant
+ * ball. No vault - the payoff is booting the ball so its reserved space can be
+ * cleared.
  */
 export interface CircuitRuntime {
   terminals: CircuitRuntimeTerminal[];
-  /** Hard mode: all terminals must be threaded by ONE fence. */
-  singleCut: boolean;
-  /** All terminals lit and the vault opened. */
-  complete: boolean;
-  /** Grid cells of the sealed bonus vault, reopened on completion. */
-  revealCells: number[];
-  /** Lock zone pushed onto game.lockZones when the vault opens (its multiplier). */
-  bonusZone: LockZone;
-  /** i18n telegraph key flashed on completion (optional). */
+  /** i18n telegraph key flashed when a terminal boots its ball (optional). */
   announce?: string;
 }
 
