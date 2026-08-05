@@ -8,37 +8,42 @@ import { useTranslation } from 'react-i18next';
 
 const ACCENT = '#00ff88';
 
-/** A ball sealed inside a fenced pocket, padlocked: "a locked ball". */
+/**
+ * The actual in-game lock: a ball sealed into a small captured pocket in the
+ * corner of the board by two fences (the other two sides are board walls). Dark
+ * board + dot grid, bright accent fences, a tinted captured pocket, snug ball.
+ */
 function LockedBallArt() {
   return (
-    <svg width="132" height="132" viewBox="0 0 140 140" fill="none" aria-hidden="true">
+    <svg width="152" height="134" viewBox="0 0 152 134" fill="none" aria-hidden="true">
       <defs>
-        <radialGradient id="lb-ball" cx="50%" cy="40%" r="62%">
-          <stop offset="0%" stopColor="#d6ffec" />
-          <stop offset="45%" stopColor="#2bff9e" />
-          <stop offset="100%" stopColor="#0a7a4c" />
+        <radialGradient id="lb-ball" cx="42%" cy="38%" r="64%">
+          <stop offset="0%" stopColor="#ffd7cf" />
+          <stop offset="45%" stopColor="#ff5a52" />
+          <stop offset="100%" stopColor="#8f1a16" />
         </radialGradient>
+        <pattern id="lb-grid" width="9" height="9" patternUnits="userSpaceOnUse">
+          <circle cx="1" cy="1" r="0.8" fill="#2bff9e" opacity="0.12" />
+        </pattern>
+        <clipPath id="lb-board"><rect x="7" y="7" width="138" height="120" rx="12" /></clipPath>
       </defs>
-      {/* Sealed pocket (fences) with rounded corners */}
-      <rect x="18" y="18" width="104" height="104" rx="16"
-            fill="rgba(0,255,136,0.06)" stroke={ACCENT} strokeWidth="3" />
-      {/* Fence-corner ticks so the pocket reads as "sealed" */}
-      <g stroke={ACCENT} strokeWidth="3" strokeLinecap="round" opacity="0.85" fill="none">
-        <path d="M18 42 V34 a16 16 0 0 1 16-16 H42" />
-        <path d="M122 42 V34 a16 16 0 0 0-16-16 H98" />
-        <path d="M18 98 V106 a16 16 0 0 0 16 16 H42" />
-        <path d="M122 98 V106 a16 16 0 0 1-16 16 H98" />
+
+      {/* The board: dark region + faint dot grid, with the captured pocket tinted */}
+      <g clipPath="url(#lb-board)">
+        <rect x="7" y="7" width="138" height="120" fill="#0f2117" />
+        <rect x="7" y="7" width="138" height="120" fill="url(#lb-grid)" />
+        <rect x="7" y="71" width="55" height="56" fill={ACCENT} opacity="0.2" />
       </g>
-      {/* Glow + the ball */}
-      <circle cx="70" cy="66" r="34" fill={ACCENT} opacity="0.16" />
-      <circle cx="70" cy="66" r="27" fill="url(#lb-ball)" />
-      {/* Padlock on the ball (dark so it reads on the bright body) */}
-      <path d="M61 65 v-6 a9 9 0 0 1 18 0 v6" fill="none" stroke="#05130c"
-            strokeWidth="4.5" strokeLinecap="round" />
-      <rect x="57" y="63" width="26" height="20" rx="4" fill="#05130c" />
-      {/* Keyhole, in accent so it pops on the dark lock */}
-      <circle cx="70" cy="71" r="2.6" fill={ACCENT} />
-      <rect x="68.6" y="71" width="2.8" height="7" rx="1.4" fill={ACCENT} />
+      <rect x="7" y="7" width="138" height="120" rx="12" fill="none" stroke="#24422f" strokeWidth="2" />
+
+      {/* The two fences that seal the corner pocket (glow under, bright over) */}
+      <path d="M7 71 H62 V127" fill="none" stroke={ACCENT} strokeWidth="7" strokeLinecap="round" opacity="0.28" />
+      <path d="M7 71 H62 V127" fill="none" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" />
+
+      {/* The locked ball, snug in the pocket */}
+      <circle cx="34" cy="99" r="24" fill="#ff5a52" opacity="0.18" />
+      <circle cx="34" cy="99" r="18" fill="url(#lb-ball)" />
+      <circle cx="28" cy="93" r="5" fill="#ffffff" opacity="0.45" />
     </svg>
   );
 }
