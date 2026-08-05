@@ -672,13 +672,12 @@ export function createInitialGameData(
   }
 
   // Circuit dormant balls (#73): spawn one asleep per terminal at its authored
-  // spot, and reserve the pocket around it as uncapturable (keepActive) so that
-  // space can't be cleared until the player wires the terminal to boot the ball
-  // (then traps it like a normal ball). No vault - the payoff IS the ball.
+  // spot. A dormant ball anchors reachability (captureUnreachableCells), so it
+  // HOLDS its region uncapturable until the player wires the terminal to boot it
+  // (then traps it like a normal ball). No vault - the payoff IS the ball, and a
+  // map can be entirely dormant (no live ball at start).
   let circuitRuntime: CircuitRuntime | null = null;
   if (circuit && circuit.terminals.length > 0) {
-    if (!spaceGrid.keepActive) spaceGrid.keepActive = new Uint8Array(spaceGrid.cells.length);
-    const keep = spaceGrid.keepActive;
     const redType = getBallType("red");
     const terminals = circuit.terminals.map((t, i) => {
       const cfg = t.ball;
@@ -688,23 +687,6 @@ export function createInitialGameData(
       ball.state = "dormant";
       ball.speed = 0;
       ball.velocity = { x: 0, y: 0 };
-      // Reserve every ACTIVE cell within reserveRadius as uncapturable while asleep.
-      const rr = cfg.reserveRadius ?? 70;
-      const reserved: number[] = [];
-      const c0 = Math.max(0, Math.floor((cfg.x - rr - spaceGrid.originX) / spaceGrid.cellSize));
-      const c1 = Math.min(spaceGrid.width - 1, Math.ceil((cfg.x + rr - spaceGrid.originX) / spaceGrid.cellSize));
-      const r0 = Math.max(0, Math.floor((cfg.y - rr - spaceGrid.originY) / spaceGrid.cellSize));
-      const r1 = Math.min(spaceGrid.height - 1, Math.ceil((cfg.y + rr - spaceGrid.originY) / spaceGrid.cellSize));
-      for (let row = r0; row <= r1; row++) {
-        for (let col = c0; col <= c1; col++) {
-          const idx = row * spaceGrid.width + col;
-          if (spaceGrid.cells[idx] !== CellState.ACTIVE) continue;
-          const wx = spaceGrid.originX + col * spaceGrid.cellSize + spaceGrid.cellSize / 2;
-          const wy = spaceGrid.originY + row * spaceGrid.cellSize + spaceGrid.cellSize / 2;
-          if ((wx - cfg.x) ** 2 + (wy - cfg.y) ** 2 <= rr * rr) { keep[idx] = 1; reserved.push(idx); }
-        }
-      }
-      ball.dormantReserveCells = reserved;
       balls.push(ball);
       return { x: t.x, y: t.y, radius: circuit.radius, lit: false, ballId: id };
     });

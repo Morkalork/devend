@@ -333,7 +333,9 @@ export function selectBallTypesForMap(
   );
   const candidates = rolled.length > 0 ? rolled : eligible;
 
-  const count = Math.max(1, Math.min(maxBalls, candidates.length));
+  // maxBalls 0 means truly no random balls (e.g. an all-dormant circuit map, #73);
+  // otherwise spawn at least one. The default when maxBalls is omitted is 1.
+  const count = maxBalls <= 0 ? 0 : Math.max(1, Math.min(maxBalls, candidates.length));
 
   // Seeded Fisher–Yates shuffle of a copy, then take `count`.
   const rng = mulberry32(hashString(mapId));

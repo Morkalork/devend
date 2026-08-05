@@ -55,19 +55,13 @@ export function tickCircuitOnCut(game: CanvasGameState, wall: GrowingWall, callb
 }
 
 /**
- * Boot a dormant ball: release its reserved pocket, set it active, and launch it
- * with a starting velocity. Returns true when a dormant ball was actually woken.
+ * Boot a dormant ball: set it active and launch it with a starting velocity so
+ * it springs loose (its region stops being held). Returns true when a dormant
+ * ball was actually woken.
  */
 function wakeBall(game: CanvasGameState, ballId: string): boolean {
   const ball = game.balls.find(b => b.id === ballId);
   if (!ball || ball.state !== "dormant") return false;
-
-  // Release the uncapturable pocket it held so that space can be cleared again.
-  const keep = game.spaceGrid?.keepActive;
-  if (keep && ball.dormantReserveCells) {
-    for (const idx of ball.dormantReserveCells) keep[idx] = 0;
-  }
-  ball.dormantReserveCells = undefined;
 
   ball.state = "active";
   // Spring to life from its sleeping spot in a random direction at base speed.

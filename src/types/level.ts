@@ -266,8 +266,6 @@ export interface DormantBallConfig {
   y: number;
   /** Ball-type id (default: the map's normal selection picks one). */
   typeId?: string;
-  /** Radius of the uncapturable pocket it reserves while asleep (default 70). */
-  reserveRadius?: number;
 }
 
 /**

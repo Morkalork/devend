@@ -383,18 +383,18 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
-  # PILOT: "Wire the Integration" (#73). The map seeds two DORMANT balls (asleep,
-  # un-lockable) that each reserve an uncapturable pocket, so you can't clear the
-  # board without them. Route a fence past a terminal to BOOT its ball; it springs
-  # loose, its space frees up, and you trap it. Boot them one at a time to control
-  # the tempo. One live ball is already in play so the map reads normally.
+  # PILOT: "Wire the Integration" (#73). An ALL-DORMANT map: no live ball at start,
+  # just two sleeping balls that each HOLD their region uncapturable. Fence off the
+  # empty space, then route a fence past a terminal to BOOT its ball; it springs
+  # loose and you trap it. A calm routing puzzle where you invite the danger.
   - id: level-8
     level: 8
     sizeThreshold: 10
     expectedCuts: 7
     points: 20
     variety: 5
-    maxBalls: 1
+    randomShapes: 0   # keep the sleepers' spots clear of stray mini-obstacles
+    maxBalls: 0
     circuit:
       radius: 28
       announce: game.circuitComplete
@@ -403,10 +403,10 @@ levels:
       terminals:
         - x: 235
           y: 250
-          ball: { x: 235, y: 480, reserveRadius: 110 }
+          ball: { x: 235, y: 480 }
         - x: 665
           y: 620
-          ball: { x: 665, y: 390, reserveRadius: 110 }
+          ball: { x: 665, y: 390 }
     entities:
       - id: hub
         kind: wall
@@ -810,13 +810,27 @@ levels:
         blastRadius: 200
         delaySeconds: 1.2
         announce: game.chargeBlown
+  # Circuit (#73) MIXED with live balls: four bouncing balls AND two sleepers in
+  # the open diagonals. Boot the sleepers (wiring their terminals) while managing
+  # the live balls: a step up from the all-dormant level-8.
   - id: level-17
     level: 17
     sizeThreshold: 7
     expectedCuts: 8
     points: 20
     variety: 30
+    randomShapes: 0   # keep the sleepers' spots clear of stray mini-obstacles
     maxBalls: 4
+    circuit:
+      radius: 28
+      announce: game.circuitComplete
+      terminals:
+        - x: 275
+          y: 130
+          ball: { x: 275, y: 300 }
+        - x: 625
+          y: 770
+          ball: { x: 625, y: 600 }
     entities:
       - id: wall-center
         kind: wall
@@ -1105,6 +1119,8 @@ levels:
         range: 280
         speed: 135
         phase: 0.5
+  # Circuit (#73): two sleepers tucked in opposite corners, away from the roaming
+  # movers. Boot them between mover passes.
   - id: level-23
     level: 23
     sizeThreshold: 15
@@ -1113,6 +1129,16 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 2
+    circuit:
+      radius: 28
+      announce: game.circuitComplete
+      terminals:
+        - x: 150
+          y: 320
+          ball: { x: 150, y: 150 }
+        - x: 750
+          y: 580
+          ball: { x: 750, y: 750 }
     entities:
       - id: mover-top
         kind: mover

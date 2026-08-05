@@ -459,7 +459,11 @@ export function captureUnreachableCells(
   const n = cells.length;
 
   const keep = grid.keepActive;
-  const activeBalls = balls.filter(b => b.state !== 'won' && b.speed > 0);
+  // Dormant balls (#73) hold their region: they anchor reachability exactly like
+  // an active ball, so the space they sit in can't be captured until they are
+  // booted (then trapped). This also lets an all-dormant map exist without the
+  // board collapsing on the first cut.
+  const activeBalls = balls.filter(b => b.state === 'dormant' || (b.state !== 'won' && b.speed > 0));
   if (activeBalls.length === 0) {
     // No ball left in play — everything remaining is captured territory (except
     // any designed keep-active pocket, e.g. an opened circuit vault).

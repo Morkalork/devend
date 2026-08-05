@@ -43,9 +43,6 @@ export interface Ball {
   flashIntensity: number; // 0-1, LEGACY - kept for compatibility, use effects instead
   effects: BallEffectState; // Visual effect state for pulse, wall hit, ball hit
   state: BallState; // 'active' = normal, 'won' = captured in small region, 'dormant' = un-booted (#73)
-  // Dormant balls (#73): the grid cells this ball reserves as uncapturable while
-  // asleep (kept ACTIVE via grid.keepActive). Released when the ball is woken.
-  dormantReserveCells?: number[];
   wonSpinSpeed: number; // Spin speed when in WON state
   wonTime: number;      // timestamp when entering WON state
   assimScale: number;   // visual scale factor for assimilation animation (default 1.0)
