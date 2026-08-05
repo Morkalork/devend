@@ -90,7 +90,8 @@ export function TutorialOverlay({
         background: '#0a0f0a',
         border: `2px solid ${accentColor}`,
       }}
-      onClick={e => e.stopPropagation()}
+      // "Tap anywhere to continue" means the card too: let taps bubble to the
+      // backdrop's dismiss handler (the card is text-only, nothing to protect).
     >
       <h2
         className="text-lg sm:text-xl font-black tracking-widest uppercase text-center"
