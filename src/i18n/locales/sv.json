@@ -263,6 +263,11 @@
       "superiorTitle": "Överlägset lås",
       "superiorBody": "Försegla en boll i en extra trång ficka, långt under hälften av storleken som normalt skulle låsa den. Den betalar dubbelt och markeras med den här guldstjärnan."
     },
+    "lockExplainer": {
+      "title": "Om lås",
+      "lead": "Du klarade den kartan utan att låsa en enda boll. Att krympa brädet vinner den, men att låsa bollar är där den riktiga vinsten finns, så det där var övertid du lämnade på bordet.",
+      "dismiss": "Uppfattat"
+    },
     "pickupFork": "Bollen delades!",
     "pickupCapRaise": "Tak +{n}h",
     "pickupFreeze": "Frysning +1",

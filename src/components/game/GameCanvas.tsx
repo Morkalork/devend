@@ -37,6 +37,7 @@ import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/b
 import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats } from "@/lib/physics/mapBeats";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
+import { LockExplainerModal } from "./LockExplainerModal";
 import { AbilityIcon } from "./AbilityIcon";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
 import { TutorialStep } from "@/types/game";
@@ -461,6 +462,11 @@ export function GameCanvas({
   const [tutorialCutMade, setTutorialCutMade] = useState(false);
   const [debugInfo, setDebugInfo] = useState({ boardWidth: 0, boardHeight: 0, scale: 0, boardTopPct: 5 });
   const [lockedBallsCount, setLockedBallsCount] = useState(0);
+  // Did the player lock ANY ball this map? Set true whenever a lock fires
+  // (setLockedBallsCount is only called on a lock), reset per map. Drives the
+  // one-time "how locks work" explainer shown before the first zero-lock prompt.
+  const madeLockThisMapRef = useRef(false);
+  const [lockExplainerOpen, setLockExplainerOpen] = useState(false);
   // Feature Freeze tap-freezes left this map, mirrored from game.freezeUsesRemaining
   // for the HUD counter (updated on map init and on each freeze spent).
   const [freezeUsesRemaining, setFreezeUsesRemaining] = useState(0);
@@ -1021,6 +1027,7 @@ export function GameCanvas({
       game.wallCount = 0;
       game.completedCuts = 0;
       setCompletedCuts(0);
+      madeLockThisMapRef.current = false; // fresh map: no locks yet (#zero-lock explainer)
       clearWallImpacts();
       clearObstacleImpacts();
       setCutCount(0);
@@ -1194,7 +1201,9 @@ export function GameCanvas({
 
     // Build callbacks object for extracted physics functions
     const callbacks: GameCallbacks = {
-      setLockedBallsCount,
+      // Called only when a ball locks: mirror the count AND flag that a lock
+      // happened this map (for the zero-lock explainer).
+      setLockedBallsCount: (n: number) => { setLockedBallsCount(n); madeLockThisMapRef.current = true; },
       onBossState: (hp: number, maxHp: number, defeated: boolean) => setBossHud({ active: !defeated, hp, maxHp, defeated }),
       setRemainingPercent,
       setTutorialCutMade,
@@ -1616,6 +1625,16 @@ export function GameCanvas({
     startGameLoop(game);
   }, [pushMode]);
 
+  // First time you finish a map having locked NOTHING, teach how locks work
+  // before the bank / push-your-luck choice. The modal renders over the push
+  // prompt (which is already mounted + paused); dismissing it reveals the choice.
+  useEffect(() => {
+    if (pushMode !== "prompt") { setLockExplainerOpen(false); return; }
+    let seen = false;
+    try { seen = localStorage.getItem("devend_lock_tutorial_seen") === "1"; } catch { /* private mode */ }
+    if (!madeLockThisMapRef.current && !seen) setLockExplainerOpen(true);
+  }, [pushMode]);
+
   useEffect(() => {
     const updateCanvasPosition = () => {
       const container = containerRef.current;
@@ -1765,6 +1784,16 @@ export function GameCanvas({
           basePoints={level.points}
           onBank={handleBankAndContinue}
           onPush={handlePushYourLuck}
+        />
+      )}
+
+      {/* One-time lock explainer, over the push prompt, on the first zero-lock finish. */}
+      {lockExplainerOpen && (
+        <LockExplainerModal
+          onClose={() => {
+            try { localStorage.setItem("devend_lock_tutorial_seen", "1"); } catch { /* private mode */ }
+            setLockExplainerOpen(false);
+          }}
         />
       )}
 

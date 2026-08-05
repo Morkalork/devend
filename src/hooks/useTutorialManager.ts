@@ -111,6 +111,8 @@ export function useTutorialManager() {
       // Self-contained one-time intros managed by GameScreen (no flag here).
       localStorage.removeItem('devend_break_tutorial_seen');
       localStorage.removeItem('devend_creep_tutorial_seen');
+      // One-time "how locks work" explainer (GameCanvas, zero-lock finish).
+      localStorage.removeItem('devend_lock_tutorial_seen');
     } catch {
       // ignore
     }
