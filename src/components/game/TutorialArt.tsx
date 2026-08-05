@@ -39,6 +39,23 @@ function Ball({ x, y, r = 14, color = '#ff5a52' }: { x: number; y: number; r?: n
   );
 }
 
+/** FENCE — drag to grow a slicing wall that partitions the board. */
+export function FenceArt() {
+  return (
+    <Board>
+      {/* the slicing fence */}
+      <line x1="76" y1="10" x2="76" y2="110" stroke={ACCENT} strokeWidth="7" strokeLinecap="round" opacity="0.28" />
+      <line x1="76" y1="10" x2="76" y2="110" stroke={ACCENT} strokeWidth="3" strokeLinecap="round" />
+      {/* drag gesture: a finger dot + dashed swipe + arrowhead */}
+      <circle cx="76" cy="24" r="4" fill="#ffffff" opacity="0.85" />
+      <line x1="76" y1="24" x2="76" y2="94" stroke="#ffffff" strokeWidth="2" strokeDasharray="3 5" opacity="0.7" />
+      <path d="M70 88 l6 8 l6 -8" fill="none" stroke="#ffffff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" opacity="0.85" />
+      {/* a ball to keep clear of */}
+      <Ball x={110} y={60} r={13} color="#4aa3ff" />
+    </Board>
+  );
+}
+
 /** LOCK — a ball fenced tight into a captured corner pocket. */
 export function LockArt() {
   return (

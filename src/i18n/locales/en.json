@@ -29,9 +29,9 @@
     "selectLoadout": "Select a Loadout",
     "retireBankRun": "Retire - Bank This Run",
     "ascensionUnlocked": "Ascension Unlocked",
-    "tutorialIntro1": "You beat every level - but the grind never ends. Ascend to start over at level 1 with your score, upgrades and lives intact, plus one ",
+    "tutorialIntro1": "You beat every level. Ascend to restart at level 1 with your score, upgrades and lives intact, plus one ",
     "tutorialLoadoutWord": "loadout",
-    "tutorialIntro2": ": a curse bundled with a blessing. Loadouts stack with every ascension, levels get faster, and each cleared level counts more toward Certificate Hours. Retire whenever you want to bank it all.",
+    "tutorialIntro2": ": a curse with a blessing. Loadouts stack each ascension, levels speed up, and cleared levels count more toward Certificate Hours. Retire anytime to bank it all.",
     "gotIt": "Got It"
   },
   "bottomBar": {
@@ -218,7 +218,7 @@
     "loading": "Loading certificates…",
     "continue": "Continue",
     "tutorialTitle": "CERTIFICATE WORKSHOP",
-    "tutorialBody": "Unlock permanent bonuses by mastering upgrade families across multiple runs. Each certificate has levels you can purchase with Certificate Hours earned during gameplay."
+    "tutorialBody": "Spend Certificate Hours (earned as you play) on permanent bonuses, unlocked by mastering upgrade families across runs."
   },
   "checkpointPicker": {
     "startFrom": "Start From…",
@@ -261,9 +261,9 @@
     "lockInfo": {
       "title": "Superior Lock",
       "normalTitle": "Standard Lock",
-      "normalBody": "Seal a ball into its own pocket, cut off from the rest of the board. It pays its lock value; tougher ball types pay more.",
+      "normalBody": "Seal a ball into its own pocket, cut off from the board. It pays its lock value; tougher balls pay more.",
       "superiorTitle": "Superior Lock",
-      "superiorBody": "Seal a ball into an extra tight pocket, well under half the size that would normally lock it. It pays double and is marked with this gold star."
+      "superiorBody": "Seal a ball into an extra-tight pocket, well under half the usual size. It pays double and gets a gold star."
     },
     "lockExplainer": {
       "line": "Fence a ball into a tight pocket to lock it for extra points.",
@@ -289,7 +289,7 @@
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
-    "dragInstruction": "Drag anywhere inside the area to create a slicing wall. Don't let the ball hit the wall while it's growing!"
+    "dragInstruction": "Drag inside the area to grow a slicing wall. Don't let a ball hit it while it grows!"
   },
   "levelComplete": {
     "title": "Level Complete!",
@@ -696,9 +696,9 @@
     "continue": "Continue",
     "closedNotEnoughLocks": "Not enough balls locked",
     "closedInfoTitle": "Store closed",
-    "closedInfoBody": "The store only opens when you lock enough balls during the round: at least one, or two on maps with three or more balls.\n\nSeal balls into pockets to earn your trip to the shop. Lock nothing and you skip straight to the next map.",
+    "closedInfoBody": "The store opens only when you lock enough balls that round: one, or two on maps with three or more balls. Lock nothing and you skip it.",
     "tutorialTitle": "THE UPGRADE SHOP",
-    "tutorialBody": "Spend overtime hours on upgrades after each map. Overtime upgrades multiply future earnings. Effects appear in the bottom bar on the next map. Press and hold any upgrade for more info - including what unlocks it and what it unlocks."
+    "tutorialBody": "Spend overtime hours on upgrades between maps, they multiply future earnings. Press and hold any upgrade for details."
   },
   "runDraft": {
     "title": "Sprint Planning",
@@ -797,7 +797,7 @@
     "dailyStandup": "Daily Stand-up",
     "newBadge": "NEW",
     "dailyIntroTitle": "Daily Stand-up",
-    "dailyIntroBody": "Every day, every player gets the exact same run: identical levels, drafts, shops and obstacles, all from one shared daily seed.\n\nIt is a level playing field, your skill against everyone else's on the same ground. Your result lands on a separate daily leaderboard, and playing each day builds an attendance streak.\n\nToday's run always starts at level 1.",
+    "dailyIntroBody": "Every day everyone gets the exact same run from one shared seed: same levels, drafts, shops and obstacles. Your result lands on the daily leaderboard, and playing builds a streak. Starts at level 1.",
     "dailyIntroStart": "Start today's run"
   },
   "loadouts": {

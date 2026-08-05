@@ -29,9 +29,9 @@
     "selectLoadout": "Selecciona un equipamiento",
     "retireBankRun": "Retirarse - asegurar esta partida",
     "ascensionUnlocked": "Ascensión desbloqueada",
-    "tutorialIntro1": "Superaste todos los niveles, pero el esfuerzo nunca acaba. Asciende para empezar de nuevo en el nivel 1 con tu puntuación, mejoras y vidas intactas, además de un ",
+    "tutorialIntro1": "Superaste todos los niveles. Asciende para empezar de nuevo en el nivel 1 con tu puntuacion, mejoras y vidas intactas, mas un ",
     "tutorialLoadoutWord": "equipamiento",
-    "tutorialIntro2": ": una maldición combinada con una bendición. Los equipamientos se acumulan con cada ascensión, los niveles se vuelven más rápidos y cada nivel superado cuenta más para las horas de certificado. Retírate cuando quieras para asegurarlo todo.",
+    "tutorialIntro2": ": una maldicion con una bendicion. Los loadouts se acumulan con cada ascension, los niveles se aceleran y cada nivel cuenta mas para las Horas de Certificado. Retirate cuando quieras para cobrarlo todo.",
     "gotIt": "Entendido"
   },
   "bottomBar": {
@@ -218,7 +218,7 @@
     "loading": "Cargando certificados…",
     "continue": "Continuar",
     "tutorialTitle": "TALLER DE CERTIFICADOS",
-    "tutorialBody": "Desbloquea bonificaciones permanentes dominando familias de mejoras a lo largo de varias partidas. Cada certificado tiene niveles que puedes comprar con las horas de certificado ganadas durante el juego."
+    "tutorialBody": "Gasta Horas de Certificado (ganadas al jugar) en bonos permanentes, desbloqueados al dominar familias de mejoras entre partidas."
   },
   "checkpointPicker": {
     "startFrom": "Empezar desde…",
@@ -259,9 +259,9 @@
     "lockInfo": {
       "title": "Bloqueo superior",
       "normalTitle": "Bloqueo estándar",
-      "normalBody": "Sella una bola en su propio hueco, aislada del resto del tablero. Paga su valor de bloqueo; los tipos de bola más duros pagan más.",
+      "normalBody": "Sella una bola en su propio hueco, aislada del tablero. Paga su valor de cierre; las bolas mas duras pagan mas.",
       "superiorTitle": "Bloqueo superior",
-      "superiorBody": "Sella una bola en un hueco muy ajustado, bastante menos de la mitad del tamaño que normalmente la bloquearía. Paga el doble y se marca con esta estrella dorada."
+      "superiorBody": "Sella una bola en un hueco muy ajustado, bastante menos de la mitad del tamano habitual. Paga el doble y lleva una estrella dorada."
     },
     "lockExplainer": {
       "line": "Encierra una bola en un hueco ajustado para crear un cierre y ganar puntos extra.",
@@ -287,7 +287,7 @@
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",
-    "dragInstruction": "Arrastra en cualquier lugar dentro del área para crear un muro que corte. ¡No dejes que la bola toque el muro mientras crece!"
+    "dragInstruction": "Arrastra dentro del area para hacer crecer un muro. No dejes que una bola lo toque mientras crece."
   },
   "levelComplete": {
     "title": "¡Nivel completado!",
@@ -681,9 +681,9 @@
     "continue": "Continuar",
     "closedNotEnoughLocks": "No has bloqueado suficientes bolas",
     "closedInfoTitle": "Tienda cerrada",
-    "closedInfoBody": "La tienda solo abre cuando bloqueas suficientes bolas durante la ronda: al menos una, o dos en mapas con tres o más bolas.\n\nSella bolas en huecos para ganarte la visita a la tienda. Si no bloqueas nada, pasas directo al siguiente mapa.",
+    "closedInfoBody": "La tienda solo abre si encierras suficientes bolas en la ronda: una, o dos en mapas con tres o mas bolas. Si no encierras nada, te la saltas.",
     "tutorialTitle": "LA TIENDA DE MEJORAS",
-    "tutorialBody": "Gasta horas extra en mejoras después de cada mapa. Las mejoras de horas extra multiplican las ganancias futuras. Los efectos aparecen en la barra inferior en el siguiente mapa. Mantén pulsada una mejora para ver más información, incluido qué la desbloquea y qué desbloquea."
+    "tutorialBody": "Gasta horas extra en mejoras entre mapas; multiplican tus ganancias futuras. Manten pulsada una mejora para ver detalles."
   },
   "runDraft": {
     "title": "Planificación de sprint",
@@ -782,7 +782,7 @@
     "dailyStandup": "Reunión diaria",
     "newBadge": "NUEVO",
     "dailyIntroTitle": "Reunión diaria",
-    "dailyIntroBody": "Cada día, todos los jugadores reciben exactamente la misma partida: mismos niveles, elecciones, tiendas y obstáculos, todo a partir de una semilla diaria compartida.\n\nEs igualdad de condiciones: tu habilidad contra la de los demás sobre el mismo terreno. Tu resultado va a una clasificación diaria aparte, y jugar cada día crea una racha de asistencia.\n\nLa partida de hoy siempre empieza en el nivel 1.",
+    "dailyIntroBody": "Cada dia todos reciben la misma partida desde una semilla compartida: mismos niveles, sorteos, tiendas y obstaculos. Tu resultado va a la tabla diaria y jugar crea una racha. Empieza en el nivel 1.",
     "dailyIntroStart": "Empezar la partida de hoy"
   },
   "content": {

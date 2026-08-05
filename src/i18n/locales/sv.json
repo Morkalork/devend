@@ -29,9 +29,9 @@
     "selectLoadout": "Välj en loadout",
     "retireBankRun": "Dra dig tillbaka - säkra denna omgång",
     "ascensionUnlocked": "Uppstigning upplåst",
-    "tutorialIntro1": "Du klarade alla nivåer - men slitet tar aldrig slut. Stig upp för att börja om på nivå 1 med poäng, uppgraderingar och liv intakta, plus en ",
+    "tutorialIntro1": "Du klarade varje nivå. Stig upp för att börja om på nivå 1 med poäng, uppgraderingar och liv i behåll, plus en ",
     "tutorialLoadoutWord": "loadout",
-    "tutorialIntro2": ": en förbannelse i kombination med en välsignelse. Loadouts staplas vid varje uppstigning, nivåerna blir snabbare och varje avklarad nivå räknas mer mot certifikattimmar. Dra dig tillbaka när du vill för att säkra allt.",
+    "tutorialIntro2": ": en förbannelse med en välsignelse. Loadouts staplas för varje uppstigning, nivåerna går snabbare och varje klarad nivå räknas mer mot Certifikattimmar. Gå i pension när du vill för att banka allt.",
     "gotIt": "Uppfattat"
   },
   "bottomBar": {
@@ -218,7 +218,7 @@
     "loading": "Laddar certifikat…",
     "continue": "Fortsätt",
     "tutorialTitle": "CERTIFIKATVERKSTAD",
-    "tutorialBody": "Lås upp permanenta bonusar genom att bemästra uppgraderingsfamiljer över flera omgångar. Varje certifikat har nivåer som du kan köpa med certifikattimmar som tjänas under spelets gång."
+    "tutorialBody": "Spendera Certifikattimmar (intjänade när du spelar) på permanenta bonusar, upplåsta genom att bemästra uppgraderingsfamiljer över flera rundor."
   },
   "checkpointPicker": {
     "startFrom": "Börja från…",
@@ -259,9 +259,9 @@
     "lockInfo": {
       "title": "Överlägset lås",
       "normalTitle": "Vanligt lås",
-      "normalBody": "Försegla en boll i sin egen ficka, avskuren från resten av brädet. Den betalar sitt låsvärde; tuffare bolltyper betalar mer.",
+      "normalBody": "Försegla en boll i en egen ficka, avskuren från brädet. Den betalar sitt låsvärde; tuffare bollar betalar mer.",
       "superiorTitle": "Överlägset lås",
-      "superiorBody": "Försegla en boll i en extra trång ficka, långt under hälften av storleken som normalt skulle låsa den. Den betalar dubbelt och markeras med den här guldstjärnan."
+      "superiorBody": "Försegla en boll i en extra trång ficka, långt under halva vanliga storleken. Den betalar dubbelt och får en guldstjärna."
     },
     "lockExplainer": {
       "line": "Stängsla in en boll i en trång ficka för att låsa den och få extra poäng.",
@@ -287,7 +287,7 @@
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",
-    "dragInstruction": "Dra var som helst inom området för att skapa en skärande mur. Låt inte bollen träffa muren medan den växer!"
+    "dragInstruction": "Dra inuti ytan för att skapa en delande vägg. Låt inte en boll träffa den medan den växer!"
   },
   "levelComplete": {
     "title": "Nivå klar!",
@@ -681,9 +681,9 @@
     "continue": "Fortsätt",
     "closedNotEnoughLocks": "Inte tillräckligt många bollar låsta",
     "closedInfoTitle": "Butiken stängd",
-    "closedInfoBody": "Butiken öppnar bara när du låser tillräckligt många bollar under rundan: minst en, eller två på banor med tre eller fler bollar.\n\nFörsegla bollar i fickor för att förtjäna ditt butiksbesök. Låser du inget hoppar du direkt till nästa bana.",
+    "closedInfoBody": "Butiken öppnar bara när du låser nog med bollar under rundan: en, eller två på kartor med tre eller fler bollar. Låser du inget hoppar du över den.",
     "tutorialTitle": "BUTIKEN",
-    "tutorialBody": "Spendera övertidstimmar på uppgraderingar efter varje bana. Övertidsuppgraderingar mångdubblar framtida intäkter. Effekterna visas i den nedre listen på nästa bana. Håll inne en uppgradering för mer information - bland annat vad som låser upp den och vad den låser upp."
+    "tutorialBody": "Spendera övertidstimmar på uppgraderingar mellan kartor; de mångdubblar framtida vinster. Håll in en uppgradering för detaljer."
   },
   "runDraft": {
     "title": "Sprintplanering",
@@ -782,7 +782,7 @@
     "dailyStandup": "Morgonmöte",
     "newBadge": "NYTT",
     "dailyIntroTitle": "Morgonmöte",
-    "dailyIntroBody": "Varje dag får alla spelare exakt samma runda: samma banor, val, butiker och hinder, allt från ett gemensamt dagligt frö.\n\nDet är lika villkor, din skicklighet mot allas andras på samma mark. Ditt resultat hamnar på en separat daglig topplista, och att spela varje dag bygger en närvarosvit.\n\nDagens runda börjar alltid på nivå 1.",
+    "dailyIntroBody": "Varje dag får alla exakt samma runda från ett delat frö: samma nivåer, dragningar, butiker och hinder. Ditt resultat hamnar på dagliga topplistan och att spela bygger en svit. Börjar på nivå 1.",
     "dailyIntroStart": "Starta dagens runda"
   },
   "content": {

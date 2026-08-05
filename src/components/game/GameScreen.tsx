@@ -24,7 +24,7 @@ import { TopBarDetailsPanel } from './TopBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
-import { MoverArt, BreakArt, CircuitArt, PickupArt } from './TutorialArt';
+import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
 import { contentText } from '@/i18n/content';
 import { playHeartbeatSound } from '@/lib/gameAudio';
@@ -928,7 +928,7 @@ export function GameScreen({
           },
           {
             show: fenceIntroOpen, accentColor,
-            title: t('interactiveTutorial.drawAFence'), body: t('interactiveTutorial.dragInstruction'),
+            title: t('interactiveTutorial.drawAFence'), body: t('interactiveTutorial.dragInstruction'), graphic: <FenceArt />,
             onDismiss: () => setFenceIntroOpen(false),
           },
         ];
