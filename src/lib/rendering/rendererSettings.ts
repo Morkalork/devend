@@ -1,17 +1,24 @@
 // Renderer flag — which implementation draws the game board.
 //
-// 'pixi' (the WebGL port, src/lib/rendering/pixi/) is the default: native
-// device resolution + the bloom pass. 'canvas2d' (renderFrame.ts) remains as
-// the opt-out escape hatch and the automatic fallback when WebGL init fails
-// (GameCanvas handles that per session). The choice is read ONCE when
-// GameCanvas mounts, so switching requires a remount: the Playground toggle
-// bumps its gameKey, a real game needs a reload.
+// 'sleek' (src/lib/rendering/sleek/) is THE DEFAULT: device-pixel-exact
+// geometry (crisp on axis, antialiased on the diagonal) lit by a single
+// off-screen monitor past the bottom-right corner, over a gently translucent
+// board. See SleekRenderer's header for the model.
 //
-// 'sleek' (src/lib/rendering/sleek/) is the EXPERIMENTAL board rewrite: same
-// WebGL plumbing as 'pixi', but device-pixel-exact geometry and a single
-// off-screen light source. Select it with ?renderer=sleek. It is a vertical
-// slice - see SleekRenderer's header for what it does not draw yet - so it is
-// not a candidate for the default until that list is empty.
+// 'pixi' (src/lib/rendering/pixi/) is the previous WebGL renderer - native
+// resolution plus a bloom pass. Kept selectable with ?renderer=pixi, both as a
+// comparison and because it still draws several board effects sleek has not
+// ported (see SleekRenderer's header for that list).
+//
+// 'canvas2d' (renderFrame.ts) remains the opt-out escape hatch and the
+// automatic fallback when WebGL init fails (GameCanvas handles that per
+// session). The choice is read ONCE when GameCanvas mounts, so switching
+// requires a remount: the Playground toggle bumps its gameKey, a real game
+// needs a reload.
+//
+// NOTE for anyone changing the default back: a stored localStorage value always
+// beats it, so players who ever loaded ?renderer=... are pinned to that choice
+// until they clear it. The default only reaches players who never picked one.
 //
 // POLICY (decided): canvas2d is the FALLBACK ONLY. It stays load-bearing for
 // three reasons - the WebGL-init fallback (old Android WebViews), the intro
@@ -28,7 +35,7 @@
 export type RendererKind = "canvas2d" | "pixi" | "sleek";
 
 const LS_RENDERER = "devend:renderer";
-const DEFAULT_RENDERER: RendererKind = "pixi";
+const DEFAULT_RENDERER: RendererKind = "sleek";
 
 function isRendererKind(v: string | null): v is RendererKind {
   return v === "canvas2d" || v === "pixi" || v === "sleek";

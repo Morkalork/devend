@@ -20,6 +20,7 @@
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
+import { getSquishEffect } from "@/lib/ballEffects";
 import { BALL_FALLBACK, PALETTE, withAlpha } from "./palette";
 import { contactFor, shadowFor, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
@@ -83,13 +84,28 @@ export function clearSphereCache(): void {
   sphereCache.clear();
 }
 
+/**
+ * One ball's display objects.
+ *
+ * The squash needs its own transform, because the SPRITE's rotation is already
+ * spent aiming the baked highlight at the monitor. So each ball is a holder
+ * carrying the deformation (rotated to the impact axis, scaled non-uniformly)
+ * with the lit sphere nested inside it, counter-rotated so the highlight still
+ * points at the light. The child inherits the parent's non-uniform scale, which
+ * is exactly right: a squashed ball's highlight should smear with it.
+ */
+interface BallView {
+  holder: Container;
+  sprite: Sprite;
+}
+
 export class SleekBallLayer {
   readonly container = new Container();
 
   private shadows = new Graphics();
   private bodies = new Container();
   private speculars = new Graphics();
-  private sprites: Sprite[] = [];
+  private views: BallView[] = [];
 
   constructor() {
     this.container.addChild(this.shadows, this.bodies, this.speculars);
@@ -101,22 +117,25 @@ export class SleekBallLayer {
 
     const balls = game.balls.filter(b => b.state !== "dormant");
 
-    // Grow the sprite pool to match; sprites are reused frame to frame so a
-    // steady board allocates nothing.
-    while (this.sprites.length < balls.length) {
-      const s = new Sprite();
-      s.anchor.set(0.5);
-      this.bodies.addChild(s);
-      this.sprites.push(s);
+    // Grow the pool to match; views are reused frame to frame so a steady board
+    // allocates nothing.
+    while (this.views.length < balls.length) {
+      const holder = new Container();
+      const sprite = new Sprite();
+      sprite.anchor.set(0.5);
+      holder.addChild(sprite);
+      this.bodies.addChild(holder);
+      this.views.push({ holder, sprite });
     }
-    for (let i = balls.length; i < this.sprites.length; i++) this.sprites[i].visible = false;
+    for (let i = balls.length; i < this.views.length; i++) this.views[i].holder.visible = false;
 
     for (let i = 0; i < balls.length; i++) {
-      this.drawBall(balls[i], this.sprites[i], light, w2s, scale);
+      this.drawBall(balls[i], this.views[i], light, w2s, scale);
     }
   }
 
-  private drawBall(ball: Ball, sprite: Sprite, light: LightScope, w2s: W2S, scale: number): void {
+  private drawBall(ball: Ball, view: BallView, light: LightScope, w2s: W2S, scale: number): void {
+    const { holder, sprite } = view;
     const p = ball.renderPosition ?? ball.position;
     const c = w2s(p.x, p.y);
     const r = Math.max(2, ball.radius * scale * (ball.assimScale ?? 1));
@@ -145,22 +164,52 @@ export class SleekBallLayer {
 
     // ── Body ────────────────────────────────────────────────────────────────
     const rb = bucket(r);
-    sprite.visible = true;
+    holder.visible = true;
+    holder.position.set(c.x, c.y);
     sprite.texture = sphereTexture(parseColor(ball.color), rb);
-    sprite.position.set(c.x, c.y);
-    // Scale the bucketed bake back to the exact radius, and rotate so the baked
-    // highlight points at the monitor.
+    sprite.position.set(0, 0);
+    // Scale the bucketed bake back to the exact radius.
     sprite.scale.set(r / rb);
-    sprite.rotation = bearing;
     // Locked balls dim toward the captured substrate they now belong to.
     sprite.alpha = ball.state === "won" ? 0.72 : 1;
 
+    // ── Squash & stretch ────────────────────────────────────────────────────
+    // The ball flattens along the impact normal and springs back (physics owns
+    // the envelope; this only draws it). Applied to the HOLDER so the sphere
+    // keeps its own rotation for the highlight - and because the child inherits
+    // the squash, the highlight smears with the deformation, which is what makes
+    // it read as a soft ball rather than a scaled sprite.
+    const squish = getSquishEffect(ball.effects, ball.isBoss ? 0.5 : 1);
+    if (squish.active) {
+      const impact = Math.atan2(squish.ny, squish.nx);
+      holder.rotation = impact;
+      holder.scale.set(squish.scaleAlong, squish.scalePerp);
+      // Counter-rotate so the highlight still faces the monitor in world space.
+      sprite.rotation = bearing - impact;
+    } else {
+      holder.rotation = 0;
+      holder.scale.set(1, 1);
+      sprite.rotation = bearing;
+    }
+
     // ── Specular ────────────────────────────────────────────────────────────
     if (ball.state === "won") return;
-    const hx = c.x + Math.cos(bearing) * r * 0.42;
-    const hy = c.y + Math.sin(bearing) * r * 0.42;
+    // Drawn in screen space, so it has to be deformed by hand - otherwise the
+    // hot spot floats off the surface of a squashed ball. Rotate the offset into
+    // the impact frame, scale it, rotate back.
+    let ox = Math.cos(bearing) * r * 0.42;
+    let oy = Math.sin(bearing) * r * 0.42;
+    if (squish.active) {
+      const ca = squish.nx, sa = squish.ny;
+      const along = ox * ca + oy * sa;
+      const perp = -ox * sa + oy * ca;
+      const a2 = along * squish.scaleAlong;
+      const p2 = perp * squish.scalePerp;
+      ox = a2 * ca - p2 * sa;
+      oy = a2 * sa + p2 * ca;
+    }
     this.speculars
-      .circle(hx, hy, Math.max(0.8, r * 0.17))
+      .circle(c.x + ox, c.y + oy, Math.max(0.8, r * 0.17))
       .fill({ color: PALETTE.monitor, alpha: 0.5 * light.level });
   }
 

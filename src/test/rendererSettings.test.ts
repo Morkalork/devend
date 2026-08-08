@@ -7,8 +7,8 @@ describe("rendererSettings", () => {
     window.history.replaceState(null, "", "/");
   });
 
-  it("defaults to pixi (WebGL)", () => {
-    expect(getRenderer()).toBe("pixi");
+  it("defaults to sleek (the lit, device-pixel-exact board)", () => {
+    expect(getRenderer()).toBe("sleek");
   });
 
   it("round-trips through localStorage", () => {
@@ -16,10 +16,19 @@ describe("rendererSettings", () => {
     expect(getRenderer()).toBe("canvas2d");
     setRenderer("pixi");
     expect(getRenderer()).toBe("pixi");
+    setRenderer("sleek");
+    expect(getRenderer()).toBe("sleek");
   });
 
   it("ignores garbage stored values", () => {
     localStorage.setItem("devend:renderer", "vulkan");
+    expect(getRenderer()).toBe("sleek");
+  });
+
+  // A stored choice always beats the default, which is why changing the default
+  // does not migrate anyone who has ever loaded ?renderer=...
+  it("keeps a stored non-default choice over the new default", () => {
+    setRenderer("pixi");
     expect(getRenderer()).toBe("pixi");
   });
 
