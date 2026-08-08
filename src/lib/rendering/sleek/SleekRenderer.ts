@@ -37,6 +37,10 @@ import { WallLayer } from "./wallLayer";
 import { EntityLayer } from "./entityLayer";
 import { AreaLayer } from "./areaLayer";
 import { SleekBallLayer, clearSphereCache } from "./ballLayer";
+import { ObjectLayer } from "./objectLayer";
+import { PropLayer } from "./propLayer";
+import { FxLayer } from "./fxLayer";
+import { ChromeLayer } from "./chromeLayer";
 import { lightScope } from "./light";
 import { PALETTE } from "./palette";
 
@@ -51,9 +55,13 @@ export class SleekRenderer {
 
   private board = new BoardLayer();
   private areas = new AreaLayer();
+  private props = new PropLayer();
   private entities = new EntityLayer();
+  private objects = new ObjectLayer();
   private walls = new WallLayer();
+  private fx = new FxLayer();
   private balls = new SleekBallLayer();
+  private chrome = new ChromeLayer();
 
   private staticDirty = true;
   private maskKey = "";
@@ -79,17 +87,26 @@ export class SleekRenderer {
     });
     this.app.ticker.stop(); // the game loop drives presentation
 
-    // Draw order: surface, floor markings, furniture, fences, then actors.
+    // Draw order: surface, floor markings, props, furniture, fences, effects,
+    // then the actors on top. Chrome lives OUTSIDE the board mask, because the
+    // rim and the space bar deliberately sit on and past the board edge.
     this.boardScope.addChild(
       this.board.container,
       this.areas.container,
+      this.props.container,
       this.entities.container,
+      this.objects.container,
       this.walls.container,
+      this.fx.container,
       this.balls.container,
+      // Rim + danger frame: masked with the board, so their wide halo strokes
+      // clip at the edge instead of blooming out over the page.
+      this.chrome.container,
     );
     this.root.addChild(this.boardScope, this.boardMask);
     this.boardScope.mask = this.boardMask;
-    this.app.stage.addChild(this.root);
+    // The space bar is the one piece of chrome that belongs outside the board.
+    this.app.stage.addChild(this.root, this.chrome.outer);
 
     // No bloom pass. The classic renderer leans on it to sell the neon; here the
     // form is carried by the light model, and a bloom would smear exactly the
@@ -123,7 +140,7 @@ export class SleekRenderer {
     this.staticDirty = true;
   }
 
-  render(game: CanvasGameState, _rctx: RenderContext): void {
+  render(game: CanvasGameState, rctx: RenderContext): void {
     if (!this.ready) return;
     const now = performance.now();
     const { boardRect } = game;
@@ -142,9 +159,13 @@ export class SleekRenderer {
 
     this.board.sync(game, light, w2s, this.staticDirty);
     this.areas.sync(game, light, w2s, scale);
+    this.props.sync(game, light, w2s, scale, now);
     this.entities.sync(game, light, w2s, scale);
+    this.objects.sync(game, light, w2s, scale);
     this.walls.sync(game, light, w2s, scale);
+    this.fx.sync(game, light, w2s, scale, now);
     this.balls.sync(game, light, w2s, scale);
+    this.chrome.sync(game, light, scale, now, rctx.spaceThreshold);
     this.staticDirty = false;
 
     this.noteMissing(game);
@@ -183,15 +204,10 @@ export class SleekRenderer {
    */
   private noteMissing(game: CanvasGameState): void {
     const check: Array<[string, boolean]> = [
-      ["breakables", game.destructibles.length > 0],
-      ["mirrors", game.mirrorPolygons.length > 0],
-      ["phasing", (game.phasingObjects?.length ?? 0) > 0],
-      ["circuit", !!game.circuit],
-      ["charges", (game.charges?.length ?? 0) > 0],
-      ["dataStream", !!game.dataStream],
-      ["pickups", (game.pickups?.length ?? 0) > 0],
-      ["lockFlash", game.assimilations.size > 0],
-      ["dissolve", !!game.dissolve],
+      ["dissolve (shatter transition)", !!game.dissolve],
+      ["levelClearSweep", game.levelComplete],
+      ["abilityFx", !!game.abilityFx],
+      ["pickupFeedback", (game.pickupFeedback?.length ?? 0) > 0],
     ];
     for (const [name, present] of check) {
       if (present && !this.reportedMissing.has(name)) {
@@ -223,9 +239,13 @@ export class SleekRenderer {
     clearSphereCache();
     this.board.destroy();
     this.areas.destroy();
+    this.props.destroy();
     this.entities.destroy();
+    this.objects.destroy();
     this.walls.destroy();
+    this.fx.destroy();
     this.balls.destroy();
+    this.chrome.destroy();
     try {
       this.app.destroy(true, { children: true });
     } catch {
