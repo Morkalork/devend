@@ -83,7 +83,13 @@ export class BoardLayer {
 
     // Project points that land near a wall onto that wall, so the fill stops
     // flush against the fence instead of wobbling along the lattice beside it.
-    const loops = snapContoursToWalls(raw, game.walls, spaceGrid.cellSize * 1.05);
+    //
+    // The reach must exceed the lattice's own diagonal, not just its pitch. A
+    // contour tracking a diagonal fence steps through cell CORNERS, which sit up
+    // to half a cell diagonal (~0.7 cells) off the line; a reach of ~1 cell left
+    // those corners unsnapped and they showed as a comb of teeth along every
+    // diagonal cut. 1.8 cells clears them with margin.
+    const loops = snapContoursToWalls(raw, game.walls, spaceGrid.cellSize * 1.8);
 
     const screenLoops: Pt[][] = loops.map(loop => loop.map(p => w2s(p.x, p.y)));
 

@@ -21,8 +21,9 @@
 import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Wall } from "@/lib/wallGeometry";
-import { PALETTE } from "./palette";
-import { facing, shadowFor, type LightScope } from "./light";
+import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
+import { PALETTE, mix } from "./palette";
+import { ambientAt, facing, shadowFor, type LightScope } from "./light";
 import { snapSegment, snapWidth, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -51,6 +52,23 @@ function convexHull(pts: Pt[]): Pt[] {
 export class WallLayer {
   readonly container = new Container();
 
+  /**
+   * Fence content lives in a scope masked to the board polygon MINUS the
+   * obstacle footprints, and every fence segment is additionally clipped against
+   * those obstacles before drawing.
+   *
+   * Both are needed and neither is decorative. A fence Wall is a full-length
+   * line across whatever it spans; drawing it raw paints it straight through
+   * obstacles and out over areas that should hide it, which showed up in play as
+   * stray diagonal lines wandering across the board. The classic renderer does
+   * exactly this clip + mask pair; skipping it was the bug.
+   */
+  private fenceScope = new Container();
+  private fenceMask = new Graphics();
+  private fenceMaskKey = "";
+  /** Per-wall clipped sub-segments; walls are immutable, so cache on identity. */
+  private clipCache = new WeakMap<Wall, { start: Vector2; end: Vector2 }[]>();
+
   private shadows = new Graphics();
   private bodies = new Graphics();
   private rims = new Graphics();
@@ -58,7 +76,29 @@ export class WallLayer {
   constructor() {
     // Shadows first so every wall body sits on top of every shadow: a wall must
     // never be dimmed by its neighbour's shadow falling across it.
-    this.container.addChild(this.shadows, this.bodies, this.rims);
+    this.fenceScope.addChild(this.shadows, this.bodies, this.rims);
+    this.fenceScope.mask = this.fenceMask;
+    // The mask must be a sibling in the display list, not a detached Graphics.
+    this.container.addChild(this.fenceScope, this.fenceMask);
+  }
+
+  /** Board polygon with the obstacle footprints cut out of it. */
+  private syncMask(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const key = `${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}`;
+    if (key === this.fenceMaskKey) return;
+    this.fenceMaskKey = key;
+
+    const m = this.fenceMask;
+    m.clear();
+    if (game.boardPolygon && game.boardPolygon.vertices.length >= 3) {
+      m.poly(game.boardPolygon.vertices.map(v => w2s(v.x, v.y))).fill({ color: 0xffffff });
+    } else {
+      const { left, top, width, height } = game.boardRect;
+      m.rect(left, top, width, height).fill({ color: 0xffffff });
+    }
+    for (const poly of game.obstaclePolygons) {
+      m.poly(poly.vertices.map(v => w2s(v.x, v.y))).cut();
+    }
   }
 
   sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
@@ -66,6 +106,7 @@ export class WallLayer {
     this.bodies.clear();
     this.rims.clear();
     this.shadowRuns.clear();
+    this.syncMask(game, w2s, scale);
 
     for (const w of game.walls) {
       const isEdge = w.isBoardEdge ?? w.id.startsWith("board-");
@@ -73,12 +114,28 @@ export class WallLayer {
       // Obstacle boundaries are drawn by the entity layer with their bodies;
       // drawing them here too would double their rim and shadow.
       if (isObstacle) continue;
-      this.drawWall(w, isEdge, light, w2s, scale);
+
+      // Split the wall around any obstacle it passes through, so no fence is
+      // ever painted across a slab it should be interrupted by.
+      for (const seg of this.clippedSegments(w, game)) {
+        this.drawSegment(seg.start, seg.end, w.thickness, isEdge, light, w2s, scale);
+      }
     }
 
     for (const g of game.activeWalls) this.drawGrowing(g, light, w2s, scale);
 
     this.flushShadows();
+  }
+
+  /** A wall's sub-segments with the obstacle footprints removed. */
+  private clippedSegments(w: Wall, game: CanvasGameState): { start: Vector2; end: Vector2 }[] {
+    if (game.obstaclePolygons.length === 0) return [{ start: w.start, end: w.end }];
+    let segs = this.clipCache.get(w);
+    if (!segs) {
+      segs = clipLineAgainstPolygons(w.start, w.end, game.obstaclePolygons);
+      this.clipCache.set(w, segs);
+    }
+    return segs;
   }
 
   /**
@@ -170,30 +227,61 @@ export class WallLayer {
         -(b.y - a.y) / len, (b.x - a.x) / len, thickness / 2,
         cast.dx * cast.length, cast.dy * cast.length, cast.alpha,
       );
+      const amb = ambientAt(light, (a.x + b.x) / 2, (a.y + b.y) / 2);
       this.bodies
         .moveTo(a.x, a.y)
         .lineTo(b.x, b.y)
-        .stroke({ width: snapWidth(thickness), color: PALETTE.accentDim, alpha: 1, cap: "butt" });
+        .stroke({
+          width: snapWidth(thickness),
+          color: mix(PALETTE.shadow, PALETTE.accentDim, 0.35 + amb * 0.65),
+          alpha: 1, cap: "butt",
+        });
       this.bodies
         .moveTo(a.x, a.y)
         .lineTo(b.x, b.y)
-        .stroke({ width: Math.max(1, snapWidth(thickness * 0.45)), color: PALETTE.accent, alpha: 1, cap: "butt" });
+        .stroke({
+          width: Math.max(1, snapWidth(thickness * 0.3)),
+          color: mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb),
+          alpha: 0.8, cap: "butt",
+        });
     }
 
-    // Both growing tips get a bright cap: the one part of the board that should
-    // read as emitting light rather than catching it.
+    // The growing TIPS stay bright, and are now the only emissive thing a fence
+    // has. That is deliberate: the tip is live, in-progress, and the one moment
+    // a cut genuinely is energy rather than material.
     for (const tip of [wall.startPoint, wall.endPoint]) {
       const p = w2s(tip.x, tip.y);
       this.rims
-        .circle(p.x, p.y, thickness * 0.75)
-        .fill({ color: PALETTE.accentGlow, alpha: 0.9 * light.level });
+        .circle(p.x, p.y, thickness * 0.7)
+        .fill({ color: PALETTE.accentGlow, alpha: 0.85 * light.level });
     }
   }
 
-  private drawWall(w: Wall, isEdge: boolean, light: LightScope, w2s: W2S, scale: number): void {
-    const thickness = Math.max(1, w.thickness * scale);
-    const a0 = w2s(w.start.x, w.start.y);
-    const b0 = w2s(w.end.x, w.end.y);
+  /**
+   * One wall segment, in the SAME material language as the board's furniture.
+   *
+   * A fence used to be drawn emissive: a flat dark core with a full-chroma neon
+   * centreline riding on it, unaffected by the light. Next to obstacles that are
+   * genuinely lit (ambient-tinted body, rim only on the face pointing at the
+   * monitor) that read as two unrelated art styles on one board.
+   *
+   * Now a fence is a lit object like everything else - its body is tinted by the
+   * ambient falloff, and it keeps only a narrow accent core so the player can
+   * still find their own cuts. It reads as a thing standing on the board rather
+   * than a glowing line painted over it.
+   */
+  private drawSegment(
+    startW: Vector2,
+    endW: Vector2,
+    worldThickness: number,
+    isEdge: boolean,
+    light: LightScope,
+    w2s: W2S,
+    scale: number,
+  ): void {
+    const thickness = Math.max(1, worldThickness * scale);
+    const a0 = w2s(startW.x, startW.y);
+    const b0 = w2s(endW.x, endW.y);
     const { a, b } = snapSegment(a0, b0, snapWidth(thickness));
 
     const dx = b.x - a.x;
@@ -215,23 +303,35 @@ export class WallLayer {
     this.addShadow(a, b, nx, ny, half, cast.dx * cast.length, cast.dy * cast.length, cast.alpha);
 
     // ── 2. Body ────────────────────────────────────────────────────────────
-    const body = isEdge ? PALETTE.edge : PALETTE.accentDim;
+    // Lit like a slab: the same mix(shadow, material, ambient) the obstacles
+    // use, so a fence and a wall are visibly made of the same stuff.
+    const amb = ambientAt(light, midX, midY);
+    const material = isEdge ? PALETTE.edge : PALETTE.accentDim;
     this.bodies
       .moveTo(a.x, a.y)
       .lineTo(b.x, b.y)
-      .stroke({ width: snapWidth(thickness), color: body, alpha: 1, cap: "butt" });
+      .stroke({
+        width: snapWidth(thickness),
+        color: mix(PALETTE.shadow, material, 0.35 + amb * 0.65),
+        alpha: 1,
+        cap: "butt",
+      });
 
     if (!isEdge) {
-      // The live accent centreline. Half the body's width so the darker core
-      // still frames it, which is what keeps a fence legible against the
-      // bright captured fill it creates.
+      // A narrow accent core - the player's own mark still needs to be findable
+      // at a glance. Much dimmer and thinner than the old neon centreline, and
+      // it now dims with the ambient like everything else rather than emitting.
       this.bodies
         .moveTo(a.x, a.y)
         .lineTo(b.x, b.y)
         .stroke({
-          width: Math.max(1, snapWidth(thickness * 0.45)),
-          color: PALETTE.accent,
-          alpha: 0.95,
+          width: Math.max(1, snapWidth(thickness * 0.3)),
+          // Deliberately kept well short of full accent: this is a lit material
+          // catching the monitor, not a neon tube. Blending most of the way to
+          // PALETTE.accent (the first attempt) left it as hot as before and
+          // still clashing with the furniture around it.
+          color: mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb),
+          alpha: 0.8,
           cap: "butt",
         });
     }
@@ -247,13 +347,15 @@ export class WallLayer {
 
     const rx = useNx * half;
     const ry = useNy * half;
+    // Same 1px rim, same strength constant as the obstacles and mirrors use, so
+    // every lit edge on the board is spoken in one voice.
     this.rims
       .moveTo(a.x + rx, a.y + ry)
       .lineTo(b.x + rx, b.y + ry)
       .stroke({
         width: 1,
-        color: isEdge ? PALETTE.monitor : PALETTE.accentGlow,
-        alpha: Math.min(0.85, lit * 0.8 * light.level),
+        color: isEdge ? PALETTE.edge : PALETTE.accentGlow,
+        alpha: Math.min(0.95, lit * 0.95 * light.level),
         cap: "butt",
       });
   }
