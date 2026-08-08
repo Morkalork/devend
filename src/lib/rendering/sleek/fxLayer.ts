@@ -13,6 +13,9 @@
 
 import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
+import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
+import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, shadowFor, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
@@ -42,10 +45,72 @@ export class FxLayer {
     this.under.clear();
     this.over.clear();
 
+    this.drawCutPreview(game, w2s, scale);
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
     this.drawDebris(game, w2s, scale, now);
     this.drawFalling(game, light, w2s, now);
+  }
+
+  /**
+   * The cut preview: where the fence WILL land, shown while the player drags.
+   *
+   * This is the single most important affordance on the board - every cut is
+   * aimed with it - so it is drawn as pure UI and deliberately breaks the light
+   * model: no shadow, no ambient dimming, no rim. It is a projection of intent,
+   * not an object sitting on the surface, and lighting it would both bury it
+   * against the board and imply it is already real.
+   *
+   * The ray is cast through the same castRayWithReflections the physics uses,
+   * so what the player sees is exactly what they will get, bounces included. A
+   * cut that would anchor on a breakable turns red: it will "dud", and the
+   * player deserves to know before they commit rather than after.
+   */
+  private drawCutPreview(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const { swipeStart, currentSwipePos, swipeRegionId } = game;
+    if (!swipeStart || !currentSwipePos || !swipeRegionId) return;
+
+    const delta = vec2Sub(currentSwipePos, swipeStart);
+    // Below this the direction is noise, and a preview that flails around while
+    // the finger settles is worse than none.
+    if (vec2Length(delta) < 5) return;
+
+    const dir = vec2Normalize(delta);
+    const fwd = castRayWithReflections(swipeStart, dir, game.walls);
+    const bwd = castRayWithReflections(swipeStart, { x: -dir.x, y: -dir.y }, game.walls);
+    if (!fwd || !bwd) return;
+
+    const fEnd = fwd.waypoints[fwd.waypoints.length - 1];
+    const bEnd = bwd.waypoints[bwd.waypoints.length - 1];
+    const isDud = cutAnchorsBreakable(game, fEnd, bEnd, WALL_THICKNESS + 6);
+
+    const outer = isDud ? 0xff8080 : 0xffffff;
+    const inner = isDud ? PALETTE.danger : PALETTE.accent;
+    const dot = isDud ? 0xff5b5b : PALETTE.mirror;
+    const alpha = isDud ? 0.3 : 0.15;
+
+    const paths = [fwd.waypoints, bwd.waypoints];
+    const stroke = (width: number, color: number) => {
+      for (const wps of paths) {
+        for (let i = 0; i < wps.length - 1; i++) {
+          const s = w2s(wps[i].x, wps[i].y);
+          const e = w2s(wps[i + 1].x, wps[i + 1].y);
+          this.over.moveTo(s.x, s.y).lineTo(e.x, e.y);
+        }
+      }
+      this.over.stroke({ width, color, alpha, cap: "butt" });
+    };
+    stroke((WALL_THICKNESS + 8) * scale, outer);
+    stroke((WALL_THICKNESS + 4) * scale, inner);
+
+    // Bounce points: the interior waypoints are where the cut turns, and seeing
+    // them is what makes a mirror bank readable before committing.
+    for (const wps of paths) {
+      for (let i = 1; i < wps.length - 1; i++) {
+        const p = w2s(wps[i].x, wps[i].y);
+        this.over.circle(p.x, p.y, 4 * scale).fill({ color: dot, alpha: 0.4 });
+      }
+    }
   }
 
   /**
