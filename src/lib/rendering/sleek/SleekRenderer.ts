@@ -105,8 +105,10 @@ export class SleekRenderer {
     );
     this.root.addChild(this.boardScope, this.boardMask);
     this.boardScope.mask = this.boardMask;
-    // The space bar is the one piece of chrome that belongs outside the board.
-    this.app.stage.addChild(this.root, this.chrome.outer);
+    // The board's drop shadow falls on the page BEHIND the board, so it is a
+    // stage-level underlay added before everything else. The space bar is the
+    // one piece of chrome that belongs outside the board on top.
+    this.app.stage.addChild(this.board.underlay, this.root, this.chrome.outer);
 
     // No bloom pass. The classic renderer leans on it to sell the neon; here the
     // form is carried by the light model, and a bloom would smear exactly the

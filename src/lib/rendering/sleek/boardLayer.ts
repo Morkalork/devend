@@ -16,7 +16,7 @@ import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { traceActiveContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 import { PALETTE, withAlpha } from "./palette";
-import { ambientAt, type LightScope } from "./light";
+import { ambientAt, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapStroke, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -24,21 +24,56 @@ type W2S = (x: number, y: number) => Pt;
 /** Lattice lines are drawn every N grid cells, whichever N keeps them ≥ this. */
 const MIN_LATTICE_PX = 26;
 
+/**
+ * Opacity of the board SURFACE only (captured fill, live fill, lattice).
+ *
+ * The CRT terminal behind the board is part of the fiction - the game is code
+ * running on the same machine - so letting a little of it seep through makes the
+ * board feel like a panel laid over a live screen rather than a hole punched in
+ * the page. Kept deliberately high: the background is bright scrolling text, and
+ * anything much below this starts competing with the balls for attention.
+ *
+ * Objects on the board (walls, obstacles, balls, props) stay fully opaque. Only
+ * the surface they rest on is translucent, so nothing the player must read is
+ * ever fighting the background.
+ */
+const SURFACE_ALPHA = 0.9;
+
+/** The board panel's own height above the page, as a multiple of the furniture. */
+const BOARD_HEIGHT_FACTOR = 2.4;
+/** Softness of the board's drop shadow, in screen px per unit scale. */
+const DROP_BLUR = 22;
+
 export class BoardLayer {
   readonly container = new Container();
+  /**
+   * The board's own drop shadow. Lives OUTSIDE the board (it falls on the page)
+   * and must render beneath everything, so the renderer adds it to a stage-level
+   * underlay rather than to `container`.
+   */
+  readonly underlay = new Container();
 
+  /** Surface fills, held together so one alpha covers the whole surface. */
+  private surface = new Container();
   private captured = new Graphics();  // fenced-off territory (the substrate)
   private active = new Graphics();    // still-playable space, punched on top
   private lattice = new Graphics();   // the faint grid inside live space
   private latticeMask = new Graphics();
   private wash: Sprite | null = null; // baked ambient falloff, multiplied over
+  private drop: Sprite | null = null; // baked drop shadow under the whole board
 
   private geometryKey = "";
   private washKey = "";
+  private dropKey = "";
 
   constructor() {
     this.lattice.mask = this.latticeMask;
-    this.container.addChild(this.captured, this.active, this.lattice, this.latticeMask);
+    this.surface.addChild(this.captured, this.active, this.lattice, this.latticeMask);
+    // One alpha on the group, rather than per-fill: the captured and live fills
+    // overlap, so per-fill alpha would make the overlap less transparent than
+    // the rest and show as a visible seam along every region boundary.
+    this.surface.alpha = SURFACE_ALPHA;
+    this.container.addChild(this.surface);
   }
 
   /**
@@ -49,6 +84,71 @@ export class BoardLayer {
   sync(game: CanvasGameState, light: LightScope, w2s: W2S, dirty: boolean): void {
     this.syncGeometry(game, w2s, dirty);
     this.syncWash(game, light);
+    this.syncDrop(game, light);
+  }
+
+  /**
+   * The board's drop shadow on the page behind it.
+   *
+   * Cast by the same monitor as everything else, so it falls up-and-left like
+   * every other shadow on screen - a board lit from one direction with its panel
+   * shadow going another way would break the whole illusion in one glance. The
+   * board is a thick panel rather than a thin slab, so it stands taller than the
+   * furniture and throws a correspondingly longer, softer shadow.
+   *
+   * The board's OWN footprint is punched out of the bake. With a translucent
+   * surface you would otherwise see the shadow through the board it belongs to,
+   * which reads as a smudge under the glass.
+   */
+  private syncDrop(game: CanvasGameState, light: LightScope): void {
+    const { boardRect } = game;
+    const key = `${boardRect.width}x${boardRect.height}|${Math.round(light.x)},${Math.round(light.y)}`;
+    if (key !== this.dropKey) {
+      this.dropKey = key;
+      this.drop?.destroy();
+      this.drop = this.bakeDrop(game, light);
+      if (this.drop) this.underlay.addChild(this.drop);
+    }
+    // Only the intensity rides the flicker; re-baking per frame would be absurd.
+    if (this.drop) this.drop.alpha = 0.5 + 0.25 * light.level;
+  }
+
+  private bakeDrop(game: CanvasGameState, light: LightScope): Sprite | null {
+    const { boardRect, boardRect: { scale } } = game;
+    const w = Math.max(1, Math.round(boardRect.width));
+    const h = Math.max(1, Math.round(boardRect.height));
+
+    const cast = shadowFor(
+      light,
+      boardRect.left + w / 2,
+      boardRect.top + h / 2,
+      slabHeight(scale) * BOARD_HEIGHT_FACTOR,
+    );
+    const offX = cast.dx * cast.length;
+    const offY = cast.dy * cast.length;
+    const blur = Math.max(6, DROP_BLUR * scale);
+    const pad = Math.ceil(blur * 3);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = w + pad * 2;
+    canvas.height = h + pad * 2;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    ctx.filter = `blur(${blur}px)`;
+    ctx.fillStyle = withAlpha(PALETTE.shadow, 0.85);
+    ctx.fillRect(pad, pad, w, h);
+    ctx.filter = "none";
+
+    // Remove the part that would sit under the board itself.
+    ctx.globalCompositeOperation = "destination-out";
+    ctx.fillStyle = "#000";
+    ctx.fillRect(pad - offX, pad - offY, w, h);
+    ctx.globalCompositeOperation = "source-over";
+
+    const sprite = new Sprite(Texture.from(canvas));
+    sprite.position.set(boardRect.left - pad + offX, boardRect.top - pad + offY);
+    return sprite;
   }
 
   private syncGeometry(game: CanvasGameState, w2s: W2S, dirty: boolean): void {
@@ -205,6 +305,8 @@ export class BoardLayer {
 
   destroy(): void {
     this.wash?.destroy();
+    this.drop?.destroy();
     this.container.destroy({ children: true });
+    this.underlay.destroy({ children: true });
   }
 }
