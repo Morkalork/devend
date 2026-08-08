@@ -14,7 +14,7 @@ import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
 import { ScopeCreepConfig } from "@/lib/scopeCreep";
 import { ActiveMapMutator } from "@/types/mapMutator";
-import { LockZone, ColoredArea } from "@/types/level";
+import { ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 
@@ -166,11 +166,12 @@ export interface CanvasGameState {
   firedBeats: string[];
   /** Map-beat ids whose telegraph warning has shown, so each warns once. */
   warnedBeats: string[];
-  /** Bonus-lock zones for this map, in world space, already rotated (mapRotation). */
-  lockZones: LockZone[];
-  /** Colored Areas for this map, in world space, already rotated (mapRotation). */
+  /**
+   * Colored Areas for this map (gate AND bonus), in world space, already
+   * rotated (mapRotation). Gate-only consumers filter with gateAreas().
+   */
   coloredAreas: ColoredArea[];
-  /** A target ball has been locked inside a required Colored Area (the win gate). */
+  /** A target ball has been locked inside a GATE Colored Area (the win gate). */
   coloredAreaSatisfied: boolean;
   /** "Wire the Integration" circuit runtime for this map (null = no circuit). */
   circuit: CircuitRuntime | null;

@@ -8,7 +8,8 @@ import type { GameStateInfo } from '@/components/game/GameCanvas';
 import { getAllAbilities, loadAbilities } from '@/lib/abilities';
 import { GameModifiers, useActiveModifiers } from '@/hooks/useActiveModifiers';
 import { useColorProgression } from '@/hooks/useColorProgression';
-import { LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
+import { AreaKind, ColoredArea, LevelConfig, LevelData, LevelEntity, BallConfig, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
+import { makeColoredArea } from '@/lib/coloredAreas';
 import { BallTypeDef, getAllBallTypes, loadBallTypes, selectBallTypesForMap } from '@/lib/ballTypes';
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
@@ -236,6 +237,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [editDraft, setEditDraft] = useState<LevelConfig | null>(null);
   const [editEntityId, setEditEntityId] = useState<string | null>(null);
   const [editBallId, setEditBallId] = useState<string | null>(null);
+  // Colored Areas have no id in the schema, so selection is by index.
+  const [editAreaIndex, setEditAreaIndex] = useState<number | null>(null);
   const [editSaveStatus, setEditSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // Sync draft whenever the selected level changes (new level picked)
@@ -244,6 +247,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
       setEditDraft(JSON.parse(JSON.stringify(selectedLevel)));
       setEditEntityId(null);
       setEditBallId(null);
+      setEditAreaIndex(null);
     } else {
       setEditDraft(null);
     }
@@ -321,6 +325,41 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     setEditDraft(prev => {
       if (!prev) return prev;
       return { ...prev, entities: (prev.entities || []).map(e => e.id === id ? { ...e, ...updates } as LevelEntity : e) };
+    });
+  }, []);
+
+  // ── Colored Areas (win-gate zones) ──────────────────────────────────────────
+  const addEditArea = useCallback((kind: AreaKind) => {
+    setEditDraft(prev => {
+      if (!prev) return prev;
+      const existing = prev.coloredAreas || [];
+      setEditAreaIndex(existing.length);
+      setEditEntityId(null);
+      setEditBallId(null);
+      return { ...prev, coloredAreas: [...existing, makeColoredArea(kind, existing.length)] };
+    });
+  }, []);
+
+  const updateEditArea = useCallback((index: number, updates: Partial<ColoredArea>) => {
+    setEditDraft(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        coloredAreas: (prev.coloredAreas || []).map((a, i) => i === index ? { ...a, ...updates } : a),
+      };
+    });
+  }, []);
+
+  const deleteEditArea = useCallback((index: number) => {
+    setEditDraft(prev => {
+      if (!prev) return prev;
+      setEditAreaIndex(null);
+      const remaining = (prev.coloredAreas || []).filter((_, i) => i !== index);
+      const next = { ...prev, coloredAreas: remaining };
+      // Drop the key entirely when the last area goes, so the map falls back to
+      // the normal clear-the-space win.
+      if (remaining.length === 0) delete next.coloredAreas;
+      return next;
     });
   }, []);
 
@@ -641,15 +680,20 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               level={editDraft}
               selectedEntityId={editEntityId}
               selectedBallId={editBallId}
-              onSelectEntity={id => { setEditEntityId(id); setEditBallId(null); }}
-              onSelectBall={id => { setEditBallId(id); setEditEntityId(null); }}
+              selectedAreaIndex={editAreaIndex}
+              onSelectEntity={id => { setEditEntityId(id); setEditBallId(null); setEditAreaIndex(null); }}
+              onSelectBall={id => { setEditBallId(id); setEditEntityId(null); setEditAreaIndex(null); }}
+              onSelectArea={index => { setEditAreaIndex(index); setEditEntityId(null); setEditBallId(null); }}
               onAddEntity={addEditEntity}
               onAddBall={addEditBall}
+              onAddArea={addEditArea}
               onDeleteEntity={deleteEditEntity}
               onDuplicateEntity={duplicateEditEntity}
               onDeleteBall={deleteEditBall}
+              onDeleteArea={deleteEditArea}
               onUpdateEntity={updateEditEntity}
               onUpdateBall={updateEditBall}
+              onUpdateArea={updateEditArea}
             />
           </div>
 

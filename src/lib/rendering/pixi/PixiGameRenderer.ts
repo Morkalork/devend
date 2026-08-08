@@ -35,7 +35,7 @@ import {
   circuitPalette,
   clearWallSkeletonCache,
 } from "@/lib/rendering/wallSkeleton";
-import { areaStyle } from "@/lib/coloredAreas";
+import { areaStyle, isGateArea } from "@/lib/coloredAreas";
 import { getRainGlyph } from "../rainGlyphCache";
 import { getFrameStats, heapLine } from "../perfStats";
 import { flameTonguesForCount } from "../renderFrame";
@@ -65,10 +65,7 @@ export class PixiGameRenderer {
   private regionSprite: Sprite | null = null;
   private mirrorCracks = new Graphics();
   private bloom: Filter | null = null;
-  private lockZonesContainer = new Container(); // bonus-lock zone + colored-area markings + labels
-  private lockZonesG = new Graphics();
-  private lockZoneLabels: Text[] = [];
-  private lockZonesKey = "";
+  private coloredAreasContainer = new Container(); // colored-area markings + labels
   private coloredAreasG = new Graphics();
   private coloredAreaLabels: Text[] = [];
   private coloredAreasKey = "";
@@ -146,11 +143,11 @@ export class PixiGameRenderer {
     this.wallsScope.addChild(this.wallGlow, this.wallCore);
     this.wallsScope.mask = this.fenceMask;
 
-    this.lockZonesContainer.addChild(this.lockZonesG, this.coloredAreasG, this.circuitG, this.chargeG, this.dataStreamG);
+    this.coloredAreasContainer.addChild(this.coloredAreasG, this.circuitG, this.chargeG, this.dataStreamG);
     this.boardScope.addChild(
       this.rainLayer,
       this.boardBase,
-      this.lockZonesContainer, // gold floor markings beneath movers/walls
+      this.coloredAreasContainer, // floor markings beneath movers/walls
       this.movers,
       this.breakables,
       // Board edge + obstacle outlines sit BELOW the fences, so a fence's green
@@ -278,7 +275,6 @@ export class PixiGameRenderer {
 
     {
       this.syncRain(game, rctx, scale, now);
-      this.syncLockZones(game, w2s, scale);
       this.syncColoredAreas(game, w2s, scale);
       this.syncCircuit(game, w2s, scale, now);
       this.syncCharges(game, w2s, scale, now);
@@ -584,58 +580,18 @@ export class PixiGameRenderer {
   }
 
   // ── Static obstacle outlines (section F) ──────────────────────────────────
-  // ── Bonus-lock zones (greed hook) ─────────────────────────────────────────
-  // Static per map: a gold floor tint + dashed border + ×N label, rebuilt only
-  // when the zone set / boardRect / scale changes.
-  private syncLockZones(game: CanvasGameState, w2s: W2S, scale: number): void {
-    const zones = game.lockZones ?? [];
-    const key = zones.map(z => `${z.x},${z.y},${z.width},${z.height},${z.multiplier}`).join("|")
-      + `_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 1000)}`;
-    if (this.lockZonesKey === key) return;
-    this.lockZonesKey = key;
-
-    const g = this.lockZonesG;
-    g.clear();
-    for (const t of this.lockZoneLabels) { t.parent?.removeChild(t); t.destroy(); }
-    this.lockZoneLabels = [];
-
-    for (const z of zones) {
-      const tl = w2s(z.x, z.y);
-      const zw = z.width * scale;
-      const zh = z.height * scale;
-      g.rect(tl.x, tl.y, zw, zh).fill({ color: 0xffd76b, alpha: 0.10 });
-      dashedLine(g, tl.x, tl.y, tl.x + zw, tl.y, 8 * scale, 6 * scale);
-      dashedLine(g, tl.x + zw, tl.y, tl.x + zw, tl.y + zh, 8 * scale, 6 * scale);
-      dashedLine(g, tl.x + zw, tl.y + zh, tl.x, tl.y + zh, 8 * scale, 6 * scale);
-      dashedLine(g, tl.x, tl.y + zh, tl.x, tl.y, 8 * scale, 6 * scale);
-      g.stroke({ width: Math.max(1, 2 * scale), color: 0xffd76b, alpha: 0.7 });
-
-      const fontPx = Math.max(12, Math.min(zw, zh) * 0.28);
-      const label = new Text({
-        text: `×${z.multiplier}`,
-        style: new TextStyle({
-          fontFamily: "sans-serif",
-          fontWeight: "bold",
-          fontSize: fontPx,
-          fill: 0xffe9a8,
-          stroke: { color: 0x78501e, width: Math.max(1, scale) },
-        }),
-      });
-      label.anchor.set(0.5);
-      label.position.set(tl.x + zw / 2, tl.y + zh / 2);
-      this.lockZonesContainer.addChild(label);
-      this.lockZoneLabels.push(label);
-    }
-  }
-
-  // ── Colored Areas (required win-gate) ─────────────────────────────────────
+  // ── Colored Areas ─────────────────────────────────────────────────────────
   // Static per map: a light-coloured zone with its kind (var/let/const) +
   // multiplier at centre. Rebuilt only when the areas / boardRect / scale change.
+  // A GATE area is solid and bright; a BONUS pocket is fainter and finely
+  // dotted, so "you must lock here" and "you may" never read the same.
   private syncColoredAreas(game: CanvasGameState, w2s: W2S, scale: number): void {
     const areas = game.coloredAreas ?? [];
     // `satisfied` is in the key so the (otherwise static) graphics rebuild the
     // instant a ball locks inside and the zone lights up.
-    const key = areas.map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind},${a.satisfied ? 1 : 0}`).join("|")
+    const key = areas
+      .map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind},${isGateArea(a) ? 1 : 0},${a.satisfied ? 1 : 0}`)
+      .join("|")
       + `_${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 1000)}`;
     if (this.coloredAreasKey === key) return;
     this.coloredAreasKey = key;
@@ -647,28 +603,34 @@ export class PixiGameRenderer {
 
     for (const a of areas) {
       const st = areaStyle(a.kind);
+      const gate = isGateArea(a);
+      const dash = gate ? 9 * scale : 3 * scale;
+      const gap = gate ? 6 * scale : 5 * scale;
       const tl = w2s(a.x, a.y);
       const aw = a.width * scale;
       const ah = a.height * scale;
+      // Two independent axes: OCCUPIED (a ball is locked in here) beats the
+      // gate/bonus styling, since a filled pocket reads the same either way.
+      // Unoccupied, a gate is bright + boldly dashed ("you must") and a bonus
+      // pocket dim + finely dotted ("you may").
       const lit = !!a.satisfied;
-      // Used win-gate: a brighter fill + a solid, glowing border reads as "this
-      // zone is filled" vs the dashed, dim "target here" prompt.
-      g.rect(tl.x, tl.y, aw, ah).fill({ color: st.color, alpha: lit ? 0.32 : 0.12 });
+      g.rect(tl.x, tl.y, aw, ah).fill({ color: st.color, alpha: lit ? 0.32 : gate ? 0.12 : 0.07 });
       if (lit) {
         g.rect(tl.x - 3 * scale, tl.y - 3 * scale, aw + 6 * scale, ah + 6 * scale)
           .stroke({ width: Math.max(1, 2 * scale), color: st.color, alpha: 0.4 });
         g.rect(tl.x, tl.y, aw, ah).stroke({ width: Math.max(2, 3 * scale), color: st.color, alpha: 1 });
       } else {
-        dashedLine(g, tl.x, tl.y, tl.x + aw, tl.y, 9 * scale, 6 * scale);
-        dashedLine(g, tl.x + aw, tl.y, tl.x + aw, tl.y + ah, 9 * scale, 6 * scale);
-        dashedLine(g, tl.x + aw, tl.y + ah, tl.x, tl.y + ah, 9 * scale, 6 * scale);
-        dashedLine(g, tl.x, tl.y + ah, tl.x, tl.y, 9 * scale, 6 * scale);
-        g.stroke({ width: Math.max(1, 2 * scale), color: st.color, alpha: 0.75 });
+        dashedLine(g, tl.x, tl.y, tl.x + aw, tl.y, dash, gap);
+        dashedLine(g, tl.x + aw, tl.y, tl.x + aw, tl.y + ah, dash, gap);
+        dashedLine(g, tl.x + aw, tl.y + ah, tl.x, tl.y + ah, dash, gap);
+        dashedLine(g, tl.x, tl.y + ah, tl.x, tl.y, dash, gap);
+        g.stroke({ width: Math.max(1, (gate ? 2 : 1.25) * scale), color: st.color, alpha: gate ? 0.75 : 0.5 });
       }
 
       const cx = tl.x + aw / 2, cy = tl.y + ah / 2;
       const labelPx = Math.max(13, Math.min(aw, ah) * 0.2);
       const stroke = { color: 0x000000, width: Math.max(1, scale) };
+      const labelAlpha = gate ? 1 : 0.7;
       const kindText = new Text({
         text: st.label,
         style: new TextStyle({ fontFamily: "monospace", fontWeight: "bold", fontSize: labelPx, fill: st.color, stroke }),
@@ -681,7 +643,9 @@ export class PixiGameRenderer {
       });
       multText.anchor.set(0.5, 0);
       multText.position.set(cx, cy + labelPx * 0.35);
-      this.lockZonesContainer.addChild(kindText, multText);
+      kindText.alpha = labelAlpha;
+      multText.alpha = labelAlpha;
+      this.coloredAreasContainer.addChild(kindText, multText);
       this.coloredAreaLabels.push(kindText, multText);
     }
   }

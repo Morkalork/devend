@@ -19,7 +19,7 @@
 
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
-import type { LevelEntity, LockZone, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig } from "@/types/level";
+import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig } from "@/types/level";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -122,18 +122,11 @@ export function rotateEntities(entities: LevelEntity[], r: MapRotation): LevelEn
   return r === 0 ? entities : entities.map(e => rotateEntity(e, r));
 }
 
-/** Rotate a bonus-lock zone (a rect + its multiplier) into the target orientation. */
-export function rotateLockZone(zone: LockZone, r: MapRotation): LockZone {
-  if (r === 0) return zone;
-  const rect = rotateRect(zone.x, zone.y, zone.width, zone.height, r);
-  return { ...rect, multiplier: zone.multiplier };
-}
-
-/** Rotate a Colored Area (a rect + its kind) into the target orientation. */
+/** Rotate a Colored Area (a rect + its kind/stakes) into the target orientation. */
 export function rotateColoredArea(area: ColoredArea, r: MapRotation): ColoredArea {
   if (r === 0) return area;
   const rect = rotateRect(area.x, area.y, area.width, area.height, r);
-  return { ...rect, kind: area.kind };
+  return { ...area, ...rect };
 }
 
 /** Rotate a circuit (each terminal point + its linked dormant ball) into the

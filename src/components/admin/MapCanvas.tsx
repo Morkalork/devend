@@ -1,16 +1,22 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
+import { ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from '@/lib/boardConstants';
+import { AREA_MIN_SIZE, areaStyle, isGateArea } from '@/lib/coloredAreas';
+import { hexToRgba } from '@/lib/gameUtils';
 
 interface MapCanvasProps {
   level: LevelConfig;
   selectedEntityId: string | null;
   selectedBallId: string | null;
+  /** Index into level.coloredAreas (they have no id), or null. */
+  selectedAreaIndex: number | null;
   snapToGrid: boolean;
   onSelectEntity: (id: string | null) => void;
   onSelectBall: (id: string | null) => void;
+  onSelectArea: (index: number | null) => void;
   onUpdateEntity: (id: string, updates: Partial<LevelEntity>) => void;
   onUpdateBall: (id: string, updates: Partial<BallConfig>) => void;
+  onUpdateArea: (index: number, updates: Partial<ColoredArea>) => void;
 }
 
 const GRID_SIZE = 25;
@@ -21,9 +27,13 @@ const HANDLE_HIT_SIZE = 20; // Larger hit area for easier clicking
 const POINT_HANDLE_SIZE = 12;
 const EDGE_HANDLE_SIZE = 10;
 
-type DragMode = 
+type RectHandle = 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r';
+
+type DragMode =
   | { type: 'none' }
   | { type: 'entity'; id: string; startX: number; startY: number; originalEntity: LevelEntity }
+  | { type: 'area'; index: number; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
+  | { type: 'area-resize'; index: number; handle: RectHandle; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
   | { type: 'ball'; id: string; startX: number; startY: number; originalX: number; originalY: number }
   | { type: 'circle-radius'; id: string; startDistance: number; originalRadius: number }
   | { type: 'polygon-point'; id: string; pointIndex: number; startX: number; startY: number }
@@ -61,11 +71,14 @@ export function MapCanvas({
   level,
   selectedEntityId,
   selectedBallId,
+  selectedAreaIndex,
   snapToGrid,
   onSelectEntity,
   onSelectBall,
+  onSelectArea,
   onUpdateEntity,
   onUpdateBall,
+  onUpdateArea,
 }: MapCanvasProps) {
   const snap = useCallback((v: number) => snapToGrid ? Math.round(v / GRID_SIZE) * GRID_SIZE : Math.round(v), [snapToGrid]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -203,6 +216,59 @@ export function MapCanvas({
       ctx.lineTo(boardRect.left + boardRect.width, sy);
       ctx.stroke();
     }
+
+    // Draw Colored Areas (win-gate zones) beneath the entities, mirroring the
+    // in-game look: light fill, dashed border, centred kind label + multiplier.
+    (level.coloredAreas || []).forEach((area, index) => {
+      const st = areaStyle(area.kind);
+      const gate = isGateArea(area);
+      const isSelected = index === selectedAreaIndex ||
+        ((dragMode.type === 'area' || dragMode.type === 'area-resize') && dragMode.index === index);
+      const tl = worldToScreen(area.x, area.y);
+      const aw = area.width * boardRect.scale;
+      const ah = area.height * boardRect.scale;
+
+      // Same distinction as in game: gate solid + bright, bonus faint + dotted.
+      ctx.fillStyle = hexToRgba(st.color, isSelected ? 0.28 : (gate ? 0.14 : 0.08));
+      ctx.fillRect(tl.x, tl.y, aw, ah);
+      ctx.strokeStyle = hexToRgba(st.color, isSelected ? 1 : (gate ? 0.75 : 0.5));
+      ctx.lineWidth = isSelected ? 3 : (gate ? 2 : 1.25);
+      ctx.setLineDash(gate ? [9, 6] : [3, 5]);
+      ctx.strokeRect(tl.x, tl.y, aw, ah);
+      ctx.setLineDash([]);
+
+      const cx = tl.x + aw / 2;
+      const cy = tl.y + ah / 2;
+      const labelPx = Math.max(12, Math.min(aw, ah) * 0.2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = hexToRgba(st.color, gate ? 0.95 : 0.7);
+      ctx.font = `bold ${labelPx}px monospace`;
+      ctx.fillText(st.label, cx, cy + labelPx * 0.15);
+      ctx.font = `bold ${labelPx * 0.6}px monospace`;
+      ctx.fillText(`x${st.multiplier}`, cx, cy + labelPx * 1.05);
+
+      if (isSelected) {
+        // Move handle at the centre + the eight resize handles (same as rects).
+        ctx.fillStyle = '#4488ff';
+        ctx.beginPath();
+        ctx.arc(cx, cy, HANDLE_SIZE / 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#2255cc';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        rectHandlePositions(tl.x, tl.y, aw, ah).forEach(({ pos, name }) => {
+          const isCorner = name.length === 2;
+          const size = isCorner ? HANDLE_SIZE : EDGE_HANDLE_SIZE;
+          ctx.fillStyle = isCorner ? '#fff' : '#00ff88';
+          ctx.fillRect(pos.x - size / 2, pos.y - size / 2, size, size);
+          ctx.strokeStyle = isCorner ? st.color : '#008844';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(pos.x - size / 2, pos.y - size / 2, size, size);
+        });
+      }
+    });
 
     // Draw entities
     (level.entities || []).forEach(entity => {
@@ -407,14 +473,36 @@ export function MapCanvas({
       }
     });
 
-  }, [level, boardRect, selectedEntityId, selectedBallId, ballPositions, worldToScreen, getEdgeInfo, dragMode]);
+  }, [level, boardRect, selectedEntityId, selectedBallId, selectedAreaIndex, ballPositions, worldToScreen, getEdgeInfo, dragMode]);
 
   // Hit testing
-  const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle'; id: string; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: string } | null => {
+  const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle' | 'area' | 'area-handle'; id: string; areaIndex?: number; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: RectHandle } | null => {
     if (!boardRect) return null;
-    
+
     const world = screenToWorld(sx, sy);
-    
+
+    // Check the selected area's handles first (they sit on top of everything)
+    if (selectedAreaIndex !== null) {
+      const area = (level.coloredAreas || [])[selectedAreaIndex];
+      if (area) {
+        const tl = worldToScreen(area.x, area.y);
+        const aw = area.width * boardRect.scale;
+        const ah = area.height * boardRect.scale;
+
+        const center = { x: tl.x + aw / 2, y: tl.y + ah / 2 };
+        if (Math.abs(sx - center.x) < HANDLE_HIT_SIZE && Math.abs(sy - center.y) < HANDLE_HIT_SIZE) {
+          return { type: 'area-handle', id: '', areaIndex: selectedAreaIndex, handleType: 'move' };
+        }
+
+        for (const handle of rectHandlePositions(tl.x, tl.y, aw, ah)) {
+          const hitSize = handle.name.length === 2 ? HANDLE_HIT_SIZE : HANDLE_HIT_SIZE - 4;
+          if (Math.abs(sx - handle.pos.x) < hitSize && Math.abs(sy - handle.pos.y) < hitSize) {
+            return { type: 'area-handle', id: '', areaIndex: selectedAreaIndex, handleType: 'rect', rectHandle: handle.name };
+          }
+        }
+      }
+    }
+
     // Check entity handles first (when selected)
     if (selectedEntityId) {
       const entity = (level.entities || []).find(e => e.id === selectedEntityId);
@@ -455,18 +543,7 @@ export function MapCanvas({
           }
 
           // Check corner and edge handles
-          const handles: { pos: { x: number; y: number }; name: string }[] = [
-            { pos: { x: topLeft.x, y: topLeft.y }, name: 'tl' },
-            { pos: { x: topLeft.x + width, y: topLeft.y }, name: 'tr' },
-            { pos: { x: topLeft.x, y: topLeft.y + height }, name: 'bl' },
-            { pos: { x: topLeft.x + width, y: topLeft.y + height }, name: 'br' },
-            { pos: { x: topLeft.x + width / 2, y: topLeft.y }, name: 't' },
-            { pos: { x: topLeft.x + width / 2, y: topLeft.y + height }, name: 'b' },
-            { pos: { x: topLeft.x, y: topLeft.y + height / 2 }, name: 'l' },
-            { pos: { x: topLeft.x + width, y: topLeft.y + height / 2 }, name: 'r' },
-          ];
-
-          for (const handle of handles) {
+          for (const handle of rectHandlePositions(topLeft.x, topLeft.y, width, height)) {
             const hitSize = handle.name.length === 2 ? HANDLE_HIT_SIZE : HANDLE_HIT_SIZE - 4;
             if (Math.abs(sx - handle.pos.x) < hitSize && Math.abs(sy - handle.pos.y) < hitSize) {
               return { type: 'handle', id: entity.id, handleType: 'rect', rectHandle: handle.name };
@@ -538,9 +615,19 @@ export function MapCanvas({
         }
       }
     }
-    
+
+    // Areas are checked last: they're big backdrops, so anything drawn on top of
+    // one (obstacle, ball) must stay clickable.
+    const areas = level.coloredAreas || [];
+    for (let i = areas.length - 1; i >= 0; i--) {
+      const a = areas[i];
+      if (world.x >= a.x && world.x <= a.x + a.width && world.y >= a.y && world.y <= a.y + a.height) {
+        return { type: 'area', id: '', areaIndex: i };
+      }
+    }
+
     return null;
-  }, [boardRect, level, selectedEntityId, ballPositions, worldToScreen, screenToWorld, getEdgeInfo]);
+  }, [boardRect, level, selectedEntityId, selectedAreaIndex, ballPositions, worldToScreen, screenToWorld, getEdgeInfo]);
 
   // Mouse handlers
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -560,13 +647,36 @@ export function MapCanvas({
     if (!hit) {
       onSelectEntity(null);
       onSelectBall(null);
+      onSelectArea(null);
       return;
     }
-    
+
     // Removed early return - let entity click fall through to normal handling below
     // This allows both selection AND drag to work on first click
-    
-    if (hit.type === 'handle') {
+
+    if (hit.type === 'area-handle' && hit.areaIndex !== undefined) {
+      const area = (level.coloredAreas || [])[hit.areaIndex];
+      if (area) {
+        const originalRect = { x: area.x, y: area.y, width: area.width, height: area.height };
+        setDragMode(
+          hit.handleType === 'move'
+            ? { type: 'area', index: hit.areaIndex, startX: world.x, startY: world.y, originalRect }
+            : { type: 'area-resize', index: hit.areaIndex, handle: hit.rectHandle ?? 'br', startX: world.x, startY: world.y, originalRect },
+        );
+      }
+    } else if (hit.type === 'area' && hit.areaIndex !== undefined) {
+      onSelectArea(hit.areaIndex);
+      const area = (level.coloredAreas || [])[hit.areaIndex];
+      if (area) {
+        setDragMode({
+          type: 'area',
+          index: hit.areaIndex,
+          startX: world.x,
+          startY: world.y,
+          originalRect: { x: area.x, y: area.y, width: area.width, height: area.height },
+        });
+      }
+    } else if (hit.type === 'handle') {
       if (hit.handleType === 'move') {
         // Move handle - start dragging the entity
         const entity = (level.entities || []).find(e => e.id === hit.id);
@@ -653,7 +763,7 @@ export function MapCanvas({
         });
       }
     }
-  }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, selectedEntityId]);
+  }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, onSelectArea, selectedEntityId]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (dragMode.type === 'none' || !boardRect) return;
@@ -701,61 +811,38 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { radius: snap(newRadius) });
       }
     } else if (dragMode.type === 'rect-resize') {
-      const orig = dragMode.originalRect;
-      const handle = dragMode.handle;
-      
-      let newX = orig.x;
-      let newY = orig.y;
-      let newWidth = orig.width;
-      let newHeight = orig.height;
-      
-      const dx = world.x - dragMode.startX;
-      const dy = world.y - dragMode.startY;
-      
-      // Handle corners
-      if (handle === 'tl') {
-        newX = orig.x + dx;
-        newY = orig.y + dy;
-        newWidth = orig.width - dx;
-        newHeight = orig.height - dy;
-      } else if (handle === 'tr') {
-        newY = orig.y + dy;
-        newWidth = orig.width + dx;
-        newHeight = orig.height - dy;
-      } else if (handle === 'bl') {
-        newX = orig.x + dx;
-        newWidth = orig.width - dx;
-        newHeight = orig.height + dy;
-      } else if (handle === 'br') {
-        newWidth = orig.width + dx;
-        newHeight = orig.height + dy;
-      } else if (handle === 't') {
-        newY = orig.y + dy;
-        newHeight = orig.height - dy;
-      } else if (handle === 'b') {
-        newHeight = orig.height + dy;
-      } else if (handle === 'l') {
-        newX = orig.x + dx;
-        newWidth = orig.width - dx;
-      } else if (handle === 'r') {
-        newWidth = orig.width + dx;
-      }
-      
-      // Ensure minimum size
-      if (newWidth < 20) {
-        if (handle.includes('l')) newX = orig.x + orig.width - 20;
-        newWidth = 20;
-      }
-      if (newHeight < 20) {
-        if (handle.includes('t')) newY = orig.y + orig.height - 20;
-        newHeight = 20;
-      }
-      
+      const r = resizeRect(
+        dragMode.originalRect,
+        dragMode.handle,
+        world.x - dragMode.startX,
+        world.y - dragMode.startY,
+        20,
+      );
       onUpdateEntity(dragMode.id, {
-        x: snap(newX),
-        y: snap(newY),
-        width: snap(newWidth),
-        height: snap(newHeight),
+        x: snap(r.x),
+        y: snap(r.y),
+        width: snap(r.width),
+        height: snap(r.height),
+      });
+    } else if (dragMode.type === 'area') {
+      const orig = dragMode.originalRect;
+      onUpdateArea(dragMode.index, {
+        x: snap(orig.x + (world.x - dragMode.startX)),
+        y: snap(orig.y + (world.y - dragMode.startY)),
+      });
+    } else if (dragMode.type === 'area-resize') {
+      const r = resizeRect(
+        dragMode.originalRect,
+        dragMode.handle,
+        world.x - dragMode.startX,
+        world.y - dragMode.startY,
+        AREA_MIN_SIZE,
+      );
+      onUpdateArea(dragMode.index, {
+        x: snap(r.x),
+        y: snap(r.y),
+        width: snap(r.width),
+        height: snap(r.height),
       });
     } else if (dragMode.type === 'polygon-point') {
       const entity = (level.entities || []).find(e => e.id === dragMode.id) as WallPolygonEntity;
@@ -798,7 +885,7 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     }
-  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, snap]);
+  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, snap]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const canvas = canvasRef.current;
@@ -820,7 +907,7 @@ export function MapCanvas({
       const hit = hitTest(sx, sy);
       
       if (hit) {
-        if (hit.type === 'handle') {
+        if (hit.type === 'handle' || hit.type === 'area-handle') {
           if (hit.handleType === 'move') {
             setCursorStyle('move');
           } else if (hit.handleType === 'radius' || hit.handleType === 'rect') {
@@ -830,7 +917,7 @@ export function MapCanvas({
           } else if (hit.handleType === 'edge') {
             setCursorStyle('grab');
           }
-        } else if (hit.type === 'entity' || hit.type === 'ball') {
+        } else if (hit.type === 'entity' || hit.type === 'ball' || hit.type === 'area') {
           setCursorStyle('move');
         }
       } else {
@@ -854,6 +941,51 @@ export function MapCanvas({
       />
     </div>
   );
+}
+
+/** The eight resize-handle positions of a screen-space rect, in handle order. */
+function rectHandlePositions(
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+): { pos: { x: number; y: number }; name: RectHandle }[] {
+  return [
+    { pos: { x: left, y: top }, name: 'tl' },
+    { pos: { x: left + width, y: top }, name: 'tr' },
+    { pos: { x: left, y: top + height }, name: 'bl' },
+    { pos: { x: left + width, y: top + height }, name: 'br' },
+    { pos: { x: left + width / 2, y: top }, name: 't' },
+    { pos: { x: left + width / 2, y: top + height }, name: 'b' },
+    { pos: { x: left, y: top + height / 2 }, name: 'l' },
+    { pos: { x: left + width, y: top + height / 2 }, name: 'r' },
+  ];
+}
+
+/** Apply a handle drag (dx/dy in world units) to a rect, clamped to a minimum size. */
+function resizeRect(
+  orig: { x: number; y: number; width: number; height: number },
+  handle: RectHandle,
+  dx: number,
+  dy: number,
+  minSize: number,
+): { x: number; y: number; width: number; height: number } {
+  let { x, y, width, height } = orig;
+
+  if (handle.includes('l')) { x = orig.x + dx; width = orig.width - dx; }
+  if (handle.includes('r')) { width = orig.width + dx; }
+  if (handle.includes('t')) { y = orig.y + dy; height = orig.height - dy; }
+  if (handle.includes('b')) { height = orig.height + dy; }
+
+  if (width < minSize) {
+    if (handle.includes('l')) x = orig.x + orig.width - minSize;
+    width = minSize;
+  }
+  if (height < minSize) {
+    if (handle.includes('t')) y = orig.y + orig.height - minSize;
+    height = minSize;
+  }
+  return { x, y, width, height };
 }
 
 function pointInPolygon(x: number, y: number, points: [number, number][]): boolean {

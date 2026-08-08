@@ -1,7 +1,12 @@
 import { Ball, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
-import { bonusLockMultiplierAt } from "@/lib/lockZones";
-import { coloredAreaAt, coloredAreaMultiplierAt, regionWithinAreas, regionCoversAreas } from "@/lib/coloredAreas";
+import {
+  coloredAreaAt,
+  coloredAreaMultiplierAt,
+  gateAreas,
+  regionWithinAreas,
+  regionCoversAreas,
+} from "@/lib/coloredAreas";
 
 /** A lock counts as "inside" a colored area once it covers this fraction of the
  *  area's cells (issue: the whole-region-inside rule was too hard). */
@@ -240,14 +245,17 @@ export function checkAndUpdateBallWonStates(
     // normal shrink-to-lock. The area is far larger than the lock threshold, so a
     // fenced-in boss would otherwise never register as "locked" and thus never
     // be defeated. This settles it the moment its region is contained.
+    // Only GATE areas decide the map; a bonus pocket (required: false) pays its
+    // multiplier but never ships a boss, satisfies the gate or fails the map.
     const areas = game.coloredAreas ?? [];
-    const areaGate = areas.length > 0;
+    const gates = gateAreas(areas);
+    const areaGate = gates.length > 0;
     // Boss ship condition stays STRICT (whole region sealed within the area):
     // a not-yet-fenced boss roams the open board, whose region trivially covers
     // the area, so coverage alone can't gate the boss's lock or it would "win"
     // before you fence it (level-10 fix).
     const bossContainedInArea = ball.isBoss && areaGate
-      && regionWithinAreas(game.spaceGrid, ballRegion.cellIndices, areas);
+      && regionWithinAreas(game.spaceGrid, ballRegion.cellIndices, gates);
 
     if (!lockedByPercent && !lockedBySliver && !bossContainedInArea) continue;
 
@@ -280,13 +288,13 @@ export function checkAndUpdateBallWonStates(
     // map -> the boss is the target; otherwise any ball is.
     // A contained boss (region sealed within the area) counts as inside even if
     // its exact centre sits a hair past the rect edge on a boundary cell.
-    // A locked ball counts as INSIDE the area if its centre is in it OR its
-    // sealed pocket covers >=70% of the AREA's cells. The pocket may spill
+    // A locked ball counts as INSIDE the gate if its centre is in one OR its
+    // sealed pocket covers >=70% of the GATE areas' cells. The pocket may spill
     // outside the zone; it just has to cover most of it (issue: the old rule was
     // too strict). Only reached after the lock gate above, so `ballRegion` is a
     // real seal, not the open board.
-    const inArea = (areaGate && coloredAreaAt(ball.position.x, ball.position.y, areas) !== null)
-      || (areaGate && regionCoversAreas(game.spaceGrid, ballRegion.cellIndices, areas, AREA_COVER_FRACTION))
+    const inArea = (areaGate && coloredAreaAt(ball.position.x, ball.position.y, gates) !== null)
+      || (areaGate && regionCoversAreas(game.spaceGrid, ballRegion.cellIndices, gates, AREA_COVER_FRACTION))
       || bossContainedInArea;
     const isAreaTarget = game.balls.some(x => x.isBoss) ? ball.isBoss : true;
 
@@ -331,13 +339,14 @@ export function checkAndUpdateBallWonStates(
     if (areaGate && isAreaTarget && inArea) {
       game.coloredAreaSatisfied = true;
     }
-    // Visual "used" light-up: ANY ball locked inside an area lights it, so the
-    // player sees the zone is occupied - not only the win-target (the boss,
-    // whose lock also ends the map). Fall back to the sole area for the
-    // boss-contained-on-a-boundary-cell case (centre a hair outside the rect).
-    if (areaGate && inArea) {
+    // Visual "used" light-up: ANY ball locked inside ANY area lights it, gate or
+    // bonus, so the player sees the zone is occupied - not only the win-target
+    // (the boss, whose lock also ends the map). Fall back to the sole GATE area
+    // when the gate counted this lock as inside without the ball's centre being
+    // in it (boss contained on a boundary cell, or the >=70% coverage rule).
+    if (areas.length > 0) {
       const hit = coloredAreaAt(ball.position.x, ball.position.y, areas)
-        ?? (areas.length === 1 ? areas[0] : null);
+        ?? (inArea && gates.length === 1 ? gates[0] : null);
       if (hit) hit.satisfied = true;
     }
 
@@ -495,12 +504,9 @@ export function checkAndUpdateBallWonStates(
         lockedWhileFrozen && activeModifiers.frozenLockBonus > 0
           ? 1 + activeModifiers.frozenLockBonus
           : 1;
-      // Bonus-lock zone / Colored Area: a ball locked inside a map-authored zone
-      // pays its multiplier on top of everything else (the larger of the two).
-      const zoneMult = Math.max(
-        bonusLockMultiplierAt(b.position.x, b.position.y, game.lockZones ?? []),
-        coloredAreaMultiplierAt(b.position.x, b.position.y, game.coloredAreas ?? []),
-      );
+      // Colored Area: a ball locked inside a map-authored area pays its kind
+      // multiplier on top of everything else. Gate and bonus areas both pay.
+      const zoneMult = coloredAreaMultiplierAt(b.position.x, b.position.y, game.coloredAreas ?? []);
       const ballPoints = (b.lockMultiplier ?? 1) * mult * frozenMult * zoneMult;
       if (superiorIds.has(b.id)) superiorPoints += ballPoints;
       else standardPoints += ballPoints;

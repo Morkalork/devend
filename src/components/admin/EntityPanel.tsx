@@ -1,37 +1,50 @@
-import { Plus, Trash2, Circle, Pentagon, Square, Copy } from 'lucide-react';
-import { LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
+import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed } from 'lucide-react';
+import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
+import { AREA_KINDS, AREA_MIN_SIZE, areaStyle } from '@/lib/coloredAreas';
 
 interface EntityPanelProps {
   level: LevelConfig;
   selectedEntityId: string | null;
   selectedBallId: string | null;
+  selectedAreaIndex: number | null;
   onSelectEntity: (id: string | null) => void;
   onSelectBall: (id: string | null) => void;
+  onSelectArea: (index: number | null) => void;
   onAddEntity: (type: 'circle' | 'polygon' | 'rect') => void;
   onAddBall: () => void;
+  onAddArea: (kind: AreaKind) => void;
   onDeleteEntity: (id: string) => void;
   onDuplicateEntity: (id: string) => void;
   onDeleteBall: (id: string) => void;
+  onDeleteArea: (index: number) => void;
   onUpdateEntity: (id: string, updates: Partial<LevelEntity>) => void;
   onUpdateBall: (id: string, updates: Partial<BallConfig>) => void;
+  onUpdateArea: (index: number, updates: Partial<ColoredArea>) => void;
 }
 
 export function EntityPanel({
   level,
   selectedEntityId,
   selectedBallId,
+  selectedAreaIndex,
   onSelectEntity,
   onSelectBall,
+  onSelectArea,
   onAddEntity,
   onAddBall,
+  onAddArea,
   onDeleteEntity,
   onDuplicateEntity,
   onDeleteBall,
+  onDeleteArea,
   onUpdateEntity,
   onUpdateBall,
+  onUpdateArea,
 }: EntityPanelProps) {
   const selectedEntity = (level.entities || []).find(e => e.id === selectedEntityId);
   const selectedBall = level.balls.find(b => b.id === selectedBallId);
+  const areas = level.coloredAreas || [];
+  const selectedArea = selectedAreaIndex !== null ? areas[selectedAreaIndex] : undefined;
 
   const getEntityIcon = (entity: LevelEntity) => {
     const color = isMirrorEntity(entity) ? 'text-cyan-400' : 'text-destructive';
@@ -53,6 +66,79 @@ export function EntityPanel({
 
   return (
     <div className="p-3 space-y-4">
+      {/* Colored Areas Section — the required win gate (var / let / const) */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">Areas (win gate)</h3>
+          <div className="flex gap-1">
+            {(Object.keys(AREA_KINDS) as AreaKind[]).map(kind => (
+              <button
+                key={kind}
+                onClick={() => onAddArea(kind)}
+                className="px-2 py-1 rounded text-[11px] font-mono font-semibold transition-colors hover:brightness-125"
+                style={{
+                  color: AREA_KINDS[kind].color,
+                  backgroundColor: `${AREA_KINDS[kind].color}22`,
+                  border: `1px solid ${AREA_KINDS[kind].color}66`,
+                }}
+                title={`Add ${kind} area (x${AREA_KINDS[kind].multiplier})`}
+              >
+                + {kind}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          {areas.map((area, index) => (
+            <div
+              key={index}
+              onClick={() => onSelectArea(index)}
+              className={`flex items-center justify-between p-2 rounded cursor-pointer transition-colors ${
+                index === selectedAreaIndex
+                  ? 'bg-primary/20 border border-primary/50'
+                  : 'bg-muted/50 hover:bg-muted'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <SquareDashed className="w-4 h-4" style={{ color: areaStyle(area.kind).color }} />
+                <span className="text-sm font-mono">{area.kind}</span>
+                <span className="text-xs text-muted-foreground">
+                  x{areaStyle(area.kind).multiplier} - {Math.round(area.width)}x{Math.round(area.height)}
+                  {area.required === false && ' - bonus'}
+                </span>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteArea(index);
+                }}
+                className="p-1 rounded hover:bg-destructive/20 text-destructive transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+          {areas.length === 0 && (
+            <div className="text-xs text-muted-foreground text-center py-2">
+              No areas (map is won by clearing space)
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Selected Area Details */}
+      {selectedArea && selectedAreaIndex !== null && (
+        <div className="p-2 rounded bg-muted/50 space-y-2">
+          <h4 className="text-xs font-semibold text-muted-foreground">Area Properties</h4>
+          <AreaEditor
+            area={selectedArea}
+            onUpdate={(updates) => onUpdateArea(selectedAreaIndex, updates)}
+          />
+        </div>
+      )}
+
       {/* Walls Section */}
       <div>
         <div className="flex items-center justify-between mb-2">
@@ -227,6 +313,94 @@ export function EntityPanel({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+function AreaEditor({ area, onUpdate }: { area: ColoredArea; onUpdate: (updates: Partial<ColoredArea>) => void }) {
+  return (
+    <div className="space-y-2">
+      {/* Kind: var (easiest, draw biggest) < let < const (hardest, smallest) */}
+      <div className="space-y-1 text-xs">
+        <span className="text-muted-foreground">Kind</span>
+        <div className="flex gap-1">
+          {(Object.keys(AREA_KINDS) as AreaKind[]).map(kind => {
+            const active = area.kind === kind;
+            return (
+              <button
+                key={kind}
+                onClick={() => onUpdate({ kind })}
+                className="flex-1 px-2 py-1 rounded font-mono text-[11px] font-semibold transition-colors"
+                style={{
+                  color: active ? '#0b0b12' : AREA_KINDS[kind].color,
+                  backgroundColor: active ? AREA_KINDS[kind].color : `${AREA_KINDS[kind].color}22`,
+                  border: `1px solid ${AREA_KINDS[kind].color}${active ? 'ff' : '66'}`,
+                }}
+              >
+                {kind}
+                <span className="opacity-70"> x{AREA_KINDS[kind].multiplier}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <label className="space-y-1">
+          <span className="text-muted-foreground">X</span>
+          <input
+            type="number"
+            value={Math.round(area.x)}
+            onChange={(e) => onUpdate({ x: Number(e.target.value) })}
+            className="w-full px-2 py-1 rounded bg-background border border-border"
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-muted-foreground">Y</span>
+          <input
+            type="number"
+            value={Math.round(area.y)}
+            onChange={(e) => onUpdate({ y: Number(e.target.value) })}
+            className="w-full px-2 py-1 rounded bg-background border border-border"
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-muted-foreground">Width</span>
+          <input
+            type="number"
+            value={Math.round(area.width)}
+            onChange={(e) => onUpdate({ width: Math.max(AREA_MIN_SIZE, Number(e.target.value)) })}
+            className="w-full px-2 py-1 rounded bg-background border border-border"
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-muted-foreground">Height</span>
+          <input
+            type="number"
+            value={Math.round(area.height)}
+            onChange={(e) => onUpdate({ height: Math.max(AREA_MIN_SIZE, Number(e.target.value)) })}
+            className="w-full px-2 py-1 rounded bg-background border border-border"
+          />
+        </label>
+      </div>
+
+      {/* Gate vs bonus: the same rect, opposite stakes. */}
+      <label className="flex items-start gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={area.required !== false}
+          onChange={(e) => onUpdate({ required: e.target.checked ? undefined : false })}
+          className="rounded mt-0.5"
+        />
+        <span>
+          <span className="font-semibold">Win gate</span>
+          <span className="block text-[11px] leading-snug text-muted-foreground">
+            {area.required !== false
+              ? 'Required: lock the target ball (the boss on a boss map, else any ball) inside to win. Locking it outside fails the map.'
+              : 'Bonus pocket: locking here pays the multiplier, but the map is won the normal way.'}
+          </span>
+        </span>
+      </label>
     </div>
   );
 }

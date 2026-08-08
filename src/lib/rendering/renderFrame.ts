@@ -49,7 +49,7 @@ import {
 } from "@/lib/gameConstants";
 import { getRemainingPercent } from "@/lib/spaceGrid";
 import { clearWallSkeletonCache, WALL_RENDER_THICKEN, WALL_CORE_ALPHA, WALL_CENTERLINE_ALPHA } from "./wallSkeleton";
-import { areaStyle } from "@/lib/coloredAreas";
+import { areaStyle, isGateArea } from "@/lib/coloredAreas";
 
 const RAIN_SYMBOLS = '01{}()=>;./#@*';
 
@@ -683,54 +683,30 @@ export function renderFrame(
   ctx.drawImage(boardGridCanvas, 0, 0);
   ctx.drawImage(regionCanvas, 0, 0);
 
-  // ── Bonus-lock zones (greed hook) ─────────────────────────────────────────
-  // A gold floor marking with a ×N label, so the player can see the prize
-  // pocket. Drawn beneath the walls/balls as a marking on the board.
-  if (game.lockZones && game.lockZones.length > 0) {
-    ctx.save();
-    for (const z of game.lockZones) {
-      const tl = w2s(z.x, z.y);
-      const zw = z.width * scale;
-      const zh = z.height * scale;
-      ctx.fillStyle = 'rgba(255, 215, 107, 0.10)';
-      ctx.fillRect(tl.x, tl.y, zw, zh);
-      ctx.strokeStyle = 'rgba(255, 215, 107, 0.70)';
-      ctx.lineWidth = Math.max(1, 2 * scale);
-      ctx.setLineDash([8 * scale, 6 * scale]);
-      ctx.strokeRect(tl.x, tl.y, zw, zh);
-      ctx.setLineDash([]);
-      const fontPx = Math.max(12, Math.min(zw, zh) * 0.28);
-      ctx.font = `bold ${fontPx}px sans-serif`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(120, 80, 20, 0.9)';
-      ctx.shadowBlur = 4 * scale;
-      ctx.fillStyle = 'rgba(255, 233, 168, 0.9)';
-      ctx.fillText(`×${z.multiplier}`, tl.x + zw / 2, tl.y + zh / 2);
-      ctx.shadowBlur = 0;
-    }
-    ctx.restore();
-  }
-
-  // ── Colored Areas (required win-gate) ─────────────────────────────────────
-  // A light-coloured zone with its kind (var/let/const) + multiplier at centre,
-  // so the player can see where to trap the target ball.
+  // ── Colored Areas ─────────────────────────────────────────────────────────
+  // A light-coloured zone with its kind (var/let/const) + multiplier at centre.
+  // A GATE area (where the target ball must be trapped) is drawn solid and
+  // bright; a BONUS pocket is fainter with a fine dotted border, so "you must"
+  // and "you may" never read the same.
   if (game.coloredAreas && game.coloredAreas.length > 0) {
     ctx.save();
     ctx.textAlign = 'center';
     for (const a of game.coloredAreas) {
       const st = areaStyle(a.kind);
+      const gate = isGateArea(a);
       const tl = w2s(a.x, a.y);
       const aw = a.width * scale;
       const ah = a.height * scale;
+      // Two independent axes: OCCUPIED (a ball is locked in here) beats the
+      // gate/bonus styling, since a filled pocket reads the same either way.
+      // Unoccupied, a gate is bright + boldly dashed ("you must") and a bonus
+      // pocket dim + finely dotted ("you may").
       const lit = !!a.satisfied;
-      // Used win-gate: a brighter fill + a solid, glowing border reads as
-      // "filled" vs the dashed, dim "target here" prompt.
-      ctx.fillStyle = hexToRgba(st.color, lit ? 0.32 : 0.12);
+      ctx.fillStyle = hexToRgba(st.color, lit ? 0.32 : gate ? 0.12 : 0.07);
       ctx.fillRect(tl.x, tl.y, aw, ah);
-      ctx.strokeStyle = hexToRgba(st.color, lit ? 1 : 0.75);
-      ctx.lineWidth = Math.max(1, (lit ? 3 : 2) * scale);
-      ctx.setLineDash(lit ? [] : [9 * scale, 6 * scale]);
+      ctx.strokeStyle = hexToRgba(st.color, lit ? 1 : gate ? 0.75 : 0.5);
+      ctx.lineWidth = Math.max(1, (lit ? 3 : gate ? 2 : 1.25) * scale);
+      ctx.setLineDash(lit ? [] : gate ? [9 * scale, 6 * scale] : [3 * scale, 5 * scale]);
       if (lit) { ctx.shadowColor = st.color; ctx.shadowBlur = 10 * scale; }
       ctx.strokeRect(tl.x, tl.y, aw, ah);
       ctx.shadowBlur = 0;
@@ -739,7 +715,7 @@ export function renderFrame(
       const labelPx = Math.max(13, Math.min(aw, ah) * 0.2);
       ctx.shadowColor = 'rgba(0,0,0,0.6)';
       ctx.shadowBlur = 3 * scale;
-      ctx.fillStyle = hexToRgba(st.color, 0.95);
+      ctx.fillStyle = hexToRgba(st.color, gate ? 0.95 : 0.7);
       ctx.textBaseline = 'alphabetic';
       ctx.font = `bold ${labelPx}px monospace`;
       ctx.fillText(st.label, cx, cy + labelPx * 0.15);

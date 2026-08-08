@@ -1,15 +1,49 @@
 levels:
+  # L1 "The Vault" - the greed hook, with no way to lose it. The bare loop is
+  # taught once by the first-run-only onboarding map (src/lib/onboardingMap.ts),
+  # so map 1 can already ask a question: seal the ball anywhere and you clear it,
+  # or shepherd it into the pink var pocket and get paid 1.5x for the same work.
+  # The pocket is a BONUS area (required: false): ignoring it costs nothing, so
+  # the first real map cannot punish you. By L10 the same pink box is the boss's
+  # win gate, and the player already knows how to read it.
   - id: level-1
     level: 1
     sizeThreshold: 40
     expectedCuts: 3
     points: 20
     variety: 0
+    randomShapes: 0
     maxBalls: 1
-    entities: []
-  # PILOT REDESIGN (LEVELDESIGN.md): "Split Shift" - two server racks joined by a
-  # single central aisle (neck). Topology (C1): pinch the aisle to trap a ball in
-  # a rack. Still the teaching band, so no greed hook / Turn yet.
+    coloredAreas:
+      - kind: var
+        x: 640
+        'y': 640
+        width: 215
+        height: 215
+        required: false
+    entities:
+      # Two stubs bracket the bottom-right corner, leaving one diagonal doorway
+      # (~85 wide, a ball is 36) that a single short fence closes.
+      - id: vault-lip-v
+        kind: wall
+        shape: rect
+        x: 610
+        'y': 700
+        width: 30
+        height: 220
+      - id: vault-lip-h
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 610
+        width: 220
+        height: 30
+  # "Split Shift" (LEVELDESIGN.md): two server racks joined by a single central
+  # aisle (neck). Topology (C1): pinch the aisle to trap a ball in a rack. THE
+  # TURN (C3), "Standup Interrupt": at 60% remaining one extra ball drops in,
+  # with a banner so it is never an ambush, and the board stops being a static
+  # shrink. Two balls on an open board is a thrill, not a threat, which is
+  # exactly the dose an early map wants.
   - id: level-2
     level: 2
     sizeThreshold: 30
@@ -17,6 +51,11 @@ levels:
     points: 20
     variety: 3
     maxBalls: 2
+    beats:
+      - id: standup
+        atSpaceRemaining: 60
+        spawnAdds: 1
+        announce: game.beatStandup
     entities:
       - id: divider-top
         kind: wall
@@ -40,6 +79,12 @@ levels:
     points: 20
     variety: 3
     maxBalls: 2
+    # Same Turn as level-2, so the level-2 slot always teaches "the board changes".
+    beats:
+      - id: standup
+        atSpaceRemaining: 60
+        spawnAdds: 1
+        announce: game.beatStandup
     entities:
       - id: divider-left
         kind: wall
@@ -55,9 +100,11 @@ levels:
         'y': 440
         width: 410
         height: 20
-  # PILOT REDESIGN: "Corner Office" - a central block carves four rooms; one tight
-  # top-right pocket is a 2x lock zone (C2, the greed hook). Seal a ball there for
-  # double (a snug, risky cut) or bank the safe rooms.
+  # "Corner Office": a central block carves four rooms; one tight top-right
+  # pocket is a 2x BONUS let area (C2, the greed hook). Seal a ball there for
+  # double (a snug, risky cut) or bank the safe rooms. Bonus, not a gate: the
+  # same read as L1's vault, one step harder, and this early a missed pocket
+  # must never fail the map.
   - id: level-3
     level: 3
     sizeThreshold: 35
@@ -65,12 +112,15 @@ levels:
     points: 20
     variety: 5
     maxBalls: 2
-    lockZones:
-      - x: 670
+    # The old 2x lockZone, now the single authorable form of the greed hook: a
+    # BONUS let area (let = 2x, the same payout) that gates nothing.
+    coloredAreas:
+      - kind: let
+        x: 670
         'y': 60
         width: 170
         height: 170
-        multiplier: 2
+        required: false
     entities:
       - id: core
         kind: wall
@@ -87,12 +137,13 @@ levels:
     points: 20
     variety: 5
     maxBalls: 2
-    lockZones:
-      - x: 60
+    coloredAreas:
+      - kind: let
+        x: 60
         'y': 60
         width: 170
         height: 170
-        multiplier: 2
+        required: false
     entities:
       - id: core
         kind: wall

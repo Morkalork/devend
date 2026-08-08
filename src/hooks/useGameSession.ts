@@ -38,6 +38,7 @@ import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
 import { assignmentRewardForBlock, eligibleTierUpgrades } from '@/lib/assignments';
 import { drawRandom } from '@/lib/yamlCatalogue';
+import { isOnboardingMap, ONBOARDING_MAP_ID } from '@/lib/onboardingMap';
 import { loadMapMutators } from '@/lib/mapMutators';
 import { loadMapObjectives } from '@/lib/mapObjectives';
 import { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
@@ -269,6 +270,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     shouldShowAscension,
     shouldShowDaily,
     shouldShowTimeLimit,
+    markOnboardingSeen,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,
@@ -1027,6 +1029,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (lastDeliveredCompletionRef.current === currentLevelNum) return;
     lastDeliveredCompletionRef.current = currentLevelNum;
     setIntroAssemblePending(false); // the run is underway: later maps appear as usual
+    // The onboarding map (first run only) has served its purpose the moment it
+    // is cleared: every later run opens on the real level-1 map instead.
+    if (isOnboardingMap(currentLevel)) markOnboardingSeen();
     recordLevelReached(currentLevelNum);
     recordFencesDrawn(scoreData.cutCount || 0);
     // Levels completed while ascended count more toward Certificate Hours
@@ -1114,7 +1119,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     let highscoreBonusEarned = 0;
     let beatHighscore = false;
     let previousHighscore: number | undefined;
-    if (scoreData.levelId) {
+    // The onboarding map is played once, ever, so it gets no map record: a row
+    // in the Records screen that can never be beaten is just noise.
+    if (scoreData.levelId && scoreData.levelId !== ONBOARDING_MAP_ID) {
       const { previous, isRecord } = recordMapHighscore(scoreData.levelId, baseLevelScore);
       if (isRecord) {
         beatHighscore = true;
@@ -1178,7 +1185,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
 
     setLivesAtLevelStart(currentLives);
-  }, [totalScore, currentLevelIndex, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore, activeDoor]);
+  }, [totalScore, currentLevelIndex, currentLevel, markOnboardingSeen, recordLevelReached, recordFencesDrawn, recordPerfectLevel, recordPushBonusBanked, currentLives, livesAtLevelStart, incrementRunLevel, ascensionDepth, activeModifiers.underParInstantFence, checkAndCompleteAchievements, metaStats, isLastLevel, draftedLoadoutIds, recordLoadoutWin, recordMapHighscore, introduceLoadouts, armFeatureUnlock, loadouts, bestRunTrajectory, bestScore, activeDoor]);
 
   /**
    * Enter the assignment draft (1-of-3, or skip). If the pool failed to load,

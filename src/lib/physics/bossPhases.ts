@@ -17,6 +17,7 @@ import { createBall } from "@/lib/initGame";
 import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
 import { playBossChargeSound } from "@/lib/gameAudio";
 import { BIG_BALL_RADIUS_SCALE } from "@/lib/ballGifts";
+import { gateAreas } from "@/lib/coloredAreas";
 
 let _bossAddCounter = 0;
 
@@ -70,7 +71,7 @@ export function tickBossSpit(game: CanvasGameState, level: LevelConfig): void {
 
   // An area-gated boss (Colored Area win) has no HP: it never panics and keeps
   // spawning adds, so managing (locking) them is the second layer of challenge.
-  const areaGated = (game.coloredAreas?.length ?? 0) > 0;
+  const areaGated = gateAreas(game.coloredAreas ?? []).length > 0;
 
   for (const boss of bosses) {
     // Airborne (mid break-out leap): don't start a wind-up or a panic lunge - the

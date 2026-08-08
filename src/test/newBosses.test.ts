@@ -143,7 +143,6 @@ describe("colored area lights up when a ball locks inside it", () => {
     const data = createInitialGameData(AREA_LEVEL, 10, MODS);
     const game = { ...data } as unknown as CanvasGameState;
     game.coloredAreaSatisfied = false;
-    game.lockZones = game.lockZones ?? [];
     game.lockBonus = game.lockBonus ?? 0;
     game.superiorLockBonus = game.superiorLockBonus ?? 0;
     game.superiorLockCount = game.superiorLockCount ?? 0;

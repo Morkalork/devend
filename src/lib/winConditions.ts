@@ -9,7 +9,7 @@
 import type { TFunction } from "i18next";
 import type { LevelConfig } from "@/types/level";
 import { getMapTimeLimit } from "@/lib/mapTiming";
-import { AREA_KINDS } from "@/lib/coloredAreas";
+import { AREA_KINDS, gateAreas } from "@/lib/coloredAreas";
 
 export function winConditionsBody(
   t: TFunction,
@@ -17,7 +17,9 @@ export function winConditionsBody(
   levelNumber: number,
 ): string {
   const parts: string[] = [];
-  const areas = level.coloredAreas ?? [];
+  // Only GATE areas are win conditions; a bonus pocket is pure upside and has
+  // nothing to say here (the board's own marking sells it).
+  const areas = gateAreas(level.coloredAreas ?? []);
   const isBoss = !!level.boss;
   const target = t(isBoss ? "winConditions.targetBoss" : "winConditions.targetBall");
 

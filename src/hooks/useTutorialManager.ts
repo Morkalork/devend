@@ -5,6 +5,8 @@ import { useState, useCallback } from 'react';
  * localStorage so they only appear on the first encounter.
  *
  * Flags:
+ * - `onboarding` — the first-run-only empty "learn the loop" map (see
+ *                  onboardingMap.ts); marked once that map is completed
  * - `fence`      — interactive "draw your first fence" tutorial (level 1)
  * - `store`      — upgrade shop intro (first shop visit)
  * - `certStore`  — certificate store intro (first store visit)
@@ -22,6 +24,7 @@ const STORAGE_KEY = 'tutorials_seen_v1';
 const OLD_STORAGE_KEY = 'ball_breaker_seen_interactive_tutorial';
 
 interface TutorialsSeen {
+  onboarding: boolean;
   fence: boolean;
   store: boolean;
   certStore: boolean;
@@ -34,6 +37,7 @@ interface TutorialsSeen {
 }
 
 const NONE_SEEN: TutorialsSeen = {
+  onboarding: false,
   fence: false,
   store: false,
   certStore: false,
@@ -52,6 +56,9 @@ function loadSeen(): TutorialsSeen {
       const parsed = JSON.parse(raw);
       // `infoPanels` is the legacy single flag that covered both bars.
       return {
+        // Existing installs have already learned the loop: an install that has
+        // seen the fence tutorial never gets the onboarding map retroactively.
+        onboarding: !!(parsed.onboarding ?? parsed.fence),
         fence: !!parsed.fence,
         store: !!parsed.store,
         // `augment` is the legacy name for the certificate store flag.
@@ -67,7 +74,7 @@ function loadSeen(): TutorialsSeen {
     // Migration: very old installs stored a single boolean for the fence tutorial.
     const old = localStorage.getItem(OLD_STORAGE_KEY);
     if (old === 'true') {
-      return { ...NONE_SEEN, fence: true };
+      return { ...NONE_SEEN, fence: true, onboarding: true };
     }
   } catch {
     // ignore corrupt storage and fall through to defaults
@@ -83,6 +90,15 @@ function saveSeen(seen: TutorialsSeen) {
   }
 }
 
+/**
+ * Standalone read of the onboarding flag, for callers outside React state: the
+ * level manager builds a run's sequence synchronously and must know, right
+ * then, whether slot 1 is the onboarding map (see onboardingMap.ts).
+ */
+export function hasSeenOnboarding(): boolean {
+  return loadSeen().onboarding;
+}
+
 export function useTutorialManager() {
   const [seen, setSeen] = useState<TutorialsSeen>(loadSeen);
 
@@ -94,6 +110,7 @@ export function useTutorialManager() {
     });
   }, []);
 
+  const markOnboardingSeen = useCallback(() => markSeen('onboarding'), [markSeen]);
   const markFenceSeen = useCallback(() => markSeen('fence'), [markSeen]);
   const markStoreSeen = useCallback(() => markSeen('store'), [markSeen]);
   const markCertStoreSeen = useCallback(() => markSeen('certStore'), [markSeen]);
@@ -120,6 +137,7 @@ export function useTutorialManager() {
   }, []);
 
   return {
+    shouldShowOnboarding: !seen.onboarding,
     shouldShowFence: !seen.fence,
     shouldShowStore: !seen.store,
     shouldShowCertStore: !seen.certStore,
@@ -129,6 +147,7 @@ export function useTutorialManager() {
     shouldShowAscension: !seen.ascension,
     shouldShowDaily: !seen.daily,
     shouldShowTimeLimit: !seen.timeLimit,
+    markOnboardingSeen,
     markFenceSeen,
     markStoreSeen,
     markCertStoreSeen,

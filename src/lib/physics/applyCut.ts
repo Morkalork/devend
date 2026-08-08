@@ -32,6 +32,7 @@ import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
+import { gateAreas } from "@/lib/coloredAreas";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
 import { objectiveClearReward } from "@/lib/mapObjectives";
 import { wasteCapturedPickups } from "@/lib/pickups";
@@ -370,11 +371,12 @@ export function evaluateWinConditions(
     }, 700);
     return null;
   }
-  // Colored Area win gate (LEVELDESIGN.md): when a map has colored areas, the
-  // ONLY win is a TARGET ball locked inside one. Satisfied -> win. If no target
-  // ball can still reach an area (the boss trapped outside, or every ball locked
-  // with none inside) -> lose a life + restart. Otherwise keep playing.
-  if ((game.coloredAreas ?? []).length > 0) {
+  // Colored Area win gate (LEVELDESIGN.md): when a map has GATE areas, the ONLY
+  // win is a TARGET ball locked inside one. Satisfied -> win. If no target ball
+  // can still reach an area (the boss trapped outside, or every ball locked with
+  // none inside) -> lose a life + restart. Otherwise keep playing. Bonus areas
+  // (required: false) are pure upside and never reach this branch.
+  if (gateAreas(game.coloredAreas ?? []).length > 0) {
     if (game.coloredAreaSatisfied) {
       triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
       return null;

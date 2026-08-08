@@ -74,21 +74,29 @@ identity and its purpose.
     balls into your workspace), a hazard lane you must cut across, or a long
     fence drawn over live ball paths.
   - Always leave a real safe path, or it is not a choice.
-- **YAML:** a `lockZones` entry (a rect + `multiplier`) marks the pay-more
-  pocket; `entities` with `breakable: true` + `chest: true` + `chestRewards`, or
-  a `reveals` rect on a breakable gate; a `mover` as the guard.
+- **YAML:** a BONUS Colored Area (`coloredAreas` entry with `required: false`)
+  marks the pay-more pocket; `entities` with `breakable: true` + `chest: true` +
+  `chestRewards`, or a `reveals` rect on a breakable gate; a `mover` as the guard.
 - **Example premises:** *Bonus Pool* (a central chest behind a breakable;
   smashing it frees two fast balls at you); *Corner Office* (a superior-lock
   pocket guarded by a mover you must time).
 - **Pitfall:** exactly ONE hook per map. Two focal points equal no focus.
 
-### Colored Areas (a required win-gate greed hook)
+### Colored Areas (the one lock-zone primitive: bonus OR gate)
 
-Where `lockZones` is an *optional* bonus pocket, a **Colored Area** is a typed,
-labelled zone that is a **required win gate**: you win the map by locking a
-TARGET ball inside one, and locking the target *outside* fails the map (lose a
-life, restart). Locking inside also pays the kind's multiplier. Three kinds,
-easiest to hardest (draw `var` biggest, `const` smallest):
+A **Colored Area** is a typed, labelled zone where locking pays the kind's
+multiplier. One primitive, two stakes, chosen with `required`:
+
+- **BONUS** (`required: false`) - the optional greed hook. Pays, gates nothing,
+  costs nothing to ignore. This is the early-game form.
+- **GATE** (the default) - a **required win condition**: you win the map by
+  locking a TARGET ball inside one, and locking the target *outside* fails the
+  map (lose a life, restart). This is the late-game form.
+
+Teach it in that order: a bonus pocket on an early map trains the player to read
+the box, so when L10's boss turns the same box into the only way to ship it, the
+symbol is already familiar. Three kinds, easiest to hardest (draw `var` biggest,
+`const` smallest):
 
 | kind | colour | multiplier |
 |------|--------|------------|
@@ -96,13 +104,21 @@ easiest to hardest (draw `var` biggest, `const` smallest):
 | `let` | light orange | 2x |
 | `const` | light teal | 3x |
 
-- **Target ball:** boss map -> the boss ball; otherwise any ball. The area is
-  the map's SOLE win path (space-clear does not win a Colored-Area map).
-- **Fail:** the target can no longer reach an area (boss trapped outside, or
-  every ball locked with none inside) -> lose a life + restart.
-- **YAML:** `coloredAreas: [{ x, y, width, height, kind }]`. Shipped example:
-  the level-10 boss is defeated by fencing it into a top-right `var` area
-  (replacing "trap it 3 times").
+- **Target ball (gate only):** boss map -> the boss ball; otherwise any ball. A
+  map with any gate area has that as its SOLE win path (space-clear does not win
+  it). Bonus areas never affect the win at all.
+- **Fail (gate only):** the target can no longer reach a gate area (boss trapped
+  outside, or every ball locked with none inside) -> lose a life + restart.
+- **Look:** a gate is drawn solid and bright; a bonus pocket is fainter with a
+  fine dotted border, so "you must" and "you may" never read the same.
+- **YAML:** `coloredAreas: [{ x, y, width, height, kind, required }]`. Shipped
+  examples: L1's bonus `var` pocket (the greed hook, no risk), and the level-10
+  boss, defeated by fencing it into a top-right `var` GATE.
+- **Authoring:** the Map Builder and the Playground level editor both have an
+  "Areas (win gate)" section: `+ var` / `+ let` / `+ const` drop a kind-sized
+  area on the board, which you then drag, resize by its handles, retype, or flip
+  between gate and bonus with the "Win gate" checkbox. Deleting the last gate
+  area returns the map to the normal clear-the-space win.
 
 ---
 
@@ -206,6 +222,12 @@ If you cannot name the map in one sentence, it has no identity yet.
   turn, so on rotatable maps (L4+) either avoid gravity-cascade stacks or build
   the Turn from non-gravity beats (movers, adds, creep). See the topple caveat in
   ARCHITECTURE / issue #38.
+- **Onboarding map (first run only, `onboardingMap.ts`):** a brand new player's
+  very first map is a hardcoded empty board with one ball and nothing else, which
+  takes over slot 1 exactly once (it is NOT in `map.yml`, and is skipped on
+  seeded Daily runs). It carries the whole "here is the loop" job, so L1-3 do
+  NOT have to be teaching set-pieces: from the second run on, every run opens on
+  the authored level-1 map. Design L1-3 as easy but real maps.
 - **Teaching cadence (L1-3):** introduce each convention alone before combining,
   a first-chokepoint map, a first-vault map, a first-turn map. L1-3 never rotate.
 - **Economy inflation and build identity:** the greed hook is where builds

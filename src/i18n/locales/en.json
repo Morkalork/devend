@@ -275,6 +275,7 @@
     "freezeUsesLeft": "{{count}} freezes left this map",
     "fenceBudgetLeft": "{{count}} fences left this map",
     "beatCrunchTime": "Crunch Time",
+    "beatStandup": "Standup Interrupt",
     "circuitComplete": "Process Booted",
     "chargeArmed": "Charge Armed",
     "chargeBlown": "Charge Deployed",

@@ -1,17 +1,21 @@
 /**
- * Colored Areas: typed, required win-gate zones (LEVELDESIGN.md).
+ * Colored Areas: typed var/let/const lock zones (LEVELDESIGN.md).
  *
- * A map with colored areas is won by locking a TARGET ball inside one (boss map:
- * the boss ball; otherwise any ball). Locking the target OUTSIDE fails the map
- * (lose a life, restart). Locking inside also pays the kind's multiplier. Three
- * kinds, easiest (biggest, by convention) to hardest (smallest):
- *   var 1.5x < let 2x < const 3x.
+ * Every area pays its kind's multiplier to a ball locked inside, easiest
+ * (biggest, by convention) to hardest (smallest): var 1.5x < let 2x < const 3x.
+ * What differs is the stakes, per `ColoredArea.required`:
+ * - GATE (default): the map's SOLE win path. Lock a TARGET ball inside one (boss
+ *   map: the boss ball; otherwise any ball) to win; locking the target OUTSIDE
+ *   fails the map (lose a life, restart).
+ * - BONUS (`required: false`): the greed hook. Pays the multiplier, gates
+ *   nothing; the map is won the normal way whether or not it is used.
  *
  * Pure geometry + kind lookups; the win/fail decision lives in checkBallWonState
  * + evaluateWinConditions, and rendering in the two renderers.
  */
 import type { AreaKind, ColoredArea } from "@/types/level";
 import { gridIndexToWorld, type SpaceGrid } from "@/lib/spaceGrid";
+import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 
 export interface AreaStyle {
   /** Centred label = the kind keyword. */
@@ -30,6 +34,50 @@ export const AREA_KINDS: Record<AreaKind, AreaStyle> = {
 
 export function areaStyle(kind: AreaKind): AreaStyle {
   return AREA_KINDS[kind] ?? AREA_KINDS.var;
+}
+
+/**
+ * Starting size (square, world units) for a new area of each kind. Encodes the
+ * authoring convention: var is the easiest kind so it's drawn biggest, const the
+ * hardest so it's smallest.
+ */
+export const AREA_DEFAULT_SIZE: Record<AreaKind, number> = {
+  var: 340,
+  let: 260,
+  const: 180,
+};
+
+/** Smallest area the editors allow: below this a ball can't be fenced in. */
+export const AREA_MIN_SIZE = 100;
+
+/**
+ * A fresh area for the map editors: kind-sized, placed top-right (where the
+ * level-10 boss area sits) and nudged per already-placed area so a second one
+ * doesn't land exactly on the first.
+ */
+export function makeColoredArea(kind: AreaKind, existingCount = 0): ColoredArea {
+  const size = AREA_DEFAULT_SIZE[kind];
+  const offset = existingCount * 40;
+  return {
+    kind,
+    x: Math.min(500 + offset, BOARD_WIDTH - size - 45),
+    y: Math.min(45 + offset, BOARD_HEIGHT - size - 45),
+    width: size,
+    height: size,
+  };
+}
+
+/**
+ * True when an area gates the win (the default). A `required: false` area is a
+ * bonus pocket: it pays, but it never decides the map.
+ */
+export function isGateArea(a: ColoredArea): boolean {
+  return a.required !== false;
+}
+
+/** Only the areas that gate the win. Empty = the map is won the normal way. */
+export function gateAreas(areas: ColoredArea[]): ColoredArea[] {
+  return areas.filter(isGateArea);
 }
 
 /** True when a world point is inside the area rect (boundary counts). */

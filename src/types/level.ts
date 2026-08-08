@@ -176,13 +176,9 @@ export interface LevelConfig {
    */
   beats?: MapBeat[];
   /**
-   * Bonus-lock zones (LEVELDESIGN.md convention 2): rects where locking pays a
-   * multiplier. The authorable form of the greed hook.
-   */
-  lockZones?: LockZone[];
-  /**
-   * Colored Areas: typed, REQUIRED win-gate zones (var/let/const). Lock a target
-   * ball inside to win; the target locked outside fails the map. See ColoredArea.
+   * Colored Areas: typed var/let/const zones. A GATE area (the default) is a
+   * required win condition; a `required: false` area is the optional greed hook
+   * (bonus pay, no fail state). See ColoredArea.
    */
   coloredAreas?: ColoredArea[];
   /**
@@ -242,21 +238,6 @@ export interface MapBeat {
    * player-driven, so their warning shows as the effect lands. Default 1600.
    */
   leadMs?: number;
-}
-
-/**
- * A bonus-lock zone (LEVELDESIGN.md convention 2, the greed hook): a rect where
- * locking a ball pays `multiplier` times the normal lock points. Author one as a
- * guarded, high-value pocket so the player faces "go for the vault, or play
- * safe?". Rotated with the map like all other geometry.
- */
-export interface LockZone {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  /** Lock-points multiplier for balls locked inside (e.g. 2 = double). */
-  multiplier: number;
 }
 
 /** The dormant ball a circuit terminal boots when lit (issue #73). */
@@ -345,12 +326,20 @@ export interface DataStreamConfig {
 }
 
 /**
- * A Colored Area: a typed, labelled zone that is a REQUIRED win gate. You win a
- * map by locking a target ball inside one (boss map: the boss; else any ball);
- * locking the target outside fails the map (lose a life, restart). Locking
- * inside also pays the kind's multiplier. Three kinds, easiest to hardest:
+ * A Colored Area: a typed, labelled zone where locking pays the kind's
+ * multiplier. Three kinds, easiest to hardest:
  *   var (light pink, 1.5x) < let (light orange, 2x) < const (light teal, 3x).
  * By convention a var area is drawn largest (easiest), a const smallest.
+ *
+ * An area is either a GATE or a BONUS pocket (`required`), which is the single
+ * authorable form of LEVELDESIGN.md's greed hook:
+ * - GATE (default): a REQUIRED win condition. You win the map by locking a
+ *   target ball inside one (boss map: the boss; else any ball); locking the
+ *   target outside fails the map (lose a life, restart).
+ * - BONUS (`required: false`): pure upside. Locking inside pays the multiplier,
+ *   ignoring it costs nothing and the map is won the normal way.
+ * The teaching arc runs bonus first (early maps: "the pink box pays more") and
+ * gate later (L10's boss: "the pink box is the only way to ship it").
  */
 export type AreaKind = "var" | "let" | "const";
 
@@ -361,11 +350,16 @@ export interface ColoredArea {
   height: number;
   kind: AreaKind;
   /**
+   * Win gate (default true). Set false for a bonus-only pocket: it still pays
+   * the kind multiplier but never gates the win and never fails the map.
+   */
+  required?: boolean;
+  /**
    * Runtime only (set by checkBallWonState, not authored): true once ANY ball
    * has been locked inside this area, so the renderers light it up to show the
-   * zone is occupied/used. (The WIN gate itself still requires the target ball;
-   * that's the separate game.coloredAreaSatisfied.) Reset per map with
-   * game.coloredAreas.
+   * zone is occupied/used. (The WIN gate itself still requires the target ball
+   * in a GATE area; that's the separate game.coloredAreaSatisfied.) Reset per
+   * map with game.coloredAreas.
    */
   satisfied?: boolean;
 }

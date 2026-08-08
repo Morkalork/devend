@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
   AREA_KINDS,
+  AREA_MIN_SIZE,
   areaStyle,
+  gateAreas,
+  isGateArea,
+  makeColoredArea,
   pointInArea,
   coloredAreaAt,
   coloredAreaMultiplierAt,
@@ -11,6 +15,7 @@ import {
 import { rotateColoredArea } from "@/lib/mapRotation";
 import { createSpaceGrid, worldToGridIndex } from "@/lib/spaceGrid";
 import { createRectPolygon } from "@/lib/polygon";
+import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import type { ColoredArea } from "@/types/level";
 
 const area = (x: number, y: number, w: number, h: number, kind: ColoredArea["kind"]): ColoredArea => ({
@@ -104,6 +109,61 @@ describe("regionCoversAreas (win gate: cover >=70% of the AREA, not 70% of the p
   it("false for an empty region or with no areas", () => {
     expect(regionCoversAreas(grid, [], [a], 0.7)).toBe(false);
     expect(regionCoversAreas(grid, areaCells, [], 0.7)).toBe(false);
+  });
+});
+
+describe("gate vs bonus areas", () => {
+  const gate = area(0, 0, 300, 300, "var");
+  const bonus: ColoredArea = { ...area(400, 400, 200, 200, "const"), required: false };
+
+  it("treats an area as a win gate unless it opts out", () => {
+    expect(isGateArea(gate)).toBe(true);
+    expect(isGateArea({ ...gate, required: true })).toBe(true);
+    expect(isGateArea(bonus)).toBe(false);
+  });
+
+  it("gateAreas drops bonus pockets, so a bonus-only map has no gate", () => {
+    expect(gateAreas([gate, bonus])).toEqual([gate]);
+    expect(gateAreas([bonus])).toEqual([]);
+  });
+
+  it("still pays the kind multiplier inside a bonus pocket", () => {
+    // The greed hook: locking here pays 3x even though it gates nothing.
+    expect(coloredAreaMultiplierAt(500, 500, [bonus])).toBe(3);
+    expect(coloredAreaMultiplierAt(700, 700, [bonus])).toBe(1);
+  });
+
+  it("keeps the bonus flag through a rotation", () => {
+    const r = rotateColoredArea(bonus, 1);
+    expect(r.required).toBe(false);
+    expect(r.kind).toBe("const");
+    expect(isGateArea(r)).toBe(false);
+  });
+});
+
+describe("makeColoredArea (map-editor default)", () => {
+  it("sizes var biggest and const smallest, never below the minimum", () => {
+    const sizes = (["var", "let", "const"] as const).map(k => makeColoredArea(k).width);
+    expect(sizes[0]).toBeGreaterThan(sizes[1]);
+    expect(sizes[1]).toBeGreaterThan(sizes[2]);
+    expect(sizes[2]).toBeGreaterThanOrEqual(AREA_MIN_SIZE);
+  });
+
+  it("keeps the rect on the board and offsets each additional area", () => {
+    for (const kind of ["var", "let", "const"] as const) {
+      for (let i = 0; i < 6; i++) {
+        const a = makeColoredArea(kind, i);
+        expect(a.kind).toBe(kind);
+        expect(a.x).toBeGreaterThanOrEqual(0);
+        expect(a.y).toBeGreaterThanOrEqual(0);
+        expect(a.x + a.width).toBeLessThanOrEqual(BOARD_WIDTH);
+        expect(a.y + a.height).toBeLessThanOrEqual(BOARD_HEIGHT);
+      }
+    }
+    // A second area doesn't land exactly on the first.
+    const first = makeColoredArea("const", 0);
+    const second = makeColoredArea("const", 1);
+    expect(second.x !== first.x || second.y !== first.y).toBe(true);
   });
 });
 

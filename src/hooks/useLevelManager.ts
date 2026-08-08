@@ -4,11 +4,17 @@
  * Multiple map entries may share one logical level number ('variants');
  * loadLevels() picks one variant per level at random to build the run's
  * sequence. Exposes the current level config plus advance/reset helpers.
+ *
+ * On a brand new install the FIRST slot is replaced by the onboarding map
+ * (onboardingMap.ts), an empty board that teaches the loop once and is then
+ * never seen again.
  */
 import { useState, useCallback } from 'react';
 import yaml from 'js-yaml';
 import { LevelConfig, LevelData, LevelEntity } from '@/types/level';
-import { getRunRng } from '@/lib/runRng';
+import { getRunRng, getRunSeedText } from '@/lib/runRng';
+import { ONBOARDING_MAP, ONBOARDING_MAP_ID } from '@/lib/onboardingMap';
+import { hasSeenOnboarding } from './useTutorialManager';
 
 interface LevelManagerState {
   allMaps: LevelConfig[]; // all maps from YAML
@@ -49,11 +55,15 @@ function warnOnPayCurveRegressions(allMaps: LevelConfig[]): void {
  * same seed plays the same variant lineup; normal runs stay Math.random.
  * The generator is created fresh inside the call, keeping this safe when
  * invoked from a React state updater (StrictMode double-invocation).
+ *
+ * The onboarding map is never a variant: it is swapped into slot 1 afterwards,
+ * and only until the player has completed it once.
  */
-function buildLevelSequence(allMaps: LevelConfig[]): LevelConfig[] {
+export function buildLevelSequence(allMaps: LevelConfig[]): LevelConfig[] {
   const rng = getRunRng('levels');
   const groups = new Map<number, LevelConfig[]>();
   for (const map of allMaps) {
+    if (map.id === ONBOARDING_MAP_ID) continue;
     const lvl = map.level;
     if (!groups.has(lvl)) groups.set(lvl, []);
     groups.get(lvl)!.push(map);
@@ -61,10 +71,17 @@ function buildLevelSequence(allMaps: LevelConfig[]): LevelConfig[] {
 
   // Sort by level number, pick one random variant per level
   const sortedLevels = [...groups.keys()].sort((a, b) => a - b);
-  return sortedLevels.map(lvl => {
+  const sequence = sortedLevels.map(lvl => {
     const variants = groups.get(lvl)!;
     return variants[Math.floor(rng() * variants.length)];
   });
+
+  // First run ever: the opening map is the no-obstacle onboarding board instead
+  // of the authored level-1 map. Every later run plays the real level 1. Seeded
+  // runs (Daily Stand-up) are exempt, so everyone on a seed plays the same board.
+  const seeded = getRunSeedText() !== null;
+  if (sequence.length > 0 && !seeded && !hasSeenOnboarding()) sequence[0] = ONBOARDING_MAP;
+  return sequence;
 }
 
 export function useLevelManager() {
@@ -203,6 +220,8 @@ export function useLevelManager() {
   const restoreSequence = useCallback((levelIds: string[], index: number) => {
     setState(prev => {
       const byId = new Map(prev.allMaps.map(m => [m.id, m]));
+      // A run saved mid-onboarding refers to a map that is not in map.yml.
+      byId.set(ONBOARDING_MAP_ID, ONBOARDING_MAP);
       const sequence = levelIds
         .map(id => byId.get(id))
         .filter((m): m is LevelConfig => m != null);

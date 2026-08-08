@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle } from 'lucide-react';
-import { LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
+import { AreaKind, ColoredArea, LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
+import { makeColoredArea } from '@/lib/coloredAreas';
 import { MapCanvas } from './MapCanvas';
 import { EntityPanel } from './EntityPanel';
 import { LevelPanel } from './LevelPanel';
@@ -15,6 +16,8 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const [selectedLevelIndex, setSelectedLevelIndex] = useState<number>(0);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [selectedBallId, setSelectedBallId] = useState<string | null>(null);
+  // Colored Areas have no id in the schema, so selection is by index.
+  const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
@@ -125,6 +128,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     setSelectedLevelIndex(index + 1);
     setSelectedEntityId(null);
     setSelectedBallId(null);
+    setSelectedAreaIndex(null);
   }, [levels]);
 
   // Add entity (obstacle)
@@ -167,6 +171,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     });
     setSelectedEntityId(newEntity.id);
     setSelectedBallId(null);
+    setSelectedAreaIndex(null);
   }, [currentLevel, updateLevel]);
 
   // Add ball
@@ -186,6 +191,42 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     });
     setSelectedBallId(newBall.id);
     setSelectedEntityId(null);
+    setSelectedAreaIndex(null);
+  }, [currentLevel, updateLevel]);
+
+  // Add a Colored Area (win-gate zone). Sized by kind, per the LEVELDESIGN
+  // convention: var is easiest so it's drawn biggest, const hardest/smallest.
+  const addArea = useCallback((kind: AreaKind) => {
+    if (!currentLevel) return;
+
+    const existing = currentLevel.coloredAreas || [];
+    updateLevel({ ...currentLevel, coloredAreas: [...existing, makeColoredArea(kind, existing.length)] });
+    setSelectedAreaIndex(existing.length);
+    setSelectedEntityId(null);
+    setSelectedBallId(null);
+  }, [currentLevel, updateLevel]);
+
+  // Update a Colored Area by index
+  const updateArea = useCallback((index: number, updates: Partial<ColoredArea>) => {
+    if (!currentLevel) return;
+
+    updateLevel({
+      ...currentLevel,
+      coloredAreas: (currentLevel.coloredAreas || []).map((a, i) =>
+        i === index ? { ...a, ...updates } : a
+      ),
+    });
+  }, [currentLevel, updateLevel]);
+
+  // Delete a Colored Area by index (drop the key entirely when it was the last)
+  const deleteArea = useCallback((index: number) => {
+    if (!currentLevel) return;
+
+    const remaining = (currentLevel.coloredAreas || []).filter((_, i) => i !== index);
+    const next = { ...currentLevel, coloredAreas: remaining };
+    if (remaining.length === 0) delete next.coloredAreas;
+    updateLevel(next);
+    setSelectedAreaIndex(null);
   }, [currentLevel, updateLevel]);
 
   // Delete selected entity
@@ -228,6 +269,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     });
     setSelectedEntityId(newEntity.id);
     setSelectedBallId(null);
+    setSelectedAreaIndex(null);
   }, [currentLevel, updateLevel]);
 
   // Copy the selected object (entity or ball) into the clipboard.
@@ -392,6 +434,8 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         e.preventDefault();
         if (selectedEntityId) {
           deleteEntity(selectedEntityId);
+        } else if (selectedAreaIndex !== null) {
+          deleteArea(selectedAreaIndex);
         } else if (selectedBallId && currentLevel && currentLevel.balls.length > 1) {
           deleteBall(selectedBallId);
         }
@@ -399,7 +443,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedEntityId, selectedBallId, deleteEntity, deleteBall, currentLevel, copySelection, pasteClipboard]);
+  }, [selectedEntityId, selectedBallId, selectedAreaIndex, deleteEntity, deleteBall, deleteArea, currentLevel, copySelection, pasteClipboard]);
 
   if (isLoading) {
     return (
@@ -483,6 +527,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
                   setSelectedLevelIndex(index);
                   setSelectedEntityId(null);
                   setSelectedBallId(null);
+                  setSelectedAreaIndex(null);
                 }}
                 className={`px-3 py-1.5 rounded-l text-sm font-medium transition-colors ${
                   index === selectedLevelIndex
@@ -524,24 +569,34 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Canvas Area */}
-        <div className="flex-1 min-h-0 p-2">
+        {/* Canvas Area — min-w-0 so the canvas' intrinsic buffer width can't
+            push the side panel off-screen (flex items default to min-width:auto). */}
+        <div className="flex-1 min-h-0 min-w-0 p-2">
           {currentLevel && (
             <MapCanvas
               level={currentLevel}
               selectedEntityId={selectedEntityId}
               selectedBallId={selectedBallId}
+              selectedAreaIndex={selectedAreaIndex}
               snapToGrid={snapToGrid}
               onSelectEntity={(id) => {
                 setSelectedEntityId(id);
                 setSelectedBallId(null);
+                setSelectedAreaIndex(null);
               }}
               onSelectBall={(id) => {
                 setSelectedBallId(id);
                 setSelectedEntityId(null);
+                setSelectedAreaIndex(null);
+              }}
+              onSelectArea={(index) => {
+                setSelectedAreaIndex(index);
+                setSelectedEntityId(null);
+                setSelectedBallId(null);
               }}
               onUpdateEntity={updateEntity}
               onUpdateBall={updateBall}
+              onUpdateArea={updateArea}
             />
           )}
         </div>
@@ -558,21 +613,32 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
                 level={currentLevel}
                 selectedEntityId={selectedEntityId}
                 selectedBallId={selectedBallId}
+                selectedAreaIndex={selectedAreaIndex}
                 onSelectEntity={(id) => {
                   setSelectedEntityId(id);
                   setSelectedBallId(null);
+                  setSelectedAreaIndex(null);
                 }}
                 onSelectBall={(id) => {
                   setSelectedBallId(id);
                   setSelectedEntityId(null);
+                  setSelectedAreaIndex(null);
+                }}
+                onSelectArea={(index) => {
+                  setSelectedAreaIndex(index);
+                  setSelectedEntityId(null);
+                  setSelectedBallId(null);
                 }}
                 onAddEntity={addEntity}
                 onAddBall={addBall}
+                onAddArea={addArea}
                 onDeleteEntity={deleteEntity}
                 onDuplicateEntity={duplicateEntity}
                 onDeleteBall={deleteBall}
+                onDeleteArea={deleteArea}
                 onUpdateEntity={updateEntity}
                 onUpdateBall={updateBall}
+                onUpdateArea={updateArea}
               />
             </>
           )}

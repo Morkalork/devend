@@ -273,6 +273,7 @@
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
     "fenceBudgetLeft": "{{count}} staket kvar på denna bana",
     "beatCrunchTime": "Slutspurt",
+    "beatStandup": "Oplanerat Möte",
     "circuitComplete": "Process Startad",
     "chargeArmed": "Laddning Osäkrad",
     "chargeBlown": "Laddning Sprängd",
