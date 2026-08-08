@@ -1,5 +1,6 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useGameConfig } from '../../hooks/useGameConfig';
+import { pulseMonitor } from '@/lib/rendering/sleek/monitorSignal';
 
 /**
  * CRT Terminal Background
@@ -368,6 +369,11 @@ export function CRTBackground({ accentColor = '#00ff88', paused = false }: CRTBa
     
     // Duration varies by type
     const duration = type === 'flicker' ? 80 : type === 'tear' ? 150 : 200;
+    // Tell the board's light model the monitor just stuttered, so the scene is
+    // lit by the SAME screen this background is imitating. A 'flicker' is the
+    // whole tube dropping (hardest hit); a 'tear' is a partial roll; 'corrupt'
+    // is mostly a data artefact, so it barely moves the light.
+    pulseMonitor(type === 'flicker' ? 1 : type === 'tear' ? 0.65 : 0.3, duration * 1.6);
     // Track the reset timeout so it can be cleared on unmount (otherwise it
     // fires setActiveGlitch on an unmounted component).
     glitchResetTimerRef.current = setTimeout(() => setActiveGlitch(null), duration);

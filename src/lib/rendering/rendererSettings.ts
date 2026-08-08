@@ -7,6 +7,12 @@
 // GameCanvas mounts, so switching requires a remount: the Playground toggle
 // bumps its gameKey, a real game needs a reload.
 //
+// 'sleek' (src/lib/rendering/sleek/) is the EXPERIMENTAL board rewrite: same
+// WebGL plumbing as 'pixi', but device-pixel-exact geometry and a single
+// off-screen light source. Select it with ?renderer=sleek. It is a vertical
+// slice - see SleekRenderer's header for what it does not draw yet - so it is
+// not a candidate for the default until that list is empty.
+//
 // POLICY (decided): canvas2d is the FALLBACK ONLY. It stays load-bearing for
 // three reasons - the WebGL-init fallback (old Android WebViews), the intro
 // fly-in capture (renderFrame draws the tile snapshot even under Pixi), and
@@ -19,13 +25,18 @@
 // > default. Persisting the query override makes `?renderer=canvas2d` sticky
 // for on-device Android testing where editing localStorage is awkward.
 
-export type RendererKind = "canvas2d" | "pixi";
+export type RendererKind = "canvas2d" | "pixi" | "sleek";
 
 const LS_RENDERER = "devend:renderer";
 const DEFAULT_RENDERER: RendererKind = "pixi";
 
 function isRendererKind(v: string | null): v is RendererKind {
-  return v === "canvas2d" || v === "pixi";
+  return v === "canvas2d" || v === "pixi" || v === "sleek";
+}
+
+/** True for the WebGL-backed renderers (both share GameCanvas's pixi path). */
+export function isWebGLRenderer(kind: RendererKind): boolean {
+  return kind === "pixi" || kind === "sleek";
 }
 
 /** The renderer to use for this session. */

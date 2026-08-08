@@ -102,8 +102,8 @@ import { ActiveMapObjective } from "@/types/objective";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
-import { getRenderer, RendererKind } from "@/lib/rendering/rendererSettings";
-import type { PixiGameRenderer } from "@/lib/rendering/pixi/PixiGameRenderer";
+import { getRenderer, isWebGLRenderer, RendererKind } from "@/lib/rendering/rendererSettings";
+import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn, checkSpaceWin, evaluateWinConditions } from "@/lib/physics/applyCut";
 import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
@@ -304,7 +304,7 @@ export function GameCanvas({
   // back to canvas2d for the session: the state change remounts the canvas
   // element (key below) so the fallback gets a fresh, contextless canvas.
   const [rendererKind, setRendererKind] = useState<RendererKind>(() => getRenderer());
-  const pixiRef = useRef<PixiGameRenderer | null>(null);
+  const pixiRef = useRef<BoardRenderer | null>(null);
   const pixiInitStartedRef = useRef(false);
   const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
   const startDissolveRef = useRef<((onComplete: () => void, tint?: string) => void) | null>(null);
@@ -638,7 +638,9 @@ export function GameCanvas({
     game.wallShieldsRemaining = Math.max(0, Math.round(activeModifiers.wallShieldsPerMap));
     setWallShieldCount(game.wallShieldsRemaining);
 
-    const isPixi = rendererKind === "pixi";
+    // Both WebGL renderers ('pixi' and the experimental 'sleek') share this
+    // path: same canvas sizing, same init/fallback, same render call.
+    const isPixi = isWebGLRenderer(rendererKind);
     const ctx = isPixi ? null : canvas.getContext("2d");
     if (!isPixi && !ctx) return;
     if (ctx) {
@@ -659,9 +661,12 @@ export function GameCanvas({
         pixiInitStartedRef.current = false;
         setRendererKind("canvas2d");
       };
-      import("@/lib/rendering/pixi/PixiGameRenderer").then(({ PixiGameRenderer }) => {
+      const load: Promise<BoardRenderer> =
+        rendererKind === "sleek"
+          ? import("@/lib/rendering/sleek/SleekRenderer").then(m => new m.SleekRenderer())
+          : import("@/lib/rendering/pixi/PixiGameRenderer").then(m => new m.PixiGameRenderer());
+      load.then((renderer) => {
         if (pixiRef.current) return;
-        const renderer = new PixiGameRenderer();
         pixiRef.current = renderer;
         const size = pixiSizeRef.current ?? { w: canvas.width || 1, h: canvas.height || 1 };
         renderer.init(canvas, size.w, size.h).then(() => {
