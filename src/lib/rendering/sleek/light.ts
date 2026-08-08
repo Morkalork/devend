@@ -34,10 +34,34 @@ import { monitorLevel } from "./monitorSignal";
 const LIGHT_OFFSET_X = 0.85;
 const LIGHT_OFFSET_Y = 0.72;
 
-/** Shadow length as a fraction of an object's own size, at the board's centre. */
+/** Shadow length as a fraction of an object's HEIGHT, at the board's centre. */
 const SHADOW_LENGTH = 1.15;
 /** How much longer shadows get at the far (top-left) corner than the near one. */
 const DISTANCE_STRETCH = 0.9;
+
+/**
+ * How far the board's furniture stands proud of the surface, in WORLD units.
+ *
+ * This is the single most important constant in the model, and getting it wrong
+ * was the bug that made obstacles look shadowless. A cast shadow's displacement
+ * is a function of how high the object stands, NOT of how wide it is - a filing
+ * cabinet and a rug of the same footprint throw completely different shadows.
+ * Feeding an object's footprint radius in as its "size" (the first version of
+ * this) meant a big slab's shadow was displaced nearly twice its own width and
+ * detached into a separate dark blob, which nobody reads as a shadow.
+ *
+ * Everything on this board is the same low slab standing on the same surface,
+ * so they share one height, and their shadows all hug them by the same amount.
+ * Balls are the deliberate exception: a sphere's centre really does sit its own
+ * radius above the surface, so a ball passes its radius and gets a longer throw
+ * the bigger it is - which is correct, and is why balls read well already.
+ */
+export const SLAB_HEIGHT_WORLD = 13;
+
+/** Slab height in screen pixels for the current board scale. */
+export function slabHeight(scale: number): number {
+  return SLAB_HEIGHT_WORLD * scale;
+}
 
 export interface LightScope {
   /** Light position in screen (device-pixel) space. */
@@ -76,15 +100,18 @@ export interface ShadowCast {
 }
 
 /**
- * The shadow cast by an object of `size` (its radius or half-thickness in
- * screen pixels) sitting at screen point (x, y).
+ * The shadow cast by an object standing `height` screen pixels above the board
+ * at screen point (x, y).
+ *
+ * `height` is HEIGHT, not footprint - see SLAB_HEIGHT_WORLD. Pass slabHeight()
+ * for board furniture, or the radius for a sphere resting on the surface.
  *
  * Shadows lengthen and soften with distance from the light, so an object in the
  * far corner throws a long faint smear while one near the corner throws a short
  * hard stub. That gradient across the board is most of what makes the scene
  * read as lit rather than merely decorated.
  */
-export function shadowFor(light: LightScope, x: number, y: number, size: number): ShadowCast {
+export function shadowFor(light: LightScope, x: number, y: number, height: number): ShadowCast {
   const vx = x - light.x;
   const vy = y - light.y;
   const dist = Math.hypot(vx, vy) || 1;
@@ -94,7 +121,7 @@ export function shadowFor(light: LightScope, x: number, y: number, size: number)
   return {
     dx: vx / dist,
     dy: vy / dist,
-    length: size * SHADOW_LENGTH * stretch,
+    length: height * SHADOW_LENGTH * stretch,
     // Distant shadows are longer but weaker: the light spreads.
     alpha: (0.72 - t * 0.22) * light.level,
   };
@@ -132,7 +159,7 @@ export function ambientAt(light: LightScope, x: number, y: number): number {
  * shorter and denser than the cast shadow, and it is what actually makes things
  * look SEATED on the surface rather than floating above it.
  */
-export function contactFor(light: LightScope, x: number, y: number, size: number): ShadowCast {
-  const s = shadowFor(light, x, y, size);
-  return { dx: s.dx, dy: s.dy, length: Math.max(1.5, size * 0.16), alpha: 0.5 * light.level };
+export function contactFor(light: LightScope, x: number, y: number, height: number): ShadowCast {
+  const s = shadowFor(light, x, y, height);
+  return { dx: s.dx, dy: s.dy, length: Math.max(1.5, height * 0.16), alpha: 0.5 * light.level };
 }

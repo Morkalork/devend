@@ -20,7 +20,7 @@ import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
-import { ambientAt, facing, shadowFor, type LightScope } from "./light";
+import { ambientAt, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapContour, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -49,7 +49,7 @@ export class ObjectLayer {
       if (!poly || phasingPolys.has(poly)) continue;
       const damage = d.maxHits > 0 ? Math.min(1, d.hits / d.maxHits) : 0;
       if (d.kind === "mirror") {
-        this.drawMirror(poly, light, w2s, 1);
+        this.drawMirror(poly, light, w2s, scale, 1);
       } else {
         this.drawBreakable(d, poly, damage, light, w2s, scale);
       }
@@ -61,25 +61,23 @@ export class ObjectLayer {
     );
     for (const poly of game.mirrorPolygons) {
       if (destructibleMirrors.has(poly)) continue;
-      this.drawMirror(poly, light, w2s, 1);
+      this.drawMirror(poly, light, w2s, scale, 1);
     }
 
     for (const p of game.phasingObjects ?? []) {
       if (p.alpha <= 0.02) continue;
-      this.drawPhasing(p, light, w2s);
+      this.drawPhasing(p, light, w2s, scale);
     }
   }
 
   /** Shared geometry prep: screen hull, centroid and bounding radius. */
-  private prep(poly: Polygon, w2s: W2S): { pts: Pt[]; cx: number; cy: number; r: number } | null {
+  private prep(poly: Polygon, w2s: W2S): { pts: Pt[]; cx: number; cy: number } | null {
     const pts = snapContour(poly.vertices.map(v => w2s(v.x, v.y)));
     if (pts.length < 3) return null;
     let cx = 0, cy = 0;
     for (const p of pts) { cx += p.x; cy += p.y; }
     cx /= pts.length; cy /= pts.length;
-    let r = 0;
-    for (const p of pts) r = Math.max(r, Math.hypot(p.x - cx, p.y - cy));
-    return { pts, cx, cy, r };
+    return { pts, cx, cy };
   }
 
   /** Per-edge rim on the faces pointing at the monitor. */
@@ -106,8 +104,13 @@ export class ObjectLayer {
     }
   }
 
-  private castShadow(pts: Pt[], cx: number, cy: number, r: number, light: LightScope, alphaScale = 1): void {
-    const cast = shadowFor(light, cx, cy, r);
+  /**
+   * `scale` (not the object's footprint) drives the offset: these all stand the
+   * same slab height off the board, so their shadows hug them by the same
+   * amount regardless of how big they are.
+   */
+  private castShadow(pts: Pt[], cx: number, cy: number, scale: number, light: LightScope, alphaScale = 1): void {
+    const cast = shadowFor(light, cx, cy, slabHeight(scale));
     const ox = cast.dx * cast.length;
     const oy = cast.dy * cast.length;
     this.shadows
@@ -130,9 +133,9 @@ export class ObjectLayer {
   ): void {
     const g = this.prep(poly, w2s);
     if (!g) return;
-    const { pts, cx, cy, r } = g;
+    const { pts, cx, cy } = g;
 
-    this.castShadow(pts, cx, cy, r, light, 1 - damage * 0.4);
+    this.castShadow(pts, cx, cy, scale, light, 1 - damage * 0.4);
 
     const amb = ambientAt(light, cx, cy);
     // A chest is loot, not obstruction: amber body so it reads as a prize.
@@ -153,12 +156,12 @@ export class ObjectLayer {
   }
 
   /** A mirror: hard specular edge, cool body, still a solid object with a shadow. */
-  private drawMirror(poly: Polygon, light: LightScope, w2s: W2S, alpha: number): void {
+  private drawMirror(poly: Polygon, light: LightScope, w2s: W2S, scale: number, alpha: number): void {
     const g = this.prep(poly, w2s);
     if (!g) return;
-    const { pts, cx, cy, r } = g;
+    const { pts, cx, cy } = g;
 
-    this.castShadow(pts, cx, cy, r, light, alpha);
+    this.castShadow(pts, cx, cy, scale, light, alpha);
 
     const amb = ambientAt(light, cx, cy);
     this.bodies
@@ -175,15 +178,16 @@ export class ObjectLayer {
     p: CanvasGameState["phasingObjects"][number],
     light: LightScope,
     w2s: W2S,
+    scale: number,
   ): void {
     const g = this.prep(p.polygon, w2s);
     if (!g) return;
-    const { pts, cx, cy, r } = g;
+    const { pts, cx, cy } = g;
     const a = Math.max(0, Math.min(1, p.alpha));
 
     // Shadow fades WITH the body: a shadow from something you can walk through
     // is the most confusing thing the light model could say.
-    this.castShadow(pts, cx, cy, r, light, a);
+    this.castShadow(pts, cx, cy, scale, light, a);
 
     const amb = ambientAt(light, cx, cy);
     this.bodies

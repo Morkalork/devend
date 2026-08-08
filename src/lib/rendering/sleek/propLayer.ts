@@ -18,7 +18,7 @@
 import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { PALETTE, mix } from "./palette";
-import { ambientAt, contactFor, shadowFor, type LightScope } from "./light";
+import { ambientAt, contactFor, shadowFor, slabHeight, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -177,11 +177,11 @@ export class PropLayer {
       const left = p.expiresAtSeconds - game.activePlaySeconds;
       const fade = game.freezePickups || life <= 0 ? 1 : Math.max(0.25, Math.min(1, left / (life * 0.35)));
 
-      const cast = shadowFor(light, c.x, c.y, r);
+      const cast = shadowFor(light, c.x, c.y, slabHeight(scale));
       this.shadows
         .ellipse(c.x + cast.dx * cast.length, c.y + cast.dy * cast.length, r * 0.95, r * 0.66)
         .fill({ color: PALETTE.shadow, alpha: cast.alpha * fade });
-      const contact = contactFor(light, c.x, c.y, r);
+      const contact = contactFor(light, c.x, c.y, slabHeight(scale));
       this.shadows
         .ellipse(c.x + contact.dx * contact.length, c.y + contact.dy * contact.length, r * 0.9, r * 0.62)
         .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.4 * fade });
@@ -215,7 +215,7 @@ export class PropLayer {
     for (const g of game.chestLoot ?? []) {
       const c = w2s(g.x, g.y);
       const r = Math.max(3, 8 * scale);
-      const cast = shadowFor(light, c.x, c.y, r);
+      const cast = shadowFor(light, c.x, c.y, slabHeight(scale) * 0.6);
       this.shadows
         .ellipse(c.x + cast.dx * cast.length, c.y + cast.dy * cast.length, r, r * 0.6)
         .fill({ color: PALETTE.shadow, alpha: cast.alpha * 0.8 });

@@ -16,7 +16,7 @@ import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
-import { ambientAt, contactFor, facing, shadowFor, type LightScope } from "./light";
+import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapContour, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -49,7 +49,7 @@ export class EntityLayer {
 
     for (const poly of game.obstaclePolygons) {
       if (skip.has(poly as Polygon)) continue;
-      this.drawSlab(poly as Polygon, light, w2s);
+      this.drawSlab(poly as Polygon, light, w2s, scale);
     }
 
     for (const m of game.movers) {
@@ -58,7 +58,7 @@ export class EntityLayer {
   }
 
   /** A static obstacle: shadow, lit fill, contact band, rim on the lit edges. */
-  private drawSlab(poly: Polygon, light: LightScope, w2s: W2S): void {
+  private drawSlab(poly: Polygon, light: LightScope, w2s: W2S, scale: number): void {
     const pts = snapContour(poly.vertices.map(v => w2s(v.x, v.y)));
     if (pts.length < 3) return;
 
@@ -68,10 +68,10 @@ export class EntityLayer {
     for (const p of pts) { cx += p.x; cy += p.y; }
     cx /= pts.length; cy /= pts.length;
 
-    let radius = 0;
-    for (const p of pts) radius = Math.max(radius, Math.hypot(p.x - cx, p.y - cy));
-
-    const cast = shadowFor(light, cx, cy, radius);
+    // Offset comes from the slab's HEIGHT, never its footprint: a wide slab and
+    // a narrow one stand equally proud, so their shadows hug them equally. Using
+    // the footprint radius here threw the shadow clear of the object entirely.
+    const cast = shadowFor(light, cx, cy, slabHeight(scale));
     const ox = cast.dx * cast.length;
     const oy = cast.dy * cast.length;
 
@@ -127,21 +127,21 @@ export class EntityLayer {
     const cyw = m.homeY + (m.axis === "vertical" ? m.offset : 0);
 
     if (m.shape === "rect") {
-      this.drawMoverSlab(m, light, w2s);
+      this.drawMoverSlab(m, light, w2s, scale);
       return;
     }
 
     const c = w2s(cxw, cyw);
     const r = Math.max(2, (m.radius ?? 18) * scale);
 
-    const cast = shadowFor(light, c.x, c.y, r);
+    const cast = shadowFor(light, c.x, c.y, slabHeight(scale));
     this.shadows
       .circle(c.x + cast.dx * cast.length, c.y + cast.dy * cast.length, r)
       .fill({ color: PALETTE.shadow, alpha: cast.alpha });
 
     // Contact band: short, dense, hard against the body. This is what stops the
     // mover looking like it hovers.
-    const contact = contactFor(light, c.x, c.y, r);
+    const contact = contactFor(light, c.x, c.y, slabHeight(scale));
     this.shadows
       .circle(c.x + contact.dx * contact.length, c.y + contact.dy * contact.length, r * 0.96)
       .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.5 });
@@ -171,6 +171,7 @@ export class EntityLayer {
     m: CanvasGameState["movers"][number],
     light: LightScope,
     w2s: W2S,
+    scale: number,
   ): void {
     const pts = snapContour(m.polygon.vertices.map(v => w2s(v.x, v.y)));
     if (pts.length < 3) return;
@@ -178,10 +179,8 @@ export class EntityLayer {
     let cx = 0, cy = 0;
     for (const p of pts) { cx += p.x; cy += p.y; }
     cx /= pts.length; cy /= pts.length;
-    let radius = 0;
-    for (const p of pts) radius = Math.max(radius, Math.hypot(p.x - cx, p.y - cy));
 
-    const cast = shadowFor(light, cx, cy, radius);
+    const cast = shadowFor(light, cx, cy, slabHeight(scale));
     this.shadows
       .poly(pts.map(p => ({ x: p.x + cast.dx * cast.length, y: p.y + cast.dy * cast.length })))
       .fill({ color: PALETTE.shadow, alpha: cast.alpha });
