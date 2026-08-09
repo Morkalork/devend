@@ -57,7 +57,7 @@ export class ObjectLayer {
       if (!poly || phasingPolys.has(poly)) continue;
       const damage = d.maxHits > 0 ? Math.min(1, d.hits / d.maxHits) : 0;
       if (d.kind === "mirror") {
-        this.drawMirror(poly, light, w2s, scale, 1);
+        this.drawMirror(poly, light, w2s, scale, 1, damage, d.dents);
       } else {
         this.drawBreakable(d, poly, damage, light, w2s, scale);
       }
@@ -160,7 +160,25 @@ export class ObjectLayer {
     // The crack geometry is seeded from the impact position rather than random,
     // so it is identical every frame; a per-frame random would make the cracks
     // crawl and read as noise.
-    for (const dent of d.dents ?? []) {
+    this.drawCracks(d.dents, w2s, scale, PALETTE.shadow, 0.7, true);
+  }
+
+  /**
+   * Impact cracks radiating from each recorded hit point.
+   *
+   * Shared by breakables and mirrors: both are destructible, and a mirror one
+   * hit from shattering used to look identical to a fresh one.
+   */
+  private drawCracks(
+    dents: { x: number; y: number }[] | undefined,
+    w2s: W2S,
+    scale: number,
+    color: number,
+    alpha: number,
+    withPit = false,
+  ): void {
+    if (!dents || dents.length === 0) return;
+    for (const dent of dents) {
       const p = w2s(dent.x, dent.y);
       const len = Math.max(3, 9 * scale);
       const seed = Math.abs(Math.round(dent.x * 73856093) ^ Math.round(dent.y * 19349663));
@@ -173,17 +191,25 @@ export class ObjectLayer {
           .moveTo(p.x, p.y)
           .lineTo(p.x + Math.cos(ang) * reach, p.y + Math.sin(ang) * reach);
       }
-      this.bodies
-        .circle(p.x, p.y, Math.max(1.5, 4 * scale))
-        .fill({ color: PALETTE.shadow, alpha: 0.55 });
+      if (withPit) {
+        this.bodies
+          .circle(p.x, p.y, Math.max(1.5, 4 * scale))
+          .fill({ color: PALETTE.shadow, alpha: 0.55 });
+      }
     }
-    if ((d.dents?.length ?? 0) > 0) {
-      this.rims.stroke({ width: Math.max(hairline(), scale), color: PALETTE.shadow, alpha: 0.7 });
-    }
+    this.rims.stroke({ width: Math.max(hairline(), scale), color, alpha });
   }
 
   /** A mirror: hard specular edge, cool body, still a solid object with a shadow. */
-  private drawMirror(poly: Polygon, light: LightScope, w2s: W2S, scale: number, alpha: number): void {
+  private drawMirror(
+    poly: Polygon,
+    light: LightScope,
+    w2s: W2S,
+    scale: number,
+    alpha: number,
+    damage = 0,
+    dents?: { x: number; y: number }[],
+  ): void {
     const g = this.prep(poly, w2s);
     if (!g) return;
     const { pts, cx, cy } = g;
@@ -197,7 +223,14 @@ export class ObjectLayer {
 
     // Specular, not rim: brighter, wider, and only on the faces actually
     // pointing at the monitor. This is the surface that returns the light.
-    this.rimEdges(pts, cx, cy, light, 0xd8f4ff, 1.6 * alpha, 2);
+    // Damage eats into it, because a cracked mirror stops returning the light -
+    // which is also the honest cue that it is nearly broken.
+    this.rimEdges(pts, cx, cy, light, 0xd8f4ff, 1.6 * alpha * (1 - damage * 0.7), 2);
+
+    // Damage cracks. A mirror is destructible (the black ball smashes it), and
+    // with no damage drawn at all a mirror one hit from shattering looked
+    // identical to a fresh one.
+    this.drawCracks(dents, w2s, scale, 0xd8f4ff, 0.75);
   }
 
   /** A phasing obstacle: body, shadow and rim all fade together with `alpha`. */

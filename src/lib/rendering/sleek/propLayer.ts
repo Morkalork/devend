@@ -17,6 +17,7 @@
 
 import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
+import { dashedLine } from "./dashedLine";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, contactFor, shadowFor, slabHeight, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
@@ -115,6 +116,20 @@ export class PropLayer {
       const p = w2s(t.x, t.y);
       const r = Math.max(6, t.radius * scale);
       const color = t.lit ? PALETTE.areaConst : 0x59b3a3;
+
+      // Dashed link to the sleeper this terminal wakes. Without it the player
+      // can see terminals and can see caged balls, but nothing says WHICH node
+      // wakes WHICH ball - and on a multi-terminal map that is the whole puzzle.
+      const sleeper = game.balls.find(b => b.id === t.ballId);
+      if (sleeper && sleeper.state === "dormant") {
+        const bp = w2s(sleeper.position.x, sleeper.position.y);
+        dashedLine(this.glows, p.x, p.y, bp.x, bp.y, 8 * scale, 6 * scale);
+        this.glows.stroke({
+          width: Math.max(1, 1.5 * scale),
+          color,
+          alpha: 0.2 + 0.25 * (t.lit ? 1 : pulse),
+        });
+      }
 
       this.glows
         .circle(p.x, p.y, r + (t.lit ? 5 : 4 + 6 * pulse) * scale)

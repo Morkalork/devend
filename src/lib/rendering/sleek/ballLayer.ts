@@ -20,9 +20,9 @@
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
-import { getSquishEffect } from "@/lib/ballEffects";
+import { getSquishEffect, getWallHitEffect, getBallHitEffect } from "@/lib/ballEffects";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
-import { BALL_FALLBACK, PALETTE, withAlpha } from "./palette";
+import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
 import { contactFor, shadowFor, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
 
@@ -206,7 +206,19 @@ export class SleekBallLayer {
     const rb = bucket(r);
     holder.visible = true;
     holder.position.set(c.x, c.y);
-    sprite.texture = sphereTexture(parseColor(ball.color), rb);
+    // While a lock plays out the ball drains toward the accent, so it visibly
+    // becomes part of the territory it just created rather than simply stopping.
+    // BUCKET the fade before blending. assimColorFade is a continuous 0->1 clock
+    // over the ~2s lock fade, and sphereTexture caches per colour - so an
+    // unbucketed blend bakes a fresh texture nearly every frame, per locking
+    // ball. 13 steps is visually indistinguishable from continuous and bounds
+    // the cache to at most 13 extra bakes for the whole clear.
+    const fadeRaw = ball.assimColorFade ?? 0;
+    const fade = fadeRaw > 0 ? Math.round(Math.min(1, fadeRaw) * 12) / 12 : 0;
+    const bodyColor = fade > 0
+      ? mix(parseColor(ball.color), PALETTE.accent, fade)
+      : parseColor(ball.color);
+    sprite.texture = sphereTexture(bodyColor, rb);
     sprite.position.set(0, 0);
     // Scale the bucketed bake back to the exact radius.
     sprite.scale.set(r / rb);
@@ -267,6 +279,32 @@ export class SleekBallLayer {
           .lineTo(c.x + Math.cos(a) * r * 1.05, c.y + Math.sin(a) * r * 1.05);
       }
       this.overlays.stroke({ width: Math.max(1, scale), color: PALETTE.frost, alpha: 0.55 });
+    }
+
+    // ── Collision halos ─────────────────────────────────────────────────────
+    // An expanding ring on impact: wall hits and ball-to-ball hits get their own,
+    // the latter larger and brighter because it is the rarer, more consequential
+    // event. This is feedback, not decoration - it is how a hit you did not see
+    // coming announces itself - so it is drawn over the body rather than lit.
+    const wallHit = getWallHitEffect(ball.effects);
+    if (wallHit.active) {
+      this.overlays
+        .circle(c.x, c.y, r * wallHit.ringRadius)
+        .stroke({
+          width: Math.max(1, wallHit.ringWidth * scale),
+          color: parseColor(ball.color),
+          alpha: wallHit.glowAlpha,
+        });
+    }
+    const ballHit = getBallHitEffect(ball.effects, this.now);
+    if (ballHit.active) {
+      this.overlays
+        .circle(c.x, c.y, r * ballHit.ringRadius)
+        .stroke({
+          width: Math.max(1, 2 * scale),
+          color: parseColor(ball.color),
+          alpha: ballHit.glowAlpha,
+        });
     }
 
     // ── Fastest ball: the one the trajectory tracks and the danger frame means.
