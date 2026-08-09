@@ -414,7 +414,14 @@ export function checkAndUpdateBallWonStates(
         if (col > 0) consider(idx - 1);
         if (col < gw - 1) consider(idx + 1);
       }
-      for (const idx of floodRemovedEnclosure(grid, seeds, game.walls)) cellSet.add(idx);
+      // Depth 2: this only ever needs to reclaim the ~1-cell band the cut
+      // rasterizer strands between the pocket and the fence line. Anything
+      // further is the flood escaping through a sub-ball-width gap, and the
+      // flash would then fill the whole board outside the pocket.
+      for (const idx of floodRemovedEnclosure(grid, seeds, game.walls, {
+        maxDepth: 2,
+        maxCells: ballRegion.cellIndices.length * 2 + 256,
+      })) cellSet.add(idx);
       // Snap the lattice contour onto the pocket's bounding walls so the flash
       // fills flush with the fence line (same treatment as the persistent tint).
       const contours = snapContoursToWalls(

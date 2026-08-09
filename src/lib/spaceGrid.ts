@@ -645,41 +645,73 @@ export function isRegionTrulySealed(
  * left dark, cell-quantized fringes between the tint and the fence line (the
  * reported "glitchy" lock fill). Flooding to the walls makes the tint span the
  * whole enclosure while wall crossings keep it out of neighbouring territory.
+ *
+ * BOUNDING IS NOT OPTIONAL. Walls stop this flood only where a wall SEGMENT
+ * physically lies between two cell centres. A pocket closed off by a gap
+ * narrower than the ball has no segment across that gap: the ball cannot escape
+ * (so the lock is legitimate) but the flood walks straight through and consumes
+ * every REMOVED cell on the board - the long-standing "lock fill bleeds into all
+ * the space outside".
+ *
+ * `maxCells` is the guard. Exceed it and the flood is deemed to have escaped its
+ * chamber, and the SEEDS ALONE are returned: cells we independently know are
+ * inside. The tint may then miss the thin raster band along a fence, which is a
+ * cosmetic shortfall in a rare case - vastly preferable to painting the board.
+ * `maxDepth` additionally caps the walk for callers that only ever want to
+ * reclaim that band, where anything beyond a cell or two is by definition wrong.
  */
 export function floodRemovedEnclosure(
   grid: SpaceGrid,
   seeds: number[],
   walls: { start: Vector2; end: Vector2 }[],
+  limit: { maxDepth?: number; maxCells?: number } = {},
 ): Set<number> {
   const { width, height, cells } = grid;
+  const maxDepth = limit.maxDepth ?? Infinity;
+  const maxCells = limit.maxCells ?? Infinity;
+
   const visited = new Uint8Array(cells.length);
-  const queue: number[] = [];
+  const seeded: number[] = [];
   for (const s of seeds) {
     if (s >= 0 && s < cells.length && cells[s] === CellState.REMOVED && !visited[s]) {
       visited[s] = 1;
-      queue.push(s);
+      seeded.push(s);
     }
   }
-  const out = new Set<number>(queue);
-  while (queue.length > 0) {
-    const cur = queue.pop()!;
+
+  // BFS (a read cursor, not pop()) so `depth` really is distance in cells from
+  // the seed set - a LIFO walk would assign meaningless depths.
+  const queue = [...seeded];
+  const depth = new Map<number, number>(seeded.map(s => [s, 0]));
+  const out = new Set<number>(seeded);
+  let head = 0;
+
+  while (head < queue.length) {
+    const cur = queue[head++];
+    const d = depth.get(cur) ?? 0;
+    if (d >= maxDepth) continue;
     const a = gridIndexToWorld(grid, cur);
     const row = (cur / width) | 0;
     const col = cur % width;
-    const step = (ni: number) => {
-      if (visited[ni] || cells[ni] !== CellState.REMOVED) return;
+
+    const step = (ni: number): boolean => {
+      if (visited[ni] || cells[ni] !== CellState.REMOVED) return true;
       const b = gridIndexToWorld(grid, ni);
       for (const w of walls) {
-        if (lineSegmentIntersection(a, b, w.start, w.end)) return;
+        if (lineSegmentIntersection(a, b, w.start, w.end)) return true;
       }
       visited[ni] = 1;
       out.add(ni);
+      depth.set(ni, d + 1);
       queue.push(ni);
+      // Overflow: the flood has escaped its chamber (see below).
+      return out.size <= maxCells;
     };
-    if (row > 0) step(cur - width);
-    if (row < height - 1) step(cur + width);
-    if (col > 0) step(cur - 1);
-    if (col < width - 1) step(cur + 1);
+
+    if (row > 0 && !step(cur - width)) return new Set(seeded);
+    if (row < height - 1 && !step(cur + width)) return new Set(seeded);
+    if (col > 0 && !step(cur - 1)) return new Set(seeded);
+    if (col < width - 1 && !step(cur + 1)) return new Set(seeded);
   }
   return out;
 }
