@@ -32,7 +32,7 @@ import {
   constrainBallToRegion,
 } from "@/lib/regionOwnership";
 import { playWallHitSound, playBossJumpSound, playBossLandSound } from "@/lib/gameAudio";
-import { updateBallEffects, triggerWallHit } from "@/lib/ballEffects";
+import { updateBallEffects, triggerWallHit, bounceImpact } from "@/lib/ballEffects";
 import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWallId, registerObjectHit, ballImpactDamage } from "@/lib/physics/destructibles";
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
 import { collectPhasedOut } from "@/lib/physics/phasing";
@@ -397,6 +397,7 @@ export function updateBall(
       ball.position.y <= bb.minY + m || ball.position.y >= bb.maxY - m;
     if (nearBoardEdge) {
       const boardResult = resolveBallPolygonCollision(ball.position, ball.velocity, ball.radius, game.boardPolygon);
+      const vBefore = ball.velocity;
       ball.position = boardResult.position;
       ball.velocity = boardResult.velocity;
       if (boardResult.collided) surfaceHit = true;
@@ -413,7 +414,7 @@ export function updateBall(
           ball.position,
         );
         // Trigger wall hit effect on ball
-        triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
+        triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
         // Play wall hit sound
         playWallHitSound(impactStrength);
       }
@@ -437,10 +438,11 @@ export function updateBall(
 
     const result = resolveBallPolygonCollisionOutward(ball.position, ball.velocity, ball.radius, mover.polygon);
     if (result.collided) {
+      const vBefore = ball.velocity;
       ball.position = result.position;
       ball.velocity = result.velocity;
       surfaceHit = true;
-      triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
+      triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
       playWallHitSound(Math.min(1, vec2Length(ball.velocity) / 400));
       // Black ball wears down movers (its heavy mass makes short work of them).
       if (ball.ability === 'breakObjects') {
@@ -476,12 +478,13 @@ export function updateBall(
       obstacle
     );
     if (obstacleResult.collided) {
+      const vBefore = ball.velocity;
       ball.position = obstacleResult.position;
       ball.velocity = obstacleResult.velocity;
       surfaceHit = true;
 
       // Trigger wall hit effect on ball
-      triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
+      triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
 
       // Play wall hit sound for obstacle collision
       const spd = vec2Length(ball.velocity);
@@ -513,6 +516,7 @@ export function updateBall(
     // A phased-out obstacle's edge walls are intangible this frame (#64).
     if (phasedOut && phasedOut.walls.has(wall.id)) continue;
 
+    const vBefore = { x: ball.velocity.x, y: ball.velocity.y };
     const impactPoint = collideBallWithWall(ball, wall);
 
     // Register wall impact for visual effect
@@ -526,7 +530,7 @@ export function updateBall(
       if (!isObstacleWall) {
         registerWallImpact(wall.start, wall.end, impactPoint, impactStrength, ball.position);
       }
-      triggerWallHit(ball.effects, now, ball.velocity.x, ball.velocity.y, vec2Length(ball.velocity));
+      triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
       playWallHitSound(impactStrength);
 
       // Ascension fence durability: each (debounced) hit wears the fence down.

@@ -164,9 +164,34 @@ export function updateBallEffects(state: BallEffectState, dt: number, now: numbe
 }
 
 /**
- * Trigger wall collision effect. Pass the ball's post-bounce velocity + speed to
- * also fire a speed-scaled squash along the bounce axis (issue #44); omit them
- * (e.g. resting contacts) to keep the halo without any squish.
+ * Impact axis + normal-component speed for a reflection, derived from the
+ * velocity either side of it.
+ *
+ * For a bounce, `vAfter - vBefore` is the impulse, which by definition points
+ * along the SURFACE NORMAL, and its magnitude is twice the normal component of
+ * the impact velocity. So both numbers the squash needs fall out of the two
+ * velocities, with no need for any collision resolver to hand back its normal.
+ *
+ * This is also what makes the squash respond to ANGLE: a head-on hit reverses
+ * the velocity and yields a large impulse, while a graze barely changes it and
+ * yields almost none.
+ */
+export function bounceImpact(
+  vBefore: { x: number; y: number },
+  vAfter: { x: number; y: number },
+): [nx: number, ny: number, normalSpeed: number] {
+  const dx = vAfter.x - vBefore.x;
+  const dy = vAfter.y - vBefore.y;
+  const mag = Math.hypot(dx, dy);
+  if (mag < 1e-6) return [0, 0, 0];
+  return [dx / mag, dy / mag, mag / 2];
+}
+
+/**
+ * Trigger wall collision effect. Pass the impact NORMAL and the normal-component
+ * impact speed (see bounceImpact) to also fire a squash along the axis the ball
+ * was actually struck on; omit them (e.g. resting contacts) to keep the halo
+ * without any squish.
  */
 export function triggerWallHit(
   state: BallEffectState, now: number, vx = 0, vy = 0, speed = 0,
@@ -188,13 +213,25 @@ export function triggerBallHit(
 }
 
 /**
- * Record a squash impulse: compress the ball along its travel axis (which, just
- * after a bounce, points away from the surface it hit), by an amount scaled to
- * how fast it was moving. Near-resting contacts (amount ~0) leave the ball round.
+ * Record a squash impulse.
+ *
+ * (nx, ny) is the IMPACT NORMAL - the axis the ball is compressed along - and
+ * `speed` is the impact's component ALONG that normal, not the ball's total
+ * speed. Both matter, and getting either wrong is visible:
+ *
+ * - Axis. The wall path used to pass the post-bounce VELOCITY as the axis. That
+ *   equals the surface normal only for a head-on hit; on a glancing hit the
+ *   post-bounce velocity is mostly tangential, so the ball squashed nearly
+ *   PARALLEL to the surface it had just hit.
+ * - Magnitude. It also passed total speed, so a fast ball merely grazing a wall
+ *   saturated the squish as hard as one hitting it square.
+ *
+ * Use `bounceImpact()` to derive both from a reflection.
  */
 function triggerSquish(
-  state: BallEffectState, vx: number, vy: number, speed: number, now: number,
+  state: BallEffectState, nx: number, ny: number, speed: number, now: number,
 ): void {
+  const vx = nx, vy = ny;
   const amount = Math.min(1, speed / CONFIG.squishReferenceSpeed);
   if (amount <= 0.01) return;
   const mag = Math.hypot(vx, vy) || 1;
