@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 vi.mock("@/lib/gameAudio", () => ({
   playBallLockSound: () => {}, playWallHitSound: () => {}, playBallCollideSound: () => {},
   playFenceBreakSound: () => {}, playDeathSound: () => {}, playCutClaimedSound: () => {},
@@ -15,6 +15,9 @@ import { LevelConfig } from "@/types/level";
 import { GrowingWall, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
+import {
+  setLockDebugEnabled, getLockDecisions, clearLockDecisions, resetLockDebugCache,
+} from "@/lib/lockDiagnostics";
 
 // Regression for the FALSE LOCK: a fence sealed a pocket whose only exit was a
 // corridor under an obstacle box, just wider than the ball. The ball-size-aware
@@ -134,5 +137,37 @@ describe("corridor under a box: locking requires a REAL seal", () => {
     const game = runScenario(24);
     expect(game.balls[0].state).toBe("active");
     expect(game.lockedBallsCount).toBe(0);
+  });
+});
+
+// The diagnostics exist to explain exactly this scenario, so assert they are
+// wired to the real decision rather than merely importable: a recorder that
+// silently records nothing is worse than none, because it reads as "no lock
+// was considered here" when the truth is "nobody was watching".
+describe("lock diagnostics capture the rejection", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetLockDebugCache();
+    clearLockDecisions();
+  });
+  afterEach(() => setLockDebugEnabled(false));
+
+  it("records the near-miss with the numbers that explain it", () => {
+    setLockDebugEnabled(true);
+    runScenario(24);
+
+    const rejected = getLockDecisions().find(d => d.outcome === "rejected-unsealed");
+    expect(rejected, "the unsealed rejection should be recorded").toBeTruthy();
+    // The pocket WAS small enough; the seal check is what refused it. That
+    // distinction is the entire point of the log.
+    expect(rejected!.lockedByPercent || rejected!.lockedBySliver).toBe(true);
+    expect(rejected!.trulySealed).toBe(false);
+    expect(rejected!.regionCells).toBeGreaterThan(0);
+    expect(rejected!.denominator).toBeGreaterThan(0);
+  });
+
+  it("stays silent when disabled, even through a full cut", () => {
+    runScenario(24);
+    expect(getLockDecisions()).toEqual([]);
   });
 });

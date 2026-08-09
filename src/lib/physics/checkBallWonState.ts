@@ -33,6 +33,7 @@ import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
 import { getLockValue, getLockQuality } from "@/lib/scoring";
 import { claimPickupsInPocket } from "@/lib/pickups";
+import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
 
 // ── Boss ball helpers (issue #56) ────────────────────────────────────────────
 
@@ -271,15 +272,37 @@ export function checkAndUpdateBallWonStates(
       && regionWithinAreas(game.spaceGrid, ballRegion.cellIndices, gates);
     const bossContainedInArea = ball.isBoss && containedInGate;
 
-    if (!lockedByPercent && !lockedBySliver && !containedInArea) continue;
+    // Diagnostics (devend:lockDebug): capture the inputs while the pocket still
+    // exists. Shared by all three exits below so they can't drift apart.
+    const diagnose = (outcome: LockOutcome, trulySealed: boolean | null) => {
+      recordLockDecision({
+        ballId: ball.id, ballColor: ball.color, isBoss: !!ball.isBoss,
+        regionCells, denominator, percentage, thresholdPercent: threshold,
+        lockedByPercent, lockedBySliver, containedInArea, trulySealed, outcome,
+      });
+    };
+
+    if (!lockedByPercent && !lockedBySliver && !containedInArea) {
+      // Near-misses only. Every ball on the open board fails this gate on every
+      // cut, and logging those would push the interesting entries out of the ring.
+      if (percentage <= threshold * 3) diagnose('below-gate', null);
+      continue;
+    }
 
     // Require a REAL seal: a small region that only became small because the
     // capture severed a sub-ball-width gap still opens onto living space, so the
     // ball must keep playing until the player actually closes it off. (Skipped
     // when no snapshot was passed.)
-    if (preCaptureCells && !isRegionTrulySealed(game.spaceGrid, preCaptureCells, ballRegion.cellIndices)) {
+    const trulySealed = preCaptureCells
+      ? isRegionTrulySealed(game.spaceGrid, preCaptureCells, ballRegion.cellIndices)
+      : null;
+    if (trulySealed === false) {
+      diagnose('rejected-unsealed', false);
       continue;
     }
+    // Past every lock gate. A boss may still break out downstream rather than
+    // ship, but the lock ELIGIBILITY question is settled here.
+    diagnose('locked', trulySealed);
 
     // Grade the lock: a pocket at most superiorThresholdFraction of the BASE
     // threshold is a SUPERIOR lock and pays superiorMultiplier below. Graded

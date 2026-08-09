@@ -24,6 +24,8 @@ import { TopBarDetailsPanel } from './TopBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
+import { LockDebugOverlay } from './LockDebugOverlay';
+import { isLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
 import { contentText } from '@/i18n/content';
@@ -290,6 +292,9 @@ export function GameScreen({
   // it ended now (same formula as the real level score, sans lock/break bonus),
   // so the bar tracks how close the run is to beating the record.
   const showHighscoreBar = activeModifiers.showHighscoreProgress > 0;
+  // Read once per mount: the flag is flipped in the admin screen, which can only
+  // be reached by leaving the game, so it cannot change while a map is running.
+  const [lockDebug] = useState(isLockDebugEnabled);
   const highscoreTarget = mapHighscores?.[level.id] ?? 0;
   const projectedScore = useMemo(() => {
     if (!showHighscoreBar || highscoreTarget <= 0) return 0;
@@ -701,6 +706,9 @@ export function GameScreen({
             showBallSpeeds={showBallSpeeds}
             showPerfOverlay={showPerfOverlay}
           />
+          {/* Admin lock diagnostics. `absolute` inside this relative wrapper, not
+              `fixed`: the page-transition transform breaks fixed positioning. */}
+          <LockDebugOverlay visible={lockDebug} />
         </div>
 
         {/* Live action bars pinned to the bottom in their own fixed wrapper (a

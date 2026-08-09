@@ -12,6 +12,7 @@ import { makeColoredArea } from '@/lib/coloredAreas';
 import { BallTypeDef, getAllBallTypes, loadBallTypes, selectBallTypesForMap } from '@/lib/ballTypes';
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
+import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
 
 interface PlaygroundScreenProps {
   onBack: () => void;
@@ -158,6 +159,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [ballPickerOpen, setBallPickerOpen] = useState(false);
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
   const [showPerfOverlay, setShowPerfOverlay] = useState(false);
+  const [lockDebug, setLockDebug] = useState(isLockDebugEnabled);
   // Dev: on clear, play the desaturation drain then freeze on the drained frame;
   // click the board to reload. `frozen` arms the click-to-reload catcher.
   const [freezeOnClear, setFreezeOnClear] = useState(false);
@@ -976,6 +978,34 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                     <span
                       className="absolute rounded-full bg-white transition-all"
                       style={{ width: 14, height: 14, top: 3, left: showPerfOverlay ? 19 : 3 }}
+                    />
+                  </span>
+                </button>
+              </div>
+
+              {/* Lock diagnostics. Unlike the two toggles above, this one PERSISTS
+                  (localStorage) and shows in normal runs too: the suspect locks
+                  happen mid-run on a real map, not in the playground. */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <button
+                  onClick={() => { const next = !lockDebug; setLockDebug(next); setLockDebugEnabled(next); }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: lockDebug ? `${accent}1a` : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${lockDebug ? `${accent}55` : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <span className="text-xs font-semibold text-left" style={{ color: lockDebug ? accent : 'hsl(var(--foreground))' }}>
+                    Log lock decisions
+                    <span className="block text-[10px] font-normal opacity-60">Persists into normal runs</span>
+                  </span>
+                  <span
+                    className="relative inline-flex items-center rounded-full transition-colors flex-shrink-0"
+                    style={{ width: 36, height: 20, backgroundColor: lockDebug ? accent : 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span
+                      className="absolute rounded-full bg-white transition-all"
+                      style={{ width: 14, height: 14, top: 3, left: lockDebug ? 19 : 3 }}
                     />
                   </span>
                 </button>
