@@ -445,7 +445,8 @@
       }
     },
     "recordPace": "Ritmo de récord",
-    "newPersonalBest": "¡Nuevo récord personal, y sigues jugando!"
+    "newPersonalBest": "¡Nuevo récord personal, y sigues jugando!",
+    "breakdownTitle": "Desglose de puntuación"
   },
   "notFound": {
     "message": "¡Vaya! Página no encontrada",

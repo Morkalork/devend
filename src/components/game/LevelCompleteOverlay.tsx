@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem, ChevronDown } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { getAbility } from '@/lib/abilities';
@@ -53,6 +53,10 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // Stat row whose info card is open via press-and-hold (same pattern as the
   // upgrade shop's detail card: 450ms hold, >10px movement cancels for scroll).
   const [infoKey, setInfoKey] = useState<string | null>(null);
+  // Itemised breakdown, collapsed by default. Every new scoring mechanic adds a
+  // row here and none are ever removed, so the screen grew without bound; the
+  // totals below it are fixed-size and stay out of the fold.
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -158,6 +162,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
+  const totalBonus = underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus;
 
   return (
     <>
@@ -212,6 +217,38 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.28 }}
           >
+            {/* Breakdown toggle. The bonus subtotal rides on the header so the
+                collapsed state still answers "was this map worth anything?" -
+                otherwise closing it by default would hide the good news. */}
+            <button
+              type="button"
+              onClick={() => setBreakdownOpen(open => !open)}
+              aria-expanded={breakdownOpen}
+              className="w-full flex items-center justify-between gap-2 py-2 px-2 rounded-lg border border-border hover:border-muted-foreground/60 transition-colors"
+            >
+              <span className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                <Target className="w-3.5 h-3.5" />
+                {t('levelComplete.breakdownTitle')}
+              </span>
+              <span className="flex items-center gap-2">
+                {totalBonus > 0 && (
+                  <span className="text-success font-bold text-sm">+{totalBonus}h</span>
+                )}
+                <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${breakdownOpen ? 'rotate-180' : ''}`} />
+              </span>
+            </button>
+
+            <AnimatePresence initial={false}>
+              {breakdownOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-2 sm:space-y-3">
+
             <div {...hold('level')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground">{t('levelComplete.level')}</span>
               <span className="font-bold text-foreground">{levelNumber}</span>
@@ -414,13 +451,19 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
-            {/* Total Bonus Summary */}
-            {(underParBonus > 0 || spaceBonus > 0 || lockBonus > 0 || pushBonus > 0 || breakBonus > 0 || shipEarlyBonus > 0) && (
+            {/* Total Bonus Summary: the breakdown's own subtotal, so it closes
+                the itemised list rather than joining the totals below. */}
+            {totalBonus > 0 && (
               <div {...hold('totalBonus')} className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
                 <span className="font-semibold text-foreground">{t('levelComplete.totalBonus')}</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus}h</span>
+                <span className="text-lg sm:text-xl font-bold text-success">+{totalBonus}h</span>
               </div>
             )}
+
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div {...hold('overtimeEarned')} className="flex justify-between items-center py-2 sm:py-3 bg-primary/10 rounded-lg px-2 sm:px-3">
               <span className="font-semibold text-foreground">{t('levelComplete.overtimeEarned')}</span>

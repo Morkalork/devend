@@ -445,7 +445,8 @@
       }
     },
     "recordPace": "Rekordtakt",
-    "newPersonalBest": "Nytt personbästa, och du är fortfarande igång!"
+    "newPersonalBest": "Nytt personbästa, och du är fortfarande igång!",
+    "breakdownTitle": "Poänguppdelning"
   },
   "notFound": {
     "message": "Hoppsan! Sidan hittades inte",

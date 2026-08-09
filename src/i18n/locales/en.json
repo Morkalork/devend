@@ -448,7 +448,8 @@
       }
     },
     "recordPace": "Record Pace",
-    "newPersonalBest": "New personal best, and you are still going!"
+    "newPersonalBest": "New personal best, and you are still going!",
+    "breakdownTitle": "Score breakdown"
   },
   "notFound": {
     "message": "Oops! Page not found",
