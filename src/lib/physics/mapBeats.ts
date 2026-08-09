@@ -62,7 +62,10 @@ export function tickMapBeats(
 
 function applyBeat(game: CanvasGameState, beat: MapBeat, levelNumber: number): void {
   if (beat.spawnAdds && beat.spawnAdds > 0) {
-    spawnAdds(game, levelNumber, beat.spawnAdds);
+    // bud=false: a beat's anchor is an ordinary ball the same size as the
+    // newcomer, so budding one off its rim reads as that ball duplicating
+    // itself rather than a new ball arriving. Bosses keep the budding.
+    spawnAdds(game, levelNumber, beat.spawnAdds, false);
   }
   if (beat.speedSpike && beat.speedSpike > 0) {
     game.beatSpeedMult = (game.beatSpeedMult ?? 1) * (1 + beat.speedSpike);

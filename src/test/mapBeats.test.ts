@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { tickMapBeats } from "@/lib/physics/mapBeats";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig, MapBeat } from "@/types/level";
+import { createSpaceGrid } from "@/lib/spaceGrid";
+import { createRectPolygon } from "@/lib/polygon";
 
 function makeGame(overrides: Partial<CanvasGameState> = {}): CanvasGameState {
   return {
@@ -110,5 +112,35 @@ describe("tickMapBeats", () => {
     tickMapBeats(g, level([{ id: "silent", atSeconds: 24, spawnAdds: 1 }]), 5, a => warns.push(a));
     expect(warns).toEqual([]);
     expect(g.warnedBeats).toEqual([]);
+  });
+});
+
+describe("beat spawnAdds placement (issue: 'the ball duplicated')", () => {
+  // A beat's add used to bud off the anchor's rim at 0.75 radii — the boss
+  // placement, where a big boss visibly spits out a small minion. On a normal
+  // map the anchor is an ordinary ball the SAME size, so an add appearing half
+  // a radius away (with a random type that may match its colour) read as the
+  // anchor cloning itself. Beat adds must arrive clear of every live ball.
+  it("spawns a beat add well clear of the anchor, not on top of it", () => {
+    const grid = createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15);
+    const anchor = {
+      id: "blue-1", typeId: "blue", state: "active", speed: 200, baseSpeed: 200,
+      radius: 18, position: { x: 450, y: 450 }, velocity: { x: 100, y: 0 },
+      regionId: "r1",
+    } as unknown as CanvasGameState["balls"][number];
+
+    const g = makeGame({
+      spaceGrid: grid,
+      activePlaySeconds: 10,
+      balls: [anchor],
+    });
+    // Grid is fully active => 100% remaining, so drive it with a time beat.
+    tickMapBeats(g, level([{ id: "standup", atSeconds: 5, spawnAdds: 1 }]), 5);
+
+    expect(g.balls).toHaveLength(2);
+    const added = g.balls[1];
+    const dist = Math.hypot(added.position.x - anchor.position.x, added.position.y - anchor.position.y);
+    // Two radii would still visually overlap; three is the placement floor.
+    expect(dist).toBeGreaterThanOrEqual(anchor.radius * 3);
   });
 });

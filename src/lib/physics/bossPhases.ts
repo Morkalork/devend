@@ -11,7 +11,13 @@
 import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig, BossBall } from "@/types/level";
 import { Ball } from "@/types/game";
-import { getRemainingPercent, findGridRegions, gridIndexToWorld } from "@/lib/spaceGrid";
+import {
+  getRemainingPercent,
+  findGridRegions,
+  buildGridRegionMap,
+  findGridRegionForBall,
+  gridIndexToWorld,
+} from "@/lib/spaceGrid";
 import { getBallType, getSpawnableBallTypes } from "@/lib/ballTypes";
 import { createBall } from "@/lib/initGame";
 import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
@@ -219,8 +225,25 @@ export function tickBossFenceWipe(
   }
 }
 
-/** Spawn `n` extra balls off live active balls (inherits their region + scale). */
-export function spawnAdds(game: CanvasGameState, levelNumber: number, n: number): void {
+/**
+ * Spawn `n` extra balls off live active balls (inherits their region + scale).
+ *
+ * `bud` controls WHERE the new ball appears, and it matters more than it looks:
+ *
+ * - true (bosses): the add emerges from the anchor's rim, because a big boss
+ *   visibly spitting out a small minion is the whole read of the mechanic.
+ * - false (map beats): the add arrives in open space, well clear of every other
+ *   ball. Budding is wrong here - a map beat's anchor is an ORDINARY ball the
+ *   same size as the newcomer, so a ball appearing half a radius away with a
+ *   randomly-picked type that may match the anchor's colour looks exactly like
+ *   the anchor duplicated itself. Reported as a bug, and fairly.
+ */
+export function spawnAdds(
+  game: CanvasGameState,
+  levelNumber: number,
+  n: number,
+  bud = true,
+): void {
   const spawnable = getSpawnableBallTypes(levelNumber);
   if (spawnable.length === 0) return;
   // Only balls still in play can anchor a valid spawn position.
@@ -233,12 +256,9 @@ export function spawnAdds(game: CanvasGameState, levelNumber: number, n: number)
     // Match the run's speed scaling from the anchor (as rainbowSpawner does).
     const speedScale = anchorType && anchorType.baseSpeed > 0 ? anchor.baseSpeed / anchorType.baseSpeed : 1;
     const type = spawnable[Math.floor(Math.random() * spawnable.length)];
-    const offset = anchor.radius * 0.75;
-    const angle = Math.random() * Math.PI * 2;
-    const position = {
-      x: anchor.position.x + Math.cos(angle) * offset,
-      y: anchor.position.y + Math.sin(angle) * offset,
-    };
+    const position = bud
+      ? budPosition(anchor)
+      : openPosition(game, anchor) ?? budPosition(anchor);
     const child = createBall(
       type, position, speedScale, anchor.radius,
       `${type.id}-boss-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
@@ -246,4 +266,47 @@ export function spawnAdds(game: CanvasGameState, levelNumber: number, n: number)
     child.regionId = anchor.regionId; // born in the anchor's region
     game.balls.push(child);
   }
+}
+
+/** Just off the anchor's rim: the boss "spitting out" placement. */
+function budPosition(anchor: Ball): { x: number; y: number } {
+  const offset = anchor.radius * 0.75;
+  const angle = Math.random() * Math.PI * 2;
+  return {
+    x: anchor.position.x + Math.cos(angle) * offset,
+    y: anchor.position.y + Math.sin(angle) * offset,
+  };
+}
+
+/**
+ * A spot in the anchor's own region that is clear of every ball, so the newcomer
+ * reads as arriving rather than splitting off. Samples the region's own cells,
+ * which guarantees the point is live playable space; returns null if the region
+ * is too crowded to place one, and the caller falls back to budding.
+ */
+function openPosition(game: CanvasGameState, anchor: Ball): { x: number; y: number } | null {
+  const grid = game.spaceGrid;
+  if (!grid) return null;
+  const regions = findGridRegions(grid);
+  const region = findGridRegionForBall(
+    grid,
+    buildGridRegionMap(regions),
+    anchor.position.x,
+    anchor.position.y,
+  );
+  const cells = region?.cellIndices;
+  if (!cells || cells.length === 0) return null;
+
+  // Keep well clear of every live ball; three radii reads as a separate object
+  // rather than an overlap, at any board scale.
+  const minDist = anchor.radius * 3;
+  const live = game.balls.filter(b => b.state === "active");
+
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const world = gridIndexToWorld(grid, cells[Math.floor(Math.random() * cells.length)]);
+    if (live.every(b => Math.hypot(b.position.x - world.x, b.position.y - world.y) >= minDist)) {
+      return world;
+    }
+  }
+  return null;
 }
