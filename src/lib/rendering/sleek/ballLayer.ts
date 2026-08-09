@@ -132,7 +132,12 @@ export class SleekBallLayer {
     this.fastestId = game.fastestBallId;
     this.now = now;
 
-    const balls = game.balls.filter(b => b.state !== "dormant");
+    // Dormant balls MUST be drawn. They are the whole point of the circuit maps
+    // (#73): an un-booted sleeper reserves space you cannot clear until you
+    // route a fence through its terminal to wake it. Filtering them out (as this
+    // layer originally did) leaves the player staring at territory that refuses
+    // to be captured with nothing on screen explaining why.
+    const balls = game.balls;
 
     // Grow the pool to match; views are reused frame to frame so a steady board
     // allocates nothing.
@@ -157,27 +162,45 @@ export class SleekBallLayer {
     const c = w2s(p.x, p.y);
     const r = Math.max(2, ball.radius * scale * (ball.assimScale ?? 1));
 
+    const dormant = ball.state === "dormant";
     // Bearing toward the monitor: everything below orients off this.
     const bearing = Math.atan2(light.y - c.y, light.x - c.x);
 
-    // ── Cast shadow: an ellipse, squashed across the light bearing ──────────
-    const cast = shadowFor(light, c.x, c.y, r);
-    const sx = c.x + cast.dx * cast.length;
-    const sy = c.y + cast.dy * cast.length;
-    this.shadows
-      .ellipse(sx, sy, r * 1.02, r * 0.72)
-      .fill({ color: PALETTE.shadow, alpha: cast.alpha });
+    // ── Cast shadow + contact ───────────────────────────────────────────────
+    // Skipped while dormant: a sleeper is not yet part of the scene, and seating
+    // it on the board with a shadow makes it read as a live ball to be locked.
+    if (!dormant) {
+      const cast = shadowFor(light, c.x, c.y, r);
+      this.shadows
+        .ellipse(c.x + cast.dx * cast.length, c.y + cast.dy * cast.length, r * 1.02, r * 0.72)
+        .fill({ color: PALETTE.shadow, alpha: cast.alpha });
 
-    // ── Contact crescent, hard against the shaded limb ──────────────────────
-    const contact = contactFor(light, c.x, c.y, r);
-    this.shadows
-      .ellipse(
-        c.x + contact.dx * contact.length,
-        c.y + contact.dy * contact.length,
-        r * 0.95,
-        r * 0.68,
-      )
-      .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.45 });
+      const contact = contactFor(light, c.x, c.y, r);
+      this.shadows
+        .ellipse(
+          c.x + contact.dx * contact.length,
+          c.y + contact.dy * contact.length,
+          r * 0.95,
+          r * 0.68,
+        )
+        .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.45 });
+    }
+
+    // ── Dormant: asleep, not gone ───────────────────────────────────────────
+    // Dimmed and wrapped in a breathing teal cage, matching the circuit
+    // terminals' colour so the link between sleeper and terminal is readable at
+    // a glance. It casts no shadow and takes no specular below: it is not yet a
+    // participant in the scene, and lighting it like one would make it read as a
+    // live ball the player could lock.
+    if (dormant) {
+      const tp = 0.5 + 0.5 * Math.sin(this.now / 600);
+      this.overlays
+        .circle(c.x, c.y, r + 5 * scale)
+        .stroke({ width: Math.max(1.5, 2 * scale), color: PALETTE.areaConst, alpha: 0.3 + 0.3 * tp });
+      this.overlays
+        .circle(c.x, c.y, r + 10 * scale)
+        .stroke({ width: Math.max(1, 1.5 * scale), color: PALETTE.areaConst, alpha: 0.15 + 0.2 * tp });
+    }
 
     // ── Body ────────────────────────────────────────────────────────────────
     const rb = bucket(r);
@@ -188,7 +211,7 @@ export class SleekBallLayer {
     // Scale the bucketed bake back to the exact radius.
     sprite.scale.set(r / rb);
     // Locked balls dim toward the captured substrate they now belong to.
-    sprite.alpha = ball.state === "won" ? 0.72 : 1;
+    sprite.alpha = dormant ? 0.5 : ball.state === "won" ? 0.72 : 1;
 
     // ── Squash & stretch ────────────────────────────────────────────────────
     // The ball flattens along the impact normal and springs back (physics owns
@@ -210,7 +233,7 @@ export class SleekBallLayer {
     }
 
     // ── Specular ────────────────────────────────────────────────────────────
-    if (ball.state === "won") return;
+    if (ball.state === "won" || dormant) return;
     // Drawn in screen space, so it has to be deformed by hand - otherwise the
     // hot spot floats off the surface of a squashed ball. Rotate the offset into
     // the impact frame, scale it, rotate back.
