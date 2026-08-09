@@ -131,8 +131,8 @@ export interface GameModifiers {
   autoFreezeDuration: number;
 
   // Additive (sum) — Benchmarking (#45): 0 = off, >0 = show the map-highscore
-  // progress bar in the HUD (a second bar under the capture readout). Gated in
-  // upgrades.yml behind the ball-size upgrade.
+  // progress bar in the HUD (a second bar under the capture readout). Granted
+  // by the `benchmarking` certificate, so once earned it is on for every run.
   showHighscoreProgress: number;
 }
 
@@ -193,7 +193,11 @@ export function mergeBonuses(
   return result;
 }
 
-const DEFAULT_MODIFIERS: GameModifiers = {
+/**
+ * Exported so config tests can check YAML effect names against the keys this
+ * pipeline actually reads: an unknown key is dropped silently on merge.
+ */
+export const DEFAULT_MODIFIERS: GameModifiers = {
   ballSpeedMultiplier: 1,
   ballSizeMultiplier: 1,
   fenceGenerationSpeedMultiplier: 1,

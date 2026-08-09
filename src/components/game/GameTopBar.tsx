@@ -31,7 +31,7 @@ interface GameTopBarProps {
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   ascensionDepth?: number;
-  // Map highscore progress (#45): shown only with the Benchmarking upgrade and
+  // Map highscore progress (#45): shown only with the Benchmarking certificate and
   // when this map has a stored highscore. current = live projected score.
   showHighscoreBar?: boolean;
   highscoreCurrent?: number;
@@ -333,7 +333,7 @@ export function GameTopBar({
         )}
       </div>
 
-      {/* Highscore progress (#45): the Benchmarking upgrade reveals a second bar
+      {/* Highscore progress (#45): the Benchmarking certificate reveals a second bar
           (bottom) tracking the live projected score vs the map highscore, under
           a bar (top) showing capture progress toward clearing the map. */}
       {showHighscoreBar && highscoreTarget > 0 && (() => {

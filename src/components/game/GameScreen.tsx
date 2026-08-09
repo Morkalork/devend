@@ -285,7 +285,7 @@ export function GameScreen({
     onGameStateChange?.(state); // forward to a parent (Playground ability tester)
   }, [onGameStateChange]);
 
-  // Map-highscore bar (#45): only with the Benchmarking upgrade and a stored
+  // Map-highscore bar (#45): only with the Benchmarking certificate and a stored
   // highscore for this map. `projectedScore` is the score the map would pay if
   // it ended now (same formula as the real level score, sans lock/break bonus),
   // so the bar tracks how close the run is to beating the record.

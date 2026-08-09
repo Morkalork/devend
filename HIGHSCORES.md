@@ -86,7 +86,7 @@ Welcome-screen "Records" entry (appears once a run has banked), screen title
 - **Deepest Ascension** — tracked today, shown nowhere.
 - **Map records** — the 35 `mapHighscores` as a browsable list. The existing
   1.25x beat-the-record bonus + Benchmarking bar already monetize the chase.
-Also shipped: the **Benchmarking** upgrade shows a persistent top-bar chip
+Also shipped: the **Benchmarking** certificate shows a persistent top-bar chip
 with the run-pace delta as of the last completed map, next to its per-map
 record bar, and the screen carries a lifetime-stats flavor footer (highest
 level, fences drawn, perfect maps, lives lost).

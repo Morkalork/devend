@@ -220,3 +220,19 @@ certificates:
         effect: { type: pushBonusMultiplier, value: 1.5 }
       - cost: 14
         effect: { type: pushBonusMultiplier, value: 1.3 }
+
+  # Was an upgrade (benchmarking_junior) until it moved here. It grants no
+  # power, only information, so paying for it again every run out of the same
+  # budget as a real upgrade was always the wrong buy. Gated on "Senior Dev"
+  # (reach level 15), by which point there are stored highscores worth racing:
+  # before that the bar has nothing to draw.
+  - id: benchmarking
+    name: Benchmarking
+    description: Permanently adds a HUD bar tracking your live score against the map highscore, so you can see how close you are to beating it.
+    unlockType: achievement
+    # "Senior Dev" - reach level 15
+    sourceAchievementId: senior-dev
+    # Single level: it is a HUD toggle, so a second level would do nothing.
+    levels:
+      - cost: 5
+        effect: { type: showHighscoreProgress, value: 1 }
