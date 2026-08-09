@@ -707,7 +707,10 @@
     "closedInfoTitle": "Store closed",
     "closedInfoBody": "The store opens only when you lock enough balls that round: one, or two on maps with three or more balls. Lock nothing and you skip it.",
     "tutorialTitle": "THE UPGRADE SHOP",
-    "tutorialBody": "Spend overtime hours on upgrades between maps, they multiply future earnings. Press and hold any upgrade for details."
+    "tutorialBody": "Spend overtime hours on upgrades between maps, they multiply future earnings. Press and hold any upgrade for details.",
+    "certRuns": "{{current}}/{{required}} runs",
+    "detailCertificate": "Certificate progress",
+    "detailCertificateBody": "Buying this in {{required}} separate runs unlocks the {{name}} certificate, a permanent bonus that applies to every run. Credited so far: {{current}} of {{required}}."
   },
   "runDraft": {
     "title": "Sprint Planning",

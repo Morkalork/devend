@@ -47,6 +47,12 @@ interface UpgradeShopProps {
   showTutorial?: boolean;
   onTutorialDismiss?: () => void;
   newlyUnlockedCerts?: Certificate[];
+  /** Certificate catalogue, for the "counts toward a certificate" card note. */
+  certificates?: Certificate[];
+  /** certKey -> runs already credited, for that note's progress fraction. */
+  maxTierCounts?: Record<string, number>;
+  /** Already-unlocked cert ids; their chase note is done and is hidden. */
+  unlockedCertIds?: string[];
   /** Owned upgrades of a tag needed to activate its set bonus (tagSets). */
   tagSetThreshold?: number;
   /** Company Card capstone: the cheapest unowned offer costs nothing. */
@@ -105,6 +111,9 @@ export function UpgradeShop({
   showTutorial = false,
   onTutorialDismiss,
   newlyUnlockedCerts = [],
+  certificates = [],
+  maxTierCounts = {},
+  unlockedCertIds = [],
   tagSetThreshold = DEFAULT_TAG_SET_THRESHOLD,
   freeCheapestOffer = false,
   activeModifiers,
@@ -252,6 +261,32 @@ export function UpgradeShop({
     [...ownedUpgradeIds, ...purchasedThisSession],
     [ownedUpgradeIds, purchasedThisSession]
   );
+
+  /**
+   * Upgrade-chain certificates, keyed the way useGameSession credits a purchase:
+   * by `choiceGroup` when the tier forks, otherwise by upgrade id.
+   *
+   * Buying a max-tier upgrade silently advances a certificate, and until now the
+   * only evidence was the unlock firing a run or two later. A player had no way
+   * to know the purchase counted toward anything, let alone that buying it again
+   * next run was the point.
+   *
+   * Unlocked ones drop out: their chase is over, and the note would be noise.
+   */
+  const certChaseByKey = useMemo(() => {
+    const map = new Map<string, { cert: Certificate; current: number; required: number }>();
+    for (const cert of certificates) {
+      if (cert.unlockType !== 'upgrade-chain' || !cert.sourceUpgradeId) continue;
+      if (unlockedCertIds.includes(cert.id)) continue;
+      const required = cert.requiredRuns ?? 3;
+      map.set(cert.sourceUpgradeId, {
+        cert,
+        current: Math.min(maxTierCounts[cert.sourceUpgradeId] ?? 0, required),
+        required,
+      });
+    }
+    return map;
+  }, [certificates, unlockedCertIds, maxTierCounts]);
 
   // Build readout: owned + currently selected upgrades per tag. Selections
   // count, so picking the piece that reaches the set threshold lights the
@@ -675,6 +710,15 @@ export function UpgradeShop({
                 const cantAfford = !locked && !owned && !selected && shownPrice > remainingBudget;
                 const tierColors = TIER_COLORS[upgrade.tier];
                 const Icon = getUpgradeIcon(displayUpgrade, upgrades);
+                // Either fork of a choice credits the same certificate, so key on
+                // the group when there is one (mirrors useGameSession's certKey).
+                const certChase = certChaseByKey.get(upgrade.choiceGroup ?? upgrade.id);
+                // Count the pending selection: the note then previews what this
+                // purchase does, rather than reporting where you already were.
+                const certPending = certChase != null && (selected || owned);
+                const certShown = certChase
+                  ? Math.min(certChase.current + (certPending ? 1 : 0), certChase.required)
+                  : 0;
 
             return (
               <motion.div
@@ -799,6 +843,24 @@ export function UpgradeShop({
                     : contentText.upgradeDesc(t, displayUpgrade)}
                 </p>
 
+                {/* Certificate chase: this purchase is also progress toward a
+                    permanent unlock, which was previously invisible until the
+                    unlock itself fired, a run or more later. */}
+                {certChase && (
+                  <div className={`mt-1.5 flex flex-col items-center gap-0.5 text-[10px] leading-tight
+                    ${certShown >= certChase.required ? 'text-yellow-300' : 'text-yellow-400/80'}`}>
+                    {/* Stacked, not inline: the card is ~176px, and sharing that
+                        row with the fraction truncated the name to "Runtime Aug…". */}
+                    <div className="flex items-center gap-1 max-w-full">
+                      <Medal className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{contentText.certName(t, certChase.cert)}</span>
+                    </div>
+                    <span className="font-bold tabular-nums">
+                      {t('upgradeShop.certRuns', { current: certShown, required: certChase.required })}
+                    </span>
+                  </div>
+                )}
+
                 {/* Cost — mt-auto pins it to the card bottom regardless of how
                     many lines the description above it takes. */}
                 {!owned && (
@@ -883,6 +945,7 @@ export function UpgradeShop({
             .map(id => upgrades.find(x => x.id === id))
             .filter((x): x is UpgradeConfig => Boolean(x));
           const dependents = dependentsById.get(u.id) ?? [];
+          const detailCert = certChaseByKey.get(u.choiceGroup ?? u.id);
 
           const relRow = (rel: UpgradeConfig) => {
             const RelIcon = getUpgradeIcon(rel, upgrades);
@@ -963,6 +1026,27 @@ export function UpgradeShop({
                     <p className="text-xs italic text-muted-foreground/60">{t('upgradeShop.detailNoUnlocks')}</p>
                   )}
                 </div>
+
+                {/* The card note only has room for a fraction; this is where the
+                    rule behind it gets stated, including that the runs must be
+                    SEPARATE, which is the part nothing else in the game says. */}
+                {detailCert && (
+                  <div className="mt-3 pt-3 border-t border-border">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <Medal className="w-3.5 h-3.5 shrink-0 text-yellow-400" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-yellow-400">
+                        {t('upgradeShop.detailCertificate')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {t('upgradeShop.detailCertificateBody', {
+                        name: contentText.certName(t, detailCert.cert),
+                        required: detailCert.required,
+                        current: detailCert.current,
+                      })}
+                    </p>
+                  </div>
+                )}
               </motion.div>
             </motion.div>
           );

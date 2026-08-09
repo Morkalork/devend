@@ -342,6 +342,9 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 showTutorial={session.shouldShowStore}
                 onTutorialDismiss={session.markStoreSeen}
                 newlyUnlockedCerts={session.shopUnlockedCerts}
+                certificates={session.certificates}
+                maxTierCounts={session.maxTierCounts}
+                unlockedCertIds={session.unlockedCertIds}
                 tagSetThreshold={session.tagSetThreshold}
                 freeCheapestOffer={session.activeModifiers.freeCheapestOffer > 0 || session.carryFreeShopItems > 0}
                 activeModifiers={session.activeModifiers}

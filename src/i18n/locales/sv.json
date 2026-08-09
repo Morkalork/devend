@@ -692,7 +692,10 @@
     "closedInfoTitle": "Butiken stängd",
     "closedInfoBody": "Butiken öppnar bara när du låser nog med bollar under rundan: en, eller två på kartor med tre eller fler bollar. Låser du inget hoppar du över den.",
     "tutorialTitle": "BUTIKEN",
-    "tutorialBody": "Spendera övertidstimmar på uppgraderingar mellan kartor; de mångdubblar framtida vinster. Håll in en uppgradering för detaljer."
+    "tutorialBody": "Spendera övertidstimmar på uppgraderingar mellan kartor; de mångdubblar framtida vinster. Håll in en uppgradering för detaljer.",
+    "certRuns": "{{current}}/{{required}} omgångar",
+    "detailCertificate": "Certifikatframsteg",
+    "detailCertificateBody": "Att köpa den här i {{required}} separata omgångar låser upp certifikatet {{name}}, en permanent bonus som gäller varje omgång. Hittills tillgodoräknat: {{current}} av {{required}}."
   },
   "runDraft": {
     "title": "Sprintplanering",
