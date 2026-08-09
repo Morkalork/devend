@@ -75,6 +75,60 @@ describe("lock fill containment", () => {
     }
   });
 
+  /**
+   * Level 11, reported from the field: "I locked a ball in the bottom right
+   * corner, but it bled through and locked the upper right corner too."
+   *
+   * That map's `wall-1` is a rect at x 82..830 on a playable board of x 45..855,
+   * so it leaves a 25-unit gap at the RIGHT board edge. A ball is 36 units
+   * across and cannot fit through 25 - which is why sealing the bottom right
+   * legitimately locks - but the gap is 1.7 CELLS wide and carries no wall
+   * segment, so the flood strolls through it into the space above.
+   *
+   * This is the leak above with real numbers rather than invented ones, and it
+   * shows the bound is doing the load-bearing work on a shipped map.
+   */
+  function levelElevenRightGap() {
+    const grid = createSpaceGrid(createRectPolygon(45, 45, 855, 855), [], 15);
+    grid.cells.fill(CellState.REMOVED);
+    // The board edges plus wall-1's outline. The wall's right edge stops at
+    // x=830, so nothing spans 830..855.
+    const walls = [
+      { start: { x: 45, y: 45 }, end: { x: 855, y: 45 } },
+      { start: { x: 855, y: 45 }, end: { x: 855, y: 855 } },
+      { start: { x: 855, y: 855 }, end: { x: 45, y: 855 } },
+      { start: { x: 45, y: 855 }, end: { x: 45, y: 45 } },
+      { start: { x: 82, y: 350 }, end: { x: 830, y: 350 } },
+      { start: { x: 830, y: 350 }, end: { x: 830, y: 550 } },
+      { start: { x: 830, y: 550 }, end: { x: 82, y: 550 } },
+      { start: { x: 82, y: 550 }, end: { x: 82, y: 350 } },
+    ];
+    // A pocket seed BELOW the wall, near the right edge: the bottom-right corner.
+    const seeds = [worldToGridIndex(grid, 800, 700)];
+    return { grid, walls, seeds };
+  }
+
+  it("leaks past level 11's 25-unit right gap when unbounded", () => {
+    const { grid, walls, seeds } = levelElevenRightGap();
+    const reached = floodRemovedEnclosure(grid, seeds, walls);
+    // Above the wall is the "upper right corner" the report describes.
+    const aboveWall = worldToGridIndex(grid, 800, 200);
+    expect(reached.has(aboveWall)).toBe(true);
+  });
+
+  it("the pocket's bounding box keeps the fill out of the upper right", () => {
+    const { grid, walls, seeds } = levelElevenRightGap();
+    const seedRow = (seeds[0] / grid.width) | 0;
+    const seedCol = seeds[0] % grid.width;
+    const reached = floodRemovedEnclosure(grid, seeds, walls, {
+      bounds: {
+        minCol: seedCol - 2, maxCol: seedCol + 2,
+        minRow: seedRow - 2, maxRow: seedRow + 2,
+      },
+    });
+    expect(reached.has(worldToGridIndex(grid, 800, 200))).toBe(false);
+  });
+
   it("still fills a genuinely sealed chamber under its budget", () => {
     const grid = createSpaceGrid(createRectPolygon(0, 0, 300, 300), [], 15);
     grid.cells.fill(CellState.REMOVED);
