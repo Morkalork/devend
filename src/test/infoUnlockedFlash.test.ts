@@ -44,7 +44,11 @@ const MODS: GameModifiers = {
 
 const LEVEL: LevelConfig = {
   id: "info-unlocked", level: 2, sizeThreshold: 40, expectedCuts: 5, points: 40,
-  maxBalls: 2, entities: [],
+  // randomShapes: 0 is REQUIRED, not tidiness. Omitting it defaults to 20, and
+  // createInitialGameData then scatters random mini-obstacles - which can land
+  // in the test's pocket and change what the lock captures, so the assertion
+  // fails on a minority of runs for reasons unrelated to what it tests.
+  maxBalls: 2, randomShapes: 0, entities: [],
 } as unknown as LevelConfig;
 
 function makeGame(): CanvasGameState {

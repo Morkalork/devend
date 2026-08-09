@@ -51,6 +51,30 @@ describe("lock fill containment", () => {
     expect(reached.has(seeds[0])).toBe(true);
   });
 
+  it("a bounding box contains the leak WITHOUT starving the fill", () => {
+    const { grid, walls, seeds } = leakyBoard();
+    const seedRow = (seeds[0] / grid.width) | 0;
+    const seedCol = seeds[0] % grid.width;
+    // A box around the pocket. The flood may roam anywhere inside it - which is
+    // what fills triangular corners and crevices - but cannot leave it, so the
+    // gap at the far end leads nowhere.
+    const reached = floodRemovedEnclosure(grid, seeds, walls, {
+      bounds: {
+        minCol: seedCol - 3, maxCol: seedCol + 3,
+        minRow: seedRow - 3, maxRow: seedRow + 3,
+      },
+    });
+    // Fills the whole 7x7 box (far more than a depth cap would reach)...
+    expect(reached.size).toBe(49);
+    // ...and nothing outside it: every cell is within the box.
+    for (const idx of reached) {
+      const r = (idx / grid.width) | 0;
+      const c = idx % grid.width;
+      expect(Math.abs(r - seedRow)).toBeLessThanOrEqual(3);
+      expect(Math.abs(c - seedCol)).toBeLessThanOrEqual(3);
+    }
+  });
+
   it("still fills a genuinely sealed chamber under its budget", () => {
     const grid = createSpaceGrid(createRectPolygon(0, 0, 300, 300), [], 15);
     grid.cells.fill(CellState.REMOVED);

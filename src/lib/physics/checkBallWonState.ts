@@ -414,13 +414,30 @@ export function checkAndUpdateBallWonStates(
         if (col > 0) consider(idx - 1);
         if (col < gw - 1) consider(idx + 1);
       }
-      // Depth 2: this only ever needs to reclaim the ~1-cell band the cut
-      // rasterizer strands between the pocket and the fence line. Anything
-      // further is the flood escaping through a sub-ball-width gap, and the
-      // flash would then fill the whole board outside the pocket.
+      // Bound the reclaim to the POCKET'S OWN BOUNDING BOX, inflated a couple
+      // of cells for the fence's raster band.
+      //
+      // A plain depth cap under-filled: a triangular corner or a narrow crevice
+      // needs the flood to reach several cells along a taper, and cutting it
+      // short left visible holes in the fill. A cell budget was no better - it
+      // cannot tell "deep into a crevice" from "escaped through a gap". The box
+      // can: crevices are inside it, leaks are outside it. So the flood fills
+      // freely within the pocket and simply cannot reach the space beyond it.
+      const bandCells = 2;
+      let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+      for (const idx of ballRegion.cellIndices) {
+        const r = (idx / gw) | 0;
+        const c = idx % gw;
+        if (c < minCol) minCol = c;
+        if (c > maxCol) maxCol = c;
+        if (r < minRow) minRow = r;
+        if (r > maxRow) maxRow = r;
+      }
       for (const idx of floodRemovedEnclosure(grid, seeds, game.walls, {
-        maxDepth: 2,
-        maxCells: ballRegion.cellIndices.length * 2 + 256,
+        bounds: {
+          minCol: minCol - bandCells, maxCol: maxCol + bandCells,
+          minRow: minRow - bandCells, maxRow: maxRow + bandCells,
+        },
       })) cellSet.add(idx);
       // Snap the lattice contour onto the pocket's bounding walls so the flash
       // fills flush with the fence line (same treatment as the persistent tint).

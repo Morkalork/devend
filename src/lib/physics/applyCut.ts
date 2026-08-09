@@ -259,14 +259,26 @@ export function applyCutFn(
         // just 0/1: pockets that trapped 2+ balls at once render a brighter
         // tint (see GameCanvas step 2b). Never downgrade an earlier pocket.
         const intensity = Math.min(newlyLocked, 255);
-        // The tint legitimately spans the whole enclosed chamber (it must also
-        // pick up cells captured in an earlier pass), so no depth cap here - but
-        // a chamber is bounded, and a flood that balloons past a generous
-        // multiple of what this cut captured has escaped through a gap. On
-        // overflow the helper returns the seeds alone, so the tint covers
-        // exactly the cells this cut captured rather than the entire board.
+        // Bounded to the captured area's own box, generously inflated so the
+        // tint can still pick up cells captured in an earlier pass within the
+        // same chamber, while a flood escaping through a sub-ball-width gap
+        // cannot reach the space beyond. A cell budget could not tell those two
+        // apart; a box can.
+        const pad = 6;
+        let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+        for (const idx of seeds) {
+          const r = (idx / grid.width) | 0;
+          const c = idx % grid.width;
+          if (c < minCol) minCol = c;
+          if (c > maxCol) maxCol = c;
+          if (r < minRow) minRow = r;
+          if (r > maxRow) maxRow = r;
+        }
         const bounded = floodRemovedEnclosure(grid, seeds, game.walls, {
-          maxCells: seeds.length * 4 + 512,
+          bounds: {
+            minCol: minCol - pad, maxCol: maxCol + pad,
+            minRow: minRow - pad, maxRow: maxRow + pad,
+          },
         });
         for (const idx of bounded) {
           if (grid.lockCaptured[idx] < intensity) grid.lockCaptured[idx] = intensity;

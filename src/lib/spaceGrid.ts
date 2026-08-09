@@ -664,11 +664,17 @@ export function floodRemovedEnclosure(
   grid: SpaceGrid,
   seeds: number[],
   walls: { start: Vector2; end: Vector2 }[],
-  limit: { maxDepth?: number; maxCells?: number } = {},
+  limit: {
+    maxDepth?: number;
+    maxCells?: number;
+    /** Cell-space box the flood may not leave (inclusive). */
+    bounds?: { minCol: number; maxCol: number; minRow: number; maxRow: number };
+  } = {},
 ): Set<number> {
   const { width, height, cells } = grid;
   const maxDepth = limit.maxDepth ?? Infinity;
   const maxCells = limit.maxCells ?? Infinity;
+  const bounds = limit.bounds;
 
   const visited = new Uint8Array(cells.length);
   const seeded: number[] = [];
@@ -696,6 +702,17 @@ export function floodRemovedEnclosure(
 
     const step = (ni: number): boolean => {
       if (visited[ni] || cells[ni] !== CellState.REMOVED) return true;
+      if (bounds) {
+        // Outside the caller's box is, by construction, outside the chamber.
+        // Refusing the step (rather than aborting) is what lets the flood fill
+        // every crevice INSIDE the box while never escaping it.
+        const r = (ni / width) | 0;
+        const c = ni % width;
+        if (r < bounds.minRow || r > bounds.maxRow || c < bounds.minCol || c > bounds.maxCol) {
+          visited[ni] = 1;
+          return true;
+        }
+      }
       const b = gridIndexToWorld(grid, ni);
       for (const w of walls) {
         if (lineSegmentIntersection(a, b, w.start, w.end)) return true;
