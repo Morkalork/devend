@@ -233,7 +233,7 @@ export class WallLayer {
         .lineTo(b.x, b.y)
         .stroke({
           width: snapWidth(thickness),
-          color: mix(PALETTE.shadow, PALETTE.accentDim, 0.35 + amb * 0.65),
+          color: mix(PALETTE.shadow, PALETTE.accentDim, 0.55 + amb * 0.45),
           alpha: 1, cap: "butt",
         });
       this.bodies
@@ -312,7 +312,7 @@ export class WallLayer {
       .lineTo(b.x, b.y)
       .stroke({
         width: snapWidth(thickness),
-        color: mix(PALETTE.shadow, material, 0.35 + amb * 0.65),
+        color: mix(PALETTE.shadow, material, 0.55 + amb * 0.45),
         alpha: 1,
         cap: "butt",
       });

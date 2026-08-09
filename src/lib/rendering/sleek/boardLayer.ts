@@ -285,9 +285,12 @@ export class BoardLayer {
     const ly = light.y - boardRect.top;
     const far = Math.hypot(Math.max(lx, w - lx), Math.max(ly, h - ly));
     const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, far);
+    // Eased back from 0.62: at that strength the far corner crushed obstacle
+    // bodies down into the substrate and they lost their silhouette entirely.
+    // The wash exists to give the surface depth, not to hide what stands on it.
     grad.addColorStop(0, withAlpha(PALETTE.monitor, 0.0));
-    grad.addColorStop(0.45, withAlpha(PALETTE.shadow, 0.16));
-    grad.addColorStop(1, withAlpha(PALETTE.shadow, 0.62));
+    grad.addColorStop(0.45, withAlpha(PALETTE.shadow, 0.1));
+    grad.addColorStop(1, withAlpha(PALETTE.shadow, 0.42));
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, w, h);
 

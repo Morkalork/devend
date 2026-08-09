@@ -66,11 +66,21 @@ export const PALETTE = {
   accentGlow: 0x6bffbc,
 
   // ── Structure ─────────────────────────────────────────────────────────────
-  /** Static obstacle bodies: cool grey-green, never competing with the accent. */
-  obstacle: 0x263b33,
-  obstacleEdge: 0x3d5f52,
+  /**
+   * Static obstacle bodies.
+   *
+   * These must sit CLEARLY above `captured` in value. The first version used
+   * 0x263b33, which after the ambient mix landed around 0x1d2f28-0x233729 -
+   * essentially identical to the captured fill at 0x1e3529 - so obstacles had no
+   * silhouette against the territory they stood on and simply vanished. The job
+   * here is value separation from the substrate, not chroma: these are furniture
+   * and must never compete with the accent for attention.
+   */
+  obstacle: 0x51705f,
+  /** Lit obstacle edge: bright enough to draw the silhouette on its own. */
+  obstacleEdge: 0x9fd0b6,
   /** Board perimeter. */
-  edge: 0x2f4a3f,
+  edge: 0x5c8172,
 
   // ── Hazards + special objects (full chroma, these must pop) ───────────────
   mover: 0xff8800,

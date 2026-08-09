@@ -86,7 +86,7 @@ export class EntityLayer {
     const amb = ambientAt(light, cx, cy);
     this.bodies
       .poly(pts)
-      .fill({ color: mix(PALETTE.shadow, PALETTE.obstacle, 0.35 + amb * 0.65), alpha: 1 });
+      .fill({ color: mix(PALETTE.shadow, PALETTE.obstacle, 0.55 + amb * 0.45), alpha: 1 });
 
     // Per-edge rim: only edges whose outward normal faces the monitor.
     const n = pts.length;
@@ -149,7 +149,7 @@ export class EntityLayer {
     const amb = ambientAt(light, c.x, c.y);
     this.bodies
       .circle(c.x, c.y, r)
-      .fill({ color: mix(PALETTE.shadow, PALETTE.mover, 0.45 + amb * 0.55), alpha: 1 });
+      .fill({ color: mix(PALETTE.shadow, PALETTE.mover, 0.6 + amb * 0.4), alpha: 1 });
 
     // Rim arc on the lit side only: stroke the arc centred on the light bearing.
     const bearing = Math.atan2(light.y - c.y, light.x - c.x);
@@ -188,7 +188,7 @@ export class EntityLayer {
     const amb = ambientAt(light, cx, cy);
     this.bodies
       .poly(pts)
-      .fill({ color: mix(PALETTE.shadow, PALETTE.mover, 0.45 + amb * 0.55), alpha: 1 });
+      .fill({ color: mix(PALETTE.shadow, PALETTE.mover, 0.6 + amb * 0.4), alpha: 1 });
 
     const n = pts.length;
     for (let i = 0; i < n; i++) {

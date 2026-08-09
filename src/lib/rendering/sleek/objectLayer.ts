@@ -140,7 +140,7 @@ export class ObjectLayer {
     const amb = ambientAt(light, cx, cy);
     // A chest is loot, not obstruction: amber body so it reads as a prize.
     const base = d.chest ? PALETTE.amber : d.objective ? 0x8a6a3a : PALETTE.obstacle;
-    const body = mix(PALETTE.shadow, base, (0.35 + amb * 0.65) * (1 - damage * 0.55));
+    const body = mix(PALETTE.shadow, base, (0.55 + amb * 0.45) * (1 - damage * 0.45));
     this.bodies.poly(pts).fill({ color: body, alpha: 1 });
 
     this.rimEdges(pts, cx, cy, light, d.chest ? 0xffe9b0 : PALETTE.obstacleEdge, 0.95 * (1 - damage * 0.7));
@@ -185,7 +185,7 @@ export class ObjectLayer {
     const amb = ambientAt(light, cx, cy);
     this.bodies
       .poly(pts)
-      .fill({ color: mix(PALETTE.shadow, PALETTE.mirror, 0.22 + amb * 0.4), alpha });
+      .fill({ color: mix(PALETTE.shadow, PALETTE.mirror, 0.35 + amb * 0.4), alpha });
 
     // Specular, not rim: brighter, wider, and only on the faces actually
     // pointing at the monitor. This is the surface that returns the light.
@@ -211,7 +211,7 @@ export class ObjectLayer {
     const amb = ambientAt(light, cx, cy);
     this.bodies
       .poly(pts)
-      .fill({ color: mix(PALETTE.shadow, PALETTE.obstacle, 0.35 + amb * 0.65), alpha: a });
+      .fill({ color: mix(PALETTE.shadow, PALETTE.obstacle, 0.55 + amb * 0.45), alpha: a });
 
     // Even fully phased out it keeps a ghost outline, so the player can plan
     // around where it will come back.
