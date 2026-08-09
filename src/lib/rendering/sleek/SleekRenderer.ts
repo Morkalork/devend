@@ -53,6 +53,12 @@ export class SleekRenderer {
   private root = new Container();
   private boardScope = new Container();
   private boardMask = new Graphics();
+  /**
+   * The floor plane every cast shadow is drawn into. Owned here, not by the
+   * layers, because a shadow belongs to the FLOOR rather than to the object
+   * that casts it - see the draw order in init().
+   */
+  private shadowPlane = new Graphics();
 
   private board = new BoardLayer();
   private areas = new AreaLayer();
@@ -93,12 +99,20 @@ export class SleekRenderer {
     });
     this.app.ticker.stop(); // the game loop drives presentation
 
-    // Draw order: surface, floor markings, props, furniture, fences, effects,
-    // then the actors on top. Chrome lives OUTSIDE the board mask, because the
-    // rim and the space bar deliberately sit on and past the board edge.
+    // Draw order: surface, floor markings, THE SHADOW PLANE, then everything
+    // that stands on the floor, then effects and actors.
+    //
+    // Every cast shadow in the scene is drawn into one shared plane here rather
+    // than by the layer that owns the caster. A shadow lies ON the floor, so
+    // anything standing on the floor must occlude it - and with per-layer
+    // shadows the ball layer (drawn last) painted its shadow straight over
+    // walls and obstacles, which reads as the shadow floating above the board.
+    // Sharing one plane makes occlusion fall out of the existing draw order for
+    // free: obstacles, fences and props are all painted after it.
     this.boardScope.addChild(
       this.board.container,
       this.areas.container,
+      this.shadowPlane,
       this.props.container,
       this.entities.container,
       this.objects.container,
@@ -201,14 +215,17 @@ export class SleekRenderer {
 
     this.syncMask(game);
 
+    // One clear per frame: every layer draws its shadows into this same plane.
+    this.shadowPlane.clear();
+
     this.board.sync(game, light, w2s, this.staticDirty);
     this.areas.sync(game, light, w2s, scale);
-    this.props.sync(game, light, w2s, scale, now);
-    this.entities.sync(game, light, w2s, scale);
-    this.objects.sync(game, light, w2s, scale);
-    this.walls.sync(game, light, w2s, scale);
+    this.props.sync(game, light, this.shadowPlane, w2s, scale, now);
+    this.entities.sync(game, light, this.shadowPlane, w2s, scale);
+    this.objects.sync(game, light, this.shadowPlane, w2s, scale);
+    this.walls.sync(game, light, this.shadowPlane, w2s, scale);
     this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);
-    this.balls.sync(game, light, w2s, scale, now);
+    this.balls.sync(game, light, this.shadowPlane, w2s, scale, now);
     this.chrome.sync(game, light, scale, now, rctx.spaceThreshold);
     this.staticDirty = false;
 

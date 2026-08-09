@@ -37,17 +37,26 @@ const PICKUP_COLORS: Record<string, number> = {
 export class PropLayer {
   readonly container = new Container();
 
-  private shadows = new Graphics();
+  /** The renderer's shared floor plane, set each frame in sync(). */
+  private shadows!: Graphics;
   private glows = new Graphics();
   private bodies = new Graphics();
 
   constructor() {
     // Glows sit under bodies so a token's core stays legible inside its halo.
-    this.container.addChild(this.shadows, this.glows, this.bodies);
+    // No shadow child: cast shadows go to the shared floor plane.
+    this.container.addChild(this.glows, this.bodies);
   }
 
-  sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, now: number): void {
-    this.shadows.clear();
+  sync(
+    game: CanvasGameState,
+    light: LightScope,
+    shadows: Graphics,
+    w2s: W2S,
+    scale: number,
+    now: number,
+  ): void {
+    this.shadows = shadows;
     this.glows.clear();
     this.bodies.clear();
 

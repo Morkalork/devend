@@ -103,21 +103,30 @@ interface BallView {
 export class SleekBallLayer {
   readonly container = new Container();
 
-  private shadows = new Graphics();
   private bodies = new Container();
   private speculars = new Graphics();
   /** Frost + fastest-ball ring: informational marks drawn over the bodies. */
   private overlays = new Graphics();
   private views: BallView[] = [];
+  /** The renderer's shared floor plane, set each frame in sync(). */
+  private shadows!: Graphics;
   private fastestId: string | null = null;
   private now = 0;
 
   constructor() {
-    this.container.addChild(this.shadows, this.bodies, this.speculars, this.overlays);
+    // No shadow child: cast shadows go to the renderer's shared floor plane.
+    this.container.addChild(this.bodies, this.speculars, this.overlays);
   }
 
-  sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, now: number): void {
-    this.shadows.clear();
+  sync(
+    game: CanvasGameState,
+    light: LightScope,
+    shadows: Graphics,
+    w2s: W2S,
+    scale: number,
+    now: number,
+  ): void {
+    this.shadows = shadows;
     this.speculars.clear();
     this.overlays.clear();
     this.fastestId = game.fastestBallId;

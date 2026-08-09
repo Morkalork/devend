@@ -69,14 +69,17 @@ export class WallLayer {
   /** Per-wall clipped sub-segments; walls are immutable, so cache on identity. */
   private clipCache = new WeakMap<Wall, { start: Vector2; end: Vector2 }[]>();
 
-  private shadows = new Graphics();
+  /** The renderer's shared floor plane, set each frame in sync(). */
+  private shadows!: Graphics;
   private bodies = new Graphics();
   private rims = new Graphics();
 
   constructor() {
     // Shadows first so every wall body sits on top of every shadow: a wall must
     // never be dimmed by its neighbour's shadow falling across it.
-    this.fenceScope.addChild(this.shadows, this.bodies, this.rims);
+    // Shadows are NOT in the fence scope: they belong to the shared floor
+    // plane, below everything that stands on the board.
+    this.fenceScope.addChild(this.bodies, this.rims);
     this.fenceScope.mask = this.fenceMask;
     // The mask must be a sibling in the display list, not a detached Graphics.
     this.container.addChild(this.fenceScope, this.fenceMask);
@@ -101,8 +104,14 @@ export class WallLayer {
     }
   }
 
-  sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
-    this.shadows.clear();
+  sync(
+    game: CanvasGameState,
+    light: LightScope,
+    shadows: Graphics,
+    w2s: W2S,
+    scale: number,
+  ): void {
+    this.shadows = shadows;
     this.bodies.clear();
     this.rims.clear();
     this.shadowRuns.clear();

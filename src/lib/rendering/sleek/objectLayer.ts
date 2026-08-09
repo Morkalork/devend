@@ -28,16 +28,24 @@ type W2S = (x: number, y: number) => Pt;
 export class ObjectLayer {
   readonly container = new Container();
 
-  private shadows = new Graphics();
+  /** The renderer's shared floor plane, set each frame in sync(). */
+  private shadows!: Graphics;
   private bodies = new Graphics();
   private rims = new Graphics();
 
   constructor() {
-    this.container.addChild(this.shadows, this.bodies, this.rims);
+    // No shadow child: cast shadows go to the shared floor plane.
+    this.container.addChild(this.bodies, this.rims);
   }
 
-  sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
-    this.shadows.clear();
+  sync(
+    game: CanvasGameState,
+    light: LightScope,
+    shadows: Graphics,
+    w2s: W2S,
+    scale: number,
+  ): void {
+    this.shadows = shadows;
     this.bodies.clear();
     this.rims.clear();
 
