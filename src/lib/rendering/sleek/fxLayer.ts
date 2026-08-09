@@ -15,6 +15,12 @@ import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+// Imported, never re-declared: these govern how long the physics keeps a marker
+// alive, and a local copy that drifts makes markers disappear early.
+import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS } from "@/lib/pickups";
+import { computeBallTrajectory, trajectoryBallSnapshots } from "@/lib/gameUtils";
+import { dashedLine } from "./dashedLine";
+import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, shadowFor, type LightScope } from "./light";
@@ -25,6 +31,23 @@ type W2S = (x: number, y: number) => Pt;
 /** How long a lock flash burns. Mirrors the classic renderer's feel. */
 const LOCK_FLASH_MS = 900;
 const SUPERIOR_FLASH_MS = 1500;
+/**
+ * Magnet marker lifetime. Not exported from anywhere shared - the physics culls
+ * the marker on its own clock - so this must stay 1100 to match. Guessing it
+ * shorter makes the marker vanish while the state says it is still live.
+ */
+const MAGNET_MARKER_MS = 1100;
+
+/** Token colours, mirroring propLayer so a claim ring matches its token. */
+const PICKUP_FX_COLORS: Record<string, number> = {
+  overtime: 0x00ff88,
+  capRaise: 0xffd76b,
+  freezeCharge: 0xbfefff,
+  fork: 0xff9ebf,
+  freeShopItem: 0x9fe6ff,
+  extraLife: 0xff5b7a,
+  rainbowConvert: 0xffbf80,
+};
 
 function parseColor(c: string, fallback: number): number {
   const n = Number.parseInt(c.replace("#", ""), 16);
@@ -41,7 +64,14 @@ export class FxLayer {
     this.container.addChild(this.under, this.over);
   }
 
-  sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, now: number): void {
+  sync(
+    game: CanvasGameState,
+    light: LightScope,
+    mods: GameModifiers,
+    w2s: W2S,
+    scale: number,
+    now: number,
+  ): void {
     this.under.clear();
     this.over.clear();
 
@@ -50,6 +80,182 @@ export class FxLayer {
     this.drawChains(game, light, w2s, scale);
     this.drawDebris(game, w2s, scale, now);
     this.drawFalling(game, light, w2s, now);
+    this.drawAbilityFx(game, w2s, scale, now);
+    this.drawMagnetMarker(game, w2s, scale, now);
+    this.drawPickupFeedback(game, w2s, scale, now);
+    this.drawLockMarkers(game, w2s, scale);
+    this.drawBallPops(game, w2s, scale, now);
+    this.drawTrajectory(game, mods, w2s, scale);
+  }
+
+  /**
+   * Banked power-up badges: a dot per power-up a lock claimed, left in the
+   * pocket for the rest of the map. Persistent, not transient - the point is to
+   * be able to look at a sealed pocket later and see what it paid.
+   */
+  private drawLockMarkers(game: CanvasGameState, w2s: W2S, scale: number): void {
+    for (const m of game.pickupLockMarkers ?? []) {
+      const p = w2s(m.x, m.y);
+      const color = PICKUP_FX_COLORS[m.effect] ?? PALETTE.amber;
+      // Brief pop-in on the active-play clock, so it lands with the lock.
+      const age = game.activePlaySeconds - m.bornActiveSeconds;
+      const pop = age < 0.35 ? 0.5 + (age / 0.35) * 0.5 : 1;
+      const r = 5 * scale * pop;
+      this.under.circle(p.x, p.y, r * 1.9).fill({ color, alpha: 0.16 });
+      this.under.circle(p.x, p.y, r).fill({ color, alpha: 0.9 });
+    }
+  }
+
+  /** A white "tappable" ball was tapped away: a quick expanding pop. */
+  private drawBallPops(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    for (const pop of game.ballPops ?? []) {
+      const t = (now - pop.startTime) / 420;
+      if (t < 0 || t >= 1) continue;
+      const p = w2s(pop.x, pop.y);
+      const color = parseColor(pop.color, 0xffffff);
+      this.over
+        .circle(p.x, p.y, (6 + 26 * t) * scale)
+        .stroke({ width: Math.max(1, 2 * scale), color, alpha: (1 - t) * 0.9 });
+      this.over
+        .circle(p.x, p.y, Math.max(0.5, 6 * scale * (1 - t)))
+        .fill({ color, alpha: (1 - t) * 0.8 });
+    }
+  }
+
+  /**
+   * Trajectory prediction (the SCRUM Master modifier): where the tracked balls
+   * are heading, bounces included. Dashed rather than solid, because it is a
+   * forecast - a solid line would read as geometry that already exists.
+   *
+   * Both the bounce count and how many balls are tracked come from the upgrade,
+   * so this is off entirely unless the player bought it.
+   */
+  private drawTrajectory(
+    game: CanvasGameState,
+    mods: GameModifiers,
+    w2s: W2S,
+    scale: number,
+  ): void {
+    const bounces = mods.ballPathPredictionBounces;
+    const maxBalls = mods.ballPathPredictionBalls;
+    if (bounces <= 0 || maxBalls <= 0) return;
+
+    const active = game.balls
+      .filter(b => b.state === "active")
+      .sort((a, b) => b.speed - a.speed);
+    const tracked = maxBalls >= 100 ? active : active.slice(0, maxBalls);
+
+    for (const ball of tracked) {
+      // Start from the RENDER position, not the physics one, so the line begins
+      // exactly at the drawn ball rather than a step ahead of it.
+      const start = ball.renderPosition ?? ball.position;
+      const wps = computeBallTrajectory(
+        start, ball.velocity, game.walls, bounces, ball.radius,
+        game.obstaclePolygons, game.movers, game.creepFactor || 1,
+        trajectoryBallSnapshots(game.balls, ball, game.frozenBallId),
+      );
+      if (wps.length < 2) continue;
+      for (let i = 0; i < wps.length - 1; i++) {
+        const a = w2s(wps[i].x, wps[i].y);
+        const b = w2s(wps[i + 1].x, wps[i + 1].y);
+        dashedLine(this.over, a.x, a.y, b.x, b.y, 6 * scale, 8 * scale);
+      }
+    }
+    this.over.stroke({ width: Math.max(1, 2 * scale), color: PALETTE.accent, alpha: 0.5, cap: "round" });
+  }
+
+  /**
+   * Ability fired: a board-wide flash plus staggered rings.
+   *
+   * The flash exists because an ability can fire and change nothing the player
+   * can see (one ball, already cornered), and "did that work?" is a terrible
+   * thing for a spent charge to leave behind. Rings expand for most abilities
+   * and CONVERGE for Magnet, matching the direction of the thing they describe.
+   *
+   * Pure UI, so no lighting: this is the interface confirming an input.
+   */
+  private drawAbilityFx(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const list = game.abilityFx;
+    if (!list || list.length === 0) return;
+    const { boardRect } = game;
+    const maxR = 0.6 * Math.hypot(boardRect.width, boardRect.height);
+    let expired = false;
+
+    for (const fx of list) {
+      const elapsed = now - fx.startTime;
+      if (elapsed >= fx.durationMs) { expired = true; continue; }
+      const t = elapsed / fx.durationMs;
+      const color = parseColor(fx.color, PALETTE.accent);
+
+      this.over
+        .rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height)
+        .fill({ color, alpha: 0.2 * (1 - t) });
+
+      const c = w2s(fx.center.x, fx.center.y);
+      for (let k = 0; k < 3; k++) {
+        const ph = t - k * 0.15;
+        if (ph <= 0) continue;
+        const r = (fx.expand ? ph : 1 - ph) * maxR;
+        if (r <= 0) continue;
+        this.over
+          .circle(c.x, c.y, r)
+          .stroke({ width: Math.max(2, 3 * scale), color, alpha: 0.85 * (1 - t) });
+      }
+    }
+    if (expired) game.abilityFx = list.filter(fx => now - fx.startTime < fx.durationMs);
+  }
+
+  /** Magnet: a fading ring at the point the player pulled toward. */
+  private drawMagnetMarker(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const m = game.magnetMarker;
+    if (!m) return;
+    const t = (now - m.startTime) / MAGNET_MARKER_MS;
+    if (t < 0 || t >= 1) return;
+    const p = w2s(m.x, m.y);
+    const r = (13 + t * 4) * scale;
+    this.over.circle(p.x, p.y, r).stroke({ width: Math.max(1.5, 2 * scale), color: PALETTE.mover, alpha: 1 - t });
+    this.over.circle(p.x, p.y, r * 0.35).fill({ color: PALETTE.mover, alpha: (1 - t) * 0.8 });
+  }
+
+  /**
+   * Pickup claimed or wasted.
+   *
+   * Claimed gets an expanding ring in the token's own colour; wasted gets a grey
+   * ring collapsing to nothing with a strike through it. The two read as
+   * opposites at a glance, which matters because the player usually finds out a
+   * token was wasted from this marker alone.
+   *
+   * The rising "+Nh" label the 2D path draws is omitted: the top bar already
+   * reports the value, and floating text is the one thing that would fight the
+   * board's typography.
+   */
+  private drawPickupFeedback(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const list = game.pickupFeedback;
+    if (!list || list.length === 0) return;
+
+    for (const fb of list) {
+      const elapsed = now - fb.startTime;
+      if (elapsed < 0 || elapsed >= PICKUP_FEEDBACK_MS) continue;
+      const t = elapsed / PICKUP_FEEDBACK_MS;
+      const p = w2s(fb.position.x, fb.position.y);
+
+      if (fb.kind === "claimed") {
+        const ringT = Math.min(1, elapsed / 450);
+        if (ringT >= 1) continue;
+        const color = PICKUP_FX_COLORS[fb.effect] ?? PALETTE.accent;
+        this.over
+          .circle(p.x, p.y, (PICKUP_DRAW_RADIUS + 30 * ringT) * scale)
+          .stroke({ width: Math.max(1.5, 2 * scale), color, alpha: (1 - ringT) * 0.8 });
+      } else {
+        const r = PICKUP_DRAW_RADIUS * scale * (1 - t);
+        if (r <= 0.5) continue;
+        const alpha = 0.7 * (1 - t);
+        this.over.circle(p.x, p.y, r).stroke({ width: Math.max(1.5, 2 * scale), color: 0x9aa3ad, alpha });
+        this.over
+          .moveTo(p.x - r, p.y - r).lineTo(p.x + r, p.y + r)
+          .stroke({ width: Math.max(1.5, 2 * scale), color: 0x9aa3ad, alpha });
+      }
+    }
   }
 
   /**

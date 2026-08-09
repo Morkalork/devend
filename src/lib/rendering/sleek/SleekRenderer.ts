@@ -165,8 +165,8 @@ export class SleekRenderer {
     this.entities.sync(game, light, w2s, scale);
     this.objects.sync(game, light, w2s, scale);
     this.walls.sync(game, light, w2s, scale);
-    this.fx.sync(game, light, w2s, scale, now);
-    this.balls.sync(game, light, w2s, scale);
+    this.fx.sync(game, light, rctx.activeModifiers, w2s, scale, now);
+    this.balls.sync(game, light, w2s, scale, now);
     this.chrome.sync(game, light, scale, now, rctx.spaceThreshold);
     this.staticDirty = false;
 

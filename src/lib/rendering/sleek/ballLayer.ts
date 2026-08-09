@@ -105,15 +105,22 @@ export class SleekBallLayer {
   private shadows = new Graphics();
   private bodies = new Container();
   private speculars = new Graphics();
+  /** Frost + fastest-ball ring: informational marks drawn over the bodies. */
+  private overlays = new Graphics();
   private views: BallView[] = [];
+  private fastestId: string | null = null;
+  private now = 0;
 
   constructor() {
-    this.container.addChild(this.shadows, this.bodies, this.speculars);
+    this.container.addChild(this.shadows, this.bodies, this.speculars, this.overlays);
   }
 
-  sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
+  sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, now: number): void {
     this.shadows.clear();
     this.speculars.clear();
+    this.overlays.clear();
+    this.fastestId = game.fastestBallId;
+    this.now = now;
 
     const balls = game.balls.filter(b => b.state !== "dormant");
 
@@ -211,6 +218,30 @@ export class SleekBallLayer {
     this.speculars
       .circle(c.x + ox, c.y + oy, Math.max(0.8, r * 0.17))
       .fill({ color: PALETTE.monitor, alpha: 0.5 * light.level });
+
+    // ── Frost: this ball is held by a tap-freeze ────────────────────────────
+    // Informational, not decorative - a frozen ball is one the player has spent
+    // a charge on and is planning a cut around, so it has to be unmistakable.
+    if (ball.frozenUntil !== undefined && this.now < ball.frozenUntil) {
+      this.overlays
+        .circle(c.x, c.y, r * 1.12)
+        .stroke({ width: Math.max(1, 1.5 * scale), color: PALETTE.frost, alpha: 0.85 });
+      // Crystal spokes, so it reads as frozen rather than merely outlined.
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * Math.PI * 2 + Math.PI / 12;
+        this.overlays
+          .moveTo(c.x + Math.cos(a) * r * 0.45, c.y + Math.sin(a) * r * 0.45)
+          .lineTo(c.x + Math.cos(a) * r * 1.05, c.y + Math.sin(a) * r * 1.05);
+      }
+      this.overlays.stroke({ width: Math.max(1, scale), color: PALETTE.frost, alpha: 0.55 });
+    }
+
+    // ── Fastest ball: the one the trajectory tracks and the danger frame means.
+    if (ball.id === this.fastestId && ball.state === "active") {
+      this.overlays
+        .circle(c.x, c.y, r + 6 * scale)
+        .stroke({ width: Math.max(1, 2 * scale), color: PALETTE.mirror, alpha: 0.55 });
+    }
   }
 
   destroy(): void {

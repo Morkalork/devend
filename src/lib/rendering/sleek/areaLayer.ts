@@ -15,7 +15,7 @@
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { areaStyle, isGateArea } from "@/lib/coloredAreas";
-import { dashedLine } from "@/lib/rendering/pixi/pixiEffects";
+import { dashedLine } from "./dashedLine";
 import { ambientAt, type LightScope } from "./light";
 import { snapRect, type Pt } from "./pixelGrid";
 
