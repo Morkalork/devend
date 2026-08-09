@@ -129,6 +129,22 @@ export function snapContoursToWalls(
   loops: ContourPoint[][],
   walls: WallSegment[],
   maxDist: number,
+  /**
+   * How points near a wall's END are treated.
+   *
+   * "clamp" (default) pulls them onto the endpoint, which is what a lock-flash
+   * pocket wants: its tint must sit flush right into the corners of the fence
+   * that sealed it.
+   *
+   * "segment" leaves them alone unless the perpendicular foot is genuinely ON
+   * the wall. Clamping collapses a whole neighbourhood of contour points onto
+   * one endpoint, and a loop that visits the same position repeatedly jumps
+   * back and forth across the board, drawing long chords - which is what the
+   * whole-board outline showed as green lines fanning over the map. A big
+   * outline spanning many walls has far more endpoints to collapse onto than a
+   * small pocket does, which is why it only bit there.
+   */
+  endpoints: "clamp" | "segment" = "clamp",
 ): ContourPoint[][] {
   if (walls.length === 0 || maxDist <= 0) return loops;
   const maxSq = maxDist * maxDist;
@@ -142,7 +158,10 @@ export function snapContoursToWalls(
         const lenSq = dx * dx + dy * dy;
         if (lenSq === 0) continue;
         let t = ((p.x - w.start.x) * dx + (p.y - w.start.y) * dy) / lenSq;
-        t = t < 0 ? 0 : t > 1 ? 1 : t;
+        if (t < 0 || t > 1) {
+          if (endpoints === "segment") continue;
+          t = t < 0 ? 0 : 1;
+        }
         const qx = w.start.x + t * dx;
         const qy = w.start.y + t * dy;
         const dSq = (p.x - qx) * (p.x - qx) + (p.y - qy) * (p.y - qy);

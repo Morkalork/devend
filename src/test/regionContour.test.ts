@@ -128,3 +128,37 @@ describe("snapContoursToWalls", () => {
     }
   });
 });
+
+describe("snapContoursToWalls endpoint modes", () => {
+  // Clamping pulls every point near a wall's END onto that endpoint. On a small
+  // lock pocket that is wanted (the tint sits flush into the fence corners), but
+  // on the whole-board outline it collapses whole neighbourhoods of contour
+  // points onto single positions. A loop that revisits the same position jumps
+  // back and forth across the board, and those long chords get stroked as the
+  // boundary hairline — which showed up in play as green lines fanning over the
+  // map, with no fences drawn at all.
+  const stub = [{ start: { x: 100, y: 100 }, end: { x: 110, y: 100 } }];
+  const nearTheEnd = [[
+    { x: 118, y: 104 },
+    { x: 121, y: 106 },
+    { x: 124, y: 108 },
+  ]];
+
+  it("clamp mode collapses distinct points onto one endpoint", () => {
+    const [out] = snapContoursToWalls(nearTheEnd, stub, 30, "clamp");
+    const unique = new Set(out.map(p => `${p.x.toFixed(4)},${p.y.toFixed(4)}`));
+    expect(unique.size).toBe(1); // all three land on (110,100)
+  });
+
+  it("segment mode leaves them distinct", () => {
+    const [out] = snapContoursToWalls(nearTheEnd, stub, 30, "segment");
+    const unique = new Set(out.map(p => `${p.x.toFixed(4)},${p.y.toFixed(4)}`));
+    expect(unique.size).toBe(3);
+  });
+
+  it("segment mode still snaps a point lying alongside the wall", () => {
+    const [out] = snapContoursToWalls([[{ x: 105, y: 104 }]], stub, 30, "segment");
+    expect(out[0].x).toBeCloseTo(105, 6);
+    expect(out[0].y).toBeCloseTo(100, 6); // pulled onto the wall line
+  });
+});

@@ -189,7 +189,12 @@ export class BoardLayer {
     // to half a cell diagonal (~0.7 cells) off the line; a reach of ~1 cell left
     // those corners unsnapped and they showed as a comb of teeth along every
     // diagonal cut. 1.8 cells clears them with margin.
-    const loops = snapContoursToWalls(raw, game.walls, spaceGrid.cellSize * 1.8);
+    // Only FENCES and board edges. Snapping the live-space outline to obstacle
+    // boundaries buys nothing - the obstacle's own body is painted over that
+    // outline anyway - while doubling the chances of a point being dragged
+    // somewhere it does not belong.
+    const boundingWalls = game.walls.filter(w => !w.isObstacleBoundary);
+    const loops = snapContoursToWalls(raw, boundingWalls, spaceGrid.cellSize * 1.8, "segment");
 
     const screenLoops: Pt[][] = loops.map(loop => loop.map(p => w2s(p.x, p.y)));
 
