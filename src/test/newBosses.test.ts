@@ -187,6 +187,57 @@ describe("colored area lights up when a ball locks inside it", () => {
     expect(game.coloredAreas![0].satisfied).toBe(true);  // ...so the zone lit up
     expect(game.coloredAreaSatisfied).toBe(false);       // but the win gate (the boss) is NOT satisfied
   });
+
+  // Rule: a ball SEALED INSIDE a colored area locks there and activates it,
+  // without having to shrink the pocket to the normal threshold first.
+  //
+  // This is what made areas hard to activate. The area here is 355x335 on a
+  // 900x900 board - about 15% of it - so a pocket the size of the area sits at
+  // or above the lock threshold and never locked. Activation already accepted a
+  // ball whose centre was inside; the lock was the part that never happened.
+  it("locks a ball sealed inside the area, even though the pocket is too big to lock normally", () => {
+    const data = createInitialGameData(AREA_LEVEL, 10, MODS);
+    const game = { ...data } as unknown as CanvasGameState;
+    game.coloredAreaSatisfied = false;
+    game.lockBonus = 0;
+    game.superiorLockBonus = 0;
+    game.superiorLockCount = 0;
+    game.lockedBallsCount = 0;
+    game.assimilations = new Map();
+    game.coloredAreas = (AREA_LEVEL.coloredAreas ?? []).map(a => ({ ...a }));
+    const grid = game.spaceGrid!;
+    const area = game.coloredAreas![0];
+
+    // Carve everything OUTSIDE the area away, so the ball's region is exactly
+    // the area: sealed inside it, and far larger than the lock threshold.
+    for (let r = 0; r < grid.height; r++) {
+      for (let c = 0; c < grid.width; c++) {
+        const x = grid.originX + c * grid.cellSize + grid.cellSize / 2;
+        const y = grid.originY + r * grid.cellSize + grid.cellSize / 2;
+        const inside = x >= area.x && x <= area.x + area.width
+          && y >= area.y && y <= area.y + area.height;
+        if (!inside) grid.cells[r * grid.width + c] = CellState.REMOVED;
+      }
+    }
+
+    const ball = {
+      id: "ball-1", isBoss: false, state: "active",
+      position: { x: area.x + area.width / 2, y: area.y + area.height / 2 },
+      velocity: { x: 60, y: 0 }, speed: 60,
+      radius: 14, lockMultiplier: 1, typeId: "red", ability: "none",
+    } as unknown as Ball;
+    game.balls = [ball];
+
+    const noop = () => {};
+    checkAndUpdateBallWonStates(
+      game, MODS, 0,
+      { setLockedBallsCount: noop, onBallTypeLocked: () => false, onBallCountChanged: noop, onBossState: noop },
+      null,
+    );
+
+    expect(ball.state).toBe("won");
+    expect(game.coloredAreas![0].satisfied).toBe(true);
+  });
 });
 
 describe("black-ball fence fracture (#64)", () => {

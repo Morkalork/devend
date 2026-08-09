@@ -250,14 +250,28 @@ export function checkAndUpdateBallWonStates(
     const areas = game.coloredAreas ?? [];
     const gates = gateAreas(areas);
     const areaGate = gates.length > 0;
-    // Boss ship condition stays STRICT (whole region sealed within the area):
-    // a not-yet-fenced boss roams the open board, whose region trivially covers
-    // the area, so coverage alone can't gate the boss's lock or it would "win"
-    // before you fence it (level-10 fix).
-    const bossContainedInArea = ball.isBoss && areaGate
+    // SEALED INSIDE AN AREA IS A LOCK, for any ball (rule change: areas were
+    // too hard to activate).
+    //
+    // Activation already accepted "ball centre inside the area" - what actually
+    // blocked it was the LOCK. This early-lock shortcut used to be boss-only, so
+    // every other ball had to shrink its pocket to the normal threshold; a
+    // colored area is frequently LARGER than that threshold, so fencing a ball
+    // neatly into one produced a pocket that simply never locked, and the area
+    // could not be activated at all.
+    //
+    // The test stays STRICT - the ball's WHOLE region sealed within the area,
+    // not mere overlap - because a ball on the open board sits in a region that
+    // trivially contains the area, and anything looser would fire the moment a
+    // map with an area started.
+    const containedInArea = areas.length > 0
+      && regionWithinAreas(game.spaceGrid, ballRegion.cellIndices, areas);
+    // Only containment in a GATE area can settle the win/fail decision below.
+    const containedInGate = areaGate
       && regionWithinAreas(game.spaceGrid, ballRegion.cellIndices, gates);
+    const bossContainedInArea = ball.isBoss && containedInGate;
 
-    if (!lockedByPercent && !lockedBySliver && !bossContainedInArea) continue;
+    if (!lockedByPercent && !lockedBySliver && !containedInArea) continue;
 
     // Require a REAL seal: a small region that only became small because the
     // capture severed a sub-ball-width gap still opens onto living space, so the
@@ -295,7 +309,7 @@ export function checkAndUpdateBallWonStates(
     // real seal, not the open board.
     const inArea = (areaGate && coloredAreaAt(ball.position.x, ball.position.y, gates) !== null)
       || (areaGate && regionCoversAreas(game.spaceGrid, ballRegion.cellIndices, gates, AREA_COVER_FRACTION))
-      || bossContainedInArea;
+      || containedInGate;
     const isAreaTarget = game.balls.some(x => x.isBoss) ? ball.isBoss : true;
 
     if (bossTrapIsDamage(ball) && !areaGate) {
