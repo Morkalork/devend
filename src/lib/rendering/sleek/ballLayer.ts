@@ -21,6 +21,7 @@ import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import { getSquishEffect } from "@/lib/ballEffects";
+import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { BALL_FALLBACK, PALETTE, withAlpha } from "./palette";
 import { contactFor, shadowFor, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
@@ -241,6 +242,36 @@ export class SleekBallLayer {
       this.overlays
         .circle(c.x, c.y, r + 6 * scale)
         .stroke({ width: Math.max(1, 2 * scale), color: PALETTE.mirror, alpha: 0.55 });
+    }
+
+    // ── Boss splash: a minion budding out of the boss ───────────────────────
+    // Droplets thrown from the boss rim along the birth direction, so a spawn
+    // reads as something being EXPELLED rather than a ball appearing from
+    // nowhere. Frame geometry comes from the shared bossSplashFrame.
+    if (ball.splitAnimAt !== undefined) {
+      const dir = ball.splitDirX !== undefined && ball.splitDirY !== undefined
+        ? { x: ball.splitDirX, y: ball.splitDirY }
+        : { x: 1, y: 0 };
+      const frame = bossSplashFrame(
+        r, dir.x, dir.y, ball.splitAnimAt, this.now, scale,
+        ball.id.charCodeAt(ball.id.length - 1) || 1,
+      );
+      if (frame.active) {
+        const color = parseColor(ball.color);
+        // The rupture ring is the tell that the boss SPLIT rather than that a
+        // ball drifted past; droplets alone read as ambient particles.
+        if (frame.ringAlpha > 0) {
+          this.overlays
+            .circle(c.x + frame.ringX, c.y + frame.ringY, Math.max(0.5, frame.ringR))
+            .stroke({ width: Math.max(1, frame.ringWidth), color, alpha: frame.ringAlpha });
+        }
+        for (const d of frame.droplets) {
+          this.overlays.circle(c.x + d.x, c.y + d.y, Math.max(0.5, d.r)).fill({ color, alpha: d.alpha });
+          this.overlays
+            .circle(c.x + d.x + d.hx, c.y + d.y + d.hy, Math.max(0.3, d.r * 0.35))
+            .fill({ color: 0xffffff, alpha: d.alpha * 0.6 });
+        }
+      }
     }
   }
 

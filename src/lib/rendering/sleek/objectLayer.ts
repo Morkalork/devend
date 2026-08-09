@@ -145,13 +145,32 @@ export class ObjectLayer {
 
     this.rimEdges(pts, cx, cy, light, d.chest ? 0xffe9b0 : PALETTE.obstacleEdge, 0.95 * (1 - damage * 0.7));
 
-    // Dents: each recorded impact notches the surface. Small, dark, and placed
-    // at the real world hit point, so damage reads as history not decoration.
+    // Dents + cracks: each recorded impact notches the surface and throws a few
+    // splits out from it. Placed at the real world hit point, so damage reads as
+    // history - you can see WHERE it has been hit, not just how much.
+    //
+    // The crack geometry is seeded from the impact position rather than random,
+    // so it is identical every frame; a per-frame random would make the cracks
+    // crawl and read as noise.
     for (const dent of d.dents ?? []) {
       const p = w2s(dent.x, dent.y);
+      const len = Math.max(3, 9 * scale);
+      const seed = Math.abs(Math.round(dent.x * 73856093) ^ Math.round(dent.y * 19349663));
+      for (let i = 0; i < 3; i++) {
+        // Cheap deterministic hash -> angle, stable for this dent forever.
+        const h = Math.sin(seed * 0.0001 + i * 2.399) * 43758.5453;
+        const ang = (h - Math.floor(h)) * Math.PI * 2;
+        const reach = len * (0.6 + ((h * 7) - Math.floor(h * 7)) * 0.8);
+        this.rims
+          .moveTo(p.x, p.y)
+          .lineTo(p.x + Math.cos(ang) * reach, p.y + Math.sin(ang) * reach);
+      }
       this.bodies
         .circle(p.x, p.y, Math.max(1.5, 4 * scale))
         .fill({ color: PALETTE.shadow, alpha: 0.55 });
+    }
+    if ((d.dents?.length ?? 0) > 0) {
+      this.rims.stroke({ width: Math.max(1, scale), color: PALETTE.shadow, alpha: 0.7 });
     }
   }
 
