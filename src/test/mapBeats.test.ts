@@ -141,6 +141,8 @@ describe("beat spawnAdds placement (issue: 'the ball duplicated')", () => {
     const added = g.balls[1];
     const dist = Math.hypot(added.position.x - anchor.position.x, added.position.y - anchor.position.y);
     // Two radii would still visually overlap; three is the placement floor.
-    expect(dist).toBeGreaterThanOrEqual(anchor.radius * 3);
+    // Epsilon because the placement lands exactly ON the threshold and the trig
+    // that gets it there can leave it a float hair short (53.999... vs 54).
+    expect(dist).toBeGreaterThanOrEqual(anchor.radius * 3 - 1e-9);
   });
 });
