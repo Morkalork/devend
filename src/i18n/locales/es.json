@@ -218,7 +218,15 @@
     "loading": "Cargando certificados…",
     "continue": "Continuar",
     "tutorialTitle": "TALLER DE CERTIFICADOS",
-    "tutorialBody": "Gasta Horas de Certificado (ganadas al jugar) en bonos permanentes, desbloqueados al dominar familias de mejoras entre partidas."
+    "tutorialBody": "Gasta Horas de Certificado (ganadas al jugar) en bonos permanentes, desbloqueados al dominar familias de mejoras entre partidas.",
+    "subtitle": "Bonificaciones permanentes. Una vez compradas, se aplican a todas las partidas.",
+    "walletNote": "Una cartera aparte de las horas que gastas en la tienda de mejoras",
+    "levelOwned": "En posesión",
+    "nextLevelCost": "Siguiente {{cost}}h",
+    "progressShort": "{{current}}/{{required}} {{label}}",
+    "buyingOne": "Comprando Nv {{to}}",
+    "buyingRange": "Comprando Nv {{from}}-{{to}}",
+    "closest": "Más cerca"
   },
   "checkpointPicker": {
     "startFrom": "Empezar desde…",
@@ -1404,5 +1412,23 @@
     "confirmButton": "Tomar mejora",
     "pickHint": "Selecciona una mejora",
     "closeDetail": "Cerrar detalles"
+  },
+  "certificateEffects": {
+    "ballSpeedMultiplier": "Velocidad de bola {{percent}}%",
+    "ballSizeMultiplier": "Tamaño de bola {{percent}}%",
+    "fenceGenerationSpeedMultiplier": "Velocidad de valla {{percent}}%",
+    "scoreMultiplier": "Horas extra {{percent}}%",
+    "shopDiscountMultiplier": "Precios de la tienda {{percent}}%",
+    "pushBonusMultiplier": "Bonus de riesgo {{percent}}%",
+    "extraLives": "Vidas iniciales {{value}}",
+    "instantFencesPerMap": "Vallas instantáneas por mapa {{value}}",
+    "additionalConcurrentFences": "Vallas simultáneas {{value}}",
+    "ballPathPredictionBounces": "Rebotes en la vista previa {{value}}",
+    "startingLevelBonus": "Cada partida empieza en el nivel {{level}}",
+    "startingCapturePercent": "Tablero ya capturado +{{percent}}%",
+    "extraCertificateHours": "Horas de Certificación por partida +{{hours}}",
+    "bankedSlowPer50h": "Velocidad de bola {{percent}}% por cada 50h en el banco",
+    "microManagerPerLock": "Velocidad de bola {{percent}}% por bola encerrada",
+    "showHighscoreProgress": "Añade la barra de récord del mapa al HUD"
   }
 }

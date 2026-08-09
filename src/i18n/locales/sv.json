@@ -218,7 +218,15 @@
     "loading": "Laddar certifikat…",
     "continue": "Fortsätt",
     "tutorialTitle": "CERTIFIKATVERKSTAD",
-    "tutorialBody": "Spendera Certifikattimmar (intjänade när du spelar) på permanenta bonusar, upplåsta genom att bemästra uppgraderingsfamiljer över flera rundor."
+    "tutorialBody": "Spendera Certifikattimmar (intjänade när du spelar) på permanenta bonusar, upplåsta genom att bemästra uppgraderingsfamiljer över flera rundor.",
+    "subtitle": "Permanenta bonusar. När de är köpta gäller de varje omgång framöver.",
+    "walletNote": "En egen plånbok, skild från timmarna du spenderar i uppgraderingsbutiken",
+    "levelOwned": "Ägd",
+    "nextLevelCost": "Nästa {{cost}}h",
+    "progressShort": "{{current}}/{{required}} {{label}}",
+    "buyingOne": "Köper Nv {{to}}",
+    "buyingRange": "Köper Nv {{from}}-{{to}}",
+    "closest": "Närmast"
   },
   "checkpointPicker": {
     "startFrom": "Börja från…",
@@ -1404,5 +1412,23 @@
     "confirmButton": "Ta uppgradering",
     "pickHint": "Välj en uppgradering",
     "closeDetail": "Stäng detaljer"
+  },
+  "certificateEffects": {
+    "ballSpeedMultiplier": "Bollhastighet {{percent}}%",
+    "ballSizeMultiplier": "Bollstorlek {{percent}}%",
+    "fenceGenerationSpeedMultiplier": "Stängselhastighet {{percent}}%",
+    "scoreMultiplier": "Övertid {{percent}}%",
+    "shopDiscountMultiplier": "Butikspriser {{percent}}%",
+    "pushBonusMultiplier": "Riskbonus {{percent}}%",
+    "extraLives": "Liv vid start {{value}}",
+    "instantFencesPerMap": "Direkta stängsel per bana {{value}}",
+    "additionalConcurrentFences": "Samtidiga stängsel {{value}}",
+    "ballPathPredictionBounces": "Studsar i banförhandsvisningen {{value}}",
+    "startingLevelBonus": "Varje omgång börjar på nivå {{level}}",
+    "startingCapturePercent": "Brädet redan intaget +{{percent}}%",
+    "extraCertificateHours": "Certifikattimmar per omgång +{{hours}}",
+    "bankedSlowPer50h": "Bollhastighet {{percent}}% per 50h i banken",
+    "microManagerPerLock": "Bollhastighet {{percent}}% per inlåst boll",
+    "showHighscoreProgress": "Lägger till rekordmätaren för banan i HUD:en"
   }
 }

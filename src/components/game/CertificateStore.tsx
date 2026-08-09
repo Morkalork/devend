@@ -16,6 +16,7 @@ import { MetaProgressionStats } from '@/types/metaProgression';
 import { UpgradeConfig } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
 import { contentText } from '@/i18n/content';
+import { certEffectLabel } from '@/lib/certEffectLabel';
 import { Progress } from '@/components/ui/progress';
 import { TutorialOverlay } from './TutorialOverlay';
 
@@ -163,7 +164,20 @@ export function CertificateStore({
     return { locked, available, maxed };
   };
 
-  const { locked, available, maxed } = getSectionCerts();
+  const { locked: lockedUnsorted, available, maxed } = getSectionCerts();
+
+  // Nearest-first. In YAML order the locked list is a wall of identical grey
+  // cards with no hint of which is within reach; sorted, it reads as a ladder
+  // and the top one is a goal for the next run or two.
+  const locked = useMemo(() => {
+    const fraction = (cert: Certificate) => {
+      const { current, required } = getUnlockInfo(cert);
+      return required > 0 ? current / required : 0;
+    };
+    return [...lockedUnsorted].sort((a, b) => fraction(b) - fraction(a));
+    // getUnlockInfo closes over the progress inputs below; recompute when they move.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedUnsorted, maxTierCounts, metaStats, lifetimeHoursSpent, achievements, upgrades]);
 
   const handleLevelTap = (certId: string, level: number) => {
     const currentOwned = certLevelsOwned[certId] || 0;
@@ -212,12 +226,19 @@ export function CertificateStore({
           transition={{ duration: 0.5 }}
           className="relative z-10 flex flex-col items-center gap-6 w-full max-w-2xl"
         >
-          {/* Header */}
-          <div className="flex items-center gap-3">
-            <Medal className="w-8 h-8 text-primary" />
-            <h1 className="text-3xl sm:text-4xl font-display font-black tracking-wider text-foreground">
-              {t('certificateStore.title')}
-            </h1>
+          {/* Header. The subtitle is the one thing that separates this screen from
+              the upgrade shop, and it used to be said only in the first-visit
+              tutorial - which a returning player has long since dismissed. */}
+          <div className="flex flex-col items-center gap-1">
+            <div className="flex items-center gap-3">
+              <Medal className="w-8 h-8 text-primary" />
+              <h1 className="text-3xl sm:text-4xl font-display font-black tracking-wider text-foreground">
+                {t('certificateStore.title')}
+              </h1>
+            </div>
+            <p className="text-xs text-muted-foreground text-center max-w-sm">
+              {t('certificateStore.subtitle')}
+            </p>
           </div>
 
           {/* Balance */}
@@ -240,6 +261,11 @@ export function CertificateStore({
             <p className="text-xs text-muted-foreground mt-1">
               {t('certificateStore.earnRate')}
             </p>
+            {/* Both currencies are called "hours" and both render as "5h", so the
+                store reads as if it spends the same wallet as the upgrade shop. */}
+            <p className="text-[0.65rem] text-muted-foreground/70 mt-0.5 max-w-[16rem]">
+              {t('certificateStore.walletNote')}
+            </p>
           </motion.div>
 
           {/* Cert list */}
@@ -254,6 +280,7 @@ export function CertificateStore({
                   const pendingCost = selectedTarget != null ? getCostForSelection(cert, selectedTarget, certLevelsOwned) : 0;
                   const canAfford = pendingCost <= totalCertificateHours && pendingCost > 0;
                   const expanded = expandedCertId === cert.id;
+                  const nextCost = cert.levels[levelsOwned]?.cost ?? null;
 
                   return (
                     <motion.div
@@ -274,9 +301,18 @@ export function CertificateStore({
                           <p className="text-xs text-muted-foreground mt-0.5">{contentText.certDesc(t, cert)}</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs font-display font-bold text-primary tabular-nums">
-                            {t('certificateStore.levelFraction', { owned: levelsOwned, total: cert.levels.length })}
-                          </span>
+                          <div className="text-right">
+                            <span className="block text-xs font-display font-bold text-primary tabular-nums">
+                              {t('certificateStore.levelFraction', { owned: levelsOwned, total: cert.levels.length })}
+                            </span>
+                            {/* Price of the next level up front, so a collapsed list can be
+                                scanned for what is affordable without opening every card. */}
+                            {nextCost != null && (
+                              <span className={`block text-[0.65rem] tabular-nums ${nextCost <= totalCertificateHours ? 'text-muted-foreground' : 'text-destructive/80'}`}>
+                                {t('certificateStore.nextLevelCost', { cost: nextCost })}
+                              </span>
+                            )}
+                          </div>
                           <ChevronDown
                             className={`w-5 h-5 text-primary transition-transform ${expanded ? 'rotate-180' : ''}`}
                           />
@@ -295,11 +331,15 @@ export function CertificateStore({
                           >
                             {/* Purchases happen in here — don't let taps collapse the card */}
                             <div className="mt-3 pt-3 border-t border-primary/20" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex flex-wrap gap-2 mb-3">
+                              {/* One row per level, not a chip row: the row is what
+                                  makes space for the EFFECT, and a level whose
+                                  effect you cannot read is a blind purchase. */}
+                              <div className="flex flex-col gap-1.5 mb-3">
                                 {cert.levels.map((level, idx) => {
                                   const levelNum = idx + 1;
                                   const owned = levelNum <= levelsOwned;
                                   const selected = selectedTarget != null && levelNum <= selectedTarget && levelNum > levelsOwned;
+                                  const effect = certEffectLabel(t, level.effect);
 
                                   return (
                                     <button
@@ -307,9 +347,9 @@ export function CertificateStore({
                                       disabled={owned}
                                       onClick={() => handleLevelTap(cert.id, levelNum)}
                                       className={`
-                                        flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-display font-bold transition-all
+                                        w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-all
                                         ${owned
-                                          ? 'border-primary/30 bg-primary/10 text-primary/60 cursor-default'
+                                          ? 'border-primary/25 bg-primary/10 text-primary/60 cursor-default'
                                           : selected
                                             ? 'border-primary bg-primary/25 text-primary cursor-pointer'
                                             : 'border-primary/40 bg-primary/5 text-primary hover:border-primary hover:bg-primary/15 cursor-pointer'
@@ -317,14 +357,23 @@ export function CertificateStore({
                                       `}
                                     >
                                       {owned ? (
-                                        <Check className="w-3.5 h-3.5" />
+                                        <Check className="w-4 h-4 shrink-0" />
                                       ) : (
-                                        <Hexagon className="w-3.5 h-3.5 fill-current opacity-80" />
+                                        <Hexagon className="w-4 h-4 shrink-0 fill-current opacity-80" />
                                       )}
-                                      {t('certificateStore.levelLabel', { level: levelNum })}
-                                      {!owned && (
-                                        <span className="text-xs font-normal opacity-80">{t('certificateStore.levelCost', { cost: level.cost })}</span>
+                                      <span className="shrink-0 text-sm font-display font-bold">
+                                        {t('certificateStore.levelLabel', { level: levelNum })}
+                                      </span>
+                                      {/* Falls back to nothing rather than a guess when the
+                                          effect has no label; the description still stands. */}
+                                      {effect && (
+                                        <span className="flex-1 min-w-0 text-xs leading-tight opacity-90">{effect}</span>
                                       )}
+                                      <span className={`ml-auto shrink-0 text-xs font-bold tabular-nums ${owned ? '' : 'opacity-90'}`}>
+                                        {owned
+                                          ? t('certificateStore.levelOwned')
+                                          : t('certificateStore.hoursValue', { hours: level.cost })}
+                                      </span>
                                     </button>
                                   );
                                 })}
@@ -333,6 +382,13 @@ export function CertificateStore({
                               {selectedTarget != null && (
                                 <div className="flex items-center justify-between gap-3 pt-2 border-t border-primary/20">
                                   <div className="text-sm text-muted-foreground">
+                                    {/* Tapping Lv 3 also buys Lv 2, so name the range: the
+                                        total cost alone doesn't explain where it came from. */}
+                                    <span className="block text-xs text-primary/80 font-bold">
+                                      {levelsOwned + 1 === selectedTarget
+                                        ? t('certificateStore.buyingOne', { to: selectedTarget })
+                                        : t('certificateStore.buyingRange', { from: levelsOwned + 1, to: selectedTarget })}
+                                    </span>
                                     {t('certificateStore.cost')} <span className={canAfford ? 'text-primary font-bold' : 'text-destructive font-bold'}>
                                       {t('certificateStore.hoursValue', { hours: pendingCost })}
                                     </span>
@@ -385,10 +441,21 @@ export function CertificateStore({
                           <p className="font-display font-bold text-sm text-muted-foreground">{contentText.certName(t, cert)}</p>
                           <p className="text-xs text-muted-foreground/70 mt-0.5">{contentText.certDesc(t, cert)}</p>
                           {unlock.required > 1 && (
-                            <Progress
-                              value={(unlock.current / unlock.required) * 100}
-                              className="h-1 mt-2 bg-muted/30"
-                            />
+                            <div className="flex items-center gap-2 mt-2">
+                              <Progress
+                                value={(unlock.current / unlock.required) * 100}
+                                className="h-1 flex-1 bg-muted/30"
+                              />
+                              {/* The bare bar said nothing about what it was counting.
+                                  Numbers here mean the tap is for the "how", not the "how far". */}
+                              <span className="shrink-0 text-[0.65rem] tabular-nums text-muted-foreground">
+                                {t('certificateStore.progressShort', {
+                                  current: unlock.current,
+                                  required: unlock.required,
+                                  label: unlock.progressLabel,
+                                })}
+                              </span>
+                            </div>
                           )}
                         </div>
                         {/* Keyboard path: Enter/Space clicks the button, which bubbles to the card */}

@@ -218,7 +218,15 @@
     "loading": "Loading certificates…",
     "continue": "Continue",
     "tutorialTitle": "CERTIFICATE WORKSHOP",
-    "tutorialBody": "Spend Certificate Hours (earned as you play) on permanent bonuses, unlocked by mastering upgrade families across runs."
+    "tutorialBody": "Spend Certificate Hours (earned as you play) on permanent bonuses, unlocked by mastering upgrade families across runs.",
+    "subtitle": "Permanent bonuses. Once bought, they apply to every run from now on.",
+    "walletNote": "A separate wallet from the hours you spend in the upgrade shop",
+    "levelOwned": "Owned",
+    "nextLevelCost": "Next {{cost}}h",
+    "progressShort": "{{current}}/{{required}} {{label}}",
+    "buyingOne": "Buying Lv {{to}}",
+    "buyingRange": "Buying Lv {{from}}-{{to}}",
+    "closest": "Closest"
   },
   "checkpointPicker": {
     "startFrom": "Start From…",
@@ -871,5 +879,23 @@
     "confirmButton": "Take Upgrade",
     "pickHint": "Select an upgrade",
     "closeDetail": "Close details"
+  },
+  "certificateEffects": {
+    "ballSpeedMultiplier": "Ball speed {{percent}}%",
+    "ballSizeMultiplier": "Ball size {{percent}}%",
+    "fenceGenerationSpeedMultiplier": "Fence speed {{percent}}%",
+    "scoreMultiplier": "Overtime {{percent}}%",
+    "shopDiscountMultiplier": "Shop prices {{percent}}%",
+    "pushBonusMultiplier": "Push bonus {{percent}}%",
+    "extraLives": "Starting lives {{value}}",
+    "instantFencesPerMap": "Instant fences per map {{value}}",
+    "additionalConcurrentFences": "Concurrent fences {{value}}",
+    "ballPathPredictionBounces": "Path preview bounces {{value}}",
+    "startingLevelBonus": "Every run starts at level {{level}}",
+    "startingCapturePercent": "Board pre-captured +{{percent}}%",
+    "extraCertificateHours": "Certificate Hours per run +{{hours}}",
+    "bankedSlowPer50h": "Ball speed {{percent}}% per 50h banked",
+    "microManagerPerLock": "Ball speed {{percent}}% per locked ball",
+    "showHighscoreProgress": "Adds the map highscore bar to the HUD"
   }
 }

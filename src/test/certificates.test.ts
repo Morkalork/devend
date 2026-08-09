@@ -6,6 +6,7 @@ import type { CertConfig } from "@/types/certificate";
 import type { AchievementConfig } from "@/types/achievement";
 import type { UpgradeData } from "@/types/upgrade";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
+import { certEffectLabel } from "@/lib/certEffectLabel";
 
 // Read straight from the YAML sources of truth so this suite guards the data,
 // not a hand-maintained copy of it (same approach as upgrades.test.ts).
@@ -80,6 +81,51 @@ describe("certificate catalogue integrity", () => {
         prev = l.cost;
       }
     }
+  });
+});
+
+// A minimal stand-in for i18next's `t`: resolves a dotted key against the real
+// en.json and interpolates {{...}}. Using the actual locale file means these
+// tests fail if a label key is missing, not just if the formatter forgets one.
+const en = JSON.parse(readFileSync(resolve(process.cwd(), "src/i18n/locales/en.json"), "utf8"));
+const fakeT = ((key: string, opts?: Record<string, unknown>) => {
+  const hit = key.split(".").reduce<unknown>((o, k) => (o as Record<string, unknown>)?.[k], en);
+  if (typeof hit !== "string") return (opts?.defaultValue as string) ?? "";
+  return hit.replace(/\{\{(\w+)\}\}/g, (_, name) => String(opts?.[name] ?? `{{${name}}}`));
+}) as unknown as Parameters<typeof certEffectLabel>[0];
+
+describe("certificate effect labels", () => {
+  // The store shows one description for the whole certificate, so the only
+  // place a level's actual value can be stated is this label. A type with no
+  // label renders an empty row: a priced button that says nothing.
+  it("labels every effect used in certificates.yml", () => {
+    const unlabelled: string[] = [];
+    for (const c of certificates)
+      for (const l of c.levels)
+        if (!certEffectLabel(fakeT, l.effect).trim()) unlabelled.push(`${c.id} -> ${l.effect.type}`);
+    expect(unlabelled).toEqual([]);
+  });
+
+  it("leaves no interpolation placeholder unfilled", () => {
+    const leaky: string[] = [];
+    for (const c of certificates)
+      for (const l of c.levels)
+        if (certEffectLabel(fakeT, l.effect).includes("{{")) leaky.push(`${c.id} -> ${l.effect.type}`);
+    expect(leaky).toEqual([]);
+  });
+
+  it("signs deltas by direction, not by whether the number is a bonus", () => {
+    // 0.95 is a REDUCTION even though it is a good thing, and 1.05 an increase
+    // even where that is bad (shop prices). The sign must follow the number.
+    expect(certEffectLabel(fakeT, { type: "ballSpeedMultiplier", value: 0.95 })).toBe("Ball speed -5%");
+    expect(certEffectLabel(fakeT, { type: "scoreMultiplier", value: 1.05 })).toBe("Overtime +5%");
+    // 0.93 - 1 is -0.07000000000000006 in floating point.
+    expect(certEffectLabel(fakeT, { type: "shopDiscountMultiplier", value: 0.93 })).toBe("Shop prices -7%");
+    expect(certEffectLabel(fakeT, { type: "extraLives", value: 1 })).toBe("Starting lives +1");
+  });
+
+  it("returns empty for an unknown type rather than inventing a label", () => {
+    expect(certEffectLabel(fakeT, { type: "notAModifier" as never, value: 3 })).toBe("");
   });
 });
 
