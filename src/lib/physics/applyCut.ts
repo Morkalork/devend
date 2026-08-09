@@ -39,7 +39,7 @@ import { wasteCapturedPickups } from "@/lib/pickups";
 import { tickCircuitOnCut } from "@/lib/physics/circuit";
 import { tickChargeOnCut } from "@/lib/physics/charge";
 import { tickDataStreamOnCut } from "@/lib/physics/dataStream";
-import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS } from "@/lib/gameConstants";
+import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS, BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
@@ -274,11 +274,19 @@ export function applyCutFn(
           if (r < minRow) minRow = r;
           if (r > maxRow) maxRow = r;
         }
+        // Smallest ball still in play, so the gate only blocks a slit that NO
+        // ball could have passed. Blocking on a bigger ball's width would wall
+        // off gaps a smaller one legitimately uses, and under-fill the tint.
+        const liveRadii = game.balls
+          .filter(b => b.state !== 'won' && b.state !== 'dormant')
+          .map(b => b.radius);
+        const throatWidth = 2 * (liveRadii.length > 0 ? Math.min(...liveRadii) : BASE_BALL_RADIUS);
         const bounded = floodRemovedEnclosure(grid, seeds, game.walls, {
           bounds: {
             minCol: minCol - pad, maxCol: maxCol + pad,
             minRow: minRow - pad, maxRow: maxRow + pad,
           },
+          minThroatWidth: throatWidth,
         });
         for (const idx of bounded) {
           if (grid.lockCaptured[idx] < intensity) grid.lockCaptured[idx] = intensity;

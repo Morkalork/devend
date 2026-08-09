@@ -475,6 +475,10 @@ export function checkAndUpdateBallWonStates(
           minCol: minCol - bandCells, maxCol: maxCol + bandCells,
           minRow: minRow - bandCells, maxRow: maxRow + bandCells,
         },
+        // This ball's own diameter: a slit it could not pass is not part of the
+        // pocket it was sealed in, so the flash must not cross one. The box
+        // alone cannot tell a crevice from a leak that stays inside it.
+        minThroatWidth: ball.radius * 2,
       })) cellSet.add(idx);
       // Snap the lattice contour onto the pocket's bounding walls so the flash
       // fills flush with the fence line (same treatment as the persistent tint).

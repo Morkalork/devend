@@ -103,7 +103,15 @@ describe("lock fill containment", () => {
       { start: { x: 830, y: 550 }, end: { x: 82, y: 550 } },
       { start: { x: 82, y: 550 }, end: { x: 82, y: 350 } },
     ];
-    // A pocket seed BELOW the wall, near the right edge: the bottom-right corner.
+    // The player's fence, sealing the bottom-right corner: vertical at x=700
+    // from the wall's underside down to the board edge. The pocket is then
+    // closed on all sides EXCEPT the 25-unit slit at x 830..855 leading up past
+    // the wall's end - the same shape as the reported map.
+    //
+    // Note the wall's LEFT gap (x 45..82) is 37 units and a ball DOES fit
+    // through it, so without this fence the flood reaches the top legitimately
+    // by going the long way round, and the slit proves nothing.
+    walls.push({ start: { x: 700, y: 550 }, end: { x: 700, y: 855 } });
     const seeds = [worldToGridIndex(grid, 800, 700)];
     return { grid, walls, seeds };
   }
@@ -114,6 +122,27 @@ describe("lock fill containment", () => {
     // Above the wall is the "upper right corner" the report describes.
     const aboveWall = worldToGridIndex(grid, 800, 200);
     expect(reached.has(aboveWall)).toBe(true);
+  });
+
+  // The structural fix: the slit is 25 units and a ball is 36, so the flood is
+  // refused at the throat itself rather than merely fenced in by a box drawn
+  // around the pocket. This holds with NO bounds at all.
+  it("the throat gate blocks the leak with no bounding box at all", () => {
+    const { grid, walls, seeds } = levelElevenRightGap();
+    const reached = floodRemovedEnclosure(grid, seeds, walls, { minThroatWidth: 36 });
+    expect(reached.has(worldToGridIndex(grid, 800, 200))).toBe(false);
+    // ...while still filling the pocket it was actually sealed in, right up to
+    // the fence and the board corner.
+    expect(reached.has(worldToGridIndex(grid, 750, 800))).toBe(true);
+    expect(reached.has(worldToGridIndex(grid, 840, 840))).toBe(true);
+  });
+
+  it("a ball small enough to use the slit is not walled off by it", () => {
+    const { grid, walls, seeds } = levelElevenRightGap();
+    // 20-unit ball fits through the 25-unit gap, so that route is legitimately
+    // open and the fill must follow it rather than inventing a barrier.
+    const reached = floodRemovedEnclosure(grid, seeds, walls, { minThroatWidth: 20 });
+    expect(reached.has(worldToGridIndex(grid, 800, 200))).toBe(true);
   });
 
   it("the pocket's bounding box keeps the fill out of the upper right", () => {

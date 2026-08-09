@@ -660,6 +660,54 @@ export function isRegionTrulySealed(
  * `maxDepth` additionally caps the walk for callers that only ever want to
  * reclaim that band, where anything beyond a cell or two is by definition wrong.
  */
+/**
+ * How far the fill may spread past the ball-passable core once `minThroatWidth`
+ * is in play. This is what still reaches flush to a fence and into the tip of a
+ * triangular corner - places a ball can never sit, but which are unmistakably
+ * part of the pocket and looked broken when left dark.
+ *
+ * It stays small on purpose: a throat is only crossable if the barrier beside it
+ * is thinner than this, and real walls are far thicker.
+ */
+const THROAT_DILATION_CELLS = 2;
+
+/**
+ * Free span across the step a->b, measured perpendicular to it. Used to decide
+ * whether the step passes through a throat too narrow for a ball.
+ *
+ * Returns early as soon as one side alone is wider than `probe`: the span can
+ * only grow from there, so the second cast is wasted work.
+ */
+function spanAcrossStep(
+  a: Vector2,
+  b: Vector2,
+  walls: { start: Vector2; end: Vector2 }[],
+  probe: number,
+): number {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len = Math.hypot(dx, dy) || 1;
+  // Perpendicular to the direction of travel: the axis a throat pinches along.
+  const px = -dy / len, py = dx / len;
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  const m = { x: mx, y: my };
+
+  const reach = (sx: number, sy: number): number => {
+    const end = { x: mx + sx * probe, y: my + sy * probe };
+    let nearest = probe;
+    for (const w of walls) {
+      const hit = lineSegmentIntersection(m, end, w.start, w.end);
+      if (!hit) continue;
+      const d = Math.hypot(hit.x - mx, hit.y - my);
+      if (d < nearest) nearest = d;
+    }
+    return nearest;
+  };
+
+  const plus = reach(px, py);
+  if (plus >= probe) return plus; // already wide enough; skip the other cast
+  return plus + reach(-px, -py);
+}
+
 export function floodRemovedEnclosure(
   grid: SpaceGrid,
   seeds: number[],
@@ -669,12 +717,27 @@ export function floodRemovedEnclosure(
     maxCells?: number;
     /** Cell-space box the flood may not leave (inclusive). */
     bounds?: { minCol: number; maxCol: number; minRow: number; maxRow: number };
+    /**
+     * Treat any gap narrower than this (world units, so pass a ball DIAMETER)
+     * as if it were solid.
+     *
+     * This is the structural fix for the bleed rather than a bound on it. A slit
+     * a ball cannot pass through carries no wall segment, so the plain flood
+     * strolls through it into a chamber the ball could never have reached, and
+     * tints territory that has nothing to do with the lock. Level 11's wall-1
+     * leaves exactly such a slit: 25 units against a 36-unit ball.
+     *
+     * Confinement is the ball's, so the tint's should match: if the ball could
+     * not get there, the pocket does not extend there.
+     */
+    minThroatWidth?: number;
   } = {},
 ): Set<number> {
   const { width, height, cells } = grid;
   const maxDepth = limit.maxDepth ?? Infinity;
   const maxCells = limit.maxCells ?? Infinity;
   const bounds = limit.bounds;
+  const throat = limit.minThroatWidth ?? 0;
 
   const visited = new Uint8Array(cells.length);
   const seeded: number[] = [];
@@ -717,6 +780,13 @@ export function floodRemovedEnclosure(
       for (const w of walls) {
         if (lineSegmentIntersection(a, b, w.start, w.end)) return true;
       }
+      // A throat the ball cannot fit through is a wall as far as the pocket is
+      // concerned. Deliberately NOT marked visited: the dilation below has to be
+      // able to grow into these cells, and the span depends on the direction of
+      // travel, so a cell refused from one side may legitimately be entered from
+      // another. That costs re-testing a blocked cell once per neighbour, which
+      // is cheap next to getting it wrong.
+      if (throat > 0 && spanAcrossStep(a, b, walls, throat) < throat) return true;
       visited[ni] = 1;
       out.add(ni);
       depth.set(ni, d + 1);
@@ -730,6 +800,44 @@ export function floodRemovedEnclosure(
     if (col > 0 && !step(cur - 1)) return new Set(seeded);
     if (col < width - 1 && !step(cur + 1)) return new Set(seeded);
   }
+
+  // The throat gate stops the flood a ball-width short of every wall, which
+  // would leave the fence band dark and hollow out triangular tips - the exact
+  // under-fill the bounding box was introduced to avoid. So spread back out a
+  // couple of cells, ignoring throats but still never crossing a wall segment.
+  // Too short to traverse any real barrier, long enough to finish the pocket.
+  if (throat > 0) {
+    let frontier = [...out];
+    for (let d = 0; d < THROAT_DILATION_CELLS && frontier.length > 0; d++) {
+      const next: number[] = [];
+      for (const cur of frontier) {
+        const a = gridIndexToWorld(grid, cur);
+        const row = (cur / width) | 0;
+        const col = cur % width;
+        const grow = (ni: number) => {
+          if (visited[ni] || cells[ni] !== CellState.REMOVED) return;
+          if (bounds) {
+            const r = (ni / width) | 0;
+            const c = ni % width;
+            if (r < bounds.minRow || r > bounds.maxRow || c < bounds.minCol || c > bounds.maxCol) return;
+          }
+          const b = gridIndexToWorld(grid, ni);
+          for (const w of walls) {
+            if (lineSegmentIntersection(a, b, w.start, w.end)) return;
+          }
+          visited[ni] = 1;
+          out.add(ni);
+          next.push(ni);
+        };
+        if (row > 0) grow(cur - width);
+        if (row < height - 1) grow(cur + width);
+        if (col > 0) grow(cur - 1);
+        if (col < width - 1) grow(cur + 1);
+      }
+      frontier = next;
+    }
+  }
+
   return out;
 }
 
