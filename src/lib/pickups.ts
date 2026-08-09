@@ -407,6 +407,33 @@ function slowSplitBall(ball: Ball, factor: number): void {
  * (never below its minimum speed), and at level 3 the split yields a THIRD
  * ball - three slower balls means three lock payouts.
  */
+/**
+ * Pick the clone's departure heading and how far along it to place the clone.
+ *
+ * Prefers a heading whose spawn point is still live playable space, so pushing
+ * the clone clear of its parent can never post it inside a wall or into already
+ * captured territory. Falls back to the old near-zero offset if the ball is
+ * somewhere too tight for a clean separation (a nearly-sealed pocket), where
+ * being coincident for a frame is much better than being embedded in geometry.
+ */
+function forkDeparture(game: CanvasGameState, src: Ball): { angle: number; gap: number } {
+  const gap = src.radius * 1.25;
+  const grid = game.spaceGrid;
+  const start = Math.random() * Math.PI * 2;
+  if (grid) {
+    // Walk headings from a random start so the choice stays unbiased.
+    for (let i = 0; i < 8; i++) {
+      const angle = start + (i / 8) * Math.PI * 2;
+      const pos = {
+        x: src.position.x + Math.cos(angle) * gap,
+        y: src.position.y + Math.sin(angle) * gap,
+      };
+      if (isPositionActive(grid, pos)) return { angle, gap };
+    }
+  }
+  return { angle: start, gap: 2 };
+}
+
 function forkRandomFreeBall(game: CanvasGameState, payoutLevel = 0): boolean {
   const free = game.balls.filter(b => b.state === "active" && b.speed > 0);
   if (free.length === 0) return false;
@@ -416,13 +443,17 @@ function forkRandomFreeBall(game: CanvasGameState, payoutLevel = 0): boolean {
   const spawned: Ball[] = [];
   for (let i = 0; i < cloneCount; i++) {
     if (game.balls.length >= MAX_LIVE_BALLS) break; // hard safety cap (memory + CPU)
-    const angle = Math.random() * Math.PI * 2;
+    const { angle, gap } = forkDeparture(game, src);
     const clone: Ball = {
       ...src,
       id: `${src.typeId}-fork-${++_forkCounter}`,
-      // A tiny offset avoids a zero-distance ball-ball collision solve; the
-      // normal collision pass separates the pair on the next steps.
-      position: { x: src.position.x + Math.cos(angle) * 2, y: src.position.y + Math.sin(angle) * 2 },
+      // Born a clear gap away along its own departure heading, so the split
+      // reads as ONE ball becoming TWO rather than a second ball materialising
+      // on top of the first. A fork clone is an exact copy - same type, colour
+      // and radius - so at the old 2-unit offset (a ball radius is ~18) the two
+      // were coincident for the first frames and it looked like the ball had
+      // duplicated itself. Reported as a bug more than once, understandably.
+      position: { x: src.position.x + Math.cos(angle) * gap, y: src.position.y + Math.sin(angle) * gap },
       velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
       rotation: Math.random() * Math.PI * 2,
       effects: createBallEffectState(),
