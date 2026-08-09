@@ -29,7 +29,7 @@
  * would have needed, so finishing the tail is a checklist rather than a hunt.
  */
 
-import { Application, Container, Graphics } from "pixi.js";
+import { Application, Container, Graphics, RenderTexture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { RenderContext } from "../types";
 import { BoardLayer } from "./boardLayer";
@@ -41,6 +41,7 @@ import { ObjectLayer } from "./objectLayer";
 import { PropLayer } from "./propLayer";
 import { FxLayer } from "./fxLayer";
 import { ChromeLayer } from "./chromeLayer";
+import { SweepTransition, ShatterTransition } from "./transitions";
 import { lightScope } from "./light";
 import { PALETTE } from "./palette";
 
@@ -62,6 +63,11 @@ export class SleekRenderer {
   private fx = new FxLayer();
   private balls = new SleekBallLayer();
   private chrome = new ChromeLayer();
+
+  private sweep = new SweepTransition();
+  private shatter = new ShatterTransition();
+  /** GPU snapshot for the shatter, taken by captureForDissolve. */
+  private shatterRT: RenderTexture | null = null;
 
   private staticDirty = true;
   private maskKey = "";
@@ -107,8 +113,14 @@ export class SleekRenderer {
     this.boardScope.mask = this.boardMask;
     // The board's drop shadow falls on the page BEHIND the board, so it is a
     // stage-level underlay added before everything else. The space bar is the
-    // one piece of chrome that belongs outside the board on top.
-    this.app.stage.addChild(this.board.underlay, this.root, this.chrome.outer);
+    // one piece of chrome that belongs outside the board on top. The shatter
+    // sits above everything: while it runs, it IS the frame.
+    this.app.stage.addChild(
+      this.board.underlay,
+      this.root,
+      this.chrome.outer,
+      this.shatter.container,
+    );
 
     // No bloom pass. The classic renderer leans on it to sell the neon; here the
     // form is carried by the light model, and a bloom would smear exactly the
@@ -145,6 +157,36 @@ export class SleekRenderer {
   render(game: CanvasGameState, rctx: RenderContext): void {
     if (!this.ready) return;
     const now = performance.now();
+
+    // ── Shatter owns the whole frame ────────────────────────────────────────
+    if (game.dissolve) {
+      // A sweep in flight becomes the shatter's source: its drained slices are
+      // what the tiles are cut from.
+      if (this.sweep.active) this.teardownSweep();
+      this.root.visible = false;
+      this.board.underlay.visible = false;
+      this.chrome.outer.visible = false;
+      this.shatter.render(game.dissolve, now, this.shatterRT?.source);
+      this.app.render();
+      return;
+    }
+    // Nothing in flight: release transition resources and restore the scene.
+    this.shatter.clear();
+    this.clearShatterRT();
+    this.root.visible = true;
+    this.board.underlay.visible = true;
+    this.chrome.outer.visible = true;
+
+    // ── Level-clear sweep ───────────────────────────────────────────────────
+    // shimmerStart can sit in the FUTURE (it waits for lock flashes to finish),
+    // so keep rendering live until the sweep actually begins.
+    if (game.shimmerStart > 0 && now >= game.shimmerStart) {
+      this.sweep.render(this.app, this.root, game, now);
+      this.app.render();
+      return;
+    }
+    if (this.sweep.active) this.teardownSweep();
+
     const { boardRect } = game;
     const scale = boardRect.scale;
 
@@ -206,10 +248,8 @@ export class SleekRenderer {
    */
   private noteMissing(game: CanvasGameState): void {
     const check: Array<[string, boolean]> = [
-      ["dissolve (shatter transition)", !!game.dissolve],
-      ["levelClearSweep", game.levelComplete],
-      ["abilityFx", !!game.abilityFx],
-      ["pickupFeedback", (game.pickupFeedback?.length ?? 0) > 0],
+      ["bossSplash", game.bossActive],
+      ["damageCracks", game.destructibles.some(d => d.hits > 0)],
     ];
     for (const [name, present] of check) {
       if (present && !this.reportedMissing.has(name)) {
@@ -219,26 +259,53 @@ export class SleekRenderer {
     }
   }
 
+  /** Restore the live scene after a sweep and drop its baked textures. */
+  private teardownSweep(): void {
+    this.sweep.teardown();
+    this.root.visible = true;
+  }
+
+  private clearShatterRT(): void {
+    this.shatterRT?.destroy(true);
+    this.shatterRT = null;
+  }
+
   /** Blank frame (used between levels), so the canvas is never a stale image. */
   presentEmpty(): void {
     if (!this.ready) return;
-    this.boardScope.visible = false;
+    this.teardownSweep();
+    this.shatter.clear();
+    this.clearShatterRT();
+    this.root.visible = false;
     this.app.renderer.background.color = PALETTE.boardVoid;
     this.app.render();
-    this.boardScope.visible = true;
   }
 
   /**
-   * The shatter dissolve is not ported yet. GameCanvas calls this before its
-   * transition and then drives the effect itself, so a no-op degrades to "no
-   * shatter" rather than breaking the level change.
+   * GPU snapshot of whatever is currently presented - the drained sweep after a
+   * level clear, or the live scene on game over - for the shatter tiles to be
+   * cut from.
+   *
+   * Snapshotting on the GPU rather than reading the canvas back matters: a
+   * drawImage(webglCanvas) readback stalls the pipeline, and it stalls it at
+   * exactly the frame the shatter is supposed to start, which is the most
+   * visible possible moment for a hitch.
    */
   captureForDissolve(_tint?: string): void {
-    /* not ported in this slice */
+    if (!this.ready) return;
+    this.clearShatterRT();
+    this.shatterRT = RenderTexture.create({
+      width: this.app.renderer.width,
+      height: this.app.renderer.height,
+    });
+    this.app.renderer.render({ container: this.app.stage, target: this.shatterRT });
   }
 
   destroy(): void {
     clearSphereCache();
+    this.sweep.teardown();
+    this.shatter.clear();
+    this.clearShatterRT();
     this.board.destroy();
     this.areas.destroy();
     this.props.destroy();
