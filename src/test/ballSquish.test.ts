@@ -60,7 +60,7 @@ describe("ball squash & stretch (issue #44)", () => {
     triggerWallHit(st, 1000, 300, 0, 300); // full-speed hit
     const full = getSquishEffect(st, 1);
     const half = getSquishEffect(st, 0.5);
-    const fullCompress = 1 - full.scaleAlong; // 0.35 at full strength
+    const fullCompress = 1 - full.scaleAlong; // squishMaxCompress at full strength
     const halfCompress = 1 - half.scaleAlong;
     expect(halfCompress).toBeCloseTo(fullCompress / 2, 6);
     expect(half.scaleAlong * half.scalePerp).toBeCloseTo(1, 6); // still area-preserving

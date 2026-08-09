@@ -93,7 +93,10 @@ const CONFIG = {
   // compression dies inside 4-5 frames and reads as nothing at ball size (~13px),
   // especially with the round highlight ring and glow masking the silhouette.
   squishDuration: 500,       // ms spring-back to round (compress ~165ms, stretch, settle)
-  squishMaxCompress: 0.35,   // peak compression fraction along the impact axis at full speed
+  // Peak compression fraction along the impact axis at full speed. Dialled back
+  // 30% from the original 0.35 on play feedback: at that strength a square hit
+  // read as rubbery rather than as a ball with some give.
+  squishMaxCompress: 0.245,
   squishReferenceSpeed: 250, // world speed at which the squish magnitude saturates
 };
 
