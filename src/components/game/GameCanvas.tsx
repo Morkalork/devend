@@ -4,14 +4,14 @@
  * Bridges React and the imperative game world: all per-frame state lives in
  * a mutable CanvasGameState ref (src/types/gameState.ts), driven by a
  * fixed-timestep loop (src/hooks/useGameLoop.ts) and drawn by
- * src/lib/rendering/renderFrame.ts. React state here is only for UI-visible
+ * src/lib/rendering/sleek/. React state here is only for UI-visible
  * values (lives, cut count, flashes).
  *
  * Subsystem entry points:
  *   - input:     src/hooks/useGameInput.ts (pointer → fence cuts)
  *   - physics:   src/lib/physics/* (ball movement, fence growth, cuts)
  *   - level init src/lib/initGame.ts (board, obstacles, balls, regions)
- *   - rendering: src/lib/rendering/renderFrame.ts
+ *   - rendering: src/lib/rendering/sleek/SleekRenderer.ts
  */
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
@@ -23,7 +23,7 @@ import { clearBallRenderCache } from "@/lib/ballRenderCache";
 import { clearBallSphereCache } from "@/lib/ballSphereCache";
 import { clearRainGlyphCache } from "@/lib/rendering/rainGlyphCache";
 import { clearBallEffectsCache } from "@/lib/ballEffects";
-import { renderFrame, createRainParticles, clearRenderFrameCache } from "@/lib/rendering/renderFrame";
+import { renderFallbackBoard } from "@/lib/rendering/fallbackBoard";
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
 import { getAbility } from "@/lib/abilities";
@@ -102,7 +102,6 @@ import { ActiveMapObjective } from "@/types/objective";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
 import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
-import { getRenderer, isWebGLRenderer, RendererKind } from "@/lib/rendering/rendererSettings";
 import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn, checkSpaceWin, evaluateWinConditions } from "@/lib/physics/applyCut";
@@ -297,13 +296,12 @@ export function GameCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  // Renderer flag: read once per mount (switching = remount). Under 'pixi' the
-  // canvas gets a WebGL context via PixiGameRenderer (dynamic import, so the
-  // 2D path never pays for the pixi chunk) and renders at NATIVE device
-  // resolution. If WebGL init fails (old WebView, blocklisted GPU), we fall
-  // back to canvas2d for the session: the state change remounts the canvas
-  // element (key below) so the fallback gets a fresh, contextless canvas.
-  const [rendererKind, setRendererKind] = useState<RendererKind>(() => getRenderer());
+  // The board is drawn by the sleek WebGL renderer. This flag flips to true
+  // ONLY if its init fails (old WebView, blocklisted GPU); the state change
+  // remounts the canvas element (key below) so the emergency 2D board gets a
+  // fresh, contextless canvas — one that has had a WebGL context cannot hand
+  // out a 2D one.
+  const [useFallback2d, setUseFallback2d] = useState(false);
   const pixiRef = useRef<BoardRenderer | null>(null);
   const pixiInitStartedRef = useRef(false);
   const pixiSizeRef = useRef<{ w: number; h: number } | null>(null);
@@ -638,35 +636,34 @@ export function GameCanvas({
     game.wallShieldsRemaining = Math.max(0, Math.round(activeModifiers.wallShieldsPerMap));
     setWallShieldCount(game.wallShieldsRemaining);
 
-    // Both WebGL renderers ('pixi' and the experimental 'sleek') share this
-    // path: same canvas sizing, same init/fallback, same render call.
-    const isPixi = isWebGLRenderer(rendererKind);
-    const ctx = isPixi ? null : canvas.getContext("2d");
-    if (!isPixi && !ctx) return;
+    // The sleek WebGL renderer is the only renderer. `useFallback2d` is set ONLY
+    // when its init fails (old WebView, blocklisted GPU), and swaps in the
+    // emergency 2D board so the player gets something legible rather than a
+    // black rectangle. It is not a user-selectable alternative.
+    const ctx = useFallback2d ? canvas.getContext("2d") : null;
+    if (useFallback2d && !ctx) return;
     if (ctx) {
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = 'high';
     }
 
-    // Pixi renderer: created once per component mount (async chunk, so the
-    // 2D path never loads it); level-effect re-runs share the instance. Any
-    // failure (chunk load, WebGL context) drops back to canvas2d for the
-    // session via the renderer state, which remounts a fresh canvas element.
-    if (isPixi && !pixiInitStartedRef.current) {
+    // Created once per component mount (async chunk); level-effect re-runs share
+    // the instance.
+    if (!useFallback2d && !pixiInitStartedRef.current) {
       pixiInitStartedRef.current = true;
       const fallback = (err: unknown) => {
-        console.warn("[renderer] WebGL init failed, falling back to canvas2d:", err);
+        console.warn("[renderer] WebGL init failed, using the emergency 2D board:", err);
         try { pixiRef.current?.destroy(); } catch { /* half-initialized app */ }
         pixiRef.current = null;
         pixiInitStartedRef.current = false;
-        setRendererKind("canvas2d");
+        // Remounts the canvas element (see its key) so the 2D path gets a fresh,
+        // contextless canvas — a canvas that has had a WebGL context cannot
+        // hand out a 2D one.
+        setUseFallback2d(true);
       };
-      const load: Promise<BoardRenderer> =
-        rendererKind === "sleek"
-          ? import("@/lib/rendering/sleek/SleekRenderer").then(m => new m.SleekRenderer())
-          : import("@/lib/rendering/pixi/PixiGameRenderer").then(m => new m.PixiGameRenderer());
-      load.then((renderer) => {
+      import("@/lib/rendering/sleek/SleekRenderer").then(m => {
         if (pixiRef.current) return;
+        const renderer = new m.SleekRenderer();
         pixiRef.current = renderer;
         const size = pixiSizeRef.current ?? { w: canvas.width || 1, h: canvas.height || 1 };
         renderer.init(canvas, size.w, size.h).then(() => {
@@ -1035,19 +1032,19 @@ export function GameCanvas({
       setCutCount(0);
       // Not always 100: startingCapturePercent (Equity Grant) starts the run lower
       setRemainingPercent(game.spaceGrid ? Math.round(getRemainingPercent(game.spaceGrid)) : 100);
-      rainState.particles = createRainParticles(40);
+      rainState.particles = [];
       rainState.lastTime = 0;
     };
 
     const resizeCanvas = () => {
       const { width, height } = container.getBoundingClientRect();
-      // Pixi renders at native device resolution (3x sanity cap saturates any
-      // panel); the 2D path keeps its capped + adaptive DPR.
-      const dpr = isPixi ? Math.min(window.devicePixelRatio || 1, 3) : getDevicePixelRatio();
+      // Native device resolution (3x sanity cap saturates any panel); the
+      // emergency 2D board keeps the capped + adaptive DPR.
+      const dpr = !useFallback2d ? Math.min(window.devicePixelRatio || 1, 3) : getDevicePixelRatio();
       const physW = Math.round(width * dpr);
       const physH = Math.round(height * dpr);
       pixiSizeRef.current = { w: physW, h: physH };
-      if (isPixi && pixiRef.current?.isReady) {
+      if (!useFallback2d && pixiRef.current?.isReady) {
         // The WebGL renderer manages canvas.width/height itself.
         pixiRef.current.resize(physW, physH);
       } else {
@@ -1118,9 +1115,9 @@ export function GameCanvas({
         pixiRef.current?.render(game, rctx);
         return;
       }
-      renderFrame(ctx, game, rctx);
-      // Perf HUD drawn after renderFrame (which returns early on normal frames),
-      // so it always lands on top. Its cost counts toward the measured render ms.
+      renderFallbackBoard(ctx, game, rctx);
+      // Perf HUD on top of the emergency board. Its cost counts toward the
+      // measured render ms.
       if (showPerfOverlayRef.current) drawPerfOverlay(ctx, game);
     };
 
@@ -1152,7 +1149,7 @@ export function GameCanvas({
       const W = canvas.width, H = canvas.height;
       const captured = document.createElement('canvas');
       captured.width = W; captured.height = H;
-      if (isPixi) {
+      if (!useFallback2d) {
         // GPU-side snapshot: drawImage(webglCanvas) is a synchronous full-frame
         // readback — a visible hitch right when the shatter should start.
         pixiRef.current?.captureForDissolve(tint);
@@ -1182,8 +1179,12 @@ export function GameCanvas({
       const W = canvas.width, H = canvas.height;
       const captured = document.createElement('canvas');
       captured.width = W; captured.height = H;
+      // Snapshot the map's first frame from the renderer that will actually
+      // draw it. Under the emergency 2D board there is no renderer to extract
+      // from, so the assemble is simply skipped (the board appears directly).
+      const snap = pixiRef.current?.captureSceneCanvas?.(game, rctx) ?? null;
       const cctx = captured.getContext('2d');
-      if (cctx) renderFrame(cctx, game, rctx);
+      if (cctx && snap) cctx.drawImage(snap, 0, 0);
       game.dissolve = {
         captured, tiles: buildDissolveTiles(W, H),
         // Start a beat in the FUTURE: the game screen slides in for ~280ms
@@ -1354,7 +1355,7 @@ export function GameCanvas({
     let disposed = false;
     if (introPendingRef.current) {
       introPendingRef.current = false;
-      if (!isPixi) {
+      if (useFallback2d) {
         startAssemble(); // captures off-screen and starts the loop itself
       } else {
         // Pixi inits async: keep the loop (and the parallax background)
@@ -1383,7 +1384,7 @@ export function GameCanvas({
     // re-applies the raised DPR ceiling. Pixi already renders at native DPR, so
     // the ramp (whose cost model is 2D-fill-bound) is skipped entirely there.
     let dprRampInterval: number | undefined;
-    if (!isPixi) {
+    if (useFallback2d) {
       let dprRampChecks = 0;
       dprRampInterval = window.setInterval(() => {
         dprRampChecks++;
@@ -1409,11 +1410,10 @@ export function GameCanvas({
       clearRainGlyphCache();
       clearBallEffectsCache();
       clearPickupSpriteCache();
-      clearRenderFrameCache();
     };
-  }, [level, levelNumber, activeModifiers, fenceDurability, rendererKind]);
+  }, [level, levelNumber, activeModifiers, fenceDurability, useFallback2d]);
 
-  // The Pixi renderer survives level changes (the effect above re-runs per
+  // The renderer survives level changes (the effect above re-runs per
   // level); the GPU context is torn down only when the component unmounts.
   useEffect(() => () => {
     pixiRef.current?.destroy();
@@ -1699,7 +1699,7 @@ export function GameCanvas({
             }}
           />
         )}
-        <canvas key={rendererKind} ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
+        <canvas key={useFallback2d ? '2d' : 'gl'} ref={canvasRef} className="absolute inset-0 touch-none cursor-crosshair" style={{ zIndex: 2 }} />
         <canvas
           ref={overlayCanvasRef}
           className="absolute inset-0 pointer-events-none"

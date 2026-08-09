@@ -259,6 +259,31 @@ export class SleekRenderer {
     }
   }
 
+  /**
+   * Snapshot the current scene into a plain 2D canvas, for the run-start
+   * assemble (the board flying IN from shards).
+   *
+   * The assemble needs a picture of the map's FIRST frame before that frame has
+   * ever been presented, and it needs it as a canvas because the tiles are cut
+   * from it by the shared dissolve path. Previously this was the one job the 2D
+   * renderer still did under WebGL; extracting from our own scene removes the
+   * last reason for that renderer to exist.
+   *
+   * Returns null if extraction fails, and the caller simply skips the assemble
+   * rather than losing the level.
+   */
+  captureSceneCanvas(game: CanvasGameState, rctx: RenderContext): HTMLCanvasElement | null {
+    if (!this.ready) return null;
+    try {
+      // Draw one full frame first: at this point nothing has been presented, so
+      // the scene graph is still empty.
+      this.render(game, rctx);
+      return this.app.renderer.extract.canvas(this.app.stage) as HTMLCanvasElement;
+    } catch {
+      return null;
+    }
+  }
+
   /** Restore the live scene after a sweep and drop its baked textures. */
   private teardownSweep(): void {
     this.sweep.teardown();

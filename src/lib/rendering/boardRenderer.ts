@@ -25,5 +25,12 @@ export interface BoardRenderer {
   presentEmpty(): void;
   /** Snapshot the current frame for the shatter transition. */
   captureForDissolve(tint?: string): void;
+  /**
+   * Render one frame into a detached 2D canvas, for the run-start assemble.
+   * The assemble needs a picture of the map's first frame BEFORE it has been
+   * presented, and needs it as a canvas because the shatter tiles are cut from
+   * one. Returns null if extraction is unavailable.
+   */
+  captureSceneCanvas(game: CanvasGameState, rctx: RenderContext): HTMLCanvasElement | null;
   destroy(): void;
 }
