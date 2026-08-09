@@ -17,7 +17,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import { areaStyle, isGateArea } from "@/lib/coloredAreas";
 import { dashedLine } from "./dashedLine";
 import { ambientAt, type LightScope } from "./light";
-import { snapRect, type Pt } from "./pixelGrid";
+import { snapRect, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -76,7 +76,7 @@ export class AreaLayer {
         dashedLine(this.g, x1, y1, x0, y1, dash, gap);
         dashedLine(this.g, x0, y1, x0, y0, dash, gap);
         this.g.stroke({
-          width: 1,
+          width: hairline(),
           color,
           alpha: (gate ? 0.8 : 0.5) * light.level,
         });

@@ -17,7 +17,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import { traceActiveContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, shadowFor, slabHeight, type LightScope } from "./light";
-import { snapStroke, type Pt } from "./pixelGrid";
+import { snapStroke, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -209,7 +209,7 @@ export class BoardLayer {
       if (loop.length < 3) continue;
       this.active.poly(loop);
     }
-    this.active.stroke({ width: 1, color: PALETTE.accentDim, alpha: 0.55 });
+    this.active.stroke({ width: hairline(), color: PALETTE.accentDim, alpha: 0.55 });
 
     this.drawLattice(game, w2s);
   }
@@ -245,7 +245,7 @@ export class BoardLayer {
       const y = snapStroke(w2s(originX, wy).y, 1);
       g.moveTo(top.x, y).lineTo(bottom.x, y);
     }
-    g.stroke({ width: 1, color: PALETTE.grid, alpha: 0.6 });
+    g.stroke({ width: hairline(), color: PALETTE.grid, alpha: 0.6 });
   }
 
   /**

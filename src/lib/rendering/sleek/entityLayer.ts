@@ -17,7 +17,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
-import { snapContour, type Pt } from "./pixelGrid";
+import { snapContour, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -117,7 +117,7 @@ export class EntityLayer {
       this.rims
         .moveTo(a.x, a.y)
         .lineTo(b.x, b.y)
-        .stroke({ width: 1, color: PALETTE.obstacleEdge, alpha: Math.min(0.9, lit * 0.95 * light.level) });
+        .stroke({ width: hairline(), color: PALETTE.obstacleEdge, alpha: Math.min(0.9, lit * 0.95 * light.level) });
     }
   }
 
@@ -213,7 +213,7 @@ export class EntityLayer {
       this.rims
         .moveTo(a.x, a.y)
         .lineTo(b.x, b.y)
-        .stroke({ width: 1, color: 0xffd9a0, alpha: Math.min(0.9, lit * 0.9 * light.level) });
+        .stroke({ width: hairline(), color: 0xffd9a0, alpha: Math.min(0.9, lit * 0.9 * light.level) });
     }
   }
 

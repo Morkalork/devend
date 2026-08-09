@@ -51,6 +51,24 @@ export function snapWidth(width: number): number {
   return Math.max(1, Math.round(width));
 }
 
+/**
+ * Width of a hairline, in DEVICE pixels, that reads as one CSS pixel.
+ *
+ * This renderer's coordinate space is device pixels, so a literal `width: 1` is
+ * one HARDWARE pixel - and that is a very different physical thickness per
+ * display. On a 3x phone it is a third of a CSS pixel and effectively invisible;
+ * on a 1x monitor it is a full one. Tuning line weights on a desktop therefore
+ * silently produces a board whose detail vanishes on the device it ships to,
+ * which is exactly what happened to the obstacle rims, the lattice and the
+ * region boundary here.
+ *
+ * Rounded to a whole number so hairlines stay snappable and crisp.
+ */
+export function hairline(): number {
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  return Math.max(1, Math.round(dpr));
+}
+
 export interface SnappedRect {
   x: number;
   y: number;

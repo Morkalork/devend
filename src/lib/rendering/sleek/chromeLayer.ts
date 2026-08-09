@@ -18,7 +18,7 @@ import { getRemainingPercent } from "@/lib/spaceGrid";
 import { BALL_DANGER_SPEED } from "@/lib/gameConstants";
 import { PALETTE } from "./palette";
 import type { LightScope } from "./light";
-import { snapRect, snapStroke, snapWidth } from "./pixelGrid";
+import { snapRect, snapStroke, snapWidth, hairline } from "./pixelGrid";
 
 /** Ball speed (as a fraction of the danger threshold) before the frame shows. */
 const DANGER_FLOOR = 0.55;
@@ -78,7 +78,7 @@ export class ChromeLayer {
 
     const r = snapRect(left, top, width, height);
     g.rect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1)
-      .stroke({ width: 1, color: PALETTE.accent, alpha: 0.85 * level });
+      .stroke({ width: hairline(), color: PALETTE.accent, alpha: 0.85 * level });
 
     // Corner ticks: a console bezel cue, and they make the board feel mounted
     // rather than floating.
@@ -146,7 +146,7 @@ export class ChromeLayer {
     if (!done) {
       const x = snapStroke(track.x + track.width, 1);
       g.moveTo(x, track.y).lineTo(x, track.y + track.height)
-        .stroke({ width: 1, color: PALETTE.accentGlow, alpha: 0.7 * fade });
+        .stroke({ width: hairline(), color: PALETTE.accentGlow, alpha: 0.7 * fade });
     }
   }
 

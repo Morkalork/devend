@@ -21,7 +21,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, facing, shadowFor, slabHeight, type LightScope } from "./light";
-import { snapContour, type Pt } from "./pixelGrid";
+import { snapContour, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -91,7 +91,7 @@ export class ObjectLayer {
   /** Per-edge rim on the faces pointing at the monitor. */
   private rimEdges(
     pts: Pt[], cx: number, cy: number, light: LightScope,
-    color: number, strength: number, width = 1,
+    color: number, strength: number, width = hairline(),
   ): void {
     const n = pts.length;
     for (let i = 0; i < n; i++) {
@@ -178,7 +178,7 @@ export class ObjectLayer {
         .fill({ color: PALETTE.shadow, alpha: 0.55 });
     }
     if ((d.dents?.length ?? 0) > 0) {
-      this.rims.stroke({ width: Math.max(1, scale), color: PALETTE.shadow, alpha: 0.7 });
+      this.rims.stroke({ width: Math.max(hairline(), scale), color: PALETTE.shadow, alpha: 0.7 });
     }
   }
 
@@ -225,7 +225,7 @@ export class ObjectLayer {
     // around where it will come back.
     this.rims
       .poly(pts)
-      .stroke({ width: 1, color: PALETTE.obstacleEdge, alpha: 0.25 + a * 0.5 });
+      .stroke({ width: hairline(), color: PALETTE.obstacleEdge, alpha: 0.25 + a * 0.5 });
     if (a > 0.5) this.rimEdges(pts, cx, cy, light, PALETTE.obstacleEdge, 0.95 * a);
   }
 

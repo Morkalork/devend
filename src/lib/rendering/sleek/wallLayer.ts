@@ -24,7 +24,7 @@ import type { Wall } from "@/lib/wallGeometry";
 import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, facing, shadowFor, type LightScope } from "./light";
-import { snapSegment, snapWidth, type Pt } from "./pixelGrid";
+import { snapSegment, snapWidth, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -362,7 +362,7 @@ export class WallLayer {
       .moveTo(a.x + rx, a.y + ry)
       .lineTo(b.x + rx, b.y + ry)
       .stroke({
-        width: 1,
+        width: hairline(),
         color: isEdge ? PALETTE.edge : PALETTE.accentGlow,
         alpha: Math.min(0.95, lit * 0.95 * light.level),
         cap: "butt",
