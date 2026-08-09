@@ -21,6 +21,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { PickupConfig, PickupState, PickupEffect } from "@/types/pickups";
 import { Vector2, pointToSegmentDistance } from "@/lib/polygon";
 import { CellState, isPositionActive, worldToGridIndex } from "@/lib/spaceGrid";
+import { spawnClearOfParent } from "@/lib/physics/spawnPlacement";
 import { createBallEffectState } from "@/lib/ballEffects";
 import { getBallType } from "@/lib/ballTypes";
 import { playPickupClaimedSound } from "@/lib/gameAudio";
@@ -407,33 +408,6 @@ function slowSplitBall(ball: Ball, factor: number): void {
  * (never below its minimum speed), and at level 3 the split yields a THIRD
  * ball - three slower balls means three lock payouts.
  */
-/**
- * Pick the clone's departure heading and how far along it to place the clone.
- *
- * Prefers a heading whose spawn point is still live playable space, so pushing
- * the clone clear of its parent can never post it inside a wall or into already
- * captured territory. Falls back to the old near-zero offset if the ball is
- * somewhere too tight for a clean separation (a nearly-sealed pocket), where
- * being coincident for a frame is much better than being embedded in geometry.
- */
-function forkDeparture(game: CanvasGameState, src: Ball): { angle: number; gap: number } {
-  const gap = src.radius * 1.25;
-  const grid = game.spaceGrid;
-  const start = Math.random() * Math.PI * 2;
-  if (grid) {
-    // Walk headings from a random start so the choice stays unbiased.
-    for (let i = 0; i < 8; i++) {
-      const angle = start + (i / 8) * Math.PI * 2;
-      const pos = {
-        x: src.position.x + Math.cos(angle) * gap,
-        y: src.position.y + Math.sin(angle) * gap,
-      };
-      if (isPositionActive(grid, pos)) return { angle, gap };
-    }
-  }
-  return { angle: start, gap: 2 };
-}
-
 function forkRandomFreeBall(game: CanvasGameState, payoutLevel = 0): boolean {
   const free = game.balls.filter(b => b.state === "active" && b.speed > 0);
   if (free.length === 0) return false;
@@ -443,7 +417,7 @@ function forkRandomFreeBall(game: CanvasGameState, payoutLevel = 0): boolean {
   const spawned: Ball[] = [];
   for (let i = 0; i < cloneCount; i++) {
     if (game.balls.length >= MAX_LIVE_BALLS) break; // hard safety cap (memory + CPU)
-    const { angle, gap } = forkDeparture(game, src);
+    const spot = spawnClearOfParent(game, src);
     const clone: Ball = {
       ...src,
       id: `${src.typeId}-fork-${++_forkCounter}`,
@@ -453,8 +427,8 @@ function forkRandomFreeBall(game: CanvasGameState, payoutLevel = 0): boolean {
       // and radius - so at the old 2-unit offset (a ball radius is ~18) the two
       // were coincident for the first frames and it looked like the ball had
       // duplicated itself. Reported as a bug more than once, understandably.
-      position: { x: src.position.x + Math.cos(angle) * gap, y: src.position.y + Math.sin(angle) * gap },
-      velocity: { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed },
+      position: { x: spot.x, y: spot.y },
+      velocity: { x: Math.cos(spot.angle) * speed, y: Math.sin(spot.angle) * speed },
       rotation: Math.random() * Math.PI * 2,
       effects: createBallEffectState(),
       speedRange: src.speedRange ? [src.speedRange[0], src.speedRange[1]] : undefined,

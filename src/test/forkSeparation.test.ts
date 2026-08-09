@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { claimPickupsInPocket } from "@/lib/pickups";
+import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { worldToGridIndex } from "@/lib/spaceGrid";
 import { createSpaceGrid } from "@/lib/spaceGrid";
 import { createRectPolygon } from "@/lib/polygon";
@@ -62,5 +63,33 @@ describe("fork clone separation", () => {
     const dot = (offX / offLen) * (clone.velocity.x / velLen)
       + (offY / offLen) * (clone.velocity.y / velLen);
     expect(dot).toBeCloseTo(1, 5);
+  });
+});
+
+describe("rainbow spawner separation", () => {
+  // The rainbow spitter had the same sub-radius offset as Fork and the map
+  // beat: a SAME-SIZE child with a randomly-picked type, born on top of its
+  // parent. Unlike the others it fires on a timer, so it kept happening.
+  it("spawns a rainbow child a clear gap from its parent", () => {
+    const grid = createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15);
+    const parent = {
+      id: "rainbow-1", typeId: "rainbow", ability: "rainbow",
+      state: "active", speed: 200, baseSpeed: 200, radius: 18,
+      position: { x: 450, y: 450 }, velocity: { x: 200, y: 0 },
+      regionId: "r1", spawnActiveSeconds: 0, rainbowSpawnCount: 0,
+    };
+    const g = {
+      spaceGrid: grid,
+      balls: [parent],
+      activePlaySeconds: 999, // well past the spawn interval
+    } as unknown as CanvasGameState;
+
+    tickRainbowSpawns(g, 5);
+
+    expect(g.balls.length).toBeGreaterThan(1);
+    for (const child of g.balls.slice(1)) {
+      const d = Math.hypot(child.position.x - parent.position.x, child.position.y - parent.position.y);
+      expect(d).toBeGreaterThan(parent.radius);
+    }
   });
 });

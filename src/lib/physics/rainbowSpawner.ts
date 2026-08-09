@@ -15,6 +15,7 @@ import { CanvasGameState } from '@/types/gameState';
 import { getBallType, getSpawnableBallTypes, DEFAULT_RAINBOW_SPAWN_INTERVAL } from '@/lib/ballTypes';
 import { createBall } from '@/lib/initGame';
 import { MAX_LIVE_BALLS } from '@/lib/gameConstants';
+import { spawnClearOfParent } from '@/lib/physics/spawnPlacement';
 
 let _rainbowCounter = 0;
 
@@ -59,11 +60,10 @@ export function tickRainbowSpawns(game: CanvasGameState, levelNumber: number): v
     for (let k = 0; k < toSpawn; k++) {
       if (game.balls.length >= MAX_LIVE_BALLS) break; // hard safety cap
       const type = spawnable[Math.floor(Math.random() * spawnable.length)];
-      // A small offset off the parent avoids a zero-distance collision solve;
-      // the parent sits in valid active space, so just beside it is valid too.
-      const offset = rb.radius * 0.75;
-      const angle = Math.random() * Math.PI * 2;
-      const position = { x: rb.position.x + Math.cos(angle) * offset, y: rb.position.y + Math.sin(angle) * offset };
+      // A clear gap from the parent, not the old sub-radius offset: a rainbow
+      // child is the SAME size as its parent and its type is picked at random,
+      // so being born on top of it read as the ball duplicating itself.
+      const position = spawnClearOfParent(game, rb);
       const child = createBall(type, position, speedScale, rb.radius, `${type.id}-rainbow-${++_rainbowCounter}`, performance.now(), game.activePlaySeconds);
       child.regionId = rb.regionId; // born in the parent's region
       game.balls.push(child);

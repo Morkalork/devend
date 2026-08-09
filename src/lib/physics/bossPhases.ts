@@ -11,19 +11,14 @@
 import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig, BossBall } from "@/types/level";
 import { Ball } from "@/types/game";
-import {
-  getRemainingPercent,
-  findGridRegions,
-  buildGridRegionMap,
-  findGridRegionForBall,
-  gridIndexToWorld,
-} from "@/lib/spaceGrid";
+import { getRemainingPercent, findGridRegions, gridIndexToWorld } from "@/lib/spaceGrid";
 import { getBallType, getSpawnableBallTypes } from "@/lib/ballTypes";
 import { createBall } from "@/lib/initGame";
 import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
 import { playBossChargeSound } from "@/lib/gameAudio";
 import { BIG_BALL_RADIUS_SCALE } from "@/lib/ballGifts";
 import { gateAreas } from "@/lib/coloredAreas";
+import { spawnClearOfParent } from "@/lib/physics/spawnPlacement";
 
 let _bossAddCounter = 0;
 
@@ -258,7 +253,9 @@ export function spawnAdds(
     const type = spawnable[Math.floor(Math.random() * spawnable.length)];
     const position = bud
       ? budPosition(anchor)
-      : openPosition(game, anchor) ?? budPosition(anchor);
+      // 3 radii: a beat's anchor is an ordinary ball the same size as the
+      // newcomer, so it needs a wider berth than a parent/child split does.
+      : spawnClearOfParent(game, anchor, { gapRadii: 3, clearOfOtherBalls: true });
     const child = createBall(
       type, position, speedScale, anchor.radius,
       `${type.id}-boss-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
@@ -278,35 +275,3 @@ function budPosition(anchor: Ball): { x: number; y: number } {
   };
 }
 
-/**
- * A spot in the anchor's own region that is clear of every ball, so the newcomer
- * reads as arriving rather than splitting off. Samples the region's own cells,
- * which guarantees the point is live playable space; returns null if the region
- * is too crowded to place one, and the caller falls back to budding.
- */
-function openPosition(game: CanvasGameState, anchor: Ball): { x: number; y: number } | null {
-  const grid = game.spaceGrid;
-  if (!grid) return null;
-  const regions = findGridRegions(grid);
-  const region = findGridRegionForBall(
-    grid,
-    buildGridRegionMap(regions),
-    anchor.position.x,
-    anchor.position.y,
-  );
-  const cells = region?.cellIndices;
-  if (!cells || cells.length === 0) return null;
-
-  // Keep well clear of every live ball; three radii reads as a separate object
-  // rather than an overlap, at any board scale.
-  const minDist = anchor.radius * 3;
-  const live = game.balls.filter(b => b.state === "active");
-
-  for (let attempt = 0; attempt < 40; attempt++) {
-    const world = gridIndexToWorld(grid, cells[Math.floor(Math.random() * cells.length)]);
-    if (live.every(b => Math.hypot(b.position.x - world.x, b.position.y - world.y) >= minDist)) {
-      return world;
-    }
-  }
-  return null;
-}
