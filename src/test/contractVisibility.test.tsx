@@ -145,16 +145,32 @@ describe("contract stats accumulate across the block (session integration)", () 
     for (let i = 0; i < 5; i++) await finishMap(30, 2);
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("assignmentSummary"));
     await act(async () => { result.current.session.handleContinueFromSummary(); });
-    // Continuing from the summary transitions asynchronously into the Promotion
-    // draft (level 10 trigger) before the next assignment draft. Wait for it to
-    // settle into one of the two draft screens BEFORE the conditional check -
-    // reading currentScreen synchronously here raced the transition and could
-    // skip the capstone select, then hang forever waiting for doorDraft.
-    await waitFor(() =>
-      expect(["capstoneDraft", "doorDraft"]).toContain(result.current.nav.currentScreen),
-    );
-    if (result.current.nav.currentScreen === "capstoneDraft") {
-      await act(async () => { result.current.session.handleSelectCapstone(result.current.session.capstoneOffers[0]); });
+    // Continuing from the summary walks asynchronously through however many
+    // reward screens this contract earned before reaching the next assignment.
+    //
+    // WHICH screens appear is not fixed: the Promotion draft rides the level-10
+    // trigger, and a tierDraft appears only when the drafted assignment's
+    // mission tiers were actually met - and which assignment gets drafted is
+    // seeded RNG. An earlier de-flake enumerated capstoneDraft/doorDraft and so
+    // still failed roughly one run in four, on `tierDraft`, because it had
+    // guessed at the set instead of draining it.
+    //
+    // So drain: clear whatever intermediate draft is on screen until the
+    // assignment draft arrives. The bound stops a routing bug from hanging the
+    // suite instead of failing it.
+    for (let guard = 0; guard < 6; guard++) {
+      await waitFor(() =>
+        expect(["capstoneDraft", "tierDraft", "doorDraft"]).toContain(result.current.nav.currentScreen),
+      );
+      const screen = result.current.nav.currentScreen;
+      if (screen === "doorDraft") break;
+      if (screen === "capstoneDraft") {
+        await act(async () => { result.current.session.handleSelectCapstone(result.current.session.capstoneOffers[0]); });
+      } else {
+        await act(async () => {
+          result.current.session.handleSelectTierUpgrade(result.current.session.pendingTierDraft!.offers[0].id);
+        });
+      }
     }
     await waitFor(() => expect(result.current.nav.currentScreen).toBe("doorDraft"));
 
