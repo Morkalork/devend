@@ -148,6 +148,44 @@ export function regionCoversAreas(
   return total > 0 && covered / total >= minFraction;
 }
 
+/**
+ * The area a completed lock counts as being "in", or null.
+ *
+ * One rule for BOTH the payout and the zone lighting up, because a lock that
+ * pays but does not light (or the reverse) is unreadable. It is also the same
+ * forgiving test the win gate already uses, rather than a stricter one: a lock
+ * good enough to WIN a gate map should certainly be good enough to pay.
+ *
+ * A single point is not enough on its own. The pocket you fence around a zone
+ * routinely extends past it, which drags the settled position outside the rect
+ * even though the zone is plainly captured - so covering the zone counts too,
+ * and so does a small pocket sitting entirely inside it.
+ *
+ * Ties break toward the richer zone, matching coloredAreaMultiplierAt.
+ */
+export function areaForLock(
+  grid: SpaceGrid,
+  cellIndices: number[],
+  ballX: number,
+  ballY: number,
+  areas: ColoredArea[],
+  minFraction: number,
+): ColoredArea | null {
+  let best: ColoredArea | null = null;
+  let bestMult = 0;
+  for (const a of areas) {
+    const one = [a];
+    const qualifies =
+      pointInArea(ballX, ballY, a)
+      || regionWithinAreas(grid, cellIndices, one)
+      || regionCoversAreas(grid, cellIndices, one, minFraction);
+    if (!qualifies) continue;
+    const m = areaStyle(a.kind).multiplier;
+    if (m > bestMult) { bestMult = m; best = a; }
+  }
+  return best;
+}
+
 /** Lock-points multiplier at a world point: the max among containing areas, or 1. */
 export function coloredAreaMultiplierAt(x: number, y: number, areas: ColoredArea[]): number {
   let m = 1;

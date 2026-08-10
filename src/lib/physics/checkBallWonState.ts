@@ -1,12 +1,14 @@
 import { Ball, Vector2 } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import {
+  areaForLock,
+  areaStyle,
   coloredAreaAt,
-  coloredAreaMultiplierAt,
   gateAreas,
   regionWithinAreas,
   regionCoversAreas,
 } from "@/lib/coloredAreas";
+import type { ColoredArea } from "@/types/level";
 
 /** A lock counts as "inside" a colored area once it covers this fraction of the
  *  area's cells (issue: the whole-region-inside rule was too hard). */
@@ -204,6 +206,8 @@ export function checkAndUpdateBallWonStates(
   const wonThisPass: typeof game.balls = [];
   /** Balls whose lock graded SUPERIOR this pass (tight pocket). */
   const superiorIds = new Set<string>();
+  /** Colored area each lock counted as landing in; drives the tint AND the pay. */
+  const lockAreaById = new Map<string, ColoredArea>();
   const lockQuality = getLockQuality();
   const gridRegions = precomputed ? precomputed.gridRegions : findGridRegions(game.spaceGrid);
   const gridRegionMap = precomputed ? precomputed.gridRegionMap : buildGridRegionMap(gridRegions);
@@ -382,9 +386,20 @@ export function checkAndUpdateBallWonStates(
     // when the gate counted this lock as inside without the ball's centre being
     // in it (boss contained on a boundary cell, or the >=70% coverage rule).
     if (areas.length > 0) {
-      const hit = coloredAreaAt(ball.position.x, ball.position.y, areas)
-        ?? (inArea && gates.length === 1 ? gates[0] : null);
-      if (hit) hit.satisfied = true;
+      // Settled position, not the bounce position: `ball.position` is still
+      // wherever the ball happened to be on the frame the lock fired, and it is
+      // overwritten with the region centroid a few lines below precisely because
+      // that is arbitrary. Reading it here made the zone light up (or not) on a
+      // coin flip. Recorded for the payout loop so both agree by construction.
+      const hit = areaForLock(
+        game.spaceGrid, ballRegion.cellIndices,
+        ballRegion.centroid.x, ballRegion.centroid.y,
+        areas, AREA_COVER_FRACTION,
+      ) ?? (inArea && gates.length === 1 ? gates[0] : null);
+      if (hit) {
+        hit.satisfied = true;
+        lockAreaById.set(ball.id, hit);
+      }
     }
 
     ball.state = 'won';
@@ -571,7 +586,10 @@ export function checkAndUpdateBallWonStates(
           : 1;
       // Colored Area: a ball locked inside a map-authored area pays its kind
       // multiplier on top of everything else. Gate and bonus areas both pay.
-      const zoneMult = coloredAreaMultiplierAt(b.position.x, b.position.y, game.coloredAreas ?? []);
+      // Uses the SAME verdict that lit the zone up, so the zone can never glow
+      // without paying or pay without glowing.
+      const lockArea = lockAreaById.get(b.id);
+      const zoneMult = lockArea ? areaStyle(lockArea.kind).multiplier : 1;
       const ballPoints = (b.lockMultiplier ?? 1) * mult * frozenMult * zoneMult;
       if (superiorIds.has(b.id)) superiorPoints += ballPoints;
       else standardPoints += ballPoints;
