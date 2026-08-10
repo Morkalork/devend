@@ -417,4 +417,10 @@ export interface LevelScoreData {
   wonByAllLocked?: boolean;
   /** Which condition finished the map; shown on the results screen. */
   winReason?: WinReason;
+  /**
+   * An all-locked win where the cut had ALSO cleared to the size threshold on
+   * its own, before the lock drained the board. Both were genuinely true, and
+   * the lock is simply what got checked first, so the screen says so.
+   */
+  alsoClearedSpace?: boolean;
 }

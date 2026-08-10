@@ -452,7 +452,8 @@
       "space": "Espacio despejado",
       "allLocked": "Todas las bolas encerradas",
       "boss": "Jefe derrotado",
-      "area": "Objetivo encerrado en la zona"
+      "area": "Objetivo encerrado en la zona",
+      "alsoCleared": "objetivo de espacio también cumplido"
     }
   },
   "notFound": {

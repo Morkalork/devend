@@ -455,7 +455,8 @@
       "space": "Cleared to target",
       "allLocked": "All balls locked",
       "boss": "Boss defeated",
-      "area": "Target locked in zone"
+      "area": "Target locked in zone",
+      "alsoCleared": "space target also met"
     }
   },
   "notFound": {

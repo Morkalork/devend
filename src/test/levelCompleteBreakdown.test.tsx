@@ -92,6 +92,23 @@ describe('post-map screen names the win condition', () => {
     expect(screen.queryByText(/Won by/)).toBeNull();
   });
 
+  // Locking the last ball captures everything unreachable, so remaining drops to
+  // 0% and the size threshold is met as a CONSEQUENCE. Claiming the space target
+  // on every all-locked win would be flattering, not honest.
+  it('does not claim the space target when the lock is what drained the board', () => {
+    renderOverlay({ scoreData: { ...scoreData, winReason: 'allLocked' } });
+    expect(screen.getByText('All balls locked')).toBeTruthy();
+    expect(screen.queryByText(/space target also met/)).toBeNull();
+  });
+
+  it('says both landed when the cut cleared to target on its own merits', () => {
+    renderOverlay({
+      scoreData: { ...scoreData, winReason: 'allLocked', alsoClearedSpace: true },
+    });
+    expect(screen.getByText('All balls locked')).toBeTruthy();
+    expect(screen.getByText(/space target also met/)).toBeTruthy();
+  });
+
   it('hides Remaining only for the all-locked win, which drains the board', () => {
     renderOverlay({ scoreData: { ...scoreData, winReason: 'space' } });
     fireEvent.click(screen.getByText('Score breakdown'));

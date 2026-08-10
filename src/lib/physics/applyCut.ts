@@ -221,7 +221,16 @@ export function applyCutFn(
   game.activeWalls = game.activeWalls.filter(w => w !== wall);
   playCutClaimedSound();
 
+  // Remaining space as this cut left it, BEFORE any lock drains the board.
+  //
+  // Locking the last ball captures everything still unreachable, so remaining
+  // drops to 0% and the size threshold is then met as a CONSEQUENCE of the lock.
+  // Comparing against that would let every all-locked win claim it also cleared
+  // the board. Measured here, the number is the space this cut genuinely
+  // captured, so "the space target was also met" can only be said when it is
+  // independently true.
   const lockedBefore = game.lockedBallsCount;
+  game.percentBeforeLocks = getGridRemainingPercent(game);
   const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions);
   if (anyBallWon) {
     // How many balls this cut locked: the simultaneous-trap multiplier pays
@@ -618,6 +627,13 @@ export function triggerLevelComplete(
         // Every power-up claimed this map (#59), so the finish screen lists them.
         pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
         winReason: reason,
+        // Both conditions genuinely landed on the same cut: the space target was
+        // already met by what this cut captured, and then the lock ended the map
+        // before the space win could open the Push Your Luck prompt. Naming only
+        // the winner would be true but not the whole truth.
+        alsoClearedSpace: reason === 'allLocked'
+          && game.percentBeforeLocks != null
+          && game.percentBeforeLocks <= level.sizeThreshold,
         // Only the all-balls-locked win drains the board to 0% remaining, which
         // makes the Remaining row meaningless and worth hiding. This was
         // hardcoded true, on a comment claiming this path was reachable only

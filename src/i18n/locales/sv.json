@@ -452,7 +452,8 @@
       "space": "Rensat till målet",
       "allLocked": "Alla bollar inlåsta",
       "boss": "Boss besegrad",
-      "area": "Målbollen inlåst i zonen"
+      "area": "Målbollen inlåst i zonen",
+      "alsoCleared": "ytmålet uppnåddes också"
     }
   },
   "notFound": {

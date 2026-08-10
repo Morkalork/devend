@@ -142,6 +142,13 @@ export interface CanvasGameState {
   /** activePlaySeconds frozen the first moment the win condition was met (null = not yet). */
   clearedActiveSeconds: number | null;
   /**
+   * Remaining space % as the last cut left it, measured BEFORE any lock on that
+   * cut drained the board. Lets an all-balls-locked win say whether the size
+   * threshold was also met on its own merits, rather than as a side effect of
+   * the lock capturing everything.
+   */
+  percentBeforeLocks?: number;
+  /**
    * Current ball displacement multiplier: Scope Creep folded with the map
    * mutator's speed factor (crunch/overclock). 1 = neither active. The trajectory
    * predictor reads this too, so mutator speed changes keep the aim line in sync.

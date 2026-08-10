@@ -145,6 +145,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     highscoreBonus = 0,
     wonByAllLocked = false,
     winReason,
+    alsoClearedSpace = false,
   } = scoreData;
 
   const claimedPickups = scoreData.pickupsClaimed ?? [];
@@ -206,6 +207,11 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <p className="text-[11px] sm:text-xs text-success/90 mt-0.5">
                   {t('levelComplete.winReason.label')}:{' '}
                   <span className="font-semibold">{t(`levelComplete.winReason.${winReason}`)}</span>
+                  {alsoClearedSpace && (
+                    <span className="text-muted-foreground">
+                      {' '}({t('levelComplete.winReason.alsoCleared')})
+                    </span>
+                  )}
                 </p>
               )}
             </div>
