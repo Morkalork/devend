@@ -146,19 +146,41 @@ describe("corridor under a box: locking requires a REAL seal", () => {
   });
 });
 
-// A positive "the rejection was recorded" test lived here and was removed: it
-// depended on this harness's cut actually landing, which is not deterministic
-// across the full suite (ownership sometimes rejects the fence and no lock is
-// ever evaluated, so nothing is recorded and the assertion fails ~1 run in 4).
-// The recorder's behaviour is covered deterministically in lockDiagnostics.test.ts.
-// This negative case is safe because it asserts an EMPTY log either way.
-describe("lock diagnostics stay silent when disabled", () => {
+// This pair was dropped once as flaky: the positive case needs the cut to land,
+// and wouldWallOrphanBall was rejecting it about 1 run in 4 on a sightline that
+// had nothing to do with this fence. That bug is fixed (see
+// orphanCheckLineOfSight.test.ts), which is what makes the scenario
+// deterministic enough to assert on.
+describe("lock diagnostics capture the rejection", () => {
   beforeEach(() => {
     localStorage.clear();
     resetLockDebugCache();
     clearLockDecisions();
   });
   afterEach(() => setLockDebugEnabled(false));
+
+  it("records the decision, with the numbers that explain the outcome", () => {
+    setLockDebugEnabled(true);
+    runScenario(24);
+
+    const all = getLockDecisions();
+    // Wired to the real decision: a recorder that records nothing is worse than
+    // none, because it reads as "no lock was considered" when the truth is
+    // "nobody was watching".
+    expect(all.length, "expected at least one recorded decision").toBeGreaterThan(0);
+
+    // Deliberately not asserting WHICH gate refused it. This pocket lands near
+    // the threshold (the log has shown both 12.4% against a 10% bar, refused for
+    // size, and smaller regions refused for the seal), and pinning the exact
+    // reason made the test flaky without testing anything more. What must hold
+    // is that nothing locked, and that every row carries usable numbers.
+    expect(all.some(d => d.outcome === "locked")).toBe(false);
+    for (const d of all) {
+      expect(d.regionCells).toBeGreaterThan(0);
+      expect(d.denominator).toBeGreaterThan(0);
+      expect(d.thresholdPercent).toBeGreaterThan(0);
+    }
+  });
 
   it("records nothing through a full cut while the flag is off", () => {
     runScenario(24);

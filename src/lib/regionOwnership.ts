@@ -403,44 +403,40 @@ export function wouldWallOrphanBall(
   regions: Region[],
   existingWalls: Wall[]
 ): boolean {
-  // Create a temporary wall for testing
-  const testWalls = [
-    ...existingWalls,
-    { id: 'test-wall', start: wallStart, end: wallEnd, thickness: 6 }
-  ];
-  
+  const testWall = { id: 'test-wall', start: wallStart, end: wallEnd, thickness: 6 };
+
+  /** Straight, unobstructed segment from the ball to at least one sample. */
+  const hasSightline = (ball: Ball, samples: Vector2[], walls: typeof existingWalls): boolean =>
+    samples.some(sample =>
+      !walls.some(w => lineSegmentIntersection(ball.position, sample, w.start, w.end)));
+
   for (const ball of balls) {
     // Skip dead balls
     if (ball.speed === 0) continue;
-    
-    // Check if ball can still reach sample points without crossing the new wall
+
     const region = regions.find(r => r.id === ball.regionId);
     if (!region || !region.samplePoints) continue;
-    
-    let canReachAnySample = false;
-    
-    for (const sample of region.samplePoints) {
-      let blocked = false;
-      
-      for (const wall of testWalls) {
-        if (lineSegmentIntersection(ball.position, sample, wall.start, wall.end)) {
-          blocked = true;
-          break;
-        }
-      }
-      
-      if (!blocked) {
-        canReachAnySample = true;
-        break;
-      }
-    }
-    
-    if (!canReachAnySample) {
+
+    // This is a VISIBILITY test standing in for reachability, and the two part
+    // company as soon as a region is concave: an obstacle between the ball and
+    // every sample point makes a perfectly mobile ball look stranded.
+    //
+    // Asking only "can it see a sample AFTER the wall" then produces a verdict
+    // that does not depend on the proposed wall at all, so a ball parked behind
+    // an obstacle silently refuses EVERY cut anywhere on the board until it
+    // drifts back into the open - reported from level 14 as fences failing on
+    // "an invisible wall", with no feedback and no way out.
+    //
+    // So compare: only a fence that actually TAKES the sightline away can be
+    // the thing that stranded the ball. If it was already gone, this fence is
+    // not the culprit and refusing it helps nobody.
+    if (!hasSightline(ball, region.samplePoints, existingWalls)) continue;
+    if (!hasSightline(ball, region.samplePoints, [...existingWalls, testWall])) {
       console.warn(`[OWNERSHIP] Wall would orphan ball ${ball.id}`);
       return true;
     }
   }
-  
+
   return false;
 }
 
