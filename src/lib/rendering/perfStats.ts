@@ -45,6 +45,25 @@ const _physicsMs = new Ring(); // time inside the fixed-step physics loop
 const _renderMs = new Ring();  // time inside callbacks.render()
 let _balls = 0;
 let _steps = 0;
+/**
+ * Time inside applyCut, which runs AFTER recordFrame in the loop and so was
+ * counted by neither phys nor rend. It is also the heaviest thing the game does
+ * - capture flood, region rebuild, contour traces, lock check, tint flood - and
+ * it landed invisibly in the NEXT frame's delta. Measured separately because a
+ * frame peak with a low render peak is otherwise unattributable.
+ *
+ * Peak-only: cuts are occasional, so an average over a frame window is
+ * meaningless. `_cutAgo` keeps the reading honest about how stale it is.
+ */
+let _cutMs = 0;
+let _cutPeak = 0;
+let _cutAt = 0;
+
+export function recordCut(ms: number): void {
+  _cutMs = ms;
+  if (ms > _cutPeak) _cutPeak = ms;
+  _cutAt = performance.now();
+}
 
 /** Called once per active frame from the game loop. */
 export function recordFrame(
@@ -179,6 +198,7 @@ export function perfLines(): string[] {
     // dpr is rounded: devicePixelRatio is often an ugly float (1.6500000000953
     // on this machine) and the raw value pushed the line off the HUD.
     `surf  ${_surfaceW}x${_surfaceH} @${dpr.toFixed(2)}x (${mpx.toFixed(1)}Mpx)`,
+    `cut   ${f1(_cutMs)}  peak ${f1(_cutPeak)}${_cutAt ? `  ${Math.round((performance.now() - _cutAt) / 1000)}s ago` : ""}`,
     `balls ${_balls}   steps ${_steps}`,
     `heap  ${heapLine()}`,
   ];

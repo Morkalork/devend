@@ -27,7 +27,7 @@ import { updatePickups } from "@/lib/pickups";
 import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
-import { recordFrame } from "@/lib/rendering/perfStats";
+import { recordFrame, recordCut } from "@/lib/rendering/perfStats";
 
 export interface GameLoopCallbacks {
   /** Called every physics step to advance wall growth. */
@@ -457,7 +457,14 @@ export function createGameLoop(
     if (!game.levelComplete && game.activeWalls.length > 0) {
       for (const w of [...game.activeWalls]) {
         if (game.levelComplete) break;
-        if (w.isComplete) callbacks.applyCut(w);
+        if (w.isComplete) {
+          // Timed separately: this runs after recordFrame above, so its cost
+          // lands in the NEXT frame's delta and shows up as an unattributable
+          // frame spike with a low render peak.
+          const _cutStart = performance.now();
+          callbacks.applyCut(w);
+          recordCut(performance.now() - _cutStart);
+        }
       }
     }
 
