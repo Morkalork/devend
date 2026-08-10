@@ -103,25 +103,95 @@ export function heapLine(): string {
   return `${Math.round(mem.usedJSHeapSize / 1048576)}/${Math.round(mem.jsHeapSizeLimit / 1048576)}MB`;
 }
 
-export function drawPerfOverlay(ctx: CanvasRenderingContext2D, game: CanvasGameState): void {
+/**
+ * Persisted HUD toggle.
+ *
+ * The Playground's own switch is component state, and Index never passes the
+ * prop, so the HUD could only ever appear in the admin sandbox - which is the
+ * one place the numbers do not matter. The frame budget worth measuring is a
+ * real map on a real phone, so the flag has to survive leaving the admin screen.
+ */
+export const PERF_HUD_KEY = "devend:perfHud";
+let _hudEnabled: boolean | null = null;
+
+export function isPerfHudEnabled(): boolean {
+  if (_hudEnabled === null) {
+    try {
+      _hudEnabled = typeof localStorage !== "undefined" && localStorage.getItem(PERF_HUD_KEY) === "1";
+    } catch {
+      _hudEnabled = false; // blocked storage must never break the game loop
+    }
+  }
+  return _hudEnabled;
+}
+
+export function setPerfHudEnabled(on: boolean): void {
+  _hudEnabled = on;
+  try {
+    if (on) localStorage.setItem(PERF_HUD_KEY, "1");
+    else localStorage.removeItem(PERF_HUD_KEY);
+  } catch {
+    /* blocked storage: the in-memory flag still holds for this session */
+  }
+}
+
+/** Test seam: forget the cached flag so a fresh localStorage value is read. */
+export function resetPerfHudCache(): void {
+  _hudEnabled = null;
+}
+
+/**
+ * The surface actually being rasterised, recorded by whoever sizes the canvas.
+ *
+ * The renderer runs at `resolution: 1` over a physically-sized canvas, so on a
+ * 3x phone it is filling ~9x the pixels of a 1x desktop. That is a deliberate
+ * choice (pixel fidelity over frame rate) but it is invisible in a frame-time
+ * number alone, so the HUD reports it: `rend` is only interpretable next to how
+ * many pixels produced it.
+ */
+let _surfaceW = 0;
+let _surfaceH = 0;
+
+export function recordSurface(widthPx: number, heightPx: number): void {
+  _surfaceW = widthPx;
+  _surfaceH = heightPx;
+}
+
+/**
+ * The HUD as text. Shared by the 2D painter below and the DOM overlay, so the
+ * WebGL renderer (which has no 2D context to paint into) reports exactly the
+ * same numbers rather than a second, drifting implementation.
+ */
+export function perfLines(): string[] {
   const frameAvg = _frameMs.avg();
   const framePeak = _frameMs.max();
   const fps = frameAvg > 0 ? 1000 / frameAvg : 0;
   const fpsMin = framePeak > 0 ? 1000 / framePeak : 0;
-  const physAvg = _physicsMs.avg();
-  const physPeak = _physicsMs.max();
-  const rendAvg = _renderMs.avg();
-  const rendPeak = _renderMs.max();
-
   const f1 = (n: number) => n.toFixed(1);
-  const lines = [
+  const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+  const mpx = (_surfaceW * _surfaceH) / 1e6;
+
+  return [
     `FPS ${Math.round(fps)}  (min ${Math.round(fpsMin)})`,
     `frame ${f1(frameAvg)}ms  peak ${f1(framePeak)}`,
-    `phys  ${f1(physAvg)}  peak ${f1(physPeak)}`,
-    `rend  ${f1(rendAvg)}  peak ${f1(rendPeak)}`,
+    `phys  ${f1(_physicsMs.avg())}  peak ${f1(_physicsMs.max())}`,
+    `rend  ${f1(_renderMs.avg())}  peak ${f1(_renderMs.max())}`,
+    // dpr is rounded: devicePixelRatio is often an ugly float (1.6500000000953
+    // on this machine) and the raw value pushed the line off the HUD.
+    `surf  ${_surfaceW}x${_surfaceH} @${dpr.toFixed(2)}x (${mpx.toFixed(1)}Mpx)`,
     `balls ${_balls}   steps ${_steps}`,
     `heap  ${heapLine()}`,
   ];
+}
+
+/** Frame-health colour for the HUD's first line (peak-driven; stutter is peaks). */
+export function perfColor(): string {
+  return pick(_frameMs.max());
+}
+
+export function drawPerfOverlay(ctx: CanvasRenderingContext2D, game: CanvasGameState): void {
+  const framePeak = _frameMs.max();
+  const lines = perfLines();
 
   const { left, top, scale } = game.boardRect;
   const pad = 6;
@@ -129,7 +199,7 @@ export function drawPerfOverlay(ctx: CanvasRenderingContext2D, game: CanvasGameS
   const fontPx = 11;
   const x = left + 6 * scale;
   const y = top + 6 * scale;
-  const boxW = 150;
+  const boxW = 210;
   const boxH = pad * 2 + lh * lines.length;
 
   ctx.save();

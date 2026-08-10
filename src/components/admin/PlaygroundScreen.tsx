@@ -13,6 +13,7 @@ import { BallTypeDef, getAllBallTypes, loadBallTypes, selectBallTypesForMap } fr
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
+import { isPerfHudEnabled, setPerfHudEnabled } from '@/lib/rendering/perfStats';
 
 interface PlaygroundScreenProps {
   onBack: () => void;
@@ -158,7 +159,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [ballTypeIds, setBallTypeIds] = useState<string[] | null>(null);
   const [ballPickerOpen, setBallPickerOpen] = useState(false);
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
-  const [showPerfOverlay, setShowPerfOverlay] = useState(false);
+  const [showPerfOverlay, setShowPerfOverlay] = useState(isPerfHudEnabled);
   const [lockDebug, setLockDebug] = useState(isLockDebugEnabled);
   // Dev: on clear, play the desaturation drain then freeze on the drained frame;
   // click the board to reload. `frozen` arms the click-to-reload catcher.
@@ -961,7 +962,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               {/* Perf-overlay toggle (frame-timing HUD) */}
               <div className="px-5 pt-3 flex-shrink-0">
                 <button
-                  onClick={() => setShowPerfOverlay(v => !v)}
+                  onClick={() => { const next = !showPerfOverlay; setShowPerfOverlay(next); setPerfHudEnabled(next); }}
                   className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
                   style={{
                     backgroundColor: showPerfOverlay ? `${accent}1a` : 'rgba(255,255,255,0.03)',

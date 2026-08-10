@@ -28,7 +28,8 @@ import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
 import { getAbility } from "@/lib/abilities";
 import { fireAbility, fireTargetedAbility } from "@/lib/abilityEffects";
-import { drawPerfOverlay } from "@/lib/rendering/perfStats";
+import { drawPerfOverlay, recordSurface, isPerfHudEnabled } from "@/lib/rendering/perfStats";
+import { PerfOverlay } from "./PerfOverlay";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent } from "@/lib/scoring";
 import { isTimingExempt, getMapTimeLimit } from "@/lib/mapTiming";
@@ -327,6 +328,9 @@ export function GameCanvas({
   // the render loop (the rctx is rebuilt only per level).
   const showBallSpeedsRef = useRef(showBallSpeeds);
   useEffect(() => { showBallSpeedsRef.current = showBallSpeeds; }, [showBallSpeeds]);
+  // Read once per mount: flipped in the admin screen, which can only be reached
+  // by leaving the game, so it cannot change mid-map.
+  const [perfHudPersisted] = useState(isPerfHudEnabled);
   const showPerfOverlayRef = useRef(showPerfOverlay);
   useEffect(() => { showPerfOverlayRef.current = showPerfOverlay; }, [showPerfOverlay]);
   // Keep the lock-rule config live on the game state (initGame also seeds it),
@@ -1044,6 +1048,7 @@ export function GameCanvas({
       const physW = Math.round(width * dpr);
       const physH = Math.round(height * dpr);
       pixiSizeRef.current = { w: physW, h: physH };
+      recordSurface(physW, physH); // so the perf HUD can report pixels, not just ms
       if (!useFallback2d && pixiRef.current?.isReady) {
         // The WebGL renderer manages canvas.width/height itself.
         pixiRef.current.resize(physW, physH);
@@ -1708,6 +1713,11 @@ export function GameCanvas({
           className="absolute inset-0 pointer-events-none"
           style={{ zIndex: 3, opacity: 1 }}
         />
+        {/* Frame-timing HUD. Absolute INSIDE this positioned container (the root
+            div is unpositioned, and page transforms break `fixed`), and outside
+            the canvas so it costs the renderer nothing and can never land inside
+            the render time it reports. */}
+        <PerfOverlay visible={showPerfOverlay || perfHudPersisted} />
         {chestToast && (
           <div
             key={chestToast.key}
