@@ -343,6 +343,23 @@ export interface ChestLoot {
   settled: boolean;            // true once it has come to rest on the floor
 }
 
+/**
+ * Which win condition finished the map.
+ *
+ * Only `space` opens the Push Your Luck prompt; the other three bank the map the
+ * instant they fire, which reads as the prompt appearing at random until you
+ * know that. That is what the results screen reports.
+ */
+export type WinReason =
+  /** Cleared down to the map's size threshold. */
+  | 'space'
+  /** Every ball locked, which ends the map whatever space is left. */
+  | 'allLocked'
+  /** Boss beaten. On a boss map the space-clear path never applies at all. */
+  | 'boss'
+  /** Target ball locked inside a gate colored area, the sole win on those maps. */
+  | 'area';
+
 export interface LevelScoreData {
   levelNumber: number;
   levelId: string;
@@ -398,4 +415,6 @@ export interface LevelScoreData {
   // fully drains once no ball is left in play, so "remaining space" is 0% and
   // meaningless here - the results screen hides the Remaining row.
   wonByAllLocked?: boolean;
+  /** Which condition finished the map; shown on the results screen. */
+  winReason?: WinReason;
 }

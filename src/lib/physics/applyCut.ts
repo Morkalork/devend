@@ -1,4 +1,4 @@
-import { GrowingWall, Ball, Region, Vector2 } from "@/types/game";
+import { GrowingWall, Ball, Region, Vector2, WinReason } from "@/types/game";
 import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -407,7 +407,7 @@ export function evaluateWinConditions(
   // (required: false) are pure upside and never reach this branch.
   if (gateAreas(game.coloredAreas ?? []).length > 0) {
     if (game.coloredAreaSatisfied) {
-      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'area');
       return null;
     }
     const hasBoss = game.balls.some(b => b.isBoss);
@@ -426,13 +426,13 @@ export function evaluateWinConditions(
   // the fail state.
   if (level.boss) {
     if (game.bossDefeated) {
-      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'boss');
     }
     return null;
   }
   // Non-boss maps keep the normal all-balls-locked and space-clear win paths.
   if (areAllBallsWon(game)) {
-    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'allLocked');
     return null;
   }
   return checkSpaceWin(game, level, callbacks, levelNumber, activeModifiers);
@@ -473,7 +473,7 @@ export function checkSpaceWin(
     // Assignment constraint (#60): Push Your Luck disabled for this block, so
     // the win banks straight through instead of opening the prompt.
     if (activeModifiers.disablePushYourLuck > 0) {
-      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks);
+      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'space');
       return percent;
     }
     // The frame is already drawn (loop render + the post-cut render above) and
@@ -515,6 +515,13 @@ export function triggerLevelComplete(
   levelNumber: number,
   activeModifiers: GameModifiers,
   callbacks: CompleteCallbacks,
+  /**
+   * Which condition finished the map. Required rather than defaulted: four
+   * different wins funnel through here and a default would quietly mislabel
+   * whichever one a future caller forgets about, which is exactly how
+   * `wonByAllLocked` came to be hardcoded true for all of them.
+   */
+  reason: WinReason,
 ): void {
   if (game.levelComplete) return;
   game.levelComplete = true;
@@ -610,10 +617,13 @@ export function triggerLevelComplete(
         pickupBonus: game.pickupOvertime || undefined,
         // Every power-up claimed this map (#59), so the finish screen lists them.
         pickupsClaimed: (game.pickupsClaimedLog && game.pickupsClaimedLog.length > 0) ? [...game.pickupsClaimedLog] : undefined,
-        // triggerLevelComplete is only reached via the all-balls-locked win, so
-        // the board drained to 0% remaining - flag it so the results screen
-        // hides the now-meaningless Remaining row.
-        wonByAllLocked: true,
+        winReason: reason,
+        // Only the all-balls-locked win drains the board to 0% remaining, which
+        // makes the Remaining row meaningless and worth hiding. This was
+        // hardcoded true, on a comment claiming this path was reachable only
+        // that way - it is reached four ways, so boss, area and
+        // push-disabled space wins were all hiding a row that mattered.
+        wonByAllLocked: reason === 'allLocked',
       });
     });
   }, lockDelay + LEVEL_CLEAR_SHIMMER_MS + LEVEL_CLEAR_HOLD_MS);

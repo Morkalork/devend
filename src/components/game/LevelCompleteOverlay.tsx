@@ -144,6 +144,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     beatHighscore = false,
     highscoreBonus = 0,
     wonByAllLocked = false,
+    winReason,
   } = scoreData;
 
   const claimedPickups = scoreData.pickupsClaimed ?? [];
@@ -198,6 +199,15 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
             <div>
               <h2 className="text-xl sm:text-2xl font-display font-bold text-foreground">{t('levelComplete.title')}</h2>
               <p className="text-muted-foreground text-xs sm:text-sm">{levelId}</p>
+              {/* Which condition actually ended the map. Only a space clear opens
+                  the Push Your Luck prompt, so without this the prompt's coming
+                  and going reads as random. */}
+              {winReason && (
+                <p className="text-[11px] sm:text-xs text-success/90 mt-0.5">
+                  {t('levelComplete.winReason.label')}:{' '}
+                  <span className="font-semibold">{t(`levelComplete.winReason.${winReason}`)}</span>
+                </p>
+              )}
             </div>
           </motion.div>
 

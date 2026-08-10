@@ -1484,6 +1484,9 @@ export function GameCanvas({
           levelScore,
           remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
           thresholdPercent: level.sizeThreshold, pushBonus,
+          // Reached only by banking the Push Your Luck prompt, and the prompt
+          // only ever opens on a space clear.
+          winReason: 'space' as const,
           underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
           spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
           fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,

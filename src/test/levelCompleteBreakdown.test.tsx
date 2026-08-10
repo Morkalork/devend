@@ -78,3 +78,23 @@ describe('post-map score breakdown collapses', () => {
     expect(screen.queryByText('+0h')).toBeNull();
   });
 });
+
+describe('post-map screen names the win condition', () => {
+  it('reports the condition that finished the map', () => {
+    renderOverlay({ scoreData: { ...scoreData, winReason: 'allLocked' } });
+    expect(screen.getByText('All balls locked')).toBeTruthy();
+  });
+
+  // Old saves and the game-over path carry no reason; inventing one would be
+  // worse than staying quiet, since the label exists to be trusted.
+  it('stays silent rather than guessing when no reason is given', () => {
+    renderOverlay();
+    expect(screen.queryByText(/Won by/)).toBeNull();
+  });
+
+  it('hides Remaining only for the all-locked win, which drains the board', () => {
+    renderOverlay({ scoreData: { ...scoreData, winReason: 'space' } });
+    fireEvent.click(screen.getByText('Score breakdown'));
+    expect(screen.getByText('Remaining')).toBeTruthy();
+  });
+});

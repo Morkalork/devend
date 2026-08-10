@@ -446,7 +446,14 @@
     },
     "recordPace": "Rekordtakt",
     "newPersonalBest": "Nytt personbästa, och du är fortfarande igång!",
-    "breakdownTitle": "Poänguppdelning"
+    "breakdownTitle": "Poänguppdelning",
+    "winReason": {
+      "label": "Vunnen genom",
+      "space": "Rensat till målet",
+      "allLocked": "Alla bollar inlåsta",
+      "boss": "Boss besegrad",
+      "area": "Målbollen inlåst i zonen"
+    }
   },
   "notFound": {
     "message": "Hoppsan! Sidan hittades inte",

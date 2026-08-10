@@ -449,7 +449,14 @@
     },
     "recordPace": "Record Pace",
     "newPersonalBest": "New personal best, and you are still going!",
-    "breakdownTitle": "Score breakdown"
+    "breakdownTitle": "Score breakdown",
+    "winReason": {
+      "label": "Won by",
+      "space": "Cleared to target",
+      "allLocked": "All balls locked",
+      "boss": "Boss defeated",
+      "area": "Target locked in zone"
+    }
   },
   "notFound": {
     "message": "Oops! Page not found",

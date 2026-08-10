@@ -188,7 +188,7 @@ describe("triggerLevelComplete (one delivery per map, pushes end cleanly)", () =
       wallCount: 6, lockBonus: 0, breakBonus: 0,
     });
     const { delivered, pushModes, callbacks } = mkCompleteCallbacks();
-    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks);
+    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks, 'space');
     expect(game.pushMode).toBe("none");
     expect(pushModes).toEqual(["none"]);
     vi.runAllTimers();
@@ -205,8 +205,8 @@ describe("triggerLevelComplete (one delivery per map, pushes end cleanly)", () =
     vi.useFakeTimers();
     const game = mkGame(10, { wallCount: 6, lockBonus: 0, breakBonus: 0 });
     const { delivered, callbacks } = mkCompleteCallbacks();
-    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks);
-    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks);
+    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks, 'space');
+    triggerLevelComplete(game, SCORE_LEVEL, 13, SCORE_MODS, callbacks, 'space');
     vi.runAllTimers();
     expect(delivered).toHaveLength(1);
     vi.useRealTimers();

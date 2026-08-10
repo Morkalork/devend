@@ -446,7 +446,14 @@
     },
     "recordPace": "Ritmo de récord",
     "newPersonalBest": "¡Nuevo récord personal, y sigues jugando!",
-    "breakdownTitle": "Desglose de puntuación"
+    "breakdownTitle": "Desglose de puntuación",
+    "winReason": {
+      "label": "Victoria por",
+      "space": "Espacio despejado",
+      "allLocked": "Todas las bolas encerradas",
+      "boss": "Jefe derrotado",
+      "area": "Objetivo encerrado en la zona"
+    }
   },
   "notFound": {
     "message": "¡Vaya! Página no encontrada",
