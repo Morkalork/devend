@@ -304,12 +304,24 @@ export function isAwaitingUserGesture(): boolean {
  * foreground element is the main loop and is playing, audibly.
  */
 export function startMenuMusic(): void {
-  audioUnlocked = true;
   const pair = ensureDeck();
   if (!pair) return;
+  // Only claim the unlock once there is a deck to unlock. Setting it before the
+  // ensureDeck guard would disarm armGestureUnlock permanently on the strength
+  // of a gesture that primed nothing.
+  audioUnlocked = true;
   if (currentKey !== "main") playMainMusic();
   const a = pair[activeIndex];
   a.muted = musicMuted || isAudioMuted();
   a.volume = musicVolume || DEFAULT_VOLUME;
   markUnlockedOnPlay(a.play());
+  // Prime the crossfade PARTNER inside this same gesture.
+  //
+  // Mobile unlocks media per element, and this gate plays only the foreground
+  // one - yet it sets audioUnlocked, which makes armGestureUnlock a permanent
+  // no-op, so unlockDeck() (the only other thing that primes the partner) never
+  // runs. Menu music therefore plays while the first band switch crossfades onto
+  // a never-unlocked element and is silent: "no music once the game starts, but
+  // the main menu is fine". Same reasoning as unlockDeck; see primeElement.
+  primeElement(pair[(1 - activeIndex) as 0 | 1]);
 }
