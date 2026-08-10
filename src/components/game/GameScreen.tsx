@@ -13,7 +13,7 @@ import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
-import { winConditionsBody } from '@/lib/winConditions';
+import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { GameTopBar } from './GameTopBar';
@@ -428,7 +428,12 @@ export function GameScreen({
   // the loop — initialising true would leave the loop running on the first map,
   // because the pause effect early-returns before the loop exists and never re-runs.
   const [winModalOpen, setWinModalOpen] = useState(false);
-  useEffect(() => { setWinModalOpen(true); }, [level.id]);
+  // Announce the win conditions only when the map has something to say beyond
+  // "clear X%", which the top bar already shows permanently. Every map still
+  // has the menu entry, so this hides an interruption, not information.
+  useEffect(() => {
+    setWinModalOpen(shouldAnnounceWinConditions(t, level, levelNumber));
+  }, [level, levelNumber, t]);
 
   // Handle a BACK gesture while the game is active (wired via backRef from the
   // popstate guard in Index): close an open pause overlay/menu, otherwise open

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { winConditionsBody } from "@/lib/winConditions";
+import { winConditionsBody, shouldAnnounceWinConditions } from "@/lib/winConditions";
 import type { LevelConfig } from "@/types/level";
 import type { TFunction } from "i18next";
 
@@ -52,5 +52,49 @@ describe("winConditionsBody", () => {
   it("fence budget adds its fail line", () => {
     const body = winConditionsBody(t, base({ fenceBudget: 14 }), 5);
     expect(body).toContain('winConditions.fences({"count":14}');
+  });
+});
+
+/**
+ * The modal fires unprompted only when the map has something to say beyond
+ * "clear X%", which the top bar shows continuously. It still lists everything
+ * when opened from the menu; this only governs the interruption.
+ */
+describe("shouldAnnounceWinConditions", () => {
+  it("stays quiet on an ordinary map", () => {
+    expect(shouldAnnounceWinConditions(t, base({ sizeThreshold: 30 }), 5)).toBe(false);
+  });
+
+  // The default ramp timer applies to every map past the tutorial band, so
+  // counting it would mark almost the whole game noteworthy and change nothing.
+  it("ignores the default ramp timer but announces an authored one", () => {
+    expect(shouldAnnounceWinConditions(t, base({}), 20)).toBe(false);
+    expect(shouldAnnounceWinConditions(t, base({ timeLimit: 25 }), 20)).toBe(true);
+  });
+
+  it("announces every genuinely unusual condition", () => {
+    expect(shouldAnnounceWinConditions(t, base({ threadLockRequired: 1 }), 6)).toBe(true);
+    expect(shouldAnnounceWinConditions(t, base({ fenceBudget: 4 }), 6)).toBe(true);
+    expect(shouldAnnounceWinConditions(t, base({ boss: {} as LevelConfig["boss"] }), 10)).toBe(true);
+    expect(shouldAnnounceWinConditions(t, base({
+      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var" }],
+    }), 10)).toBe(true);
+  });
+
+  // A bonus pocket is upside, not a win condition, and the board already marks it.
+  it("does not announce a bonus-only colored area", () => {
+    expect(shouldAnnounceWinConditions(t, base({
+      coloredAreas: [{ x: 0, y: 0, width: 100, height: 100, kind: "var", required: false }],
+    }), 10)).toBe(false);
+  });
+
+  // The body must stay complete regardless: opening it from the menu on an
+  // ordinary map should still explain the map.
+  it("keeps the full body even where it stays quiet", () => {
+    const level = base({ sizeThreshold: 30 });
+    expect(shouldAnnounceWinConditions(t, level, 20)).toBe(false);
+    const body = winConditionsBody(t, level, 20);
+    expect(body).toContain("winConditions.clear");
+    expect(body).toContain("winConditions.time");
   });
 });
