@@ -14,7 +14,7 @@
 
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import { traceActiveContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
+import { traceActiveContours, traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapStroke, hairline, type Pt } from "./pixelGrid";
@@ -39,6 +39,16 @@ const MIN_LATTICE_PX = 26;
  */
 const SURFACE_ALPHA = 0.9;
 
+/**
+ * Multi-lock tiers drawn for locked territory, and the tint each one adds.
+ *
+ * Kept low and few on purpose: this marks the substrate the player has already
+ * won, so it must never compete with live space or the balls for attention. Three
+ * tiers is enough - a quadruple lock is rare enough to look the same as a triple.
+ */
+const LOCK_TIERS = 3;
+const LOCK_TIER_ALPHA = 0.13;
+
 /** The board panel's own height above the page, as a multiple of the furniture. */
 const BOARD_HEIGHT_FACTOR = 2.4;
 /** Softness of the board's drop shadow, in screen px per unit scale. */
@@ -56,6 +66,7 @@ export class BoardLayer {
   /** Surface fills, held together so one alpha covers the whole surface. */
   private surface = new Container();
   private captured = new Graphics();  // fenced-off territory (the substrate)
+  private locked = new Graphics();    // territory earned by trapping a ball
   private active = new Graphics();    // still-playable space, punched on top
   private lattice = new Graphics();   // the faint grid inside live space
   private latticeMask = new Graphics();
@@ -68,7 +79,11 @@ export class BoardLayer {
 
   constructor() {
     this.lattice.mask = this.latticeMask;
-    this.surface.addChild(this.captured, this.active, this.lattice, this.latticeMask);
+    // Locked sits between the substrate and live space: it tints territory that
+    // has been captured, and live space is painted opaque on top, which also
+    // means a pocket that later REOPENS (a destructible breaking) hides its
+    // stale tint for free rather than needing the array cleaned up.
+    this.surface.addChild(this.captured, this.locked, this.active, this.lattice, this.latticeMask);
     // One alpha on the group, rather than per-fill: the captured and live fills
     // overlap, so per-fill alpha would make the overlap less transparent than
     // the rest and show as a visible seam along every region boundary.
@@ -164,9 +179,14 @@ export class BoardLayer {
       .fill({ color: PALETTE.captured, alpha: 1 });
 
     this.active.clear();
+    this.locked.clear();
     this.latticeMask.clear();
     this.lattice.clear();
     if (!spaceGrid) return;
+
+    // Before the live-space trace, because a fully captured board returns early
+    // below and the locked tint is exactly what you want to see on that frame.
+    this.drawLocked(game, w2s);
 
     // ── Live space: one traced contour set, drawn OPAQUE over the captured fill.
     // Drawing on top (rather than compositing a hole) keeps the edge a single
@@ -217,6 +237,52 @@ export class BoardLayer {
     this.active.stroke({ width: hairline(), color: PALETTE.accentDim, alpha: 0.55 });
 
     this.drawLattice(game, w2s);
+  }
+
+  /**
+   * Territory earned by TRAPPING a ball, as opposed to merely swept up.
+   *
+   * The economy is lock-centric - a plain clear pays almost nothing next to a
+   * lock - but until now the board drew both the same green, so the record of
+   * how well a map was played was invisible the moment the lock flash faded.
+   * `grid.lockCaptured` has been maintained on every cut all along, intensity
+   * and all, and nothing read it.
+   *
+   * Intensity is the number of balls sealed in that pocket at once, and it is
+   * rendered by OVERLAYING one pass per tier rather than by picking a colour per
+   * count: a triple lock is covered three times and simply comes out brighter,
+   * so the scale stays legible without inventing a palette for it.
+   *
+   * Contours get the same 1.05-cell wall snap as the lock flash, not the 1.8
+   * used for live space. These are pocket-shaped, and the wider reach was what
+   * dragged contour points into long stray chords on tight pockets.
+   */
+  private drawLocked(game: CanvasGameState, w2s: W2S): void {
+    const grid = game.spaceGrid;
+    const lock = grid?.lockCaptured;
+    if (!grid || !lock) return;
+    const gw = grid.width;
+
+    for (let tier = 1; tier <= LOCK_TIERS; tier++) {
+      let present = false;
+      for (let i = 0; i < lock.length; i++) {
+        if (lock[i] >= tier) { present = true; break; }
+      }
+      if (!present) break; // tiers are cumulative, so nothing above this exists
+
+      const loops = snapContoursToWalls(
+        traceContours(grid, (col, row) => lock[row * gw + col] >= tier),
+        game.walls,
+        grid.cellSize * 1.05,
+      );
+      let drew = false;
+      for (const loop of loops) {
+        if (loop.length < 3) continue;
+        this.locked.poly(loop.map(p => w2s(p.x, p.y)));
+        drew = true;
+      }
+      if (drew) this.locked.fill({ color: PALETTE.accent, alpha: LOCK_TIER_ALPHA });
+    }
   }
 
   /**
