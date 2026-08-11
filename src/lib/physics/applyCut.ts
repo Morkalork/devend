@@ -75,7 +75,7 @@ function getGridRemainingPercent(game: CanvasGameState): number {
 }
 
 function wouldWallTrapBallCheck(start: Vector2, end: Vector2, game: CanvasGameState): boolean {
-  return wouldWallOrphanBall(start, end, game.balls, game.regions, game.walls);
+  return wouldWallOrphanBall(start, end, game.balls, game.regions, game.walls, game.spaceGrid);
 }
 
 /**

@@ -19,6 +19,8 @@ import { describe, it, expect } from "vitest";
 import { wouldWallOrphanBall } from "@/lib/regionOwnership";
 import type { Ball, Region } from "@/types/game";
 import type { Wall } from "@/lib/wallGeometry";
+import { createSpaceGrid, CellState, worldToGridIndex } from "@/lib/spaceGrid";
+import { createRectPolygon } from "@/lib/polygon";
 
 const ball = (x: number, y: number): Ball => ({
   id: "b1", position: { x, y }, velocity: { x: 1, y: 0 }, speed: 100,
@@ -79,5 +81,51 @@ describe("orphan check: visibility is not reachability", () => {
       { x: 300, y: 0 }, { x: 300, y: 900 }, balls, regions, [],
     );
     expect(orphaned).toBe(true);
+  });
+});
+
+/**
+ * With a space grid, the check asks whether the ball can WALK to a sample, not
+ * whether it can see one. That is the question it always meant to ask: a ball in
+ * an L-shaped region reaches the far arm perfectly well and has no line of sight
+ * to any of it.
+ */
+describe("orphan check uses reachability when a grid is available", () => {
+  /** An L: the corridor turns, so no sample in the far arm is ever visible. */
+  const lShapedGrid = () => {
+    const grid = createSpaceGrid(createRectPolygon(45, 45, 855, 855), [], 15);
+    grid.cells.fill(CellState.REMOVED);
+    const open = (x0: number, y0: number, x1: number, y1: number) => {
+      for (let y = y0; y < y1; y += 15) {
+        for (let x = x0; x < x1; x += 15) {
+          const i = worldToGridIndex(grid, x, y);
+          if (i >= 0) grid.cells[i] = CellState.ACTIVE;
+        }
+      }
+    };
+    open(100, 100, 300, 200);  // horizontal arm
+    open(200, 100, 300, 500);  // vertical arm turning down
+    return grid;
+  };
+
+  it("does not strand a ball that can walk round the corner", () => {
+    const grid = lShapedGrid();
+    const balls = [ball(150, 150)];
+    const regions: Region[] = [
+      { id: "r1", samplePoints: [{ x: 250, y: 450 }] } as unknown as Region,
+    ];
+    // A blocking wall between the ball and the sample, so line of sight fails.
+    const walls = [seg("obstacle-corner-edge-0", 180, 100, 180, 400)];
+    expect(wouldWallOrphanBall({ x: 800, y: 800 }, { x: 840, y: 800 }, balls, regions, walls, grid)).toBe(false);
+  });
+
+  it("still refuses a fence that genuinely severs the corridor", () => {
+    const grid = lShapedGrid();
+    const balls = [ball(150, 150)];
+    const regions: Region[] = [
+      { id: "r1", samplePoints: [{ x: 250, y: 450 }] } as unknown as Region,
+    ];
+    // Cuts straight across the vertical arm, below the ball's reach.
+    expect(wouldWallOrphanBall({ x: 190, y: 260 }, { x: 320, y: 260 }, balls, regions, [], grid)).toBe(true);
   });
 });

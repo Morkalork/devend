@@ -27,7 +27,7 @@ import {
 } from './polygon';
 import { Wall } from './wallGeometry';
 import { SAMPLE_GRID_SIZE } from './regionSplit';
-import { SpaceGrid, CellState, worldToGridIndex } from './spaceGrid';
+import { SpaceGrid, CellState, worldToGridIndex, gridIndexToWorld } from './spaceGrid';
 
 // Re-export under the legacy name so existing callers don't need updating.
 export const REGION_SAMPLE_GRID_SIZE = SAMPLE_GRID_SIZE;
@@ -401,7 +401,10 @@ export function wouldWallOrphanBall(
   wallEnd: Vector2,
   balls: Ball[],
   regions: Region[],
-  existingWalls: Wall[]
+  existingWalls: Wall[],
+  /** Space grid, when available: enables a true reachability test instead of
+   *  line of sight. Optional so callers without one still work. */
+  grid?: SpaceGrid | null,
 ): boolean {
   const testWall = { id: 'test-wall', start: wallStart, end: wallEnd, thickness: 6 };
 
@@ -409,6 +412,60 @@ export function wouldWallOrphanBall(
   const hasSightline = (ball: Ball, samples: Vector2[], walls: typeof existingWalls): boolean =>
     samples.some(sample =>
       !walls.some(w => lineSegmentIntersection(ball.position, sample, w.start, w.end)));
+
+  /**
+   * Can the ball WALK to any of its samples, rather than see one?
+   *
+   * Floods the space grid's live cells from the ball, refusing only steps that
+   * cross the proposed fence - every existing barrier is already baked into
+   * which cells are active. This is the question the check always meant to ask:
+   * a ball in an L-shaped region can reach the far end perfectly well and has no
+   * line of sight to any of it.
+   *
+   * Returns null when the grid cannot answer (no grid, or the ball is standing
+   * in a captured cell), so the caller can fall back rather than guess.
+   */
+  const canWalkToSample = (
+    ball: Ball,
+    samples: Vector2[],
+    blocking: { start: Vector2; end: Vector2 } | null,
+  ): boolean | null => {
+    if (!grid) return null;
+    const start = worldToGridIndex(grid, ball.position.x, ball.position.y);
+    if (start < 0 || start >= grid.cells.length || grid.cells[start] !== CellState.ACTIVE) return null;
+
+    const targets = new Set<number>();
+    for (const s of samples) {
+      const idx = worldToGridIndex(grid, s.x, s.y);
+      if (idx >= 0 && idx < grid.cells.length) targets.add(idx);
+    }
+    if (targets.size === 0) return null;
+
+    const { width, height, cells } = grid;
+    const seen = new Uint8Array(cells.length);
+    const queue = [start];
+    seen[start] = 1;
+    for (let qh = 0; qh < queue.length; qh++) {
+      const cur = queue[qh];
+      if (targets.has(cur)) return true;
+      const row = (cur / width) | 0, col = cur % width;
+      const a = gridIndexToWorld(grid, cur);
+      const step = (ni: number) => {
+        if (seen[ni] || cells[ni] !== CellState.ACTIVE) return;
+        if (blocking) {
+          const b = gridIndexToWorld(grid, ni);
+          if (lineSegmentIntersection(a, b, blocking.start, blocking.end)) return;
+        }
+        seen[ni] = 1;
+        queue.push(ni);
+      };
+      if (row > 0) step(cur - width);
+      if (row < height - 1) step(cur + width);
+      if (col > 0) step(cur - 1);
+      if (col < width - 1) step(cur + 1);
+    }
+    return false;
+  };
 
   for (const ball of balls) {
     // Skip dead balls
@@ -430,6 +487,21 @@ export function wouldWallOrphanBall(
     // So compare: only a fence that actually TAKES the sightline away can be
     // the thing that stranded the ball. If it was already gone, this fence is
     // not the culprit and refusing it helps nobody.
+    // Prefer real reachability; fall back to the sightline delta only where the
+    // grid cannot answer.
+    const walkBefore = canWalkToSample(ball, region.samplePoints, null);
+    if (walkBefore !== null) {
+      // Still a DELTA even with a true flood: cell quantisation can put a ball
+      // in a spot the grid thinks is already cut off, and refusing every fence
+      // on that basis is the failure this check has produced before.
+      if (!walkBefore) continue;
+      if (canWalkToSample(ball, region.samplePoints, { start: wallStart, end: wallEnd }) === false) {
+        console.warn(`[OWNERSHIP] Wall would orphan ball ${ball.id}`);
+        return true;
+      }
+      continue;
+    }
+
     if (!hasSightline(ball, region.samplePoints, existingWalls)) continue;
     if (!hasSightline(ball, region.samplePoints, [...existingWalls, testWall])) {
       console.warn(`[OWNERSHIP] Wall would orphan ball ${ball.id}`);
