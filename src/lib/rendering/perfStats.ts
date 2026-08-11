@@ -58,6 +58,12 @@ const _renderMs = new Ring();  // time inside callbacks.render()
  * on means the work is happening outside the counters, not that it is absent.
  */
 const _otherMs = new Ring();
+/**
+ * The background parallax tick, which runs at the TOP of the loop body - before
+ * the physics timer starts and before render - so it was invisible to both and
+ * landed silently in `other`. Exactly the blind spot that hid the cut pass.
+ */
+const _bgMs = new Ring();
 let _balls = 0;
 let _steps = 0;
 /**
@@ -81,6 +87,10 @@ export function recordCut(ms: number): void {
 }
 
 /** Called once per active frame from the game loop. */
+export function recordBg(ms: number): void {
+  _bgMs.push(ms);
+}
+
 export function recordFrame(
   frameMs: number,
   physicsMs: number,
@@ -185,6 +195,43 @@ export function resetPerfHudCache(): void {
 }
 
 /**
+ * Freeze the animated CRT background (admin).
+ *
+ * An A/B switch, not a feature. Everything this loop can measure has been ruled
+ * out of the periodic stutter - render, physics, the cut pass and the parallax
+ * tick are all accounted for and small - which leaves work the loop never sees:
+ * compositing a translucent board over a full-screen animated DOM layer being
+ * the obvious candidate. That has to be tested on a real phone, because a
+ * desktop composites it for free.
+ *
+ * Flip this, watch `other`, and the question answers itself. If it drops, the
+ * background is the cost and this toggle is already most of the fix.
+ */
+export const STATIC_BG_KEY = "devend:staticBg";
+let _staticBg: boolean | null = null;
+
+export function isStaticBgEnabled(): boolean {
+  if (_staticBg === null) {
+    try {
+      _staticBg = typeof localStorage !== "undefined" && localStorage.getItem(STATIC_BG_KEY) === "1";
+    } catch {
+      _staticBg = false;
+    }
+  }
+  return _staticBg;
+}
+
+export function setStaticBgEnabled(on: boolean): void {
+  _staticBg = on;
+  try {
+    if (on) localStorage.setItem(STATIC_BG_KEY, "1");
+    else localStorage.removeItem(STATIC_BG_KEY);
+  } catch {
+    /* blocked storage */
+  }
+}
+
+/**
  * The surface actually being rasterised, recorded by whoever sizes the canvas.
  *
  * The renderer runs at `resolution: 1` over a physically-sized canvas, so on a
@@ -224,6 +271,7 @@ export function perfLines(): string[] {
     // on this machine) and the raw value pushed the line off the HUD.
     `surf  ${_surfaceW}x${_surfaceH} @${dpr.toFixed(2)}x (${mpx.toFixed(1)}Mpx)`,
     `other ${f1(_otherMs.avg())}  peak ${f1(_otherMs.max())}`,
+    `bg    ${f1(_bgMs.avg())}  peak ${f1(_bgMs.max())}`,
     `cut   ${f1(_cutMs)}  peak ${f1(_cutPeak)}${_cutAt ? `  ${Math.round((performance.now() - _cutAt) / 1000)}s ago` : ""}`,
     `balls ${_balls}   steps ${_steps}`,
     `heap  ${heapLine()}`,

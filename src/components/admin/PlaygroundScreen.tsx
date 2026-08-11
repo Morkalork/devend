@@ -13,7 +13,7 @@ import { BallTypeDef, getAllBallTypes, loadBallTypes, selectBallTypesForMap } fr
 import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
-import { isPerfHudEnabled, setPerfHudEnabled } from '@/lib/rendering/perfStats';
+import { isPerfHudEnabled, setPerfHudEnabled, isStaticBgEnabled, setStaticBgEnabled } from '@/lib/rendering/perfStats';
 
 interface PlaygroundScreenProps {
   onBack: () => void;
@@ -161,6 +161,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const [showBallSpeeds, setShowBallSpeeds] = useState(false);
   const [showPerfOverlay, setShowPerfOverlay] = useState(isPerfHudEnabled);
   const [lockDebug, setLockDebug] = useState(isLockDebugEnabled);
+  const [staticBg, setStaticBg] = useState(isStaticBgEnabled);
   // Dev: on clear, play the desaturation drain then freeze on the drained frame;
   // click the board to reload. `frozen` arms the click-to-reload catcher.
   const [freezeOnClear, setFreezeOnClear] = useState(false);
@@ -980,6 +981,32 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
                       className="absolute rounded-full bg-white transition-all"
                       style={{ width: 14, height: 14, top: 3, left: showPerfOverlay ? 19 : 3 }}
                     />
+                  </span>
+                </button>
+              </div>
+
+              {/* Static background: the A/B for the unattributed frame time.
+                  Persists into normal runs, because the measurement that matters
+                  is a real map on a real device, not a desktop that composites
+                  an animated layer for free. */}
+              <div className="px-5 pt-3 flex-shrink-0">
+                <button
+                  onClick={() => { const next = !staticBg; setStaticBg(next); setStaticBgEnabled(next); }}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg"
+                  style={{
+                    backgroundColor: staticBg ? accent + '1a' : 'rgba(255,255,255,0.03)',
+                    border: '1px solid ' + (staticBg ? accent + '55' : 'rgba(255,255,255,0.08)'),
+                  }}
+                >
+                  <span className="text-xs font-semibold text-left" style={{ color: staticBg ? accent : 'hsl(var(--foreground))' }}>
+                    Freeze background
+                    <span className="block text-[10px] font-normal opacity-60">Persists; watch "other" in the perf HUD</span>
+                  </span>
+                  <span
+                    className="relative inline-flex items-center rounded-full transition-colors flex-shrink-0"
+                    style={{ width: 36, height: 20, backgroundColor: staticBg ? accent : 'rgba(255,255,255,0.15)' }}
+                  >
+                    <span className="absolute rounded-full bg-white transition-all" style={{ width: 14, height: 14, top: 3, left: staticBg ? 19 : 3 }} />
                   </span>
                 </button>
               </div>

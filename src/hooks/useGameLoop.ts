@@ -27,7 +27,7 @@ import { updatePickups } from "@/lib/pickups";
 import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
-import { recordFrame, recordCut } from "@/lib/rendering/perfStats";
+import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
 
 export interface GameLoopCallbacks {
   /** Called every physics step to advance wall growth. */
@@ -127,7 +127,12 @@ export function createGameLoop(
     // background code goes still with the board; it resumes when the next map's
     // loop starts (levelComplete resets to false on init).
     if (!game.levelComplete && !game.gameOver) {
+      // Timed separately: this runs before the physics timer starts, so its cost
+      // was counted by neither phys nor rend and showed up only as unattributable
+      // `other` time.
+      const _bgStart = performance.now();
       parallaxTickRef?.current?.(timestamp);
+      recordBg(performance.now() - _bgStart);
     }
 
     // Dissolve animation always runs regardless of gameOver/levelComplete state

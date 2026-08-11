@@ -29,6 +29,7 @@ import { TutorialOverlay } from './TutorialOverlay';
 import { LockDebugOverlay } from './LockDebugOverlay';
 import { isLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { fileManualEntry } from '@/lib/manual';
+import { isStaticBgEnabled } from '@/lib/rendering/perfStats';
 import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
 import { contentText } from '@/i18n/content';
@@ -298,6 +299,8 @@ export function GameScreen({
   // Read once per mount: the flag is flipped in the admin screen, which can only
   // be reached by leaving the game, so it cannot change while a map is running.
   const [lockDebug] = useState(isLockDebugEnabled);
+  // Admin A/B for the unattributed frame time; see isStaticBgEnabled.
+  const [staticBg] = useState(isStaticBgEnabled);
   const highscoreTarget = mapHighscores?.[level.id] ?? 0;
   const projectedScore = useMemo(() => {
     if (!showHighscoreBar || highscoreTarget <= 0) return 0;
@@ -560,7 +563,7 @@ export function GameScreen({
   return (
     <>
       {/* CRT Terminal Background */}
-      <CRTBackground accentColor={accentColor} paused={mapComplete} />
+      <CRTBackground accentColor={accentColor} paused={mapComplete || staticBg} />
       
       {/* Memory Parallax Layer - between CRT and game */}
       <MemoryParallaxLayer accentColor={accentColor} externalTickRef={memParallaxTickRef} />
