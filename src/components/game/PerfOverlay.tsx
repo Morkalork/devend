@@ -11,11 +11,15 @@
  * it is reporting.
  */
 import { useEffect, useState } from 'react';
-import { perfLines, perfColor } from '@/lib/rendering/perfStats';
+import { perfLines, perfColor, startLongTaskWatch } from '@/lib/rendering/perfStats';
 
 export function PerfOverlay({ visible }: { visible: boolean }) {
   const [lines, setLines] = useState<string[]>([]);
   const [color, setColor] = useState('#00ff88');
+
+  // Started with the HUD rather than at module load: the observer is only of
+  // interest while someone is reading these numbers.
+  useEffect(() => { if (visible) startLongTaskWatch(); }, [visible]);
 
   // Polled, and deliberately slower than the frame rate: the numbers are rolling
   // averages over ~1.5s, so sampling faster would only add React renders to the

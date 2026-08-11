@@ -64,6 +64,42 @@ const _otherMs = new Ring();
  * landed silently in `other`. Exactly the blind spot that hid the cut pass.
  */
 const _bgMs = new Ring();
+/**
+ * Long tasks, straight from the browser.
+ *
+ * The decisive question for a 65ms frame that this loop cannot account for is
+ * whether the time was spent running JAVASCRIPT at all. A longtask entry means
+ * some script blocked the main thread and the work is ours to find; NO entry
+ * beside a 65ms frame means the time went to style, layout, paint or compositing
+ * - work no amount of profiling our own functions will ever surface.
+ *
+ * Five suspects have already been eliminated by measurement here (native DPR,
+ * the throat-gated flood, the parallax tick, the cut pass, the animated
+ * background). This is the instrument that stops the sixth being a guess.
+ */
+let _taskMs = 0;
+let _taskPeak = 0;
+let _taskAt = 0;
+let _taskCount = 0;
+let _taskObserver: PerformanceObserver | null = null;
+
+/** Idempotent; safe to call on every mount. */
+export function startLongTaskWatch(): void {
+  if (_taskObserver || typeof PerformanceObserver === "undefined") return;
+  try {
+    _taskObserver = new PerformanceObserver(list => {
+      for (const entry of list.getEntries()) {
+        _taskMs = entry.duration;
+        if (entry.duration > _taskPeak) _taskPeak = entry.duration;
+        _taskAt = performance.now();
+        _taskCount++;
+      }
+    });
+    _taskObserver.observe({ entryTypes: ["longtask"] });
+  } catch {
+    _taskObserver = null; // unsupported (Safari): the line just reads zero
+  }
+}
 let _balls = 0;
 let _steps = 0;
 /**
@@ -272,6 +308,7 @@ export function perfLines(): string[] {
     `surf  ${_surfaceW}x${_surfaceH} @${dpr.toFixed(2)}x (${mpx.toFixed(1)}Mpx)`,
     `other ${f1(_otherMs.avg())}  peak ${f1(_otherMs.max())}`,
     `bg    ${f1(_bgMs.avg())}  peak ${f1(_bgMs.max())}`,
+    `task  ${f1(_taskMs)}  peak ${f1(_taskPeak)}  n=${_taskCount}${_taskAt ? `  ${Math.round((performance.now() - _taskAt) / 1000)}s ago` : ""}`,
     `cut   ${f1(_cutMs)}  peak ${f1(_cutPeak)}${_cutAt ? `  ${Math.round((performance.now() - _cutAt) / 1000)}s ago` : ""}`,
     `balls ${_balls}   steps ${_steps}`,
     `heap  ${heapLine()}`,
