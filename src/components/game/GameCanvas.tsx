@@ -706,161 +706,17 @@ export function GameCanvas({
     };
 
     // ── Region / board-grid offscreen canvases ───────────────────────────────
-    const boardGridCanvas = new OffscreenCanvas(canvas.width, canvas.height);
-    const regionCanvas    = new OffscreenCanvas(canvas.width, canvas.height);
-
-    const scanlineTile = new OffscreenCanvas(4, 4);
-    (() => {
-      const stCtx = scanlineTile.getContext('2d')!;
-      stCtx.clearRect(0, 0, 4, 4);
-      stCtx.fillStyle = 'rgba(0,0,0,0.18)';
-      stCtx.fillRect(0, 3, 4, 1);
-    })();
-
-    let boardGridKey = "";
-    let boardGridSamplesRef: Vector2[] | null = null;
-    const paintBoardGrid = () => {
-      const gCtx = boardGridCanvas.getContext("2d");
-      if (!gCtx) return;
-      const { width: sw, height: sh } = game.screenSize;
-      // The board grid is static per map: nothing about it changes as the player
-      // cuts. Skip the thousands of fillRects unless its inputs (size, board
-      // transform, colour, opacity, or the sample set) actually changed. NOTE the
-      // sample COUNT is in the key: a vault reveal (pushReopenedSamplePoints)
-      // grows game.initialSamplePoints IN PLACE (same reference), so a reference
-      // check alone would miss it and the reopened area would render no grid.
-      const key = `${sw}x${sh}|${game.boardRect.scale}|${game.boardRect.left}|${game.boardRect.top}|${game.regionColor}|${canvasOpacity}|${game.initialSamplePoints.length}`;
-      if (key === boardGridKey && boardGridSamplesRef === game.initialSamplePoints) return;
-      boardGridKey = key;
-      boardGridSamplesRef = game.initialSamplePoints;
-      if (boardGridCanvas.width !== sw || boardGridCanvas.height !== sh) {
-        boardGridCanvas.width = sw; boardGridCanvas.height = sh;
-      }
-      gCtx.clearRect(0, 0, boardGridCanvas.width, boardGridCanvas.height);
-      if (game.initialSamplePoints.length === 0) return;
-      const { boardRect, regionColor } = game;
-      const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
-      const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
-      gCtx.save();
-      gCtx.globalAlpha = canvasOpacity * 0.55;
-      gCtx.fillStyle = regionColor;
-      for (const s of game.initialSamplePoints) {
-        const sx = Math.round(boardRect.left + (s.x - halfGrid - cellPadding) * boardRect.scale);
-        const sy = Math.round(boardRect.top  + (s.y - halfGrid - cellPadding) * boardRect.scale);
-        gCtx.fillRect(sx, sy, size, size);
-      }
-      gCtx.restore();
-    };
-
+    // The board grid and region fills used to be painted here into two
+    // full-screen OffscreenCanvases and handed to the renderer as textures.
+    // The sleek renderer draws the board from the space grid instead and never
+    // read either one, so this was rasterising two native-DPR surfaces (2.3Mpx
+    // each on a phone) on every cut and throwing both away.
+    //
+    // The one part that mattered is the signal: markStaticDirty tells the
+    // renderer the board shape changed, which is what gates its contour trace.
     const repaintRegionCanvas = () => {
-      paintBoardGrid();
-      const rCtx = regionCanvas.getContext("2d");
-      if (!rCtx) return;
-      const { width: sw, height: sh } = game.screenSize;
-      if (regionCanvas.width !== sw || regionCanvas.height !== sh) {
-        regionCanvas.width = sw; regionCanvas.height = sh;
-      }
-      rCtx.clearRect(0, 0, regionCanvas.width, regionCanvas.height);
-      const { boardRect, regionColor } = game;
-      // Step 1: solid board = captured territory
-      rCtx.save();
-      rCtx.globalAlpha = canvasOpacity * 0.8;
-      rCtx.fillStyle = regionColor;
-      rCtx.fillRect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
-      rCtx.restore();
-      // Step 2: punch transparent holes over the ACTIVE (playable) area.
-      const grid = game.spaceGrid;
-      if (grid) {
-        // Authoritative + smooth: trace the ACTIVE/removed boundary straight from
-        // the space grid (the single source of truth, so captured space behind an
-        // obstacle can never leak a hole — the old "shadow behind the obstacle")
-        // and punch it as one anti-aliased path with rounded corners, instead of
-        // stamping hard 15px cells. Even-odd fill keeps interior captured holes
-        // (obstacles inside the playable area) intact.
-        const loops = traceActiveContours(grid);
-        rCtx.save();
-        rCtx.globalCompositeOperation = "destination-out";
-        rCtx.beginPath();
-        for (const loop of loops) {
-          for (let i = 0; i < loop.length; i++) {
-            const sx = boardRect.left + loop[i].x * boardRect.scale;
-            const sy = boardRect.top + loop[i].y * boardRect.scale;
-            if (i === 0) rCtx.moveTo(sx, sy);
-            else rCtx.lineTo(sx, sy);
-          }
-          rCtx.closePath();
-        }
-        rCtx.fill("evenodd");
-        rCtx.restore();
-      } else {
-        // Fallback (no space grid): stamp active region cells as before.
-        const gridSize = 15, halfGrid = 7.5, cellPadding = 3;
-        const size = Math.round((gridSize + cellPadding * 2) * boardRect.scale);
-        for (const region of game.regions) {
-          for (const sample of (region.samplePoints ?? [])) {
-            const sx = Math.round(boardRect.left + (sample.x - halfGrid - cellPadding) * boardRect.scale);
-            const sy = Math.round(boardRect.top  + (sample.y - halfGrid - cellPadding) * boardRect.scale);
-            rCtx.clearRect(sx, sy, size, size);
-          }
-        }
-      }
-      // Step 2b: accent-tint LOCKED territory. Marks where balls were locked
-      // (vs plain fenced-off space) with a persistent accent wash. Traced from the
-      // grid's lock-captured mask, not the ray-cast lock polygon, so it's uniform
-      // behind obstacles and can't leave the "shadow behind the obstacle" wedge.
-      // source-atop keeps it on the captured fill only (never over active holes).
-      if (grid?.lockCaptured) {
-        const mask = grid.lockCaptured;
-        const gw = grid.width;
-        // Snap the traced lattice contour onto the walls that bound the pocket,
-        // so the tint sits flush with the fence line instead of up to a cell
-        // short/past it (the seam the lattice quantization leaves otherwise).
-        // The mask stores lock INTENSITY (balls trapped by the sealing cut):
-        // the base wash covers every locked pocket, and a second pass over the
-        // multi-lock (>= 2) pockets doubles up the accent so a double trap
-        // visibly outshines a single one - the visual twin of the x2 payout.
-        const traceAtLeast = (min: number) =>
-          snapContoursToWalls(
-            traceContours(grid, (col, row) => mask[row * gw + col] >= min),
-            game.walls,
-            grid.cellSize * 1.05,
-          );
-        const fillLoops = (loops: ContourPoint[][], alpha: number) => {
-          if (loops.length === 0) return;
-          rCtx.save();
-          rCtx.globalCompositeOperation = 'source-atop';
-          rCtx.globalAlpha = alpha;
-          rCtx.fillStyle = accentColor;
-          rCtx.beginPath();
-          for (const loop of loops) {
-            for (let i = 0; i < loop.length; i++) {
-              const sx = boardRect.left + loop[i].x * boardRect.scale;
-              const sy = boardRect.top + loop[i].y * boardRect.scale;
-              if (i === 0) rCtx.moveTo(sx, sy);
-              else rCtx.lineTo(sx, sy);
-            }
-            rCtx.closePath();
-          }
-          rCtx.fill('evenodd');
-          rCtx.restore();
-        };
-        fillLoops(traceAtLeast(1), canvasOpacity * 0.3);
-        fillLoops(traceAtLeast(2), canvasOpacity * 0.35);
-      }
-      // Step 3: scanline overlay on captured fill only
-      const scanPattern = rCtx.createPattern(scanlineTile, 'repeat');
-      if (scanPattern) {
-        rCtx.save();
-        rCtx.globalAlpha = 1;
-        rCtx.globalCompositeOperation = 'source-atop';
-        rCtx.fillStyle = scanPattern;
-        rCtx.fillRect(0, 0, regionCanvas.width, regionCanvas.height);
-        rCtx.restore();
-      }
-      // The Pixi renderer wraps these canvases as textures; tell it to re-upload.
       pixiRef.current?.markStaticDirty();
     };
-    // Expose the repaint to the ability bar's Clear All Fences handler.
     repaintRegionCanvasRef.current = repaintRegionCanvas;
 
     const paintOverlayCanvas = () => {
@@ -1086,7 +942,7 @@ export function GameCanvas({
     };
 
     const rctx: RenderContext = {
-      accentColor, activeModifiers, boardGridCanvas, regionCanvas, rain: rainState,
+      accentColor, activeModifiers, rain: rainState,
       spaceThreshold: level.sizeThreshold, showBallSpeeds: showBallSpeedsRef.current,
       infoUnlockedLabel: t('game.infoUnlocked'),
       pickupLabels: {
