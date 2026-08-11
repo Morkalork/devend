@@ -43,6 +43,21 @@ class Ring {
 const _frameMs = new Ring();   // wall-clock between frames
 const _physicsMs = new Ring(); // time inside the fixed-step physics loop
 const _renderMs = new Ring();  // time inside callbacks.render()
+/**
+ * Frame time this loop cannot account for: frame - (phys + rend).
+ *
+ * The point is attribution, not a target. In a HEALTHY frame this is mostly idle
+ * - the loop finishes in ~2ms and the browser waits ~14ms for vsync - so the
+ * AVERAGE being large is normal and good. The PEAK is the diagnostic: when a
+ * frame takes 50ms and only 2ms of it was ours, the other 48 went somewhere this
+ * loop never sees. Browser layout, compositing the translucent board over the
+ * animated background, GC, or a phase we simply are not timing.
+ *
+ * That distinction is the whole question behind a stutter with no cut nearby, and
+ * it is exactly how the cut pass was caught: a frame peak with nothing to pin it
+ * on means the work is happening outside the counters, not that it is absent.
+ */
+const _otherMs = new Ring();
 let _balls = 0;
 let _steps = 0;
 /**
@@ -73,9 +88,19 @@ export function recordFrame(
   steps: number,
   ballCount: number,
 ): void {
-  if (frameMs > 0 && frameMs < 1000) _frameMs.push(frameMs); // ignore tab-switch gaps
+  // All four rings take a sample or none do. They used to disagree - frame was
+  // gated on the tab-switch guard while phys and rend were pushed regardless -
+  // so the averages were over different frame sets and `frame - phys - rend`
+  // did not equal `other`. A HUD whose own arithmetic does not add up teaches
+  // you to distrust it, which defeats the point of having it.
+  if (frameMs <= 0 || frameMs >= 1000) return; // tab-switch gap: not a real frame
+  _frameMs.push(frameMs);
   _physicsMs.push(physicsMs);
   _renderMs.push(renderMs);
+  // Clamped: the three are sampled at slightly different moments, so a fast
+  // frame can round very slightly negative, and a negative "unaccounted" would
+  // read as nonsense.
+  _otherMs.push(Math.max(0, frameMs - physicsMs - renderMs));
   _steps = steps;
   _balls = ballCount;
 }
@@ -198,6 +223,7 @@ export function perfLines(): string[] {
     // dpr is rounded: devicePixelRatio is often an ugly float (1.6500000000953
     // on this machine) and the raw value pushed the line off the HUD.
     `surf  ${_surfaceW}x${_surfaceH} @${dpr.toFixed(2)}x (${mpx.toFixed(1)}Mpx)`,
+    `other ${f1(_otherMs.avg())}  peak ${f1(_otherMs.max())}`,
     `cut   ${f1(_cutMs)}  peak ${f1(_cutPeak)}${_cutAt ? `  ${Math.round((performance.now() - _cutAt) / 1000)}s ago` : ""}`,
     `balls ${_balls}   steps ${_steps}`,
     `heap  ${heapLine()}`,
