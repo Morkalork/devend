@@ -122,9 +122,40 @@ export function recordCut(ms: number): void {
   _cutAt = performance.now();
 }
 
+/**
+ * The worst frame since the last reset, with its full attribution frozen at the
+ * moment it happened.
+ *
+ * Rolling averages and peaks decay in ~1.5s, which made catching a stutter a
+ * test of reflexes: you had to notice a dip and screenshot before the window
+ * forgot it. This holds the evidence instead, so a minute of ordinary play can
+ * be screenshotted at leisure and still answer the question.
+ *
+ * The field that matters is taskGap: how long before this frame the browser last
+ * reported a long task. A few milliseconds means some JavaScript blocked the main
+ * thread and the work is ours to find. Seconds - or never - means the time went
+ * to style, layout, paint or compositing, and no amount of profiling our own
+ * functions will surface it.
+ */
+interface WorstFrame {
+  ms: number; phys: number; rend: number; other: number; bg: number;
+  taskMs: number; taskGap: number; cutAgo: number; balls: number; at: number;
+}
+let _worst: WorstFrame | null = null;
+
+/** Frames below this are ordinary; only a real hitch is worth freezing. */
+const WORST_THRESHOLD_MS = 32;
+
+export function resetWorstFrame(): void {
+  _worst = null;
+}
+
 /** Called once per active frame from the game loop. */
+let _lastBg = 0;
+
 export function recordBg(ms: number): void {
   _bgMs.push(ms);
+  _lastBg = ms;
 }
 
 export function recordFrame(
@@ -147,6 +178,18 @@ export function recordFrame(
   // frame can round very slightly negative, and a negative "unaccounted" would
   // read as nonsense.
   _otherMs.push(Math.max(0, frameMs - physicsMs - renderMs));
+
+  // Freeze the worst hitch and everything that might explain it.
+  if (frameMs >= WORST_THRESHOLD_MS && (!_worst || frameMs > _worst.ms)) {
+    const now = performance.now();
+    _worst = {
+      ms: frameMs, phys: physicsMs, rend: renderMs,
+      other: Math.max(0, frameMs - physicsMs - renderMs), bg: _lastBg,
+      taskMs: _taskMs, taskGap: _taskAt ? now - _taskAt : -1,
+      cutAgo: _cutAt ? now - _cutAt : -1,
+      balls: ballCount, at: now,
+    };
+  }
   _steps = steps;
   _balls = ballCount;
 }
@@ -310,6 +353,14 @@ export function perfLines(): string[] {
     `bg    ${f1(_bgMs.avg())}  peak ${f1(_bgMs.max())}`,
     `task  ${f1(_taskMs)}  peak ${f1(_taskPeak)}  n=${_taskCount}${_taskAt ? `  ${Math.round((performance.now() - _taskAt) / 1000)}s ago` : ""}`,
     `cut   ${f1(_cutMs)}  peak ${f1(_cutPeak)}${_cutAt ? `  ${Math.round((performance.now() - _cutAt) / 1000)}s ago` : ""}`,
+    ...(_worst
+      ? [
+          `WORST ${f1(_worst.ms)}ms  ${Math.round((performance.now() - _worst.at) / 1000)}s ago`,
+          ` ph ${f1(_worst.phys)} rd ${f1(_worst.rend)} ot ${f1(_worst.other)} bg ${f1(_worst.bg)}`,
+          ` task ${f1(_worst.taskMs)} ${_worst.taskGap < 0 ? "never" : f1(_worst.taskGap) + "ms before"}`,
+          ` cut ${_worst.cutAgo < 0 ? "never" : Math.round(_worst.cutAgo / 1000) + "s before"}`,
+        ]
+      : []),
     `balls ${_balls}   steps ${_steps}`,
     `heap  ${heapLine()}`,
   ];

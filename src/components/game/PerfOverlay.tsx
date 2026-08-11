@@ -11,7 +11,7 @@
  * it is reporting.
  */
 import { useEffect, useState } from 'react';
-import { perfLines, perfColor, startLongTaskWatch } from '@/lib/rendering/perfStats';
+import { perfLines, perfColor, startLongTaskWatch, resetWorstFrame } from '@/lib/rendering/perfStats';
 
 export function PerfOverlay({ visible }: { visible: boolean }) {
   const [lines, setLines] = useState<string[]>([]);
@@ -37,7 +37,9 @@ export function PerfOverlay({ visible }: { visible: boolean }) {
 
   return (
     <div
-      className="absolute left-1 top-1 z-50 rounded border pointer-events-none"
+      onClick={() => { resetWorstFrame(); setLines(perfLines()); }}
+      title="Tap to clear the worst-frame record"
+      className="absolute left-1 top-1 z-50 rounded border cursor-pointer"
       style={{
         background: 'rgba(0,0,0,0.72)',
         borderColor: color,
