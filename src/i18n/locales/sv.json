@@ -1442,5 +1442,60 @@
     "bankedSlowPer50h": "Bollhastighet {{percent}}% per 50h i banken",
     "microManagerPerLock": "Bollhastighet {{percent}}% per inlåst boll",
     "showHighscoreProgress": "Lägger till rekordmätaren för banan i HUD:en"
+  },
+  "boardInfo": {
+    "hint": "Håll in vad som helst på brädet för att se vad det är.",
+    "pickup": {
+      "title": "Uppgraderingsmarker",
+      "body": "Stäng in den i en ficka när du låser en boll så tar du den. Fångar du den utan lås går den till spillo."
+    },
+    "chestLoot": {
+      "title": "Byte",
+      "body": "Tappas av en krossad kista. Tryck för att plocka upp. Den försvinner kort efter att den landat."
+    },
+    "dormantBall": {
+      "title": "Sovande boll",
+      "body": "Inte i spel än, och stängsel går rakt igenom den. Dra ett stängsel genom dess terminal för att väcka den. Den kan inte låsas medan den sover."
+    },
+    "ball": {
+      "title": "Boll",
+      "body": "Stängsla in den i en liten förseglad ficka för att låsa den. Lås är där pengarna finns; att rensa tom yta ger nästan inget."
+    },
+    "terminal": {
+      "title": "Kretsterminal",
+      "body": "Dra ett stängsel genom den för att tända den. Slut kretsen så vaknar bollen den är kopplad till."
+    },
+    "chest": {
+      "title": "Skattkista",
+      "body": "Krossa den med en boll för byte. Varje krossning höjer också banans utbetalning."
+    },
+    "objective": {
+      "title": "Uppdragslåda",
+      "body": "Banan ber dig krossa den. Skicka en boll in i den."
+    },
+    "breakable": {
+      "title": "Krossbart block",
+      "body": "Tål några träffar och spricker när det försvagas. Krossas det öppnas ytan under igen."
+    },
+    "mirror": {
+      "title": "Spegel",
+      "body": "Studsar bollar i skarpa vinklar och gör banan svår att förutse. Den svarta bollen kan krossa den."
+    },
+    "mover": {
+      "title": "Rörligt block",
+      "body": "Glider längs sin bana, så en lucka här är tillfällig. Tajma stängslet."
+    },
+    "phasing": {
+      "title": "Blinkande block",
+      "body": "Tonar in och ut i cykler. Fast när det syns, genomträngligt när det inte gör det. Ett stängsel draget medan det är borta kapas när det kommer tillbaka."
+    },
+    "obstacle": {
+      "title": "Hinder",
+      "body": "Fast. Bollar studsar och stängsel stannar mot det, vilket gör det till ett bra fäste för en ficka."
+    },
+    "area": {
+      "title": "Markerad zon",
+      "body": "Lås en boll med zonen intagen så betalar den en multiplikator. På vissa banor är det enda sättet att vinna."
+    }
   }
 }

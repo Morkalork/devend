@@ -909,5 +909,60 @@
     "bankedSlowPer50h": "Ball speed {{percent}}% per 50h banked",
     "microManagerPerLock": "Ball speed {{percent}}% per locked ball",
     "showHighscoreProgress": "Adds the map highscore bar to the HUD"
+  },
+  "boardInfo": {
+    "hint": "Hold anything on the board to see what it is.",
+    "pickup": {
+      "title": "Power-up token",
+      "body": "Seal this inside a pocket when you lock a ball and you claim it. Capture it without a lock and it is wasted."
+    },
+    "chestLoot": {
+      "title": "Loot",
+      "body": "Dropped by a smashed chest. Tap it to collect. It vanishes shortly after it lands, so take it now."
+    },
+    "dormantBall": {
+      "title": "Sleeping ball",
+      "body": "Not in play yet, and fences pass straight through it. Route a fence through its terminal to wake it. It cannot be locked while it sleeps."
+    },
+    "ball": {
+      "title": "Ball",
+      "body": "Fence it into a small sealed pocket to lock it. Locks are where the money is; clearing empty space pays very little."
+    },
+    "terminal": {
+      "title": "Circuit terminal",
+      "body": "Draw a fence through it to light it. Complete the circuit and the ball it is wired to wakes up."
+    },
+    "chest": {
+      "title": "Treasure chest",
+      "body": "Smash it with a ball for loot. Every smash also raises this map payout."
+    },
+    "objective": {
+      "title": "Objective crate",
+      "body": "This map asks you to break it. Send a ball into it."
+    },
+    "breakable": {
+      "title": "Breakable block",
+      "body": "Takes a few hits before it shatters, and cracks as it weakens. Breaking it reopens the space underneath."
+    },
+    "mirror": {
+      "title": "Mirror",
+      "body": "Bounces balls off at hard angles, which makes their path hard to predict. The black ball can smash it."
+    },
+    "mover": {
+      "title": "Moving block",
+      "body": "Slides along its track, so a gap here is only temporary. Time your fence around it."
+    },
+    "phasing": {
+      "title": "Phasing block",
+      "body": "Fades in and out on a cycle. Solid when visible, passable when not. A fence drawn through it while it is out will be cut when it returns."
+    },
+    "obstacle": {
+      "title": "Obstacle",
+      "body": "Solid. Balls bounce off it and fences stop dead against it, which makes it a good anchor for a pocket."
+    },
+    "area": {
+      "title": "Marked zone",
+      "body": "Lock a ball with this zone captured and it pays a multiplier. On some maps it is the only way to win."
+    }
   }
 }

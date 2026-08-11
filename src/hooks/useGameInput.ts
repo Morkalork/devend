@@ -7,6 +7,7 @@
 
 import { useEffect, RefObject } from "react";
 import { CanvasGameState } from "@/types/gameState";
+import { boardEntityAt, type BoardEntityHit } from "@/lib/boardEntityInfo";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { Ball, GrowingWall } from "@/types/game";
 import {
@@ -64,6 +65,9 @@ export function useGameInput(
   /** Tap on a white "tappable" ball (#57): the input layer removes it; this runs
    *  the side effects (pop, ball-count, sound). Read from a ref. */
   onTapRemoveRef?: RefObject<((info: { x: number; y: number; color: string }) => void) | null>,
+  /** Press-and-hold on a board object: opens its explainer. Read from a ref so
+   *  the listeners stay wired once. */
+  onEntityInfoRef?: RefObject<((hit: BoardEntityHit) => void) | null>,
 ): void {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -159,23 +163,35 @@ export function useGameInput(
         }
       }
 
-      // Press-and-hold on a superior-lock star opens the lock explainer. Checked
-      // before the cut logic so the press arms a hold instead of a fence.
+      // Press-and-hold opens an explainer. Checked before the cut logic so the
+      // press arms a hold instead of a fence.
+      //
+      // A superior-lock star wins over whatever it is drawn on top of; otherwise
+      // the hold explains the board object under the finger. Both share one
+      // timer, so a press can only ever arm one of them.
       {
         const c = getCanvasCoords(e);
-        if (isPointInBoard(c.screenX, c.screenY, game.boardRect) && onSuperiorInfoRef?.current) {
+        if (isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
           const w = screenToWorld(c.screenX, c.screenY, game.boardRect);
-          if (superiorStarAt(game, w)) {
+          const star = onSuperiorInfoRef?.current ? superiorStarAt(game, w) : null;
+          const entity = star ? null : (onEntityInfoRef?.current ? boardEntityAt(game, w.x, w.y) : null);
+          if (star || entity) {
             clearHold();
             holdPointerId = e.pointerId;
             holdStartWorld = w;
             holdTimer = setTimeout(() => {
               holdTimer = null;
               if (navigator.vibrate) navigator.vibrate(20);
-              onSuperiorInfoRef.current?.();
+              if (star) onSuperiorInfoRef?.current?.();
+              else if (entity) onEntityInfoRef?.current?.(entity);
               clearHold();
             }, HOLD_MS);
-            return; // a star press arms the hold, never a cut
+            // Arming a hold must NOT block the cut: the player may simply be
+            // starting a fence from a point that happens to sit on an obstacle,
+            // and that is the common case. The fence begins as usual below; the
+            // first movement past the slop cancels the hold. Only the star
+            // returns early, because a star is never a place you start a cut.
+            if (star) return;
           }
         }
       }

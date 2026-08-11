@@ -38,6 +38,7 @@ import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/b
 import { clearAllFences } from "@/lib/abilityEffects";
 import { tickMapBeats } from "@/lib/physics/mapBeats";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
+import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
 import { AbilityIcon } from "./AbilityIcon";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
@@ -168,6 +169,9 @@ interface GameCanvasProps {
   onSpendAbility?: (abilityId: string) => void;
   /** Press-and-hold on a superior-lock star: open the lock explainer modal. */
   onRequestSuperiorInfo?: () => void;
+  /** Press-and-hold on a board object: opens its explainer (owned by GameScreen
+   *  so it can pause the map while it is open). */
+  onRequestEntityInfo?: (hit: BoardEntityHit) => void;
   onGameEnd: (result: GameResult) => void;
   /** Out of time with lives to spare: the session should restart this level. */
   onMapTimedOut?: () => void;
@@ -261,6 +265,7 @@ export function GameCanvas({
   onGrantAbility,
   onSpendAbility,
   onRequestSuperiorInfo,
+  onRequestEntityInfo,
   onGameEnd,
   onMapTimedOut,
   onLevelComplete,
@@ -408,6 +413,7 @@ export function GameCanvas({
   const handleAbilityTargetRef = useRef<((id: string | null, pos: { x: number; y: number } | null) => void) | null>(null);
   // Superior-lock-star hold handler (opens the explainer), read by the input hook.
   const handleSuperiorInfoRef = useRef<(() => void) | null>(null);
+  const handleEntityInfoRef = useRef<((hit: BoardEntityHit) => void) | null>(null);
   // Chest loot-gem tap handler (collects the reward), read by the input hook.
   const handleLootCollectRef = useRef<((rewardId: string) => void) | null>(null);
   // White ball tapped away (#57): pop + ball-count sync, read by the input hook.
@@ -622,7 +628,7 @@ export function GameCanvas({
     pickupFeedback: [] as PickupFeedback[],
   });
 
-  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleLootCollectRef, handleTapRemoveRef);
+  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleLootCollectRef, handleTapRemoveRef, handleEntityInfoRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1566,6 +1572,7 @@ export function GameCanvas({
   }, [onSpendAbility]);
   useEffect(() => { handleAbilityTargetRef.current = handleAbilityTarget; }, [handleAbilityTarget]);
   useEffect(() => { handleSuperiorInfoRef.current = onRequestSuperiorInfo ?? null; }, [onRequestSuperiorInfo]);
+  useEffect(() => { handleEntityInfoRef.current = onRequestEntityInfo ?? null; }, [onRequestEntityInfo]);
 
   // A tap collected a chest loot gem (#38 rework): bank the ability run-wide,
   // log it for the level recap, and flash the reward toast. The input layer has

@@ -1442,5 +1442,60 @@
     "bankedSlowPer50h": "Velocidad de bola {{percent}}% por cada 50h en el banco",
     "microManagerPerLock": "Velocidad de bola {{percent}}% por bola encerrada",
     "showHighscoreProgress": "Añade la barra de récord del mapa al HUD"
+  },
+  "boardInfo": {
+    "hint": "Mantén pulsado cualquier elemento del tablero para ver qué es.",
+    "pickup": {
+      "title": "Ficha de mejora",
+      "body": "Enciérrala en un bolsillo al atrapar una bola y la reclamas. Capturarla sin un encierro la desperdicia."
+    },
+    "chestLoot": {
+      "title": "Botín",
+      "body": "Cae de un cofre roto. Tócalo para recogerlo. Desaparece poco después de aterrizar."
+    },
+    "dormantBall": {
+      "title": "Bola dormida",
+      "body": "Aún no está en juego y las vallas la atraviesan. Pasa una valla por su terminal para despertarla. No puede encerrarse mientras duerme."
+    },
+    "ball": {
+      "title": "Bola",
+      "body": "Enciérrala en un bolsillo pequeño y sellado. Los encierros son el dinero; despejar espacio vacío paga muy poco."
+    },
+    "terminal": {
+      "title": "Terminal del circuito",
+      "body": "Traza una valla a través de él para encenderlo. Completa el circuito y la bola conectada despertará."
+    },
+    "chest": {
+      "title": "Cofre del tesoro",
+      "body": "Rómpelo con una bola para obtener botín. Cada rotura también aumenta el pago del mapa."
+    },
+    "objective": {
+      "title": "Caja objetivo",
+      "body": "Este mapa te pide romperla. Lanza una bola contra ella."
+    },
+    "breakable": {
+      "title": "Bloque rompible",
+      "body": "Aguanta varios golpes y se agrieta al debilitarse. Romperlo reabre el espacio que ocupa."
+    },
+    "mirror": {
+      "title": "Espejo",
+      "body": "Rebota las bolas en ángulos bruscos y hace su trayectoria impredecible. La bola negra puede romperlo."
+    },
+    "mover": {
+      "title": "Bloque móvil",
+      "body": "Se desliza por su recorrido, así que un hueco aquí es temporal. Calcula bien tu valla."
+    },
+    "phasing": {
+      "title": "Bloque intermitente",
+      "body": "Aparece y desaparece por ciclos. Sólido cuando se ve, atravesable cuando no. Una valla trazada mientras no está se cortará al volver."
+    },
+    "obstacle": {
+      "title": "Obstáculo",
+      "body": "Sólido. Las bolas rebotan y las vallas se detienen contra él, lo que lo hace buen anclaje para un bolsillo."
+    },
+    "area": {
+      "title": "Zona marcada",
+      "body": "Encierra una bola con esta zona capturada y pagará un multiplicador. En algunos mapas es la única forma de ganar."
+    }
   }
 }

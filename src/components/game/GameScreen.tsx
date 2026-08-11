@@ -16,6 +16,8 @@ import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
+import { BoardEntityInfoModal } from './BoardEntityInfoModal';
+import type { BoardEntityHit } from '@/lib/boardEntityInfo';
 import { GameTopBar } from './GameTopBar';
 import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
@@ -417,6 +419,10 @@ export function GameScreen({
   const [topPanelOpen, setTopPanelOpen] = useState(false);
   const [abilityInfoOpen, setAbilityInfoOpen] = useState(false);
   const [superiorInfoOpen, setSuperiorInfoOpen] = useState(false);
+  // Press-and-hold on a board object. Owned here rather than in GameCanvas so it
+  // joins modalOverlayActive and PAUSES the map: reading an explainer while the
+  // balls keep bouncing behind it is how you lose a life to a tooltip.
+  const [entityInfo, setEntityInfo] = useState<BoardEntityHit | null>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -511,7 +517,7 @@ export function GameScreen({
     showMoverOverlay || showBreakOverlay || showCircuitOverlay || showTopBarOverlay || showBottomBarOverlay ||
     showTimeLimitOverlay || showCreepOverlay || showPickupOverlay || showBossOverlay || showWinModal || fenceIntroOpen;
   const modalOverlayActive =
-    topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen || anyExplainerModal;
+    topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen || !!entityInfo || anyExplainerModal;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -676,6 +682,7 @@ export function GameScreen({
             onGrantAbility={onGrantAbility}
             onSpendAbility={onSpendAbility}
             onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
+            onRequestEntityInfo={setEntityInfo}
             onGameEnd={handleGameEnd}
             onMapTimedOut={onMapTimedOut}
             onLevelComplete={handleLevelComplete}
@@ -755,6 +762,9 @@ export function GameScreen({
 
       {/* Superior-lock explainer (opened by holding a superior lock's star) */}
       {superiorInfoOpen && <SuperiorLockInfoModal onClose={() => setSuperiorInfoOpen(false)} />}
+      {entityInfo && (
+        <BoardEntityInfoModal hit={entityInfo} accentColor={accentColor} onClose={() => setEntityInfo(null)} />
+      )}
 
       {/* Pause overlay */}
       {isPaused && (
