@@ -30,6 +30,7 @@ import {
 } from "@/lib/regionOwnership";
 import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
+import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { gateAreas } from "@/lib/coloredAreas";
@@ -188,10 +189,17 @@ export function applyCutFn(
   // code between mutates grid cells), so hand them off to avoid recomputing.
   const capturedRegions = captureUnreachableSpace(game);
 
-  // Update sample-based regions for rendering
+  // Update sample-based regions.
+  //
+  // Built fresh rather than reusing game.wallGrid: the fence's own segments were
+  // pushed above, and a stale index would let samples adjacent to the new fence
+  // connect straight through it - silently merging the two halves of the cut the
+  // player just made. One O(walls) build per cut is nothing next to what the
+  // index saves inside the split (profiled at ~90% of the whole cut pass).
+  const splitIndex = rebuildWallGrid(null, game.walls, game.boardPolygon ?? null);
   const updatedRegions: Region[] = [];
   for (const region of [...game.regions]) {
-    const subRegions = findSubRegionsGrid(region, game.balls, game.walls);
+    const subRegions = findSubRegionsGrid(region, game.balls, game.walls, splitIndex);
     if (subRegions.length <= 1) {
       if (subRegions.length === 1) {
         updatedRegions.push({
