@@ -28,6 +28,7 @@ import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
 import { LockDebugOverlay } from './LockDebugOverlay';
 import { isLockDebugEnabled } from '@/lib/lockDiagnostics';
+import { fileManualEntry } from '@/lib/manual';
 import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
 import { contentText } from '@/i18n/content';
@@ -514,8 +515,32 @@ export function GameScreen({
   const showWinModal = winModalOpen && !mapComplete;
   // Any queued explainer modal is up (used to gate building the queue + to pause).
   const anyExplainerModal =
-    showMoverOverlay || showBreakOverlay || showCircuitOverlay || showTopBarOverlay || showBottomBarOverlay ||
-    showTimeLimitOverlay || showCreepOverlay || showPickupOverlay || showBossOverlay || showWinModal || fenceIntroOpen;
+    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal || fenceIntroOpen;
+
+
+  // Mechanics the player has just met. These used to stop the game to deliver a
+  // paragraph; now they are filed in the Manual and the Specs button badges, so
+  // the explanation stays available without costing the frame they were playing.
+  // The original "seen" flags are still set, so nothing re-fires.
+  useEffect(() => {
+    if (showMoverOverlay) { fileManualEntry('mover'); setMoverTutorialDismissed(true); onMoverTutorialSeen?.(); }
+  }, [showMoverOverlay, onMoverTutorialSeen]);
+  useEffect(() => {
+    if (showBreakOverlay) { fileManualEntry('break'); setShowBreakIntro(false); try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ } }
+  }, [showBreakOverlay]);
+  useEffect(() => {
+    if (showCircuitOverlay) { fileManualEntry('circuit'); setShowCircuitIntro(false); try { localStorage.setItem('devend_circuit_tutorial_seen', '1'); } catch { /* ignore */ } }
+  }, [showCircuitOverlay]);
+  useEffect(() => {
+    if (showTopBarOverlay) { fileManualEntry('topBar'); onTopBarTutorialSeen?.(); }
+  }, [showTopBarOverlay, onTopBarTutorialSeen]);
+  useEffect(() => {
+    if (showBottomBarOverlay) { fileManualEntry('bottomBar'); onBottomBarTutorialSeen?.(); }
+  }, [showBottomBarOverlay, onBottomBarTutorialSeen]);
+  useEffect(() => {
+    if (showPickupOverlay) { fileManualEntry('pickup'); setPickupIntroSeen(true); try { localStorage.setItem('devend_pickup_intro_seen', '1'); } catch { /* ignore */ } }
+  }, [showPickupOverlay]);
+
   const modalOverlayActive =
     topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen || !!entityInfo || anyExplainerModal;
 
@@ -910,44 +935,14 @@ export function GameScreen({
             onDismiss: () => setWinModalOpen(false),
           },
           {
-            show: showMoverOverlay, accentColor: '#ff8800',
-            title: t('game.moverTutorialTitle'), body: t('game.moverTutorialBody'), graphic: <MoverArt />,
-            onDismiss: () => { setMoverTutorialDismissed(true); onMoverTutorialSeen?.(); },
-          },
-          {
-            show: showBreakOverlay, accentColor: '#ffb454',
-            title: t('game.breakTutorialTitle'), body: t('game.breakTutorialBody'), graphic: <BreakArt />,
-            onDismiss: () => { setShowBreakIntro(false); try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ } },
-          },
-          {
-            show: showCircuitOverlay, accentColor: '#7fe3d4',
-            title: t('game.circuitTutorialTitle'), body: t('game.circuitTutorialBody'), graphic: <CircuitArt />,
-            onDismiss: () => { setShowCircuitIntro(false); try { localStorage.setItem('devend_circuit_tutorial_seen', '1'); } catch { /* ignore */ } },
-          },
-          {
             show: showTimeLimitOverlay, accentColor,
             title: t('game.timeLimitTutorialTitle'), body: t('game.timeLimitTutorialBody'),
             onDismiss: () => onTimeLimitTutorialSeen?.(),
           },
           {
-            show: showTopBarOverlay, accentColor,
-            title: t('game.topBarTutorialTitle'), body: t('game.topBarTutorialBody'),
-            onDismiss: () => onTopBarTutorialSeen?.(),
-          },
-          {
-            show: showBottomBarOverlay, accentColor,
-            title: t('game.bottomBarTutorialTitle'), body: t('game.bottomBarTutorialBody'),
-            onDismiss: () => onBottomBarTutorialSeen?.(),
-          },
-          {
             show: showCreepOverlay, accentColor: '#ff6b6b',
             title: t('game.creepTutorialTitle'), body: t('game.creepTutorialBody'),
             onDismiss: () => { setCreepIntroSeen(true); try { localStorage.setItem('devend_creep_tutorial_seen', '1'); } catch { /* ignore */ } },
-          },
-          {
-            show: showPickupOverlay, accentColor: '#e879f9',
-            title: t('game.pickupTutorialTitle'), body: t('game.pickupTutorialBody'), graphic: <PickupArt />,
-            onDismiss: () => { setPickupIntroSeen(true); try { localStorage.setItem('devend_pickup_intro_seen', '1'); } catch { /* ignore */ } },
           },
           {
             show: fenceIntroOpen, accentColor,

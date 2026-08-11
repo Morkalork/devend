@@ -539,7 +539,8 @@
     "contractClose": "Stäng",
     "contractModifier": "Kartmodifierare",
     "contractObjective": "Mål",
-    "objectiveReward": "+{{hours}}h om uppfyllt"
+    "objectiveReward": "+{{hours}}h om uppfyllt",
+    "specsNew": "{{count}} nya manualposter"
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
@@ -591,7 +592,8 @@
     "noUpgrades": "Inga uppgraderingar köpta ännu. Besök butiken mellan nivåerna för att stärka din omgång.",
     "mission": "Uppdrag:",
     "missionProgress": "Framsteg",
-    "missionMapsPassed": "Klarade banor"
+    "missionMapsPassed": "Klarade banor",
+    "manual": "Manual"
   },
   "tutorial": {
     "back": "Tillbaka",

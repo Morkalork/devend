@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 /**
  * TopBarDetailsPanel — the full-screen "Specs" sheet for the current run:
  * your build (archetype tags + loadout), the map's objectives and assignment
@@ -6,6 +7,7 @@
  * button in GameTopBar.
  */
 import { useTranslation } from 'react-i18next';
+import { MANUAL_ENTRIES, hasMetManualEntry, markManualRead } from '@/lib/manual';
 import { X, Ticket, Award, Wind } from 'lucide-react';
 import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
@@ -95,6 +97,12 @@ export function TopBarDetailsPanel({
   objective = null,
   objectiveProgress = null,
 }: TopBarDetailsPanelProps) {
+  // Entries the player has met. Opening the panel is what clears the badge:
+  // the badge means "there is something new in here", so reading counts as
+  // acknowledging it, and it must not need a separate dismiss.
+  const manualSeen = MANUAL_ENTRIES.filter(e => hasMetManualEntry(e.id));
+  useEffect(() => { if (visible) markManualRead(); }, [visible]);
+
   const { t } = useTranslation();
   if (!visible) return null;
 
@@ -164,6 +172,27 @@ export function TopBarDetailsPanel({
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
+
+        {/* MANUAL: mechanics met so far. These used to be one-time modals that
+            interrupted play, fired once and were then unreachable forever; here
+            they stay readable, and the Specs badge announces a new one instead
+            of a paragraph thrown over the board. */}
+        {manualSeen.length > 0 && (
+          <section>
+            <p style={sectionHeadStyle}>{t('topBarDetails.manual')}</p>
+            <div className="space-y-3">
+              {manualSeen.map(entry => (
+                <div key={entry.id} style={cardStyle}>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: entry.color }} />
+                    <p className="text-sm font-semibold text-foreground">{t(entry.titleKey)}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{t(entry.bodyKey)}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ── BUILD ── archetype tags + ascension + loadout: the run's identity.
             At depth 0 the drafted loadout is the run-start pick; past it they're

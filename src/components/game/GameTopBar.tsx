@@ -6,6 +6,7 @@
  */
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { unreadManualCount } from '@/lib/manual';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X } from 'lucide-react';
 
 interface CertificateHourProgress {
@@ -63,6 +64,10 @@ export function GameTopBar({
   runPaceDelta = null,
   onExpand,
 }: GameTopBarProps) {
+  // Recomputed per render rather than held in state: the count only changes
+  // when a mechanic is first met or the panel is opened, both of which already
+  // re-render this bar, and the read is a cached in-memory set.
+  const manualUnread = unreadManualCount();
   const { t } = useTranslation();
   const swipeStartYRef = useRef<number | null>(null);
 
@@ -402,6 +407,18 @@ export function GameTopBar({
           >
             <ClipboardList className="w-4 h-4" strokeWidth={1.5} />
             <span className="font-display text-sm font-bold tracking-widest uppercase">{t('topBar.specs')}</span>
+            {/* A new mechanic has been filed in the Manual. This badge is what
+                replaced the modal that used to announce it: the player learns
+                something is there without losing the frame they were playing. */}
+            {manualUnread > 0 && (
+              <span
+                className="ml-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
+                style={{ background: accentColor, color: '#04160d' }}
+                aria-label={t('topBar.specsNew', { count: manualUnread })}
+              >
+                {manualUnread}
+              </span>
+            )}
           </button>
         </div>
       )}

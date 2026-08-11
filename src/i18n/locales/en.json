@@ -542,7 +542,8 @@
     "contractClose": "Close",
     "contractModifier": "Map Modifier",
     "contractObjective": "Objective",
-    "objectiveReward": "+{{hours}}h if met"
+    "objectiveReward": "+{{hours}}h if met",
+    "specsNew": "{{count}} new manual entries"
   },
   "shipEarlyBar": {
     "title": "Map deadline: clear the map before the bar runs out. Finish early for bonus overtime.",
@@ -594,7 +595,8 @@
     "noUpgrades": "No upgrades purchased yet. Visit the upgrade shop between levels to power up your run.",
     "mission": "Mission:",
     "missionProgress": "Progress",
-    "missionMapsPassed": "Maps passed"
+    "missionMapsPassed": "Maps passed",
+    "manual": "Manual"
   },
   "tutorial": {
     "back": "Back",

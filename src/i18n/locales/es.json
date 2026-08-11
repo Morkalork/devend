@@ -539,7 +539,8 @@
     "contractClose": "Cerrar",
     "contractModifier": "Modificador de mapa",
     "contractObjective": "Objetivo",
-    "objectiveReward": "+{{hours}}h si se cumple"
+    "objectiveReward": "+{{hours}}h si se cumple",
+    "specsNew": "{{count}} entradas nuevas del manual"
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",
@@ -591,7 +592,8 @@
     "noUpgrades": "Aún no has comprado mejoras. Visita la tienda de mejoras entre niveles para potenciar tu partida.",
     "mission": "Misión:",
     "missionProgress": "Progreso",
-    "missionMapsPassed": "Mapas superados"
+    "missionMapsPassed": "Mapas superados",
+    "manual": "Manual"
   },
   "tutorial": {
     "back": "Atrás",
