@@ -1,6 +1,7 @@
 import { useEffect, useRef, useMemo, useState, useCallback } from 'react';
 import { useGameConfig } from '../../hooks/useGameConfig';
 import { pulseMonitor } from '@/lib/rendering/sleek/monitorSignal';
+import { sampleVisibleWords } from '@/lib/crtWordSampling';
 
 /**
  * CRT Terminal Background
@@ -268,36 +269,51 @@ export function CRTBackground({ accentColor = '#00ff88', paused = false }: CRTBa
     const containerRect = container.getBoundingClientRect();
     const vh = window.innerHeight;
 
-    interface Candidate { absX: number; absY: number; width: number; height: number; }
-    const candidates: Candidate[] = [];
-
-    for (const pre of pres) {
-      const textNode = pre.firstChild;
-      if (!textNode) continue;
-      for (const { charOffset, length } of wordPositions) {
+    // Sampled rather than exhaustive; see crtWordSampling for why the old loop
+    // was the game's heaviest JavaScript.
+    const candidates = sampleVisibleWords({
+      textNodes: pres.map(p => p.firstChild).filter((n): n is ChildNode => n !== null),
+      wordPositions,
+      containerLeft: containerRect.left,
+      containerTop: containerRect.top,
+      viewportHeight: vh,
+      measure: (node, charOffset, length) => {
         try {
           const range = document.createRange();
-          range.setStart(textNode, charOffset);
-          range.setEnd(textNode, charOffset + length);
-          const rect = range.getBoundingClientRect();
-          // Only pick words fully visible in the viewport with a small margin
-          if (rect.top >= vh * 0.25 && rect.bottom <= vh - 20 && rect.width > 0) {
-            candidates.push({
-              absX: rect.left - containerRect.left,
-              absY: rect.top  - containerRect.top,
-              width: rect.width,
-              height: rect.height,
-            });
-          }
+          range.setStart(node, charOffset);
+          range.setEnd(node, charOffset + length);
+          return range.getBoundingClientRect();
         } catch {
-          // charOffset out of range for this node — skip
+          return null; // charOffset out of range for this node
         }
-      }
+      },
+    });
+
+    const picked = candidates.length > 0
+      ? candidates[(Math.random() * candidates.length) | 0]
+      : null;
+
+    // Next highlight 8-14 s from now (via ref to avoid a stale closure). This
+    // self-rescheduling chain is the only thing keeping highlights running, so
+    // every exit path below has to go through it.
+    const scheduleNext = () => {
+      const minMs = hlCfg.interval_min_seconds * 1000;
+      const maxMs = hlCfg.interval_max_seconds * 1000;
+      nextHighlightTimerRef.current = setTimeout(
+        () => triggerRef.current(),
+        minMs + Math.random() * (maxMs - minMs),
+      );
+    };
+
+    // Sampling can legitimately come up empty (mid-scroll, most words off
+    // screen). The old exhaustive loop returned early here without rescheduling,
+    // which silently killed every future highlight for the rest of the session -
+    // survivable when "no candidates" was near-impossible, fatal now that it is
+    // merely uncommon.
+    if (!picked) {
+      scheduleNext();
+      return;
     }
-
-    if (candidates.length === 0) return;
-
-    const picked = candidates[Math.floor(Math.random() * candidates.length)];
 
     // Decide callout placement: prefer right, fall back to left
     const CALLOUT_W = 118;
@@ -320,11 +336,7 @@ export function CRTBackground({ accentColor = '#00ff88', paused = false }: CRTBa
       calloutText, calloutToRight: toRight,
     }]);
 
-    // Schedule the next highlight 8–14 s from now (via ref to avoid stale closure)
-    const minMs = hlCfg.interval_min_seconds * 1000;
-    const maxMs = hlCfg.interval_max_seconds * 1000;
-    const delay = minMs + Math.random() * (maxMs - minMs);
-    nextHighlightTimerRef.current = setTimeout(() => triggerRef.current(), delay);
+    scheduleNext();
   }, [wordPositions, hlCfg.interval_min_seconds, hlCfg.interval_max_seconds]);
 
   // Keep ref pointing at latest version of the trigger
