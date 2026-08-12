@@ -378,6 +378,23 @@ export function recordSurface(widthPx: number, heightPx: number): void {
  * WebGL renderer (which has no 2D context to paint into) reports exactly the
  * same numbers rather than a second, drifting implementation.
  */
+/**
+ * A "how long before" gap, in whichever unit reads unambiguously.
+ *
+ * These span five orders of magnitude - the interesting case is single-digit
+ * MILLISECONDS (a long task that caused this frame), the common case is tens of
+ * SECONDS (one that had nothing to do with it) - and printing both as raw ms gave
+ * "tk69704", which scans as 69704ms only if you stop and count the digits. Telling
+ * those two cases apart at a glance is the field's entire purpose.
+ *
+ * Exported so this is testable directly: the gap comes from a long-task observer
+ * that does not fire under jsdom, so a test going through perfLines would assert
+ * on the no-task placeholder and prove nothing.
+ */
+export function formatGap(ms: number): string {
+  return ms >= 1000 ? `${Math.round(ms / 1000)}s` : `${Math.round(ms)}ms`;
+}
+
 export function perfLines(): string[] {
   const frameAvg = _frameMs.avg();
   const framePeak = _frameMs.max();
@@ -386,6 +403,7 @@ export function perfLines(): string[] {
   const f1 = (n: number) => n.toFixed(1);
   /** Seconds into the measuring session, so a hitch can be told from a map load. */
   const at = (t: number) => `${Math.round((t - _sessionStart) / 1000)}s`;
+  const gap = formatGap;
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
   const mpx = (_surfaceW * _surfaceH) / 1e6;
 
@@ -411,7 +429,7 @@ export function perfLines(): string[] {
     ...(_last
       ? [
           ` last ${f1(_last.ms)}ms ot ${f1(_last.other)} rd ${f1(_last.rend)} ${
-            _last.taskGap < 0 ? "tk-" : "tk" + Math.round(_last.taskGap)
+            _last.taskGap < 0 ? "tk-" : "tk" + gap(_last.taskGap)
           } @${at(_last.at)}`,
         ]
       : []),
@@ -422,7 +440,7 @@ export function perfLines(): string[] {
           // readings before the HUD said which it was.
           `WORST ${f1(_worst.ms)}ms  ${Math.round((performance.now() - _worst.at) / 1000)}s ago  @${at(_worst.at)}`,
           ` ph ${f1(_worst.phys)} rd ${f1(_worst.rend)} ot ${f1(_worst.other)} bg ${f1(_worst.bg)}`,
-          ` task ${f1(_worst.taskMs)} ${_worst.taskGap < 0 ? "never" : f1(_worst.taskGap) + "ms before"}`,
+          ` task ${f1(_worst.taskMs)} ${_worst.taskGap < 0 ? "never" : gap(_worst.taskGap) + " before"}`,
           ` cut ${_worst.cutAgo < 0 ? "never" : Math.round(_worst.cutAgo / 1000) + "s before"}`,
         ]
       : []),

@@ -12,7 +12,7 @@
  * the most recent hitch stays current, and the rate is reported.
  */
 import { describe, it, expect, beforeEach } from "vitest";
-import { recordFrame, resetWorstFrame, perfLines } from "@/lib/rendering/perfStats";
+import { recordFrame, resetWorstFrame, perfLines, formatGap } from "@/lib/rendering/perfStats";
 
 /** A frame at or over the 32ms threshold; anything under is ordinary. */
 const hitch = (ms: number) => recordFrame(ms, 0.2, 5, 1, 2);
@@ -76,6 +76,27 @@ describe("the most recent hitch", () => {
   it("marks a hitch with no long task before it", () => {
     hitch(40);
     expect(line("last")).toMatch(/tk-/);
+  });
+
+});
+
+/**
+ * The field's entire value is separating "a long task caused this frame" (single
+ * digit ms) from "one happened a minute ago" (tens of seconds). Printed as raw
+ * milliseconds those read "tk8" and "tk69704", distinguishable only by counting
+ * digits - and a misread here points the whole investigation the wrong way.
+ */
+describe("gap formatting", () => {
+  it("keeps a causal gap in milliseconds", () => {
+    expect(formatGap(8)).toBe("8ms");
+    expect(formatGap(12.9)).toBe("13ms");
+    expect(formatGap(999)).toBe("999ms");
+  });
+
+  it("switches a stale gap to seconds rather than five digits", () => {
+    expect(formatGap(1000)).toBe("1s");
+    expect(formatGap(49481.2)).toBe("49s");
+    expect(formatGap(69704)).toBe("70s");
   });
 });
 
