@@ -349,14 +349,16 @@ export function CRTBackground({ accentColor = '#00ff88', paused = false }: CRTBa
     }));
   }, []);
 
-  // Fire the first highlight shortly after mount; cleanup on unmount
+  // Fire the first highlight shortly after mount; cleanup on unmount. Also
+  // gated on `paused`, for the same reason as the glitch scheduler above.
   useEffect(() => {
+    if (paused) return;
     const id = setTimeout(() => triggerRef.current(), 600);
     return () => {
       clearTimeout(id);
       if (nextHighlightTimerRef.current) clearTimeout(nextHighlightTimerRef.current);
     };
-  }, []);
+  }, [paused]);
 
   // Trigger a random glitch effect
   const triggerGlitch = useCallback(() => {
@@ -379,8 +381,19 @@ export function CRTBackground({ accentColor = '#00ff88', paused = false }: CRTBa
     glitchResetTimerRef.current = setTimeout(() => setActiveGlitch(null), duration);
   }, []);
 
-  // Random glitch interval
+  // Random glitch interval.
+  //
+  // `paused` genuinely stops this now, rather than only freezing the CSS. It
+  // used to do the latter, which made the admin "freeze background" A/B
+  // meaningless: the animation stopped while the JavaScript kept firing, so the
+  // thing being measured was never actually switched off.
+  //
+  // It is the JavaScript that matters. Each glitch flips a class on a
+  // full-screen element wrapping the entire code layer, and a device reading
+  // showed 14 long tasks in a minute (worst 97ms, landing 12.9ms before a
+  // 166ms frame) on the same 3.75-10s cadence this scheduler runs at.
   useEffect(() => {
+    if (paused) return;
     const scheduleNextGlitch = () => {
       // Random interval: 3.75-10 seconds (25% longer = 20% fewer glitches)
       const delay = 3750 + Math.random() * 6250;
@@ -397,7 +410,7 @@ export function CRTBackground({ accentColor = '#00ff88', paused = false }: CRTBa
       if (glitchTimerRef.current) clearTimeout(glitchTimerRef.current);
       if (glitchResetTimerRef.current) clearTimeout(glitchResetTimerRef.current);
     };
-  }, [triggerGlitch]);
+  }, [triggerGlitch, paused]);
 
   // Clone content for seamless loop
   useEffect(() => {
