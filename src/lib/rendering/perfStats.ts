@@ -143,11 +143,48 @@ interface WorstFrame {
 }
 let _worst: WorstFrame | null = null;
 
+/**
+ * The MOST RECENT hitch, and how often hitches arrive.
+ *
+ * WORST alone turned out to answer the wrong question. Loading a map costs a
+ * ~170ms frame, and being a single all-time maximum, that one spike wins forever
+ * - so two consecutive field readings both froze the same startup frame and the
+ * recurring dip we were actually hunting could never appear, no matter how long
+ * anyone played. A max is the wrong summary for a PERIODIC event.
+ *
+ * `_last` refreshes on every hitch, so a screenshot taken at leisure shows a
+ * representative dip rather than the session's outlier, and `_gap` measures the
+ * interval between them - which is the claim under test: "the dips happen every 3
+ * or 4 seconds" is a statement about rate, and now the HUD reports rate.
+ */
+let _last: WorstFrame | null = null;
+let _hitchCount = 0;
+let _lastHitchAt = 0;
+let _gapSum = 0;
+let _gapN = 0;
+
+/**
+ * When measuring began, so a hitch can be dated relative to it. A hitch at @2s is
+ * the map loading; the same number at @40s is the thing we are looking for, and
+ * the two are indistinguishable without this.
+ */
+let _sessionStart = 0;
+
 /** Frames below this are ordinary; only a real hitch is worth freezing. */
 const WORST_THRESHOLD_MS = 32;
 
+/**
+ * Clears every hitch statistic, not just the worst frame - tapping the HUD after a
+ * map has loaded is the simplest way to exclude the load spike from the numbers.
+ */
 export function resetWorstFrame(): void {
   _worst = null;
+  _last = null;
+  _hitchCount = 0;
+  _lastHitchAt = 0;
+  _gapSum = 0;
+  _gapN = 0;
+  _sessionStart = 0; // re-arms on the next frame
 }
 
 /** Called once per active frame from the game loop. */
@@ -171,6 +208,7 @@ export function recordFrame(
   // did not equal `other`. A HUD whose own arithmetic does not add up teaches
   // you to distrust it, which defeats the point of having it.
   if (frameMs <= 0 || frameMs >= 1000) return; // tab-switch gap: not a real frame
+  if (_sessionStart === 0) _sessionStart = performance.now();
   _frameMs.push(frameMs);
   _physicsMs.push(physicsMs);
   _renderMs.push(renderMs);
@@ -179,16 +217,24 @@ export function recordFrame(
   // read as nonsense.
   _otherMs.push(Math.max(0, frameMs - physicsMs - renderMs));
 
-  // Freeze the worst hitch and everything that might explain it.
-  if (frameMs >= WORST_THRESHOLD_MS && (!_worst || frameMs > _worst.ms)) {
+  // Freeze the hitch and everything that might explain it. The snapshot always
+  // becomes `last` and only sometimes becomes `worst`: a periodic stutter is
+  // characterised by its rate and its typical cost, neither of which a running
+  // maximum can express.
+  if (frameMs >= WORST_THRESHOLD_MS) {
     const now = performance.now();
-    _worst = {
+    const snap: WorstFrame = {
       ms: frameMs, phys: physicsMs, rend: renderMs,
       other: Math.max(0, frameMs - physicsMs - renderMs), bg: _lastBg,
       taskMs: _taskMs, taskGap: _taskAt ? now - _taskAt : -1,
       cutAgo: _cutAt ? now - _cutAt : -1,
       balls: ballCount, at: now,
     };
+    _last = snap;
+    if (!_worst || frameMs > _worst.ms) _worst = snap;
+    if (_lastHitchAt) { _gapSum += now - _lastHitchAt; _gapN++; }
+    _lastHitchAt = now;
+    _hitchCount++;
   }
   _steps = steps;
   _balls = ballCount;
@@ -338,6 +384,8 @@ export function perfLines(): string[] {
   const fps = frameAvg > 0 ? 1000 / frameAvg : 0;
   const fpsMin = framePeak > 0 ? 1000 / framePeak : 0;
   const f1 = (n: number) => n.toFixed(1);
+  /** Seconds into the measuring session, so a hitch can be told from a map load. */
+  const at = (t: number) => `${Math.round((t - _sessionStart) / 1000)}s`;
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
   const mpx = (_surfaceW * _surfaceH) / 1e6;
 
@@ -353,9 +401,26 @@ export function perfLines(): string[] {
     `bg    ${f1(_bgMs.avg())}  peak ${f1(_bgMs.max())}`,
     `task  ${f1(_taskMs)}  peak ${f1(_taskPeak)}  n=${_taskCount}${_taskAt ? `  ${Math.round((performance.now() - _taskAt) / 1000)}s ago` : ""}`,
     `cut   ${f1(_cutMs)}  peak ${f1(_cutPeak)}${_cutAt ? `  ${Math.round((performance.now() - _cutAt) / 1000)}s ago` : ""}`,
+    // Rate first: the reported symptom is "every 3 or 4 seconds", which is a claim
+    // about how OFTEN, and no maximum can confirm or refute it.
+    `hitch n=${_hitchCount}${_gapN ? `  every ${(_gapSum / _gapN / 1000).toFixed(1)}s` : ""}${
+      _lastHitchAt ? `  ${Math.round((performance.now() - _lastHitchAt) / 1000)}s ago` : ""
+    }`,
+    // The most recent hitch, on one line. Unlike WORST this keeps refreshing, so a
+    // screenshot shows a TYPICAL dip instead of the session's single outlier.
+    ...(_last
+      ? [
+          ` last ${f1(_last.ms)}ms ot ${f1(_last.other)} rd ${f1(_last.rend)} ${
+            _last.taskGap < 0 ? "tk-" : "tk" + Math.round(_last.taskGap)
+          } @${at(_last.at)}`,
+        ]
+      : []),
     ...(_worst
       ? [
-          `WORST ${f1(_worst.ms)}ms  ${Math.round((performance.now() - _worst.at) / 1000)}s ago`,
+          // "@Ns" dates it within the session. A worst frame at @3s is the map
+          // loading, and mistaking that for the recurring dip cost two field
+          // readings before the HUD said which it was.
+          `WORST ${f1(_worst.ms)}ms  ${Math.round((performance.now() - _worst.at) / 1000)}s ago  @${at(_worst.at)}`,
           ` ph ${f1(_worst.phys)} rd ${f1(_worst.rend)} ot ${f1(_worst.other)} bg ${f1(_worst.bg)}`,
           ` task ${f1(_worst.taskMs)} ${_worst.taskGap < 0 ? "never" : f1(_worst.taskGap) + "ms before"}`,
           ` cut ${_worst.cutAgo < 0 ? "never" : Math.round(_worst.cutAgo / 1000) + "s before"}`,
