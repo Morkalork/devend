@@ -114,6 +114,46 @@ symbol is already familiar. Three kinds, easiest to hardest (draw `var` biggest,
 - **YAML:** `coloredAreas: [{ x, y, width, height, kind, required }]`. Shipped
   examples: L1's bonus `var` pocket (the greed hook, no risk), and the level-10
   boss, defeated by fencing it into a top-right `var` GATE.
+
+#### Stacking the area with lock quality (the 6x rung)
+
+The area kind is **not** the only lock multiplier, and the two **multiply**:
+
+| multiplier | comes from | worth |
+|---|---|---|
+| area kind | locking inside a Colored Area | 1.5x / 2x / **3x** |
+| lock quality | a SUPERIOR lock: pocket at most 40% of the base lock threshold | **2x** |
+
+So a tight seal inside a `const` area pays **6x**, the top of the payout curve.
+An area alone says *where* you locked; quality says *how well*. A map that asks
+for both gets a three-rung decision (skip it / take it loosely / take it tight)
+instead of a yes-no, which is the most interesting shape a greed hook has.
+
+**The sizing trap:** the "draw const smallest" convention fights this. A const
+box small enough to *look* like the hardest kind is itself superior-sized, so
+any lock inside it grades superior automatically and the two multipliers
+collapse back into one. To keep both rungs, draw the box **large enough to hold
+both a sloppy and a tight seal**, and let obstacles inside it (a shelf, a
+back nook) create the tight option. Size the two pockets against the *worst*
+denominator for each, not a typical one:
+
+- the roomy pocket must exceed 4% of the **whole board** (else an early seal
+  grades superior by accident);
+- the tight pocket must fall under 4% of **initial cells / ball count** (the
+  smallest denominator the map can reach late).
+
+That range matters because the grade is `cells / denominator` and the
+denominator is `max(active cells, initial / active balls)`, which swings about
+2x over a map. A pocket sized by eye grades differently at second 5 and second
+50. A roomy pocket sized this way will sit *above* the 10% lock threshold late,
+so it stops locking by percentage and relies on the "sealed inside an area is a
+lock" containment rule instead: that only works if **every** cell of the pocket
+is inside the box, so draw the box to cover the whole chamber.
+
+Shipped example: **level-22 "Code Freeze"** (a const alcove with a shelf carving
+off a back nook). Its geometry is pinned by `src/test/codeFreezeMap.test.ts`,
+which asserts both margins rather than trusting the rects; copy that test when
+authoring another stacked hook.
 - **Authoring:** the Map Builder and the Playground level editor both have an
   "Areas (win gate)" section: `+ var` / `+ let` / `+ const` drop a kind-sized
   area on the board, which you then drag, resize by its handles, retype, or flip

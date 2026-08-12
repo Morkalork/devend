@@ -1141,34 +1141,110 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
+  # "Code Freeze" - the STACKED greed hook (LEVELDESIGN.md C2 + lock quality).
+  #
+  # The economy has TWO lock multipliers that multiply each other: the Colored
+  # Area kind (const = 3x) and lock QUALITY (a pocket at most 40% of the base
+  # lock threshold grades SUPERIOR = 2x). No map had ever set up both at once,
+  # so the top of the payout curve (3 x 2 = 6x) was unreachable. This map is
+  # built around exactly that stack, and gives the choice three rungs:
+  #
+  #   skip it            base pay. The safe line: clear the lower half and go.
+  #   seal the alcove    138 cells inside the const box: 3x, but far too roomy
+  #                      to grade superior. One 85-long fence across the corner
+  #                      doorway, drawn with the ball loose in a big room.
+  #   seal the nook      35 cells behind the shelf: 3x AND superior = 6x. The
+  #                      fence is no longer, but you draw it in a pocket barely
+  #                      three ball-widths across, with the ball already inside.
+  #
+  # Both rungs are robust by construction, not by tuning luck. The lock grade is
+  # cells/denominator, and the denominator swings ~2x over a map (it is
+  # max(active cells, initial/active balls)), so a pocket sized by eye grades
+  # differently depending on WHEN you seal it. These two sit outside that swing,
+  # with ~32% of headroom each way: the alcove is larger than 4% of the ENTIRE
+  # board (so no denominator can make it superior) and the nook is under 4% of
+  # the smallest denominator this map can produce (so none can take superior
+  # away). Pinned in codeFreezeMap.test.ts, which is where to look before
+  # nudging any of these rects.
+  #
+  # NOTE on the area size: LEVELDESIGN.md says to draw const smallest, but a
+  # const box small enough to look "hardest" is itself superior-sized, which
+  # collapses the two multipliers back into one. The box marks WHERE, the
+  # geometry inside it marks HOW TIGHT, so it has to be roomy enough to hold
+  # both a sloppy and a tight seal. That is why the alcove is a 200x205 const.
+  # It also means the sloppy seal locks by the area-containment rule rather than
+  # the % threshold, which is what keeps rung 2 available all map long.
   - id: level-22
     level: 22
     sizeThreshold: 16
     expectedCuts: 6
     points: 20
     variety: 0
+    # A stray mini-obstacle inside the nook would change its cell count and cost
+    # the superior grade, so this map has to stay deterministic.
     randomShapes: 0
     maxBalls: 2
+    coloredAreas:
+      - kind: const
+        x: 630
+        'y': 45
+        width: 225
+        height: 205
+        required: false
     entities:
-      - id: mover-h
+      # The alcove: a vertical lip hanging off the top edge and a horizontal lip
+      # running to the right edge, overlapping in neither axis, so the way in is
+      # a 60x60 corner gap that ONE short axis-aligned fence closes (the L1
+      # vault pattern, mirrored into the top-right).
+      - id: alcove-lip-v
+        kind: wall
+        shape: rect
+        x: 604
+        'y': -20
+        width: 26
+        height: 205
+      - id: alcove-lip-h
+        kind: wall
+        shape: rect
+        x: 690
+        'y': 245
+        width: 190
+        height: 26
+      # The shelf that makes the greedy line exist: it carves a 120x85 nook off
+      # the back of the alcove, sealed by an 85-long fence at x=735.
+      - id: nook-shelf
+        kind: wall
+        shape: rect
+        x: 735
+        'y': 130
+        width: 140
+        height: 24
+      # The safe line has to be real or the hook is not a choice: the lower half
+      # is an ordinary chamber behind a 100-wide neck, playable start to finish
+      # without ever going near the const box.
+      - id: divider-left
+        kind: wall
+        shape: rect
+        x: -20
+        'y': 600
+        width: 400
+        height: 26
+      - id: divider-right
+        kind: wall
+        shape: rect
+        x: 480
+        'y': 600
+        width: 400
+        height: 26
+      - id: sweeper
         kind: mover
         shape: circle
-        cx: 450
-        cy: 350
-        radius: 50
+        cx: 430
+        cy: 520
+        radius: 42
         axis: horizontal
-        range: 460
-        speed: 160
-        phase: 0
-      - id: mover-v
-        kind: mover
-        shape: circle
-        cx: 650
-        cy: 580
-        radius: 40
-        axis: vertical
-        range: 280
-        speed: 135
+        range: 380
+        speed: 140
         phase: 0.5
   # Circuit (#73): two sleepers tucked in opposite corners, away from the roaming
   # movers. Boot them between mover passes.
