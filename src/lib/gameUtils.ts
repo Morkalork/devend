@@ -303,6 +303,56 @@ export function trajectoryBallSnapshots(
  *
  * Per-bounce speed shifts (yellow ball) are still not modelled.
  */
+/**
+ * One collision surface for the trajectory raycast.
+ *
+ * `pad` is the surface's own half-thickness, NOT the swept radius: the ball's
+ * radius is added at test time instead of baked in here. That is what lets a
+ * single built set serve every ball in the frame regardless of size, which is
+ * the entire point of building it separately.
+ */
+export interface TrajectorySeg {
+  ax: number; ay: number; bx: number; by: number;
+  /** Added to the predicted ball's radius to get the capsule radius. */
+  pad: number;
+  id: string;
+}
+
+/**
+ * Build the trajectory collision surfaces once for a whole frame.
+ *
+ * The path preview is drawn per tracked ball, and this set used to be rebuilt
+ * inside every one of those calls - so a fully upgraded SCRUM Master (which
+ * tracks EVERY active ball, four bounces deep) rebuilt an array of every fence,
+ * board edge and obstacle edge on the map once per ball, sixty times a second.
+ * The work and the garbage both scaled with balls x segments for a result that
+ * is identical across all of them.
+ *
+ * Board edges collide at exactly the ball radius (matching the boardPolygon
+ * collision) and so do obstacle polygon edges; user fences add half the wall
+ * thickness (matching collideBallWithWall). Obstacle-boundary walls are skipped,
+ * being handled via their polygons.
+ */
+export function buildTrajectorySegments(
+  walls: Wall[],
+  obstaclePolygons: Polygon[] = [],
+): TrajectorySeg[] {
+  const segs: TrajectorySeg[] = [];
+  for (const wall of walls) {
+    if (wall.id.startsWith('obstacle-')) continue;
+    const pad = wall.id.startsWith('board-') ? 0 : (wall.thickness ?? 0) / 2;
+    segs.push({ ax: wall.start.x, ay: wall.start.y, bx: wall.end.x, by: wall.end.y, pad, id: wall.id });
+  }
+  for (let pi = 0; pi < obstaclePolygons.length; pi++) {
+    const vs = obstaclePolygons[pi].vertices;
+    for (let i = 0; i < vs.length; i++) {
+      const j = (i + 1) % vs.length;
+      segs.push({ ax: vs[i].x, ay: vs[i].y, bx: vs[j].x, by: vs[j].y, pad: 0, id: `obs:${pi}:${i}` });
+    }
+  }
+  return segs;
+}
+
 export function computeBallTrajectory(
   ballPosition: Vector2,
   ballVelocity: Vector2,
@@ -315,6 +365,12 @@ export function computeBallTrajectory(
   ballSpeedScale = 1,
   /** Same-region active balls (excluding the predicted one), as snapshots. */
   otherBalls: ReadonlyArray<TrajectoryBall> = [],
+  /**
+   * Prebuilt collision surfaces from buildTrajectorySegments, shared across every
+   * ball predicted this frame. Omit and they are built here, which is fine for a
+   * single call and wasteful for a loop - see that function for why it matters.
+   */
+  prebuiltSegs?: ReadonlyArray<TrajectorySeg>,
 ): Vector2[] {
   const points: Vector2[] = [{ ...ballPosition }];
   const vLen = Math.sqrt(ballVelocity.x * ballVelocity.x + ballVelocity.y * ballVelocity.y);
@@ -326,24 +382,7 @@ export function computeBallTrajectory(
   // Mutable: a ball-ball deflection sheds the normal component (see below).
   let speed = vLen * ballSpeedScale;
 
-  // Build the collision surfaces once as capsule segments. Board edges use the
-  // ball radius (matching the boardPolygon collision); user fences add half the
-  // wall thickness (matching collideBallWithWall). Obstacle polygon edges use
-  // the ball radius. Obstacle-boundary walls are skipped — handled via polygons.
-  interface Seg { ax: number; ay: number; bx: number; by: number; R: number; id: string; }
-  const segs: Seg[] = [];
-  for (const wall of walls) {
-    if (wall.id.startsWith('obstacle-')) continue;
-    const R = wall.id.startsWith('board-') ? ballRadius : ballRadius + (wall.thickness ?? 0) / 2;
-    segs.push({ ax: wall.start.x, ay: wall.start.y, bx: wall.end.x, by: wall.end.y, R, id: wall.id });
-  }
-  for (let pi = 0; pi < obstaclePolygons.length; pi++) {
-    const vs = obstaclePolygons[pi].vertices;
-    for (let i = 0; i < vs.length; i++) {
-      const j = (i + 1) % vs.length;
-      segs.push({ ax: vs[i].x, ay: vs[i].y, bx: vs[j].x, by: vs[j].y, R: ballRadius, id: `obs:${pi}:${i}` });
-    }
-  }
+  const segs = prebuiltSegs ?? buildTrajectorySegments(walls, obstaclePolygons);
   let skipId = ""; // don't immediately re-hit the surface we just bounced off
   let tNow = 0;    // absolute prediction time at the current leg's start
   for (let bounce = 0; bounce < numBounces; bounce++) {
@@ -351,7 +390,7 @@ export function computeBallTrajectory(
     let bestTime = Infinity, bnx = 0, bny = 0, bestId = "";
     for (const s of segs) {
       if (s.id === skipId) continue;
-      const hit = capsuleRayHit(ox, oy, dx, dy, s.ax, s.ay, s.bx, s.by, s.R);
+      const hit = capsuleRayHit(ox, oy, dx, dy, s.ax, s.ay, s.bx, s.by, ballRadius + s.pad);
       if (!hit) continue;
       const time = hit.t / speed;
       if (time < bestTime) { bestTime = time; bnx = hit.nx; bny = hit.ny; bestId = s.id; }

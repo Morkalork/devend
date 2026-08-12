@@ -120,6 +120,17 @@ export function createGameLoop(
   // catches, logs once, and reschedules, so a render/physics bug degrades to a
   // bad frame plus a console error instead of freezing the whole game.
   let loopErrorLogged = false;
+  /**
+   * Scratch surface list for chest-loot gravity, reused frame to frame.
+   *
+   * This was rebuilt with `game.walls.map(...)` on every frame a gem was in
+   * flight - one fresh object per fence, board edge and obstacle edge, sixty
+   * times a second - purely to reshape the same numbers the walls already hold.
+   * Loot lands in a couple of seconds, but that is still hundreds of short-lived
+   * objects per gem, which is exactly the garbage that shows up later as a
+   * collection pause with nothing on screen to explain it.
+   */
+  const lootSegments: { x1: number; y1: number; x2: number; y2: number }[] = [];
 
   const gameLoopBody = (timestamp: number): void => {
     // Forward tick to MemoryParallaxLayer so it shares this rAF instead of owning
@@ -396,8 +407,16 @@ export function createGameLoop(
     if (game.chestLoot && game.chestLoot.length > 0 && game.boardPolygon) {
       let floorY = -Infinity;
       for (const v of game.boardPolygon.vertices) if (v.y > floorY) floorY = v.y;
-      const segments = game.walls.map(w => ({ x1: w.start.x, y1: w.start.y, x2: w.end.x, y2: w.end.y }));
-      game.chestLoot = updateChestLoot(game.chestLoot, Math.min(dt, 0.05), { segments, floorY }, game.activePlaySeconds);
+      // Refill the scratch buffer in place; entries are overwritten rather than
+      // reallocated, and the array only ever grows to the largest wall count seen.
+      lootSegments.length = game.walls.length;
+      for (let i = 0; i < game.walls.length; i++) {
+        const w = game.walls[i];
+        const s = lootSegments[i];
+        if (s) { s.x1 = w.start.x; s.y1 = w.start.y; s.x2 = w.end.x; s.y2 = w.end.y; }
+        else lootSegments[i] = { x1: w.start.x, y1: w.start.y, x2: w.end.x, y2: w.end.y };
+      }
+      game.chestLoot = updateChestLoot(game.chestLoot, Math.min(dt, 0.05), { segments: lootSegments, floorY }, game.activePlaySeconds);
     }
 
     // Rainbow balls spit out a new ball on their own active-play timer. Once per

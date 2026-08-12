@@ -18,7 +18,7 @@ import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 // Imported, never re-declared: these govern how long the physics keeps a marker
 // alive, and a local copy that drifts makes markers disappear early.
 import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS } from "@/lib/pickups";
-import { computeBallTrajectory, trajectoryBallSnapshots } from "@/lib/gameUtils";
+import { computeBallTrajectory, trajectoryBallSnapshots, buildTrajectorySegments } from "@/lib/gameUtils";
 import { dashedLine } from "./dashedLine";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
@@ -145,6 +145,11 @@ export class FxLayer {
       .sort((a, b) => b.speed - a.speed);
     const tracked = maxBalls >= 100 ? active : active.slice(0, maxBalls);
 
+    // Built ONCE for the frame, not once per tracked ball: the surfaces are
+    // identical for every prediction, and rebuilding them per ball made the cost
+    // and the garbage scale with balls x segments for no difference in result.
+    const segs = buildTrajectorySegments(game.walls, game.obstaclePolygons);
+
     for (const ball of tracked) {
       // Start from the RENDER position, not the physics one, so the line begins
       // exactly at the drawn ball rather than a step ahead of it.
@@ -153,6 +158,7 @@ export class FxLayer {
         start, ball.velocity, game.walls, bounces, ball.radius,
         game.obstaclePolygons, game.movers, game.creepFactor || 1,
         trajectoryBallSnapshots(game.balls, ball, game.frozenBallId),
+        segs,
       );
       if (wps.length < 2) continue;
       for (let i = 0; i < wps.length - 1; i++) {
