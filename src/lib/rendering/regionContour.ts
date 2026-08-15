@@ -193,3 +193,36 @@ function chaikin(pts: ContourPoint[]): ContourPoint[] {
   }
   return out;
 }
+
+/**
+ * Contours of territory locked at least `tier` deep, snapped to the fences that
+ * seal it.
+ *
+ * One place, because two callers need exactly the same loops and must not
+ * drift: the lock TINT draws them once per tier so overlapping passes read as
+ * brighter, and the shadow mask punches them out so nothing casts onto ground
+ * that has already been won.
+ *
+ * The mask caller must pass tier 1 and only tier 1. Under the even-odd rule a
+ * tier-2 loop drawn inside its own tier-1 loop cancels back to visible, so
+ * punching the tiers separately would put the shadows straight back into the
+ * pockets that were locked hardest.
+ *
+ * The 1.05-cell reach is the pocket-shaped one, deliberately tighter than the
+ * 1.8 live space uses: these loops hug small pockets, where the wider reach
+ * drags contour points into long stray chords.
+ */
+export function traceLockContours(
+  grid: SpaceGrid,
+  walls: WallSegment[],
+  tier = 1,
+): ContourPoint[][] {
+  const lock = grid.lockCaptured;
+  if (!lock) return [];
+  const gw = grid.width;
+  return snapContoursToWalls(
+    traceContours(grid, (col, row) => lock[row * gw + col] >= tier),
+    walls,
+    grid.cellSize * 1.05,
+  );
+}

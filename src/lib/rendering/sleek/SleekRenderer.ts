@@ -109,9 +109,16 @@ export class SleekRenderer {
     // walls and obstacles, which reads as the shadow floating above the board.
     // Sharing one plane makes occlusion fall out of the existing draw order for
     // free: obstacles, fences and props are all painted after it.
+    // Nothing casts a shadow onto ground that has been locked away: the pocket
+    // is settled, and a fence bounding it stands right at its edge, so its
+    // shadow would fall almost entirely inside the tint. Masking the shared
+    // plane catches every caster at once rather than per layer.
+    this.shadowPlane.mask = this.board.shadowMask;
+
     this.boardScope.addChild(
       this.board.container,
       this.areas.container,
+      this.board.shadowMask,
       this.shadowPlane,
       this.props.container,
       this.entities.container,

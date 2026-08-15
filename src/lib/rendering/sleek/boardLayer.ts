@@ -14,7 +14,7 @@
 
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import { traceActiveContours, traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
+import { traceActiveContours, snapContoursToWalls, traceLockContours } from "@/lib/rendering/regionContour";
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapStroke, hairline, type Pt } from "./pixelGrid";
@@ -70,6 +70,19 @@ export class BoardLayer {
   private active = new Graphics();    // still-playable space, punched on top
   private lattice = new Graphics();   // the faint grid inside live space
   private latticeMask = new Graphics();
+  /**
+   * Everywhere a shadow is allowed to fall: the whole board, with locked
+   * territory punched out.
+   *
+   * Locked ground is settled: the ball is sealed away and the pocket is won, so
+   * it is a record rather than a place things still stand on. Fences bounding a
+   * pocket are right at its edge, so their shadows fall almost entirely INSIDE
+   * it, and on a small pocket that is most of the tint covered in grey. The
+   * renderer masks the shared shadow plane with this, which catches every
+   * caster at once (fences, obstacles, props, balls) instead of asking each
+   * layer to remember.
+   */
+  readonly shadowMask = new Graphics();
   private wash: Sprite | null = null; // baked ambient falloff, multiplied over
   private drop: Sprite | null = null; // baked drop shadow under the whole board
 
@@ -182,7 +195,16 @@ export class BoardLayer {
     this.locked.clear();
     this.latticeMask.clear();
     this.lattice.clear();
-    if (!spaceGrid) return;
+
+    // Shadows are allowed over the whole board until drawLocked subtracts the
+    // pockets. Rebuilt here (not per frame) because it changes only when the
+    // lock state does, which is exactly what marks the board dirty.
+    this.shadowMask.clear();
+    this.shadowMask.rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height);
+    if (!spaceGrid) {
+      this.shadowMask.fill({ color: 0xffffff, alpha: 1 });
+      return;
+    }
 
     // Before the live-space trace, because a fully captured board returns early
     // below and the locked tint is exactly what you want to see on that frame.
@@ -260,8 +282,23 @@ export class BoardLayer {
   private drawLocked(game: CanvasGameState, w2s: W2S): void {
     const grid = game.spaceGrid;
     const lock = grid?.lockCaptured;
-    if (!grid || !lock) return;
+    if (!grid || !lock) {
+      this.shadowMask.fill({ color: 0xffffff, alpha: 1 });
+      return;
+    }
     const gw = grid.width;
+
+    // Punch every locked pocket out of the shadow mask. Tier 1 and only tier 1:
+    // the tiers nest, so punching each one would cancel back to visible under
+    // the even-odd rule and put the shadows straight back into the pockets that
+    // were locked hardest. A loop the trace returns as a HOLE in the locked
+    // shape (live space enclosed by a locked ring) nests one level deeper and
+    // correctly comes back as a place shadows fall again.
+    for (const loop of traceLockContours(grid, game.walls)) {
+      if (loop.length < 3) continue;
+      this.shadowMask.poly(loop.map(p => w2s(p.x, p.y)));
+    }
+    this.shadowMask.fill({ color: 0xffffff, alpha: 1 });
 
     for (let tier = 1; tier <= LOCK_TIERS; tier++) {
       let present = false;
@@ -270,11 +307,7 @@ export class BoardLayer {
       }
       if (!present) break; // tiers are cumulative, so nothing above this exists
 
-      const loops = snapContoursToWalls(
-        traceContours(grid, (col, row) => lock[row * gw + col] >= tier),
-        game.walls,
-        grid.cellSize * 1.05,
-      );
+      const loops = traceLockContours(grid, game.walls, tier);
       let drew = false;
       for (const loop of loops) {
         if (loop.length < 3) continue;
