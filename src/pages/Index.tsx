@@ -327,6 +327,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               <TenureDraftScreen
                 offers={session.pendingTenure.offers}
                 earnedAtLevel={session.pendingTenure.earnedAtLevel}
+                lastRunUpgradeIds={session.pendingTenure.lastRunUpgradeIds}
                 onConfirm={session.handleTenurePicked}
                 accentColor={accentHex}
               />

@@ -728,7 +728,8 @@
     "subtitle": "Llegaste al nivel {{level}} en la partida anterior. Tu antigüedad se conserva.",
     "pickHint": "Elige una cadena. Es tuya desde el nivel 1, ya pagada.",
     "confirmButton": "Aceptar",
-    "pickToStart": "Elige una Mejora"
+    "pickToStart": "Elige una Mejora",
+    "continued": "De tu partida anterior"
   },
   "buildRecap": {
     "heading": "Resumen de la partida",

@@ -728,7 +728,8 @@
     "subtitle": "Du nådde nivå {{level}} förra rundan. Din anställningstid följer med.",
     "pickHint": "Välj en kedja. Den är din från nivå 1, redan betald.",
     "confirmButton": "Ta Den",
-    "pickToStart": "Välj en Uppgradering"
+    "pickToStart": "Välj en Uppgradering",
+    "continued": "Från din förra runda"
   },
   "buildRecap": {
     "heading": "Omgångens sammanfattning",

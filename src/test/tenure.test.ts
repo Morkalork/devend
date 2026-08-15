@@ -22,7 +22,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
   TENURE_OFFER_COUNT, TENURE_PATH, TENURE_THRESHOLDS,
-  eligibleTenureChains, tenureSteps, levelsToNextTenure, rollTenureOffers,
+  eligibleTenureChains, isContinuation, tenureSteps, levelsToNextTenure, rollTenureOffers,
 } from "@/lib/tenure";
 import type { UpgradeConfig } from "@/types/upgrade";
 
@@ -361,3 +361,81 @@ describe("the family-name assumption Tenure is built on", () => {
   });
 });
 
+
+/**
+ * The guaranteed continuation slot.
+ *
+ * The literal request was "only offer upgrades used in that round". The
+ * catalogue cannot support it: at depth 30 there are 9 eligible chains across
+ * 6 archetypes, so a lock build would be offered exactly ONE card and the pick
+ * would stop being a pick. Instead the FIRST slot is guaranteed to continue the
+ * previous run and the rest are drawn from everything else, matching how the
+ * shop already weights toward owned tags rather than filtering to them.
+ */
+describe("the guaranteed continuation slot", () => {
+  const chain = (fam: string, unlock = 1) => [
+    up(`${fam}_junior`, "Junior", unlock, [], { tags: [fam === "aa" ? "lock" : "tempo"] }),
+    up(`${fam}_senior`, "Senior", unlock, [`${fam}_junior`]),
+    up(`${fam}_principal`, "Principal", unlock, [`${fam}_senior`]),
+  ];
+  const CATALOGUE = ["aa", "bb", "cc", "dd", "ee"].flatMap(f => chain(f));
+
+  it("puts a chain the last run bought into the first slot", () => {
+    const offers = rollTenureOffers(CATALOGUE, 30, Math.random, 3, ["dd_senior"]);
+    expect(offers[0].headId).toBe("dd_junior");
+    expect(isContinuation(offers[0], ["dd_senior"])).toBe(true);
+  });
+
+  /** Guaranteed, not exclusive: the other two slots are a real draw. */
+  it("fills the other slots from everything else", () => {
+    const offers = rollTenureOffers(CATALOGUE, 30, Math.random, 3, ["dd_senior"]);
+    expect(offers).toHaveLength(3);
+    expect(new Set(offers.map(o => o.headId)).size).toBe(3);
+    expect(offers.slice(1).some(o => o.headId !== "dd_junior")).toBe(true);
+  });
+
+  it("never repeats the guaranteed chain in another slot", () => {
+    for (let i = 0; i < 30; i++) {
+      const offers = rollTenureOffers(CATALOGUE, 30, Math.random, 3, ["aa_junior"]);
+      expect(offers.filter(o => o.headId === "aa_junior")).toHaveLength(1);
+    }
+  });
+
+  /**
+   * A chain played last run may not be eligible at this depth. Falling back to
+   * a shared archetype keeps the slot meaningful instead of dropping to random.
+   */
+  it("falls back to a chain sharing an archetype when none is still eligible", () => {
+    const played = [
+      up("zz_junior", "Junior", 1, [], { tags: ["lock"] }), // not in CATALOGUE
+    ];
+    const offers = rollTenureOffers([...CATALOGUE, ...played], 30, Math.random, 3, ["zz_junior"]);
+    // aa is the only lock-tagged chain that can pay a depth-30 reward.
+    expect(offers[0].headId).toBe("aa_junior");
+  });
+
+  it("draws normally when the previous run is unknown", () => {
+    const offers = rollTenureOffers(CATALOGUE, 30, Math.random, 3, []);
+    expect(offers).toHaveLength(3);
+  });
+
+  it("draws normally when nothing owned relates to any eligible chain", () => {
+    const offers = rollTenureOffers(CATALOGUE, 30, Math.random, 3, ["totally_unknown_id"]);
+    expect(offers).toHaveLength(3);
+  });
+
+  it("marks only the chains actually continued", () => {
+    const offers = rollTenureOffers(CATALOGUE, 30, Math.random, 3, ["bb_principal"]);
+    expect(isContinuation(offers[0], ["bb_principal"])).toBe(true);
+    for (const other of offers.slice(1)) {
+      expect(isContinuation(other, ["bb_principal"])).toBe(false);
+    }
+  });
+
+  // Against the shipped catalogue, not just synthetic chains.
+  it("guarantees a continuation on the real upgrade list", () => {
+    const offers = rollTenureOffers(REAL_UPGRADES, 30, Math.random, 3, ["severance_package_senior"]);
+    expect(offers[0].name).toBe("Severance Package");
+    expect(offers).toHaveLength(3);
+  });
+});

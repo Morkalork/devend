@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Rocket, Play, ChevronsUp } from 'lucide-react';
-import type { TenureOffer } from '@/lib/tenure';
+import { isContinuation, type TenureOffer } from '@/lib/tenure';
 import { CRTBackground } from './CRTBackground';
 import { contentText } from '@/i18n/content';
 
@@ -22,6 +22,8 @@ interface TenureDraftScreenProps {
   offers: TenureOffer[];
   /** Levels reached in the previous run, shown as the reason for the reward. */
   earnedAtLevel: number;
+  /** Upgrades the previous run owned; one offer is guaranteed to continue them. */
+  lastRunUpgradeIds?: string[];
   /** Called with the chosen chain head id. */
   onConfirm: (headId: string) => void;
   accentColor?: string;
@@ -30,6 +32,7 @@ interface TenureDraftScreenProps {
 export function TenureDraftScreen({
   offers,
   earnedAtLevel,
+  lastRunUpgradeIds = [],
   onConfirm,
   accentColor = '#00ff88',
 }: TenureDraftScreenProps) {
@@ -101,11 +104,22 @@ export function TenureDraftScreen({
                   }}
                 >
                   <p
-                    className="font-display font-bold text-base mb-3"
+                    className="font-display font-bold text-base mb-1"
                     style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
                   >
                     {contentText.upgradeName(t, offer.upgrades[0])}
                   </p>
+                  {/* Without this the guaranteed slot is invisible: the card
+                      looks like any other draw, so the continuity never lands. */}
+                  {isContinuation(offer, lastRunUpgradeIds) && (
+                    <p
+                      className="text-[10px] uppercase tracking-wide mb-2"
+                      style={{ color: accentColor, opacity: 0.75 }}
+                    >
+                      {t('tenure.continued')}
+                    </p>
+                  )}
+                  <div className="mb-2" />
                   {/* Every tier that lands, so a 30-level reward visibly beats a
                       20-level one rather than looking like the same card. */}
                   {offer.upgrades.map(u => (

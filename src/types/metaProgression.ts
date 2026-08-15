@@ -78,6 +78,16 @@ export interface UnlockState {
    * hidden. The first entry is 'loadouts', earned by beating the level-10 boss.
    */
   unlockedFeatureIds: string[];
+  /**
+   * Upgrade ids owned when the previous run ENDED. Tenure (src/lib/tenure.ts)
+   * guarantees one of its three offers continues a chain from that run, so the
+   * reward visibly follows the build you just played.
+   *
+   * Stored raw rather than pre-reduced to chain heads or archetypes, so the
+   * offer rules can change without a migration; unknown ids are simply ignored
+   * at roll time.
+   */
+  lastRunUpgradeIds: string[];
 }
 
 export const DEFAULT_META_STATS: MetaProgressionStats = {

@@ -57,6 +57,7 @@ function emptyUnlockState(): UnlockState {
   return {
     unlockedIds: [], wonLoadoutIds: [], loadoutsIntroduced: false, mapHighscores: {},
     encounteredBallTypeIds: [], archetypeBests: {}, unlockedFeatureIds: [],
+    lastRunUpgradeIds: [],
   };
 }
 
@@ -95,6 +96,7 @@ function loadUnlockState(): UnlockState {
       encounteredBallTypeIds: Array.isArray(parsed.encounteredBallTypeIds) ? parsed.encounteredBallTypeIds : [],
       archetypeBests,
       unlockedFeatureIds: featureIds,
+      lastRunUpgradeIds: Array.isArray(parsed.lastRunUpgradeIds) ? parsed.lastRunUpgradeIds : [],
     };
   } catch {
     return emptyUnlockState();
@@ -134,6 +136,7 @@ export function useMetaProgression() {
   const [loadoutsIntroduced, setLoadoutsIntroduced] = useState(false);
   const [mapHighscores, setMapHighscores] = useState<Record<string, number>>({});
   const [encounteredBallTypeIds, setEncounteredBallTypeIds] = useState<string[]>([]);
+  const [lastRunUpgradeIds, setLastRunUpgradeIds] = useState<string[]>([]);
   const [archetypeBests, setArchetypeBests] = useState<Record<string, number>>({});
   const [unlockedFeatureIds, setUnlockedFeatureIds] = useState<string[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -146,6 +149,7 @@ export function useMetaProgression() {
   const loadoutsIntroducedRef = useRef(false);
   const mapHighscoresRef = useRef<Record<string, number>>({});
   const encounteredBallTypeIdsRef = useRef<string[]>([]);
+  const lastRunUpgradeIdsRef = useRef<string[]>([]);
   const archetypeBestsRef = useRef<Record<string, number>>({});
   const unlockedFeatureIdsRef = useRef<string[]>([]);
 
@@ -160,6 +164,7 @@ export function useMetaProgression() {
       encounteredBallTypeIds: encounteredBallTypeIdsRef.current,
       archetypeBests: archetypeBestsRef.current,
       unlockedFeatureIds: unlockedFeatureIdsRef.current,
+      lastRunUpgradeIds: lastRunUpgradeIdsRef.current,
     });
   }, []);
 
@@ -175,10 +180,12 @@ export function useMetaProgression() {
     setEncounteredBallTypeIds(loadedUnlocks.encounteredBallTypeIds);
     setArchetypeBests(loadedUnlocks.archetypeBests);
     setUnlockedFeatureIds(loadedUnlocks.unlockedFeatureIds);
+    setLastRunUpgradeIds(loadedUnlocks.lastRunUpgradeIds);
     unlockedIdsRef.current = loadedUnlocks.unlockedIds;
     wonLoadoutIdsRef.current = loadedUnlocks.wonLoadoutIds;
     loadoutsIntroducedRef.current = loadedUnlocks.loadoutsIntroduced;
     mapHighscoresRef.current = loadedUnlocks.mapHighscores;
+    lastRunUpgradeIdsRef.current = loadedUnlocks.lastRunUpgradeIds;
     encounteredBallTypeIdsRef.current = loadedUnlocks.encounteredBallTypeIds;
     archetypeBestsRef.current = loadedUnlocks.archetypeBests;
     unlockedFeatureIdsRef.current = loadedUnlocks.unlockedFeatureIds;
@@ -284,6 +291,16 @@ export function useMetaProgression() {
    * only if new, persists, and returns the win-count transition so callers can
    * compute which loadouts just unlocked. Idempotent for a repeat loadout.
    */
+  /**
+   * Remember what the finishing run was built out of, for Tenure's guaranteed
+   * offer. REPLACES rather than accumulates: it describes one run, not a career.
+   */
+  const recordRunUpgrades = useCallback((upgradeIds: string[]): void => {
+    lastRunUpgradeIdsRef.current = [...upgradeIds];
+    setLastRunUpgradeIds(lastRunUpgradeIdsRef.current);
+    persistUnlockState();
+  }, [persistUnlockState]);
+
   const recordLoadoutWin = useCallback((loadoutId: string): { added: boolean; prevCount: number; newCount: number } => {
     const prev = wonLoadoutIdsRef.current;
     const prevCount = prev.length;
@@ -419,6 +436,8 @@ export function useMetaProgression() {
     loadoutsIntroduced,
     mapHighscores,
     encounteredBallTypeIds,
+    lastRunUpgradeIds,
+    recordRunUpgrades,
     archetypeBests,
     unlockedFeatureIds,
     updateStats,

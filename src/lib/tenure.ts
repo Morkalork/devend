@@ -24,7 +24,7 @@
  * covers both `choiceGroup` alternatives (runtime_optimisation_principal_a/_b)
  * and plain branches in the chain.
  */
-import type { UpgradeConfig, UpgradeTier } from "@/types/upgrade";
+import type { UpgradeConfig, UpgradeTag, UpgradeTier } from "@/types/upgrade";
 
 /** Levels reached in the previous ended run, and the reward each pays. */
 export const TENURE_THRESHOLDS = [10, 20, 30] as const;
@@ -147,13 +147,64 @@ export function eligibleTenureChains(
 }
 
 /**
- * The offers to put in front of the player: up to `count` distinct chains.
- * Re-rolled fresh on every run start, so a retry is a new draw rather than the
- * same three cards.
+ * Which of the eligible chains continue the run that just ended.
+ *
+ * Two strengths, because the catalogue is too thin to filter on: at depth 30
+ * there are only 9 chains spread across 6 archetypes, so "only what you played"
+ * would offer a lock build exactly ONE card and stop being a choice at all.
+ *   - `owned`: a chain the player literally bought into last run.
+ *   - `archetype`: a chain sharing a tag with what they bought, used only when
+ *     no owned chain is still eligible (they may have played chains that this
+ *     depth cannot pay for).
+ */
+function continuations(
+  eligible: TenureOffer[], lastRunUpgradeIds: string[], all: UpgradeConfig[],
+): { owned: TenureOffer[]; archetype: TenureOffer[] } {
+  const ownedIds = new Set(lastRunUpgradeIds);
+  const ownedTags = new Set<UpgradeTag>();
+  for (const u of all) {
+    if (!ownedIds.has(u.id)) continue;
+    for (const t of u.tags ?? []) ownedTags.add(t);
+  }
+
+  const owned = eligible.filter(o => o.upgrades.some(u => ownedIds.has(u.id)));
+  const ownedHeads = new Set(owned.map(o => o.headId));
+  const archetype = eligible.filter(
+    o => !ownedHeads.has(o.headId) && (o.upgrades[0].tags ?? []).some(t => ownedTags.has(t)),
+  );
+  return { owned, archetype };
+}
+
+/**
+ * The offers to put in front of the player: up to `count` distinct chains,
+ * re-rolled fresh on every run start so a retry is a new draw.
+ *
+ * When the previous run's upgrades are known, the FIRST slot is guaranteed to
+ * continue that run: a chain it bought into, or failing that one sharing an
+ * archetype with it. The remaining slots are drawn from everything else, which
+ * is the point of guaranteeing rather than filtering. A Tenure that only ever
+ * offered last run's chains would push every run toward the previous one, which
+ * is the opposite of what the reward is for.
  */
 export function rollTenureOffers(
   upgrades: UpgradeConfig[], levelsReached: number, rng: () => number,
   count: number = TENURE_OFFER_COUNT,
+  lastRunUpgradeIds: string[] = [],
 ): TenureOffer[] {
-  return shuffled(eligibleTenureChains(upgrades, levelsReached, rng), rng).slice(0, count);
+  const eligible = eligibleTenureChains(upgrades, levelsReached, rng);
+  if (lastRunUpgradeIds.length === 0) return shuffled(eligible, rng).slice(0, count);
+
+  const { owned, archetype } = continuations(eligible, lastRunUpgradeIds, upgrades);
+  const pool = owned.length > 0 ? owned : archetype;
+  if (pool.length === 0) return shuffled(eligible, rng).slice(0, count);
+
+  const guaranteed = shuffled(pool, rng)[0];
+  const rest = shuffled(eligible.filter(o => o.headId !== guaranteed.headId), rng);
+  return [guaranteed, ...rest].slice(0, count);
+}
+
+/** True when this offer continues the previous run (drives the card's badge). */
+export function isContinuation(offer: TenureOffer, lastRunUpgradeIds: string[]): boolean {
+  const owned = new Set(lastRunUpgradeIds);
+  return offer.upgrades.some(u => owned.has(u.id));
 }

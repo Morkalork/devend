@@ -57,7 +57,7 @@ import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
 import { baseStartingLives, isInfiniteLivesEnabled } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
-import { TenureOffer, tenureSteps, rollTenureOffers } from '@/lib/tenure';
+import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
 
 const NORMAL_LIVES = 3;
 /**
@@ -178,8 +178,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * run's depth, plus whether the loadout draft still follows once picked.
    * Rolled fresh per run, so a retry is a new draw rather than the same cards.
    */
-  const [pendingTenure, setPendingTenure] =
-    useState<{ offers: TenureOffer[]; earnedAtLevel: number; thenDraftLoadout: boolean } | null>(null);
+  const [pendingTenure, setPendingTenure] = useState<{
+    offers: TenureOffer[];
+    earnedAtLevel: number;
+    thenDraftLoadout: boolean;
+    /** What the previous run owned, so the screen can badge the continuation. */
+    lastRunUpgradeIds: string[];
+  } | null>(null);
   // Issue #63: when the "Assignment Complete" summary is showing, whether its
   // Continue should route into the run finale (ascension) rather than the next
   // block's drafts. Set for the final block; cleared for mid-run boundaries.
@@ -337,6 +342,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     archetypeBests,
     recordLevelReached,
     recordRunEnded,
+    recordRunUpgrades,
+    lastRunUpgradeIds,
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
@@ -773,15 +780,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       const offers = tenureSteps(tenureDepth) > 0
         // getLoadedUpgrades(), not the `upgrades` state: this closure was
         // created before loadUpgrades() ran, so the state read here is stale.
-        ? rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random)
+        ? rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
+                           TENURE_OFFER_COUNT, metaStats ? lastRunUpgradeIds : [])
         : [];
       if (offers.length > 0) {
-        setPendingTenure({ offers, earnedAtLevel: tenureDepth, thenDraftLoadout });
+        setPendingTenure({
+          offers, earnedAtLevel: tenureDepth, thenDraftLoadout,
+          lastRunUpgradeIds: [...lastRunUpgradeIds],
+        });
         nav.goToTenureDraft();
       } else if (thenDraftLoadout) nav.goToRunDraft();
       else nav.startGame();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, nav.goToTenureDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, metaStats.lastRunDepth]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, nav.goToTenureDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, metaStats.lastRunDepth, lastRunUpgradeIds]);
 
   /**
    * Daily Stand-up (HIGHSCORES.md Phase D): start today's seeded run. The seed
@@ -978,6 +989,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // run's free upgrade. Recorded here and nowhere else, so quitting to the
     // menu leaves the last real result standing.
     recordRunEnded(currentLevelIndex + 1);
+    // Tenure's guaranteed offer continues the build this run was made of.
+    recordRunUpgrades(ownedUpgradeIds);
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
     captureRunRecap(totalScore);
@@ -989,7 +1002,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
       loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
-  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, currentLevelIndex]);
+  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, recordRunUpgrades, ownedUpgradeIds, currentLevelIndex]);
 
   /**
    * Tenure pick confirmed (issue #75): grant every upgrade in the chosen
