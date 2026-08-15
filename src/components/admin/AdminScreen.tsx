@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Map, Sparkles, HeartPulse, GitCommit, RefreshCw, Check, AlertCircle, Network } from 'lucide-react';
 import { DEV_LIVES, isInfiniteLivesEnabled, setInfiniteLivesEnabled } from '@/lib/devFlags';
 import {
   BUILD_AT, BUILD_REPO, BUILD_SHA, checkForUpdate, relativeTime, shortSha,
@@ -10,9 +10,10 @@ interface AdminScreenProps {
   onBack: () => void;
   onMapBuilder: () => void;
   onAnimationTest: () => void;
+  onUpgradeAtlas: () => void;
 }
 
-export function AdminScreen({ onBack, onMapBuilder, onAnimationTest }: AdminScreenProps) {
+export function AdminScreen({ onBack, onMapBuilder, onAnimationTest, onUpgradeAtlas }: AdminScreenProps) {
   const [infiniteLives, setInfiniteLives] = useState(isInfiniteLivesEnabled);
   const [update, setUpdate] = useState<UpdateCheck | null>(null);
   const [checking, setChecking] = useState(false);
@@ -74,6 +75,22 @@ export function AdminScreen({ onBack, onMapBuilder, onAnimationTest }: AdminScre
               <div className="font-semibold">Playground</div>
               <div className="text-sm text-muted-foreground">
                 Test animations and modifiers live
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={onUpgradeAtlas}
+            className="w-full p-4 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors flex items-center gap-4"
+          >
+            <div className="p-3 rounded-lg bg-primary/10">
+              <Network className="w-6 h-6 text-primary" />
+            </div>
+            <div className="text-left">
+              <div className="font-semibold">Upgrade Atlas</div>
+              <div className="text-sm text-muted-foreground">
+                The whole catalogue as a graph: what leads to what, how long each
+                chain runs, and what looks wrong
               </div>
             </div>
           </button>

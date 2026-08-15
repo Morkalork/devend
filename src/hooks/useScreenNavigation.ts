@@ -96,6 +96,10 @@ export function useScreenNavigation() {
     setCurrentScreen('animationTest');
   }, []);
 
+  const goToUpgradeAtlas = useCallback(() => {
+    setCurrentScreen('upgradeAtlas');
+  }, []);
+
   const goToAchievements = useCallback(() => {
     setCurrentScreen('achievements');
   }, []);
@@ -129,5 +133,6 @@ export function useScreenNavigation() {
     goToAdmin,
     goToMapBuilder,
     goToAnimationTest,
+    goToUpgradeAtlas,
   };
 }

@@ -43,6 +43,7 @@ import { todayKey, previousDayKey } from '@/lib/runRng';
 const AdminScreen = lazy(() => import('@/components/admin/AdminScreen').then(m => ({ default: m.AdminScreen })));
 const MapBuilder = lazy(() => import('@/components/admin/MapBuilder').then(m => ({ default: m.MapBuilder })));
 const PlaygroundScreen = lazy(() => import('@/components/admin/PlaygroundScreen').then(m => ({ default: m.PlaygroundScreen })));
+const UpgradeAtlasScreen = lazy(() => import('@/components/admin/UpgradeAtlasScreen').then(m => ({ default: m.UpgradeAtlasScreen })));
 
 // Top-level menu screens that play the shared main.mp3 loop. Gameplay music is
 // driven per-band by GameScreen; in-run interludes (result, shops, drafts) are
@@ -483,7 +484,12 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
 
             {adminUnlocked && navigation.currentScreen === 'admin' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
-                <AdminScreen onBack={navigation.goToWelcome} onMapBuilder={navigation.goToMapBuilder} onAnimationTest={navigation.goToAnimationTest} />
+                <AdminScreen
+                  onBack={navigation.goToWelcome}
+                  onMapBuilder={navigation.goToMapBuilder}
+                  onAnimationTest={navigation.goToAnimationTest}
+                  onUpgradeAtlas={navigation.goToUpgradeAtlas}
+                />
               </Suspense>
             )}
             {adminUnlocked && navigation.currentScreen === 'mapBuilder' && (
@@ -494,6 +500,11 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             {adminUnlocked && navigation.currentScreen === 'animationTest' && (
               <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
                 <PlaygroundScreen onBack={navigation.goToAdmin} accentColor={accentHex} />
+              </Suspense>
+            )}
+            {adminUnlocked && navigation.currentScreen === 'upgradeAtlas' && (
+              <Suspense fallback={<div className="min-h-screen bg-background flex items-center justify-center">{t('common.loading')}</div>}>
+                <UpgradeAtlasScreen onBack={navigation.goToAdmin} />
               </Suspense>
             )}
           </motion.div>

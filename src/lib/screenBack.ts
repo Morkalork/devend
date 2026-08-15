@@ -35,6 +35,7 @@ export function backActionForScreen(screen: GameScreen): BackAction {
       return 'hall';
     case 'mapBuilder':
     case 'animationTest':
+    case 'upgradeAtlas':
       return 'admin';
     // Mid-run flow screens have no meaningful "back" (going back would skip the
     // forced progression), so we just swallow the gesture to prevent an exit.

@@ -10,6 +10,7 @@ const ALL_SCREENS: GameScreen[] = [
   'welcome', 'tutorial', 'game', 'upgradeShop', 'doorDraft', 'capstoneDraft',
   'runDraft', 'ascensionDraft', 'result', 'certificateStore', 'loadouts',
   'options', 'achievements', 'hallOfFame', 'admin', 'mapBuilder', 'animationTest',
+  'upgradeAtlas',
 ];
 
 describe("backActionForScreen", () => {
@@ -46,5 +47,6 @@ describe("backActionForScreen", () => {
   it("admin sub-screens return to the admin screen", () => {
     expect(backActionForScreen('mapBuilder')).toBe('admin');
     expect(backActionForScreen('animationTest')).toBe('admin');
+    expect(backActionForScreen('upgradeAtlas')).toBe('admin');
   });
 });
