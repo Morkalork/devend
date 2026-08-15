@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { tickMapBeats } from "@/lib/physics/mapBeats";
+import { tickMapBeats, beatEffectLines, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig, MapBeat } from "@/types/level";
 import { createSpaceGrid } from "@/lib/spaceGrid";
@@ -275,4 +275,79 @@ describe("every ball-spawning beat in map.yml announces itself", () => {
     );
     expect(silent).toEqual([]);
   });
+});
+
+/**
+ * The banner used to show only a flavour name ("Standup Interrupt"), which
+ * telegraphs that something is coming but not WHAT. An extra ball therefore
+ * still arrived unexplained even once the lead time existed. The consequence is
+ * derived from the beat rather than written per map, so a beat added later
+ * cannot ship without one.
+ */
+describe("a beat says what it is about to do", () => {
+  it("names the arriving ball, singular or plural", () => {
+    expect(beatEffectLines({ id: "b", spawnAdds: 1 })).toEqual([
+      { key: "game.beatEffectBalls", values: { count: 1 } },
+    ]);
+    expect(beatEffectLines({ id: "b", spawnAdds: 3 })[0].values).toEqual({ count: 3 });
+  });
+
+  it("names a speed spike as a percentage", () => {
+    expect(beatEffectLines({ id: "b", speedSpike: 0.2 })).toEqual([
+      { key: "game.beatEffectSpeed", values: { percent: 20 } },
+    ]);
+  });
+
+  it("names a forced break", () => {
+    expect(beatEffectLines({ id: "b", breakId: "gate" })).toEqual([
+      { key: "game.beatEffectBreak" },
+    ]);
+  });
+
+  it("lists every effect a beat combines", () => {
+    const lines = beatEffectLines({ id: "b", spawnAdds: 2, speedSpike: 0.5, breakId: "g" });
+    expect(lines.map(l => l.key)).toEqual([
+      "game.beatEffectBalls", "game.beatEffectSpeed", "game.beatEffectBreak",
+    ]);
+  });
+
+  it("says nothing about a beat with no effect", () => {
+    expect(beatEffectLines({ id: "b" })).toEqual([]);
+    expect(beatEffectLines({ id: "b", spawnAdds: 0, speedSpike: 0 })).toEqual([]);
+  });
+
+  it("hands the effects to the telegraph, alongside the flavour name", () => {
+    const g = makeGame({ activePlaySeconds: 24 });
+    const seen: { announce: string; effects: BeatEffectLine[] }[] = [];
+    tickMapBeats(
+      g,
+      level([{ id: "crunch", atSeconds: 24, speedSpike: 0.2, announce: "game.beatCrunchTime" }]),
+      5,
+      (announce, effects) => seen.push({ announce, effects }),
+    );
+    expect(seen).toHaveLength(1);
+    expect(seen[0].announce).toBe("game.beatCrunchTime");
+    expect(seen[0].effects).toEqual([{ key: "game.beatEffectSpeed", values: { percent: 20 } }]);
+  });
+});
+
+/** Every key the banner can render must exist in every locale, or a player on
+ *  Spanish or Swedish reads a raw i18n key at the moment of the ambush. */
+describe("the beat copy exists in every language", () => {
+  const LOCALES = ["en", "es", "sv"] as const;
+  const KEYS = [
+    "beatEffectBalls_one", "beatEffectBalls_other", "beatEffectSpeed", "beatEffectBreak",
+    "beatStandup", "beatCrunchTime",
+  ];
+
+  for (const locale of LOCALES) {
+    it(`${locale} has them all`, () => {
+      const game = (JSON.parse(
+        readFileSync(resolve(__dirname, `../i18n/locales/${locale}.json`), "utf8"),
+      ) as { game: Record<string, string> }).game;
+      for (const key of KEYS) expect(game[key], `${locale}.game.${key}`).toBeTruthy();
+      // No em-dashes in UI text (CLAUDE.md).
+      for (const key of KEYS) expect(game[key]).not.toContain("\u2014");
+    });
+  }
 });

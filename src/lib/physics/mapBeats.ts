@@ -19,15 +19,44 @@ import { spawnAdds } from "@/lib/physics/bossPhases";
 /** Default lead time (ms) for a beat's telegraph warning. */
 const DEFAULT_LEAD_MS = 1600;
 
+/** One consequence of a beat, as an i18n key the banner can render. */
+export interface BeatEffectLine {
+  key: string;
+  /** Interpolation values, including `count` for plural selection. */
+  values?: Record<string, number>;
+}
+
+/**
+ * What a beat is about to DO, in words.
+ *
+ * The `announce` label is a flavour name ("Standup Interrupt"), which telegraphs
+ * that SOMETHING is coming but not what, so an extra ball still arrived
+ * unexplained. Derived from the beat's own fields rather than written per map,
+ * so a beat added later says what it does without anyone remembering to write
+ * the copy.
+ */
+export function beatEffectLines(beat: MapBeat): BeatEffectLine[] {
+  const lines: BeatEffectLine[] = [];
+  if (beat.spawnAdds && beat.spawnAdds > 0) {
+    lines.push({ key: "game.beatEffectBalls", values: { count: beat.spawnAdds } });
+  }
+  if (beat.speedSpike && beat.speedSpike > 0) {
+    lines.push({ key: "game.beatEffectSpeed", values: { percent: Math.round(beat.speedSpike * 100) } });
+  }
+  if (beat.breakId) lines.push({ key: "game.beatEffectBreak" });
+  return lines;
+}
+
 /**
  * @param onWarn called with a beat's `announce` label when its telegraph should
- *   show (once per beat), `leadMs` before the effect lands.
+ *   show (once per beat), `leadMs` before the effect lands, along with what the
+ *   beat is about to do.
  */
 export function tickMapBeats(
   game: CanvasGameState,
   level: LevelConfig,
   levelNumber: number,
-  onWarn?: (announce: string) => void,
+  onWarn?: (announce: string, effects: BeatEffectLine[]) => void,
 ): void {
   const beats = level.beats;
   if (!beats || beats.length === 0) return;
@@ -61,7 +90,7 @@ export function tickMapBeats(
       const warnByTime = beat.atSeconds != null && game.activePlaySeconds >= beat.atSeconds - leadSec;
       if (warnByTime || bySpace) {
         game.warnedBeats.push(beat.id);
-        onWarn?.(beat.announce);
+        onWarn?.(beat.announce, beatEffectLines(beat));
       }
     }
 

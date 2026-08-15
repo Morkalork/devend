@@ -36,7 +36,7 @@ import { isTimingExempt, getMapTimeLimit } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
 import { clearAllFences } from "@/lib/abilityEffects";
-import { tickMapBeats } from "@/lib/physics/mapBeats";
+import { tickMapBeats, type BeatEffectLine } from "@/lib/physics/mapBeats";
 import { PushYourLuckOverlay } from "./PushYourLuckOverlay";
 import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
@@ -436,7 +436,9 @@ export function GameCanvas({
   useEffect(() => () => { if (chestToastTimer.current) clearTimeout(chestToastTimer.current); }, []);
   // Map-beat telegraph banner (LEVELDESIGN.md Turn): a warning shown ahead of a
   // beat firing so the player is not ambushed. `announce` is an i18n key.
-  const [beatBanner, setBeatBanner] = useState<{ key: number; announce: string } | null>(null);
+  const [beatBanner, setBeatBanner] = useState<
+    { key: number; announce: string; effects?: BeatEffectLine[] } | null
+  >(null);
   const beatBannerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current); }, []);
   // Highest time-pressure tier reached this map (0 fresh .. 3 final), so each
@@ -1186,10 +1188,12 @@ export function GameCanvas({
         tickBossFenceWipe(game, level, () =>
           clearAllFences(game, { repaintRegionCanvas, setRemainingPercent, fenceColor: "#ff5b5b" }),
         );
-        tickMapBeats(game, level, levelNumber, (announce) => {
-          setBeatBanner({ key: performance.now(), announce });
+        tickMapBeats(game, level, levelNumber, (announce, effects) => {
+          setBeatBanner({ key: performance.now(), announce, effects });
           if (beatBannerTimer.current) clearTimeout(beatBannerTimer.current);
-          beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 2200);
+          // Outlasts the beat's lead, so the banner is still up when the effect
+          // it described actually lands.
+          beatBannerTimer.current = setTimeout(() => setBeatBanner(null), 3000);
         });
       },
       onCreepStep: setCreepPercent,
@@ -1618,6 +1622,15 @@ export function GameCanvas({
           >
             <span aria-hidden>⚠</span>
             {t(beatBanner.announce)}
+            {/* What the beat is about to DO. The flavour name alone telegraphs
+                that something is coming but not what, which is how an extra
+                ball still arrived unexplained. Kept on the same line so the
+                toast stays inside the thin band above the board. */}
+            {beatBanner.effects?.map(effect => (
+              <span key={effect.key} className="font-normal opacity-90">
+                · {t(effect.key, effect.values)}
+              </span>
+            ))}
           </div>
         )}
         {abilityIconFx && (
