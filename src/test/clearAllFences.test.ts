@@ -119,6 +119,10 @@ function sealPocket(game: CanvasGameState): void {
 
 const isFenceWall = (id: string) => !id.startsWith("board-") && !id.startsWith("obstacle-");
 
+// Mirrors the constants in abilityEffects.ts, in cells (cellSize is 15 here).
+const LOCK_ADJACENCY = 2;
+const TRIM_MARGIN = 1.5;
+
 const clear = (game: CanvasGameState) =>
   clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
 
@@ -151,6 +155,72 @@ describe("Clear All Fences (#38)", () => {
     expect(left).toContain("(175,320)->(285,169)"); // diagonal, upper
     expect(left).toContain("(175,320)->(64,472)");  // diagonal, lower
     expect(left).not.toContain("(64,500)->(64,855)"); // the stretch below: gone
+  });
+
+  /**
+   * The screenshot case. A single cut can seal a pocket in one corner and carry
+   * on to the far side of the board; keeping it whole left the lock plus a line
+   * going nowhere, which looked worse than the bug it replaced. The wall now
+   * stops where the pocket does.
+   */
+  it("cuts a surviving fence back to the stretch that does the sealing", () => {
+    const game = makeGame();
+    sealPocket(game);
+
+    // A fence along the pocket's left edge that then runs the width of the
+    // board. Given a stale collision AABB too, so the trim has to clear it.
+    game.walls.push({
+      id: "wall-overshoot",
+      start: { x: 64, y: 300 },
+      end: { x: 860, y: 300 },
+      thickness: 6,
+      aabbMinX: 64, aabbMinY: 294, aabbMaxX: 860, aabbMaxY: 306,
+    } as unknown as CanvasGameState["walls"][number]);
+
+    expect(clear(game)).toBe(true);
+
+    const kept = game.walls.find(w => w.id === "wall-overshoot");
+    expect(kept, "the sealing end survives").toBeTruthy();
+    // Cut back to the pocket instead of spanning the board. At y=300 the
+    // pocket's diagonal edge sits at x ~= 190; the wall is allowed to run two
+    // cells past that for the adjacency probe and another one and a half for
+    // the corner margin, so ~245. Anything near 860 is the bug.
+    expect(kept!.start.x).toBeCloseTo(64, 0);
+    expect(kept!.end.x).toBeGreaterThan(190);
+    expect(kept!.end.x).toBeLessThan(190 + 15 * (LOCK_ADJACENCY + TRIM_MARGIN) + 15);
+    // A stale AABB would silently break collision culling on the new geometry.
+    expect(kept!.aabbMinX).toBeUndefined();
+    expect(kept!.aabbMaxX).toBeUndefined();
+  });
+
+  it("drops a fence that only grazes a pocket rather than leaving a stub", () => {
+    const game = makeGame();
+    sealPocket(game);
+
+    // Runs away from the board's left edge, nowhere near the pocket.
+    game.walls.push({
+      id: "wall-elsewhere",
+      start: { x: 700, y: 700 }, end: { x: 860, y: 700 }, thickness: 6,
+    } as unknown as CanvasGameState["walls"][number]);
+
+    expect(clear(game)).toBe(true);
+    expect(game.walls.find(w => w.id === "wall-elsewhere")).toBeUndefined();
+  });
+
+  it("shatters the offcut, so a trimmed fence does not just get shorter", () => {
+    const game = makeGame();
+    sealPocket(game);
+    game.walls.push({
+      id: "wall-overshoot",
+      start: { x: 64, y: 300 }, end: { x: 860, y: 300 }, thickness: 6,
+    } as unknown as CanvasGameState["walls"][number]);
+    game.objectDebris = [];
+
+    clear(game);
+
+    // One burst for the fully-cleared wall, one for the offcut of the trimmed
+    // one: the piece that goes has to be seen going.
+    expect(game.objectDebris.length).toBeGreaterThanOrEqual(2);
   });
 
   it("leaves board and obstacle walls alone", () => {

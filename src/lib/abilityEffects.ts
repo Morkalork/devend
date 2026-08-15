@@ -81,26 +81,92 @@ export interface ClearFencesCallbacks {
  *  flood the debris renderer. */
 const MAX_FENCE_SHATTERS = 40;
 
-/**
- * How far either side of a fence to look for locked ground, in cells.
- *
- * Generous on purpose, and the asymmetry is the reason: keeping a fence that
- * did not really need keeping leaves a wall standing in open space, which is an
- * ordinary sight in this game. DROPPING one that a pocket needed leaves locked
- * territory with no wall around it, which is the bug being fixed. So when the
- * probe is unsure, it errs towards keeping.
- */
+/** How far either side of a fence to look for locked ground, in cells. */
 const LOCK_ADJACENCY_CELLS = 2;
+
+/**
+ * How far past the last locked sample a kept fence keeps running, in cells.
+ *
+ * This is the whole safety margin of the trim, and it exists for corners. Two
+ * fences meeting at a pocket corner are each cut back to where they stop
+ * bordering locked ground; without an overlap they would be cut back to
+ * slightly different points and leave a notch at the corner, which is both ugly
+ * and a hole a ball could pass through. Overshooting by more than a cell on
+ * each end guarantees the pair still crosses.
+ */
+const TRIM_MARGIN_CELLS = 1.5;
+
+/**
+ * Below this, a trimmed fence is dropped rather than kept, in cells.
+ *
+ * A fence that only grazes a pocket corner is not sealing it, and a stub that
+ * short is a speck of wall in open space. In practice the margin above means a
+ * real contact always survives this.
+ */
+const MIN_KEPT_LENGTH_CELLS = 1;
 
 /** A wall as this module needs it: a segment with an id. */
 type Wall = CanvasGameState["walls"][number];
 
+type Grid = NonNullable<CanvasGameState["spaceGrid"]>;
+
+/** True when any cell within `bandCells` of a world point is locked ground. */
+function touchesLocked(
+  grid: Grid, x: number, y: number, bandCells: number, locked: Set<number>,
+): boolean {
+  const reach = grid.cellSize * bandCells;
+  const span = Math.ceil(bandCells);
+  const col0 = Math.floor((x - grid.originX) / grid.cellSize);
+  const row0 = Math.floor((y - grid.originY) / grid.cellSize);
+  for (let row = row0 - span; row <= row0 + span; row++) {
+    for (let col = col0 - span; col <= col0 + span; col++) {
+      if (row < 0 || col < 0 || row >= grid.height || col >= grid.width) continue;
+      const cx = grid.originX + (col + 0.5) * grid.cellSize;
+      const cy = grid.originY + (row + 0.5) * grid.cellSize;
+      if (Math.hypot(cx - x, cy - y) > reach) continue;
+      if (locked.has(row * grid.width + col)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * The stretch of a wall that runs alongside locked ground, as [t0,t1] in 0..1,
+ * already widened by the corner margin. Null when it never touches one.
+ */
+function lockedSpan(
+  grid: Grid, wall: Wall, locked: Set<number>,
+): { t0: number; t1: number } | null {
+  const dx = wall.end.x - wall.start.x;
+  const dy = wall.end.y - wall.start.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 0.001 || locked.size === 0) return null;
+
+  const steps = Math.max(1, Math.ceil(length / (grid.cellSize * 0.5)));
+  let first = -1;
+  let last = -1;
+  for (let s = 0; s <= steps; s++) {
+    const t = s / steps;
+    if (!touchesLocked(grid, wall.start.x + dx * t, wall.start.y + dy * t, LOCK_ADJACENCY_CELLS, locked)) {
+      continue;
+    }
+    if (first < 0) first = s;
+    last = s;
+  }
+  if (first < 0) return null;
+
+  // One span from the first contact to the last, not one per run of contacts: a
+  // fence that borders a pocket, crosses a gap and borders it again is a single
+  // piece of wall, and cutting the middle out of it would open the pocket.
+  const margin = (grid.cellSize * TRIM_MARGIN_CELLS) / length;
+  return {
+    t0: Math.max(0, first / steps - margin),
+    t1: Math.min(1, last / steps + margin),
+  };
+}
+
 /** Cell indices a fence's body covers, within `bandCells` of its segment. */
-function cellsUnderWall(
-  grid: NonNullable<CanvasGameState["spaceGrid"]>,
-  wall: Wall,
-  bandCells: number,
-): number[] {
+function cellsUnderWall(grid: Grid, wall: Wall, bandCells: number): number[] {
   const out: number[] = [];
   const dx = wall.end.x - wall.start.x;
   const dy = wall.end.y - wall.start.y;
@@ -130,6 +196,37 @@ function cellsUnderWall(
   return out;
 }
 
+/** Point at `t` along a wall. */
+const along = (wall: Wall, t: number) => ({
+  x: wall.start.x + (wall.end.x - wall.start.x) * t,
+  y: wall.start.y + (wall.end.y - wall.start.y) * t,
+});
+
+/**
+ * A wall cut down to [t0,t1] of its length.
+ *
+ * The cached collision AABB and the raster-cell list both describe the OLD
+ * geometry, so they are dropped: the physics hot loop refills the AABB lazily,
+ * and the cell list is recomputed from the new body with locked cells excluded,
+ * so a later fracture cannot reopen the pocket this wall is holding.
+ */
+function trimWall(grid: Grid, wall: Wall, t0: number, t1: number, locked: Set<number>): Wall {
+  const trimmed: Wall = {
+    ...wall,
+    start: along(wall, t0),
+    end: along(wall, t1),
+    aabbMinX: undefined,
+    aabbMinY: undefined,
+    aabbMaxX: undefined,
+    aabbMaxY: undefined,
+    rasterCells: undefined,
+  };
+  if (wall.rasterCells) {
+    trimmed.rasterCells = cellsUnderWall(grid, trimmed, 1).filter(i => !locked.has(i));
+  }
+  return trimmed;
+}
+
 /**
  * Clear the player's fences, EXCEPT the ones holding a lock together.
  *
@@ -145,14 +242,20 @@ function cellsUnderWall(
  * which is also the honest picture: those fences are load-bearing, and the rest
  * were the mess the player asked to be rid of.
  *
- * The awkward cases all resolve in favour of the picture staying coherent:
+ * A kept fence is also CUT BACK to the stretch that does the sealing. Keeping
+ * whole walls was the first attempt and it looked worse than the bug: a pocket
+ * in one corner left a fence running the full height of the board and another
+ * out to the far edge, so the board read as a lock plus two arbitrary lines
+ * going nowhere. What the player wants left is the pocket, so the wall stops
+ * where the pocket does, plus a margin so corners still overlap.
+ *
+ * The awkward cases resolve in favour of the picture staying coherent:
  *  - A pocket sealed mid-board keeps its whole loop, because every wall on that
  *    loop borders it.
- *  - Two pockets sharing a wall keep it once.
- *  - A long fence that only clips a pocket at one end is kept whole. It reads
- *    as a wall standing in open space, which is a normal board state, and
- *    trimming it to the bordering stretch risks unsealing the pocket for a
- *    cosmetic gain.
+ *  - Two pockets sharing a wall keep the stretch spanning both, since the span
+ *    runs from first contact to last rather than per run of contacts. Cutting
+ *    the middle out would open them.
+ *  - A fence only grazing a corner is dropped, not left as a speck of wall.
  *  - Space that the kept fences now enclose with no ball in it is re-sealed by
  *    captureUnreachableCells below, so no unreachable hole is left behind.
  *
@@ -174,33 +277,60 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
     for (const idx of a.cellIndices) locked.add(idx);
   }
 
-  // 2. Split the fences. A fence is any wall that is neither a board edge nor an
-  //    obstacle edge; it is load-bearing if any cell near its body is locked.
+  // 2. Work out what survives. A fence is any wall that is neither a board edge
+  //    nor an obstacle edge; what survives of it is the stretch bordering a
+  //    lock, and every other piece of wall on the board shatters.
   const isFence = (w: Wall) =>
     !(w.isBoardEdge ?? w.id.startsWith("board-")) && !w.id.startsWith("obstacle-");
-  const holdsLock = (w: Wall) =>
-    locked.size > 0 && cellsUnderWall(grid, w, LOCK_ADJACENCY_CELLS).some(i => locked.has(i));
+  const minKept = grid.cellSize * MIN_KEPT_LENGTH_CELLS;
 
-  const cleared: Wall[] = [];
   const kept: Wall[] = [];
+  /** The pieces that go: whole fences, and the offcuts of trimmed ones. */
+  const shards: { start: { x: number; y: number }; end: { x: number; y: number } }[] = [];
+  let changed = false;
+
   for (const w of game.walls) {
     if (!isFence(w)) continue;
-    (holdsLock(w) ? kept : cleared).push(w);
+
+    const span = lockedSpan(grid, w, locked);
+    if (!span) {
+      shards.push({ start: w.start, end: w.end });
+      changed = true;
+      continue;
+    }
+
+    const length = Math.hypot(w.end.x - w.start.x, w.end.y - w.start.y);
+    if ((span.t1 - span.t0) * length < minKept) {
+      shards.push({ start: w.start, end: w.end }); // a graze, not a seal
+      changed = true;
+      continue;
+    }
+
+    if (span.t0 <= 0 && span.t1 >= 1) {
+      kept.push(w); // the whole wall does the sealing
+      continue;
+    }
+
+    // Trimmed: keep the sealing stretch, shatter the offcuts at either end.
+    if (span.t0 > 0) shards.push({ start: w.start, end: along(w, span.t0) });
+    if (span.t1 < 1) shards.push({ start: along(w, span.t1), end: w.end });
+    kept.push(trimWall(grid, w, span.t0, span.t1, locked));
+    changed = true;
   }
-  if (cleared.length === 0) return false; // every fence is holding a lock
+
+  if (!changed) return false; // every fence is already exactly a lock's wall
 
   // Reassign the array so reference-keyed render caches (glow / fence-clip)
-  // invalidate.
-  const clearedIds = new Set(cleared.map(w => w.id));
-  game.walls = game.walls.filter(w => !clearedIds.has(w.id));
+  // invalidate. Kept walls may be trimmed copies, so rebuild from scratch.
+  game.walls = [...game.walls.filter(w => !isFence(w)), ...kept];
 
-  // Shatter the cleared fences into flying shards (like the map-clear shatter),
-  // so they break apart instead of just vanishing.
+  // Shatter what went into flying shards (like the map-clear shatter), so it
+  // breaks apart instead of just vanishing.
   const now = performance.now();
   const color = callbacks.fenceColor ?? "#00ff88";
   game.objectDebris ??= [];
-  for (const w of cleared.slice(0, MAX_FENCE_SHATTERS)) {
-    game.objectDebris.push(spawnFenceShatter(w.start, w.end, color, now));
+  for (const piece of shards.slice(0, MAX_FENCE_SHATTERS)) {
+    game.objectDebris.push(spawnFenceShatter(piece.start, piece.end, color, now));
   }
 
   // 3. Cells to PRESERVE = the locked pockets, plus the ground the kept fences
