@@ -55,8 +55,15 @@ import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
+import { baseStartingLives, isInfiniteLivesEnabled } from '@/lib/devFlags';
 
-const BASE_LIVES = 3;
+const NORMAL_LIVES = 3;
+/**
+ * Lives a run starts with, before certificate/loadout bonuses. A function, not a
+ * constant, because the admin "Infinite lives" flag overrides it and must take
+ * effect on the next run without a reload (src/lib/devFlags.ts).
+ */
+const baseLives = (): number => baseStartingLives(NORMAL_LIVES);
 /** Warm Cache: cap the cleared-map fence-speed ramp so a deep run can't run away
  *  (10 maps × the coefficient is the ceiling). */
 const WARM_CACHE_RAMP_CAP = 10;
@@ -110,8 +117,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const [pendingLevelScore, setPendingLevelScore] = useState<LevelScoreData | null>(null);
   const [showLevelComplete, setShowLevelComplete] = useState(false);
   const [ownedUpgradeIds, setOwnedUpgradeIds] = useState<string[]>([]);
-  const [currentLives, setCurrentLives] = useState(BASE_LIVES);
-  const [livesAtLevelStart, setLivesAtLevelStart] = useState(BASE_LIVES);
+  const [currentLives, setCurrentLives] = useState(baseLives);
+  const [livesAtLevelStart, setLivesAtLevelStart] = useState(baseLives);
   const [cumulativeLockedBalls, setCumulativeLockedBalls] = useState(0);
   const [shopUnlockedCerts, setShopUnlockedCerts] = useState<Certificate[]>([]);
   const [pendingCertUnlocks, setPendingCertUnlocks] = useState<Certificate[]>([]);
@@ -710,11 +717,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       clearRun();
 
       const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
-      const startingLives = BASE_LIVES + certBonusLives;
+      const startingLives = baseLives() + certBonusLives;
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
       setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
       setPendingDeathResult(null);
+
+      // Admin "Infinite lives" makes a run unrepresentative in exactly the way
+      // the ?level= jump does, so it gets the same treatment: play it, but never
+      // let highscores / Employee of the Month / Records learn from it.
+      if (isInfiniteLivesEnabled()) recordEligibleRef.current = false;
 
       if (forceLevel !== undefined) {
         setLevelIndex(forceLevel - 1);
@@ -780,7 +792,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     clearRun();
 
     const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
-    const startingLives = BASE_LIVES + certBonusLives;
+    const startingLives = baseLives() + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
@@ -968,7 +980,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleSpendContinue = useCallback(() => {
     analytics.continueSpent({ level: currentLevelIndex + 1 });
     setContinuesRemaining(n => Math.max(0, n - 1));
-    const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
+    const startingLives = baseLives() + ((certBonuses.extraLives as number | undefined) ?? 0);
     const refilled = Math.max(1, Math.max(currentLives, startingLives));
     setCurrentLives(refilled);
     setLivesAtLevelStart(refilled);
@@ -1393,7 +1405,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     // Refill lives to the run's starting value (never down), then apply the
     // drafted loadout's life delta once — same as buying an extraLives upgrade.
-    const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
+    const startingLives = baseLives() + ((certBonuses.extraLives as number | undefined) ?? 0);
     const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
     const refilled = Math.max(1, Math.max(currentLives, startingLives) + livesDelta);
     setCurrentLives(refilled);
@@ -1419,7 +1431,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     analytics.loadoutSelected({ loadoutId });
     if (loadoutId) {
       setDraftedLoadoutIds([loadoutId]);
-      const startingLives = BASE_LIVES + ((certBonuses.extraLives as number | undefined) ?? 0);
+      const startingLives = baseLives() + ((certBonuses.extraLives as number | undefined) ?? 0);
       const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
       const lives = Math.max(1, startingLives + livesDelta);
       setCurrentLives(lives);
@@ -1563,7 +1575,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     resetRunScopedState();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
-    const startingLives = BASE_LIVES + certBonusLives;
+    const startingLives = baseLives() + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
@@ -1593,7 +1605,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     clearRunCheckpoints();
 
     const certBonusLives = certBonuses.extraLives ?? 0;
-    const startingLives = BASE_LIVES + certBonusLives;
+    const startingLives = baseLives() + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
     setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
@@ -1609,7 +1621,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // and Continue restores the seed. The next new-run path disarms it.
     resetToFirstLevel();
     resetRunScopedState();
-    setCurrentLives(BASE_LIVES);
+    setCurrentLives(baseLives());
     setPendingDeathResult(null);
     nav.goToWelcome();
   }, [resetToFirstLevel, nav.goToWelcome, resetRunScopedState]);
