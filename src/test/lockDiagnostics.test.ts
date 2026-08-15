@@ -19,7 +19,7 @@ const decision = (regionCells: number): LockDecision => ({
   ballId: `b${regionCells}`, ballColor: "#fff", isBoss: false,
   regionCells, denominator: 1000, percentage: regionCells / 10,
   thresholdPercent: 5, lockedByPercent: true, lockedBySliver: false,
-  containedInArea: false, trulySealed: true, outcome: "locked",
+  containedInArea: false, trulySealed: true, area: null, outcome: "locked",
 });
 
 beforeEach(() => {

@@ -17,6 +17,7 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   baseOvertime: { icon: Clock, color: 'text-foreground' },
   threadLocks: { icon: Lock, color: 'text-cyan-400' },
   superiorLocks: { icon: Medal, color: 'text-cyan-300' },
+  zoneLocks: { icon: Target, color: 'text-fuchsia-300' },
   breakBonus: { icon: Hammer, color: 'text-amber-400' },
   shipEarly: { icon: Timer, color: 'text-teal-400' },
   pushBonus: { icon: Zap, color: 'text-orange-400' },
@@ -135,6 +136,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     lockedBallsCount = 0,
     superiorLockCount = 0,
     superiorLockBonus = 0,
+    zoneLockCount = 0,
+    zoneLockBonus = 0,
     pushBonus = 0,
     breakBonus = 0,
     breakMultiplier = 1,
@@ -160,6 +163,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const standardLockBonus = Math.max(0, lockBonus - superiorLockBonus);
   const hasLockBonus = standardLockCount > 0 && standardLockBonus > 0;
   const hasSuperiorLocks = superiorLockCount > 0 && superiorLockBonus > 0;
+  // Colored Areas: the zone multiplier is folded into lockBonus, so without its
+  // own row a var/let/const lock looked exactly like an ordinary one here and
+  // the mechanic was invisible the moment the zone stopped glowing. This row
+  // reports what the zones ADDED; it is already inside lockBonus, so it must
+  // NOT be added to the total again.
+  const hasZoneLocks = zoneLockCount > 0 && zoneLockBonus > 0;
   const hasBreakBonus = breakBonus > 0;
   const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;
@@ -370,6 +379,16 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   {t('levelComplete.superiorLocks', { count: superiorLockCount })}
                 </span>
                 <span className="font-bold text-cyan-300">+{superiorLockBonus}h</span>
+              </div>
+            )}
+
+            {hasZoneLocks && (
+              <div {...hold('zoneLocks')} className="flex justify-between items-center py-2 border-b border-fuchsia-400/50 bg-fuchsia-400/15 rounded px-2">
+                <span className="text-fuchsia-300 flex items-center gap-1">
+                  <Target className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.zoneLocks', { count: zoneLockCount })}
+                </span>
+                <span className="font-bold text-fuchsia-300">+{zoneLockBonus}h</span>
               </div>
             )}
 

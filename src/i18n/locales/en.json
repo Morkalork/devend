@@ -318,6 +318,7 @@
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Thread Locks ({{count}})",
     "superiorLocks": "Superior Locks ({{count}})",
+    "zoneLocks": "Zone Locks ({{count}})",
     "pushBonus": "Push Bonus",
     "pickupBonus": "Power-Up Bonus",
     "breakBonus": "Demolition Bonus",
@@ -366,6 +367,11 @@
         "title": "Superior Locks",
         "body": "A Superior Lock is a lock with real craft: the pocket you sealed the ball into was well under half the size that would normally lock it. Superior locks pay double the lock value, and money-ball, frozen and multi-trap multipliers all stack on top.",
         "tip": "Place your sealing cut as close to the ball as you dare. A roomy, lazy pocket only ever earns standard lock value; the tight cage is where the money is."
+      },
+      "zoneLocks": {
+        "title": "Zone Locks",
+        "body": "A map's coloured var, let and const boxes pay a multiplier (1.5x, 2x, 3x) on any ball locked inside them. It stacks with everything else, so a tight, Superior lock inside a const box is the biggest single payout in the game. This row shows only the hours the zone added; they are already counted in your lock income above.",
+        "tip": "The zone lights up the moment a lock counts. If it stays dark, the pocket you sealed did not land inside the box: aim for the ball to settle within the border, not merely near it."
       },
       "breakBonus": {
         "title": "Demolition Bonus",

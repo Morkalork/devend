@@ -316,6 +316,7 @@
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Trådlås ({{count}})",
     "superiorLocks": "Överlägsna lås ({{count}})",
+    "zoneLocks": "Zonlås ({{count}})",
     "pushBonus": "Pressbonus",
     "pickupBonus": "Power-up-bonus",
     "chestBonus": "Skatt bärgad",
@@ -363,6 +364,11 @@
         "title": "Överlägsna lås",
         "body": "Ett överlägset lås är ett lås med hantverk: fickan du stängde in bollen i var långt under halva storleken som normalt räcker för ett lås. Överlägsna lås betalar dubbelt låsvärde, och multiplikatorer från pengabollar, frysning och multifångst staplas ovanpå.",
         "tip": "Lägg ditt förseglande snitt så nära bollen du vågar. En rymlig, slarvig ficka ger bara standardvärdet; den trånga buren är där pengarna finns."
+      },
+      "zoneLocks": {
+        "title": "Zonlås",
+        "body": "En kartas färgade var-, let- och const-rutor ger en multiplikator (1,5x, 2x, 3x) på varje boll som låses inuti dem. Den staplas med allt annat, så ett tajt superiorlås inuti en const-ruta är spelets största enskilda utbetalning. Den här raden visar bara timmarna som zonen lade till; de räknas redan i din låsinkomst ovan.",
+        "tip": "Zonen tänds i samma stund som ett lås räknas. Om den förblir mörk hamnade fickan du förseglade inte inuti rutan: sikta på att bollen stannar innanför kanten, inte bara nära den."
       },
       "breakBonus": {
         "title": "Rivningsbonus",

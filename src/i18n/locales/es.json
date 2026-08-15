@@ -316,6 +316,7 @@
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Bloqueos de hilo ({{count}})",
     "superiorLocks": "Bloqueos superiores ({{count}})",
+    "zoneLocks": "Bloqueos de zona ({{count}})",
     "pushBonus": "Bono de presión",
     "pickupBonus": "Bono de potenciadores",
     "chestBonus": "Botín obtenido",
@@ -363,6 +364,11 @@
         "title": "Bloqueos superiores",
         "body": "Un bloqueo superior es un bloqueo con oficio: el rincón donde sellaste la bola era mucho menor que la mitad del tamaño que normalmente basta para bloquear. Los bloqueos superiores pagan el doble del valor de bloqueo, y los multiplicadores de bola de dinero, congelación y captura múltiple se apilan encima.",
         "tip": "Traza tu corte de sellado tan cerca de la bola como te atrevas. Un rincón amplio y perezoso solo gana el valor estándar; la jaula estrecha es donde está el dinero."
+      },
+      "zoneLocks": {
+        "title": "Bloqueos de zona",
+        "body": "Las cajas de color var, let y const de un mapa pagan un multiplicador (1.5x, 2x, 3x) por cualquier bola bloqueada dentro. Se acumula con todo lo demás, así que un bloqueo superior y ajustado dentro de una caja const es el mayor pago individual del juego. Esta fila muestra solo las horas que añadió la zona; ya están contadas en tus ingresos de bloqueo de arriba.",
+        "tip": "La zona se ilumina en cuanto un bloqueo cuenta. Si sigue apagada, el rincón que sellaste no cayó dentro de la caja: busca que la bola quede dentro del borde, no solo cerca."
       },
       "breakBonus": {
         "title": "Bono de demolición",

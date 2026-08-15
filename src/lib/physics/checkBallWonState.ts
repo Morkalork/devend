@@ -7,6 +7,7 @@ import {
   gateAreas,
   regionWithinAreas,
   regionCoversAreas,
+  regionCoverFraction,
 } from "@/lib/coloredAreas";
 import type { ColoredArea } from "@/types/level";
 
@@ -276,13 +277,34 @@ export function checkAndUpdateBallWonStates(
       && regionWithinAreas(game.spaceGrid, ballRegion.cellIndices, gates);
     const bossContainedInArea = ball.isBoss && containedInGate;
 
+    // Why a Colored Area did or did not pay. Computed from the SAME inputs
+    // areaForLock uses below (the settled pocket centroid, not the arbitrary
+    // bounce position), so the diagnostic can never disagree with the payout.
+    // `bestCoverFraction` is the one that answers "my zone should have counted":
+    // a value just under AREA_COVER_FRACTION means the rule was the problem,
+    // a value near zero means the cut was.
+    const areaVerdict = areas.length === 0 ? null : {
+      creditedKind: (areaForLock(
+        game.spaceGrid, ballRegion.cellIndices,
+        ballRegion.centroid.x, ballRegion.centroid.y,
+        areas, AREA_COVER_FRACTION,
+      )?.kind ?? null) as string | null,
+      centroidInside: coloredAreaAt(ballRegion.centroid.x, ballRegion.centroid.y, areas) !== null,
+      pocketWithin: containedInArea,
+      bestCoverFraction: Math.max(
+        0,
+        ...areas.map(a => regionCoverFraction(game.spaceGrid!, ballRegion.cellIndices, [a])),
+      ),
+    };
+
     // Diagnostics (devend:lockDebug): capture the inputs while the pocket still
     // exists. Shared by all three exits below so they can't drift apart.
     const diagnose = (outcome: LockOutcome, trulySealed: boolean | null) => {
       recordLockDecision({
         ballId: ball.id, ballColor: ball.color, isBoss: !!ball.isBoss,
         regionCells, denominator, percentage, thresholdPercent: threshold,
-        lockedByPercent, lockedBySliver, containedInArea, trulySealed, outcome,
+        lockedByPercent, lockedBySliver, containedInArea, trulySealed,
+        area: areaVerdict, outcome,
       });
     };
 
@@ -537,6 +559,10 @@ export function checkAndUpdateBallWonStates(
         particles,
         firstEncounter: isFirstEncounter,
         superior: isSuperior,
+        zoneColor: (() => {
+          const a = lockAreaById.get(ball.id);
+          return a ? areaStyle(a.kind).color : null;
+        })(),
       });
       playBallLockSound();
       vibrateBallLock();
@@ -573,6 +599,12 @@ export function checkAndUpdateBallWonStates(
     const greensThisPass = wonThisPass.filter(b => b.ability === 'moneyBall').length;
     let standardPoints = 0;
     let superiorPoints = 0;
+    // The same two totals with every zone multiplier forced to 1. Subtracting
+    // the two is the only honest way to say what the Colored Areas actually
+    // paid: the multiplier sits inside a product with the money, frozen and
+    // simultaneous multipliers, so it has no standalone "bonus" to add up.
+    let standardBase = 0;
+    let superiorBase = 0;
     for (const b of wonThisPass) {
       const selfGreen = b.ability === 'moneyBall' ? 1 : 0;
       const mult = game.moneyMultiplier * Math.pow(3, greensThisPass - selfGreen);
@@ -590,9 +622,10 @@ export function checkAndUpdateBallWonStates(
       // without paying or pay without glowing.
       const lockArea = lockAreaById.get(b.id);
       const zoneMult = lockArea ? areaStyle(lockArea.kind).multiplier : 1;
-      const ballPoints = (b.lockMultiplier ?? 1) * mult * frozenMult * zoneMult;
-      if (superiorIds.has(b.id)) superiorPoints += ballPoints;
-      else standardPoints += ballPoints;
+      const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult;
+      const ballPoints = basePoints * zoneMult;
+      if (superiorIds.has(b.id)) { superiorPoints += ballPoints; superiorBase += basePoints; }
+      else { standardPoints += ballPoints; standardBase += basePoints; }
     }
     // Each lock-multiplier point is worth lockValue overtime hours (the
     // economy's main income; scoring-config.yml), and a SUPERIOR lock's points
@@ -606,6 +639,18 @@ export function checkAndUpdateBallWonStates(
     game.lockBonus += standardPay + superiorPay;
     game.superiorLockBonus += superiorPay;
     game.superiorLockCount += superiorCountThisPass;
+
+    // Colored Areas (issue: an area lock was indistinguishable from a normal
+    // one on the results screen, so the whole mechanic was invisible once the
+    // zone stopped glowing). Report what the zones added, by pricing this pass
+    // a second time with no zone multiplier and taking the difference. Rounded
+    // the same way as the pay above, so the reported figure is exactly the
+    // hours the areas contributed and never drifts from lockBonus.
+    const baseStandardPay = Math.round(standardBase * simultaneousMultiplier * lockValue);
+    const baseSuperiorPay = Math.round(superiorBase * simultaneousMultiplier * lockValue * lockQuality.superiorMultiplier);
+    const zonePay = (standardPay + superiorPay) - (baseStandardPay + baseSuperiorPay);
+    if (zonePay > 0) game.zoneLockBonus += zonePay;
+    game.zoneLockCount += wonThisPass.filter(b => lockAreaById.has(b.id)).length;
 
     // Severance Package: flat overtime per locked ball, deliberately outside
     // the money/simultaneous/quality multipliers so it reads as a predictable

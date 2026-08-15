@@ -126,7 +126,21 @@ export function regionCoversAreas(
   areas: ColoredArea[],
   minFraction: number,
 ): boolean {
-  if (areas.length === 0 || cellIndices.length === 0) return false;
+  return regionCoverFraction(grid, cellIndices, areas) >= minFraction;
+}
+
+/**
+ * The fraction of the given areas' cells that the region covers, 0 when there
+ * is nothing to measure. Split out of regionCoversAreas so diagnostics can
+ * report HOW CLOSE a lock came, which is the difference between "the rule is
+ * too strict" and "that cut was nowhere near".
+ */
+export function regionCoverFraction(
+  grid: SpaceGrid,
+  cellIndices: number[],
+  areas: ColoredArea[],
+): number {
+  if (areas.length === 0 || cellIndices.length === 0) return 0;
   const region = new Set(cellIndices);
   const { originX, originY, cellSize, width, height } = grid;
   let total = 0, covered = 0;
@@ -145,7 +159,7 @@ export function regionCoversAreas(
       }
     }
   }
-  return total > 0 && covered / total >= minFraction;
+  return total > 0 ? covered / total : 0;
 }
 
 /**

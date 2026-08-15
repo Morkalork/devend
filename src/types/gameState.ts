@@ -263,6 +263,10 @@ export interface CanvasGameState {
   superiorLockCount: number;
   /** Of lockBonus, the hours earned by superior locks (for the results split). */
   superiorLockBonus: number;
+  /** Locks credited to a Colored Area this map (issue: areas were invisible). */
+  zoneLockCount: number;
+  /** Overtime the Colored Area multipliers ADDED, over the same locks unzoned. */
+  zoneLockBonus: number;
   /** Green "money ball" multiplier applied to subsequent locks this map (default 1). */
   moneyMultiplier: number;
   /** ballSpeedMultiplier captured at map init — scales ability speed constants. */

@@ -341,7 +341,12 @@ export class FxLayer {
       const t = (now - a.startTime) / dur;
       if (t < 0 || t > 1) continue;
 
-      const tint = a.superior ? 0xffd54a : parseColor(a.ballColor, PALETTE.accent);
+      // Zone first: landing a var/let/const box is the rarest and most valuable
+      // outcome, so it owns the flash colour even on a superior lock (which
+      // still keeps its longer duration and rings).
+      const tint = a.zoneColor
+        ? parseColor(a.zoneColor, PALETTE.accent)
+        : a.superior ? 0xffd54a : parseColor(a.ballColor, PALETTE.accent);
       // Fast in, slow out: the pocket slams bright then drains.
       const intensity = t < 0.15 ? t / 0.15 : Math.pow(1 - (t - 0.15) / 0.85, 1.6);
 

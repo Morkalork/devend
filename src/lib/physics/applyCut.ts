@@ -627,6 +627,7 @@ export function triggerLevelComplete(
         extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
         lockedBallsCount: game.lockedBallsCount,
         superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
+        zoneLockCount: game.zoneLockCount, zoneLockBonus: game.zoneLockBonus,
         breakBonus: game.breakBonus,
         breakMultiplier: game.breakMultiplier,
         chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,

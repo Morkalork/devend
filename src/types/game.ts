@@ -215,6 +215,14 @@ export interface LockFlashState {
    *  lockQuality). Triggers a distinct gold pocket-throb + expanding gold rings
    *  (a longer SUPERIOR_LOCK_DURATION celebration), not a text label. */
   superior: boolean;
+  /**
+   * Hex colour of the Colored Area this lock was credited to, or null when it
+   * paid no zone multiplier. Tints the pocket flash, so hitting a var/let/const
+   * box is unmistakable AT THE MOMENT OF THE LOCK. Before this the only signal
+   * was the zone quietly lighting up, which is easy to miss and impossible to
+   * tell apart from a near miss.
+   */
+  zoneColor: string | null;
 }
 
 export interface DissolveTile {
@@ -389,6 +397,9 @@ export interface LevelScoreData {
   // the results screen's Locks / Superior Locks split
   superiorLockCount?: number;
   superiorLockBonus?: number;
+  /** Locks that landed in a Colored Area, and the hours those zones added. */
+  zoneLockCount?: number;
+  zoneLockBonus?: number;
   // Bonus from smashing breakable objects (issue #38)
   breakBonus?: number;
   // Demolition multiplier applied to the map payout (×1.15 per smash, issue #38)

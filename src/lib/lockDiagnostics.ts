@@ -52,7 +52,35 @@ export interface LockDecision {
    * passed and the check was skipped entirely.
    */
   trulySealed: boolean | null;
+  /**
+   * Why a Colored Area did or did not pay out. `containedInArea` above only
+   * says whether the pocket sat wholly inside SOME area; this records the
+   * actual credit decision, which is what a player means by "my zone did not
+   * count". Null when the map has no areas.
+   *
+   * areaForLock credits on ANY of three tests, so all three are recorded: a
+   * near miss on `coversFraction` reads very differently from a pocket whose
+   * centroid simply landed outside the box.
+   */
+  area: AreaVerdict | null;
   outcome: LockOutcome;
+}
+
+/** The three tests areaForLock runs, and which area (if any) won. */
+export interface AreaVerdict {
+  /** Kind of the area credited, or null when the lock paid no zone multiplier. */
+  creditedKind: string | null;
+  /** Test 1: the settled pocket centroid landed inside an area. */
+  centroidInside: boolean;
+  /** Test 2: every cell of the pocket sat inside an area. */
+  pocketWithin: boolean;
+  /**
+   * Test 3 input: the largest fraction of any single area's cells that the
+   * pocket covered. Credit needs this at or above AREA_COVER_FRACTION, so a
+   * value just under the bar is the signature of a cut that felt like it
+   * should have counted.
+   */
+  bestCoverFraction: number;
 }
 
 const RING_SIZE = 40;
