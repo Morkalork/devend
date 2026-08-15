@@ -11,9 +11,10 @@ import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObjec
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
+import { MapTuningModal } from './MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { BoardEntityInfoModal } from './BoardEntityInfoModal';
@@ -120,6 +121,8 @@ interface GameScreenProps {
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
+  /** Admin: unlocks the live map tuner in the in-game menu. */
+  adminMode?: boolean;
   /** Admin/Playground: draw a live speed label above each ball. */
   showBallSpeeds?: boolean;
   /** Admin/Playground: draw the frame-timing perf HUD (physics/render ms, FPS). */
@@ -181,6 +184,7 @@ export function GameScreen({
   capstone = null,
   activeLoadouts = [],
   fenceDurability = null,
+  adminMode = false,
   showBallSpeeds = false,
   showPerfOverlay = false,
   onGameStateChange,
@@ -429,6 +433,8 @@ export function GameScreen({
   const [entityInfo, setEntityInfo] = useState<BoardEntityHit | null>(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
+  /** Admin live map tuner (par / clear threshold), opened from the menu. */
+  const [tuningOpen, setTuningOpen] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   // "How to win" modal: shown at the start of every map (win conditions now vary
   // by map), and reopenable from the top-left menu. Dismissing it lets the board
@@ -883,6 +889,21 @@ export function GameScreen({
               <Target className="w-4 h-4" />
               {t('winConditions.menuItem')}
             </button>
+            {adminMode && (
+              <button
+                onClick={() => { setMenuOpen(false); setTuningOpen(true); }}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
+                style={{ color: accentColor, backgroundColor: 'transparent' }}
+                onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+                onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+                onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <SlidersHorizontal className="w-4 h-4" />
+                Tune map
+              </button>
+            )}
             <button
               onClick={() => { setMenuOpen(false); onRestart(); }}
               className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
@@ -965,6 +986,12 @@ export function GameScreen({
           />
         ) : null;
       })()}
+
+      {/* Admin live map tuner. `level` here is already the tuned view, so the
+          modal shows what is in play and compares against the authored map. */}
+      {tuningOpen && adminMode && (
+        <MapTuningModal level={level} onClose={() => setTuningOpen(false)} />
+      )}
 
       {/* Full-screen Specs panel: build, objectives, assignment, status,
           upgrades and the full attribute breakdown. */}

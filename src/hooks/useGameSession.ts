@@ -56,6 +56,7 @@ import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
 import { baseStartingLives, isInfiniteLivesEnabled } from '@/lib/devFlags';
+import { hasAnyMapTuning } from '@/lib/mapTuning';
 
 const NORMAL_LIVES = 3;
 /**
@@ -723,10 +724,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
       setPendingDeathResult(null);
 
-      // Admin "Infinite lives" makes a run unrepresentative in exactly the way
-      // the ?level= jump does, so it gets the same treatment: play it, but never
-      // let highscores / Employee of the Month / Records learn from it.
-      if (isInfiniteLivesEnabled()) recordEligibleRef.current = false;
+      // Admin "Infinite lives" and live map tuning both make a run
+      // unrepresentative in exactly the way the ?level= jump does, so they get
+      // the same treatment: play it, but never let highscores / Employee of the
+      // Month / Records learn from it.
+      if (isInfiniteLivesEnabled() || hasAnyMapTuning()) recordEligibleRef.current = false;
 
       if (forceLevel !== undefined) {
         setLevelIndex(forceLevel - 1);

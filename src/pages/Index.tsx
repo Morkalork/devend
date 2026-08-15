@@ -273,6 +273,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 key={`game-${session.gameInstanceKey}`}
                 backRef={gameBackRef}
                 level={session.currentLevel}
+                adminMode={adminUnlocked}
                 levelNumber={session.currentLevelIndex + 1}
                 totalLevels={session.totalLevels}
                 totalScore={session.totalScore}

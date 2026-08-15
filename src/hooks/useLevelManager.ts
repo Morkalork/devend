@@ -9,7 +9,8 @@
  * (onboardingMap.ts), an empty board that teaches the loop once and is then
  * never seen again.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useSyncExternalStore } from 'react';
+import { applyMapTuning, mapTuningVersion, resetMapTuningBaselines, subscribeMapTuning } from '@/lib/mapTuning';
 import yaml from 'js-yaml';
 import { LevelConfig, LevelData, LevelEntity } from '@/types/level';
 import { getRunRng, getRunSeedText } from '@/lib/runRng';
@@ -162,6 +163,9 @@ export function useLevelManager() {
       }
 
       warnOnPayCurveRegressions(validLevels);
+      // Fresh level objects: re-capture the authored baselines the tuner
+      // restores from, so an edited map.yml is picked up rather than shadowed.
+      resetMapTuningBaselines();
       const sequence = buildLevelSequence(validLevels);
 
       setState({
@@ -237,7 +241,19 @@ export function useLevelManager() {
     });
   }, []);
 
-  const currentLevel = state.levelSequence[state.currentLevelIndex] || null;
+  // Admin live tuning: overlay any per-map overrides onto the level the game
+  // actually plays. Memoised on the tuning version so an untuned run keeps the
+  // exact same level object it always had (a new identity here would tear down
+  // and re-init the running game on every render).
+  const tuningVersion = useSyncExternalStore(
+    subscribeMapTuning, mapTuningVersion, mapTuningVersion,
+  );
+  const rawLevel = state.levelSequence[state.currentLevelIndex] || null;
+  const currentLevel = useMemo(
+    () => applyMapTuning(rawLevel),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rawLevel, tuningVersion],
+  );
   const totalLevels = state.levelSequence.length;
   const isLastLevel = state.currentLevelIndex >= state.levelSequence.length - 1;
 
