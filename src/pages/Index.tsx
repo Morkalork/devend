@@ -27,6 +27,7 @@ import { CapstoneDraftScreen } from '@/components/game/CapstoneDraftScreen';
 import { TierDraftScreen } from '@/components/game/TierDraftScreen';
 import { AssignmentSummaryScreen } from '@/components/game/AssignmentSummaryScreen';
 import { RunDraftScreen } from '@/components/game/RunDraftScreen';
+import { TenureDraftScreen } from '@/components/game/TenureDraftScreen';
 import { ContinuePrompt } from '@/components/game/ContinuePrompt';
 import { AscensionDraftScreen } from '@/components/game/AscensionDraftScreen';
 import { CertificateStore } from '@/components/game/CertificateStore';
@@ -173,7 +174,10 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
 
   const SCREEN_ORDER: Record<string, number> = {
     welcome: 0, tutorial: 1, options: 1, achievements: 1, loadouts: 1, hallOfFame: 1,
-    game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3, ascensionDraft: 3, result: 4,
+    // tenureDraft sits just before runDraft: it is picked first so a free
+    // upgrade chain can steer the loadout choice.
+    tenureDraft: 2, game: 2, upgradeShop: 3, certificateStore: 3, runDraft: 3,
+    ascensionDraft: 3, result: 4,
   };
   const prevScreenRef = useRef(navigation.currentScreen);
   const transitionDirRef = useRef(1);
@@ -317,6 +321,14 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
                 introAssemble={session.introAssemblePending}
+              />
+            )}
+            {navigation.currentScreen === 'tenureDraft' && session.pendingTenure && (
+              <TenureDraftScreen
+                offers={session.pendingTenure.offers}
+                earnedAtLevel={session.pendingTenure.earnedAtLevel}
+                onConfirm={session.handleTenurePicked}
+                accentColor={accentHex}
               />
             )}
             {navigation.currentScreen === 'runDraft' && (

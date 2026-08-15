@@ -732,6 +732,13 @@
     "skipButton": "Skip (no loadout)",
     "noLoadouts": "No loadouts available."
   },
+  "tenure": {
+    "title": "Tenure",
+    "subtitle": "You reached level {{level}} last run. Your tenure carries over.",
+    "pickHint": "Pick one chain. It is yours from level 1, already paid for.",
+    "confirmButton": "Take It",
+    "pickToStart": "Pick an Upgrade"
+  },
   "buildRecap": {
     "heading": "Run Recap",
     "buildLine": "{{name}} build: {{title}}",

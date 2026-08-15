@@ -30,6 +30,14 @@ export interface MetaProgressionStats {
   totalLivesLost: number;
   deepestAscension: number;
   pushBonusesBanked: number;
+  /**
+   * Levels reached in the previous ENDED run (died or finished), which decides
+   * the next run's Tenure (issue #75, src/lib/tenure.ts). Unlike
+   * highestLevelReached this is NOT a high-water mark: it goes down after a
+   * short run, which is what keeps the reward re-earnable rather than a
+   * permanent unlock. Abandoning a run does not write it.
+   */
+  lastRunDepth: number;
 }
 
 /**
@@ -79,6 +87,7 @@ export const DEFAULT_META_STATS: MetaProgressionStats = {
   totalLivesLost: 0,
   deepestAscension: 0,
   pushBonusesBanked: 0,
+  lastRunDepth: 0,
 };
 
 export const META_STATS_STORAGE_KEY = 'jezzball_meta_stats';

@@ -717,6 +717,13 @@
     "skipButton": "Saltar (sin equipamiento)",
     "noLoadouts": "No hay equipamientos disponibles."
   },
+  "tenure": {
+    "title": "Antigüedad",
+    "subtitle": "Llegaste al nivel {{level}} en la partida anterior. Tu antigüedad se conserva.",
+    "pickHint": "Elige una cadena. Es tuya desde el nivel 1, ya pagada.",
+    "confirmButton": "Aceptar",
+    "pickToStart": "Elige una Mejora"
+  },
   "buildRecap": {
     "heading": "Resumen de la partida",
     "buildLine": "Build {{name}}: {{title}}",

@@ -79,6 +79,11 @@ export function useScreenNavigation() {
     setCurrentScreen('options');
   }, []);
 
+  /** Tenure pick (issue #75): shown before the loadout draft. */
+  const goToTenureDraft = useCallback(() => {
+    setCurrentScreen('tenureDraft');
+  }, []);
+
   const goToAdmin = useCallback(() => {
     setCurrentScreen('admin');
   }, []);
@@ -120,6 +125,7 @@ export function useScreenNavigation() {
     goToOptions,
     goToAchievements,
     goToHallOfFame,
+    goToTenureDraft,
     goToAdmin,
     goToMapBuilder,
     goToAnimationTest,

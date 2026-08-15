@@ -217,6 +217,12 @@ export function useMetaProgression() {
         newStats.pushBonusesBanked = prev.pushBonusesBanked + updates.pushBonusesBanked;
       }
 
+      // REPLACED, not maxed or summed: the Tenure reward is meant to decay
+      // when a run ends short, so this must be able to go down.
+      if (updates.lastRunDepth !== undefined) {
+        newStats.lastRunDepth = updates.lastRunDepth;
+      }
+
       saveMetaStats(newStats);
       return newStats;
     });
@@ -227,6 +233,15 @@ export function useMetaProgression() {
    */
   const recordLevelReached = useCallback((level: number) => {
     updateStats({ highestLevelReached: level });
+  }, [updateStats]);
+
+  /**
+   * Record how deep a run got, at the moment it ENDED (issue #75). Only called
+   * from the single run-end path, so quitting to the menu leaves the previous
+   * result standing instead of zeroing the next run's Tenure.
+   */
+  const recordRunEnded = useCallback((levelsReached: number) => {
+    updateStats({ lastRunDepth: levelsReached });
   }, [updateStats]);
 
   /**
@@ -408,6 +423,7 @@ export function useMetaProgression() {
     unlockedFeatureIds,
     updateStats,
     recordLevelReached,
+    recordRunEnded,
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,

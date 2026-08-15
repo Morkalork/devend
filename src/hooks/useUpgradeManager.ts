@@ -50,6 +50,17 @@ function detectPrerequisiteCycle(upgrades: UpgradeConfig[]): void {
   }
 }
 
+/**
+ * The catalogue as of the last successful load, readable synchronously right
+ * after `await loadUpgrades()` (see the note at the setState below).
+ */
+let loadedUpgrades: UpgradeConfig[] = [];
+
+/** The loaded upgrade catalogue, or [] before the first successful load. */
+export function getLoadedUpgrades(): UpgradeConfig[] {
+  return loadedUpgrades;
+}
+
 export function useUpgradeManager() {
   const [state, setState] = useState<UpgradeManagerState>({
     upgrades: [],
@@ -183,7 +194,13 @@ export function useUpgradeManager() {
         isLoading: false,
         error: null,
       });
-      
+      // Publish module-level as well (same pattern as setLivePricing above).
+      // `upgrades` is React state, so a caller that awaits loadUpgrades() and
+      // then reads it from its own closure still sees the PRE-load value: the
+      // re-render has not happened yet. The Tenure roll runs in exactly that
+      // position, and would silently offer nothing on the first run.
+      loadedUpgrades = data.upgrades;
+
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load upgrades';

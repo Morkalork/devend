@@ -18,7 +18,7 @@
  */
 import { useCallback, useState, useEffect, useRef, useMemo } from 'react';
 import { useLevelManager } from './useLevelManager';
-import { useUpgradeManager } from './useUpgradeManager';
+import { useUpgradeManager, getLoadedUpgrades } from './useUpgradeManager';
 import { useLoadoutManager } from './useLoadoutManager';
 import { useActiveModifiers, mergeBonuses, GameModifiers, MULTIPLICATIVE_KEYS, ModifierSource } from './useActiveModifiers';
 import { useTutorialManager } from './useTutorialManager';
@@ -57,6 +57,7 @@ import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
 import { baseStartingLives, isInfiniteLivesEnabled } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
+import { TenureOffer, tenureSteps, rollTenureOffers } from '@/lib/tenure';
 
 const NORMAL_LIVES = 3;
 /**
@@ -172,6 +173,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Issue #60: a tier-draft reward owed by the just-finished assignment, shown
   // as a 1-of-3 upgrade pick before the next assignment draft. null = none owed.
   const [pendingTierDraft, setPendingTierDraft] = useState<{ tier: UpgradeTier; offers: UpgradeConfig[] } | null>(null);
+  /**
+   * Tenure (issue #75): offers rolled at run start from the PREVIOUS ended
+   * run's depth, plus whether the loadout draft still follows once picked.
+   * Rolled fresh per run, so a retry is a new draw rather than the same cards.
+   */
+  const [pendingTenure, setPendingTenure] =
+    useState<{ offers: TenureOffer[]; earnedAtLevel: number; thenDraftLoadout: boolean } | null>(null);
   // Issue #63: when the "Assignment Complete" summary is showing, whether its
   // Continue should route into the run finale (ascension) rather than the next
   // block's drafts. Set for the final block; cleared for mid-run boundaries.
@@ -328,6 +336,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     encounteredBallTypeIds,
     archetypeBests,
     recordLevelReached,
+    recordRunEnded,
     recordFencesDrawn,
     recordPerfectLevel,
     recordLivesLost,
@@ -616,6 +625,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setBlockResults([]);
     setAssignmentRewardMods({});
     setPendingTierDraft(null);
+    setPendingTenure(null);
     setActiveDoor(null);
     setCapstone(null);
     setPendingLevelScore(null);
@@ -753,10 +763,25 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // A fresh run drafts a loadout first, but the loadout system only appears
       // once it's been introduced (after the first win). The first run and the
       // ?level= debug path go straight into the game.
-      if (skipDraft || !loadoutsIntroduced) nav.startGame();
-      else nav.goToRunDraft();
+      const thenDraftLoadout = !(skipDraft || !loadoutsIntroduced);
+
+      // Tenure (issue #75): the previous ended run's depth buys a free
+      // upgrade chain. It is picked BEFORE the loadout draft, so a free lock
+      // chain can steer which loadout you take. Seeded Daily runs are excluded:
+      // a per-player head start would make one shared seed incomparable.
+      const tenureDepth = metaStats.lastRunDepth;
+      const offers = tenureSteps(tenureDepth) > 0
+        // getLoadedUpgrades(), not the `upgrades` state: this closure was
+        // created before loadUpgrades() ran, so the state read here is stale.
+        ? rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random)
+        : [];
+      if (offers.length > 0) {
+        setPendingTenure({ offers, earnedAtLevel: tenureDepth, thenDraftLoadout });
+        nav.goToTenureDraft();
+      } else if (thenDraftLoadout) nav.goToRunDraft();
+      else nav.startGame();
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, nav.goToTenureDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, metaStats.lastRunDepth]);
 
   /**
    * Daily Stand-up (HIGHSCORES.md Phase D): start today's seeded run. The seed
@@ -949,6 +974,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       ascensionDepth,
       daily: dailyKeyRef.current !== null,
     });
+    // Tenure (issue #75): the depth this run ENDED at decides the next
+    // run's free upgrade. Recorded here and nowhere else, so quitting to the
+    // menu leaves the last real result standing.
+    recordRunEnded(currentLevelIndex + 1);
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
     setLastRunSummary({ levelsCompleted, hoursAwarded });
     captureRunRecap(totalScore);
@@ -960,7 +989,28 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       ascensionDepth: ascensionDepth > 0 ? ascensionDepth : undefined,
       loadoutNames: ascensionDepth > 0 ? activeLoadouts.map(l => l.name) : undefined,
     });
-  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun]);
+  }, [nav.endGame, totalScore, finalizeRun, ascensionDepth, runLevelsCompleted, activeModifiers.extraCertificateHours, activeLoadouts, captureRunRecap, fileRunOnLedger, clearRun, recordRunEnded, currentLevelIndex]);
+
+  /**
+   * Tenure pick confirmed (issue #75): grant every upgrade in the chosen
+   * chain, then continue into the loadout draft (or straight into the game when
+   * loadouts are not in play yet).
+   *
+   * The WHOLE chain is granted, not just its top tier, because upgrade
+   * modifiers compound: handing over only the Principal would make the
+   * 30-level reward weaker than the 20-level one.
+   */
+  const handleTenurePicked = useCallback((headId: string) => {
+    const pending = pendingTenure;
+    const offer = pending?.offers.find(o => o.headId === headId) ?? null;
+    if (offer) {
+      const granted = offer.upgrades.map(u => u.id);
+      setOwnedUpgradeIds(prev => [...prev, ...granted.filter(id => !prev.includes(id))]);
+    }
+    setPendingTenure(null);
+    if (pending?.thenDraftLoadout) nav.goToRunDraft();
+    else nav.startGame();
+  }, [pendingTenure, nav.goToRunDraft, nav.startGame]);
 
   const handleGameEnd = useCallback((result: GameResult) => {
     if (!result.isWin) {
@@ -1089,6 +1139,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       totalLivesLost: metaStats.totalLivesLost,
       deepestAscension: Math.max(metaStats.deepestAscension, ascensionDepth),
       pushBonusesBanked: metaStats.pushBonusesBanked + (bankedPush ? 1 : 0),
+      // Only written when a run ENDS, so it is carried through unchanged here.
+      lastRunDepth: metaStats.lastRunDepth,
     };
     checkAndCompleteAchievements(projectedStats);
 
@@ -1691,6 +1743,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [handleStartGame]);
 
   return {
+    // Tenure (issue #75)
+    pendingTenure,
+    handleTenurePicked,
     // Level state
     currentLevel,
     currentLevelIndex,

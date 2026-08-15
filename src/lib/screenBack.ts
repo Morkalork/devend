@@ -39,6 +39,7 @@ export function backActionForScreen(screen: GameScreen): BackAction {
     // Mid-run flow screens have no meaningful "back" (going back would skip the
     // forced progression), so we just swallow the gesture to prevent an exit.
     case 'upgradeShop':
+    case 'tenureDraft':
     case 'doorDraft':
     case 'capstoneDraft':
     case 'runDraft':
