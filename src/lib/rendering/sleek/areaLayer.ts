@@ -25,8 +25,32 @@ import { areaStyle, isGateArea } from "@/lib/coloredAreas";
 import { dashedLine } from "./dashedLine";
 import { ambientAt, type LightScope } from "./light";
 import { snapRect, hairline, type Pt } from "./pixelGrid";
+import { mix } from "./palette";
 
 type W2S = (x: number, y: number) => Pt;
+
+/**
+ * How far a DORMANT zone is drained toward grey (0 = full chroma, 1 = grey).
+ *
+ * Brightness alone was not enough to tell activated from dormant: reported
+ * twice, and the second time with the pulse already in. Dimming makes a zone
+ * quieter, but a quiet pink box and a bright pink box are still the same box,
+ * and a player judging one in isolation has nothing to compare against. Draining
+ * the COLOUR out gives the two states different hues, so activation reads as the
+ * zone coming to life rather than merely turning up.
+ *
+ * Gates drain less than bonus pockets: a gate is a required win condition, so it
+ * has to stay legible even while dormant.
+ */
+const DORMANT_DRAIN_BONUS = 0.72;
+const DORMANT_DRAIN_GATE = 0.4;
+/** What a drained zone mixes toward: the board's dead slate, not pure grey. */
+const DORMANT_GREY = 0x55605a;
+
+/** The colour a zone is drawn in while dormant. Pure, so it can be tested. */
+export function dormantColor(color: number, gate: boolean): number {
+  return mix(color, DORMANT_GREY, gate ? DORMANT_DRAIN_GATE : DORMANT_DRAIN_BONUS);
+}
 
 /** Activation flare length, and the steady breath's cycle, in ms. */
 export const FLARE_MS = 1100;
@@ -99,6 +123,9 @@ export class AreaLayer {
       const gate = isGateArea(a);
       const lit = !!a.satisfied;
       const color = Number.parseInt(st.color.replace("#", ""), 16);
+      // A dormant zone is drawn drained and faint; a live one keeps full chroma
+      // and gets the pulse on top. The gap between the two is the whole point.
+      const inkColor = lit ? color : dormantColor(color, gate);
 
       const tl = w2s(a.x, a.y);
       const br = w2s(a.x + a.width, a.y + a.height);
@@ -109,9 +136,10 @@ export class AreaLayer {
       const amb = ambientAt(light, r.x + r.width / 2, r.y + r.height / 2);
       // A lit zone deliberately paints LIGHTER than it used to: the breathing
       // wash from drawPulse sits on top of this every frame, and the two
-      // stacked at the old weight read as a solid block.
-      const fill = (lit ? 0.12 : gate ? 0.11 : 0.06) * (0.55 + amb * 0.45);
-      this.g.rect(r.x, r.y, r.width, r.height).fill({ color, alpha: fill });
+      // stacked at the old weight read as a solid block. A dormant one paints
+      // fainter still, so the contrast lives in the gap between them.
+      const fill = (lit ? 0.12 : gate ? 0.07 : 0.03) * (0.55 + amb * 0.45);
+      this.g.rect(r.x, r.y, r.width, r.height).fill({ color: inkColor, alpha: fill });
 
       if (lit) {
         // Occupied: solid and bright, unmistakably "this one is done".
@@ -129,15 +157,17 @@ export class AreaLayer {
         dashedLine(this.g, x0, y1, x0, y0, dash, gap);
         this.g.stroke({
           width: hairline(),
-          color,
-          alpha: (gate ? 0.8 : 0.5) * light.level,
+          color: inkColor,
+          alpha: (gate ? 0.55 : 0.28) * light.level,
         });
       }
 
       const cx = r.x + r.width / 2;
       const cy = r.y + r.height / 2;
       const labelPx = Math.max(13, Math.min(r.width, r.height) * 0.2);
-      const alpha = gate ? 1 : 0.7;
+      // The label carries the state too: a dormant bonus zone reads as a faded
+      // stencil, a live one as a lit sign.
+      const alpha = lit ? 1 : gate ? 0.7 : 0.4;
 
       const kind = new Text({
         text: st.label,
@@ -145,7 +175,7 @@ export class AreaLayer {
           fontFamily: "monospace",
           fontWeight: "bold",
           fontSize: labelPx,
-          fill: color,
+          fill: inkColor,
         }),
       });
       kind.anchor.set(0.5, 1);
@@ -158,7 +188,7 @@ export class AreaLayer {
           fontFamily: "monospace",
           fontWeight: "bold",
           fontSize: labelPx * 0.6,
-          fill: color,
+          fill: inkColor,
         }),
       });
       mult.anchor.set(0.5, 0);

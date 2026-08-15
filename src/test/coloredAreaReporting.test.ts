@@ -34,7 +34,7 @@ import {
   getLockDecisions, setLockDebugEnabled, clearLockDecisions,
 } from "@/lib/lockDiagnostics";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
-import { zonePulse, FLARE_MS, BREATH_MS } from "@/lib/rendering/sleek/areaLayer";
+import { zonePulse, dormantColor, FLARE_MS, BREATH_MS } from "@/lib/rendering/sleek/areaLayer";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { CanvasGameState } from "@/types/gameState";
 import type { GrowingWall, Vector2 } from "@/types/game";
@@ -284,5 +284,54 @@ describe("the activation pulse", () => {
 
   it("treats a negative age as the moment of activation", () => {
     expect(zonePulse(-50).flare).toBe(1); // clock skew must not blank the pulse
+  });
+});
+
+/**
+ * Dormant vs live appearance. Reported three times running ("still can't tell",
+ * "not different enough"), each time after a change that made the LIVE state
+ * louder. The lesson encoded here is that loudness alone does not work: a
+ * player looking at one zone has nothing to compare it against, so the dormant
+ * state has to be visibly impoverished in its own right.
+ */
+describe("a dormant zone reads as dormant", () => {
+  const KINDS = ["var", "let", "const"] as const;
+  const packed = (kind: typeof KINDS[number]) =>
+    Number.parseInt(areaStyle(kind).color.replace("#", ""), 16);
+  /** Chroma, the thing "bleak" actually refers to. */
+  const saturation = (c: number) => {
+    const r = ((c >> 16) & 255) / 255, g = ((c >> 8) & 255) / 255, b = (c & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    return mx === 0 ? 0 : (mx - mn) / mx;
+  };
+
+  it("drains the colour out of every kind, not just darkens it", () => {
+    for (const kind of KINDS) {
+      const live = packed(kind);
+      const dormant = dormantColor(live, false);
+      expect(saturation(dormant)).toBeLessThan(saturation(live) * 0.75);
+    }
+  });
+
+  it("keeps a dormant gate more legible than a dormant bonus pocket", () => {
+    // A gate is a required win condition: it must stay readable while unused.
+    for (const kind of KINDS) {
+      const live = packed(kind);
+      expect(saturation(dormantColor(live, true)))
+        .toBeGreaterThan(saturation(dormantColor(live, false)));
+    }
+  });
+
+  it("never drains a zone all the way to grey, so the kind is still identifiable", () => {
+    for (const kind of KINDS) {
+      expect(saturation(dormantColor(packed(kind), false))).toBeGreaterThan(0.05);
+    }
+  });
+
+  it("leaves a live zone at full chroma", () => {
+    for (const kind of KINDS) {
+      const live = packed(kind);
+      expect(dormantColor(live, false)).not.toBe(live);
+    }
   });
 });
