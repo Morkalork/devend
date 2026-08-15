@@ -13,6 +13,7 @@
  */
 import { CanvasGameState } from "@/types/gameState";
 import { getAbility } from "@/lib/abilities";
+import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
 import {
   CellState,
@@ -20,6 +21,7 @@ import {
   getRemainingPercent,
   captureUnreachableCells,
   rasterizeCutToGrid,
+  floodRemovedEnclosure,
 } from "@/lib/spaceGrid";
 import { rebuildRegionsKeepAll, spawnFenceShatter, pushReopenedSamplePoints } from "@/lib/physics/destructibles";
 import { traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
@@ -95,8 +97,21 @@ const MAX_FENCE_SHATTERS = 40;
  */
 const OUTLINE_TOLERANCE_CELLS = 1;
 
-/** How close a redrawn edge may sit to an existing wall before it is dropped. */
-const EXISTING_WALL_CELLS = 1.2;
+/**
+ * How close a redrawn edge may sit to an existing wall before it is dropped.
+ *
+ * Deliberately under one cell, and it can be, because the outline is snapped to
+ * the walls first: an edge that really does run along the board edge is pulled
+ * flush onto it and comes out at a distance of about zero, so it does not need
+ * a wide net to catch it.
+ *
+ * Widening this is a trap. The board's playable area is inset from its frame,
+ * so a fence drawn near the edge sits only a cell or so from the board wall; at
+ * two cells the check starts swallowing real pocket edges and leaves the pocket
+ * open on that side. Measured: it drops the fixture's left-hand wall, which is
+ * 19 units from a board edge.
+ */
+const EXISTING_WALL_CELLS = 0.9;
 
 /** Below this a redrawn edge is skipped: a sliver of wall, not an edge. */
 const MIN_EDGE_CELLS = 0.8;
@@ -198,13 +213,13 @@ function sealWallsFor(
       if (Math.hypot(end.x - start.x, end.y - start.y) < minEdge) continue;
 
       // Already walled: the pocket runs along the board edge or an obstacle.
-      // Two probes, so an edge merely CROSSING a wall is not mistaken for one
-      // lying along it.
-      const mid = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
-      const quarter = { x: start.x * 0.75 + end.x * 0.25, y: start.y * 0.75 + end.y * 0.25 };
+      // Probed at three points, so an edge merely CROSSING a wall is not
+      // mistaken for one lying along it, and a long edge cannot qualify on the
+      // strength of its middle alone.
+      const at = (t: number) => ({ x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t });
+      const probes = [at(0.25), at(0.5), at(0.75)];
       const covered = coveredBy.some(w =>
-        pointToSegmentDistance(mid, w.start, w.end) < nearExisting
-        && pointToSegmentDistance(quarter, w.start, w.end) < nearExisting);
+        probes.every(pt => pointToSegmentDistance(pt, w.start, w.end) < nearExisting));
       if (covered) continue;
 
       out.push({
@@ -263,6 +278,44 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
     for (const idx of a.cellIndices) if (stillCaptured(idx)) locked.add(idx);
   }
 
+  //    Then flood that across still-captured ground to the walls STANDING NOW,
+  //    which is what turns a set of remembered cells into the actual pocket.
+  //    Neither record covers the chamber: an assimilation holds the ball's
+  //    region as it was, and lockCaptured is painted from a capture diff, so
+  //    both miss the sealing fence's own raster band and any cells captured in
+  //    an earlier pass (the acute tip of a wedge a ball never fit into). Left
+  //    unflooded, those cells stay captured but untinted and unwalled: a dark
+  //    fringe inside the pocket, which is exactly the "artifacts here and
+  //    there". applyCut floods for the same reason when it paints the tint.
+  if (locked.size > 0) {
+    const seeds = [...locked];
+    let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+    for (const idx of seeds) {
+      const r = (idx / grid.width) | 0;
+      const c = idx % grid.width;
+      if (c < minCol) minCol = c;
+      if (c > maxCol) maxCol = c;
+      if (r < minRow) minRow = r;
+      if (r > maxRow) maxRow = r;
+    }
+    // Smallest ball still in play, so the flood is only blocked by a slit no
+    // ball could have passed. A wider gate would wall off gaps a small ball
+    // legitimately used, and under-fill the pocket again.
+    const liveRadii = game.balls
+      .filter(b => b.state !== "won" && b.state !== "dormant")
+      .map(b => b.radius);
+    const pad = 6;
+    for (const idx of floodRemovedEnclosure(grid, seeds, game.walls, {
+      bounds: {
+        minCol: minCol - pad, maxCol: maxCol + pad,
+        minRow: minRow - pad, maxRow: maxRow + pad,
+      },
+      minThroatWidth: 2 * (liveRadii.length > 0 ? Math.min(...liveRadii) : BASE_BALL_RADIUS),
+    })) {
+      locked.add(idx);
+    }
+  }
+
   // 2. Every player fence goes, including the outlines a previous press drew.
   //    Snapshot the walls first: the redraw projects each pocket's outline onto
   //    the lines that sealed it, so it needs them before they are gone.
@@ -289,6 +342,26 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
   // 3. Redraw each pocket's outline and stand it back up.
   const seals = sealWallsFor(grid, locked, now, snapTo, game.walls);
   game.walls = [...game.walls, ...seals];
+
+  // 3b. Make grid.lockCaptured agree with what was just drawn.
+  //
+  //     The two records of a lock disagree by design. applyCut only paints
+  //     lockCaptured when the lock CAPTURED something, so a ball sealed into
+  //     ground that was already captured is recorded in `assimilations` alone,
+  //     and the tint for it never existed. Meanwhile neither record is ever
+  //     cleaned, so both accumulate pockets that have since reopened.
+  //
+  //     The outline drawn above is the union, filtered to ground that is really
+  //     still captured, which makes it the most accurate statement of where the
+  //     locks are. Writing it back leaves the tint, the outline and the shadow
+  //     mask reading the same thing, instead of three views disagreeing about
+  //     which pockets exist.
+  if (lockCap) {
+    for (let i = 0; i < lockCap.length; i++) {
+      if (locked.has(i)) lockCap[i] = Math.max(1, lockCap[i]); // keep the intensity
+      else lockCap[i] = 0;                                     // a pocket that is gone
+    }
+  }
 
   // 4. Reopen every REMOVED cell that is inside the board, not inside a solid
   //    obstacle/mirror, and not preserved.

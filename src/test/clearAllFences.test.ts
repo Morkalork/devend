@@ -281,6 +281,63 @@ describe("Clear All Fences (#38)", () => {
     }
   });
 
+  /**
+   * The lock TINT and the redrawn outline must describe the same pockets.
+   *
+   * They came from different records and disagreed both ways. applyCut only
+   * paints grid.lockCaptured when a lock CAPTURES something, so a ball sealed
+   * into ground that was already captured is recorded in `assimilations` alone
+   * and never gets a tint; and neither record is ever cleaned, so both keep
+   * pockets that have since reopened. Reported as "the lock tint is gone" on a
+   * board that still had the walls drawn round it.
+   */
+  it("leaves a tint behind every outline it draws", () => {
+    const game = makeGame();
+    sealPocket(game);
+
+    // A pocket the tint never knew about: recorded by the won ball's
+    // assimilation, absent from lockCaptured.
+    const grid = game.spaceGrid!;
+    const orphan: number[] = [];
+    for (let i = 0; i < grid.lockCaptured!.length; i++) {
+      if (grid.lockCaptured![i] >= 1) { orphan.push(i); grid.lockCaptured![i] = 0; }
+    }
+    expect(orphan.length).toBeGreaterThan(0);
+    expect(game.assimilations.size).toBeGreaterThan(0);
+
+    clear(game);
+
+    // Every cell still held as locked ground carries a tint again.
+    for (const idx of orphan) {
+      if (grid.cells[idx] !== CellState.REMOVED) continue;
+      expect(grid.lockCaptured![idx], `cell ${idx} is walled but not tinted`)
+        .toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it("clears the tint of a pocket that no longer exists", () => {
+    const game = makeGame();
+    sealPocket(game);
+
+    const grid = game.spaceGrid!;
+    const stale: number[] = [];
+    for (let row = 40; row < 46; row++) {
+      for (let col = 40; col < 46; col++) {
+        const idx = row * grid.width + col;
+        if (grid.cells[idx] !== CellState.ACTIVE) continue;
+        grid.lockCaptured![idx] = 1;
+        stale.push(idx);
+      }
+    }
+    expect(stale.length).toBeGreaterThan(0);
+
+    clear(game);
+
+    // The board layer hides a stale tint by painting live space over it, so it
+    // was invisible rather than absent. It is now actually gone.
+    for (const idx of stale) expect(grid.lockCaptured![idx]).toBe(0);
+  });
+
   it("leaves board and obstacle walls alone", () => {
     const game = makeGame();
     sealPocket(game);
