@@ -394,6 +394,61 @@ describe("Clear All Fences (#38)", () => {
     }
   });
 
+  /**
+   * The pocket may be nudged out to meet its own outline, and no further.
+   *
+   * The touch-up that closes the gap between a straightened outline and the
+   * cells it wraps used to run as an unbounded flood, trusting the outline to
+   * be a closed ring and a bounding box to catch it if it was not. It was not:
+   * one gap and it walked out through it, taking everything captured inside
+   * that box and merging two separate locks into a single blob across half the
+   * board. It is now capped by DISTANCE, so the worst a hole in the outline can
+   * cost is a couple of cells of fringe.
+   *
+   * Measured on this fixture the fill adds five cells to a pocket of 158, which
+   * is what closing a sliver should look like.
+   */
+  it("grows a pocket by a fringe, never by a spread", () => {
+    for (const build of [sealPocket, sealCornerPocket]) {
+      const game = makeGame();
+      build(game);
+      const grid = game.spaceGrid!;
+
+      const before = new Set<number>();
+      for (let i = 0; i < grid.lockCaptured!.length; i++) {
+        if (grid.lockCaptured![i] >= 1) before.add(i);
+      }
+      expect(before.size).toBeGreaterThan(0);
+
+      clear(game);
+
+      const after: number[] = [];
+      for (let i = 0; i < grid.lockCaptured!.length; i++) {
+        if (grid.lockCaptured![i] >= 1) after.push(i);
+      }
+
+      // Every cell that became locked is a neighbour of one that already was:
+      // a dilation, not a journey.
+      const reach = 3;
+      for (const idx of after) {
+        if (before.has(idx)) continue;
+        const row = (idx / grid.width) | 0;
+        const col = idx % grid.width;
+        let near = false;
+        for (let r = row - reach; r <= row + reach && !near; r++) {
+          for (let c = col - reach; c <= col + reach; c++) {
+            if (r < 0 || c < 0 || r >= grid.height || c >= grid.width) continue;
+            if (before.has(r * grid.width + c)) { near = true; break; }
+          }
+        }
+        expect(near, `cell ${idx} became locked ${reach}+ cells from any pocket`).toBe(true);
+      }
+
+      // ...and the pocket as a whole did not balloon.
+      expect(after.length).toBeLessThan(before.size * 1.5);
+    }
+  });
+
   it("leaves board and obstacle walls alone", () => {
     const game = makeGame();
     sealPocket(game);

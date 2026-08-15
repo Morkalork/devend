@@ -129,6 +129,17 @@ const MIN_EDGE_CELLS = 0.8;
  */
 const REACH_BOUNDARY_CELLS = 3;
 
+/**
+ * How far the pocket may be grown to meet its own outline, in cells.
+ *
+ * The gap between a straightened outline and the cells it wraps is one or two
+ * cells wide, so the fill never needs to reach further. Capping the DISTANCE
+ * rather than trusting the ring to be closed is what keeps a cosmetic touch-up
+ * from being able to swallow the board: the worst a gap in the outline can cost
+ * is a fringe this deep.
+ */
+const SLIVER_DEPTH_CELLS = 2;
+
 /** Prefix marking a wall this module drew around a pocket. */
 const SEAL_PREFIX = "lockseal-";
 
@@ -431,13 +442,23 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
   const seals = sealWallsFor(grid, locked, now, snapTo, game.walls);
   game.walls = [...game.walls, ...seals];
 
-  // 3b. Anything still captured INSIDE the finished outline is part of the
-  //     pocket too. The outline is straightened and snapped, so it does not
-  //     follow the cell boundary exactly; at an acute tip it bows slightly wide
-  //     of the locked cells, and the captured sliver left between the two would
-  //     otherwise be reopened and show as live space biting into the pocket.
-  //     Bounded to the pocket's own box so that a ring with a gap in it can
-  //     never flood the board.
+  // 3b. Close the gap between the outline and the cells it wraps.
+  //
+  //     The outline is straightened and snapped, so it does not follow the cell
+  //     boundary exactly; at an acute tip it bows slightly wide of the locked
+  //     cells, and the captured sliver between the two would be reopened and
+  //     show as live space biting into the pocket.
+  //
+  //     Strictly a DILATION, capped at SLIVER_DEPTH_CELLS. The first version of
+  //     this had no depth cap and trusted the seal ring plus a bounding box to
+  //     contain it; one gap in the ring and it walked out and swallowed
+  //     everything captured inside the box, merging two separate pockets into
+  //     one blob across half the board. A sliver is one or two cells wide by
+  //     construction, so the fill never needs to travel further than that, and
+  //     capping the DISTANCE means the worst a gap can now cost is a two-cell
+  //     fringe rather than the board. The throat gate and the box stay as well:
+  //     three independent limits, because this one is only cosmetic and must
+  //     never be able to do real damage.
   if (locked.size > 0 && seals.length > 0) {
     const seeds = [...locked];
     let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
@@ -449,12 +470,17 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
       if (r < minRow) minRow = r;
       if (r > maxRow) maxRow = r;
     }
-    const pad = 2;
+    const liveRadii = game.balls
+      .filter(b => b.state !== "won" && b.state !== "dormant")
+      .map(b => b.radius);
+    const pad = SLIVER_DEPTH_CELLS;
     for (const idx of floodRemovedEnclosure(grid, seeds, game.walls, {
+      maxDepth: SLIVER_DEPTH_CELLS,
       bounds: {
         minCol: minCol - pad, maxCol: maxCol + pad,
         minRow: minRow - pad, maxRow: maxRow + pad,
       },
+      minThroatWidth: 2 * (liveRadii.length > 0 ? Math.min(...liveRadii) : BASE_BALL_RADIUS),
     })) {
       locked.add(idx);
     }
