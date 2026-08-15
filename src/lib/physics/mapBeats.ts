@@ -19,11 +19,34 @@ import { spawnAdds } from "@/lib/physics/bossPhases";
 /** Default lead time (ms) for a beat's telegraph warning. */
 const DEFAULT_LEAD_MS = 1600;
 
+/**
+ * First level on which a beat may duplicate a ball.
+ *
+ * The add lands as a visible cell division: the ball stops, swells and buds a
+ * daughter cell that pinches off. That is the level-10 boss's signature move,
+ * so an ordinary map only borrows it once the boss has taught it. Before that
+ * the same event is just a ball becoming two for no stated reason, which is
+ * precisely how it was read on level 2.
+ */
+export const DUPLICATION_MIN_LEVEL = 11;
+
 /** One consequence of a beat, as an i18n key the banner can render. */
 export interface BeatEffectLine {
   key: string;
   /** Interpolation values, including `count` for plural selection. */
   values?: Record<string, number>;
+}
+
+/**
+ * How many balls this beat actually duplicates here, after the level gate.
+ *
+ * One function so the banner and the effect can never disagree: a beat whose
+ * duplication is gated out must not announce a ball that never arrives.
+ */
+export function beatSpawnCount(beat: MapBeat, levelNumber: number): number {
+  const wanted = beat.spawnAdds ?? 0;
+  if (wanted <= 0) return 0;
+  return levelNumber >= DUPLICATION_MIN_LEVEL ? wanted : 0;
 }
 
 /**
@@ -35,11 +58,10 @@ export interface BeatEffectLine {
  * so a beat added later says what it does without anyone remembering to write
  * the copy.
  */
-export function beatEffectLines(beat: MapBeat): BeatEffectLine[] {
+export function beatEffectLines(beat: MapBeat, levelNumber: number): BeatEffectLine[] {
   const lines: BeatEffectLine[] = [];
-  if (beat.spawnAdds && beat.spawnAdds > 0) {
-    lines.push({ key: "game.beatEffectBalls", values: { count: beat.spawnAdds } });
-  }
+  const adds = beatSpawnCount(beat, levelNumber);
+  if (adds > 0) lines.push({ key: "game.beatEffectBalls", values: { count: adds } });
   if (beat.speedSpike && beat.speedSpike > 0) {
     lines.push({ key: "game.beatEffectSpeed", values: { percent: Math.round(beat.speedSpike * 100) } });
   }
@@ -90,7 +112,7 @@ export function tickMapBeats(
       const warnByTime = beat.atSeconds != null && game.activePlaySeconds >= beat.atSeconds - leadSec;
       if (warnByTime || bySpace) {
         game.warnedBeats.push(beat.id);
-        onWarn?.(beat.announce, beatEffectLines(beat));
+        onWarn?.(beat.announce, beatEffectLines(beat, levelNumber));
       }
     }
 
@@ -120,12 +142,10 @@ export function tickMapBeats(
 }
 
 function applyBeat(game: CanvasGameState, beat: MapBeat, levelNumber: number): void {
-  if (beat.spawnAdds && beat.spawnAdds > 0) {
-    // bud=false: a beat's anchor is an ordinary ball the same size as the
-    // newcomer, so budding one off its rim reads as that ball duplicating
-    // itself rather than a new ball arriving. Bosses keep the budding.
-    spawnAdds(game, levelNumber, beat.spawnAdds, false);
-  }
+  // "mitosis": the anchor visibly divides, the level-10 boss's move. Gated to
+  // level 11+ by beatSpawnCount, so the boss teaches it first.
+  const adds = beatSpawnCount(beat, levelNumber);
+  if (adds > 0) spawnAdds(game, levelNumber, adds, "mitosis");
   if (beat.speedSpike && beat.speedSpike > 0) {
     game.beatSpeedMult = (game.beatSpeedMult ?? 1) * (1 + beat.speedSpike);
   }

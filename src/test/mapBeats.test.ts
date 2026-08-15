@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { tickMapBeats, beatEffectLines, type BeatEffectLine } from "@/lib/physics/mapBeats";
+import {
+  tickMapBeats, beatEffectLines, beatSpawnCount, DUPLICATION_MIN_LEVEL,
+  type BeatEffectLine,
+} from "@/lib/physics/mapBeats";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig, MapBeat } from "@/types/level";
 import { createSpaceGrid } from "@/lib/spaceGrid";
@@ -55,7 +58,7 @@ describe("tickMapBeats", () => {
   it("does not fire a space beat while the board is full (100% remaining)", () => {
     // spaceGrid null => remaining treated as 100.
     const g = makeGame({ activePlaySeconds: 999 });
-    tickMapBeats(g, level([{ id: "s1", atSpaceRemaining: 40, spawnAdds: 3 }]), 5);
+    tickMapBeats(g, level([{ id: "s1", atSpaceRemaining: 40, spawnAdds: 3 }]), 12);
     expect(g.firedBeats).toEqual([]);
   });
 
@@ -112,7 +115,7 @@ describe("tickMapBeats", () => {
   it("does not telegraph a beat without an announce label", () => {
     const g = makeGame({ activePlaySeconds: 24 });
     const warns: string[] = [];
-    tickMapBeats(g, level([{ id: "silent", atSeconds: 24, spawnAdds: 1 }]), 5, a => warns.push(a));
+    tickMapBeats(g, level([{ id: "silent", atSeconds: 24, spawnAdds: 1 }]), 12, a => warns.push(a));
     expect(warns).toEqual([]);
     expect(g.warnedBeats).toEqual([]);
   });
@@ -128,8 +131,10 @@ describe("tickMapBeats", () => {
  * The lead runs on activePlaySeconds, so a pause or a hold cannot eat it.
  */
 describe("a telegraphed space beat warns BEFORE it lands", () => {
+  /** Level 12, the map that carries the Reorg beat. */
+  const LEVEL = DUPLICATION_MIN_LEVEL + 1;
   const spaceBeat = (): MapBeat => ({
-    id: "standup", atSpaceRemaining: 60, spawnAdds: 1, announce: "game.beatStandup",
+    id: "reorg", atSpaceRemaining: 60, spawnAdds: 1, announce: "game.beatReorg",
   });
 
   /**
@@ -153,24 +158,24 @@ describe("a telegraphed space beat warns BEFORE it lands", () => {
   it("shows the banner on the cut that crosses the threshold", () => {
     const g = halfCaptured();
     const warns: string[] = [];
-    tickMapBeats(g, level([spaceBeat()]), 5, a => warns.push(a));
-    expect(warns).toEqual(["game.beatStandup"]);
+    tickMapBeats(g, level([spaceBeat()]), LEVEL, a => warns.push(a));
+    expect(warns).toEqual(["game.beatReorg"]);
   });
 
   it("does NOT spawn the ball in that same tick", () => {
     const g = halfCaptured();
-    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    tickMapBeats(g, level([spaceBeat()]), LEVEL, () => {});
     expect(g.balls).toHaveLength(1);
     expect(g.pendingBeats).toHaveLength(1);
   });
 
   it("spawns it once the telegraph has had its lead", () => {
     const g = halfCaptured();
-    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    tickMapBeats(g, level([spaceBeat()]), LEVEL, () => {});
     expect(g.balls).toHaveLength(1);
 
     g.activePlaySeconds = 1.6; // default leadMs
-    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    tickMapBeats(g, level([spaceBeat()]), LEVEL, () => {});
     expect(g.balls).toHaveLength(2);
     expect(g.pendingBeats).toHaveLength(0);
   });
@@ -178,14 +183,14 @@ describe("a telegraphed space beat warns BEFORE it lands", () => {
   it("honours a custom leadMs", () => {
     const beat: MapBeat = { ...spaceBeat(), leadMs: 3000 };
     const g = halfCaptured();
-    tickMapBeats(g, level([beat]), 5, () => {});
+    tickMapBeats(g, level([beat]), LEVEL, () => {});
 
     g.activePlaySeconds = 2.9;
-    tickMapBeats(g, level([beat]), 5, () => {});
+    tickMapBeats(g, level([beat]), LEVEL, () => {});
     expect(g.balls).toHaveLength(1);
 
     g.activePlaySeconds = 3.1;
-    tickMapBeats(g, level([beat]), 5, () => {});
+    tickMapBeats(g, level([beat]), LEVEL, () => {});
     expect(g.balls).toHaveLength(2);
   });
 
@@ -193,16 +198,16 @@ describe("a telegraphed space beat warns BEFORE it lands", () => {
     // activePlaySeconds does not advance while paused, so ticking many frames
     // must not release the beat early.
     const g = halfCaptured();
-    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
-    for (let frame = 0; frame < 200; frame++) tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    tickMapBeats(g, level([spaceBeat()]), LEVEL, () => {});
+    for (let frame = 0; frame < 200; frame++) tickMapBeats(g, level([spaceBeat()]), LEVEL, () => {});
     expect(g.balls).toHaveLength(1);
   });
 
   it("fires once, not once per frame after it comes due", () => {
     const g = halfCaptured();
-    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    tickMapBeats(g, level([spaceBeat()]), LEVEL, () => {});
     g.activePlaySeconds = 5;
-    for (let frame = 0; frame < 10; frame++) tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    for (let frame = 0; frame < 10; frame++) tickMapBeats(g, level([spaceBeat()]), LEVEL, () => {});
     expect(g.balls).toHaveLength(2);
   });
 
@@ -213,47 +218,137 @@ describe("a telegraphed space beat warns BEFORE it lands", () => {
    */
   it("does not delay a beat that has no banner", () => {
     const g = halfCaptured();
-    tickMapBeats(g, level([{ id: "silent", atSpaceRemaining: 60, spawnAdds: 1 }]), 5);
+    tickMapBeats(g, level([{ id: "silent", atSpaceRemaining: 60, spawnAdds: 1 }]), LEVEL);
     expect(g.balls).toHaveLength(2);
     expect(g.pendingBeats).toHaveLength(0);
   });
 
   it("does not delay a time beat, which already warned early", () => {
     const g = halfCaptured(24);
-    tickMapBeats(g, level([{ id: "t", atSeconds: 24, spawnAdds: 1, announce: "x" }]), 5, () => {});
+    tickMapBeats(g, level([{ id: "t", atSeconds: 24, spawnAdds: 1, announce: "x" }]), LEVEL, () => {});
     expect(g.balls).toHaveLength(2);
   });
 });
 
-describe("beat spawnAdds placement (issue: 'the ball duplicated')", () => {
-  // A beat's add used to bud off the anchor's rim at 0.75 radii — the boss
-  // placement, where a big boss visibly spits out a small minion. On a normal
-  // map the anchor is an ordinary ball the SAME size, so an add appearing half
-  // a radius away (with a random type that may match its colour) read as the
-  // anchor cloning itself. Beat adds must arrive clear of every live ball.
-  it("spawns a beat add well clear of the anchor, not on top of it", () => {
-    const grid = createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15);
+/**
+ * A beat's extra ball is a CELL DIVISION, the level-10 boss's move: the anchor
+ * stops dead and swells, a bud grows out of its body, and it pinches off.
+ *
+ * The earlier attempt at this had the ball arrive somewhere else on the board
+ * entirely, to stop it reading as a split. It reads as a split because it IS
+ * one, so this commits to the reading and animates it, and gates it to level
+ * 11+ so the boss has taught the visual before an ordinary map borrows it.
+ */
+describe("a beat's add divides out of a ball, boss-style", () => {
+  const LEVEL = DUPLICATION_MIN_LEVEL + 1;
+
+  function withAnchor() {
     const anchor = {
       id: "blue-1", typeId: "blue", state: "active", speed: 200, baseSpeed: 200,
       radius: 18, position: { x: 450, y: 450 }, velocity: { x: 100, y: 0 },
       regionId: "r1",
     } as unknown as CanvasGameState["balls"][number];
-
     const g = makeGame({
-      spaceGrid: grid,
+      spaceGrid: createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15),
       activePlaySeconds: 10,
       balls: [anchor],
     });
-    // Grid is fully active => 100% remaining, so drive it with a time beat.
-    tickMapBeats(g, level([{ id: "standup", atSeconds: 5, spawnAdds: 1 }]), 5);
+    return { g, anchor };
+  }
+
+  /** Grid is fully active => 100% remaining, so drive it with a time beat. */
+  const fire = (g: CanvasGameState, levelNumber = LEVEL) =>
+    tickMapBeats(g, level([{ id: "reorg", atSeconds: 5, spawnAdds: 1 }]), levelNumber);
+
+  it("is born attached to the ball it came out of", () => {
+    const { g, anchor } = withAnchor();
+    fire(g);
 
     expect(g.balls).toHaveLength(2);
-    const added = g.balls[1];
-    const dist = Math.hypot(added.position.x - anchor.position.x, added.position.y - anchor.position.y);
-    // Two radii would still visually overlap; three is the placement floor.
-    // Epsilon because the placement lands exactly ON the threshold and the trig
-    // that gets it there can leave it a float hair short (53.999... vs 54).
-    expect(dist).toBeGreaterThanOrEqual(anchor.radius * 3 - 1e-9);
+    const bud = g.balls[1];
+    expect(bud.birthParentId).toBe(anchor.id);
+    expect(bud.regionId).toBe(anchor.regionId);
+  });
+
+  it("starts as a speck and knows the size to grow into", () => {
+    const { g, anchor } = withAnchor();
+    fire(g);
+
+    const bud = g.balls[1];
+    expect(bud.bornRadius).toBe(anchor.radius);
+    expect(bud.radius).toBeLessThan(anchor.radius / 2);
+    expect(bud.bornAt).toBeGreaterThan(0);
+  });
+
+  it("sits on the parent's rim, which is the whole point of the read", () => {
+    const { g, anchor } = withAnchor();
+    fire(g);
+
+    const bud = g.balls[1];
+    const dist = Math.hypot(bud.position.x - anchor.position.x, bud.position.y - anchor.position.y);
+    expect(dist).toBeCloseTo(anchor.radius * 0.85, 5);
+    // ...and it heads outward along the direction it emerged, not back through.
+    const dot = ((bud.position.x - anchor.position.x) / dist) * (bud.birthDirX ?? 0)
+      + ((bud.position.y - anchor.position.y) / dist) * (bud.birthDirY ?? 0);
+    expect(dot).toBeCloseTo(1, 5);
+  });
+
+  it("stops the parent dead and swells it while it divides", () => {
+    const { g, anchor } = withAnchor();
+    fire(g);
+
+    expect(anchor.splitAnimAt).toBeGreaterThan(0);
+    expect(anchor.bornSplashAt).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Duplication is a level-11+ idea. On level 2 it was a ball becoming two with
+ * nothing having taught what that means, which is exactly how it was reported.
+ */
+describe("duplication is gated to level 11 and up", () => {
+  const beat = { id: "reorg", atSeconds: 5, spawnAdds: 1, announce: "game.beatReorg" };
+
+  const gameAt = () => makeGame({
+    spaceGrid: createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15),
+    activePlaySeconds: 10,
+    balls: [{
+      id: "blue-1", typeId: "blue", state: "active", speed: 200, baseSpeed: 200,
+      radius: 18, position: { x: 450, y: 450 }, velocity: { x: 100, y: 0 }, regionId: "r1",
+    } as unknown as CanvasGameState["balls"][number]],
+  });
+
+  it("counts nothing below the gate, the full count at or above it", () => {
+    expect(beatSpawnCount(beat, 2)).toBe(0);
+    expect(beatSpawnCount(beat, DUPLICATION_MIN_LEVEL - 1)).toBe(0);
+    expect(beatSpawnCount(beat, DUPLICATION_MIN_LEVEL)).toBe(1);
+    expect(beatSpawnCount({ ...beat, spawnAdds: 3 }, 30)).toBe(3);
+  });
+
+  it("spawns no ball on an early map, even if a map asks for one", () => {
+    for (const levelNumber of [2, 5, 10]) {
+      const g = gameAt();
+      tickMapBeats(g, level([beat]), levelNumber, () => {});
+      g.activePlaySeconds = 99;
+      tickMapBeats(g, level([beat]), levelNumber, () => {});
+      expect(g.balls, `level ${levelNumber}`).toHaveLength(1);
+    }
+  });
+
+  it("spawns from level 11", () => {
+    const g = gameAt();
+    tickMapBeats(g, level([beat]), DUPLICATION_MIN_LEVEL, () => {});
+    g.activePlaySeconds = 99;
+    tickMapBeats(g, level([beat]), DUPLICATION_MIN_LEVEL, () => {});
+    expect(g.balls).toHaveLength(2);
+  });
+
+  /** The banner must not promise a ball the gate is going to swallow. */
+  it("does not announce a ball that the gate blocks", () => {
+    expect(beatEffectLines(beat, 2)).toEqual([]);
+    expect(beatEffectLines(beat, DUPLICATION_MIN_LEVEL)).toEqual([
+      { key: "game.beatEffectBalls", values: { count: 1 } },
+    ]);
   });
 });
 
@@ -265,7 +360,7 @@ describe("beat spawnAdds placement (issue: 'the ball duplicated')", () => {
 describe("every ball-spawning beat in map.yml announces itself", () => {
   const MAP = yaml.load(
     readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
-  ) as { levels: { id: string; beats?: MapBeat[] }[] };
+  ) as { levels: { id: string; level: number; beats?: MapBeat[] }[] };
 
   it("carries an announce wherever spawnAdds is set", () => {
     const silent = MAP.levels.flatMap(lvl =>
@@ -274,6 +369,22 @@ describe("every ball-spawning beat in map.yml announces itself", () => {
         .map(b => `${lvl.id}/${b.id}`),
     );
     expect(silent).toEqual([]);
+  });
+
+  /**
+   * The code gate makes an early duplication beat a no-op; this makes it a
+   * build failure. A beat that silently does nothing is worse than one that
+   * does the wrong thing, because nothing on screen or in the file says so.
+   */
+  it("puts no duplication beat on a map below the gate", () => {
+    const early = MAP.levels
+      .filter(lvl => (lvl.level ?? 0) < DUPLICATION_MIN_LEVEL)
+      .flatMap(lvl =>
+        (lvl.beats ?? [])
+          .filter(b => (b.spawnAdds ?? 0) > 0)
+          .map(b => `${lvl.id}/${b.id} (level ${lvl.level})`),
+      );
+    expect(early).toEqual([]);
   });
 });
 
@@ -286,34 +397,34 @@ describe("every ball-spawning beat in map.yml announces itself", () => {
  */
 describe("a beat says what it is about to do", () => {
   it("names the arriving ball, singular or plural", () => {
-    expect(beatEffectLines({ id: "b", spawnAdds: 1 })).toEqual([
+    expect(beatEffectLines({ id: "b", spawnAdds: 1 }, 30)).toEqual([
       { key: "game.beatEffectBalls", values: { count: 1 } },
     ]);
-    expect(beatEffectLines({ id: "b", spawnAdds: 3 })[0].values).toEqual({ count: 3 });
+    expect(beatEffectLines({ id: "b", spawnAdds: 3 }, 30)[0].values).toEqual({ count: 3 });
   });
 
   it("names a speed spike as a percentage", () => {
-    expect(beatEffectLines({ id: "b", speedSpike: 0.2 })).toEqual([
+    expect(beatEffectLines({ id: "b", speedSpike: 0.2 }, 30)).toEqual([
       { key: "game.beatEffectSpeed", values: { percent: 20 } },
     ]);
   });
 
   it("names a forced break", () => {
-    expect(beatEffectLines({ id: "b", breakId: "gate" })).toEqual([
+    expect(beatEffectLines({ id: "b", breakId: "gate" }, 30)).toEqual([
       { key: "game.beatEffectBreak" },
     ]);
   });
 
   it("lists every effect a beat combines", () => {
-    const lines = beatEffectLines({ id: "b", spawnAdds: 2, speedSpike: 0.5, breakId: "g" });
+    const lines = beatEffectLines({ id: "b", spawnAdds: 2, speedSpike: 0.5, breakId: "g" }, 30);
     expect(lines.map(l => l.key)).toEqual([
       "game.beatEffectBalls", "game.beatEffectSpeed", "game.beatEffectBreak",
     ]);
   });
 
   it("says nothing about a beat with no effect", () => {
-    expect(beatEffectLines({ id: "b" })).toEqual([]);
-    expect(beatEffectLines({ id: "b", spawnAdds: 0, speedSpike: 0 })).toEqual([]);
+    expect(beatEffectLines({ id: "b" }, 30)).toEqual([]);
+    expect(beatEffectLines({ id: "b", spawnAdds: 0, speedSpike: 0 }, 30)).toEqual([]);
   });
 
   it("hands the effects to the telegraph, alongside the flavour name", () => {
@@ -337,7 +448,7 @@ describe("the beat copy exists in every language", () => {
   const LOCALES = ["en", "es", "sv"] as const;
   const KEYS = [
     "beatEffectBalls_one", "beatEffectBalls_other", "beatEffectSpeed", "beatEffectBreak",
-    "beatStandup", "beatCrunchTime",
+    "beatReorg", "beatCrunchTime",
   ];
 
   for (const locale of LOCALES) {

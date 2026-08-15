@@ -19,7 +19,7 @@
  * executes.
  */
 import { describe, it, expect } from "vitest";
-import { spawnClearOfParent, spawnInOpenSpace } from "@/lib/physics/spawnPlacement";
+import { spawnClearOfParent } from "@/lib/physics/spawnPlacement";
 import { createSpaceGrid, CellState } from "@/lib/spaceGrid";
 import { createRectPolygon } from "@/lib/polygon";
 import type { CanvasGameState } from "@/types/gameState";
@@ -96,68 +96,5 @@ describe("a spawned ball never overlaps the one it came from", () => {
     const game = gameWith(openGrid(), [parent, other]);
     const spot = spawnClearOfParent(game, parent, { gapRadii: 3, clearOfOtherBalls: true });
     expect(distance(spot, other.position)).toBeGreaterThan(TOUCHING);
-  });
-});
-
-/**
- * A map beat's ball ARRIVES; it does not come out of anything. Sitting it
- * beside an existing ball reads as that ball dividing however wide the gap,
- * because the newcomer is the same size and its type is drawn at random from
- * what the level can spawn — on level 2 that is red or blue, so half the time
- * it matches. Only not being there fixes the reading.
- */
-describe("an arriving ball is placed away from every ball in play", () => {
-  it("lands well clear of the anchor, not a gap away from it", () => {
-    const anchor = ball(450, 450);
-    const game = gameWith(openGrid(), [anchor]);
-    for (let attempt = 0; attempt < 25; attempt++) {
-      const spot = spawnInOpenSpace(game, RADIUS, anchor);
-      // The tightest clearance the open-space search will accept.
-      expect(distance(spot, anchor.position)).toBeGreaterThanOrEqual(RADIUS * 3.5);
-    }
-  });
-
-  it("stays clear of every other ball, not just the anchor", () => {
-    const anchor = ball(450, 450);
-    const others = [ball(200, 200, "b2"), ball(700, 300, "b3"), ball(300, 700, "b4")];
-    const game = gameWith(openGrid(), [anchor, ...others]);
-    for (let attempt = 0; attempt < 25; attempt++) {
-      const spot = spawnInOpenSpace(game, RADIUS, anchor);
-      for (const other of [anchor, ...others]) {
-        expect(distance(spot, other.position)).toBeGreaterThanOrEqual(RADIUS * 3.5);
-      }
-    }
-  });
-
-  it("lands somewhere the whole ball fits, not half inside a fence", () => {
-    const anchor = ball(450, 450);
-    const grid = pocketGrid(200);
-    const game = gameWith(grid, [anchor]);
-    for (let attempt = 0; attempt < 25; attempt++) {
-      const spot = spawnInOpenSpace(game, RADIUS, anchor);
-      // Every point on the ball's rim must be live space.
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        const x = spot.x + Math.cos(a) * RADIUS;
-        const y = spot.y + Math.sin(a) * RADIUS;
-        const col = Math.floor((x - grid.originX) / grid.cellSize);
-        const row = Math.floor((y - grid.originY) / grid.cellSize);
-        expect(grid.cells[row * grid.width + col]).not.toBe(CellState.REMOVED);
-      }
-    }
-  });
-
-  /** A nearly-captured board has nowhere open left; it must still not overlap. */
-  it("falls back to a non-overlapping spot when the board has no room", () => {
-    const anchor = ball(450, 450);
-    const game = gameWith(pocketGrid(26), [anchor]);
-    const spot = spawnInOpenSpace(game, RADIUS, anchor);
-    expect(distance(spot, anchor.position)).toBeGreaterThanOrEqual(TOUCHING);
-  });
-
-  it("does not fall over when there is no grid", () => {
-    const anchor = ball(450, 450);
-    const spot = spawnInOpenSpace(gameWith(null, [anchor]), RADIUS, anchor);
-    expect(distance(spot, anchor.position)).toBeGreaterThanOrEqual(TOUCHING);
   });
 });

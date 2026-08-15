@@ -281,7 +281,7 @@
     "freezeUsesLeft": "{{count}} congelaciones restantes en este mapa",
     "fenceBudgetLeft": "{{count}} vallas restantes en este mapa",
     "beatCrunchTime": "Recta Final",
-    "beatStandup": "Reunión Imprevista",
+    "beatReorg": "Reorganización",
     "beatEffectBalls_one": "se une una bola nueva",
     "beatEffectBalls_other": "se unen {{count}} bolas nuevas",
     "beatEffectSpeed": "las bolas aceleran un {{percent}}%",

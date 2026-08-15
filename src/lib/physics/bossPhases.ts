@@ -18,8 +18,6 @@ import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
 import { playBossChargeSound } from "@/lib/gameAudio";
 import { BIG_BALL_RADIUS_SCALE } from "@/lib/ballGifts";
 import { gateAreas } from "@/lib/coloredAreas";
-import { spawnInOpenSpace } from "@/lib/physics/spawnPlacement";
-import { findRegionContainingPoint } from "@/lib/gameUtils";
 
 let _bossAddCounter = 0;
 
@@ -224,23 +222,23 @@ export function tickBossFenceWipe(
 /**
  * Spawn `n` extra balls off live active balls (inherits their region + scale).
  *
- * `bud` controls WHERE the new ball appears, and it matters more than it looks:
+ * `mode` controls HOW the new ball appears, and it matters more than it looks:
  *
- * - true (bosses): the add emerges from the anchor's rim, because a big boss
- *   visibly spitting out a small minion is the whole read of the mechanic.
- * - false (map beats): the add arrives somewhere else on the board entirely,
- *   anchored to nothing. Budding is wrong here - a map beat's anchor is an
- *   ORDINARY ball the same size as the newcomer, whose type is drawn at random
- *   from what the level can spawn and so often matches the anchor's colour.
- *   Placing it beside that ball reads as the ball dividing however wide the gap
- *   is, which is what "a blue ball split when I drew a fence" was: level 2's
- *   standup beat, landing an identical blue ball next to the one in play.
+ * - "rim" (boss phases): the add pops out just off the anchor's rim.
+ * - "mitosis" (map beats): the anchor stops dead, swells, and a bud grows out
+ *   of its body before pinching off, exactly as a boss births a daughter cell.
+ *   A beat's anchor is an ORDINARY ball the same size as the newcomer, so the
+ *   pair inevitably reads as one ball dividing. Rather than fight that reading
+ *   with distance, this commits to it: the division is the animation, so the
+ *   player watches it happen instead of finding a second ball already there.
+ *   Gated to level 11+ by mapBeats (DUPLICATION_MIN_LEVEL), so the level-10
+ *   boss has taught the visual before an ordinary map uses it.
  */
 export function spawnAdds(
   game: CanvasGameState,
   levelNumber: number,
   n: number,
-  bud = true,
+  mode: "rim" | "mitosis" = "rim",
 ): void {
   const spawnable = getSpawnableBallTypes(levelNumber);
   if (spawnable.length === 0) return;
@@ -254,21 +252,40 @@ export function spawnAdds(
     // Match the run's speed scaling from the anchor (as rainbowSpawner does).
     const speedScale = anchorType && anchorType.baseSpeed > 0 ? anchor.baseSpeed / anchorType.baseSpeed : 1;
     const type = spawnable[Math.floor(Math.random() * spawnable.length)];
-    const position = bud
+    const nowMs = performance.now();
+    const angle = Math.random() * Math.PI * 2;
+    const dir = { x: Math.cos(angle), y: Math.sin(angle) };
+    const position = mode === "rim"
       ? budPosition(anchor)
-      : spawnInOpenSpace(game, anchor.radius, anchor);
+      // On the anchor's body, where the bud grows from (matches spawnMinion).
+      : {
+        x: anchor.position.x + dir.x * anchor.radius * 0.85,
+        y: anchor.position.y + dir.y * anchor.radius * 0.85,
+      };
     const child = createBall(
       type, position, speedScale, anchor.radius,
-      `${type.id}-boss-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
+      `${type.id}-boss-${++_bossAddCounter}`, nowMs, game.activePlaySeconds,
     );
-    // A bud is born in its parent's region by definition; an open-space arrival
-    // has to be told where it landed, or it inherits an id for a region it is
-    // not actually in and the ownership check has to recover it mid-flight.
-    // (game.regions is absent in the partial states the physics fixtures build.)
-    const landed = bud || !game.regions
-      ? null
-      : findRegionContainingPoint(game.regions, position.x, position.y);
-    child.regionId = landed ? landed.id : anchor.regionId;
+    child.regionId = anchor.regionId; // born in the anchor's region
+
+    if (mode === "mitosis") {
+      // The daughter cell: a speck on the parent's rim that grows while
+      // attached and tracking it, then pinches off under its own power (the
+      // birth handling in updateBall). The parent stops dead and swells for the
+      // duration, so the division is something the player WATCHES rather than
+      // something they find already finished.
+      child.bornRadius = anchor.radius;
+      child.radius = Math.max(3, anchor.radius * BIRTH_START_FRAC);
+      child.bornAt = nowMs;
+      child.birthParentId = anchor.id;
+      child.birthDirX = dir.x;
+      child.birthDirY = dir.y;
+      anchor.splitAnimAt = nowMs;
+      anchor.splitDirX = dir.x;
+      anchor.splitDirY = dir.y;
+      anchor.bornSplashAt = nowMs;
+    }
+
     game.balls.push(child);
   }
 }

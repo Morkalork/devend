@@ -57,17 +57,6 @@ const DEFAULT_GAP_RADII = TOUCHING_RADII + 1;
  */
 const MIN_GAP_RADII = TOUCHING_RADII + 0.25;
 
-/** Random spots tried when placing a ball that has no parent to sit near. */
-const OPEN_SPAWN_ATTEMPTS = 60;
-/** Points sampled around a candidate spot to check the ball's whole footprint. */
-const FOOTPRINT_SAMPLES = 8;
-/**
- * Clearance from every live ball for an unanchored spawn, in radii, tried in
- * order. Even the last is past DEFAULT_GAP_RADII: an arrival that lands within
- * a gap of an existing ball reads as having come OUT of it, which is the whole
- * thing being avoided.
- */
-const OPEN_CLEAR_RADII = [8, 6, 4.5, 3.5];
 
 export interface SpawnPlacement {
   x: number;
@@ -137,72 +126,4 @@ export function spawnClearOfParent(
     y: parent.position.y + Math.sin(start) * floor,
     angle: start,
   };
-}
-
-/**
- * A spawn point in open playable space, tied to no existing ball.
- *
- * For a ball that ARRIVES rather than splits off - a map beat's extra ball -
- * sitting it next to an existing ball is wrong however wide the gap: the
- * newcomer is the same size, and its type is drawn at random from what the
- * level can spawn, so on an early map it is frequently the same colour too. A
- * matching ball appearing beside another one is read as that ball dividing, and
- * no amount of separation fixes the reading; only not being there does.
- *
- * So this ignores the anchor entirely and looks for somewhere the ball can
- * simply turn up: live space, its whole footprint inside the board, and well
- * clear of everything already in play. `fallback` is used only when the board
- * has no such spot left, which on a nearly-captured board is a real state.
- */
-export function spawnInOpenSpace(
-  game: CanvasGameState,
-  radius: number,
-  fallback: Ball,
-): SpawnPlacement {
-  const grid = game.spaceGrid;
-  const live = game.balls.filter(b => b.state === "active" || b.state === "dormant");
-
-  if (grid) {
-    // Cell centres that are still playable. Built once per spawn (a one-off
-    // event, not a per-frame cost) so the sampling below cannot spin on a board
-    // that is mostly captured.
-    const open: { x: number; y: number }[] = [];
-    for (let row = 0; row < grid.height; row++) {
-      for (let col = 0; col < grid.width; col++) {
-        const x = grid.originX + (col + 0.5) * grid.cellSize;
-        const y = grid.originY + (row + 0.5) * grid.cellSize;
-        if (isPositionActive(grid, { x, y })) open.push({ x, y });
-      }
-    }
-
-    if (open.length > 0) {
-      // The ball's whole width has to be in live space, not just its centre:
-      // a spot one cell from a fence would post it half inside the wall.
-      const footprintFits = (p: { x: number; y: number }): boolean => {
-        for (let i = 0; i < FOOTPRINT_SAMPLES; i++) {
-          const a = (i / FOOTPRINT_SAMPLES) * Math.PI * 2;
-          if (!isPositionActive(grid, { x: p.x + Math.cos(a) * radius, y: p.y + Math.sin(a) * radius })) {
-            return false;
-          }
-        }
-        return true;
-      };
-
-      for (const clearRadii of OPEN_CLEAR_RADII) {
-        const clearance = radius * clearRadii;
-        for (let attempt = 0; attempt < OPEN_SPAWN_ATTEMPTS; attempt++) {
-          const spot = open[Math.floor(Math.random() * open.length)];
-          if (!footprintFits(spot)) continue;
-          if (!live.every(b => Math.hypot(b.position.x - spot.x, b.position.y - spot.y) >= clearance)) {
-            continue;
-          }
-          return { x: spot.x, y: spot.y, angle: Math.random() * Math.PI * 2 };
-        }
-      }
-    }
-  }
-
-  // Nowhere open left. Fall back to the anchored placement, which at least
-  // guarantees the pair does not overlap.
-  return spawnClearOfParent(game, fallback, { gapRadii: DEFAULT_GAP_RADII, clearOfOtherBalls: true });
 }

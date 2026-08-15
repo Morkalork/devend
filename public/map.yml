@@ -39,11 +39,16 @@ levels:
         width: 220
         height: 30
   # "Split Shift" (LEVELDESIGN.md): two server racks joined by a single central
-  # aisle (neck). Topology (C1): pinch the aisle to trap a ball in a rack. THE
-  # TURN (C3), "Standup Interrupt": at 60% remaining one extra ball drops in,
-  # with a banner so it is never an ambush, and the board stops being a static
-  # shrink. Two balls on an open board is a thrill, not a threat, which is
-  # exactly the dose an early map wants.
+  # aisle (neck). Topology (C1): pinch the aisle to trap a ball in a rack. Its
+  # one new idea is the second ball: two balls on an open board is a thrill, not
+  # a threat, which is exactly the dose the second map you ever play wants.
+  #
+  # This map used to carry a Turn that dropped a third ball in at 60% remaining.
+  # It was pulled: the add lands as a visible cell division (the level-10 boss's
+  # move), and on map 2 there is no boss yet to have taught what that means, so
+  # it read as a ball splitting for no reason. It now lives on level 12, past
+  # the boss - see DUPLICATION_MIN_LEVEL in mapBeats.ts. The mid-map change is
+  # taught on level 4 instead, by its speed surge.
   - id: level-2
     level: 2
     sizeThreshold: 30
@@ -51,11 +56,6 @@ levels:
     points: 20
     variety: 3
     maxBalls: 2
-    beats:
-      - id: standup
-        atSpaceRemaining: 60
-        spawnAdds: 1
-        announce: game.beatStandup
     entities:
       - id: divider-top
         kind: wall
@@ -79,12 +79,6 @@ levels:
     points: 20
     variety: 3
     maxBalls: 2
-    # Same Turn as level-2, so the level-2 slot always teaches "the board changes".
-    beats:
-      - id: standup
-        atSpaceRemaining: 60
-        spawnAdds: 1
-        announce: game.beatStandup
     entities:
       - id: divider-left
         kind: wall
@@ -616,6 +610,17 @@ levels:
     points: 20
     variety: 20
     maxBalls: 3
+    # THE TURN (C3), "Reorg": at 55% remaining one ball visibly divides in two,
+    # the same cell division the level-10 boss does. Home of the mechanic now
+    # that it is gated to level 11+ (DUPLICATION_MIN_LEVEL): level 11 already
+    # introduces the rainbow ball, which multiplies balls on a timer, so a
+    # second ball-multiplying idea there would muddle both. Three pillars and
+    # three balls leaves room for a fourth to be worth reacting to.
+    beats:
+      - id: reorg
+        atSpaceRemaining: 55
+        spawnAdds: 1
+        announce: game.beatReorg
     # Procedural (issue #53): three pillars, each a circle or a square block,
     # jittered within its own region so the classic tri-pillar board differs
     # every run (and is shared per Daily seed).

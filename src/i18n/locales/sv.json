@@ -281,7 +281,7 @@
     "freezeUsesLeft": "{{count}} frysningar kvar på denna bana",
     "fenceBudgetLeft": "{{count}} staket kvar på denna bana",
     "beatCrunchTime": "Slutspurt",
-    "beatStandup": "Oplanerat Möte",
+    "beatReorg": "Omorganisation",
     "beatEffectBalls_one": "en ny boll tillkommer",
     "beatEffectBalls_other": "{{count}} nya bollar tillkommer",
     "beatEffectSpeed": "bollarna snabbas upp {{percent}}%",
