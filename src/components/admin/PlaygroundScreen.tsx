@@ -14,6 +14,7 @@ import { LevelPanel } from './LevelPanel';
 import { EntityPanel } from './EntityPanel';
 import { isLockDebugEnabled, setLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { isPerfHudEnabled, setPerfHudEnabled, isStaticBgEnabled, setStaticBgEnabled } from '@/lib/rendering/perfStats';
+import { saveMapYaml, mapSaveMessage, type MapSaveFailure } from '@/lib/mapSave';
 
 interface PlaygroundScreenProps {
   onBack: () => void;
@@ -242,6 +243,8 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   // Colored Areas have no id in the schema, so selection is by index.
   const [editAreaIndex, setEditAreaIndex] = useState<number | null>(null);
   const [editSaveStatus, setEditSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  /** Why the last save failed, so the button can say something useful. */
+  const [saveError, setSaveError] = useState<MapSaveFailure | null>(null);
 
   // Sync draft whenever the selected level changes (new level picked)
   useEffect(() => {
@@ -380,33 +383,47 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     setGameKey(k => k + 1);
   }, [editDraft]);
 
+  /** The YAML the current draft would write, also used by the download fallback. */
+  const draftYaml = useCallback(() => {
+    if (!editDraft) return '';
+    const nextLevels = allLevels.map(l => l.id === editDraft.id ? editDraft : l);
+    return yaml.dump({ levels: nextLevels }, { indent: 2, lineWidth: -1, noRefs: true });
+  }, [editDraft, allLevels]);
+
   const saveEditsToDisk = useCallback(async () => {
     if (!editDraft) return;
     setEditSaveStatus('saving');
     const updated = editDraft;
     const nextLevels = allLevels.map(l => l.id === updated.id ? updated : l);
-    const yamlContent = yaml.dump({ levels: nextLevels }, { indent: 2, lineWidth: -1, noRefs: true });
-    try {
-      const res = await fetch('/api/map', {
-        method: 'PUT',
-        body: yamlContent,
-        headers: { 'Content-Type': 'text/yaml' },
-      });
-      if (res.ok) {
-        setSelectedLevel(updated);
-        setAllLevels(nextLevels);
-        setGameKey(k => k + 1);
-        setEditSaveStatus('saved');
-        setTimeout(() => setEditSaveStatus('idle'), 1200);
-      } else {
-        setEditSaveStatus('error');
-        setTimeout(() => setEditSaveStatus('idle'), 2500);
-      }
-    } catch {
+
+    const result = await saveMapYaml(draftYaml());
+    if (!result.ok) {
+      // Deliberately does NOT update the in-memory levels: showing the edit as
+      // applied after a failed write is what made the deployed build look like
+      // it had saved.
+      setSaveError(result.reason ?? 'server');
       setEditSaveStatus('error');
-      setTimeout(() => setEditSaveStatus('idle'), 2500);
+      setTimeout(() => setEditSaveStatus('idle'), 4000);
+      return;
     }
-  }, [editDraft, allLevels]);
+    setSelectedLevel(updated);
+    setAllLevels(nextLevels);
+    setGameKey(k => k + 1);
+    setEditSaveStatus('saved');
+    setSaveError(null);
+    setTimeout(() => setEditSaveStatus('idle'), 1200);
+  }, [editDraft, allLevels, draftYaml]);
+
+  /** Fallback when there is no dev server: hand the YAML over as a file. */
+  const downloadYaml = useCallback(() => {
+    const blob = new Blob([draftYaml()], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'map.yml';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [draftYaml]);
 
   const openModal = useCallback(() => {
     setDraft(applied); // seed draft from currently applied values
@@ -717,10 +734,19 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               }}
             >
               {editSaveStatus === 'saved'  ? <><Check className="w-4 h-4" /> Saved!</> :
-               editSaveStatus === 'error'  ? <><AlertCircle className="w-4 h-4" /> Failed - dev server running?</> :
+               editSaveStatus === 'error'  ? <><AlertCircle className="w-4 h-4" /> {mapSaveMessage(saveError ?? 'server')}</> :
                editSaveStatus === 'saving' ? 'Saving…' :
                <><Save className="w-4 h-4" /> Save to disk</>}
             </button>
+            {saveError === 'unavailable' && (
+              <button
+                onClick={downloadYaml}
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-xs font-semibold"
+                style={{ backgroundColor: '#1a1f1a', color: '#a855f7', border: '1px solid #a855f733' }}
+              >
+                <Save className="w-3.5 h-3.5" /> Download map.yml instead
+              </button>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={applyEdits}
