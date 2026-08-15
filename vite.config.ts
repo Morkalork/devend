@@ -2,6 +2,35 @@ import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import fs from "fs";
+import { execSync } from "child_process";
+
+/**
+ * Identify the build, so the admin panel can answer "is the deployed staging
+ * app actually running my latest push, or has it not redeployed yet?".
+ *
+ * On Heroku the source is not a git checkout during the build, so `git` is not
+ * usable there; Heroku instead exposes the deployed commit as SOURCE_VERSION.
+ * Locally that variable is absent and git is available. Try both, and fall back
+ * to an empty sha rather than failing the build over a version label.
+ */
+function buildIdentity(): { sha: string; builtAt: string; repo: string } {
+  const run = (cmd: string): string => {
+    try {
+      return execSync(cmd, { stdio: ["ignore", "pipe", "ignore"] }).toString().trim();
+    } catch {
+      return "";
+    }
+  };
+  const sha = process.env.SOURCE_VERSION || run("git rev-parse HEAD");
+  // owner/name from the origin remote, for the "is there anything newer" check.
+  const remote = run("git config --get remote.origin.url");
+  const match = remote.match(/github\.com[:/]([^/]+\/[^/.]+)/);
+  return {
+    sha,
+    builtAt: new Date().toISOString(),
+    repo: match ? match[1] : "",
+  };
+}
 
 /** Dev-only plugin: exposes GET /api/map and PUT /api/map for saving map.yml from the admin UI */
 function mapApiPlugin(): Plugin {
@@ -66,7 +95,14 @@ function fullReloadGameEngine(): Plugin {
 }
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ mode }) => {
+  const build = buildIdentity();
+  return {
+  define: {
+    __BUILD_SHA__: JSON.stringify(build.sha),
+    __BUILD_AT__: JSON.stringify(build.builtAt),
+    __BUILD_REPO__: JSON.stringify(build.repo),
+  },
   server: {
     host: "::",
     port: 8080,
@@ -84,4 +120,5 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-}));
+  };
+});
