@@ -1,17 +1,20 @@
 /**
  * Clear Fences ability (#38, the risky one).
  *
- * It used to drop EVERY fence and simply keep the locked cells captured. On
- * screen that is a locked pocket with no walls around it: still tinted, still
- * counted, floating in reopened space with nothing holding it. Reported from a
- * level 7 screenshot, and worst for the player doing best, since a pocket
- * sealed mid-board has no board edge to fall back on and loses its outline
- * completely.
+ * Three versions, and the first two are why this file is worth reading.
  *
- * The rule now is that a fence bordering locked ground stays. What this file
- * pins down is that the two halves of the contract hold together: the mess goes
- * (space reopens, remaining % rises) and every pocket keeps the walls that
- * sealed it, along with the ground those walls stand on.
+ * v1 dropped EVERY fence and kept only the locked CELLS captured, leaving a
+ * tinted pocket floating in reopened space with no walls around it. v2 kept the
+ * fences that bordered locked ground, which left walls running to the far side
+ * of the board. v3 trimmed those to the bordering stretch, which still left
+ * stubs. All three failed the same way: whether a given fence is "part of" a
+ * pocket is not a question a proximity probe answers well.
+ *
+ * v4 stops asking. Every fence goes, and each pocket's own outline is traced,
+ * straightened to its real corners, and rebuilt as fresh walls. What this file
+ * pins down is that the two halves hold together: the mess goes (space reopens,
+ * remaining % rises) and what remains is the pockets, drawn on the lines the
+ * player cut, standing on captured ground, and nothing else anywhere.
  *
  * Built on a real grid via createInitialGameData + a couple of cuts that lock a
  * ball, mirroring destroyRecapture.test.ts.
@@ -131,96 +134,151 @@ const fenceSegments = (game: CanvasGameState) =>
   game.walls.filter(w => isFenceWall(w.id))
     .map(w => `(${Math.round(w.start.x)},${Math.round(w.start.y)})->(${Math.round(w.end.x)},${Math.round(w.end.y)})`);
 
+const fenceWalls = (game: CanvasGameState) => game.walls.filter(w => isFenceWall(w.id));
+
+const midpoint = (w: { start: Vector2; end: Vector2 }) => ({
+  x: (w.start.x + w.end.x) / 2, y: (w.start.y + w.end.y) / 2,
+});
+
+/** World point -> cell index. */
+const cellAt = (game: CanvasGameState, p: Vector2) => {
+  const g = game.spaceGrid!;
+  const col = Math.floor((p.x - g.originX) / g.cellSize);
+  const row = Math.floor((p.y - g.originY) / g.cellSize);
+  return row * g.width + col;
+};
+
+/** True when any cell within `cells` of p is locked ground. */
+function nearLocked(game: CanvasGameState, p: Vector2, cells: number): boolean {
+  const g = game.spaceGrid!;
+  const lock = g.lockCaptured!;
+  const span = Math.ceil(cells);
+  const col0 = Math.floor((p.x - g.originX) / g.cellSize);
+  const row0 = Math.floor((p.y - g.originY) / g.cellSize);
+  for (let row = row0 - span; row <= row0 + span; row++) {
+    for (let col = col0 - span; col <= col0 + span; col++) {
+      if (row < 0 || col < 0 || row >= g.height || col >= g.width) continue;
+      if (lock[row * g.width + col] >= 1) return true;
+    }
+  }
+  return false;
+}
+
 describe("Clear All Fences (#38)", () => {
-  /**
-   * sealPocket cuts twice, and each cut becomes two walls split at its origin:
-   *
-   *   (64,500)->(64,169)    the vertical, ALONGSIDE the pocket
-   *   (64,500)->(64,855)    the vertical, BELOW the pocket, touching nothing
-   *   (175,320)->(285,169)  the diagonal, upper half, sealing the pocket
-   *   (175,320)->(64,472)   the diagonal, lower half, sealing the pocket
-   *
-   * Three of the four are load-bearing. The fourth is exactly the kind of
-   * leftover the ability exists to sweep away.
-   */
-  it("clears the fence that borders nothing and keeps the three that seal the pocket", () => {
+  it("removes every fence the player drew", () => {
     const game = makeGame();
     sealPocket(game);
-    expect(fenceSegments(game)).toHaveLength(4);
+    const drawn = fenceSegments(game);
+    expect(drawn).toHaveLength(4);
 
     expect(clear(game)).toBe(true);
 
-    const left = fenceSegments(game);
-    expect(left).toContain("(64,500)->(64,169)");   // pocket's vertical edge
-    expect(left).toContain("(175,320)->(285,169)"); // diagonal, upper
-    expect(left).toContain("(175,320)->(64,472)");  // diagonal, lower
-    expect(left).not.toContain("(64,500)->(64,855)"); // the stretch below: gone
+    for (const segment of drawn) expect(fenceSegments(game)).not.toContain(segment);
   });
 
   /**
-   * The screenshot case. A single cut can seal a pocket in one corner and carry
-   * on to the far side of the board; keeping it whole left the lock plus a line
-   * going nowhere, which looked worse than the bug it replaced. The wall now
-   * stops where the pocket does.
+   * The point of the rewrite. Two earlier versions worked out which of the
+   * player's fences to KEEP, and both left walls running off across the board
+   * with nothing behind them. The pocket's outline is drawn instead, so what is
+   * left is the pocket and only the pocket.
    */
-  it("cuts a surviving fence back to the stretch that does the sealing", () => {
+  it("redraws the pocket as the few edges it really has", () => {
     const game = makeGame();
     sealPocket(game);
+    clear(game);
 
-    // A fence along the pocket's left edge that then runs the width of the
-    // board. Given a stale collision AABB too, so the trim has to clear it.
-    game.walls.push({
-      id: "wall-overshoot",
-      start: { x: 64, y: 300 },
-      end: { x: 860, y: 300 },
-      thickness: 6,
-      aabbMinX: 64, aabbMinY: 294, aabbMaxX: 860, aabbMaxY: 306,
-    } as unknown as CanvasGameState["walls"][number]);
-
-    expect(clear(game)).toBe(true);
-
-    const kept = game.walls.find(w => w.id === "wall-overshoot");
-    expect(kept, "the sealing end survives").toBeTruthy();
-    // Cut back to the pocket instead of spanning the board. At y=300 the
-    // pocket's diagonal edge sits at x ~= 190; the wall is allowed to run two
-    // cells past that for the adjacency probe and another one and a half for
-    // the corner margin, so ~245. Anything near 860 is the bug.
-    expect(kept!.start.x).toBeCloseTo(64, 0);
-    expect(kept!.end.x).toBeGreaterThan(190);
-    expect(kept!.end.x).toBeLessThan(190 + 15 * (LOCK_ADJACENCY + TRIM_MARGIN) + 15);
-    // A stale AABB would silently break collision culling on the new geometry.
-    expect(kept!.aabbMinX).toBeUndefined();
-    expect(kept!.aabbMaxX).toBeUndefined();
+    const seals = fenceWalls(game);
+    expect(seals.length).toBeGreaterThan(0);
+    // A triangle against the board's top edge: two edges, not a lattice trace.
+    // The bound is loose enough to survive re-tuning and tight enough to fail
+    // if the outline is ever handed over unsimplified (it traced 7+ before).
+    expect(seals.length).toBeLessThanOrEqual(4);
   });
 
-  it("drops a fence that only grazes a pocket rather than leaving a stub", () => {
+  /**
+   * The outline is snapped to the player's own fences before those are thrown
+   * away, so the wall lands on the line they actually cut rather than a cell
+   * inside it, wandering with the lattice.
+   */
+  it("draws the outline along the lines the player cut", () => {
     const game = makeGame();
     sealPocket(game);
+    clear(game);
 
-    // Runs away from the board's left edge, nowhere near the pocket.
-    game.walls.push({
-      id: "wall-elsewhere",
-      start: { x: 700, y: 700 }, end: { x: 860, y: 700 }, thickness: 6,
-    } as unknown as CanvasGameState["walls"][number]);
+    const segments = fenceWalls(game);
+    // The diagonal that sealed the pocket: (285,169) -> (64,472).
+    const diagonal = segments.find(w =>
+      Math.min(w.start.x, w.end.x) < 100 && Math.max(w.start.x, w.end.x) > 250);
+    expect(diagonal, "the sealing diagonal is redrawn").toBeTruthy();
 
-    expect(clear(game)).toBe(true);
-    expect(game.walls.find(w => w.id === "wall-elsewhere")).toBeUndefined();
+    // The vertical stretch at x=64 that closed its left side.
+    const vertical = segments.find(w =>
+      Math.abs(w.start.x - w.end.x) < 20 && Math.abs(w.start.x - 64) < 20);
+    expect(vertical, "the vertical edge is redrawn").toBeTruthy();
+    // ...and it stops at the pocket rather than running the height of the board,
+    // which is what the previous version left behind.
+    expect(Math.max(vertical!.start.y, vertical!.end.y)).toBeLessThan(550);
   });
 
-  it("shatters the offcut, so a trimmed fence does not just get shorter", () => {
+  /** No wall is left anywhere that is not a pocket edge. THE screenshot bug. */
+  it("leaves no wall standing away from a pocket", () => {
     const game = makeGame();
     sealPocket(game);
-    game.walls.push({
-      id: "wall-overshoot",
-      start: { x: 64, y: 300 }, end: { x: 860, y: 300 }, thickness: 6,
-    } as unknown as CanvasGameState["walls"][number]);
-    game.objectDebris = [];
+    clear(game);
+
+    for (const w of fenceWalls(game)) {
+      expect(nearLocked(game, midpoint(w), 3), `${w.id} at ${JSON.stringify(midpoint(w))}`)
+        .toBe(true);
+    }
+  });
+
+  /** The board edge already has a wall; drawing a fence over it doubles the line. */
+  it("draws nothing along an edge the board already walls", () => {
+    const game = makeGame();
+    sealPocket(game);
+    clear(game);
+
+    // The pocket's top side runs along the board's top edge.
+    const boardTop = Math.min(...game.walls.filter(w => w.id.startsWith("board-"))
+      .flatMap(w => [w.start.y, w.end.y]));
+    for (const w of fenceWalls(game)) {
+      const alongTop = Math.abs(w.start.y - boardTop) < 20 && Math.abs(w.end.y - boardTop) < 20;
+      expect(alongTop, `${w.id} duplicates the board's top edge`).toBe(false);
+    }
+  });
+
+  /**
+   * grid.lockCaptured is never cleaned: restoreCells leaves it set, and
+   * assimilations are kept for the badge, so a pocket that has since reopened
+   * stays marked forever. The board layer gets away with that because live
+   * space is painted over the top. This does not, and reading the marks
+   * unfiltered is what grew walls in the middle of an empty board.
+   */
+  it("ignores lock marks left over ground that has already reopened", () => {
+    const game = makeGame();
+    sealPocket(game);
+
+    // Fake the residue of an older pocket: marked locked, but live space now.
+    const grid = game.spaceGrid!;
+    const stale: number[] = [];
+    for (let row = 40; row < 46; row++) {
+      for (let col = 40; col < 46; col++) {
+        const idx = row * grid.width + col;
+        if (grid.cells[idx] !== CellState.ACTIVE) continue;
+        grid.lockCaptured![idx] = 1;
+        stale.push(idx);
+      }
+    }
+    expect(stale.length).toBeGreaterThan(0);
 
     clear(game);
 
-    // One burst for the fully-cleared wall, one for the offcut of the trimmed
-    // one: the piece that goes has to be seen going.
-    expect(game.objectDebris.length).toBeGreaterThanOrEqual(2);
+    const ghost = { x: grid.originX + 43 * grid.cellSize, y: grid.originY + 43 * grid.cellSize };
+    for (const w of fenceWalls(game)) {
+      const m = midpoint(w);
+      expect(Math.hypot(m.x - ghost.x, m.y - ghost.y), `${w.id} walls a pocket that is gone`)
+        .toBeGreaterThan(grid.cellSize * 6);
+    }
   });
 
   it("leaves board and obstacle walls alone", () => {
@@ -236,44 +294,42 @@ describe("Clear All Fences (#38)", () => {
   });
 
   /**
-   * A kept wall must still have captured ground under it. Reopening the strip it
-   * occupies would draw the fence over live space, which reads as a fence
-   * floating above the board - a different flavour of the same bug.
+   * A fence occupies the strip it is drawn over, and a real cut rasterises that
+   * strip as it lands. A redrawn outline has to do the same, or it is a wall
+   * painted over live space: a fence floating above the board.
    */
-  it("keeps the ground the surviving fences stand on captured", () => {
+  it("stands the redrawn outline on captured ground", () => {
     const game = makeGame();
     sealPocket(game);
     clear(game);
 
     const grid = game.spaceGrid!;
-    for (const w of game.walls.filter(x => isFenceWall(x.id))) {
+    for (const w of fenceWalls(game)) {
       for (const t of [0.25, 0.5, 0.75]) {
-        const x = w.start.x + (w.end.x - w.start.x) * t;
-        const y = w.start.y + (w.end.y - w.start.y) * t;
-        const col = Math.floor((x - grid.originX) / grid.cellSize);
-        const row = Math.floor((y - grid.originY) / grid.cellSize);
-        expect(grid.cells[row * grid.width + col], `under ${w.id} at t=${t}`)
-          .toBe(CellState.REMOVED);
+        const p = {
+          x: w.start.x + (w.end.x - w.start.x) * t,
+          y: w.start.y + (w.end.y - w.start.y) * t,
+        };
+        expect(grid.cells[cellAt(game, p)], `under ${w.id} at t=${t}`).toBe(CellState.REMOVED);
       }
     }
   });
 
   /**
-   * Every fence still standing is load-bearing, so a second press has nothing
-   * left to do. Fixture-independent, and it is also the state that must not
-   * cost the player a charge.
+   * A board already reduced to its outlines has nothing left to clear, and a
+   * press that cannot change anything must not cost a charge.
    */
-  it("declines when every remaining fence is holding a lock", () => {
+  it("declines a second press, when only the outlines are left", () => {
     const game = makeGame();
     sealPocket(game);
     expect(clear(game)).toBe(true);
 
-    const wallsAfterFirst = fenceSegments(game);
-    const pctAfterFirst = getRemainingPercent(game.spaceGrid!);
+    const after = fenceSegments(game);
+    const pct = getRemainingPercent(game.spaceGrid!);
 
     expect(clear(game)).toBe(false);
-    expect(fenceSegments(game)).toEqual(wallsAfterFirst);
-    expect(getRemainingPercent(game.spaceGrid!)).toBe(pctAfterFirst);
+    expect(fenceSegments(game)).toEqual(after);
+    expect(getRemainingPercent(game.spaceGrid!)).toBe(pct);
   });
 
   it("reopens captured space so remaining % rises", () => {
@@ -282,7 +338,7 @@ describe("Clear All Fences (#38)", () => {
     const before = getRemainingPercent(game.spaceGrid!);
     expect(before).toBeLessThan(100); // the seal captured space
 
-    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+    clear(game);
 
     const after = getRemainingPercent(game.spaceGrid!);
     expect(after).toBeGreaterThan(before); // non-locked space reopened
@@ -294,13 +350,12 @@ describe("Clear All Fences (#38)", () => {
     expect(game.balls[0].state).toBe("won"); // pocket ball locked
     const lockedCount = game.lockedBallsCount;
     const lockBonus = game.lockBonus;
-    // Snapshot the locked-pocket cells (lockCaptured >= 1) that must stay REMOVED.
     const lockCap = game.spaceGrid!.lockCaptured!;
     const pocketCells: number[] = [];
     for (let i = 0; i < lockCap.length; i++) if (lockCap[i] >= 1) pocketCells.push(i);
     expect(pocketCells.length).toBeGreaterThan(0);
 
-    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+    clear(game);
 
     // Points + locked ball untouched.
     expect(game.balls[0].state).toBe("won");
