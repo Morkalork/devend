@@ -52,6 +52,21 @@ export function dormantColor(color: number, gate: boolean): number {
   return mix(color, DORMANT_GREY, gate ? DORMANT_DRAIN_GATE : DORMANT_DRAIN_BONUS);
 }
 
+/**
+ * Per-state opacities, collected so "make the dormant state a bit more/less
+ * visible" is one edit rather than a hunt through the draw calls.
+ *
+ * The dormant numbers were tuned by report: first far too close to the live
+ * state to tell apart, then overshot into invisible, now nudged back up. The
+ * COLOUR drain above is what carries the distinction, so these only need to be
+ * low enough to read as quiet, not low enough to vanish.
+ */
+export const AREA_ALPHA = {
+  dormant: { bonus: { fill: 0.045, border: 0.38, label: 0.54 },
+             gate:  { fill: 0.085, border: 0.64, label: 0.80 } },
+  live:    { fill: 0.12, border: 0.95, label: 1 },
+} as const;
+
 /** Activation flare length, and the steady breath's cycle, in ms. */
 export const FLARE_MS = 1100;
 export const BREATH_MS = 1900;
@@ -138,14 +153,15 @@ export class AreaLayer {
       // wash from drawPulse sits on top of this every frame, and the two
       // stacked at the old weight read as a solid block. A dormant one paints
       // fainter still, so the contrast lives in the gap between them.
-      const fill = (lit ? 0.12 : gate ? 0.07 : 0.03) * (0.55 + amb * 0.45);
+      const dormantAlpha = gate ? AREA_ALPHA.dormant.gate : AREA_ALPHA.dormant.bonus;
+      const fill = (lit ? AREA_ALPHA.live.fill : dormantAlpha.fill) * (0.55 + amb * 0.45);
       this.g.rect(r.x, r.y, r.width, r.height).fill({ color: inkColor, alpha: fill });
 
       if (lit) {
         // Occupied: solid and bright, unmistakably "this one is done".
         this.g
           .rect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1)
-          .stroke({ width: 2, color, alpha: 0.95 * light.level });
+          .stroke({ width: 2, color, alpha: AREA_ALPHA.live.border * light.level });
       } else {
         const dash = gate ? 9 * scale : 3 * scale;
         const gap = gate ? 6 * scale : 5 * scale;
@@ -158,7 +174,7 @@ export class AreaLayer {
         this.g.stroke({
           width: hairline(),
           color: inkColor,
-          alpha: (gate ? 0.55 : 0.28) * light.level,
+          alpha: dormantAlpha.border * light.level,
         });
       }
 
@@ -167,7 +183,7 @@ export class AreaLayer {
       const labelPx = Math.max(13, Math.min(r.width, r.height) * 0.2);
       // The label carries the state too: a dormant bonus zone reads as a faded
       // stencil, a live one as a lit sign.
-      const alpha = lit ? 1 : gate ? 0.7 : 0.4;
+      const alpha = lit ? AREA_ALPHA.live.label : dormantAlpha.label;
 
       const kind = new Text({
         text: st.label,

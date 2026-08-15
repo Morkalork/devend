@@ -34,7 +34,7 @@ import {
   getLockDecisions, setLockDebugEnabled, clearLockDecisions,
 } from "@/lib/lockDiagnostics";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
-import { zonePulse, dormantColor, FLARE_MS, BREATH_MS } from "@/lib/rendering/sleek/areaLayer";
+import { zonePulse, dormantColor, AREA_ALPHA, FLARE_MS, BREATH_MS } from "@/lib/rendering/sleek/areaLayer";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { CanvasGameState } from "@/types/gameState";
 import type { GrowingWall, Vector2 } from "@/types/game";
@@ -332,6 +332,47 @@ describe("a dormant zone reads as dormant", () => {
     for (const kind of KINDS) {
       const live = packed(kind);
       expect(dormantColor(live, false)).not.toBe(live);
+    }
+  });
+});
+
+/**
+ * Dormant opacity. Tuned by report across three rounds (too similar, then too
+ * bleak, then nudged back), so the ordering is pinned: a future nudge can move
+ * the numbers but must not cross a state over.
+ */
+describe("dormant opacity stays below live, for every element", () => {
+  const states = [
+    ["bonus", AREA_ALPHA.dormant.bonus],
+    ["gate", AREA_ALPHA.dormant.gate],
+  ] as const;
+
+  it.each(states)("a dormant %s zone is fainter than a live one everywhere", (_name, dormant) => {
+    expect(dormant.fill).toBeLessThan(AREA_ALPHA.live.fill);
+    expect(dormant.border).toBeLessThan(AREA_ALPHA.live.border);
+    expect(dormant.label).toBeLessThan(AREA_ALPHA.live.label);
+  });
+
+  // A gate is a required win condition, so it must never be quieter than an
+  // optional bonus pocket.
+  it("keeps a dormant gate louder than a dormant bonus pocket", () => {
+    expect(AREA_ALPHA.dormant.gate.fill).toBeGreaterThan(AREA_ALPHA.dormant.bonus.fill);
+    expect(AREA_ALPHA.dormant.gate.border).toBeGreaterThan(AREA_ALPHA.dormant.bonus.border);
+    expect(AREA_ALPHA.dormant.gate.label).toBeGreaterThan(AREA_ALPHA.dormant.bonus.label);
+  });
+
+  /**
+   * The label is the biggest thing in the box, so it carries most of the
+   * legibility. It was dropped to 0.4 and reported as too faint; this keeps it
+   * readable without letting it reach the live weight.
+   */
+  it("keeps the dormant label readable rather than a ghost", () => {
+    expect(AREA_ALPHA.dormant.bonus.label).toBeGreaterThan(0.45);
+  });
+
+  it("keeps every dormant value above zero, so a zone never disappears", () => {
+    for (const [, d] of states) {
+      expect(Math.min(d.fill, d.border, d.label)).toBeGreaterThan(0);
     }
   });
 });
