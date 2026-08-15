@@ -1471,7 +1471,7 @@
     },
     "chestLoot": {
       "title": "Byte",
-      "body": "Tappas av en krossad kista. Tryck för att plocka upp. Den försvinner kort efter att den landat."
+      "body": "Faller ur en krossad kista och visar vad du vann. Belöningen är redan din, det finns inget att plocka upp."
     },
     "dormantBall": {
       "title": "Sovande boll",

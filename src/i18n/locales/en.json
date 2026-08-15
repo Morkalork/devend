@@ -938,7 +938,7 @@
     },
     "chestLoot": {
       "title": "Loot",
-      "body": "Dropped by a smashed chest. Tap it to collect. It vanishes shortly after it lands, so take it now."
+      "body": "Dropped by a smashed chest, showing what you won. The reward is already yours, so there is nothing to collect."
     },
     "dormantBall": {
       "title": "Sleeping ball",

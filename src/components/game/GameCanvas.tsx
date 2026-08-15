@@ -633,7 +633,7 @@ export function GameCanvas({
     pickupFeedback: [] as PickupFeedback[],
   });
 
-  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleLootCollectRef, handleTapRemoveRef, handleEntityInfoRef);
+  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleTapRemoveRef, handleEntityInfoRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -1167,8 +1167,9 @@ export function GameCanvas({
           repaintRegionCanvas,
           setRemainingPercent,
           onObjectDestroyed: () => { playFenceBreakSound(); vibrateFenceBreak(); },
-          // A smashed chest drops a loot gem; the reward is granted only when the
-          // player taps it in time (handleLootCollect), not here.
+          // Smashing the chest IS the interaction, so the reward lands here. The
+          // gem it drops is a receipt showing what came out of it.
+          onChestReward: (rewardId) => handleLootCollectRef.current?.(rewardId),
         }, levelNumber);
         // A destroy can capture pocket cells (destroy-recapture) and take the
         // remaining space past the goal with no fence involved — run the same
@@ -1439,9 +1440,9 @@ export function GameCanvas({
   useEffect(() => { handleSuperiorInfoRef.current = onRequestSuperiorInfo ?? null; }, [onRequestSuperiorInfo]);
   useEffect(() => { handleEntityInfoRef.current = onRequestEntityInfo ?? null; }, [onRequestEntityInfo]);
 
-  // A tap collected a chest loot gem (#38 rework): bank the ability run-wide,
-  // log it for the level recap, and flash the reward toast. The input layer has
-  // already removed the gem from game.chestLoot.
+  // A chest was smashed: bank the ability run-wide, log it for the level recap,
+  // and flash the reward toast. Fired from the smash itself, so the gem that
+  // drops alongside is a receipt showing what was won, not a thing to chase.
   const handleLootCollect = useCallback((rewardId: string) => {
     playPickupClaimedSound();
     (gameRef.current.chestRewardsLog ??= []).push(rewardId);

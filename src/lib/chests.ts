@@ -5,8 +5,14 @@
  * charge of an activatable ability. Charges bank run-wide in the ability bar
  * beneath the board. The reward roster + the seeded, level-gated roll live in
  * the catalogue (src/lib/abilities.ts, loaded from public/abilities.yml); this
- * module only owns the cosmetic loot gem a broken chest spits out (it falls
- * under gravity and bounces like a rubber ball; coloured by the ability).
+ * module only owns the loot gem a broken chest spits out (it falls under
+ * gravity and bounces like a rubber ball; coloured by the ability).
+ *
+ * The gem is a RECEIPT, not a token. It used to have to be tapped within two
+ * seconds or the reward was lost, which made an earned thing depend on a reflex
+ * unrelated to earning it: you had to steer a ball into the chest, and then also
+ * be free to stop drawing and hit a bouncing target while the balls carried on.
+ * The reward now lands on the smash, and the gem just shows what came out.
  */
 import { ChestLoot } from "@/types/game";
 
@@ -21,34 +27,14 @@ const LOOT_FLOOR_FRICTION = 0.86;
 /** Below this bounce speed the gem is considered at rest. */
 const LOOT_REST_SPEED = 40;
 /**
- * How long a gem lives (active-play seconds). This is also the window to TAP it:
- * a smashed chest's reward is only granted if the player taps the gem it drops
- * before it expires (#38 rework). Miss the window and the reward is lost.
+ * How long a gem lives, in active-play seconds.
+ *
+ * This used to be a deadline: the reward was granted only if the player tapped
+ * the gem before it expired. It is now purely how long the receipt stays up -
+ * the reward is banked the moment the chest breaks - so missing it costs
+ * nothing but a glance.
  */
 export const LOOT_TTL_SECONDS = 2.0;
-/** World-unit radius for a tap to count as hitting a gem (generous for touch). */
-export const LOOT_TAP_RADIUS = 30;
-
-/**
- * The nearest still-live loot gem within tap range of a world point, or null.
- * Pure hit-test used by the input layer to turn a board tap into a collect.
- */
-export function lootAtPoint(
-  loot: ChestLoot[],
-  x: number,
-  y: number,
-  nowActiveSeconds: number,
-): ChestLoot | null {
-  let best: ChestLoot | null = null;
-  let bestD = LOOT_TAP_RADIUS * LOOT_TAP_RADIUS;
-  for (const g of loot) {
-    if (nowActiveSeconds - g.bornActiveSeconds >= LOOT_TTL_SECONDS) continue; // expired
-    const dx = g.x - x, dy = g.y - y;
-    const d = dx * dx + dy * dy;
-    if (d <= bestD) { best = g; bestD = d; }
-  }
-  return best;
-}
 
 /**
  * Spawn a bouncing loot gem at a broken chest. `bornActiveSeconds` anchors the

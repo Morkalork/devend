@@ -98,6 +98,11 @@ export interface DestroyCallbacks {
   repaintRegionCanvas: () => void;
   setRemainingPercent: (percent: number) => void;
   onObjectDestroyed?: () => void;
+  /**
+   * A chest was smashed and its reward is the player's. Fired at the smash, not
+   * at some later collection: breaking the chest IS the interaction.
+   */
+  onChestReward?: (rewardId: string) => void;
 }
 
 // ── Lookups ─────────────────────────────────────────────────────────────────
@@ -484,14 +489,30 @@ export function rebuildRegionsKeepAll(game: CanvasGameState): void {
 // ── Treasure chests (#38) ────────────────────────────────────────────────────
 
 /**
- * Roll a smashed chest's reward (#38) and drop a loot gem carrying it. The
- * reward is NOT granted here: the player must TAP the gem within its lifetime
- * (LOOT_TTL_SECONDS) to collect it, else it is lost (see lootAtPoint + the
- * input layer's collect path). Seeded per chest id, so daily / record runs roll
- * identically; whether the reward is actually banked then depends on the tap.
- * The loot gem is coloured by the ability.
+ * Roll a smashed chest's reward (#38) and grant it.
+ *
+ * The reward used to require a second action: the chest dropped a gem and the
+ * player had two seconds to TAP it, or the reward was lost. That made the
+ * earned thing conditional on a reflex unrelated to earning it - you had to
+ * manoeuvre a ball into a chest, and then also be free to stop drawing and hit
+ * a bouncing target, on a board where the balls do not pause to let you. The
+ * smash is the interaction; landing it is the skill.
+ *
+ * The gem still drops, and still bounces and fades. It is now a receipt rather
+ * than a token: it shows WHAT was won and where it came from, so the reward
+ * still reads as coming out of that chest instead of appearing in the ability
+ * bar unexplained.
+ *
+ * Seeded per chest id, so daily / record runs roll identically. Now that the
+ * grant is unconditional, that seed also makes the reward itself reproducible,
+ * which it never quite was while a missed tap could erase it.
  */
-function grantChestReward(game: CanvasGameState, d: DestructibleState, levelNumber: number): void {
+function grantChestReward(
+  game: CanvasGameState,
+  d: DestructibleState,
+  levelNumber: number,
+  onChestReward?: (rewardId: string) => void,
+): void {
   if (!d.obstaclePolygon) return;
   const rng = getRunRng(`chest:${d.id}`);
   // Random among abilities unlocked at this level, optionally narrowed to the
@@ -500,6 +521,7 @@ function grantChestReward(game: CanvasGameState, d: DestructibleState, levelNumb
   if (!rewardId) return; // empty catalogue (should never happen)
   const c = polygonCentroid(d.obstaclePolygon);
   (game.chestLoot ??= []).push(makeChestLoot(`loot-${d.id}`, rewardId, c.x, c.y, game.activePlaySeconds));
+  onChestReward?.(rewardId);
 }
 
 // ── Processing queued destructions ──────────────────────────────────────────
@@ -551,8 +573,9 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
     // break things offsets the ship-early time it cost (issue #38).
     game.breakMultiplier = (game.breakMultiplier ?? 1) * BREAK_MULTIPLIER_PER;
 
-    // Treasure chest (#38): a smash rolls a reward and drops a gem to tap.
-    if (d.chest) grantChestReward(game, d, levelNumber);
+    // Treasure chest (#38): a smash rolls a reward, grants it, and drops a gem
+    // showing what it was.
+    if (d.chest) grantChestReward(game, d, levelNumber, callbacks.onChestReward);
 
     // A gate breakable re-opens its sealed (locked) area as capturable space.
     if (d.sealedCells && d.sealedCells.length > 0 && game.spaceGrid) {

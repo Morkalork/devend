@@ -1471,7 +1471,7 @@
     },
     "chestLoot": {
       "title": "Botín",
-      "body": "Cae de un cofre roto. Tócalo para recogerlo. Desaparece poco después de aterrizar."
+      "body": "Cae de un cofre destrozado y muestra lo que ganaste. La recompensa ya es tuya, no hay que recogerla."
     },
     "dormantBall": {
       "title": "Bola dormida",
