@@ -50,8 +50,8 @@ abilities:
     color: "#ffd76b"
     weight: 2
     startLevel: 7
-    description: "Shatters all your fences and reopens the space they captured. Locked balls stay locked and keep their points."
-    howTo: "Tap to reset your fences when a map gets away from you."
+    description: "Shatters every fence that is not sealing a lock, and reopens the space it captured. Locked pockets keep their walls, their tint and their points."
+    howTo: "Tap to clear the mess when a map gets away from you. The fences holding your locks are left standing."
 
   # Magnet: pull every active ball toward a point YOU pick so they cluster -
   # set up a big multi-lock or wall off a large empty area. One-shot, targeted.

@@ -8,8 +8,8 @@
  *
  *  - freeze:       freeze every active ball for a few seconds (frozenUntil).
  *  - slow:         globally slow every ball for a few seconds via game.creepFactor.
- *  - clearFences:  remove all player fences and reopen ALL non-locked captured
- *                  space while locked pockets stay captured.
+ *  - clearFences:  remove every player fence EXCEPT the ones sealing a locked
+ *                  pocket, and reopen all non-locked captured space.
  */
 import { CanvasGameState } from "@/types/gameState";
 import { getAbility } from "@/lib/abilities";
@@ -82,46 +82,137 @@ export interface ClearFencesCallbacks {
 const MAX_FENCE_SHATTERS = 40;
 
 /**
- * Remove every player-drawn fence and reopen ALL non-locked captured space, so
- * an overwhelmed player gets the open board back to re-cut. Locked-ball pockets
- * (and their points) are preserved; remaining % rises. Reuses the space-grid +
- * region-rebuild machinery (see destructibles.ts).
+ * How far either side of a fence to look for locked ground, in cells.
+ *
+ * Generous on purpose, and the asymmetry is the reason: keeping a fence that
+ * did not really need keeping leaves a wall standing in open space, which is an
+ * ordinary sight in this game. DROPPING one that a pocket needed leaves locked
+ * territory with no wall around it, which is the bug being fixed. So when the
+ * probe is unsure, it errs towards keeping.
  */
-export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCallbacks): void {
-  const grid = game.spaceGrid;
-  if (!grid) return;
+const LOCK_ADJACENCY_CELLS = 2;
 
-  // 1. Drop player fences, keep board + obstacle walls. A fence is any wall that
-  //    is neither a board edge nor an obstacle edge. Reassign the array so
-  //    reference-keyed render caches (glow / fence-clip) invalidate.
-  const isFence = (w: typeof game.walls[number]) =>
+/** A wall as this module needs it: a segment with an id. */
+type Wall = CanvasGameState["walls"][number];
+
+/** Cell indices a fence's body covers, within `bandCells` of its segment. */
+function cellsUnderWall(
+  grid: NonNullable<CanvasGameState["spaceGrid"]>,
+  wall: Wall,
+  bandCells: number,
+): number[] {
+  const out: number[] = [];
+  const dx = wall.end.x - wall.start.x;
+  const dy = wall.end.y - wall.start.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 0.001) return out;
+
+  const reach = grid.cellSize * bandCells;
+  const steps = Math.ceil(length / (grid.cellSize * 0.5));
+  const span = Math.ceil(bandCells);
+
+  for (let s = 0; s <= steps; s++) {
+    const t = s / steps;
+    const x = wall.start.x + dx * t;
+    const y = wall.start.y + dy * t;
+    const col0 = Math.floor((x - grid.originX) / grid.cellSize);
+    const row0 = Math.floor((y - grid.originY) / grid.cellSize);
+    for (let row = row0 - span; row <= row0 + span; row++) {
+      for (let col = col0 - span; col <= col0 + span; col++) {
+        if (row < 0 || col < 0 || row >= grid.height || col >= grid.width) continue;
+        const cx = grid.originX + (col + 0.5) * grid.cellSize;
+        const cy = grid.originY + (row + 0.5) * grid.cellSize;
+        if (Math.hypot(cx - x, cy - y) > reach) continue;
+        out.push(row * grid.width + col);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Clear the player's fences, EXCEPT the ones holding a lock together.
+ *
+ * The original version dropped every fence and simply kept the locked cells
+ * captured. On screen that is a locked pocket with no walls around it: tinted,
+ * still counted, and floating in reopened space with nothing explaining why it
+ * is still there. Reported from level 7, and it is worse the better the player
+ * was doing, because a pocket sealed mid-board has no board edge to fall back
+ * on and loses its outline entirely.
+ *
+ * So a fence that borders locked ground stays, along with the strip of grid it
+ * occupies. That keeps every pocket sealed by exactly the walls that sealed it,
+ * which is also the honest picture: those fences are load-bearing, and the rest
+ * were the mess the player asked to be rid of.
+ *
+ * The awkward cases all resolve in favour of the picture staying coherent:
+ *  - A pocket sealed mid-board keeps its whole loop, because every wall on that
+ *    loop borders it.
+ *  - Two pockets sharing a wall keep it once.
+ *  - A long fence that only clips a pocket at one end is kept whole. It reads
+ *    as a wall standing in open space, which is a normal board state, and
+ *    trimming it to the bordering stretch risks unsealing the pocket for a
+ *    cosmetic gain.
+ *  - Space that the kept fences now enclose with no ball in it is re-sealed by
+ *    captureUnreachableCells below, so no unreachable hole is left behind.
+ *
+ * Returns false when there was nothing to clear, so the caller can decline to
+ * spend the charge (see fireAbility).
+ */
+export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCallbacks): boolean {
+  const grid = game.spaceGrid;
+  if (!grid) return false;
+
+  // 1. Locked ground: grid.lockCaptured marks it (>=1), unioned with won balls'
+  //    authoritative assimilation cells for precision.
+  const locked = new Set<number>();
+  const lockCap = grid.lockCaptured;
+  if (lockCap) {
+    for (let i = 0; i < lockCap.length; i++) if (lockCap[i] >= 1) locked.add(i);
+  }
+  for (const a of game.assimilations.values()) {
+    for (const idx of a.cellIndices) locked.add(idx);
+  }
+
+  // 2. Split the fences. A fence is any wall that is neither a board edge nor an
+  //    obstacle edge; it is load-bearing if any cell near its body is locked.
+  const isFence = (w: Wall) =>
     !(w.isBoardEdge ?? w.id.startsWith("board-")) && !w.id.startsWith("obstacle-");
-  const fences = game.walls.filter(isFence);
-  if (fences.length === 0) return; // nothing to clear
-  game.walls = game.walls.filter(w => !isFence(w));
+  const holdsLock = (w: Wall) =>
+    locked.size > 0 && cellsUnderWall(grid, w, LOCK_ADJACENCY_CELLS).some(i => locked.has(i));
+
+  const cleared: Wall[] = [];
+  const kept: Wall[] = [];
+  for (const w of game.walls) {
+    if (!isFence(w)) continue;
+    (holdsLock(w) ? kept : cleared).push(w);
+  }
+  if (cleared.length === 0) return false; // every fence is holding a lock
+
+  // Reassign the array so reference-keyed render caches (glow / fence-clip)
+  // invalidate.
+  const clearedIds = new Set(cleared.map(w => w.id));
+  game.walls = game.walls.filter(w => !clearedIds.has(w.id));
 
   // Shatter the cleared fences into flying shards (like the map-clear shatter),
   // so they break apart instead of just vanishing.
   const now = performance.now();
   const color = callbacks.fenceColor ?? "#00ff88";
   game.objectDebris ??= [];
-  for (const w of fences.slice(0, MAX_FENCE_SHATTERS)) {
+  for (const w of cleared.slice(0, MAX_FENCE_SHATTERS)) {
     game.objectDebris.push(spawnFenceShatter(w.start, w.end, color, now));
   }
 
-  // 2. Cells to PRESERVE = locked pockets. grid.lockCaptured marks them (>=1);
-  //    union with won balls' authoritative assimilation cells for precision.
-  const preserve = new Set<number>();
-  const lockCap = grid.lockCaptured;
-  if (lockCap) {
-    for (let i = 0; i < lockCap.length; i++) if (lockCap[i] >= 1) preserve.add(i);
-  }
-  for (const a of game.assimilations.values()) {
-    for (const idx of a.cellIndices) preserve.add(idx);
+  // 3. Cells to PRESERVE = the locked pockets, plus the ground the kept fences
+  //    stand on. Without the second part a kept wall would be drawn over live
+  //    space, which reads as a fence floating above the board.
+  const preserve = new Set(locked);
+  for (const w of kept) {
+    for (const idx of cellsUnderWall(grid, w, 1)) preserve.add(idx);
   }
 
-  // 3. Reopen every REMOVED cell that is inside the board, not inside a solid
-  //    obstacle/mirror, and not a preserved locked-pocket cell.
+  // 4. Reopen every REMOVED cell that is inside the board, not inside a solid
+  //    obstacle/mirror, and not preserved.
   const boardPoly = game.boardPolygon;
   const reopened: number[] = [];
   for (let row = 0; row < grid.height; row++) {
@@ -148,13 +239,17 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
     pushReopenedSamplePoints(game, reopened);
   }
 
-  // 4. Re-seal anything still unreachable by an active ball (avoids uncapturable
+  // 5. Re-seal anything still unreachable by an active ball (avoids uncapturable
   //    islands; won balls don't count), then rebuild regions + reassign balls.
+  //    This is also what tidies up after the kept fences: any space they still
+  //    enclose with no ball in it goes back to captured rather than sitting
+  //    there as an open hole nothing can reach.
   captureUnreachableCells(grid, game.balls, game.walls);
   rebuildRegionsKeepAll(game);
 
   callbacks.repaintRegionCanvas();
   callbacks.setRemainingPercent(Math.round(getRemainingPercent(grid)));
+  return true;
 }
 
 // ── Magnet / Shockwave (one-shot velocity redirects) ─────────────────────────
@@ -291,7 +386,9 @@ export function fireAbility(
       applySlowAll(game, def.factor ?? DEFAULT_SLOW_FACTOR, def.durationSeconds ?? DEFAULT_SLOW_SECONDS);
       break;
     case "clearFences":
-      clearAllFences(game, clearCallbacks);
+      // Declines when every fence is holding a lock: nothing would change, and
+      // burning a charge for no effect is worse than the button not responding.
+      fired = clearAllFences(game, clearCallbacks);
       break;
     case "magnet":
       magnetPull(game);

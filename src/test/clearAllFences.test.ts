@@ -1,9 +1,20 @@
 /**
- * Clear All Fences ability (#38, the risky one): removing all player fences must
- * reopen non-locked captured space (remaining % rises) while KEEPING locked-ball
- * pockets captured and the locked balls + their points intact. Built on a real
- * grid via createInitialGameData + a couple of cuts that lock a ball, mirroring
- * destroyRecapture.test.ts.
+ * Clear Fences ability (#38, the risky one).
+ *
+ * It used to drop EVERY fence and simply keep the locked cells captured. On
+ * screen that is a locked pocket with no walls around it: still tinted, still
+ * counted, floating in reopened space with nothing holding it. Reported from a
+ * level 7 screenshot, and worst for the player doing best, since a pocket
+ * sealed mid-board has no board edge to fall back on and loses its outline
+ * completely.
+ *
+ * The rule now is that a fence bordering locked ground stays. What this file
+ * pins down is that the two halves of the contract hold together: the mess goes
+ * (space reopens, remaining % rises) and every pocket keeps the walls that
+ * sealed it, along with the ground those walls stand on.
+ *
+ * Built on a real grid via createInitialGameData + a couple of cuts that lock a
+ * ball, mirroring destroyRecapture.test.ts.
  */
 import { describe, it, expect, vi } from "vitest";
 vi.mock("@/lib/gameAudio", () => ({
@@ -108,19 +119,91 @@ function sealPocket(game: CanvasGameState): void {
 
 const isFenceWall = (id: string) => !id.startsWith("board-") && !id.startsWith("obstacle-");
 
+const clear = (game: CanvasGameState) =>
+  clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+
+/** Fence walls remaining, as "(x,y)->(x,y)" for readable assertions. */
+const fenceSegments = (game: CanvasGameState) =>
+  game.walls.filter(w => isFenceWall(w.id))
+    .map(w => `(${Math.round(w.start.x)},${Math.round(w.start.y)})->(${Math.round(w.end.x)},${Math.round(w.end.y)})`);
+
 describe("Clear All Fences (#38)", () => {
-  it("removes all player fences but keeps board and obstacle walls", () => {
+  /**
+   * sealPocket cuts twice, and each cut becomes two walls split at its origin:
+   *
+   *   (64,500)->(64,169)    the vertical, ALONGSIDE the pocket
+   *   (64,500)->(64,855)    the vertical, BELOW the pocket, touching nothing
+   *   (175,320)->(285,169)  the diagonal, upper half, sealing the pocket
+   *   (175,320)->(64,472)   the diagonal, lower half, sealing the pocket
+   *
+   * Three of the four are load-bearing. The fourth is exactly the kind of
+   * leftover the ability exists to sweep away.
+   */
+  it("clears the fence that borders nothing and keeps the three that seal the pocket", () => {
     const game = makeGame();
     sealPocket(game);
-    expect(game.walls.some(w => isFenceWall(w.id))).toBe(true); // fences exist first
+    expect(fenceSegments(game)).toHaveLength(4);
+
+    expect(clear(game)).toBe(true);
+
+    const left = fenceSegments(game);
+    expect(left).toContain("(64,500)->(64,169)");   // pocket's vertical edge
+    expect(left).toContain("(175,320)->(285,169)"); // diagonal, upper
+    expect(left).toContain("(175,320)->(64,472)");  // diagonal, lower
+    expect(left).not.toContain("(64,500)->(64,855)"); // the stretch below: gone
+  });
+
+  it("leaves board and obstacle walls alone", () => {
+    const game = makeGame();
+    sealPocket(game);
     const boardCount = game.walls.filter(w => w.id.startsWith("board-")).length;
     const obstacleCount = game.walls.filter(w => w.id.startsWith("obstacle-")).length;
 
-    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+    clear(game);
 
-    expect(game.walls.some(w => isFenceWall(w.id))).toBe(false); // all fences gone
     expect(game.walls.filter(w => w.id.startsWith("board-")).length).toBe(boardCount);
     expect(game.walls.filter(w => w.id.startsWith("obstacle-")).length).toBe(obstacleCount);
+  });
+
+  /**
+   * A kept wall must still have captured ground under it. Reopening the strip it
+   * occupies would draw the fence over live space, which reads as a fence
+   * floating above the board - a different flavour of the same bug.
+   */
+  it("keeps the ground the surviving fences stand on captured", () => {
+    const game = makeGame();
+    sealPocket(game);
+    clear(game);
+
+    const grid = game.spaceGrid!;
+    for (const w of game.walls.filter(x => isFenceWall(x.id))) {
+      for (const t of [0.25, 0.5, 0.75]) {
+        const x = w.start.x + (w.end.x - w.start.x) * t;
+        const y = w.start.y + (w.end.y - w.start.y) * t;
+        const col = Math.floor((x - grid.originX) / grid.cellSize);
+        const row = Math.floor((y - grid.originY) / grid.cellSize);
+        expect(grid.cells[row * grid.width + col], `under ${w.id} at t=${t}`)
+          .toBe(CellState.REMOVED);
+      }
+    }
+  });
+
+  /**
+   * Every fence still standing is load-bearing, so a second press has nothing
+   * left to do. Fixture-independent, and it is also the state that must not
+   * cost the player a charge.
+   */
+  it("declines when every remaining fence is holding a lock", () => {
+    const game = makeGame();
+    sealPocket(game);
+    expect(clear(game)).toBe(true);
+
+    const wallsAfterFirst = fenceSegments(game);
+    const pctAfterFirst = getRemainingPercent(game.spaceGrid!);
+
+    expect(clear(game)).toBe(false);
+    expect(fenceSegments(game)).toEqual(wallsAfterFirst);
+    expect(getRemainingPercent(game.spaceGrid!)).toBe(pctAfterFirst);
   });
 
   it("reopens captured space so remaining % rises", () => {
@@ -169,11 +252,13 @@ describe("Clear All Fences (#38)", () => {
     expect(game.objectDebris[0].particles.length).toBeGreaterThan(0);
   });
 
-  it("is a no-op when there are no fences to clear", () => {
+  it("is a no-op, and declines, when there are no fences at all", () => {
     const game = makeGame();
     const wallsBefore = game.walls.length;
     const pctBefore = getRemainingPercent(game.spaceGrid!);
-    clearAllFences(game, { repaintRegionCanvas: () => {}, setRemainingPercent: () => {} });
+
+    expect(clear(game)).toBe(false);
+
     expect(game.walls.length).toBe(wallsBefore);
     expect(getRemainingPercent(game.spaceGrid!)).toBe(pctBefore);
   });
