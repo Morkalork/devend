@@ -271,6 +271,8 @@ upgrades:
     modifiers:
       instantFencesPerMap: 2
 
+  # Last tier is a CHOICE: front-load the map with instant fences, or draw one
+  # more fence at a time for the whole map.
   - id: hot_start_architect
     name: Hot Start
     tier: Architect
@@ -278,9 +280,23 @@ upgrades:
     unlockLevel: 20
     prerequisites:
       - hot_start_principal
+    choiceGroup: hot_start_architect
     tags: [tempo]
     modifiers:
       instantFencesPerMap: 3
+
+  - id: hot_start_architect_b
+    name: Hot Start
+    tier: Architect
+    description: "Warm Pool: only one instant fence per map, but you can draw an additional fence at the same time."
+    unlockLevel: 20
+    prerequisites:
+      - hot_start_principal
+    choiceGroup: hot_start_architect
+    tags: [tempo]
+    modifiers:
+      instantFencesPerMap: 1
+      additionalConcurrentFences: 1
 
 
   # ===============================
@@ -399,6 +415,8 @@ upgrades:
     modifiers:
       extraLives: 1
 
+  # Last tier is a CHOICE: one more whole-map retry, or per-hit protection that
+  # never needs the retry. Soak the loss, or stop it happening.
   - id: fault_tolerance_architect
     name: Fault Tolerance
     tier: Architect
@@ -406,9 +424,22 @@ upgrades:
     unlockLevel: 15
     prerequisites:
       - fault_tolerance_senior
+    choiceGroup: fault_tolerance_architect
     tags: [safety]
     modifiers:
       extraLives: 1
+
+  - id: fault_tolerance_architect_b
+    name: Fault Tolerance
+    tier: Architect
+    description: "Redundancy: no extra life, but every map starts with two shields that each absorb a ball hit."
+    unlockLevel: 15
+    prerequisites:
+      - fault_tolerance_senior
+    choiceGroup: fault_tolerance_architect
+    tags: [safety]
+    modifiers:
+      wallShieldsPerMap: 2
 
 
   # ===============================
@@ -516,6 +547,8 @@ upgrades:
     modifiers:
       runwayConcurrentFenceAt: 200
 
+  # Last tier is a CHOICE: a perk for HOARDING, or a perk for SPENDING. The rest
+  # of the family rewards a fat balance, so this is where you can invert it.
   - id: venture_capital_architect
     name: Runway
     tier: Architect
@@ -523,9 +556,22 @@ upgrades:
     unlockLevel: 11
     prerequisites:
       - venture_capital_principal
+    choiceGroup: venture_capital_architect
     tags: [bank]
     modifiers:
       runwayFreezeAt: 300
+
+  - id: venture_capital_architect_b
+    name: Runway
+    tier: Architect
+    description: "Burn Rate: no banked-balance freeze, but every chunk you spend in the store grants an instant fence next map."
+    unlockLevel: 11
+    prerequisites:
+      - venture_capital_principal
+    choiceGroup: venture_capital_architect
+    tags: [bank, risk]
+    modifiers:
+      spendInstantFencePerChunk: 1
 
 
   # ===============================
@@ -1021,6 +1067,8 @@ upgrades:
       scoreMultiplier: 1.35
       ballSpeedMultiplier: 1.15
 
+  # Last tier is a CHOICE: the same payout, but pick WHICH danger you take on.
+  # Faster balls are harder to time; bigger ones are harder to seal around.
   - id: technical_debt_architect
     name: Technical Debt
     tier: Architect
@@ -1028,10 +1076,24 @@ upgrades:
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
+    choiceGroup: technical_debt_architect
     tags: [risk]
     modifiers:
       scoreMultiplier: 1.50
       ballSpeedMultiplier: 1.25
+
+  - id: technical_debt_architect_b
+    name: Technical Debt
+    tier: Architect
+    description: "Ship It Anyway: earn 50% more overtime, and balls grow 15% instead of speeding up."
+    unlockLevel: 14
+    prerequisites:
+      - technical_debt_principal
+    choiceGroup: technical_debt_architect
+    tags: [risk]
+    modifiers:
+      scoreMultiplier: 1.5
+      ballSizeMultiplier: 1.15
 
 
   # ===============================
@@ -1160,6 +1222,8 @@ upgrades:
     modifiers:
       ballPathPredictionBounces: 1
 
+  # Last tier is a CHOICE: see every ball one step ahead, or one ball much
+  # further ahead. Breadth versus depth.
   - id: scrum_master_6
     name: SCRUM Master
     tier: Architect
@@ -1167,9 +1231,22 @@ upgrades:
     unlockLevel: 19
     prerequisites:
       - scrum_master_5
+    choiceGroup: scrum_master_6
     tags: [safety]
     modifiers:
       ballPathPredictionBalls: 999
+
+  - id: scrum_master_6_b
+    name: SCRUM Master
+    tier: Architect
+    description: "Deep Dive: the preview covers no more balls, but traces three more bounces ahead."
+    unlockLevel: 19
+    prerequisites:
+      - scrum_master_5
+    choiceGroup: scrum_master_6
+    tags: [safety]
+    modifiers:
+      ballPathPredictionBounces: 3
 
   # ===============================
   # COLD BOOT (Spawn freeze)
@@ -1279,6 +1356,7 @@ upgrades:
     modifiers:
       ballFreezeCount: 1
 
+  # Last tier is a CHOICE: hold each freeze longer, or get more of them.
   - id: cascade_freeze_principal
     name: Cascade Freeze
     tier: Architect
@@ -1286,9 +1364,22 @@ upgrades:
     unlockLevel: 22
     prerequisites:
       - cascade_freeze_senior
+    choiceGroup: cascade_freeze_principal
     tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
+
+  - id: cascade_freeze_principal_b
+    name: Cascade Freeze
+    tier: Architect
+    description: "Rolling Blackout: freezes stay the same length, but you get two more taps per map."
+    unlockLevel: 22
+    prerequisites:
+      - cascade_freeze_senior
+    choiceGroup: cascade_freeze_principal
+    tags: [freeze]
+    modifiers:
+      ballFreezeCount: 2
 
 
   # ===============================
@@ -1320,6 +1411,8 @@ upgrades:
     modifiers:
       autoFreezeDuration: 1
 
+  # Last tier is a CHOICE: a longer scheduled freeze, or a short one on EVERY
+  # ball the moment it appears.
   - id: cron_job_architect
     name: Cron Job
     tier: Architect
@@ -1327,9 +1420,22 @@ upgrades:
     unlockLevel: 24
     prerequisites:
       - cron_job_principal
+    choiceGroup: cron_job_architect
     tags: [freeze]
     modifiers:
       autoFreezeDuration: 1
+
+  - id: cron_job_architect_b
+    name: Cron Job
+    tier: Architect
+    description: "Watchdog Timer: scheduled freezes stay at 4 seconds, but every ball is frozen briefly the moment it spawns."
+    unlockLevel: 24
+    prerequisites:
+      - cron_job_principal
+    choiceGroup: cron_job_architect
+    tags: [freeze, safety]
+    modifiers:
+      spawnFreezeSeconds: 1.5
 
 
   # ===============================

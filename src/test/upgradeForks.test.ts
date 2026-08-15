@@ -9,7 +9,7 @@
  * already shipped:
  *
  * 1. The existing upgrade's id must survive. Player saves store owned ids, and
- *    three certificates point at these ids by `sourceUpgradeId`, so renaming
+ *    eight certificates point at these ids by `sourceUpgradeId`, so renaming
  *    the original to `_a` would strip owned upgrades from live runs and break
  *    certificate credit.
  * 2. The group is therefore named AFTER that original id, because cert credit
@@ -53,15 +53,12 @@ const isForked = (list: UpgradeConfig[]): boolean => {
 };
 
 /**
- * Families whose last tier is still a flat increment. This list may only ever
- * SHRINK: adding a name here means shipping a family that ends on a number
- * instead of a decision. Every entry tops out at Architect, the planned second
- * batch after the eight Principal-tier forks.
+ * Families whose last tier is still a flat increment. Now empty: every
+ * multi-tier family ends on a decision. The list stays so a future family can
+ * be parked here deliberately rather than by accident, but it may only ever
+ * SHRINK, and an addition should be argued for in review.
  */
-const UNFORKED_BY_DESIGN = [
-  "Cascade Freeze", "Cron Job", "Fault Tolerance", "Hot Start",
-  "Runway", "SCRUM Master", "Technical Debt",
-];
+const UNFORKED_BY_DESIGN: string[] = [];
 
 describe("a family's last tier is a choice", () => {
   it("only the known-unforked families end on an increment", () => {
@@ -70,17 +67,13 @@ describe("a family's last tier is a choice", () => {
   });
 
   it("the exception list never grows", () => {
-    expect(UNFORKED_BY_DESIGN.length).toBeLessThanOrEqual(7);
+    expect(UNFORKED_BY_DESIGN).toEqual([]);
   });
 
-  it("every unforked family tops out at Architect, not Principal", () => {
-    // Principal is the tier Tenure pays to, so a flat Principal is the one the
-    // player meets most often. Those are all done.
-    for (const name of UNFORKED_BY_DESIGN) {
-      const fam = families.find(([n]) => n === name);
-      expect(fam, `${name} is no longer a multi-tier family`).toBeTruthy();
-      expect(topTierOf(fam![1])).toBe("Architect");
-    }
+  /** Guards against the rule passing because nothing was actually checked. */
+  it("is checking a real set of families", () => {
+    expect(families.length).toBeGreaterThanOrEqual(20);
+    expect(families.every(([, l]) => isForked(l))).toBe(true);
   });
 });
 
