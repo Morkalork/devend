@@ -33,6 +33,7 @@ import { createInitialGameData } from "@/lib/initGame";
 import { applyCutFn } from "@/lib/physics/applyCut";
 import { clearAllFences } from "@/lib/abilityEffects";
 import { CellState, getRemainingPercent } from "@/lib/spaceGrid";
+import { pointToSegmentDistance } from "@/lib/polygon";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { LevelConfig } from "@/types/level";
 import { GrowingWall, Vector2 } from "@/types/game";
@@ -121,6 +122,23 @@ function sealPocket(game: CanvasGameState): void {
 }
 
 const isFenceWall = (id: string) => !id.startsWith("board-") && !id.startsWith("obstacle-");
+
+/**
+ * Seal the BOTTOM-RIGHT board corner with one diagonal cut, so the pocket is
+ * bounded by two board edges and nothing else. The outline's two loose ends
+ * then have only the frame to reach, which is the case the fixture above
+ * cannot produce: its pocket lands on an obstacle face instead.
+ */
+function sealCornerPocket(game: CanvasGameState): void {
+  game.balls = game.balls.slice(0, 2);
+  const [A, B] = game.balls;
+  A.position = { x: 780, y: 780 }; A.velocity = { x: 40, y: 40 }; A.speed = 57;
+  B.position = { x: 300, y: 500 }; B.velocity = { x: -70, y: 90 }; B.speed = 114;
+  applyCutFn(
+    completedWall({ x: 780, y: 640 }, { x: 855, y: 620 }, { x: 620, y: 855 }),
+    game, LEVEL, 2, MODS, false, false, 0, noopCallbacks,
+  );
+}
 
 // Mirrors the constants in abilityEffects.ts, in cells (cellSize is 15 here).
 const LOCK_ADJACENCY = 2;
@@ -336,6 +354,44 @@ describe("Clear All Fences (#38)", () => {
     // The board layer hides a stale tint by painting live space over it, so it
     // was invisible rather than absent. It is now actually gone.
     for (const idx of stale) expect(grid.lockCaptured![idx]).toBe(0);
+  });
+
+  /**
+   * A fence must run all the way into whatever bounds it. Never ending in
+   * mid-air, a few pixels short of the frame: that is visibly wrong, and it is
+   * a hole a ball can be pushed through.
+   *
+   * The trace works on cell centres, so an outline naturally stops about a cell
+   * shy of the edge it is heading for; loose ends are pushed out along their
+   * own direction until they meet it.
+   */
+  it("never leaves an outline end floating in mid-air", () => {
+    for (const build of [sealPocket, sealCornerPocket]) {
+      const game = makeGame();
+      build(game);
+      clear(game);
+
+      const seals = fenceWalls(game);
+      expect(seals.length).toBeGreaterThan(0);
+      const solid = game.walls.filter(w => !isFenceWall(w.id));
+
+      for (const w of seals) {
+        for (const [which, pt] of [["start", w.start], ["end", w.end]] as const) {
+          // Either another edge of the outline carries on from here...
+          const joins = seals.some(o => o !== w
+            && (Math.hypot(o.start.x - pt.x, o.start.y - pt.y) < 1
+              || Math.hypot(o.end.x - pt.x, o.end.y - pt.y) < 1));
+          if (joins) continue;
+          // ...or it has reached a wall, exactly. The extension solves a
+          // line intersection, so this lands on zero rather than merely near
+          // it; a single unit of slack is float noise, not a gap. Without the
+          // extension these come out around half a cell short.
+          const gap = Math.min(...solid.map(b => pointToSegmentDistance(pt, b.start, b.end)));
+          expect(gap, `${w.id}.${which} ends ${gap.toFixed(2)} from anything`)
+            .toBeLessThan(0.5);
+        }
+      }
+    }
   });
 
   it("leaves board and obstacle walls alone", () => {

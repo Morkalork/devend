@@ -116,6 +116,19 @@ const EXISTING_WALL_CELLS = 0.9;
 /** Below this a redrawn edge is skipped: a sliver of wall, not an edge. */
 const MIN_EDGE_CELLS = 0.8;
 
+/**
+ * How far a loose outline end may be pushed to reach the wall it stops against,
+ * in cells.
+ *
+ * A fence must always run all the way into whatever bounds it. The trace works
+ * on cell centres, so a pocket's outline naturally stops about a cell shy of
+ * the board edge, and a wall ending a few pixels short of the frame is a gap:
+ * visibly wrong, and a hole a ball can be pushed through. Ends are therefore
+ * extended ALONG THEIR OWN DIRECTION onto the wall they are heading for, which
+ * lengthens the fence without bending it.
+ */
+const REACH_BOUNDARY_CELLS = 3;
+
 /** Prefix marking a wall this module drew around a pocket. */
 const SEAL_PREFIX = "lockseal-";
 
@@ -149,6 +162,72 @@ function simplify(points: Pt[], tolerance: number): Pt[] {
     ...simplify(points.slice(0, index + 1), tolerance).slice(0, -1),
     ...simplify(points.slice(index), tolerance),
   ];
+}
+
+/**
+ * Where a ray from `p` along `dir` meets a wall's line, if that is within
+ * `maxReach` ahead and lands on the wall itself rather than past its end.
+ */
+function reachAlong(
+  p: Pt, dir: Pt, wall: { start: Pt; end: Pt }, maxReach: number,
+): Pt | null {
+  const sx = wall.end.x - wall.start.x;
+  const sy = wall.end.y - wall.start.y;
+  const denom = dir.x * sy - dir.y * sx;
+  if (Math.abs(denom) < 1e-9) return null; // parallel: it never meets it
+
+  const qx = wall.start.x - p.x;
+  const qy = wall.start.y - p.y;
+  const t = (qx * sy - qy * sx) / denom;   // distance along dir (dir is unit)
+  const u = (qx * dir.y - qy * dir.x) / denom; // 0..1 along the wall
+  if (t < 0 || t > maxReach) return null;
+  if (u < -0.02 || u > 1.02) return null;
+  return { x: p.x + dir.x * t, y: p.y + dir.y * t };
+}
+
+/**
+ * Push every loose end of a ring of segments out to the wall it stops against.
+ *
+ * An end is loose when no other segment in the ring continues from it, which
+ * happens wherever an edge was dropped for lying along the board edge or an
+ * obstacle. Those are exactly the ends that must reach the frame, and the trace
+ * leaves them about a cell short of it.
+ */
+function reachBoundaries(segments: { start: Pt; end: Pt }[], walls: Wall[], maxReach: number): void {
+  const shared = (pt: Pt, self: number) => segments.some((other, i) =>
+    i !== self
+    && (Math.hypot(other.start.x - pt.x, other.start.y - pt.y) < 0.5
+      || Math.hypot(other.end.x - pt.x, other.end.y - pt.y) < 0.5));
+
+  segments.forEach((seg, i) => {
+    const dx = seg.end.x - seg.start.x;
+    const dy = seg.end.y - seg.start.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-6) return;
+    const forward = { x: dx / len, y: dy / len };
+    const back = { x: -forward.x, y: -forward.y };
+
+    const push = (from: Pt, dir: Pt): Pt | null => {
+      let best: Pt | null = null;
+      let bestDist = Infinity;
+      for (const w of walls) {
+        const hit = reachAlong(from, dir, w, maxReach);
+        if (!hit) continue;
+        const d = Math.hypot(hit.x - from.x, hit.y - from.y);
+        if (d < bestDist) { bestDist = d; best = hit; }
+      }
+      return best;
+    };
+
+    if (!shared(seg.end, i)) {
+      const hit = push(seg.end, forward);
+      if (hit) seg.end = hit;
+    }
+    if (!shared(seg.start, i)) {
+      const hit = push(seg.start, back);
+      if (hit) seg.start = hit;
+    }
+  });
 }
 
 /**
@@ -207,6 +286,7 @@ function sealWallsFor(
     // point is straightened like every other corner.
     const ring = simplify([...loop, loop[0]], tolerance);
 
+    const kept: { start: Pt; end: Pt }[] = [];
     for (let i = 0; i < ring.length - 1; i++) {
       const start = ring[i];
       const end = ring[i + 1];
@@ -222,10 +302,18 @@ function sealWallsFor(
         probes.every(pt => pointToSegmentDistance(pt, w.start, w.end) < nearExisting));
       if (covered) continue;
 
+      kept.push({ start: { x: start.x, y: start.y }, end: { x: end.x, y: end.y } });
+    }
+
+    // Run the loose ends into whatever they stop against, so no fence ends in
+    // mid-air a few pixels from the frame.
+    reachBoundaries(kept, coveredBy, grid.cellSize * REACH_BOUNDARY_CELLS);
+
+    for (const seg of kept) {
       out.push({
         id: SEAL_PREFIX + (++_sealCounter),
-        start: { x: start.x, y: start.y },
-        end: { x: end.x, y: end.y },
+        start: seg.start,
+        end: seg.end,
         thickness: WALL_THICKNESS,
         createdAt: now,
       } as unknown as Wall);
@@ -343,7 +431,36 @@ export function clearAllFences(game: CanvasGameState, callbacks: ClearFencesCall
   const seals = sealWallsFor(grid, locked, now, snapTo, game.walls);
   game.walls = [...game.walls, ...seals];
 
-  // 3b. Make grid.lockCaptured agree with what was just drawn.
+  // 3b. Anything still captured INSIDE the finished outline is part of the
+  //     pocket too. The outline is straightened and snapped, so it does not
+  //     follow the cell boundary exactly; at an acute tip it bows slightly wide
+  //     of the locked cells, and the captured sliver left between the two would
+  //     otherwise be reopened and show as live space biting into the pocket.
+  //     Bounded to the pocket's own box so that a ring with a gap in it can
+  //     never flood the board.
+  if (locked.size > 0 && seals.length > 0) {
+    const seeds = [...locked];
+    let minCol = Infinity, maxCol = -Infinity, minRow = Infinity, maxRow = -Infinity;
+    for (const idx of seeds) {
+      const r = (idx / grid.width) | 0;
+      const c = idx % grid.width;
+      if (c < minCol) minCol = c;
+      if (c > maxCol) maxCol = c;
+      if (r < minRow) minRow = r;
+      if (r > maxRow) maxRow = r;
+    }
+    const pad = 2;
+    for (const idx of floodRemovedEnclosure(grid, seeds, game.walls, {
+      bounds: {
+        minCol: minCol - pad, maxCol: maxCol + pad,
+        minRow: minRow - pad, maxRow: maxRow + pad,
+      },
+    })) {
+      locked.add(idx);
+    }
+  }
+
+  // 3c. Make grid.lockCaptured agree with what was just drawn.
   //
   //     The two records of a lock disagree by design. applyCut only paints
   //     lockCaptured when the lock CAPTURED something, so a ball sealed into
