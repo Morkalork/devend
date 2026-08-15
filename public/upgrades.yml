@@ -154,6 +154,9 @@ upgrades:
     modifiers:
       ballSizeMultiplier: 0.90
 
+  # Third tier is a CHOICE: shrink the BALL, or widen the POCKET. Superior locks
+  # are graded against the BASE threshold, so Paging never makes a tight seal
+  # cheaper - it only makes an ordinary lock easier to close.
   - id: memory_footprint_principal
     name: Memory Footprint
     tier: Principal
@@ -161,9 +164,23 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - memory_footprint_senior
+    choiceGroup: memory_footprint_principal
     tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.85
+
+  - id: memory_footprint_principal_b
+    name: Memory Footprint
+    tier: Principal
+    description: "Paging: balls shrink only 5%, but a ball locks in a noticeably roomier pocket."
+    unlockLevel: 10
+    prerequisites:
+      - memory_footprint_senior
+    choiceGroup: memory_footprint_principal
+    tags: [safety]
+    modifiers:
+      ballSizeMultiplier: 0.95
+      lockThresholdBonus: 4
 
   # Benchmarking (the map-highscore HUD bar, #45) used to live here, hanging off
   # Memory Footprint. It is now the `benchmarking` CERTIFICATE - see
@@ -198,6 +215,9 @@ upgrades:
     modifiers:
       fenceGenerationSpeedMultiplier: 1.20
 
+  # Third tier is a CHOICE: a flat fence speed, or one that ramps as the map goes
+  # on. Incremental Build is slower on a map you finish in three cuts and much
+  # faster on a long one.
   - id: fast_compile_principal
     name: Fast Compile
     tier: Principal
@@ -205,9 +225,23 @@ upgrades:
     unlockLevel: 10
     prerequisites:
       - fast_compile_senior
+    choiceGroup: fast_compile_principal
     tags: [tempo]
     modifiers:
       fenceGenerationSpeedMultiplier: 1.30
+
+  - id: fast_compile_principal_b
+    name: Fast Compile
+    tier: Principal
+    description: "Incremental Build: fences start 10% faster, and speed up a further 5% with every fence you complete this map."
+    unlockLevel: 10
+    prerequisites:
+      - fast_compile_senior
+    choiceGroup: fast_compile_principal
+    tags: [tempo, risk]
+    modifiers:
+      fenceGenerationSpeedMultiplier: 1.1
+      fenceSpeedPerFence: 0.05
 
 
   # ===============================
@@ -423,6 +457,8 @@ upgrades:
     modifiers:
       scoreMultiplier: 1.10
 
+  # Third tier is a CHOICE: a flat rate on everything, or a smaller rate with a
+  # much bigger reward for clearing well past the requirement.
   - id: performance_bonus_principal
     name: Performance Bonus
     tier: Principal
@@ -430,9 +466,23 @@ upgrades:
     unlockLevel: 8
     prerequisites:
       - performance_bonus_senior
+    choiceGroup: performance_bonus_principal
     tags: [bank]
     modifiers:
       scoreMultiplier: 1.15
+
+  - id: performance_bonus_principal_b
+    name: Performance Bonus
+    tier: Principal
+    description: "Stock Options: only 5% more overtime per map, but the Space Optimization bonus pays double."
+    unlockLevel: 8
+    prerequisites:
+      - performance_bonus_senior
+    choiceGroup: performance_bonus_principal
+    tags: [bank, risk]
+    modifiers:
+      scoreMultiplier: 1.05
+      spaceBonusMultiplier: 2
 
 
   # ===============================
@@ -613,6 +663,8 @@ upgrades:
     modifiers:
       frozenLockBonus: 1
 
+  # Third tier is a CHOICE: freeze pays more, or freeze lasts longer. Cold Storage
+  # keeps the doubled payout and buys time to actually close the pocket.
   - id: frozen_assets_principal
     name: Frozen Assets
     tier: Principal
@@ -620,9 +672,22 @@ upgrades:
     unlockLevel: 16
     prerequisites:
       - frozen_assets_senior
+    choiceGroup: frozen_assets_principal
     tags: [freeze, lock]
     modifiers:
       frozenLockBonus: 1
+
+  - id: frozen_assets_principal_b
+    name: Frozen Assets
+    tier: Principal
+    description: "Cold Storage: frozen locks still pay double, but every freeze lasts a second longer."
+    unlockLevel: 16
+    prerequisites:
+      - frozen_assets_senior
+    choiceGroup: frozen_assets_principal
+    tags: [freeze, lock]
+    modifiers:
+      ballFreezeDuration: 1
 
 
   # ===============================
@@ -776,6 +841,8 @@ upgrades:
     modifiers:
       shipEarlySecondsPerBall: 2
 
+  # Third tier is a CHOICE: a longer Ship Early window, or a shorter one that pays
+  # much better. Duration versus payout, the same fork as Feature Freeze.
   - id: deadline_extension_principal
     name: Deadline Extension
     tier: Principal
@@ -783,9 +850,23 @@ upgrades:
     unlockLevel: 16
     prerequisites:
       - deadline_extension_senior
+    choiceGroup: deadline_extension_principal
     tags: [tempo]
     modifiers:
       shipEarlySecondsPerBall: 2
+
+  - id: deadline_extension_principal_b
+    name: Deadline Extension
+    tier: Principal
+    description: "Hard Cutoff: the window grows by only 2 seconds per ball, but shipping early pays 60% more."
+    unlockLevel: 16
+    prerequisites:
+      - deadline_extension_senior
+    choiceGroup: deadline_extension_principal
+    tags: [tempo, risk]
+    modifiers:
+      shipEarlySecondsPerBall: 1
+      shipEarlyBonusMultiplier: 1.6
 
 
   # ===============================
@@ -858,6 +939,7 @@ upgrades:
     modifiers:
       shopRestockCount: 1
 
+  # Third tier is a CHOICE: churn the shelf, or make one visit cheaper and wider.
   - id: procurement_principal
     name: Procurement
     tier: Principal
@@ -865,9 +947,23 @@ upgrades:
     unlockLevel: 12
     prerequisites:
       - procurement_senior
+    choiceGroup: procurement_principal
     tags: [bank]
     modifiers:
       shopRestockCount: 1
+
+  - id: procurement_principal_b
+    name: Procurement
+    tier: Principal
+    description: "Bulk Discount: no extra restocks, but the shelf shows one more offer and the cheapest one is free."
+    unlockLevel: 12
+    prerequisites:
+      - procurement_senior
+    choiceGroup: procurement_principal
+    tags: [bank]
+    modifiers:
+      extraShopItems: 1
+      freeCheapestOffer: 1
 
 
   # ===============================
@@ -1264,6 +1360,7 @@ upgrades:
     modifiers:
       pickupChanceBonus: 0.03
 
+  # Third tier is a CHOICE: more tokens, or fewer tokens and a safety net.
   - id: benefits_package_principal
     name: Benefits Package
     tier: Principal
@@ -1271,9 +1368,23 @@ upgrades:
     unlockLevel: 14
     prerequisites:
       - benefits_package_senior
+    choiceGroup: benefits_package_principal
     tags: [risk]
     modifiers:
       pickupChanceBonus: 0.03
+
+  - id: benefits_package_principal_b
+    name: Benefits Package
+    tier: Principal
+    description: "Wellness Program: tokens turn up only slightly more often, but you get one extra life."
+    unlockLevel: 14
+    prerequisites:
+      - benefits_package_senior
+    choiceGroup: benefits_package_principal
+    tags: [risk, safety]
+    modifiers:
+      pickupChanceBonus: 0.01
+      extraLives: 1
 
 
   # ===============================
@@ -1307,6 +1418,7 @@ upgrades:
     modifiers:
       pickupPayoutLevel: 1
 
+  # Third tier is a CHOICE: the best perks, or the most perks.
   - id: total_compensation_principal
     name: Total Compensation
     tier: Principal
@@ -1314,9 +1426,22 @@ upgrades:
     unlockLevel: 19
     prerequisites:
       - total_compensation_senior
+    choiceGroup: total_compensation_principal
     tags: [risk]
     modifiers:
       pickupPayoutLevel: 1
+
+  - id: total_compensation_principal_b
+    name: Total Compensation
+    tier: Principal
+    description: "Profit Sharing: perks stay at the previous level, but tokens turn up far more often."
+    unlockLevel: 19
+    prerequisites:
+      - total_compensation_senior
+    choiceGroup: total_compensation_principal
+    tags: [risk]
+    modifiers:
+      pickupChanceBonus: 0.06
 
 
   # ===============================
