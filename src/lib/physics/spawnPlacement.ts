@@ -27,21 +27,47 @@ import { isPositionActive } from "@/lib/spaceGrid";
 
 /** Headings tried before giving up and using the fallback offset. */
 const HEADINGS = 8;
-/** Gap from the parent, in parent radii. Below ~1 the two still visually merge. */
-const DEFAULT_GAP_RADII = 1.25;
+
 /**
- * The floor, in parent radii: closer than this and the pair reads as one ball
- * splitting rather than two balls.
+ * Two same-size balls TOUCH when their centres are 2 radii apart.
  *
- * Nothing may return a position inside this, including the last-resort fallback.
- * It used to fall back to a flat 2 WORLD units - a tenth of a radius, tighter
- * than the `radius * 0.75` offsets this module exists to replace - so whenever
- * the headings all failed the result was the exact bug being fixed. A cramped
- * pocket is precisely where a beat is most likely to fire, so that path was not
- * rare: map 2 asks for a 3-radius gap that is also 3 radii clear of the other
- * ball, inside a corridor between two dividers.
+ * Every distance in this module is CENTRE TO CENTRE, and that is the one thing
+ * the earlier versions of this file got wrong. They reasoned in radii as though
+ * the number described the air between the two surfaces ("below ~1 the two
+ * still visually merge"), so the gap was set to 1.25 - which for radius-18
+ * balls is 22.5 units apart when 36 is merely touching. Every Fork clone, every
+ * rainbow spit and every degraded beat add was therefore born overlapping its
+ * parent by 13.5 units, i.e. drawn as a single blob that then separates. That
+ * is exactly the "the ball split / duplicated" report this module was created
+ * to end, and it survived two rounds of fixes because the number moved in the
+ * right direction without ever crossing 2.
+ *
+ * Anything below this constant is an overlap, not a gap.
  */
-const MIN_GAP_RADII = 1.25;
+const TOUCHING_RADII = 2;
+/** Wanted separation: a full radius of clear air between the two surfaces. */
+const DEFAULT_GAP_RADII = TOUCHING_RADII + 1;
+/**
+ * The floor. Nothing may return a position inside this, including the
+ * last-resort fallback: a quarter radius of daylight is thin, but the pair
+ * still reads as two balls rather than one splitting.
+ *
+ * A cramped pocket is precisely where a spawn is most likely to happen, so the
+ * degraded path is not rare and must stay above the overlap threshold.
+ */
+const MIN_GAP_RADII = TOUCHING_RADII + 0.25;
+
+/** Random spots tried when placing a ball that has no parent to sit near. */
+const OPEN_SPAWN_ATTEMPTS = 60;
+/** Points sampled around a candidate spot to check the ball's whole footprint. */
+const FOOTPRINT_SAMPLES = 8;
+/**
+ * Clearance from every live ball for an unanchored spawn, in radii, tried in
+ * order. Even the last is past DEFAULT_GAP_RADII: an arrival that lands within
+ * a gap of an existing ball reads as having come OUT of it, which is the whole
+ * thing being avoided.
+ */
+const OPEN_CLEAR_RADII = [8, 6, 4.5, 3.5];
 
 export interface SpawnPlacement {
   x: number;
@@ -111,4 +137,72 @@ export function spawnClearOfParent(
     y: parent.position.y + Math.sin(start) * floor,
     angle: start,
   };
+}
+
+/**
+ * A spawn point in open playable space, tied to no existing ball.
+ *
+ * For a ball that ARRIVES rather than splits off - a map beat's extra ball -
+ * sitting it next to an existing ball is wrong however wide the gap: the
+ * newcomer is the same size, and its type is drawn at random from what the
+ * level can spawn, so on an early map it is frequently the same colour too. A
+ * matching ball appearing beside another one is read as that ball dividing, and
+ * no amount of separation fixes the reading; only not being there does.
+ *
+ * So this ignores the anchor entirely and looks for somewhere the ball can
+ * simply turn up: live space, its whole footprint inside the board, and well
+ * clear of everything already in play. `fallback` is used only when the board
+ * has no such spot left, which on a nearly-captured board is a real state.
+ */
+export function spawnInOpenSpace(
+  game: CanvasGameState,
+  radius: number,
+  fallback: Ball,
+): SpawnPlacement {
+  const grid = game.spaceGrid;
+  const live = game.balls.filter(b => b.state === "active" || b.state === "dormant");
+
+  if (grid) {
+    // Cell centres that are still playable. Built once per spawn (a one-off
+    // event, not a per-frame cost) so the sampling below cannot spin on a board
+    // that is mostly captured.
+    const open: { x: number; y: number }[] = [];
+    for (let row = 0; row < grid.height; row++) {
+      for (let col = 0; col < grid.width; col++) {
+        const x = grid.originX + (col + 0.5) * grid.cellSize;
+        const y = grid.originY + (row + 0.5) * grid.cellSize;
+        if (isPositionActive(grid, { x, y })) open.push({ x, y });
+      }
+    }
+
+    if (open.length > 0) {
+      // The ball's whole width has to be in live space, not just its centre:
+      // a spot one cell from a fence would post it half inside the wall.
+      const footprintFits = (p: { x: number; y: number }): boolean => {
+        for (let i = 0; i < FOOTPRINT_SAMPLES; i++) {
+          const a = (i / FOOTPRINT_SAMPLES) * Math.PI * 2;
+          if (!isPositionActive(grid, { x: p.x + Math.cos(a) * radius, y: p.y + Math.sin(a) * radius })) {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      for (const clearRadii of OPEN_CLEAR_RADII) {
+        const clearance = radius * clearRadii;
+        for (let attempt = 0; attempt < OPEN_SPAWN_ATTEMPTS; attempt++) {
+          const spot = open[Math.floor(Math.random() * open.length)];
+          if (!footprintFits(spot)) continue;
+          if (!live.every(b => Math.hypot(b.position.x - spot.x, b.position.y - spot.y) >= clearance)) {
+            continue;
+          }
+          return { x: spot.x, y: spot.y, angle: Math.random() * Math.PI * 2 };
+        }
+      }
+    }
+  }
+
+  // Nowhere open left. Fall back to the anchored placement, which at least
+  // guarantees the pair does not overlap.
+  return spawnClearOfParent(game, fallback, { gapRadii: DEFAULT_GAP_RADII, clearOfOtherBalls: true });
 }

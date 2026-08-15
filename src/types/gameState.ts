@@ -174,6 +174,12 @@ export interface CanvasGameState {
   /** Map-beat ids whose telegraph warning has shown, so each warns once. */
   warnedBeats: string[];
   /**
+   * Beats triggered but held back until their telegraph has had its lead time
+   * (mapBeats.ts). Due times are in activePlaySeconds, so a pause never eats
+   * the warning. Empty on maps whose beats carry no `announce`.
+   */
+  pendingBeats: { id: string; dueActiveSeconds: number }[];
+  /**
    * Colored Areas for this map (gate AND bonus), in world space, already
    * rotated (mapRotation). Gate-only consumers filter with gateAreas().
    */

@@ -4,6 +4,9 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig, MapBeat } from "@/types/level";
 import { createSpaceGrid } from "@/lib/spaceGrid";
 import { createRectPolygon } from "@/lib/polygon";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import yaml from "js-yaml";
 
 function makeGame(overrides: Partial<CanvasGameState> = {}): CanvasGameState {
   return {
@@ -115,6 +118,113 @@ describe("tickMapBeats", () => {
   });
 });
 
+/**
+ * A space beat is crossed by the player's own cut, so its warning used to fire
+ * in the SAME tick as its effect: the banner appeared at the top of the screen
+ * at the instant the ball appeared mid-board, while the player was watching
+ * their fence. map.yml calls level 2's standup beat "a banner so it is never an
+ * ambush"; simultaneous is an ambush.
+ *
+ * The lead runs on activePlaySeconds, so a pause or a hold cannot eat it.
+ */
+describe("a telegraphed space beat warns BEFORE it lands", () => {
+  const spaceBeat = (): MapBeat => ({
+    id: "standup", atSpaceRemaining: 60, spawnAdds: 1, announce: "game.beatStandup",
+  });
+
+  /**
+   * A game reporting 50% space remaining, i.e. already past a 60% threshold.
+   * The cells stay open so the placement search has somewhere to work; only the
+   * counter getRemainingPercent reads is moved.
+   */
+  function halfCaptured(activePlaySeconds = 0) {
+    const grid = createSpaceGrid(createRectPolygon(0, 0, 900, 900), [], 15);
+    grid.activeCount = Math.floor(grid.initialActiveCount * 0.5);
+    return makeGame({
+      spaceGrid: grid,
+      activePlaySeconds,
+      balls: [{
+        id: "blue-1", typeId: "blue", state: "active", speed: 200, baseSpeed: 200,
+        radius: 18, position: { x: 450, y: 800 }, velocity: { x: 100, y: 0 }, regionId: "r1",
+      } as unknown as CanvasGameState["balls"][number]],
+    });
+  }
+
+  it("shows the banner on the cut that crosses the threshold", () => {
+    const g = halfCaptured();
+    const warns: string[] = [];
+    tickMapBeats(g, level([spaceBeat()]), 5, a => warns.push(a));
+    expect(warns).toEqual(["game.beatStandup"]);
+  });
+
+  it("does NOT spawn the ball in that same tick", () => {
+    const g = halfCaptured();
+    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    expect(g.balls).toHaveLength(1);
+    expect(g.pendingBeats).toHaveLength(1);
+  });
+
+  it("spawns it once the telegraph has had its lead", () => {
+    const g = halfCaptured();
+    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    expect(g.balls).toHaveLength(1);
+
+    g.activePlaySeconds = 1.6; // default leadMs
+    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    expect(g.balls).toHaveLength(2);
+    expect(g.pendingBeats).toHaveLength(0);
+  });
+
+  it("honours a custom leadMs", () => {
+    const beat: MapBeat = { ...spaceBeat(), leadMs: 3000 };
+    const g = halfCaptured();
+    tickMapBeats(g, level([beat]), 5, () => {});
+
+    g.activePlaySeconds = 2.9;
+    tickMapBeats(g, level([beat]), 5, () => {});
+    expect(g.balls).toHaveLength(1);
+
+    g.activePlaySeconds = 3.1;
+    tickMapBeats(g, level([beat]), 5, () => {});
+    expect(g.balls).toHaveLength(2);
+  });
+
+  it("holds the ball back for as long as play is paused", () => {
+    // activePlaySeconds does not advance while paused, so ticking many frames
+    // must not release the beat early.
+    const g = halfCaptured();
+    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    for (let frame = 0; frame < 200; frame++) tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    expect(g.balls).toHaveLength(1);
+  });
+
+  it("fires once, not once per frame after it comes due", () => {
+    const g = halfCaptured();
+    tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    g.activePlaySeconds = 5;
+    for (let frame = 0; frame < 10; frame++) tickMapBeats(g, level([spaceBeat()]), 5, () => {});
+    expect(g.balls).toHaveLength(2);
+  });
+
+  /**
+   * A beat with nothing to announce has no telegraph to wait for, so it must
+   * still land at once — the lead exists to give the banner time, not to delay
+   * effects on principle.
+   */
+  it("does not delay a beat that has no banner", () => {
+    const g = halfCaptured();
+    tickMapBeats(g, level([{ id: "silent", atSpaceRemaining: 60, spawnAdds: 1 }]), 5);
+    expect(g.balls).toHaveLength(2);
+    expect(g.pendingBeats).toHaveLength(0);
+  });
+
+  it("does not delay a time beat, which already warned early", () => {
+    const g = halfCaptured(24);
+    tickMapBeats(g, level([{ id: "t", atSeconds: 24, spawnAdds: 1, announce: "x" }]), 5, () => {});
+    expect(g.balls).toHaveLength(2);
+  });
+});
+
 describe("beat spawnAdds placement (issue: 'the ball duplicated')", () => {
   // A beat's add used to bud off the anchor's rim at 0.75 radii — the boss
   // placement, where a big boss visibly spits out a small minion. On a normal
@@ -144,5 +254,25 @@ describe("beat spawnAdds placement (issue: 'the ball duplicated')", () => {
     // Epsilon because the placement lands exactly ON the threshold and the trig
     // that gets it there can leave it a float hair short (53.999... vs 54).
     expect(dist).toBeGreaterThanOrEqual(anchor.radius * 3 - 1e-9);
+  });
+});
+
+/**
+ * The telegraph lead only helps a beat that HAS a telegraph. An extra ball
+ * arriving with no banner at all is the ambush in its purest form, so the rule
+ * is enforced against the shipped maps rather than left to reviewer memory.
+ */
+describe("every ball-spawning beat in map.yml announces itself", () => {
+  const MAP = yaml.load(
+    readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+  ) as { levels: { id: string; beats?: MapBeat[] }[] };
+
+  it("carries an announce wherever spawnAdds is set", () => {
+    const silent = MAP.levels.flatMap(lvl =>
+      (lvl.beats ?? [])
+        .filter(b => (b.spawnAdds ?? 0) > 0 && !b.announce)
+        .map(b => `${lvl.id}/${b.id}`),
+    );
+    expect(silent).toEqual([]);
   });
 });

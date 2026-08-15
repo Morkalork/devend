@@ -11,6 +11,14 @@ import type { CanvasGameState } from "@/types/gameState";
  * It used to be placed 2 world units away, when a ball radius is ~18, so the
  * two were coincident for the first frames and the split read as the ball
  * duplicating itself rather than splitting. It must be born a clear gap away.
+ *
+ * These assertions used to read `> src.radius`, with the comment "anything
+ * under a radius still overlaps". That is wrong by a factor of two, and it is
+ * why the bug outlived its fix: the distance is CENTRE TO CENTRE, and two
+ * same-size balls do not stop overlapping until 2 radii. At the 1.25 radii the
+ * placement then used, the pair was 22.5 units apart when 36 is merely
+ * touching, so this test passed on clones that were drawn 13.5 units inside
+ * each other. The threshold is now the one the eye actually uses.
  */
 /** Seal a fork token into a pocket, exactly as drawing a fence does. */
 function claimForkAt(g: CanvasGameState, x: number, y: number): void {
@@ -45,8 +53,9 @@ describe("fork clone separation", () => {
     expect(g.balls.length).toBe(2);
     const [src, clone] = g.balls;
     const dist = Math.hypot(clone.position.x - src.position.x, clone.position.y - src.position.y);
-    // Anything under a radius still overlaps and reads as one ball.
-    expect(dist).toBeGreaterThan(src.radius);
+    // Two same-size balls are exactly touching at 2 radii; anything less is an
+    // overlap, i.e. one blob on screen.
+    expect(dist).toBeGreaterThan(src.radius * 2);
   });
 
   it("sends the clone away along its own heading", () => {
@@ -89,7 +98,7 @@ describe("rainbow spawner separation", () => {
     expect(g.balls.length).toBeGreaterThan(1);
     for (const child of g.balls.slice(1)) {
       const d = Math.hypot(child.position.x - parent.position.x, child.position.y - parent.position.y);
-      expect(d).toBeGreaterThan(parent.radius);
+      expect(d).toBeGreaterThan(parent.radius * 2);
     }
   });
 });

@@ -18,7 +18,8 @@ import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
 import { playBossChargeSound } from "@/lib/gameAudio";
 import { BIG_BALL_RADIUS_SCALE } from "@/lib/ballGifts";
 import { gateAreas } from "@/lib/coloredAreas";
-import { spawnClearOfParent } from "@/lib/physics/spawnPlacement";
+import { spawnInOpenSpace } from "@/lib/physics/spawnPlacement";
+import { findRegionContainingPoint } from "@/lib/gameUtils";
 
 let _bossAddCounter = 0;
 
@@ -227,11 +228,13 @@ export function tickBossFenceWipe(
  *
  * - true (bosses): the add emerges from the anchor's rim, because a big boss
  *   visibly spitting out a small minion is the whole read of the mechanic.
- * - false (map beats): the add arrives in open space, well clear of every other
- *   ball. Budding is wrong here - a map beat's anchor is an ORDINARY ball the
- *   same size as the newcomer, so a ball appearing half a radius away with a
- *   randomly-picked type that may match the anchor's colour looks exactly like
- *   the anchor duplicated itself. Reported as a bug, and fairly.
+ * - false (map beats): the add arrives somewhere else on the board entirely,
+ *   anchored to nothing. Budding is wrong here - a map beat's anchor is an
+ *   ORDINARY ball the same size as the newcomer, whose type is drawn at random
+ *   from what the level can spawn and so often matches the anchor's colour.
+ *   Placing it beside that ball reads as the ball dividing however wide the gap
+ *   is, which is what "a blue ball split when I drew a fence" was: level 2's
+ *   standup beat, landing an identical blue ball next to the one in play.
  */
 export function spawnAdds(
   game: CanvasGameState,
@@ -253,14 +256,19 @@ export function spawnAdds(
     const type = spawnable[Math.floor(Math.random() * spawnable.length)];
     const position = bud
       ? budPosition(anchor)
-      // 3 radii: a beat's anchor is an ordinary ball the same size as the
-      // newcomer, so it needs a wider berth than a parent/child split does.
-      : spawnClearOfParent(game, anchor, { gapRadii: 3, clearOfOtherBalls: true });
+      : spawnInOpenSpace(game, anchor.radius, anchor);
     const child = createBall(
       type, position, speedScale, anchor.radius,
       `${type.id}-boss-${++_bossAddCounter}`, performance.now(), game.activePlaySeconds,
     );
-    child.regionId = anchor.regionId; // born in the anchor's region
+    // A bud is born in its parent's region by definition; an open-space arrival
+    // has to be told where it landed, or it inherits an id for a region it is
+    // not actually in and the ownership check has to recover it mid-flight.
+    // (game.regions is absent in the partial states the physics fixtures build.)
+    const landed = bud || !game.regions
+      ? null
+      : findRegionContainingPoint(game.regions, position.x, position.y);
+    child.regionId = landed ? landed.id : anchor.regionId;
     game.balls.push(child);
   }
 }

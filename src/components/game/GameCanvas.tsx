@@ -543,6 +543,7 @@ export function GameCanvas({
     bossFiredPhases: [],
     firedBeats: [],
     warnedBeats: [],
+    pendingBeats: [],
     beatSpeedMult: 1,
     coloredAreas: [],
     coloredAreaSatisfied: false,
@@ -879,6 +880,7 @@ export function GameCanvas({
       game.bossFiredPhases = [];
       game.firedBeats = [];
       game.warnedBeats = [];
+      game.pendingBeats = [];
       game.beatSpeedMult = 1;
       setBeatBanner(null);
       lastTimeTierRef.current = 0; // fresh map: re-arm the time-tier toasts
