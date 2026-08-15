@@ -419,6 +419,9 @@ export function checkAndUpdateBallWonStates(
         areas, AREA_COVER_FRACTION,
       ) ?? (inArea && gates.length === 1 ? gates[0] : null);
       if (hit) {
+        // Re-stamped on every credited lock, not just the first, so a second
+        // ball into an already-used zone still visibly confirms it counted.
+        hit.satisfiedAt = performance.now();
         hit.satisfied = true;
         lockAreaById.set(ball.id, hit);
       }

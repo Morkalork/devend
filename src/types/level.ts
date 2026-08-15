@@ -362,6 +362,13 @@ export interface ColoredArea {
    * map with game.coloredAreas.
    */
   satisfied?: boolean;
+  /**
+   * Runtime only: when `satisfied` flipped (performance.now()). Drives the
+   * activation pulse, which is the only thing that tells a player mid-map that
+   * their lock actually counted. Without a timestamp the renderer can only draw
+   * a static "lit" state, which is indistinguishable from never having tried.
+   */
+  satisfiedAt?: number;
 }
 
 export interface LevelData {

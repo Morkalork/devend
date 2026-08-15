@@ -34,6 +34,7 @@ import {
   getLockDecisions, setLockDebugEnabled, clearLockDecisions,
 } from "@/lib/lockDiagnostics";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
+import { zonePulse, FLARE_MS, BREATH_MS } from "@/lib/rendering/sleek/areaLayer";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import type { CanvasGameState } from "@/types/gameState";
 import type { GrowingWall, Vector2 } from "@/types/game";
@@ -160,6 +161,29 @@ describe("the results screen can see the zone", () => {
 });
 
 describe("the lock is legible the moment it happens", () => {
+  /**
+   * The renderer's pulse is time-driven, so it needs to know WHEN the zone
+   * fired. A `satisfied` boolean alone can only produce a static bright state,
+   * which is what the player reported being unable to read.
+   */
+  it("stamps when the zone was activated, not just that it was", () => {
+    const before = performance.now();
+    const { game } = sealCorner([LET]);
+    const area = game.coloredAreas!.find(a => a.kind === "let")!;
+
+    expect(area.satisfied).toBe(true);
+    expect(area.satisfiedAt).toBeGreaterThanOrEqual(before);
+    expect(area.satisfiedAt).toBeLessThanOrEqual(performance.now());
+  });
+
+  it("leaves an untouched zone unstamped", () => {
+    const faraway: ColoredArea = { ...LET, x: 60, y: 640 } as ColoredArea;
+    const { game } = sealCorner([faraway]);
+    const area = game.coloredAreas![0];
+    expect(area.satisfied).toBeFalsy();
+    expect(area.satisfiedAt).toBeUndefined();
+  });
+
   it("tints the pocket flash with the zone colour", () => {
     const { game, ball } = sealCorner([LET]);
     expect(game.assimilations.get(ball.id)?.zoneColor).toBe(areaStyle("let").color);
@@ -205,5 +229,60 @@ describe("lockDebug can answer 'why did my zone not count?'", () => {
     const { ball } = sealCorner([]);
     const decision = getLockDecisions().find(d => d.ballId === ball.id);
     expect(decision!.area).toBeNull();
+  });
+});
+
+/**
+ * The pulse curve. Reported twice from play ("I still can't tell if the colored
+ * area is activated"), so the claims it has to make good on are pinned here:
+ * it must be unmissable at the moment of the lock, and still readable long
+ * after, which is a property of these curves and not of the Pixi calls.
+ */
+describe("the activation pulse", () => {
+  it("peaks at the instant the zone fires", () => {
+    const at0 = zonePulse(0);
+    expect(at0.flare).toBe(1);
+    expect(at0.fillAlpha).toBeGreaterThan(zonePulse(FLARE_MS).fillAlpha);
+  });
+
+  it("drains the flare away, monotonically", () => {
+    const samples = [0, 200, 400, 700, 1000, FLARE_MS].map(t => zonePulse(t).flare);
+    for (let i = 1; i < samples.length; i++) {
+      expect(samples[i]).toBeLessThan(samples[i - 1]);
+    }
+    expect(zonePulse(FLARE_MS).flare).toBe(0);
+    expect(zonePulse(FLARE_MS * 5).flare).toBe(0); // never goes negative
+  });
+
+  it("expands the ring outward as the flare drains", () => {
+    expect(zonePulse(0).grow).toBe(0);
+    expect(zonePulse(FLARE_MS / 2).grow).toBeGreaterThan(0);
+    expect(zonePulse(FLARE_MS).grow).toBeGreaterThan(zonePulse(FLARE_MS / 2).grow);
+  });
+
+  /** The half that answers "did that count?" a minute later. */
+  it("keeps breathing forever, and never goes dark", () => {
+    for (const t of [2000, 10_000, 60_000, 600_000]) {
+      const p = zonePulse(t);
+      expect(p.fillAlpha).toBeGreaterThan(0.05);
+      expect(p.strokeAlpha).toBeGreaterThan(0.3);
+    }
+  });
+
+  it("actually oscillates rather than sitting at a constant", () => {
+    const overOneCycle = Array.from({ length: 12 }, (_, i) => zonePulse(5000 + i * (BREATH_MS / 12)).strokeAlpha);
+    const spread = Math.max(...overOneCycle) - Math.min(...overOneCycle);
+    expect(spread).toBeGreaterThan(0.3); // a visible swing, not a shimmer
+  });
+
+  it("is brighter during the flare than at any point in the steady breath", () => {
+    const peakIdle = Math.max(
+      ...Array.from({ length: 40 }, (_, i) => zonePulse(5000 + i * 50).fillAlpha),
+    );
+    expect(zonePulse(0).fillAlpha).toBeGreaterThan(peakIdle);
+  });
+
+  it("treats a negative age as the moment of activation", () => {
+    expect(zonePulse(-50).flare).toBe(1); // clock skew must not blank the pulse
   });
 });

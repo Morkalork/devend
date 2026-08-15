@@ -10,6 +10,13 @@
  *   GATE vs BONUS   - border weight and fill density (must vs may)
  *   OCCUPIED        - a solid, brighter border once a ball is locked inside
  * so a bonus pocket in use never reads as a gate.
+ *
+ * OCCUPIED also PULSES. Reported from play: "I still can't tell if the colored
+ * area is activated." A static brighter border is not a signal, because the
+ * player never sees the before and after side by side - by the time they look,
+ * bright-because-used and bright-because-that-is-how-it-looks are the same
+ * picture. The pulse is drawn into its own Graphics so the static geometry
+ * stays key-gated and is not rebuilt sixty times a second.
  */
 
 import { Container, Graphics, Text, TextStyle } from "pixi.js";
@@ -21,19 +28,61 @@ import { snapRect, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
 
+/** Activation flare length, and the steady breath's cycle, in ms. */
+export const FLARE_MS = 1100;
+export const BREATH_MS = 1900;
+
+/** The shape of the activation pulse at a given age. */
+export interface ZonePulse {
+  /** 1 at the instant of activation, 0 once the flare has drained. */
+  flare: number;
+  /** How far the flare ring has expanded past the border, in screen px. */
+  grow: number;
+  /** Wash alpha over the zone: flare on top of the steady breath. */
+  fillAlpha: number;
+  /** Inner border alpha, before the ambient light level is applied. */
+  strokeAlpha: number;
+}
+
+/**
+ * Pulse shape, split out so it can be tested. The visual claim being made is
+ * "you can tell the zone fired, and you can still tell a minute later", and
+ * that is entirely a property of these curves rather than of the Pixi calls
+ * that consume them.
+ */
+export function zonePulse(sinceMs: number): ZonePulse {
+  const age = Math.max(0, sinceMs);
+  // Eased so it slams on and drains off, rather than fading linearly.
+  const flare = Math.pow(Math.max(0, 1 - age / FLARE_MS), 1.7);
+  // Never reaches 0, so an activated zone always reads as activated.
+  const breath = 0.5 + 0.5 * Math.sin((age / BREATH_MS) * Math.PI * 2);
+  return {
+    flare,
+    grow: (1 - flare) * 14,
+    fillAlpha: 0.35 * flare + 0.10 + 0.14 * breath,
+    strokeAlpha: 0.35 + 0.45 * breath,
+  };
+}
+
 export class AreaLayer {
   readonly container = new Container();
 
   private g = new Graphics();
+  /** Redrawn per frame while any zone is pulsing; cleared once when none are. */
+  private pulseG = new Graphics();
   private labels: Text[] = [];
   private key = "";
+  private wasPulsing = false;
 
   constructor() {
-    this.container.addChild(this.g);
+    this.container.addChild(this.g, this.pulseG);
   }
 
   sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
     const areas = game.coloredAreas ?? [];
+    // Before the key check: the pulse is time-driven, so it must run on frames
+    // where nothing about the areas themselves changed.
+    this.drawPulse(areas, light, w2s);
     const key =
       areas
         .map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind},${isGateArea(a) ? 1 : 0},${a.satisfied ? 1 : 0}`)
@@ -58,7 +107,10 @@ export class AreaLayer {
 
       // Ambient only: the marking is part of the surface.
       const amb = ambientAt(light, r.x + r.width / 2, r.y + r.height / 2);
-      const fill = (lit ? 0.3 : gate ? 0.11 : 0.06) * (0.55 + amb * 0.45);
+      // A lit zone deliberately paints LIGHTER than it used to: the breathing
+      // wash from drawPulse sits on top of this every frame, and the two
+      // stacked at the old weight read as a solid block.
+      const fill = (lit ? 0.12 : gate ? 0.11 : 0.06) * (0.55 + amb * 0.45);
       this.g.rect(r.x, r.y, r.width, r.height).fill({ color, alpha: fill });
 
       if (lit) {
@@ -116,6 +168,54 @@ export class AreaLayer {
       this.container.addChild(kind, mult);
       this.labels.push(kind, mult);
     }
+  }
+
+  /**
+   * The activation pulse: a hard flare the instant a lock is credited, decaying
+   * into a slow steady breath that persists for the rest of the map.
+   *
+   * Both halves earn their place. The flare is what catches the eye at the
+   * moment of the lock, when the player is looking at the board and not the
+   * zone; the breath is what answers "did that count?" thirty seconds later,
+   * when the flare is long gone and a static border would tell them nothing.
+   */
+  private drawPulse(areas: CanvasGameState["coloredAreas"], light: LightScope, w2s: W2S): void {
+    const list = areas ?? [];
+    const now = performance.now();
+    let pulsing = false;
+
+    this.pulseG.clear();
+    for (const a of list) {
+      if (!a.satisfied) continue;
+      pulsing = true;
+
+      const st = areaStyle(a.kind);
+      const color = Number.parseInt(st.color.replace("#", ""), 16);
+      const since = now - (a.satisfiedAt ?? now);
+
+      const tl = w2s(a.x, a.y);
+      const br = w2s(a.x + a.width, a.y + a.height);
+      const r = snapRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+
+      const p = zonePulse(since);
+
+      // A ring that expands OUT of the border during the flare, which reads as
+      // the zone firing rather than merely getting brighter.
+      if (p.flare > 0.01) {
+        this.pulseG
+          .rect(r.x - p.grow, r.y - p.grow, r.width + p.grow * 2, r.height + p.grow * 2)
+          .stroke({ width: 2 + p.flare * 3, color, alpha: 0.85 * p.flare * light.level });
+      }
+
+      this.pulseG.rect(r.x, r.y, r.width, r.height).fill({ color, alpha: p.fillAlpha });
+      this.pulseG
+        .rect(r.x + 2.5, r.y + 2.5, r.width - 5, r.height - 5)
+        .stroke({ width: 1.5, color, alpha: p.strokeAlpha * light.level });
+    }
+
+    // Leaving a stale pulse on screen would be worse than none at all.
+    if (!pulsing && this.wasPulsing) this.pulseG.clear();
+    this.wasPulsing = pulsing;
   }
 
   destroy(): void {
