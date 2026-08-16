@@ -1461,7 +1461,10 @@
     "extraCertificateHours": "Certifikattimmar per omgång +{{hours}}",
     "bankedSlowPer50h": "Bollhastighet {{percent}}% per 50h i banken",
     "microManagerPerLock": "Bollhastighet {{percent}}% per inlåst boll",
-    "showHighscoreProgress": "Lägger till rekordmätaren för banan i HUD:en"
+    "showHighscoreProgress": "Lägger till rekordmätaren för banan i HUD:en",
+    "startingOvertime": "Börja med +{{hours}}h övertid",
+    "storeLockReliefOne": "Butiken kräver aldrig mer än en inlåsning",
+    "storeLockReliefFull": "Butiken kräver inga inlåsningar alls"
   },
   "boardInfo": {
     "hint": "Håll in vad som helst på brädet för att se vad det är.",

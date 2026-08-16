@@ -102,6 +102,15 @@ export interface GameModifiers {
   // to break. Applied to their authored integrity at level init, never below 1,
   // so a 3-hit crate at 2 comes apart on the first solid contact.
   destructibleHitsReduction: number;
+  // Additive (sum) - Signing Bonus cert: overtime hours already banked when a
+  // run starts. Spendable like any other hours, and counted in the run score
+  // the ledger files, the same way the Head Start certs already skew a run by
+  // beginning it further in.
+  startingOvertime: number;
+  // Additive (sum) - Corporate Card cert: how far the shop's lock requirement
+  // is relaxed. 1 = it never asks for more than one lock, 2 = it never asks at
+  // all. See the requirement in useGameSession.
+  storeLockRelief: number;
   // Additive (sum) - Breaking Change / Write-Off: added to the per-smash
   // demolition multiplier (base 1.15), so 0.15 makes each smash compound at
   // 1.30 instead.
@@ -256,6 +265,8 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   pickupChanceBonus: 0,
   pickupPayoutLevel: 0,
   destructibleHitsReduction: 0,
+  startingOvertime: 0,
+  storeLockRelief: 0,
   breakMultiplierBonus: 0,
   smashKeepsLockMultiplier: 0,
   shipEarlyBonusMultiplier: 1,

@@ -55,6 +55,46 @@ export interface CertManagerOptions {
   onHourEarned?: () => void;
 }
 
+/** The bonus modifiers owned cert levels add up to. Pure, so it can be run
+ *  outside React the moment a load finishes. */
+function computeCertBonuses(
+  certificates: Certificate[],
+  certLevelsOwned: Record<string, number>,
+): Partial<Record<keyof GameModifiers, number>> {
+  const result: Partial<Record<keyof GameModifiers, number>> = {};
+  for (const cert of certificates) {
+    const levelsOwned = certLevelsOwned[cert.id] || 0;
+    if (levelsOwned === 0) continue;
+    for (let i = 0; i < levelsOwned; i++) {
+      const { type, value } = cert.levels[i].effect;
+      if (type === 'startingLevelBonus') continue;
+      const k = type as keyof GameModifiers;
+      if (MULTIPLICATIVE_KEYS.includes(k)) {
+        result[k] = ((result[k] as number) ?? 1) * value;
+      } else {
+        result[k] = ((result[k] as number) ?? 0) + value;
+      }
+    }
+  }
+  return result;
+}
+
+/**
+ * The cert bonuses as of the last load or purchase, readable synchronously.
+ *
+ * The same trap `getLoadedUpgrades` exists for: certificates are fetched INSIDE
+ * the run-start handlers, so a closure created before that fetch resolved still
+ * sees the pre-load `certBonuses` state. Anything the start path reads in that
+ * window (Signing Bonus, which has to be banked before the first map) would
+ * silently be zero on the first run of a session and correct on every one
+ * after, which is the worst possible shape for a bug.
+ */
+let liveCertBonuses: Partial<Record<keyof GameModifiers, number>> = {};
+
+export function getLoadedCertBonuses(): Partial<Record<keyof GameModifiers, number>> {
+  return liveCertBonuses;
+}
+
 export function useCertificateManager(options: CertManagerOptions = {}) {
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -94,6 +134,11 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
         throw new Error('Invalid certificates configuration');
       }
       setCertificates(config.certificates);
+      // Publish immediately. A caller awaiting this load reads the bonuses in
+      // the same tick, before any re-render could refresh its closure, and
+      // loadPersistence reads localStorage directly so the owned levels are
+      // authoritative rather than whatever state happens to have settled.
+      liveCertBonuses = computeCertBonuses(config.certificates, loadPersistence().certLevelsOwned);
       setIsLoading(false);
       return true;
     } catch (err) {
@@ -236,24 +281,13 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
    * Compute combined bonus modifiers from all owned cert levels.
    * Ready to be merged with achievementBonuses via mergeBonuses().
    */
-  const certBonuses = useMemo((): Partial<Record<keyof GameModifiers, number>> => {
-    const result: Partial<Record<keyof GameModifiers, number>> = {};
-    for (const cert of certificates) {
-      const levelsOwned = persistence.certLevelsOwned[cert.id] || 0;
-      if (levelsOwned === 0) continue;
-      for (let i = 0; i < levelsOwned; i++) {
-        const { type, value } = cert.levels[i].effect;
-        if (type === 'startingLevelBonus') continue;
-        const k = type as keyof GameModifiers;
-        if (MULTIPLICATIVE_KEYS.includes(k)) {
-          result[k] = ((result[k] as number) ?? 1) * value;
-        } else {
-          result[k] = ((result[k] as number) ?? 0) + value;
-        }
-      }
-    }
-    return result;
-  }, [certificates, persistence.certLevelsOwned]);
+  const certBonuses = useMemo(
+    () => computeCertBonuses(certificates, persistence.certLevelsOwned),
+    [certificates, persistence.certLevelsOwned],
+  );
+  // Published for readers that cannot wait for a re-render: see
+  // getLoadedCertBonuses below.
+  liveCertBonuses = certBonuses;
 
   /**
    * Get max starting level from owned head-start certs (takes highest, not sum).
@@ -323,6 +357,19 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     savePersistence(newState);
   }, []);
 
+  /**
+   * Everything the store will sell: what has been earned, plus the certs that
+   * are simply always available.
+   *
+   * Merged on read rather than written into persistence, so an existing save
+   * picks the new ones up without a migration, and removing an `always` cert
+   * later does not leave it stranded as unlocked forever.
+   */
+  const unlockedIds = useMemo(() => {
+    const always = certificates.filter(c => c.unlockType === 'always').map(c => c.id);
+    return [...new Set([...persistence.unlockedCertIds, ...always])];
+  }, [certificates, persistence.unlockedCertIds]);
+
   return {
     certificates,
     isLoading,
@@ -330,7 +377,7 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     isLoaded,
     totalCertificateHours: persistence.totalCertificateHours,
     certLevelsOwned: persistence.certLevelsOwned,
-    unlockedCertIds: persistence.unlockedCertIds,
+    unlockedCertIds: unlockedIds,
     maxTierCounts: persistence.maxTierCounts,
     lifetimeHoursSpent: persistence.lifetimeHoursSpent,
     // Run tracking

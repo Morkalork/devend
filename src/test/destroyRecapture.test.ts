@@ -46,6 +46,7 @@ const MODS: GameModifiers = {
   spendInstantFencePerChunk: 0, spendFenceSpeedPerChunk: 0, spendCapturePerChunk: 0, spendChunkCapBonus: 0,
   lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
   destructibleHitsReduction: 0, breakMultiplierBonus: 0, smashKeepsLockMultiplier: 0,
+  startingOvertime: 0, storeLockRelief: 0,
 };
 
 // Mimics level-2b: obstacle block top-left, a breakable box inside the future

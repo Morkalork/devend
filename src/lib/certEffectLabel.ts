@@ -45,6 +45,12 @@ const SPECIAL: Partial<Record<string, SpecialFormatter>> = {
   microManagerPerLock: (t, v) => t('certificateEffects.microManagerPerLock', { percent: signed(-ratePct(v)) }),
   // A toggle, so a signed number would be meaningless.
   showHighscoreProgress: t => t('certificateEffects.showHighscoreProgress'),
+  startingOvertime: (t, v) => t('certificateEffects.startingOvertime', { hours: v }),
+  // Not a count of anything: the two levels are two different rules, so each
+  // states its own. Anything past the second is still the second.
+  storeLockRelief: (t, v) => t(
+    v >= 2 ? 'certificateEffects.storeLockReliefFull' : 'certificateEffects.storeLockReliefOne',
+  ),
 };
 
 /** Additive effects, keyed to a noun the count reads naturally against. */

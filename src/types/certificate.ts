@@ -20,7 +20,13 @@ export interface Certificate {
   id: string;
   name: string;
   description: string;
-  unlockType: 'upgrade-chain' | 'achievement' | 'hours-spent';
+  /**
+   * 'always' is on the shelf from the very first run. At least one cert has to
+   * be, or the store is a room full of locked doors: Certificate Hours accrue
+   * from the first run and there was nothing whatsoever to spend them on, so
+   * the whole currency was easy to forget existed.
+   */
+  unlockType: 'always' | 'upgrade-chain' | 'achievement' | 'hours-spent';
   /** For upgrade-chain: the leaf-node upgrade ID whose 3rd run purchase unlocks this cert */
   sourceUpgradeId?: string;
   /** For achievement: the achievement ID whose completion unlocks this cert */

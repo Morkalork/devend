@@ -1461,7 +1461,10 @@
     "extraCertificateHours": "Horas de Certificación por partida +{{hours}}",
     "bankedSlowPer50h": "Velocidad de bola {{percent}}% por cada 50h en el banco",
     "microManagerPerLock": "Velocidad de bola {{percent}}% por bola encerrada",
-    "showHighscoreProgress": "Añade la barra de récord del mapa al HUD"
+    "showHighscoreProgress": "Añade la barra de récord del mapa al HUD",
+    "startingOvertime": "Empieza con +{{hours}}h de horas extra",
+    "storeLockReliefOne": "La tienda nunca pide más de un encierro",
+    "storeLockReliefFull": "La tienda deja de pedir encierros"
   },
   "boardInfo": {
     "hint": "Mantén pulsado cualquier elemento del tablero para ver qué es.",

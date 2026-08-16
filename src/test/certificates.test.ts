@@ -129,22 +129,83 @@ describe("certificate effect labels", () => {
   });
 });
 
-describe("benchmarking moved from the shop to the cert store", () => {
-  it("is a certificate, not an upgrade", () => {
-    expect(certificates.some(c => c.id === "benchmarking")).toBe(true);
-    expect([...upgradeIds].filter(id => id.startsWith("benchmarking"))).toEqual([]);
+/**
+ * Something has to be buyable on day one.
+ *
+ * Certificate Hours start accruing on the first run, but every certificate was
+ * gated behind an upgrade chain, an achievement or lifetime spending, so the
+ * store was a room of locked doors and the currency was easy to forget you had.
+ * At least one cert is now simply on the shelf.
+ *
+ * (Benchmarking used to be tested here. It was removed: a HUD toggle bought
+ * with the same scarce currency as a permanent stat was never worth the hours.)
+ */
+describe("the store has something to sell from the start", () => {
+  const starters = certificates.filter(c => c.unlockType === "always");
+
+  it("carries at least one certificate that needs no unlocking", () => {
+    expect(starters.length).toBeGreaterThanOrEqual(1);
   });
 
-  // It is a HUD toggle read as `> 0`, so a second level would charge for
-  // nothing, and no upgrade may re-grant it or the cert stops being the gate.
-  it("grants the HUD bar exactly once, from one place", () => {
-    const cert = certificates.find(c => c.id === "benchmarking");
-    expect(cert?.levels).toHaveLength(1);
-    expect(cert?.levels[0].effect).toEqual({ type: "showHighscoreProgress", value: 1 });
+  it("prices the first level within reach of an early run", () => {
+    // Hours come in at 1 per 5 levels, so anything much past this is not
+    // really "available from the start", it just looks like it.
+    for (const cert of starters) {
+      expect(cert.levels[0].cost, `${cert.id} opening level`).toBeLessThanOrEqual(6);
+    }
+  });
 
-    const granters = upgrades
-      .filter(u => "showHighscoreProgress" in (u.modifiers ?? {}))
-      .map(u => u.id);
-    expect(granters).toEqual([]);
+  it("needs no source, since there is nothing to source it from", () => {
+    for (const cert of starters) {
+      expect(cert.sourceUpgradeId, cert.id).toBeUndefined();
+      expect(cert.sourceAchievementId, cert.id).toBeUndefined();
+      expect(cert.requiredHoursSpent, cert.id).toBeUndefined();
+    }
+  });
+
+  it("still gates every other certificate behind something", () => {
+    for (const cert of certificates.filter(c => c.unlockType !== "always")) {
+      const gated = cert.sourceUpgradeId ?? cert.sourceAchievementId ?? cert.requiredHoursSpent;
+      expect(gated, `${cert.id} is gated but names no source`).toBeDefined();
+    }
+  });
+
+  it("does not sell Benchmarking any more", () => {
+    expect(certificates.some(c => c.id === "benchmarking")).toBe(false);
+    // ...and nothing quietly took its place in the shop either.
+    expect([...upgradeIds].filter(id => id.startsWith("benchmarking"))).toEqual([]);
+  });
+});
+
+/**
+ * Signing Bonus and Corporate Card: the two starters, and the specific shapes
+ * their effects have to keep.
+ */
+describe("the starter certificates", () => {
+  const signing = certificates.find(c => c.id === "signing-bonus")!;
+  const card = certificates.find(c => c.id === "corporate-card")!;
+
+  it("banks hours before the run begins, in equal steps", () => {
+    expect(signing.levels).toHaveLength(3);
+    for (const level of signing.levels) {
+      expect(level.effect).toEqual({ type: "startingOvertime", value: 10 });
+    }
+  });
+
+  it("rises in price with each level, so the third is a real commitment", () => {
+    const costs = signing.levels.map(l => l.cost);
+    expect(costs).toEqual([...costs].sort((a, b) => a - b));
+    expect(new Set(costs).size).toBe(costs.length);
+  });
+
+  /**
+   * Two levels, two different rules rather than a stacking number: one lock
+   * required, then none. A third would have nothing left to relax.
+   */
+  it("frees the store in exactly two steps", () => {
+    expect(card.levels).toHaveLength(2);
+    for (const level of card.levels) {
+      expect(level.effect).toEqual({ type: "storeLockRelief", value: 1 });
+    }
   });
 });

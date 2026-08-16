@@ -27,7 +27,7 @@ import { useRunSave, RunSave } from './useRunSave';
 import { useHallOfFame } from './useHallOfFame';
 import { paceDelta, aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
 import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng';
-import { useCertificateManager } from './useCertificateManager';
+import { useCertificateManager, getLoadedCertBonuses } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
@@ -618,7 +618,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * navigation stay with the call sites - they legitimately differ per path.
    */
   const resetRunScopedState = useCallback(() => {
-    setTotalScore(0);
+    // Signing Bonus: the run opens with hours already banked. Set here rather
+    // than at one of the run-start handlers so every path gets it, the Daily
+    // included: certs already apply to a seeded run (Equity Grant, Head Start
+    // and the rest), and singling this one out would be the inconsistency.
+    // getLoadedCertBonuses(), not the `certBonuses` memo: certificates are
+    // fetched INSIDE the run-start handlers, so this closure predates the load
+    // on the first run of a session and the memo still reads empty. That would
+    // make the bonus appear from the second run onwards and never the first.
+    setTotalScore((getLoadedCertBonuses().startingOvertime as number | undefined) ?? 0);
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
     setAbilityCharges({});
@@ -1467,7 +1475,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // they missed instead of the store being silently skipped.
       const locksThisRound = pendingLevelScore?.lockedBallsCount ?? 0;
       const ballsOnMap = currentLevel?.maxBalls ?? currentLevel?.balls?.length ?? 1;
-      const locksRequired = ballsOnMap >= 3 ? 2 : 1;
+      // Corporate Card relaxes the toll: one level caps it at a single lock,
+      // two waives it entirely and the shop is simply always open.
+      const relief = Math.max(0, Math.round(activeModifiers.storeLockRelief ?? 0));
+      const locksRequired = relief >= 2 ? 0 : Math.min(relief >= 1 ? 1 : 2, ballsOnMap >= 3 ? 2 : 1);
       setStoreClosed(locksThisRound < locksRequired);
       setStoreLockProgress({ have: locksThisRound, need: locksRequired });
       nav.goToUpgradeShop();
