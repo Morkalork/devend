@@ -672,6 +672,19 @@ export function isRegionTrulySealed(
 const THROAT_DILATION_CELLS = 2;
 
 /**
+ * Clearance, as a fraction of the ball diameter, at which leftover space counts
+ * as a ROOM rather than the tapering end of the pocket.
+ *
+ * The two are far apart, which is what makes the test stable. Anywhere a ball
+ * can actually sit has at least half a diameter of clear air around it, and
+ * open floor has much more; the widest a leftover taper ever gets is the point
+ * the throat gate turned back at, which is half a diameter across, so a
+ * clearance of a quarter. Judging at three quarters sits between them with room
+ * to spare on both sides.
+ */
+const ROOM_CLEARANCE_FRACTION = 0.75;
+
+/**
  * Free span across the step a->b, measured perpendicular to it. Used to decide
  * whether the step passes through a throat too narrow for a ball.
  *
@@ -835,6 +848,120 @@ export function floodRemovedEnclosure(
         if (col < width - 1) grow(cur + 1);
       }
       frontier = next;
+    }
+  }
+
+  // The dilation above is a fixed two cells, and a taper does not oblige. A
+  // pocket narrows below a ball's width some distance from its apex, and how
+  // far depends on the angle: a 30-degree corner keeps going for about four
+  // more cells, a shallow one for fifteen. Everything past the dilation's reach
+  // stayed dark, which is the unfilled triangular tip - most obvious while the
+  // lock flash is playing, since the flash fills this same set.
+  //
+  // Reaching further is not the answer; that is just a bigger number waiting to
+  // be wrong, and every extra cell of blind reach is another chance to step
+  // through a slit into somewhere the pocket does not go. What tells the two
+  // apart is not distance. A tip is a dead end that only gets narrower; a slit
+  // is a doorway that opens back out into a room.
+  //
+  // So: flood again with the gate off, and of the cells only that flood reaches,
+  // keep the groups that never widen. A group containing even one step a ball
+  // could have taken is a room on the far side of a doorway, and stays out, at
+  // any size and any distance.
+  if (throat > 0) {
+    const minRow = Math.max(0, bounds ? bounds.minRow : 0);
+    const maxRow = Math.min(height - 1, bounds ? bounds.maxRow : height - 1);
+    const minCol = Math.max(0, bounds ? bounds.minCol : 0);
+    const maxCol = Math.min(width - 1, bounds ? bounds.maxCol : width - 1);
+    const inBox = (i: number) => {
+      const r = (i / width) | 0;
+      const c = i % width;
+      return r >= minRow && r <= maxRow && c >= minCol && c <= maxCol;
+    };
+    const onRim = (i: number) => {
+      const r = (i / width) | 0;
+      const c = i % width;
+      return r === minRow || r === maxRow || c === minCol || c === maxCol;
+    };
+    const crossesWall = (from: number, to: number) => {
+      const a2 = gridIndexToWorld(grid, from);
+      const b2 = gridIndexToWorld(grid, to);
+      for (const w of walls) {
+        if (lineSegmentIntersection(a2, b2, w.start, w.end)) return true;
+      }
+      return false;
+    };
+    const neighbours = (i: number): number[] => {
+      const r = (i / width) | 0;
+      const c = i % width;
+      const out2: number[] = [];
+      if (r > 0) out2.push(i - width);
+      if (r < height - 1) out2.push(i + width);
+      if (c > 0) out2.push(i - 1);
+      if (c < width - 1) out2.push(i + 1);
+      return out2;
+    };
+
+    // Everywhere the pocket reaches with the gate switched off.
+    const ungated = new Uint8Array(cells.length);
+    const q: number[] = [];
+    for (const i of seeded) {
+      if (!ungated[i] && cells[i] === CellState.REMOVED && inBox(i)) { ungated[i] = 1; q.push(i); }
+    }
+    for (let h = 0; h < q.length; h++) {
+      for (const ni of neighbours(q[h])) {
+        if (ungated[ni] || cells[ni] !== CellState.REMOVED || !inBox(ni)) continue;
+        if (crossesWall(q[h], ni)) continue;
+        ungated[ni] = 1;
+        q.push(ni);
+      }
+    }
+
+    // The cells only the ungated flood found, grouped into connected pieces.
+    const leftover = new Uint8Array(cells.length);
+    const pending: number[] = [];
+    for (let i = 0; i < ungated.length; i++) {
+      if (ungated[i] && !out.has(i)) { leftover[i] = 1; pending.push(i); }
+    }
+
+    const claimed = new Uint8Array(cells.length);
+    for (const seed of pending) {
+      if (claimed[seed]) continue;
+      const group: number[] = [seed];
+      claimed[seed] = 1;
+      let widens = false;
+      let touchesRim = false;
+      for (let h = 0; h < group.length; h++) {
+        const cur = group[h];
+        if (bounds && onRim(cur)) touchesRim = true;
+        // Room, or taper? Ask whether a ball could SIT here, with margin. Deep
+        // in a room a ball has a diameter of clear air around it; the widest
+        // part of a leftover taper is the point the gate turned back at, where
+        // the clearance is half that. Testing the cell rather than the step
+        // between cells matters: step spans hover right at the threshold along
+        // the whole boundary, so one borderline reading would disqualify an
+        // entire tip.
+        if (!widens) {
+          const c2 = gridIndexToWorld(grid, cur);
+          let clearance = Infinity;
+          for (const w of walls) {
+            const d = pointToSegmentDistance(c2, w.start, w.end);
+            if (d < clearance) clearance = d;
+          }
+          if (clearance >= throat * ROOM_CLEARANCE_FRACTION) widens = true;
+        }
+        for (const ni of neighbours(cur)) {
+          if (!leftover[ni] || crossesWall(cur, ni)) continue;
+          if (claimed[ni]) continue;
+          claimed[ni] = 1;
+          group.push(ni);
+        }
+      }
+      // Filled only if it stays narrow throughout, and (when the caller gave a
+      // box) stays inside it: a piece running off the edge is on its way
+      // somewhere this flood was asked not to go.
+      if (widens || touchesRim) continue;
+      for (const i of group) out.add(i);
     }
   }
 
