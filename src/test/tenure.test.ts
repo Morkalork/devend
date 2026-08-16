@@ -357,7 +357,9 @@ describe("the family-name assumption Tenure is built on", () => {
     const counts = TENURE_THRESHOLDS.map(
       r => eligibleTenureChains(REAL_UPGRADES, r, Math.random).length,
     );
-    expect(counts).toEqual([14, 11, 9]);
+    // 15/12/10 since Breaking Change joined: it is offerable at every depth
+    // (Junior at 6, Senior at 12, Principal at 18).
+    expect(counts).toEqual([15, 12, 10]);
   });
 });
 

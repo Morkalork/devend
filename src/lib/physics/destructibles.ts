@@ -12,6 +12,7 @@
  * as capturable space.
  */
 import { CanvasGameState } from "@/types/gameState";
+import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import {
   DestructibleState,
   ObjectDebrisState,
@@ -526,7 +527,13 @@ function grantChestReward(
 
 // ── Processing queued destructions ──────────────────────────────────────────
 
-export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallbacks, levelNumber = 1): void {
+export function processDestroysFn(
+  game: CanvasGameState,
+  callbacks: DestroyCallbacks,
+  levelNumber = 1,
+  /** Breaking Change forks; omitted (tests, older callers) means neither owned. */
+  modifiers?: Pick<GameModifiers, "breakMultiplierBonus" | "smashKeepsLockMultiplier">,
+): void {
   const pending = game.pendingDestroys;
   game.pendingDestroys = [];
   if (pending.length === 0) return;
@@ -536,7 +543,10 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
 
   for (const d of pending) {
     // Mirror/mover kills drop the destroying (black) ball's lock multiplier.
-    if ((d.kind === 'mirror' || d.kind === 'mover') && d.destroyedBy) {
+    // Blameless Postmortem waives it: the whole point of that fork is that
+    // wrecking things stops costing you the lock you were building.
+    const keepsLock = (modifiers?.smashKeepsLockMultiplier ?? 0) > 0;
+    if ((d.kind === 'mirror' || d.kind === 'mover') && d.destroyedBy && !keepsLock) {
       const ball = game.balls.find(b => b.id === d.destroyedBy);
       if (ball) ball.lockMultiplier = Math.max(1, ball.lockMultiplier - 1);
     }
@@ -571,7 +581,9 @@ export function processDestroysFn(game: CanvasGameState, callbacks: DestroyCallb
     game.breakBonus += d.objective ? BREAK_BONUS_OBJECTIVE : BREAK_BONUS_BASE;
     // Every smash also compounds the demolition multiplier, so stopping to
     // break things offsets the ship-early time it cost (issue #38).
-    game.breakMultiplier = (game.breakMultiplier ?? 1) * BREAK_MULTIPLIER_PER;
+    // Write-Off compounds harder per smash.
+    game.breakMultiplier = (game.breakMultiplier ?? 1)
+      * (BREAK_MULTIPLIER_PER + Math.max(0, modifiers?.breakMultiplierBonus ?? 0));
 
     // Treasure chest (#38): a smash rolls a reward, grants it, and drops a gem
     // showing what it was.

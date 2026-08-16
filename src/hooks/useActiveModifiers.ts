@@ -98,6 +98,18 @@ export interface GameModifiers {
   // 5% slower per level; at level 3 the Fork splits a ball into THREE).
   pickupPayoutLevel: number;
 
+  // Additive (sum) - Breaking Change: destructibles need this many fewer hits
+  // to break. Applied to their authored integrity at level init, never below 1,
+  // so a 3-hit crate at 2 comes apart on the first solid contact.
+  destructibleHitsReduction: number;
+  // Additive (sum) - Breaking Change / Write-Off: added to the per-smash
+  // demolition multiplier (base 1.15), so 0.15 makes each smash compound at
+  // 1.30 instead.
+  breakMultiplierBonus: number;
+  // Additive (sum) - Breaking Change / Blameless Postmortem: >0 waives the lock
+  // multiplier a ball normally forfeits for destroying a mirror or a mover.
+  smashKeepsLockMultiplier: number;
+
   // Multiplicative — Hard Deadline door: scales the Ship Early payout
   shipEarlyBonusMultiplier: number;
 
@@ -243,6 +255,9 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   spawnFreezeSeconds: 0,
   pickupChanceBonus: 0,
   pickupPayoutLevel: 0,
+  destructibleHitsReduction: 0,
+  breakMultiplierBonus: 0,
+  smashKeepsLockMultiplier: 0,
   shipEarlyBonusMultiplier: 1,
   spaceBonusMultiplier: 1,
   ballPathPredictionBounces: 0,

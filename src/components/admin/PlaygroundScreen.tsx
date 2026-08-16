@@ -90,6 +90,9 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   spawnFreezeSeconds:               { label: 'Spawn Freeze (s)',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Cold Boot: seconds every ball stays frozen at map start' },
   pickupChanceBonus:                { label: 'Pickup Chance +',        kind: 'additive',       step: 0.03, min: 0,    defaultValue: 0,    description: 'Benefits Package: extra pickup-token spawn chance per roll (0.03 = +3 points; only where pickups are enabled)' },
   pickupPayoutLevel:                { label: 'Pickup Payout Lvl',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Total Compensation: +1h/+1s per level on token payouts, split balls 5% slower per level; level 3 = Fork splits into three' },
+  destructibleHitsReduction:        { label: 'Destr. Hits -',        kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Breaking Change: destructibles need this many fewer hits to break (never below 1)' },
+  breakMultiplierBonus:             { label: 'Demolition Mult +',    kind: 'additive',       step: 0.05, min: 0,    defaultValue: 0,    description: 'Write-Off: added to the x1.15 per-smash demolition multiplier' },
+  smashKeepsLockMultiplier:         { label: 'Smash Keeps Lock',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Blameless Postmortem: >0 = smashing a mirror/mover does not cost the ball its lock multiplier' },
 };
 
 const MULTIPLICATIVE_KEYS = Object.entries(MODIFIER_META)

@@ -1170,7 +1170,7 @@ export function GameCanvas({
           // Smashing the chest IS the interaction, so the reward lands here. The
           // gem it drops is a receipt showing what came out of it.
           onChestReward: (rewardId) => handleLootCollectRef.current?.(rewardId),
-        }, levelNumber);
+        }, levelNumber, activeModifiers);
         // A destroy can capture pocket cells (destroy-recapture) and take the
         // remaining space past the goal with no fence involved — run the same
         // win check a completed cut runs, or the map shows CLEAR but never ends.

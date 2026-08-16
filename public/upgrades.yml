@@ -1591,3 +1591,65 @@ upgrades:
     tags: [safety]
     modifiers:
       fenceDurabilityBonus: 1
+
+
+  # ===============================
+  # BREAKING CHANGE (Demolition)
+  # Fewer hits to bring a destructible down. Applied to the object's authored
+  # integrity at level init (initGame's `integrity()`), never below 1, so the
+  # promise is literally "fewer hits" rather than a hidden damage buff.
+  #
+  # Only two reduction steps, on purpose. Every breakable in map.yml is authored
+  # at 2 or 3 hits bar three outliers, and maxHits floors at 1, so after -2 an
+  # ordinary crate already comes apart on the first solid contact and a third -1
+  # would do nothing on 14 of 17 objects. The last tier is the fork instead.
+  # ===============================
+
+  - id: breaking_change_junior
+    name: Breaking Change
+    tier: Junior
+    description: Destructibles need one less hit to break.
+    unlockLevel: 6
+    icon: hammer
+    tags: [tempo]
+    modifiers:
+      destructibleHitsReduction: 1
+
+  - id: breaking_change_senior
+    name: Breaking Change
+    tier: Senior
+    description: Destructibles need another hit less to break, so most come apart on the first solid contact.
+    unlockLevel: 12
+    prerequisites:
+      - breaking_change_junior
+    tags: [tempo]
+    modifiers:
+      destructibleHitsReduction: 1
+
+  # The fork: what all that smashing is FOR. Write-Off turns demolition into
+  # money, Blameless Postmortem removes what it currently costs you (a ball that
+  # destroys a mirror or a mover forfeits a point of lock multiplier).
+  - id: breaking_change_principal
+    name: Breaking Change
+    tier: Principal
+    description: "Write-Off: every object you smash compounds the demolition payout by 30% instead of 15%."
+    unlockLevel: 18
+    prerequisites:
+      - breaking_change_senior
+    choiceGroup: breaking_change_principal
+    tags: [tempo, bank]
+    modifiers:
+      destructibleHitsReduction: 0
+      breakMultiplierBonus: 0.15
+
+  - id: breaking_change_principal_b
+    name: Breaking Change
+    tier: Principal
+    description: "Blameless Postmortem: smashing a mirror or a mover no longer costs the ball its lock multiplier."
+    unlockLevel: 18
+    prerequisites:
+      - breaking_change_senior
+    choiceGroup: breaking_change_principal
+    tags: [tempo, lock]
+    modifiers:
+      smashKeepsLockMultiplier: 1

@@ -45,6 +45,7 @@ import {
   Gift,
   Crown,
   LifeBuoy,
+  Hammer,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -89,6 +90,7 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   gift: Gift,
   crown: Crown,
   'life-buoy': LifeBuoy,
+  hammer: Hammer,
 };
 
 /**

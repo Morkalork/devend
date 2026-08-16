@@ -164,6 +164,17 @@ export function createInitialGameData(
   // startingCapturePercent (Equity Grant cert) shrinks the playable arena and
   // counts the trimmed margin as already-captured: the run starts below 100%.
   const startingCapture = Math.max(0, Math.min(40, activeModifiers.startingCapturePercent));
+
+  /**
+   * Breaking Change: knock the reduction off an object's authored integrity.
+   *
+   * Applied here rather than by boosting impact damage, because the upgrade
+   * promises FEWER HITS and this is the number that means that: the dent
+   * rendering, the fatal-hit shatter and the "about three solid hits" feel all
+   * key off it. Never below 1, so nothing becomes unbreakable-by-being-free.
+   */
+  const hitsReduction = Math.max(0, Math.round(activeModifiers.destructibleHitsReduction ?? 0));
+  const integrity = (authored: number) => Math.max(1, Math.round(authored) - hitsReduction);
   const targetRemaining = 100 - startingCapture;
   const scaleFactor  = Math.sqrt(targetRemaining / 100);
   const shrunkWidth  = arenaWidth  * scaleFactor;
@@ -337,7 +348,7 @@ export function createInitialGameData(
             id: entity.id,
             kind: 'mirror',
             hits: 0,
-            maxHits: 3,
+            maxHits: integrity(3),
             lastHitAt: 0,
             destroyed: false,
             mirrorPolygon: obstaclePolygon,
@@ -373,7 +384,7 @@ export function createInitialGameData(
               id: entity.id,
               kind: 'breakable',
               hits: 0,
-              maxHits: Math.max(1, Math.round(entity.hitsToBreak ?? 3)),
+              maxHits: integrity(entity.hitsToBreak ?? 3),
               lastHitAt: 0,
               destroyed: false,
               obstaclePolygon,
@@ -762,7 +773,7 @@ export function createInitialGameData(
       id: e.id,
       kind: 'mover',
       hits: 0,
-      maxHits: 3,
+      maxHits: integrity(3),
       lastHitAt: 0,
       destroyed: false,
       moverId: mover.id,

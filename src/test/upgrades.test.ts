@@ -49,6 +49,7 @@ const EXPECTED_ROOTS = [
   "moonshot",
   "benefits_package_junior",
   "golden_parachute",
+  "breaking_change_junior",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.

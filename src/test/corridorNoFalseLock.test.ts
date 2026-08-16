@@ -44,6 +44,7 @@ const MODS: GameModifiers = {
   runwayInstantFenceAt: 0, runwayConcurrentFenceAt: 0, runwayFreezeAt: 0,
   spendInstantFencePerChunk: 0, spendFenceSpeedPerChunk: 0, spendCapturePerChunk: 0, spendChunkCapBonus: 0,
   lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
+  destructibleHitsReduction: 0, breakMultiplierBonus: 0, smashKeepsLockMultiplier: 0,
 };
 
 // Board is inset to (45,45)-(855,855). The box's bottom edge sits `gap` world
