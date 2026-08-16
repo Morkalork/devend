@@ -703,6 +703,41 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setDailyKey(null);
   }, []);
 
+  /**
+   * The last step of starting a fresh, unseeded run: hand over the Tenure draft
+   * if the previous run earned one, then continue into the loadout draft or
+   * straight into the map.
+   *
+   * Shared because there are three ways to start a run and Tenure originally
+   * fired from only one of them. New Game rolled it; Play Again and Restart went
+   * straight to the loadout draft, so losing past map 10 and pressing Play Again
+   * (the most natural way there is to start the next run) silently skipped the
+   * head start that run had just earned. The tell was that both other paths
+   * already ran the loadout draft, and Tenure is specified to come BEFORE it.
+   *
+   * Seeded Daily runs deliberately do not come through here: a per-player head
+   * start would make one shared seed incomparable.
+   */
+  const enterRun = useCallback((thenDraftLoadout: boolean) => {
+    const tenureDepth = metaStats.lastRunDepth;
+    const offers = tenureSteps(tenureDepth) > 0
+      // getLoadedUpgrades(), not the `upgrades` state: on the New Game path this
+      // closure was created before loadUpgrades() ran, so the state read here
+      // would be stale. On the other two the catalogue is already loaded from
+      // the run just played, and an empty one simply yields no offers.
+      ? rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
+                         TENURE_OFFER_COUNT, lastRunUpgradeIds)
+      : [];
+    if (offers.length > 0) {
+      setPendingTenure({
+        offers, earnedAtLevel: tenureDepth, thenDraftLoadout,
+        lastRunUpgradeIds: [...lastRunUpgradeIds],
+      });
+      nav.goToTenureDraft();
+    } else if (thenDraftLoadout) nav.goToRunDraft();
+    else nav.startGame();
+  }, [metaStats.lastRunDepth, lastRunUpgradeIds, nav.goToTenureDraft, nav.goToRunDraft, nav.startGame]);
+
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
     // A normal run must never inherit a previous daily's seed: disarm BEFORE
     // loading, because loadLevels() already rolls the level lineup.
@@ -772,27 +807,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // ?level= debug path go straight into the game.
       const thenDraftLoadout = !(skipDraft || !loadoutsIntroduced);
 
-      // Tenure (issue #75): the previous ended run's depth buys a free
-      // upgrade chain. It is picked BEFORE the loadout draft, so a free lock
-      // chain can steer which loadout you take. Seeded Daily runs are excluded:
-      // a per-player head start would make one shared seed incomparable.
-      const tenureDepth = metaStats.lastRunDepth;
-      const offers = tenureSteps(tenureDepth) > 0
-        // getLoadedUpgrades(), not the `upgrades` state: this closure was
-        // created before loadUpgrades() ran, so the state read here is stale.
-        ? rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
-                           TENURE_OFFER_COUNT, metaStats ? lastRunUpgradeIds : [])
-        : [];
-      if (offers.length > 0) {
-        setPendingTenure({
-          offers, earnedAtLevel: tenureDepth, thenDraftLoadout,
-          lastRunUpgradeIds: [...lastRunUpgradeIds],
-        });
-        nav.goToTenureDraft();
-      } else if (thenDraftLoadout) nav.goToRunDraft();
-      else nav.startGame();
+      enterRun(thenDraftLoadout);
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, nav.startGame, nav.goToRunDraft, nav.goToTenureDraft, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, metaStats.lastRunDepth, lastRunUpgradeIds]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, enterRun]);
 
   /**
    * Daily Stand-up (HIGHSCORES.md Phase D): start today's seeded run. The seed
@@ -1662,9 +1679,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
     analytics.runStarted({ mode: 'playAgain', daily: false });
 
-    if (loadoutsIntroduced) nav.goToRunDraft();
-    else nav.startGame();
-  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, setLevelIndex, certBonuses, getCertStartingLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode]);
+    enterRun(loadoutsIntroduced);
+  }, [resetToFirstLevel, setLevelIndex, certBonuses, getCertStartingLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
 
   const handleRestartRun = useCallback(() => {
     clearDailyMode(); // restart is always a normal (unseeded) run
@@ -1679,9 +1695,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setPendingDeathResult(null);
 
     resetToFirstLevel();
-    if (loadoutsIntroduced) nav.goToRunDraft();
-    else nav.startGame();
-  }, [resetToFirstLevel, nav.goToRunDraft, nav.startGame, certBonuses, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode]);
+    enterRun(loadoutsIntroduced);
+  }, [resetToFirstLevel, certBonuses, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
 
   const handleBackToWelcome = useCallback(() => {
     // NOTE: does NOT clear the daily context; a saved daily run keeps its key
