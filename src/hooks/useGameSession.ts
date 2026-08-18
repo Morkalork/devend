@@ -27,7 +27,7 @@ import { useRunSave, RunSave } from './useRunSave';
 import { useHallOfFame } from './useHallOfFame';
 import { paceDelta, aheadThroughMaps, RunRankInfo } from '@/lib/runLedger';
 import { setRunSeedText, getRunRng, todayKey, dailySeedText } from '@/lib/runRng';
-import { useCertificateManager, getLoadedCertBonuses } from './useCertificateManager';
+import { useCertificateManager, getLoadedCertBonuses, getLoadedCertStartingLevel } from './useCertificateManager';
 import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
@@ -777,11 +777,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // New Game discards any prior save; the fresh run re-saves on its first map.
       clearRun();
 
-      const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
+      // getLoadedCertBonuses(), not the `certBonuses` memo: the load two dozen
+      // lines up happened INSIDE this handler, so the memo in this closure is
+      // still the pre-load one on the first run of a session. Same for the
+      // starting level below.
+      const certs = getLoadedCertBonuses();
+      const certBonusLives = (certs.extraLives as number | undefined) ?? 0;
       const startingLives = baseLives() + certBonusLives;
       setCurrentLives(startingLives);
       setLivesAtLevelStart(startingLives);
-      setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
+      setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
       setPendingDeathResult(null);
 
       // Admin "Infinite lives" and live map tuning both make a run
@@ -794,7 +799,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         setLevelIndex(forceLevel - 1);
         recordEligibleRef.current = false; // debug jump: never files on the ledger
       } else {
-        const certStartLevel = getCertStartingLevel();
+        const certStartLevel = getLoadedCertStartingLevel();
         const queryLevel = parseInt(new URLSearchParams(window.location.search).get('level') || '0', 10);
         if (queryLevel > 0) {
           window.history.replaceState(null, '', window.location.pathname);
@@ -817,7 +822,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
       enterRun(thenDraftLoadout);
     }
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, setLevelIndex, resetToFirstLevel, certBonuses, getCertStartingLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, enterRun]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, setLevelIndex, resetToFirstLevel, resetRunScopedState, clearRun, loadoutsIntroduced, clearDailyMode, enterRun]);
 
   /**
    * Daily Stand-up (HIGHSCORES.md Phase D): start today's seeded run. The seed
@@ -854,11 +859,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     resetRunScopedState();
     clearRun();
 
-    const certBonusLives = (certBonuses.extraLives as number | undefined) ?? 0;
+    // Loaded, not memoised: the Daily fetches its catalogues here too.
+    const certs = getLoadedCertBonuses();
+    const certBonusLives = (certs.extraLives as number | undefined) ?? 0;
     const startingLives = baseLives() + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
-    setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
+    setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
     setPendingDeathResult(null);
 
     resetToFirstLevel(); // same seeded lineup for everyone, from level 1
@@ -868,7 +875,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Daily Stand-up is a seeded, identical-for-everyone challenge: it skips the
     // loadout draft (which normal runs always show now, #38) to stay clean.
     nav.startGame();
-  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, certBonuses, resetRunScopedState, clearRun, resetToFirstLevel, nav.startGame, clearDailyMode]);
+  }, [loadLevels, loadUpgrades, loadCertificates, loadLoadouts, resetRunScopedState, clearRun, resetToFirstLevel, nav.startGame, clearDailyMode]);
 
   /**
    * Resume a saved run from the welcome screen. Loads the catalogues (same as a
@@ -1669,18 +1676,22 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     clearDailyMode(); // play-again is always a normal (unseeded) run
     resetRunScopedState();
 
-    const certBonusLives = certBonuses.extraLives ?? 0;
+    // The accessor everywhere a run starts, even where the memo happens to be
+    // fresh (this path loads nothing): one rule is harder to break by accident
+    // than "the memo, except in the two handlers that fetch".
+    const certs = getLoadedCertBonuses();
+    const certBonusLives = (certs.extraLives as number | undefined) ?? 0;
     const startingLives = baseLives() + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
-    setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
+    setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
     setPendingDeathResult(null);
 
     if (startLevel !== undefined) {
       setLevelIndex(startLevel - 1);
     } else {
       clearRunCheckpoints();
-      const certStartLevel = getCertStartingLevel();
+      const certStartLevel = getLoadedCertStartingLevel();
       if (certStartLevel > 1) {
         setLevelIndex(certStartLevel - 1);
       } else {
@@ -1691,23 +1702,24 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     analytics.runStarted({ mode: 'playAgain', daily: false });
 
     enterRun(loadoutsIntroduced);
-  }, [resetToFirstLevel, setLevelIndex, certBonuses, getCertStartingLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
+  }, [resetToFirstLevel, setLevelIndex, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
 
   const handleRestartRun = useCallback(() => {
     clearDailyMode(); // restart is always a normal (unseeded) run
     resetRunScopedState();
     clearRunCheckpoints();
 
-    const certBonusLives = certBonuses.extraLives ?? 0;
+    const certs = getLoadedCertBonuses();
+    const certBonusLives = (certs.extraLives as number | undefined) ?? 0;
     const startingLives = baseLives() + certBonusLives;
     setCurrentLives(startingLives);
     setLivesAtLevelStart(startingLives);
-    setContinuesRemaining(BASE_CONTINUES + ((certBonuses.extraContinues as number | undefined) ?? 0));
+    setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
     setPendingDeathResult(null);
 
     resetToFirstLevel();
     enterRun(loadoutsIntroduced);
-  }, [resetToFirstLevel, certBonuses, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
+  }, [resetToFirstLevel, resetRunScopedState, clearRunCheckpoints, loadoutsIntroduced, clearDailyMode, enterRun]);
 
   const handleBackToWelcome = useCallback(() => {
     // NOTE: does NOT clear the daily context; a saved daily run keeps its key

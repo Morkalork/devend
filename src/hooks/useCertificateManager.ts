@@ -79,20 +79,47 @@ function computeCertBonuses(
   return result;
 }
 
+/** The level a run begins at given the head-start certs owned: the highest
+ *  bought, never the sum. Pure, for the same reason as computeCertBonuses. */
+function computeCertStartingLevel(
+  certificates: Certificate[],
+  certLevelsOwned: Record<string, number>,
+): number {
+  let max = 1;
+  for (const cert of certificates) {
+    const levelsOwned = certLevelsOwned[cert.id] || 0;
+    for (let i = 0; i < levelsOwned; i++) {
+      if (cert.levels[i].effect.type === 'startingLevelBonus') {
+        max = Math.max(max, cert.levels[i].effect.value);
+      }
+    }
+  }
+  return max;
+}
+
 /**
- * The cert bonuses as of the last load or purchase, readable synchronously.
+ * Certificate state as of the last load or purchase, readable synchronously.
  *
  * The same trap `getLoadedUpgrades` exists for: certificates are fetched INSIDE
  * the run-start handlers, so a closure created before that fetch resolved still
- * sees the pre-load `certBonuses` state. Anything the start path reads in that
- * window (Signing Bonus, which has to be banked before the first map) would
- * silently be zero on the first run of a session and correct on every one
- * after, which is the worst possible shape for a bug.
+ * sees the pre-load state. Anything the start path reads in that window would
+ * silently be missing on the first run of a session and correct on every one
+ * after, which is the worst possible shape for a bug: unreproducible on demand,
+ * and fine by the time anyone goes looking.
+ *
+ * Head Start was the loud one. The handler's own read came back as level 1
+ * while the result screen, which reads at render time where the memo is fresh,
+ * went on advertising "Continue from level 10".
  */
 let liveCertBonuses: Partial<Record<keyof GameModifiers, number>> = {};
+let liveCertStartingLevel = 1;
 
 export function getLoadedCertBonuses(): Partial<Record<keyof GameModifiers, number>> {
   return liveCertBonuses;
+}
+
+export function getLoadedCertStartingLevel(): number {
+  return liveCertStartingLevel;
 }
 
 export function useCertificateManager(options: CertManagerOptions = {}) {
@@ -134,11 +161,13 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
         throw new Error('Invalid certificates configuration');
       }
       setCertificates(config.certificates);
-      // Publish immediately. A caller awaiting this load reads the bonuses in
-      // the same tick, before any re-render could refresh its closure, and
+      // Publish immediately. A caller awaiting this load reads these in the
+      // same tick, before any re-render could refresh its closure, and
       // loadPersistence reads localStorage directly so the owned levels are
       // authoritative rather than whatever state happens to have settled.
-      liveCertBonuses = computeCertBonuses(config.certificates, loadPersistence().certLevelsOwned);
+      const owned = loadPersistence().certLevelsOwned;
+      liveCertBonuses = computeCertBonuses(config.certificates, owned);
+      liveCertStartingLevel = computeCertStartingLevel(config.certificates, owned);
       setIsLoading(false);
       return true;
     } catch (err) {
@@ -285,26 +314,19 @@ export function useCertificateManager(options: CertManagerOptions = {}) {
     () => computeCertBonuses(certificates, persistence.certLevelsOwned),
     [certificates, persistence.certLevelsOwned],
   );
-  // Published for readers that cannot wait for a re-render: see
-  // getLoadedCertBonuses below.
-  liveCertBonuses = certBonuses;
-
   /**
    * Get max starting level from owned head-start certs (takes highest, not sum).
    */
-  const getCertStartingLevel = useCallback((): number => {
-    let max = 1;
-    for (const cert of certificates) {
-      const levelsOwned = persistence.certLevelsOwned[cert.id] || 0;
-      if (levelsOwned === 0) continue;
-      for (let i = 0; i < levelsOwned; i++) {
-        if (cert.levels[i].effect.type === 'startingLevelBonus') {
-          max = Math.max(max, cert.levels[i].effect.value);
-        }
-      }
-    }
-    return max;
-  }, [certificates, persistence.certLevelsOwned]);
+  const getCertStartingLevel = useCallback(
+    () => computeCertStartingLevel(certificates, persistence.certLevelsOwned),
+    [certificates, persistence.certLevelsOwned],
+  );
+
+  // Published for readers that cannot wait for a re-render (a purchase is the
+  // other way these change, and it lands as a render, not a load): see
+  // getLoadedCertBonuses above.
+  liveCertBonuses = certBonuses;
+  liveCertStartingLevel = computeCertStartingLevel(certificates, persistence.certLevelsOwned);
 
   // ── Run tracking ──────────────────────────────────────────────────────────
 
