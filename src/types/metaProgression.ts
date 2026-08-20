@@ -38,6 +38,18 @@ export interface MetaProgressionStats {
    * permanent unlock. Abandoning a run does not write it.
    */
   lastRunDepth: number;
+  /**
+   * The deepest level whose SHOP the previous ended run reached, which is what
+   * decides which upgrades Tenure may offer (issue #75).
+   *
+   * Deliberately not the same number as lastRunDepth. Dying on level 10 means
+   * you reached 10 but your last shop was the one after clearing 9, so an
+   * upgrade unlocking at level 10 was never on sale to you. Retiring after
+   * CLEARING level 10 did include that shop. Both end the run "at 10", so the
+   * depth alone cannot tell them apart and the availability gate needs its own
+   * number.
+   */
+  lastRunShopLevel: number;
 }
 
 /**
@@ -98,6 +110,7 @@ export const DEFAULT_META_STATS: MetaProgressionStats = {
   deepestAscension: 0,
   pushBonusesBanked: 0,
   lastRunDepth: 0,
+  lastRunShopLevel: 0,
 };
 
 export const META_STATS_STORAGE_KEY = 'jezzball_meta_stats';

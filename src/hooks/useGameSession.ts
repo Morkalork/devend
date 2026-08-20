@@ -733,8 +733,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // closure was created before loadUpgrades() ran, so the state read here
       // would be stale. On the other two the catalogue is already loaded from
       // the run just played, and an empty one simply yields no offers.
+      //
+      // The depth sets how much is granted; lastRunShopLevel limits what may be
+      // granted to what the run could actually have bought.
       ? rollTenureOffers(getLoadedUpgrades(), tenureDepth, Math.random,
-                         TENURE_OFFER_COUNT, lastRunUpgradeIds)
+                         TENURE_OFFER_COUNT, lastRunUpgradeIds, metaStats.lastRunShopLevel)
       : [];
     if (offers.length > 0) {
       setPendingTenure({
@@ -744,7 +747,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       nav.goToTenureDraft();
     } else if (thenDraftLoadout) nav.goToRunDraft();
     else nav.startGame();
-  }, [metaStats.lastRunDepth, lastRunUpgradeIds, nav.goToTenureDraft, nav.goToRunDraft, nav.startGame]);
+  }, [metaStats.lastRunDepth, metaStats.lastRunShopLevel, lastRunUpgradeIds, nav.goToTenureDraft, nav.goToRunDraft, nav.startGame]);
 
   const handleStartGame = useCallback(async (forceLevel?: number, skipDraft?: boolean) => {
     // A normal run must never inherit a previous daily's seed: disarm BEFORE
@@ -1020,7 +1023,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Tenure (issue #75): the depth this run ENDED at decides the next
     // run's free upgrade. Recorded here and nowhere else, so quitting to the
     // menu leaves the last real result standing.
-    recordRunEnded(currentLevelIndex + 1);
+    //
+    // The second number is the deepest shop this run reached, which caps what
+    // Tenure may offer. A win means this level was cleared and its shop seen;
+    // a death means the last shop was the previous level's.
+    recordRunEnded(currentLevelIndex + 1, result.isWin ? currentLevelIndex + 1 : currentLevelIndex);
     // Tenure's guaranteed offer continues the build this run was made of.
     recordRunUpgrades(ownedUpgradeIds);
     const hoursAwarded = finalizeRun(activeModifiers.extraCertificateHours);
@@ -1184,8 +1191,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       totalLivesLost: metaStats.totalLivesLost,
       deepestAscension: Math.max(metaStats.deepestAscension, ascensionDepth),
       pushBonusesBanked: metaStats.pushBonusesBanked + (bankedPush ? 1 : 0),
-      // Only written when a run ENDS, so it is carried through unchanged here.
+      // Only written when a run ENDS, so these are carried through unchanged.
       lastRunDepth: metaStats.lastRunDepth,
+      lastRunShopLevel: metaStats.lastRunShopLevel,
     };
     checkAndCompleteAchievements(projectedStats);
 

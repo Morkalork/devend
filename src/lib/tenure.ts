@@ -66,13 +66,21 @@ export function levelsToNextTenure(levelsReached: number): number | null {
 }
 
 /**
- * Eligible at this depth: not ascension-only, and unlocked by the level the
- * player actually reached. The gate applies to EVERY granted upgrade, so
- * reaching 11 offers only what level 11 had access to, never a later card.
+ * Eligible: not ascension-only, and already on sale by the deepest shop the
+ * run actually reached. The gate applies to EVERY granted upgrade, so a card
+ * the run never had access to cannot arrive through a chain's later tier
+ * either.
+ *
+ * `shoppedThrough`, not the depth reached. Dying on level 10 means the last
+ * shop was the one after clearing 9, so an upgrade unlocking at 10 was never
+ * purchasable that run - Tenure offering it as a reward for the run reads as
+ * the game handing over something it had not shown you yet. Clearing 10 and
+ * retiring did include that shop, and both runs "reached 10", which is why the
+ * caller passes this separately.
  */
-function isAvailable(upgrade: UpgradeConfig, levelsReached: number): boolean {
+function isAvailable(upgrade: UpgradeConfig, shoppedThrough: number): boolean {
   if (upgrade.ascensionOnly) return false;
-  return (upgrade.unlockLevel ?? 1) <= levelsReached;
+  return (upgrade.unlockLevel ?? 1) <= shoppedThrough;
 }
 
 /** Fisher-Yates, so offers vary per run but stay seedable for Daily parity. */
@@ -107,7 +115,7 @@ function shuffled<T>(items: T[], rng: () => number): T[] {
  */
 function resolveChain(
   head: UpgradeConfig, all: UpgradeConfig[], steps: number,
-  levelsReached: number, rng: () => number,
+  shoppedThrough: number, rng: () => number,
 ): UpgradeConfig[] | null {
   const path = [head];
   for (let step = 1; step < steps; step++) {
@@ -117,7 +125,7 @@ function resolveChain(
       u.tier === wantTier
       && (u.prerequisites ?? []).includes(prev.id)
       && u.name === head.name
-      && isAvailable(u, levelsReached),
+      && isAvailable(u, shoppedThrough),
     );
     if (candidates.length === 0) return null;
     path.push(candidates[Math.floor(rng() * candidates.length)]);
@@ -125,9 +133,17 @@ function resolveChain(
   return path;
 }
 
-/** Every chain that can pay a head start of this depth, already resolved. */
+/**
+ * Every chain that can pay a head start of this depth, already resolved.
+ *
+ * Two numbers, because they answer different questions: `levelsReached` decides
+ * how MUCH is granted (the 10/20/30 thresholds), `shoppedThrough` decides WHAT
+ * may be granted (see isAvailable). Callers with only a depth to hand - the
+ * catalogue health check, say - can leave the second out.
+ */
 export function eligibleTenureChains(
   upgrades: UpgradeConfig[], levelsReached: number, rng: () => number,
+  shoppedThrough: number = levelsReached,
 ): TenureOffer[] {
   const steps = tenureSteps(levelsReached);
   if (steps === 0) return [];
@@ -135,12 +151,12 @@ export function eligibleTenureChains(
   const heads = upgrades.filter(u =>
     u.tier === TENURE_PATH[0]
     && (u.prerequisites ?? []).length === 0
-    && isAvailable(u, levelsReached),
+    && isAvailable(u, shoppedThrough),
   );
 
   const offers: TenureOffer[] = [];
   for (const head of heads) {
-    const chain = resolveChain(head, upgrades, steps, levelsReached, rng);
+    const chain = resolveChain(head, upgrades, steps, shoppedThrough, rng);
     if (chain) offers.push({ headId: head.id, name: head.name, upgrades: chain });
   }
   return offers;
@@ -190,8 +206,9 @@ export function rollTenureOffers(
   upgrades: UpgradeConfig[], levelsReached: number, rng: () => number,
   count: number = TENURE_OFFER_COUNT,
   lastRunUpgradeIds: string[] = [],
+  shoppedThrough: number = levelsReached,
 ): TenureOffer[] {
-  const eligible = eligibleTenureChains(upgrades, levelsReached, rng);
+  const eligible = eligibleTenureChains(upgrades, levelsReached, rng, shoppedThrough);
   if (lastRunUpgradeIds.length === 0) return shuffled(eligible, rng).slice(0, count);
 
   const { owned, archetype } = continuations(eligible, lastRunUpgradeIds, upgrades);

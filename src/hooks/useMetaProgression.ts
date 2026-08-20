@@ -33,6 +33,14 @@ function loadMetaStats(): MetaProgressionStats {
       const v = parsed[key];
       if (typeof v === 'number' && Number.isFinite(v)) merged[key] = v;
     }
+    // Saves written before lastRunShopLevel existed still owe Tenure a reward
+    // for the run they remember. Assume that run ended the common way, by
+    // dying, so its last shop was one level back. Erring low costs at most the
+    // single card that unlocks exactly at the depth reached, where erring high
+    // would hand over an upgrade that run never had on sale.
+    if (merged.lastRunDepth > 0 && typeof parsed.lastRunShopLevel !== 'number') {
+      merged.lastRunShopLevel = Math.max(0, merged.lastRunDepth - 1);
+    }
     return merged;
   } catch {
     return { ...DEFAULT_META_STATS };
@@ -225,9 +233,12 @@ export function useMetaProgression() {
       }
 
       // REPLACED, not maxed or summed: the Tenure reward is meant to decay
-      // when a run ends short, so this must be able to go down.
+      // when a run ends short, so these must be able to go down.
       if (updates.lastRunDepth !== undefined) {
         newStats.lastRunDepth = updates.lastRunDepth;
+      }
+      if (updates.lastRunShopLevel !== undefined) {
+        newStats.lastRunShopLevel = updates.lastRunShopLevel;
       }
 
       saveMetaStats(newStats);
@@ -246,9 +257,14 @@ export function useMetaProgression() {
    * Record how deep a run got, at the moment it ENDED (issue #75). Only called
    * from the single run-end path, so quitting to the menu leaves the previous
    * result standing instead of zeroing the next run's Tenure.
+   *
+   * `shoppedThrough` is the deepest level whose shop the run reached, which is
+   * a level lower than `levelsReached` when the run ended in a death. It is
+   * what limits which upgrades Tenure may offer, so it is recorded separately
+   * rather than derived: only the caller knows how the run ended.
    */
-  const recordRunEnded = useCallback((levelsReached: number) => {
-    updateStats({ lastRunDepth: levelsReached });
+  const recordRunEnded = useCallback((levelsReached: number, shoppedThrough: number) => {
+    updateStats({ lastRunDepth: levelsReached, lastRunShopLevel: Math.max(0, shoppedThrough) });
   }, [updateStats]);
 
   /**
