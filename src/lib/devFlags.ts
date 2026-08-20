@@ -48,6 +48,37 @@ export function baseStartingLives(normal: number): number {
   return isInfiniteLivesEnabled() ? DEV_LIVES : normal;
 }
 
+/**
+ * Ascension depth requested by `?ascension=N`, or 0 for a normal run.
+ *
+ * Reaching depth N legitimately means clearing the whole map list N times, so
+ * without this the later ladder rungs are effectively untestable. The jump
+ * lands you at depth N with NO drafted loadouts, which is deliberate: an
+ * ascension normally arrives carrying every curse and blessing drafted on the
+ * way up, and those would muddle what a rung on its own actually does.
+ *
+ * Ledger-ineligible like every other flag in this file.
+ */
+export const MAX_DEBUG_ASCENSION = 50;
+
+/** Pure parse, so the clamping is testable without a URL. */
+export function parseAscensionParam(search: string): number {
+  const raw = new URLSearchParams(search).get('ascension');
+  if (raw == null) return 0;
+  const n = Number.parseInt(raw, 10);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return Math.min(MAX_DEBUG_ASCENSION, n);
+}
+
+/** The requested depth from the live URL. 0 when absent or malformed. */
+export function debugAscensionDepth(): number {
+  try {
+    return parseAscensionParam(window.location.search);
+  } catch {
+    return 0; // no window (SSR / test env without a location)
+  }
+}
+
 /** Test seam: drop the memoised values so a test can flip the flag. */
 export function resetDevFlagCache(): void {
   infiniteLives = null;

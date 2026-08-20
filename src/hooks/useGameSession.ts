@@ -55,10 +55,26 @@ import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
-import { baseStartingLives, isInfiniteLivesEnabled } from '@/lib/devFlags';
+import { baseStartingLives, isInfiniteLivesEnabled, debugAscensionDepth } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
 import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
 import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
+
+/**
+ * Drop one debug query param, keeping the rest. The old code replaced the whole
+ * search string, which meant ?ascension=3&level=12 lost the ascension jump the
+ * moment the level jump consumed its own param.
+ */
+function stripQueryParam(name: string): void {
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.delete(name);
+    const search = url.searchParams.toString();
+    window.history.replaceState(null, '', url.pathname + (search ? `?${search}` : ''));
+  } catch {
+    /* no history API (embedded webview): the param is harmless if it lingers */
+  }
+}
 
 const NORMAL_LIVES = 3;
 /**
@@ -831,6 +847,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Month / Records learn from it.
       if (isInfiniteLivesEnabled() || hasAnyMapTuning()) recordEligibleRef.current = false;
 
+      // ?ascension=N: start this run already at that depth, so the ladder's
+      // later rungs can be looked at without clearing the map list N times.
+      // Applied after resetRunScopedState (which zeroes the depth) and before
+      // the level jump, so ?ascension=3&level=12 works as one instruction.
+      // The param is consumed here, matching ?level=, so a later Play Again is
+      // an ordinary depth-0 run rather than silently staying ascended.
+      const debugAscension = debugAscensionDepth();
+      if (debugAscension > 0) {
+        setAscensionDepth(debugAscension);
+        recordEligibleRef.current = false; // debug jump: never files on the ledger
+        stripQueryParam('ascension');
+      }
+
       if (forceLevel !== undefined) {
         setLevelIndex(forceLevel - 1);
         recordEligibleRef.current = false; // debug jump: never files on the ledger
@@ -838,7 +867,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         const certStartLevel = getLoadedCertStartingLevel();
         const queryLevel = parseInt(new URLSearchParams(window.location.search).get('level') || '0', 10);
         if (queryLevel > 0) {
-          window.history.replaceState(null, '', window.location.pathname);
+          stripQueryParam('level');
           recordEligibleRef.current = false; // debug jump: never files on the ledger
         }
         const startingLevel = Math.max(certStartLevel, queryLevel || 0);
@@ -1834,12 +1863,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
   }, [completedAchievementIds, checkAchievementUnlocks]);
 
-  // Auto-start when ?level= query param is present
+  // Auto-start when a ?level= or ?ascension= debug jump is present. Either one
+  // alone is enough, so ?ascension=6 drops straight into a depth-6 run.
   const levelQueryHandled = useRef(false);
   useEffect(() => {
     if (levelQueryHandled.current) return;
     const levelParam = new URLSearchParams(window.location.search).get('level');
-    if (levelParam && parseInt(levelParam, 10) > 0) {
+    const wantsJump = (levelParam != null && parseInt(levelParam, 10) > 0) || debugAscensionDepth() > 0;
+    if (wantsJump) {
       levelQueryHandled.current = true;
       handleStartGame(undefined, true); // debug jump skips the loadout draft
     }
