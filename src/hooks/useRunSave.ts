@@ -108,25 +108,39 @@ function removeRunSave(): void {
   }
 }
 
+/** The little the main menu needs to know about a save without loading it. */
+export interface SavedRunSummary {
+  ascensionDepth: number;
+}
+
+const summarise = (save: RunSave | null): SavedRunSummary | null =>
+  save ? { ascensionDepth: save.ascensionDepth ?? 0 } : null;
+
 export function useRunSave() {
-  const [hasSavedRun, setHasSavedRun] = useState<boolean>(() => loadRunSave() !== null);
+  // One piece of state, not a boolean beside a depth: two would drift the
+  // moment a save was written without updating both.
+  const [savedRun, setSavedRun] = useState<SavedRunSummary | null>(() => summarise(loadRunSave()));
 
   // Re-check on mount in case another tab wrote a save.
   useEffect(() => {
-    setHasSavedRun(loadRunSave() !== null);
+    setSavedRun(summarise(loadRunSave()));
   }, []);
 
   const saveRun = useCallback((input: RunSaveInput) => {
     writeRunSave({ ...input, version: RUN_SAVE_VERSION, savedAt: Date.now() });
-    setHasSavedRun(true);
+    // Read back rather than summarising what we just wrote, so the menu can
+    // only ever describe a save that would actually load. A write rejected on
+    // quota, or one the loader would refuse, now leaves Continue hidden instead
+    // of offering a run that is not there.
+    setSavedRun(summarise(loadRunSave()));
   }, []);
 
   const clearRun = useCallback(() => {
     removeRunSave();
-    setHasSavedRun(false);
+    setSavedRun(null);
   }, []);
 
   const readRun = useCallback((): RunSave | null => loadRunSave(), []);
 
-  return { hasSavedRun, saveRun, clearRun, readRun };
+  return { hasSavedRun: savedRun !== null, savedRun, saveRun, clearRun, readRun };
 }

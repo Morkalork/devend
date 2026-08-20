@@ -11,6 +11,12 @@ interface WelcomeScreenProps {
   onStartGame: () => void;
   /** When a saved run exists, resumes it. Absent = no save (single Start Game button). */
   onContinue?: () => void;
+  /**
+   * Ascension depth of the saved run, 0 for an unascended one. Shown on the
+   * Continue button so the menu says which run is waiting: at depth the rules
+   * differ enough that resuming blind is a genuine surprise.
+   */
+  savedRunAscension?: number;
   onTutorial: () => void;
   onOptions: () => void;
   onOpenCertificateStore?: () => void;
@@ -45,6 +51,7 @@ interface WelcomeScreenProps {
 export function WelcomeScreen({
   onStartGame,
   onContinue,
+  savedRunAscension = 0,
   onTutorial,
   onOptions,
   onOpenCertificateStore,
@@ -279,14 +286,30 @@ export function WelcomeScreen({
               it as the recommended action. New Game is always a normal button. */}
           {onContinue && (
             <motion.button
-              className="arcade-button-primary arcade-button-sm shimmer rounded-lg flex items-center justify-center gap-2"
+              className="arcade-button-primary arcade-button-sm shimmer rounded-lg flex flex-col items-center justify-center"
               onClick={onContinue}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
               style={{ boxShadow: '0 0 24px hsl(var(--primary) / 0.5), 0 0 48px hsl(var(--primary) / 0.2)' }}
             >
-              {isLoading ? <><Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}</> : t('welcome.continueGame')}
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin" /> {t('welcome.loading')}
+                </span>
+              ) : (
+                <>
+                  <span>{t('welcome.continueGame')}</span>
+                  {savedRunAscension > 0 && (
+                    <span
+                      className="text-[10px] font-bold tracking-widest uppercase leading-none mt-1"
+                      style={{ color: '#ffb347' }}
+                    >
+                      {t('ascension.ladderTitle', { depth: savedRunAscension })}
+                    </span>
+                  )}
+                </>
+              )}
             </motion.button>
           )}
           <motion.button

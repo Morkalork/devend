@@ -223,6 +223,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
               <WelcomeScreen
                 onStartGame={() => session.handleStartGame()}
                 onContinue={session.hasSavedRun ? session.handleContinueRun : undefined}
+                savedRunAscension={session.savedRun?.ascensionDepth ?? 0}
                 onTutorial={navigation.goToTutorial}
                 onOptions={navigation.goToOptions}
                 onOpenCertificateStore={

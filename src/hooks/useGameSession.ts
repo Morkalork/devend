@@ -328,7 +328,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Full-run persistence: written each time a map begins, cleared when the run
   // ends or a New Game starts. Powers the welcome-screen Continue button.
-  const { hasSavedRun, saveRun, clearRun, readRun } = useRunSave();
+  const { hasSavedRun, savedRun, saveRun, clearRun, readRun } = useRunSave();
 
   // Hall of Fame (HIGHSCORES.md Phase A): the all-time Top 10 run ledger plus
   // the #1 run's per-map trajectory, which Record Pace races during the run.
@@ -2000,6 +2000,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleSelectCapstone,
     // Run persistence (Continue / New Game on the welcome screen)
     hasSavedRun,
+    /** The saved run's ascension depth, for the menu's Continue button. */
+    savedRun,
     handleContinueRun,
     // Records (HIGHSCORES.md Phase A/B/C/D)
     levelPace,
