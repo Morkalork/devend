@@ -11,9 +11,10 @@ import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObjec
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal, TrendingUp } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
+import { ascensionAnnouncement, rungsUpTo } from '@/lib/ascensionLadder';
 import { MapTuningModal } from './MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
@@ -42,7 +43,7 @@ import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
 import { getRunRng } from '@/lib/runRng';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
-import { LoadoutConfig } from '@/types/loadout';
+import { LoadoutConfig, AscensionRung } from '@/types/loadout';
 import { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
 import { evaluateAssignment } from '@/lib/assignments';
 import { CapstoneConfig } from '@/types/capstone';
@@ -121,6 +122,8 @@ interface GameScreenProps {
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
+  /** The ladder rungs themselves, for the "what does this depth add" modal. */
+  ascensionLadder?: AscensionRung[];
   /** Constant Change (ascension rung 9): every eligible map rolls a mutator. */
   everyMapMutated?: boolean;
   /** Use It Or Lose It (ascension rung 7): multiplies pickup token lifetime. */
@@ -188,6 +191,7 @@ export function GameScreen({
   capstone = null,
   activeLoadouts = [],
   fenceDurability = null,
+  ascensionLadder = [],
   everyMapMutated = false,
   pickupLifetimeFactor = 1,
   adminMode = false,
@@ -462,6 +466,26 @@ export function GameScreen({
   useEffect(() => {
     setWinModalOpen(shouldAnnounceWinConditions(t, level, levelNumber));
   }, [level, levelNumber, t]);
+
+  /**
+   * Announce the ascension rules once per DEPTH, not once per map.
+   *
+   * Keyed on the depth rather than on reaching level 1, because the debug jump
+   * (?ascension=9&level=12) never passes through level 1 and would otherwise
+   * drop you into a run governed by nine rules nobody mentioned. Re-openable
+   * from the menu, like the win conditions.
+   */
+  const announcement = useMemo(
+    () => ascensionAnnouncement(t, ascensionDepth, ascensionLadder),
+    [t, ascensionDepth, ascensionLadder],
+  );
+  const [ascModalOpen, setAscModalOpen] = useState(false);
+  const announcedDepth = useRef<number | null>(null);
+  useEffect(() => {
+    if (!announcement || announcedDepth.current === ascensionDepth) return;
+    announcedDepth.current = ascensionDepth;
+    setAscModalOpen(true);
+  }, [announcement, ascensionDepth]);
 
   // Handle a BACK gesture while the game is active (wired via backRef from the
   // popstate guard in Index): close an open pause overlay/menu, otherwise open
@@ -907,6 +931,21 @@ export function GameScreen({
               <Target className="w-4 h-4" />
               {t('winConditions.menuItem')}
             </button>
+            {announcement && (
+              <button
+                onClick={() => { setMenuOpen(false); setAscModalOpen(true); }}
+                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
+                style={{ color: '#ffb347', backgroundColor: 'transparent' }}
+                onPointerEnter={e => (e.currentTarget.style.backgroundColor = '#ffb34718')}
+                onPointerDown={e => (e.currentTarget.style.backgroundColor = '#ffb34730')}
+                onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <TrendingUp className="w-4 h-4" />
+                {t('ascension.menuItem')}
+              </button>
+            )}
             {adminMode && (
               <button
                 onClick={() => { setMenuOpen(false); setTuningOpen(true); }}
@@ -971,6 +1010,13 @@ export function GameScreen({
               try { localStorage.setItem(`devend_boss_intro_${level.id}`, '1'); } catch { /* ignore */ }
             },
           }] : []),
+          ...(announcement ? [{
+            show: ascModalOpen,
+            accentColor: '#ffb347',
+            title: announcement.title,
+            body: announcement.body,
+            onDismiss: () => setAscModalOpen(false),
+          }] : []),
           {
             show: showWinModal, accentColor,
             title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber),
@@ -1030,6 +1076,7 @@ export function GameScreen({
         certificateProgress={certificateProgress}
         microManagerPerLock={activeModifiers.microManagerPerLock}
         ascensionDepth={ascensionDepth}
+        ascensionRungs={rungsUpTo(ascensionDepth, ascensionLadder)}
         activeLoadouts={activeLoadouts}
         tagCounts={tagCounts}
         tagSetThreshold={tagSetThreshold}

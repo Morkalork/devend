@@ -32,7 +32,10 @@
     "tutorialIntro1": "Superaste todos los niveles. Asciende para empezar de nuevo en el nivel 1 con tu puntuacion, mejoras y vidas intactas, mas un ",
     "tutorialLoadoutWord": "equipamiento",
     "tutorialIntro2": ": una maldicion con una bendicion. Los loadouts se acumulan con cada ascension, los niveles se aceleran y cada nivel cuenta mas para las Horas de Certificado. Retirate cuando quieras para cobrarlo todo.",
-    "gotIt": "Entendido"
+    "gotIt": "Entendido",
+    "ladderTitle": "Ascensión {{depth}}",
+    "alsoInForce": "También en vigor: {{names}}.",
+    "menuItem": "Reglas de Ascensión"
   },
   "bottomBar": {
     "ballSpeed": "Velocidad de bola",

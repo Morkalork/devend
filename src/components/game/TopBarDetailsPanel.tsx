@@ -11,7 +11,7 @@ import { MANUAL_ENTRIES, hasMetManualEntry, markManualRead } from '@/lib/manual'
 import { X, Ticket, Award, Wind } from 'lucide-react';
 import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
-import { LoadoutConfig } from '@/types/loadout';
+import { LoadoutConfig, AscensionRung } from '@/types/loadout';
 import { AssignmentConfig } from '@/types/assignment';
 import type { AssignmentProgress } from '@/lib/assignments';
 import { CapstoneConfig } from '@/types/capstone';
@@ -49,6 +49,8 @@ interface TopBarDetailsPanelProps {
   certificateProgress?: CertificateHourProgress;
   microManagerPerLock?: number;
   ascensionDepth?: number;
+  /** Ladder rungs in force at that depth (ascensionLadder.ts). */
+  ascensionRungs?: AscensionRung[];
   activeLoadouts?: LoadoutConfig[];
   // Build readout: owned upgrades per archetype tag, and the count needed to
   // light a tag's set bonus.
@@ -84,6 +86,7 @@ export function TopBarDetailsPanel({
   certificateProgress,
   microManagerPerLock = 0,
   ascensionDepth = 0,
+  ascensionRungs = [],
   activeLoadouts = [],
   continuesRemaining = 0,
   tagCounts,
@@ -173,27 +176,6 @@ export function TopBarDetailsPanel({
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
 
-        {/* MANUAL: mechanics met so far. These used to be one-time modals that
-            interrupted play, fired once and were then unreachable forever; here
-            they stay readable, and the Specs badge announces a new one instead
-            of a paragraph thrown over the board. */}
-        {manualSeen.length > 0 && (
-          <section>
-            <p style={sectionHeadStyle}>{t('topBarDetails.manual')}</p>
-            <div className="space-y-3">
-              {manualSeen.map(entry => (
-                <div key={entry.id} style={cardStyle}>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: entry.color }} />
-                    <p className="text-sm font-semibold text-foreground">{t(entry.titleKey)}</p>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{t(entry.bodyKey)}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
         {/* ── BUILD ── archetype tags + ascension + loadout: the run's identity.
             At depth 0 the drafted loadout is the run-start pick; past it they're
             the stacked ascension picks (with the depth multiplier). */}
@@ -230,6 +212,31 @@ export function TopBarDetailsPanel({
                   <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.7 }}>
                     {t('topBarDetails.ascensionDescription', { multiplier: ascensionDepth + 1 })}
                   </p>
+                  {/* Every ladder rung in force, deepest first. The modal at
+                      depth start only names the rungs below the newest one, so
+                      this is where the full text stays reachable. */}
+                  {ascensionRungs.length > 0 && (
+                    <div className="mt-2.5 space-y-2">
+                      {[...ascensionRungs].reverse().map(rung => (
+                        <div key={rung.depth} className="flex items-start gap-2">
+                          <span
+                            className="text-[10px] font-bold tabular-nums shrink-0 mt-0.5"
+                            style={{ color: '#ffb347', opacity: 0.8 }}
+                          >
+                            {rung.depth}
+                          </span>
+                          <div>
+                            <p className="text-xs font-semibold" style={{ color: '#ffb347' }}>
+                              {contentText.rungName(t, rung)}
+                            </p>
+                            <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.7 }}>
+                              {contentText.rungDesc(t, rung)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               {activeLoadouts.map(loadout => (
@@ -531,6 +538,29 @@ export function TopBarDetailsPanel({
               accentColor={accentColor}
               lockedBalls={lockedBalls}
             />
+          </section>
+        )}
+
+        {/* MANUAL: mechanics met so far, kept LAST. These used to be one-time
+            modals that interrupted play, fired once and were then unreachable
+            forever; here they stay readable, and the Specs badge announces a
+            new one instead of a paragraph thrown over the board. It sits at the
+            bottom because it is reference material you look up occasionally,
+            while the build above is what the panel is opened for. */}
+        {manualSeen.length > 0 && (
+          <section>
+            <p style={sectionHeadStyle}>{t('topBarDetails.manual')}</p>
+            <div className="space-y-3">
+              {manualSeen.map(entry => (
+                <div key={entry.id} style={cardStyle}>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: entry.color }} />
+                    <p className="text-sm font-semibold text-foreground">{t(entry.titleKey)}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{t(entry.bodyKey)}</p>
+                </div>
+              ))}
+            </div>
           </section>
         )}
 

@@ -27,6 +27,8 @@
  * Optimisation. Both make an existing pick more interesting at depth instead of
  * mandatory.
  */
+import type { TFunction } from "i18next";
+import { contentText } from "@/i18n/content";
 import type { AscensionRung, AscensionRules } from "@/types/loadout";
 
 /** How many rungs the ladder has. Depths past this repeat the last rung's
@@ -124,4 +126,40 @@ export function shopOpensAfter(levelNumber: number, rules: AscensionRules): bool
 /** The rung earned at exactly this depth, for the "what is new" callout. */
 export function rungAt(depth: number, ladder: AscensionRung[]): AscensionRung | null {
   return ladder.find(r => r.depth === depth) ?? null;
+}
+
+/**
+ * What to put in front of the player when a depth begins.
+ *
+ * Leads with the rung just earned, because that is the question being asked:
+ * what does THIS ascension add. The rungs below it are named but not described,
+ * as a reminder of what is already in force rather than a wall of text nobody
+ * reads. The full descriptions stay in the Specs panel.
+ *
+ * Returns null when there is nothing to announce (depth 0, or a ladder that
+ * failed to load), which is the caller's cue not to open a modal at all.
+ */
+export function ascensionAnnouncement(
+  t: TFunction, depth: number, ladder: AscensionRung[],
+): { title: string; body: string } | null {
+  const inForce = rungsUpTo(depth, ladder);
+  if (inForce.length === 0) return null;
+
+  const earned = rungAt(depth, ladder);
+  // Past the ladder's end there is no new rung, so lead with the deepest one.
+  const lead = earned ?? inForce[inForce.length - 1];
+  const rest = inForce.filter(r => r.depth !== lead.depth);
+
+  const parts = [
+    `${contentText.rungName(t, lead)}\n${contentText.rungDesc(t, lead)}`,
+  ];
+  if (rest.length > 0) {
+    parts.push(t("ascension.alsoInForce", {
+      names: rest.map(r => contentText.rungName(t, r)).join(", "),
+    }));
+  }
+  return {
+    title: t("ascension.ladderTitle", { depth }),
+    body: parts.join("\n\n"),
+  };
 }

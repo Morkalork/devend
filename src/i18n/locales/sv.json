@@ -32,7 +32,10 @@
     "tutorialIntro1": "Du klarade varje nivå. Stig upp för att börja om på nivå 1 med poäng, uppgraderingar och liv i behåll, plus en ",
     "tutorialLoadoutWord": "loadout",
     "tutorialIntro2": ": en förbannelse med en välsignelse. Loadouts staplas för varje uppstigning, nivåerna går snabbare och varje klarad nivå räknas mer mot Certifikattimmar. Gå i pension när du vill för att banka allt.",
-    "gotIt": "Uppfattat"
+    "gotIt": "Uppfattat",
+    "ladderTitle": "Ascension {{depth}}",
+    "alsoInForce": "Gäller också: {{names}}.",
+    "menuItem": "Ascension-regler"
   },
   "bottomBar": {
     "ballSpeed": "Bollhastighet",

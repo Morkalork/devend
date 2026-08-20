@@ -82,6 +82,16 @@ export const contentText = {
   mutatorClarify: (t: TFunction, m: WithId & { clarify?: string }) =>
     field(t, 'mapMutators', m.id, 'clarify', m.clarify),
 
+  /**
+   * Ascension ladder rung (the `ascension.ladder` block in loadouts.yml).
+   * Keyed by DEPTH rather than an id: a rung's identity is which depth it comes
+   * into force at, so there is nothing else for it to be called.
+   */
+  rungName: (t: TFunction, r: { depth: number; name?: string }) =>
+    field(t, 'ascensionRungs', String(r.depth), 'name', r.name),
+  rungDesc: (t: TFunction, r: { depth: number; description?: string }) =>
+    field(t, 'ascensionRungs', String(r.depth), 'description', r.description),
+
   loadoutName: (t: TFunction, l: WithId & { name?: string }) => field(t, 'loadouts', l.id, 'name', l.name),
   loadoutCurse: (t: TFunction, l: WithId & { curse?: string }) => field(t, 'loadouts', l.id, 'curse', l.curse),
   loadoutBlessing: (t: TFunction, l: WithId & { blessing?: string }) =>

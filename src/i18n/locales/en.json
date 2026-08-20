@@ -32,7 +32,10 @@
     "tutorialIntro1": "You beat every level. Ascend to restart at level 1 with your score, upgrades and lives intact, plus one ",
     "tutorialLoadoutWord": "loadout",
     "tutorialIntro2": ": a curse with a blessing. Loadouts stack each ascension, levels speed up, and cleared levels count more toward Certificate Hours. Retire anytime to bank it all.",
-    "gotIt": "Got It"
+    "gotIt": "Got It",
+    "ladderTitle": "Ascension {{depth}}",
+    "alsoInForce": "Also in force: {{names}}.",
+    "menuItem": "Ascension Rules"
   },
   "bottomBar": {
     "ballSpeed": "Ball Speed",

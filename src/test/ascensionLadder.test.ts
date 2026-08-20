@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
-  ascensionRules, rungsUpTo, rungAt, shopOpensAfter,
+  ascensionRules, rungsUpTo, rungAt, shopOpensAfter, ascensionAnnouncement,
   NO_ASCENSION_RULES, LADDER_LENGTH,
 } from "@/lib/ascensionLadder";
 import type { AscensionRung } from "@/types/loadout";
@@ -196,5 +196,60 @@ describe("the store cadence", () => {
     expect(rules.shopEveryOtherLevel).toBe(true);
     expect([1, 2, 3, 4, 5, 6].map(lv => shopOpensAfter(lv, rules)))
       .toEqual([true, false, true, false, true, false]);
+  });
+});
+
+// ── The announcement ────────────────────────────────────────────────────────
+
+/**
+ * Arriving at a depth without being told what changed was the original
+ * complaint: the rules were in force and only the Specs panel knew about them.
+ *
+ * `t` is stubbed to echo its key plus the interpolated values, so these tests
+ * check WHICH strings are assembled rather than what any locale says they are.
+ */
+const fakeT = ((key: string, vars?: Record<string, unknown>) =>
+  vars ? `${key}(${Object.values(vars).join("|")})` : key) as unknown as Parameters<typeof ascensionAnnouncement>[0];
+
+describe("announcing a depth", () => {
+  it("says nothing at depth 0, so no modal opens on a normal run", () => {
+    expect(ascensionAnnouncement(fakeT, 0, LADDER)).toBeNull();
+  });
+
+  it("says nothing when the ladder failed to load", () => {
+    expect(ascensionAnnouncement(fakeT, 4, [])).toBeNull();
+  });
+
+  it("leads with the rung just earned", () => {
+    const a = ascensionAnnouncement(fakeT, 4, LADDER)!;
+    expect(a.title).toContain("4");
+    // The lead rung's description is spelled out in full.
+    expect(a.body).toContain(LADDER[3].description);
+  });
+
+  it("names the rungs already in force without repeating their descriptions", () => {
+    const a = ascensionAnnouncement(fakeT, 4, LADDER)!;
+    expect(a.body).toContain("ascension.alsoInForce");
+    for (const below of LADDER.slice(0, 3)) {
+      expect(a.body, below.name).toContain(below.name);
+      expect(a.body, `${below.name} description should not be repeated`)
+        .not.toContain(below.description);
+    }
+  });
+
+  it("has nothing to list at depth 1, where the lead rung is the only one", () => {
+    const a = ascensionAnnouncement(fakeT, 1, LADDER)!;
+    expect(a.body).toContain(LADDER[0].description);
+    expect(a.body).not.toContain("ascension.alsoInForce");
+  });
+
+  /**
+   * Past the ladder's end no rung is earned, but the run is still governed by
+   * all ten and the player still deserves to be told which.
+   */
+  it("still describes the run past the ladder's end", () => {
+    const a = ascensionAnnouncement(fakeT, LADDER_LENGTH + 3, LADDER)!;
+    expect(a.title).toContain(String(LADDER_LENGTH + 3));
+    expect(a.body).toContain(LADDER[LADDER_LENGTH - 1].description);
   });
 });

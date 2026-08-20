@@ -103,7 +103,7 @@ export function TutorialOverlay({
       {graphic && <div className="flex justify-center">{graphic}</div>}
 
       <p
-        className="text-sm sm:text-base text-center leading-relaxed"
+        className="text-sm sm:text-base text-center leading-relaxed whitespace-pre-line"
         style={{ fontFamily: "'JetBrains Mono', monospace", color: '#c8ffd8' }}
       >
         {body}
