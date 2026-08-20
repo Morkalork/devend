@@ -1042,7 +1042,13 @@ export function GameScreen({
           {
             show: fenceIntroOpen, accentColor,
             title: t('interactiveTutorial.drawAFence'), body: t('interactiveTutorial.dragInstruction'), graphic: <FenceArt />,
-            onDismiss: () => setFenceIntroOpen(false),
+            // Dismissing marks it seen. The modal IS the explanation; the guided
+            // hint that follows is practice, and it still runs this map either
+            // way. Previously only a successful tutorial cut persisted anything,
+            // so dismissing this and then dying on level 1 - or reloading a
+            // ?level= / ?ascension= debug jump without finishing the map - re-armed
+            // it on every single run, forever.
+            onDismiss: () => { setFenceIntroOpen(false); onFenceSeen?.(); },
           },
         ];
         const active = queue.find(m => m.show);
