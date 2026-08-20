@@ -38,7 +38,7 @@ describe("loot gem physics", () => {
     const world = flat(800);
     let loot = [makeChestLoot("l1", "freezeAll", 450, 400, 0)];
     loot[0].vx = 0; loot[0].vy = 0; // straight drop for a clean test
-    let peaksAfterBounce: number[] = [];
+    const peaksAfterBounce: number[] = [];
     let bounced = 0, prevVy = 0;
     for (let s = 0; s < 400; s++) {
       prevVy = loot[0]?.vy ?? 0;

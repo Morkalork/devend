@@ -5,7 +5,11 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist"] },
+  // Build output, not source. `android/app/build` holds Capacitor's copied web
+  // assets and its own bundled native-bridge.js, which trips rules that are not
+  // even configured for plain JS - errors nobody can act on, in a file nobody
+  // wrote, regenerated on every android:sync.
+  { ignores: ["dist", "android/app/build", "android/app/src/main/assets"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],

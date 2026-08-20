@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight, Circle, Plus, Trash2, Pencil } from 'lucide-react';
 import yaml from 'js-yaml';
+import { spliceYamlEntry } from '@/lib/yamlSplice';
 import { GameScreen } from '@/components/game/GameScreen';
 import type { GameStateInfo } from '@/components/game/GameCanvas';
 import { getAllAbilities, loadAbilities } from '@/lib/abilities';
@@ -184,10 +185,15 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   // static side column). `editorOpen` toggles the drawer on small screens.
   const [editorOpen, setEditorOpen] = useState(false);
 
+  // The map.yml source as fetched, kept so a save can splice one level back in
+  // rather than re-dumping the document and deleting every comment in it.
+  const rawMapYaml = useRef<string | null>(null);
+
   useEffect(() => {
     fetch('/map.yml')
       .then(r => r.text())
       .then(text => {
+        rawMapYaml.current = text;
         const data = yaml.load(text) as LevelData;
         // Migrated maps have no `balls` array (the game derives them). Normalise
         // so the legacy entity/ball editor panels don't choke on `undefined`.
@@ -388,9 +394,29 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     setGameKey(k => k + 1);
   }, [editDraft]);
 
-  /** The YAML the current draft would write, also used by the download fallback. */
+  /**
+   * The YAML the current draft would write, also used by the download fallback.
+   *
+   * Splices the edited level over its own lines in the fetched source, so every
+   * comment in map.yml survives a save: the schema header, the per-map design
+   * notes, the LEVELDESIGN.md cross-references. Re-dumping the whole document
+   * (the old behaviour) deleted all of it on every save, silently, because the
+   * game loads a comment-free file perfectly well.
+   *
+   * Falls back to a full dump when the level cannot be located unambiguously,
+   * which loses comments but never writes a mangled file.
+   */
   const draftYaml = useCallback(() => {
     if (!editDraft) return '';
+    const raw = rawMapYaml.current;
+    if (raw) {
+      // One level, dumped as a sequence of one, so js-yaml produces the "  - "
+      // entry shape and indentation the file already uses.
+      const entry = yaml.dump([editDraft], { indent: 2, lineWidth: -1, noRefs: true })
+        .split('\n').map(l => (l ? '  ' + l : l)).join('\n');
+      const spliced = spliceYamlEntry(raw, 'id', String(editDraft.id), entry);
+      if (spliced) return spliced;
+    }
     const nextLevels = allLevels.map(l => l.id === editDraft.id ? editDraft : l);
     return yaml.dump({ levels: nextLevels }, { indent: 2, lineWidth: -1, noRefs: true });
   }, [editDraft, allLevels]);

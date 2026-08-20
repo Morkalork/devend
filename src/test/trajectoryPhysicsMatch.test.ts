@@ -37,7 +37,7 @@ function boardWalls(x0: number, y0: number, x1: number, y1: number): Wall[] {
   return c.map((s, i) => ({ id: `board-${i}`, start: s[0], end: s[1], thickness: 0 } as unknown as Wall));
 }
 function angleDeg(v: Vector2) { return Math.atan2(v.y, v.x) * 180 / Math.PI; }
-function angleErr(a: number, b: number) { let e = Math.abs(a - b); return e > 180 ? 360 - e : e; }
+function angleErr(a: number, b: number) { const e = Math.abs(a - b); return e > 180 ? 360 - e : e; }
 
 const BOARD = createRectPolygon(0, 0, 600, 400);
 const OBSTACLE = circlePoly(300, 200, 55);
