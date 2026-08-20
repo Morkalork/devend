@@ -559,8 +559,15 @@ export function GameScreen({
   const showBossOverlay = !!level.boss && !bossIntroSeen;
   const showWinModal = winModalOpen && !mapComplete;
   // Any queued explainer modal is up (used to gate building the queue + to pause).
+  // EVERY entry in the explainer queue below must appear here. This flag gates
+  // whether the queue renders at all, and pauses the game behind it, so a modal
+  // missing from this list is a modal that cannot show when it is the only one
+  // waiting - and, because its open flag is then never cleared, one that
+  // ambushes a later map by jumping the queue in front of that map's own
+  // explainer.
   const anyExplainerModal =
-    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal || fenceIntroOpen;
+    showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal
+    || fenceIntroOpen || ascModalOpen;
 
 
   // Mechanics the player has just met. These used to stop the game to deliver a
