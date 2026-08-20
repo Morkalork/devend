@@ -321,6 +321,8 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 capstone={session.capstone}
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
+                everyMapMutated={session.ascensionRules.everyMapMutated}
+                pickupLifetimeFactor={session.ascensionRules.pickupLifetimeFactor}
                 introAssemble={session.introAssemblePending}
               />
             )}

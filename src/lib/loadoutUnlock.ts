@@ -10,7 +10,16 @@ import { LoadoutConfig } from '@/types/loadout';
 
 /** Is this loadout unlocked for the run-start draft at the given win count? */
 export const isLoadoutUnlocked = (loadout: LoadoutConfig, uniqueWins: number): boolean =>
-  loadout.uniqueWinsRequired == null || uniqueWins >= loadout.uniqueWinsRequired;
+  !loadout.neverDrafted &&
+  (loadout.uniqueWinsRequired == null || uniqueWins >= loadout.uniqueWinsRequired);
+
+/**
+ * Loadouts the Ascension draft may offer. That draft ignores win-gating (it
+ * always showed the full catalogue) but must still skip imposed loadouts, or
+ * the ladder's forced curse would turn up as one of three "rewards".
+ */
+export const draftableAtAscension = (loadouts: LoadoutConfig[]): LoadoutConfig[] =>
+  loadouts.filter(l => !l.neverDrafted);
 
 /** Loadouts offered in the run-start draft at the given unique-win count. */
 export const unlockedForStart = (loadouts: LoadoutConfig[], uniqueWins: number): LoadoutConfig[] =>

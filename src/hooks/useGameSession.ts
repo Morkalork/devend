@@ -58,6 +58,7 @@ import { analytics } from '@/lib/analytics';
 import { baseStartingLives, isInfiniteLivesEnabled } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
 import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
+import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
 
 const NORMAL_LIVES = 3;
 /**
@@ -405,8 +406,26 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     activateAchievement,
   } = useAchievementManager();
 
-  // Drafted loadouts + the baseline per-depth speed ramp, folded into the
-  // same bonus map the achievements/certificates use.
+  /**
+   * Every ladder rung in force at the current depth, folded into one rule set.
+   * Read by the shop, the assignment draft, the Promotion, fence durability,
+   * the mutator roll and the forced curse, so a rung is authored once in
+   * loadouts.yml and applies everywhere without a second switch statement.
+   */
+  const ascRules = useMemo(
+    () => (ascensionDepth > 0 ? ascensionRules(ascensionDepth, ascensionConfig.ladder) : NO_ASCENSION_RULES),
+    [ascensionDepth, ascensionConfig.ladder],
+  );
+
+  /**
+   * Drafted loadouts, the ladder's own modifier rungs, and the forced curse,
+   * folded into the same bonus map the achievements/certificates use.
+   *
+   * Ball speed used to be speedRampPerDepth ^ depth at EVERY depth, which was
+   * the whole of what an ascension meant. It is now one rung among ten, and the
+   * ramp only takes over past the ladder's end so deep ascensions still
+   * escalate once the named rungs run out.
+   */
   const loadoutBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
     for (const id of draftedLoadoutIds) {
@@ -414,12 +433,23 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       if (loadout) bonuses = mergeBonuses(bonuses, loadout.modifiers as Partial<Record<keyof GameModifiers, number>>);
     }
     if (ascensionDepth > 0) {
-      bonuses = mergeBonuses(bonuses, {
-        ballSpeedMultiplier: Math.pow(ascensionConfig.speedRampPerDepth, ascensionDepth),
-      });
+      bonuses = mergeBonuses(bonuses, ascRules.modifiers as Partial<Record<keyof GameModifiers, number>>);
+      // The imposed curse is a normal loadout the player never drafted.
+      const forced = ascRules.forcedCurseLoadoutId
+        ? loadoutLookup.get(ascRules.forcedCurseLoadoutId)
+        : undefined;
+      if (forced && !draftedLoadoutIds.includes(forced.id)) {
+        bonuses = mergeBonuses(bonuses, forced.modifiers as Partial<Record<keyof GameModifiers, number>>);
+      }
+      const past = ascensionDepth - LADDER_LENGTH;
+      if (past > 0) {
+        bonuses = mergeBonuses(bonuses, {
+          ballSpeedMultiplier: Math.pow(ascensionConfig.speedRampPerDepth, past),
+        });
+      }
     }
     return bonuses;
-  }, [draftedLoadoutIds, loadoutLookup, ascensionDepth, ascensionConfig.speedRampPerDepth]);
+  }, [draftedLoadoutIds, loadoutLookup, ascensionDepth, ascRules, ascensionConfig.speedRampPerDepth]);
 
   // Set bonuses: free modifier bundles active while the player owns enough
   // upgrades of a tag (tagSets block in upgrades.yml).
@@ -594,9 +624,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
 
   // Ascension rule: fences wear out after a number of ball hits — generous on
   // early levels, brutal late, plus the Defensive Programming upgrade bonus.
-  // null at depth 0 = indestructible fences (the normal game).
+  // null = indestructible fences (the normal game). Gated on the "Technical
+  // Debt" rung rather than on depth > 0, so the first three ascensions have a
+  // character of their own and Defensive Programming is a considered buy at
+  // depth 4 instead of mandatory from the very first ascension.
   const fenceDurability = useMemo(() => {
-    if (ascensionDepth === 0) return null;
+    if (!ascRules.fencesWearOut) return null;
     const levelNumber = currentLevelIndex + 1;
     const t = totalLevels > 1 ? Math.min(1, (levelNumber - 1) / (totalLevels - 1)) : 0;
     const base = Math.round(
@@ -604,7 +637,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       (ascensionConfig.fenceDurabilityAtFinal - ascensionConfig.fenceDurabilityBase) * t
     );
     return Math.max(1, base + activeModifiers.fenceDurabilityBonus);
-  }, [ascensionDepth, currentLevelIndex, totalLevels, ascensionConfig, activeModifiers.fenceDurabilityBonus]);
+  }, [ascRules.fencesWearOut, currentLevelIndex, totalLevels, ascensionConfig, activeModifiers.fenceDurabilityBonus]);
 
   const certSourceIds = useMemo(
     () => new Set(certificates.map(c => c.sourceUpgradeId).filter((id): id is string => id != null)),
@@ -1315,12 +1348,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (doorPool.length > 0) {
       // Seeded runs key the roll by the level it lands on, so every player on
       // the daily seed is offered the same assignments.
-      setDoorOffers(drawDoorOffers(doorPool, ASSIGNMENT_OFFER_COUNT, getRunRng(`doors:${currentLevelIndex + 1}`)));
+      // Reduced Headcount (ascension rung 2) narrows the contract draft. No
+      // upgrade sells a third door, so this rung cannot be bought back.
+      const offerCount = Math.max(1, Math.min(ASSIGNMENT_OFFER_COUNT, ascRules.doorOffers ?? ASSIGNMENT_OFFER_COUNT));
+      setDoorOffers(drawDoorOffers(doorPool, offerCount, getRunRng(`doors:${currentLevelIndex + 1}`)));
       nav.goToDoorDraft();
       return;
     }
     nav.goToUpgradeShop();
-  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex]);
+  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex, ascRules.doorOffers]);
 
   /**
    * After the finished assignment's reward is granted, route into the capstone
@@ -1328,13 +1364,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    */
   const routeAfterAssignmentReward = useCallback(() => {
     const capstonePool = getCapstones();
-    if (!capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
+    // Promotion Freeze (ascension rung 3): no capstone is awarded at all.
+    if (!ascRules.noCapstone && !capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
       setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT, getRunRng(`capstones:${currentLevelIndex + 1}`)));
       nav.goToCapstoneDraft();
       return;
     }
     proceedToAssignment();
-  }, [capstone, currentLevelIndex, nav.goToCapstoneDraft, proceedToAssignment]);
+  }, [capstone, currentLevelIndex, ascRules.noCapstone, nav.goToCapstoneDraft, proceedToAssignment]);
 
   /**
    * Grant the just-finished assignment's reward (issue #60): the reward of the
@@ -1494,11 +1531,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // two waives it entirely and the shop is simply always open.
       const relief = Math.max(0, Math.round(activeModifiers.storeLockRelief ?? 0));
       const locksRequired = relief >= 2 ? 0 : Math.min(relief >= 1 ? 1 : 2, ballsOnMap >= 3 ? 2 : 1);
+      // Hiring Freeze (ascension rung 1): on the levels the store skips there is
+      // nothing to show, so go straight on. Assignment levels never reach here,
+      // so a contract can never be swallowed by the cadence.
+      if (!shopOpensAfter(currentLevelIndex + 1, ascRules)) {
+        finishShopPhase();
+        return;
+      }
       setStoreClosed(locksThisRound < locksRequired);
       setStoreLockProgress({ have: locksThisRound, need: locksRequired });
       nav.goToUpgradeShop();
     }
-  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, activeDoor, grantAssignmentReward, nav.goToAssignmentSummary, nav.goToAscensionDraft, nav.goToUpgradeShop]);
+  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, activeDoor, grantAssignmentReward, ascRules, activeModifiers.storeLockRelief, finishShopPhase, nav.goToAssignmentSummary, nav.goToAscensionDraft, nav.goToUpgradeShop]);
 
   const handleDismissFeatureUnlocked = useCallback(() => {
     // Advance to the next queued unlock, or close if none remain.
@@ -1872,6 +1916,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     certStartingLevel: getCertStartingLevel(),
     // Loadouts + Ascension mode
     ascensionDepth,
+    /** The ladder rungs in force at the current depth (ascensionLadder.ts). */
+    ascensionRules: ascRules,
+    ascensionLadder: ascensionConfig.ladder,
     loadouts,
     availableLoadouts,
     draftedLoadoutIds,

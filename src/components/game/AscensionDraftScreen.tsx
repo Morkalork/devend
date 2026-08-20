@@ -13,6 +13,7 @@ import { ArrowUpCircle, Flag, Skull, Sparkles } from 'lucide-react';
 import { LoadoutConfig } from '@/types/loadout';
 import { drawOffers } from '@/lib/loadoutDraft';
 import { getRunRng } from '@/lib/runRng';
+import { draftableAtAscension } from '@/lib/loadoutUnlock';
 import { CRTBackground } from './CRTBackground';
 import { contentText } from '@/i18n/content';
 
@@ -43,7 +44,13 @@ export function AscensionDraftScreen({
   const { t } = useTranslation();
   // Drawn once per mount so re-renders don't reshuffle the offer. Seeded runs
   // key the roll by depth so each ascension draws fresh but deterministically.
-  const [offers] = useState(() => drawOffers(loadouts, draftedLoadoutIds, 3, getRunRng(`ascDraft:${ascensionDepth}`)));
+  // draftableAtAscension, not the raw catalogue: this draft ignores win-gating
+  // by design, but must still skip loadouts the game imposes rather than
+  // offers. The ladder's forced curse has no blessing, so seeing it among three
+  // rewards would read as a bug.
+  const [offers] = useState(() => drawOffers(
+    draftableAtAscension(loadouts), draftedLoadoutIds, 3, getRunRng(`ascDraft:${ascensionDepth}`),
+  ));
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const nextDepth = ascensionDepth + 1;

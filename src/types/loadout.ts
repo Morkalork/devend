@@ -20,19 +20,81 @@ export interface LoadoutConfig {
    * always offers the full catalogue.
    */
   uniqueWinsRequired?: number;
+  /**
+   * Never offered in either draft. For loadouts the game imposes rather than
+   * lets you pick, such as the Ascension ladder's final forced curse: it is a
+   * curse with no blessing, so drafting it would be a strictly bad choice
+   * nobody would take on purpose.
+   */
+  neverDrafted?: boolean;
+}
+
+/**
+ * One rung of the Ascension ladder: a single named rule that comes into force
+ * at `depth` and stays in force for every depth above it.
+ *
+ * `effects` prefers RULES over stat nerfs. A rung that subtracts from a stat a
+ * shop upgrade adds to turns that upgrade into a tax (see ascensionLadder.ts),
+ * so the rule-shaped fields exist to give rungs something no purchase undoes.
+ */
+export interface AscensionRung {
+  /** Ascension depth at which this rung comes into force (1-based). */
+  depth: number;
+  /** Short name, shown on the ladder card. Displayed text: no em-dashes. */
+  name: string;
+  /** One line explaining what changes. Displayed text: no em-dashes. */
+  description: string;
+  effects?: AscensionRungEffects;
+}
+
+export interface AscensionRungEffects {
+  /** The shop opens only after odd-numbered levels. */
+  shopEveryOtherLevel?: boolean;
+  /** Cap the assignment door draft at this many offers. */
+  doorOffers?: number;
+  /** No Promotion (capstone) draft this run. */
+  noCapstone?: boolean;
+  /** Completed fences wear out under ball hits (the old blanket depth rule). */
+  fencesWearOut?: boolean;
+  /** Every eligible map rolls a mutator (drops the "none" bucket). */
+  everyMapMutated?: boolean;
+  /** Multiplies pickup token lifetime; 0.5 halves it. */
+  pickupLifetimeFactor?: number;
+  /** A loadout id forced into the run and not removable. */
+  forcedCurseLoadoutId?: string;
+  /** Plain GameModifiers, for rungs whose counter is a real decision. */
+  modifiers?: Record<string, number>;
+}
+
+/** Every rung at or below the current depth, folded into one rule set. */
+export interface AscensionRules {
+  shopEveryOtherLevel: boolean;
+  doorOffers: number | null;
+  noCapstone: boolean;
+  fencesWearOut: boolean;
+  everyMapMutated: boolean;
+  pickupLifetimeFactor: number;
+  forcedCurseLoadoutId: string | null;
+  modifiers: Record<string, number>;
 }
 
 export interface AscensionConfig {
-  /** Baseline ballSpeedMultiplier applied per ascension depth (compounds). */
+  /**
+   * Baseline ballSpeedMultiplier applied per ascension depth (compounds).
+   * Retained for saves and for depths past the ladder's end; the ladder's own
+   * speed rung is what carries speed inside the named range.
+   */
   speedRampPerDepth: number;
   /** Ball hits an ascended fence survives on level 1 (durability eases in)… */
   fenceDurabilityBase: number;
   /** …declining linearly to this many hits on the final level. */
   fenceDurabilityAtFinal: number;
+  /** The named ladder. Empty falls back to the old flat per-depth behaviour. */
+  ladder: AscensionRung[];
 }
 
 export interface LoadoutData {
-  ascension?: Partial<AscensionConfig>;
+  ascension?: Partial<AscensionConfig> & { ladder?: AscensionRung[] };
   loadouts: LoadoutConfig[];
 }
 
@@ -40,4 +102,5 @@ export const DEFAULT_ASCENSION_CONFIG: AscensionConfig = {
   speedRampPerDepth: 1.08,
   fenceDurabilityBase: 6,
   fenceDurabilityAtFinal: 2,
+  ladder: [],
 };

@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import type { LoadoutConfig, LoadoutData } from "@/types/loadout";
 import { drawOffers } from "@/lib/loadoutDraft";
-import { unlockedForStart } from "@/lib/loadoutUnlock";
+import { unlockedForStart, isLoadoutUnlocked, draftableAtAscension } from "@/lib/loadoutUnlock";
 import {
   mergeBonuses,
   computeGameModifiers,
@@ -24,13 +24,28 @@ const loadouts = loadoutDoc.loadouts;
 const VALID_MODIFIER_KEYS = new Set(Object.keys(computeGameModifiers([], new Map())));
 
 describe("run-start loadout draft", () => {
+  // Imposed loadouts (the Ascension ladder's forced curse) are never offered by
+  // either draft, so they sit outside every question this suite asks about the
+  // draft pool. Filtered with the same flag the game filters on.
+  const draftable = loadouts.filter(l => !l.neverDrafted);
+
   it("has exactly two loadouts available from scratch (no uniqueWinsRequired)", () => {
-    const fromScratch = loadouts.filter(l => l.uniqueWinsRequired == null);
+    const fromScratch = draftable.filter(l => l.uniqueWinsRequired == null);
     expect(fromScratch).toHaveLength(2);
   });
 
+  it("never offers an imposed loadout, at any win count or either draft", () => {
+    const imposed = loadouts.filter(l => l.neverDrafted);
+    expect(imposed.length, "the ladder's forced curse should be one").toBeGreaterThan(0);
+    for (const l of imposed) {
+      expect(isLoadoutUnlocked(l, 0), l.id).toBe(false);
+      expect(isLoadoutUnlocked(l, 999), l.id).toBe(false);
+      expect(draftableAtAscension(loadouts).map(x => x.id), l.id).not.toContain(l.id);
+    }
+  });
+
   it("gates every other loadout behind a positive integer uniqueWinsRequired", () => {
-    const gated = loadouts.filter(l => l.uniqueWinsRequired != null);
+    const gated = draftable.filter(l => l.uniqueWinsRequired != null);
     expect(gated.length).toBeGreaterThan(0);
     for (const l of gated) {
       expect(Number.isInteger(l.uniqueWinsRequired)).toBe(true);

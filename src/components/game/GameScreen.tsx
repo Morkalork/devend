@@ -121,6 +121,10 @@ interface GameScreenProps {
   activeLoadouts?: LoadoutConfig[];
   /** Ball hits a fence survives (Ascension); null = indestructible. */
   fenceDurability?: number | null;
+  /** Constant Change (ascension rung 9): every eligible map rolls a mutator. */
+  everyMapMutated?: boolean;
+  /** Use It Or Lose It (ascension rung 7): multiplies pickup token lifetime. */
+  pickupLifetimeFactor?: number;
   /** Admin: unlocks the live map tuner in the in-game menu. */
   adminMode?: boolean;
   /** Admin/Playground: draw a live speed label above each ball. */
@@ -184,6 +188,8 @@ export function GameScreen({
   capstone = null,
   activeLoadouts = [],
   fenceDurability = null,
+  everyMapMutated = false,
+  pickupLifetimeFactor = 1,
   adminMode = false,
   showBallSpeeds = false,
   showPerfOverlay = false,
@@ -336,8 +342,14 @@ export function GameScreen({
   // map (level 11+) from the run seed. A boss map (#56) forces its authored
   // mutator instead of rolling.
   const mapMutator = useMemo(
-    () => level.boss?.mutator ?? selectMapMutator(levelNumber, getRunRng(`mapMutator:${level.id}`)),
-    [levelNumber, level.id, level.boss],
+    // noneWeight 0 removes the "vanilla map" bucket, so every eligible map
+    // draws a real mutator. Maps below the procedural band stay unmutated:
+    // that gate is about teaching order, not about difficulty.
+    () => level.boss?.mutator ?? selectMapMutator(
+      levelNumber, getRunRng(`mapMutator:${level.id}`), undefined,
+      everyMapMutated ? 0 : undefined,
+    ),
+    [levelNumber, level.id, level.boss, everyMapMutated],
   );
 
   // Per-map objective (issue #55): an optional goal rolled 0-or-1 per eligible
@@ -742,7 +754,13 @@ export function GameScreen({
             scopeCreep={scopeCreepConfig}
             mapMutator={mapMutator}
             objective={mapObjective}
-            pickupConfig={config.pickups}
+            pickupConfig={pickupLifetimeFactor === 1 ? config.pickups : {
+              ...config.pickups,
+              // Use It Or Lose It (ascension rung 7). Floor at 1s so a deep
+              // ladder can never round a token's life down to zero, which
+              // would delete it on the frame it spawned.
+              lifetimeSeconds: Math.max(1, Math.round(config.pickups.lifetimeSeconds * pickupLifetimeFactor)),
+            }}
             regionColor={getRegionColor()}
             accentColor={accentColor}
             activeModifiers={activeModifiers}

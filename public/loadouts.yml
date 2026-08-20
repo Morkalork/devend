@@ -25,7 +25,98 @@ ascension:
   fenceDurabilityBase: 6
   fenceDurabilityAtFinal: 2
 
+  # ── The ladder ────────────────────────────────────────────────────────────
+  # Ten named rungs, applied cumulatively: everything at or below your depth is
+  # in force. This replaces "the same game, balls 8% faster per depth", where
+  # depth 3 and depth 4 differed by one number and neither was describable.
+  #
+  # RULES, NOT NERFS. Most rungs change a rule instead of subtracting from a
+  # stat, because a rung that docks a stat meets the shop upgrade that adds to
+  # it: `fenceDurabilityBonus: -1` versus Defensive Programming cancels exactly,
+  # making that upgrade a mandatory tax and useless everywhere else. Nothing in
+  # the shop sells a third assignment door, so `doorOffers` cannot be bought
+  # back at any price. Two rungs collide on purpose (the overtime cap against
+  # the Stock Options capstone, ball speed against Runtime Optimisation)
+  # because there the counter is a real decision, not a purchase.
+  #
+  # Depths past 10 keep the whole ladder and fall back to speedRampPerDepth for
+  # further escalation. Displayed text: no em-dashes.
+  ladder:
+    - depth: 1
+      name: Hiring Freeze
+      description: The store opens every other level instead of after every one.
+      effects:
+        shopEveryOtherLevel: true
+
+    - depth: 2
+      name: Reduced Headcount
+      description: Every assignment offers two contracts to choose from, not three.
+      effects:
+        doorOffers: 2
+
+    - depth: 3
+      name: Promotion Freeze
+      description: No Promotion is awarded this run, whatever you achieve.
+      effects:
+        noCapstone: true
+
+    - depth: 4
+      name: Technical Debt
+      description: Finished fences wear out under repeated ball hits and finally break.
+      effects:
+        fencesWearOut: true
+
+    - depth: 5
+      name: Hard Deadline
+      description: Scope Creep starts the moment a map does, with no grace period.
+      effects:
+        modifiers:
+          scopeCreepImmediate: 1
+
+    - depth: 6
+      name: Budget Cuts
+      description: Each map pays 10 fewer overtime hours before hitting its ceiling.
+      effects:
+        modifiers:
+          overtimeCapBonus: -10
+
+    - depth: 7
+      name: Use It Or Lose It
+      description: Power-up tokens expire in half the time.
+      effects:
+        pickupLifetimeFactor: 0.5
+
+    - depth: 8
+      name: Velocity Targets
+      description: Balls move 8% faster.
+      effects:
+        modifiers:
+          ballSpeedMultiplier: 1.08
+
+    - depth: 9
+      name: Constant Change
+      description: Every map that can roll a mutator does. No quiet maps left.
+      effects:
+        everyMapMutated: true
+
+    - depth: 10
+      name: Performance Improvement Plan
+      description: A permanent curse joins the run, and it cannot be dropped.
+      effects:
+        forcedCurseLoadoutId: performance_improvement_plan
+
 loadouts:
+
+  # Imposed by Ascension rung 10, never drafted: a curse with no blessing, so
+  # nobody would ever pick it and it must not appear as one of three "rewards".
+  - id: performance_improvement_plan
+    name: Performance Improvement Plan
+    curse: Balls move 10% faster and every map pays 10% less.
+    blessing: None. This one is not a trade.
+    neverDrafted: true
+    modifiers:
+      ballSpeedMultiplier: 1.10
+      scoreMultiplier: 0.90
 
   - id: crunch_time
     name: Crunch Time
