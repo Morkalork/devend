@@ -1,4 +1,3 @@
-import { untiltWorldPoint } from "@/lib/boardTilt";
 // Fixed-aspect-ratio game board constants
 // All gameplay simulation runs in world coordinates
 
@@ -114,6 +113,52 @@ export function worldToScreen(
   return {
     x: boardRect.left + worldX * boardRect.scale,
     y: boardRect.top + worldY * boardRect.scale,
+  };
+}
+
+// ── Board tilt geometry (issue #77) ─────────────────────────────────────────
+// Lives HERE, beside BOARD_WIDTH, rather than in boardTilt.ts. boardTilt needs
+// the board size and screenToWorld needs the inverse, so putting the geometry
+// there and importing it back created a cycle: boardTilt read BOARD_WIDTH at
+// module scope, so whichever side initialised second saw it uninitialised and
+// the app failed to boot. Tests missed it because Vitest happened to resolve
+// the graph in a working order. Geometry with the constants, schedule in
+// boardTilt, and the dependency only ever points this way.
+
+/** Half the board, the centre every rotation happens about. */
+const TILT_CENTRE = BOARD_WIDTH / 2;
+
+/**
+ * How much to shrink so a board rotated by `angle` still fits its own square.
+ * 1 at every 90 degree rest angle, about 0.707 at 45. Without it the corners
+ * would leave the frame mid-turn.
+ */
+export function fitScale(angle: number): number {
+  const s = Math.abs(Math.cos(angle)) + Math.abs(Math.sin(angle));
+  return s > 1e-9 ? 1 / s : 1;
+}
+
+/** Rotate and shrink a world point about the board centre. */
+export function tiltWorldPoint(x: number, y: number, angle: number): { x: number; y: number } {
+  if (angle === 0) return { x, y };
+  const cos = Math.cos(angle), sin = Math.sin(angle);
+  const k = fitScale(angle);
+  const dx = x - TILT_CENTRE, dy = y - TILT_CENTRE;
+  return {
+    x: TILT_CENTRE + (dx * cos - dy * sin) * k,
+    y: TILT_CENTRE + (dx * sin + dy * cos) * k,
+  };
+}
+
+/** The exact inverse of tiltWorldPoint, for turning a tap back into world space. */
+export function untiltWorldPoint(x: number, y: number, angle: number): { x: number; y: number } {
+  if (angle === 0) return { x, y };
+  const cos = Math.cos(angle), sin = Math.sin(angle);
+  const k = fitScale(angle);
+  const dx = (x - TILT_CENTRE) / k, dy = (y - TILT_CENTRE) / k;
+  return {
+    x: TILT_CENTRE + dx * cos + dy * sin,   // rotate by -angle
+    y: TILT_CENTRE - dx * sin + dy * cos,
   };
 }
 

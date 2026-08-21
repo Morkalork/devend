@@ -21,15 +21,18 @@
  * therefore appears to shrink slightly as it turns and settle as it lands,
  * which reads as a deliberate move rather than a clipping bug.
  */
-import { BOARD_WIDTH } from "@/lib/boardConstants";
+// Geometry lives in boardConstants beside BOARD_WIDTH and is re-exported here,
+// so callers can keep importing "the tilt" from one place. The dependency runs
+// one way only: boardConstants imports nothing of ours, which is what stops the
+// cycle that briefly stopped the app booting.
+import { fitScale, tiltWorldPoint, untiltWorldPoint } from "@/lib/boardConstants";
+export { fitScale, tiltWorldPoint, untiltWorldPoint };
 import {
   gravityPhaseIndex, type GravityConfig, type GravityDirection,
 } from "@/lib/physics/gravity";
 
 /** Seconds a turn takes. Long enough to read as a move, short enough to play. */
 export const TILT_SECONDS = 0.7;
-
-const HALF = BOARD_WIDTH / 2;
 
 /**
  * The screen-space rotation that puts a world pull at the bottom of the screen.
@@ -95,37 +98,4 @@ export function tiltAngleAt(activeSeconds: number, cfg: GravityConfig | null): n
   return from + shortestDelta(from, to) * u;
 }
 
-/**
- * How much to shrink so a board rotated by `angle` still fits its own square.
- *
- * 1 at every 90 degree rest angle, about 0.707 at 45. Without it the corners
- * would leave the frame during a turn.
- */
-export function fitScale(angle: number): number {
-  const s = Math.abs(Math.cos(angle)) + Math.abs(Math.sin(angle));
-  return s > 1e-9 ? 1 / s : 1;
-}
 
-/** Rotate and shrink a world point about the board centre. */
-export function tiltWorldPoint(x: number, y: number, angle: number): { x: number; y: number } {
-  if (angle === 0) return { x, y };
-  const cos = Math.cos(angle), sin = Math.sin(angle);
-  const k = fitScale(angle);
-  const dx = x - HALF, dy = y - HALF;
-  return {
-    x: HALF + (dx * cos - dy * sin) * k,
-    y: HALF + (dx * sin + dy * cos) * k,
-  };
-}
-
-/** The exact inverse of tiltWorldPoint, for turning a tap back into world space. */
-export function untiltWorldPoint(x: number, y: number, angle: number): { x: number; y: number } {
-  if (angle === 0) return { x, y };
-  const cos = Math.cos(angle), sin = Math.sin(angle);
-  const k = fitScale(angle);
-  const dx = (x - HALF) / k, dy = (y - HALF) / k;
-  return {
-    x: HALF + dx * cos + dy * sin,   // rotate by -angle
-    y: HALF - dx * sin + dy * cos,
-  };
-}
