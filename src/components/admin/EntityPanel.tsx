@@ -1,6 +1,16 @@
-import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed, ArrowDownToLine } from 'lucide-react';
-import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell } from '@/types/level';
+import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed,
+  ArrowDownToLine, ArrowUpToLine, ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
+import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell, WellPull } from '@/types/level';
 import { AREA_KINDS, AREA_MIN_SIZE, areaStyle } from '@/lib/coloredAreas';
+
+/** The four bearings, laid out the way they point. */
+const PULL_ORDER: WellPull[] = ['up', 'left', 'down', 'right'];
+const PULL_ICON: Record<WellPull, typeof ArrowDownToLine> = {
+  down: ArrowDownToLine,
+  up: ArrowUpToLine,
+  left: ArrowLeftToLine,
+  right: ArrowRightToLine,
+};
 
 interface EntityPanelProps {
   level: LevelConfig;
@@ -168,11 +178,24 @@ export function EntityPanel({
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <ArrowDownToLine className="w-4 h-4" style={{ color: '#ffa23c' }} />
+                  {(() => {
+                    // The row icon points the way the well pulls, so a list of
+                    // wells is readable without opening each one.
+                    const Icon = PULL_ICON[well.pull ?? 'down'];
+                    return <Icon className="w-4 h-4" style={{ color: '#ffa23c' }} />;
+                  })()}
                   <span className="text-sm font-mono">well {index + 1}</span>
                   <span className="text-xs text-muted-foreground">
                     {Math.round(well.width)}x{Math.round(well.height)}
                   </span>
+                  {well.activeFrom != null && (
+                    <span
+                      className="text-[10px] px-1 rounded bg-muted-foreground/20 text-muted-foreground"
+                      title={`Dormant until ${well.activeFrom}% space remains`}
+                    >
+                      wakes {well.activeFrom}%
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={(e) => { e.stopPropagation(); onDeleteWell?.(index); }}
@@ -184,29 +207,78 @@ export function EntityPanel({
               </div>
 
               {index === selectedWellIndex && (
-                <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                  {/* Strong and small beats weak and large: a gentle wide well
-                      is a nudge nobody notices, a fierce narrow one is a
-                      deflector you can aim a ball through. */}
-                  <span className="w-16">bend</span>
-                  <input
-                    type="number" step="0.2" min="0.2" max="8"
-                    value={well.turnRate ?? 2.8}
-                    onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => {
-                      const v = Number.parseFloat(e.target.value);
-                      if (Number.isFinite(v)) onUpdateWell?.(index, { turnRate: v });
-                    }}
-                    className="w-20 px-1 py-0.5 rounded bg-background border border-border font-mono"
-                  />
-                  <span className="opacity-70">rad/s</span>
-                </label>
+                <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {/* Strong and small beats weak and large: a gentle wide well
+                        is a nudge nobody notices, a fierce narrow one is a
+                        deflector you can aim a ball through. */}
+                    <span className="w-16">bend</span>
+                    <input
+                      type="number" step="0.2" min="0.2" max="8"
+                      value={well.turnRate ?? 2.8}
+                      onChange={(e) => {
+                        const v = Number.parseFloat(e.target.value);
+                        if (Number.isFinite(v)) onUpdateWell?.(index, { turnRate: v });
+                      }}
+                      className="w-20 px-1 py-0.5 rounded bg-background border border-border font-mono"
+                    />
+                    <span className="opacity-70">rad/s</span>
+                  </label>
+
+                  {/* Direction, as four arrow buttons rather than a dropdown:
+                      the choice IS a direction, so picking it should look like
+                      pointing rather than like reading a list. */}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="w-16">pulls</span>
+                    <div className="flex gap-1">
+                      {PULL_ORDER.map((dir) => {
+                        const Icon = PULL_ICON[dir];
+                        const on = (well.pull ?? 'down') === dir;
+                        return (
+                          <button
+                            key={dir}
+                            onClick={() => onUpdateWell?.(index, { pull: dir })}
+                            title={dir}
+                            className={`p-1 rounded transition-colors ${
+                              on ? 'bg-primary/30 text-primary' : 'bg-muted hover:bg-muted/70'
+                            }`}
+                          >
+                            <Icon className="w-3.5 h-3.5" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Dormancy. Blank means "live from the first frame", which is
+                      why this is a text field with an explicit clear rather than
+                      a number input whose empty state is indistinguishable
+                      from 0 (and 0 means something: wakes only at a clean board). */}
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="w-16">wakes at</span>
+                    <input
+                      type="number" step="5" min="0" max="100"
+                      placeholder="always"
+                      value={well.activeFrom ?? ''}
+                      onChange={(e) => {
+                        const raw = e.target.value.trim();
+                        if (raw === '') { onUpdateWell?.(index, { activeFrom: undefined }); return; }
+                        const v = Number.parseFloat(raw);
+                        if (Number.isFinite(v)) {
+                          onUpdateWell?.(index, { activeFrom: Math.max(0, Math.min(100, v)) });
+                        }
+                      }}
+                      className="w-20 px-1 py-0.5 rounded bg-background border border-border font-mono"
+                    />
+                    <span className="opacity-70">% space left</span>
+                  </label>
+                </div>
               )}
             </div>
           ))}
           {(level.gravityWells || []).length === 0 && (
             <p className="text-xs text-muted-foreground opacity-70">
-              None. A well bends any ball inside it downward.
+              None. A well bends any ball inside it toward its pull.
             </p>
           )}
         </div>

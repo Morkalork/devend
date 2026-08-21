@@ -24,21 +24,74 @@
  * it always leaves the well before converging. Locality fixes it for free.
  */
 import type { Vector2 } from "@/types/game";
-import type { GravityWell } from "@/types/level";
+import type { GravityWell, WellPull } from "@/types/level";
 import { steerToward } from "@/lib/physics/gravity";
 
-/** Wells pull DOWN the screen. Absolute, not map-relative: see GravityWell. */
-export const WELL_PULL: Vector2 = { x: 0, y: 1 };
+/**
+ * The four bearings, in SCREEN space. Absolute, not map-relative: see
+ * GravityWell.pull for why that is the whole mechanic rather than a detail.
+ */
+export const PULL_VECTORS: Record<WellPull, Vector2> = {
+  down: { x: 0, y: 1 },
+  up: { x: 0, y: -1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+};
+
+/** A well that does not say which way it pulls pulls down, as they all used to. */
+export const DEFAULT_PULL: WellPull = "down";
+
+/** Retained name for the default bearing, which most wells still use. */
+export const WELL_PULL: Vector2 = PULL_VECTORS[DEFAULT_PULL];
 
 /** Fallback bend rate for a well that does not author one. */
 export const DEFAULT_WELL_TURN_RATE = 2.6;
+
+/** This well's bearing, defaulting to down. */
+export function wellPull(well: GravityWell): WellPull {
+  const p = well.pull;
+  return p && p in PULL_VECTORS ? p : DEFAULT_PULL;
+}
+
+/** This well's pull as a unit vector in screen space. */
+export function wellPullVector(well: GravityWell): Vector2 {
+  return PULL_VECTORS[wellPull(well)];
+}
+
+/**
+ * Is this well pulling yet?
+ *
+ * A well with no `activeFrom` is live from the first frame, which is every well
+ * authored before dormancy existed. One with a threshold stays inert until the
+ * board has been cleared down to it.
+ *
+ * `spaceRemainingPercent` is undefined before the first cut of a map resolves,
+ * and is treated as a full board: nothing has been cleared, so a dormant well
+ * has certainly not woken. Defaulting the other way would wake every dormant
+ * well for the opening seconds of every map and then put it back to sleep.
+ */
+export function wellIsLive(
+  well: GravityWell, spaceRemainingPercent: number | undefined,
+): boolean {
+  if (well.activeFrom == null) return true;
+  const remaining = Number.isFinite(spaceRemainingPercent as number)
+    ? (spaceRemainingPercent as number)
+    : 100;
+  return remaining <= well.activeFrom;
+}
 
 /** Is this point inside the well? Mirrors pointInArea for coloured areas. */
 export function pointInWell(x: number, y: number, w: GravityWell): boolean {
   return x >= w.x && x <= w.x + w.width && y >= w.y && y <= w.y + w.height;
 }
 
-/** The first well containing the point, or null. */
+/**
+ * The first well containing the point, or null.
+ *
+ * Dormancy-blind on purpose: the renderer and the map builder need to find a
+ * well whether or not it has woken. Anything that cares about the well DOING
+ * something wants liveWellAt.
+ */
 export function wellAt(
   x: number, y: number, wells: readonly GravityWell[] | undefined,
 ): GravityWell | null {
@@ -47,9 +100,22 @@ export function wellAt(
   return null;
 }
 
+/** The first LIVE well containing the point, or null. */
+export function liveWellAt(
+  x: number, y: number,
+  wells: readonly GravityWell[] | undefined,
+  spaceRemainingPercent: number | undefined,
+): GravityWell | null {
+  if (!wells || wells.length === 0) return null;
+  for (const w of wells) {
+    if (pointInWell(x, y, w) && wellIsLive(w, spaceRemainingPercent)) return w;
+  }
+  return null;
+}
+
 /**
- * The velocity a ball at `position` should have after `dt` inside whatever well
- * it is in, or null when it is in none and nothing should change.
+ * The velocity a ball at `position` should have after `dt` inside whatever live
+ * well it is in, or null when it is in none and nothing should change.
  *
  * Returning null rather than the unchanged vector lets the caller skip the
  * write entirely, which is the common case: most balls are outside every well
@@ -60,27 +126,35 @@ export function wellStep(
   velocity: Vector2,
   wells: readonly GravityWell[] | undefined,
   dt: number,
+  spaceRemainingPercent?: number,
 ): Vector2 | null {
-  const well = wellAt(position.x, position.y, wells);
+  const well = liveWellAt(position.x, position.y, wells, spaceRemainingPercent);
   if (!well) return null;
   const rate = Number.isFinite(well.turnRate) && (well.turnRate as number) > 0
     ? (well.turnRate as number)
     : DEFAULT_WELL_TURN_RATE;
-  return steerToward(velocity, WELL_PULL, rate, dt);
+  return steerToward(velocity, wellPullVector(well), rate, dt);
 }
 
 /**
- * Does this well pull into a wall it is sitting against?
+ * Does this well pull into a board edge it is sitting against?
  *
  * The authoring rule, made checkable. A well whose pull points at a nearby
  * surface pins a ball against it, bouncing in place: not stopped, since speed
  * is preserved, but stuck on one axis and trivially fenceable, which is worse
- * than either. `floor` is the board edge the pull points at.
+ * than either.
  *
- * Stated generally on purpose. The obvious case is a down-pulling well resting
- * on the bottom of the board, but once maps start tilting any of the four
- * edges can become the one the pull is aimed at.
+ * Which edge counts follows the well's own bearing, so an "up" well is checked
+ * against the ceiling and a "right" well against the right wall. The board is
+ * square, so one size describes all four.
  */
-export function pullsIntoWall(well: GravityWell, floorY: number, clearance = 60): boolean {
-  return floorY - (well.y + well.height) < clearance;
+export function pullsIntoWall(
+  well: GravityWell, boardSize: number, clearance = 60,
+): boolean {
+  switch (wellPull(well)) {
+    case "up": return well.y < clearance;
+    case "left": return well.x < clearance;
+    case "right": return boardSize - (well.x + well.width) < clearance;
+    default: return boardSize - (well.y + well.height) < clearance;
+  }
 }

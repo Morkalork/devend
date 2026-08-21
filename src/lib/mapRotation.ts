@@ -19,7 +19,7 @@
 
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
-import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig, GravityWell } from "@/types/level";
+import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig, GravityWell, WellPull } from "@/types/level";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -129,18 +129,62 @@ export function rotateColoredArea(area: ColoredArea, r: MapRotation): ColoredAre
   return { ...area, ...rect };
 }
 
+/** The four bearings as unit vectors, in the same axes as rotatePoint. */
+const BEARING: Record<WellPull, readonly [number, number]> = {
+  down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0],
+};
+
 /**
- * Rotate a gravity well's RECTANGLE into the orientation (issue #77).
+ * Turn a well's bearing into the map orientation.
  *
- * Only the rectangle. The pull stays screen-absolute and is deliberately not
- * rotated: a rigid rotation preserves every relationship inside it, so a pull
- * that turned with the map could never change how the map plays. Rotating the
- * box but not the pull is what will let a later board tilt move a safe well
- * into a dangerous place.
+ * Derived by pushing the DIRECTION through rotatePoint rather than by stepping
+ * a hand-written table of bearings. A table has to encode which way a quarter
+ * turn goes, and getting that backwards is invisible: the well still pulls, the
+ * map still plays, it is simply not the map that was authored. Transforming two
+ * points and keeping the difference cannot disagree with how the rest of the
+ * map rotates, because it IS how the rest of the map rotates.
+ */
+export function rotateWellPull(pull: WellPull, r: MapRotation): WellPull {
+  if (r === 0) return pull;
+  const [dx, dy] = BEARING[pull] ?? BEARING.down;
+  const o = rotatePoint(0, 0, r);
+  const p = rotatePoint(dx, dy, r);
+  const rx = Math.round(p.x - o.x), ry = Math.round(p.y - o.y);
+  for (const key of Object.keys(BEARING) as WellPull[]) {
+    if (BEARING[key][0] === rx && BEARING[key][1] === ry) return key;
+  }
+  return pull;
+}
+
+/**
+ * Rotate a gravity well into the orientation (issue #77): BOTH its rectangle
+ * and its pull.
+ *
+ * The pull turning here looks like it contradicts the screen-absolute rule that
+ * makes the board tilt mean anything, and it is worth being precise about why
+ * it does not. There are two different rotations, and only one of them happens
+ * where the player can see it.
+ *
+ * A board TILT happens mid-map, live, as a transform over a board already in
+ * play. The pull must not turn with it, or the turn preserves every
+ * relationship inside the map and changes nothing. That is the mechanic.
+ *
+ * A map ROTATION is baked in before the first frame; the player never sees the
+ * un-rotated board, so nothing is changed underneath them. Leaving the pull
+ * fixed there does not create surprise, it just randomises which of four
+ * unrelated maps the author actually shipped, and quietly voids the authoring
+ * rule the author checked against: a well placed safely clear of the floor has
+ * a one-in-four chance of being rotated onto it. Turning the pull keeps all
+ * four orientations the map that was designed.
  */
 export function rotateGravityWell(well: GravityWell, r: MapRotation): GravityWell {
   if (r === 0) return well;
-  return { ...well, ...rotateRect(well.x, well.y, well.width, well.height, r) };
+  const rotated = {
+    ...well, ...rotateRect(well.x, well.y, well.width, well.height, r),
+  };
+  if (well.pull) rotated.pull = rotateWellPull(well.pull, r);
+  else rotated.pull = rotateWellPull("down", r);
+  return rotated;
 }
 
 /** Rotate a circuit (each terminal point + its linked dormant ball) into the

@@ -330,7 +330,10 @@ export function updateBall(
   // Frozen balls are exempt, the same exemption the speed floor and map gravity
   // make: a held ball must not drift out of the pocket it was frozen in.
   if (!(game.frozenBallId && ball.id === game.frozenBallId)) {
-    const pulled = wellStep(ball.position, ball.velocity, game.gravityWells, dt);
+    const pulled = wellStep(
+      ball.position, ball.velocity, game.gravityWells, dt,
+      game.spaceRemainingPercent,
+    );
     if (pulled) { ball.velocity.x = pulled.x; ball.velocity.y = pulled.y; }
   }
 

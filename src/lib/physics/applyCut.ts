@@ -357,7 +357,12 @@ export function applyCutFn(
   //
   // Landing it just after a committed fence is also when it bites hardest: you
   // have just decided where your walls go, and the board turns under them.
-  if (percent !== null) tickBoardTilt(game, level, levelNumber, 100 - percent);
+  if (percent !== null) {
+    // Recorded before the tilt roll so anything reading cleared space this
+    // frame (dormant wells) sees the same number the roll used.
+    game.spaceRemainingPercent = percent;
+    tickBoardTilt(game, level, levelNumber, 100 - percent);
+  }
 
   if (percent !== null && tutorialMode && !tutorialCutMade && percent < 100) {
     callbacks.setTutorialCutMade(true);

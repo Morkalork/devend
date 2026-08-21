@@ -106,6 +106,35 @@ export function debugMutatorId(): string | null {
   }
 }
 
+/**
+ * Force every sporadic board tilt to fire, via `?tilt=1`.
+ *
+ * A tilt is deliberately rare: 5-10% per progress tier, drawn per map, which
+ * across a whole map lands near a one-in-three chance of a single turn. That is
+ * the right feel and the wrong testability - confirming the feature works, or
+ * that a map still reads after a quarter turn, can take a dozen runs and there
+ * is no way to tell "did not fire" from "does not work".
+ *
+ * This pins the per-tier chance to 1, so the board turns at the first tier
+ * crossed. It does NOT bypass the wells requirement: a tilt on a map with no
+ * well is a rigid rotation that changes nothing, so forcing one there would
+ * demonstrate nothing. Use it on a map that has a well.
+ *
+ * Ledger-ineligible like every other flag in this file.
+ */
+export function parseTiltParam(search: string): boolean {
+  return new URLSearchParams(search).get('tilt') === '1';
+}
+
+/** Whether the live URL is forcing tilts. */
+export function forcedTilts(): boolean {
+  try {
+    return parseTiltParam(window.location.search);
+  } catch {
+    return false; // no window (SSR / test env without a location)
+  }
+}
+
 /** Test seam: drop the memoised values so a test can flip the flag. */
 export function resetDevFlagCache(): void {
   infiniteLives = null;

@@ -256,9 +256,17 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     if (!currentLevel) return;
     updateLevel({
       ...currentLevel,
-      gravityWells: (currentLevel.gravityWells || []).map((w, i) =>
-        i === index ? { ...w, ...updates } : w
-      ),
+      gravityWells: (currentLevel.gravityWells || []).map((w, i) => {
+        if (i !== index) return w;
+        const next = { ...w, ...updates };
+        // An `undefined` in `updates` means CLEAR, not "set to undefined": a
+        // spread would leave the key present, and the YAML dump turns that into
+        // an explicit `activeFrom: null` that reads back as a real value.
+        for (const k of Object.keys(updates) as (keyof GravityWell)[]) {
+          if (updates[k] === undefined) delete next[k];
+        }
+        return next;
+      }),
     });
   }, [currentLevel, updateLevel]);
 

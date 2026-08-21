@@ -192,6 +192,15 @@ export interface CanvasGameState {
   coloredAreas: ColoredArea[];
   /** Authored gravity wells for this map (issue #77), already map-rotated. */
   gravityWells?: GravityWell[];
+  /**
+   * Space remaining (%) as of the last resolved cut. Undefined until the first
+   * one lands, which readers must treat as a full board rather than as zero.
+   *
+   * Lives on the state because a dormant gravity well wakes on cleared space
+   * and is evaluated per ball per frame, deep inside updateBall, where the
+   * cut-resolution callbacks that normally carry this number cannot reach.
+   */
+  spaceRemainingPercent?: number;
   /** Sporadic board tilts: the current turn, mid-ease included (#77). */
   boardTilt?: TiltState;
   /** Per-tier tilt chance, drawn once at map start so it cannot be learned. */

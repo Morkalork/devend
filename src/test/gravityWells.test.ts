@@ -27,9 +27,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
-  pointInWell, wellAt, wellStep, pullsIntoWall, WELL_PULL, DEFAULT_WELL_TURN_RATE,
+  pointInWell, wellAt, liveWellAt, wellStep, pullsIntoWall, WELL_PULL,
+  DEFAULT_WELL_TURN_RATE, wellIsLive, wellPull,
 } from "@/lib/physics/gravityWells";
-import { rotateGravityWell } from "@/lib/mapRotation";
+import { rotateGravityWell, rotatePoint } from "@/lib/mapRotation";
 import { createInitialGameData } from "@/lib/initGame";
 import { updateBall } from "@/lib/physics/updateBall";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
@@ -126,9 +127,19 @@ describe("the authoring rule", () => {
 
 describe("rotating with the map", () => {
   /**
-   * The box turns with the map; the PULL does not. A rigid rotation preserves
-   * every relationship inside it, so a pull that turned too could never change
-   * how a map plays, which is what a later board tilt has to be able to do.
+   * Both the box and the PULL turn here, and the distinction is worth stating
+   * because it looks like it contradicts the rule that makes the board tilt
+   * work. There are two rotations and only one of them happens where the player
+   * can see it.
+   *
+   * A board TILT is live, mid-map, over a board already in play. Its pull must
+   * NOT turn, or the turn preserves every relationship inside the map and
+   * changes nothing. That is the mechanic.
+   *
+   * A map ROTATION is baked in before the first frame. The player never sees
+   * the un-rotated board, so a fixed pull creates no surprise - it just
+   * randomises which of four unrelated maps the author actually shipped, and
+   * silently voids the authoring rule they checked against.
    */
   it("moves the box into the orientation", () => {
     const turned = rotateGravityWell(WELL, 1);
@@ -143,6 +154,159 @@ describe("rotating with the map", () => {
 
   it("keeps the turn rate through a rotation", () => {
     expect(rotateGravityWell(WELL, 3).turnRate).toBe(WELL.turnRate);
+  });
+
+  /** Orientation 1 is a left/CCW quarter turn (see rotatePoint), so down goes right. */
+  it("turns the pull the same way it turns the box", () => {
+    expect(rotateGravityWell({ ...WELL, pull: "down" }, 1).pull).toBe("right");
+    expect(rotateGravityWell({ ...WELL, pull: "down" }, 2).pull).toBe("up");
+    expect(rotateGravityWell({ ...WELL, pull: "down" }, 3).pull).toBe("left");
+  });
+
+  /**
+   * Stated against rotatePoint rather than against a table of expected answers,
+   * because the failure mode is turning the pull the WRONG way: every test that
+   * only checks "it changed" passes, and the map quietly stops being the one
+   * that was designed.
+   */
+  it("agrees with how every other part of the map rotates", () => {
+    const V = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] } as const;
+    for (const pull of ["down", "up", "left", "right"] as const) {
+      for (const r of [1, 2, 3] as const) {
+        const [dx, dy] = V[pull];
+        const o = rotatePoint(0, 0, r);
+        const q = rotatePoint(dx, dy, r);
+        const got = V[rotateGravityWell({ ...WELL, pull }, r).pull!];
+        expect(got[0], `${pull} @ ${r}`).toBeCloseTo(q.x - o.x, 6);
+        expect(got[1], `${pull} @ ${r}`).toBeCloseTo(q.y - o.y, 6);
+      }
+    }
+  });
+
+  it("turns an unstated pull too, since absent means down", () => {
+    expect(rotateGravityWell(WELL, 1).pull).toBe("right");
+  });
+
+  it("comes full circle over four quarter turns", () => {
+    let w: GravityWell = { ...WELL, pull: "right" };
+    for (let i = 0; i < 4; i++) w = rotateGravityWell(w, 1);
+    expect(w.pull).toBe("right");
+  });
+
+  /**
+   * The whole point of turning the pull, stated as the thing that was broken:
+   * an author places a well safely clear of the edge it pulls toward, and a
+   * fixed pull gave it a one-in-four chance of being rotated onto that edge.
+   */
+  it("keeps a safely-placed well safe in all four orientations", () => {
+    const safe: GravityWell = { x: 330, y: 300, width: 240, height: 170, pull: "down" };
+    expect(pullsIntoWall(safe, BOARD_WIDTH)).toBe(false);
+    for (const r of [1, 2, 3] as const) {
+      const turned = rotateGravityWell(safe, r);
+      expect(
+        pullsIntoWall(turned, BOARD_WIDTH),
+        `orientation ${r} must not push a safe well onto the edge it pulls at`,
+      ).toBe(false);
+    }
+  });
+});
+
+describe("the four bearings", () => {
+  const at = (pull: GravityWell["pull"]) =>
+    wellStep({ x: 400, y: 400 }, { x: 200, y: 0 }, [{ ...WELL, pull }], 1 / 60)!;
+
+  it("bend a rightward ball toward the pull, each its own way", () => {
+    expect(at("down").y).toBeGreaterThan(0);
+    expect(at("up").y).toBeLessThan(0);
+    // Already flying right: a rightward pull has nothing to bend.
+    expect(at("right").y).toBeCloseTo(0, 6);
+    expect(at("right").x).toBeCloseTo(200, 6);
+  });
+
+  it("keep the speed exactly, whichever way they pull", () => {
+    for (const pull of ["down", "up", "left", "right"] as const) {
+      expect(Math.hypot(at(pull).x, at(pull).y), pull).toBeCloseTo(200, 6);
+    }
+  });
+
+  it("resolve a head-on pull rather than stalling on it", () => {
+    // The one case a steering rule has to be explicit about: a perfectly
+    // opposed pull has no side to turn toward unless the maths picks one.
+    const out = wellStep(
+      { x: 400, y: 400 }, { x: 200, y: 0 }, [{ ...WELL, pull: "left" }], 1 / 60,
+    )!;
+    expect(Math.hypot(out.x, out.y)).toBeCloseTo(200, 6);
+    expect(out.x).toBeLessThan(200);
+  });
+
+  it("treat an absent or nonsense bearing as down", () => {
+    expect(wellPull(WELL)).toBe("down");
+    expect(wellPull({ ...WELL, pull: "sideways" as GravityWell["pull"] })).toBe("down");
+    const plain = wellStep({ x: 400, y: 400 }, { x: 200, y: 0 }, [WELL], 1 / 60)!;
+    expect(plain.y).toBeGreaterThan(0);
+  });
+
+  it("check the edge they actually pull at, not always the floor", () => {
+    const near = { width: 200, height: 150 };
+    expect(pullsIntoWall({ x: 300, y: 700, ...near, pull: "down" }, BOARD_WIDTH)).toBe(true);
+    expect(pullsIntoWall({ x: 300, y: 700, ...near, pull: "up" }, BOARD_WIDTH)).toBe(false);
+    expect(pullsIntoWall({ x: 300, y: 10, ...near, pull: "up" }, BOARD_WIDTH)).toBe(true);
+    expect(pullsIntoWall({ x: 10, y: 300, ...near, pull: "left" }, BOARD_WIDTH)).toBe(true);
+    expect(pullsIntoWall({ x: 690, y: 300, ...near, pull: "right" }, BOARD_WIDTH)).toBe(true);
+    expect(pullsIntoWall({ x: 690, y: 300, ...near, pull: "left" }, BOARD_WIDTH)).toBe(false);
+  });
+});
+
+/**
+ * Dormant wells: visible the whole map, inert until the board has been cleared
+ * down to a threshold. LEVELDESIGN.md's "Turn" in well form.
+ *
+ * What makes it a Turn rather than an ambush is that the well is DRAWN while
+ * dormant, so a player sees it coming and plans around it. That half lives in
+ * the renderer; what is testable here is that it genuinely does nothing until
+ * it wakes, and that "nothing cleared yet" reads as asleep rather than awake.
+ */
+describe("a dormant well", () => {
+  const SLEEPER: GravityWell = { ...WELL, activeFrom: 55 };
+  const pull = (remaining: number | undefined) =>
+    wellStep({ x: 400, y: 400 }, { x: 200, y: 0 }, [SLEEPER], 1 / 60, remaining);
+
+  it("does nothing while the board is still full", () => {
+    expect(pull(100)).toBeNull();
+    expect(pull(80)).toBeNull();
+  });
+
+  it("wakes once cleared space reaches its threshold", () => {
+    expect(pull(55)).not.toBeNull();
+    expect(pull(20)).not.toBeNull();
+    expect(pull(55)!.y).toBeGreaterThan(0);
+  });
+
+  /**
+   * Space remaining is undefined until the first cut of a map resolves. Reading
+   * that as an empty board would wake every dormant well for the opening
+   * seconds of every map and then put it back to sleep, which is the exact
+   * opposite of the intended beat and would look like a physics bug.
+   */
+  it("treats an unknown board as a full one, not an empty one", () => {
+    expect(pull(undefined)).toBeNull();
+    expect(pull(Number.NaN)).toBeNull();
+    expect(wellIsLive(SLEEPER, undefined)).toBe(false);
+  });
+
+  it("leaves a well with no threshold live from the first frame", () => {
+    expect(wellIsLive(WELL, undefined)).toBe(true);
+    expect(wellStep({ x: 400, y: 400 }, { x: 200, y: 0 }, [WELL], 1 / 60, 100)).not.toBeNull();
+  });
+
+  it("is still found by a dormancy-blind lookup, so it can be drawn", () => {
+    expect(wellAt(400, 400, [SLEEPER])).toBe(SLEEPER);
+    expect(liveWellAt(400, 400, [SLEEPER], 100)).toBeNull();
+    expect(liveWellAt(400, 400, [SLEEPER], 40)).toBe(SLEEPER);
+  });
+
+  it("does not shadow a live well sharing the same patch", () => {
+    expect(liveWellAt(400, 400, [SLEEPER, WELL], 100)).toBe(WELL);
   });
 });
 
@@ -244,13 +408,49 @@ describe("the wells in map.yml", () => {
   });
 
   /** The rule, enforced rather than merely written down in a comment. */
-  it("never rests a well on the floor it pulls toward", () => {
+  it("never rests a well on the edge it pulls toward", () => {
     for (const l of withWells) {
       for (const w of l.gravityWells!) {
         expect(
           pullsIntoWall(w, BOARD_WIDTH),
-          `${l.id}: a well this close to the floor pins balls against it`,
+          `${l.id}: a well this close to the edge it pulls at pins balls against it`,
         ).toBe(false);
+      }
+    }
+  });
+
+  /**
+   * And in every orientation the map can actually be dealt in, which is the
+   * guarantee the author is really relying on. Checking only the authored
+   * orientation would have passed happily back when the pull did not rotate,
+   * while three runs in four shipped a well pinned against a wall.
+   */
+  it("holds in all four orientations the map can be dealt in", () => {
+    for (const l of withWells) {
+      for (const w of l.gravityWells!) {
+        for (const r of [0, 1, 2, 3] as const) {
+          expect(
+            pullsIntoWall(rotateGravityWell(w, r), BOARD_WIDTH),
+            `${l.id} in orientation ${r}`,
+          ).toBe(false);
+        }
+      }
+    }
+  });
+
+  /** A dormant well nobody can reach the threshold of never wakes. */
+  it("keeps every dormancy threshold reachable", () => {
+    for (const l of withWells) {
+      for (const w of l.gravityWells!) {
+        if (w.activeFrom == null) continue;
+        expect(w.activeFrom, `${l.id}: threshold out of range`).toBeGreaterThan(0);
+        expect(w.activeFrom, `${l.id}: threshold out of range`).toBeLessThanOrEqual(100);
+        // The map is won at sizeThreshold% remaining, so a well that wakes at
+        // or below it wakes exactly as the map ends, i.e. never in practice.
+        expect(
+          w.activeFrom,
+          `${l.id}: wakes at ${w.activeFrom}% but the map is already won at ${l.sizeThreshold}%`,
+        ).toBeGreaterThan(l.sizeThreshold);
       }
     }
   });

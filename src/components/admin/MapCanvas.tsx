@@ -3,6 +3,7 @@ import { ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, Wall
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from '@/lib/boardConstants';
 import { AREA_MIN_SIZE, areaStyle, isGateArea } from '@/lib/coloredAreas';
 import { hexToRgba } from '@/lib/gameUtils';
+import { PULL_VECTORS } from '@/lib/physics/gravityWells';
 
 interface MapCanvasProps {
   level: LevelConfig;
@@ -299,21 +300,48 @@ export function MapCanvas({
       const wcy = tl.y + wh / 2;
       const unit = Math.min(ww, wh);
       const arm = Math.min(unit * 0.3, 22);
+
+      // The glyph points the way the well pulls, authored once in the pull's
+      // own frame. `f` runs along the pull, `s` across it, exactly as in the
+      // game renderer, so a well reads identically in both places.
+      const pv = PULL_VECTORS[well.pull ?? 'down'];
+      const sx = pv.y, sy = -pv.x;
+      const at = (sOff: number, fOff: number) => ({
+        x: wcx + sx * sOff + pv.x * fOff,
+        y: wcy + sy * sOff + pv.y * fOff,
+      });
+      const across = pv.x !== 0 ? wh : ww;
+
       ctx.strokeStyle = hexToRgba(COLOR, 0.9);
       ctx.lineWidth = 2;
       ctx.lineCap = 'round';
-      for (const fx of [0.16, 0.84]) {
-        const ax = tl.x + ww * fx;
+      for (const frac of [-0.34, 0.34]) {
+        const o = frac * across;
+        const tail = at(o, -arm), tip = at(o, arm);
+        const l = at(o - arm * 0.42, arm * 0.58), r = at(o + arm * 0.42, arm * 0.58);
         ctx.beginPath();
-        ctx.moveTo(ax, wcy - arm); ctx.lineTo(ax, wcy + arm);
-        ctx.moveTo(ax - arm * 0.42, wcy + arm * 0.58); ctx.lineTo(ax, wcy + arm);
-        ctx.moveTo(ax + arm * 0.42, wcy + arm * 0.58); ctx.lineTo(ax, wcy + arm);
+        ctx.moveTo(tail.x, tail.y); ctx.lineTo(tip.x, tip.y);
+        ctx.moveTo(l.x, l.y); ctx.lineTo(tip.x, tip.y);
+        ctx.moveTo(r.x, r.y); ctx.lineTo(tip.x, tip.y);
         ctx.stroke();
       }
+      const ballC = at(0, unit * 0.14);
       ctx.beginPath();
-      ctx.arc(wcx, wcy + unit * 0.14, Math.max(3, unit * 0.15), 0, Math.PI * 2);
+      ctx.arc(ballC.x, ballC.y, Math.max(3, unit * 0.15), 0, Math.PI * 2);
       ctx.stroke();
       ctx.lineCap = 'butt';
+
+      // A dormant well says so in words. The builder has no clock and no
+      // cleared space, so there is no state it could show instead, and an
+      // unlabelled well that simply does nothing in play is the kind of thing
+      // an author discovers ten minutes into testing.
+      if (well.activeFrom != null) {
+        ctx.fillStyle = hexToRgba(COLOR, 0.95);
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(`wakes at ${well.activeFrom}%`, wcx, tl.y + wh - 6);
+        ctx.textAlign = 'start';
+      }
     });
       }
     });

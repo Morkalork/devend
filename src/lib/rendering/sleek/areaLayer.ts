@@ -25,7 +25,12 @@ import { areaStyle, isGateArea } from "@/lib/coloredAreas";
 import { dashedLine } from "./dashedLine";
 import { ambientAt, type LightScope } from "./light";
 import { snapRect, hairline, type Pt } from "./pixelGrid";
+import {
+  worldRectQuad, quadLocal, expandQuad, cornersPoly,
+  type ScreenQuad,
+} from "./quad";
 import { PALETTE } from "./palette";
+import { wellIsLive, wellPullVector } from "@/lib/physics/gravityWells";
 import { mix } from "./palette";
 
 type W2S = (x: number, y: number) => Pt;
@@ -104,6 +109,35 @@ export function zonePulse(sinceMs: number): ZonePulse {
   };
 }
 
+/**
+ * The quad inset by `px` on every side (negative grows it), as four corners.
+ *
+ * Insets are authored in screen pixels and applied along the LOCAL basis, so a
+ * border sits the same distance inside its marking however the board is turned.
+ */
+function insetCorners(q: ScreenQuad, px: number): [Pt, Pt, Pt, Pt] {
+  return expandQuad(q, -px);
+}
+
+/**
+ * Queue the quad, inset by `px`, as a shape on `g` ready to be filled/stroked.
+ *
+ * At rest it takes the pixel-snapped rect path, which is not an optimisation
+ * but a fidelity requirement: an unsnapped rect edge lands between pixels and
+ * renders as a soft two-pixel smear, and the board is at rest for almost the
+ * whole game. Only a turned board pays for the general path.
+ */
+function shapeOf(g: Graphics, q: ScreenQuad, px: number): Graphics {
+  if (q.axisAligned) {
+    const r = snapRect(q.tl.x, q.tl.y, q.w, q.h);
+    return g.rect(
+      r.x + px, r.y + px,
+      Math.max(1, r.width - px * 2), Math.max(1, r.height - px * 2),
+    );
+  }
+  return g.poly(cornersPoly(insetCorners(q, px)));
+}
+
 export class AreaLayer {
   readonly container = new Container();
 
@@ -118,7 +152,15 @@ export class AreaLayer {
     this.container.addChild(this.g, this.pulseG);
   }
 
-  sync(game: CanvasGameState, light: LightScope, w2s: W2S, scale: number): void {
+  /**
+   * `tilt` is the board angle. It is passed in rather than re-derived because
+   * this layer is key-gated: without the angle in the key, a turning board
+   * would leave every marking frozen at the orientation it had when the tilt
+   * began while the walls and balls swung round without them.
+   */
+  sync(
+    game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, tilt = 0,
+  ): void {
     const areas = game.coloredAreas ?? [];
     // Before the key check: the pulse is time-driven, so it must run on frames
     // where nothing about the areas themselves changed.
@@ -127,8 +169,12 @@ export class AreaLayer {
       areas
         .map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind},${isGateArea(a) ? 1 : 0},${a.satisfied ? 1 : 0}`)
         .join("|")
-      + "#" + (game.gravityWells ?? []).map(w => `${w.x},${w.y},${w.width},${w.height}`).join("|")
-      + `|${Math.round(game.boardRect.left)},${Math.round(game.boardRect.top)},${Math.round(scale * 1000)}`;
+      + "#" + (game.gravityWells ?? [])
+        .map(w => `${w.x},${w.y},${w.width},${w.height},${w.pull ?? ""},`
+          + `${wellIsLive(w, game.spaceRemainingPercent) ? 1 : 0}`)
+        .join("|")
+      + `|${Math.round(game.boardRect.left)},${Math.round(game.boardRect.top)},${Math.round(scale * 1000)}`
+      + `|${Math.round(tilt * 2000)}`;
     if (key === this.key) return;
     this.key = key;
 
@@ -147,35 +193,30 @@ export class AreaLayer {
       // and gets the pulse on top. The gap between the two is the whole point.
       const inkColor = lit ? color : dormantColor(color, gate);
 
-      const tl = w2s(a.x, a.y);
-      const br = w2s(a.x + a.width, a.y + a.height);
-      // A floor marking is axis-aligned by definition, so it snaps outright.
-      const r = snapRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+      const q = worldRectQuad(a.x, a.y, a.width, a.height, w2s);
 
       // Ambient only: the marking is part of the surface.
-      const amb = ambientAt(light, r.x + r.width / 2, r.y + r.height / 2);
+      const amb = ambientAt(light, q.cx, q.cy);
       // A lit zone deliberately paints LIGHTER than it used to: the breathing
       // wash from drawPulse sits on top of this every frame, and the two
       // stacked at the old weight read as a solid block. A dormant one paints
       // fainter still, so the contrast lives in the gap between them.
       const dormantAlpha = gate ? AREA_ALPHA.dormant.gate : AREA_ALPHA.dormant.bonus;
       const fill = (lit ? AREA_ALPHA.live.fill : dormantAlpha.fill) * (0.55 + amb * 0.45);
-      this.g.rect(r.x, r.y, r.width, r.height).fill({ color: inkColor, alpha: fill });
+      shapeOf(this.g, q, 0).fill({ color: inkColor, alpha: fill });
 
       if (lit) {
         // Occupied: solid and bright, unmistakably "this one is done".
-        this.g
-          .rect(r.x + 0.5, r.y + 0.5, r.width - 1, r.height - 1)
+        shapeOf(this.g, q, 0.5)
           .stroke({ width: 2, color, alpha: AREA_ALPHA.live.border * light.level });
       } else {
         const dash = gate ? 9 * scale : 3 * scale;
         const gap = gate ? 6 * scale : 5 * scale;
-        const x0 = r.x + 0.5, y0 = r.y + 0.5;
-        const x1 = r.x + r.width - 0.5, y1 = r.y + r.height - 0.5;
-        dashedLine(this.g, x0, y0, x1, y0, dash, gap);
-        dashedLine(this.g, x1, y0, x1, y1, dash, gap);
-        dashedLine(this.g, x1, y1, x0, y1, dash, gap);
-        dashedLine(this.g, x0, y1, x0, y0, dash, gap);
+        const c = insetCorners(q, 0.5);
+        for (let i = 0; i < 4; i++) {
+          const a0 = c[i], a1 = c[(i + 1) % 4];
+          dashedLine(this.g, a0.x, a0.y, a1.x, a1.y, dash, gap);
+        }
         this.g.stroke({
           width: hairline(),
           color: inkColor,
@@ -183,9 +224,12 @@ export class AreaLayer {
         });
       }
 
-      const cx = r.x + r.width / 2;
-      const cy = r.y + r.height / 2;
-      const labelPx = Math.max(13, Math.min(r.width, r.height) * 0.2);
+      // The label stays UPRIGHT rather than turning with the marking it sits
+      // on. It is information, not decoration, and a floor decal rotated past
+      // 90 degrees carries its text upside down.
+      const cx = q.cx;
+      const cy = q.cy;
+      const labelPx = Math.max(13, Math.min(q.w, q.h) * 0.2);
       // The label carries the state too: a dormant bonus zone reads as a faded
       // stencil, a live one as a lit sign.
       const alpha = lit ? AREA_ALPHA.live.label : dormantAlpha.label;
@@ -244,23 +288,19 @@ export class AreaLayer {
       const color = Number.parseInt(st.color.replace("#", ""), 16);
       const since = now - (a.satisfiedAt ?? now);
 
-      const tl = w2s(a.x, a.y);
-      const br = w2s(a.x + a.width, a.y + a.height);
-      const r = snapRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+      const q = worldRectQuad(a.x, a.y, a.width, a.height, w2s);
 
       const p = zonePulse(since);
 
       // A ring that expands OUT of the border during the flare, which reads as
       // the zone firing rather than merely getting brighter.
       if (p.flare > 0.01) {
-        this.pulseG
-          .rect(r.x - p.grow, r.y - p.grow, r.width + p.grow * 2, r.height + p.grow * 2)
+        shapeOf(this.pulseG, q, -p.grow)
           .stroke({ width: 2 + p.flare * 3, color, alpha: 0.85 * p.flare * light.level });
       }
 
-      this.pulseG.rect(r.x, r.y, r.width, r.height).fill({ color, alpha: p.fillAlpha });
-      this.pulseG
-        .rect(r.x + 2.5, r.y + 2.5, r.width - 5, r.height - 5)
+      shapeOf(this.pulseG, q, 0).fill({ color, alpha: p.fillAlpha });
+      shapeOf(this.pulseG, q, 2.5)
         .stroke({ width: 1.5, color, alpha: p.strokeAlpha * light.level });
     }
 
@@ -274,14 +314,19 @@ export class AreaLayer {
   }
 
   /**
-   * Gravity wells (issue #77): a patch that pulls anything inside it downward.
+   * Gravity wells (issue #77): a patch that pulls anything inside it.
    *
-   * Drawn as a dim box full of down arrows, because a well has to be readable
-   * at a glance and from the corner of the eye. A player who does not notice it
-   * before committing a fence has been ambushed rather than challenged, and the
-   * arrows say both THAT it pulls and WHICH WAY in one mark. Down is currently
-   * the only direction, but the arrow is what will carry the meaning once a
-   * board tilt can leave a well pointing somewhere new.
+   * Drawn as a dim striped box with a falling-object glyph, because a well has
+   * to be readable at a glance and from the corner of the eye. A player who
+   * does not notice one before committing a fence has been ambushed rather than
+   * challenged.
+   *
+   * The glyph points the way the well pulls, and now that a well can pull any
+   * of four ways that mark is load-bearing rather than decorative. It is
+   * oriented in SCREEN space and never turns with the board, which is exactly
+   * right and is the tilt mechanic showing through the art: after a quarter
+   * turn the box is somewhere new and the arrow still points down, which is the
+   * whole reason the turn matters.
    *
    * Deliberately quiet: coloured areas are the map's loud markings and the
    * accent belongs to the player's own fences. A well is terrain.
@@ -289,38 +334,55 @@ export class AreaLayer {
   private drawGravityWells(game: CanvasGameState, w2s: W2S, scale: number): void {
     const wells = game.gravityWells ?? [];
     if (wells.length === 0) return;
-    const COLOR = PALETTE.mover;
 
     for (const well of wells) {
-      const tl = w2s(well.x, well.y);
-      const br = w2s(well.x + well.width, well.y + well.height);
-      const r = snapRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+      const live = wellIsLive(well, game.spaceRemainingPercent);
+      // A dormant well borrows the coloured areas' vocabulary for the same
+      // state, deliberately: the player has already learned that drained and
+      // dashed means "real, but not yet". Teaching a second dialect for the
+      // identical idea would be the expensive way to say the same thing.
+      const COLOR = live ? PALETTE.mover : dormantColor(PALETTE.mover, false);
+      const a = live ? 1 : 0.55;
 
-      this.g.rect(r.x, r.y, r.width, r.height).fill({ color: COLOR, alpha: 0.07 });
-      this.g.rect(r.x, r.y, r.width, r.height)
-        .stroke({ width: Math.max(1, 1.5 * scale), color: COLOR, alpha: 0.45 });
+      const q = worldRectQuad(well.x, well.y, well.width, well.height, w2s);
 
-      // Diagonal stripes, clipped to the box. A hazard marking reads as "this
-      // patch is different" from the corner of the eye without ever competing
-      // with a ball or a fence for attention, which a grid of arrows did start
-      // to do once the well was any size at all.
-      //
-      // Each stripe is a 45 degree line x = (x0 + d) + t, y = y0 + t, kept
-      // inside the rect by intersecting the two axis ranges: t must satisfy
-      // both [-d, width - d] and [0, height], so the overlap is the visible
-      // span. Computing the span beats drawing long lines behind a mask, which
-      // would cost a texture per well.
-      const spacing = Math.max(9, 16 * scale);
-      for (let d = -r.height; d < r.width; d += spacing) {
-        const t0 = Math.max(-d, 0);
-        const t1 = Math.min(r.width - d, r.height);
-        if (t1 <= t0) continue;
-        this.g.moveTo(r.x + d + t0, r.y + t0).lineTo(r.x + d + t1, r.y + t1);
+      shapeOf(this.g, q, 0).fill({ color: COLOR, alpha: 0.07 * a });
+      if (live) {
+        shapeOf(this.g, q, 0)
+          .stroke({ width: Math.max(1, 1.5 * scale), color: COLOR, alpha: 0.45 });
+      } else {
+        const c = insetCorners(q, 0.5);
+        for (let i = 0; i < 4; i++) {
+          const p0 = c[i], p1 = c[(i + 1) % 4];
+          dashedLine(this.g, p0.x, p0.y, p1.x, p1.y, 7 * scale, 5 * scale);
+        }
+        this.g.stroke({ width: hairline(), color: COLOR, alpha: 0.5 });
       }
-      this.g.stroke({ width: Math.max(1, 1 * scale), color: COLOR, alpha: 0.16 });
 
-      // The glyph, after the classic falling-apple gravity icon: a falling
-      // object, motion lines trailing above it, and two arrows flanking.
+      // Diagonal stripes. A hazard marking reads as "this patch is different"
+      // from the corner of the eye without ever competing with a ball or a
+      // fence for attention, which a grid of arrows did start to do once the
+      // well was any size at all.
+      //
+      // Laid out in the well's LOCAL frame and mapped through its basis, so
+      // they stay parallel to its own edges on a turned board. Each stripe is a
+      // 45 degree line a = (a0 + d) + t, b = t, kept inside the box by
+      // intersecting the two ranges: t must satisfy both [-d, w - d] and
+      // [0, h], so the overlap is the visible span. Computing the span beats
+      // drawing long lines behind a mask, which would cost a texture per well.
+      const spacing = Math.max(9, 16 * scale);
+      for (let d = -q.h; d < q.w; d += spacing) {
+        const t0 = Math.max(-d, 0);
+        const t1 = Math.min(q.w - d, q.h);
+        if (t1 <= t0) continue;
+        const s0 = quadLocal(q, d + t0, t0);
+        const s1 = quadLocal(q, d + t1, t1);
+        this.g.moveTo(s0.x, s0.y).lineTo(s1.x, s1.y);
+      }
+      this.g.stroke({ width: Math.max(1, 1 * scale), color: COLOR, alpha: 0.16 * a });
+
+      // ── The glyph, after the classic falling-apple gravity icon ───────────
+      // A falling object, motion lines trailing behind it, two arrows flanking.
       //
       // The object is a BALL, not an apple. An apple is Newton's joke and this
       // game's is a different one, but the real reason is that a ball is what
@@ -328,45 +390,62 @@ export class AreaLayer {
       // the theory that a real ball crossing the well would supply it: true
       // only while one is inside, and the rest of the time the motion lines
       // hung over nothing and read as a barcode rather than as falling.
-      const cx = r.x + r.width / 2;
-      const cy = r.y + r.height / 2;
-      const unit = Math.min(r.width, r.height);
+      //
+      // Everything below is authored in the well's PULL frame - `f` runs the
+      // way it pulls, `s` across - so the one description covers all four
+      // bearings. Rotating a hand-placed set of screen coordinates would have
+      // meant four of these.
+      const pv = wellPullVector(well);
+      const fwd = pv;                              // along the pull
+      const side = { x: pv.y, y: -pv.x };          // across it, consistently handed
+      const at = (sOff: number, fOff: number): Pt => ({
+        x: q.cx + side.x * sOff + fwd.x * fOff,
+        y: q.cy + side.y * sOff + fwd.y * fOff,
+      });
+      const line = (s0: number, f0: number, s1: number, f1: number) => {
+        const p0 = at(s0, f0), p1 = at(s1, f1);
+        this.g.moveTo(p0.x, p0.y).lineTo(p1.x, p1.y);
+      };
+
+      // A horizontal pull runs along the box's width, so what counts as
+      // "across" swaps with it.
+      const horizontal = pv.x !== 0;
+      const across = horizontal ? q.h : q.w;
+      const unit = Math.min(q.w, q.h);
       const armH = Math.min(unit * 0.3, 26 * scale);
       const head = armH * 0.44;
 
       // Flankers, held off the edges so they never touch the outline.
-      for (const fx of [0.15, 0.85]) {
-        const ax = r.x + r.width * fx;
-        this.g.moveTo(ax, cy - armH).lineTo(ax, cy + armH);
-        this.g.moveTo(ax - head, cy + armH - head).lineTo(ax, cy + armH);
-        this.g.moveTo(ax + head, cy + armH - head).lineTo(ax, cy + armH);
+      for (const frac of [-0.35, 0.35]) {
+        const sOff = frac * across;
+        line(sOff, -armH, sOff, armH);
+        line(sOff - head, armH - head, sOff, armH);
+        line(sOff + head, armH - head, sOff, armH);
       }
 
-      // Motion lines ABOVE the ball, uneven: equal lengths read as a barcode,
+      // Motion lines BEHIND the ball, uneven: equal lengths read as a barcode,
       // staggered ones read as something having just dropped through.
       const ballR = unit * 0.15;
-      const ballY = cy + unit * 0.14;
-      for (const [dx, top, len] of [
+      for (const [ds, top, len] of [
         [-0.085, -0.44, 0.20] as const,
         [-0.028, -0.36, 0.13] as const,
         [0.028, -0.46, 0.24] as const,
         [0.085, -0.34, 0.11] as const,
       ]) {
-        const lx = cx + unit * dx;
-        const ly = cy + unit * top;
-        this.g.moveTo(lx, ly).lineTo(lx, ly + unit * len);
+        line(unit * ds, unit * top, unit * ds, unit * (top + len));
       }
 
       this.g.stroke({
-        width: Math.max(2, 2.4 * scale), color: COLOR, alpha: 0.8,
+        width: Math.max(2, 2.4 * scale), color: COLOR, alpha: 0.8 * a,
         cap: "round", join: "round",
       });
 
       // The falling ball itself: outlined to match the line-art of the rest of
       // the glyph, and never filled, so a real ball crossing the well is always
       // the more solid thing on screen.
-      this.g.circle(cx, ballY, ballR).stroke({
-        width: Math.max(2, 2.6 * scale), color: COLOR, alpha: 0.85,
+      const ballC = at(0, unit * 0.14);
+      this.g.circle(ballC.x, ballC.y, ballR).stroke({
+        width: Math.max(2, 2.6 * scale), color: COLOR, alpha: 0.85 * a,
       });
     }
   }

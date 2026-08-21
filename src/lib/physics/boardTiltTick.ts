@@ -9,6 +9,7 @@
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
 import { getRunRng } from "@/lib/runRng";
+import { forcedTilts } from "@/lib/devFlags";
 import { beginTilt, NO_TILT } from "@/lib/boardTilt";
 import {
   mapCanTilt, newTiers, rollTilts, rollTiltDirection, rollTiltChance,
@@ -39,8 +40,13 @@ export function tickBoardTilt(
   // Drawn once per map, lazily, and seeded: a Daily plays the same tilts for
   // everyone, and a normal run gets a fresh band each map so the cadence cannot
   // be learned across runs.
+  // `?tilt=1` pins it to certain. Recorded on the state like any other drawn
+  // chance rather than special-cased at the roll, so everything downstream sees
+  // one consistent number instead of a flag it has to know about.
   if (game.tiltChance == null) {
-    game.tiltChance = rollTiltChance(getRunRng(`tiltChance:${level.id}`));
+    game.tiltChance = forcedTilts()
+      ? 1
+      : rollTiltChance(getRunRng(`tiltChance:${level.id}`));
   }
 
   const rng = getRunRng(`tilt:${level.id}:${crossed.join(",")}`);

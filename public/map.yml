@@ -734,6 +734,19 @@ levels:
         chest: true
         breakable: true
         hitsToBreak: 2
+    # FOUNTAIN (issue #77): a well that pulls UP, sitting low on the board.
+    # The first map to use a bearing other than down, and it teaches the idea by
+    # contradiction: everything about a well says "things fall here", and this
+    # one throws a ball back at the ceiling instead. Placed over the floor on
+    # purpose, so it holds balls off the one surface a down-well would pin them
+    # against, which is the case that makes an up-well worth having at all.
+    gravityWells:
+      - x: 350
+        'y': 620
+        width: 200
+        height: 150
+        turnRate: 2.6
+        pull: up
   - id: level-14
     level: 14
     sizeThreshold: 8
@@ -782,6 +795,19 @@ levels:
   # corner nodes. Draw a fence ALONG it (a wide, loose top seal) to harvest it for
   # bonus overtime, scaled by how much you cover; each span pays once. It is a
   # greed call: a tight seal banks nothing, tracing the seam loosens your cut.
+    # DORMANT WELL (issue #77): drawn from the first frame, inert until the
+    # board is half cleared. LEVELDESIGN.md's Turn, in well form: the endgame is
+    # not the opening, and because the well is VISIBLE the whole time the player
+    # can see it coming and plan around it, which is what separates a turn from
+    # an ambush. Parked clear of the procedural slots (both pillars, both
+    # flanks, the debris) so it never wakes up underneath an obstacle.
+    gravityWells:
+      - x: 90
+        'y': 150
+        width: 200
+        height: 170
+        turnRate: 2.8
+        activeFrom: 50
   - id: level-15
     level: 15
     sizeThreshold: 5

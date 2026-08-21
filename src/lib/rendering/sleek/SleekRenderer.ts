@@ -238,7 +238,7 @@ export class SleekRenderer {
     this.shadowPlane.clear();
 
     this.board.sync(game, light, w2s, this.staticDirty);
-    this.areas.sync(game, light, w2s, scale);
+    this.areas.sync(game, light, w2s, scale, tilt);
     this.props.sync(game, light, this.shadowPlane, w2s, scale, now);
     this.entities.sync(game, light, this.shadowPlane, w2s, scale);
     this.objects.sync(game, light, this.shadowPlane, w2s, scale);

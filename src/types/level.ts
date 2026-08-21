@@ -370,12 +370,23 @@ export interface DataStreamConfig {
 export type AreaKind = "var" | "let" | "const";
 
 /**
- * A rectangular patch that bends any ball inside it toward a fixed direction.
+ * Which way a well pulls, in SCREEN space.
  *
- * The pull is SCREEN-absolute, not map-relative, which matters for the tilt
- * that will come later: a rigid rotation preserves every relationship inside
- * it, so a pull that turned with the map could never change anything. Down is
- * down, and one day the map will turn underneath it.
+ * Screen-absolute rather than map-relative is the load-bearing choice, and the
+ * board tilt is why: a rigid rotation preserves every relationship inside it,
+ * so a pull that turned with the map could never change how the map plays. Down
+ * stays down while the board turns underneath it, and that gap is the entire
+ * mechanic.
+ *
+ * With more than one direction available the gap gets richer rather than just
+ * bigger. A map carrying several differently-aimed wells has its whole
+ * relationship to gravity rearranged by one quarter turn, because each well
+ * lands on a different one of its four possible bearings.
+ */
+export type WellPull = "down" | "up" | "left" | "right";
+
+/**
+ * A rectangular patch that bends any ball inside it toward a fixed direction.
  */
 export interface GravityWell {
   x: number;
@@ -388,6 +399,31 @@ export interface GravityWell {
    * narrow one is a deflector you can aim a ball through on purpose.
    */
   turnRate?: number;
+  /**
+   * Which way it pulls (default "down", so every map authored before this
+   * plays exactly as it did).
+   *
+   * The three new bearings are not merely rotations of the old one, because the
+   * board has a floor and balls have somewhere to fall TO. "up" is a fountain
+   * that holds balls off a surface; "left"/"right" are currents that sweep a
+   * lane. Each also makes the well's arrow load-bearing: with one direction the
+   * glyph was decoration telling you what you already knew.
+   */
+  pull?: WellPull;
+  /**
+   * Space remaining (%) at or below which the well WAKES. Absent = live from
+   * the first frame.
+   *
+   * A dormant well is drawn the whole time, drained and inert, and starts
+   * pulling when the board has been cleared down to this much. That is
+   * LEVELDESIGN.md's "Turn" in well form: the endgame is not the opening, and
+   * critically the player can SEE it coming and plan around it, which is the
+   * difference between a turn and an ambush.
+   *
+   * Same units and comparison as MapBeat.atSpaceRemaining, deliberately: a map
+   * author reading one already knows how to read the other.
+   */
+  activeFrom?: number;
 }
 
 export interface ColoredArea {
