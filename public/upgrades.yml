@@ -781,7 +781,7 @@ upgrades:
   - id: war_chest
     name: War Chest
     tier: Principal
-    description: Balls spawn 2% slower for every 50h banked at map start, up to 8%. Hoard it.
+    description: "Balls spawn 2% slower for every 50h banked at map start, up to 8%. Every other bank upgrade you own adds another 0.5% per 50h (up to 4), so you reach that ceiling sooner. Hoard it."
     unlockLevel: 13
     prerequisites:
       - venture_capital_senior
@@ -801,6 +801,10 @@ upgrades:
   # splurges. Both stay paid in board-state, never score, so the flat economy
   # holds.
   # ===============================
+    # Scaling here buys TIME, not power: useGameSession caps the total slow at
+    # MAX_BANKED_SLOW (8%) whatever the rate, so a committed bank build reaches
+    # the ceiling on 100h banked instead of 200h and never goes past it.
+    scaling: { tag: bank, key: bankedSlowPer50h, per: 0.005, max: 4 }
 
   - id: budget_cycle_junior
     name: Budget Cycle
@@ -861,7 +865,7 @@ upgrades:
   - id: clean_release
     name: Clean Release
     tier: Senior
-    description: Finish a map under par and the next map starts with 1 extra instant fence.
+    description: "Finish a map under par and the next map starts with 1 extra instant fence, or 2 once you own four other tempo upgrades."
     unlockLevel: 6
     prerequisites:
       - fast_compile_junior
@@ -869,6 +873,8 @@ upgrades:
     tags: [tempo]
     modifiers:
       underParInstantFence: 1
+    # Whole fences only, so stepped. One extra at full tempo commitment.
+    scaling: { tag: tempo, key: underParInstantFence, per: 1, every: 4, max: 4 }
 
   - id: continuous_delivery
     name: Continuous Delivery
@@ -1062,7 +1068,7 @@ upgrades:
   - id: augmentation_wizard
     name: Certification Wizard
     tier: Wizard
-    description: Gain +1 Certificate Hour.
+    description: "Gain +1 Certificate Hour, and +1 more once you own four other bank upgrades."
     unlockLevel: 10
     prerequisites:
       - technical_debt_principal
@@ -1076,6 +1082,9 @@ upgrades:
   # TECHNICAL DEBT (Score + Speed tradeoff)
   # Head of the risk archetype: no longer gated behind Venture Capital.
   # ===============================
+    # Certificate Hours are whole, so stepped. This is the only upgrade that
+    # pays out ACROSS runs, which is why one extra hour is the whole cap.
+    scaling: { tag: bank, key: extraCertificateHours, per: 1, every: 4, max: 4 }
 
   - id: technical_debt_senior
     name: Technical Debt
@@ -1577,7 +1586,7 @@ upgrades:
   - id: total_compensation_principal
     name: Total Compensation
     tier: Principal
-    description: Peak perks. The ball splitter now splits a ball into three.
+    description: "Peak perks. The ball splitter now splits a ball into three, and every token payout climbs another level once you own five other risk upgrades."
     unlockLevel: 19
     prerequisites:
       - total_compensation_senior
@@ -1585,6 +1594,11 @@ upgrades:
     tags: [risk]
     modifiers:
       pickupPayoutLevel: 1
+    # pickupPayoutLevel is a hybrid: a THRESHOLD at 3 (where the Fork splits a
+    # ball into three) and a straight addend on overtime and cap-raise tokens.
+    # The trunk already reaches 3, so this step only buys the addend, which is
+    # why it can be granted without disturbing the fork behaviour.
+    scaling: { tag: risk, key: pickupPayoutLevel, per: 1, every: 5, max: 5 }
 
   - id: total_compensation_principal_b
     name: Total Compensation
