@@ -319,48 +319,54 @@ export class AreaLayer {
       }
       this.g.stroke({ width: Math.max(1, 1 * scale), color: COLOR, alpha: 0.16 });
 
-      // The glyph, after the falling-apple gravity icon: two arrows flanking a
-      // cluster of motion lines. The icon's apple is the thing being pulled,
-      // and here the BALL plays that part as it crosses, so drawing one would
-      // only compete with the real object. The lines and arrows are the part
-      // that says "things fall here"; the ball supplies the rest.
+      // The glyph, after the classic falling-apple gravity icon: a falling
+      // object, motion lines trailing above it, and two arrows flanking.
       //
-      // Spread across the box rather than centred as a single mark, which also
-      // fixes what a lone arrow did in a large well: read as one small sticker
-      // floating in a lot of empty rectangle.
+      // The object is a BALL, not an apple. An apple is Newton's joke and this
+      // game's is a different one, but the real reason is that a ball is what
+      // actually falls here. An earlier version left the object out entirely on
+      // the theory that a real ball crossing the well would supply it: true
+      // only while one is inside, and the rest of the time the motion lines
+      // hung over nothing and read as a barcode rather than as falling.
       const cx = r.x + r.width / 2;
       const cy = r.y + r.height / 2;
       const unit = Math.min(r.width, r.height);
-      const armH = Math.min(unit * 0.34, 30 * scale);   // arrow shaft half-length
-      const head = armH * 0.42;
-
-      const downArrow = (ax: number, ay: number) => {
-        this.g.moveTo(ax, ay - armH).lineTo(ax, ay + armH);
-        this.g.moveTo(ax - head, ay + armH - head).lineTo(ax, ay + armH);
-        this.g.moveTo(ax + head, ay + armH - head).lineTo(ax, ay + armH);
-      };
+      const armH = Math.min(unit * 0.3, 26 * scale);
+      const head = armH * 0.44;
 
       // Flankers, held off the edges so they never touch the outline.
-      downArrow(r.x + r.width * 0.16, cy);
-      downArrow(r.x + r.width * 0.84, cy);
+      for (const fx of [0.15, 0.85]) {
+        const ax = r.x + r.width * fx;
+        this.g.moveTo(ax, cy - armH).lineTo(ax, cy + armH);
+        this.g.moveTo(ax - head, cy + armH - head).lineTo(ax, cy + armH);
+        this.g.moveTo(ax + head, cy + armH - head).lineTo(ax, cy + armH);
+      }
 
-      // Motion lines: uneven lengths and offsets, because equal ones read as a
-      // barcode rather than as falling.
-      const lines: [number, number, number][] = [
-        [0.40, -0.34, 0.30],
-        [0.47, -0.20, 0.20],
-        [0.54, -0.40, 0.34],
-        [0.61, -0.26, 0.16],
-      ];
-      for (const [fx, fromF, lenF] of lines) {
-        const lx = r.x + r.width * fx;
-        const y0 = cy + unit * fromF;
-        this.g.moveTo(lx, y0).lineTo(lx, y0 + unit * lenF);
+      // Motion lines ABOVE the ball, uneven: equal lengths read as a barcode,
+      // staggered ones read as something having just dropped through.
+      const ballR = unit * 0.15;
+      const ballY = cy + unit * 0.14;
+      for (const [dx, top, len] of [
+        [-0.085, -0.44, 0.20] as const,
+        [-0.028, -0.36, 0.13] as const,
+        [0.028, -0.46, 0.24] as const,
+        [0.085, -0.34, 0.11] as const,
+      ]) {
+        const lx = cx + unit * dx;
+        const ly = cy + unit * top;
+        this.g.moveTo(lx, ly).lineTo(lx, ly + unit * len);
       }
 
       this.g.stroke({
-        width: Math.max(2, 2.6 * scale), color: COLOR, alpha: 0.8,
+        width: Math.max(2, 2.4 * scale), color: COLOR, alpha: 0.8,
         cap: "round", join: "round",
+      });
+
+      // The falling ball itself: outlined to match the line-art of the rest of
+      // the glyph, and never filled, so a real ball crossing the well is always
+      // the more solid thing on screen.
+      this.g.circle(cx, ballY, ballR).stroke({
+        width: Math.max(2, 2.6 * scale), color: COLOR, alpha: 0.85,
       });
     }
   }
