@@ -70,9 +70,6 @@
     "concurrentFences": "Vallas simultáneas",
     "concurrentFencesActive": "Puedes trazar {{total}} vallas a la vez. Las vallas simultáneas adicionales te permiten cortar desde varios muros al mismo tiempo.",
     "concurrentFencesInactive": "Por defecto: 1 valla activa a la vez.",
-    "bonusRemoval": "Eliminación de bono",
-    "bonusRemovalActive": "Cada corte exitoso tiene un {{chance}} de probabilidad de quitar {{amount}} del bono de velocidad acumulado de una bola, devolviendo gradualmente a las bolas rápidas hacia su velocidad base.",
-    "bonusRemovalInactive": "No hay eliminación de bono activa.",
     "extraLives": "Vidas extra",
     "extraLivesActive_one": "+{{count}} vida inicial adicional al comienzo de cada partida. Más vidas significan más oportunidades de recuperarte de un mal corte.",
     "extraLivesActive_other": "+{{count}} vidas iniciales adicionales al comienzo de cada partida. Más vidas significan más oportunidades de recuperarte de un mal corte.",
@@ -192,7 +189,10 @@
     "noModifiers": "Aún no hay modificadores activos. Compra mejoras entre niveles para obtener potenciadores para tu partida.",
     "atDefault": "Por defecto",
     "fromSources": "De",
-    "ascensionSource": "Ascensión x{{depth}}"
+    "ascensionSource": "Ascensión x{{depth}}",
+    "par": "Margen de Par",
+    "parActive": "+{{cuts}} de par, bonus bajo par x{{mult}}",
+    "parInactive": "Los mapas se puntúan con su par propio"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Compra la mejora {{upgradeName}} en {{required}} partidas diferentes.",

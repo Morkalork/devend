@@ -34,7 +34,7 @@ export function getOvertimeCap(basePoints: number, headroom: number): number {
 export function getPerformanceMultiplier(
   usedFences: number,
   parFences: number,
-  config: ScoringConfig
+  config: ScoringConfig,
 ): { multiplier: number; fencesOverPar: number; fencesUnderPar: number } {
   const fencesOverPar = Math.max(0, usedFences - parFences);
   const fencesUnderPar = Math.max(0, parFences - usedFences);
@@ -176,11 +176,19 @@ export function calculateScoreBreakdown(
   requiredRemovedRatio: number,
   config: ScoringConfig,
   spaceBonusMultiplier: number = 1,
+  underParBonusMultiplier: number = 1,
 ): ScoreBreakdown {
   const { multiplier: performanceMultiplier, fencesOverPar, fencesUnderPar } =
     getPerformanceMultiplier(usedFences, parFences, config);
 
-  const underParBonus = calculateUnderParBonus(usedFences, parFences, config);
+  // Overdelivery multiplies AFTER calculateUnderParBonus has applied its own
+  // maxBonus cap, so the ceiling actually moves. Multiplying before it would be
+  // clamped straight back down and the upgrade would do nothing.
+  const safeUnderParMult =
+    Number.isFinite(underParBonusMultiplier) && underParBonusMultiplier > 0 ? underParBonusMultiplier : 1;
+  const underParBonus = Math.round(
+    calculateUnderParBonus(usedFences, parFences, config) * safeUnderParMult,
+  );
   const { bonus: spaceBonusBase, bonusRaw: spaceBonusRaw, extraPercent } =
     calculateSpaceBonus(actualRemovedRatio, requiredRemovedRatio, fencesOverPar, config);
   // Tech Evangelist: scales the space-optimization payout (still under the
@@ -372,6 +380,8 @@ export interface ScoreOptions {
   /** Ship Early tempo reward as a PERCENT (0-100) of the capped map overtime,
    *  paid ABOVE the cap so finishing fast is a real bonus (default 0). */
   shipEarlyPercent?: number;
+  /** Overdelivery: multiplies the under-par bonus, applied after its own cap. */
+  underParBonusMultiplier?: number;
   /**
    * Demolition multiplier (issue #38): breaking destructibles multiplies the
    * whole pre-cap payout (×1.15 per break, compounding), to offset the
@@ -406,12 +416,13 @@ export function calculateScore(
   /** The ship-early hours actually paid (capped overtime x shipEarlyPercent). */
   shipEarlyBonus: number;
 } {
-  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0, payoutMultiplier = 1, shipEarlyPercent = 0 } = options;
+  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0, payoutMultiplier = 1, shipEarlyPercent = 0, underParBonusMultiplier = 1 } = options;
   const requiredRemovedRatio = (100 - thresholdPercent) / 100;
   const actualRemovedRatio = (100 - remainingPercent) / 100;
 
   const breakdown = calculateScoreBreakdown(
-    usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig, spaceBonusMultiplier
+    usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig,
+    spaceBonusMultiplier, underParBonusMultiplier,
   );
 
   // Guard against a NaN/negative scoreMultiplier leaking in from bad config.

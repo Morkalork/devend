@@ -32,6 +32,7 @@ import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
+import { effectivePar } from "@/lib/par";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { gateAreas } from "@/lib/coloredAreas";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
@@ -579,7 +580,7 @@ export function triggerLevelComplete(
     lockedBalls: game.lockedBallsCount,
     superiorLocks: game.superiorLockCount,
     cuts: game.wallCount,
-    par: level.expectedCuts,
+    par: effectivePar(level.expectedCuts, activeModifiers),
     activeSeconds: game.activePlaySeconds,
     bossDefeated: game.bossDefeated,
   });
@@ -588,8 +589,9 @@ export function triggerLevelComplete(
   // so a single map can't exceed the per-map ceiling (issue #43); ship-early is
   // paid as a percent ABOVE the cap (see shipEarlyPercent).
   const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
-    game.wallCount, level.expectedCuts, percent, level.sizeThreshold, level.points, {
+    game.wallCount, effectivePar(level.expectedCuts, activeModifiers), percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
+      underParBonusMultiplier: activeModifiers.underParBonusMultiplier,
       extraBonus: game.lockBonus + game.breakBonus + pushBonus + mutatorOvertimePremium(game.mapMutator) + objectiveBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
       // Comp Time pickups raise THIS map's cap on top of the capstone raise.
@@ -618,7 +620,7 @@ export function triggerLevelComplete(
     callbacks.startDissolve(() => {
       callbacks.onLevelComplete({
         levelNumber, levelId: level.id, cutCount: game.wallCount,
-        expectedCuts: level.expectedCuts, basePoints: level.points,
+        expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
         levelScore,
         remainingPercent: percent, thresholdPercent: level.sizeThreshold, pushBonus,
         underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,

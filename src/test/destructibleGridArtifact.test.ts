@@ -28,8 +28,7 @@ import { Vector2 } from "@/types/game";
 const MODS: GameModifiers = {
   ballSpeedMultiplier: 1, ballSizeMultiplier: 1, fenceGenerationSpeedMultiplier: 1,
   scoreMultiplier: 1, shopDiscountMultiplier: 1, pushBonusMultiplier: 1,
-  instantFencesPerMap: 0, additionalConcurrentFences: 0, bonusRemovalChance: 0,
-  bonusRemovalAmount: 0, extraLives: 0, extraShopItems: 0,
+  instantFencesPerMap: 0, additionalConcurrentFences: 0, extraLives: 0, extraShopItems: 0,
   shopRestockCount: 0, extraContinues: 0, extraCertificateHours: 0,
   startingCapturePercent: 0, fenceDurabilityBonus: 0, microManagerPerLock: 0,
   ballPathPredictionBounces: 0, ballPathPredictionBalls: 0, disablePushYourLuck: 0, ballFreezeDuration: 0,

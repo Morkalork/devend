@@ -3,6 +3,7 @@ import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
+import { effectivePar } from "@/lib/par";
 import { isTimingExempt } from "@/lib/mapTiming";
 import { playDeathSound } from "@/lib/gameAudio";
 import { vibrateDeath } from "@/lib/gameHaptics";
@@ -49,8 +50,9 @@ export function handleGameOverFn(
     // Fold lock + push in before the cap (issue #43); ship-early pays a percent
     // above the cap (the tempo bonus survives a failed push, never taxed).
     const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
-      game.wallCount, level.expectedCuts, pushStartPercent, level.sizeThreshold, level.points, {
+      game.wallCount, effectivePar(level.expectedCuts, activeModifiers), pushStartPercent, level.sizeThreshold, level.points, {
         scoreMultiplier: activeModifiers.scoreMultiplier,
+      underParBonusMultiplier: activeModifiers.underParBonusMultiplier,
         extraBonus: game.lockBonus + pushBonus,
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
         overtimeCapBonus: activeModifiers.overtimeCapBonus,
@@ -60,7 +62,7 @@ export function handleGameOverFn(
 
     callbacks.onLevelComplete({
       levelNumber, levelId: level.id, cutCount: game.wallCount,
-      expectedCuts: level.expectedCuts, basePoints: level.points,
+      expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
       levelScore,
       remainingPercent: percent, overcutBonus: 0,
       thresholdPercent: level.sizeThreshold, pushFailed: true, pushBonus,
@@ -88,7 +90,7 @@ export function handleGameOverFn(
     callbacks.setIsShaking(false);
     callbacks.onGameEnd({
       isWin: false, remainingPercent: percent, levelId: level.id, levelNumber,
-      cutCount: game.wallCount, expectedCuts: level.expectedCuts, basePoints: level.points,
+      cutCount: game.wallCount, expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
     });
   }, 1000);
 }
@@ -117,8 +119,9 @@ export function handlePushFailedFn(
   // Fold lock + push in before the cap (issue #43); ship-early pays a percent
   // above the cap (the tempo bonus survives a failed push, never taxed).
   const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
-    game.wallCount, level.expectedCuts, game.pushStartPercent ?? percent, level.sizeThreshold, level.points, {
+    game.wallCount, effectivePar(level.expectedCuts, activeModifiers), game.pushStartPercent ?? percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
+      underParBonusMultiplier: activeModifiers.underParBonusMultiplier,
       extraBonus: game.lockBonus + pushBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
       overtimeCapBonus: activeModifiers.overtimeCapBonus,
@@ -128,7 +131,7 @@ export function handlePushFailedFn(
 
   callbacks.onLevelComplete({
     levelNumber, levelId: level.id, cutCount: game.wallCount,
-    expectedCuts: level.expectedCuts, basePoints: level.points,
+    expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
     levelScore,
     remainingPercent: percent, overcutBonus: 0,
     thresholdPercent: level.sizeThreshold, pushFailed: true, pushBonus,

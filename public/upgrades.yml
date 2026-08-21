@@ -329,72 +329,72 @@ upgrades:
     modifiers:
       additionalConcurrentFences: 1
 
-
   # ===============================
-  # GARBAGE COLLECTOR (Bonus Removal)
-  # Third tier is a CHOICE (choiceGroup, +50% cost) on the same removal roll:
-  # tune it toward frequent-but-small (Full Sweep) or rare-but-huge (Big Bang).
-  # Both use the existing bonusRemovalChance/Amount modifiers.
+  # PADDED ESTIMATE (Par Relief)
   # ===============================
-
-  - id: garbage_collector_senior
-    name: Garbage Collector
-    tier: Senior
-    description: Each fence has a small chance to remove an additional 5% area.
-    unlockLevel: 5
-    prerequisites:
-      - memory_footprint_senior
-    icon: trash
-    tags: [tempo, risk]
-    modifiers:
-      bonusRemovalChance: 0.10
-      bonusRemovalAmount: 0.05
-
-  - id: garbage_collector_medior
-    name: Garbage Collector 2
-    tier: Principal
-    description: Each fence has a small chance to remove an additional 10% area.
-    unlockLevel: 20
-    prerequisites:
-      - garbage_collector_senior
-    icon: recycle
-    tags: [tempo, risk]
-    modifiers:
-      bonusRemovalChance: 0.10
-      bonusRemovalAmount: 0.10
-
-  # Architect is a CHOICE: buy ONE. Owning one locks out the other. Full Sweep
-  # trades size for frequency; Big Bang trades frequency for size. Roughly equal
-  # expected area; the difference is variance.
-  - id: garbage_collector_architect_a
-    name: Garbage Collector 3
-    tier: Architect
-    description: "Full Sweep: the bonus removal fires far more often, though each clear stays the same size."
-    unlockLevel: 24
-    prerequisites:
-      - garbage_collector_medior
-    choiceGroup: garbage_collector_architect
+  # Replaces the Garbage Collector line, whose bonusRemovalChance/Amount keys
+  # were never read by any game logic: four upgrades across three families,
+  # purchasable with real overtime, doing nothing while the Specs panel
+  # cheerfully reported them as active.
+  #
+  # Par relief sells CONSISTENCY rather than multiplier, which is the one kind
+  # of payoff a per-map overtime cap leaves room for. The under-par bonus caps
+  # at 4h and is close to noise; the value is slack before the over-par cliff,
+  # where one fence over costs 40% of the map base and three disable the space
+  # bonus outright.
+  - id: padded_estimate_junior
+    name: Padded Estimate
+    tier: Junior
+    description: Every map is scored against one extra fence of par.
+    unlockLevel: 6
+    icon: ruler
     tags: [tempo]
     modifiers:
-      bonusRemovalChance: 0.25
+      parBonus: 1
 
-  - id: garbage_collector_architect_b
-    name: Garbage Collector 3
-    tier: Architect
-    description: "Big Bang: the bonus removal stays rare, but each clear rips out a much larger area."
-    unlockLevel: 24
+  - id: padded_estimate_senior
+    name: Padded Estimate
+    tier: Senior
+    description: Every map is scored against two extra fences of par.
+    unlockLevel: 14
     prerequisites:
-      - garbage_collector_medior
-    choiceGroup: garbage_collector_architect
-    tags: [tempo, risk]
+      - padded_estimate_junior
+    tags: [tempo]
     modifiers:
-      bonusRemovalAmount: 0.25
+      parBonus: 1
 
+  # The fork is a real opposition: Sandbagging buys SLACK, Overdelivery buys
+  # REWARD. Sandbagging wins on a map that got away from you; Overdelivery
+  # wins on one you clear well under par.
+  #
+  # The first design gave the second option "forgive one fence over par", which
+  # was degenerate: forgiveness is arithmetically identical to raising par
+  # (used - (par + n) equals (used - par) - n), so the two options scored the
+  # same on every overrun and Sandbagging was strictly better for also lifting
+  # the under-par bonus. A test caught it.
+  - id: padded_estimate_principal
+    name: Padded Estimate
+    tier: Principal
+    description: "Sandbagging: every map is scored against three extra fences of par."
+    unlockLevel: 20
+    prerequisites:
+      - padded_estimate_senior
+    choiceGroup: padded_estimate_principal
+    tags: [tempo]
+    modifiers:
+      parBonus: 1
 
-  # ===============================
-  # FAULT TOLERANCE (Lives)
-  # A track head: the safety line no longer hides behind the shop-slot upgrade.
-  # ===============================
+  - id: padded_estimate_principal_b
+    name: Padded Estimate
+    tier: Principal
+    description: "Overdelivery: par stays at two extra fences, but beating par pays double."
+    unlockLevel: 20
+    prerequisites:
+      - padded_estimate_senior
+    choiceGroup: padded_estimate_principal
+    tags: [tempo, safety]
+    modifiers:
+      underParBonusMultiplier: 2
 
   - id: fault_tolerance_junior
     name: Fault Tolerance

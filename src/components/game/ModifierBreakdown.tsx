@@ -30,8 +30,6 @@ interface StatRow {
 
 /** Additive keys expressed as fractions (shown as percentages, not raw counts). */
 const FRACTIONAL_ADDITIVE_KEYS = new Set<keyof GameModifiers>([
-  'bonusRemovalChance',
-  'bonusRemovalAmount',
   'microManagerPerLock',
   'fenceSpeedPerLock',
   'fenceSpeedPerFence',
@@ -157,14 +155,14 @@ export function ModifierBreakdown({
           : t('bottomBarDetails.concurrentFencesInactive'),
     },
     {
-      label: t('bottomBarDetails.bonusRemoval'),
-      value: `${pct(m.bonusRemovalChance)} @ ${pct(m.bonusRemovalAmount)}`,
-      changed: m.bonusRemovalChance > 0,
-      keys: ['bonusRemovalChance', 'bonusRemovalAmount'],
+      label: t('bottomBarDetails.par'),
+      value: bonus(m.parBonus),
+      changed: m.parBonus !== 0 || m.underParBonusMultiplier !== 1,
+      keys: ['parBonus', 'underParBonusMultiplier'],
       description:
-        m.bonusRemovalChance > 0
-          ? t('bottomBarDetails.bonusRemovalActive', { chance: pct(m.bonusRemovalChance), amount: pct(m.bonusRemovalAmount) })
-          : t('bottomBarDetails.bonusRemovalInactive'),
+        m.parBonus !== 0 || m.underParBonusMultiplier !== 1
+          ? t('bottomBarDetails.parActive', { cuts: m.parBonus, mult: m.underParBonusMultiplier })
+          : t('bottomBarDetails.parInactive'),
     },
     {
       label: t('bottomBarDetails.extraLives'),

@@ -70,9 +70,6 @@
     "concurrentFences": "Samtidiga stängsel",
     "concurrentFencesActive": "Du kan rita {{total}} stängsel samtidigt. Extra samtidiga stängsel låter dig skära från flera väggar på en gång.",
     "concurrentFencesInactive": "Standard: 1 aktivt stängsel åt gången.",
-    "bonusRemoval": "Bonusborttagning",
-    "bonusRemovalActive": "Varje lyckat snitt har {{chance}} chans att ta bort {{amount}} av en bolls samlade hastighetsbonus, och för gradvis snabba bollar tillbaka mot sin grundhastighet.",
-    "bonusRemovalInactive": "Ingen bonusborttagning aktiv.",
     "extraLives": "Extra liv",
     "extraLivesActive_one": "+{{count}} extra startliv läggs till i början av varje omgång. Fler liv betyder fler chanser att återhämta sig från ett dåligt snitt.",
     "extraLivesActive_other": "+{{count}} extra startliv läggs till i början av varje omgång. Fler liv betyder fler chanser att återhämta sig från ett dåligt snitt.",
@@ -192,7 +189,10 @@
     "noModifiers": "Inga modifierare aktiva ännu. Köp uppgraderingar mellan nivåerna för att få förstärkningar till din omgång.",
     "atDefault": "Standard",
     "fromSources": "Från",
-    "ascensionSource": "Uppstigning x{{depth}}"
+    "ascensionSource": "Uppstigning x{{depth}}",
+    "par": "Par-marginal",
+    "parActive": "+{{cuts}} par, under par-bonus x{{mult}}",
+    "parInactive": "Banor bedöms mot sitt eget par"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Köp uppgraderingen {{upgradeName}} i {{required}} olika omgångar.",

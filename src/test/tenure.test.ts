@@ -357,9 +357,12 @@ describe("the family-name assumption Tenure is built on", () => {
     const counts = TENURE_THRESHOLDS.map(
       r => eligibleTenureChains(REAL_UPGRADES, r, Math.random).length,
     );
-    // 15/12/10 since Breaking Change joined: it is offerable at every depth
-    // (Junior at 6, Senior at 12, Principal at 18).
-    expect(counts).toEqual([15, 12, 10]);
+    // 16/13/11 since Padded Estimate replaced the Garbage Collector line. That
+    // is a gain of one chain, not a coincidence: the three Garbage Collector
+    // families used three DIFFERENT names, so Tenure could never walk them as a
+    // chain. Padded Estimate names all four tiers identically and is therefore
+    // offerable at every depth (Junior at 6, Senior at 14, Principal at 20).
+    expect(counts).toEqual([16, 13, 11]);
   });
 });
 

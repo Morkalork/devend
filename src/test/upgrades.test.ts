@@ -50,6 +50,9 @@ const EXPECTED_ROOTS = [
   "benefits_package_junior",
   "golden_parachute",
   "breaking_change_junior",
+  // Replaced the three Garbage Collector roots, whose modifier keys were never
+  // read by any game logic (see the Padded Estimate block in upgrades.yml).
+  "padded_estimate_junior",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.
@@ -316,20 +319,28 @@ describe("choice-group forks (mutually-exclusive tiers)", () => {
     }
   });
 
-  it("Garbage Collector's Architect fork splits frequency vs size", () => {
-    const opts = groups.get("garbage_collector_architect");
+  /**
+   * Padded Estimate's fork is an opposition, not two flavours: Sandbagging
+   * MOVES the over-par cliff by buying another fence of par, Blameless SOFTENS
+   * it by forgiving the first fence over. Four fences over par, Sandbagging
+   * changes nothing (still the 3-or-more bracket) while Blameless lifts you a
+   * whole bracket, so one rewards near-par play and the other rescues a
+   * disaster.
+   */
+  it("Padded Estimate's Principal fork splits slack vs reward", () => {
+    const opts = groups.get("padded_estimate_principal");
     expect(opts).toBeDefined();
-    const fullSweep = opts!.find(o => o.id.endsWith("_a"))!;
-    const bigBang = opts!.find(o => o.id.endsWith("_b"))!;
-    // Full Sweep buys frequency (chance), leaves size alone.
-    expect(fullSweep.modifiers.bonusRemovalChance).toBeGreaterThan(0);
-    expect(fullSweep.modifiers.bonusRemovalAmount ?? 0).toBe(0);
-    // Big Bang buys size (amount), leaves frequency alone.
-    expect(bigBang.modifiers.bonusRemovalAmount).toBeGreaterThan(0);
-    expect(bigBang.modifiers.bonusRemovalChance ?? 0).toBe(0);
-    // Big Bang carries the extra risk tag; Full Sweep is pure tempo.
-    expect(bigBang.tags).toContain("risk");
-    expect(fullSweep.tags).not.toContain("risk");
+    const sandbag = opts!.find(o => o.id.endsWith("_principal"))!;
+    const overdeliver = opts!.find(o => o.id.endsWith("_b"))!;
+    // Sandbagging buys SLACK: another fence of par, no change to the payout.
+    expect(sandbag.modifiers.parBonus).toBeGreaterThan(0);
+    expect(sandbag.modifiers.underParBonusMultiplier ?? 1).toBe(1);
+    // Overdelivery buys REWARD: beating par pays double, par itself unchanged.
+    expect(overdeliver.modifiers.underParBonusMultiplier).toBeGreaterThan(1);
+    expect(overdeliver.modifiers.parBonus ?? 0).toBe(0);
+    // Overdelivery carries the extra safety tag; Sandbagging is pure tempo.
+    expect(overdeliver.tags).toContain("safety");
+    expect(sandbag.tags).not.toContain("safety");
   });
 
   it("Defensive Programming's Architect fork splits survival vs evasion", () => {

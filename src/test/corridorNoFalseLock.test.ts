@@ -30,8 +30,7 @@ import {
 const MODS: GameModifiers = {
   ballSpeedMultiplier: 1, ballSizeMultiplier: 1, fenceGenerationSpeedMultiplier: 1,
   scoreMultiplier: 1, shopDiscountMultiplier: 1, pushBonusMultiplier: 1,
-  instantFencesPerMap: 0, additionalConcurrentFences: 0, bonusRemovalChance: 0,
-  bonusRemovalAmount: 0, extraLives: 0, extraShopItems: 0,
+  instantFencesPerMap: 0, additionalConcurrentFences: 0, extraLives: 0, extraShopItems: 0,
   shopRestockCount: 0, extraContinues: 0, extraCertificateHours: 0,
   startingCapturePercent: 0, fenceDurabilityBonus: 0, microManagerPerLock: 0,
   ballPathPredictionBounces: 0, ballPathPredictionBalls: 0, disablePushYourLuck: 0, ballFreezeDuration: 0,
@@ -45,7 +44,7 @@ const MODS: GameModifiers = {
   spendInstantFencePerChunk: 0, spendFenceSpeedPerChunk: 0, spendCapturePerChunk: 0, spendChunkCapBonus: 0,
   lockThresholdBonus: 0, spawnFreezeSeconds: 0, pickupChanceBonus: 0, pickupPayoutLevel: 0,
   destructibleHitsReduction: 0, breakMultiplierBonus: 0, smashKeepsLockMultiplier: 0,
-  startingOvertime: 0, storeLockRelief: 0,
+  startingOvertime: 0, storeLockRelief: 0, parBonus: 0, underParBonusMultiplier: 1,
 };
 
 // Board is inset to (45,45)-(855,855). The box's bottom edge sits `gap` world

@@ -175,13 +175,12 @@ loadouts:
   - id: tech_debt_audit
     name: Tech Debt Audit
     curse: Balls move 10% faster and are 10% bigger.
-    blessing: Cuts have a 25% chance to clear 5% extra space.
+    blessing: Every map is scored against two extra fences of par.
     uniqueWinsRequired: 5
     modifiers:
       ballSpeedMultiplier: 1.1
       ballSizeMultiplier: 1.1
-      bonusRemovalChance: 0.25
-      bonusRemovalAmount: 0.05
+      parBonus: 2
 
   - id: night_school
     name: Night School

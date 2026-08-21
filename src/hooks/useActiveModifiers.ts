@@ -17,8 +17,27 @@ export interface GameModifiers {
   // Additive (sum)
   instantFencesPerMap: number;
   additionalConcurrentFences: number;
-  bonusRemovalChance: number;
-  bonusRemovalAmount: number;
+  /**
+   * Padded Estimate: extra fences added to each map's par before scoring.
+   *
+   * Par relief buys CONSISTENCY, not multiplier, which is what a per-map
+   * overtime cap leaves room for. The under-par bonus caps at 4h and is close
+   * to noise; the real value is slack before the over-par cliff, where one
+   * fence over costs 40% of the map's base and three disable the space bonus
+   * outright. Integer: see effectivePar in src/lib/par.ts.
+   */
+  parBonus: number;
+  /**
+   * Overdelivery: multiplies the under-par bonus, applied AFTER its own cap so
+   * the ceiling actually moves.
+   *
+   * Deliberately NOT "forgive N fences over par", which was the first design:
+   * forgiveness is arithmetically identical to raising par (used - (par + n)
+   * equals (used - par) - n), so that fork was degenerate, with one option
+   * strictly worse because it also lost the under-par bonus. This one is
+   * opposed: par relief rescues a loose map, this pays for a tight one.
+   */
+  underParBonusMultiplier: number;
   extraLives: number;
   extraShopItems: number;
   shopRestockCount: number; // purchases per shop visit that refill their slot with a new offer
@@ -188,6 +207,7 @@ export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'pushBonusMultiplier',
   'spaceBonusMultiplier',
   'shipEarlyBonusMultiplier',
+  'underParBonusMultiplier',
 ];
 
 /**
@@ -227,8 +247,8 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   pushBonusMultiplier: 1,
   instantFencesPerMap: 0,
   additionalConcurrentFences: 0,
-  bonusRemovalChance: 0,
-  bonusRemovalAmount: 0,
+  parBonus: 0,
+  underParBonusMultiplier: 1,
   extraLives: 0,
   extraShopItems: 0,
   shopRestockCount: 0,

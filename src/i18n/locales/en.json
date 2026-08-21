@@ -70,9 +70,6 @@
     "concurrentFences": "Concurrent Fences",
     "concurrentFencesActive": "You can draw {{total}} fences simultaneously. Extra concurrent fences let you cut from multiple walls at once.",
     "concurrentFencesInactive": "Default: 1 active fence at a time.",
-    "bonusRemoval": "Bonus Removal",
-    "bonusRemovalActive": "Each successful cut has a {{chance}} chance to strip {{amount}} of a ball's accumulated speed bonus, gradually nudging fast balls back toward their base speed.",
-    "bonusRemovalInactive": "No bonus removal active.",
     "extraLives": "Extra Lives",
     "extraLivesActive_one": "+{{count}} additional starting live added at the start of every run. More lives means more chances to recover from a bad cut.",
     "extraLivesActive_other": "+{{count}} additional starting lives added at the start of every run. More lives means more chances to recover from a bad cut.",
@@ -192,7 +189,10 @@
     "noModifiers": "No modifiers active yet. Purchase upgrades between levels to gain power-ups for your run.",
     "atDefault": "At Default",
     "fromSources": "From",
-    "ascensionSource": "Ascension x{{depth}}"
+    "ascensionSource": "Ascension x{{depth}}",
+    "par": "Par Relief",
+    "parActive": "+{{cuts}} par, under-par bonus x{{mult}}",
+    "parInactive": "Maps are scored against their own par"
   },
   "certificateStore": {
     "unlockUpgradeChain": "Buy the {{upgradeName}} upgrade in {{required}} different runs.",
