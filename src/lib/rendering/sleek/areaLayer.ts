@@ -25,6 +25,7 @@ import { areaStyle, isGateArea } from "@/lib/coloredAreas";
 import { dashedLine } from "./dashedLine";
 import { ambientAt, type LightScope } from "./light";
 import { snapRect, hairline, type Pt } from "./pixelGrid";
+import { PALETTE } from "./palette";
 import { mix } from "./palette";
 
 type W2S = (x: number, y: number) => Pt;
@@ -125,13 +126,17 @@ export class AreaLayer {
     const key =
       areas
         .map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind},${isGateArea(a) ? 1 : 0},${a.satisfied ? 1 : 0}`)
-        .join("|") + `|${Math.round(game.boardRect.left)},${Math.round(game.boardRect.top)},${Math.round(scale * 1000)}`;
+        .join("|")
+      + "#" + (game.gravityWells ?? []).map(w => `${w.x},${w.y},${w.width},${w.height}`).join("|")
+      + `|${Math.round(game.boardRect.left)},${Math.round(game.boardRect.top)},${Math.round(scale * 1000)}`;
     if (key === this.key) return;
     this.key = key;
 
     this.g.clear();
     for (const t of this.labels) { t.parent?.removeChild(t); t.destroy(); }
     this.labels = [];
+
+    this.drawGravityWells(game, w2s, scale);
 
     for (const a of areas) {
       const st = areaStyle(a.kind);
@@ -266,5 +271,52 @@ export class AreaLayer {
 
   destroy(): void {
     this.container.destroy({ children: true });
+  }
+
+  /**
+   * Gravity wells (issue #77): a patch that pulls anything inside it downward.
+   *
+   * Drawn as a dim box full of down arrows, because a well has to be readable
+   * at a glance and from the corner of the eye. A player who does not notice it
+   * before committing a fence has been ambushed rather than challenged, and the
+   * arrows say both THAT it pulls and WHICH WAY in one mark. Down is currently
+   * the only direction, but the arrow is what will carry the meaning once a
+   * board tilt can leave a well pointing somewhere new.
+   *
+   * Deliberately quiet: coloured areas are the map's loud markings and the
+   * accent belongs to the player's own fences. A well is terrain.
+   */
+  private drawGravityWells(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const wells = game.gravityWells ?? [];
+    if (wells.length === 0) return;
+    const COLOR = PALETTE.mover;
+
+    for (const well of wells) {
+      const tl = w2s(well.x, well.y);
+      const br = w2s(well.x + well.width, well.y + well.height);
+      const r = snapRect(tl.x, tl.y, br.x - tl.x, br.y - tl.y);
+
+      this.g.rect(r.x, r.y, r.width, r.height).fill({ color: COLOR, alpha: 0.07 });
+      this.g.rect(r.x, r.y, r.width, r.height)
+        .stroke({ width: Math.max(1, 1.5 * scale), color: COLOR, alpha: 0.45 });
+
+      // A grid of arrows sized to the box, so a wide well reads as wide rather
+      // than as one lonely marker floating in a large rectangle.
+      const step = 46 * scale;
+      const cols = Math.max(1, Math.round(r.width / step));
+      const rows = Math.max(1, Math.round(r.height / step));
+      const head = Math.min(9 * scale, r.width / (cols * 2.6), r.height / (rows * 2.6));
+
+      for (let cx = 0; cx < cols; cx++) {
+        for (let cy = 0; cy < rows; cy++) {
+          const x = r.x + r.width * ((cx + 0.5) / cols);
+          const y = r.y + r.height * ((cy + 0.5) / rows);
+          this.g.moveTo(x, y - head).lineTo(x, y + head);
+          this.g.moveTo(x - head * 0.7, y + head * 0.25).lineTo(x, y + head);
+          this.g.moveTo(x + head * 0.7, y + head * 0.25).lineTo(x, y + head);
+        }
+      }
+      this.g.stroke({ width: Math.max(1, 1.6 * scale), color: COLOR, alpha: 0.7, cap: "round" });
+    }
   }
 }

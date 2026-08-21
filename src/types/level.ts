@@ -169,6 +169,22 @@ export interface LevelConfig {
    */
   boss?: BossConfig;
   /**
+   * Gravity wells (issue #77): authored patches of the board that PULL.
+   *
+   * A ball flies normally until it enters one, bends toward the pull while it
+   * is inside, and resumes ordinary motion the moment it leaves. That is the
+   * whole point of doing it locally rather than globally: a universal pull
+   * makes every ball's path knowable, which is corrosive in a game whose
+   * tension is unpredictable motion in shrinking space. A well does the
+   * opposite, because where a ball leaves depends on where and at what angle
+   * it happened to enter.
+   *
+   * It is also structurally immune to the failure a global pull has. Given
+   * long enough a ball's heading converges on the pull and it ends up
+   * ping-ponging in a straight column; inside a well it always leaves first.
+   */
+  gravityWells?: GravityWell[];
+  /**
    * Pin a mutator to this map instead of leaving it to the procedural roll.
    *
    * Boss maps could already force one; ordinary maps could not, so a mutator
@@ -352,6 +368,27 @@ export interface DataStreamConfig {
  * gate later (L10's boss: "the pink box is the only way to ship it").
  */
 export type AreaKind = "var" | "let" | "const";
+
+/**
+ * A rectangular patch that bends any ball inside it toward a fixed direction.
+ *
+ * The pull is SCREEN-absolute, not map-relative, which matters for the tilt
+ * that will come later: a rigid rotation preserves every relationship inside
+ * it, so a pull that turned with the map could never change anything. Down is
+ * down, and one day the map will turn underneath it.
+ */
+export interface GravityWell {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /**
+   * Radians per second the heading bends while inside. Strong and small beats
+   * weak and large: a gentle wide well is a nudge nobody notices, a fierce
+   * narrow one is a deflector you can aim a ball through on purpose.
+   */
+  turnRate?: number;
+}
 
 export interface ColoredArea {
   x: number;

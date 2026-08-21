@@ -14,6 +14,7 @@ import { BoardRect } from "@/lib/boardConstants";
 import { MoverState } from "@/lib/physics/moverState";
 import { ScopeCreepConfig } from "@/lib/scopeCreep";
 import { ActiveMapMutator } from "@/types/mapMutator";
+import type { GravityWell } from "@/types/level";
 import type { GravityConfig } from "@/lib/physics/gravity";
 import { ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
@@ -188,6 +189,8 @@ export interface CanvasGameState {
    * rotated (mapRotation). Gate-only consumers filter with gateAreas().
    */
   coloredAreas: ColoredArea[];
+  /** Authored gravity wells for this map (issue #77), already map-rotated. */
+  gravityWells?: GravityWell[];
   /** A target ball has been locked inside a GATE Colored Area (the win gate). */
   coloredAreaSatisfied: boolean;
   /** "Wire the Integration" circuit runtime for this map (null = no circuit). */

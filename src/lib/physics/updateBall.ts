@@ -7,6 +7,7 @@
 
 import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
+import { wellStep } from "@/lib/physics/gravityWells";
 import { CanvasGameState } from "@/types/gameState";
 import {
   vec2Add,
@@ -319,6 +320,18 @@ export function updateBall(
       && !(game.frozenBallId && ball.id === game.frozenBallId)) {
     const steered = gravityStep(ball.velocity, game.activePlaySeconds, game.gravityConfig, dt);
     if (steered) { ball.velocity.x = steered.x; ball.velocity.y = steered.y; }
+  }
+
+  // Gravity wells (issue #77): a local patch that bends the heading toward the
+  // pull while the ball is inside it, and lets go the moment it leaves. Placed
+  // with the other steering, BEFORE the speed rescalers below, for the same
+  // reason: anything that accumulated into speed would be erased by them.
+  //
+  // Frozen balls are exempt, the same exemption the speed floor and map gravity
+  // make: a held ball must not drift out of the pocket it was frozen in.
+  if (!(game.frozenBallId && ball.id === game.frozenBallId)) {
+    const pulled = wellStep(ball.position, ball.velocity, game.gravityWells, dt);
+    if (pulled) { ball.velocity.x = pulled.x; ball.velocity.y = pulled.y; }
   }
 
   // Update rotation based on speed (medium spin rate); uses the creep-scaled

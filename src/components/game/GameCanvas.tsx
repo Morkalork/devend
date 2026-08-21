@@ -62,7 +62,7 @@ import {
   generateRegionId,
 } from "@/lib/gameUtils";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
-import { rotatePoint, rotateColoredArea } from "@/lib/mapRotation";
+import { rotatePoint, rotateColoredArea, rotateGravityWell } from "@/lib/mapRotation";
 import {
   registerWallImpact,
   clearWallImpacts,
@@ -820,6 +820,7 @@ export function GameCanvas({
       game.pickupSpots = (level.pickupSpots ?? []).map(s => rotatePoint(s.x, s.y, data.mapRotation));
       // Colored Areas (gate + bonus pockets): rotate into the board's frame.
       game.coloredAreas = (level.coloredAreas ?? []).map(a => rotateColoredArea(a, data.mapRotation));
+      game.gravityWells = (level.gravityWells ?? []).map(w => rotateGravityWell(w, data.mapRotation));
       game.coloredAreaSatisfied = false;
       // "Wire the Integration" circuit (already rotated + sealed in initGame).
       game.circuit = data.circuit;

@@ -19,7 +19,7 @@
 
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
-import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig } from "@/types/level";
+import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig, GravityWell } from "@/types/level";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -127,6 +127,20 @@ export function rotateColoredArea(area: ColoredArea, r: MapRotation): ColoredAre
   if (r === 0) return area;
   const rect = rotateRect(area.x, area.y, area.width, area.height, r);
   return { ...area, ...rect };
+}
+
+/**
+ * Rotate a gravity well's RECTANGLE into the orientation (issue #77).
+ *
+ * Only the rectangle. The pull stays screen-absolute and is deliberately not
+ * rotated: a rigid rotation preserves every relationship inside it, so a pull
+ * that turned with the map could never change how the map plays. Rotating the
+ * box but not the pull is what will let a later board tilt move a safe well
+ * into a dangerous place.
+ */
+export function rotateGravityWell(well: GravityWell, r: MapRotation): GravityWell {
+  if (r === 0) return well;
+  return { ...well, ...rotateRect(well.x, well.y, well.width, well.height, r) };
 }
 
 /** Rotate a circuit (each terminal point + its linked dormant ball) into the

@@ -614,6 +614,23 @@ levels:
     points: 20
     variety: 20
     maxBalls: 3
+    # Gravity well (issue #77). This map is otherwise open, so the well is the
+    # idea rather than one hazard among many.
+    #
+    # Mid-board and well clear of the floor, deliberately: a down-pulling well
+    # resting on the bottom edge pins a ball against it, bouncing in place,
+    # which is duller than either a clean bounce or a clean lock. That is the
+    # authoring rule pullsIntoWall() in gravityWells.ts exists to state.
+    #
+    # Narrow and fierce on purpose: a wide gentle well is a nudge nobody
+    # notices, this one is a deflector you can aim a ball through to bend it
+    # into a pocket you have already fenced.
+    gravityWells:
+      - x: 330
+        y: 300
+        width: 240
+        height: 170
+        turnRate: 2.8
     # THE TURN (C3), "Reorg": at 55% remaining one ball visibly divides in two,
     # the same cell division the level-10 boss does. Home of the mechanic now
     # that it is gated to level 11+ (DUPLICATION_MIN_LEVEL): level 11 already
