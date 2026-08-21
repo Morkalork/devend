@@ -59,6 +59,7 @@ import { baseStartingLives, isInfiniteLivesEnabled, debugAscensionDepth } from '
 import { hasAnyMapTuning } from '@/lib/mapTuning';
 import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
 import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
+import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
 
 /**
  * Drop one debug query param, keeping the rest. The old code replaced the whole
@@ -481,12 +482,25 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     return bonuses;
   }, [activeTagSets]);
 
+  /**
+   * Build scaling: upgrades whose effect grows with how committed the run is to
+   * their archetype (src/lib/upgradeScaling.ts). Folded in with the other
+   * static sources, since it depends only on what is OWNED, not on run state.
+   */
+  const scalingBonuses = useMemo(
+    () => computeScalingBonuses(ownedUpgradeIds, upgrades),
+    [ownedUpgradeIds, upgrades]
+  );
+
   const mergedBonuses = useMemo(
     () => mergeBonuses(
       mergeBonuses(mergeBonuses(achievementBonuses, certBonuses), loadoutBonuses),
-      mergeBonuses(tagSetBonuses, capstone?.modifiers as Partial<Record<keyof GameModifiers, number>> | undefined),
+      mergeBonuses(
+        mergeBonuses(tagSetBonuses, scalingBonuses),
+        capstone?.modifiers as Partial<Record<keyof GameModifiers, number>> | undefined,
+      ),
     ),
-    [achievementBonuses, certBonuses, loadoutBonuses, tagSetBonuses, capstone]
+    [achievementBonuses, certBonuses, loadoutBonuses, tagSetBonuses, scalingBonuses, capstone]
   );
 
   // Two-pass modifier resolution: the base pass aggregates every static source;
@@ -1947,6 +1961,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     certStartingLevel: getCertStartingLevel(),
     // Loadouts + Ascension mode
     ascensionDepth,
+    /** What build scaling is paying right now, per upgrade (upgradeScaling.ts). */
+    scalingReadouts: scalingReadouts(ownedUpgradeIds, upgrades),
     /** The ladder rungs in force at the current depth (ascensionLadder.ts). */
     ascensionRules: ascRules,
     ascensionLadder: ascensionConfig.ladder,

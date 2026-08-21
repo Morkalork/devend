@@ -12,6 +12,7 @@ import { X, Ticket, Award, Wind } from 'lucide-react';
 import { Heart, Lock, Scissors, Target, Hexagon, Skull, Sparkles, RotateCcw } from 'lucide-react';
 import { UpgradeConfig, UpgradeTag } from '@/types/upgrade';
 import { LoadoutConfig, AscensionRung } from '@/types/loadout';
+import type { ScalingReadout } from '@/lib/upgradeScaling';
 import { AssignmentConfig } from '@/types/assignment';
 import type { AssignmentProgress } from '@/lib/assignments';
 import { CapstoneConfig } from '@/types/capstone';
@@ -51,6 +52,8 @@ interface TopBarDetailsPanelProps {
   ascensionDepth?: number;
   /** Ladder rungs in force at that depth (ascensionLadder.ts). */
   ascensionRungs?: AscensionRung[];
+  /** What build scaling is paying right now (upgradeScaling.ts). */
+  scalingReadouts?: ScalingReadout[];
   activeLoadouts?: LoadoutConfig[];
   // Build readout: owned upgrades per archetype tag, and the count needed to
   // light a tag's set bonus.
@@ -87,6 +90,7 @@ export function TopBarDetailsPanel({
   microManagerPerLock = 0,
   ascensionDepth = 0,
   ascensionRungs = [],
+  scalingReadouts = [],
   activeLoadouts = [],
   continuesRemaining = 0,
   tagCounts,
@@ -204,6 +208,36 @@ export function TopBarDetailsPanel({
                           />
                         );
                       })}
+                  </div>
+                </div>
+              )}
+              {/* Build scaling: what a focused archetype is currently paying.
+                  Invisible otherwise, since it moves a modifier rather than
+                  granting a card of its own. */}
+              {scalingReadouts.length > 0 && (
+                <div style={{ ...cardStyle, border: `1px solid ${accentColor}55` }}>
+                  <p
+                    className="text-[10px] font-bold tracking-widest uppercase mb-2"
+                    style={{ color: accentColor, opacity: 0.85 }}
+                  >
+                    {t('topBarDetails.buildScaling')}
+                  </p>
+                  <div className="space-y-1.5">
+                    {scalingReadouts.map(r => (
+                      <div key={r.upgradeId} className="flex items-baseline justify-between gap-3">
+                        <span className="text-xs" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                          {r.upgradeName}
+                        </span>
+                        <span
+                          className="text-xs font-bold tabular-nums shrink-0"
+                          style={{ color: accentColor }}
+                        >
+                          {t('topBarDetails.buildScalingFrom', {
+                            count: r.effective, tag: r.tag,
+                          })}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}

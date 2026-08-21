@@ -44,6 +44,7 @@ import { getRunRng } from '@/lib/runRng';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { UpgradeConfig } from '@/types/upgrade';
 import { LoadoutConfig, AscensionRung } from '@/types/loadout';
+import type { ScalingReadout } from '@/lib/upgradeScaling';
 import { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
 import { evaluateAssignment } from '@/lib/assignments';
 import { CapstoneConfig } from '@/types/capstone';
@@ -124,6 +125,8 @@ interface GameScreenProps {
   fenceDurability?: number | null;
   /** The ladder rungs themselves, for the "what does this depth add" modal. */
   ascensionLadder?: AscensionRung[];
+  /** What build scaling is paying right now (upgradeScaling.ts). */
+  scalingReadouts?: ScalingReadout[];
   /** Constant Change (ascension rung 9): every eligible map rolls a mutator. */
   everyMapMutated?: boolean;
   /** Use It Or Lose It (ascension rung 7): multiplies pickup token lifetime. */
@@ -192,6 +195,7 @@ export function GameScreen({
   activeLoadouts = [],
   fenceDurability = null,
   ascensionLadder = [],
+  scalingReadouts = [],
   everyMapMutated = false,
   pickupLifetimeFactor = 1,
   adminMode = false,
@@ -1090,6 +1094,7 @@ export function GameScreen({
         microManagerPerLock={activeModifiers.microManagerPerLock}
         ascensionDepth={ascensionDepth}
         ascensionRungs={rungsUpTo(ascensionDepth, ascensionLadder)}
+        scalingReadouts={scalingReadouts}
         activeLoadouts={activeLoadouts}
         tagCounts={tagCounts}
         tagSetThreshold={tagSetThreshold}

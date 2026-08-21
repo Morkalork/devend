@@ -606,7 +606,9 @@
     "mission": "Uppdrag:",
     "missionProgress": "Framsteg",
     "missionMapsPassed": "Klarade banor",
-    "manual": "Manual"
+    "manual": "Manual",
+    "buildScaling": "Build-skalning",
+    "buildScalingFrom": "{{count}} x {{tag}}"
   },
   "tutorial": {
     "back": "Tillbaka",

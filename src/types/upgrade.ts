@@ -45,6 +45,30 @@ export interface UpgradeConfig {
   /** Build archetype tags; drives shop-offer weighting and the card chips. */
   tags?: UpgradeTag[];
   modifiers: Record<string, number>;
+  /**
+   * Build scaling: this effect grows with how committed the run is to an
+   * archetype (src/lib/upgradeScaling.ts). Omit for a flat upgrade.
+   */
+  scaling?: UpgradeScaling;
+}
+
+/**
+ * "This modifier gains `per` for every owned upgrade tagged `tag`, outside this
+ * upgrade's own family, up to `max` of them."
+ *
+ * Excluding the own family is what stops a family powering itself: counting
+ * siblings would make each tier of Technical Debt feed the next, a compounding
+ * loop rather than a decision about the build.
+ */
+export interface UpgradeScaling {
+  /** Archetype counted. Usually one of the upgrade's own tags. */
+  tag: UpgradeTag;
+  /** The GameModifiers key that grows. */
+  key: string;
+  /** Delta per counted upgrade: 0.05 on a multiplier is +5% each. */
+  per: number;
+  /** Cap on the COUNT, so the card can promise a legible maximum. */
+  max?: number;
 }
 
 /**

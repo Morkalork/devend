@@ -103,7 +103,7 @@ upgrades:
   - id: runtime_optimisation_principal_a
     name: Runtime Optimisation
     tier: Principal
-    description: Reduce all ball speed by 15%.
+    description: Reduce all ball speed by 15%, and a further 2% for every other safety upgrade you own (up to 4).
     unlockLevel: 5
     prerequisites:
       - runtime_optimisation_senior
@@ -111,6 +111,8 @@ upgrades:
     tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.85
+    # Slower still the more of the safety line you run.
+    scaling: { tag: safety, key: ballSpeedMultiplier, per: -0.02, max: 4 }
 
   - id: runtime_optimisation_principal_b
     name: Runtime Optimisation
@@ -493,7 +495,7 @@ upgrades:
   - id: performance_bonus_principal
     name: Performance Bonus
     tier: Principal
-    description: Gain 15% more overtime per map.
+    description: Gain 15% more overtime per map, and a further 4% for every other bank upgrade you own (up to 5).
     unlockLevel: 8
     prerequisites:
       - performance_bonus_senior
@@ -501,6 +503,8 @@ upgrades:
     tags: [bank]
     modifiers:
       scoreMultiplier: 1.15
+    # Pays for a committed bank build, not a stray pick.
+    scaling: { tag: bank, key: scoreMultiplier, per: 0.04, max: 5 }
 
   - id: performance_bonus_principal_b
     name: Performance Bonus
@@ -745,7 +749,7 @@ upgrades:
   - id: expense_account
     name: Expense Account
     tier: Senior
-    description: All shop prices are 10% lower for the rest of the run.
+    description: All shop prices are 10% lower for the rest of the run, and 3% lower still for every other bank upgrade you own (up to 4).
     unlockLevel: 9
     prerequisites:
       - performance_bonus_junior
@@ -753,6 +757,8 @@ upgrades:
     tags: [bank]
     modifiers:
       shopDiscountMultiplier: 0.9
+    # Buying power compounds with the rest of the bank line.
+    scaling: { tag: bank, key: shopDiscountMultiplier, per: -0.03, max: 4 }
 
   - id: war_chest
     name: War Chest
@@ -1072,7 +1078,7 @@ upgrades:
   - id: technical_debt_architect
     name: Technical Debt
     tier: Architect
-    description: Earn 50% more overtime per map - but balls move 25% faster.
+    description: Earn 50% more overtime per map, and a further 6% for every other risk upgrade you own (up to 5), but balls move 25% faster.
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
@@ -1081,11 +1087,13 @@ upgrades:
     modifiers:
       scoreMultiplier: 1.50
       ballSpeedMultiplier: 1.25
+    # Leveraged: the deeper the risk build, the harder this pays.
+    scaling: { tag: risk, key: scoreMultiplier, per: 0.06, max: 5 }
 
   - id: technical_debt_architect_b
     name: Technical Debt
     tier: Architect
-    description: "Ship It Anyway: earn 50% more overtime, and balls grow 15% instead of speeding up."
+    description: "Ship It Anyway: earn 50% more overtime, plus a further 6% for every other risk upgrade you own (up to 5). Balls grow 15% instead of speeding up."
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
@@ -1101,6 +1109,8 @@ upgrades:
   # ===============================
   # Lives are deliberately NOT sold here: Fault Tolerance is the one life line,
   # so this is the pure shrink-the-balls defence (a different kind of safety).
+    # Leveraged the same way as its sibling.
+    scaling: { tag: risk, key: scoreMultiplier, per: 0.06, max: 5 }
 
   - id: defensive_programming_junior
     name: Defensive Programming
@@ -1360,7 +1370,7 @@ upgrades:
   - id: cascade_freeze_principal
     name: Cascade Freeze
     tier: Architect
-    description: Your freeze taps now hold balls 2 seconds longer.
+    description: Your freeze taps hold balls 2 seconds longer, plus half a second more for every other freeze upgrade you own (up to 4).
     unlockLevel: 22
     prerequisites:
       - cascade_freeze_senior
@@ -1368,6 +1378,8 @@ upgrades:
     tags: [freeze]
     modifiers:
       ballFreezeDuration: 2
+    # A freeze build holds them longer.
+    scaling: { tag: freeze, key: ballFreezeDuration, per: 0.5, max: 4 }
 
   - id: cascade_freeze_principal_b
     name: Cascade Freeze
@@ -1470,7 +1482,7 @@ upgrades:
   - id: benefits_package_principal
     name: Benefits Package
     tier: Principal
-    description: Power-up tokens turn up noticeably more often.
+    description: Power-up tokens turn up noticeably more often, and more often still for every other risk upgrade you own (up to 5).
     unlockLevel: 14
     prerequisites:
       - benefits_package_senior
@@ -1478,6 +1490,8 @@ upgrades:
     tags: [risk]
     modifiers:
       pickupChanceBonus: 0.03
+    # More tokens the further the risk build goes.
+    scaling: { tag: risk, key: pickupChanceBonus, per: 0.01, max: 5 }
 
   - id: benefits_package_principal_b
     name: Benefits Package

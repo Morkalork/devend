@@ -323,6 +323,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 activeLoadouts={session.activeLoadouts}
                 fenceDurability={session.fenceDurability}
                 ascensionLadder={session.ascensionLadder}
+                scalingReadouts={session.scalingReadouts}
                 everyMapMutated={session.ascensionRules.everyMapMutated}
                 pickupLifetimeFactor={session.ascensionRules.pickupLifetimeFactor}
                 introAssemble={session.introAssemblePending}

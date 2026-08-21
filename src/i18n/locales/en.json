@@ -609,7 +609,9 @@
     "mission": "Mission:",
     "missionProgress": "Progress",
     "missionMapsPassed": "Maps passed",
-    "manual": "Manual"
+    "manual": "Manual",
+    "buildScaling": "Build Scaling",
+    "buildScalingFrom": "{{count}} x {{tag}}"
   },
   "tutorial": {
     "back": "Back",
