@@ -30,7 +30,7 @@
  */
 
 import { Application, Container, Graphics, RenderTexture } from "pixi.js";
-import { tiltAngleAt, tiltWorldPoint } from "@/lib/boardTilt";
+import { boardAngleFor, tiltWorldPoint } from "@/lib/boardTilt";
 import type { CanvasGameState } from "@/types/gameState";
 import type { RenderContext } from "../types";
 import { BoardLayer } from "./boardLayer";
@@ -221,7 +221,7 @@ export class SleekRenderer {
     // through, so walls, balls, areas, props, lock tints and the trajectory
     // preview all swing round together for free. Zero on every other map, where
     // the branch below keeps the original arithmetic untouched.
-    const tilt = tiltAngleAt(game.activePlaySeconds, game.gravityConfig ?? null);
+    const tilt = boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
     const w2s = tilt === 0
       ? (x: number, y: number) => ({
           x: boardRect.left + x * scale,

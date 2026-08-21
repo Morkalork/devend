@@ -265,7 +265,17 @@ describe("input never forgets the tilt", () => {
     ).toEqual([]);
   });
 
-  it("derives that angle from the same clock the renderer uses", () => {
-    expect(SRC).toMatch(/tiltAngleAt\(\s*game\.activePlaySeconds/);
+  /**
+   * Stronger than "both read the same clock": both must call the SAME function.
+   * There are two tilt drivers now, a gravity mutator's phase schedule and the
+   * sporadic tilts, and if the renderer and input each picked their own the
+   * board would be drawn at one angle and taps un-turned by another.
+   */
+  it("resolves the angle through the one shared function the renderer uses", () => {
+    const RENDERER = readFileSync(
+      resolve(__dirname, "../lib/rendering/sleek/SleekRenderer.ts"), "utf8",
+    );
+    expect(SRC).toMatch(/boardAngleFor\(\s*game\.activePlaySeconds/);
+    expect(RENDERER).toMatch(/boardAngleFor\(game\.activePlaySeconds/);
   });
 });

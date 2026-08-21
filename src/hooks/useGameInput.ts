@@ -6,7 +6,7 @@
  */
 
 import { useEffect, RefObject } from "react";
-import { tiltAngleAt } from "@/lib/boardTilt";
+import { boardAngleFor } from "@/lib/boardTilt";
 import { CanvasGameState } from "@/types/gameState";
 import { boardEntityAt, type BoardEntityHit } from "@/lib/boardEntityInfo";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -47,7 +47,7 @@ import { initAudio } from "@/lib/gameAudio";
  * introduce a frame of skew between what is on screen and where a fence lands.
  */
 function boardTilt(game: CanvasGameState): number {
-  return tiltAngleAt(game.activePlaySeconds, game.gravityConfig ?? null);
+  return boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
 }
 
 /** How many fences may grow at once: 1, plus the additionalConcurrentFences

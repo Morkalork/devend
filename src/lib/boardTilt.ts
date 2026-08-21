@@ -77,7 +77,7 @@ function shortestDelta(a: number, b: number): number {
 }
 
 /** Smoothstep, so the board eases out of one rest angle and into the next. */
-const ease = (u: number) => u * u * (3 - 2 * u);
+export const ease = (u: number) => u * u * (3 - 2 * u);
 
 /**
  * The board's rotation at a moment of active play, mid-turn included.
@@ -99,3 +99,64 @@ export function tiltAngleAt(activeSeconds: number, cfg: GravityConfig | null): n
 }
 
 
+
+// ── Sporadic tilts (issue #77) ──────────────────────────────────────────────
+
+/** A discrete board turn in progress, or settled once the ease has finished. */
+export interface TiltState {
+  /** Quarter turns applied so far. Signed: negative is counter-clockwise. */
+  turns: number;
+  /** What it was turning FROM, so a turn can be eased rather than snapped. */
+  fromTurns: number;
+  /** activePlaySeconds when this turn began. */
+  startedAt: number;
+}
+
+export const NO_TILT: TiltState = { turns: 0, fromTurns: 0, startedAt: 0 };
+
+/**
+ * The board angle for a discrete tilt, mid-turn included.
+ *
+ * Separate from tiltAngleAt, which reads a gravity mutator's PHASE SCHEDULE.
+ * This one is driven by events: a tilt fires, turns is bumped, and the angle
+ * eases across from where it was. Both feed the same transform, so a map can
+ * only ever be using one of them.
+ */
+export function discreteTiltAngle(state: TiltState | null | undefined, activeSeconds: number): number {
+  if (!state) return 0;
+  const to = state.turns * (Math.PI / 2);
+  const from = state.fromTurns * (Math.PI / 2);
+  if (to === from) return to;
+  const t = Number.isFinite(activeSeconds) ? activeSeconds : 0;
+  const into = t - state.startedAt;
+  if (into >= TILT_SECONDS) return to;
+  if (into <= 0) return from;
+  return from + (to - from) * ease(into / TILT_SECONDS);
+}
+
+/** Begin a turn from wherever the board currently is. */
+export function beginTilt(state: TiltState, direction: 1 | -1, activeSeconds: number): TiltState {
+  return {
+    fromTurns: state.turns,
+    turns: state.turns + direction,
+    startedAt: Number.isFinite(activeSeconds) ? activeSeconds : 0,
+  };
+}
+
+/**
+ * THE board angle. Both the renderer's w2s and input's screenToWorld read this
+ * and nothing else, so they cannot drift apart: a tap is always un-turned by
+ * exactly the angle the board was drawn at.
+ *
+ * A gravity MUTATOR turns the board on a phase schedule; sporadic tilts turn it
+ * on events. A map uses one or the other, never both, but the order is fixed
+ * here rather than left to whichever caller asks first.
+ */
+export function boardAngleFor(
+  activeSeconds: number,
+  gravityCfg: GravityConfig | null | undefined,
+  tilt: TiltState | null | undefined,
+): number {
+  if (gravityCfg) return tiltAngleAt(activeSeconds, gravityCfg);
+  return discreteTiltAngle(tilt, activeSeconds);
+}

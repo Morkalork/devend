@@ -33,6 +33,7 @@ import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
 import { effectivePar } from "@/lib/par";
+import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
 import { gateAreas } from "@/lib/coloredAreas";
 import { mutatorOvertimePremium } from "@/lib/mapMutators";
@@ -348,6 +349,15 @@ export function applyCutFn(
   callbacks.setCompletedCuts?.(game.completedCuts);
 
   const percent = evaluateWinConditions(game, level, levelNumber, activeModifiers, callbacks);
+
+  // Sporadic board tilt (issue #77). Rolled here, right after a cut has changed
+  // how much is cleared, because the tiers are PROGRESS not time: tying them to
+  // a clock means a well-played map ends before the first roll and the tilt only
+  // ever hits players who were already struggling.
+  //
+  // Landing it just after a committed fence is also when it bites hardest: you
+  // have just decided where your walls go, and the board turns under them.
+  if (percent !== null) tickBoardTilt(game, level, levelNumber, 100 - percent);
 
   if (percent !== null && tutorialMode && !tutorialCutMade && percent < 100) {
     callbacks.setTutorialCutMade(true);

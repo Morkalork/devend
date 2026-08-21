@@ -16,6 +16,7 @@ import { ScopeCreepConfig } from "@/lib/scopeCreep";
 import { ActiveMapMutator } from "@/types/mapMutator";
 import type { GravityWell } from "@/types/level";
 import type { GravityConfig } from "@/lib/physics/gravity";
+import type { TiltState } from "@/lib/boardTilt";
 import { ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
@@ -191,6 +192,12 @@ export interface CanvasGameState {
   coloredAreas: ColoredArea[];
   /** Authored gravity wells for this map (issue #77), already map-rotated. */
   gravityWells?: GravityWell[];
+  /** Sporadic board tilts: the current turn, mid-ease included (#77). */
+  boardTilt?: TiltState;
+  /** Per-tier tilt chance, drawn once at map start so it cannot be learned. */
+  tiltChance?: number;
+  /** Progress tiers whose roll has already happened, so none rolls twice. */
+  firedTiltTiers?: number[];
   /** A target ball has been locked inside a GATE Colored Area (the win gate). */
   coloredAreaSatisfied: boolean;
   /** "Wire the Integration" circuit runtime for this map (null = no circuit). */
