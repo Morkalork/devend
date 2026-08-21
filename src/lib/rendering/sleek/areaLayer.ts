@@ -300,23 +300,68 @@ export class AreaLayer {
       this.g.rect(r.x, r.y, r.width, r.height)
         .stroke({ width: Math.max(1, 1.5 * scale), color: COLOR, alpha: 0.45 });
 
-      // A grid of arrows sized to the box, so a wide well reads as wide rather
-      // than as one lonely marker floating in a large rectangle.
-      const step = 46 * scale;
-      const cols = Math.max(1, Math.round(r.width / step));
-      const rows = Math.max(1, Math.round(r.height / step));
-      const head = Math.min(9 * scale, r.width / (cols * 2.6), r.height / (rows * 2.6));
-
-      for (let cx = 0; cx < cols; cx++) {
-        for (let cy = 0; cy < rows; cy++) {
-          const x = r.x + r.width * ((cx + 0.5) / cols);
-          const y = r.y + r.height * ((cy + 0.5) / rows);
-          this.g.moveTo(x, y - head).lineTo(x, y + head);
-          this.g.moveTo(x - head * 0.7, y + head * 0.25).lineTo(x, y + head);
-          this.g.moveTo(x + head * 0.7, y + head * 0.25).lineTo(x, y + head);
-        }
+      // Diagonal stripes, clipped to the box. A hazard marking reads as "this
+      // patch is different" from the corner of the eye without ever competing
+      // with a ball or a fence for attention, which a grid of arrows did start
+      // to do once the well was any size at all.
+      //
+      // Each stripe is a 45 degree line x = (x0 + d) + t, y = y0 + t, kept
+      // inside the rect by intersecting the two axis ranges: t must satisfy
+      // both [-d, width - d] and [0, height], so the overlap is the visible
+      // span. Computing the span beats drawing long lines behind a mask, which
+      // would cost a texture per well.
+      const spacing = Math.max(9, 16 * scale);
+      for (let d = -r.height; d < r.width; d += spacing) {
+        const t0 = Math.max(-d, 0);
+        const t1 = Math.min(r.width - d, r.height);
+        if (t1 <= t0) continue;
+        this.g.moveTo(r.x + d + t0, r.y + t0).lineTo(r.x + d + t1, r.y + t1);
       }
-      this.g.stroke({ width: Math.max(1, 1.6 * scale), color: COLOR, alpha: 0.7, cap: "round" });
+      this.g.stroke({ width: Math.max(1, 1 * scale), color: COLOR, alpha: 0.16 });
+
+      // The glyph, after the falling-apple gravity icon: two arrows flanking a
+      // cluster of motion lines. The icon's apple is the thing being pulled,
+      // and here the BALL plays that part as it crosses, so drawing one would
+      // only compete with the real object. The lines and arrows are the part
+      // that says "things fall here"; the ball supplies the rest.
+      //
+      // Spread across the box rather than centred as a single mark, which also
+      // fixes what a lone arrow did in a large well: read as one small sticker
+      // floating in a lot of empty rectangle.
+      const cx = r.x + r.width / 2;
+      const cy = r.y + r.height / 2;
+      const unit = Math.min(r.width, r.height);
+      const armH = Math.min(unit * 0.34, 30 * scale);   // arrow shaft half-length
+      const head = armH * 0.42;
+
+      const downArrow = (ax: number, ay: number) => {
+        this.g.moveTo(ax, ay - armH).lineTo(ax, ay + armH);
+        this.g.moveTo(ax - head, ay + armH - head).lineTo(ax, ay + armH);
+        this.g.moveTo(ax + head, ay + armH - head).lineTo(ax, ay + armH);
+      };
+
+      // Flankers, held off the edges so they never touch the outline.
+      downArrow(r.x + r.width * 0.16, cy);
+      downArrow(r.x + r.width * 0.84, cy);
+
+      // Motion lines: uneven lengths and offsets, because equal ones read as a
+      // barcode rather than as falling.
+      const lines: [number, number, number][] = [
+        [0.40, -0.34, 0.30],
+        [0.47, -0.20, 0.20],
+        [0.54, -0.40, 0.34],
+        [0.61, -0.26, 0.16],
+      ];
+      for (const [fx, fromF, lenF] of lines) {
+        const lx = r.x + r.width * fx;
+        const y0 = cy + unit * fromF;
+        this.g.moveTo(lx, y0).lineTo(lx, y0 + unit * lenF);
+      }
+
+      this.g.stroke({
+        width: Math.max(2, 2.6 * scale), color: COLOR, alpha: 0.8,
+        cap: "round", join: "round",
+      });
     }
   }
 }
