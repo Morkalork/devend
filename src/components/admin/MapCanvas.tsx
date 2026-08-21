@@ -521,7 +521,7 @@ export function MapCanvas({
       }
     });
 
-  }, [level, boardRect, selectedEntityId, selectedBallId, selectedAreaIndex, ballPositions, worldToScreen, getEdgeInfo, dragMode]);
+  }, [level, boardRect, selectedEntityId, selectedBallId, selectedAreaIndex, selectedWellIndex, ballPositions, worldToScreen, getEdgeInfo, dragMode]);
 
   // Hit testing
   const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle' | 'area' | 'area-handle' | 'well' | 'well-handle'; id: string; areaIndex?: number; wellIndex?: number; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: RectHandle } | null => {
@@ -706,7 +706,7 @@ export function MapCanvas({
     }
 
     return null;
-  }, [boardRect, level, selectedEntityId, selectedAreaIndex, ballPositions, worldToScreen, screenToWorld, getEdgeInfo]);
+  }, [boardRect, level, selectedEntityId, selectedAreaIndex, selectedWellIndex, ballPositions, worldToScreen, screenToWorld, getEdgeInfo]);
 
   // Mouse handlers
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -869,7 +869,7 @@ export function MapCanvas({
         });
       }
     }
-  }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, onSelectArea, selectedEntityId]);
+  }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, onSelectArea, onSelectWell, selectedEntityId]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (dragMode.type === 'none' || !boardRect) return;
@@ -1003,7 +1003,7 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     }
-  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, snap]);
+  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, onUpdateWell, snap]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const canvas = canvasRef.current;

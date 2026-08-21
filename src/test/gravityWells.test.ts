@@ -303,7 +303,7 @@ describe("the map builder can author wells", () => {
 
   it("actually passes the handlers down, since the props are optional", () => {
     for (const prop of ["onAddWell", "onDeleteWell", "onUpdateWell", "onSelectWell"]) {
-      expect(BUILDER, `${prop} never wired`).toMatch(new RegExp(`${prop}=\{`));
+      expect(BUILDER, `${prop} never wired`).toContain(`${prop}={`);
     }
     expect(PANEL).toMatch(/onAddWell\?\.\(\)/);
   });
