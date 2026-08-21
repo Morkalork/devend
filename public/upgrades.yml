@@ -1119,27 +1119,32 @@ upgrades:
   - id: technical_debt_architect
     name: Technical Debt
     tier: Architect
-    description: Earn 50% more overtime per map - but balls move 25% faster.
+    description: "Raise this run's per-map overtime ceiling by 20 hours, so a stacked multiplier finally pays out - but balls move 25% faster."
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
     choiceGroup: technical_debt_architect
     tags: [risk]
     modifiers:
-      scoreMultiplier: 1.50
+      overtimeCapBonus: 20
       ballSpeedMultiplier: 1.25
+    # Was scoreMultiplier 1.5. Technical Debt already trunks at x2.43 and the
+    # shop sold x3.23 in total, against a median map that caps at x2.9: the top
+    # tier was paying in a currency the cap refuses. Raising the ceiling instead
+    # makes the multiplier you ALREADY own start paying again, which is a
+    # better reward for the same pick.
 
   - id: technical_debt_architect_b
     name: Technical Debt
     tier: Architect
-    description: "Ship It Anyway: earn 50% more overtime, and balls grow 15% instead of speeding up."
+    description: "Ship It Anyway: Ship Early bonuses pay double, paid over the per-map ceiling, and balls grow 15% instead of speeding up."
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
     choiceGroup: technical_debt_architect
     tags: [risk]
     modifiers:
-      scoreMultiplier: 1.5
+      shipEarlyBonusMultiplier: 2
       ballSizeMultiplier: 1.15
 
 
@@ -1148,6 +1153,10 @@ upgrades:
   # ===============================
   # Lives are deliberately NOT sold here: Fault Tolerance is the one life line,
   # so this is the pure shrink-the-balls defence (a different kind of safety).
+    # The other way past the ceiling. Ship Early is paid ABOVE the per-map cap
+    # (scoring.ts pays capped x shipEarlyPercent), so doubling it is income the
+    # cap can never eat. Raise the ceiling, or earn over it: a real fork now,
+    # where before it was x1.5 against x1.5.
 
   - id: defensive_programming_junior
     name: Defensive Programming
