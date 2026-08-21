@@ -540,6 +540,13 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           upgrades={[]}
           lives={99}
           onLivesChange={() => {}}
+          // The Playground is a tester, not a run, so there are no lives to
+          // spend and onLivesChange is a no-op. The map deadline still has to
+          // DO something: without this the timer expired, flashed red, and
+          // called an undefined callback, so the map sat there past its own
+          // deadline and the timer looked broken. Remounting is exactly what
+          // the panel's own restart button does.
+          onMapTimedOut={() => setGameKey(k => k + 1)}
           onGrantAbility={(id) => setAbilityCharges(prev => ({ ...prev, [id]: (prev[id] ?? 0) + 1 }))}
           onSpendAbility={(id) => setAbilityCharges(prev => {
             const have = prev[id] ?? 0;
