@@ -320,7 +320,7 @@ upgrades:
   - id: ultrathreading_principal
     name: Ultrathreading
     tier: Principal
-    description: Allow one additional fence to be in progress simultaneously.
+    description: "Draw one more fence at the same time, and another once you own five other tempo upgrades."
     unlockLevel: 30
     prerequisites:
       - multithreading_principal
@@ -342,6 +342,11 @@ upgrades:
   # at 4h and is close to noise; the value is slack before the over-par cliff,
   # where one fence over costs 40% of the map base and three disable the space
   # bonus outright.
+    # Ultrathreading scales, Multithreading does not. They grant the same key,
+    # and scaling both would compound one structural resource from two places
+    # (the Moonshot / Risk Appetite problem). This is the deeper of the two at
+    # L30, so it carries the reward.
+    scaling: { tag: tempo, key: additionalConcurrentFences, per: 1, every: 5, max: 5 }
   - id: padded_estimate_junior
     name: Padded Estimate
     tier: Junior
@@ -375,7 +380,7 @@ upgrades:
   - id: padded_estimate_principal
     name: Padded Estimate
     tier: Principal
-    description: "Sandbagging: every map is scored against three extra fences of par."
+    description: "Sandbagging: every map is scored against three extra fences of par, and a fourth once you own four other tempo upgrades."
     unlockLevel: 20
     prerequisites:
       - padded_estimate_senior
@@ -383,6 +388,11 @@ upgrades:
     tags: [tempo]
     modifiers:
       parBonus: 1
+    # Caps at one extra fence of par, taking the Sandbagging line to four.
+    # Par ranges from 3 to 9 across the map list, so on a par-3 map even this
+    # is a large relative swing; a second step would defang the over-par
+    # cliff the family is built around.
+    scaling: { tag: tempo, key: parBonus, per: 1, every: 4, max: 4 }
 
   - id: padded_estimate_principal_b
     name: Padded Estimate
@@ -456,7 +466,7 @@ upgrades:
   - id: golden_parachute
     name: Golden Parachute
     tier: Wizard
-    description: "Gain 1 Continue: run out of lives and you retry the level with your overtime and upgrades intact."
+    description: "Start each run with an extra Continue, and one more again once you own six other safety upgrades."
     unlockLevel: 5
     icon: life-buoy
     cost: 250
@@ -468,6 +478,10 @@ upgrades:
   # ===============================
   # PERFORMANCE BONUS (Score %)
   # ===============================
+    # A Continue is a whole extra run at the level you died on, so this is the
+    # stingiest step on the board: one more, and only for a safety build that
+    # has bought six other cards in the archetype.
+    scaling: { tag: safety, key: extraContinues, per: 1, every: 6, max: 6 }
 
   - id: performance_bonus_junior
     name: Performance Bonus
@@ -1005,7 +1019,7 @@ upgrades:
   - id: procurement_principal
     name: Procurement
     tier: Principal
-    description: Your first three purchases per store visit each add a new offer to the shelf.
+    description: "Your first three purchases per store visit each add a new offer to the shelf, plus one more restock for every four other bank upgrades you own (up to two)."
     unlockLevel: 12
     prerequisites:
       - procurement_senior
@@ -1013,6 +1027,9 @@ upgrades:
     tags: [bank]
     modifiers:
       shopRestockCount: 1
+    # Restocks are cheap to grant and self-limiting: you still have to afford
+    # what turns up. Two extra at full commitment.
+    scaling: { tag: bank, key: shopRestockCount, per: 1, every: 4, max: 8 }
 
   - id: procurement_principal_b
     name: Procurement

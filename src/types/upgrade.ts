@@ -69,6 +69,19 @@ export interface UpgradeScaling {
   per: number;
   /** Cap on the COUNT, so the card can promise a legible maximum. */
   max?: number;
+  /**
+   * Grant `per` once for every N counted upgrades, instead of once each.
+   *
+   * This is what makes INTEGER keys scalable. A quarter of a Continue, or 0.6
+   * of a concurrent fence, is either meaningless or actively wrong: the fence
+   * limit reads its modifier through Math.round, so fractional accumulation
+   * would snap at 0.5 into a hidden cliff rather than a ramp. With `every`, the
+   * grant is whole from the start.
+   *
+   * `max` still caps the COUNT in both forms, deliberately, so it means one
+   * thing everywhere. The steps are then floor(min(count, max) / every).
+   */
+  every?: number;
 }
 
 /**

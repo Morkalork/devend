@@ -124,6 +124,75 @@ describe("what scaling pays", () => {
   });
 });
 
+// ── Stepped scaling, for integer keys ───────────────────────────────────────
+
+/**
+ * `every` grants `per` once per N counted upgrades rather than once each.
+ *
+ * It exists because a quarter of a Continue is meaningless and 0.6 of a
+ * concurrent fence is actively wrong: concurrentFenceLimit reads its modifier
+ * through Math.round, so fractional accumulation would snap at 0.5 into a
+ * hidden cliff instead of a ramp. Stepping keeps the grant whole from the start.
+ */
+describe("stepped scaling", () => {
+  const mk = (every: number, max: number, per = 1): UpgradeConfig[] => ([
+    {
+      id: "step-target", name: "Stepper", tier: "Junior", description: "d",
+      cost: 10, tags: ["tempo"], modifiers: { additionalConcurrentFences: 1 },
+      scaling: { tag: "tempo", key: "additionalConcurrentFences", per, every, max },
+    } as unknown as UpgradeConfig,
+    ...Array.from({ length: 12 }, (_, i) => ({
+      id: `filler-${i}`, name: `Filler ${i}`, tier: "Junior", description: "d",
+      cost: 10, tags: ["tempo"], modifiers: { fenceGenerationSpeedMultiplier: 1.01 },
+    } as unknown as UpgradeConfig)),
+  ]);
+  const owned = (n: number) => ["step-target", ...Array.from({ length: n }, (_, i) => `filler-${i}`)];
+  const amountAt = (cat: UpgradeConfig[], n: number) =>
+    scalingReadouts(owned(n), cat)[0]?.amount ?? 0;
+
+  it("grants nothing until a whole step is reached", () => {
+    const cat = mk(4, 8);
+    expect(amountAt(cat, 0)).toBe(0);
+    expect(amountAt(cat, 3)).toBe(0);
+    expect(amountAt(cat, 4)).toBe(1);
+  });
+
+  it("grants only whole units, never a fraction", () => {
+    const cat = mk(4, 8);
+    for (let n = 0; n <= 10; n++) {
+      expect(Number.isInteger(amountAt(cat, n)), `owning ${n}`).toBe(true);
+    }
+  });
+
+  it("steps again at each further multiple", () => {
+    const cat = mk(4, 8);
+    expect(amountAt(cat, 7)).toBe(1);
+    expect(amountAt(cat, 8)).toBe(2);
+  });
+
+  /** `max` caps the COUNT in both forms, so it means one thing everywhere. */
+  it("caps through the count, not the steps", () => {
+    const cat = mk(4, 8);
+    expect(amountAt(cat, 11)).toBe(2); // count clamped to 8 -> 2 steps
+    expect(scalingReadouts(owned(11), cat)[0].effective).toBe(8);
+    expect(scalingReadouts(owned(11), cat)[0].steps).toBe(2);
+  });
+
+  it("degrades to one grant each when every is absent or 1", () => {
+    for (const e of [1, 0, -3]) {
+      const cat = mk(e, 8);
+      expect(amountAt(cat, 5), `every ${e}`).toBe(5);
+    }
+  });
+
+  it("reports steps alongside the raw count", () => {
+    const r = scalingReadouts(owned(6), mk(4, 8))[0];
+    expect(r.count).toBe(6);
+    expect(r.effective).toBe(6);
+    expect(r.steps).toBe(1);
+  });
+});
+
 // ── The catalogue as authored ───────────────────────────────────────────────
 
 describe("the scaling blocks in upgrades.yml", () => {
@@ -175,9 +244,43 @@ describe("the scaling blocks in upgrades.yml", () => {
     }
   });
 
+  /**
+   * Integer keys must be stepped. A key the game reads as a count (a fence, a
+   * Continue, a shop slot) cannot take a fraction: at best it is meaningless,
+   * at worst it rounds at 0.5 into a cliff the card never mentions.
+   */
+  it("steps every scaling block on a whole-unit key", () => {
+    const WHOLE_UNIT_KEYS = new Set([
+      "additionalConcurrentFences", "extraContinues", "extraLives", "extraShopItems",
+      "shopRestockCount", "parBonus", "pickupPayoutLevel", "instantFencesPerMap",
+      "wallShieldsPerMap", "freezeUsesPerMap", "ballFreezeCount", "extraCertificateHours",
+    ]);
+    for (const u of scaled) {
+      if (!WHOLE_UNIT_KEYS.has(u.scaling!.key)) continue;
+      const every = u.scaling!.every ?? 1;
+      expect(Number.isInteger(u.scaling!.per), `${u.id} per`).toBe(true);
+      expect(every, `${u.id} scales the whole-unit key ${u.scaling!.key} without an every`)
+        .toBeGreaterThan(1);
+    }
+  });
+
+  /** A step nobody can reach is a promise the catalogue cannot keep. */
+  it("can reach at least one step of every stepped block", () => {
+    for (const u of scaled) {
+      const s = u.scaling!;
+      if (!s.every || s.every <= 1) continue;
+      const available = UPGRADES.filter(
+        o => o.name !== u.name && (o.tags ?? []).includes(s.tag),
+      ).length;
+      const reachable = Math.min(available, s.max ?? available);
+      expect(Math.floor(reachable / s.every), `${u.id} can never reach a step`)
+        .toBeGreaterThanOrEqual(1);
+    }
+  });
+
   it("says so on the card, so the effect is not invisible", () => {
     for (const u of scaled) {
-      expect(u.description ?? "", `${u.id}`).toMatch(/every other|for each|up to/i);
+      expect(u.description ?? "", `${u.id}`).toMatch(/every other|for each|up to|once you own|for every/i);
       expect(u.description ?? "", `${u.id} description`).not.toContain("—");
     }
   });

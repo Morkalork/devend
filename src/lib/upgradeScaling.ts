@@ -37,6 +37,8 @@ export interface ScalingReadout {
   count: number;
   /** The count actually paid for, after the cap. */
   effective: number;
+  /** How many times `per` was granted. Equals `effective` unless `every` > 1. */
+  steps: number;
   /** The delta this contributes: +0.15 on a multiplier, +2 on an additive. */
   amount: number;
 }
@@ -78,10 +80,16 @@ export function scalingReadouts(
     // other risk upgrades" and the number on it stays legible.
     const effective = typeof s.max === "number" ? Math.min(count, Math.max(0, s.max)) : count;
     if (effective <= 0) continue;
+    // `every` grants `per` once per N counted upgrades, which is what lets an
+    // INTEGER key scale: whole grants rather than fractions that would round
+    // into a hidden cliff. Absent or <= 1 it degrades to one grant each.
+    const every = typeof s.every === "number" && s.every > 1 ? Math.floor(s.every) : 1;
+    const steps = every > 1 ? Math.floor(effective / every) : effective;
+    if (steps <= 0) continue;
     out.push({
       upgradeId: u.id, upgradeName: u.name, tag: s.tag,
       key: s.key as keyof GameModifiers,
-      count, effective, amount: s.per * effective,
+      count, effective, steps, amount: s.per * steps,
     });
   }
   return out;
