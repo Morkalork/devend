@@ -491,6 +491,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     () => computeScalingBonuses(ownedUpgradeIds, upgrades),
     [ownedUpgradeIds, upgrades]
   );
+  /** The per-upgrade breakdown, for the Specs panel. Memoised on the same deps
+   *  as the bonuses: it walks the whole catalogue, and useGameSession re-renders
+   *  on every score and life change, so calling it inline rebuilt a 110-entry
+   *  lookup several times a second AND handed the panel a new array each time. */
+  const scalingDetail = useMemo(
+    () => scalingReadouts(ownedUpgradeIds, upgrades),
+    [ownedUpgradeIds, upgrades]
+  );
 
   const mergedBonuses = useMemo(
     () => mergeBonuses(
@@ -1962,7 +1970,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     // Loadouts + Ascension mode
     ascensionDepth,
     /** What build scaling is paying right now, per upgrade (upgradeScaling.ts). */
-    scalingReadouts: scalingReadouts(ownedUpgradeIds, upgrades),
+    scalingReadouts: scalingDetail,
     /** The ladder rungs in force at the current depth (ascensionLadder.ts). */
     ascensionRules: ascRules,
     ascensionLadder: ascensionConfig.ladder,

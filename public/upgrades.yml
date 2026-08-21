@@ -517,7 +517,12 @@ upgrades:
     tags: [bank]
     modifiers:
       scoreMultiplier: 1.15
-    # Pays for a committed bank build, not a stray pick.
+    # Pays for a committed bank build, not a stray pick. This is the ONLY
+    # upgrade that scales scoreMultiplier, and it is this one rather than
+    # Technical Debt on purpose: TD trunks at 2.43x on its own, already past
+    # the point where the 80h per-map cap eats any further multiplier, so
+    # scaling it would have been a reward the player never actually receives.
+    # This line trunks at 1.33x, so the scaling lands inside useful range.
     scaling: { tag: bank, key: scoreMultiplier, per: 0.04, max: 5 }
 
   - id: performance_bonus_principal_b
@@ -1114,7 +1119,7 @@ upgrades:
   - id: technical_debt_architect
     name: Technical Debt
     tier: Architect
-    description: Earn 50% more overtime per map, and a further 6% for every other risk upgrade you own (up to 5), but balls move 25% faster.
+    description: Earn 50% more overtime per map - but balls move 25% faster.
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
@@ -1123,13 +1128,11 @@ upgrades:
     modifiers:
       scoreMultiplier: 1.50
       ballSpeedMultiplier: 1.25
-    # Leveraged: the deeper the risk build, the harder this pays.
-    scaling: { tag: risk, key: scoreMultiplier, per: 0.06, max: 5 }
 
   - id: technical_debt_architect_b
     name: Technical Debt
     tier: Architect
-    description: "Ship It Anyway: earn 50% more overtime, plus a further 6% for every other risk upgrade you own (up to 5). Balls grow 15% instead of speeding up."
+    description: "Ship It Anyway: earn 50% more overtime, and balls grow 15% instead of speeding up."
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
@@ -1145,8 +1148,6 @@ upgrades:
   # ===============================
   # Lives are deliberately NOT sold here: Fault Tolerance is the one life line,
   # so this is the pure shrink-the-balls defence (a different kind of safety).
-    # Leveraged the same way as its sibling.
-    scaling: { tag: risk, key: scoreMultiplier, per: 0.06, max: 5 }
 
   - id: defensive_programming_junior
     name: Defensive Programming

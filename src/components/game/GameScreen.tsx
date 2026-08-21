@@ -483,6 +483,12 @@ export function GameScreen({
     () => ascensionAnnouncement(t, ascensionDepth, ascensionLadder),
     [t, ascensionDepth, ascensionLadder],
   );
+  /** The rungs in force, for the Specs panel. Memoised so the panel is not
+   *  handed a fresh array on every frame of a running game. */
+  const rungsInForce = useMemo(
+    () => rungsUpTo(ascensionDepth, ascensionLadder),
+    [ascensionDepth, ascensionLadder],
+  );
   const [ascModalOpen, setAscModalOpen] = useState(false);
   const announcedDepth = useRef<number | null>(null);
   useEffect(() => {
@@ -1093,7 +1099,7 @@ export function GameScreen({
         certificateProgress={certificateProgress}
         microManagerPerLock={activeModifiers.microManagerPerLock}
         ascensionDepth={ascensionDepth}
-        ascensionRungs={rungsUpTo(ascensionDepth, ascensionLadder)}
+        ascensionRungs={rungsInForce}
         scalingReadouts={scalingReadouts}
         activeLoadouts={activeLoadouts}
         tagCounts={tagCounts}

@@ -61,7 +61,7 @@ describe("counting the build", () => {
 });
 
 describe("what scaling pays", () => {
-  const target = "technical_debt_architect";
+  const target = "performance_bonus_principal";
   const upgrade = byId.get(target)!;
 
   it("pays nothing when the upgrade is owned alone", () => {
@@ -71,16 +71,16 @@ describe("what scaling pays", () => {
 
   /** The headline property: an unfocused build gets the base rate. */
   it("pays nothing for a scattered build", () => {
-    const scattered = ["freeze", "safety", "tempo", "bank"]
+    const scattered = ["freeze", "safety", "tempo", "risk"]
       .flatMap(t => otherTagged(t as UpgradeTag, upgrade.name, 1))
-      .filter(id => !(byId.get(id)!.tags ?? []).includes("risk"));
+      .filter(id => !(byId.get(id)!.tags ?? []).includes("bank"));
     const owned = [target, ...scattered];
     expect(computeScalingBonuses(owned, UPGRADES)).toEqual({});
   });
 
   it("pays more the deeper the archetype goes", () => {
     const amounts = [1, 2, 3].map(n => {
-      const owned = [target, ...otherTagged("risk", upgrade.name, n)];
+      const owned = [target, ...otherTagged("bank", upgrade.name, n)];
       return scalingReadouts(owned, UPGRADES)[0]?.amount ?? 0;
     });
     expect(amounts[0]).toBeGreaterThan(0);
@@ -90,8 +90,8 @@ describe("what scaling pays", () => {
 
   it("stops at the cap, so the card's promise holds", () => {
     const max = upgrade.scaling!.max!;
-    const atCap = [target, ...otherTagged("risk", upgrade.name, max)];
-    const past = [target, ...otherTagged("risk", upgrade.name, max + 3)];
+    const atCap = [target, ...otherTagged("bank", upgrade.name, max)];
+    const past = [target, ...otherTagged("bank", upgrade.name, max + 3)];
     const a = scalingReadouts(atCap, UPGRADES)[0];
     const b = scalingReadouts(past, UPGRADES)[0];
     expect(b.amount).toBe(a.amount);
@@ -104,10 +104,10 @@ describe("what scaling pays", () => {
    * modifier to a fifth instead of adding 18% to it.
    */
   it("returns multiplicative keys as a multiplier, not a raw delta", () => {
-    const owned = [target, ...otherTagged("risk", upgrade.name, 3)];
+    const owned = [target, ...otherTagged("bank", upgrade.name, 3)];
     const b = computeScalingBonuses(owned, UPGRADES);
     expect(MULTIPLICATIVE_KEYS).toContain("scoreMultiplier");
-    expect(b.scoreMultiplier).toBeCloseTo(1 + 0.06 * 3, 6);
+    expect(b.scoreMultiplier).toBeCloseTo(1 + 0.04 * 3, 6);
   });
 
   it("returns additive keys as a raw delta", () => {
@@ -119,7 +119,7 @@ describe("what scaling pays", () => {
   });
 
   it("ignores an upgrade that is not owned, however much of its tag is", () => {
-    const owned = otherTagged("risk", upgrade.name, 4);
+    const owned = otherTagged("bank", upgrade.name, 4);
     expect(computeScalingBonuses(owned, UPGRADES)).toEqual({});
   });
 });
@@ -277,6 +277,36 @@ describe("the scaling blocks in upgrades.yml", () => {
       expect(Math.floor(reachable / s.every), `${u.id} can never reach a step`)
         .toBeGreaterThanOrEqual(1);
     }
+  });
+
+  /**
+   * No key may be scaled from two places.
+   *
+   * Scaling one modifier from two upgrades compounds it twice into a number
+   * nobody can reason about. It happened here: scoreMultiplier was scaled by
+   * both Technical Debt and Performance Bonus, stacking to 5.03x on a build
+   * that owned both lines fully, when the 80h per-map cap makes anything past
+   * roughly 2x wasted. The reward was simultaneously enormous and worthless.
+   *
+   * Mutually exclusive siblings are the one exception: two options of the same
+   * choiceGroup can never both be owned, so they cannot compound.
+   */
+  it("scales each modifier key from exactly one place", () => {
+    const byKey = new Map<string, UpgradeConfig[]>();
+    for (const u of scaled) {
+      const list = byKey.get(u.scaling!.key) ?? [];
+      list.push(u);
+      byKey.set(u.scaling!.key, list);
+    }
+    const offenders: string[] = [];
+    for (const [key, list] of byKey) {
+      if (list.length < 2) continue;
+      // Same choiceGroup means only one can ever be owned.
+      const groups = new Set(list.map(u => u.choiceGroup ?? u.id));
+      if (groups.size === 1) continue;
+      offenders.push(`${key} <- ${list.map(u => u.id).join(", ")}`);
+    }
+    expect(offenders).toEqual([]);
   });
 
   it("says so on the card, so the effect is not invisible", () => {
