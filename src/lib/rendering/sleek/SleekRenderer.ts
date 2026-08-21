@@ -30,6 +30,7 @@
  */
 
 import { Application, Container, Graphics, RenderTexture } from "pixi.js";
+import { tiltAngleAt, tiltWorldPoint } from "@/lib/boardTilt";
 import type { CanvasGameState } from "@/types/gameState";
 import type { RenderContext } from "../types";
 import { BoardLayer } from "./boardLayer";
@@ -215,10 +216,21 @@ export class SleekRenderer {
     // between layers.
     const light = lightScope(boardRect, now);
 
-    const w2s = (x: number, y: number) => ({
-      x: boardRect.left + x * scale,
-      y: boardRect.top + y * scale,
-    });
+    // Board tilt (issue #77): a gravity map turns so its pull always reads as
+    // screen-down. Applied HERE, in the one transform every layer already goes
+    // through, so walls, balls, areas, props, lock tints and the trajectory
+    // preview all swing round together for free. Zero on every other map, where
+    // the branch below keeps the original arithmetic untouched.
+    const tilt = tiltAngleAt(game.activePlaySeconds, game.gravityConfig ?? null);
+    const w2s = tilt === 0
+      ? (x: number, y: number) => ({
+          x: boardRect.left + x * scale,
+          y: boardRect.top + y * scale,
+        })
+      : (x: number, y: number) => {
+          const p = tiltWorldPoint(x, y, tilt);
+          return { x: boardRect.left + p.x * scale, y: boardRect.top + p.y * scale };
+        };
 
     this.syncMask(game);
 

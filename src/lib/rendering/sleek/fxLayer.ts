@@ -12,7 +12,6 @@
  */
 
 import { Container, Graphics } from "pixi.js";
-import { gravityVectorAt, secondsToNextShift } from "@/lib/physics/gravity";
 import type { CanvasGameState } from "@/types/gameState";
 import { castRayWithReflections, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
@@ -87,53 +86,6 @@ export class FxLayer {
     this.drawLockMarkers(game, w2s, scale);
     this.drawBallPops(game, w2s, scale, now);
     this.drawTrajectory(game, mods, w2s, scale);
-    this.drawGravity(game, w2s, scale);
-  }
-
-  /**
-   * Which way is down, right now (issue #77).
-   *
-   * Not decoration: a pull the player cannot see is a rule the board is obeying
-   * in secret, and this one rotates. Chevrons march along the edge being pulled
-   * toward, and they FLASH in the last two seconds of a phase, so a shift is
-   * telegraphed rather than sprung. Fencing here is a plan, not a reaction.
-   */
-  private drawGravity(game: CanvasGameState, w2s: W2S, scale: number): void {
-    const cfg = game.gravityConfig;
-    if (!cfg) return;
-    const pull = gravityVectorAt(game.activePlaySeconds, cfg);
-    if (!pull) return;
-
-    const grid = game.spaceGrid;
-    if (!grid) return;
-    const x0 = grid.originX, y0 = grid.originY;
-    const x1 = x0 + grid.width * grid.cellSize;
-    const y1 = y0 + grid.height * grid.cellSize;
-
-    // Telegraph: ramp up over the last two seconds before the pull changes.
-    const left = secondsToNextShift(game.activePlaySeconds, cfg);
-    const warn = left < 2 ? 0.35 + 0.45 * Math.abs(Math.sin(left * Math.PI * 3)) : 0.35;
-
-    // Three chevrons across the edge the pull points at, each an arrowhead
-    // aimed the way the balls are being taken.
-    const along = { x: -pull.y, y: pull.x };          // perpendicular to the pull
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    const halfSpan = (Math.abs(along.x) * (x1 - x0) + Math.abs(along.y) * (y1 - y0)) / 2;
-    const edgeX = pull.x > 0 ? x1 : pull.x < 0 ? x0 : cx;
-    const edgeY = pull.y > 0 ? y1 : pull.y < 0 ? y0 : cy;
-    const inset = 26;
-    const size = 16;
-
-    for (const f of [-0.55, 0, 0.55]) {
-      const bx = edgeX - pull.x * inset + along.x * halfSpan * f;
-      const by = edgeY - pull.y * inset + along.y * halfSpan * f;
-      const tip = w2s(bx + pull.x * size, by + pull.y * size);
-      const a = w2s(bx - along.x * size, by - along.y * size);
-      const b = w2s(bx + along.x * size, by + along.y * size);
-      this.over
-        .moveTo(a.x, a.y).lineTo(tip.x, tip.y).lineTo(b.x, b.y)
-        .stroke({ width: Math.max(2, 3 * scale), color: PALETTE.mover, alpha: warn, cap: "round" });
-    }
   }
 
   /**

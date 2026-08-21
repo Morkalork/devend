@@ -1,3 +1,4 @@
+import { untiltWorldPoint } from "@/lib/boardTilt";
 // Fixed-aspect-ratio game board constants
 // All gameplay simulation runs in world coordinates
 
@@ -122,12 +123,18 @@ export function worldToScreen(
 export function screenToWorld(
   screenX: number,
   screenY: number,
-  boardRect: BoardRect
+  boardRect: BoardRect,
+  /**
+   * Board tilt in radians (issue #77). While a gravity map is turning, the
+   * board is drawn rotated about its centre, so a tap has to be turned BACK to
+   * find the world point under the finger. Zero on every other map, where this
+   * is exactly the arithmetic it always was.
+   */
+  tiltAngle = 0,
 ): { x: number; y: number } {
-  return {
-    x: (screenX - boardRect.left) / boardRect.scale,
-    y: (screenY - boardRect.top) / boardRect.scale,
-  };
+  const x = (screenX - boardRect.left) / boardRect.scale;
+  const y = (screenY - boardRect.top) / boardRect.scale;
+  return tiltAngle === 0 ? { x, y } : untiltWorldPoint(x, y, tiltAngle);
 }
 
 /**

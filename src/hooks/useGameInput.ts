@@ -6,6 +6,7 @@
  */
 
 import { useEffect, RefObject } from "react";
+import { tiltAngleAt } from "@/lib/boardTilt";
 import { CanvasGameState } from "@/types/gameState";
 import { boardEntityAt, type BoardEntityHit } from "@/lib/boardEntityInfo";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -36,6 +37,18 @@ import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 import { abilityFenceRushFactor } from "@/lib/abilityEffects";
 import { isTappableBall } from "@/lib/ballTypes";
 import { initAudio } from "@/lib/gameAudio";
+
+/**
+ * The board's current rotation (issue #77), recomputed rather than cached.
+ *
+ * The renderer derives its angle from the same pure function and the same
+ * activePlaySeconds, so the two cannot drift: a tap is always un-turned by
+ * exactly the angle the board was drawn at. Caching it on the game state would
+ * introduce a frame of skew between what is on screen and where a fence lands.
+ */
+function boardTilt(game: CanvasGameState): number {
+  return tiltAngleAt(game.activePlaySeconds, game.gravityConfig ?? null);
+}
 
 /** How many fences may grow at once: 1, plus the additionalConcurrentFences
  *  modifier, plus one while Fence Overclock is active (#38). */
@@ -130,7 +143,7 @@ export function useGameInput(
       if (game.armedAbility && onAbilityTargetRef?.current) {
         const c = getCanvasCoords(e);
         if (isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
-          onAbilityTargetRef.current(game.armedAbility, screenToWorld(c.screenX, c.screenY, game.boardRect));
+          onAbilityTargetRef.current(game.armedAbility, screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game)));
         } else {
           onAbilityTargetRef.current(null, null);
         }
@@ -156,7 +169,7 @@ export function useGameInput(
       {
         const c = getCanvasCoords(e);
         if (isPointInBoard(c.screenX, c.screenY, game.boardRect)) {
-          const w = screenToWorld(c.screenX, c.screenY, game.boardRect);
+          const w = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
           const star = onSuperiorInfoRef?.current ? superiorStarAt(game, w) : null;
           const entity = star ? null : (onEntityInfoRef?.current ? boardEntityAt(game, w.x, w.y) : null);
           if (star || entity) {
@@ -187,7 +200,7 @@ export function useGameInput(
 
       if (!isPointInBoard(screenX, screenY, game.boardRect)) return;
 
-      const worldPos = screenToWorld(screenX, screenY, game.boardRect);
+      const worldPos = screenToWorld(screenX, screenY, game.boardRect, boardTilt(game));
 
       if (!game.spaceGrid || !isPositionActive(game.spaceGrid, worldPos)) {
         if (import.meta.env.DEV) console.warn(`[cut-refused] start cell not active at (${worldPos.x | 0},${worldPos.y | 0}) - wrongly-captured cell?`);
@@ -224,7 +237,7 @@ export function useGameInput(
       // A superior-star hold is cancelled once the finger drifts past the slop.
       if (holdStartWorld !== null && e.pointerId === holdPointerId) {
         const c = getCanvasCoords(e);
-        const w = screenToWorld(c.screenX, c.screenY, game.boardRect);
+        const w = screenToWorld(c.screenX, c.screenY, game.boardRect, boardTilt(game));
         const dx = w.x - holdStartWorld.x, dy = w.y - holdStartWorld.y;
         if (dx * dx + dy * dy > HOLD_MOVE_SLOP * HOLD_MOVE_SLOP) clearHold();
       }
@@ -233,7 +246,7 @@ export function useGameInput(
       if (e.pointerId !== game.swipePointerId) return;
 
       const { screenX, screenY } = getCanvasCoords(e);
-      const worldPos = screenToWorld(screenX, screenY, game.boardRect);
+      const worldPos = screenToWorld(screenX, screenY, game.boardRect, boardTilt(game));
       worldPos.x = Math.max(0, Math.min(BOARD_WIDTH, worldPos.x));
       worldPos.y = Math.max(0, Math.min(BOARD_HEIGHT, worldPos.y));
 
