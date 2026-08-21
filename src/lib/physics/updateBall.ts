@@ -6,6 +6,7 @@
  */
 
 import { Ball, Vector2 } from "@/types/game";
+import { gravityStep } from "@/lib/physics/gravity";
 import { CanvasGameState } from "@/types/gameState";
 import {
   vec2Add,
@@ -301,6 +302,23 @@ export function updateBall(
   if (mut && mut.behavior === "conveyor") {
     ball.position.x += (mut.driftX || 0) * dt;
     ball.position.y += (mut.driftY || 0) * dt;
+  }
+
+  // Shifting gravity (issue #77): bend the HEADING toward the current pull,
+  // never the speed. Placed here, after the move and before the speed
+  // rescalers below, for the reason the whole feature is shaped this way: the
+  // minimum-speed floor and the grey/yellow abilities all rewrite velocity to
+  // an absolute magnitude every frame, so anything that accumulated INTO speed
+  // would be erased. Steering survives them untouched, and a ball at constant
+  // speed can never come to rest, which is what makes "they must bounce" a
+  // property of the design rather than a number someone has to tune.
+  //
+  // Frozen balls are exempt, the same exemption the speed floor makes: they are
+  // held in place on purpose and must not drift out of a pocket mid-freeze.
+  if (mut?.behavior === "gravity" && game.gravityConfig
+      && !(game.frozenBallId && ball.id === game.frozenBallId)) {
+    const steered = gravityStep(ball.velocity, game.activePlaySeconds, game.gravityConfig, dt);
+    if (steered) { ball.velocity.x = steered.x; ball.velocity.y = steered.y; }
   }
 
   // Update rotation based on speed (medium spin rate); uses the creep-scaled

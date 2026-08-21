@@ -353,11 +353,13 @@ export function GameScreen({
     // noneWeight 0 removes the "vanilla map" bucket, so every eligible map
     // draws a real mutator. Maps below the procedural band stay unmutated:
     // that gate is about teaching order, not about difficulty.
-    () => level.boss?.mutator ?? selectMapMutator(
+    // Authored first: a boss's forced mutator, then a map that pins one
+    // (issue #77), and only then the procedural roll.
+    () => level.boss?.mutator ?? level.mutator ?? selectMapMutator(
       levelNumber, getRunRng(`mapMutator:${level.id}`), undefined,
       everyMapMutated ? 0 : undefined,
     ),
-    [levelNumber, level.id, level.boss, everyMapMutated],
+    [levelNumber, level.id, level.boss, level.mutator, everyMapMutated],
   );
 
   // Per-map objective (issue #55): an optional goal rolled 0-or-1 per eligible

@@ -16,7 +16,7 @@ import { PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { eligibleByLevel, weightedPick, finiteOrUndefined } from "@/lib/mapPools";
 import type { Rng } from "@/lib/runRng";
 
-const VALID_BEHAVIORS = new Set(["crunch", "overclock", "conveyor", "none"]);
+const VALID_BEHAVIORS = new Set(["crunch", "overclock", "conveyor", "gravity", "none"]);
 
 let liveMutators: MapMutator[] = [];
 /** Odds weight of "no mutator this map", so some eligible maps stay vanilla. */
@@ -49,6 +49,7 @@ function parseMutatorEntry(raw: unknown): MapMutator | null {
     description: r.description,
     clarify: typeof r.clarify === "string" ? r.clarify : undefined,
     behavior: r.behavior as MapMutator["behavior"],
+    gravity: (r as { gravity?: MapMutator["gravity"] }).gravity,
     minLevel: finiteOrUndefined(r.minLevel),
     maxLevel: finiteOrUndefined(r.maxLevel),
     weight: finiteOrUndefined(r.weight),

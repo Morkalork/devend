@@ -169,6 +169,16 @@ export interface LevelConfig {
    */
   boss?: BossConfig;
   /**
+   * Pin a mutator to this map instead of leaving it to the procedural roll.
+   *
+   * Boss maps could already force one; ordinary maps could not, so a mutator
+   * could only ever be a random visitor. A set-piece built AROUND its mutator
+   * (the shifting-gravity map of issue #77 is the case that needed this) has to
+   * be able to author it, the same way LEVELDESIGN.md expects a map's Turn to
+   * be authored rather than hoped for.
+   */
+  mutator?: MapMutator;
+  /**
    * Scripted "Turn" beats (LEVELDESIGN.md convention 3): threshold-triggered
    * one-shot events so the endgame differs from the opening. Generalizes boss
    * phases to ANY map. Each beat fires once when its space-remaining or

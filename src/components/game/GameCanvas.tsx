@@ -100,6 +100,7 @@ import { CanvasGameState } from "@/types/gameState";
 import { PickupConfig, PickupState, PickupFeedback, PickupEffect, DEFAULT_PICKUP_CONFIG } from "@/types/pickups";
 import { ScopeCreepConfig, DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { ActiveMapMutator } from "@/types/mapMutator";
+import { normaliseGravity } from "@/lib/physics/gravity";
 import { ActiveMapObjective } from "@/types/objective";
 import { createInitialGameData } from "@/lib/initGame";
 import { useGameInput } from "@/hooks/useGameInput";
@@ -355,6 +356,8 @@ export function GameCanvas({
   // and per-map reset). Changing map remounts/rerolls, so this is belt-and-braces.
   useEffect(() => {
     gameRef.current.mapMutator = mapMutator ?? null;
+    gameRef.current.gravityConfig = mapMutator?.behavior === "gravity"
+      ? normaliseGravity(mapMutator.gravity) : null;
   }, [mapMutator]);
   // Same live-sync for the per-map objective (issue #55).
   useEffect(() => {
@@ -541,6 +544,9 @@ export function GameCanvas({
     lastCreepPct: -1,
     creepConfig: DEFAULT_SCOPE_CREEP,
     mapMutator: mapMutator ?? null,
+    // Normalised once per map rather than per frame; a malformed authored block
+    // yields null, which simply disables gravity instead of half-applying it.
+    gravityConfig: mapMutator?.behavior === "gravity" ? normaliseGravity(mapMutator.gravity) : null,
     objective: objective ?? null,
     bossFiredPhases: [],
     firedBeats: [],
@@ -878,6 +884,8 @@ export function GameCanvas({
       game.lastCreepPct = -1;
       game.creepConfig = scopeCreep ?? DEFAULT_SCOPE_CREEP;
       game.mapMutator = mapMutator ?? null;
+      game.gravityConfig = mapMutator?.behavior === "gravity"
+        ? normaliseGravity(mapMutator.gravity) : null;
       game.objective = objective ?? null;
       game.bossFiredPhases = [];
       game.firedBeats = [];

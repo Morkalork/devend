@@ -15,7 +15,7 @@
  * - `conveyor`  a steady positional drift nudges every ball one way.
  * - `none`      no effect (a defined "breather" entry; also see noneWeight).
  */
-export type MutatorBehavior = "crunch" | "overclock" | "conveyor" | "none";
+export type MutatorBehavior = "crunch" | "overclock" | "conveyor" | "gravity" | "none";
 
 /** One authored mutator entry (public/mapMutators.yml). English source of truth. */
 export interface MapMutator {
@@ -34,6 +34,16 @@ export interface MapMutator {
   params?: Record<string, number>;
   /** Overtime hours awarded on clear, folded UNDER the per-map cap (issue #43). */
   overtimePremium?: number;
+  /**
+   * Shifting gravity (issue #77), for `behavior: gravity`. Authored as a
+   * sequence of cardinal phases plus a turn rate; see src/lib/physics/gravity.ts
+   * for why this steers the heading rather than accelerating the ball.
+   */
+  gravity?: {
+    turnRate?: number;
+    period?: number;
+    sequence?: string[];
+  };
 }
 
 /**

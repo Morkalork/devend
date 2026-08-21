@@ -1,4 +1,5 @@
 import { Region, Ball } from "@/types/game";
+import { gravityVectorAt, steerToward, type GravityConfig } from "@/lib/physics/gravity";
 import { Vector2, pointInPolygon, Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 
@@ -371,6 +372,15 @@ export function computeBallTrajectory(
    * single call and wasteful for a loop - see that function for why it matters.
    */
   prebuiltSegs?: ReadonlyArray<TrajectorySeg>,
+  /**
+   * Shifting gravity (issue #77). When a map is pulling, the path CURVES, and a
+   * straight ray per bounce would draw a line the ball never takes - on a
+   * preview the player may have spent up to 488h of upgrades on. Passing this
+   * marches each leg in short chords, re-steering between them, exactly as
+   * updateBall does. Omitted (every other map) the fast analytic path is
+   * unchanged, so nothing pays for this except gravity maps.
+   */
+  gravity?: { cfg: GravityConfig; atSeconds: number } | null,
 ): Vector2[] {
   const points: Vector2[] = [{ ...ballPosition }];
   const vLen = Math.sqrt(ballVelocity.x * ballVelocity.x + ballVelocity.y * ballVelocity.y);
@@ -385,7 +395,34 @@ export function computeBallTrajectory(
   const segs = prebuiltSegs ?? buildTrajectorySegments(walls, obstaclePolygons);
   let skipId = ""; // don't immediately re-hit the surface we just bounced off
   let tNow = 0;    // absolute prediction time at the current leg's start
-  for (let bounce = 0; bounce < numBounces; bounce++) {
+
+  // Curvature budget. A chord short enough to turn only MAX_TURN_PER_CHORD
+  // radians keeps the drawn line smooth; MAX_STEPS bounds the total work so a
+  // long shallow arc can never make this loop expensive without limit.
+  const MAX_TURN_PER_CHORD = 0.15;
+  const MAX_STEPS = 160;
+  const ALIGNED = 0.02; // once within this of the pull, the path is straight again
+
+  let bounces = 0, steps = 0;
+  while (bounces < numBounces && steps < MAX_STEPS) {
+    steps++;
+
+    // Under gravity, cap this leg to a chord unless the heading has already
+    // converged on the pull, in which case the rest of the leg IS straight and
+    // the analytic cast is both cheaper and exact.
+    let chordDist = Infinity;
+    let pull: Vector2 | null = null;
+    if (gravity) {
+      pull = gravityVectorAt(gravity.atSeconds + tNow, gravity.cfg);
+      if (pull) {
+        const cross = dx * pull.y - dy * pull.x;
+        const dot2 = dx * pull.x + dy * pull.y;
+        const remaining = Math.abs(Math.atan2(cross, dot2));
+        if (remaining > ALIGNED) {
+          chordDist = speed * (MAX_TURN_PER_CHORD / gravity.cfg.turnRate);
+        }
+      }
+    }
     // Earliest static hit, converted to TIME so movers compete on equal terms.
     let bestTime = Infinity, bnx = 0, bny = 0, bestId = "";
     for (const s of segs) {
@@ -419,7 +456,21 @@ export function computeBallTrajectory(
         hitBall = b;
       }
     }
-    if (!Number.isFinite(bestTime)) break;
+    // Nothing struck within this chord: advance along it, bend the heading, and
+    // carry on WITHOUT spending a bounce. This is what draws the arc.
+    const chordTime = chordDist / speed;
+    if (!Number.isFinite(bestTime) || bestTime > chordTime) {
+      if (!pull || !Number.isFinite(chordTime)) break;
+      const nx2 = ox + dx * chordDist, ny2 = oy + dy * chordDist;
+      points.push({ x: nx2, y: ny2 });
+      const steered = steerToward({ x: dx, y: dy }, pull, gravity!.cfg.turnRate, chordTime);
+      const sl = Math.hypot(steered.x, steered.y) || 1;
+      dx = steered.x / sl; dy = steered.y / sl;
+      ox = nx2; oy = ny2;
+      tNow += chordTime;
+      skipId = ""; // a new heading may legitimately meet the last surface again
+      continue;
+    }
 
     // Waypoint = ball CENTRE at contact (distance R from the surface).
     const hx = ox + dx * speed * bestTime, hy = oy + dy * speed * bestTime;
@@ -453,6 +504,7 @@ export function computeBallTrajectory(
     oy = hy + dy * 1e-3;
     tNow += bestTime + 1e-3 / speed; // count the nudge so mover phase stays in sync
     skipId = bestId;
+    bounces++;
   }
 
   return points;

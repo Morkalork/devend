@@ -49,3 +49,26 @@ mutators:
     params:
       speed: 82
     overtimePremium: 3
+
+  # Shifting gravity (issue #77). Balls are PULLED toward a cardinal direction
+  # that rotates through the sequence, with gravity-free stretches between so
+  # the map reads as shifting rather than as permanently tilted.
+  #
+  # The pull bends a ball's heading and never its speed, which is not a
+  # shortcut: this game rewrites velocity to absolute magnitudes every frame
+  # (the minimum-speed floor, grey wind-down, yellow variable speed), so any
+  # gravity that accumulated INTO speed would be erased the same frame. Steering
+  # also makes "they must bounce" structural, since a ball at constant speed can
+  # never come to rest. See src/lib/physics/gravity.ts.
+  - id: gravity_well
+    name: Technical Gravity
+    description: Everything is pulled one way, and the way keeps changing.
+    clarify: A direction of pull rotates through the map with quiet stretches between. Balls arc toward it and pile along that edge, but they never slow down, so they keep bouncing. Fence where the pull is taking them, not where they are.
+    behavior: gravity
+    weight: 2
+    minLevel: 14
+    gravity:
+      turnRate: 1.1
+      period: 9
+      sequence: [down, none, left, none, up, none, right, none]
+    overtimePremium: 4
