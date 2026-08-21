@@ -55,7 +55,7 @@ import { useScreenNavigation } from './useScreenNavigation';
 import { GameResult, LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { analytics } from '@/lib/analytics';
-import { baseStartingLives, isInfiniteLivesEnabled, debugAscensionDepth } from '@/lib/devFlags';
+import { baseStartingLives, isInfiniteLivesEnabled, debugAscensionDepth, debugMutatorId } from '@/lib/devFlags';
 import { hasAnyMapTuning } from '@/lib/mapTuning';
 import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
 import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
@@ -867,7 +867,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // unrepresentative in exactly the way the ?level= jump does, so they get
       // the same treatment: play it, but never let highscores / Employee of the
       // Month / Records learn from it.
-      if (isInfiniteLivesEnabled() || hasAnyMapTuning()) recordEligibleRef.current = false;
+      if (isInfiniteLivesEnabled() || hasAnyMapTuning() || debugMutatorId()) {
+        recordEligibleRef.current = false;
+      }
 
       // ?ascension=N: start this run already at that depth, so the ladder's
       // later rungs can be looked at without clearing the map list N times.

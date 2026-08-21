@@ -38,7 +38,9 @@ import { contentText } from '@/i18n/content';
 import { playHeartbeatSound } from '@/lib/gameAudio';
 import { LevelConfig } from '@/types/level';
 import { getMapTimeLimit, TIME_LIMIT_EXEMPT_MAX_LEVEL } from '@/lib/mapTiming';
-import { selectMapMutator } from '@/lib/mapMutators';
+import { selectMapMutator, getMapMutators } from '@/lib/mapMutators';
+import { debugMutatorId } from '@/lib/devFlags';
+import type { MapMutator } from '@/types/mapMutator';
 import { selectMapObjective, evaluateObjective } from '@/lib/mapObjectives';
 import { getRunRng } from '@/lib/runRng';
 import { GameResult, LevelScoreData } from '@/types/game';
@@ -230,6 +232,13 @@ export function GameScreen({
   // The modal was previously an overlay on the LIVE board, which hid it.
   const [fenceIntroOpen, setFenceIntroOpen] = useState(showInGameTutorial && levelNumber === 1);
 
+  /** The mutator named by ?mutator=<id>, if it is in the catalogue. */
+  const forcedMutator = (): MapMutator | null => {
+    const id = debugMutatorId();
+    if (!id) return null;
+    return getMapMutators().find(m => m.id === id) ?? null;
+  };
+
   const levelHasMovers = (level.entities ?? []).some(e => e.kind === 'mover');
   const [moverTutorialDismissed, setMoverTutorialDismissed] = useState(false);
   const showMoverOverlay = showMoverTutorial && levelHasMovers && !moverTutorialDismissed;
@@ -355,7 +364,10 @@ export function GameScreen({
     // that gate is about teaching order, not about difficulty.
     // Authored first: a boss's forced mutator, then a map that pins one
     // (issue #77), and only then the procedural roll.
-    () => level.boss?.mutator ?? level.mutator ?? selectMapMutator(
+    // Authored first (a boss's forced mutator, then a map that pins one), then
+    // the ?mutator= debug override, then the procedural roll. The override sits
+    // below the authored pins so it can never silently replace a set-piece.
+    () => level.boss?.mutator ?? level.mutator ?? forcedMutator() ?? selectMapMutator(
       levelNumber, getRunRng(`mapMutator:${level.id}`), undefined,
       everyMapMutated ? 0 : undefined,
     ),

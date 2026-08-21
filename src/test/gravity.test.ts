@@ -13,7 +13,15 @@
  * below are not pedantry: they are the contract that keeps this compatible with
  * every rescaler, and the reason a ball can never settle.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+vi.mock("@/lib/gameAudio", () => ({
+  playBallLockSound: () => {}, playWallHitSound: () => {}, playBallCollideSound: () => {},
+  playFenceBreakSound: () => {}, playDeathSound: () => {}, playCutClaimedSound: () => {},
+  playLevelCompleteSound: () => {}, playBossChargeSound: () => {}, playPickupClaimedSound: () => {},
+}));
+vi.mock("@/lib/gameHaptics", () => ({
+  vibrateBallLock: () => {}, vibrateFenceComplete: () => {}, vibrateFenceBreak: () => {},
+}));
 import {
   DEFAULT_GRAVITY, normaliseGravity, gravityPhaseIndex, gravityDirectionAt,
   gravityVectorAt, secondsToNextShift, steerToward, gravityStep,
@@ -22,6 +30,11 @@ import type { GravityConfig, RawGravityConfig } from "@/lib/physics/gravity";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
+import { createInitialGameData } from "@/lib/initGame";
+import { updateBall } from "@/lib/physics/updateBall";
+import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
+import type { LevelConfig } from "@/types/level";
+import type { CanvasGameState } from "@/types/gameState";
 
 const CFG: GravityConfig = { turnRate: 1.2, period: 8, sequence: ["down", "none", "left", "none"] };
 const len = (v: { x: number; y: number }) => Math.hypot(v.x, v.y);
@@ -249,5 +262,94 @@ describe("the Technical Gravity mutator", () => {
     for (const field of [entry.name, entry.description, entry.clarify ?? ""]) {
       expect(field).not.toContain("\u2014");
     }
+  });
+});
+
+// ── Through the real physics ────────────────────────────────────────────────
+
+/**
+ * The lib tests above prove the MATHS. This proves the WIRING, which is a
+ * different thing and the one that actually shipped untested: the gravity block
+ * is read in GameCanvas, normalised onto game.gravityConfig, and applied in
+ * updateBall between the move and the speed rescalers. Any link in that chain
+ * could be wrong while every test above stayed green.
+ *
+ * Runs the genuine updateBall against a real initGame board, so the min-speed
+ * floor and every other rescaler are in play exactly as they are in a run.
+ */
+describe("a ball on a real gravity map", () => {
+  const LEVEL = {
+    id: "gravity-probe", level: 14, sizeThreshold: 40, expectedCuts: 6, points: 20,
+    maxBalls: 1, variety: 0, randomShapes: 0, entities: [],
+  } as unknown as LevelConfig;
+
+  const CFG = normaliseGravity({ turnRate: 1.2, period: 100, sequence: ["down"] })!;
+
+  function probeGame(withGravity: boolean): CanvasGameState {
+    const data = createInitialGameData(LEVEL, 14, DEFAULT_MODIFIERS);
+    const ball = data.balls[0];
+    // Heading straight right, mid-board, so any downward bend is unambiguous.
+    ball.position = { x: 450, y: 300 };
+    const speed = Math.hypot(ball.velocity.x, ball.velocity.y) || ball.baseSpeed;
+    ball.velocity = { x: speed, y: 0 };
+    return {
+      ...data,
+      balls: [ball],
+      activeWalls: [], walls: data.walls, activePlaySeconds: 0,
+      movers: data.movers ?? [], objectDebris: [], destructibles: [], pendingDestroys: [],
+      obstaclePolygons: data.obstaclePolygons ?? [], mirrorPolygons: data.mirrorPolygons ?? [],
+      pickups: [], pickupFeedback: [], regions: data.regions ?? [], chestLoot: [],
+      creepFactor: 1, ballSpeedScale: 1, frozenBallId: null,
+      mapMutator: withGravity
+        ? ({ id: "g", name: "G", description: "d", behavior: "gravity" } as never)
+        : null,
+      gravityConfig: withGravity ? CFG : null,
+      screenSize: { width: 900, height: 900 },
+      boardRect: { left: 0, top: 0, width: 900, height: 900, scale: 1 },
+    } as unknown as CanvasGameState;
+  }
+
+  const step = (game: CanvasGameState, frames: number) => {
+    for (let i = 0; i < frames; i++) {
+      game.activePlaySeconds += 1 / 60;
+      updateBall(game.balls[0], 1 / 60, game);
+    }
+  };
+
+  it("bends the ball downward, where an ordinary map does not", () => {
+    const plain = probeGame(false);
+    const pulled = probeGame(true);
+    step(plain, 30);
+    step(pulled, 30);
+    expect(pulled.balls[0].velocity.y).toBeGreaterThan(0.5);
+    expect(Math.abs(plain.balls[0].velocity.y)).toBeLessThan(1e-6);
+  });
+
+  /**
+   * The contract, checked where it actually has to survive: AFTER the
+   * minimum-speed floor and the ball-type rescalers have had their say.
+   */
+  it("does not change the ball's speed, even through the rescalers", () => {
+    const game = probeGame(true);
+    const before = Math.hypot(game.balls[0].velocity.x, game.balls[0].velocity.y);
+    step(game, 240);
+    const after = Math.hypot(game.balls[0].velocity.x, game.balls[0].velocity.y);
+    expect(after).toBeCloseTo(before, 3);
+  });
+
+  it("never lets the ball come to rest, which is the whole requirement", () => {
+    const game = probeGame(true);
+    for (let i = 0; i < 40; i++) {
+      step(game, 10);
+      const v = Math.hypot(game.balls[0].velocity.x, game.balls[0].velocity.y);
+      expect(v, `frame block ${i}`).toBeGreaterThan(1);
+    }
+  });
+
+  it("leaves an ordinary map's physics completely alone", () => {
+    const game = probeGame(false);
+    const v0 = { ...game.balls[0].velocity };
+    step(game, 10);
+    expect(game.balls[0].velocity.y).toBeCloseTo(v0.y, 6);
   });
 });

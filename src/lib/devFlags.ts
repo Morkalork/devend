@@ -79,6 +79,33 @@ export function debugAscensionDepth(): number {
   }
 }
 
+/**
+ * Mutator forced by `?mutator=<id>`, or null for the normal roll.
+ *
+ * Map mutators are rolled per map from a weighted pool with a "no mutator"
+ * bucket, and most are gated to a level band, so seeing a specific one takes
+ * an unbounded number of reloads. That makes any mutator effectively untestable
+ * by hand, which is how shifting gravity (issue #77) shipped without ever being
+ * watched. This forces one onto every eligible map.
+ *
+ * Ledger-ineligible like every other flag in this file: a run playing a mutator
+ * it was handed rather than dealt is not a representative run.
+ */
+export function parseMutatorParam(search: string): string | null {
+  const raw = new URLSearchParams(search).get('mutator');
+  const id = raw?.trim();
+  return id ? id : null;
+}
+
+/** The forced mutator id from the live URL, or null. */
+export function debugMutatorId(): string | null {
+  try {
+    return parseMutatorParam(window.location.search);
+  } catch {
+    return null; // no window (SSR / test env without a location)
+  }
+}
+
 /** Test seam: drop the memoised values so a test can flip the flag. */
 export function resetDevFlagCache(): void {
   infiniteLives = null;
