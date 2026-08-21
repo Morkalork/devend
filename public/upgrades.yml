@@ -955,7 +955,7 @@ upgrades:
   - id: tech_evangelist
     name: Tech Evangelist
     tier: Principal
-    description: Space Optimization bonuses pay double.
+    description: Space Optimization bonuses pay double, and 8% more for every other risk upgrade you own (up to 5).
     unlockLevel: 12
     prerequisites:
       - risk_appetite
@@ -971,6 +971,12 @@ upgrades:
   # refills its slot with a new offer, N times per visit.
   # Gated behind System Architect (the shop line), not the lives line.
   # ===============================
+    # spaceBonusMultiplier is MULTIPLICATIVE, so the scaling multiplies the
+    # x2 base rather than adding to it: 2 x 1.4 = 2.8x at full commitment.
+    # Moonshot and Risk Appetite are deliberately left flat - they share one
+    # key (pushBonusMultiplier), and scaling both would compound the same
+    # multiplier from two places into a number nobody can reason about.
+    scaling: { tag: risk, key: spaceBonusMultiplier, per: 0.08, max: 5 }
 
   - id: procurement_junior
     name: Procurement
