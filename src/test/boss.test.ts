@@ -20,6 +20,14 @@ import { updateBall } from "@/lib/physics/updateBall";
 import { createRectPolygon } from "@/lib/polygon";
 import { createBallEffectState, getSquishEffect } from "@/lib/ballEffects";
 import type { CanvasGameState } from "@/types/gameState";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import yaml from "js-yaml";
+
+/** The real map list, for pinning authored boss numbers. */
+const REAL_LEVELS = (yaml.load(
+  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+) as { levels: LevelConfig[] }).levels;
 import type { LevelConfig } from "@/types/level";
 import type { Ball } from "@/types/game";
 import type { MapObjective } from "@/types/objective";
@@ -118,6 +126,79 @@ describe("boss ball fight (#56 the Release Candidate)", () => {
     }
     return game.balls.filter((b) => b.id.includes("minion"));
   }
+
+  // ── The concurrent minion cap ─────────────────────────────────────────────
+
+  /**
+   * The cap counts ACTIVE minions, not minions ever spawned, and that is the
+   * whole fight.
+   *
+   * A total cap would let the player clear the adds once and then face an inert
+   * boss. Capping the live ones means locking a minion frees its slot and the
+   * boss immediately buds another, so the map is about KEEPING them sealed
+   * rather than out-clearing a crowd. Nothing tested this before, which is
+   * uncomfortable given it is the entire second layer of the level-10 boss.
+   */
+  function spitUntilCapped(boss: Ball, level: LevelConfig, game = gameWith({ balls: [boss], bossMinionCount: 0 })) {
+    for (let s = 5; s <= 60; s += 5) {
+      game.activePlaySeconds = s;
+      tickBossSpit(game, level);
+      if (boss.spitChargeStart !== undefined) {
+        boss.spitChargeStart -= 1000;
+        tickBossSpit(game, level);
+      }
+    }
+    return game;
+  }
+
+  const cappedLevel = (maxMinions: number): LevelConfig => ({
+    ...bossLevel,
+    boss: { ...bossLevel.boss!, bossBall: { hp: 3, spitIntervalSeconds: 5, maxMinions } },
+  });
+
+  it("never exceeds its concurrent minion cap, however long the map runs", () => {
+    for (const cap of [1, 2, 3]) {
+      const boss = bossBall(3);
+      const game = spitUntilCapped(boss, cappedLevel(cap));
+      const live = game.balls.filter(b => b.isMinion && b.state === "active");
+      expect(live.length, `cap ${cap}`).toBeLessThanOrEqual(cap);
+    }
+  });
+
+  it("buds a replacement once a minion is LOCKED, so pressure never stops", () => {
+    const boss = bossBall(3);
+    const game = spitUntilCapped(boss, cappedLevel(2));
+    const atCap = game.balls.filter(b => b.isMinion && b.state === "active");
+    expect(atCap.length).toBe(2);
+
+    // Lock one away: 'won' is what checkBallWonState sets on a sealed ball.
+    atCap[0].state = "won";
+
+    boss.rainbowSpawnCount = 0;                 // let the spit clock come due again
+    const before = game.balls.length;
+    spitUntilCapped(boss, cappedLevel(2), game);
+    expect(game.balls.length, "a freed slot should refill").toBeGreaterThan(before);
+    expect(game.balls.filter(b => b.isMinion && b.state === "active").length).toBe(2);
+  });
+
+  it("counts only its own minions toward the cap, not the boss or ordinary balls", () => {
+    const boss = bossBall(3);
+    const game = gameWith({ balls: [boss, activeBall("plain-1"), activeBall("plain-2")], bossMinionCount: 0 });
+    spitUntilCapped(boss, cappedLevel(2), game);
+    expect(game.balls.filter(b => b.isMinion && b.state === "active").length).toBe(2);
+    expect(boss.isMinion ?? false).toBe(false);
+  });
+
+  /**
+   * The authored number, pinned. It is a balance decision rather than a
+   * mechanism, so it belongs in the map file, but a silent drift back to the
+   * old value would change the fight without anyone noticing.
+   */
+  it("holds the level-10 boss to two adds at a time", () => {
+    const level10 = REAL_LEVELS.find(l => l.id === "level-10");
+    expect(level10?.boss?.bossBall, "level-10 should still be a boss map").toBeTruthy();
+    expect(level10!.boss!.bossBall!.maxMinions).toBe(2);
+  });
 
   it("spits its own minion type (red), never a random one, when the white roll misses", () => {
     // Force the 25% white roll to MISS so every minion is the boss's own type.

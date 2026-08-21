@@ -554,7 +554,11 @@ levels:
         speedScale: 1.15
         color: "#ff2d55"
         spitIntervalSeconds: 6
-        maxMinions: 4
+        # Two at a time, deliberately (issue: keep the L10 boss to 2 adds). The cap
+        # is on ACTIVE minions, so locking one frees the slot and the boss buds
+        # another: the fight is about KEEPING them sealed, not out-clearing a
+        # crowd. Four made the board a scramble where the boss was the easy part.
+        maxMinions: 2
     entities:
       - id: pillar
         kind: wall
