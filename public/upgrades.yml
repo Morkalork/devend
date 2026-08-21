@@ -1285,7 +1285,7 @@ upgrades:
   - id: scrum_master_6_b
     name: SCRUM Master
     tier: Architect
-    description: "Deep Dive: the preview covers no more balls, but traces three more bounces ahead."
+    description: "Deep Dive: the preview covers no more balls, but traces three more bounces ahead, and one further for every four other safety upgrades you own (up to eight)."
     unlockLevel: 19
     prerequisites:
       - scrum_master_5
@@ -1301,6 +1301,14 @@ upgrades:
   # also how you hit the top Ship Early window). Rides the same frozenUntil
   # path as Feature Freeze; no re-freeze cooldown after the spawn thaw.
   # ===============================
+    # Bounces are whole, so stepped. Scaled rather than pruned: the family is
+    # seven upgrades and 488h to max for a VISUAL AID, which is a lot of shop
+    # space for something that never changes what the board does. Merging the
+    # tiers is the better fix, but it would delete ids that live in saved runs
+    # (useRunSave persists ownedUpgradeIds and rehydrates by id), so a resume
+    # would silently lose upgrades the player paid for. That needs a migration,
+    # not a data edit.
+    scaling: { tag: safety, key: ballPathPredictionBounces, per: 1, every: 4, max: 8 }
 
   - id: cold_boot
     name: Cold Boot

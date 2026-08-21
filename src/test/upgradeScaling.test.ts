@@ -254,7 +254,7 @@ describe("the scaling blocks in upgrades.yml", () => {
       "additionalConcurrentFences", "extraContinues", "extraLives", "extraShopItems",
       "shopRestockCount", "parBonus", "pickupPayoutLevel", "instantFencesPerMap",
       "wallShieldsPerMap", "freezeUsesPerMap", "ballFreezeCount", "extraCertificateHours",
-      "underParInstantFence",
+      "underParInstantFence", "ballPathPredictionBounces", "ballPathPredictionBalls",
     ]);
     for (const u of scaled) {
       if (!WHOLE_UNIT_KEYS.has(u.scaling!.key)) continue;
