@@ -1,5 +1,5 @@
-import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed } from 'lucide-react';
-import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
+import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed, ArrowDownToLine } from 'lucide-react';
+import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell } from '@/types/level';
 import { AREA_KINDS, AREA_MIN_SIZE, areaStyle } from '@/lib/coloredAreas';
 
 interface EntityPanelProps {
@@ -20,6 +20,12 @@ interface EntityPanelProps {
   onUpdateEntity: (id: string, updates: Partial<LevelEntity>) => void;
   onUpdateBall: (id: string, updates: Partial<BallConfig>) => void;
   onUpdateArea: (index: number, updates: Partial<ColoredArea>) => void;
+  /** Gravity wells (issue #77): authored patches that bend a ball downward. */
+  selectedWellIndex?: number | null;
+  onSelectWell?: (index: number | null) => void;
+  onAddWell?: () => void;
+  onDeleteWell?: (index: number) => void;
+  onUpdateWell?: (index: number, updates: Partial<GravityWell>) => void;
 }
 
 export function EntityPanel({
@@ -27,6 +33,11 @@ export function EntityPanel({
   selectedEntityId,
   selectedBallId,
   selectedAreaIndex,
+  selectedWellIndex = null,
+  onSelectWell,
+  onAddWell,
+  onDeleteWell,
+  onUpdateWell,
   onSelectEntity,
   onSelectBall,
   onSelectArea,
@@ -126,6 +137,80 @@ export function EntityPanel({
             </div>
           )}
         </div>
+
+      {/* Gravity wells (issue #77). Their own section rather than a kind of
+          area: an area scores a lock, a well bends a ball, and conflating them
+          in the UI would suggest they interact when they do not. */}
+      <div className="p-3 border-t border-border">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Gravity Wells
+          </h3>
+          <button
+            onClick={() => onAddWell?.()}
+            className="px-2 py-1 text-xs rounded bg-muted hover:bg-muted/70 transition-colors"
+            title="Add a gravity well"
+          >
+            + well
+          </button>
+        </div>
+
+        <div className="space-y-1">
+          {(level.gravityWells || []).map((well, index) => (
+            <div
+              key={index}
+              onClick={() => onSelectWell?.(index)}
+              className={`p-2 rounded cursor-pointer transition-colors ${
+                index === selectedWellIndex
+                  ? 'bg-primary/20 border border-primary/50'
+                  : 'bg-muted/50 hover:bg-muted'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ArrowDownToLine className="w-4 h-4" style={{ color: '#ffa23c' }} />
+                  <span className="text-sm font-mono">well {index + 1}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {Math.round(well.width)}x{Math.round(well.height)}
+                  </span>
+                </div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteWell?.(index); }}
+                  className="p-1 rounded hover:bg-destructive/20 text-destructive transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {index === selectedWellIndex && (
+                <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  {/* Strong and small beats weak and large: a gentle wide well
+                      is a nudge nobody notices, a fierce narrow one is a
+                      deflector you can aim a ball through. */}
+                  <span className="w-16">bend</span>
+                  <input
+                    type="number" step="0.2" min="0.2" max="8"
+                    value={well.turnRate ?? 2.8}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={(e) => {
+                      const v = Number.parseFloat(e.target.value);
+                      if (Number.isFinite(v)) onUpdateWell?.(index, { turnRate: v });
+                    }}
+                    className="w-20 px-1 py-0.5 rounded bg-background border border-border font-mono"
+                  />
+                  <span className="opacity-70">rad/s</span>
+                </label>
+              )}
+            </div>
+          ))}
+          {(level.gravityWells || []).length === 0 && (
+            <p className="text-xs text-muted-foreground opacity-70">
+              None. A well bends any ball inside it downward.
+            </p>
+          )}
+        </div>
+      </div>
       </div>
 
       {/* Selected Area Details */}

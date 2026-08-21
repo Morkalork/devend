@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle } from 'lucide-react';
-import { AreaKind, ColoredArea, LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity } from '@/types/level';
+import { AreaKind, ColoredArea, LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity, GravityWell } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
 import { MapCanvas } from './MapCanvas';
 import { EntityPanel } from './EntityPanel';
@@ -18,6 +18,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const [selectedBallId, setSelectedBallId] = useState<string | null>(null);
   // Colored Areas have no id in the schema, so selection is by index.
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(null);
+  const [selectedWellIndex, setSelectedWellIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
@@ -227,6 +228,47 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     if (remaining.length === 0) delete next.coloredAreas;
     updateLevel(next);
     setSelectedAreaIndex(null);
+  }, [currentLevel, updateLevel]);
+
+  /**
+   * Gravity wells (issue #77). Defaults follow the authoring rule the game
+   * enforces: narrow and fierce beats wide and gentle, and a new well starts
+   * mid-board rather than near an edge, since a well that pulls into a wall it
+   * is sitting against pins balls against it (see pullsIntoWall).
+   */
+  const addWell = useCallback(() => {
+    if (!currentLevel) return;
+    const existing = currentLevel.gravityWells || [];
+    const offset = existing.length * 30;
+    updateLevel({
+      ...currentLevel,
+      gravityWells: [...existing, {
+        x: 330 + offset, y: 300 + offset, width: 240, height: 170, turnRate: 2.8,
+      }],
+    });
+    setSelectedWellIndex(existing.length);
+    setSelectedAreaIndex(null);
+    setSelectedEntityId(null);
+    setSelectedBallId(null);
+  }, [currentLevel, updateLevel]);
+
+  const updateWell = useCallback((index: number, updates: Partial<GravityWell>) => {
+    if (!currentLevel) return;
+    updateLevel({
+      ...currentLevel,
+      gravityWells: (currentLevel.gravityWells || []).map((w, i) =>
+        i === index ? { ...w, ...updates } : w
+      ),
+    });
+  }, [currentLevel, updateLevel]);
+
+  const deleteWell = useCallback((index: number) => {
+    if (!currentLevel) return;
+    const remaining = (currentLevel.gravityWells || []).filter((_, i) => i !== index);
+    const next = { ...currentLevel, gravityWells: remaining };
+    if (remaining.length === 0) delete next.gravityWells;
+    updateLevel(next);
+    setSelectedWellIndex(null);
   }, [currentLevel, updateLevel]);
 
   // Delete selected entity
@@ -578,25 +620,36 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
               selectedEntityId={selectedEntityId}
               selectedBallId={selectedBallId}
               selectedAreaIndex={selectedAreaIndex}
+              selectedWellIndex={selectedWellIndex}
               snapToGrid={snapToGrid}
               onSelectEntity={(id) => {
                 setSelectedEntityId(id);
                 setSelectedBallId(null);
                 setSelectedAreaIndex(null);
+                setSelectedWellIndex(null);
               }}
               onSelectBall={(id) => {
                 setSelectedBallId(id);
                 setSelectedEntityId(null);
                 setSelectedAreaIndex(null);
+                setSelectedWellIndex(null);
               }}
               onSelectArea={(index) => {
                 setSelectedAreaIndex(index);
                 setSelectedEntityId(null);
                 setSelectedBallId(null);
+                setSelectedWellIndex(null);
               }}
               onUpdateEntity={updateEntity}
               onUpdateBall={updateBall}
               onUpdateArea={updateArea}
+              onSelectWell={(index) => {
+                setSelectedWellIndex(index);
+                setSelectedEntityId(null);
+                setSelectedBallId(null);
+                setSelectedAreaIndex(null);
+              }}
+              onUpdateWell={updateWell}
             />
           )}
         </div>
@@ -614,6 +667,16 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
                 selectedEntityId={selectedEntityId}
                 selectedBallId={selectedBallId}
                 selectedAreaIndex={selectedAreaIndex}
+                selectedWellIndex={selectedWellIndex}
+                onSelectWell={(index) => {
+                  setSelectedWellIndex(index);
+                  setSelectedEntityId(null);
+                  setSelectedBallId(null);
+                  setSelectedAreaIndex(null);
+                }}
+                onAddWell={addWell}
+                onDeleteWell={deleteWell}
+                onUpdateWell={updateWell}
                 onSelectEntity={(id) => {
                   setSelectedEntityId(id);
                   setSelectedBallId(null);

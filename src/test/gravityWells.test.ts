@@ -255,3 +255,60 @@ describe("the wells in map.yml", () => {
     }
   });
 });
+
+// ── The map builder ─────────────────────────────────────────────────────────
+
+/**
+ * The builder has to be able to author a well, or every one has to be typed
+ * into map.yml by hand next to a coordinate system nobody can see.
+ *
+ * A source check because the wiring is optional props: I made onSelectWell,
+ * onAddWell and the rest optional so the canvas and panel keep working for
+ * callers that do not care, which means a half-wired builder typechecks
+ * perfectly and silently does nothing when you click.
+ */
+describe("the map builder can author wells", () => {
+  const read = (f: string) =>
+    readFileSync(resolve(__dirname, `../components/admin/${f}`), "utf8");
+  const CANVAS = read("MapCanvas.tsx");
+  const PANEL = read("EntityPanel.tsx");
+  const BUILDER = read("MapBuilder.tsx");
+
+  it("draws them on the canvas", () => {
+    expect(CANVAS).toMatch(/level\.gravityWells/);
+  });
+
+  it("hit-tests them ABOVE areas, matching the draw order", () => {
+    const wellHit = CANVAS.indexOf("return { type: 'well', id: '', wellIndex: i }");
+    const areaHit = CANVAS.indexOf("return { type: 'area', id: '', areaIndex: i }");
+    expect(wellHit, "well hit-test missing").toBeGreaterThan(-1);
+    expect(areaHit, "area hit-test missing").toBeGreaterThan(-1);
+    expect(wellHit, "a well drawn over an area must take the click").toBeLessThan(areaHit);
+  });
+
+  it("supports moving and resizing, not just placing", () => {
+    expect(CANVAS).toMatch(/type: 'well';/);
+    expect(CANVAS).toMatch(/type: 'well-resize';/);
+  });
+
+  it("adds, updates and deletes from the builder", () => {
+    for (const fn of ["addWell", "updateWell", "deleteWell"]) {
+      expect(BUILDER, `${fn} missing`).toMatch(new RegExp(`const ${fn} = useCallback`));
+    }
+  });
+
+  it("drops the key entirely when the last well goes", () => {
+    expect(BUILDER).toMatch(/delete next\.gravityWells/);
+  });
+
+  it("actually passes the handlers down, since the props are optional", () => {
+    for (const prop of ["onAddWell", "onDeleteWell", "onUpdateWell", "onSelectWell"]) {
+      expect(BUILDER, `${prop} never wired`).toMatch(new RegExp(`${prop}=\{`));
+    }
+    expect(PANEL).toMatch(/onAddWell\?\.\(\)/);
+  });
+
+  it("lets the bend rate be edited, since it is the one tuning knob", () => {
+    expect(PANEL).toMatch(/turnRate/);
+  });
+});

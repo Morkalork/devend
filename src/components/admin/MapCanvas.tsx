@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity } from '@/types/level';
+import { ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell } from '@/types/level';
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from '@/lib/boardConstants';
 import { AREA_MIN_SIZE, areaStyle, isGateArea } from '@/lib/coloredAreas';
 import { hexToRgba } from '@/lib/gameUtils';
@@ -8,6 +8,10 @@ interface MapCanvasProps {
   level: LevelConfig;
   selectedEntityId: string | null;
   selectedBallId: string | null;
+  /** Index into level.gravityWells (they have no id), or null. */
+  selectedWellIndex?: number | null;
+  onSelectWell?: (index: number | null) => void;
+  onUpdateWell?: (index: number, updates: Partial<GravityWell>) => void;
   /** Index into level.coloredAreas (they have no id), or null. */
   selectedAreaIndex: number | null;
   snapToGrid: boolean;
@@ -38,6 +42,8 @@ type DragMode =
   | { type: 'circle-radius'; id: string; startDistance: number; originalRadius: number }
   | { type: 'polygon-point'; id: string; pointIndex: number; startX: number; startY: number }
   | { type: 'polygon-edge'; id: string; edgeIndex: number; startX: number; startY: number; originalPoints: [number, number][] }
+  | { type: 'well'; index: number; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
+  | { type: 'well-resize'; index: number; handle: RectHandle; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
   | { type: 'rect-resize'; id: string; handle: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } };
 
 /**
@@ -72,6 +78,9 @@ export function MapCanvas({
   selectedEntityId,
   selectedBallId,
   selectedAreaIndex,
+  selectedWellIndex = null,
+  onSelectWell,
+  onUpdateWell,
   snapToGrid,
   onSelectEntity,
   onSelectBall,
@@ -267,6 +276,45 @@ export function MapCanvas({
           ctx.lineWidth = 2;
           ctx.strokeRect(pos.x - size / 2, pos.y - size / 2, size, size);
         });
+
+    // Gravity wells (issue #77). Drawn after the areas and in their own colour,
+    // because they are a different KIND of thing: an area scores a lock, a well
+    // bends a ball. The glyph is the in-game one cut down to what survives at
+    // editor size, so a map reads the same here as it does in play.
+    (level.gravityWells || []).forEach((well, index) => {
+      const isSel = index === selectedWellIndex ||
+        ((dragMode.type === 'well' || dragMode.type === 'well-resize') && dragMode.index === index);
+      const tl = worldToScreen(well.x, well.y);
+      const ww = well.width * boardRect.scale;
+      const wh = well.height * boardRect.scale;
+      const COLOR = '#ffa23c';
+
+      ctx.fillStyle = hexToRgba(COLOR, isSel ? 0.22 : 0.1);
+      ctx.fillRect(tl.x, tl.y, ww, wh);
+      ctx.strokeStyle = hexToRgba(COLOR, isSel ? 1 : 0.6);
+      ctx.lineWidth = isSel ? 3 : 1.5;
+      ctx.strokeRect(tl.x, tl.y, ww, wh);
+
+      const wcx = tl.x + ww / 2;
+      const wcy = tl.y + wh / 2;
+      const unit = Math.min(ww, wh);
+      const arm = Math.min(unit * 0.3, 22);
+      ctx.strokeStyle = hexToRgba(COLOR, 0.9);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      for (const fx of [0.16, 0.84]) {
+        const ax = tl.x + ww * fx;
+        ctx.beginPath();
+        ctx.moveTo(ax, wcy - arm); ctx.lineTo(ax, wcy + arm);
+        ctx.moveTo(ax - arm * 0.42, wcy + arm * 0.58); ctx.lineTo(ax, wcy + arm);
+        ctx.moveTo(ax + arm * 0.42, wcy + arm * 0.58); ctx.lineTo(ax, wcy + arm);
+        ctx.stroke();
+      }
+      ctx.beginPath();
+      ctx.arc(wcx, wcy + unit * 0.14, Math.max(3, unit * 0.15), 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
+    });
       }
     });
 
@@ -476,10 +524,31 @@ export function MapCanvas({
   }, [level, boardRect, selectedEntityId, selectedBallId, selectedAreaIndex, ballPositions, worldToScreen, getEdgeInfo, dragMode]);
 
   // Hit testing
-  const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle' | 'area' | 'area-handle'; id: string; areaIndex?: number; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: RectHandle } | null => {
+  const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle' | 'area' | 'area-handle' | 'well' | 'well-handle'; id: string; areaIndex?: number; wellIndex?: number; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: RectHandle } | null => {
     if (!boardRect) return null;
 
     const world = screenToWorld(sx, sy);
+
+    // The selected well's handles, before the area's: a well is drawn on top of
+    // an area, so its handles must win a click in the same order.
+    if (selectedWellIndex !== null) {
+      const well = (level.gravityWells || [])[selectedWellIndex];
+      if (well) {
+        const tl = worldToScreen(well.x, well.y);
+        const ww = well.width * boardRect.scale;
+        const wh = well.height * boardRect.scale;
+        const center = { x: tl.x + ww / 2, y: tl.y + wh / 2 };
+        if (Math.abs(sx - center.x) < HANDLE_HIT_SIZE && Math.abs(sy - center.y) < HANDLE_HIT_SIZE) {
+          return { type: 'well-handle', id: '', wellIndex: selectedWellIndex, handleType: 'move' };
+        }
+        for (const handle of rectHandlePositions(tl.x, tl.y, ww, wh)) {
+          const hitSize = handle.name.length === 2 ? HANDLE_HIT_SIZE : HANDLE_HIT_SIZE - 4;
+          if (Math.abs(sx - handle.pos.x) < hitSize && Math.abs(sy - handle.pos.y) < hitSize) {
+            return { type: 'well-handle', id: '', wellIndex: selectedWellIndex, handleType: 'rect', rectHandle: handle.name };
+          }
+        }
+      }
+    }
 
     // Check the selected area's handles first (they sit on top of everything)
     if (selectedAreaIndex !== null) {
@@ -616,6 +685,16 @@ export function MapCanvas({
       }
     }
 
+    // Wells before areas, matching the draw order: a well sits on top, so it
+    // must take the click when the two overlap.
+    const wells = level.gravityWells || [];
+    for (let i = wells.length - 1; i >= 0; i--) {
+      const w = wells[i];
+      if (world.x >= w.x && world.x <= w.x + w.width && world.y >= w.y && world.y <= w.y + w.height) {
+        return { type: 'well', id: '', wellIndex: i };
+      }
+    }
+
     // Areas are checked last: they're big backdrops, so anything drawn on top of
     // one (obstacle, ball) must stay clickable.
     const areas = level.coloredAreas || [];
@@ -648,11 +727,38 @@ export function MapCanvas({
       onSelectEntity(null);
       onSelectBall(null);
       onSelectArea(null);
+      onSelectWell?.(null);
       return;
     }
 
     // Removed early return - let entity click fall through to normal handling below
     // This allows both selection AND drag to work on first click
+
+    if (hit.type === 'well-handle' && hit.wellIndex !== undefined) {
+      const well = (level.gravityWells || [])[hit.wellIndex];
+      if (well) {
+        const originalRect = { x: well.x, y: well.y, width: well.width, height: well.height };
+        setDragMode(hit.handleType === 'move'
+          ? { type: 'well', index: hit.wellIndex, startX: world.x, startY: world.y, originalRect }
+          : { type: 'well-resize', index: hit.wellIndex, handle: hit.rectHandle!, startX: world.x, startY: world.y, originalRect });
+      }
+      return;
+    }
+
+    if (hit.type === 'well' && hit.wellIndex !== undefined) {
+      onSelectWell?.(hit.wellIndex);
+      onSelectEntity(null);
+      onSelectBall(null);
+      onSelectArea(null);
+      const well = (level.gravityWells || [])[hit.wellIndex];
+      if (well) {
+        setDragMode({
+          type: 'well', index: hit.wellIndex, startX: world.x, startY: world.y,
+          originalRect: { x: well.x, y: well.y, width: well.width, height: well.height },
+        });
+      }
+      return;
+    }
 
     if (hit.type === 'area-handle' && hit.areaIndex !== undefined) {
       const area = (level.coloredAreas || [])[hit.areaIndex];
@@ -823,6 +929,18 @@ export function MapCanvas({
         y: snap(r.y),
         width: snap(r.width),
         height: snap(r.height),
+      });
+    } else if (dragMode.type === 'well') {
+      const orig = dragMode.originalRect;
+      onUpdateWell?.(dragMode.index, {
+        x: snap(orig.x + (world.x - dragMode.startX)),
+        y: snap(orig.y + (world.y - dragMode.startY)),
+      });
+    } else if (dragMode.type === 'well-resize') {
+      const orig = dragMode.originalRect;
+      const next = resizeRect(orig, dragMode.handle, world.x - dragMode.startX, world.y - dragMode.startY, AREA_MIN_SIZE);
+      onUpdateWell?.(dragMode.index, {
+        x: snap(next.x), y: snap(next.y), width: snap(next.width), height: snap(next.height),
       });
     } else if (dragMode.type === 'area') {
       const orig = dragMode.originalRect;
