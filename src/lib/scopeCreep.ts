@@ -26,10 +26,10 @@ export interface ScopeCreepConfig {
 }
 
 export const DEFAULT_SCOPE_CREEP: ScopeCreepConfig = {
-  graceSeconds: 45,
+  graceSeconds: 30,
   stepSeconds: 15,
   stepPercent: 8,
-  maxSteps: 4,
+  maxSteps: 5,
 };
 
 /** True when every config field is a usable finite number. */

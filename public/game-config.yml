@@ -73,10 +73,20 @@ lock:
 # out the clock for perfect alignment makes the board progressively hotter.
 # Set max_steps: 0 to disable the mechanic entirely.
 scope_creep:
-  grace_seconds: 45
+  # Grace was 45s with 4 surges. Play testing said the opening is too generous:
+  # a map could be stalled for three quarters of a minute before anything
+  # pushed back. The first surge now lands at 30s, and the extra step is ADDED
+  # rather than shifted, so the late-map surges keep their old timing and the
+  # ceiling rises 32% -> 40%. The map gets hotter sooner AND hotter overall.
+  #
+  # 30s also sits on a real boundary: Ship Early's lowest tier is 15s per ball,
+  # so on a two-ball map the bonus window closes exactly as the first surge
+  # lands. The reward for speed ends at the moment the punishment for slowness
+  # begins, which is the clearest possible statement of what the clock is for.
+  grace_seconds: 30
   step_seconds: 15
   step_percent: 8
-  max_steps: 4
+  max_steps: 5
 
 # Pickups (power-up tokens)
 # Tokens spawn in open playable space. Locking a ball in a pocket that contains
