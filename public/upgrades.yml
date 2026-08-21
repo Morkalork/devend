@@ -1273,7 +1273,7 @@ upgrades:
   - id: cold_boot
     name: Cold Boot
     tier: Junior
-    description: Every map boots frozen, all balls hold still for the first 2 seconds.
+    description: Every map boots frozen, all balls hold still for the first 2 seconds, and a quarter-second longer for every other freeze upgrade you own (up to 4).
     unlockLevel: 3
     icon: power
     tags: [freeze]
@@ -1289,6 +1289,9 @@ upgrades:
   # ball thaws it briefly cannot be re-frozen (per-ball cooldown).
   # Head of the freeze archetype.
   # ===============================
+    # An L3 card that stays relevant into a late freeze build instead of
+    # being one you outgrow by map 10.
+    scaling: { tag: freeze, key: spawnFreezeSeconds, per: 0.25, max: 4 }
 
   - id: feature_freeze_junior
     name: Feature Freeze
@@ -1432,7 +1435,7 @@ upgrades:
   - id: cron_job_architect
     name: Cron Job
     tier: Architect
-    description: Scheduled freezes now hold a ball for 5 seconds.
+    description: Scheduled freezes now hold a ball for 5 seconds, and a further 0.4 seconds for every other freeze upgrade you own (up to 4).
     unlockLevel: 24
     prerequisites:
       - cron_job_principal
@@ -1440,6 +1443,11 @@ upgrades:
     tags: [freeze]
     modifiers:
       autoFreezeDuration: 1
+    # The deepest freeze payoff in the game (L24), so it carries the
+    # archetype largest scaling reward. The sibling fork stays flat: it
+    # also carries safety, and scaling on that (29 available) would make it
+    # strictly better than this for any build, killing the choice.
+    scaling: { tag: freeze, key: autoFreezeDuration, per: 0.4, max: 4 }
 
   - id: cron_job_architect_b
     name: Cron Job
