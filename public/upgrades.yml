@@ -718,7 +718,7 @@ upgrades:
   - id: frozen_assets_principal
     name: Frozen Assets
     tier: Principal
-    description: Locking a ball while it is frozen now pays triple the lock bonus.
+    description: Locking a ball while it is frozen now pays triple the lock bonus, plus a further quarter-share for every other lock upgrade you own (up to 4).
     unlockLevel: 16
     prerequisites:
       - frozen_assets_senior
@@ -726,6 +726,10 @@ upgrades:
     tags: [freeze, lock]
     modifiers:
       frozenLockBonus: 1
+    # Scales on LOCK, not freeze: this family is already freeze-flavoured, and
+    # lock is the archetype with the fewest ways to express itself. 8 lock
+    # upgrades exist outside this family, so the cap demands real commitment.
+    scaling: { tag: lock, key: frozenLockBonus, per: 0.25, max: 4 }
 
   - id: frozen_assets_principal_b
     name: Frozen Assets
