@@ -48,6 +48,7 @@ const EXPECTED_ROOTS = [
   "cold_boot",
   "moonshot",
   "benefits_package_junior",
+  "free_fall_junior",
   "golden_parachute",
   "breaking_change_junior",
   // Replaced the three Garbage Collector roots, whose modifier keys were never

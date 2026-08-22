@@ -193,6 +193,15 @@ export interface CanvasGameState {
   /** Authored gravity wells for this map (issue #77), already map-rotated. */
   gravityWells?: GravityWell[];
   /**
+   * Free Fall (Escape Velocity): how hard gravity bends headings this map, as a
+   * multiplier on the authored turn rate. 1 = as authored, below 1 = straighter.
+   *
+   * Copied onto the state from activeModifiers at map init, the same way
+   * freezePickups is, because updateBall runs per ball per frame and is handed
+   * the game rather than the modifier bundle.
+   */
+  gravityBendMultiplier?: number;
+  /**
    * Space remaining (%) as of the last resolved cut. Undefined until the first
    * one lands, which readers must treat as a full board rather than as zero.
    *

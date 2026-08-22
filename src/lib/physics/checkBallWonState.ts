@@ -35,6 +35,7 @@ import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
 import { getLockValue, getLockQuality } from "@/lib/scoring";
+import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
 
@@ -600,6 +601,9 @@ export function checkAndUpdateBallWonStates(
     // this map (via game.moneyMultiplier). A green's own lock is never tripled
     // by itself, so each ball is tripled by every green this pass except itself.
     const greensThisPass = wonThisPass.filter(b => b.ability === 'moneyBall').length;
+    // Whole-map gravity (the shifting-gravity mutator). A property of the map
+    // rather than of any ball, so it is read once per pass.
+    const mapGravity = game.mapMutator?.behavior === 'gravity' && !!game.gravityConfig;
     let standardPoints = 0;
     let superiorPoints = 0;
     // The same two totals with every zone multiplier forced to 1. Subtracting
@@ -619,13 +623,29 @@ export function checkAndUpdateBallWonStates(
         lockedWhileFrozen && activeModifiers.frozenLockBonus > 0
           ? 1 + activeModifiers.frozenLockBonus
           : 1;
+      // Free Fall: a ball locked UNDER GRAVITY pays a multiplied lock bonus.
+      // That is a live well, or anywhere on a map running the gravity mutator.
+      //
+      // Wells alone would not have been enough. They are authored onto a
+      // handful of maps, so a well-only upgrade is dead on most of a run - the
+      // trap pick this family exists to avoid - and folding the mutator in also
+      // gives it a build to belong to. A DORMANT well pays nothing, which falls
+      // out of asking for a live one: an inert patch of floor is not a risk, so
+      // locking in it is not brave.
+      const underGravity =
+        activeModifiers.gravityLockBonus > 0 &&
+        (mapGravity ||
+          liveWellAt(
+            b.position.x, b.position.y, game.gravityWells, game.spaceRemainingPercent,
+          ) !== null);
+      const gravityMult = underGravity ? 1 + activeModifiers.gravityLockBonus : 1;
       // Colored Area: a ball locked inside a map-authored area pays its kind
       // multiplier on top of everything else. Gate and bonus areas both pay.
       // Uses the SAME verdict that lit the zone up, so the zone can never glow
       // without paying or pay without glowing.
       const lockArea = lockAreaById.get(b.id);
       const zoneMult = lockArea ? areaStyle(lockArea.kind).multiplier : 1;
-      const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult;
+      const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult * gravityMult;
       const ballPoints = basePoints * zoneMult;
       if (superiorIds.has(b.id)) { superiorPoints += ballPoints; superiorBase += basePoints; }
       else { standardPoints += ballPoints; standardBase += basePoints; }

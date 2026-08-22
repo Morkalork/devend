@@ -54,6 +54,27 @@ export interface GameModifiers {
   // Additive (sum) — Frozen Assets: extra lock-bonus multiplier when a ball is
   // locked while frozen (1 = frozen locks pay double, 2 = triple; 0 = off)
   frozenLockBonus: number;
+  /**
+   * Additive (sum) — Free Fall: extra lock-bonus multiplier for a ball locked
+   * UNDER GRAVITY (1 = double, 2 = triple; 0 = off).
+   *
+   * "Under gravity" means inside a live gravity well OR anywhere on a map
+   * running the shifting-gravity mutator. Both, rather than wells alone,
+   * because wells are authored onto a handful of maps and an upgrade that is
+   * dead on nine maps in ten is a trap pick, which is the exact complaint this
+   * family exists to avoid. Together they make "the gravity build" a real thing
+   * a run can commit to, and they give the mutator a build to belong to.
+   */
+  gravityLockBonus: number;
+  /**
+   * Multiplicative — Free Fall (Escape Velocity): scales how hard gravity bends
+   * your headings, wells and mutator alike. Below 1 you fly straighter.
+   *
+   * Genuinely two-sided, which is what makes it a fork rather than a downgrade:
+   * a weaker pull is easier to survive and worse to aim with, and a well is a
+   * tool as much as a hazard.
+   */
+  gravityBendMultiplier: number;
   // Additive (sum) — lock set bonus: every lock pass counts as this many balls
   // bigger for the simultaneous-trap multiplier (Chain Reaction)
   simultaneousLockBonus: number;
@@ -208,6 +229,7 @@ export const MULTIPLICATIVE_KEYS: (keyof GameModifiers)[] = [
   'spaceBonusMultiplier',
   'shipEarlyBonusMultiplier',
   'underParBonusMultiplier',
+  'gravityBendMultiplier',
 ];
 
 /**
@@ -261,6 +283,8 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   overtimePerSuperiorLock: 0,
   fenceSpeedPerLock: 0,
   frozenLockBonus: 0,
+  gravityLockBonus: 0,
+  gravityBendMultiplier: 1,
   simultaneousLockBonus: 0,
   freezeNoCooldown: 0,
   fenceSpeedPerFence: 0,

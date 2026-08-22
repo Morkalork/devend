@@ -318,7 +318,10 @@ export function updateBall(
   // held in place on purpose and must not drift out of a pocket mid-freeze.
   if (mut?.behavior === "gravity" && game.gravityConfig
       && !(game.frozenBallId && ball.id === game.frozenBallId)) {
-    const steered = gravityStep(ball.velocity, game.activePlaySeconds, game.gravityConfig, dt);
+    const steered = gravityStep(
+      ball.velocity, game.activePlaySeconds, game.gravityConfig, dt,
+      game.gravityBendMultiplier,
+    );
     if (steered) { ball.velocity.x = steered.x; ball.velocity.y = steered.y; }
   }
 
@@ -332,7 +335,7 @@ export function updateBall(
   if (!(game.frozenBallId && ball.id === game.frozenBallId)) {
     const pulled = wellStep(
       ball.position, ball.velocity, game.gravityWells, dt,
-      game.spaceRemainingPercent,
+      game.spaceRemainingPercent, game.gravityBendMultiplier,
     );
     if (pulled) { ball.velocity.x = pulled.x; ball.velocity.y = pulled.y; }
   }

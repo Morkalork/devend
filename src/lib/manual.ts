@@ -38,6 +38,7 @@ export const MANUAL_ENTRIES: ManualEntry[] = [
   { id: 'break', titleKey: 'game.breakTutorialTitle', bodyKey: 'game.breakTutorialBody', color: '#ffb454' },
   { id: 'circuit', titleKey: 'game.circuitTutorialTitle', bodyKey: 'game.circuitTutorialBody', color: '#7fe3d4' },
   { id: 'pickup', titleKey: 'game.pickupTutorialTitle', bodyKey: 'game.pickupTutorialBody', color: '#e879f9' },
+  { id: 'gravityWell', titleKey: 'game.gravityWellTutorialTitle', bodyKey: 'game.gravityWellTutorialBody', color: '#ffa23c' },
 ];
 
 const byId = new Map(MANUAL_ENTRIES.map(e => [e.id, e] as const));

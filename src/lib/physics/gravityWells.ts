@@ -127,12 +127,20 @@ export function wellStep(
   wells: readonly GravityWell[] | undefined,
   dt: number,
   spaceRemainingPercent?: number,
+  bendMultiplier = 1,
 ): Vector2 | null {
   const well = liveWellAt(position.x, position.y, wells, spaceRemainingPercent);
   if (!well) return null;
-  const rate = Number.isFinite(well.turnRate) && (well.turnRate as number) > 0
+  const authored = Number.isFinite(well.turnRate) && (well.turnRate as number) > 0
     ? (well.turnRate as number)
     : DEFAULT_WELL_TURN_RATE;
+  // Free Fall (Escape Velocity) can soften the bend. Guarded rather than
+  // trusted: a zero or negative multiplier would make steerToward a no-op or
+  // turn the pull inside out, and a well that silently pushes AWAY is far
+  // worse than one that does nothing.
+  const scale = Number.isFinite(bendMultiplier) && bendMultiplier > 0 ? bendMultiplier : 1;
+  const rate = authored * scale;
+  if (rate <= 0) return null;
   return steerToward(velocity, wellPullVector(well), rate, dt);
 }
 

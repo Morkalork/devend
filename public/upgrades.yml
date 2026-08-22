@@ -763,6 +763,74 @@ upgrades:
       ballFreezeDuration: 1
 
 
+
+  # ===============================
+  # FREE FALL (Lock payoff, keyed on gravity)
+  # Wells are a tool as much as a hazard: you can aim a ball into one to bend it
+  # toward a pocket you already fenced. This family pays you for doing exactly
+  # that, which turns a well from terrain into a greed hook.
+  #
+  # Keyed on GRAVITY rather than on wells alone, deliberately. Wells are
+  # authored onto a handful of maps, so a well-only upgrade would be dead on
+  # most of a run: the trap pick this whole tag rework exists to avoid. Counting
+  # the shifting-gravity mutator too makes "the gravity build" something a run
+  # can actually commit to, and gives that mutator a build to belong to.
+  #
+  # A DORMANT well pays nothing. That falls out of asking for a live one rather
+  # than being a special case: an inert patch of floor is not a risk, so locking
+  # in it is not brave.
+  # ===============================
+
+  - id: free_fall_junior
+    name: Free Fall
+    tier: Junior
+    description: "Locking a ball under gravity, inside a live gravity well or anywhere on a gravity map, pays double the lock bonus."
+    unlockLevel: 12
+    icon: gem
+    tags: [lock, risk]
+    modifiers:
+      gravityLockBonus: 1
+
+  - id: free_fall_senior
+    name: Free Fall
+    tier: Senior
+    description: "Gravity locks now pay triple."
+    unlockLevel: 18
+    prerequisites:
+      - free_fall_junior
+    tags: [lock, risk]
+    modifiers:
+      gravityLockBonus: 1
+
+  - id: free_fall_principal
+    name: Free Fall
+    tier: Principal
+    description: "Terminal Velocity: gravity locks pay quadruple, plus a further quarter-share for every other lock upgrade you own (up to 4)."
+    unlockLevel: 24
+    prerequisites:
+      - free_fall_senior
+    choiceGroup: free_fall_principal
+    tags: [lock, risk]
+    modifiers:
+      gravityLockBonus: 1
+    scaling:
+      tag: lock
+      key: gravityLockBonus
+      per: 0.25
+      max: 4
+
+  - id: free_fall_principal_b
+    name: Free Fall
+    tier: Principal
+    description: "Escape Velocity: gravity locks still pay triple, and gravity bends your balls a third less, in wells and on gravity maps alike."
+    unlockLevel: 24
+    prerequisites:
+      - free_fall_senior
+    choiceGroup: free_fall_principal
+    tags: [lock, safety]
+    modifiers:
+      gravityBendMultiplier: 0.67
+
   # ===============================
   # EXPENSE ACCOUNT & WAR CHEST (Bank payoffs)
   # Bank stops being "number goes up": cheaper shopping keeps the bank fat,

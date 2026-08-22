@@ -248,6 +248,30 @@ export function ModifierBreakdown({
           : t('bottomBarDetails.frozenLockBonusInactive'),
     },
     {
+      label: t('bottomBarDetails.gravityLockBonus'),
+      value: m.gravityLockBonus > 0 ? `x${1 + m.gravityLockBonus}` : t('bottomBarDetails.off'),
+      changed: m.gravityLockBonus !== 0,
+      keys: ['gravityLockBonus'],
+      description:
+        m.gravityLockBonus > 0
+          ? t('bottomBarDetails.gravityLockBonusActive', { mult: 1 + m.gravityLockBonus })
+          : t('bottomBarDetails.gravityLockBonusInactive'),
+    },
+    {
+      label: t('bottomBarDetails.gravityBend'),
+      value: m.gravityBendMultiplier !== 1
+        ? `x${m.gravityBendMultiplier.toFixed(2)}`
+        : t('bottomBarDetails.off'),
+      changed: m.gravityBendMultiplier !== 1,
+      keys: ['gravityBendMultiplier'],
+      description:
+        m.gravityBendMultiplier !== 1
+          ? t('bottomBarDetails.gravityBendActive', {
+              percent: Math.round((1 - m.gravityBendMultiplier) * 100),
+            })
+          : t('bottomBarDetails.gravityBendInactive'),
+    },
+    {
       label: t('bottomBarDetails.lockThreshold'),
       value: m.lockThresholdBonus > 0 ? `+${m.lockThresholdBonus}%` : t('bottomBarDetails.off'),
       changed: m.lockThresholdBonus !== 0,

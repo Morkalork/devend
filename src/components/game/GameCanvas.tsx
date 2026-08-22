@@ -63,6 +63,7 @@ import {
 } from "@/lib/gameUtils";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { rotatePoint, rotateColoredArea, rotateGravityWell } from "@/lib/mapRotation";
+import { fileManualEntry } from "@/lib/manual";
 import {
   registerWallImpact,
   clearWallImpacts,
@@ -809,6 +810,9 @@ export function GameCanvas({
       setFreezeUsesRemaining(game.freezeUsesRemaining);
       // Cryo Protocol: freeze pickup tokens so they never expire this run.
       game.freezePickups = activeModifiers.freezePickups > 0;
+      // Free Fall (Escape Velocity): soften how hard wells and gravity maps
+      // bend your headings.
+      game.gravityBendMultiplier = activeModifiers.gravityBendMultiplier;
       {
         const chance = effectivePickupChance(pickupConfig, levelNumber, level.pickupChance, activeModifiers.pickupChanceBonus);
         game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
@@ -821,6 +825,10 @@ export function GameCanvas({
       // Colored Areas (gate + bonus pockets): rotate into the board's frame.
       game.coloredAreas = (level.coloredAreas ?? []).map(a => rotateColoredArea(a, data.mapRotation));
       game.gravityWells = (level.gravityWells ?? []).map(w => rotateGravityWell(w, data.mapRotation));
+      // File the well explainer the first time a map actually has one. Filed
+      // rather than shown: a well is visible, quiet and never instantly fatal,
+      // so it does not earn an interruption (see manual.ts on what does).
+      if (game.gravityWells.length > 0) fileManualEntry('gravityWell');
       game.coloredAreaSatisfied = false;
       // "Wire the Integration" circuit (already rotated + sealed in initGame).
       game.circuit = data.circuit;

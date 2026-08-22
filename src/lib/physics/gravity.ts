@@ -151,8 +151,15 @@ export function steerToward(
  */
 export function gravityStep(
   velocity: Vector2, activeSeconds: number, cfg: GravityConfig, dt: number,
+  bendMultiplier = 1,
 ): Vector2 | null {
   const pull = gravityVectorAt(activeSeconds, cfg);
   if (!pull) return null;
-  return steerToward(velocity, pull, cfg.turnRate, dt);
+  // Free Fall (Escape Velocity) can soften the bend. Guarded rather than
+  // trusted: a zero or negative multiplier would stall the steer or invert the
+  // pull, and gravity that quietly pushes the wrong way is worse than none.
+  const scale = Number.isFinite(bendMultiplier) && bendMultiplier > 0 ? bendMultiplier : 1;
+  const rate = cfg.turnRate * scale;
+  if (rate <= 0) return null;
+  return steerToward(velocity, pull, rate, dt);
 }
