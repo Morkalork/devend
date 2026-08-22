@@ -89,6 +89,55 @@ export interface ZonePulse {
   strokeAlpha: number;
 }
 
+/** The falling ball in the gravity-well glyph, as fractions of the glyph unit. */
+export const WELL_GLYPH_BALL = { radius: 0.15, offset: 0.14 } as const;
+/** How far a motion line stops short of the ball's surface (glyph units). */
+export const WELL_GLYPH_CLEARANCE = 0.03;
+
+/** One motion line, in the well's PULL frame: `s` across it, `f` along it. */
+export interface GlyphLine {
+  /** Offset across the pull, from the glyph centre. */
+  s: number;
+  /** The end nearest the ball, and the far trailing end. */
+  nearF: number;
+  farF: number;
+}
+
+/**
+ * The motion lines trailing the ball, split out so the one thing that matters
+ * about them can be tested.
+ *
+ * The visual claim is "these come off the ball", and it is entirely a property
+ * of where each line STARTS. An earlier version placed the near ends at
+ * hand-picked heights, leaving a gap of about a quarter of the glyph between
+ * the lines and the ball: enough that they read as an unrelated barcode hanging
+ * above it rather than as speed. Solving each near end against the circle keeps
+ * the clearance constant however the glyph is scaled, and fans them out for
+ * free, since the outer lines meet the surface further forward than the inner.
+ *
+ * Lengths stay uneven. Equal ones read as a barcode again, whatever they happen
+ * to be attached to.
+ */
+export function wellGlyphLines(unit: number): GlyphLine[] {
+  const r = unit * WELL_GLYPH_BALL.radius;
+  const centre = unit * WELL_GLYPH_BALL.offset;
+  // Each near end is placed on a circle one clearance BIGGER than the ball, at
+  // its own angle round the trailing pole. Positioning by angle rather than by
+  // horizontal offset is what makes the clearance genuinely constant: offsetting
+  // a line straight back along the fall axis leaves the off-centre ones nearer
+  // the surface than the middle ones, since the circle curves away underneath
+  // them, and unequal contact is what made these read as detached in the first
+  // place.
+  const ring = r + unit * WELL_GLYPH_CLEARANCE;
+  return [
+    [-48, 0.17], [-20, 0.29], [20, 0.24], [48, 0.15],
+  ].map(([deg, len]) => {
+    const t = (deg * Math.PI) / 180;
+    const nearF = centre - Math.cos(t) * ring;
+    return { s: Math.sin(t) * ring, nearF, farF: nearF - unit * len };
+  });
+}
+
 /**
  * Pulse shape, split out so it can be tested. The visual claim being made is
  * "you can tell the zone fired, and you can still tell a minute later", and
@@ -423,17 +472,11 @@ export class AreaLayer {
         line(sOff + head, armH - head, sOff, armH);
       }
 
-      // Motion lines BEHIND the ball, uneven: equal lengths read as a barcode,
-      // staggered ones read as something having just dropped through.
-      const ballR = unit * 0.15;
-      for (const [ds, top, len] of [
-        [-0.085, -0.44, 0.20] as const,
-        [-0.028, -0.36, 0.13] as const,
-        [0.028, -0.46, 0.24] as const,
-        [0.085, -0.34, 0.11] as const,
-      ]) {
-        line(unit * ds, unit * top, unit * ds, unit * (top + len));
-      }
+      // Motion lines trailing the ball, each starting on the ball's own
+      // surface so they read as speed coming off it. See wellGlyphLines.
+      const ballR = unit * WELL_GLYPH_BALL.radius;
+      const ballF = unit * WELL_GLYPH_BALL.offset;
+      for (const l of wellGlyphLines(unit)) line(l.s, l.nearF, l.s, l.farF);
 
       this.g.stroke({
         width: Math.max(2, 2.4 * scale), color: COLOR, alpha: 0.8 * a,
@@ -443,7 +486,7 @@ export class AreaLayer {
       // The falling ball itself: outlined to match the line-art of the rest of
       // the glyph, and never filled, so a real ball crossing the well is always
       // the more solid thing on screen.
-      const ballC = at(0, unit * 0.14);
+      const ballC = at(0, ballF);
       this.g.circle(ballC.x, ballC.y, ballR).stroke({
         width: Math.max(2, 2.6 * scale), color: COLOR, alpha: 0.85 * a,
       });
