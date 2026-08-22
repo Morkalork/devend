@@ -64,6 +64,11 @@ export const PALETTE = {
   accent: 0x00ff88,
   accentDim: 0x0a8a4e,
   accentGlow: 0x6bffbc,
+  /**
+   * Superior locks. The same gold the lock flash already uses, so the moment of
+   * the tight seal and the mark it leaves behind are recognisably one thing.
+   */
+  superior: 0xffd54a,
 
   // ── Structure ─────────────────────────────────────────────────────────────
   /**

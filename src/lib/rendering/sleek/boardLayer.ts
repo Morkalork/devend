@@ -54,6 +54,9 @@ const BOARD_HEIGHT_FACTOR = 2.4;
 /** Softness of the board's drop shadow, in screen px per unit scale. */
 const DROP_BLUR = 22;
 
+/** Stroke width of the superior hatch, in screen px. */
+const SUPERIOR_HATCH_WIDTH = 1.5;
+
 export class BoardLayer {
   readonly container = new Container();
   /**
@@ -315,6 +318,53 @@ export class BoardLayer {
         drew = true;
       }
       if (drew) this.locked.fill({ color: PALETTE.accent, alpha: LOCK_TIER_ALPHA });
+    }
+
+    this.drawSuperiorHatch(game, w2s);
+  }
+
+  /**
+   * Diagonal hatching over pockets that were sealed by a SUPERIOR lock.
+   *
+   * Superior locks pay double and were, once the gold flash had faded, visually
+   * identical to an ordinary one: the board kept a record of how much a pocket
+   * paid (lockCaptured intensity) and none at all of how well it was played.
+   * Reported twice as not different enough, and both earlier passes had gone
+   * into the FLASH, which is over in half a second.
+   *
+   * A hatch rather than another colour, because the tint is already carrying
+   * intensity through brightness and a second brightness cue would collide with
+   * it. Texture is a free axis: a striped pocket and a plain one read apart at
+   * any tint level, and at a glance from across the board.
+   *
+   * Drawn per cell rather than as a clipped pattern, which sounds worse than it
+   * is: this layer only redraws when the lock state changes, so the hatch is
+   * built once per lock and then sits there. A Pixi mask would cost a texture
+   * per pocket for the same picture.
+   */
+  private drawSuperiorHatch(game: CanvasGameState, w2s: W2S): void {
+    const grid = game.spaceGrid;
+    const sup = grid?.superiorCaptured;
+    if (!grid || !sup) return;
+
+    const size = grid.cellSize;
+    let drew = false;
+    for (let i = 0; i < sup.length; i++) {
+      if (!sup[i]) continue;
+      const col = i % grid.width;
+      const row = (i / grid.width) | 0;
+      // Every other anti-diagonal, so the stripes sit about a cell and a half
+      // apart instead of packing into a solid wash at cell resolution.
+      if (((col + row) & 1) !== 0) continue;
+      const x = grid.originX + col * size;
+      const y = grid.originY + row * size;
+      const a = w2s(x, y + size);
+      const b = w2s(x + size, y);
+      this.locked.moveTo(a.x, a.y).lineTo(b.x, b.y);
+      drew = true;
+    }
+    if (drew) {
+      this.locked.stroke({ width: SUPERIOR_HATCH_WIDTH, color: PALETTE.superior, alpha: 0.5 });
     }
   }
 

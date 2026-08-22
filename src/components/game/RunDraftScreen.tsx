@@ -10,7 +10,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ClipboardList, Play, SkipForward, Skull, Sparkles } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Play, SkipForward, Skull, Sparkles } from 'lucide-react';
 import { LoadoutConfig } from '@/types/loadout';
 import { drawOffers } from '@/lib/loadoutDraft';
 import { getRunRng } from '@/lib/runRng';
@@ -23,6 +23,12 @@ interface RunDraftScreenProps {
   draftedLoadoutIds: string[];
   /** Called with the chosen loadout id, or null when the player skips. */
   onConfirm: (loadoutId: string | null) => void;
+  /**
+   * Leave without starting a run. Sprint Planning happens BEFORE the run
+   * begins, so unlike the mid-run drafts there is nothing here to skip past:
+   * backing out costs the player nothing and stranding them costs a restart.
+   */
+  onBack?: () => void;
   accentColor?: string;
 }
 
@@ -30,6 +36,7 @@ export function RunDraftScreen({
   loadouts,
   draftedLoadoutIds,
   onConfirm,
+  onBack,
   accentColor = '#00ff88',
 }: RunDraftScreenProps) {
   const { t } = useTranslation();
@@ -41,6 +48,22 @@ export function RunDraftScreen({
   return (
     <>
       <CRTBackground accentColor={accentColor} />
+
+      {/* Top-left, where every other screen in the game puts its way out. */}
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-4 left-4 z-20 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-opacity hover:opacity-80"
+          style={{
+            backgroundColor: '#0009',
+            color: accentColor,
+            border: `1px solid ${accentColor}55`,
+          }}
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t('runDraft.back')}
+        </button>
+      )}
       <div className="min-h-screen flex flex-col items-center justify-center bg-background/90 p-4 sm:p-6 relative z-10 overflow-y-auto">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}

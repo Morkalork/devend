@@ -344,6 +344,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 loadouts={session.availableLoadouts}
                 draftedLoadoutIds={session.draftedLoadoutIds}
                 onConfirm={session.handleConfirmLoadout}
+                onBack={session.handleBackToWelcome}
                 accentColor={accentHex}
               />
             )}

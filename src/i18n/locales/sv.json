@@ -734,6 +734,7 @@
   },
   "runDraft": {
     "title": "Sprintplanering",
+    "back": "Tillbaka",
     "subtitle": "Välj en laddning som formar omgången från nivå 1.",
     "pickHint": "Varje laddning kombinerar en förbannelse med en välsignelse. Välj en, eller hoppa över för att spela rakt.",
     "startButton": "Starta omgång",

@@ -43,8 +43,13 @@ export function backActionForScreen(screen: GameScreen): BackAction {
     case 'tenureDraft':
     case 'doorDraft':
     case 'capstoneDraft':
-    case 'runDraft':
     case 'ascensionDraft':
       return 'consume';
+    // Sprint Planning is the one draft that runs BEFORE the run starts, so
+    // there is no forced progression to skip past: backing out just returns to
+    // the menu, which is what the on-screen button does too. Swallowing the
+    // gesture here left the player with no way out but to start a run.
+    case 'runDraft':
+      return 'welcome';
   }
 }

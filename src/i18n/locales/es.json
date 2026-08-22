@@ -734,6 +734,7 @@
   },
   "runDraft": {
     "title": "Planificación de sprint",
+    "back": "Atrás",
     "subtitle": "Elige un equipamiento para definir esta partida desde el nivel 1.",
     "pickHint": "Cada equipamiento combina una maldición con una bendición. Elige uno o sáltalo para jugar sin extras.",
     "startButton": "Empezar partida",

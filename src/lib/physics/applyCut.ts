@@ -279,7 +279,12 @@ export function applyCutFn(
   // independently true.
   const lockedBefore = game.lockedBallsCount;
   game.percentBeforeLocks = getGridRemainingPercent(game);
+  // Snapshot the superior tally so the tint pass below can tell whether the
+  // lock it is about to paint was a tight seal. The grade is decided inside
+  // checkBallWonState and nothing else carries it out here.
+  const superiorBefore = game.superiorLockCount;
   const anyBallWon = checkAndUpdateBallWonStates(game, activeModifiers, cumulativeLockedBalls, callbacks, preCaptureCells, capturedRegions);
+  const wasSuperior = game.superiorLockCount > superiorBefore;
   if (anyBallWon) {
     // How many balls this cut locked: the simultaneous-trap multiplier pays
     // x2/x3 for multi-locks, and the tint mask below stores the same count so
@@ -345,8 +350,12 @@ export function applyCutFn(
           },
           minThroatWidth: throatWidth,
         });
+        if (!grid.superiorCaptured) grid.superiorCaptured = new Uint8Array(grid.cells.length);
         for (const idx of bounded) {
           if (grid.lockCaptured[idx] < intensity) grid.lockCaptured[idx] = intensity;
+          // Never downgrade: a pocket that ever held a superior lock keeps the
+          // mark, the same way lockCaptured keeps its highest intensity.
+          if (wasSuperior) grid.superiorCaptured[idx] = 1;
         }
       }
     }

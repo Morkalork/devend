@@ -749,6 +749,7 @@
   },
   "runDraft": {
     "title": "Sprint Planning",
+    "back": "Back",
     "subtitle": "Pick a loadout to shape this run from level 1.",
     "pickHint": "Each loadout pairs a curse with a blessing. Choose one, or skip to play it straight.",
     "startButton": "Start Run",

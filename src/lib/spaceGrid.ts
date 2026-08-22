@@ -56,6 +56,15 @@ export interface SpaceGrid {
    */
   lockCaptured?: Uint8Array;
   /**
+   * Cells belonging to a pocket sealed by a SUPERIOR lock.
+   *
+   * Separate from lockCaptured, which stores how many balls a pocket took. The
+   * two are different questions - how much did this pay, and how well was it
+   * played - and the persistent tint answered only the first, so a tight seal
+   * and a sloppy one left the board looking identical once the flash had gone.
+   */
+  superiorCaptured?: Uint8Array;
+  /**
    * Cells that must NEVER be auto-recaptured as "unreachable" (1 = keep active).
    * Set for the circuit bonus vault: it is a DESIGNED open pocket the player must
    * be able to fence into, even when no ball can currently reach it. Absent =
@@ -142,6 +151,7 @@ export function createSpaceGrid(
     activeCount: initialActiveCount,
     cellRegionIds: new Array<string | null>(cells.length).fill(null),
     lockCaptured: new Uint8Array(cells.length),
+    superiorCaptured: new Uint8Array(cells.length),
   };
 
   // Seal obstacle boundaries into the grid. Removing only cells whose CENTER

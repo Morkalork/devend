@@ -33,9 +33,18 @@ describe("backActionForScreen", () => {
   });
 
   it("mid-run flow screens swallow the back (never exit)", () => {
-    for (const s of ['upgradeShop', 'doorDraft', 'capstoneDraft', 'runDraft', 'ascensionDraft'] as GameScreen[]) {
+    // runDraft is deliberately NOT here: Sprint Planning is the one draft that
+    // runs before the run begins, so there is no forced progression to skip
+    // past and nothing has been committed yet.
+    for (const s of ['upgradeShop', 'doorDraft', 'capstoneDraft', 'ascensionDraft'] as GameScreen[]) {
       expect(backActionForScreen(s)).toBe('consume');
     }
+  });
+
+  it("Sprint Planning returns to the menu instead of swallowing the back", () => {
+    // It had no way out at all: no button, and the gesture consumed. The only
+    // exit was to start a run you did not want.
+    expect(backActionForScreen('runDraft')).toBe('welcome');
   });
 
   it("menu/info screens return to the main menu", () => {
