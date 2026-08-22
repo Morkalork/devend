@@ -214,6 +214,105 @@ describe("the difficulty spine", () => {
 });
 
 /**
+ * Necks a ball can actually get through.
+ *
+ * A ball is 36 world units across and an enlarged one (the level-11 gift) is 47,
+ * so a gap between two collinear wall stubs falls into one of three bands:
+ *
+ *   <= 12   a seam. A chest cover sitting on its chest, two pieces of one
+ *           structure. Not a passage, and nobody reads it as one.
+ *   >= 60   a real neck. Both ball sizes pass with room to time a cut.
+ *   between the two: the trap. Wide enough to LOOK like a way through and
+ *           narrow enough that the ball never takes it, so the space behind it
+ *           is neither reachable nor sealable. It also silently changes meaning
+ *           when the big-ball gift rolls.
+ *
+ * This was not hypothetical: authoring act I left a 26-unit slot beside level
+ * 9's pay shelf and a 40-unit alcove mouth on level 3, the second of which a
+ * normal ball squeezed through and an enlarged one could not. Neither is
+ * visible by eye in YAML, and neither would fail any other test.
+ */
+describe("every gap is a seam or a neck, never in between", () => {
+  const BALL = 36;         // BASE_BALL_RADIUS * 2
+  const SEAM_MAX = 12;     // below this nothing reads as a way through
+  const NECK_MIN = 60;     // Code Freeze's proven corner gap
+
+  /**
+   * Maps not yet migrated to the feature schedule. May only SHRINK: an entry
+   * comes off when its act is authored, and none is ever added to silence a
+   * new map.
+   */
+  const UNMIGRATED: string[] = ["level-32"];
+
+  type Rect = { id: string; x0: number; x1: number; y0: number; y1: number };
+
+  const rectsOf = (l: LevelConfig): Rect[] =>
+    (l.entities ?? [])
+      .filter(e => e.shape === "rect" && e.kind === "wall")
+      .map(e => {
+        const r = e as unknown as { id: string; x: number; y: number; width: number; height: number };
+        return { id: r.id, x0: r.x, x1: r.x + r.width, y0: r.y, y1: r.y + r.height };
+      });
+
+  /** Gaps between stubs that line up, i.e. the places a ball could try to pass. */
+  const gapsIn = (l: LevelConfig): { gap: number; between: string }[] => {
+    const rs = rectsOf(l);
+    const out: { gap: number; between: string }[] = [];
+    for (let i = 0; i < rs.length; i++) {
+      for (let j = i + 1; j < rs.length; j++) {
+        const a = rs[i], b = rs[j];
+        const xOverlap = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0);
+        if (xOverlap > 0) {
+          const g = Math.max(a.y0, b.y0) - Math.min(a.y1, b.y1);
+          if (g > 0) out.push({ gap: g, between: `${a.id}|${b.id}` });
+        }
+        const yOverlap = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0);
+        if (yOverlap > 0) {
+          const g = Math.max(a.x0, b.x0) - Math.min(a.x1, b.x1);
+          if (g > 0) out.push({ gap: g, between: `${a.id}|${b.id}` });
+        }
+      }
+    }
+    return out;
+  };
+
+  it("leaves no gap a ball half-fits through", () => {
+    const offenders: string[] = [];
+    for (const l of MAPS) {
+      if (UNMIGRATED.includes(l.id)) continue;
+      for (const { gap, between } of gapsIn(l)) {
+        if (gap > SEAM_MAX && gap < NECK_MIN) {
+          offenders.push(`${l.id}: ${gap}u between ${between}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("keeps a neck wide enough for the enlarged ball too", () => {
+    // Not merely wider than a plain ball: a neck that fits 36 but not 47 plays
+    // differently depending on a gift roll the player did not ask for.
+    expect(NECK_MIN).toBeGreaterThan(BALL);
+    expect(NECK_MIN).toBeGreaterThanOrEqual(47);
+  });
+
+  it("is checking real maps, not an empty set", () => {
+    const measured = MAPS.filter(l => !UNMIGRATED.includes(l.id))
+      .reduce((n, l) => n + gapsIn(l).length, 0);
+    expect(measured, "no gaps measured at all").toBeGreaterThan(10);
+  });
+
+  /** The exception list is a debt, so it has to be visible and finite. */
+  it("names only maps that really are unmigrated", () => {
+    for (const id of UNMIGRATED) {
+      const l = MAPS.find(m => m.id === id);
+      expect(l, `${id} is listed as unmigrated but does not exist`).toBeTruthy();
+      expect(l!.level, `${id} is in a migrated act`).toBeGreaterThan(30);
+    }
+  });
+});
+
+/**
  * A telegraph that renders as `game.beatWellWakes` is worse than no telegraph:
  * the player gets a warning banner full of a variable name at the exact moment
  * the map is trying to be fair with them. i18n misses fail silently, so this is

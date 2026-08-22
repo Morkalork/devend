@@ -136,9 +136,10 @@ describe("booting dormant balls", () => {
 });
 
 describe("config + rotation", () => {
-  it("the level-8 pilot ships terminals that each boot a dormant ball", () => {
+  it("the level-15 pilot ships terminals that each boot a dormant ball", () => {
     const doc = yaml.load(readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8")) as LevelData;
-    const l8 = doc.levels.find(l => l.id === "level-8")!;
+    const l8 = doc.levels.find(l => l.id === "level-15")!;
+    expect(l8, "level-15 (Integration) is missing from map.yml").toBeDefined();
     expect(l8.circuit).toBeDefined();
     expect(l8.circuit!.terminals.length).toBeGreaterThanOrEqual(1);
     expect(l8.circuit!.radius).toBeGreaterThan(0);
