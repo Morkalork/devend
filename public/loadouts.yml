@@ -80,11 +80,15 @@ ascension:
         modifiers:
           overtimeCapBonus: -10
 
+    # Two rules with one theme: you cannot stockpile. Tokens rot, and the
+    # ability bar is one slot narrower, so a chest stops being free and starts
+    # being a question about what you are willing to stop carrying.
     - depth: 7
       name: Use It Or Lose It
-      description: Power-up tokens expire in half the time.
+      description: Power-up tokens expire in half the time, and you can carry one fewer ability.
       effects:
         pickupLifetimeFactor: 0.5
+        abilitySlots: 4
 
     - depth: 8
       name: Velocity Targets
@@ -101,9 +105,10 @@ ascension:
 
     - depth: 10
       name: Performance Improvement Plan
-      description: A permanent curse joins the run, and it cannot be dropped.
+      description: A permanent curse joins the run and cannot be dropped, and you can carry only three abilities.
       effects:
         forcedCurseLoadoutId: performance_improvement_plan
+        abilitySlots: 3
 
 loadouts:
 

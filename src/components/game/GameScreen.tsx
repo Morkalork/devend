@@ -86,6 +86,8 @@ interface GameScreenProps {
   onSpendAbility?: (abilityId: string) => void;
   /** Run-wide banked ability charges: { abilityId -> count }, for the ability bar. */
   abilityCharges?: Record<string, number>;
+  /** Distinct abilities holdable at once (ascension can tighten it). */
+  abilitySlots?: number;
   onGameEnd: (result: GameResult) => void;
   /** Out of time with lives left: restart the current level (session remount). */
   onMapTimedOut?: () => void;
@@ -166,6 +168,7 @@ export function GameScreen({
   onGrantAbility,
   onSpendAbility,
   abilityCharges,
+  abilitySlots,
   onGameEnd,
   onMapTimedOut,
   onLevelComplete,
@@ -781,6 +784,8 @@ export function GameScreen({
             lives={lives}
             onLivesChange={onLivesChange}
             onGrantAbility={onGrantAbility}
+            abilityCharges={abilityCharges ?? {}}
+            abilitySlots={abilitySlots}
             onSpendAbility={onSpendAbility}
             onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
             onRequestEntityInfo={setEntityInfo}

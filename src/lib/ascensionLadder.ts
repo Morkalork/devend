@@ -28,6 +28,7 @@
  * mandatory.
  */
 import type { TFunction } from "i18next";
+import { MAX_ABILITY_SLOTS } from "@/lib/abilities";
 import { contentText } from "@/i18n/content";
 import type { AscensionRung, AscensionRules } from "@/types/loadout";
 
@@ -39,6 +40,7 @@ export const LADDER_LENGTH = 10;
 export const NO_ASCENSION_RULES: AscensionRules = {
   shopEveryOtherLevel: false,
   doorOffers: null,
+  abilitySlots: MAX_ABILITY_SLOTS,
   noCapstone: false,
   fencesWearOut: false,
   everyMapMutated: false,
@@ -77,6 +79,10 @@ export function ascensionRules(depth: number, ladder: AscensionRung[]): Ascensio
     // A tighter door count wins, so a later rung can never widen the draft.
     if (typeof e.doorOffers === "number") {
       out.doorOffers = out.doorOffers == null ? e.doorOffers : Math.min(out.doorOffers, e.doorOffers);
+    }
+    // Same rule for ability slots: the ladder only ever takes away.
+    if (typeof e.abilitySlots === "number") {
+      out.abilitySlots = Math.max(1, Math.min(out.abilitySlots, e.abilitySlots));
     }
     if (typeof e.pickupLifetimeFactor === "number" && e.pickupLifetimeFactor > 0) {
       out.pickupLifetimeFactor *= e.pickupLifetimeFactor;

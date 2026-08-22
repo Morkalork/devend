@@ -291,6 +291,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 onGrantAbility={session.handleGrantAbility}
                 onSpendAbility={session.handleSpendAbility}
                 abilityCharges={session.abilityCharges}
+                abilitySlots={session.ascensionRules.abilitySlots}
                 onGameEnd={session.handleGameEnd}
                 onMapTimedOut={session.handleMapTimedOut}
                 onLevelComplete={session.handleLevelComplete}

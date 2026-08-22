@@ -44,6 +44,22 @@ abilities:
     description: "Slows every ball for a few seconds, making them easier to trap."
     howTo: "Tap to slow all balls, then line up your cuts."
 
+  # The only ability that outlives its own moment: it changes the BOARD rather
+  # than the balls, for the rest of the map. Priced accordingly (rarer than the
+  # two global panic buttons) and gated late, because it rewards reading a map
+  # you already understand.
+  - id: slowArea
+    name: Slow Area
+    kind: slowArea
+    color: "#8fb8ff"
+    weight: 2
+    startLevel: 7
+    targeted: true
+    factor: 0.5
+    size: 230
+    description: "Marks a patch of the board where balls move at half speed, for the rest of the map."
+    howTo: "Tap to activate, then tap the board to place it. Put it where you want a lock, not where the balls are now."
+
   - id: clearFences
     name: Clear Fences
     kind: clearFences

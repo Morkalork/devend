@@ -52,6 +52,13 @@ export interface AscensionRungEffects {
   shopEveryOtherLevel?: boolean;
   /** Cap the assignment door draft at this many offers. */
   doorOffers?: number;
+  /**
+   * Cap the DISTINCT abilities holdable at once, below the normal
+   * MAX_ABILITY_SLOTS. A rules change rather than a stat nerf: the same
+   * abilities, fewer of them at a time, so the chest you smash becomes a
+   * choice about what you are willing to stop carrying.
+   */
+  abilitySlots?: number;
   /** No Promotion (capstone) draft this run. */
   noCapstone?: boolean;
   /** Completed fences wear out under ball hits (the old blanket depth rule). */
@@ -70,6 +77,8 @@ export interface AscensionRungEffects {
 export interface AscensionRules {
   shopEveryOtherLevel: boolean;
   doorOffers: number | null;
+  /** Distinct abilities holdable at once; MAX_ABILITY_SLOTS unless tightened. */
+  abilitySlots: number;
   noCapstone: boolean;
   fencesWearOut: boolean;
   everyMapMutated: boolean;

@@ -13,6 +13,8 @@
  */
 import { CanvasGameState } from "@/types/gameState";
 import { getAbility } from "@/lib/abilities";
+import { placeSlowArea } from "@/lib/physics/slowAreas";
+import { BOARD_WIDTH } from "@/lib/boardConstants";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
 import {
@@ -662,6 +664,16 @@ export function fireTargetedAbility(id: string, game: CanvasGameState, now: numb
     game.magnetMarker = { x: target.x, y: target.y, startTime: now };
     return true;
   }
+  if (def.kind === "slowArea") {
+    // Placed and left there. Every other ability in the catalogue is a moment;
+    // this one is a decision about the board that outlives the charge, so it
+    // goes onto the map state rather than onto a countdown.
+    (game.slowAreas ??= []).push(
+      placeSlowArea(target.x, target.y, BOARD_WIDTH, def.size, def.factor),
+    );
+    pushAbilityFx(game, def.color, false, now, target);
+    return true;
+  }
   return false;
 }
 
@@ -702,6 +714,12 @@ export function fireAbility(
       break;
     case "fenceShield":
       applyFenceShield(game, def.durationSeconds ?? DEFAULT_FENCE_SHIELD_SECONDS);
+      break;
+    case "slowArea":
+      // Targeted: it has no meaning without a point, so reaching here means the
+      // arming step was skipped. Decline rather than place one at the centre,
+      // which would spend the charge somewhere the player did not choose.
+      fired = false;
       break;
     default:
       fired = false;

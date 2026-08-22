@@ -17,8 +17,13 @@ import yaml from "js-yaml";
 import abilitiesYamlRaw from "../../public/abilities.yml?raw";
 
 /** The coded effect an ability triggers. A new kind needs code in abilityEffects.ts. */
-export type AbilityKind = "freeze" | "slow" | "clearFences" | "magnet" | "shockwave" | "fenceRush" | "fenceShield";
-const VALID_KINDS = new Set<AbilityKind>(["freeze", "slow", "clearFences", "magnet", "shockwave", "fenceRush", "fenceShield"]);
+export type AbilityKind = "freeze" | "slow" | "slowArea" | "clearFences" | "magnet" | "shockwave" | "fenceRush" | "fenceShield";
+/** Every coded kind, exported so nothing has to keep a second copy of the list. */
+export const ABILITY_KINDS: readonly AbilityKind[] = [
+  "freeze", "slow", "slowArea", "clearFences", "magnet", "shockwave",
+  "fenceRush", "fenceShield",
+];
+const VALID_KINDS = new Set<AbilityKind>(ABILITY_KINDS);
 
 /** An ability id is a catalogue key (dynamic, so just a string). */
 export type AbilityId = string;
@@ -35,8 +40,11 @@ export interface AbilityDef {
   startLevel: number;
   /** freeze / slow: effect duration in seconds. */
   durationSeconds?: number;
-  /** slow: creepFactor multiplier while active (<1). */
+  /** slow: creepFactor multiplier while active (<1). slowArea: the same, but
+   *  applied only inside the placed zone, and for the rest of the map. */
   factor?: number;
+  /** slowArea: side length of the placed zone, in world units. */
+  size?: number;
   /** true = arm on tap, then the player taps the board to pick a point (magnet). */
   targeted?: boolean;
   /** Info modal: one-line "what it does". */
@@ -61,6 +69,7 @@ function parseAbilityEntry(raw: unknown): AbilityDef | null {
     ? Number(r.durationSeconds)
     : undefined;
   const factor = Number.isFinite(Number(r.factor)) && Number(r.factor) > 0 ? Number(r.factor) : undefined;
+  const size = Number.isFinite(Number(r.size)) && Number(r.size) > 0 ? Number(r.size) : undefined;
 
   return {
     id,
@@ -71,6 +80,7 @@ function parseAbilityEntry(raw: unknown): AbilityDef | null {
     startLevel,
     durationSeconds,
     factor,
+    size,
     targeted: r.targeted === true,
     description: typeof r.description === "string" ? r.description : undefined,
     howTo: typeof r.howTo === "string" ? r.howTo : undefined,
@@ -120,6 +130,56 @@ export function getEligibleAbilities(level: number): AbilityDef[] {
  * back to the full eligible set (then the whole catalogue) if a narrowing leaves
  * nothing. Returns null only if the catalogue is somehow empty.
  */
+/**
+ * How many DISTINCT abilities a player may hold at once.
+ *
+ * A cap, rather than letting the bar grow to the whole catalogue, for the same
+ * reason the upgrade shop offers three of a hundred: a loadout you chose is a
+ * build, and a loadout you accumulated is an inventory. With every ability
+ * available at once there is no wrong moment to smash a chest and no reason to
+ * prefer one reward over another, so the whole system flattens into "press the
+ * button that helps".
+ *
+ * Ascension tightens it (see AscensionRules.abilitySlots), which is a rules
+ * change rather than a stat nerf: the same abilities, fewer of them at a time.
+ */
+export const MAX_ABILITY_SLOTS = 5;
+
+/**
+ * The reward a chest grants, honouring the slot cap.
+ *
+ * At the cap, a roll that lands on an ability the player does NOT hold is
+ * re-rolled among the ones they do, so the chest still pays. Refusing the
+ * grant outright was the alternative and it is worse: a chest is a thing the
+ * player spent balls and time smashing, and "you get nothing because your bar
+ * is full" punishes them for the reward system working. Converting it into a
+ * charge of something they already chose keeps every chest worth opening and
+ * turns the cap into a shape for the build rather than a wall.
+ *
+ * `held` is the ids currently holding a charge. Passing it is optional so every
+ * existing caller and test keeps the uncapped behaviour.
+ */
+export function rollCappedAbilityReward(
+  pool: string[] | undefined,
+  level: number,
+  rng: () => number,
+  held?: readonly string[],
+  slots: number = MAX_ABILITY_SLOTS,
+): string | null {
+  const first = rollAbilityReward(pool, level, rng);
+  if (first === null || !held) return first;
+  const distinct = new Set(held);
+  if (distinct.size < Math.max(1, slots) || distinct.has(first)) return first;
+  // At the cap and the roll is a stranger: re-roll among what is already held,
+  // narrowed by the chest's own pool where that leaves anything.
+  const heldIds = [...distinct];
+  const narrowed = pool && pool.length > 0
+    ? heldIds.filter(id => pool.includes(id))
+    : heldIds;
+  const from = narrowed.length > 0 ? narrowed : heldIds;
+  return rollAbilityReward(from, level, rng) ?? from[0] ?? null;
+}
+
 export function rollAbilityReward(pool: string[] | undefined, level: number, rng: () => number): string | null {
   let eligible = getEligibleAbilities(level);
   if (eligible.length === 0) eligible = liveAbilities; // level below every startLevel

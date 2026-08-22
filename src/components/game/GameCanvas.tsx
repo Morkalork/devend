@@ -167,6 +167,11 @@ interface GameCanvasProps {
   /** A smashed chest granted one charge of an ability (issue #38): the session
    *  banks it run-wide so it persists into later maps. */
   onGrantAbility?: (abilityId: string) => void;
+  /** Run-wide banked charges, mirrored onto the game so the chest roll can
+   *  honour the slot cap from inside the physics step. */
+  abilityCharges?: Record<string, number>;
+  /** Distinct abilities holdable at once. */
+  abilitySlots?: number;
   /** The player spent one ability charge (pressed the ability button). */
   onSpendAbility?: (abilityId: string) => void;
   /** Press-and-hold on a superior-lock star: open the lock explainer modal. */
@@ -265,6 +270,8 @@ export function GameCanvas({
   lives,
   onLivesChange,
   onGrantAbility,
+  abilityCharges,
+  abilitySlots,
   onSpendAbility,
   onRequestSuperiorInfo,
   onRequestEntityInfo,
@@ -350,6 +357,16 @@ export function GameCanvas({
     gameRef.current.lockMinRegionCells = lockMinRegionCells;
   }, [lockWinThresholdPercent, lockMinRegionCells, activeModifiers.lockThresholdBonus]);
   // Same live-config treatment for the Scope Creep tuning.
+  // Mirror the banked ability charges onto the game so the chest roll can honour
+  // the slot cap. Live rather than set once at map init, because a chest smashed
+  // mid-map changes what is held and the very next chest must see it.
+  useEffect(() => {
+    gameRef.current.heldAbilityIds = Object.entries(abilityCharges ?? {})
+      .filter(([, n]) => (n ?? 0) > 0)
+      .map(([id]) => id);
+    gameRef.current.abilitySlots = abilitySlots;
+  }, [abilityCharges, abilitySlots]);
+
   useEffect(() => {
     if (scopeCreep) gameRef.current.creepConfig = scopeCreep;
   }, [scopeCreep]);
@@ -617,6 +634,7 @@ export function GameCanvas({
     lastDudAt: 0,
     chestLoot: [] as import("@/types/game").ChestLoot[],
     chestRewardsLog: [] as string[],
+    slowAreas: [] as import('@/types/game').SlowArea[],
     abilitySlowUntil: 0,
     abilitySlowMult: 1,
     abilityFenceRushUntil: 0,
@@ -780,6 +798,10 @@ export function GameCanvas({
       game.chestLoot = [];
       game.ballPops = [];
       game.chestRewardsLog = [];
+      // Slow Areas are per-MAP, not per-run: a zone you paid to place is a
+      // decision about this board, and carrying it to the next one would hand
+      // over a board the player never read.
+      game.slowAreas = [];
       game.abilitySlowUntil = 0;
       game.abilitySlowMult = 1;
       game.abilityFenceRushUntil = 0;

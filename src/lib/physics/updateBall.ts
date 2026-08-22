@@ -8,6 +8,7 @@
 import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
 import { wellStep } from "@/lib/physics/gravityWells";
+import { slowFactorAt } from "@/lib/physics/slowAreas";
 import { CanvasGameState } from "@/types/gameState";
 import {
   vec2Add,
@@ -292,7 +293,12 @@ export function updateBall(
   // not the stored velocity, so abilities that rescale velocity to absolute targets
   // (grey wind-down, yellow variable speed, the minimum-speed floor) stay untouched
   // and the factor can never compound frame-over-frame.
-  const moveDt = dt * (game.creepFactor || 1) * splitFactor;
+  // A Slow Area scales displacement here for the same reason Scope Creep does,
+  // and the comment above is the whole argument: halving the VELOCITY would be
+  // erased within a frame by the rescalers, and would fight the minimum-speed
+  // floor, whose entire job is to stop a ball moving this slowly.
+  const slowFactor = slowFactorAt(ball.position.x, ball.position.y, game.slowAreas);
+  const moveDt = dt * (game.creepFactor || 1) * splitFactor * slowFactor;
   ball.position.x += ball.velocity.x * moveDt;
   ball.position.y += ball.velocity.y * moveDt;
 

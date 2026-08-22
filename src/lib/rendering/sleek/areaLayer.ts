@@ -223,7 +223,9 @@ export class AreaLayer {
           + `${wellIsLive(w, game.spaceRemainingPercent) ? 1 : 0}`)
         .join("|")
       + `|${Math.round(game.boardRect.left)},${Math.round(game.boardRect.top)},${Math.round(scale * 1000)}`
-      + `|${Math.round(tilt * 2000)}`;
+      + `|${Math.round(tilt * 2000)}`
+      + "#s" + (game.slowAreas ?? [])
+        .map(a => `${a.x},${a.y},${a.width},${a.height}`).join("|");
     if (key === this.key) return;
     this.key = key;
 
@@ -232,6 +234,7 @@ export class AreaLayer {
     this.labels = [];
 
     this.drawGravityWells(game, w2s, scale);
+    this.drawSlowAreas(game, w2s, scale);
 
     for (const a of areas) {
       const st = areaStyle(a.kind);
@@ -490,6 +493,63 @@ export class AreaLayer {
       this.g.circle(ballC.x, ballC.y, ballR).stroke({
         width: Math.max(2, 2.6 * scale), color: COLOR, alpha: 0.85 * a,
       });
+    }
+  }
+
+  /**
+   * Slow Areas (ability): a placed patch where balls crawl for the rest of the
+   * map.
+   *
+   * Drawn deliberately UNLIKE a gravity well, because the two are the same
+   * shape doing opposite jobs: a well is terrain the map inflicted on you, a
+   * slow area is something you chose and paid for. So this reads as a marked
+   * zone rather than a hazard - a cool wash, a bracketed border, and ripples
+   * across it instead of hazard stripes and a falling glyph.
+   *
+   * Goes through the same quad machinery as everything else on this layer, so
+   * it stays correct on a turned board.
+   */
+  private drawSlowAreas(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const areas = game.slowAreas ?? [];
+    if (areas.length === 0) return;
+    const COLOR = 0x8fb8ff;
+
+    for (const a of areas) {
+      const q = worldRectQuad(a.x, a.y, a.width, a.height, w2s);
+
+      shapeOf(this.g, q, 0).fill({ color: COLOR, alpha: 0.10 });
+
+      // Corner brackets rather than a full border: a closed box reads as a
+      // wall to fence along, which this is not. Brackets say "marked region"
+      // without suggesting an edge the ball will bounce off.
+      const arm = Math.min(q.w, q.h) * 0.22;
+      for (const [ca, cb, sa, sb] of [
+        [0, 0, 1, 1] as const, [q.w, 0, -1, 1] as const,
+        [q.w, q.h, -1, -1] as const, [0, q.h, 1, -1] as const,
+      ]) {
+        const corner = quadLocal(q, ca, cb);
+        const alongX = quadLocal(q, ca + sa * arm, cb);
+        const alongY = quadLocal(q, ca, cb + sb * arm);
+        this.g.moveTo(alongX.x, alongX.y).lineTo(corner.x, corner.y).lineTo(alongY.x, alongY.y);
+      }
+      this.g.stroke({
+        width: Math.max(1.5, 2 * scale), color: COLOR, alpha: 0.75,
+        cap: "round", join: "round",
+      });
+
+      // Ripples: evenly spaced lines across the zone, each shortened toward the
+      // edges so the set reads as a pool rather than as a barcode. Authored in
+      // the quad's local frame, so they stay parallel to its own edges when the
+      // board turns.
+      const rows = 4;
+      for (let i = 1; i <= rows; i++) {
+        const t = i / (rows + 1);
+        const inset = q.w * (0.18 + 0.14 * Math.abs(0.5 - t) * 2);
+        const p0 = quadLocal(q, inset, q.h * t);
+        const p1 = quadLocal(q, q.w - inset, q.h * t);
+        this.g.moveTo(p0.x, p0.y).lineTo(p1.x, p1.y);
+      }
+      this.g.stroke({ width: Math.max(1, 1.5 * scale), color: COLOR, alpha: 0.3, cap: "round" });
     }
   }
 }

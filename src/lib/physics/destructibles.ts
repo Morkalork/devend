@@ -26,7 +26,7 @@ import { getBallType } from "@/lib/ballTypes";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { getRunRng } from "@/lib/runRng";
 import { makeChestLoot } from "@/lib/chests";
-import { rollAbilityReward } from "@/lib/abilities";
+import { rollCappedAbilityReward } from "@/lib/abilities";
 import { Polygon, pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
 import {
   CellState,
@@ -518,7 +518,9 @@ function grantChestReward(
   const rng = getRunRng(`chest:${d.id}`);
   // Random among abilities unlocked at this level, optionally narrowed to the
   // chest's authored pool (see abilities.ts / public/abilities.yml).
-  const rewardId = rollAbilityReward(d.chestRewards, levelNumber, rng);
+  const rewardId = rollCappedAbilityReward(
+    d.chestRewards, levelNumber, rng, game.heldAbilityIds, game.abilitySlots,
+  );
   if (!rewardId) return; // empty catalogue (should never happen)
   const c = polygonCentroid(d.obstaclePolygon);
   (game.chestLoot ??= []).push(makeChestLoot(`loot-${d.id}`, rewardId, c.x, c.y, game.activePlaySeconds));

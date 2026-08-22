@@ -9,6 +9,7 @@ import {
   getAbility,
   getEligibleAbilities,
   rollAbilityReward,
+  ABILITY_KINDS,
 } from "@/lib/abilities";
 import {
   freezeAllBalls,
@@ -56,7 +57,10 @@ describe("ability catalogue", () => {
     expect(ids).toContain("slowAll");
     expect(ids).toContain("clearFences");
     // Each carries a valid colour + a known kind.
-    const KINDS = ["freeze", "slow", "clearFences", "magnet", "shockwave", "fenceRush", "fenceShield"];
+    // Taken from the module rather than restated here: this list WAS restated,
+    // and adding slowArea broke the test rather than the code, which is the
+    // wrong way round for an assertion about the catalogue.
+    const KINDS = ABILITY_KINDS as readonly string[];
     for (const a of getAllAbilities()) {
       expect(a.color).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(KINDS).toContain(a.kind);

@@ -6,7 +6,7 @@
  */
 
 import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
-import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject, ChestLoot, AbilityFx, ChainState, PhasingObjectState } from "@/types/game";
+import { Region, Ball, GrowingWall, LockFlashState, DissolveState, DestructibleState, ObjectDebrisState, StackObject, FallingObject, ChestLoot, AbilityFx, ChainState, PhasingObjectState, SlowArea } from "@/types/game";
 import { Wall } from "@/lib/wallGeometry";
 import { WallGrid } from "@/lib/physics/wallGrid";
 import { Polygon, Vector2 } from "@/lib/polygon";
@@ -410,6 +410,21 @@ export interface CanvasGameState {
   chestLoot?: ChestLoot[];
   /** Ability ids granted by chests this map, for the completion overlay. */
   chestRewardsLog?: string[];
+  /**
+   * Slow Areas placed this map, in world space. Permanent for the map and
+   * cleared with it, which is what distinguishes them from Slow All: one is a
+   * placement decision that lasts, the other a timing decision that does not.
+   */
+  slowAreas?: SlowArea[];
+  /**
+   * Ability ids the player currently holds a charge of, mirrored from the
+   * session each frame. The chest roll needs it to honour the slot cap, and it
+   * runs deep inside the physics step where the session's React state cannot
+   * reach.
+   */
+  heldAbilityIds?: string[];
+  /** How many DISTINCT abilities may be held at once (ascension can tighten). */
+  abilitySlots?: number;
   /** Slow All ability (#38): active-play second the global slow expires at. */
   abilitySlowUntil?: number;
   /** Slow All ability: creepFactor multiplier while the slow is active (<1). */

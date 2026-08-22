@@ -435,3 +435,21 @@ export interface LevelScoreData {
    */
   alsoClearedSpace?: boolean;
 }
+
+/**
+ * A player-placed Slow Area (ability): a patch of board where balls crawl for
+ * the rest of the map.
+ *
+ * Runtime state, not authored content, so it lives here rather than in
+ * types/level.ts beside gravity wells and coloured areas. It is placed in WORLD
+ * space, already un-tilted by the input handler, so it sits in the same frame
+ * as everything else on the board and rotates with it.
+ */
+export interface SlowArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  /** Displacement multiplier inside it (0.5 = half speed). */
+  factor: number;
+}
