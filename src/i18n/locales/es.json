@@ -293,6 +293,7 @@
     "fenceBudgetLeft": "{{count}} vallas restantes en este mapa",
     "beatCrunchTime": "Recta Final",
     "beatReorg": "Reorganización",
+    "beatWellWakes": "Gravedad activada",
     "beatEffectBalls_one": "se une una bola nueva",
     "beatEffectBalls_other": "se unen {{count}} bolas nuevas",
     "beatEffectSpeed": "las bolas aceleran un {{percent}}%",

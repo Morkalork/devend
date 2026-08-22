@@ -293,6 +293,7 @@
     "fenceBudgetLeft": "{{count}} staket kvar på denna bana",
     "beatCrunchTime": "Slutspurt",
     "beatReorg": "Omorganisation",
+    "beatWellWakes": "Gravitationen vaknar",
     "beatEffectBalls_one": "en ny boll tillkommer",
     "beatEffectBalls_other": "{{count}} nya bollar tillkommer",
     "beatEffectSpeed": "bollarna snabbas upp {{percent}}%",

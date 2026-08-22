@@ -295,6 +295,7 @@
     "fenceBudgetLeft": "{{count}} fences left this map",
     "beatCrunchTime": "Crunch Time",
     "beatReorg": "Reorg",
+    "beatWellWakes": "Gravity Online",
     "beatEffectBalls_one": "a new ball joins",
     "beatEffectBalls_other": "{{count}} new balls join",
     "beatEffectSpeed": "balls speed up {{percent}}%",

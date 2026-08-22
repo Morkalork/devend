@@ -13,6 +13,7 @@ import { forcedTilts } from "@/lib/devFlags";
 import { beginTilt, NO_TILT } from "@/lib/boardTilt";
 import {
   mapCanTilt, newTiers, rollTilts, rollTiltDirection, rollTiltChance,
+  authoredTiltChance,
 } from "@/lib/boardTiltRoll";
 
 /**
@@ -40,13 +41,16 @@ export function tickBoardTilt(
   // Drawn once per map, lazily, and seeded: a Daily plays the same tilts for
   // everyone, and a normal run gets a fresh band each map so the cadence cannot
   // be learned across runs.
-  // `?tilt=1` pins it to certain. Recorded on the state like any other drawn
-  // chance rather than special-cased at the roll, so everything downstream sees
-  // one consistent number instead of a flag it has to know about.
+  // Resolved once per map and recorded on the state, so everything downstream
+  // sees one consistent number instead of a flag it has to know about.
+  //
+  // Precedence: the debug flag beats an authored value beats the random draw.
+  // `?tilt=1` outranks authoring because its whole job is to make a map that
+  // rarely turns turn every time, which an authored 0.05 would otherwise veto.
   if (game.tiltChance == null) {
     game.tiltChance = forcedTilts()
       ? 1
-      : rollTiltChance(getRunRng(`tiltChance:${level.id}`));
+      : authoredTiltChance(level) ?? rollTiltChance(getRunRng(`tiltChance:${level.id}`));
   }
 
   const rng = getRunRng(`tilt:${level.id}:${crossed.join(",")}`);

@@ -25,6 +25,109 @@ turn). A strong non-tutorial map embodies **all three at once**.
 
 ---
 
+## The feature schedule: four beats per mechanic
+
+The three conventions above say what makes any single map good. This section
+says which mechanic each map is *about*, and it exists because thirty-one good
+maps in a row still produced a bad ladder.
+
+**What went wrong.** "One new idea per map" is right for L1-3 and wrong for
+everything after it. Applied to the whole ladder it spends the vocabulary by
+level 20 and leaves nothing for the back half. The audit that prompted this:
+
+- `dataStream`, `charge`, `threadLockRequired` and `gravityWell` each appeared
+  on **exactly one map in the entire game**.
+- `mover` carried **eight of the ten maps** in 21-30, `mirror` four of them, and
+  nothing else in that band was new at all.
+- The difficulty curve **inverted**: levels 31-34 asked for 70-72% of the board
+  when level 15 had asked for 95%, and `expectedCuts` fell from 9 to 4.
+
+None of that is visible one map at a time, which is why it survived so long.
+
+### The four beats
+
+A mechanic is not introduced, it is **developed**. A headline mechanic gets up
+to four maps inside its act:
+
+| beat | name | what the map does |
+|------|------|-------------------|
+| 1 | **Meet** | The mechanic alone, safe, legible. Nothing else on the map is new. |
+| 2 | **Use** | The mechanic **is** the greed hook (Convention 2). You must operate it deliberately to get paid. |
+| 3 | **Fight** | The mechanic as a hazard, crossed with an **older** mechanic, under space or fence pressure. |
+| 4 | **Break** | The mechanic inverted, so the lesson it taught is turned against you. |
+
+Seasoning mechanics (mirrors, thread-lock, slots) get one or two beats. Only
+headline mechanics earn all four.
+
+**Only beat 1 is solo.** Beats 2-4 must combine with something older. That
+constraint is the whole point: it is where a mechanic stops being a feature and
+starts being a decision.
+
+Worked example, gravity wells across act III:
+
+| beat | map | what it does |
+|---|---|---|
+| Meet | 21 "Gravity" | Two chambers, one neck, and a well hanging over the neck. The route between chambers is also where your ball stops going where you aimed it. |
+| Use | 22 "Slingshot" | A paying pocket with a mouth you cannot reach on a straight line. Feed a ball through the well and it arcs in. The well becomes the aiming device. |
+| Meet' | 23 "Fountain" | An up-well, low over the floor. Everything about a well says things fall here; this one throws them back. |
+| Break | 24 "Deferred" | A well drawn from frame one and *asleep*. Bank under it early and it is free money; at 50% it wakes and that pocket fills with balls you did not send. |
+
+### The rules
+
+1. **Every mechanic is a greed hook at least once.** One that is only ever a
+   hazard never becomes interesting, it just becomes tax.
+2. **Every act ends with a skill check before its boss.** No new toys on that
+   map. The boss is never the first test of the act's content.
+3. **The inversion is mandatory** for headline mechanics. A dormant well, a
+   `reveals` that frees balls instead of gifting space, an obstacle whose
+   *absence* is the hazard (L28 "Flaky").
+4. **The difficulty spine is independent of features.** Thresholds and cuts
+   follow the spine below whatever happens to be on the map.
+5. **The code gates are part of the schedule.** A mechanic debuting at level N
+   needs its level constant at N. `TILT_MIN_LEVEL`, `PROCEDURAL_MIN_LEVEL`,
+   `ROTATION_MIN_LEVEL`, `pickups.start_level`, and each ball's `unlockLevel`
+   in `balls.yml`. A gate below its content is the worst case, because nothing
+   throws: wells used to sit at 12-14 with the tilt gate at 11, which was ten
+   levels of dice rolls that could only ever produce a rotation with nothing to
+   break.
+6. **Keep what works, move it.** A map with real identity gets relocated, not
+   rebuilt. "Code Freeze" moved from 22 to 33 byte-for-byte when act III needed
+   the slot.
+
+### The difficulty spine
+
+Space demanded (100 − `sizeThreshold`) climbs within an act, and may only fall
+on the map straight after a boss, which is the breather. Bosses sit below the
+map before them: a boss is about its objective, not about the clear.
+
+```
+Act I    60 -> 84    Act III  86 -> 93
+Act II   84 -> 91    Act IV   92 -> 95
+```
+
+`expectedCuts` is deliberately **not** required to be monotone: it says how many
+seals a map's topology is built around, so a map of fewer, larger chambers
+legitimately wants fewer cuts than its neighbour. What is forbidden is a
+collapse, so a map may sit at most one cut below its act's high-water mark.
+
+### The acts
+
+| act | levels | identity | owns |
+|---|---|---|---|
+| I | 1-10 | Onboarding: the basics of sealing | locking, 2 balls, chambers & necks, movers, breakables, the BONUS area |
+| II | 11-20 | The Sprint: pressure and space | chests, `reveals`, terminals + dormant balls, WIP limit, mirrors, 4 balls |
+| III | 21-30 | Legacy Code: the board fights back | every gravity idea, the tilt, `dataStream`, charges, phasing |
+| IV | 31-35 | Crunch: everything at once | no new primitives; combination set-pieces and pinned mutators |
+
+`src/test/featureSchedule.test.ts` enforces the parts of this that are
+machine-checkable: no mechanic debuts before its gate, headline mechanics appear
+on enough maps, the spine holds, and every `announce` telegraph resolves in all
+three locales (a missing key renders the variable name in a warning banner, at
+the exact moment the map is trying to be fair). Acts are migrated one at a time;
+its `MIGRATED_ACTS` list may only grow.
+
+---
+
 ## Convention 1: Topology with intent (chambers & chokepoints)
 
 **The map is a sealing puzzle, not a field of noise.** Compose obstacles into a
@@ -270,6 +373,8 @@ If you cannot name the map in one sentence, it has no identity yet.
   the authored level-1 map. Design L1-3 as easy but real maps.
 - **Teaching cadence (L1-3):** introduce each convention alone before combining,
   a first-chokepoint map, a first-vault map, a first-turn map. L1-3 never rotate.
+  This is the ONLY band where one-new-idea-per-map applies to every map; from
+  L4 on, follow the four-beat schedule above.
 - **Economy inflation and build identity:** the greed hook is where builds
   express; as money gets scarce late-run, raise the hook's stakes (bigger vault,
   higher lock multiplier).

@@ -28,8 +28,17 @@
  */
 import type { GravityWell } from "@/types/level";
 
-/** Tilts only exist past the teaching band, which is full of other first ideas. */
-export const TILT_MIN_LEVEL = 11;
+/**
+ * Tilts only exist from act III, where gravity wells now debut.
+ *
+ * Was 11, when wells lived on levels 12-14. The feature schedule moved every
+ * well into act III so the band has ideas of its own, and the gate has to move
+ * with it: a tilt on a map with no well is a rigid rotation, which preserves
+ * every relationship inside it and therefore changes nothing. Leaving the gate
+ * at 11 would not have been a bug so much as ten levels of rolling dice that
+ * could only ever produce a disorienting non-event.
+ */
+export const TILT_MIN_LEVEL = 21;
 
 /** Board cleared (percent) at which a roll happens. Progress, never time. */
 export const TILT_TIERS = [20, 40, 60, 80] as const;
@@ -51,6 +60,22 @@ export function rollTiltChance(rng: () => number): number {
   const raw = rng();
   const t = Number.isFinite(raw) ? Math.min(1, Math.max(0, raw)) : 0;
   return TILT_CHANCE_MIN + t * (TILT_CHANCE_MAX - TILT_CHANCE_MIN);
+}
+
+/**
+ * A map's authored tilt chance, or null to use the random draw.
+ *
+ * Clamped and finite-guarded rather than trusted: an out-of-range or NaN value
+ * from YAML would otherwise make every `rng() < chance` comparison false and
+ * leave tilts silently never firing, which reads as an unimplemented feature
+ * rather than a broken one. Out-of-range clamps; nonsense falls back to the
+ * draw, because a typo should not silently pin a map to a number nobody chose.
+ */
+export function authoredTiltChance(level: { tiltChance?: number }): number | null {
+  const raw = level.tiltChance;
+  if (raw == null) return null;
+  if (!Number.isFinite(raw)) return null;
+  return Math.min(1, Math.max(0, raw));
 }
 
 /** Does this map tilt at all? */

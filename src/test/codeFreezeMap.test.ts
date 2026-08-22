@@ -1,5 +1,10 @@
 /**
- * "Code Freeze" (level-22): the STACKED greed hook.
+ * "Code Freeze" (level-33): the STACKED greed hook.
+ *
+ * Lived at level 22 until the feature schedule gave act III that slot for the
+ * gravity Slingshot. The map moved wholesale and its geometry is unchanged:
+ * the two pockets are sized against the denominator swing described below,
+ * not against the level number, so relocating it moves nothing that matters.
  *
  * The economy has two lock multipliers that MULTIPLY each other, and no map had
  * ever set up both at once:
@@ -67,7 +72,9 @@ const MODS = {
 const MAP = yaml.load(
   readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
 ) as LevelData;
-const LEVEL = MAP.levels.find(l => l.id === "level-22") as LevelConfig;
+const LEVEL = MAP.levels.find(l => l.id === "level-33") as LevelConfig;
+
+if (!LEVEL) throw new Error("level-33 (Code Freeze) is missing from map.yml");
 
 /**
  * Rotation is picked from the run seed for level >= 4, which would move every

@@ -185,6 +185,18 @@ export interface LevelConfig {
    */
   gravityWells?: GravityWell[];
   /**
+   * Per-tier board-tilt chance for this map (0-1), overriding the 5-10% band
+   * drawn at map start. Absent = the normal draw.
+   *
+   * The band is deliberately rare, which makes a tilt a surprise and makes it
+   * impossible to AUTHOR one. A map built around the turn (act III's skill
+   * check) has to be able to say "this one really does turn", the same way a
+   * map can pin a mutator rather than hoping the roll delivers it. Still
+   * subject to every other rule: the map needs a well for a tilt to mean
+   * anything, and it must be past TILT_MIN_LEVEL.
+   */
+  tiltChance?: number;
+  /**
    * Pin a mutator to this map instead of leaving it to the procedural roll.
    *
    * Boss maps could already force one; ordinary maps could not, so a mutator

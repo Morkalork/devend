@@ -17,6 +17,9 @@
  *   3. Chance drawn per map. A fixed number is learnable across runs.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import yaml from "js-yaml";
 import {
   TILT_MIN_LEVEL, TILT_TIERS, TILT_CHANCE_MIN, TILT_CHANCE_MAX,
   rollTiltChance, mapCanTilt, tiersReached, newTiers, rollTilts, rollTiltDirection,
@@ -28,12 +31,15 @@ import type { CanvasGameState } from "@/types/gameState";
 
 const WELL: GravityWell = { x: 300, y: 300, width: 200, height: 170 };
 const QUARTER = Math.PI / 2;
+/** A level that tilts. Derived from the gate: hard-coding it is what broke
+ *  these when wells moved to act III and the gate followed them. */
+const TILTS = TILT_MIN_LEVEL;
 
 describe("which maps tilt at all", () => {
   it("needs a well to have something to break", () => {
-    expect(mapCanTilt(20, [WELL])).toBe(true);
-    expect(mapCanTilt(20, [])).toBe(false);
-    expect(mapCanTilt(20, undefined)).toBe(false);
+    expect(mapCanTilt(TILTS, [WELL])).toBe(true);
+    expect(mapCanTilt(TILTS, [])).toBe(false);
+    expect(mapCanTilt(TILTS, undefined)).toBe(false);
   });
 
   it("stays out of the teaching band", () => {
@@ -41,8 +47,21 @@ describe("which maps tilt at all", () => {
     expect(mapCanTilt(TILT_MIN_LEVEL, [WELL])).toBe(true);
   });
 
-  it("starts after level 10, where the one-idea-per-map band ends", () => {
-    expect(TILT_MIN_LEVEL).toBeGreaterThan(10);
+  /**
+   * The gate and the content have to agree. A tilt needs a well to mean
+   * anything, so a gate BELOW the first authored well is ten levels of dice
+   * rolls that can only ever produce a disorienting non-event, and a gate ABOVE
+   * the last one is a feature that never fires. Checked against map.yml rather
+   * than against a number, because the number is the thing that drifts.
+   */
+  it("opens exactly where the authored wells start", () => {
+    const MAPS = (yaml.load(
+      readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+    ) as { levels: { level: number; gravityWells?: unknown[] }[] }).levels;
+    const withWells = MAPS.filter(l => (l.gravityWells?.length ?? 0) > 0);
+    expect(withWells.length, "no map has a well at all").toBeGreaterThan(0);
+    const firstWellLevel = Math.min(...withWells.map(l => l.level));
+    expect(firstWellLevel).toBeGreaterThanOrEqual(TILT_MIN_LEVEL);
   });
 });
 
@@ -189,7 +208,7 @@ describe("firing a tilt from cleared space", () => {
 
   it("never tilts a map with no wells, however much is cleared", () => {
     const g = game(undefined);
-    tickBoardTilt(g, LEVEL, 20, 99);
+    tickBoardTilt(g, LEVEL, TILTS, 99);
     expect(g.boardTilt).toBeUndefined();
     expect(g.firedTiltTiers ?? []).toEqual([]);
   });
@@ -202,15 +221,15 @@ describe("firing a tilt from cleared space", () => {
 
   it("records the tiers it has rolled, so none rolls twice", () => {
     const g = game([WELL], { tiltChance: 0 });   // never fires, but still spends
-    tickBoardTilt(g, LEVEL, 20, 45);
+    tickBoardTilt(g, LEVEL, TILTS, 45);
     expect(g.firedTiltTiers).toEqual([20, 40]);
-    tickBoardTilt(g, LEVEL, 20, 45);
+    tickBoardTilt(g, LEVEL, TILTS, 45);
     expect(g.firedTiltTiers, "the same tiers must not be spent again").toEqual([20, 40]);
   });
 
   it("turns the board when a roll comes up", () => {
     const g = game([WELL], { tiltChance: 1 });   // certain
-    tickBoardTilt(g, LEVEL, 20, 25);
+    tickBoardTilt(g, LEVEL, TILTS, 25);
     expect(g.boardTilt).toBeTruthy();
     expect(Math.abs(g.boardTilt!.turns)).toBe(1);
     expect(g.boardTilt!.startedAt).toBe(12);
@@ -224,22 +243,22 @@ describe("firing a tilt from cleared space", () => {
    */
   it("turns at most a quarter even when several tiers land at once", () => {
     const g = game([WELL], { tiltChance: 1 });
-    tickBoardTilt(g, LEVEL, 20, 95);            // crosses all four
+    tickBoardTilt(g, LEVEL, TILTS, 95);            // crosses all four
     expect(Math.abs(g.boardTilt!.turns)).toBe(1);
   });
 
   it("draws its chance once and keeps it for the map", () => {
     const g = game([WELL]);
-    tickBoardTilt(g, LEVEL, 20, 25);
+    tickBoardTilt(g, LEVEL, TILTS, 25);
     const first = g.tiltChance;
     expect(first).toBeGreaterThanOrEqual(TILT_CHANCE_MIN);
-    tickBoardTilt(g, LEVEL, 20, 45);
+    tickBoardTilt(g, LEVEL, TILTS, 45);
     expect(g.tiltChance).toBe(first);
   });
 
   it("does nothing before the first tier", () => {
     const g = game([WELL], { tiltChance: 1 });
-    tickBoardTilt(g, LEVEL, 20, TILT_TIERS[0] - 1);
+    tickBoardTilt(g, LEVEL, TILTS, TILT_TIERS[0] - 1);
     expect(g.boardTilt).toBeUndefined();
   });
 });
