@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronRight, Circle, Plus, Trash2, Pencil } from 'lucide-react';
+import { stepLevelIndex } from '@/lib/levelStep';
+import { SlidersHorizontal, RotateCcw, X, Layers, Save, Check, AlertCircle, ChevronLeft, ChevronRight, Circle, Plus, Trash2, Pencil } from 'lucide-react';
 import yaml from 'js-yaml';
 import { spliceYamlEntry } from '@/lib/yamlSplice';
 import { GameScreen } from '@/components/game/GameScreen';
@@ -484,16 +485,15 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
     setGameKey(k => k + 1);
   }, []);
 
-  const goToNextLevel = useCallback(() => {
+  const stepLevel = useCallback((delta: 1 | -1) => {
     if (allLevels.length === 0) return;
-    if (!selectedLevel) {
-      setSelectedLevel(allLevels[0]);
-    } else {
-      const idx = allLevels.findIndex(l => l.id === selectedLevel.id);
-      setSelectedLevel(allLevels[(idx + 1) % allLevels.length]);
-    }
+    const idx = selectedLevel ? allLevels.findIndex(l => l.id === selectedLevel.id) : -1;
+    setSelectedLevel(allLevels[stepLevelIndex(idx, allLevels.length, delta)]);
     setGameKey(k => k + 1);
   }, [allLevels, selectedLevel]);
+
+  const goToNextLevel = useCallback(() => stepLevel(1), [stepLevel]);
+  const goToPreviousLevel = useCallback(() => stepLevel(-1), [stepLevel]);
 
   const getDraftValue = useCallback((key: keyof GameModifiers): number => {
     return draft[key] ?? MODIFIER_META[key].defaultValue;
@@ -673,6 +673,14 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             <span className="truncate">{selectedLevel ? `L${selectedLevel.level}: ${selectedLevel.id}` : 'Level'}</span>
           </button>
           <button
+            onClick={goToPreviousLevel}
+            title="Previous level"
+            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
             onClick={goToNextLevel}
             title="Next level"
             className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
@@ -832,6 +840,14 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           >
             <Layers className="w-4 h-4" />
             Level
+          </button>
+          <button
+            onClick={goToPreviousLevel}
+            title="Previous level"
+            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
+          >
+            <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={goToNextLevel}
