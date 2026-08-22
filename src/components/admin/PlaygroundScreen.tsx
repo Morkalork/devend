@@ -213,6 +213,16 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   // The level the game is running (base for the ball override below).
   const baseLevel = selectedLevel ?? PLAYGROUND_LEVEL;
 
+  /**
+   * What the Level button says. Reads `baseLevel`, not `selectedLevel`, so it
+   * names the sandbox on first open instead of the bare word "Level": reported
+   * as "the level label only appears after changing level", which it did,
+   * because the no-level toolbar had the word hard-coded.
+   */
+  const levelLabel = selectedLevel
+    ? `L${selectedLevel.level}: ${selectedLevel.id}`
+    : 'Sandbox';
+
   // The balls the game spawns by default for this level (same deterministic
   // selection the real game uses) — what the picker shows when there's no
   // explicit override yet, so adding appends instead of replacing.
@@ -642,7 +652,11 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         )}
 
         {/* Controls overlay — only visible when a level is selected (floating toolbar handles the no-level case) */}
-        {selectedLevel && <div style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 50, display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'center', gap: 8, maxWidth: 'calc(100% - 32px)' }}>
+        {selectedLevel && <div
+          className="scrollbar-hide"
+          style={{ position: 'absolute', bottom: 16, left: 16, right: 16, zIndex: 50, overflowX: 'auto' }}
+        >
+        <div style={{ display: 'flex', flexWrap: 'nowrap', alignItems: 'center', gap: 8, width: 'max-content', marginLeft: 'auto' }}>
           {/* Mobile-only: open the level-edit drawer. */}
           <button
             onClick={() => setEditorOpen(true)}
@@ -655,14 +669,14 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           <button
             onClick={hardReset}
             title="Reset game"
-            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#ef4444', color: '#fff' }}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
           <button
             onClick={() => setLevelPickerOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90 min-w-0 max-w-[42vw] md:max-w-none"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90 flex-shrink-0 whitespace-nowrap"
             style={{
               backgroundColor: selectedLevel ? '#a855f722' : '#1a1f1a',
               color: selectedLevel ? '#a855f7' : accent,
@@ -670,12 +684,12 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
             }}
           >
             <Layers className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">{selectedLevel ? `L${selectedLevel.level}: ${selectedLevel.id}` : 'Level'}</span>
+            <span>{levelLabel}</span>
           </button>
           <button
             onClick={goToPreviousLevel}
             title="Previous level"
-            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -683,7 +697,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           <button
             onClick={goToNextLevel}
             title="Next level"
-            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
           >
             <ChevronRight className="w-4 h-4" />
@@ -691,7 +705,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           <button
             onClick={() => setBallPickerOpen(true)}
             title="Balls"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg shadow-lg text-sm font-semibold transition-opacity hover:opacity-90"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg flex-shrink-0 shadow-lg text-sm font-semibold transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
           >
             <Circle className="w-4 h-4" /> Balls
@@ -699,6 +713,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               <span className="bg-black/30 px-1.5 rounded-full text-[10px] font-bold">{effectiveBallIds.length}</span>
             )}
           </button>
+        </div>
         </div>}
       </div>
 
@@ -824,27 +839,28 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
 
       {/* ── Floating toolbar (only when in default playground mode, no level selected) ── */}
       {!selectedLevel && (
-        <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2">
+        <div className="fixed bottom-4 left-2 right-2 z-50 overflow-x-auto scrollbar-hide">
+        <div className="flex flex-nowrap items-center gap-2 w-max ml-auto pr-1">
           <button
             onClick={hardReset}
             title="Reset game & modifiers"
-            className="flex items-center justify-center w-9 h-9 rounded-lg font-semibold shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 font-semibold shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#ef4444', color: '#fff' }}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
           <button
             onClick={() => setLevelPickerOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90 flex-shrink-0 whitespace-nowrap"
             style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
           >
-            <Layers className="w-4 h-4" />
-            Level
+            <Layers className="w-4 h-4 flex-shrink-0" />
+            <span>{levelLabel}</span>
           </button>
           <button
             onClick={goToPreviousLevel}
             title="Previous level"
-            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
           >
             <ChevronLeft className="w-4 h-4" />
@@ -852,14 +868,14 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           <button
             onClick={goToNextLevel}
             title="Next level"
-            className="flex items-center justify-center w-9 h-9 rounded-lg shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center justify-center w-9 h-9 rounded-lg flex-shrink-0 shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
           >
             <ChevronRight className="w-4 h-4" />
           </button>
           <button
             onClick={() => setBallPickerOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg flex-shrink-0 font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: '#1a1f1a', color: accent, border: `1px solid ${accent}55` }}
           >
             <Circle className="w-4 h-4" />
@@ -870,7 +886,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
           </button>
           <button
             onClick={openModal}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg flex-shrink-0 font-semibold text-sm shadow-lg transition-opacity hover:opacity-90"
             style={{ backgroundColor: accent, color: '#000', boxShadow: `0 0 16px ${accent}66` }}
           >
             <SlidersHorizontal className="w-4 h-4" />
@@ -881,6 +897,7 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
               </span>
             )}
           </button>
+        </div>
         </div>
       )}
 

@@ -113,3 +113,95 @@ describe("both toolbars carry both buttons", () => {
     expect(SRC).toMatch(/goToNextLevel = useCallback\(\(\) => stepLevel\(1\)/);
   });
 });
+
+/**
+ * The bottom toolbar on a phone.
+ *
+ * Reported as two bugs and it was one: the no-level toolbar was a plain
+ * non-wrapping flex row pinned to the right, so on a narrow screen it simply
+ * ran off the side, taking the level button with it. That is also why "the
+ * level label only appears after changing level" - the label existed the whole
+ * time, it was off-screen until a selection swapped in the other toolbar, which
+ * wrapped instead.
+ *
+ * Both failures are invisible to every other kind of test: the markup is valid,
+ * nothing throws, and on a desktop viewport it all looks correct.
+ */
+describe("the playground toolbars fit on a phone", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../components/admin/PlaygroundScreen.tsx"), "utf8",
+  );
+
+  /**
+   * Checked per toolbar rather than by counting scroll containers in the file.
+   * A global count passed happily with the no-level toolbar's scrolling removed,
+   * because an unrelated row elsewhere in the screen also scrolls: the sort of
+   * assertion that is green for a reason that has nothing to do with the bug.
+   */
+  it("scrolls the with-a-level toolbar", () => {
+    const i = SRC.indexOf("{selectedLevel && <div");
+    expect(i, "the with-a-level toolbar is gone").toBeGreaterThan(-1);
+    const container = SRC.slice(i, SRC.indexOf(">", SRC.indexOf("style={{", i)));
+    expect(container).toMatch(/overflowX: 'auto'/);
+    expect(container).toMatch(/position: 'absolute'/);
+  });
+
+  it("scrolls the no-level toolbar", () => {
+    const i = SRC.indexOf("{!selectedLevel && (");
+    expect(i, "the no-level toolbar is gone").toBeGreaterThan(-1);
+    const container = SRC.slice(i, i + 260);
+    expect(container).toMatch(/overflow-x-auto/);
+    expect(container, "pinning it to the right edge is what pushed it off-screen")
+      .not.toMatch(/fixed bottom-4 right-4 z-50 flex/);
+  });
+
+  it("stops the row wrapping onto a second line over the board", () => {
+    expect(SRC).not.toMatch(/flexWrap: 'wrap'/);
+  });
+
+  it("pins every toolbar button against being squeezed", () => {
+    // A flex row that is allowed to shrink its children will do that instead of
+    // scrolling, and the buttons become unreadable slivers rather than
+    // overflowing into the scroll area.
+    const toolbarButtons = SRC.match(/className="flex items-center (?:justify-center )?[^"]*(?:w-9 h-9|px-3 py-2|px-4 py-2)[^"]*rounded-lg[^"]*shadow-lg[^"]*"/g) ?? [];
+    expect(toolbarButtons.length, "no toolbar buttons matched").toBeGreaterThan(6);
+    const unpinned = toolbarButtons.filter(c => !c.includes("flex-shrink-0"));
+    expect(unpinned).toEqual([]);
+  });
+
+  it("right-aligns the row while leaving the overflow reachable", () => {
+    // ml-auto collapses to zero once the content is wider than the rail, so the
+    // row starts at the left edge and scrolls. Aligning with justify-end
+    // instead would clip the leading buttons out of reach in some engines.
+    expect(SRC).toMatch(/marginLeft: 'auto'/);
+    expect(SRC).toMatch(/ml-auto/);
+    expect(SRC).not.toMatch(/justifyContent: 'flex-end'/);
+  });
+});
+
+/**
+ * The label the Level button carries. It read the word "Level" from a string
+ * literal in the no-level toolbar, so it could not name anything until a
+ * selection existed.
+ */
+describe("the level label says what is loaded, from the start", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../components/admin/PlaygroundScreen.tsx"), "utf8",
+  );
+
+  it("derives one label and uses it in both toolbars", () => {
+    expect(SRC).toMatch(/const levelLabel = selectedLevel/);
+    const uses = SRC.match(/\{levelLabel\}/g) ?? [];
+    expect(uses.length, "both toolbars should render the same label").toBe(2);
+  });
+
+  it("names the sandbox rather than the bare word Level", () => {
+    expect(SRC).toMatch(/'Sandbox'/);
+    // The hard-coded label is what made the button uninformative on open.
+    expect(SRC).not.toMatch(/<Layers className="w-4 h-4" \/>\s*\n\s*Level\s*\n/);
+  });
+
+  it("still names a real level once one is selected", () => {
+    expect(SRC).toMatch(/L\$\{selectedLevel\.level\}: \$\{selectedLevel\.id\}/);
+  });
+});
