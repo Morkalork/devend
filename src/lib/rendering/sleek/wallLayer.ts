@@ -24,6 +24,7 @@ import type { Wall } from "@/lib/wallGeometry";
 import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, facing, shadowFor, type LightScope } from "./light";
+import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
 import { snapSegment, snapWidth, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -279,6 +280,49 @@ export class WallLayer {
    * still find their own cuts. It reads as a thing standing on the board rather
    * than a glowing line painted over it.
    */
+  /**
+   * The screen points to stroke this segment through.
+   *
+   * Two, snapped to the pixel grid, whenever nothing has hit it: that is every
+   * wall on every frame, so the bulge has to cost nothing at rest, and a
+   * straight fence has to keep landing exactly on the grid or its edges soften.
+   *
+   * When a ball HAS struck nearby, the segment is sampled into N_NODES points
+   * and each is displaced by the impact bulge. Sampled and displaced in WORLD
+   * space, then transformed: the displacement direction is a world normal, so
+   * adding it to screen coordinates would point the wrong way the moment the
+   * board is tilted. Doing it before w2s makes the tilt handle it for free.
+   *
+   * Not snapped in that case, deliberately. Snapping a curve to whole pixels
+   * quantises a 6-unit bulge into a visible staircase, and the bulge is worth
+   * more than the crispness for the half second it lasts.
+   */
+  private segmentPoints(
+    startW: Vector2, endW: Vector2, w2s: W2S, snapTo: number,
+  ): { pts: Pt[]; bulged: boolean } {
+    if (!hasNearbyImpacts(startW, endW)) {
+      const { a, b } = snapSegment(w2s(startW.x, startW.y), w2s(endW.x, endW.y), snapTo);
+      return { pts: [a, b], bulged: false };
+    }
+    const pts: Pt[] = [];
+    for (let i = 0; i < N_NODES; i++) {
+      const t = i / (N_NODES - 1);
+      const wx = startW.x + (endW.x - startW.x) * t;
+      const wy = startW.y + (endW.y - startW.y) * t;
+      // scale 1: world units in, world units out.
+      const e = getEffectsAtPoint({ x: wx, y: wy }, 1);
+      pts.push(w2s(wx + e.dx, wy + e.dy));
+    }
+    return { pts, bulged: true };
+  }
+
+  /** Queue a polyline through `pts`. Two points is the ordinary straight wall. */
+  private path(g: Graphics, pts: Pt[]): Graphics {
+    g.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+    return g;
+  }
+
   private drawSegment(
     startW: Vector2,
     endW: Vector2,
@@ -289,9 +333,9 @@ export class WallLayer {
     scale: number,
   ): void {
     const thickness = Math.max(1, worldThickness * scale);
-    const a0 = w2s(startW.x, startW.y);
-    const b0 = w2s(endW.x, endW.y);
-    const { a, b } = snapSegment(a0, b0, snapWidth(thickness));
+    const { pts, bulged } = this.segmentPoints(startW, endW, w2s, snapWidth(thickness));
+    const a = pts[0];
+    const b = pts[pts.length - 1];
 
     const dx = b.x - a.x;
     const dy = b.y - a.y;
@@ -316,24 +360,25 @@ export class WallLayer {
     // use, so a fence and a wall are visibly made of the same stuff.
     const amb = ambientAt(light, midX, midY);
     const material = isEdge ? PALETTE.edge : PALETTE.accentDim;
-    this.bodies
-      .moveTo(a.x, a.y)
-      .lineTo(b.x, b.y)
+    this.path(this.bodies, pts)
       .stroke({
         width: snapWidth(thickness),
         color: mix(PALETTE.shadow, material, 0.55 + amb * 0.45),
         alpha: 1,
-        cap: "butt",
+        // A bulged run is one bent line rather than a chain of butted stubs, so
+        // its joins have to be round or every sample point shows as a notch.
+        cap: bulged ? "round" : "butt",
+        join: "round",
       });
 
     if (!isEdge) {
       // A narrow accent core - the player's own mark still needs to be findable
       // at a glance. Much dimmer and thinner than the old neon centreline, and
       // it now dims with the ambient like everything else rather than emitting.
-      this.bodies
-        .moveTo(a.x, a.y)
-        .lineTo(b.x, b.y)
+      this.path(this.bodies, pts)
         .stroke({
+          join: "round",
+          cap: bulged ? "round" : "butt",
           width: Math.max(1, snapWidth(thickness * 0.3)),
           // Deliberately kept well short of full accent: this is a lit material
           // catching the monitor, not a neon tube. Blending most of the way to
@@ -341,7 +386,6 @@ export class WallLayer {
           // still clashing with the furniture around it.
           color: mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb),
           alpha: 0.8,
-          cap: "butt",
         });
     }
 
@@ -358,14 +402,17 @@ export class WallLayer {
     const ry = useNy * half;
     // Same 1px rim, same strength constant as the obstacles and mirrors use, so
     // every lit edge on the board is spoken in one voice.
-    this.rims
-      .moveTo(a.x + rx, a.y + ry)
-      .lineTo(b.x + rx, b.y + ry)
+    // The rim rides the same curve, offset along the chord normal. Using a
+    // per-point normal would be more correct and is not worth it: the bulge
+    // peaks at six world units, so the curve's own normals never diverge from
+    // the chord's by enough to see.
+    this.path(this.rims, pts.map(p => ({ x: p.x + rx, y: p.y + ry })))
       .stroke({
         width: hairline(),
         color: isEdge ? PALETTE.edge : PALETTE.accentGlow,
         alpha: Math.min(0.95, lit * 0.95 * light.level),
-        cap: "butt",
+        cap: bulged ? "round" : "butt",
+        join: "round",
       });
   }
 
