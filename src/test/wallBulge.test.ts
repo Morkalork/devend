@@ -204,22 +204,48 @@ describe("the board's outer wall", () => {
     resolve(__dirname, "../lib/rendering/sleek/wallLayer.ts"), "utf8",
   );
 
-  it("is drawn outside the fence mask, or its bulge is cropped away", () => {
-    expect(SRC).toMatch(/outerScope/);
-    // The masked scope is the one with fenceMask on it; the outer one must not be.
+  /**
+   * There are TWO masks between a board-edge bulge and the screen, and dodging
+   * one is not enough. Escaping the inner fenceMask still left the frame
+   * clipped flat by boardScope's mask, which is the same board polygon applied
+   * to every layer at once: reported as the effect happening "underneath the
+   * wall", because the only part that survived was the sliver falling inside
+   * the boundary.
+   */
+  it("is drawn outside the fence mask", () => {
+    expect(SRC).toMatch(/readonly outer = new Container\(\)/);
     expect(SRC).toMatch(/this\.fenceScope\.mask = this\.fenceMask;/);
-    expect(SRC).not.toMatch(/this\.outerScope\.mask/);
+    expect(SRC).not.toMatch(/this\.outer\.mask/);
+  });
+
+  it("is hung outside the BOARD scope too, which is the mask that caught it", () => {
+    const R = readFileSync(
+      resolve(__dirname, "../lib/rendering/sleek/SleekRenderer.ts"), "utf8",
+    );
+    expect(R, "the frame must not live inside the masked board scope")
+      .toMatch(/this\.root\.addChild\(this\.walls\.outer\)/);
+    const scope = R.slice(R.indexOf("this.boardScope.addChild("), R.indexOf("this.root.addChild"));
+    expect(scope, "walls.outer inside boardScope is the bug").not.toMatch(/walls\.outer/);
+  });
+
+  it("offsets each edge along its own normal, not radially from the centre", () => {
+    // A radial push is a scale-out: on a rectangle it moves corners further
+    // than edge midpoints, so the frame sits at a different distance from the
+    // boundary depending where you look, and the corners open up.
+    expect(SRC).toMatch(/nx \* mx \+ ny \* my < 0/);
   });
 
   it("stops the masked pass drawing board edges twice", () => {
     expect(SRC).toMatch(/if \(isEdge\) continue;/);
   });
 
-  it("sits under the fences, so a fence butts into it", () => {
-    const add = SRC.match(/this\.container\.addChild\(([^)]*)\)/);
-    expect(add).toBeTruthy();
-    const order = add![1];
-    expect(order.indexOf("outerScope")).toBeLessThan(order.indexOf("fenceScope"));
+  it("fits inside the board's margin instead of overhanging the page", () => {
+    const m = SRC.match(/const OUTER_WALL_THICKNESS = (\d+)/);
+    const thickness = Number(m![1]);
+    // initGame insets the play area by ARENA_MARGIN of the board on each side;
+    // the frame is drawn into that gap, so it has to be narrower than it.
+    const margin = 900 * 0.05;
+    expect(thickness).toBeLessThan(margin);
   });
 
   it("is heavier than a fence, so the frame reads as structure", () => {

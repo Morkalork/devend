@@ -133,6 +133,11 @@ export class SleekRenderer {
     );
     this.root.addChild(this.boardScope, this.boardMask);
     this.boardScope.mask = this.boardMask;
+    // The board's outer wall is the one thing that belongs OUTSIDE the board
+    // mask: it is drawn beyond the play boundary on purpose, and inside the
+    // scope it would be clipped flat against the very edge it frames. Added
+    // after boardScope so it sits over the margin rather than under the panel.
+    this.root.addChild(this.walls.outer);
     // The board's drop shadow falls on the page BEHIND the board, so it is a
     // stage-level underlay added before everything else. The space bar is the
     // one piece of chrome that belongs outside the board on top. The shatter

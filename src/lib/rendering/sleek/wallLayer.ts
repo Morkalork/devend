@@ -80,7 +80,18 @@ export class WallLayer {
    * Drawing the rim of the board as a real wall outside that mask fixes the
    * clipping and gives the board a frame at the same time.
    */
-  private outerScope = new Container();
+  /**
+   * Exposed so the renderer can hang it OUTSIDE the board scope.
+   *
+   * There are two masks between a board-edge bulge and the screen, and escaping
+   * one is not enough. The inner `fenceMask` is the board polygon minus the
+   * obstacles; the outer `boardScope.mask` is the board polygon again, applied
+   * to every layer at once. A frame drawn outside the play area is clipped
+   * flat by the second one however carefully it dodges the first, which reads
+   * exactly like the effect happening UNDERNEATH the wall: all you see is the
+   * sliver that happens to fall inside the boundary.
+   */
+  readonly outer = new Container();
   private fenceScope = new Container();
   private fenceMask = new Graphics();
   private fenceMaskKey = "";
@@ -101,11 +112,9 @@ export class WallLayer {
     // plane, below everything that stands on the board.
     this.fenceScope.addChild(this.bodies, this.rims);
     this.fenceScope.mask = this.fenceMask;
-    this.outerScope.addChild(this.outerBodies, this.outerRims);
+    this.outer.addChild(this.outerBodies, this.outerRims);
     // The mask must be a sibling in the display list, not a detached Graphics.
-    // The outer wall goes UNDER the fences: a fence meeting the frame should
-    // read as butting into it, not as being cut off by it.
-    this.container.addChild(this.outerScope, this.fenceScope, this.fenceMask);
+    this.container.addChild(this.fenceScope, this.fenceMask);
   }
 
   /** Board polygon with the obstacle footprints cut out of it. */
@@ -188,16 +197,28 @@ export class WallLayer {
       const cx = poly.vertices.reduce((n, v) => n + v.x, 0) / poly.vertices.length;
       const cy = poly.vertices.reduce((n, v) => n + v.y, 0) / poly.vertices.length;
       const push = OUTER_WALL_THICKNESS / 2;
-      // Offset each vertex away from the centre. Exact for the rectangle the
-      // board actually is, and gracefully approximate for anything else.
-      const out = poly.vertices.map(v => {
-        const dx = v.x - cx, dy = v.y - cy;
-        const d = Math.hypot(dx, dy) || 1;
-        return { x: v.x + (dx / d) * push * Math.SQRT2, y: v.y + (dy / d) * push * Math.SQRT2 };
-      });
-      for (let i = 0; i < out.length; i++) {
+      const n = poly.vertices.length;
+      // Offset each EDGE along its own outward normal, rather than pushing the
+      // vertices away from the centroid. A radial push is a scale-out: on a
+      // rectangle it moves corners further than edge midpoints, so the frame
+      // ends up a different distance from the boundary depending on where you
+      // look at it, and the corners open up.
+      for (let i = 0; i < n; i++) {
+        const a = poly.vertices[i];
+        const b = poly.vertices[(i + 1) % n];
+        const ex = b.x - a.x, ey = b.y - a.y;
+        const len = Math.hypot(ex, ey);
+        if (len < 1) continue;
+        let nx = -ey / len, ny = ex / len;
+        // Point it away from the middle of the board.
+        const mx = (a.x + b.x) / 2 - cx, my = (a.y + b.y) / 2 - cy;
+        if (nx * mx + ny * my < 0) { nx = -nx; ny = -ny; }
+        // Extended half a thickness at each end so neighbouring edges overlap
+        // into a mitre instead of leaving a notch at every corner.
+        const tx = (ex / len) * push, ty = (ey / len) * push;
         this.drawSegment(
-          out[i], out[(i + 1) % out.length],
+          { x: a.x + nx * push - tx, y: a.y + ny * push - ty },
+          { x: b.x + nx * push + tx, y: b.y + ny * push + ty },
           OUTER_WALL_THICKNESS, true, light, w2s, scale,
         );
       }
