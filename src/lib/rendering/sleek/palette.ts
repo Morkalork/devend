@@ -64,15 +64,6 @@ export const PALETTE = {
   accent: 0x00ff88,
   accentDim: 0x0a8a4e,
   accentGlow: 0x6bffbc,
-  /**
-   * What a wall lightens toward where a ball strikes it.
-   *
-   * A pale near-white rather than the accent, because both a green fence and a
-   * grey board edge take this flash and each has to brighten in its OWN hue.
-   * Mixing toward the accent would turn every board edge green on impact, which
-   * says "the player did this" about a wall the player did not make.
-   */
-  wallFlash: 0xdff7ea,
 
   // ── Structure ─────────────────────────────────────────────────────────────
   /**

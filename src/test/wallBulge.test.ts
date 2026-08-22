@@ -142,55 +142,6 @@ describe("the shape of the bulge", () => {
 });
 
 /**
- * The lightening at the hit point, which was computed and thrown away exactly
- * like the bulge: getEffectsAtPoint has always returned a `glow` and nothing
- * had ever drawn it.
- */
-describe("the flash at the point of impact", () => {
-  it("lights the wall where the ball landed", () => {
-    hitFromAbove(BASE_SPEED / 400);
-    updateWallImpacts();
-    expect(getEffectsAtPoint(MID, 1).glow).toBeGreaterThan(0.1);
-  });
-
-  it("is brightest at the hit and falls away along the wall", () => {
-    hitFromAbove(BASE_SPEED / 400);
-    updateWallImpacts();
-    const here = getEffectsAtPoint(MID, 1).glow;
-    const away = getEffectsAtPoint({ x: 560, y: 400 }, 1).glow;
-    expect(here).toBeGreaterThan(away);
-  });
-
-  /** A flash, not a lamp: it has to be gone well before the bulge relaxes. */
-  it("fades faster than the bulge does", () => {
-    hitFromAbove(BASE_SPEED / 400);
-    advance(300);
-    updateWallImpacts();
-    expect(getEffectsAtPoint(MID, 1).glow).toBe(0);
-    expect(Math.abs(getEffectsAtPoint(MID, 1).dy), "the bulge should outlive it")
-      .toBeGreaterThan(0);
-  });
-
-  it("lasts long enough to be seen at all", () => {
-    hitFromAbove(BASE_SPEED / 400);
-    advance(120);
-    updateWallImpacts();
-    expect(getEffectsAtPoint(MID, 1).glow, "gone inside a tenth of a second is not a flash")
-      .toBeGreaterThan(0);
-  });
-
-  it("is drawn by the renderer, in the wall's own hue", () => {
-    const SRC = readFileSync(
-      resolve(__dirname, "../lib/rendering/sleek/wallLayer.ts"), "utf8",
-    );
-    expect(SRC, "the glow must reach a stroke").toMatch(/glows\[/);
-    // Mixed from the wall's own material toward a near-white, so a grey board
-    // edge does not flash green and claim to be the player's fence.
-    expect(SRC).toMatch(/mix\(material, PALETTE\.wallFlash/);
-  });
-});
-
-/**
  * The outer wall, and why the effect looked like a fences-only feature.
  *
  * Board edges DO exist as walls and DID register impacts. They were drawn

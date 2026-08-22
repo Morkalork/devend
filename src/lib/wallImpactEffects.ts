@@ -38,10 +38,9 @@ const BULGE_TAU       = 85;   // ms to peak (soft, quick rise)
 const BULGE_DURATION  = 520;  // ms total life (smooth relax)
 const BULGE_SIGMA     = 40;   // spatial spread of the bump along the wall (world units)
 const EDGE_TAPER      = 22;   // world units: bulge fades to 0 approaching the wall ends
-// The hit flash. 130ms was under a tenth of a second, which is long enough to
-// exist and short enough that nobody was going to catch it on a wall two pixels
-// wide; 220 still reads as a flash rather than a lamp.
-const GLOW_DURATION   = 220;  // ms — brief hit flash
+// Feeds only the dead Canvas2D path below (renderWallPolyline); the Pixi
+// renderer drew a hit flash from it briefly and no longer does.
+const GLOW_DURATION   = 130;  // ms — brief hit flash
 const GLOW_MAX        = 0.85;
 const EFFECT_RADIUS   = 60;   // world units — cull radius / glow falloff
 const MAX_IMPACTS     = 14;
