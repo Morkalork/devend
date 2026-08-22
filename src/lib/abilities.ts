@@ -17,10 +17,10 @@ import yaml from "js-yaml";
 import abilitiesYamlRaw from "../../public/abilities.yml?raw";
 
 /** The coded effect an ability triggers. A new kind needs code in abilityEffects.ts. */
-export type AbilityKind = "freeze" | "slow" | "slowArea" | "clearFences" | "magnet" | "shockwave" | "fenceRush" | "fenceShield";
+export type AbilityKind = "freeze" | "slow" | "slowArea" | "descope" | "clearFences" | "magnet" | "shockwave" | "fenceRush" | "fenceShield";
 /** Every coded kind, exported so nothing has to keep a second copy of the list. */
 export const ABILITY_KINDS: readonly AbilityKind[] = [
-  "freeze", "slow", "slowArea", "clearFences", "magnet", "shockwave",
+  "freeze", "slow", "slowArea", "descope", "clearFences", "magnet", "shockwave",
   "fenceRush", "fenceShield",
 ];
 const VALID_KINDS = new Set<AbilityKind>(ABILITY_KINDS);

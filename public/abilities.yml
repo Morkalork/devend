@@ -60,6 +60,21 @@ abilities:
     description: "Marks a patch of the board where balls move at half speed, for the rest of the map."
     howTo: "Tap to activate, then tap the board to place it. Put it where you want a lock, not where the balls are now."
 
+  # The counterpart to Scope Creep, and the bluntest thing in the catalogue: it
+  # changes what the board IS rather than how it behaves. Two-sided by nature,
+  # since the obstacle you delete takes the pocket it formed with it. Refuses
+  # objectives (that is the map's actual job) and chests (their reward comes
+  # from smashing them, so deleting one would destroy what you were owed).
+  - id: descope
+    name: Descope
+    kind: descope
+    color: "#ff8fa3"
+    weight: 2
+    startLevel: 12
+    targeted: true
+    description: "Deletes one obstacle from the map for good, turning it into space you can capture."
+    howTo: "Tap to activate, then tap the obstacle you want gone. Objectives and treasure chests cannot be descoped."
+
   - id: clearFences
     name: Clear Fences
     kind: clearFences

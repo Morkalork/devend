@@ -14,6 +14,7 @@
 import { CanvasGameState } from "@/types/gameState";
 import { getAbility } from "@/lib/abilities";
 import { placeSlowArea } from "@/lib/physics/slowAreas";
+import { descopeAt } from "@/lib/physics/descope";
 import { BOARD_WIDTH } from "@/lib/boardConstants";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
@@ -664,6 +665,15 @@ export function fireTargetedAbility(id: string, game: CanvasGameState, now: numb
     game.magnetMarker = { x: target.x, y: target.y, startTime: now };
     return true;
   }
+  if (def.kind === "descope") {
+    // Returns false on a tap that hit nothing removable, which the caller reads
+    // as "spend no charge". A miss that costs a charge would feel like theft:
+    // the player cannot see the hit boxes, so a near-miss on a thin wall is not
+    // a mistake they had the information to avoid.
+    const removed = descopeAt(game, target.x, target.y);
+    if (removed) pushAbilityFx(game, def.color, true, now, target);
+    return removed;
+  }
   if (def.kind === "slowArea") {
     // Placed and left there. Every other ability in the catalogue is a moment;
     // this one is a decision about the board that outlives the charge, so it
@@ -716,9 +726,10 @@ export function fireAbility(
       applyFenceShield(game, def.durationSeconds ?? DEFAULT_FENCE_SHIELD_SECONDS);
       break;
     case "slowArea":
-      // Targeted: it has no meaning without a point, so reaching here means the
-      // arming step was skipped. Decline rather than place one at the centre,
-      // which would spend the charge somewhere the player did not choose.
+    case "descope":
+      // Targeted: they have no meaning without a point, so reaching here means
+      // the arming step was skipped. Decline rather than act at the board
+      // centre, which would spend the charge somewhere nobody chose.
       fired = false;
       break;
     default:
