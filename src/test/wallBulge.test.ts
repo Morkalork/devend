@@ -273,3 +273,48 @@ describe("the renderer actually samples it", () => {
     expect(N_NODES).toBeGreaterThan(2);
   });
 });
+
+/**
+ * Deformations must finish, not freeze half-risen.
+ *
+ * Reported from play: locking a ball froze the wall bulges mid-animation. The
+ * loop advanced them beside the physics step, and several paths render and
+ * return long before reaching it - a completed level playing out its lock
+ * animations, and the deferred push prompt holding the world still while a
+ * flash finishes. Both keep DRAWING, so a bulge caught on the way up stayed at
+ * full deflection for as long as the lock took, which is precisely the moment
+ * the board is held still enough to look at.
+ */
+describe("impacts keep relaxing while a lock plays out", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../hooks/useGameLoop.ts"), "utf8",
+  );
+
+  it("advances them before any early-returning render path", () => {
+    const update = SRC.indexOf("updateWallImpacts();");
+    expect(update, "the update must exist").toBeGreaterThan(-1);
+    // Every path that renders and returns without running physics comes later.
+    expect(update).toBeLessThan(SRC.indexOf("if (game.levelComplete)"));
+    expect(update).toBeLessThan(SRC.indexOf("if (game.pushPromptPending)"));
+  });
+
+  it("advances obstacles on the same schedule as walls", () => {
+    // A frozen slab dent beside a relaxing fence bulge would be worse than
+    // either alone: two surfaces on the same board disagreeing about time.
+    const w = SRC.indexOf("updateWallImpacts();");
+    const o = SRC.indexOf("updateObstacleImpacts();");
+    expect(Math.abs(o - w)).toBeLessThan(120);
+  });
+
+  it("stays behind the pause guard, so a modal still freezes everything", () => {
+    const pause = SRC.indexOf("if (game.paused && !game.levelComplete");
+    expect(pause).toBeLessThan(SRC.indexOf("updateWallImpacts();"));
+  });
+
+  it("is advanced exactly once per frame", () => {
+    // It used to sit beside the physics step; leaving both call sites in would
+    // not double-advance (the envelope is absolute-time) but would leave the
+    // next reader guessing which one matters.
+    expect((SRC.match(/updateWallImpacts\(\);/g) ?? []).length).toBe(1);
+  });
+});

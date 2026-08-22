@@ -102,11 +102,26 @@ describe("drawing it", () => {
     expect(BOARD).toMatch(/\(\(col \+ row\) & 1\) !== 0\) continue;/);
   });
 
-  it("is drawn with the persistent tint, not with the transient flash", () => {
+  it("is drawn on the board surface, not as a transient flash", () => {
     // The whole point: it has to still be there a minute later.
-    const fn = BOARD.slice(BOARD.indexOf("private drawSuperiorHatch"));
-    expect(fn).toMatch(/this\.locked\./);
     expect(BOARD).toMatch(/this\.drawSuperiorHatch\(game, w2s\);/);
+    expect(BOARD).toMatch(/private hatch = new Graphics\(\)/);
+    expect(BOARD).toMatch(/this\.surface\.addChild\([^)]*this\.hatch/);
+  });
+
+  /**
+   * On its OWN Graphics rather than sharing `locked`. A Pixi Graphics carries
+   * one accumulating path, so stroking the hatch on the object that had just
+   * filled every locked-pocket contour risks stroking those contours too. The
+   * separation makes that impossible rather than relying on fill() having
+   * consumed the path.
+   */
+  it("cannot contaminate, or be contaminated by, the pocket fills", () => {
+    expect(BOARD).not.toMatch(/this\.locked\.stroke\(/);
+    const fn = BOARD.slice(BOARD.indexOf("private drawSuperiorHatch"));
+    expect(fn).toMatch(/this\.hatch\.moveTo/);
+    expect(fn).toMatch(/this\.hatch\.stroke/);
+    expect(BOARD).toMatch(/this\.hatch\.clear\(\);/);
   });
 });
 

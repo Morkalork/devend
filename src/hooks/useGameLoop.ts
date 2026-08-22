@@ -219,6 +219,22 @@ export function createGameLoop(
 
     if (game.gameOver || game.pushMode === "prompt") return;
 
+    // Wall and obstacle deformations, advanced HERE rather than beside the
+    // physics step further down.
+    //
+    // Several paths below render and return without ever reaching that step: a
+    // completed level playing out its lock animations, and the deferred push
+    // prompt holding the world still while a lock flash finishes. Both keep
+    // drawing, so a bulge caught mid-rise stayed frozen at full deflection for
+    // as long as the lock took, which is the one moment the board is held still
+    // enough to stare at. They are time-based and idempotent, so running them
+    // on every frame that draws anything is both correct and cheap.
+    //
+    // After the `paused` guard on purpose: with a modal up nothing should be
+    // moving, deformations included.
+    updateWallImpacts();
+    updateObstacleImpacts();
+
     // After level complete, keep rendering until all lock animations finish and
     // the celebratory clear shimmer has swept the whole board.
     if (game.levelComplete) {
@@ -465,10 +481,6 @@ export function createGameLoop(
     applyLockGlide(game, performance.now());
 
     const _physMs = performance.now() - _physStart;
-
-    // Update wall + obstacle impact visual effects (time-based)
-    updateWallImpacts();
-    updateObstacleImpacts();
 
     const _renderStart = performance.now();
     callbacks.render();

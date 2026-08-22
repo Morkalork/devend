@@ -70,6 +70,16 @@ export class BoardLayer {
   private surface = new Container();
   private captured = new Graphics();  // fenced-off territory (the substrate)
   private locked = new Graphics();    // territory earned by trapping a ball
+  /**
+   * The superior hatch, on its own canvas rather than sharing `locked`.
+   *
+   * A Pixi Graphics accumulates one path across calls, and `fill()` does not
+   * discard what came before it: stroking the hatch on the same object also
+   * stroked every locked-pocket contour already sitting in that path, which
+   * drew long stray lines across the board. Its own Graphics cannot be
+   * contaminated by, or contaminate, the fills.
+   */
+  private hatch = new Graphics();
   private active = new Graphics();    // still-playable space, punched on top
   private lattice = new Graphics();   // the faint grid inside live space
   private latticeMask = new Graphics();
@@ -99,7 +109,7 @@ export class BoardLayer {
     // has been captured, and live space is painted opaque on top, which also
     // means a pocket that later REOPENS (a destructible breaking) hides its
     // stale tint for free rather than needing the array cleaned up.
-    this.surface.addChild(this.captured, this.locked, this.active, this.lattice, this.latticeMask);
+    this.surface.addChild(this.captured, this.locked, this.hatch, this.active, this.lattice, this.latticeMask);
     // One alpha on the group, rather than per-fill: the captured and live fills
     // overlap, so per-fill alpha would make the overlap less transparent than
     // the rest and show as a visible seam along every region boundary.
@@ -196,6 +206,7 @@ export class BoardLayer {
 
     this.active.clear();
     this.locked.clear();
+    this.hatch.clear();
     this.latticeMask.clear();
     this.lattice.clear();
 
@@ -360,11 +371,11 @@ export class BoardLayer {
       const y = grid.originY + row * size;
       const a = w2s(x, y + size);
       const b = w2s(x + size, y);
-      this.locked.moveTo(a.x, a.y).lineTo(b.x, b.y);
+      this.hatch.moveTo(a.x, a.y).lineTo(b.x, b.y);
       drew = true;
     }
     if (drew) {
-      this.locked.stroke({ width: SUPERIOR_HATCH_WIDTH, color: PALETTE.superior, alpha: 0.5 });
+      this.hatch.stroke({ width: SUPERIOR_HATCH_WIDTH, color: PALETTE.superior, alpha: 0.5 });
     }
   }
 
