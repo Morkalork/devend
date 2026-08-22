@@ -195,6 +195,29 @@ describe("the level label says what is loaded, from the start", () => {
     expect(uses.length, "both toolbars should render the same label").toBe(2);
   });
 
+  /**
+   * The half the first fix missed. Deriving the label was not enough, because
+   * the Playground opened on the synthetic sandbox, so there was no level for
+   * the button to name until you pressed next. Reported twice, which is what a
+   * fix that addresses one of two causes feels like from the outside.
+   */
+  it("opens on a real level, so there is something to name", () => {
+    const load = SRC.slice(SRC.indexOf("fetch('/map.yml')"), SRC.indexOf("loadBallTypes()"));
+    expect(load, "the map load must select a level").toMatch(/setSelectedLevel\(/);
+    expect(load, "and it must be the first one").toMatch(/levels\[0\]/);
+  });
+
+  it("does not clobber a selection that already exists", () => {
+    const load = SRC.slice(SRC.indexOf("fetch('/map.yml')"), SRC.indexOf("loadBallTypes()"));
+    expect(load).toMatch(/prev \?\? levels\[0\]/);
+  });
+
+  /** Auto-selecting must not make the blank tester unreachable. */
+  it("leaves the sandbox reachable from the picker", () => {
+    expect(SRC).toMatch(/Playground default/);
+    expect(SRC).toMatch(/onClick=\{\(\) => \{ setSelectedLevel\(null\)/);
+  });
+
   it("names the sandbox rather than the bare word Level", () => {
     expect(SRC).toMatch(/'Sandbox'/);
     // The hard-coded label is what made the button uninformative on open.

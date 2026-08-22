@@ -200,7 +200,16 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
         const data = yaml.load(text) as LevelData;
         // Migrated maps have no `balls` array (the game derives them). Normalise
         // so the legacy entity/ball editor panels don't choke on `undefined`.
-        if (data?.levels) setAllLevels(data.levels.map(l => ({ ...l, balls: l.balls ?? [] })));
+        if (data?.levels) {
+          const levels = data.levels.map(l => ({ ...l, balls: l.balls ?? [] }));
+          setAllLevels(levels);
+          // Open ON the first level rather than on the blank sandbox. The
+          // sandbox was the default, so the Level button had nothing to name
+          // until you pressed next: reported twice as "the label only shows
+          // after switching map". It is still one tap away, as the picker's
+          // "Playground default" row.
+          if (levels.length > 0) setSelectedLevel(prev => prev ?? levels[0]);
+        }
       })
       .catch(() => {/* silently ignore */});
     // Load the ball catalogue (balls.yml) so the picker lists the latest types,
@@ -214,10 +223,14 @@ export function PlaygroundScreen({ onBack, accentColor = '#00ff88' }: Playground
   const baseLevel = selectedLevel ?? PLAYGROUND_LEVEL;
 
   /**
-   * What the Level button says. Reads `baseLevel`, not `selectedLevel`, so it
-   * names the sandbox on first open instead of the bare word "Level": reported
-   * as "the level label only appears after changing level", which it did,
-   * because the no-level toolbar had the word hard-coded.
+   * What the Level button says.
+   *
+   * Two things had to change for this to read correctly on open. The no-level
+   * toolbar had the word "Level" hard-coded, so it could not name anything; and
+   * the Playground started on the synthetic sandbox, so there was nothing to
+   * name. It now opens on a real level and both toolbars share this label, so
+   * the button states the map from the first frame. "Sandbox" is left for when
+   * the blank tester is chosen on purpose.
    */
   const levelLabel = selectedLevel
     ? `L${selectedLevel.level}: ${selectedLevel.id}`
