@@ -219,7 +219,7 @@ export class WallLayer {
         this.drawSegment(
           { x: a.x + nx * push - tx, y: a.y + ny * push - ty },
           { x: b.x + nx * push + tx, y: b.y + ny * push + ty },
-          OUTER_WALL_THICKNESS, true, light, w2s, scale,
+          OUTER_WALL_THICKNESS, true, light, w2s, scale, true,
         );
       }
     } finally {
@@ -395,9 +395,9 @@ export class WallLayer {
    * more than the crispness for the half second it lasts.
    */
   private segmentPoints(
-    startW: Vector2, endW: Vector2, w2s: W2S, snapTo: number,
+    startW: Vector2, endW: Vector2, w2s: W2S, snapTo: number, rigid = false,
   ): { pts: Pt[]; bulged: boolean } {
-    if (!hasNearbyImpacts(startW, endW)) {
+    if (rigid || !hasNearbyImpacts(startW, endW)) {
       const { a, b } = snapSegment(w2s(startW.x, startW.y), w2s(endW.x, endW.y), snapTo);
       return { pts: [a, b], bulged: false };
     }
@@ -475,9 +475,17 @@ export class WallLayer {
     light: LightScope,
     w2s: W2S,
     scale: number,
+    /**
+     * Never deform, whatever lands on it. The board's frame is the enclosure
+     * rather than something the player built: a fence giving under a ball reads
+     * as material, and the wall the whole board sits inside doing the same reads
+     * as the room being made of rubber. Fine for one hit and wonky over a
+     * session, which is how it was reported.
+     */
+    rigid = false,
   ): void {
     const thickness = Math.max(1, worldThickness * scale);
-    const { pts, bulged } = this.segmentPoints(startW, endW, w2s, snapWidth(thickness));
+    const { pts, bulged } = this.segmentPoints(startW, endW, w2s, snapWidth(thickness), rigid);
     const a = pts[0];
     const b = pts[pts.length - 1];
 

@@ -100,12 +100,22 @@ describe("the shape of the bulge", () => {
    * Both ends matter. Under about a thickness and it disappears again; past
    * three and the wall reads as rubber rather than as a solid taking a knock.
    */
-  it("displaces a typical hit by more than the wall is thick", () => {
+  /**
+   * The band is bounded by two values that were actually rejected in play, not
+   * by taste:
+   *
+   *   3.8 units (0.63x thickness) was reported invisible.
+   *   6.3 units (1.04x thickness) was reported wonky over a long session.
+   *
+   * So the window is roughly 0.7x to 1.0x of the wall's own thickness, and
+   * either regression fails here rather than being rediscovered by playing.
+   */
+  it("displaces a typical hit inside the band play settled on", () => {
     const typical = Math.abs(getEffectsAtPoint(MID, 1).dy);
-    expect(typical, "smaller than the wall itself is invisible in play")
-      .toBeGreaterThan(WALL_THICKNESS * 0.9);
-    expect(typical, "a wall this bendy stops reading as a wall")
-      .toBeLessThan(WALL_THICKNESS * 2);
+    expect(typical, "3.8 units was reported invisible")
+      .toBeGreaterThan(WALL_THICKNESS * 0.7);
+    expect(typical, "6.3 units was reported wonky")
+      .toBeLessThan(WALL_THICKNESS * 1.0);
   });
 
   it("tapers to nothing at the ends, so it never detaches from a junction", () => {
@@ -316,5 +326,39 @@ describe("impacts keep relaxing while a lock plays out", () => {
     // not double-advance (the envelope is absolute-time) but would leave the
     // next reader guessing which one matters.
     expect((SRC.match(/updateWallImpacts\(\);/g) ?? []).length).toBe(1);
+  });
+});
+
+/**
+ * The board's frame does not deform.
+ *
+ * A fence giving under a ball reads as material. The wall the whole board sits
+ * inside doing the same reads as the room being made of rubber: fine for one
+ * hit and wonky over a session, which is how it was reported. The frame is the
+ * enclosure, not something the player built.
+ */
+describe("the outer wall is rigid", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../lib/rendering/sleek/wallLayer.ts"), "utf8",
+  );
+
+  it("asks for the straight path explicitly", () => {
+    expect(SRC).toMatch(/rigid = false/);
+    expect(SRC).toMatch(/if \(rigid \|\| !hasNearbyImpacts\(/);
+  });
+
+  it("passes it from the outer wall, and only there", () => {
+    const outer = SRC.slice(SRC.indexOf("private drawOuterWall"), SRC.indexOf("/** A wall's sub-segments"));
+    expect(outer).toMatch(/OUTER_WALL_THICKNESS, true, light, w2s, scale, true,/);
+    // The fence pass must NOT be rigid: that is where the effect lives now.
+    const fences = SRC.slice(SRC.indexOf("for (const w of game.walls)"), SRC.indexOf("for (const g of game.activeWalls)"));
+    expect(fences).toMatch(/this\.drawSegment\(seg\.start, seg\.end, w\.thickness, isEdge, light, w2s, scale\)/);
+  });
+
+  it("still lets fences and obstacles deform", () => {
+    // Removing the wobble from the frame must not quietly remove it everywhere:
+    // the sampling path has to survive for the walls that are meant to give.
+    expect(SRC).toMatch(/getEffectsAtPoint\(/);
+    expect(SRC).toMatch(/hasNearbyImpacts\(/);
   });
 });
