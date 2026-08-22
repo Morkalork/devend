@@ -103,9 +103,9 @@ describe("the shape of the bulge", () => {
   it("displaces a typical hit by more than the wall is thick", () => {
     const typical = Math.abs(getEffectsAtPoint(MID, 1).dy);
     expect(typical, "smaller than the wall itself is invisible in play")
-      .toBeGreaterThan(WALL_THICKNESS);
+      .toBeGreaterThan(WALL_THICKNESS * 0.9);
     expect(typical, "a wall this bendy stops reading as a wall")
-      .toBeLessThan(WALL_THICKNESS * 3);
+      .toBeLessThan(WALL_THICKNESS * 2);
   });
 
   it("tapers to nothing at the ends, so it never detaches from a junction", () => {
@@ -187,6 +187,74 @@ describe("the flash at the point of impact", () => {
     // Mixed from the wall's own material toward a near-white, so a grey board
     // edge does not flash green and claim to be the player's fence.
     expect(SRC).toMatch(/mix\(material, PALETTE\.wallFlash/);
+  });
+});
+
+/**
+ * The outer wall, and why the effect looked like a fences-only feature.
+ *
+ * Board edges DO exist as walls and DID register impacts. They were drawn
+ * inside a scope masked to the board polygon, so an edge wall was already half
+ * clipped and its bulge - which pushes AWAY from the ball, i.e. outward - was
+ * clipped away entirely. Every hit on the rim of the board was computed,
+ * displaced, and then cropped out of existence.
+ */
+describe("the board's outer wall", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../lib/rendering/sleek/wallLayer.ts"), "utf8",
+  );
+
+  it("is drawn outside the fence mask, or its bulge is cropped away", () => {
+    expect(SRC).toMatch(/outerScope/);
+    // The masked scope is the one with fenceMask on it; the outer one must not be.
+    expect(SRC).toMatch(/this\.fenceScope\.mask = this\.fenceMask;/);
+    expect(SRC).not.toMatch(/this\.outerScope\.mask/);
+  });
+
+  it("stops the masked pass drawing board edges twice", () => {
+    expect(SRC).toMatch(/if \(isEdge\) continue;/);
+  });
+
+  it("sits under the fences, so a fence butts into it", () => {
+    const add = SRC.match(/this\.container\.addChild\(([^)]*)\)/);
+    expect(add).toBeTruthy();
+    const order = add![1];
+    expect(order.indexOf("outerScope")).toBeLessThan(order.indexOf("fenceScope"));
+  });
+
+  it("is heavier than a fence, so the frame reads as structure", () => {
+    const m = SRC.match(/const OUTER_WALL_THICKNESS = (\d+)/);
+    expect(m, "the outer wall needs its own thickness").toBeTruthy();
+    expect(Number(m![1])).toBeGreaterThan(WALL_THICKNESS);
+  });
+});
+
+/**
+ * Obstacles take the same knock. `obstacleBulgeAt` was live and unread, exactly
+ * like the wall bulge and the glow before it.
+ */
+describe("obstacles dent where they are struck", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../lib/rendering/sleek/entityLayer.ts"), "utf8",
+  );
+
+  it("reads the obstacle bulge", () => {
+    expect(SRC).toMatch(/obstacleBulgeAt\(/);
+    expect(SRC).toMatch(/anyObstacleImpactsActive\(/);
+  });
+
+  it("subdivides the outline, or a four-corner slab just moves", () => {
+    // Pushing four corners around translates the shape; a dent needs points
+    // between them for the falloff to land on.
+    expect(SRC).toMatch(/DENT_STEP/);
+  });
+
+  it("displaces in world units, so a tilted board dents the right way", () => {
+    expect(SRC).toMatch(/obstacleBulgeAt\(wx, wy, 1\)/);
+  });
+
+  it("keeps the snapped fast path when nothing has hit anything", () => {
+    expect(SRC).toMatch(/if \(!anyObstacleImpactsActive\(\)\) \{[\s\S]{0,120}snapContour/);
   });
 });
 

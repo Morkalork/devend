@@ -14,14 +14,57 @@
 
 import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import type { Polygon } from "@/lib/polygon";
+import type { Polygon, Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
+import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
 
 const MOVER_SEGMENTS = 28;
+
+/**
+ * Longest edge piece, in world units, when an obstacle is taking a hit.
+ *
+ * A slab is four corners. A dent is a local thing, so pushing four corners
+ * around moves the whole shape instead of denting it: the edge has to be cut
+ * into enough pieces for the falloff to have somewhere to land.
+ */
+const DENT_STEP = 22;
+
+/**
+ * An obstacle's outline, dented where balls have struck it.
+ *
+ * The ordinary path is untouched: snapContour over the four transformed
+ * corners, which is every obstacle on every frame. Only while an impact is
+ * live does the outline get subdivided and displaced, and only then does it
+ * stop being pixel-snapped, because snapping a curve quantises the dent into a
+ * staircase.
+ *
+ * Displaced in WORLD space before transforming, for the same reason the wall
+ * bulge is: the displacement is a world-space direction, and adding it to
+ * screen coordinates would push the dent sideways once the board is tilted.
+ */
+function dentedContour(vertices: Vector2[], w2s: W2S): Pt[] {
+  if (!anyObstacleImpactsActive()) {
+    return snapContour(vertices.map(v => w2s(v.x, v.y)));
+  }
+  const out: Pt[] = [];
+  for (let i = 0; i < vertices.length; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % vertices.length];
+    const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / DENT_STEP));
+    for (let k = 0; k < steps; k++) {
+      const t = k / steps;
+      const wx = a.x + (b.x - a.x) * t;
+      const wy = a.y + (b.y - a.y) * t;
+      const d = obstacleBulgeAt(wx, wy, 1);   // scale 1: world units in and out
+      out.push(w2s(wx + d.dx, wy + d.dy));
+    }
+  }
+  return out;
+}
 
 export class EntityLayer {
   readonly container = new Container();
@@ -67,7 +110,7 @@ export class EntityLayer {
 
   /** A static obstacle: shadow, lit fill, contact band, rim on the lit edges. */
   private drawSlab(poly: Polygon, light: LightScope, w2s: W2S, scale: number): void {
-    const pts = snapContour(poly.vertices.map(v => w2s(v.x, v.y)));
+    const pts = dentedContour(poly.vertices, w2s);
     if (pts.length < 3) return;
 
     // Centroid drives the shadow so the whole slab shares one offset; per-vertex
@@ -181,7 +224,7 @@ export class EntityLayer {
     w2s: W2S,
     scale: number,
   ): void {
-    const pts = snapContour(m.polygon.vertices.map(v => w2s(v.x, v.y)));
+    const pts = dentedContour(m.polygon.vertices, w2s);
     if (pts.length < 3) return;
 
     let cx = 0, cy = 0;

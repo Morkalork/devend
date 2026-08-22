@@ -25,6 +25,10 @@ import { clipLineAgainstPolygons, type Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, facing, shadowFor, type LightScope } from "./light";
 import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEffects";
+
+/** How thick the board's outer frame is, in world units. Heavier than a
+ *  fence (6) so the enclosure reads as structure rather than as a cut. */
+const OUTER_WALL_THICKNESS = 14;
 import { snapSegment, snapWidth, hairline, type Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -64,6 +68,19 @@ export class WallLayer {
    * stray diagonal lines wandering across the board. The classic renderer does
    * exactly this clip + mask pair; skipping it was the bug.
    */
+  /**
+   * The board's outer wall: a band sitting just OUTSIDE the play area.
+   *
+   * Unmasked, and that is the entire reason it exists as its own scope. The
+   * fence mask is the board polygon, so a board-edge wall is already half
+   * clipped and its bulge - which pushes AWAY from the ball, i.e. outward - was
+   * clipped away completely. Board edges were registering impacts nobody could
+   * ever see, which is why the effect looked like a fences-only feature.
+   *
+   * Drawing the rim of the board as a real wall outside that mask fixes the
+   * clipping and gives the board a frame at the same time.
+   */
+  private outerScope = new Container();
   private fenceScope = new Container();
   private fenceMask = new Graphics();
   private fenceMaskKey = "";
@@ -74,6 +91,8 @@ export class WallLayer {
   private shadows!: Graphics;
   private bodies = new Graphics();
   private rims = new Graphics();
+  private outerBodies = new Graphics();
+  private outerRims = new Graphics();
 
   constructor() {
     // Shadows first so every wall body sits on top of every shadow: a wall must
@@ -82,8 +101,11 @@ export class WallLayer {
     // plane, below everything that stands on the board.
     this.fenceScope.addChild(this.bodies, this.rims);
     this.fenceScope.mask = this.fenceMask;
+    this.outerScope.addChild(this.outerBodies, this.outerRims);
     // The mask must be a sibling in the display list, not a detached Graphics.
-    this.container.addChild(this.fenceScope, this.fenceMask);
+    // The outer wall goes UNDER the fences: a fence meeting the frame should
+    // read as butting into it, not as being cut off by it.
+    this.container.addChild(this.outerScope, this.fenceScope, this.fenceMask);
   }
 
   /** Board polygon with the obstacle footprints cut out of it. */
@@ -115,11 +137,17 @@ export class WallLayer {
     this.shadows = shadows;
     this.bodies.clear();
     this.rims.clear();
+    this.outerBodies.clear();
+    this.outerRims.clear();
     this.shadowRuns.clear();
     this.syncMask(game, w2s, scale);
+    this.drawOuterWall(game, light, w2s, scale);
 
     for (const w of game.walls) {
       const isEdge = w.isBoardEdge ?? w.id.startsWith("board-");
+      // Board edges are drawn by drawOuterWall, outside the mask that was
+      // eating their bulge. Drawing them here as well would double the rim.
+      if (isEdge) continue;
       const isObstacle = !!w.isObstacleBoundary;
       // Obstacle boundaries are drawn by the entity layer with their bodies;
       // drawing them here too would double their rim and shadow.
@@ -135,6 +163,48 @@ export class WallLayer {
     for (const g of game.activeWalls) this.drawGrowing(g, light, w2s, scale);
 
     this.flushShadows();
+  }
+
+  /**
+   * The board's frame, drawn from the board polygon pushed OUTWARD so its inner
+   * face sits on the play boundary rather than straddling it.
+   *
+   * Thicker than a fence on purpose: this is the enclosure, and a frame the same
+   * weight as the player's own marks reads as just another fence. It takes the
+   * bulge and the hit flash like any other wall, which is what makes a ball
+   * slamming into the edge of the board finally register.
+   */
+  private drawOuterWall(
+    game: CanvasGameState, light: LightScope, w2s: W2S, scale: number,
+  ): void {
+    const poly = game.boardPolygon;
+    if (!poly || poly.vertices.length < 3) return;
+
+    const bodies = this.bodies, rims = this.rims;
+    // Borrow drawSegment by pointing it at the unmasked graphics for the frame.
+    this.bodies = this.outerBodies;
+    this.rims = this.outerRims;
+    try {
+      const cx = poly.vertices.reduce((n, v) => n + v.x, 0) / poly.vertices.length;
+      const cy = poly.vertices.reduce((n, v) => n + v.y, 0) / poly.vertices.length;
+      const push = OUTER_WALL_THICKNESS / 2;
+      // Offset each vertex away from the centre. Exact for the rectangle the
+      // board actually is, and gracefully approximate for anything else.
+      const out = poly.vertices.map(v => {
+        const dx = v.x - cx, dy = v.y - cy;
+        const d = Math.hypot(dx, dy) || 1;
+        return { x: v.x + (dx / d) * push * Math.SQRT2, y: v.y + (dy / d) * push * Math.SQRT2 };
+      });
+      for (let i = 0; i < out.length; i++) {
+        this.drawSegment(
+          out[i], out[(i + 1) % out.length],
+          OUTER_WALL_THICKNESS, true, light, w2s, scale,
+        );
+      }
+    } finally {
+      this.bodies = bodies;
+      this.rims = rims;
+    }
   }
 
   /** A wall's sub-segments with the obstacle footprints removed. */

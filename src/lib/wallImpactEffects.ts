@@ -27,12 +27,13 @@ export const N_NODES = 16;
  * inside half a second. The effect was working exactly as written and was
  * simply below the resolution of the thing it was drawn on.
  *
- * 14 puts a normal hit at ~1.5x wall thickness, which reads as the wall giving
- * without reading as rubber. Expressed against WALL_THICKNESS deliberately: the
- * number that matters is the ratio, so if walls are ever redrawn thicker this
- * is the line to revisit.
+ * 10 puts a normal hit at about one wall thickness: enough to read as the wall
+ * giving, not enough to read as rubber. 14 was the first visible value and was
+ * a shade springy. Expressed against WALL_THICKNESS deliberately: the number
+ * that matters is the ratio, so if walls are ever redrawn thicker this is the
+ * line to revisit.
  */
-const BULGE_MAX_WORLD = 14;   // ~2.3x WALL_THICKNESS at full strength
+const BULGE_MAX_WORLD = 10;   // ~1.7x WALL_THICKNESS at full strength
 const BULGE_TAU       = 85;   // ms to peak (soft, quick rise)
 const BULGE_DURATION  = 520;  // ms total life (smooth relax)
 const BULGE_SIGMA     = 40;   // spatial spread of the bump along the wall (world units)
