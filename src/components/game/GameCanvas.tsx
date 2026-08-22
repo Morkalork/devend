@@ -634,6 +634,7 @@ export function GameCanvas({
     lastDudAt: 0,
     chestLoot: [] as import("@/types/game").ChestLoot[],
     chestRewardsLog: [] as string[],
+    claimFlashes: [] as { contours: import('@/lib/polygon').Vector2[][]; startTime: number }[],
     slowAreas: [] as import('@/types/game').SlowArea[],
     abilitySlowUntil: 0,
     abilitySlowMult: 1,
@@ -807,6 +808,7 @@ export function GameCanvas({
       game.abilityFenceRushUntil = 0;
       game.abilityFenceRushMult = 1;
       game.abilityFenceShieldUntil = 0;
+      game.claimFlashes = [];
       game.abilityFx = [];
       game.moneyMultiplier = 1;
       game.ballSpeedScale = activeModifiers.ballSpeedMultiplier;

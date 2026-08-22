@@ -435,6 +435,14 @@ export interface CanvasGameState {
   abilityFenceRushMult?: number;
   /** Fence Shield ability: active-play second growing fences stop taking hits at. */
   abilityFenceShieldUntil?: number;
+  /**
+   * Territory claimed by the cut that just landed, flashed once and culled.
+   *
+   * Capturing space is the game's main verb and was the only thing on the board
+   * with no reaction at all: the fill simply changed colour on the next redraw.
+   * Locking a ball got a flash; claiming the ground around it got nothing.
+   */
+  claimFlashes?: { contours: Vector2[][]; startTime: number }[];
   /** Transient ability-fired flash/ring bursts (#38); rendered then culled. */
   abilityFx?: AbilityFx[];
   /** A targeted ability (Magnet) armed and awaiting a board tap; else null. Read

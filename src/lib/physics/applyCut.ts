@@ -1,4 +1,5 @@
 import { GrowingWall, Ball, Region, Vector2, WinReason } from "@/types/game";
+import { traceContours, snapContoursToWalls } from "@/lib/rendering/regionContour";
 import { CanvasGameState } from "@/types/gameState";
 import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -115,6 +116,42 @@ function captureUnreachableSpace(game: CanvasGameState): {
   return { gridRegions, gridRegionMap };
 }
 
+/** How long a claim flash lives, in ms. Short: it is punctuation, not an event. */
+const CLAIM_FLASH_MS = 420;
+/** Below this many cells a claim is a sliver, and flashing it is just noise. */
+const CLAIM_MIN_CELLS = 6;
+
+/**
+ * Flash the ground this cut just took.
+ *
+ * The cells are the difference between the grid before the capture and after,
+ * traced into smooth outlines the same way a lock flash traces its pocket, so
+ * the two effects speak in one visual language rather than one being cells and
+ * the other a shape.
+ *
+ * Silent for tiny claims. Every cut shaves a few cells off somewhere, and
+ * flashing those turns the punctuation into a stutter.
+ */
+function recordClaimFlash(game: CanvasGameState, before: Uint8Array | null): void {
+  const grid = game.spaceGrid;
+  if (!grid || !before) return;
+  const cells = grid.cells;
+  const claimed = new Set<number>();
+  for (let i = 0; i < cells.length; i++) {
+    if (cells[i] !== before[i]) claimed.add(i);
+  }
+  if (claimed.size < CLAIM_MIN_CELLS) return;
+
+  const gw = grid.width;
+  const contours = snapContoursToWalls(
+    traceContours(grid, (col, row) => claimed.has(row * gw + col)),
+    game.walls,
+    grid.cellSize * 1.05,
+  );
+  if (contours.length === 0) return;
+  (game.claimFlashes ??= []).push({ contours, startTime: performance.now() });
+}
+
 export function applyCutFn(
   wall: GrowingWall,
   game: CanvasGameState,
@@ -190,6 +227,7 @@ export function applyCutFn(
   // The grid regions this computes are still valid at the lock check below (no
   // code between mutates grid cells), so hand them off to avoid recomputing.
   const capturedRegions = captureUnreachableSpace(game);
+  recordClaimFlash(game, preCaptureCells);
 
   // Update sample-based regions.
   //

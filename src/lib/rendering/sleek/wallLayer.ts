@@ -317,6 +317,12 @@ export class WallLayer {
     };
     collect(wall.startWaypoints, wall.startSegmentIndex, wall.startPoint);
     collect(wall.endWaypoints, wall.endSegmentIndex, wall.endPoint);
+    // Remember which legs are the LIVE ones. collect() pushes each direction's
+    // finished legs and then its partial one, so the advancing tip is always the
+    // end of the leg it pushed last.
+
+    this.drawGrowTip(wall.startWaypoints, wall.startSegmentIndex, wall.startPoint, w2s, scale, thickness);
+    this.drawGrowTip(wall.endWaypoints, wall.endSegmentIndex, wall.endPoint, w2s, scale, thickness);
 
     for (const [a0, b0] of legs) {
       const { a, b } = snapSegment(a0, b0, snapWidth(thickness));
@@ -412,6 +418,53 @@ export class WallLayer {
     g.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
     return g;
+  }
+
+  /**
+   * The bright head of a fence as it extends.
+   *
+   * A growing fence and a finished one were drawn identically, so a cut in
+   * progress read as a line that already existed rather than as something being
+   * built. The head is the one part of the board the player is actually looking
+   * at while they draw, and it was the least distinguished thing on it.
+   *
+   * Drawn AFTER the legs would put the halo over the body; drawn before, the
+   * body's own core runs over the trail and the two merge into one bright
+   * taper into the head, which is the read we want.
+   */
+  private drawGrowTip(
+    waypoints: { x: number; y: number }[],
+    segIndex: number,
+    tipW: { x: number; y: number },
+    w2s: W2S,
+    scale: number,
+    thickness: number,
+  ): void {
+    const from = waypoints[Math.min(segIndex, waypoints.length - 1)];
+    if (!from) return;
+    const a = w2s(from.x, from.y);
+    const t = w2s(tipW.x, tipW.y);
+    const dx = t.x - a.x, dy = t.y - a.y;
+    const len = Math.hypot(dx, dy);
+    // A tip that has not moved yet has no direction; drawing a head there would
+    // put a bright dot on the board the instant a cut is armed, before anything
+    // has actually grown.
+    if (len < 1) return;
+    const ux = dx / len, uy = dy / len;
+
+    const trail = Math.min(len, 30 * scale);
+    this.bodies
+      .moveTo(t.x - ux * trail, t.y - uy * trail)
+      .lineTo(t.x, t.y)
+      .stroke({
+        width: Math.max(1, thickness * 0.6),
+        color: PALETTE.accent,
+        alpha: 0.5,
+        cap: "round",
+      });
+    this.bodies
+      .circle(t.x, t.y, Math.max(1.5, thickness * 0.55))
+      .fill({ color: PALETTE.accentGlow, alpha: 0.95 });
   }
 
   private drawSegment(

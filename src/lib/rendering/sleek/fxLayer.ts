@@ -54,6 +54,9 @@ function parseColor(c: string, fallback: number): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
+/** Must match CLAIM_FLASH_MS in applyCut, which stamps the flashes. */
+const CLAIM_FLASH_MS = 420;
+
 export class FxLayer {
   readonly container = new Container();
 
@@ -76,6 +79,7 @@ export class FxLayer {
     this.over.clear();
 
     this.drawCutPreview(game, w2s, scale);
+    this.drawClaimFlashes(game, w2s, now);
     this.drawLockFlashes(game, w2s, scale, now);
     this.drawChains(game, light, w2s, scale);
     this.drawDebris(game, w2s, scale, now);
@@ -337,6 +341,39 @@ export class FxLayer {
    * for the same reason the region boundary must not be: snapping re-quantises
    * the smoothing into a staircase.
    */
+  /**
+   * The ground a cut just took, flashed once.
+   *
+   * Capturing space is the game's main verb and had no reaction: the fill
+   * changed colour on the next redraw and that was all. This is punctuation
+   * rather than an event, so it is brief and it fades rather than pulsing:
+   * every completed fence fires one, and anything longer would have several
+   * overlapping at once on a busy map.
+   *
+   * Drawn UNDER the lock flash on purpose. A cut that also locks a ball fires
+   * both, and the lock is the bigger moment of the two.
+   */
+  private drawClaimFlashes(game: CanvasGameState, w2s: W2S, now: number): void {
+    const list = game.claimFlashes;
+    if (!list || list.length === 0) return;
+
+    for (const flash of list) {
+      const age = (now - flash.startTime) / CLAIM_FLASH_MS;
+      if (age < 0 || age >= 1) continue;
+      // Slam on, ease off: the claim is instantaneous, the acknowledgement is not.
+      const alpha = Math.pow(1 - age, 1.8) * 0.3;
+      for (const loop of flash.contours) {
+        if (loop.length < 3) continue;
+        this.under.poly(loop.map(p => w2s(p.x, p.y)));
+      }
+      this.under.fill({ color: PALETTE.accent, alpha });
+    }
+
+    // Cull here rather than in the game loop: the renderer is the only thing
+    // that cares when one has finished playing.
+    game.claimFlashes = list.filter(f => now - f.startTime < CLAIM_FLASH_MS);
+  }
+
   private drawLockFlashes(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
     for (const a of game.assimilations.values()) {
       const dur = a.superior ? SUPERIOR_FLASH_MS : LOCK_FLASH_MS;
