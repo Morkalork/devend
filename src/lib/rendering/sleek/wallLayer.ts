@@ -299,12 +299,13 @@ export class WallLayer {
    */
   private segmentPoints(
     startW: Vector2, endW: Vector2, w2s: W2S, snapTo: number,
-  ): { pts: Pt[]; bulged: boolean } {
+  ): { pts: Pt[]; glows: number[]; bulged: boolean } {
     if (!hasNearbyImpacts(startW, endW)) {
       const { a, b } = snapSegment(w2s(startW.x, startW.y), w2s(endW.x, endW.y), snapTo);
-      return { pts: [a, b], bulged: false };
+      return { pts: [a, b], glows: [0, 0], bulged: false };
     }
     const pts: Pt[] = [];
+    const glows: number[] = [];
     for (let i = 0; i < N_NODES; i++) {
       const t = i / (N_NODES - 1);
       const wx = startW.x + (endW.x - startW.x) * t;
@@ -312,8 +313,9 @@ export class WallLayer {
       // scale 1: world units in, world units out.
       const e = getEffectsAtPoint({ x: wx, y: wy }, 1);
       pts.push(w2s(wx + e.dx, wy + e.dy));
+      glows.push(e.glow);
     }
-    return { pts, bulged: true };
+    return { pts, glows, bulged: true };
   }
 
   /** Queue a polyline through `pts`. Two points is the ordinary straight wall. */
@@ -333,7 +335,7 @@ export class WallLayer {
     scale: number,
   ): void {
     const thickness = Math.max(1, worldThickness * scale);
-    const { pts, bulged } = this.segmentPoints(startW, endW, w2s, snapWidth(thickness));
+    const { pts, glows, bulged } = this.segmentPoints(startW, endW, w2s, snapWidth(thickness));
     const a = pts[0];
     const b = pts[pts.length - 1];
 
@@ -387,6 +389,32 @@ export class WallLayer {
           color: mix(PALETTE.accentDim, PALETTE.accent, 0.3 * amb),
           alpha: 0.8,
         });
+    }
+
+    // ── 2b. The hit flash ──────────────────────────────────────────────────
+    // A short lightening of the wall where the ball landed, drawn as a handful
+    // of per-piece strokes because a Pixi stroke carries ONE colour: varying the
+    // brightness along a wall means cutting it into pieces and giving each its
+    // own alpha. Only ever runs on a wall with a live impact on it, so the
+    // ordinary path still queues two strokes for a whole fence.
+    //
+    // Over the body and under the rim: it is the material catching a knock, not
+    // a light source, so it must not outshine the lit edge above it.
+    if (bulged) {
+      for (let i = 1; i < pts.length; i++) {
+        const g = (glows[i - 1] + glows[i]) / 2;
+        if (g < 0.03) continue;
+        this.bodies
+          .moveTo(pts[i - 1].x, pts[i - 1].y)
+          .lineTo(pts[i].x, pts[i].y)
+          .stroke({
+            width: snapWidth(thickness),
+            color: mix(material, PALETTE.wallFlash, Math.min(1, g)),
+            alpha: Math.min(0.9, g),
+            cap: "round",
+            join: "round",
+          });
+      }
     }
 
     // ── 3. Rim on the lit face ─────────────────────────────────────────────

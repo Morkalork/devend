@@ -19,6 +19,7 @@ import {
   registerWallImpact, updateWallImpacts, getEffectsAtPoint, hasNearbyImpacts,
   clearWallImpacts, getActiveImpactCount, N_NODES,
 } from "@/lib/wallImpactEffects";
+import { WALL_THICKNESS } from "@/lib/wallGeometry";
 
 /**
  * The envelope is wall-clock driven (performance.now), and it peaks 85ms after
@@ -36,6 +37,9 @@ beforeEach(() => {
   vi.spyOn(performance, "now").mockImplementation(() => clock);
 });
 afterEach(() => vi.restoreAllMocks());
+
+/** balls.yml: a standard red ball. impactStrength is speed/400 in updateBall. */
+const BASE_SPEED = 250;
 
 const START = { x: 100, y: 400 };
 const END = { x: 700, y: 400 };
@@ -67,7 +71,8 @@ describe("registering a hit", () => {
 });
 
 describe("the shape of the bulge", () => {
-  beforeEach(() => { hitFromAbove(); advance(85); updateWallImpacts(); });
+  // A standard ball's base speed, i.e. the hit the player actually sees most.
+  beforeEach(() => { hitFromAbove(BASE_SPEED / 400); advance(85); updateWallImpacts(); });
 
   it("pushes the wall AWAY from the ball, not toward it", () => {
     // The ball came from above (y 380 < 400), so the wall must dimple downward.
@@ -85,9 +90,22 @@ describe("the shape of the bulge", () => {
     expect(near).toBeGreaterThan(far);
   });
 
-  /** Subtle was the requirement: a wall that visibly bends is a rubber band. */
-  it("stays small enough to read as a give, not a wobble", () => {
-    expect(Math.abs(getEffectsAtPoint(MID, 1).dy)).toBeLessThan(8);
+  /**
+   * The size band, stated against the wall's own thickness because that is what
+   * makes it visible or not. Reported as invisible on dev, and it was: strength
+   * is speed/400 and a standard ball runs at 250, so a typical hit asked for
+   * 6 x 0.625 = 3.8 units, about HALF the wall's 6-unit thickness and under two
+   * screen pixels on a phone. Big enough to exist, too small to see.
+   *
+   * Both ends matter. Under about a thickness and it disappears again; past
+   * three and the wall reads as rubber rather than as a solid taking a knock.
+   */
+  it("displaces a typical hit by more than the wall is thick", () => {
+    const typical = Math.abs(getEffectsAtPoint(MID, 1).dy);
+    expect(typical, "smaller than the wall itself is invisible in play")
+      .toBeGreaterThan(WALL_THICKNESS);
+    expect(typical, "a wall this bendy stops reading as a wall")
+      .toBeLessThan(WALL_THICKNESS * 3);
   });
 
   it("tapers to nothing at the ends, so it never detaches from a junction", () => {
@@ -120,6 +138,55 @@ describe("the shape of the bulge", () => {
     expect(at.dx).toBe(0);
     expect(at.dy).toBe(0);
     expect(at.glow).toBe(0);
+  });
+});
+
+/**
+ * The lightening at the hit point, which was computed and thrown away exactly
+ * like the bulge: getEffectsAtPoint has always returned a `glow` and nothing
+ * had ever drawn it.
+ */
+describe("the flash at the point of impact", () => {
+  it("lights the wall where the ball landed", () => {
+    hitFromAbove(BASE_SPEED / 400);
+    updateWallImpacts();
+    expect(getEffectsAtPoint(MID, 1).glow).toBeGreaterThan(0.1);
+  });
+
+  it("is brightest at the hit and falls away along the wall", () => {
+    hitFromAbove(BASE_SPEED / 400);
+    updateWallImpacts();
+    const here = getEffectsAtPoint(MID, 1).glow;
+    const away = getEffectsAtPoint({ x: 560, y: 400 }, 1).glow;
+    expect(here).toBeGreaterThan(away);
+  });
+
+  /** A flash, not a lamp: it has to be gone well before the bulge relaxes. */
+  it("fades faster than the bulge does", () => {
+    hitFromAbove(BASE_SPEED / 400);
+    advance(300);
+    updateWallImpacts();
+    expect(getEffectsAtPoint(MID, 1).glow).toBe(0);
+    expect(Math.abs(getEffectsAtPoint(MID, 1).dy), "the bulge should outlive it")
+      .toBeGreaterThan(0);
+  });
+
+  it("lasts long enough to be seen at all", () => {
+    hitFromAbove(BASE_SPEED / 400);
+    advance(120);
+    updateWallImpacts();
+    expect(getEffectsAtPoint(MID, 1).glow, "gone inside a tenth of a second is not a flash")
+      .toBeGreaterThan(0);
+  });
+
+  it("is drawn by the renderer, in the wall's own hue", () => {
+    const SRC = readFileSync(
+      resolve(__dirname, "../lib/rendering/sleek/wallLayer.ts"), "utf8",
+    );
+    expect(SRC, "the glow must reach a stroke").toMatch(/glows\[/);
+    // Mixed from the wall's own material toward a near-white, so a grey board
+    // edge does not flash green and claim to be the player's fence.
+    expect(SRC).toMatch(/mix\(material, PALETTE\.wallFlash/);
   });
 });
 

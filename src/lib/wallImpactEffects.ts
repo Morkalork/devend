@@ -18,12 +18,29 @@ import { taperFactor, buildFenceTaper } from './rendering/wallChains';
 // Renderers sample this many points along a wall when a bulge is nearby.
 export const N_NODES = 16;
 
-const BULGE_MAX_WORLD = 6;    // peak outward push (world units) at full strength
+/**
+ * Peak outward push, in world units, at FULL strength.
+ *
+ * Was 6, which never showed. Strength is speed/400 and a standard ball runs at
+ * 250, so a typical hit only ever asked for 6 x 0.625 = 3.8 units: about half
+ * the wall's own 6-unit thickness, under two screen pixels on a phone, and gone
+ * inside half a second. The effect was working exactly as written and was
+ * simply below the resolution of the thing it was drawn on.
+ *
+ * 14 puts a normal hit at ~1.5x wall thickness, which reads as the wall giving
+ * without reading as rubber. Expressed against WALL_THICKNESS deliberately: the
+ * number that matters is the ratio, so if walls are ever redrawn thicker this
+ * is the line to revisit.
+ */
+const BULGE_MAX_WORLD = 14;   // ~2.3x WALL_THICKNESS at full strength
 const BULGE_TAU       = 85;   // ms to peak (soft, quick rise)
 const BULGE_DURATION  = 520;  // ms total life (smooth relax)
 const BULGE_SIGMA     = 40;   // spatial spread of the bump along the wall (world units)
 const EDGE_TAPER      = 22;   // world units: bulge fades to 0 approaching the wall ends
-const GLOW_DURATION   = 130;  // ms — brief hit flash
+// The hit flash. 130ms was under a tenth of a second, which is long enough to
+// exist and short enough that nobody was going to catch it on a wall two pixels
+// wide; 220 still reads as a flash rather than a lamp.
+const GLOW_DURATION   = 220;  // ms — brief hit flash
 const GLOW_MAX        = 0.85;
 const EFFECT_RADIUS   = 60;   // world units — cull radius / glow falloff
 const MAX_IMPACTS     = 14;
