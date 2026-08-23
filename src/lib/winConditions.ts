@@ -10,16 +10,29 @@ import type { TFunction } from "i18next";
 import type { LevelConfig } from "@/types/level";
 import { getMapTimeLimit } from "@/lib/mapTiming";
 import { AREA_KINDS, gateAreas } from "@/lib/coloredAreas";
+import { resolveWinSpec } from "@/lib/winSpec";
+import type { WinCondition } from "@/types/winSpec";
+import { getBallType } from "@/lib/ballTypes";
 
 /**
- * The clauses of a map's win conditions, plus whether any of them says something
- * the player could not already read off the HUD.
+ * The clauses of a map's win conditions, plus whether any of them says
+ * something the player could not already read off the HUD.
  *
- * Both outputs come from one pass on purpose. The modal's trigger and its text
- * have to agree, and a separately written predicate would drift the first time a
- * clause was added: a map would then either open a modal saying nothing new, or
- * silently stop announcing a real constraint.
+ * Reads the SAME WinSpec the gate does. It used to re-derive the win from the
+ * level fields independently, which meant a map could tell the player one thing
+ * and check another, and the original comment here already worried about that
+ * drift. Now the only way to change what a map asks is to change the spec, and
+ * both readers see it.
+ *
+ * Both outputs still come from one pass, for the same reason as before: the
+ * modal's trigger and its text have to agree.
  */
+/** A ball type's display name, falling back to its id for an unknown one so a
+ *  typo in an authored win reads as the typo rather than as nothing. */
+function ballName(id: string): string {
+  return getBallType(id)?.name ?? id;
+}
+
 function winConditionParts(
   t: TFunction,
   level: LevelConfig,
@@ -27,30 +40,68 @@ function winConditionParts(
 ): { parts: string[]; noteworthy: boolean } {
   const parts: string[] = [];
   let noteworthy = false;
-  // Only GATE areas are win conditions; a bonus pocket is pure upside and has
-  // nothing to say here (the board's own marking sells it).
-  const areas = gateAreas(level.coloredAreas ?? []);
+  const spec = resolveWinSpec(level);
   const isBoss = !!level.boss;
   const target = t(isBoss ? "winConditions.targetBoss" : "winConditions.targetBall");
+  const areas = gateAreas(level.coloredAreas ?? []);
 
-  if (areas.length > 0) {
-    // Colored Area is the sole win path (lock a target inside; outside fails).
-    const a = areas[0];
-    const mult = AREA_KINDS[a.kind]?.multiplier ?? 1;
-    parts.push(t("winConditions.areaWin", { target, area: a.kind, mult }));
-    parts.push(t("winConditions.areaFail", { target }));
-    noteworthy = true;
-  } else if (isBoss) {
-    parts.push(t("winConditions.boss"));
-    noteworthy = true;
-  } else {
-    // The default win, and the ONE clause that is not worth interrupting for:
-    // the top bar shows "X% to go" for the whole map, permanently.
-    parts.push(t("winConditions.clear", { percent: Math.max(1, 100 - level.sizeThreshold) }));
-    if (level.threadLockRequired && level.threadLockRequired > 0) {
-      parts.push(t("winConditions.lock", { count: level.threadLockRequired }));
-      noteworthy = true;
+  for (const c of spec.require) {
+    switch (c.kind) {
+      case "space":
+        // The ONE clause not worth interrupting for: the top bar shows "X% to
+        // go" for the whole map, permanently.
+        parts.push(t("winConditions.clear", { percent: Math.max(1, 100 - c.threshold) }));
+        break;
+      case "locks":
+        parts.push(t("winConditions.lock", { count: c.count }));
+        noteworthy = true;
+        break;
+      case "superiorLocks":
+        parts.push(t("winConditions.superiorLocks", { count: c.count }));
+        noteworthy = true;
+        break;
+      case "area": {
+        const kind = areas[0]?.kind;
+        const mult = kind ? (AREA_KINDS[kind]?.multiplier ?? 1) : 1;
+        parts.push(c.count > 1
+          ? t("winConditions.areaWinMany", { count: c.count, area: kind, mult })
+          : t("winConditions.areaWin", { target, area: kind, mult }));
+        parts.push(t("winConditions.areaFail", { target }));
+        noteworthy = true;
+        break;
+      }
+      case "lockType":
+        parts.push(t("winConditions.lockType", {
+          count: c.count, ball: ballName(c.ballType),
+        }));
+        noteworthy = true;
+        break;
+      case "boss":
+        parts.push(t("winConditions.boss"));
+        noteworthy = true;
+        break;
+      case "allLocked":
+        parts.push(t("winConditions.allLocked"));
+        noteworthy = true;
+        break;
+      case "underPar":
+        parts.push(t("winConditions.underPar", { count: level.expectedCuts + c.delta }));
+        noteworthy = true;
+        break;
+      case "speedClear":
+        parts.push(t("winConditions.speedClear", { seconds: c.seconds }));
+        noteworthy = true;
+        break;
     }
+  }
+
+  // Alternatives are worth stating only when they are not the standing
+  // all-balls-locked shortcut every ordinary map has always had, which would
+  // otherwise add a line to 38 of 40 maps and teach nobody anything.
+  for (const c of spec.alsoWinIf) {
+    if (c.kind === "allLocked" && !spec.authored) continue;
+    parts.push(t("winConditions.orElse", { clause: clauseText(t, c, level) }));
+    noteworthy = true;
   }
 
   const timeLimit = getMapTimeLimit(level, levelNumber);
@@ -69,6 +120,26 @@ function winConditionParts(
   }
 
   return { parts, noteworthy };
+}
+
+/**
+ * One clause as a bare phrase, for an "or" alternative and for the admin
+ * preview. Shares its wording with the sentences above so the builder shows the
+ * player's words rather than an editor's paraphrase of them.
+ */
+export function clauseText(t: TFunction, c: WinCondition, level: LevelConfig): string {
+  switch (c.kind) {
+    case "space": return t("winConditions.shortClear", { percent: Math.max(1, 100 - c.threshold) });
+    case "locks": return t("winConditions.shortLock", { count: c.count });
+    case "superiorLocks": return t("winConditions.shortSuperior", { count: c.count });
+    case "area": return t("winConditions.shortArea", { count: c.count });
+    case "lockType": return t("winConditions.shortLockType", {
+      count: c.count, ball: ballName(c.ballType) });
+    case "boss": return t("winConditions.shortBoss");
+    case "allLocked": return t("winConditions.shortAllLocked");
+    case "underPar": return t("winConditions.shortUnderPar", { count: level.expectedCuts + c.delta });
+    case "speedClear": return t("winConditions.shortSpeed", { seconds: c.seconds });
+  }
 }
 
 export function winConditionsBody(

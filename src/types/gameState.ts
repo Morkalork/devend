@@ -218,6 +218,23 @@ export interface CanvasGameState {
   firedTiltTiers?: number[];
   /** A target ball has been locked inside a GATE Colored Area (the win gate). */
   coloredAreaSatisfied: boolean;
+  /**
+   * How many TARGET balls are locked inside a gate Colored Area.
+   *
+   * coloredAreaSatisfied is the same fact as a boolean and stays for the
+   * existing callers; the count is what lets a win ask for two balls in one
+   * zone, which the boolean made inexpressible.
+   */
+  coloredAreaTargets?: number;
+  /**
+   * Locked balls by ball-type id, for a win that names a specific ball.
+   *
+   * Optional, and read through a default everywhere, because game state is
+   * built as a partial literal in a dozen test harnesses and in the canvas: a
+   * required accumulator added here is undefined in all of them until each is
+   * updated, and the first thing to touch it throws.
+   */
+  lockedByType?: Record<string, number>;
   /** "Wire the Integration" circuit runtime for this map (null = no circuit). */
   circuit: CircuitRuntime | null;
   /** "Deploy Charge" fuses for this map (empty = none). */

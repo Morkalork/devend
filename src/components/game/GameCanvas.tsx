@@ -610,6 +610,8 @@ export function GameCanvas({
     mapBasePoints: 20,
     lockBonus: 0,
     lockDeliveryBonus: 0,
+    coloredAreaTargets: 0,
+    lockedByType: {},
     superiorLockCount: 0,
     superiorLockBonus: 0,
     zoneLockCount: 0,

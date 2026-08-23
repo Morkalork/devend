@@ -418,9 +418,12 @@ export function checkAndUpdateBallWonStates(
         callbacks.onBossState?.(0, ball.bossMaxHp ?? 0, true);
       }
     }
-    // Only the TARGET ball's lock inside satisfies the WIN gate.
+    // Only the TARGET ball's lock inside satisfies the WIN gate. The COUNT is
+    // what a win asking for two balls in one zone reads; the boolean is the
+    // same fact and stays for the callers that only need "any".
     if (areaGate && isAreaTarget && inArea) {
       game.coloredAreaSatisfied = true;
+      game.coloredAreaTargets = (game.coloredAreaTargets ?? 0) + 1;
     }
     // Visual "used" light-up: ANY ball locked inside ANY area lights it, gate or
     // bonus, so the player sees the zone is occupied - not only the win-target
@@ -672,6 +675,11 @@ export function checkAndUpdateBallWonStates(
       const lockArea = lockAreaById.get(b.id);
       const zoneMult = lockArea ? areaStyle(lockArea.kind).multiplier : 1;
       rawCapacity += b.lockMultiplier ?? 1;
+      // Tallied by ball type, so a win can name the ball it wants sealed.
+      if (b.typeId) {
+        const byType = (game.lockedByType ??= {});
+        byType[b.typeId] = (byType[b.typeId] ?? 0) + 1;
+      }
       const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult * gravityMult;
       const ballPoints = basePoints * zoneMult;
       if (superiorIds.has(b.id)) { superiorPoints += ballPoints; superiorBase += basePoints; }

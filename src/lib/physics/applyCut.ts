@@ -46,6 +46,8 @@ import { tickChargeOnCut } from "@/lib/physics/charge";
 import { tickDataStreamOnCut } from "@/lib/physics/dataStream";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS, BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
+import { resolveWinSpec, isWinMet, winReasonFor } from "@/lib/winSpec";
+import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -481,16 +483,20 @@ export function evaluateWinConditions(
     }, 700);
     return null;
   }
-  // Colored Area win gate (LEVELDESIGN.md): when a map has GATE areas, the ONLY
-  // win is a TARGET ball locked inside one. Satisfied -> win. If no target ball
-  // can still reach an area (the boss trapped outside, or every ball locked with
-  // none inside) -> lose a life + restart. Otherwise keep playing. Bonus areas
-  // (required: false) are pure upside and never reach this branch.
-  if (gateAreas(game.coloredAreas ?? []).length > 0) {
-    if (game.coloredAreaSatisfied) {
-      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'area');
-      return null;
-    }
+  // ── The win, read from the map's spec rather than from a chain of ifs ────
+  //
+  // resolveWinSpec derives an identical spec from the legacy fields when a map
+  // has no authored `win:` block, so all 40 existing maps behave exactly as
+  // before: a gate area or a boss is still the SOLE win, and the space clear
+  // still carries threadLockRequired alongside it.
+  const spec = resolveWinSpec(level);
+  const snap = readWinSnapshot(game, level);
+
+  // The area gate has a FAIL state as well as a win: if no target can still
+  // reach a zone, the map is lost rather than merely unfinished. That is a
+  // property of the board, not of the spec, so it is checked whenever the win
+  // actually depends on an area.
+  if (spec.require.some(c => c.kind === "area") && !isWinMet(spec, snap)) {
     const hasBoss = game.balls.some(b => b.isBoss);
     const activeTargets = game.balls.some(b =>
       b.state !== "won" && b.speed > 0 && (!hasBoss || b.isBoss));
@@ -498,26 +504,60 @@ export function evaluateWinConditions(
       handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
       return null;
     }
-    return null; // the area is the sole win gate; keep playing until it's decided
   }
-  // Boss maps (issue #56): DEFEATING THE BOSS SHIPS IT. The moment the boss is
-  // beaten the map completes, regardless of remaining space - the fight is about
-  // the boss, not grinding the board. So on a boss map only the boss's defeat
-  // finishes the map (the space-clear path never applies); the deadline above is
-  // the fail state.
-  if (level.boss) {
-    if (game.bossDefeated) {
-      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'boss');
+
+  if (isWinMet(spec, snap)) {
+    // A spec whose only clause is the space clear keeps the push-your-luck
+    // prompt: that is the ordinary map ending and the prompt is the whole
+    // push mechanic. Anything else ships immediately, the way beating a boss
+    // or filling a gate zone always has.
+    if (isPlainSpaceWin(spec)) {
+      return checkSpaceWin(game, level, callbacks, levelNumber, activeModifiers);
     }
+    triggerLevelComplete(
+      game, level, levelNumber, activeModifiers, callbacks, winReasonFor(spec, snap));
     return null;
   }
-  // Non-boss maps keep the normal all-balls-locked and space-clear win paths.
-  if (areAllBallsWon(game)) {
-    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'allLocked');
-    return null;
+
+  // Not won yet. Only a spec that can still end through the space clear needs
+  // the percent recomputed for the HUD; a gate map's top bar is not counting
+  // down to anything.
+  if (spec.require.some(c => c.kind === "space")) {
+    return checkSpaceWin(game, level, callbacks, levelNumber, activeModifiers);
   }
-  return checkSpaceWin(game, level, callbacks, levelNumber, activeModifiers);
+  return null;
 }
+
+/** The counters every win condition reads, gathered from live game state. */
+export function readWinSnapshot(game: CanvasGameState, level: LevelConfig): WinSnapshot {
+  return {
+    remainingPercent: Math.round(getGridRemainingPercent(game)),
+    lockedBalls: game.lockedBallsCount,
+    superiorLocks: game.superiorLockCount,
+    areaTargets: game.coloredAreaTargets ?? 0,
+    lockedByType: game.lockedByType ?? {},
+    bossDefeated: game.bossDefeated,
+    allLocked: areAllBallsWon(game),
+    cuts: game.wallCount,
+    par: level.expectedCuts,
+    activeSeconds: game.activePlaySeconds,
+  };
+}
+
+/**
+ * Is this the ordinary "clear the board" ending?
+ *
+ * Only that one opens the push-your-luck prompt. A gate zone, a boss or a
+ * named-ball lock ships the map the instant it lands, which is the behaviour
+ * those wins have always had and the reason the prompt cannot simply be
+ * attached to every win.
+ */
+function isPlainSpaceWin(spec: WinSpec): boolean {
+  return spec.require.every(c => c.kind === "space" || c.kind === "locks");
+}
+
+
+
 
 
 /**

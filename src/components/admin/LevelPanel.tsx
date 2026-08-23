@@ -1,5 +1,6 @@
 import { LevelConfig } from '@/types/level';
 import { ScoringPreviewPanel } from './ScoringPreviewPanel';
+import { WinConditionsPanel } from './WinConditionsPanel';
 
 interface LevelPanelProps {
   level: LevelConfig;
@@ -71,6 +72,10 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
         </div>
       </div>
       
+      {/* What this map actually asks of the player, above the payout preview:
+          the win is the design decision, the score is its consequence. */}
+      <WinConditionsPanel level={level} onUpdateLevel={onUpdateLevel} />
+
       {/* Scoring Preview Panel */}
       <ScoringPreviewPanel level={level} />
     </div>

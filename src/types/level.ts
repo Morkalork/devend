@@ -1,4 +1,5 @@
 import type { MapObjective } from "@/types/objective";
+import type { WinCondition } from "@/types/winSpec";
 import type { MapMutator } from "@/types/mapMutator";
 
 export interface BallConfig {
@@ -114,6 +115,17 @@ export interface LevelConfig {
   variety?: number; // 0-100: controlled randomness for organic variation (default 0)
   randomShapes?: number; // 0-100: percentage of random mini-obstacles added (default 20)
   threadLockRequired?: number; // minimum number of balls that must be thread-locked to win
+  /**
+   * The map's win, stated outright.
+   *
+   * When absent, resolveWinSpec derives an equivalent spec from sizeThreshold,
+   * threadLockRequired, the gate Colored Areas and `boss`, exactly as the old
+   * hardcoded chain read them, so every existing map is unchanged. Authoring
+   * this REPLACES that derivation, including the all-balls-locked shortcut: a
+   * map that wants it has to list it under alsoWinIf, or a gate written here
+   * could be walked around by simply locking everything.
+   */
+  win?: { require?: WinCondition[]; alsoWinIf?: WinCondition[] };
   /**
    * Maximum balls this map spawns (issue #37). The game selects which ball
    * TYPES fill these slots based on the level's eligible types — the map no
