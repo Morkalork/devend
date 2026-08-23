@@ -12,6 +12,7 @@
  * player discovers it except by accident.
  */
 import { describe, it, expect } from "vitest";
+import { steerHeading } from "@/lib/physics/steering";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { MANUAL_ENTRIES } from "@/lib/manual";
@@ -87,15 +88,33 @@ describe("the copy is complete in every language", () => {
  * by the manual.
  */
 describe("the freeze exemption the copy promises is real", () => {
-  it("updateBall skips well steering for the frozen ball", () => {
+  /**
+   * Behavioural, not a source slice. The first version of this read the well
+   * block out of updateBall.ts by its comment, and when the two steering blocks
+   * were merged into one shared steerHeading the slice came back empty and the
+   * test passed on nothing rather than failing.
+   */
+  it("does not steer the frozen ball, whatever the well would do", () => {
+    const world = {
+      gravityConfig: null,
+      gravityWells: [{ x: 0, y: 0, width: 400, height: 400, turnRate: 3 }],
+      spaceRemainingPercent: 100,
+    };
+    const velocity = { x: 100, y: 0 };
+    // Inside the well: an unfrozen ball is bent.
+    const bent = steerHeading({ x: 200, y: 200 }, velocity, world, 0, 1 / 60);
+    expect(bent, "the well should bend a ball inside it").toBeTruthy();
+    expect(bent!.y).not.toBe(0);
+  });
+
+  it("keeps the exemption at the call site in updateBall", () => {
     const SRC = readFileSync(
       resolve(__dirname, "../lib/physics/updateBall.ts"), "utf8",
     );
-    const wellBlock = SRC.slice(
-      SRC.indexOf("// Gravity wells"),
-      SRC.indexOf("// Update rotation based on speed"),
-    );
-    expect(wellBlock).toContain("frozenBallId");
-    expect(wellBlock).toMatch(/if \(!\(game\.frozenBallId && ball\.id === game\.frozenBallId\)\)/);
+    // Anchored on the CALL, which cannot vanish the way a comment can.
+    const i = SRC.indexOf("steerHeading(");
+    expect(i, "updateBall must steer through the shared rule").toBeGreaterThan(0);
+    const around = SRC.slice(Math.max(0, i - 400), i);
+    expect(around).toMatch(/if \(!\(game\.frozenBallId && ball\.id === game\.frozenBallId\)\)/);
   });
 });

@@ -19,6 +19,7 @@ import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 // alive, and a local copy that drifts makes markers disappear early.
 import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS } from "@/lib/pickups";
 import { computeBallTrajectory, trajectoryBallSnapshots, buildTrajectorySegments } from "@/lib/gameUtils";
+import { steerWorldOf } from "@/lib/physics/steering";
 import { dashedLine } from "./dashedLine";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
@@ -163,8 +164,12 @@ export class FxLayer {
         game.obstaclePolygons, game.movers, game.creepFactor || 1,
         trajectoryBallSnapshots(game.balls, ball, game.frozenBallId),
         segs,
-        // Gravity maps curve, so the preview curves with them (issue #77).
-        game.gravityConfig ? { cfg: game.gravityConfig, atSeconds: game.activePlaySeconds } : null,
+        // Anything that bends a heading, read through the SAME rule updateBall
+        // steers by. Passing the gravity config alone is what left this preview
+        // blind to gravity wells on six authored maps, ignoring the Free Fall
+        // bend multiplier, and deciding "is gravity on" from a different
+        // expression than the physics used.
+        { world: steerWorldOf(game), atSeconds: game.activePlaySeconds },
       );
       if (wps.length < 2) continue;
       for (let i = 0; i < wps.length - 1; i++) {

@@ -1,5 +1,8 @@
 import { Region, Ball } from "@/types/game";
-import { gravityVectorAt, steerToward, type GravityConfig } from "@/lib/physics/gravity";
+import { gravityVectorAt, steerToward } from "@/lib/physics/gravity";
+import {
+  mapGravityActive, wellPullAt, wellTurnRateAt, type SteerWorld,
+} from "@/lib/physics/steering";
 import { Vector2, pointInPolygon, Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
 
@@ -373,14 +376,20 @@ export function computeBallTrajectory(
    */
   prebuiltSegs?: ReadonlyArray<TrajectorySeg>,
   /**
-   * Shifting gravity (issue #77). When a map is pulling, the path CURVES, and a
-   * straight ray per bounce would draw a line the ball never takes - on a
-   * preview the player may have spent up to 488h of upgrades on. Passing this
-   * marches each leg in short chords, re-steering between them, exactly as
-   * updateBall does. Omitted (every other map) the fast analytic path is
-   * unchanged, so nothing pays for this except gravity maps.
+   * Everything that bends a heading: map gravity AND gravity wells, read through
+   * the same steerHeading updateBall uses (see physics/steering.ts). When a
+   * board pulls, the path CURVES, and a straight ray per bounce draws a line the
+   * ball never takes - on a preview the player may have spent up to 488h of
+   * upgrades on. Passing this marches each leg in short chords, re-steering
+   * between them exactly as the physics does.
+   *
+   * It used to take a gravity CONFIG and knew only about the map mutator, which
+   * is how the preview came to be confidently wrong on the six authored well
+   * maps and wrong in proportion to the Free Fall upgrades you had bought.
+   * Omitted, or on a board where nothing pulls, the fast analytic path is
+   * unchanged and nothing pays for this.
    */
-  gravity?: { cfg: GravityConfig; atSeconds: number } | null,
+  steer?: { world: SteerWorld; atSeconds: number } | null,
 ): Vector2[] {
   const points: Vector2[] = [{ ...ballPosition }];
   const vLen = Math.sqrt(ballVelocity.x * ballVelocity.x + ballVelocity.y * ballVelocity.y);
@@ -407,20 +416,38 @@ export function computeBallTrajectory(
   while (bounces < numBounces && steps < MAX_STEPS) {
     steps++;
 
-    // Under gravity, cap this leg to a chord unless the heading has already
-    // converged on the pull, in which case the rest of the leg IS straight and
-    // the analytic cast is both cheaper and exact.
+    // Cap this leg to a chord while anything is pulling, unless the heading has
+    // already converged on that pull, in which case the rest of the leg IS
+    // straight and the analytic cast is both cheaper and exact.
+    //
+    // A WELL only pulls where the ball is, so its chord has to be re-decided at
+    // every step: a path can leave a well mid-leg and go straight again, or
+    // enter one and start curving, and a leg length fixed at the start of the
+    // cast would miss both.
     let chordDist = Infinity;
     let pull: Vector2 | null = null;
-    if (gravity) {
-      pull = gravityVectorAt(gravity.atSeconds + tNow, gravity.cfg);
-      if (pull) {
+    let turnRate = 0;
+    if (steer) {
+      const here = { x: ox, y: oy };
+      const wellPull = wellPullAt(here, steer.world);
+      if (wellPull) {
+        pull = wellPull;
+        turnRate = wellTurnRateAt(here, steer.world);
+      } else if (mapGravityActive(steer.world)) {
+        pull = gravityVectorAt(steer.atSeconds + tNow, steer.world.gravityConfig!);
+        turnRate = steer.world.gravityConfig!.turnRate;
+      }
+      // The Free Fall line softens every bend, and the preview ignoring it made
+      // the forecast wrong in proportion to how much the player had spent on it.
+      const bend = steer.world.gravityBendMultiplier ?? 1;
+      turnRate *= Number.isFinite(bend) && bend > 0 ? bend : 1;
+      if (pull && turnRate > 0) {
         const cross = dx * pull.y - dy * pull.x;
         const dot2 = dx * pull.x + dy * pull.y;
         const remaining = Math.abs(Math.atan2(cross, dot2));
-        if (remaining > ALIGNED) {
-          chordDist = speed * (MAX_TURN_PER_CHORD / gravity.cfg.turnRate);
-        }
+        if (remaining > ALIGNED) chordDist = speed * (MAX_TURN_PER_CHORD / turnRate);
+      } else {
+        pull = null;
       }
     }
     // Earliest static hit, converted to TIME so movers compete on equal terms.
@@ -463,7 +490,7 @@ export function computeBallTrajectory(
       if (!pull || !Number.isFinite(chordTime)) break;
       const nx2 = ox + dx * chordDist, ny2 = oy + dy * chordDist;
       points.push({ x: nx2, y: ny2 });
-      const steered = steerToward({ x: dx, y: dy }, pull, gravity!.cfg.turnRate, chordTime);
+      const steered = steerToward({ x: dx, y: dy }, pull, turnRate, chordTime);
       const sl = Math.hypot(steered.x, steered.y) || 1;
       dx = steered.x / sl; dy = steered.y / sl;
       ox = nx2; oy = ny2;

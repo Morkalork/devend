@@ -9,6 +9,7 @@ import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
 import { wellStep } from "@/lib/physics/gravityWells";
 import { slowFactorAt } from "@/lib/physics/slowAreas";
+import { steerHeading, steerWorldOf } from "@/lib/physics/steering";
 import { tickTurnTimer } from "@/lib/physics/turnTimer";
 import { getRunRng } from "@/lib/runRng";
 import { CanvasGameState } from "@/types/gameState";
@@ -322,30 +323,21 @@ export function updateBall(
   // speed can never come to rest, which is what makes "they must bounce" a
   // property of the design rather than a number someone has to tune.
   //
+  // Map gravity and gravity wells both bend the heading, and both are applied
+  // through steerHeading rather than inline, because the Scrum Master preview
+  // has to bend a predicted path by exactly the same rule. It used to decide
+  // for itself and had drifted three ways: it had never heard of wells, it
+  // ignored the Free Fall bend multiplier, and it read "is gravity on" from a
+  // different expression than this did. A forecast the player paid hundreds of
+  // hours for has to come from the rule the ball obeys.
+  //
   // Frozen balls are exempt, the same exemption the speed floor makes: they are
   // held in place on purpose and must not drift out of a pocket mid-freeze.
-  if (mut?.behavior === "gravity" && game.gravityConfig
-      && !(game.frozenBallId && ball.id === game.frozenBallId)) {
-    const steered = gravityStep(
-      ball.velocity, game.activePlaySeconds, game.gravityConfig, dt,
-      game.gravityBendMultiplier,
+  if (!(game.frozenBallId && ball.id === game.frozenBallId)) {
+    const steered = steerHeading(
+      ball.position, ball.velocity, steerWorldOf(game), game.activePlaySeconds, dt,
     );
     if (steered) { ball.velocity.x = steered.x; ball.velocity.y = steered.y; }
-  }
-
-  // Gravity wells (issue #77): a local patch that bends the heading toward the
-  // pull while the ball is inside it, and lets go the moment it leaves. Placed
-  // with the other steering, BEFORE the speed rescalers below, for the same
-  // reason: anything that accumulated into speed would be erased by them.
-  //
-  // Frozen balls are exempt, the same exemption the speed floor and map gravity
-  // make: a held ball must not drift out of the pocket it was frozen in.
-  if (!(game.frozenBallId && ball.id === game.frozenBallId)) {
-    const pulled = wellStep(
-      ball.position, ball.velocity, game.gravityWells, dt,
-      game.spaceRemainingPercent, game.gravityBendMultiplier,
-    );
-    if (pulled) { ball.velocity.x = pulled.x; ball.velocity.y = pulled.y; }
   }
 
   // Compass ball: a quarter turn when its timer comes up. Placed with the other
