@@ -6,6 +6,7 @@ import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { getAbility } from '@/lib/abilities';
 import { contentText } from '@/i18n/content';
+import { PerformanceReviewAxes } from './PerformanceReviewAxes';
 
 // Press-and-hold info cards: each stat row explains its mechanic and how to
 // earn more from it (keys under levelComplete.info.<key> in the locales).
@@ -27,6 +28,13 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   overtimeEarned: { icon: Clock, color: 'text-primary' },
   totalOvertime: { icon: Clock, color: 'text-accent-foreground' },
   recordPace: { icon: TrendingUp, color: 'text-success' },
+  // The five Performance Review lanes. Holding a bar explains what that lane
+  // pays for and, more usefully, what it costs you on the others.
+  axis_delivery: { icon: Lock, color: 'text-cyan-400' },
+  axis_craft: { icon: Medal, color: 'text-cyan-300' },
+  axis_tempo: { icon: Timer, color: 'text-teal-400' },
+  axis_thrift: { icon: Target, color: 'text-success' },
+  axis_greed: { icon: Sparkles, color: 'text-primary' },
 };
 
 interface LevelCompleteOverlayProps {
@@ -132,6 +140,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     fencesUnderPar = 0,
     fencesOverPar = 0,
     extraPercent = 0,
+    axes,
     lockBonus = 0,
     lockedBallsCount = 0,
     superiorLockCount = 0,
@@ -160,9 +169,15 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // Lock income split by quality: the standard row shows only the plain locks,
   // superior (tight-pocket) locks get their own highlighted row below it.
   const standardLockCount = Math.max(0, lockedBallsCount - superiorLockCount);
-  const standardLockBonus = Math.max(0, lockBonus - superiorLockBonus);
+  // Lock hours as PAID, not as earned. The raw lock stack is multiplicative and
+  // routinely runs to several hundred hours; the Delivery and Craft axes are
+  // what those hours actually buy. Showing the raw figure here was the old
+  // screen's worst lie: it read "+596h" next to a payout of sixty.
+  const deliveryPay = axes?.delivery ?? Math.max(0, lockBonus - superiorLockBonus);
+  const craftPay = axes?.craft ?? superiorLockBonus;
+  const standardLockBonus = deliveryPay;
   const hasLockBonus = standardLockCount > 0 && standardLockBonus > 0;
-  const hasSuperiorLocks = superiorLockCount > 0 && superiorLockBonus > 0;
+  const hasSuperiorLocks = craftPay > 0 && (superiorLockCount > 0 || zoneLockCount > 0);
   // Colored Areas: the zone multiplier is folded into lockBonus, so without its
   // own row a var/let/const lock looked exactly like an ordinary one here and
   // the mechanic was invisible the moment the zone stopped glowing. This row
@@ -173,7 +188,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
-  const totalBonus = underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus;
+  // The five axes ARE the bonus. Push-your-luck and demolition hours bank into
+  // Greed and the lock stack into Delivery + Craft, so summing the itemised
+  // rows would count each of them twice.
+  const totalBonus = axes
+    ? axes.total
+    : underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus;
 
   return (
     <>
@@ -288,6 +308,11 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
+            {/* The Performance Review: which lanes this run committed to.
+                Sits above the itemised hours because it is the frame they are
+                read in - the numbers below say how much, this says what kind. */}
+            {axes && <PerformanceReviewAxes axes={axes} hold={hold} />}
+
             {/* Fence Efficiency Section */}
             <div {...hold('fencesUsed')} className="py-2 border-b border-border">
               <div className="flex justify-between items-center mb-1">
@@ -378,7 +403,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   <Medal className="w-3 h-3 sm:w-4 sm:h-4" />
                   {t('levelComplete.superiorLocks', { count: superiorLockCount })}
                 </span>
-                <span className="font-bold text-cyan-300">+{superiorLockBonus}h</span>
+                <span className="font-bold text-cyan-300">+{craftPay}h</span>
               </div>
             )}
 
@@ -388,7 +413,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   <Target className="w-3 h-3 sm:w-4 sm:h-4" />
                   {t('levelComplete.zoneLocks', { count: zoneLockCount })}
                 </span>
-                <span className="font-bold text-fuchsia-300">+{zoneLockBonus}h</span>
+                <span className="font-bold text-fuchsia-300">x{zoneLockCount}</span>
               </div>
             )}
 

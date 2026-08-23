@@ -107,11 +107,16 @@ describe("objectiveClearReward (#55)", () => {
     expect(objectiveClearReward(null, snap({}))).toBe(0);
   });
 
-  it("folds UNDER the per-map cap (issue #43): reward beyond the cap adds nothing", () => {
+  /**
+   * An objective reward is owed for meeting the objective, so it sits outside
+   * the five axes. Under the old single pot it folded beneath the per-map cap
+   * and paid nothing on precisely the runs that had earned it.
+   */
+  it("always pays, whichever axes the run banked", () => {
     const base = 20;
     const reward = objectiveClearReward(LOCKDOWN, snap({ lockedBalls: 2 })); // 3h, met
-    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 }).levelScore;
-    const cappedPlus = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 + reward }).levelScore;
-    expect(cappedPlus).toBe(capped);
+    const without = calculateScore(5, 5, 10, 30, base, {}).levelScore;
+    const withReward = calculateScore(5, 5, 10, 30, base, { flatBonus: reward }).levelScore;
+    expect(withReward).toBe(without + reward);
   });
 });

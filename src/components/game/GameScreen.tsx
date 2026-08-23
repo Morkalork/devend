@@ -338,7 +338,7 @@ export function GameScreen({
       gameState.cutsUsed, level.expectedCuts, gameState.spaceRemaining, level.sizeThreshold, level.points, {
         scoreMultiplier: activeModifiers.scoreMultiplier,
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
-        overtimeCapBonus: activeModifiers.overtimeCapBonus,
+        flatBonus: activeModifiers.overtimeCapBonus,
       },
     ).levelScore;
   }, [showHighscoreBar, highscoreTarget, gameState.cutsUsed, gameState.spaceRemaining,

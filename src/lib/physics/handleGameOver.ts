@@ -3,6 +3,7 @@ import { LevelConfig } from "@/types/level";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
+import { readLockAxes } from "@/lib/lockCapacity";
 import { effectivePar } from "@/lib/par";
 import { isTimingExempt } from "@/lib/mapTiming";
 import { playDeathSound } from "@/lib/gameAudio";
@@ -46,16 +47,18 @@ export function handleGameOverFn(
     // the tutorial band (levels 1-3).
     const shipEarlyPercent = isTimingExempt(levelNumber)
       ? 0
-      : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+      : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall);
     // Fold lock + push in before the cap (issue #43); ship-early pays a percent
     // above the cap (the tempo bonus survives a failed push, never taxed).
     const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
       game.wallCount, effectivePar(level.expectedCuts, activeModifiers), pushStartPercent, level.sizeThreshold, level.points, {
         scoreMultiplier: activeModifiers.scoreMultiplier,
       underParBonusMultiplier: activeModifiers.underParBonusMultiplier,
-        extraBonus: game.lockBonus + pushBonus,
+        locks: readLockAxes(game),
+        tempoCeilingMultiplier: activeModifiers.shipEarlyBonusMultiplier,
+      greedBonus: pushBonus,
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
-        overtimeCapBonus: activeModifiers.overtimeCapBonus,
+        flatBonus: activeModifiers.overtimeCapBonus,
         shipEarlyPercent,
       },
     );
@@ -69,7 +72,7 @@ export function handleGameOverFn(
       underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
       spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
       fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-      extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+      extraPercent: breakdown.extraPercent, axes: breakdown.axes, lockBonus: game.lockBonus,
       lockedBallsCount: game.lockedBallsCount,
       superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
       shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
@@ -115,16 +118,18 @@ export function handlePushFailedFn(
   // (disabled on the tutorial band, levels 1-3).
   const shipEarlyPercent = isTimingExempt(levelNumber)
     ? 0
-    : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+    : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall);
   // Fold lock + push in before the cap (issue #43); ship-early pays a percent
   // above the cap (the tempo bonus survives a failed push, never taxed).
   const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
     game.wallCount, effectivePar(level.expectedCuts, activeModifiers), game.pushStartPercent ?? percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
       underParBonusMultiplier: activeModifiers.underParBonusMultiplier,
-      extraBonus: game.lockBonus + pushBonus,
+      locks: readLockAxes(game),
+        tempoCeilingMultiplier: activeModifiers.shipEarlyBonusMultiplier,
+      greedBonus: pushBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
-      overtimeCapBonus: activeModifiers.overtimeCapBonus,
+      flatBonus: activeModifiers.overtimeCapBonus,
       shipEarlyPercent,
     },
   );
@@ -138,7 +143,7 @@ export function handlePushFailedFn(
     underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
     spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
     fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-    extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+    extraPercent: breakdown.extraPercent, axes: breakdown.axes, lockBonus: game.lockBonus,
     lockedBallsCount: game.lockedBallsCount,
     superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
     shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,

@@ -467,6 +467,31 @@
         "title": "Record Pace",
         "body": "Compares your total overtime right now with your best run at the same point (same number of maps completed). Past your best run's end it compares against its final score.",
         "tip": "Behind pace? Take more risks: lock greedily and push your luck. Ahead? Protect the lead."
+      },
+      "axis_delivery": {
+        "title": "Delivery",
+        "body": "The share of the map's balls you actually sealed away. It is the baseline, not a tactic: it ignores how tight the pockets were, and it gates the other three style lanes, so a clear that locks nothing is worth its flat base and no more.",
+        "tip": "Lock every ball. A ball left loose costs you its share of Delivery AND the same share of Tempo, Thrift and Greed."
+      },
+      "axis_craft": {
+        "title": "Craft",
+        "body": "How good the locks were, not how many. A full lane is every ball sealed in a superior pocket, and colored areas, two balls in one cut, money balls and frozen locks all reach the same ceiling by other routes.",
+        "tip": "Tight pockets cost time and fences, so Craft is bought with Tempo and Thrift. Pick one pair and commit."
+      },
+      "axis_tempo": {
+        "title": "Tempo",
+        "body": "How fast you first met the win condition, in active play seconds. The windows scale with the map's ball count, and pauses and the push prompt do not count.",
+        "tip": "Speed is bought by leaving pockets loose. If you want the Craft lane instead, ignore the clock entirely: it is worth about the same."
+      },
+      "axis_thrift": {
+        "title": "Thrift",
+        "body": "Finishing under par, measured as a fraction of par so a par-4 map and a par-10 map are equally winnable lanes.",
+        "tip": "Coarse cuts finish under par but leave loose pockets, so Thrift and Craft pull against each other. Pair Thrift with Tempo."
+      },
+      "axis_greed": {
+        "title": "Greed",
+        "body": "How much of the board you were allowed to leave that you took anyway, plus push-your-luck and demolition hours. Switches off entirely at three fences over par.",
+        "tip": "Extra clearing costs fences and time. Greed pairs naturally with Craft, and fights Thrift for every cut."
       }
     },
     "recordPace": "Record Pace",
@@ -479,6 +504,14 @@
       "boss": "Boss defeated",
       "area": "Target locked in zone",
       "alsoCleared": "space target also met"
+    },
+    "axes": {
+      "title": "Performance Review",
+      "delivery": "Delivery",
+      "craft": "Craft",
+      "tempo": "Tempo",
+      "thrift": "Thrift",
+      "greed": "Greed"
     }
   },
   "notFound": {
@@ -569,7 +602,7 @@
   },
   "shipEarlyBar": {
     "title": "Map deadline: clear the map before the bar runs out. Finish early for bonus overtime.",
-    "bonus": "+{{percent}}%",
+    "bonus": "+{{hours}}h",
     "seconds": "{{s}}s"
   },
   "topBarDetails": {

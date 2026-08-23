@@ -32,6 +32,7 @@ import { drawPerfOverlay, recordSurface, isPerfHudEnabled } from "@/lib/renderin
 import { PerfOverlay } from "./PerfOverlay";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent } from "@/lib/scoring";
+import { readLockAxes } from "@/lib/lockCapacity";
 import { isTimingExempt, getMapTimeLimit } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
 import { tickBossPhases, tickBossSpit, tickBossFenceWipe } from "@/lib/physics/bossPhases";
@@ -608,6 +609,7 @@ export function GameCanvas({
     lockedBallsCount: 0,
     mapBasePoints: 20,
     lockBonus: 0,
+    lockDeliveryBonus: 0,
     superiorLockCount: 0,
     superiorLockBonus: 0,
     zoneLockCount: 0,
@@ -1372,17 +1374,19 @@ export function GameCanvas({
     // never counts against it (disabled on the tutorial band, levels 1-3).
     const shipEarlyPercent = isTimingExempt(levelNumber)
       ? 0
-      : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+      : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall);
     // Fold lock + push in before the cap (issue #43); ship-early pays a percent
     // above the cap. Previously this site added lockBonus + pushBonus AFTER
     // calculateScore, letting a banked push exceed the per-map ceiling.
     const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
       game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
         scoreMultiplier: activeModifiers.scoreMultiplier,
-        extraBonus: game.lockBonus + game.breakBonus + pushBonus,
+        locks: readLockAxes(game),
+        tempoCeilingMultiplier: activeModifiers.shipEarlyBonusMultiplier,
+        greedBonus: pushBonus + game.breakBonus,
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
         // Comp Time pickups raise THIS map's cap; overtime pickups pay after it.
-        overtimeCapBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
+        flatBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
         postCapBonus: game.pickupOvertime,
         // Finishing fast pays a percent of the capped overtime, above the cap.
         shipEarlyPercent,
@@ -1407,7 +1411,7 @@ export function GameCanvas({
           underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
           spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
           fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-          extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+          extraPercent: breakdown.extraPercent, axes: breakdown.axes, lockBonus: game.lockBonus,
           lockedBallsCount: game.lockedBallsCount,
           superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
           zoneLockCount: game.zoneLockCount, zoneLockBonus: game.zoneLockBonus,

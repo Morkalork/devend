@@ -464,6 +464,31 @@
         "title": "Rekordtakt",
         "body": "Jämför din samlade övertid just nu med din bästa runda vid samma punkt (samma antal avklarade kartor). Bortom din bästa rundas slut jämförs mot dess slutpoäng.",
         "tip": "Ligger du efter? Ta större risker: lås in bollar girigt och pressa din tur. Ligger du före? Försvara ledningen."
+      },
+      "axis_delivery": {
+        "title": "Leverans",
+        "body": "Andelen av banans bollar du faktiskt lade undan. Det ar grunden, inte en taktik: den bryr sig inte om hur trangt du forseglade, och den styr de tre andra stilbanorna. En rensning utan las ar vard sin fasta bas och inget mer.",
+        "tip": "Las alla bollar. En lost boll kostar dig sin andel av Leverans OCH samma andel av Tempo, Sparsamhet och Girighet."
+      },
+      "axis_craft": {
+        "title": "Hantverk",
+        "body": "Hur bra lasen var, inte hur manga. Full bana ar varje boll forseglad i en overlagsen ficka, och fargade omraden, tva bollar i ett snitt, pengabollar och frysta las nar samma tak pa andra vagar.",
+        "tip": "Tranga fickor kostar tid och stangsel, sa Hantverk kops med Tempo och Sparsamhet. Valj ett par och satsa."
+      },
+      "axis_tempo": {
+        "title": "Tempo",
+        "body": "Hur snabbt du forst uppfyllde vinstvillkoret, i aktiva spelsekunder. Fonstren skalar med banans antal bollar, och pauser raknas inte.",
+        "tip": "Fart kops genom att lamna fickor losa. Vill du ha Hantverk i stallet, strunta helt i klockan: det ar ungefar lika mycket vart."
+      },
+      "axis_thrift": {
+        "title": "Sparsamhet",
+        "body": "Att klara banan under par, matt som en andel av par sa att en par-4-bana och en par-10-bana ar lika vinnbara banor.",
+        "tip": "Grova snitt hamnar under par men lamnar losa fickor, sa Sparsamhet och Hantverk drar at olika hall. Para ihop Sparsamhet med Tempo."
+      },
+      "axis_greed": {
+        "title": "Girighet",
+        "body": "Hur mycket av planen du fick lamna kvar men tog anda, plus timmar fran chansning och rivning. Stangs av helt vid tre stangsel over par.",
+        "tip": "Extra rensning kostar stangsel och tid. Girighet passar med Hantverk och slass med Sparsamhet om varje snitt."
       }
     },
     "recordPace": "Rekordtakt",
@@ -476,6 +501,14 @@
       "boss": "Boss besegrad",
       "area": "Målbollen inlåst i zonen",
       "alsoCleared": "ytmålet uppnåddes också"
+    },
+    "axes": {
+      "title": "Utvecklingssamtal",
+      "delivery": "Leverans",
+      "craft": "Hantverk",
+      "tempo": "Tempo",
+      "thrift": "Sparsamhet",
+      "greed": "Girighet"
     }
   },
   "notFound": {
@@ -566,7 +599,7 @@
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",
-    "bonus": "+{{percent}}%",
+    "bonus": "+{{hours}}h",
     "seconds": "{{s}}s"
   },
   "topBarDetails": {

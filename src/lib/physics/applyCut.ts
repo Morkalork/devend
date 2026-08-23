@@ -33,6 +33,7 @@ import { generateRegionId, generateWallId } from "@/lib/gameUtils";
 import { findSubRegionsGrid, buildPolygonFromSamples } from "@/lib/regionSplit";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { calculateScore, getShipEarlyPercent } from "@/lib/scoring";
+import { readLockAxes } from "@/lib/lockCapacity";
 import { effectivePar } from "@/lib/par";
 import { tickBoardTilt } from "@/lib/physics/boardTiltTick";
 import { getMapTimeLimit, isTimingExempt } from "@/lib/mapTiming";
@@ -617,7 +618,7 @@ export function triggerLevelComplete(
   // time limit — early play stays pressure free.
   const shipEarlyPercent = isTimingExempt(levelNumber)
     ? 0
-    : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall, activeModifiers.shipEarlyBonusMultiplier);
+    : getShipEarlyPercent(game.clearedActiveSeconds, game.balls.length, activeModifiers.shipEarlySecondsPerBall);
 
   // Locking the last ball can finish the level MID-PUSH (the per-frame win
   // check). End the push here: award the chunks banked so far and drop the
@@ -653,14 +654,23 @@ export function triggerLevelComplete(
   const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
     game.wallCount, effectivePar(level.expectedCuts, activeModifiers), percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
+      // Upgrade multipliers raise an axis CEILING, so a lane you never played
+      // has nothing for them to multiply. That is the build commitment.
       underParBonusMultiplier: activeModifiers.underParBonusMultiplier,
-      extraBonus: game.lockBonus + game.breakBonus + pushBonus + mutatorOvertimePremium(game.mapMutator) + objectiveBonus,
       spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
-      // Comp Time pickups raise THIS map's cap on top of the capstone raise.
-      overtimeCapBonus: activeModifiers.overtimeCapBonus + (game.pickupCapBonus ?? 0),
-      // Overtime pickups pay after the cap (a claimed token always pays).
+      tempoCeilingMultiplier: activeModifiers.shipEarlyBonusMultiplier,
+      // Delivery + Craft, read as a fraction of this map's own lock capacity.
+      locks: readLockAxes(game),
+      // Push-your-luck and demolition are the same bet as clearing past the
+      // requirement, so they bank into Greed.
+      greedBonus: pushBonus + game.breakBonus,
+      // Owed regardless of route: the mutator's hazard premium, the objective
+      // reward, and Stock Options / Comp Time, which used to raise a ceiling
+      // that no longer binds anything.
+      flatBonus: mutatorOvertimePremium(game.mapMutator) + objectiveBonus
+        + activeModifiers.overtimeCapBonus + (game.pickupCapBonus ?? 0),
       postCapBonus: game.pickupOvertime ?? 0,
-      // Finishing fast pays a percent of the capped overtime, above the cap.
+      // The Ship Early ladder's percent, which the Tempo axis is scored on.
       shipEarlyPercent,
       // Demolition multiplier: compounds ×1.15 per destructible smashed.
       payoutMultiplier: game.breakMultiplier ?? 1,
@@ -688,7 +698,7 @@ export function triggerLevelComplete(
         underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
         spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
         fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-        extraPercent: breakdown.extraPercent, lockBonus: game.lockBonus,
+        extraPercent: breakdown.extraPercent, axes: breakdown.axes, lockBonus: game.lockBonus,
         lockedBallsCount: game.lockedBallsCount,
         superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
         zoneLockCount: game.zoneLockCount, zoneLockBonus: game.zoneLockBonus,

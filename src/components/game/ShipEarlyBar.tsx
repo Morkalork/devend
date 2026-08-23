@@ -14,7 +14,8 @@
  */
 import { useTranslation } from 'react-i18next';
 import { Timer } from 'lucide-react';
-import { getShipEarlyThresholds, getShipEarlyPercent } from '@/lib/scoring';
+import { getShipEarlyThresholds, getShipEarlyPercent, getShipEarlyMaxPercent, getAxisCeilings } from '@/lib/scoring';
+import { tempoRatio } from '@/lib/scoreAxes';
 
 interface ShipEarlyBarProps {
   /** Whole active-play seconds elapsed this map (1Hz from the loop). */
@@ -50,9 +51,14 @@ export function ShipEarlyBar({ seconds, ballCount, timeLimit, extraSecondsPerBal
 
   const remaining = Math.max(0, 1 - seconds / timeLimit);
   const secondsLeft = Math.max(0, Math.ceil(timeLimit - seconds));
-  // Ship Early now pays a PERCENT of the map's overtime (above the cap), so the
-  // chip advertises the percent still attainable rather than a flat hours figure.
-  const payoutPercent = Math.round(getShipEarlyPercent(seconds, balls, extra, bonusMultiplier));
+  // Ship Early is the TEMPO axis now, so the chip advertises the hours still on
+  // the table rather than a percent. It used to show a percent of the map's
+  // overtime, which stopped being a real figure the moment tempo got its own
+  // ceiling: the same window is worth the same to every run.
+  const tempoCeiling = getAxisCeilings().tempo * (bonusMultiplier > 0 ? bonusMultiplier : 1);
+  const payoutHours = Math.round(
+    tempoCeiling * tempoRatio(getShipEarlyPercent(seconds, balls, extra), getShipEarlyMaxPercent()),
+  );
   const color = drainColor(remaining);
 
   return (
@@ -99,7 +105,7 @@ export function ShipEarlyBar({ seconds, ballCount, timeLimit, extraSecondsPerBal
         {/* Early on, the chip nudges you toward the fast-finish bonus; once the
             windows pass it becomes a plain seconds-left countdown. */}
         <span className="font-display text-xs font-bold tabular-nums flex-shrink-0" style={{ color, textShadow: `0 0 8px ${color}66` }}>
-          {payoutPercent > 0 ? t('shipEarlyBar.bonus', { percent: payoutPercent }) : t('shipEarlyBar.seconds', { s: secondsLeft })}
+          {payoutHours > 0 ? t('shipEarlyBar.bonus', { hours: payoutHours }) : t('shipEarlyBar.seconds', { s: secondsLeft })}
         </span>
       </div>
     </div>

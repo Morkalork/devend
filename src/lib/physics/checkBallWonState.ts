@@ -625,6 +625,13 @@ export function checkAndUpdateBallWonStates(
     const mapGravity = game.mapMutator?.behavior === 'gravity' && !!game.gravityConfig;
     let standardPoints = 0;
     let superiorPoints = 0;
+    // Raw lock capacity: lockMultiplier alone, with every quality multiplier
+    // stripped off. This is the DELIVERY axis's numerator, and subtracting the
+    // hours it buys from what the pass actually paid is what CRAFT is scored
+    // on. Splitting it here rather than at score time is the only way to be
+    // honest about it: the multipliers sit inside a product, so there is no
+    // way to recover the raw share from the total after the fact.
+    let rawCapacity = 0;
     // The same two totals with every zone multiplier forced to 1. Subtracting
     // the two is the only honest way to say what the Colored Areas actually
     // paid: the multiplier sits inside a product with the money, frozen and
@@ -664,6 +671,7 @@ export function checkAndUpdateBallWonStates(
       // without paying or pay without glowing.
       const lockArea = lockAreaById.get(b.id);
       const zoneMult = lockArea ? areaStyle(lockArea.kind).multiplier : 1;
+      rawCapacity += b.lockMultiplier ?? 1;
       const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult * gravityMult;
       const ballPoints = basePoints * zoneMult;
       if (superiorIds.has(b.id)) { superiorPoints += ballPoints; superiorBase += basePoints; }
@@ -679,6 +687,8 @@ export function checkAndUpdateBallWonStates(
     const superiorPay = Math.round(superiorPoints * simultaneousMultiplier * lockValue * lockQuality.superiorMultiplier);
     const superiorCountThisPass = wonThisPass.filter(b => superiorIds.has(b.id)).length;
     game.lockBonus += standardPay + superiorPay;
+    // Delivery's share, never multiplied by anything. Craft is the remainder.
+    game.lockDeliveryBonus = (game.lockDeliveryBonus ?? 0) + Math.round(rawCapacity * lockValue);
     game.superiorLockBonus += superiorPay;
     game.superiorLockCount += superiorCountThisPass;
 

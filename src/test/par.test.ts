@@ -1,24 +1,24 @@
 /**
  * Padded Estimate: par relief, and why it is worth having at all.
  *
- * Par drives two things of wildly different weight. The under-par BONUS caps at
- * 4h (scoring-config `fenceEfficiency`), which against an 80h map cap is close
- * to noise. The over-par PENALTY is the real mechanic: one fence over multiplies
- * the map's base by 0.6, two by 0.4, three or more by 0.2 while disabling the
- * space bonus outright.
+ * Par drives two things. Finishing under it banks the THRIFT axis, which is now
+ * a real route worth up to 20h rather than the 4h of noise the old under-par
+ * ladder paid into an 80h pot. Going over it trips the performance multiplier:
+ * one fence over multiplies the map's base by 0.6, two by 0.4, three or more by
+ * 0.2 while switching the Greed axis off outright.
  *
- * So this family sells slack before a cliff, which is CONSISTENCY rather than
- * multiplier - the one kind of payoff a per-map cap leaves room for. These tests
- * are mostly about that cliff, and about the fork staying a real choice: one
- * option buys SLACK, the other buys REWARD, and they must not collapse into two
- * shades of the same thing (the first design did exactly that).
+ * So this family sells slack before a cliff. These tests are mostly about that
+ * cliff, and about the fork staying a real choice: one option buys SLACK, the
+ * other buys REWARD, and they must not collapse into two shades of the same
+ * thing (the first design did exactly that).
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { effectivePar } from "@/lib/par";
-import { getPerformanceMultiplier, calculateUnderParBonus } from "@/lib/scoring";
+import { getPerformanceMultiplier, getAxisCeilings } from "@/lib/scoring";
+import { thriftRatio } from "@/lib/scoreAxes";
 import type { ScoringConfig } from "@/types/scoring";
 import type { UpgradeConfig } from "@/types/upgrade";
 
@@ -82,9 +82,10 @@ describe("what par relief actually buys", () => {
     expect(with2).toBe(mult(6, 6)); // exactly as if you had hit par
   });
 
-  it("raising par also widens the under-par bonus", () => {
-    const base = calculateUnderParBonus(5, effectivePar(6), CONFIG);
-    const padded = calculateUnderParBonus(5, effectivePar(6, { parBonus: 2 }), CONFIG);
+  it("raising par also fills more of the Thrift axis", () => {
+    const c = getAxisCeilings(CONFIG);
+    const base = thriftRatio(5, effectivePar(6), c.thriftFullAtParFraction);
+    const padded = thriftRatio(5, effectivePar(6, { parBonus: 2 }), c.thriftFullAtParFraction);
     expect(padded).toBeGreaterThan(base);
   });
 
@@ -106,21 +107,25 @@ describe("what par relief actually buys", () => {
 
   it("Overdelivery wins when you clear well under par", () => {
     const used = 3;
-    const sandbag = calculateUnderParBonus(used, effectivePar(6, { parBonus: 3 }), CONFIG);
-    const overdeliver = calculateUnderParBonus(used, effectivePar(6, { parBonus: 2 }), CONFIG) * 2;
+    const c = getAxisCeilings(CONFIG);
+    const thrift = (par: number, mult: number) =>
+      c.thrift * mult * thriftRatio(used, par, c.thriftFullAtParFraction);
+    const sandbag = thrift(effectivePar(6, { parBonus: 3 }), 1);
+    const overdeliver = thrift(effectivePar(6, { parBonus: 2 }), 2);
     expect(overdeliver).toBeGreaterThan(sandbag);
   });
 
   /**
-   * The multiplier is applied AFTER calculateUnderParBonus has clamped to
-   * maxBonus. Multiplying before the clamp would be clipped straight back down
-   * and the upgrade would silently do nothing, which is the exact failure that
-   * killed the Garbage Collector line.
+   * Overdelivery raises the Thrift CEILING rather than its payout, so a run
+   * that already filled the axis still gets more out of it. Multiplying a
+   * payout already clamped to the ceiling would do nothing at all, which is
+   * the exact failure that killed the Garbage Collector line.
    */
-  it("Overdelivery lifts the bonus past its own cap", () => {
-    const capped = calculateUnderParBonus(1, effectivePar(6, { parBonus: 2 }), CONFIG);
-    expect(capped).toBe(CONFIG.scoring.fenceEfficiency.maxBonus);
-    expect(capped * 2).toBeGreaterThan(CONFIG.scoring.fenceEfficiency.maxBonus);
+  it("Overdelivery lifts a filled Thrift axis past its own ceiling", () => {
+    const c = getAxisCeilings(CONFIG);
+    const ratio = thriftRatio(1, effectivePar(6, { parBonus: 2 }), c.thriftFullAtParFraction);
+    expect(ratio, "this run should already fill the axis").toBe(1);
+    expect(c.thrift * 2 * ratio).toBeGreaterThan(c.thrift);
   });
 });
 

@@ -464,6 +464,31 @@
         "title": "Ritmo de récord",
         "body": "Compara tus horas extra acumuladas ahora con tu mejor partida en el mismo punto (mismo número de mapas completados). Más allá del final de tu mejor partida, compara con su puntuación final.",
         "tip": "¿Vas por detrás? Arriesga más: encierra bolas con avaricia y fuerza tu suerte. ¿Vas por delante? Protege la ventaja."
+      },
+      "axis_delivery": {
+        "title": "Entrega",
+        "body": "La parte de las bolas del mapa que realmente encerraste. Es la base, no una tactica: ignora lo ajustados que fueran los bolsillos y condiciona las otras tres vias de estilo. Un despeje sin cierres vale su base fija y nada mas.",
+        "tip": "Encierra todas las bolas. Una bola suelta te cuesta su parte de Entrega Y la misma parte de Ritmo, Ahorro y Codicia."
+      },
+      "axis_craft": {
+        "title": "Oficio",
+        "body": "Que tan buenos fueron los cierres, no cuantos. La via completa es cada bola sellada en un bolsillo superior, y las areas de color, dos bolas en un corte, las bolas de dinero y los cierres congelados alcanzan el mismo techo por otras rutas.",
+        "tip": "Los bolsillos ajustados cuestan tiempo y vallas, asi que el Oficio se paga con Ritmo y Ahorro. Elige un par y comprometete."
+      },
+      "axis_tempo": {
+        "title": "Ritmo",
+        "body": "Con que rapidez cumpliste la condicion de victoria, en segundos de juego activo. Las ventanas escalan con el numero de bolas del mapa, y las pausas no cuentan.",
+        "tip": "La velocidad se compra dejando bolsillos flojos. Si prefieres la via del Oficio, ignora el reloj por completo: vale mas o menos lo mismo."
+      },
+      "axis_thrift": {
+        "title": "Ahorro",
+        "body": "Terminar por debajo del par, medido como fraccion del par para que un mapa de par 4 y uno de par 10 sean vias igual de alcanzables.",
+        "tip": "Los cortes gruesos quedan bajo par pero dejan bolsillos flojos, asi que Ahorro y Oficio tiran en sentidos opuestos. Combina Ahorro con Ritmo."
+      },
+      "axis_greed": {
+        "title": "Codicia",
+        "body": "Cuanto del tablero que podias dejar te llevaste igualmente, mas las horas de arriesgar y demoler. Se apaga del todo a tres vallas sobre el par.",
+        "tip": "Despejar de mas cuesta vallas y tiempo. La Codicia se lleva bien con el Oficio y pelea con el Ahorro por cada corte."
       }
     },
     "recordPace": "Ritmo de récord",
@@ -476,6 +501,14 @@
       "boss": "Jefe derrotado",
       "area": "Objetivo encerrado en la zona",
       "alsoCleared": "objetivo de espacio también cumplido"
+    },
+    "axes": {
+      "title": "Evaluacion de desempeno",
+      "delivery": "Entrega",
+      "craft": "Oficio",
+      "tempo": "Ritmo",
+      "thrift": "Ahorro",
+      "greed": "Codicia"
     }
   },
   "notFound": {
@@ -566,7 +599,7 @@
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",
-    "bonus": "+{{percent}}%",
+    "bonus": "+{{hours}}h",
     "seconds": "{{s}}s"
   },
   "topBarDetails": {

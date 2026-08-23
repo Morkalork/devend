@@ -390,12 +390,12 @@ describe("effective spawn chance (level gate + map override + Benefits Package)"
   });
 });
 
-describe("scoring: pickup overtime pays AFTER the per-map cap", () => {
-  it("postCapBonus lands on top of a capped score", () => {
-    const base = 20; // cap = 20 x 4 = 80 with default config
-    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 }).levelScore;
-    const withTokens = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, postCapBonus: 8 }).levelScore;
-    expect(withTokens).toBe(capped + 8);
+describe("scoring: pickup overtime pays outside the axes", () => {
+  it("postCapBonus lands on top whatever the axes banked", () => {
+    const base = 20;
+    const plain = calculateScore(5, 5, 10, 30, base, {}).levelScore;
+    const withTokens = calculateScore(5, 5, 10, 30, base, { postCapBonus: 8 }).levelScore;
+    expect(withTokens).toBe(plain + 8);
   });
 
   it("postCapBonus is inert at zero / negative", () => {

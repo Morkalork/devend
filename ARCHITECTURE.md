@@ -30,6 +30,8 @@ src/
 │   ├── regionOwnership.ts   Invariant: every ball belongs to exactly one region
 │   ├── polygon.ts           Geometry primitives
 │   ├── initGame.ts          Builds the world from a level config
+│   ├── scoreAxes.ts         The five Performance Review axes (the economy)
+│   ├── lockCapacity.ts      A map's lock capacity, for the Delivery/Craft axes
 │   └── scoring.ts           Score calculation + scoring-config.yml loader
 ├── types/                   Shared TypeScript types (one file per domain)
 └── test/                    Vitest setup
@@ -121,7 +123,7 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 **Make a map procedural (issue #53)** — instead of (or alongside) fixed `entities`, give a level a `slots` block ([types/level.ts](src/types/level.ts) `EntitySlot`). Each slot rolls `chance`, emits `count` entities, and picks one weighted `candidate`; any numeric candidate field may be a `[min, max]` range. [mapSlots.ts](src/lib/mapSlots.ts) `resolveSlots` resolves them through `getRunRng('slots:'+id)`, so the board varies every normal run and is identical for everyone on a Daily seed. Slots resolve **only** from level `PROCEDURAL_MIN_LEVEL` (11) up — L1-10 stay authored/fixed for the teaching cadence. A coverage/centre viability guard re-rolls a few times and falls back to authored-only, so a bad range combo can never ship an unplayable board. (level-12 and level-14 are the reference conversions.)
 
-**Add a map mutator (issue #54)** — a per-map environmental modifier rolled once per eligible map (level 11+) from the run seed. Add an entry to [public/mapMutators.yml](public/mapMutators.yml) (`id`, `name`, `description`, `clarify?`, `behavior`, optional `minLevel`/`maxLevel`/`weight`/`params`/`overtimePremium`). Reusing an existing `behavior` (`crunch`, `overclock`, `conveyor`) needs no code. A brand-new behavior needs a case in [mapMutators.ts](src/lib/mapMutators.ts) `mutatorSpeedFactor`/`resolveMutator` and its application seam: ball/mover speed rides `game.creepFactor` (folded in [useGameLoop.ts](src/hooks/useGameLoop.ts)) and `updateMovers`; positional effects go in [updateBall.ts](src/lib/physics/updateBall.ts) (see the conveyor drift). Any `overtimePremium` folds under the per-map cap via `extraBonus` in [applyCut.ts](src/lib/physics/applyCut.ts). The chip + hold-to-clarify live in [GameTopBar.tsx](src/components/game/GameTopBar.tsx); the roll is a `useMemo` in [GameScreen.tsx](src/components/game/GameScreen.tsx). `noneWeight` leaves some maps vanilla.
+**Add a map mutator (issue #54)** — a per-map environmental modifier rolled once per eligible map (level 11+) from the run seed. Add an entry to [public/mapMutators.yml](public/mapMutators.yml) (`id`, `name`, `description`, `clarify?`, `behavior`, optional `minLevel`/`maxLevel`/`weight`/`params`/`overtimePremium`). Reusing an existing `behavior` (`crunch`, `overclock`, `conveyor`) needs no code. A brand-new behavior needs a case in [mapMutators.ts](src/lib/mapMutators.ts) `mutatorSpeedFactor`/`resolveMutator` and its application seam: ball/mover speed rides `game.creepFactor` (folded in [useGameLoop.ts](src/hooks/useGameLoop.ts)) and `updateMovers`; positional effects go in [updateBall.ts](src/lib/physics/updateBall.ts) (see the conveyor drift). Any `overtimePremium` is hazard pay: it rides outside the five axes via `flatBonus` in [applyCut.ts](src/lib/physics/applyCut.ts), so it is owed whatever route the run took. The chip + hold-to-clarify live in [GameTopBar.tsx](src/components/game/GameTopBar.tsx); the roll is a `useMemo` in [GameScreen.tsx](src/components/game/GameScreen.tsx). `noneWeight` leaves some maps vanilla.
 
 **Add a boss map (issue #56)** — give a level (10/20/30/40) a `boss` block ([types/level.ts](src/types/level.ts) `BossConfig`): `name`, `intro`, a mandatory `objective` (a #55 `MapObjective`), optional forced `mutator` (#54), `creepFromStart`, `phases`, and a `bossBall`. The objective is a **hard win gate**: `isBossGateSatisfied` in [applyCut.ts](src/lib/physics/applyCut.ts) blocks `evaluateWinConditions` until it is met (the deadline `timeLimit` is the fail state). The **boss ball** ("Release Candidate") spawns in `initGame` (big/fast/red, `isBoss`+`bossHp`); trapping it is a HIT, not a lock: `checkBallWonState` intercepts (`bossTrapIsDamage`/`escalateBoss`/`breakBossOut`) so it breaks out faster+smaller until its last HP locks and sets `game.bossDefeated`, which the `defeatBoss` objective reads. It spits minions via `tickBossSpit` ([bossPhases.ts](src/lib/physics/bossPhases.ts), wired into `spawnTimedBalls`). Look: GameScreen forces a danger-red `accentColor` (re-skins the whole arena) and renders the [BossBanner](src/components/game/BossBanner.tsx) (name + deadline + HP bar); HP mirrors to React via the `onBossState` callback. Winning level 10 flows into the existing Promotion capstone draft. Keep the fight winnable when space runs low — `breakBossOut` only repositions into a comfortably-open region, and falls through to a fast defeat when none exists (never a soft-lock).
 
@@ -135,7 +137,35 @@ React callbacks the physics needs (setters, game-over handling) are bundled in `
 
 **Add an achievement or certificate** — edit the YAML; the managers pick it up. Certificates referencing achievements use `sourceAchievementId`.
 
-**Tune scoring** — [public/scoring-config.yml](public/scoring-config.yml), logic in [lib/scoring.ts](src/lib/scoring.ts).
+**Tune scoring** — [public/scoring-config.yml](public/scoring-config.yml), logic in [lib/scoring.ts](src/lib/scoring.ts) and [lib/scoreAxes.ts](src/lib/scoreAxes.ts).
+
+A map's payout is its flat base (scaled by the over-par multiplier) plus five
+independently-capped **Performance Review axes**: `delivery` (did you lock the
+balls), `craft` (superior / colored-area / simultaneous quality), `tempo` (ship
+early), `thrift` (under par) and `greed` (clearing past the requirement, plus
+push-your-luck and demolition). Each pays `ceiling x ratio`, and every ratio is
+measured against what THIS map could give, so the same quality of play is worth
+the same on level 3 and level 29.
+
+Two rules keep it a choice rather than a formula:
+
+- **The axes never share headroom.** Maxing one cannot spend another's. The
+  four tactical axes form a ring whose neighbours physically fight each other
+  (tight pockets are slow, coarse cuts are loose, extra clearing costs fences),
+  so roughly two are reachable per run and any two land near the same total.
+- **Delivery gates tempo, thrift and greed.** All three measure HOW you cleared
+  and none needs a ball sealed, so without the gate a fast frugal greedy run
+  that locked nothing would bank three full axes and the lock-centric rule
+  would quietly stop being true.
+
+`overtimeCapHeadroom` is no longer the ceiling, only a backstop on the base
+against a runaway score multiplier. As a binding cap it was the worst thing in
+the economy: 80h on every map while lock income routinely earned several times
+that, with Ship Early the only bonus paid above it, so speed was the only
+tactic the score could see.
+
+Upgrade multipliers raise an axis **ceiling**, not its payout, so an upgrade is
+a commitment to a lane and is dead weight in a run that never played it.
 
 **Test gameplay changes** — Welcome → Admin → Animation Test opens the Playground: every modifier adjustable live with apply-and-restart. Use `?level=N` in the URL to jump to a level.
 

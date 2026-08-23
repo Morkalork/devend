@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { calculateScore } from "@/lib/scoring";
 import yaml from "js-yaml";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import type { LevelData } from "@/types/level";
@@ -217,18 +218,19 @@ describe("lock-centric economy", () => {
   // player had hours saved), while lockValue makes locking close that gap.
   const scoringDoc = yaml.load(
     readFileSync(resolve(process.cwd(), "public/scoring-config.yml"), "utf8"),
-  ) as { scoring: { lockValue: number; lockQuality: { superiorThresholdFraction: number; superiorMultiplier: number }; spaceOptimization: { maxBonus: number }; shipEarly: { maxPercent: number } } };
+  ) as { scoring: { lockValue: number; lockQuality: { superiorThresholdFraction: number; superiorMultiplier: number }; shipEarly: { maxPercent: number } } };
   const scoring = scoringDoc.scoring;
 
   it("a flawless no-lock clear cannot afford the cheapest FORMULA-PRICED upgrade", () => {
     const flatBase = [...levelPoints.values()][0];
-    // Every non-lock hour a perfect clear can scrape together: flat base,
-    // under-par (+1), the full space ladder, and a generous push-your-luck
-    // allowance (chunks pay ~1h each). Ship Early then adds its top PERCENT of
-    // that overtime on top (paid above the cap).
-    const PUSH_ALLOWANCE = 4;
-    const preShip = flatBase + 1 + scoring.spaceOptimization.maxBonus + PUSH_ALLOWANCE;
-    const bestNoLockIncome = preShip + Math.round(preShip * scoring.shipEarly.maxPercent / 100);
+    // Under the axis economy this is the whole of it. Delivery gates Tempo,
+    // Thrift and Greed, so a clear that seals nothing banks no axis at all and
+    // takes home its flat base, exactly as the lock-centric rule requires.
+    const bestNoLockIncome = calculateScore(1, 8, 0, 30, flatBase, {
+      shipEarlyPercent: scoring.shipEarly.maxPercent, greedBonus: 100,
+      locks: { totalCapacity: 48, lockedCapacity: 0, premiumEarned: 0, premiumAvailable: 48 },
+    }).levelScore;
+    expect(bestNoLockIncome, "a bare clear must be worth its base alone").toBe(flatBase);
     // The guardrail is on the lock-priced economy proper. The three level-1
     // "first hire" Juniors carry an explicit discounted cost as a deliberate
     // on-ramp (a great clear, lock or not, can grab one); they're excluded here.

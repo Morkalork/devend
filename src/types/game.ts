@@ -1,5 +1,6 @@
 import { Vector2, Polygon } from '@/lib/polygon';
 import { BallEffectState } from '@/lib/ballEffects';
+import type { BankedAxes } from "@/types/scoring";
 
 export type GameScreen = 'welcome' | 'tutorial' | 'game' | 'upgradeShop' | 'tenureDraft' | 'doorDraft' | 'capstoneDraft' | 'tierDraft' | 'assignmentSummary' | 'runDraft' | 'ascensionDraft' | 'result' | 'certificateStore' | 'loadouts' | 'options' | 'achievements' | 'hallOfFame' | 'admin' | 'mapBuilder' | 'animationTest' | 'upgradeAtlas';
 
@@ -393,6 +394,14 @@ export interface LevelScoreData {
   thresholdPercent?: number;
   pushFailed?: boolean; // true if player failed during push-your-luck mode
   pushBonus?: number; // bonus OT earned from push-your-luck area removal
+  /**
+   * The Performance Review banking: what each of the five axes paid and what it
+   * could have paid. The overlay reads this to show which lanes the run
+   * committed to, which is the whole point of the axis economy - a player who
+   * cannot see that Craft was full and Tempo empty has no basis for choosing a
+   * different tactic, or an upgrade to support it.
+   */
+  axes?: BankedAxes;
   // New scoring system fields
   underParBonus?: number;
   spaceBonus?: number;

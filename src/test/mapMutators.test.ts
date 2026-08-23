@@ -115,13 +115,18 @@ describe("mutatorOvertimePremium (#54)", () => {
     expect(mutatorOvertimePremium({ ...CRUNCH, overtimePremium: undefined } as ActiveMapMutator)).toBe(0);
   });
 
-  it("folds UNDER the per-map cap (issue #43): premium beyond the cap adds nothing", () => {
+  /**
+   * The premium used to fold under the per-map cap, which meant a hazard map
+   * paid nothing extra on exactly the runs good enough to reach the ceiling.
+   * Under the axis economy it is hazard pay: owed for playing the map at all,
+   * so it belongs outside the axes and always lands.
+   */
+  it("is owed whatever route the run took", () => {
     const base = 20;
     const premium = mutatorOvertimePremium(CRUNCH as ActiveMapMutator);
-    // Both already saturate the cap; adding the premium on top changes nothing,
-    // proving it routes through the capped extraBonus path.
-    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 }).levelScore;
-    const cappedPlusPremium = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 + premium }).levelScore;
-    expect(cappedPlusPremium).toBe(capped);
+    expect(premium).toBeGreaterThan(0);
+    const without = calculateScore(5, 5, 10, 30, base, {}).levelScore;
+    const withPremium = calculateScore(5, 5, 10, 30, base, { flatBonus: premium }).levelScore;
+    expect(withPremium).toBe(without + premium);
   });
 });

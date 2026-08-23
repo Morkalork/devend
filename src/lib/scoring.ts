@@ -10,7 +10,8 @@
  * generateScoringPreview() via the useScoringConfig hook.
  */
 import yaml from 'js-yaml';
-import { ScoringConfig, ScoreBreakdown, ShipEarlyThreshold } from '@/types/scoring';
+import { ScoringConfig, ScoreBreakdown, ShipEarlyThreshold, AxisCeilings, BankedAxes } from '@/types/scoring';
+import { bankAxes } from '@/lib/scoreAxes';
 
 /**
  * Get the overtime reward cap for a level, scaled from its own base points.
@@ -55,65 +56,38 @@ export function getPerformanceMultiplier(
 }
 
 /**
- * Under-par bonus: a config-driven ladder that pays more overtime the further
- * you beat par (mirrors calculateSpaceBonus). `fenceEfficiency.steps` is an
- * ascending ladder of `{ fencesUnder, bonus }` rungs; we award the highest rung
- * whose `fencesUnder` floor is met, clamped to `maxBonus`. A single-rung config
- * ({ fencesUnder: 1, bonus: 1 }) reproduces the legacy binary +1h. This only
- * bites once par is set to a map's real solve count, so efficient cutting is a
- * genuine skill payoff rather than a freebie everyone collects.
+ * The Performance Review axis ceilings from the loaded config, with a fallback
+ * so a malformed `axes:` block degrades to the shipped balance rather than
+ * paying nothing at all.
  */
-export function calculateUnderParBonus(
-  usedFences: number,
-  parFences: number,
-  config: ScoringConfig
-): number {
-  const fencesUnder = parFences - usedFences;
-  if (fencesUnder <= 0) return 0;
-  const { maxBonus, steps } = config.scoring.fenceEfficiency;
-  let bonus = 0;
-  for (const step of steps) {
-    if (fencesUnder >= step.fencesUnder) bonus = Math.max(bonus, step.bonus);
-  }
-  return Math.min(bonus, maxBonus);
+export function getAxisCeilings(config: ScoringConfig = loadedConfig): AxisCeilings & {
+  thriftFullAtParFraction: number; greedFullAtSlackFraction: number;
+} {
+  const a = config?.scoring?.axes;
+  const d = DEFAULT_SCORING_CONFIG.scoring.axes;
+  const num = (v: unknown, fallback: number) =>
+    Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : fallback;
+  return {
+    delivery: num(a?.delivery, d.delivery),
+    craft: num(a?.craft, d.craft),
+    tempo: num(a?.tempo, d.tempo),
+    thrift: num(a?.thrift, d.thrift),
+    greed: num(a?.greed, d.greed),
+    thriftFullAtParFraction: num(a?.thriftFullAtParFraction, d.thriftFullAtParFraction),
+    greedFullAtSlackFraction: num(a?.greedFullAtSlackFraction, d.greedFullAtSlackFraction),
+  };
 }
 
-/**
- * Calculate space bonus: a config-driven ladder that pays more overtime the
- * further you clear past what the level required. `thresholds` is an ascending
- * ladder of `{ extraPercent, bonus }` rungs; we award the highest rung whose
- * extraPercent floor is met (capped at `maxBonus`). This rewards greedy,
- * push-your-luck removal: leaving less space on the board climbs to bigger
- * payouts instead of the old flat +1h. A single-rung config reproduces the
- * legacy binary behaviour. Disabled when 3+ over par.
- */
-export function calculateSpaceBonus(
-  actualRemovedRatio: number,
-  requiredRemovedRatio: number,
-  fencesOverPar: number,
-  config: ScoringConfig
-): { bonus: number; bonusRaw: number; extraPercent: number } {
-  if (requiredRemovedRatio <= 0) return { bonus: 0, bonusRaw: 0, extraPercent: 0 };
+/** Every axis ceiling added up: the part of the backstop the axes account for. */
+export function axisCeilingTotal(config: ScoringConfig = loadedConfig): number {
+  const c = getAxisCeilings(config);
+  return c.delivery + c.craft + c.tempo + c.thrift + c.greed;
+}
 
-  const extraRemovedRatio = Math.max(0, actualRemovedRatio - requiredRemovedRatio);
-  const extraPercent = extraRemovedRatio / requiredRemovedRatio;
-
-  const { maxBonus, thresholds } = config.scoring.spaceOptimization;
-
-  // Highest rung whose extraPercent floor is cleared (order-independent), then
-  // clamp to maxBonus. Below the first floor this stays 0.
-  let bonusRaw = 0;
-  for (const step of thresholds) {
-    if (extraPercent >= step.extraPercent) {
-      bonusRaw = Math.max(bonusRaw, step.bonus);
-    }
-  }
-  bonusRaw = Math.min(bonusRaw, maxBonus);
-
-  // Disabled when 3+ over par
-  const bonus = fencesOverPar >= 3 ? 0 : bonusRaw;
-
-  return { bonus, bonusRaw, extraPercent };
+/** The top rung of the Ship Early ladder: Tempo's denominator. */
+export function getShipEarlyMaxPercent(config: ScoringConfig = loadedConfig): number {
+  const m = config?.scoring?.shipEarly?.maxPercent;
+  return Number.isFinite(m) && m > 0 ? m : DEFAULT_SCORING_CONFIG.scoring.shipEarly.maxPercent;
 }
 
 /**
@@ -167,7 +141,12 @@ export function getShipEarlyThresholds(): ShipEarlyThreshold[] {
 }
 
 /**
- * Calculate complete score breakdown for a level completion.
+ * Bank a level's five axes and shape the result into a ScoreBreakdown.
+ *
+ * `underParBonus` and `spaceBonus` keep their old names because the
+ * level-complete payload, the highscore ledger and the results overlay all
+ * read them; they are now simply Thrift's and Greed's payouts. The full
+ * banking, with per-axis ratios and ceilings, rides along in `axes`.
  */
 export function calculateScoreBreakdown(
   usedFences: number,
@@ -177,39 +156,66 @@ export function calculateScoreBreakdown(
   config: ScoringConfig,
   spaceBonusMultiplier: number = 1,
   underParBonusMultiplier: number = 1,
+  axisInput: Partial<LockAxisInput> & {
+    shipEarlyPercent?: number;
+    tempoCeilingMultiplier?: number;
+    lockPayoutMultiplier?: number;
+    flatGreedBonus?: number;
+  } = {},
 ): ScoreBreakdown {
   const { multiplier: performanceMultiplier, fencesOverPar, fencesUnderPar } =
     getPerformanceMultiplier(usedFences, parFences, config);
 
-  // Overdelivery multiplies AFTER calculateUnderParBonus has applied its own
-  // maxBonus cap, so the ceiling actually moves. Multiplying before it would be
-  // clamped straight back down and the upgrade would do nothing.
-  const safeUnderParMult =
-    Number.isFinite(underParBonusMultiplier) && underParBonusMultiplier > 0 ? underParBonusMultiplier : 1;
-  const underParBonus = Math.round(
-    calculateUnderParBonus(usedFences, parFences, config) * safeUnderParMult,
-  );
-  const { bonus: spaceBonusBase, bonusRaw: spaceBonusRaw, extraPercent } =
-    calculateSpaceBonus(actualRemovedRatio, requiredRemovedRatio, fencesOverPar, config);
-  // Tech Evangelist: scales the space-optimization payout (still under the
-  // per-map cap, so it buys consistency rather than inflation).
-  const safeSpaceMult = Number.isFinite(spaceBonusMultiplier) && spaceBonusMultiplier > 0 ? spaceBonusMultiplier : 1;
-  const spaceBonus = Math.round(spaceBonusBase * safeSpaceMult);
+  const ceilings = getAxisCeilings(config);
+  const axes = bankAxes({
+    lockedCapacity: axisInput.lockedCapacity ?? 0,
+    totalCapacity: axisInput.totalCapacity ?? 0,
+    premiumEarned: axisInput.premiumEarned ?? 0,
+    premiumAvailable: axisInput.premiumAvailable ?? 0,
+    usedFences, parFences, actualRemovedRatio, requiredRemovedRatio,
+    shipEarlyPercent: axisInput.shipEarlyPercent ?? 0,
+    shipEarlyMaxPercent: getShipEarlyMaxPercent(config),
+    flatGreedBonus: axisInput.flatGreedBonus ?? 0,
+    thriftCeilingMultiplier: underParBonusMultiplier,
+    greedCeilingMultiplier: spaceBonusMultiplier,
+    tempoCeilingMultiplier: axisInput.tempoCeilingMultiplier ?? 1,
+    lockPayoutMultiplier: axisInput.lockPayoutMultiplier ?? 1,
+    fencesOverPar,
+    thriftFullAtParFraction: ceilings.thriftFullAtParFraction,
+    greedFullAtSlackFraction: ceilings.greedFullAtSlackFraction,
+  }, ceilings);
 
-  const lockBonus = 0; // Calculated separately in game logic
-  const totalBonus = underParBonus + spaceBonus + lockBonus;
+  // Greed before the 3-over-par gate, so the overlay can still show what the
+  // clearing WOULD have paid (the old spaceBonusRaw, same job).
+  const spaceBonusRaw = fencesOverPar >= 3
+    ? Math.round(axes.ceilings.greed
+        * Math.min(1, Math.max(0, (actualRemovedRatio - requiredRemovedRatio))
+          / Math.max(1e-9, (1 - requiredRemovedRatio) * ceilings.greedFullAtSlackFraction)))
+    : axes.greed;
 
   return {
-    underParBonus,
-    spaceBonus,
+    underParBonus: axes.thrift,
+    spaceBonus: axes.greed,
     spaceBonusRaw,
     performanceMultiplier,
-    totalBonus,
+    totalBonus: axes.total,
     fencesUnderPar,
     fencesOverPar,
-    extraPercent,
-    lockBonus,
+    // Kept for the overlay's "+N% extra" readout: now the share of the leftover
+    // slack consumed, which is the figure Greed is actually scored on.
+    extraPercent: requiredRemovedRatio >= 1 ? 0
+      : Math.max(0, actualRemovedRatio - requiredRemovedRatio) / (1 - requiredRemovedRatio),
+    lockBonus: axes.delivery + axes.craft,
+    axes,
   };
+}
+
+/** The lock-capacity half of the axis input, shared by the call sites. */
+export interface LockAxisInput {
+  lockedCapacity: number;
+  totalCapacity: number;
+  premiumEarned: number;
+  premiumAvailable: number;
 }
 
 /**
@@ -227,20 +233,25 @@ export function generateScoringPreview(
   breakdown: ScoreBreakdown;
   earnedScore: number;
 }> {
+  // `slackTaken` is the share of the leftover board consumed, which is what the
+  // Greed axis is actually scored on. The old preview varied "percent over the
+  // requirement", a figure that stopped meaning anything once requirements got
+  // past about 90%: at level 29 the entire remaining slack is 7% of the board.
   const scenarios = [
-    { label: 'Under par (-2), +20% extra', fenceOffset: -2, extraPercent: 0.20 },
-    { label: 'At Par, +15% extra', fenceOffset: 0, extraPercent: 0.15 },
-    { label: 'Par +1, +10% extra', fenceOffset: 1, extraPercent: 0.10 },
-    { label: 'Par +2, +10% extra', fenceOffset: 2, extraPercent: 0.10 },
-    { label: 'Par +3, +20% extra', fenceOffset: 3, extraPercent: 0.20 },
+    { label: 'Under par (-2), most of the slack', fenceOffset: -2, slackTaken: 0.70 },
+    { label: 'At Par, half the slack', fenceOffset: 0, slackTaken: 0.50 },
+    { label: 'Par +1, a third of the slack', fenceOffset: 1, slackTaken: 0.33 },
+    { label: 'Par +2, a third of the slack', fenceOffset: 2, slackTaken: 0.33 },
+    { label: 'Par +3, most of the slack (Greed off)', fenceOffset: 3, slackTaken: 0.70 },
   ];
 
   return scenarios.map((scenario) => {
     const usedFences = Math.max(1, parFences + scenario.fenceOffset);
-    const actualRemovedRatio = requiredRemovedRatio * (1 + scenario.extraPercent);
+    const slack = Math.max(0, 1 - requiredRemovedRatio);
+    const actualRemovedRatio = Math.min(1, requiredRemovedRatio + slack * scenario.slackTaken);
     const breakdown = calculateScoreBreakdown(usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, config);
     const rawScore = Math.floor(basePoints * breakdown.performanceMultiplier) + breakdown.totalBonus;
-    const cap = getOvertimeCap(basePoints, config.scoring.overtimeCapHeadroom);
+    const cap = getOvertimeCap(basePoints, config.scoring.overtimeCapHeadroom) + axisCeilingTotal(config);
     const earnedScore = Math.max(0, Math.min(rawScore, cap));
     return { label: scenario.label, usedFences, actualRemovedRatio, breakdown, earnedScore };
   });
@@ -251,28 +262,17 @@ export function generateScoringPreview(
 export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
   scoring: {
     overtimeCapHeadroom: 4.0,
+    axes: {
+      delivery: 30, craft: 30, tempo: 24, thrift: 20, greed: 25,
+      thriftFullAtParFraction: 0.40,
+      greedFullAtSlackFraction: 0.60,
+    },
     lockValue: 12,
     lockQuality: {
       superiorThresholdFraction: 0.4,
       superiorMultiplier: 2.0,
     },
     highscoreBonusMultiplier: 1.25,
-    fenceEfficiency: {
-      maxBonus: 4,
-      steps: [
-        { fencesUnder: 1, bonus: 1 },
-        { fencesUnder: 2, bonus: 2 },
-        { fencesUnder: 4, bonus: 4 },
-      ],
-    },
-    spaceOptimization: {
-      maxBonus: 3,
-      thresholds: [
-        { extraPercent: 0.10, bonus: 1 },
-        { extraPercent: 0.30, bonus: 2 },
-        { extraPercent: 0.55, bonus: 3 },
-      ],
-    },
     shipEarly: {
       maxPercent: 30,
       thresholds: [
@@ -306,10 +306,9 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
           scoring: {
             overtimeCapHeadroom: parsed.scoring.overtimeCapHeadroom ?? DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom,
             lockValue: parsed.scoring.lockValue ?? DEFAULT_SCORING_CONFIG.scoring.lockValue,
+            axes: { ...DEFAULT_SCORING_CONFIG.scoring.axes, ...parsed.scoring.axes },
             lockQuality: { ...DEFAULT_SCORING_CONFIG.scoring.lockQuality, ...parsed.scoring.lockQuality },
             highscoreBonusMultiplier: parsed.scoring.highscoreBonusMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.highscoreBonusMultiplier,
-            fenceEfficiency: { ...DEFAULT_SCORING_CONFIG.scoring.fenceEfficiency, ...parsed.scoring.fenceEfficiency },
-            spaceOptimization: { ...DEFAULT_SCORING_CONFIG.scoring.spaceOptimization, ...parsed.scoring.spaceOptimization },
             shipEarly: { ...DEFAULT_SCORING_CONFIG.scoring.shipEarly, ...parsed.scoring.shipEarly },
             performanceMultiplier: { ...DEFAULT_SCORING_CONFIG.scoring.performanceMultiplier, ...parsed.scoring.performanceMultiplier },
           },
@@ -366,42 +365,49 @@ export function getHighscoreBonusMultiplier(): number {
  * readable as the modifier system grows (they were positional args before).
  */
 export interface ScoreOptions {
-  /** Upgrade/loadout/door score multiplier (default 1). */
+  /** Upgrade/loadout/door score multiplier. Scales the flat map base only,
+   *  as it always has: the axes are bounded by their own ceilings. */
   scoreMultiplier?: number;
-  /** Lock/push/break bonuses, folded in UNDER the cap (default 0). */
-  extraBonus?: number;
-  /** Tech Evangelist: scales the space-optimization bonus (default 1). */
-  spaceBonusMultiplier?: number;
-  /** Stock Options capstone: flat raise on the per-map cap (default 0). */
-  overtimeCapBonus?: number;
-  /** Pickup overtime tokens: paid AFTER the cap clamp, like the highscore
-   *  bonus, so a claimed token always pays even on a capped map (default 0). */
-  postCapBonus?: number;
-  /** Ship Early tempo reward as a PERCENT (0-100) of the capped map overtime,
-   *  paid ABOVE the cap so finishing fast is a real bonus (default 0). */
-  shipEarlyPercent?: number;
-  /** Overdelivery: multiplies the under-par bonus, applied after its own cap. */
+  /** The map's lock capacity and the quality premium earned against it: the
+   *  raw material for the Delivery and Craft axes. */
+  locks?: LockAxisInput;
+  /** Push-your-luck and demolition hours. These bank into Greed, since both
+   *  are the same bet: staying on a cleared board for more of it. */
+  greedBonus?: number;
+  /** Hours that belong to no axis and are simply owed: the map mutator's
+   *  hazard premium, an objective's reward, and the Stock Options capstone,
+   *  which used to raise a ceiling that no longer binds anything. */
+  flatBonus?: number;
+  /** Overdelivery: raises the THRIFT ceiling (default 1). */
   underParBonusMultiplier?: number;
+  /** Tech Evangelist: raises the GREED ceiling (default 1). */
+  spaceBonusMultiplier?: number;
+  /** Hard Deadline: raises the TEMPO ceiling (default 1). */
+  tempoCeilingMultiplier?: number;
+  /** Pickup overtime tokens: paid outside the axes, like flatBonus, so a
+   *  claimed token always pays exactly what it said it would (default 0). */
+  postCapBonus?: number;
+  /** The Ship Early ladder's awarded percent, which Tempo is scored on. */
+  shipEarlyPercent?: number;
   /**
-   * Demolition multiplier (issue #38): breaking destructibles multiplies the
-   * whole pre-cap payout (×1.15 per break, compounding), to offset the
-   * ship-early time you sacrifice by stopping to smash things. Still clamped by
-   * the per-map cap. Default 1 (no destructibles broken).
+   * Demolition multiplier (issue #38): x1.15 per break, compounding. It scales
+   * DELIVERY and CRAFT rather than the whole payout, because lock income is
+   * what stopping to smash things actually costs you - the time came out of
+   * Tempo, so the offset belongs on the axes you traded it for.
    */
   payoutMultiplier?: number;
 }
 
 /**
- * Calculate the overtime reward for a level, synchronously, using the
- * preloaded config. Performance multiplier scales the base reward,
- * scoreMultiplier (from upgrades) applies on top, and the result is capped
- * at basePoints × overtimeCapHeadroom (see getOvertimeCap) plus any capstone
- * cap raise.
+ * Calculate the overtime reward for a level, using the preloaded config.
  *
- * `extraBonus` folds lock/push/break bonuses in BEFORE the cap so a single map
- * can never pay more than the cap (issue #43): together with the flat per-map
- * base points this keeps every map's reward in the same band and stops the
- * money-ball / push-your-luck stack from inflating the economy.
+ * The five axes each bank ceiling x ratio independently (see scoreAxes.ts),
+ * the flat map base rides on top scaled by the performance multiplier, and
+ * `overtimeCapHeadroom` sits far above all of it as a backstop against a
+ * runaway upgrade stack. It is deliberately no longer the binding constraint:
+ * as a binding cap it discarded most of what a skilled run earned and left
+ * Ship Early - the one bonus paid above it - as the only thing that decided a
+ * score.
  */
 export function calculateScore(
   usedFences: number,
@@ -413,42 +419,49 @@ export function calculateScore(
 ): {
   levelScore: number;
   breakdown: ScoreBreakdown;
-  /** The ship-early hours actually paid (capped overtime x shipEarlyPercent). */
+  /** Tempo's payout, under its old name for the call sites and the overlay. */
   shipEarlyBonus: number;
+  /** What each axis banked, for the results screen. */
+  axes: BankedAxes;
 } {
-  const { scoreMultiplier = 1, extraBonus = 0, spaceBonusMultiplier = 1, overtimeCapBonus = 0, postCapBonus = 0, payoutMultiplier = 1, shipEarlyPercent = 0, underParBonusMultiplier = 1 } = options;
+  const {
+    scoreMultiplier = 1, locks, greedBonus = 0, flatBonus = 0, postCapBonus = 0,
+    payoutMultiplier = 1, shipEarlyPercent = 0, underParBonusMultiplier = 1,
+    spaceBonusMultiplier = 1, tempoCeilingMultiplier = 1,
+  } = options;
   const requiredRemovedRatio = (100 - thresholdPercent) / 100;
   const actualRemovedRatio = (100 - remainingPercent) / 100;
 
   const breakdown = calculateScoreBreakdown(
     usedFences, parFences, actualRemovedRatio, requiredRemovedRatio, loadedConfig,
     spaceBonusMultiplier, underParBonusMultiplier,
+    {
+      lockedCapacity: locks?.lockedCapacity ?? 0,
+      totalCapacity: locks?.totalCapacity ?? 0,
+      premiumEarned: locks?.premiumEarned ?? 0,
+      premiumAvailable: locks?.premiumAvailable ?? 0,
+      shipEarlyPercent,
+      tempoCeilingMultiplier,
+      lockPayoutMultiplier: payoutMultiplier,
+      flatGreedBonus: greedBonus,
+    },
   );
 
   // Guard against a NaN/negative scoreMultiplier leaking in from bad config.
   const safeMultiplier = Number.isFinite(scoreMultiplier) && scoreMultiplier > 0 ? scoreMultiplier : 1;
-  const safeExtra = Number.isFinite(extraBonus) && extraBonus > 0 ? extraBonus : 0;
   const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
-  // Demolition multiplier scales the ENTIRE pre-cap payout (base + all bonuses),
-  // so breaking things offsets the lock/ship-early income you gave up. Guarded
-  // to leave the default path (×1) byte-identical.
-  const safePayout = Number.isFinite(payoutMultiplier) && payoutMultiplier > 0 ? payoutMultiplier : 1;
-  const preCap = multipliedBase + breakdown.totalBonus + safeExtra;
-  const rawScore = safePayout === 1 ? preCap : Math.floor(preCap * safePayout);
-  // Stock Options capstone: a flat raise on the per-map ceiling. Everything
-  // still folds under a cap, it's just a higher one for the rest of the run.
-  const safeCapBonus = Number.isFinite(overtimeCapBonus) && overtimeCapBonus > 0 ? overtimeCapBonus : 0;
-  const cap = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom) + safeCapBonus;
-  // Pickup overtime lands OUTSIDE the cap (a deliberate, small inflation valve:
-  // tokens must feel rewarding even on a capped map — see game-config.yml).
+  const safeFlat = Number.isFinite(flatBonus) && flatBonus > 0 ? Math.round(flatBonus) : 0;
   const safePostCap = Number.isFinite(postCapBonus) && postCapBonus > 0 ? Math.round(postCapBonus) : 0;
-  const capped = Math.max(0, Math.min(rawScore, cap));
-  // Ship Early tempo reward: a percent of the CAPPED map overtime, paid ABOVE
-  // the cap (issue: finishing fast must be a real motivator, not a flat +3h the
-  // cap eats). Scales with the map's value automatically.
-  const safeShipEarlyPct = Number.isFinite(shipEarlyPercent) && shipEarlyPercent > 0 ? shipEarlyPercent : 0;
-  const shipEarlyBonus = Math.round(capped * safeShipEarlyPct / 100);
-  const levelScore = capped + safePostCap + shipEarlyBonus;
 
-  return { levelScore, breakdown, shipEarlyBonus };
+  const earned = multipliedBase + breakdown.axes.total + safeFlat + safePostCap;
+  // The backstop bounds the BASE and the flat bonuses, never the axes: the five
+  // ceilings already bound those, and they are absolute hours while the base is
+  // per-map. Clamping the sum against a multiple of basePoints would clip axis
+  // income on any map with a low `points:` value, which is precisely the bug
+  // this rework exists to remove - a skilled run losing what it earned.
+  const backstop = getOvertimeCap(basePoints, loadedConfig.scoring.overtimeCapHeadroom)
+    + axisCeilingTotal(loadedConfig);
+  const levelScore = Math.max(0, Math.min(earned, backstop));
+
+  return { levelScore, breakdown, shipEarlyBonus: breakdown.axes.tempo, axes: breakdown.axes };
 }

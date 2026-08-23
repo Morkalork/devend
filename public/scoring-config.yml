@@ -2,13 +2,59 @@
 # Values are in overtime hours.
 
 scoring:
-  # Per-level overtime cap multiplier.
-  # cap = round(basePoints × overtimeCapHeadroom). With the lock-centric
-  # economy the base (points: 20) is only the floor; the headroom leaves room
-  # for the lock bonuses that make up most of a map's real income, while
-  # bounding extreme multiplier stacks (cap = 20 × 4 = 80h, same absolute
-  # ceiling as the old 40 × 2 economy).
+  # A ceiling on the BASE, not on the payout.
+  # backstop = round(basePoints x overtimeCapHeadroom) + every axis ceiling. It
+  # bounds a runaway score multiplier on the flat base and nothing else; the
+  # five axes below already bound themselves, and they are absolute hours while
+  # the base is per-map, so folding them into a multiple of basePoints would
+  # clip axis income on any low-`points:` map.
+  #
+  # It used to be THE ceiling, and that was the single worst thing in the
+  # economy. At 4.0 it meant 80h on all 35 maps (they all have points: 20),
+  # while lock income is a multiplicative stack that routinely earned 116h,
+  # 212h, even 596h into that pot - and everything over the brim was thrown
+  # away. Worse, Ship Early was the only bonus paid ABOVE it, so once a run
+  # capped, tempo was the only lever still connected to the score and rushing
+  # sloppily out-earned a flawless precise run 96h to 80h.
   overtimeCapHeadroom: 4.0
+
+  # ── The Performance Review: five axes, banked independently ───────────────
+  #
+  # Income is DELIVERY (did you lock the balls at all) plus four tactical axes,
+  # each with its own ceiling. Maxing one never spends another's headroom, so
+  # there is no single pot for one route to crowd out.
+  #
+  #   delivery  the baseline, not a tactic          blind to lock quality
+  #   craft     superior / zone / simultaneous      costs time and fences
+  #   tempo     ship early                          costs craft
+  #   thrift    finishing under par                 costs craft and greed
+  #   greed     clearing past the requirement       costs fences and time
+  #
+  # The four tactical axes form a ring where neighbours physically fight each
+  # other, so about two are reachable in a run, and any two land near the same
+  # total. Simulated over the whole ladder: perfectionist 96h, speedrunner 97h,
+  # balanced 95h, zone play 93h, greed 90h, and the intended failure (slow AND
+  # sloppy) 41h. The two poles come out even on every rung from level 3 to 29.
+  #
+  # Every axis pays ceiling x ratio, where the ratio is measured against what
+  # THIS map could give: lock capacity for delivery and craft, par for thrift,
+  # leftover slack for greed. That is what lets one set of ceilings cover a
+  # 1-ball map worth 12h of locks and a 4-ball act-III map worth 240h.
+  axes:
+    delivery: 30
+    craft: 30
+    tempo: 24
+    thrift: 20
+    greed: 25
+    # Under par by 40% of par banks all of Thrift: three cuts on a par-7 map,
+    # two on a par-4. Relative because par runs 3..10 across the ladder, so an
+    # absolute rung is a strong result on one map and impossible on another.
+    thriftFullAtParFraction: 0.40
+    # Consuming 60% of the leftover slack banks all of Greed. The old space
+    # bonus measured the overshoot against the REQUIREMENT, which made its top
+    # rungs unreachable exactly where requirements got interesting: level 29
+    # asks for 93%, so the entire slack is 7% and the ladder wanted 30% and 55%.
+    greedFullAtSlackFraction: 0.60
 
   # Lock Value
   # Overtime hours paid per lock-multiplier point when a ball is locked away.
@@ -39,38 +85,6 @@ scoring:
   # map's score is multiplied by this. Applied after the per-map cap, so beating
   # a record always pays. Only fires if the map has been played before.
   highscoreBonusMultiplier: 1.25
-
-  # Under-Par Bonus
-  # Under-Par Bonus (efficiency ladder)
-  # Pays more overtime the further you beat par: +1h at 1 under, +2h at 2 under,
-  # +4h at 4+ under. Only meaningful now that par is set to a map's real solve
-  # count (see LEVELDESIGN.md / expectedCuts), so tight, efficient cutting is a
-  # real skill payoff instead of the old flat +1h everyone collected.
-  fenceEfficiency:
-    maxBonus: 4
-    steps:
-      - fencesUnder: 1
-        bonus: 1
-      - fencesUnder: 2
-        bonus: 2
-      - fencesUnder: 4
-        bonus: 4
-
-  # Space Optimization Bonus
-  # Ascending ladder: the more you clear past the level's requirement, the more
-  # overtime you bank. extraPercent is the extra area removed as a fraction of
-  # what was required (e.g. required 70%, removed 90% => +28% extra). We award
-  # the highest rung whose floor is met, capped at maxBonus. Rewards greedy,
-  # push-your-luck removal. Disabled when 3+ over par.
-  spaceOptimization:
-    maxBonus: 3
-    thresholds:
-      - extraPercent: 0.10   # +10% over required
-        bonus: 1
-      - extraPercent: 0.30   # +30% over required
-        bonus: 2
-      - extraPercent: 0.55   # +55% over required (near-total clears)
-        bonus: 3
 
   # Ship Early Bonus
   # Ladder of ACTIVE-play seconds to first meet the win condition (the push

@@ -1,13 +1,17 @@
 import { describe, it, expect } from "vitest";
 import {
   calculateScore,
-  calculateSpaceBonus,
   calculateShipEarlyPercent,
-  calculateUnderParBonus,
   getPerformanceMultiplier,
   getOvertimeCap,
+  getAxisCeilings,
+  axisCeilingTotal,
   DEFAULT_SCORING_CONFIG,
 } from "@/lib/scoring";
+
+// The Thrift and Greed ladders live in scoreAxes.test.ts now; this file covers
+// the scoring FUNCTION around them - the backstop, the base curve, the Ship
+// Early ladder and the performance multiplier.
 
 // A representative range of base-point values used to exercise the scoring
 // FUNCTION (its cap and monotonicity in basePoints). This is independent of
@@ -20,56 +24,76 @@ const CURVE = [
 
 const HEADROOM = DEFAULT_SCORING_CONFIG.scoring.overtimeCapHeadroom;
 
-// Helper: overtime earned at par (no fence penalty), clearing well past the
-// threshold so the +1 space bonus applies.
+const GREED_CEILING = getAxisCeilings(DEFAULT_SCORING_CONFIG).greed;
+
+// Overtime earned at par (no fence penalty), clearing well past the threshold.
+// threshold 30 -> required 0.70, remaining 10 -> actual 0.90: two thirds of the
+// leftover slack, which fills the Greed axis. No balls, so no lock axes.
 function earnedAtPar(basePoints: number, par = 5, scoreMultiplier = 1) {
-  // threshold 30 -> required removal 0.70; remaining 10 -> actual 0.90 (+28% extra => space bonus)
   return calculateScore(par, par, 10, 30, basePoints, { scoreMultiplier }).levelScore;
 }
 
-describe("overtime cap", () => {
+/**
+ * The backstop, which is all the old per-map cap is now.
+ *
+ * At 4.0 headroom it was the binding ceiling on every map (80h, since all 35
+ * have `points: 20`), and lock income is a multiplicative stack that routinely
+ * earned two to seven times that. Everything over the brim was discarded, and
+ * because Ship Early was the only bonus paid ABOVE it, tempo was the only lever
+ * still connected to a capped run's score. The five axes bound the payout now;
+ * this only catches a runaway config or upgrade stack.
+ */
+describe("the backstop", () => {
   it("scales from the level's own base points, not its number", () => {
     expect(getOvertimeCap(50, HEADROOM)).toBe(Math.round(50 * HEADROOM));
     expect(getOvertimeCap(126, HEADROOM)).toBe(Math.round(126 * HEADROOM));
   });
 
-  it("never clips the at-par payout of any level on the curve (the old flat-44 bug)", () => {
+  /**
+   * The axes are absolute hours and the base is per-map, so the backstop has to
+   * clear them both. Clamping the sum against a multiple of basePoints alone
+   * would clip axis income on any low-`points:` map, which is the exact bug the
+   * rework exists to remove.
+   */
+  it("never clips a full set of axes, at any base value", () => {
     for (const base of CURVE) {
-      const earned = earnedAtPar(base);
-      // at par + space bonus = base + 1, comfortably under the base*headroom cap
-      expect(earned).toBe(base + 1);
+      const full = calculateScore(1, 20, 0, 30, base, {
+        locks: { totalCapacity: 240, lockedCapacity: 240, premiumEarned: 240, premiumAvailable: 240 },
+        shipEarlyPercent: 30, greedBonus: 100,
+      });
+      expect(full.levelScore, `base ${base}`)
+        .toBeGreaterThanOrEqual(axisCeilingTotal(DEFAULT_SCORING_CONFIG));
     }
   });
 
-  it("folds lock/push bonuses in UNDER the cap so one map can't exceed it (#43)", () => {
-    const base = 40; // the flat per-map base
-    const cap = getOvertimeCap(base, HEADROOM); // 80
-    // A huge lock/push stack passed as extraBonus is clamped to the cap, not
-    // added on top of it (the old hyperinflation path).
-    const huge = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000 }).levelScore;
-    expect(huge).toBe(cap);
-    // A modest bonus still lands under the cap and is counted.
-    const modest = calculateScore(5, 5, 10, 30, base, { extraBonus: 10 }).levelScore;
-    expect(modest).toBe(Math.min(cap, base + 1 + 10));
-    // Stock Options capstone: the cap itself can be raised, so the same huge
-    // stack clamps to the raised ceiling instead.
-    const raised = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, overtimeCapBonus: 20 }).levelScore;
-    expect(raised).toBe(cap + 20);
+  it("still clamps a runaway flat stack", () => {
+    const base = 40;
+    const ceiling = getOvertimeCap(base, HEADROOM) + axisCeilingTotal(DEFAULT_SCORING_CONFIG);
+    expect(calculateScore(5, 5, 10, 30, base, { flatBonus: 10_000 }).levelScore).toBe(ceiling);
   });
 
-  it("demolition multiplier scales the whole pre-cap payout, still under the cap (#38)", () => {
+  it("never clips the at-par payout of any level on the curve", () => {
+    for (const base of CURVE) {
+      expect(earnedAtPar(base)).toBe(base + GREED_CEILING);
+    }
+  });
+
+  /**
+   * Demolition scales DELIVERY and CRAFT rather than the whole payout: the time
+   * spent smashing things came out of Tempo, so the offset belongs on the axes
+   * it was traded for.
+   */
+  it("demolition multiplier lifts the lock axes and nothing else (#38)", () => {
     const base = 40;
-    const cap = getOvertimeCap(base, HEADROOM); // 80
-    // Default (no destructibles broken) is byte-identical to omitting the option.
-    const plain = calculateScore(5, 5, 10, 30, base, { extraBonus: 10 }).levelScore;
-    expect(calculateScore(5, 5, 10, 30, base, { extraBonus: 10, payoutMultiplier: 1 }).levelScore).toBe(plain);
-    // A ×1.15 multiplier lifts a below-cap payout (it multiplies base + bonuses).
-    const boosted = calculateScore(5, 5, 10, 30, base, { extraBonus: 10, payoutMultiplier: 1.15 }).levelScore;
-    expect(boosted).toBeGreaterThan(plain);
-    expect(boosted).toBeLessThanOrEqual(cap);
-    // It never breaches the per-map cap: a big multiplier on a big stack clamps.
-    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, payoutMultiplier: 1.52 }).levelScore;
-    expect(capped).toBe(cap);
+    const locks = { totalCapacity: 48, lockedCapacity: 48, premiumEarned: 24, premiumAvailable: 48 };
+    const plain = calculateScore(5, 5, 10, 30, base, { locks, shipEarlyPercent: 20 });
+    const boosted = calculateScore(5, 5, 10, 30, base, { locks, shipEarlyPercent: 20, payoutMultiplier: 1.15 });
+    expect(boosted.axes.craft).toBeGreaterThan(plain.axes.craft);
+    expect(boosted.axes.tempo).toBe(plain.axes.tempo);
+    expect(boosted.axes.greed).toBe(plain.axes.greed);
+    // Default is byte-identical to omitting the option.
+    expect(calculateScore(5, 5, 10, 30, base, { locks, payoutMultiplier: 1 }).levelScore)
+      .toBe(calculateScore(5, 5, 10, 30, base, { locks }).levelScore);
   });
 });
 
@@ -91,61 +115,8 @@ describe("pay scales with base points (scoring function, not the flat map)", () 
   });
 });
 
-describe("space bonus ladder rewards clearing more", () => {
+describe("par bites: the over-par penalty", () => {
   const cfg = DEFAULT_SCORING_CONFIG;
-  // extraPercent = (actual - required) / required. Keep required = 0.50 so the
-  // arithmetic is easy to read: actual = required * (1 + extraPercent).
-  const REQ = 0.5;
-  const atExtra = (extraPercent: number) =>
-    calculateSpaceBonus(REQ * (1 + extraPercent), REQ, 0, cfg);
-
-  it("pays nothing below the first rung", () => {
-    expect(atExtra(0.05).bonus).toBe(0);
-  });
-
-  it("climbs through each configured rung as overcut grows", () => {
-    expect(atExtra(0.10).bonus).toBe(1); // +10% over required
-    expect(atExtra(0.30).bonus).toBe(2); // +30%
-    expect(atExtra(0.55).bonus).toBe(3); // +55%
-  });
-
-  it("is monotonic: more space removed never pays less", () => {
-    let prev = -Infinity;
-    for (const e of [0, 0.05, 0.1, 0.2, 0.3, 0.45, 0.55, 0.9]) {
-      const b = atExtra(e).bonus;
-      expect(b).toBeGreaterThanOrEqual(prev);
-      prev = b;
-    }
-  });
-
-  it("never exceeds maxBonus even for near-total clears", () => {
-    expect(atExtra(2.0).bonus).toBe(cfg.scoring.spaceOptimization.maxBonus);
-  });
-
-  it("is disabled when 3+ fences over par, but still reports the raw rung", () => {
-    const big = calculateSpaceBonus(REQ * 1.55, REQ, 3, cfg);
-    expect(big.bonus).toBe(0);
-    expect(big.bonusRaw).toBe(3);
-  });
-});
-
-describe("par bites: under-par ladder + steeper over-par penalty", () => {
-  const cfg = DEFAULT_SCORING_CONFIG;
-
-  it("pays nothing at or over par", () => {
-    expect(calculateUnderParBonus(5, 5, cfg)).toBe(0);
-    expect(calculateUnderParBonus(6, 5, cfg)).toBe(0);
-  });
-
-  it("climbs the ladder the further you beat par", () => {
-    expect(calculateUnderParBonus(4, 5, cfg)).toBe(1); // 1 under
-    expect(calculateUnderParBonus(3, 5, cfg)).toBe(2); // 2 under
-    expect(calculateUnderParBonus(1, 5, cfg)).toBe(4); // 4 under
-  });
-
-  it("clamps the under-par bonus to maxBonus", () => {
-    expect(calculateUnderParBonus(0, 20, cfg)).toBe(cfg.scoring.fenceEfficiency.maxBonus);
-  });
 
   it("penalises the base harder for each fence over par", () => {
     const mult = (used: number) => getPerformanceMultiplier(used, 5, cfg).multiplier;
@@ -245,19 +216,28 @@ describe("ship early percent ladder rewards fast clears", () => {
     expect(calculateShipEarlyPercent(10, 1, hot)).toBe(20);
   });
 
-  it("pays a percent of the CAPPED map overtime, ABOVE the cap", () => {
+  /**
+   * Tempo is its own axis now, scored against the ladder's top rung. It used to
+   * pay a percent of the whole earned payout ABOVE the per-map cap, which is
+   * what made speed dominant: once a run capped it was the only bonus still
+   * connected to the score. It also double-penalised the player it rewards, a
+   * speedrunner banking little Craft getting a percentage of a small total.
+   */
+  it("banks Tempo on its own ladder, not as a slice of the rest", () => {
     const base = 40;
-    const cap = getOvertimeCap(base, HEADROOM); // 80
-    // Even riding a huge lock stack, the base clamps at the cap, and ship-early
-    // adds 30% of the cap ON TOP of it.
-    const capped = calculateScore(5, 5, 10, 30, base, { extraBonus: 10_000, shipEarlyPercent: 30 });
-    expect(capped.levelScore).toBe(cap + Math.round(cap * 0.30));
-    expect(capped.shipEarlyBonus).toBe(Math.round(cap * 0.30));
-    // A normal (uncapped) map: 10% of the earned overtime on top.
-    const normal = calculateScore(5, 5, 10, 30, base, { shipEarlyPercent: 10 });
-    const earned = base + 1; // at par (x1) + one space-bonus rung
-    expect(normal.levelScore).toBe(earned + Math.round(earned * 0.10));
-    expect(normal.shipEarlyBonus).toBe(Math.round(earned * 0.10));
+    const ceiling = getAxisCeilings(DEFAULT_SCORING_CONFIG).tempo;
+    const top = calculateScore(5, 5, 10, 30, base, { shipEarlyPercent: 30 });
+    expect(top.axes.tempo).toBe(ceiling);
+    expect(top.shipEarlyBonus).toBe(ceiling);
+    // A third of the ladder pays a third of the axis.
+    expect(calculateScore(5, 5, 10, 30, base, { shipEarlyPercent: 10 }).axes.tempo)
+      .toBe(Math.round(ceiling / 3));
+    // And a rich lock haul does not change what being fast was worth.
+    const withLocks = calculateScore(5, 5, 10, 30, base, {
+      shipEarlyPercent: 30,
+      locks: { totalCapacity: 240, lockedCapacity: 240, premiumEarned: 240, premiumAvailable: 240 },
+    });
+    expect(withLocks.axes.tempo).toBe(ceiling);
   });
 });
 
@@ -267,7 +247,7 @@ describe("risk pays off within the cap headroom", () => {
     const safe = earnedAtPar(base, 5, 1.0);
     const risky = earnedAtPar(base, 5, 1.15 * 1.5);
     expect(risky).toBeGreaterThan(safe);
-    // and the full base-game stack still pays out un-clipped (cap = base*2 = 112)
+    // and the full base-game stack still pays out un-clipped.
     expect(risky).toBeLessThanOrEqual(getOvertimeCap(base, HEADROOM));
   });
 });

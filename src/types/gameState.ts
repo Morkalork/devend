@@ -296,6 +296,13 @@ export interface CanvasGameState {
   /** Number of balls locked this level (for lock-bonus multiplier). */
   lockedBallsCount: number;
   lockBonus: number;
+  /**
+   * The DELIVERY share of lockBonus: raw lockMultiplier x lockValue with every
+   * quality multiplier stripped off. lockBonus minus this is what the CRAFT
+   * axis is scored on (see scoreAxes.ts). Accumulated at lock time because the
+   * multipliers sit inside a product and cannot be unpicked afterwards.
+   */
+  lockDeliveryBonus: number;
   /** Of lockedBallsCount, how many graded SUPERIOR (tight pocket; see
    *  scoring-config.yml lockQuality). */
   superiorLockCount: number;
