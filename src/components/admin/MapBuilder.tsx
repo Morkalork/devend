@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle, Undo2, Redo2 } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity, GravityWell } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
 import { DEFAULT_MOVER_RANGE, DEFAULT_MOVER_SPEED } from '@/lib/moverPath';
@@ -8,6 +8,10 @@ import { EntityPanel } from './EntityPanel';
 import { LevelPanel } from './LevelPanel';
 import yaml from 'js-yaml';
 import { spliceYamlEntries } from '@/lib/yamlSplice';
+import {
+  createHistory, pushHistory, undo as undoHistory, redo as redoHistory,
+  canUndo, canRedo, historyGesture, HISTORY_LIMIT, type History,
+} from '@/lib/editHistory';
 
 interface MapBuilderProps {
   onBack: () => void;
@@ -15,6 +19,15 @@ interface MapBuilderProps {
 
 export function MapBuilder({ onBack }: MapBuilderProps) {
   const [levels, setLevels] = useState<LevelConfig[]>([]);
+  /**
+   * Undo history for the ladder. Held beside `levels` rather than replacing it,
+   * because every read in this component and both panels goes through `levels`
+   * and routing all of them via `history.present` would be a large rewrite for
+   * no behavioural gain. The two are kept in step by funnelling every write
+   * through commitLevels, which is the only thing allowed to call setLevels
+   * after the initial load.
+   */
+  const [history, setHistory] = useState<History<LevelConfig[]>>(() => createHistory([]));
   const [selectedLevelIndex, setSelectedLevelIndex] = useState<number>(0);
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [selectedBallId, setSelectedBallId] = useState<string | null>(null);
@@ -34,6 +47,8 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     | null
   >(null);
 
+  /** The latest ladder, so a commit never resolves against a stale render. */
+  const levelsRef = useRef<LevelConfig[]>([]);
   /** map.yml exactly as it is on disk, so a save can be a splice not a rewrite. */
   const rawMapYaml = useRef<string | null>(null);
   /** The levels as parsed from that file, to tell which ones actually changed. */
@@ -59,7 +74,11 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         // to an empty array so the (dev-only) builder UI keeps working.
         const loaded = data.levels.map(l => ({ ...l, balls: l.balls ?? [] }));
         originalLevels.current = JSON.parse(JSON.stringify(loaded)) as LevelConfig[];
+        levelsRef.current = loaded;
         setLevels(loaded);
+        // Seeded, not pushed: the empty state before a load is not something
+        // anyone wants one Ctrl+Z to take them back to.
+        setHistory(createHistory(loaded));
         setIsLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load levels');
@@ -71,12 +90,57 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
 
   const currentLevel = levels[selectedLevelIndex] || null;
 
-  // Update level in state
-  const updateLevel = useCallback((updatedLevel: LevelConfig) => {
-    setLevels(prev => prev.map((l, i) => 
-      i === selectedLevelIndex ? updatedLevel : l
-    ));
+  /**
+   * The only way to change the ladder, so nothing can edit it without the
+   * history seeing it.
+   *
+   * `key` names what is being edited ("entity:wall-3"). Consecutive commits
+   * with the same key inside the coalesce window are ONE undo step, which is
+   * what makes this usable at ten slots: dragging a wall fires an update every
+   * pointer move, and without coalescing a single one-second drag would push
+   * the whole history out and leave undo stepping backwards a pixel at a time.
+   * Structural edits (add, delete, duplicate) pass no key, so each is its own
+   * step even in quick succession.
+   */
+  const commitLevels = useCallback((
+    next: LevelConfig[] | ((prev: LevelConfig[]) => LevelConfig[]),
+    key?: string,
+  ) => {
+    // Resolved against a ref rather than inside the setState updater: an
+    // updater must stay pure, and two commits in the same tick still need to
+    // compose rather than both building on the pre-tick value.
+    const resolved = typeof next === 'function' ? next(levelsRef.current) : next;
+    levelsRef.current = resolved;
+    setLevels(resolved);
+    setHistory(h => pushHistory(h, resolved, { key }));
+  }, []);
+
+  /** Step the ladder back or forward, and drop selections that no longer
+   *  point at anything: undoing an add leaves the added thing selected, and a
+   *  panel bound to a missing entity renders nothing with no explanation. */
+  const applyHistory = useCallback((step: 'undo' | 'redo') => {
+    setHistory(h => {
+      const nextHistory = step === 'undo' ? undoHistory(h) : redoHistory(h);
+      if (nextHistory === h) return h;
+      const restored = nextHistory.present;
+      levelsRef.current = restored;
+      setLevels(restored);
+      setSelectedLevelIndex(i => Math.min(i, Math.max(0, restored.length - 1)));
+      const level = restored[Math.min(selectedLevelIndex, restored.length - 1)];
+      setSelectedEntityId(id => (level?.entities || []).some(e => e.id === id) ? id : null);
+      setSelectedBallId(id => (level?.balls || []).some(b => b.id === id) ? id : null);
+      setSelectedAreaIndex(i => (i !== null && i < (level?.coloredAreas?.length ?? 0)) ? i : null);
+      setSelectedWellIndex(i => (i !== null && i < (level?.gravityWells?.length ?? 0)) ? i : null);
+      return nextHistory;
+    });
   }, [selectedLevelIndex]);
+
+  // Update level in state
+  const updateLevel = useCallback((updatedLevel: LevelConfig, key?: string) => {
+    commitLevels(prev => prev.map((l, i) =>
+      i === selectedLevelIndex ? updatedLevel : l
+    ), key);
+  }, [selectedLevelIndex, commitLevels]);
 
   // Create new level
   const createNewLevel = useCallback(() => {
@@ -94,16 +158,16 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       }],
       entities: [],
     };
-    setLevels(prev => [...prev, newLevel]);
+    commitLevels(prev => [...prev, newLevel]);
     setSelectedLevelIndex(levels.length);
-  }, [levels.length]);
+  }, [levels.length, commitLevels]);
 
   // Delete current level
   const deleteLevel = useCallback(() => {
     if (levels.length <= 1) return;
-    setLevels(prev => prev.filter((_, i) => i !== selectedLevelIndex));
+    commitLevels(prev => prev.filter((_, i) => i !== selectedLevelIndex));
     setSelectedLevelIndex(Math.max(0, selectedLevelIndex - 1));
-  }, [levels.length, selectedLevelIndex]);
+  }, [levels.length, selectedLevelIndex, commitLevels]);
 
   // Duplicate level with suffix (4 → 4b, 4b → 4c, etc.)
   const duplicateLevel = useCallback((index: number) => {
@@ -134,7 +198,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     newLevel.id = `${baseId}${nextSuffix}`;
 
     // Insert right after the source level
-    setLevels(prev => [
+    commitLevels(prev => [
       ...prev.slice(0, index + 1),
       newLevel,
       ...prev.slice(index + 1),
@@ -143,7 +207,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     setSelectedEntityId(null);
     setSelectedBallId(null);
     setSelectedAreaIndex(null);
-  }, [levels]);
+  }, [levels, commitLevels]);
 
   // Add entity (obstacle)
   const addEntity = useCallback((type: 'circle' | 'polygon' | 'rect' | 'mover-rect' | 'mover-circle') => {
@@ -246,7 +310,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       coloredAreas: (currentLevel.coloredAreas || []).map((a, i) =>
         i === index ? { ...a, ...updates } : a
       ),
-    });
+    }, `area:${index}`);
   }, [currentLevel, updateLevel]);
 
   // Delete a Colored Area by index (drop the key entirely when it was the last)
@@ -297,7 +361,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         }
         return next;
       }),
-    });
+    }, `well:${index}`);
   }, [currentLevel, updateLevel]);
 
   const deleteWell = useCallback((index: number) => {
@@ -423,25 +487,27 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   // Update entity
   const updateEntity = useCallback((entityId: string, updates: Partial<LevelEntity>) => {
     if (!currentLevel) return;
-    
+
+    // Keyed on the entity, so a whole drag or a run of keystrokes in a number
+    // field is one undo step rather than sixty.
     updateLevel({
       ...currentLevel,
-      entities: (currentLevel.entities || []).map(e => 
+      entities: (currentLevel.entities || []).map(e =>
         e.id === entityId ? { ...e, ...updates } as LevelEntity : e
       ),
-    });
+    }, `entity:${entityId}`);
   }, [currentLevel, updateLevel]);
 
   // Update ball
   const updateBall = useCallback((ballId: string, updates: Partial<BallConfig>) => {
     if (!currentLevel) return;
-    
+
     updateLevel({
       ...currentLevel,
-      balls: currentLevel.balls.map(b => 
+      balls: currentLevel.balls.map(b =>
         b.id === ballId ? { ...b, ...updates } : b
       ),
-    });
+    }, `ball:${ballId}`);
   }, [currentLevel, updateLevel]);
 
   // Export YAML
@@ -539,6 +605,15 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       // Don't handle if typing in an input
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
+      // Undo/redo first: Ctrl+Y would otherwise fall through to nothing, and
+      // Ctrl+Shift+Z must not be read as a plain Ctrl+Z.
+      const gesture = historyGesture(e);
+      if (gesture) {
+        e.preventDefault();
+        applyHistory(gesture);
+        return;
+      }
+
       const mod = e.ctrlKey || e.metaKey;
       const key = e.key.toLowerCase();
 
@@ -565,7 +640,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedEntityId, selectedBallId, selectedAreaIndex, deleteEntity, deleteBall, deleteArea, currentLevel, copySelection, pasteClipboard]);
+  }, [selectedEntityId, selectedBallId, selectedAreaIndex, deleteEntity, deleteBall, deleteArea, currentLevel, copySelection, pasteClipboard, applyHistory]);
 
   if (isLoading) {
     return (
@@ -594,6 +669,28 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
           <ArrowLeft className="w-4 h-4" />
         </button>
         <h1 className="text-lg font-bold text-primary flex-1">Map Builder</h1>
+        {/* Undo / redo. Labelled with how deep the stack currently is, because
+            the limit is real: at ten actions the oldest falls off silently, and
+            a button that looks available but cannot reach what you wanted is
+            worse than one that tells you how far back it goes. */}
+        <button
+          onClick={() => applyHistory('undo')}
+          disabled={!canUndo(history)}
+          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors disabled:opacity-40 disabled:hover:bg-muted"
+          title={canUndo(history)
+            ? `Undo (Ctrl+Z) - ${history.past.length} of ${HISTORY_LIMIT} actions kept`
+            : 'Nothing to undo'}
+        >
+          <Undo2 className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => applyHistory('redo')}
+          disabled={!canRedo(history)}
+          className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors disabled:opacity-40 disabled:hover:bg-muted"
+          title={canRedo(history) ? 'Redo (Ctrl+Shift+Z)' : 'Nothing to redo'}
+        >
+          <Redo2 className="w-4 h-4" />
+        </button>
         <button
           onClick={() => setSnapToGrid(s => !s)}
           className={`px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
