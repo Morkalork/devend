@@ -49,6 +49,22 @@ const BULGE_MAX_WORLD = 12;   // ~2x WALL_THICKNESS at full strength
 const BULGE_TAU       = 85;   // ms to peak (soft, quick rise)
 const BULGE_DURATION  = 520;  // ms total life (smooth relax)
 const BULGE_SIGMA     = 40;   // spatial spread of the bump along the wall (world units)
+/**
+ * Two hits closer than this along the same wall are ONE impact.
+ *
+ * Half a sigma: closer than that the bumps are effectively the same bulge, and
+ * letting both live meant a ball bouncing in a corner stacked give on give.
+ */
+const COALESCE_ALONG  = BULGE_SIGMA * 0.5;
+/**
+ * Hard ceiling on the TOTAL displacement at any point, in world units.
+ *
+ * Impacts sum, and nothing bounded the sum: fourteen may be live at once, so a
+ * busy corner could reach a hundred-plus units of give and bend a fence into a
+ * curve. Capped at one impact's peak, the effect stays what it was asked to be
+ * - a sign that a ball hit here - however many balls are hitting.
+ */
+const BULGE_TOTAL_MAX = BULGE_MAX_WORLD;
 const EDGE_TAPER      = 22;   // world units: bulge fades to 0 approaching the wall ends
 // Feeds only the dead Canvas2D path below (renderWallPolyline); the Pixi
 // renderer drew a hit flash from it briefly and no longer does.
@@ -112,13 +128,33 @@ export function registerWallImpact(
     dir = side > 0 ? -1 : 1;
   }
 
+  // A ball rattling in a pocket hits the same fence several times inside one
+  // impact's 520ms life, and every hit used to push its own bump. Because the
+  // displacements SUM, three overlapping bumps meant three times the give, and
+  // a fast ball in a tight corner bent whole fences into curves. Refreshing the
+  // nearby one instead keeps a flurry reading as one live impact, which is what
+  // this effect was ever meant to be.
+  const now = performance.now();
+  for (const live of activeImpacts) {
+    if (live.dir !== dir) continue;
+    if (Math.abs(live.impactT * live.wallLen - impactT * wallLen) > COALESCE_ALONG) continue;
+    if (Math.hypot(live.wallStart.x - wallStart.x, live.wallStart.y - wallStart.y) > 1) continue;
+    // Restart its envelope and take the harder of the two hits, so a heavy
+    // second strike still reads as heavier than the graze before it.
+    live.startTime = now;
+    live.strength = Math.max(live.strength, strength);
+    live.impactPoint = { ...impactPoint };
+    live.impactT = impactT;
+    return;
+  }
+
   activeImpacts.push({
     id: `impact-${++impactIdCounter}`,
     impactPoint: { ...impactPoint },
     impactT,
     strength,
     dir,
-    startTime: performance.now(),
+    startTime: now,
     glowIntensity: GLOW_MAX * strength,
     amp: 0,
     wallStart: { ...wallStart },
@@ -182,14 +218,24 @@ export function getEffectsAtPoint(
     const taper = Math.max(0, Math.min(1, distToEnd / EDGE_TAPER));
     const disp = impact.dir * impact.amp * bump * taper;
 
-    totalDx += impact.nx * disp * scale;
-    totalDy += impact.ny * disp * scale;
+    totalDx += impact.nx * disp;
+    totalDy += impact.ny * disp;
 
     const falloff = Math.exp(-(distToImpact * distToImpact) / (2 * EFFECT_RADIUS * EFFECT_RADIUS));
     totalGlow = Math.max(totalGlow, impact.glowIntensity * falloff);
   }
 
-  return { dx: totalDx, dy: totalDy, glow: totalGlow };
+  // Clamp the SUM, then scale. Clamping in world units keeps the ceiling the
+  // same physical give whatever the board is zoomed to, which is the whole
+  // point of the constant being in world units in the first place.
+  const mag = Math.hypot(totalDx, totalDy);
+  if (mag > BULGE_TOTAL_MAX) {
+    const k = BULGE_TOTAL_MAX / mag;
+    totalDx *= k;
+    totalDy *= k;
+  }
+
+  return { dx: totalDx * scale, dy: totalDy * scale, glow: totalGlow };
 }
 
 export function hasNearbyImpacts(wallStart: Vector2, wallEnd: Vector2): boolean {
@@ -450,6 +496,7 @@ export function getActiveImpactCount(): number {
  */
 const OBS_BULGE_MAX_WORLD = 12;  // peak outward push (world units) at full strength
 const OBS_BULGE_SIGMA     = 26;  // radial falloff (world units)
+const OBS_COALESCE        = OBS_BULGE_SIGMA * 0.5;  // two hits inside this are one
 const MAX_OBS_IMPACTS     = 10;
 
 interface ObstacleImpact {
@@ -473,7 +520,10 @@ export function registerObstacleImpact(
   // nearest recent impact instead of stacking many overlapping domes.
   for (const o of obstacleImpacts) {
     const dx = o.point.x - hitPoint.x, dy = o.point.y - hitPoint.y;
-    if (dx * dx + dy * dy < 100) { // within 10 world units
+    // Matched to the dome's own falloff rather than a round number: two hits
+    // closer than half a sigma are the same dome, and letting both live is how
+    // a ball pressing a corner stacked give on give.
+    if (dx * dx + dy * dy < OBS_COALESCE * OBS_COALESCE) {
       o.startTime = performance.now();
       o.strength = Math.max(o.strength, s);
       o.nx = outwardNx; o.ny = outwardNy;
@@ -516,11 +566,15 @@ export function obstacleBulgeAt(
     const d2 = ex * ex + ey * ey;
     if (d2 > (OBS_BULGE_SIGMA * 3) ** 2) continue;
     const bump = Math.exp(-d2 / (2 * OBS_BULGE_SIGMA * OBS_BULGE_SIGMA));
-    const disp = o.amp * bump * scale;
+    const disp = o.amp * bump;
     dx += o.nx * disp;
     dy += o.ny * disp;
   }
-  return { dx, dy };
+  // Same ceiling as the fences, for the same reason: these sum too, and an
+  // obstacle taking several hits at once should read as struck, not as melting.
+  const mag = Math.hypot(dx, dy);
+  const k = mag > OBS_BULGE_MAX_WORLD ? OBS_BULGE_MAX_WORLD / mag : 1;
+  return { dx: dx * k * scale, dy: dy * k * scale };
 }
 
 export function clearObstacleImpacts(): void {
