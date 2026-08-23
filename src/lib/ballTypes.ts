@@ -54,7 +54,8 @@ export type BallAbility =
   | 'slowDown'      // grey: decays to a crawl over one minute
   | 'breakObjects'  // black: destroys mirrors/movers after repeated hits (Phase 2)
   | 'rainbow'       // rainbow: fast, shifts hue, spits out a random eligible ball on a timer
-  | 'tappable';     // white: TAP to remove it for nothing, or LOCK it for a huge bonus (#57)
+  | 'tappable'      // white: TAP to remove it for nothing, or LOCK it for a huge bonus (#57)
+  | 'turnTimer';    // compass: turns ninety degrees on a timer, wearing the countdown
 
 export interface BallTypeDef {
   id: string;
@@ -69,6 +70,8 @@ export interface BallTypeDef {
    * purple's drain, a yellow's range) never push it below this.
    */
   minimumSpeed: number;
+  /** `turnTimer` only: seconds between its quarter turns. */
+  turnIntervalSeconds?: number;
   /** Minimum completed-level number at which this ball becomes eligible. */
   unlockLevel: number;
   /** Lock-bonus multiplier when this ball is locked away. */
@@ -121,6 +124,7 @@ export const DEFAULT_RAINBOW_SPAWN_INTERVAL = 10;
 
 const VALID_ABILITIES: ReadonlySet<string> = new Set<BallAbility>([
   'none', 'variableSpeed', 'slowOthers', 'moneyBall', 'slowDown', 'breakObjects', 'rainbow', 'tappable',
+  'turnTimer',
 ]);
 
 /** White "tappable" ball (#57): tap to discard for nothing, or lock for a big bonus. */
@@ -180,6 +184,9 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     minimumSpeed,
     unlockLevel: Number.isFinite(Number(r.unlockLevel)) ? Math.max(1, Math.round(Number(r.unlockLevel))) : 1,
     lockMultiplier: Number.isFinite(Number(r.lockMultiplier)) ? Number(r.lockMultiplier) : 1,
+    turnIntervalSeconds: Number.isFinite(Number(r.turnIntervalSeconds)) && Number(r.turnIntervalSeconds) > 0
+      ? Number(r.turnIntervalSeconds)
+      : undefined,
     ability,
     density,
     speedReduction,

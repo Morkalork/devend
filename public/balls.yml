@@ -98,6 +98,25 @@ balls:
   # Black: a heavy wrecking ball (issue #64). Besides smashing mirrors and movers,
   # it now fractures the player's own fences: three hits crack a fence apart. It
   # is foreshadowed a few levels before the level-30 boss built around it.
+  # The compass. Every other ball ability is about speed, scoring, breaking,
+  # spawning or tapping; this is the only one that touches HEADING, which is
+  # what the player is actually reading when they decide where to cut.
+  #
+  # Telegraphed on purpose: the ring around it unwinds toward the turn and
+  # shows which way it will go, so it is a thing to plan around rather than a
+  # thing that robs you. Slots into the gap between green (13) and black (25).
+  - id: compass
+    name: Compass
+    color: "#c08cff"
+    baseSpeed: 235
+    minimumSpeed: 150
+    unlockLevel: 18
+    lockMultiplier: 3
+    density: 1
+    ability: turnTimer
+    turnIntervalSeconds: 9
+    description: "Turns a quarter circle every few seconds. The ring around it counts down, and leans the way it will turn."
+
   - id: black
     name: Black
     color: "#2b2f3a"

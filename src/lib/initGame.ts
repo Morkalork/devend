@@ -38,6 +38,7 @@ import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, rotateDat
 import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
+import { armTurnTimer, DEFAULT_TURN_INTERVAL } from "@/lib/physics/turnTimer";
 import {
   getVarietyDecorationConfig,
   applyRectVariation,
@@ -84,7 +85,7 @@ export function createBall(
   const speedRange: [number, number] | undefined = type.speedRange
     ? [type.speedRange[0] * speedScale, type.speedRange[1] * speedScale]
     : undefined;
-  return {
+  const ball: Ball = {
     id,
     position,
     velocity: { x: dir.x * speed, y: dir.y * speed },
@@ -113,6 +114,17 @@ export function createBall(
     spawnActiveSeconds,
     rainbowSpawnCount: 0,
   };
+  // Compass: arm the first turn from the moment the ball enters the map, and
+  // seed it per ball so two on one board never turn in lockstep, which would
+  // read as one event rather than two independent hazards.
+  if (type.ability === "turnTimer") {
+    armTurnTimer(
+      ball, spawnActiveSeconds,
+      type.turnIntervalSeconds ?? DEFAULT_TURN_INTERVAL,
+      getRunRng(`turnArm:${ball.id}`),
+    );
+  }
+  return ball;
 }
 
 // ── Return type ────────────────────────────────────────────────────────────

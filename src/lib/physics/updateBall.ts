@@ -9,6 +9,8 @@ import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
 import { wellStep } from "@/lib/physics/gravityWells";
 import { slowFactorAt } from "@/lib/physics/slowAreas";
+import { tickTurnTimer } from "@/lib/physics/turnTimer";
+import { getRunRng } from "@/lib/runRng";
 import { CanvasGameState } from "@/types/gameState";
 import {
   vec2Add,
@@ -344,6 +346,17 @@ export function updateBall(
       game.spaceRemainingPercent, game.gravityBendMultiplier,
     );
     if (pulled) { ball.velocity.x = pulled.x; ball.velocity.y = pulled.y; }
+  }
+
+  // Compass ball: a quarter turn when its timer comes up. Placed with the other
+  // heading changes, before the speed rescalers, for the same reason they are:
+  // it rotates the velocity and never touches the magnitude, so every speed
+  // rule downstream keeps working untouched.
+  //
+  // Frozen balls are exempt, as with gravity and wells: a ball held in a pocket
+  // must not turn out of it while the player is looking elsewhere.
+  if (!(game.frozenBallId && ball.id === game.frozenBallId)) {
+    tickTurnTimer(ball, game.activePlaySeconds, getRunRng(`turn:${ball.id}`));
   }
 
   // Update rotation based on speed (medium spin rate); uses the creep-scaled

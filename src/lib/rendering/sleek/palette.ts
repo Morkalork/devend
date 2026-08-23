@@ -91,6 +91,10 @@ export const PALETTE = {
   mover: 0xff8800,
   mirror: 0x88ddff,
   danger: 0xff2244,
+  /** The compass ball's countdown ring, in its own violet rather than the accent:
+   *  the ring belongs to the BALL, and wearing the player's colour would read as
+   *  something the player did to it. */
+  compassRing: 0xc08cff,
   amber: 0xffd76b,
   frost: 0xbfefff,
 

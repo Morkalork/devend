@@ -24,6 +24,7 @@ import { getSquishEffect, getWallHitEffect, getBallHitEffect } from "@/lib/ballE
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
 import { contactFor, shadowFor, type LightScope } from "./light";
+import { turnProgress, turnDirection } from "@/lib/physics/turnTimer";
 import type { Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -152,11 +153,57 @@ export class SleekBallLayer {
     for (let i = balls.length; i < this.views.length; i++) this.views[i].holder.visible = false;
 
     for (let i = 0; i < balls.length; i++) {
-      this.drawBall(balls[i], this.views[i], light, w2s, scale);
+      this.drawBall(balls[i], this.views[i], light, w2s, scale, game.activePlaySeconds);
     }
   }
 
-  private drawBall(ball: Ball, view: BallView, light: LightScope, w2s: W2S, scale: number): void {
+  /**
+   * The compass ball's countdown: a ring that unwinds toward its next quarter
+   * turn, and leans the way it is going to turn.
+   *
+   * A ring rather than a numeral because a ball is 18 world units across, which
+   * is eight to sixteen screen pixels on a phone: a digit in there is not
+   * legible, and for most of a nine-second cycle it would not be actionable
+   * either. An arc reads at any size and from across the board.
+   *
+   * Driven from turnProgress, which is the same function the turn itself uses,
+   * so the ring cannot unwind on a different clock from the event it promises.
+   * A countdown that disagrees with what it counts down to is worse than none.
+   */
+  private drawTurnRing(
+    ball: Ball, c: Pt, r: number, scale: number, activeSeconds: number,
+  ): void {
+    const progress = turnProgress(ball, activeSeconds);
+    if (progress === null) return;
+
+    const radius = r + Math.max(2, 3 * scale);
+    const sweep = (1 - progress) * Math.PI * 2;   // unwinds as the turn nears
+    if (sweep <= 0.01) return;
+
+    // Wound in the direction of the coming turn, so the ring says WHICH WAY as
+    // well as when: that is what makes the countdown a plan rather than a
+    // warning, and it is the whole reason the direction is chosen a cycle early.
+    const cw = turnDirection(ball) > 0;
+    const start = -Math.PI / 2;
+    const end = cw ? start + sweep : start - sweep;
+
+    this.overlays
+      .arc(c.x, c.y, radius, Math.min(start, end), Math.max(start, end), !cw)
+      .stroke({
+        width: Math.max(1.5, 2.2 * scale),
+        // Reddens as it runs out: the last second should catch the eye of a
+        // player who is looking somewhere else entirely, which is exactly when
+        // this ball is about to punish them.
+        color: progress > 0.8 ? PALETTE.danger : PALETTE.compassRing,
+        alpha: 0.9,
+        cap: "round",
+      });
+  }
+
+  private drawBall(
+    ball: Ball, view: BallView, light: LightScope, w2s: W2S, scale: number,
+    activeSeconds: number,
+  ): void {
     const { holder, sprite } = view;
     const p = ball.renderPosition ?? ball.position;
     const c = w2s(p.x, p.y);
@@ -343,6 +390,9 @@ export class SleekBallLayer {
         }
       }
     }
+
+    // The compass countdown, last so it sits over the ball it belongs to.
+    this.drawTurnRing(ball, c, r, scale, activeSeconds);
   }
 
   destroy(): void {

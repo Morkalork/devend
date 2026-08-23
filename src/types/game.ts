@@ -64,6 +64,14 @@ export interface Ball {
   speedReduction?: number;   // purple (slowOthers): scaled speed each struck ball loses per hit
   speedRange?: [number, number]; // yellow: current (scaled) [lo, hi] random-speed range; shrinks when slowed
   lastSpeedStepAt?: number;  // yellow: debounce so one contact changes speed once
+  // ── Compass ability (turnTimer) ─────────────────────────────────────────
+  /** active-play second of this ball's next quarter turn. */
+  nextTurnAt?: number;
+  /** Seconds between its turns, from the ball type. */
+  turnIntervalSeconds?: number;
+  /** Which way the NEXT turn goes. Decided when the previous one lands, so the
+   *  countdown ring can show it for the whole cycle rather than only at the end. */
+  turnClockwise?: boolean;
   // ── Rainbow ability (timed spawner) ─────────────────────────────────────
   spawnActiveSeconds?: number; // game.activePlaySeconds when this ball appeared (spawn-timer anchor)
   rainbowSpawnCount?: number;  // rainbow only: how many balls it has spit out so far
