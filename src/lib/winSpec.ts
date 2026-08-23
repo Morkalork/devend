@@ -130,6 +130,28 @@ export function isWinMet(spec: WinSpec, snap: WinSnapshot): boolean {
 }
 
 /**
+ * The alternative clause that ended the map, or null.
+ *
+ * Separate from isWinMet because the two answers are used differently: a win
+ * reached through an ALTERNATIVE has to end the map outright, while the
+ * ordinary requirements route through the push-your-luck prompt. Collapsing
+ * them into one boolean is what made "every ball locked" open a prompt on a
+ * board with nothing left to push with.
+ */
+export function metAlternative(spec: WinSpec, snap: WinSnapshot): WinCondition | null {
+  for (const c of spec.alsoWinIf) {
+    if (evaluateWinCondition(c, snap).met) return c;
+  }
+  return null;
+}
+
+/** Are all the REQUIRED clauses met? An empty list is never met (see isWinMet). */
+export function requirementsMet(spec: WinSpec, snap: WinSnapshot): boolean {
+  if (spec.require.length === 0) return false;
+  return spec.require.every(c => evaluateWinCondition(c, snap).met);
+}
+
+/**
  * Which clause should be reported as the reason a map ended.
  *
  * The results screen and the highscore ledger both key off this, so it has to

@@ -46,7 +46,9 @@ import { tickChargeOnCut } from "@/lib/physics/charge";
 import { tickDataStreamOnCut } from "@/lib/physics/dataStream";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS, BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
-import { resolveWinSpec, isWinMet, winReasonFor, winBonusPercent } from "@/lib/winSpec";
+import {
+  resolveWinSpec, isWinMet, winReasonFor, winBonusPercent, metAlternative, requirementsMet,
+} from "@/lib/winSpec";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
@@ -506,11 +508,23 @@ export function evaluateWinConditions(
     }
   }
 
-  if (isWinMet(spec, snap)) {
-    // A spec whose only clause is the space clear keeps the push-your-luck
-    // prompt: that is the ordinary map ending and the prompt is the whole
-    // push mechanic. Anything else ships immediately, the way beating a boss
-    // or filling a gate zone always has.
+  // An ALTERNATIVE win ends the map outright. "Every ball locked" is the one
+  // every ordinary map carries, and it has always shipped immediately for a
+  // plain reason: there is nothing left to push with. Checked before the
+  // requirements, exactly as the old chain checked areAllBallsWon before the
+  // space clear - reading the win as one boolean and then deciding on the
+  // shape of `require` sent an all-locked win into the push prompt and offered
+  // the player a push on an empty board.
+  if (metAlternative(spec, snap)) {
+    triggerLevelComplete(
+      game, level, levelNumber, activeModifiers, callbacks, winReasonFor(spec, snap));
+    return null;
+  }
+
+  if (requirementsMet(spec, snap)) {
+    // The ordinary clear keeps the push-your-luck prompt: that is the whole
+    // push mechanic. Anything else (a gate zone, a boss, a named ball) ships
+    // the moment it lands, the way those wins always have.
     if (isPlainSpaceWin(spec)) {
       return checkSpaceWin(game, level, callbacks, levelNumber, activeModifiers);
     }
@@ -590,11 +604,24 @@ export function checkSpaceWin(
   // Breaking objects is a bonus, not a win condition (issue #38) — the level is
   // completed by shrinking the board, exactly as normal.
   const lockReq = level.threadLockRequired ?? 0;
-  if (percent <= level.sizeThreshold && game.lockedBallsCount >= lockReq && game.pushMode === "none" && !game.pushPromptPending && !game.levelComplete) {
-    // Assignment constraint (#60): Push Your Luck disabled for this block, so
-    // the win banks straight through instead of opening the prompt.
-    if (activeModifiers.disablePushYourLuck > 0) {
-      triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'space');
+  // Never prompt on a board with nothing left in play. Push Your Luck is a bet
+  // that you can keep clearing while the balls are still loose, so with every
+  // ball locked there is no bet to make: the offer just hands the player an
+  // empty map and a spent decision. Guarded here as well as at the call above,
+  // because this is the mechanic's own precondition and not a property of any
+  // one route into it.
+  if (percent <= level.sizeThreshold && game.lockedBallsCount >= lockReq
+      && game.pushMode === "none" && !game.pushPromptPending && !game.levelComplete) {
+    // Push Your Luck is a bet that you can keep clearing while the balls are
+    // still loose. With every ball locked there is no bet to make, so the offer
+    // would hand the player an empty map and a spent decision. Banks straight
+    // through instead of skipping: skipping would leave the top bar reading
+    // CLEAR on a map that never ends, which is the one thing the win check is
+    // there to make impossible.
+    if (areAllBallsWon(game) || activeModifiers.disablePushYourLuck > 0) {
+      triggerLevelComplete(
+        game, level, levelNumber, activeModifiers, callbacks,
+        areAllBallsWon(game) ? 'allLocked' : 'space');
       return percent;
     }
     // The frame is already drawn (loop render + the post-cut render above) and
