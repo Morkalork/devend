@@ -27,6 +27,13 @@ import { PALETTE, mix } from "./palette";
 import { ambientAt, shadowFor, type LightScope } from "./light";
 import type { Pt } from "./pixelGrid";
 
+/** Opacity of the predicted path. A forecast, so never fully opaque. */
+const TRAJECTORY_ALPHA = 0.5;
+/** World units the line drifts past the last bounce before it is gone. */
+const TAIL_WORLD = 130;
+/** Alpha steps across that drift. One stroke each, whatever the ball count. */
+const TAIL_BANDS = 6;
+
 type W2S = (x: number, y: number) => Pt;
 
 /** How long a lock flash burns. Mirrors the classic renderer's feel. */
@@ -134,6 +141,14 @@ export class FxLayer {
    *
    * Both the bounce count and how many balls are tracked come from the upgrade,
    * so this is off entirely unless the player bought it.
+   *
+   * The line does not stop dead at the last bounce. It drifts on a little way
+   * past it and fades out, because a hard stop against a wall reads as "the
+   * ball ends here" rather than "this is as far as I can see". The drift is
+   * the NEXT leg the ball would take, asked for by predicting one bounce more
+   * than the upgrade paid for and then truncating it: that way it is a real
+   * continuation of the path, clipped by real geometry, and never draws through
+   * a wall the way an invented stub would.
    */
   private drawTrajectory(
     game: CanvasGameState,
@@ -154,13 +169,19 @@ export class FxLayer {
     // identical for every prediction, and rebuilding them per ball made the cost
     // and the garbage scale with balls x segments for no difference in result.
     const segs = buildTrajectorySegments(game.walls, game.obstaclePolygons);
+    const dash = 6 * scale, gap = 8 * scale;
+
+    // Gathered first, drawn second: the fade needs one stroke per alpha band
+    // across ALL balls, not per ball, or tracking every ball at once (the
+    // Architect tier) would cost a stroke per ball per band.
+    const tails: Array<{ a: Pt; b: Pt }> = [];
 
     for (const ball of tracked) {
       // Start from the RENDER position, not the physics one, so the line begins
       // exactly at the drawn ball rather than a step ahead of it.
       const start = ball.renderPosition ?? ball.position;
       const wps = computeBallTrajectory(
-        start, ball.velocity, game.walls, bounces, ball.radius,
+        start, ball.velocity, game.walls, bounces + 1, ball.radius,
         game.obstaclePolygons, game.movers, game.creepFactor || 1,
         trajectoryBallSnapshots(game.balls, ball, game.frozenBallId),
         segs,
@@ -172,13 +193,62 @@ export class FxLayer {
         { world: steerWorldOf(game), atSeconds: game.activePlaySeconds },
       );
       if (wps.length < 2) continue;
-      for (let i = 0; i < wps.length - 1; i++) {
+
+      // The bounces the upgrade actually bought: start plus one point each.
+      const solidEnd = Math.min(wps.length, bounces + 1);
+      for (let i = 0; i < solidEnd - 1; i++) {
         const a = w2s(wps[i].x, wps[i].y);
         const b = w2s(wps[i + 1].x, wps[i + 1].y);
-        dashedLine(this.over, a.x, a.y, b.x, b.y, 6 * scale, 8 * scale);
+        dashedLine(this.over, a.x, a.y, b.x, b.y, dash, gap);
       }
+
+      // The drift: the next leg, cut short. Shorter than TAIL_WORLD wherever
+      // the ball would hit something sooner, which is what keeps it honest.
+      if (wps.length <= solidEnd) continue;
+      const from = wps[solidEnd - 1], to = wps[solidEnd];
+      const dx = to.x - from.x, dy = to.y - from.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 1) continue;
+      const reach = Math.min(len, TAIL_WORLD);
+      tails.push({
+        a: w2s(from.x, from.y),
+        b: w2s(from.x + (dx / len) * reach, from.y + (dy / len) * reach),
+      });
     }
-    this.over.stroke({ width: Math.max(1, 2 * scale), color: PALETTE.accent, alpha: 0.5, cap: "round" });
+
+    const width = Math.max(1, 2 * scale);
+    this.over.stroke({ width, color: PALETTE.accent, alpha: TRAJECTORY_ALPHA, cap: "round" });
+
+    // The fade, one stroke per band. Dashes are placed along the WHOLE tail and
+    // bucketed by where they fall, so the dash rhythm carries on unbroken from
+    // the solid part instead of restarting inside each band.
+    for (let band = 0; band < TAIL_BANDS; band++) {
+      let drew = false;
+      for (const t of tails) {
+        const tdx = t.b.x - t.a.x, tdy = t.b.y - t.a.y;
+        const tlen = Math.hypot(tdx, tdy);
+        if (tlen < 0.001) continue;
+        const ux = tdx / tlen, uy = tdy / tlen;
+        for (let d = 0; d < tlen; d += dash + gap) {
+          const e = Math.min(d + dash, tlen);
+          // Bucket on the dash's midpoint: a dash straddling a band boundary
+          // belongs to one band, not to both at two different alphas.
+          if (Math.floor(((d + e) / 2 / tlen) * TAIL_BANDS) !== band) continue;
+          this.over.moveTo(t.a.x + ux * d, t.a.y + uy * d)
+                   .lineTo(t.a.x + ux * e, t.a.y + uy * e);
+          drew = true;
+        }
+      }
+      if (!drew) continue;
+      // Ease the alpha down rather than stepping it linearly: a linear ramp
+      // still has a visible last dash, and the point is that the line runs out
+      // of confidence rather than out of length.
+      const t = (band + 0.5) / TAIL_BANDS;
+      this.over.stroke({
+        width, color: PALETTE.accent, cap: "round",
+        alpha: TRAJECTORY_ALPHA * (1 - t) * (1 - t),
+      });
+    }
   }
 
   /**

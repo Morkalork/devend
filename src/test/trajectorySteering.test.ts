@@ -230,3 +230,106 @@ describe("neither side is allowed its own copy of the rule", () => {
     expect(world.gravityBendMultiplier).toBe(0.5);
   });
 });
+
+/**
+ * The drift past the last bounce.
+ *
+ * The line used to stop dead on a wall, which reads as "the ball ends here"
+ * rather than "this is as far as I can see". It now runs on a little and fades.
+ *
+ * The drift is the NEXT leg the ball would actually take, obtained by asking
+ * for one bounce more than the upgrade paid for and truncating it, rather than
+ * a stub extended along the last heading. A stub would happily be drawn through
+ * a wall, and a forecast that visibly passes through solid geometry is worse
+ * than one that stops.
+ */
+describe("the preview drifts past the last bounce", () => {
+  const start = { x: 400, y: 400 };
+  const vel = { x: 300, y: 140 };
+
+  /**
+   * The property the whole approach rests on: asking for an extra bounce must
+   * not disturb the path the player paid for. If it did, turning the drift on
+   * would quietly move every predicted bounce point.
+   */
+  it("leaves the paid-for waypoints untouched", () => {
+    for (const bounces of [1, 2, 3, 4]) {
+      const paid = computeBallTrajectory(start, vel, WALLS, bounces, 18);
+      const withDrift = computeBallTrajectory(start, vel, WALLS, bounces + 1, 18);
+      expect(withDrift.slice(0, paid.length), `bounces ${bounces}`).toEqual(paid);
+    }
+  });
+
+  it("has a further leg to drift along", () => {
+    const paid = computeBallTrajectory(start, vel, WALLS, 2, 18);
+    const withDrift = computeBallTrajectory(start, vel, WALLS, 3, 18);
+    expect(withDrift.length).toBeGreaterThan(paid.length);
+  });
+
+  /**
+   * The drift heads where the ball would go, so it is clipped by whatever the
+   * ball would hit. A tail invented along the last heading would be drawn
+   * straight through the next wall.
+   */
+  it("ends where the ball would next hit something", () => {
+    // Aimed into a corner so the leg after the last bounce is very short.
+    const corner = computeBallTrajectory({ x: 800, y: 800 }, { x: 300, y: 300 }, WALLS, 2, 18);
+    for (const p of corner) {
+      expect(p.x, "no waypoint outside the board").toBeGreaterThanOrEqual(45 - 20);
+      expect(p.x).toBeLessThanOrEqual(855 + 20);
+      expect(p.y).toBeGreaterThanOrEqual(45 - 20);
+      expect(p.y).toBeLessThanOrEqual(855 + 20);
+    }
+  });
+
+  it("simply has no drift when the path ends early", () => {
+    // A ball head-on into a stationary one: the preview ends at the contact,
+    // so there is no further leg and nothing should be invented.
+    const other = [{ position: { x: 700, y: 400 }, radius: 18, frozen: false }];
+    const wps = computeBallTrajectory(
+      { x: 400, y: 400 }, { x: 300, y: 0 }, WALLS, 3, 18, [], [], 1, other);
+    expect(wps.length).toBeLessThanOrEqual(2);
+  });
+});
+
+/**
+ * Renderer wiring. The fade is a drawing concern and cannot be asserted from
+ * the maths, but the two things that would silently undo it can be.
+ */
+describe("the drift is drawn as a fade, not a stub", () => {
+  const FX = readFileSync(resolve(__dirname, "../lib/rendering/sleek/fxLayer.ts"), "utf8");
+  const draw = FX.slice(FX.indexOf("private drawTrajectory("), FX.indexOf("private drawAbilityFx("));
+
+  /**
+   * Anchored to the CALL, not to the file. The first version of this matched
+   * `bounces + 1` anywhere in the function and so was satisfied by the slice
+   * index further down: reverting the call to a hard stop left it green.
+   */
+  it("asks the predictor for one bounce more than the upgrade bought", () => {
+    const call = draw.slice(draw.indexOf("computeBallTrajectory("),
+                            draw.indexOf("if (wps.length < 2)"));
+    expect(call).toMatch(/game\.walls, bounces \+ 1,/);
+  });
+
+  it("draws only the paid-for bounces at full strength", () => {
+    expect(draw).toMatch(/solidEnd/);
+    expect(draw).toMatch(/TRAJECTORY_ALPHA/);
+  });
+
+  it("truncates the drift rather than drawing the whole next leg", () => {
+    expect(draw).toMatch(/TAIL_WORLD/);
+    expect(draw).toMatch(/Math\.min\(len, TAIL_WORLD\)/);
+  });
+
+  /** One stroke per band across every ball, not per ball: the Architect tier
+   *  tracks every ball on the board at once. */
+  it("batches the fade by band, not by ball", () => {
+    const bandLoop = draw.slice(draw.indexOf("for (let band = 0"));
+    expect(bandLoop).toMatch(/for \(const t of tails\)/);
+    expect((bandLoop.match(/this\.over\.stroke/g) ?? []).length).toBe(1);
+  });
+
+  it("fades to nothing rather than stopping at a visible last dash", () => {
+    expect(draw).toMatch(/1 - t\) \* \(1 - t/);
+  });
+});
