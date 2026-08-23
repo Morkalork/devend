@@ -37,6 +37,7 @@ import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, rotateDataStream, MapRotation } from "@/lib/mapRotation";
 import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
+import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
 import {
   getVarietyDecorationConfig,
   applyRectVariation,
@@ -283,6 +284,9 @@ export function createInitialGameData(
       if (entity.kind === "wall") {
         const isMirror = !!entity.mirror;
         let basePolygon: Polygon;
+        // Which sides this obstacle was authored against, carried past the
+        // decoration pass so it can be pulled back onto them.
+        let pinned: PinnedSides | null = null;
 
         if (entity.shape === "rect") {
           if (isMirror) {
@@ -291,10 +295,20 @@ export function createInitialGameData(
               width: entity.width, height: entity.height,
             });
           } else {
-            const varied = applyRectVariation(
+            const jittered = applyRectVariation(
               entity.x, entity.y, entity.width, entity.height,
               variety, level.id, entity.id,
             );
+            // Variety jitters width and height around the CENTRE, so an edge
+            // authored flush against the play boundary drifts off it and leaves
+            // a sliver of board between the obstacle and the frame. Re-pin the
+            // edges that were placed on the wall on purpose; the variation is
+            // absorbed by the opposite side instead.
+            const authoredRect = {
+              x: entity.x, y: entity.y, width: entity.width, height: entity.height,
+            };
+            pinned = pinnedSidesOf(authoredRect, left, right);
+            const varied = weldRectToBoard(authoredRect, jittered, left, right);
             basePolygon = createPolygonFromShape("rect", {
               x: varied.x, y: varied.y,
               width: varied.width, height: varied.height,
@@ -338,6 +352,15 @@ export function createInitialGameData(
           obstaclePolygon = variety > 0
             ? decoratePolygon(basePolygon, decorationConfig)
             : basePolygon;
+          // Decoration displaces the outline after the rect was welded, which
+          // put a flush bar back off the wall by about three units. Pull the
+          // authored-against sides home again.
+          if (pinned) {
+            obstaclePolygon = {
+              ...obstaclePolygon,
+              vertices: weldPolygonToBoard(obstaclePolygon.vertices, pinned, left, right),
+            };
+          }
         }
         obstacleIndex++;
 
