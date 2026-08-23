@@ -631,7 +631,15 @@ export function updateBall(
           // Gentle bulge for plain green obstacles only (mirrors + breakables,
           // which have their own crack/dent visuals, are excluded; movers never
           // reach this path). Push the boundary outward, away from the ball.
-          if (!wall.isMirror && d?.kind !== 'breakable' && d?.kind !== 'mirror') {
+          // Breakables DO bulge now. They were excluded on the grounds that
+          // cracks and dent notches already told the story, and they did not:
+          // a breakable wall took a hit and sat there, so nothing distinguished
+          // it from the solid wall beside it until it shattered. Cracks say
+          // "this has been damaged"; the give is what says "this can be".
+          //
+          // Mirrors stay out. Glass that flexes is the wrong material entirely,
+          // and they have a specular treatment that reads as breakable already.
+          if (!wall.isMirror && d?.kind !== 'mirror') {
             const ex = wall.end.x - wall.start.x, ey = wall.end.y - wall.start.y;
             const el = Math.hypot(ex, ey) || 1;
             let onx = -ey / el, ony = ex / el;

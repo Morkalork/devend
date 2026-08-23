@@ -18,12 +18,44 @@
 
 import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
-import type { Polygon } from "@/lib/polygon";
+import type { Polygon, Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { ambientAt, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
+import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 
 type W2S = (x: number, y: number) => Pt;
+
+/** Longest edge piece, in world units, while an object is taking a hit. */
+const DENT_STEP = 22;
+
+/**
+ * An object's outline, dented where balls have struck it.
+ *
+ * Shares its shape and its constants with entityLayer's version on purpose: a
+ * breakable slab and a solid one denting by different amounts would read as two
+ * different materials rather than the same board furniture.
+ *
+ * Displaced in WORLD space before transforming, because the displacement is a
+ * world-space direction and adding it to screen coordinates would push the dent
+ * sideways once the board is tilted.
+ */
+function dentedContour(vertices: Vector2[], w2s: W2S): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i < vertices.length; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % vertices.length];
+    const steps = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / DENT_STEP));
+    for (let k = 0; k < steps; k++) {
+      const t = k / steps;
+      const wx = a.x + (b.x - a.x) * t;
+      const wy = a.y + (b.y - a.y) * t;
+      const d = obstacleBulgeAt(wx, wy, 1);   // scale 1: world units in and out
+      out.push(w2s(wx + d.dx, wy + d.dy));
+    }
+  }
+  return out;
+}
 
 export class ObjectLayer {
   readonly container = new Container();
@@ -78,9 +110,25 @@ export class ObjectLayer {
     }
   }
 
-  /** Shared geometry prep: screen hull, centroid and bounding radius. */
+  /**
+   * Shared geometry prep: screen hull, centroid and bounding radius.
+   *
+   * The hull is DENTED where balls have struck, the same treatment the static
+   * slabs get in entityLayer. Breakables used to be excluded from that on the
+   * grounds that their cracks already told the story; they did not. A breakable
+   * wall took a hit and sat there, so nothing separated it from the solid wall
+   * beside it until the moment it shattered.
+   *
+   * The outline is subdivided first when an impact is live: a slab is four
+   * corners, and pushing four corners around translates the shape rather than
+   * denting it, so the falloff needs points between them to land on. When
+   * nothing has hit anything the snapped four-corner path is untouched, which
+   * is every object on almost every frame.
+   */
   private prep(poly: Polygon, w2s: W2S): { pts: Pt[]; cx: number; cy: number } | null {
-    const pts = snapContour(poly.vertices.map(v => w2s(v.x, v.y)));
+    const pts = anyObstacleImpactsActive()
+      ? dentedContour(poly.vertices, w2s)
+      : snapContour(poly.vertices.map(v => w2s(v.x, v.y)));
     if (pts.length < 3) return null;
     let cx = 0, cy = 0;
     for (const p of pts) { cx += p.x; cy += p.y; }

@@ -45,7 +45,10 @@ import { wasteCapturedPickups } from "@/lib/pickups";
 export const DESTRUCTIBLE_MAX_HITS = 3;
 const HIT_DEBOUNCE_MS = 250;     // one ball pass can't count as multiple hits
 const DEBRIS_DURATION_MS = 650;
-const CHIP_DURATION_MS = 520;    // per-hit chip burst (shorter than the full shatter)
+// Per-hit chip burst, shorter than the full shatter. 520ms was long enough to
+// exist and short enough to miss if you were watching the ball rather than the
+// wall it just hit, which is where a player's eyes actually are.
+const CHIP_DURATION_MS = 700;
 const MAX_OBJECT_DEBRIS = 48;    // soft cap so rapid hits can't pile debris up
 const FALL_DURATION_MS = 750;
 const FALL_SPEED = 180;          // initial downward speed of toppling objects
@@ -289,8 +292,10 @@ function spawnImpactChips(
   now: number,
   damage = 1,
 ): ObjectDebrisState {
-  // Harder hits fling more chips (4 for a graze, up to ~10 for a heavy smash).
-  const N = 4 + Math.round(Math.min(1, damage / 1.5) * 6);
+  // Harder hits fling more chips (7 for a graze, up to ~16 for a heavy smash).
+  // Raised from 4-10: on a phone the board renders at about 0.45 scale, and a
+  // handful of sub-pixel flecks over half a second is not a thing anyone sees.
+  const N = 7 + Math.round(Math.min(1, damage / 1.5) * 9);
   const base = Math.atan2(ay, ax);
   const particles: ObjectDebrisParticle[] = [];
   for (let i = 0; i < N; i++) {
@@ -303,7 +308,10 @@ function spawnImpactChips(
       vy: Math.sin(ang) * speed - 30, // small upward pop; gravity reclaims them
       rotation: Math.random() * Math.PI * 2,
       rotSpeed: (Math.random() - 0.5) * 12,
-      size: 3 + Math.random() * 6,     // smaller than the full-shatter debris
+      // 5-12 world units. The old 3-9 floor put the smallest chips at 1.4px on
+      // a phone, which is to say invisible, so half of every burst was wasted.
+      // Still comfortably under the full-shatter debris.
+      size: 5 + Math.random() * 7,
     });
   }
   return { startTime: now, durationMs: CHIP_DURATION_MS, color, particles };
