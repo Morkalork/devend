@@ -390,6 +390,17 @@ export function computeBallTrajectory(
    * unchanged and nothing pays for this.
    */
   steer?: { world: SteerWorld; atSeconds: number } | null,
+  /**
+   * Filled with the waypoint index of each BOUNCE, in order.
+   *
+   * Needed because a waypoint is not a bounce. Under steering the path is
+   * marched in short chords and every chord pushes a waypoint too, so
+   * `points[n]` is only the nth bounce on a board where nothing pulls. A caller
+   * that wants "the path up to bounce N" - the renderer, drawing the part the
+   * upgrade paid for at full strength - has to be told, and slicing by index
+   * instead is what collapsed the preview to three chords on the well maps.
+   */
+  out?: { bounceAt: number[] },
 ): Vector2[] {
   const points: Vector2[] = [{ ...ballPosition }];
   const vLen = Math.sqrt(ballVelocity.x * ballVelocity.x + ballVelocity.y * ballVelocity.y);
@@ -532,6 +543,7 @@ export function computeBallTrajectory(
     tNow += bestTime + 1e-3 / speed; // count the nudge so mover phase stays in sync
     skipId = bestId;
     bounces++;
+    out?.bounceAt.push(points.length - 1);
   }
 
   return points;

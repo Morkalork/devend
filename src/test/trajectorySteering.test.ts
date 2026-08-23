@@ -312,24 +312,117 @@ describe("the drift is drawn as a fade, not a stub", () => {
   });
 
   it("draws only the paid-for bounces at full strength", () => {
-    expect(draw).toMatch(/solidEnd/);
+    expect(draw).toMatch(/lastPaid/);
     expect(draw).toMatch(/TRAJECTORY_ALPHA/);
   });
 
   it("truncates the drift rather than drawing the whole next leg", () => {
     expect(draw).toMatch(/TAIL_WORLD/);
-    expect(draw).toMatch(/Math\.min\(len, TAIL_WORLD\)/);
+    // Walked in WORLD units down a budget, so the drift is the same length
+    // whatever the board is zoomed to and however many chords it spans.
+    expect(draw).toMatch(/let left = TAIL_WORLD/);
+    expect(draw).toMatch(/left -= use/);
   });
 
   /** One stroke per band across every ball, not per ball: the Architect tier
    *  tracks every ball on the board at once. */
   it("batches the fade by band, not by ball", () => {
     const bandLoop = draw.slice(draw.indexOf("for (let band = 0"));
-    expect(bandLoop).toMatch(/for \(const t of tails\)/);
+    expect(bandLoop).toMatch(/for \(const tail of tails\)/);
     expect((bandLoop.match(/this\.over\.stroke/g) ?? []).length).toBe(1);
   });
 
   it("fades to nothing rather than stopping at a visible last dash", () => {
     expect(draw).toMatch(/1 - t\) \* \(1 - t/);
+  });
+});
+
+/**
+ * A waypoint is not a bounce.
+ *
+ * On a board where nothing pulls, `points[n]` IS the nth bounce and slicing by
+ * index works. Under steering the path is marched in short chords and every
+ * chord pushes a waypoint too, so the same slice cuts the line off after two or
+ * three chords - a stub a few pixels long that re-roots on the ball every
+ * frame. That is what "the projection slides instead of projecting" looks like,
+ * and it is what the drift change did to the six well maps.
+ */
+describe("the paid-for path is measured in bounces, not waypoints", () => {
+  const start = { x: 300, y: 400 };
+  const vel = { x: 260, y: 0 };
+
+  it("reports a waypoint index for every bounce", () => {
+    const marks: number[] = [];
+    const wps = computeBallTrajectory(
+      start, vel, WALLS, 3, 18, [], [], 1, [], undefined, null, { bounceAt: marks });
+    expect(marks.length).toBe(3);
+    for (const m of marks) expect(wps[m]).toBeTruthy();
+    // Strictly increasing, and never the start point.
+    for (let i = 1; i < marks.length; i++) expect(marks[i]).toBeGreaterThan(marks[i - 1]);
+    expect(marks[0]).toBeGreaterThan(0);
+  });
+
+  it("indexes bounces directly when nothing is pulling", () => {
+    const marks: number[] = [];
+    computeBallTrajectory(
+      start, vel, WALLS, 3, 18, [], [], 1, [], undefined, null, { bounceAt: marks });
+    expect(marks, "a straight cast emits one waypoint per bounce").toEqual([1, 2, 3]);
+  });
+
+  /**
+   * The regression itself: under a well the chords push the bounce far past
+   * index N, so `wps[bounces]` is nowhere near the end of the paid-for path.
+   */
+  it("puts a bounce well past its own index once the path curves", () => {
+    const marks: number[] = [];
+    computeBallTrajectory(
+      start, vel, WALLS, 2, 18, [], [], 1, [], undefined,
+      { world: wellWorld(), atSeconds: 0 }, { bounceAt: marks });
+    expect(marks.length, "the path should still reach its bounces").toBeGreaterThan(0);
+    expect(marks[0], "chords come first, so bounce 1 is not waypoint 1")
+      .toBeGreaterThan(1);
+  });
+
+  it("keeps most of the path inside the budget on a curving board", () => {
+    const marks: number[] = [];
+    const wps = computeBallTrajectory(
+      start, vel, WALLS, 2, 18, [], [], 1, [], undefined,
+      { world: wellWorld(), atSeconds: 0 }, { bounceAt: marks });
+    const paidEnd = marks.length >= 2 ? marks[1] : wps.length - 1;
+    const lengthTo = (n: number) => {
+      let d = 0;
+      for (let i = 0; i < n; i++) d += Math.hypot(wps[i + 1].x - wps[i].x, wps[i + 1].y - wps[i].y);
+      return d;
+    };
+    // Slicing at `bounces` (the bug) leaves a stub; slicing at the real bounce
+    // keeps a projection worth drawing.
+    expect(lengthTo(2), "what the buggy slice would have drawn").toBeLessThan(120);
+    expect(lengthTo(paidEnd), "what the bounce budget actually bought")
+      .toBeGreaterThan(300);
+  });
+
+  it("leaves the caller alone when it does not ask", () => {
+    // The out-parameter is optional and every existing caller omits it.
+    expect(() => computeBallTrajectory(start, vel, WALLS, 2, 18)).not.toThrow();
+  });
+});
+
+describe("the renderer slices by bounce", () => {
+  const FX = readFileSync(resolve(__dirname, "../lib/rendering/sleek/fxLayer.ts"), "utf8");
+  const draw = FX.slice(FX.indexOf("private drawTrajectory("), FX.indexOf("private drawAbilityFx("));
+
+  it("asks for the bounce marks and slices on them", () => {
+    expect(draw).toMatch(/bounceAt: marks/);
+    expect(draw).toMatch(/marks\[bounces - 1\]/);
+  });
+
+  it("no longer indexes the waypoint array by the bounce count", () => {
+    expect(draw, "this is the slice that made the preview slide")
+      .not.toMatch(/Math\.min\(wps\.length, bounces \+ 1\)/);
+  });
+
+  it("walks the drift as a polyline so a curve is followed, not cut across", () => {
+    expect(draw).toMatch(/const tails: Pt\[\]\[\]/);
+    expect(draw).toMatch(/for \(let i = lastPaid; i < wps\.length - 1/);
   });
 });

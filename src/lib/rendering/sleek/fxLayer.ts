@@ -174,12 +174,17 @@ export class FxLayer {
     // Gathered first, drawn second: the fade needs one stroke per alpha band
     // across ALL balls, not per ball, or tracking every ball at once (the
     // Architect tier) would cost a stroke per ball per band.
-    const tails: Array<{ a: Pt; b: Pt }> = [];
+    //
+    // A POLYLINE, not a segment: under steering the drift follows the same
+    // chords the rest of the path does, and a straight tail would cut across a
+    // curve the ball is going to take.
+    const tails: Pt[][] = [];
 
     for (const ball of tracked) {
       // Start from the RENDER position, not the physics one, so the line begins
       // exactly at the drawn ball rather than a step ahead of it.
       const start = ball.renderPosition ?? ball.position;
+      const marks: number[] = [];
       const wps = computeBallTrajectory(
         start, ball.velocity, game.walls, bounces + 1, ball.radius,
         game.obstaclePolygons, game.movers, game.creepFactor || 1,
@@ -191,52 +196,73 @@ export class FxLayer {
         // bend multiplier, and deciding "is gravity on" from a different
         // expression than the physics used.
         { world: steerWorldOf(game), atSeconds: game.activePlaySeconds },
+        { bounceAt: marks },
       );
       if (wps.length < 2) continue;
 
-      // The bounces the upgrade actually bought: start plus one point each.
-      const solidEnd = Math.min(wps.length, bounces + 1);
-      for (let i = 0; i < solidEnd - 1; i++) {
+      // Where the bounce budget runs out, by BOUNCE and not by waypoint index.
+      // Under steering every chord pushes a waypoint too, so indexing by the
+      // bounce count sliced the line down to a couple of chords that re-rooted
+      // on the ball every frame - the preview slid instead of projecting.
+      const lastPaid = marks.length >= bounces ? marks[bounces - 1] : wps.length - 1;
+
+      for (let i = 0; i < lastPaid; i++) {
         const a = w2s(wps[i].x, wps[i].y);
         const b = w2s(wps[i + 1].x, wps[i + 1].y);
         dashedLine(this.over, a.x, a.y, b.x, b.y, dash, gap);
       }
 
-      // The drift: the next leg, cut short. Shorter than TAIL_WORLD wherever
-      // the ball would hit something sooner, which is what keeps it honest.
-      if (wps.length <= solidEnd) continue;
-      const from = wps[solidEnd - 1], to = wps[solidEnd];
-      const dx = to.x - from.x, dy = to.y - from.y;
-      const len = Math.hypot(dx, dy);
-      if (len < 1) continue;
-      const reach = Math.min(len, TAIL_WORLD);
-      tails.push({
-        a: w2s(from.x, from.y),
-        b: w2s(from.x + (dx / len) * reach, from.y + (dy / len) * reach),
-      });
+      // The drift: what the ball does next, walked in WORLD units so the length
+      // is the same wherever the board is zoomed to, and cut off at TAIL_WORLD.
+      if (lastPaid >= wps.length - 1) continue;
+      const tail: Pt[] = [w2s(wps[lastPaid].x, wps[lastPaid].y)];
+      let left = TAIL_WORLD;
+      for (let i = lastPaid; i < wps.length - 1 && left > 0; i++) {
+        const a = wps[i], b = wps[i + 1];
+        const len = Math.hypot(b.x - a.x, b.y - a.y);
+        if (len < 1e-6) continue;
+        const use = Math.min(len, left);
+        left -= use;
+        tail.push(w2s(a.x + ((b.x - a.x) / len) * use, a.y + ((b.y - a.y) / len) * use));
+      }
+      if (tail.length > 1) tails.push(tail);
     }
 
     const width = Math.max(1, 2 * scale);
     this.over.stroke({ width, color: PALETTE.accent, alpha: TRAJECTORY_ALPHA, cap: "round" });
 
-    // The fade, one stroke per band. Dashes are placed along the WHOLE tail and
+    // The fade, one stroke per band. Dashes are placed along the WHOLE drift and
     // bucketed by where they fall, so the dash rhythm carries on unbroken from
     // the solid part instead of restarting inside each band.
     for (let band = 0; band < TAIL_BANDS; band++) {
       let drew = false;
-      for (const t of tails) {
-        const tdx = t.b.x - t.a.x, tdy = t.b.y - t.a.y;
-        const tlen = Math.hypot(tdx, tdy);
-        if (tlen < 0.001) continue;
-        const ux = tdx / tlen, uy = tdy / tlen;
-        for (let d = 0; d < tlen; d += dash + gap) {
-          const e = Math.min(d + dash, tlen);
-          // Bucket on the dash's midpoint: a dash straddling a band boundary
-          // belongs to one band, not to both at two different alphas.
-          if (Math.floor(((d + e) / 2 / tlen) * TAIL_BANDS) !== band) continue;
-          this.over.moveTo(t.a.x + ux * d, t.a.y + uy * d)
-                   .lineTo(t.a.x + ux * e, t.a.y + uy * e);
-          drew = true;
+      for (const tail of tails) {
+        let total = 0;
+        for (let i = 0; i < tail.length - 1; i++) {
+          total += Math.hypot(tail[i + 1].x - tail[i].x, tail[i + 1].y - tail[i].y);
+        }
+        if (total < 0.001) continue;
+        let walked = 0;
+        for (let i = 0; i < tail.length - 1; i++) {
+          const a = tail[i], b = tail[i + 1];
+          const len = Math.hypot(b.x - a.x, b.y - a.y);
+          if (len < 0.001) continue;
+          const ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
+          // Dashes continue across a chord boundary rather than restarting, or
+          // a curving drift would stutter at every joint.
+          for (let d = -(walked % (dash + gap)); d < len; d += dash + gap) {
+            const s0 = Math.max(0, d), e0 = Math.min(d + dash, len);
+            if (e0 <= s0) continue;
+            // Bucket on the dash's midpoint along the WHOLE drift: a dash
+            // straddling a band boundary belongs to one band, not to both at
+            // two different alphas.
+            const mid = (walked + (s0 + e0) / 2) / total;
+            if (Math.floor(mid * TAIL_BANDS) !== band) continue;
+            this.over.moveTo(a.x + ux * s0, a.y + uy * s0)
+                     .lineTo(a.x + ux * e0, a.y + uy * e0);
+            drew = true;
+          }
+          walked += len;
         }
       }
       if (!drew) continue;
