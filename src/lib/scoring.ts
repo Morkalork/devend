@@ -390,6 +390,18 @@ export interface ScoreOptions {
   /** The Ship Early ladder's awarded percent, which Tempo is scored on. */
   shipEarlyPercent?: number;
   /**
+   * The map's win premium, in percent, from the win conditions it actually met
+   * (see winSpec.ts). Scales the map's EARNED pay - the flat base plus the five
+   * axes - and nothing else: pickups, objective rewards and the mutator's
+   * hazard premium are owed for their own reasons and are not made more
+   * valuable by the map having asked something hard.
+   *
+   * This is the first thing in the economy that makes one map worth more than
+   * another. Every map carries `points: 20`, so a genuinely harder win has
+   * always paid exactly what an easy one did.
+   */
+  winBonusPercent?: number;
+  /**
    * Demolition multiplier (issue #38): x1.15 per break, compounding. It scales
    * DELIVERY and CRAFT rather than the whole payout, because lock income is
    * what stopping to smash things actually costs you - the time came out of
@@ -423,11 +435,13 @@ export function calculateScore(
   shipEarlyBonus: number;
   /** What each axis banked, for the results screen. */
   axes: BankedAxes;
+  /** Hours the map's win conditions added on top of its earned pay. */
+  winBonus: number;
 } {
   const {
     scoreMultiplier = 1, locks, greedBonus = 0, flatBonus = 0, postCapBonus = 0,
     payoutMultiplier = 1, shipEarlyPercent = 0, underParBonusMultiplier = 1,
-    spaceBonusMultiplier = 1, tempoCeilingMultiplier = 1,
+    spaceBonusMultiplier = 1, tempoCeilingMultiplier = 1, winBonusPercent = 0,
   } = options;
   const requiredRemovedRatio = (100 - thresholdPercent) / 100;
   const actualRemovedRatio = (100 - remainingPercent) / 100;
@@ -453,7 +467,12 @@ export function calculateScore(
   const safeFlat = Number.isFinite(flatBonus) && flatBonus > 0 ? Math.round(flatBonus) : 0;
   const safePostCap = Number.isFinite(postCapBonus) && postCapBonus > 0 ? Math.round(postCapBonus) : 0;
 
-  const earned = multipliedBase + breakdown.axes.total + safeFlat + safePostCap;
+  // The win premium scales the map's own earned pay. Applied before the
+  // backstop, so a runaway authored percent is still caught by it.
+  const safeWinPct = Number.isFinite(winBonusPercent) && winBonusPercent > 0 ? winBonusPercent : 0;
+  const mapPay = multipliedBase + breakdown.axes.total;
+  const winBonus = Math.round(mapPay * safeWinPct / 100);
+  const earned = mapPay + winBonus + safeFlat + safePostCap;
   // The backstop bounds the BASE and the flat bonuses, never the axes: the five
   // ceilings already bound those, and they are absolute hours while the base is
   // per-map. Clamping the sum against a multiple of basePoints would clip axis
@@ -463,5 +482,8 @@ export function calculateScore(
     + axisCeilingTotal(loadedConfig);
   const levelScore = Math.max(0, Math.min(earned, backstop));
 
-  return { levelScore, breakdown, shipEarlyBonus: breakdown.axes.tempo, axes: breakdown.axes };
+  return {
+    levelScore, breakdown, shipEarlyBonus: breakdown.axes.tempo,
+    axes: breakdown.axes, winBonus,
+  };
 }

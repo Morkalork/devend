@@ -492,6 +492,11 @@
         "title": "Greed",
         "body": "How much of the board you were allowed to leave that you took anyway, plus push-your-luck and demolition hours. Switches off entirely at three fences over par.",
         "tip": "Extra clearing costs fences and time. Greed pairs naturally with Craft, and fights Thrift for every cut."
+      },
+      "winBonus": {
+        "title": "Win bonus",
+        "body": "Some maps ask for something harder than clearing the board: a ball sealed inside a coloured zone, a tight pocket, a named ball trapped. When a map's win conditions carry a premium, meeting them pays that percent on top of everything the map earned.",
+        "tip": "The premium is set per condition by the map, so it is the same for every route. It scales what you earned, which means playing a hard map well is worth more than scraping through it."
       }
     },
     "recordPace": "Record Pace",
@@ -512,7 +517,8 @@
       "tempo": "Tempo",
       "thrift": "Thrift",
       "greed": "Greed"
-    }
+    },
+    "winBonus": "Win bonus (+{{percent}}%)"
   },
   "notFound": {
     "message": "Oops! Page not found",

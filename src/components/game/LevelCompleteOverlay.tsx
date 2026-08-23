@@ -21,6 +21,7 @@ const STAT_INFO: Record<string, { icon: typeof Clock; color: string }> = {
   zoneLocks: { icon: Target, color: 'text-fuchsia-300' },
   breakBonus: { icon: Hammer, color: 'text-amber-400' },
   shipEarly: { icon: Timer, color: 'text-teal-400' },
+  winBonus: { icon: Trophy, color: 'text-violet-400' },
   pushBonus: { icon: Zap, color: 'text-orange-400' },
   pickupBonus: { icon: Gift, color: 'text-fuchsia-400' },
   newHighscore: { icon: TrendingUp, color: 'text-yellow-400' },
@@ -141,6 +142,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     fencesOverPar = 0,
     extraPercent = 0,
     axes,
+    winBonus = 0,
+    winBonusPercent = 0,
     lockBonus = 0,
     lockedBallsCount = 0,
     superiorLockCount = 0,
@@ -191,9 +194,10 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // The five axes ARE the bonus. Push-your-luck and demolition hours bank into
   // Greed and the lock stack into Delivery + Craft, so summing the itemised
   // rows would count each of them twice.
-  const totalBonus = axes
+  const totalBonus = (axes
     ? axes.total
-    : underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus;
+    : underParBonus + spaceBonus + lockBonus + pushBonus + breakBonus + shipEarlyBonus)
+    + winBonus;
 
   return (
     <>
@@ -497,6 +501,19 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                     {n > 1 && <span className="text-muted-foreground"> x{n}</span>}
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* The map's own win premium: what its conditions were priced at.
+                Sits with the earned rows rather than the post-cap ones because
+                it scales the earned pay and nothing else. */}
+            {winBonus > 0 && (
+              <div {...hold('winBonus')} className="flex justify-between items-center py-2 border-b border-violet-500/30 bg-violet-500/10 rounded px-2">
+                <span className="text-violet-400 flex items-center gap-1">
+                  <Trophy className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.winBonus', { percent: Math.round(winBonusPercent) })}
+                </span>
+                <span className="font-bold text-violet-400">+{winBonus}h</span>
               </div>
             )}
 

@@ -402,6 +402,10 @@ export interface LevelScoreData {
    * different tactic, or an upgrade to support it.
    */
   axes?: BankedAxes;
+  /** Hours the map's win conditions paid on top of its earned pay, and the
+   *  percent they asked for, so the results row can name the premium. */
+  winBonus?: number;
+  winBonusPercent?: number;
   // New scoring system fields
   underParBonus?: number;
   spaceBonus?: number;

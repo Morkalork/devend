@@ -20,7 +20,26 @@
  * different sentence per kind, and an unknown kind should fail to compile
  * rather than silently evaluate as "met".
  */
-export type WinCondition =
+/**
+ * The difficulty premium a clause carries, in percent of the map's earned pay.
+ *
+ * Attached to the CONDITION rather than to the level so the price and the thing
+ * being priced live together: an author who adds "lock a ball in the const
+ * zone" writes what it is worth in the same row, and cannot add a hard win and
+ * forget to pay for it.
+ *
+ * Premiums from every MET condition add up (30 + 20 = 50, not 56), because an
+ * author reading a list of clauses should be able to total them in their head.
+ * A required clause always pays, since you cannot win the map without it; an
+ * `alsoWinIf` clause pays only when it is the one that actually fired, which is
+ * what lets a hard alternative route be worth taking.
+ */
+export interface WinBonus {
+  /** Extra pay as a percent of the map's earned overtime. 30 = +30%. */
+  bonusPercent?: number;
+}
+
+export type WinCondition = (
   /** Clear down to at most `threshold` percent of the board remaining. */
   | { kind: "space"; threshold: number }
   /** Lock at least `count` balls, of any type. */
@@ -44,7 +63,8 @@ export type WinCondition =
   /** Finish using at most `par + delta` cuts (delta may be negative). */
   | { kind: "underPar"; delta: number }
   /** Meet the rest of the win inside `seconds` of ACTIVE play. */
-  | { kind: "speedClear"; seconds: number };
+  | { kind: "speedClear"; seconds: number }
+) & WinBonus;
 
 export type WinConditionKind = WinCondition["kind"];
 

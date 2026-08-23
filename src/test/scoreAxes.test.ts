@@ -44,6 +44,8 @@ interface Run {
   greedBonus?: number;
   /** Balls that never got locked at all. */
   lost?: number;
+  /** The map's win premium, in percent. */
+  winBonus?: number;
 }
 
 function play(r: Run) {
@@ -61,6 +63,7 @@ function play(r: Run) {
     },
     shipEarlyPercent: r.shipEarly ?? 0,
     greedBonus: r.greedBonus ?? 0,
+    winBonusPercent: r.winBonus ?? 0,
   });
 }
 
@@ -407,5 +410,54 @@ describe("the shipped config is the config these tests measure", () => {
       const backstop = Math.round(m.points * headroom) + axisTotal;
       expect(m.points + axisTotal, `level ${m.level}`).toBeLessThan(backstop);
     }
+  });
+});
+
+/**
+ * The win premium is a MAP-level price, not a route-level one, so it must scale
+ * every tactic equally. A premium that favoured one route would undo the whole
+ * point of the axes.
+ */
+describe("a map's win premium leaves the routes level", () => {
+  // Reuses the same play() every other test here uses. A second helper drifted
+  // immediately: it dropped `stack`, which undervalued the zone-play tactic and
+  // reported a spread the economy does not actually have.
+  const withPremium = (r: Run, percent: number) => play({ ...r, winBonus: percent });
+
+  it("raises every tactic by the same proportion", () => {
+    for (const [name, r] of Object.entries(TACTICS)) {
+      const plain = withPremium(r, 0).levelScore;
+      const premium = withPremium(r, 30).levelScore;
+      expect(premium / plain, `${name} moved off the others`).toBeCloseTo(1.3, 1);
+    }
+  });
+
+  it("keeps the routes within the same spread they had without it", () => {
+    const totals = Object.values(TACTICS).map(r => withPremium(r, 30).levelScore);
+    expect(Math.max(...totals) / Math.min(...totals)).toBeLessThan(1.12);
+  });
+
+  /** Pickups and objective rewards are owed for their own reasons; a hard win
+   *  does not make a claimed token worth more. */
+  it("scales the map's earned pay and not the flat extras", () => {
+    const base = { locks: { totalCapacity: 48, lockedCapacity: 48, premiumEarned: 0, premiumAvailable: 48 } };
+    const noFlat = calculateScore(5, 5, 10, 30, 20, { ...base, winBonusPercent: 50 });
+    const withFlat = calculateScore(5, 5, 10, 30, 20, { ...base, winBonusPercent: 50, flatBonus: 20 });
+    expect(withFlat.levelScore - noFlat.levelScore, "the flat bonus was multiplied").toBe(20);
+  });
+
+  it("reports the hours it added", () => {
+    const r = calculateScore(5, 5, 10, 30, 20, {
+      locks: { totalCapacity: 48, lockedCapacity: 48, premiumEarned: 0, premiumAvailable: 48 },
+      winBonusPercent: 30,
+    });
+    expect(r.winBonus).toBeGreaterThan(0);
+    expect(r.levelScore).toBe(20 + r.axes.total + r.winBonus);
+  });
+
+  it("is inert at zero, which is every map today", () => {
+    const opts = { locks: { totalCapacity: 48, lockedCapacity: 48, premiumEarned: 0, premiumAvailable: 48 } };
+    expect(calculateScore(5, 5, 10, 30, 20, opts).levelScore)
+      .toBe(calculateScore(5, 5, 10, 30, 20, { ...opts, winBonusPercent: 0 }).levelScore);
   });
 });

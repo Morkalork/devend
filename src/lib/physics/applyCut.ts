@@ -46,7 +46,7 @@ import { tickChargeOnCut } from "@/lib/physics/charge";
 import { tickDataStreamOnCut } from "@/lib/physics/dataStream";
 import { LOCK_TOTAL_DURATION, LEVEL_CLEAR_SHIMMER_MS, LEVEL_CLEAR_HOLD_MS, BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { playCutClaimedSound, playLevelCompleteSound } from "@/lib/gameAudio";
-import { resolveWinSpec, isWinMet, winReasonFor } from "@/lib/winSpec";
+import { resolveWinSpec, isWinMet, winReasonFor, winBonusPercent } from "@/lib/winSpec";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
@@ -691,7 +691,12 @@ export function triggerLevelComplete(
   // Fold lock + break + push + map-mutator + objective bonuses in before the cap
   // so a single map can't exceed the per-map ceiling (issue #43); ship-early is
   // paid as a percent ABOVE the cap (see shipEarlyPercent).
-  const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
+  // The map's own win premium: what its conditions said they were worth, for
+  // the ones it actually met. Recomputed here rather than passed in, so every
+  // caller of triggerLevelComplete gets it without having to remember to.
+  const winSpec = resolveWinSpec(level);
+  const winPct = winBonusPercent(winSpec, readWinSnapshot(game, level));
+  const { levelScore, breakdown, shipEarlyBonus, winBonus } = calculateScore(
     game.wallCount, effectivePar(level.expectedCuts, activeModifiers), percent, level.sizeThreshold, level.points, {
       scoreMultiplier: activeModifiers.scoreMultiplier,
       // Upgrade multipliers raise an axis CEILING, so a lane you never played
@@ -712,6 +717,7 @@ export function triggerLevelComplete(
       postCapBonus: game.pickupOvertime ?? 0,
       // The Ship Early ladder's percent, which the Tempo axis is scored on.
       shipEarlyPercent,
+      winBonusPercent: winPct,
       // Demolition multiplier: compounds ×1.15 per destructible smashed.
       payoutMultiplier: game.breakMultiplier ?? 1,
     },
@@ -738,7 +744,7 @@ export function triggerLevelComplete(
         underParBonus: breakdown.underParBonus, spaceBonus: breakdown.spaceBonus,
         spaceBonusRaw: breakdown.spaceBonusRaw, performanceMultiplier: breakdown.performanceMultiplier,
         fencesUnderPar: breakdown.fencesUnderPar, fencesOverPar: breakdown.fencesOverPar,
-        extraPercent: breakdown.extraPercent, axes: breakdown.axes, lockBonus: game.lockBonus,
+        extraPercent: breakdown.extraPercent, axes: breakdown.axes, winBonus, winBonusPercent: winPct, lockBonus: game.lockBonus,
         lockedBallsCount: game.lockedBallsCount,
         superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
         zoneLockCount: game.zoneLockCount, zoneLockBonus: game.zoneLockBonus,

@@ -489,6 +489,11 @@
         "title": "Girighet",
         "body": "Hur mycket av planen du fick lamna kvar men tog anda, plus timmar fran chansning och rivning. Stangs av helt vid tre stangsel over par.",
         "tip": "Extra rensning kostar stangsel och tid. Girighet passar med Hantverk och slass med Sparsamhet om varje snitt."
+      },
+      "winBonus": {
+        "title": "Vinstbonus",
+        "body": "Vissa banor kraver nagot svarare an att rensa planen: en boll forseglad i ett fargat omrade, en trang ficka, en namngiven boll fangad. Nar en banas vinstvillkor har ett pastag betalar de den procenten ovanpa allt banan tjanade.",
+        "tip": "Pastaget sätts per villkor av banan, sa det ar samma for alla vagar. Det skalar det du tjanade, vilket gor att spela en svar bana bra ar vart mer an att knappt ta sig igenom."
       }
     },
     "recordPace": "Rekordtakt",
@@ -509,7 +514,8 @@
       "tempo": "Tempo",
       "thrift": "Sparsamhet",
       "greed": "Girighet"
-    }
+    },
+    "winBonus": "Vinstbonus (+{{percent}}%)"
   },
   "notFound": {
     "message": "Hoppsan! Sidan hittades inte",

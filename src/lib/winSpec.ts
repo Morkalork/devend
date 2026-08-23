@@ -204,6 +204,16 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
     }
   }
 
+  // A premium far outside the range the economy is tuned for is almost always a
+  // typo: a good map's whole earned pay is around 95h, so +500% is another four
+  // maps' income for one win. The backstop would clamp it, silently.
+  for (const c of [...spec.require, ...spec.alsoWinIf]) {
+    const p = c.bonusPercent;
+    if (p === undefined) continue;
+    if (!Number.isFinite(p) || p < 0) problems.push(`A win premium on ${c.kind} is not a positive percent.`);
+    else if (p > 200) problems.push(`A win premium of ${p}% on ${c.kind} is far past anything the economy is tuned for.`);
+  }
+
   // Locking every ball leaves nothing to put in the zone or to grade superior.
   if (kinds.has("allLocked") && (kinds.has("area") || kinds.has("lockType"))) {
     problems.push("Requires every ball locked AND a specific ball locked somewhere; the second can never be checked after the first.");
@@ -238,4 +248,40 @@ export function winReasonFor(spec: WinSpec, snap: WinSnapshot): WinReason {
     case "underPar":
     case "speedClear": return "space";
   }
+}
+
+/**
+ * The total win premium a finished map earned, in percent.
+ *
+ * Required clauses all pay, since the map cannot be won without them, so a
+ * required premium is really a per-map difficulty price expressed on the clause
+ * that causes the difficulty. That is the point: an author who adds "lock a
+ * ball in the const zone" writes what it is worth in the same row and cannot
+ * add a hard win and forget to price it.
+ *
+ * Alternative clauses pay only when they are the one that actually fired, which
+ * is what lets a hard alternative route be worth taking rather than merely
+ * possible. Only the FIRST met alternative counts, matching isWinMet: the map
+ * ended on that clause and the others were never reached.
+ *
+ * Additive, not compounding, so a list of clauses can be totalled by eye.
+ */
+export function winBonusPercent(spec: WinSpec, snap: WinSnapshot): number {
+  if (!isWinMet(spec, snap)) return 0;
+  let percent = 0;
+  const add = (c: WinCondition) => {
+    const p = c.bonusPercent;
+    if (Number.isFinite(p) && (p as number) > 0) percent += p as number;
+  };
+
+  for (const c of spec.alsoWinIf) {
+    if (evaluateWinCondition(c, snap).met) {
+      // An alternative ended the map on its own; the requirements were not the
+      // reason it finished, so they do not collect.
+      add(c);
+      return percent;
+    }
+  }
+  for (const c of spec.require) add(c);
+  return percent;
 }

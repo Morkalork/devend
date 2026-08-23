@@ -17,7 +17,7 @@ import { resolve } from "node:path";
 import yaml from "js-yaml";
 import {
   resolveWinSpec, evaluateWinCondition, isWinMet, winningCondition,
-  winSpecProblems, winReasonFor,
+  winSpecProblems, winReasonFor, winBonusPercent,
 } from "@/lib/winSpec";
 import { WIN_CONDITION_KINDS } from "@/types/winSpec";
 import type { WinCondition, WinSnapshot } from "@/types/winSpec";
@@ -276,5 +276,90 @@ describe("flagging a map that can never be won", () => {
   it("passes a sane spec", () => {
     expect(problems([{ kind: "space", threshold: 20 }, { kind: "superiorLocks", count: 1 }]))
       .toEqual([]);
+  });
+});
+
+/**
+ * The win premium: what a map's own conditions say they are worth.
+ *
+ * This is the first thing in the economy that makes one map worth more than
+ * another. Every map carries `points: 20` and the five axis ceilings are the
+ * same everywhere, so a genuinely harder win has always paid exactly what an
+ * easy one did.
+ */
+describe("pricing a win condition", () => {
+  const spec = (require: WinCondition[], alsoWinIf: WinCondition[] = []) =>
+    ({ require, alsoWinIf, authored: true });
+  const won = snap({ remainingPercent: 0, lockedBalls: 4, areaTargets: 2, allLocked: true });
+
+  it("pays nothing until the map is actually won", () => {
+    const s = spec([{ kind: "area", count: 2, bonusPercent: 30 }]);
+    expect(winBonusPercent(s, snap({ areaTargets: 1 }))).toBe(0);
+    expect(winBonusPercent(s, snap({ areaTargets: 2 }))).toBe(30);
+  });
+
+  it("pays nothing when no clause is priced", () => {
+    expect(winBonusPercent(spec([{ kind: "area", count: 1 }]), won)).toBe(0);
+  });
+
+  /** Additive so an author can total a list of clauses by eye. */
+  it("adds the premiums of required clauses rather than compounding them", () => {
+    const s = spec([
+      { kind: "locks", count: 1, bonusPercent: 20 },
+      { kind: "area", count: 1, bonusPercent: 30 },
+    ]);
+    expect(winBonusPercent(s, won)).toBe(50);
+  });
+
+  /**
+   * A required clause always pays, because the map cannot be won without it.
+   * An alternative pays only when it is the route that actually fired, which is
+   * what makes a hard alternative worth TAKING rather than merely possible.
+   */
+  it("pays only the alternative that fired, not the requirements it skipped", () => {
+    const s = spec(
+      [{ kind: "space", threshold: 5, bonusPercent: 10 }],
+      [{ kind: "allLocked", bonusPercent: 40 }],
+    );
+    // Everything locked while the board is nowhere near clear: the alternative
+    // ended the map, so the space clause's premium was never earned.
+    expect(winBonusPercent(s, snap({ remainingPercent: 90, allLocked: true }))).toBe(40);
+  });
+
+  it("pays the requirements when they are what finished the map", () => {
+    const s = spec(
+      [{ kind: "space", threshold: 5, bonusPercent: 10 }],
+      [{ kind: "allLocked", bonusPercent: 40 }],
+    );
+    expect(winBonusPercent(s, snap({ remainingPercent: 4 }))).toBe(10);
+  });
+
+  it("ignores a zero, negative or missing premium", () => {
+    for (const p of [0, -30, undefined, NaN]) {
+      const s = spec([{ kind: "area", count: 1, bonusPercent: p as number }]);
+      expect(winBonusPercent(s, won), String(p)).toBe(0);
+    }
+  });
+
+  it("flags a premium far past what the economy is tuned for", () => {
+    const problems = winSpecProblems(
+      spec([{ kind: "area", count: 1, bonusPercent: 500 }]),
+      level({ coloredAreas: [gateArea] } as Partial<LevelConfig>));
+    expect(problems.join(" ")).toMatch(/far past/);
+  });
+
+  it("accepts a sensible premium without complaint", () => {
+    const problems = winSpecProblems(
+      spec([{ kind: "area", count: 1, bonusPercent: 30 }]),
+      level({ coloredAreas: [gateArea] } as Partial<LevelConfig>));
+    expect(problems).toEqual([]);
+  });
+
+  /** Derived specs are the 40 shipped maps, which must not start paying more. */
+  it("prices nothing on a derived spec", () => {
+    for (const l of [level(), level({ threadLockRequired: 2 }),
+                     level({ coloredAreas: [gateArea] } as Partial<LevelConfig>)]) {
+      expect(winBonusPercent(resolveWinSpec(l), won)).toBe(0);
+    }
   });
 });

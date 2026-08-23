@@ -66,6 +66,12 @@ export function WinConditionsPanel({ level, onUpdateLevel }: Props) {
   const spec = resolveWinSpec(level);
   const problems = winSpecProblems(spec, level);
   const preview = winConditionsBody(t, level, level.level ?? 1);
+  const sumPercent = (cs: WinCondition[]) =>
+    cs.reduce((a, c) => a + (c.bonusPercent && c.bonusPercent > 0 ? c.bonusPercent : 0), 0);
+  const requiredPremium = sumPercent(spec.require);
+  // Only the alternative that fires pays, so the honest figure is the best one
+  // on offer rather than their sum.
+  const altPremium = Math.max(0, ...spec.alsoWinIf.map(c => c.bonusPercent ?? 0));
 
   /** Write an edited spec onto the level, which makes it authored from here on. */
   const write = (require: WinCondition[], alsoWinIf: WinCondition[]) =>
@@ -137,6 +143,19 @@ export function WinConditionsPanel({ level, onUpdateLevel }: Props) {
         {...editGroup('alsoWinIf')}
       />
 
+      {/* The map's total premium, so a list of clauses can be read as one
+          number. Required clauses all pay (you cannot win without them); an
+          alternative pays only when it is the route that fired, which is why
+          the two are totalled separately. */}
+      {(requiredPremium > 0 || altPremium > 0) && (
+        <div className="flex items-center justify-between rounded bg-violet-500/10 border border-violet-500/30 px-2 py-1.5 text-[11px]">
+          <span className="text-violet-300">Win premium</span>
+          <span className="font-mono text-violet-300">
+            +{requiredPremium}%{altPremium > 0 && ` (or +${altPremium}% by the alternative)`}
+          </span>
+        </div>
+      )}
+
       {problems.length > 0 && (
         <div className="rounded border border-destructive/50 bg-destructive/15 p-2 space-y-1">
           {problems.map((p, i) => (
@@ -187,6 +206,24 @@ function Group({ title, hint, conditions, level, add, remove, update }: {
             ))}
           </select>
           <ConditionParams condition={c} onChange={(next) => update(i, next)} />
+          {/* What this clause is worth. Sits in the row rather than on the
+              level, so a hard condition and its price are written together and
+              you cannot add one without pricing it. */}
+          <div className="flex items-center shrink-0" title="Extra pay, as a percent of what the map earned">
+            <span className="text-[10px] text-violet-400 pr-0.5">+</span>
+            <input
+              type="number"
+              value={c.bonusPercent ?? 0}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                const next = { ...c } as WinCondition;
+                if (n > 0) next.bonusPercent = n; else delete next.bonusPercent;
+                update(i, next);
+              }}
+              className="w-12 px-1 py-1 rounded bg-background border border-violet-500/40 text-[11px] text-violet-300"
+            />
+            <span className="text-[10px] text-violet-400 pl-0.5">%</span>
+          </div>
           <button
             onClick={() => remove(i)}
             className="p-1 rounded text-destructive hover:bg-destructive/20 transition-colors shrink-0"

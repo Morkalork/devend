@@ -489,6 +489,11 @@
         "title": "Codicia",
         "body": "Cuanto del tablero que podias dejar te llevaste igualmente, mas las horas de arriesgar y demoler. Se apaga del todo a tres vallas sobre el par.",
         "tip": "Despejar de mas cuesta vallas y tiempo. La Codicia se lleva bien con el Oficio y pelea con el Ahorro por cada corte."
+      },
+      "winBonus": {
+        "title": "Bono de victoria",
+        "body": "Algunos mapas piden algo mas dificil que despejar el tablero: una bola sellada dentro de una zona de color, un bolsillo ajustado, una bola concreta atrapada. Cuando las condiciones de victoria de un mapa llevan una prima, cumplirlas paga ese porcentaje sobre todo lo que el mapa gano.",
+        "tip": "La prima la fija el mapa por condicion, asi que es igual para cualquier ruta. Escala lo que ganaste, de modo que jugar bien un mapa dificil vale mas que pasarlo por los pelos."
       }
     },
     "recordPace": "Ritmo de récord",
@@ -509,7 +514,8 @@
       "tempo": "Ritmo",
       "thrift": "Ahorro",
       "greed": "Codicia"
-    }
+    },
+    "winBonus": "Bono de victoria (+{{percent}}%)"
   },
   "notFound": {
     "message": "¡Vaya! Página no encontrada",
