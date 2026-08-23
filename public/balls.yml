@@ -117,6 +117,41 @@ balls:
     turnIntervalSeconds: 9
     description: "Turns a quarter circle every few seconds. The ring around it counts down, and leans the way it will turn."
 
+  # FREIGHT. Every other ball wants the tightest chamber it can get, because the
+  # lock gate is "small enough" and a tighter seal grades superior on top. This
+  # one inverts that: it needs ROOM, so you cannot corner it, you have to leave
+  # it space, and space is the thing the whole game is spending. It can never
+  # grade superior as a result, so its lock multiplier carries the pay.
+  - id: freight
+    name: Freight
+    color: "#8fa6b8"
+    baseSpeed: 190
+    minimumSpeed: 140
+    unlockLevel: 16
+    lockMultiplier: 4
+    density: 2.4
+    ability: heavyLock
+    minLockFraction: 0.55
+    description: "Too big for a tight corner. It only locks in a roomy pocket, so you have to leave space for it while the board shrinks."
+
+  # LODESTONE. Not the Magnet ability: that is a one-shot you aim at a point you
+  # chose, this is always on and aimed at a ball that is moving. It changes
+  # where everything TENDS to be, and the cluster it gathers is the opportunity
+  # and the danger at once. It is also the first way to set up the
+  # simultaneous-lock multiplier on purpose rather than by luck.
+  - id: lodestone
+    name: Lodestone
+    color: "#ff9e4d"
+    baseSpeed: 210
+    minimumSpeed: 150
+    unlockLevel: 21
+    lockMultiplier: 3
+    density: 1
+    ability: attract
+    attractTurnRate: 1.6
+    attractRadius: 320
+    description: "Draws the other balls toward it. Gather them for a multi-lock, or watch them pile into the pocket you were keeping clear."
+
   - id: black
     name: Black
     color: "#2b2f3a"

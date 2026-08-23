@@ -27,6 +27,7 @@ import { updatePickups } from "@/lib/pickups";
 import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
+import { applyLodestones } from "@/lib/physics/lodestone";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
 
 export interface GameLoopCallbacks {
@@ -368,6 +369,10 @@ export function createGameLoop(
           ball.prevPosition.y = ball.position.y;
         }
       }
+      // Lodestone: one pass over the balls before they move, so every ball in
+      // a cluster feels the same pull on the same frame rather than in the
+      // order the list happens to be in.
+      applyLodestones(game.balls, PHYSICS_STEP, game.frozenBallId ?? null);
 
       updateMoversFn(PHYSICS_STEP, game);
       // Phasing obstacles (#64): update solid<->intangible BEFORE ball physics so

@@ -113,6 +113,9 @@ export function createBall(
     lastSpeedStepAt: 0,
     spawnActiveSeconds,
     rainbowSpawnCount: 0,
+    minLockFraction: type.minLockFraction,
+    attractTurnRate: type.attractTurnRate,
+    attractRadius: type.attractRadius,
   };
   // Compass: arm the first turn from the moment the ball enters the map, and
   // seed it per ball so two on one board never turn in lockstep, which would
