@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowLeft, Plus, Save, Trash2, Download, Copy, Check, AlertCircle } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, BallConfig, LevelEntity, WallRectEntity, WallCircleEntity, WallPolygonEntity, GravityWell } from '@/types/level';
 import { makeColoredArea } from '@/lib/coloredAreas';
+import { DEFAULT_MOVER_RANGE, DEFAULT_MOVER_SPEED } from '@/lib/moverPath';
 import { MapCanvas } from './MapCanvas';
 import { EntityPanel } from './EntityPanel';
 import { LevelPanel } from './LevelPanel';
 import yaml from 'js-yaml';
+import { spliceYamlEntries } from '@/lib/yamlSplice';
 
 interface MapBuilderProps {
   onBack: () => void;
@@ -32,6 +34,11 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     | null
   >(null);
 
+  /** map.yml exactly as it is on disk, so a save can be a splice not a rewrite. */
+  const rawMapYaml = useRef<string | null>(null);
+  /** The levels as parsed from that file, to tell which ones actually changed. */
+  const originalLevels = useRef<LevelConfig[]>([]);
+
   // Load levels from map.yml
   useEffect(() => {
     const loadLevels = async () => {
@@ -39,6 +46,10 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         const response = await fetch('/map.yml', { cache: 'no-store' });
         if (!response.ok) throw new Error('Failed to load map.yml');
         const text = await response.text();
+        // Keep the file verbatim: saving splices over the entries that changed
+        // rather than re-dumping the document, so the 269 comment lines that
+        // carry the whole ladder's design notes survive an edit.
+        rawMapYaml.current = text;
         const data = yaml.load(text) as { levels: LevelConfig[] };
         if (!data?.levels || !Array.isArray(data.levels)) {
           throw new Error('Invalid map.yml structure');
@@ -46,7 +57,9 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         // Issue #37: gameplay no longer stores per-ball configs in map.yml (the
         // game picks ball types from maxBalls). Normalise legacy/missing `balls`
         // to an empty array so the (dev-only) builder UI keeps working.
-        setLevels(data.levels.map(l => ({ ...l, balls: l.balls ?? [] })));
+        const loaded = data.levels.map(l => ({ ...l, balls: l.balls ?? [] }));
+        originalLevels.current = JSON.parse(JSON.stringify(loaded)) as LevelConfig[];
+        setLevels(loaded);
         setIsLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load levels');
@@ -133,12 +146,29 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   }, [levels]);
 
   // Add entity (obstacle)
-  const addEntity = useCallback((type: 'circle' | 'polygon' | 'rect') => {
+  const addEntity = useCallback((type: 'circle' | 'polygon' | 'rect' | 'mover-rect' | 'mover-circle') => {
     if (!currentLevel) return;
 
     let newEntity: LevelEntity;
 
-    if (type === 'circle') {
+    // Movers are placed at their HOME, and patrol home +/- range/2 along the
+    // axis. Travel and speed seed from the median of the movers already on the
+    // ladder rather than any one map's, and the starting phase is 0 (the
+    // left/top extreme) so the start marker sits at one end of the drawn path
+    // rather than hidden under the object itself.
+    if (type === 'mover-rect' || type === 'mover-circle') {
+      const id = `mover-${Date.now()}`;
+      const common = {
+        kind: 'mover' as const,
+        axis: 'horizontal' as const,
+        range: DEFAULT_MOVER_RANGE,
+        speed: DEFAULT_MOVER_SPEED,
+        phase: 0,
+      };
+      newEntity = type === 'mover-circle'
+        ? { id, ...common, shape: 'circle', cx: 450, cy: 450, radius: 40 }
+        : { id, ...common, shape: 'rect', x: 400, y: 437, width: 100, height: 26 };
+    } else if (type === 'circle') {
       newEntity = {
         id: `wall-${Date.now()}`,
         kind: 'wall',
@@ -431,10 +461,46 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     URL.revokeObjectURL(url);
   }, [levels]);
 
+  /**
+   * The YAML a save should write.
+   *
+   * Splices the changed levels over the file we loaded instead of dumping the
+   * document. The whole-file dump this replaces deleted all 269 comment lines
+   * every time anyone moved a wall, and it did it silently, since the game
+   * loads a comment-free map.yml perfectly well. The Playground's editor has
+   * spliced for exactly this reason; the builder simply never did.
+   *
+   * Falls back to the full dump when the raw file is missing or any entry
+   * cannot be located unambiguously, which loses comments but never writes a
+   * half-spliced file.
+   */
+  const saveYaml = useCallback((): string => {
+    const raw = rawMapYaml.current;
+    const fullDump = () => yaml.dump({ levels }, { indent: 2, lineWidth: -1, noRefs: true });
+    if (!raw) return fullDump();
+
+    const before = new Map(originalLevels.current.map(l => [String(l.id), JSON.stringify(l)]));
+    const changed = levels.filter(l => before.get(String(l.id)) !== JSON.stringify(l));
+    // Nothing edited: hand back the file untouched rather than a re-dump that
+    // would show up as a whole-file diff for a no-op save.
+    if (changed.length === 0) return raw;
+    // A level the file does not contain cannot be spliced into it.
+    if (changed.some(l => !before.has(String(l.id)))) return fullDump();
+
+    const replacements = changed.map(l => ({
+      value: String(l.id),
+      // One level, dumped as a sequence of one, so js-yaml produces the "  - "
+      // entry shape and indentation the file already uses.
+      entry: yaml.dump([l], { indent: 2, lineWidth: -1, noRefs: true })
+        .split('\n').map(line => (line ? '  ' + line : line)).join('\n'),
+    }));
+    return spliceYamlEntries(raw, 'id', replacements) ?? fullDump();
+  }, [levels]);
+
   // Save YAML to server (dev server must be running)
   const saveToServer = useCallback(async () => {
     setSaveStatus('saving');
-    const yamlContent = yaml.dump({ levels }, { indent: 2, lineWidth: -1, noRefs: true });
+    const yamlContent = saveYaml();
     try {
       const res = await fetch('/api/map', {
         method: 'PUT',
@@ -442,11 +508,17 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         headers: { 'Content-Type': 'text/yaml' },
       });
       setSaveStatus(res.ok ? 'saved' : 'error');
+      // The file on disk is now what we just wrote, so a second save splices
+      // against it rather than against the version we first loaded.
+      if (res.ok) {
+        rawMapYaml.current = yamlContent;
+        originalLevels.current = JSON.parse(JSON.stringify(levels)) as LevelConfig[];
+      }
     } catch {
       setSaveStatus('error');
     }
     setTimeout(() => setSaveStatus('idle'), 2500);
-  }, [levels]);
+  }, [levels, saveYaml]);
 
   // Copy YAML to clipboard
   const copyYaml = useCallback(() => {

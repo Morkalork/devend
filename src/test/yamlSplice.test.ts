@@ -15,7 +15,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { spliceYamlEntry, findEntryRange } from "@/lib/yamlSplice";
+import { spliceYamlEntry, spliceYamlEntries, findEntryRange } from "@/lib/yamlSplice";
 
 const DOC = [
   "# map.yml - the level list.",
@@ -152,5 +152,94 @@ describe("the real map.yml", () => {
     expect(out.split(/\r?\n/)[0]).toBe(RAW.split(/\r?\n/)[0]);
     const commentsIn = (s: string) => s.split(/\r?\n/).filter(l => l.trim().startsWith("#")).length;
     expect(commentsIn(out)).toBeGreaterThanOrEqual(commentsIn(RAW) - commentsIn(entry) - 2);
+  });
+});
+
+/**
+ * Saving several levels at once, which is what the Map Builder does.
+ *
+ * The builder holds the whole ladder in memory and used to save it with one
+ * `yaml.dump({ levels })`. That rewrote all 40 entries and deleted all 269
+ * comment lines in map.yml: the act headers, the per-map design notes, the
+ * LEVELDESIGN.md cross-references. Moving one wall cost the file's entire
+ * commentary, and nothing complained because the game loads a comment-free
+ * map.yml perfectly well. It is how the file got flattened once already.
+ */
+describe("splicing several entries at once", () => {
+  const RAW = readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8");
+  const commentLines = (text: string) =>
+    text.split(/\r?\n/).filter(l => l.trim().startsWith("#")).length;
+
+  const entryFor = (id: string, extra: Record<string, unknown>) => {
+    const doc = yaml.load(RAW) as { levels: Record<string, unknown>[] };
+    const level = { ...doc.levels.find(l => l.id === id)!, ...extra };
+    return yaml.dump([level], { indent: 2, lineWidth: -1, noRefs: true })
+      .split("\n").map(l => (l ? "  " + l : l)).join("\n");
+  };
+
+  const twoEdits = () => [
+    { value: "level-1", entry: entryFor("level-1", { points: 21 }) },
+    { value: "level-3", entry: entryFor("level-3", { points: 22 }) },
+  ];
+
+  it("keeps every comment when several levels change", () => {
+    const out = spliceYamlEntries(RAW, "id", twoEdits())!;
+    expect(out, "splice should have succeeded").toBeTruthy();
+    expect(commentLines(out)).toBe(commentLines(RAW));
+  });
+
+  it("applies all of them, not just the first", () => {
+    const out = spliceYamlEntries(RAW, "id", twoEdits())!;
+    const levels = (yaml.load(out) as { levels: Record<string, unknown>[] }).levels;
+    expect(levels.find(l => l.id === "level-1")!.points).toBe(21);
+    expect(levels.find(l => l.id === "level-3")!.points).toBe(22);
+  });
+
+  it("leaves the levels it was not asked about untouched", () => {
+    const out = spliceYamlEntries(RAW, "id", [twoEdits()[0]])!;
+    const before = (yaml.load(RAW) as { levels: Record<string, unknown>[] }).levels;
+    const after = (yaml.load(out) as { levels: Record<string, unknown>[] }).levels;
+    expect(after.length).toBe(before.length);
+    for (let i = 0; i < before.length; i++) {
+      if (before[i].id === "level-1") continue;
+      expect(after[i], `level ${before[i].id}`).toEqual(before[i]);
+    }
+  });
+
+  it("refuses the whole batch rather than writing it half applied", () => {
+    expect(spliceYamlEntries(RAW, "id", [
+      twoEdits()[0],
+      { value: "level-99", entry: "  - id: level-99" },
+    ])).toBeNull();
+  });
+
+  it("is a no-op for an empty batch", () => {
+    expect(spliceYamlEntries(RAW, "id", [])).toBe(RAW);
+  });
+});
+
+/**
+ * The builder is the caller that flattened the file, so check the call site and
+ * not only the helper. A perfect splice function is worth nothing if Save still
+ * dumps the document, which is exactly the state this was found in.
+ */
+describe("the Map Builder saves by splicing", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../components/admin/MapBuilder.tsx"), "utf8",
+  );
+  const saveYaml = SRC.slice(SRC.indexOf("const saveYaml"), SRC.indexOf("const saveToServer"));
+
+  it("routes Save through the splice, not a whole-document dump", () => {
+    expect(saveYaml).toMatch(/spliceYamlEntries/);
+    expect(SRC).toMatch(/const yamlContent = saveYaml\(\);/);
+  });
+
+  it("only rewrites the levels that actually changed", () => {
+    expect(saveYaml).toMatch(/originalLevels/);
+    expect(saveYaml).toMatch(/changed/);
+  });
+
+  it("still has a full dump to fall back on", () => {
+    expect(saveYaml).toMatch(/fullDump\(\)/);
   });
 });

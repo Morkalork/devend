@@ -97,3 +97,33 @@ export function spliceYamlEntry(
   ];
   return next.join(crlf ? "\r\n" : "\n");
 }
+
+/**
+ * Splice several entries in one pass, newest content over the oldest file.
+ *
+ * The Map Builder holds the WHOLE ladder in memory and used to save it with a
+ * single `yaml.dump({ levels })`, which meant every save rewrote all 40 entries
+ * and deleted all 269 comment lines: the act headers, the per-map design notes,
+ * the LEVELDESIGN.md cross-references. It cost the file's entire commentary to
+ * nudge one wall, and nothing complained because the game loads a comment-free
+ * file perfectly well.
+ *
+ * Splicing only the entries that actually changed keeps the diff to the levels
+ * you touched and leaves every comment outside them alone. Returns null if any
+ * one of them cannot be located unambiguously, so the caller still has the
+ * whole-file dump to fall back on rather than writing something half-spliced.
+ */
+export function spliceYamlEntries(
+  original: string,
+  key: string,
+  replacements: Array<{ value: string; entry: string }>,
+  indent = 2,
+): string | null {
+  let out = original;
+  for (const { value, entry } of replacements) {
+    const next = spliceYamlEntry(out, key, value, entry, indent);
+    if (next === null) return null;
+    out = next;
+  }
+  return out;
+}

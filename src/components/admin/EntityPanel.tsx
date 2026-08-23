@@ -1,7 +1,15 @@
 import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed,
-  ArrowDownToLine, ArrowUpToLine, ArrowLeftToLine, ArrowRightToLine } from 'lucide-react';
+  ArrowDownToLine, ArrowUpToLine, ArrowLeftToLine, ArrowRightToLine,
+  MoveHorizontal, MoveVertical, CircleDot, Timer } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell, WellPull } from '@/types/level';
 import { AREA_KINDS, AREA_MIN_SIZE, areaStyle } from '@/lib/coloredAreas';
+import {
+  isMoverEntity, moverPath, moverTraverseSeconds, moverEscapesBoard,
+  DEFAULT_MOVER_RANGE, DEFAULT_MOVER_SPEED,
+} from '@/lib/moverPath';
+import { BOARD_WIDTH } from '@/lib/boardConstants';
+import { ARENA_MARGIN } from '@/lib/gameConstants';
+import type { LevelMoverEntity } from '@/types/level';
 
 /** The four bearings, laid out the way they point. */
 const PULL_ORDER: WellPull[] = ['up', 'left', 'down', 'right'];
@@ -20,7 +28,7 @@ interface EntityPanelProps {
   onSelectEntity: (id: string | null) => void;
   onSelectBall: (id: string | null) => void;
   onSelectArea: (index: number | null) => void;
-  onAddEntity: (type: 'circle' | 'polygon' | 'rect') => void;
+  onAddEntity: (type: 'circle' | 'polygon' | 'rect' | 'mover-rect' | 'mover-circle') => void;
   onAddBall: () => void;
   onAddArea: (kind: AreaKind) => void;
   onDeleteEntity: (id: string) => void;
@@ -322,6 +330,25 @@ export function EntityPanel({
             >
               <Pentagon className="w-3.5 h-3.5" />
             </button>
+            {/* Movers get their own pair rather than a checkbox on a wall: they
+                are placed differently (the position you give them is the middle
+                of a patrol, not a corner) and the canvas draws a whole path for
+                them, so treating one as a wall with a flag hides the thing that
+                actually needs looking at. */}
+            <button
+              onClick={() => onAddEntity('mover-rect')}
+              className="p-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors"
+              title="Add moving rectangle"
+            >
+              <MoveHorizontal className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onAddEntity('mover-circle')}
+              className="p-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors"
+              title="Add moving circle"
+            >
+              <CircleDot className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
         
@@ -379,6 +406,14 @@ export function EntityPanel({
             {getShapeLabel(selectedEntity.shape)} Properties
           </h4>
 
+          {isMoverEntity(selectedEntity) && (
+            <MoverEditor
+              entity={selectedEntity}
+              onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates as Partial<LevelEntity>)}
+            />
+          )}
+
+          {!isMoverEntity(selectedEntity) && (
           <label className="flex items-center gap-2 text-xs">
             <input
               type="checkbox"
@@ -389,6 +424,7 @@ export function EntityPanel({
             <span className="text-cyan-400">Mirror</span>
             <span className="text-muted-foreground">(reflects fences)</span>
           </label>
+          )}
 
           {selectedEntity.shape === 'circle' && (
             <CircleEditor
@@ -769,6 +805,137 @@ function BallEditor({ ball, onUpdate }: { ball: BallConfig; onUpdate: (updates: 
           </div>
         </div>
       </label>
+    </div>
+  );
+}
+
+/**
+ * The mover editor: the two ends of the patrol, and how fast it walks them.
+ *
+ * Shows the resolved endpoints as read-only coordinates rather than asking for
+ * them, because the runtime is centre-plus-range and inventing a second
+ * representation here would mean two numbers that can disagree. What the panel
+ * owes the author is the arithmetic they were doing in their head: where does
+ * this thing actually GET to, and how long does it take to get there.
+ */
+function MoverEditor({ entity, onUpdate }: {
+  entity: LevelMoverEntity;
+  onUpdate: (updates: Partial<LevelMoverEntity>) => void;
+}) {
+  const path = moverPath(entity);
+  const seconds = moverTraverseSeconds(entity);
+  const escapes = moverEscapesBoard(entity, BOARD_WIDTH, BOARD_WIDTH * ARENA_MARGIN);
+  const AxisIcon = entity.axis === 'horizontal' ? MoveHorizontal : MoveVertical;
+
+  const pt = (p: { x: number; y: number }) => `${Math.round(p.x)}, ${Math.round(p.y)}`;
+
+  return (
+    <div className="space-y-2 rounded border border-amber-500/40 bg-amber-500/10 p-2">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
+        <AxisIcon className="w-3.5 h-3.5" />
+        Mover
+      </div>
+
+      {/* Axis. Also draggable on the canvas: pulling the end handle sideways or
+          downwards flips this, so the path never has to be imagined. */}
+      <div className="flex gap-1">
+        {(['horizontal', 'vertical'] as const).map(axis => {
+          const active = entity.axis === axis;
+          const Icon = axis === 'horizontal' ? MoveHorizontal : MoveVertical;
+          return (
+            <button
+              key={axis}
+              onClick={() => onUpdate({ axis })}
+              className={`flex-1 flex items-center justify-center gap-1 px-2 py-1 rounded text-xs transition-colors ${
+                active
+                  ? 'bg-amber-400 text-[#0b0b12] font-semibold'
+                  : 'bg-amber-500/15 text-amber-400 hover:bg-amber-500/25'
+              }`}
+            >
+              <Icon className="w-3 h-3" />
+              {axis === 'horizontal' ? 'Left / right' : 'Up / down'}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 text-xs">
+        <label className="space-y-1">
+          <span className="text-muted-foreground">Travel</span>
+          <input
+            type="number"
+            value={Math.round(entity.range)}
+            onChange={(e) => onUpdate({ range: Math.max(0, Number(e.target.value)) })}
+            className="w-full px-2 py-1 rounded bg-background border border-border"
+          />
+        </label>
+        <label className="space-y-1">
+          <span className="text-muted-foreground">Speed (u/s)</span>
+          <input
+            type="number"
+            value={Math.round(entity.speed)}
+            onChange={(e) => onUpdate({ speed: Math.max(1, Number(e.target.value)) })}
+            className="w-full px-2 py-1 rounded bg-background border border-border"
+          />
+        </label>
+      </div>
+
+      {/* Start point along the patrol. Two movers with the same travel and
+          opposite phases make an alternating gate; identical phases make them
+          one wide block, which is the mistake this slider exists to prevent. */}
+      <label className="block space-y-1 text-xs">
+        <span className="text-muted-foreground">
+          Starts at {entity.phase === undefined || entity.phase === 0
+            ? (entity.axis === 'horizontal' ? 'the left end' : 'the top end')
+            : entity.phase === 1
+              ? (entity.axis === 'horizontal' ? 'the right end' : 'the bottom end')
+              : `${Math.round((entity.phase ?? 0) * 100)}% along`}
+        </span>
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.05}
+          value={entity.phase ?? 0}
+          onChange={(e) => onUpdate({ phase: Number(e.target.value) })}
+          className="w-full accent-amber-400"
+        />
+      </label>
+
+      {/* The arithmetic the author was doing by hand. */}
+      <div className="space-y-0.5 text-[11px] font-mono text-muted-foreground">
+        <div className="flex justify-between">
+          <span className="text-emerald-400">Start</span>
+          <span>{pt(path.start)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>{entity.axis === 'horizontal' ? 'Left end' : 'Top end'}</span>
+          <span>{pt(path.min)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>{entity.axis === 'horizontal' ? 'Right end' : 'Bottom end'}</span>
+          <span>{pt(path.max)}</span>
+        </div>
+        <div className="flex justify-between pt-1 text-amber-400/90">
+          <span className="flex items-center gap-1"><Timer className="w-3 h-3" />One way</span>
+          <span>{seconds.toFixed(1)}s</span>
+        </div>
+      </div>
+
+      {escapes && (
+        <div className="rounded bg-destructive/20 border border-destructive/50 px-2 py-1 text-[11px] text-destructive">
+          One end of this patrol is outside the play area. The home position can
+          sit well inside it and the extreme still be half a travel past the wall.
+        </div>
+      )}
+
+      <button
+        onClick={() => onUpdate({ range: DEFAULT_MOVER_RANGE, speed: DEFAULT_MOVER_SPEED })}
+        className="w-full px-2 py-1 rounded bg-muted hover:bg-muted/80 text-[11px] text-muted-foreground transition-colors"
+        title={`Reset to the ladder median (travel ${DEFAULT_MOVER_RANGE}, speed ${DEFAULT_MOVER_SPEED})`}
+      >
+        Reset to ladder median
+      </button>
     </div>
   );
 }

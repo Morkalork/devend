@@ -4,6 +4,11 @@ import { FIT_VIEW, computeEditorBoardRect, zoomAboutPoint, type EditorView } fro
 import { ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell } from '@/types/level';
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from '@/lib/boardConstants';
 import { AREA_MIN_SIZE, areaStyle, isGateArea } from '@/lib/coloredAreas';
+import {
+  isMoverEntity, moverPath, moverHome, moverFootprintAt, moverTraverseSeconds,
+  moverEscapesBoard, rangeFromHandle, axisFromDelta,
+} from '@/lib/moverPath';
+import { ARENA_MARGIN } from '@/lib/gameConstants';
 import { hexToRgba } from '@/lib/gameUtils';
 import { PULL_VECTORS } from '@/lib/physics/gravityWells';
 
@@ -47,7 +52,11 @@ type DragMode =
   | { type: 'polygon-edge'; id: string; edgeIndex: number; startX: number; startY: number; originalPoints: [number, number][] }
   | { type: 'well'; index: number; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
   | { type: 'well-resize'; index: number; handle: RectHandle; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
-  | { type: 'rect-resize'; id: string; handle: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } };
+  | { type: 'rect-resize'; id: string; handle: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
+  // Dragging the far end of a mover's patrol. Sets `range` from the distance to
+  // home, and flips `axis` when the drag is mostly the other way, so the path
+  // is authored by pulling it rather than by typing a number and re-checking.
+  | { type: 'mover-end'; id: string };
 
 export function MapCanvas({
   level,
@@ -358,6 +367,123 @@ export function MapCanvas({
       }
     });
 
+    /**
+     * Mover patrols, drawn UNDER the bodies so an object never hides its own
+     * path. Each one shows the two extremes as dashed ghosts, the line between
+     * them, an arrow for the direction it sets off in, and a filled marker
+     * where it actually starts.
+     *
+     * This is the whole reason movers were worth adding to the builder rather
+     * than leaving in YAML. A mover is authored as a home plus a range, so the
+     * two positions that collide with things are not numbers in the file, and
+     * the only way to find out that the far end walks into a wall was to run
+     * the map.
+     */
+    (level.entities || []).forEach(entity => {
+      if (!isMoverEntity(entity)) return;
+      const isSelected = entity.id === selectedEntityId
+        || (dragMode.type !== 'none' && 'id' in dragMode && dragMode.id === entity.id);
+      const path = moverPath(entity);
+      // The far end walking off the board is the classic authored-mover bug and
+      // it is invisible in the YAML: home sits comfortably inside the arena and
+      // the extreme is half a range past the wall. Flag it in red on the canvas
+      // rather than leaving it to a playtest.
+      const escapes = moverEscapesBoard(entity, BOARD_WIDTH, BOARD_WIDTH * ARENA_MARGIN);
+      const pathColor = escapes ? '239, 68, 68' : '251, 191, 36';
+      const a = worldToScreen(path.min.x, path.min.y);
+      const b = worldToScreen(path.max.x, path.max.y);
+      const start = worldToScreen(path.start.x, path.start.y);
+
+      // Ghost footprints at both ends: the actual space the mover sweeps into,
+      // not just the centre line, since it is the body that hits the wall.
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = `rgba(${pathColor}, ${isSelected || escapes ? 0.85 : 0.4})`;
+      ctx.lineWidth = 1.5;
+      for (const offset of [-entity.range / 2, entity.range / 2]) {
+        const f = moverFootprintAt(entity, offset);
+        const tl = worldToScreen(f.x, f.y);
+        if (entity.shape === 'circle') {
+          ctx.beginPath();
+          ctx.arc(tl.x + (f.width / 2) * boardRect.scale, tl.y + (f.height / 2) * boardRect.scale,
+            (f.width / 2) * boardRect.scale, 0, Math.PI * 2);
+          ctx.stroke();
+        } else {
+          ctx.strokeRect(tl.x, tl.y, f.width * boardRect.scale, f.height * boardRect.scale);
+        }
+      }
+      ctx.restore();
+
+      // The travel line.
+      ctx.save();
+      ctx.strokeStyle = `rgba(${pathColor}, ${isSelected || escapes ? 0.9 : 0.45})`;
+      ctx.lineWidth = isSelected ? 2 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.stroke();
+
+      // End caps, so the extremes read as stops rather than a line running out.
+      const capLength = 7;
+      for (const p of [a, b]) {
+        ctx.beginPath();
+        if (entity.axis === 'horizontal') {
+          ctx.moveTo(p.x, p.y - capLength); ctx.lineTo(p.x, p.y + capLength);
+        } else {
+          ctx.moveTo(p.x - capLength, p.y); ctx.lineTo(p.x + capLength, p.y);
+        }
+        ctx.stroke();
+      }
+
+      // Direction arrow at the start. Movers always set off toward +axis
+      // (right or down) whatever their phase, which is initGame's `direction: 1`
+      // and not obvious from anything in the YAML.
+      const arrow = 8;
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath();
+      if (entity.axis === 'horizontal') {
+        ctx.moveTo(start.x + arrow, start.y);
+        ctx.lineTo(start.x - arrow * 0.5, start.y - arrow * 0.7);
+        ctx.lineTo(start.x - arrow * 0.5, start.y + arrow * 0.7);
+      } else {
+        ctx.moveTo(start.x, start.y + arrow);
+        ctx.lineTo(start.x - arrow * 0.7, start.y - arrow * 0.5);
+        ctx.lineTo(start.x + arrow * 0.7, start.y - arrow * 0.5);
+      }
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      if (isSelected) {
+        // The end handle: drag it to stretch the patrol or flip its axis.
+        ctx.fillStyle = '#fbbf24';
+        ctx.strokeStyle = '#0b0b12';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, HANDLE_SIZE / 2 + 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Travel and one-way time, right on the path rather than only in the
+        // panel: placement is a canvas job and the timing is what a neck is
+        // authored against.
+        const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const label = escapes
+          ? `${Math.round(entity.range)}u  leaves the board`
+          : `${Math.round(entity.range)}u  ${moverTraverseSeconds(entity).toFixed(1)}s`;
+        ctx.font = '11px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        const w = ctx.measureText(label).width;
+        ctx.fillStyle = 'rgba(11, 11, 18, 0.8)';
+        ctx.fillRect(mid.x - w / 2 - 4, mid.y - 20, w + 8, 15);
+        ctx.fillStyle = escapes ? '#ef4444' : '#fbbf24';
+        ctx.fillText(label, mid.x, mid.y - 7);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+      }
+    });
+
     // Draw entities
     (level.entities || []).forEach(entity => {
       // Consider entity selected if it matches selectedEntityId OR if we're dragging it
@@ -369,8 +495,11 @@ export function MapCanvas({
         const center = worldToScreen(circleEntity.cx, circleEntity.cy);
         const radius = circleEntity.radius * boardRect.scale;
         const isMirror = isMirrorEntity(entity);
+        const isMover = isMoverEntity(entity);
 
-        ctx.fillStyle = isMirror
+        ctx.fillStyle = isMover
+          ? (isSelected ? 'rgba(251, 191, 36, 0.5)' : 'rgba(251, 191, 36, 0.3)')
+          : isMirror
           ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
           : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
         ctx.beginPath();
@@ -417,12 +546,17 @@ export function MapCanvas({
         const height = rectEntity.height * boardRect.scale;
 
         const isMirror = isMirrorEntity(entity);
-        ctx.fillStyle = isMirror
+        const isMover = isMoverEntity(entity);
+        ctx.fillStyle = isMover
+          ? (isSelected ? 'rgba(251, 191, 36, 0.5)' : 'rgba(251, 191, 36, 0.3)')
+          : isMirror
           ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
           : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
         ctx.fillRect(topLeft.x, topLeft.y, width, height);
 
-        ctx.strokeStyle = isMirror
+        ctx.strokeStyle = isMover
+          ? (isSelected ? '#fbbf24' : '#d19a1c')
+          : isMirror
           ? (isSelected ? '#88ddff' : '#66bbdd')
           : (isSelected ? '#ff6b6b' : '#cc5555');
         ctx.lineWidth = isSelected ? 3 : 2;
@@ -466,6 +600,8 @@ export function MapCanvas({
       } else if (entity.shape === 'polygon') {
         const polyEntity = entity as WallPolygonEntity;
         const points = polyEntity.points.map(([x, y]) => worldToScreen(x, y));
+        // No mover branch here: a mover is rect or circle only (LevelMoverEntity),
+        // so a polygon can never be one.
         const isMirror = isMirrorEntity(entity);
 
         ctx.fillStyle = isMirror
@@ -616,6 +752,14 @@ export function MapCanvas({
     if (selectedEntityId) {
       const entity = (level.entities || []).find(e => e.id === selectedEntityId);
       if (entity) {
+        // A mover's end handle sits at the far extreme, well clear of the body,
+        // so it is tested before the body's own handles rather than after.
+        if (isMoverEntity(entity)) {
+          const end = worldToScreen(moverPath(entity).max.x, moverPath(entity).max.y);
+          if (Math.hypot(sx - end.x, sy - end.y) < HANDLE_HIT_SIZE) {
+            return { type: 'handle', id: entity.id, handleType: 'mover-end' };
+          }
+        }
         if (entity.shape === 'circle') {
           const circleEntity = entity as WallCircleEntity;
           const center = worldToScreen(circleEntity.cx, circleEntity.cy);
@@ -834,7 +978,9 @@ export function MapCanvas({
         });
       }
     } else if (hit.type === 'handle') {
-      if (hit.handleType === 'move') {
+      if (hit.handleType === 'mover-end') {
+        setDragMode({ type: 'mover-end', id: hit.id });
+      } else if (hit.handleType === 'move') {
         // Move handle - start dragging the entity
         const entity = (level.entities || []).find(e => e.id === hit.id);
         if (entity) {
@@ -936,6 +1082,22 @@ export function MapCanvas({
     const { sx, sy } = getCanvasCoords(e);
     const world = screenToWorld(sx, sy);
     
+    if (dragMode.type === 'mover-end') {
+      const entity = (level.entities || []).find(e => e.id === dragMode.id);
+      if (entity && isMoverEntity(entity)) {
+        const home = moverHome(entity);
+        // Flip the axis when the drag is mostly the other way. Setting the axis
+        // in the panel and then discovering in the canvas that the path now
+        // runs through a wall is exactly the round trip this replaces.
+        const axis = axisFromDelta(world.x - home.x, world.y - home.y);
+        onUpdateEntity(dragMode.id, {
+          axis,
+          range: snap(rangeFromHandle(home, world, axis)),
+        } as Partial<LevelEntity>);
+      }
+      return;
+    }
+
     if (dragMode.type === 'entity') {
       const dx = world.x - dragMode.startX;
       const dy = world.y - dragMode.startY;
