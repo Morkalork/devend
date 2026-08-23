@@ -13,7 +13,18 @@
 #   everyMap    the count of maps whose per-map condition was met; tier
 #               thresholds are maps-passed (out of 5).
 # mission.track.kind: lockCount | superiorLocks | underPar | speedClear | allBallsLocked
-# tiers: ascending thresholds; the highest reached pays. reward.type:
+# tiers: ascending thresholds; the highest reached pays.
+#
+# IMPORTANT for cumulative lockCount / superiorLocks missions: the thresholds
+# here are a SHAPE, not a promise. They are scaled at draft time to a share of
+# how many balls the block's five maps actually put on the board
+# (assignmentScaling.ts), keeping the number of tiers and their relative
+# spacing. Authored absolutely they were mostly impossible: 20 locks over a
+# block that offers 11 balls, 40 over one that offers 14. Author the RATIO you
+# want between the tiers and let the scaling place them; a player never sees
+# these numbers, only the scaled ones.
+#
+# reward.type:
 #   lives     { count }           overtime  { hours }
 #   modifiers { blessing, modifiers, scope: run|block }   (good/bad bundle; can
 #             deepen a key to "enhance" a top-tier upgrade's effect)

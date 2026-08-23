@@ -36,6 +36,7 @@ import { loadAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
+import { scaleOffersForBlock } from '@/lib/assignmentScaling';
 import { assignmentRewardForBlock, eligibleTierUpgrades } from '@/lib/assignments';
 import { drawRandom } from '@/lib/yamlCatalogue';
 import { isOnboardingMap, ONBOARDING_MAP_ID } from '@/lib/onboardingMap';
@@ -1404,12 +1405,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Reduced Headcount (ascension rung 2) narrows the contract draft. No
       // upgrade sells a third door, so this rung cannot be bought back.
       const offerCount = Math.max(1, Math.min(ASSIGNMENT_OFFER_COUNT, ascRules.doorOffers ?? ASSIGNMENT_OFFER_COUNT));
-      setDoorOffers(drawDoorOffers(doorPool, offerCount, getRunRng(`doors:${currentLevelIndex + 1}`)));
+      const drawn = drawDoorOffers(doorPool, offerCount, getRunRng(`doors:${currentLevelIndex + 1}`));
+      // Size the lock targets to the block they are actually set over. Authored
+      // as absolute numbers they were mostly impossible: lock_quota wanted 20
+      // locks from blocks that put 8 to 15 balls on the board, and taking the
+      // constraint for five maps to chase a reward that could never be reached
+      // is worse than a hard mission, it is a dead one.
+      setDoorOffers(scaleOffersForBlock(drawn, levels, currentLevelIndex + 1));
       nav.goToDoorDraft();
       return;
     }
     nav.goToUpgradeShop();
-  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex, ascRules.doorOffers]);
+  }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex, ascRules.doorOffers, levels]);
 
   /**
    * After the finished assignment's reward is granted, route into the capstone
