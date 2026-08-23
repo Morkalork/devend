@@ -101,21 +101,22 @@ describe("the shape of the bulge", () => {
    * three and the wall reads as rubber rather than as a solid taking a knock.
    */
   /**
-   * The band is bounded by two values that were actually rejected in play, not
-   * by taste:
+   * The band, bounded by readings from play rather than by taste. It has moved
+   * UP since the last pass, and the reason is worth recording: the previous
+   * upper bound came from 6.3 units being called wonky, but the board's FRAME
+   * was still deforming when that was observed, and a rubbery enclosure is a
+   * different complaint from a rubbery fence. With the frame rigid that reading
+   * no longer constrains this constant.
    *
-   *   3.8 units (0.63x thickness) was reported invisible.
-   *   6.3 units (1.04x thickness) was reported wonky over a long session.
-   *
-   * So the window is roughly 0.7x to 1.0x of the wall's own thickness, and
-   * either regression fails here rather than being rediscovered by playing.
+   * The clean readings are 3.8 units (0.63x thickness) invisible, 5.0 (0.83x)
+   * barely visible, and 8.8 (1.46x) good. So the window is 0.9x to 1.5x.
    */
   it("displaces a typical hit inside the band play settled on", () => {
     const typical = Math.abs(getEffectsAtPoint(MID, 1).dy);
-    expect(typical, "3.8 units was reported invisible")
-      .toBeGreaterThan(WALL_THICKNESS * 0.7);
-    expect(typical, "6.3 units was reported wonky")
-      .toBeLessThan(WALL_THICKNESS * 1.0);
+    expect(typical, "5.0 units was reported barely visible")
+      .toBeGreaterThan(WALL_THICKNESS * 0.9);
+    expect(typical, "past this nothing has been seen, and 1.46x was already good")
+      .toBeLessThan(WALL_THICKNESS * 1.5);
   });
 
   it("tapers to nothing at the ends, so it never detaches from a junction", () => {
@@ -360,5 +361,38 @@ describe("the outer wall is rigid", () => {
     // the sampling path has to survive for the walls that are meant to give.
     expect(SRC).toMatch(/getEffectsAtPoint\(/);
     expect(SRC).toMatch(/hasNearbyImpacts\(/);
+  });
+});
+
+/**
+ * Obstacles give by the same amount as fences.
+ *
+ * Their constant sat at 6 from the start, which is exactly the value that was
+ * reported invisible for walls: a standard ball asks for 3.8 units of it, so
+ * slab dents were below the threshold of visibility for their whole existence
+ * and nobody had reason to suspect them, because the walls beside them worked.
+ */
+describe("a slab gives like a fence does", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../lib/wallImpactEffects.ts"), "utf8",
+  );
+
+  const constOf = (name: string) => {
+    const m = SRC.match(new RegExp(`const ${name}\\s*=\\s*(\\d+)`));
+    expect(m, `${name} not found`).toBeTruthy();
+    return Number(m![1]);
+  };
+
+  it("uses the same peak as the wall bulge", () => {
+    // One board, one material: a fence and a slab denting by different amounts
+    // reads as two effects that happen to coincide.
+    expect(constOf("OBS_BULGE_MAX_WORLD")).toBe(constOf("BULGE_MAX_WORLD"));
+  });
+
+  it("is above the depth that was reported invisible", () => {
+    // 6 asks for 3.8 units at a standard ball's speed, which is the exact
+    // value play could not see on a wall.
+    expect(constOf("OBS_BULGE_MAX_WORLD") * (250 / 400))
+      .toBeGreaterThan(WALL_THICKNESS * 0.9);
   });
 });

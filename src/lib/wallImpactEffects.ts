@@ -27,16 +27,25 @@ export const N_NODES = 16;
  * inside half a second. The effect was working exactly as written and was
  * simply below the resolution of the thing it was drawn on.
  *
- * Tuned down twice from report since. 14 was the first value visible at all and
- * read springy; 10 was better and still looked wonky over a long session. 8 puts
- * a standard hit at about four fifths of the wall's own thickness, which is a
- * give rather than a wobble, and stays clear of the 3.8 that vanished.
+ * Four rounds of play have bracketed this, and one of the readings turned out
+ * to be contaminated. In order:
+ *
+ *   6  -> 3.8 units (0.63x thickness)  invisible
+ *   14 -> 8.8 units (1.46x)            "great on everything except the frame"
+ *   10 -> 6.3 units (1.04x)            wonky over a long session
+ *   8  -> 5.0 units (0.83x)            barely visible
+ *
+ * The "wonky" reading is the contaminated one: the board's FRAME was still
+ * deforming at the time, and a rubbery enclosure is a different complaint from
+ * a rubbery fence. With the frame now rigid, that data point says nothing about
+ * this constant, and the only clean readings left are 0.63x (too little) and
+ * 1.46x (good). 12 lands at 1.25x, between the two.
  *
  * Expressed against WALL_THICKNESS deliberately: the ratio is what decides
  * whether this reads at all, so if walls are ever redrawn thicker, this is the
  * line to revisit.
  */
-const BULGE_MAX_WORLD = 8;    // ~1.3x WALL_THICKNESS at full strength
+const BULGE_MAX_WORLD = 12;   // ~2x WALL_THICKNESS at full strength
 const BULGE_TAU       = 85;   // ms to peak (soft, quick rise)
 const BULGE_DURATION  = 520;  // ms total life (smooth relax)
 const BULGE_SIGMA     = 40;   // spatial spread of the bump along the wall (world units)
@@ -430,7 +439,16 @@ export function getActiveImpactCount(): number {
 // RADIAL bulge: a soft dome centred on the hit point that pushes the boundary
 // outward (away from the ball). Shares the rise/relax envelope with walls.
 
-const OBS_BULGE_MAX_WORLD = 6;   // peak outward push (world units) at full strength
+/**
+ * Peak dent depth for an obstacle, in world units, at full strength.
+ *
+ * Was 6, which is exactly the value that was reported invisible for walls: a
+ * standard ball asks for 3.8 units of it, so slab dents have been below the
+ * threshold of visibility for their whole existence. Matched to the wall bulge
+ * so a fence and a slab give by the same amount, which is what makes them read
+ * as the same material rather than two effects that happen to coincide.
+ */
+const OBS_BULGE_MAX_WORLD = 12;  // peak outward push (world units) at full strength
 const OBS_BULGE_SIGMA     = 26;  // radial falloff (world units)
 const MAX_OBS_IMPACTS     = 10;
 
