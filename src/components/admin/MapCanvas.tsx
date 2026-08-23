@@ -1,4 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
+import { Minus, Plus as PlusIcon } from 'lucide-react';
+import { FIT_VIEW, computeEditorBoardRect, zoomAboutPoint, type EditorView } from '@/lib/editorView';
 import { ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell } from '@/types/level';
 import { BOARD_WIDTH, BOARD_HEIGHT, BoardRect } from '@/lib/boardConstants';
 import { AREA_MIN_SIZE, areaStyle, isGateArea } from '@/lib/coloredAreas';
@@ -47,33 +49,6 @@ type DragMode =
   | { type: 'well-resize'; index: number; handle: RectHandle; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
   | { type: 'rect-resize'; id: string; handle: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } };
 
-/**
- * Compute board rect for the Map Builder (no top UI offset like the game)
- */
-function computeEditorBoardRect(containerWidth: number, containerHeight: number): BoardRect {
-  const padding = 20;
-  const availableWidth = containerWidth - padding * 2;
-  const availableHeight = containerHeight - padding * 2;
-  
-  // Determine the largest square that fits
-  const boardSize = Math.min(availableWidth, availableHeight);
-  
-  // Center in container
-  const left = (containerWidth - boardSize) / 2;
-  const top = (containerHeight - boardSize) / 2;
-  
-  // Scale factor: world units to screen pixels
-  const scale = boardSize / BOARD_WIDTH;
-  
-  return {
-    left,
-    top,
-    width: boardSize,
-    height: boardSize,
-    scale,
-  };
-}
-
 export function MapCanvas({
   level,
   selectedEntityId,
@@ -94,6 +69,13 @@ export function MapCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [boardRect, setBoardRect] = useState<BoardRect | null>(null);
+  const [view, setView] = useState<EditorView>(FIT_VIEW);
+  // Read from listeners that are bound once; a ref keeps them looking at the
+  // live view without re-binding on every zoom step.
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const sizeRef = useRef({ w: 0, h: 0 });
+  const panRef = useRef<{ sx: number; sy: number; panX: number; panY: number } | null>(null);
   const [dragMode, setDragMode] = useState<DragMode>({ type: 'none' });
   
   // Ball positions derived from level config (startX/startY) or default
@@ -120,14 +102,44 @@ export function MapCanvas({
 
       canvas.width = w;
       canvas.height = h;
-      setBoardRect(computeEditorBoardRect(w, h));
+      sizeRef.current = { w, h };
+      setBoardRect(computeEditorBoardRect(w, h, viewRef.current));
     };
 
     updateSize();
     const ro = new ResizeObserver(updateSize);
     ro.observe(container);
-    return () => ro.disconnect();
+
+    /**
+     * Wheel to zoom, anchored on the cursor.
+     *
+     * A native NON-PASSIVE listener rather than React's onWheel, because the
+     * handler has to preventDefault: with ctrl held the browser reads the same
+     * gesture as page zoom, which is exactly why zooming here appeared not to
+     * work. A passive listener is not permitted to cancel that.
+     */
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = canvas.getBoundingClientRect();
+      const sx = (e.clientX - r.left) * (canvas.width / r.width);
+      const sy = (e.clientY - r.top) * (canvas.height / r.height);
+      const factor = Math.exp(-e.deltaY * 0.0015);
+      const { w, h } = sizeRef.current;
+      setView(v => zoomAboutPoint(v, v.zoom * factor, sx, sy, w, h));
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+
+    return () => {
+      ro.disconnect();
+      canvas.removeEventListener('wheel', onWheel);
+    };
   }, []);
+
+  // Re-derive the rect whenever the view changes: wheel, buttons or a pan.
+  useEffect(() => {
+    const { w, h } = sizeRef.current;
+    if (w > 0 && h > 0) setBoardRect(computeEditorBoardRect(w, h, view));
+  }, [view]);
 
   // Convert pointer event to canvas-buffer coordinates (handles CSS/buffer mismatch)
   const getCanvasCoords = useCallback((e: React.PointerEvent): { sx: number; sy: number } => {
@@ -743,6 +755,17 @@ export function MapCanvas({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // Middle button pans. Left is already spoken for by every editing gesture
+    // on the board, so panning needs a button of its own rather than a
+    // modifier that would collide with multi-select later.
+    if (e.button === 1) {
+      e.preventDefault();
+      const { sx, sy } = getCanvasCoords(e);
+      panRef.current = { sx, sy, panX: view.panX, panY: view.panY };
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+
     // Capture pointer so drag events continue even if pointer leaves canvas
     canvas.setPointerCapture(e.pointerId);
 
@@ -900,6 +923,14 @@ export function MapCanvas({
   }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, onSelectArea, onSelectWell, selectedEntityId]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    // Panning runs before the drag check: it is not an edit, so it has no
+    // dragMode, and gating it behind one would make the middle button dead.
+    if (panRef.current) {
+      const { sx, sy } = getCanvasCoords(e);
+      const p = panRef.current;
+      setView(v => ({ ...v, panX: p.panX + (sx - p.sx), panY: p.panY + (sy - p.sy) }));
+      return;
+    }
     if (dragMode.type === 'none' || !boardRect) return;
 
     const { sx, sy } = getCanvasCoords(e);
@@ -1038,7 +1069,14 @@ export function MapCanvas({
     if (canvas && canvas.hasPointerCapture(e.pointerId)) {
       canvas.releasePointerCapture(e.pointerId);
     }
+    panRef.current = null;
     setDragMode({ type: 'none' });
+  }, []);
+
+  /** Step the zoom about the centre of the view, for the buttons. */
+  const zoomBy = useCallback((factor: number) => {
+    const { w, h } = sizeRef.current;
+    setView(v => zoomAboutPoint(v, v.zoom * factor, w / 2, h / 2, w, h));
   }, []);
 
   // Update cursor based on what's under the pointer
@@ -1075,7 +1113,32 @@ export function MapCanvas({
   }, [handlePointerMove, dragMode, hitTest, getCanvasCoords]);
 
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[400px] bg-black/50 rounded-lg overflow-hidden">
+    <div ref={containerRef} className="relative w-full h-full min-h-[400px] bg-black/50 rounded-lg overflow-hidden">
+      {/* Zoom controls. Buttons as well as the wheel, because the wheel does
+          not exist on the phone this editor is used from. */}
+      <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+        <button
+          onClick={() => zoomBy(1 / 1.3)}
+          title="Zoom out"
+          className="flex items-center justify-center w-8 h-8 rounded bg-black/70 border border-white/15 text-white/80 hover:text-white"
+        >
+          <Minus className="w-4 h-4" />
+        </button>
+        <button
+          onClick={() => setView(FIT_VIEW)}
+          title="Fit the whole board"
+          className="px-2 h-8 rounded bg-black/70 border border-white/15 text-[11px] font-mono text-white/80 hover:text-white"
+        >
+          {Math.round(view.zoom * 100)}%
+        </button>
+        <button
+          onClick={() => zoomBy(1.3)}
+          title="Zoom in"
+          className="flex items-center justify-center w-8 h-8 rounded bg-black/70 border border-white/15 text-white/80 hover:text-white"
+        >
+          <PlusIcon className="w-4 h-4" />
+        </button>
+      </div>
       <canvas
         ref={canvasRef}
         className="w-full h-full"
