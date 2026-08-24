@@ -31,6 +31,7 @@
 
 import { Application, Container, Graphics, RenderTexture } from "pixi.js";
 import { boardAngleFor, tiltWorldPoint } from "@/lib/boardTilt";
+import { BeamProbe, beamProbeOn, showBeamReadout } from "./beamProbe";
 import type { CanvasGameState } from "@/types/gameState";
 import type { RenderContext } from "../types";
 import { BoardLayer } from "./boardLayer";
@@ -77,6 +78,9 @@ export class SleekRenderer {
   private shatterRT: RenderTexture | null = null;
 
   private staticDirty = true;
+  /** `?beam=1` diagnostic. Read once: the URL cannot change mid-session. */
+  private readonly probeEnabled = beamProbeOn();
+  private readonly probe = new BeamProbe();
   private maskKey = "";
   private reportedMissing = new Set<string>();
 
@@ -253,9 +257,44 @@ export class SleekRenderer {
     this.chrome.sync(game, light, scale, now, rctx.spaceThreshold);
     this.staticDirty = false;
 
+    this.probeForBeams(now);
     this.noteMissing(game);
 
     this.app.render();
+  }
+
+  /**
+   * `?beam=1`: name whichever layer is drawing a line across the board.
+   *
+   * A reported beam has survived two correct fixes, a nine-layer headless
+   * sweep and several minutes of local play. When a bug will not reproduce
+   * anywhere but in the reporter's session, the cheapest next move is to put
+   * the instrument in that session rather than build a tenth theory.
+   *
+   * Costs nothing when the flag is absent: `beamProbeOn()` is read once, and
+   * without it this returns before touching the display tree.
+   */
+  private probeForBeams(now: number): void {
+    if (!this.probeEnabled) return;
+    const hits = this.probe.run([
+      ["shadowPlane", this.shadowPlane],
+      ["board", this.board.container],
+      ["areas", this.areas.container],
+      ["props", this.props.container],
+      ["entities", this.entities.container],
+      ["objects", this.objects.container],
+      ["walls", this.walls.container],
+      ["fx", this.fx.container],
+      ["balls", this.balls.container],
+      ["chrome", this.chrome.container],
+    ], now);
+    if (!hits) return;
+    const lines = hits.map(h =>
+      `[beam] ${h.layer}  ${h.length}px  `
+      + `(${Math.round(h.from.x)},${Math.round(h.from.y)})`
+      + ` -> (${Math.round(h.to.x)},${Math.round(h.to.y)})`);
+    for (const line of lines) console.warn(line);
+    showBeamReadout(lines);
   }
 
   /** Clip everything to the board polygon so nothing bleeds into the margin. */
