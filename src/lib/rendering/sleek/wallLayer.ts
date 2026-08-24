@@ -117,9 +117,24 @@ export class WallLayer {
     this.container.addChild(this.fenceScope, this.fenceMask);
   }
 
-  /** Board polygon with the obstacle footprints cut out of it. */
+  /**
+   * Board polygon with the obstacle footprints cut out of it.
+   *
+   * A PHASED-OUT obstacle is not cut. Balls, fences and chains all pass through
+   * one while it is out (phasing.ts), and updateBall and chain.ts both honour
+   * that - but this mask did not, so a fence drawn across a phased-out pillar
+   * was clipped into an invisible gap on the two maps that have them. The mask
+   * has to agree with the collision it is standing in for.
+   */
   private syncMask(game: CanvasGameState, w2s: W2S, scale: number): void {
-    const key = `${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}`;
+    // Intangible right now: cutting these would punch a hole where a fence is
+    // legally allowed to be drawn.
+    const intangible = new Set(
+      (game.phasingObjects ?? []).filter(p => p.phase === "out").map(p => p.polygon),
+    );
+    // The phase count is part of the key, or the mask would keep whatever it
+    // cut on the frame a pillar last changed state and never catch up.
+    const key = `${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}_${intangible.size}`;
     if (key === this.fenceMaskKey) return;
     this.fenceMaskKey = key;
 
@@ -132,6 +147,7 @@ export class WallLayer {
       m.rect(left, top, width, height).fill({ color: 0xffffff });
     }
     for (const poly of game.obstaclePolygons) {
+      if (intangible.has(poly)) continue;
       m.poly(poly.vertices.map(v => w2s(v.x, v.y))).cut();
     }
   }
