@@ -148,7 +148,6 @@ describe("the shape of the bulge", () => {
     const at = getEffectsAtPoint(MID, 1);
     expect(at.dx).toBe(0);
     expect(at.dy).toBe(0);
-    expect(at.glow).toBe(0);
   });
 });
 

@@ -38,6 +38,19 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const [error, setError] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  /**
+   * Does the ladder in memory differ from the one on disk?
+   *
+   * There was no indication at all, and undo made that actively misleading: it
+   * steps the in-memory ladder back but cannot step the FILE back, so after a
+   * save-then-undo the two disagreed and the builder said nothing. The Saved
+   * tick from a minute ago was still the last thing it had told you.
+   *
+   * A flag rather than comparing against originalLevels every render: the
+   * comparison is 40 levels of geometry, and every edit already funnels through
+   * one place that can just say so.
+   */
+  const [dirty, setDirty] = useState(false);
   // Copy/paste clipboard for objects (walls or balls). Ctrl+C fills it from the
   // current selection, Ctrl+V pastes an offset copy into the current level, so a
   // copy can also be pasted onto a different level.
@@ -53,6 +66,20 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   const rawMapYaml = useRef<string | null>(null);
   /** The levels as parsed from that file, to tell which ones actually changed. */
   const originalLevels = useRef<LevelConfig[]>([]);
+
+  /**
+   * Refuse to leave with unsaved geometry.
+   *
+   * The builder has no autosave and its state is entirely in memory, so a
+   * stray refresh costs however long you have been placing walls. Gated on the
+   * flag so a clean builder never nags.
+   */
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
 
   // Load levels from map.yml
   useEffect(() => {
@@ -79,6 +106,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         // Seeded, not pushed: the empty state before a load is not something
         // anyone wants one Ctrl+Z to take them back to.
         setHistory(createHistory(loaded));
+        setDirty(false);
         setIsLoading(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load levels');
@@ -112,6 +140,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
     const resolved = typeof next === 'function' ? next(levelsRef.current) : next;
     levelsRef.current = resolved;
     setLevels(resolved);
+    setDirty(true);
     setHistory(h => pushHistory(h, resolved, { key }));
   }, []);
 
@@ -125,6 +154,9 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       const restored = nextHistory.present;
       levelsRef.current = restored;
       setLevels(restored);
+      // Stepping back in memory cannot step the file back, so an undo after a
+      // save leaves the two out of step. That is the case this flag exists for.
+      setDirty(true);
       setSelectedLevelIndex(i => Math.min(i, Math.max(0, restored.length - 1)));
       const level = restored[Math.min(selectedLevelIndex, restored.length - 1)];
       setSelectedEntityId(id => (level?.entities || []).some(e => e.id === id) ? id : null);
@@ -579,6 +611,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       if (res.ok) {
         rawMapYaml.current = yamlContent;
         originalLevels.current = JSON.parse(JSON.stringify(levels)) as LevelConfig[];
+        setDirty(false);
       }
     } catch {
       setSaveStatus('error');
@@ -719,7 +752,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
         <button
           onClick={saveToServer}
           disabled={saveStatus === 'saving'}
-          className={`p-2 rounded-lg transition-colors ${
+          className={`relative p-2 rounded-lg transition-colors ${
             saveStatus === 'saved'  ? 'bg-green-600 text-white' :
             saveStatus === 'error'  ? 'bg-destructive text-white' :
             'bg-primary text-primary-foreground hover:bg-primary/90'
@@ -727,12 +760,22 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
           title={
             saveStatus === 'saved'  ? 'Saved!' :
             saveStatus === 'error'  ? 'Save failed - dev server running?' :
-            'Save to disk (requires dev server)'
+            dirty ? 'Unsaved changes - save to disk (requires dev server)' :
+            'Saved. Nothing to write.'
           }
         >
           {saveStatus === 'saved'  ? <Check className="w-4 h-4" /> :
            saveStatus === 'error'  ? <AlertCircle className="w-4 h-4" /> :
            <Save className="w-4 h-4" />}
+          {/* A dot rather than a colour change: the button already uses colour
+              for the save RESULT, and "unsaved" is a different axis from
+              "the last write worked". */}
+          {dirty && saveStatus === 'idle' && (
+            <span
+              className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-amber-400 border border-background"
+              aria-label="Unsaved changes"
+            />
+          )}
         </button>
       </div>
 

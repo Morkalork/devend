@@ -13,6 +13,8 @@
  * is clamped so the total give at any point can never exceed one impact's peak.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   registerWallImpact, updateWallImpacts, getEffectsAtPoint, clearWallImpacts,
   registerObstacleImpact, updateObstacleImpacts, obstacleBulgeAt, clearObstacleImpacts,
@@ -197,5 +199,36 @@ describe("obstacles get the same ceiling", () => {
     for (let x = 340; x <= 460; x += 10) {
       expect(at(x, 400), `at x=${x}`).toBeLessThanOrEqual(12.001);
     }
+  });
+});
+
+/**
+ * The module drew walls itself once, for the Canvas2D renderer. That renderer
+ * was replaced by Pixi and the ~200 lines that served it kept compiling,
+ * kept being tuned, and reached nothing: the glow they lit was computed every
+ * frame for a consumer that no longer existed.
+ */
+describe("nothing here draws any more", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../lib/wallImpactEffects.ts"), "utf8");
+
+  it("has no Canvas2D wall renderers left", () => {
+    expect(SRC).not.toMatch(/renderWallPolyline/);
+    expect(SRC).not.toMatch(/renderWallWithEffects/);
+  });
+
+  it("touches no canvas context at all", () => {
+    expect(SRC).not.toMatch(/CanvasRenderingContext2D/);
+    expect(SRC).not.toMatch(/ctx\./);
+  });
+
+  it("no longer computes a glow nobody reads", () => {
+    expect(SRC).not.toMatch(/glowIntensity/);
+    expect(SRC).not.toMatch(/GLOW_MAX/);
+  });
+
+  it("still does the one job it has", () => {
+    expect(SRC).toMatch(/export function getEffectsAtPoint/);
+    expect(SRC).toMatch(/export function obstacleBulgeAt/);
   });
 });

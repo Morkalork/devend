@@ -66,11 +66,7 @@ const COALESCE_ALONG  = BULGE_SIGMA * 0.5;
  */
 const BULGE_TOTAL_MAX = BULGE_MAX_WORLD;
 const EDGE_TAPER      = 22;   // world units: bulge fades to 0 approaching the wall ends
-// Feeds only the dead Canvas2D path below (renderWallPolyline); the Pixi
-// renderer drew a hit flash from it briefly and no longer does.
-const GLOW_DURATION   = 130;  // ms — brief hit flash
-const GLOW_MAX        = 0.85;
-const EFFECT_RADIUS   = 60;   // world units — cull radius / glow falloff
+const EFFECT_RADIUS   = 60;   // world units — how far an impact is culled at
 const MAX_IMPACTS     = 14;
 
 export interface WallImpact {
@@ -80,7 +76,6 @@ export interface WallImpact {
   strength: number;
   dir: number;          // +/-1: which way along the normal the wall bulges (away from ball)
   startTime: number;
-  glowIntensity: number;
   amp: number;          // current bulge amplitude (world units), refreshed each frame
   wallStart: Vector2;
   wallEnd: Vector2;
@@ -155,7 +150,6 @@ export function registerWallImpact(
     strength,
     dir,
     startTime: now,
-    glowIntensity: GLOW_MAX * strength,
     amp: 0,
     wallStart: { ...wallStart },
     wallEnd: { ...wallEnd },
@@ -174,12 +168,6 @@ export function updateWallImpacts(): boolean {
     const elapsed = now - impact.startTime;
 
     // Glow decays quickly (a brief flash at the hit point).
-    if (elapsed < GLOW_DURATION) {
-      const p = elapsed / GLOW_DURATION;
-      impact.glowIntensity = GLOW_MAX * impact.strength * (1 - p * p);
-    } else {
-      impact.glowIntensity = 0;
-    }
 
     // Bulge amplitude follows the smooth rise/relax envelope.
     impact.amp = BULGE_MAX_WORLD * impact.strength * bulgeEnvelope(elapsed);
@@ -190,14 +178,13 @@ export function updateWallImpacts(): boolean {
   return activeImpacts.length > 0;
 }
 
-/** Gentle bulge displacement + glow at a world point (also used by the Pixi renderer). */
+/** The bulge displacement at a world point. */
 export function getEffectsAtPoint(
   queryPoint: Vector2,
   scale: number,
-): { dx: number; dy: number; glow: number } {
+): { dx: number; dy: number } {
   let totalDx = 0;
   let totalDy = 0;
-  let totalGlow = 0;
 
   for (const impact of activeImpacts) {
     const distToImpact = Math.hypot(
@@ -221,8 +208,6 @@ export function getEffectsAtPoint(
     totalDx += impact.nx * disp;
     totalDy += impact.ny * disp;
 
-    const falloff = Math.exp(-(distToImpact * distToImpact) / (2 * EFFECT_RADIUS * EFFECT_RADIUS));
-    totalGlow = Math.max(totalGlow, impact.glowIntensity * falloff);
   }
 
   // Clamp the SUM, then scale. Clamping in world units keeps the ceiling the
@@ -235,7 +220,7 @@ export function getEffectsAtPoint(
     totalDy *= k;
   }
 
-  return { dx: totalDx * scale, dy: totalDy * scale, glow: totalGlow };
+  return { dx: totalDx * scale, dy: totalDy * scale };
 }
 
 export function hasNearbyImpacts(wallStart: Vector2, wallEnd: Vector2): boolean {
@@ -245,229 +230,6 @@ export function hasNearbyImpacts(wallStart: Vector2, wallEnd: Vector2): boolean 
     }
   }
   return false;
-}
-
-/**
- * Stroke a whole connected wall run (fence chain or the board loop) as ONE
- * continuous neon path, so shared vertices become round *joins* instead of
- * overlapping round *caps* — the board reads as one coherent wall, not a pile
- * of segments. `screenPts`/`worldPts` are parallel arrays (>= 2 points); pass
- * `closed` for a loop (e.g. the board polygon).
- *
- * `taperLen` > 0 (screen px) flares the core/centerline into the wall at both
- * ends: it widens over that distance (widest at the contact) so the fence looks
- * like it splashed onto the wall and merged, not butted a point against it. Use
- * 0 for closed loops.
- */
-export function renderWallPolyline(
-  ctx: CanvasRenderingContext2D,
-  screenPts: { x: number; y: number }[],
-  worldPts: Vector2[],
-  scale: number,
-  baseColor: string,
-  baseWidth: number,
-  glowBoost = 0,
-  closed = false,
-  taperLen = 0,
-  flareEnds: [boolean, boolean] = [true, true],
-  greenOnly = false,
-  skipGreen = false,
-): void {
-  if (screenPts.length < 2 || worldPts.length !== screenPts.length) return;
-
-  // Thicken the drawn line only (physics thickness is untouched) so the circuit
-  // skeleton has room to read.
-  if (WALL_CIRCUITS_ENABLED) baseWidth *= WALL_RENDER_THICKEN;
-
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-
-  // Arc lengths along the run, for the root taper near the ends.
-  const cum: number[] = [0];
-  for (let i = 1; i < screenPts.length; i++) {
-    cum[i] = cum[i - 1] + Math.hypot(screenPts[i].x - screenPts[i - 1].x, screenPts[i].y - screenPts[i - 1].y);
-  }
-  const totalLen = cum[screenPts.length - 1];
-  const rootAt = (pos: number) =>
-    taperLen > 0 ? taperFactor(Math.min(pos, totalLen - pos), taperLen) : { w: 1, a: 1 };
-
-  // Impact wobble: if any sub-segment has a nearby impact, resample the whole
-  // run so the bulge eases along it; otherwise use the raw vertices.
-  let hasImpact = false;
-  if (activeImpacts.length > 0) {
-    for (let s = 0; s < worldPts.length - 1; s++) {
-      if (hasNearbyImpacts(worldPts[s], worldPts[s + 1])) { hasImpact = true; break; }
-    }
-  }
-
-  let centers: { x: number; y: number }[];
-  let maxGlow = 0;
-  if (!hasImpact) {
-    centers = screenPts;
-  } else {
-    const pts: { x: number; y: number }[] = [];
-    for (let s = 0; s < worldPts.length - 1; s++) {
-      const ws = worldPts[s], we = worldPts[s + 1];
-      const ss = screenPts[s], es = screenPts[s + 1];
-      const sdx = es.x - ss.x, sdy = es.y - ss.y;
-      // Skip the shared vertex on all but the first sub-segment.
-      for (let i = s === 0 ? 0 : 1; i <= N_NODES; i++) {
-        const t = i / N_NODES;
-        const { dx, dy, glow } = getEffectsAtPoint(
-          { x: ws.x + (we.x - ws.x) * t, y: ws.y + (we.y - ws.y) * t }, scale,
-        );
-        pts.push({ x: ss.x + sdx * t + dx, y: ss.y + sdy * t + dy });
-        if (glow > maxGlow) maxGlow = glow;
-      }
-    }
-    centers = pts;
-  }
-
-  const buildPath = () => {
-    ctx.beginPath();
-    ctx.moveTo(centers[0].x, centers[0].y);
-    for (let i = 1; i < centers.length; i++) ctx.lineTo(centers[i].x, centers[i].y);
-    if (closed) ctx.closePath();
-  };
-
-  // Outer glow via additive compositing (amplified for freshly drawn walls).
-  // Skipped on the green-only pass (which just relays the centerline on top so
-  // fence-to-fence junctions merge — see the second fence pass in the renderer).
-  if (!greenOnly) {
-  ctx.save();
-  ctx.globalCompositeOperation = 'lighter';
-  // Fence glow (taperLen > 0) uses butt end-caps so it doesn't bulge past a
-  // fence-to-fence end (joins stay round). Wall ends are clipped anyway.
-  ctx.lineCap = taperLen > 0 ? 'butt' : 'round';
-  ctx.strokeStyle = baseColor;
-  buildPath(); ctx.lineWidth = baseWidth * (2.8 + glowBoost * 2.5); ctx.globalAlpha = 0.10 + glowBoost * 0.22; ctx.stroke();
-  buildPath(); ctx.lineWidth = baseWidth * (1.6 + glowBoost * 1.8); ctx.globalAlpha = 0.18 + glowBoost * 0.25; ctx.stroke();
-  ctx.restore();
-  }
-
-  // Circuit "skeleton" (see wallSkeleton.ts), built per sub-segment but drawn
-  // UNDER the border so the colored core/centerline veil it down to a hint.
-  const pal = WALL_CIRCUITS_ENABLED ? circuitPalette(baseColor) : null;
-  if (pal && !greenOnly) {
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    for (let s = 0; s < worldPts.length - 1; s++) {
-      const ss = screenPts[s], es = screenPts[s + 1];
-      const ws = worldPts[s], we = worldPts[s + 1];
-      // Fade + narrow the skeleton near the ends so it doesn't poke past the
-      // rooted core.
-      const rf = rootAt((cum[s] + cum[s + 1]) / 2);
-      if (rf.a < 0.02) continue;
-      const skel = buildWallSkeleton(ss.x, ss.y, es.x, es.y, scale, baseWidth / scale, ws.x, ws.y, we.x, we.y);
-      if (!skel) continue; // short segments (e.g. a locked pocket's walls) carry no circuit
-      ctx.strokeStyle = pal.trace;
-      ctx.globalAlpha = pal.traceAlpha * rf.a;
-      ctx.lineWidth = Math.max(1, baseWidth * pal.traceWidthFrac * rf.w);
-      for (const tr of skel.traces) {
-        ctx.beginPath();
-        ctx.moveTo(tr[0], tr[1]);
-        for (let i = 2; i < tr.length; i += 2) ctx.lineTo(tr[i], tr[i + 1]);
-        ctx.stroke();
-      }
-      for (const nd of skel.nodes) {
-        ctx.globalCompositeOperation = 'source-over';
-        ctx.globalAlpha = pal.viaAlpha * rf.a;
-        ctx.fillStyle = pal.via;
-        ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r * rf.w, 0, Math.PI * 2); ctx.fill();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = pal.sparkAlpha * rf.a;
-        ctx.fillStyle = pal.spark;
-        ctx.beginPath(); ctx.arc(nd.x, nd.y, nd.r * rf.w * (nd.kind === 'via' ? 0.5 : 0.58), 0, Math.PI * 2); ctx.fill();
-      }
-    }
-    ctx.restore();
-  }
-
-  // White-bright core + accent centerline — the colored border, kept mostly
-  // opaque so the circuit beneath reads only as a hint coming through. With a
-  // join flare, stroke it as short pieces so it widens into a splash where it
-  // meets the wall at each end.
-  const coreAlpha = pal ? WALL_CORE_ALPHA : 1;
-  const centerAlpha = pal ? WALL_CENTERLINE_ALPHA : 1;
-  if (taperLen > 0) {
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    // Overshoot ~1 drawn width so the core end lands past the clip boundary,
-    // so the flare fills flush to the wall with no cap.
-    const pieces = buildFenceTaper(screenPts, taperLen, baseWidth, flareEnds);
-    // Near the wall the white border smoothly hands off to the wall's own white
-    // (over ~1 wall-width, so no blunt notch), and the green centerline widens to
-    // fill the flare as the white falls away — so the splash reads as solid green
-    // merging in, not an empty glow blob. Away from the wall it's the normal
-    // tube: full white core + 0.7x green centerline.
-    const whiteFade = baseWidth * 1.0;
-    const whiteFracAt = (dw: number) => { const s = Math.max(0, Math.min(1, dw / whiteFade)); return s * s * (3 - 2 * s); };
-    if (!greenOnly) {
-      ctx.strokeStyle = '#ffffff';
-      for (const pc of pieces) {
-        const wf = whiteFracAt(pc.dw);
-        if (wf <= 0.002) continue;
-        ctx.lineCap = pc.butt ? 'butt' : 'round';
-        ctx.beginPath(); ctx.moveTo(pc.x1, pc.y1); ctx.lineTo(pc.x2, pc.y2);
-        ctx.lineWidth = baseWidth * pc.w; ctx.globalAlpha = coreAlpha * wf; ctx.stroke();
-      }
-    }
-    if (!skipGreen) {
-      ctx.strokeStyle = baseColor;
-      for (const pc of pieces) {
-        ctx.lineCap = pc.butt ? 'butt' : 'round';
-        ctx.beginPath(); ctx.moveTo(pc.x1, pc.y1); ctx.lineTo(pc.x2, pc.y2);
-        ctx.lineWidth = baseWidth * pc.w * (1 - 0.3 * whiteFracAt(pc.dw)); ctx.globalAlpha = centerAlpha; ctx.stroke();
-      }
-    }
-  } else {
-    if (!greenOnly) { buildPath(); ctx.lineWidth = baseWidth * 1.0; ctx.strokeStyle = '#ffffff'; ctx.globalAlpha = coreAlpha; ctx.stroke(); }
-    if (!skipGreen) { buildPath(); ctx.lineWidth = baseWidth * 0.7; ctx.strokeStyle = baseColor; ctx.globalAlpha = centerAlpha; ctx.stroke(); }
-  }
-
-  // Fresh-wall bloom
-  if (glowBoost > 0.05 && !greenOnly) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = taperLen > 0 ? 'butt' : 'round';
-    buildPath();
-    ctx.lineWidth = baseWidth * (3.5 + glowBoost * 3);
-    ctx.strokeStyle = baseColor;
-    ctx.globalAlpha = glowBoost * 0.18;
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Impact wobble extra glow
-  if (maxGlow > 0.05 && !greenOnly) {
-    ctx.save();
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.lineCap = taperLen > 0 ? 'butt' : 'round';
-    buildPath();
-    ctx.lineWidth = baseWidth * (1 + maxGlow * 2);
-    ctx.strokeStyle = baseColor;
-    ctx.globalAlpha = maxGlow * 0.65;
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  ctx.globalAlpha = 1;
-}
-
-/** Single-segment convenience wrapper around {@link renderWallPolyline}. */
-export function renderWallWithEffects(
-  ctx: CanvasRenderingContext2D,
-  startScreen: { x: number; y: number },
-  endScreen: { x: number; y: number },
-  wallStart: Vector2,
-  wallEnd: Vector2,
-  scale: number,
-  baseColor: string,
-  baseWidth: number,
-  glowBoost = 0,
-): void {
-  renderWallPolyline(ctx, [startScreen, endScreen], [wallStart, wallEnd], scale, baseColor, baseWidth, glowBoost);
 }
 
 export function clearWallImpacts(): void {

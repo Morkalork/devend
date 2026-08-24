@@ -266,3 +266,51 @@ describe("the Map Builder routes every edit through the history", () => {
     expect(apply).toMatch(/setSelectedWellIndex/);
   });
 });
+
+/**
+ * Whether the ladder in memory matches the one on disk.
+ *
+ * Undo made the absence of this actively misleading. It steps the in-memory
+ * ladder back but cannot step the FILE back, so after a save-then-undo the two
+ * disagreed and the builder said nothing at all: the Saved tick from a minute
+ * ago was still the last thing it had told you.
+ */
+describe("the builder says when it has unsaved work", () => {
+  const SRC = readFileSync(
+    resolve(__dirname, "../components/admin/MapBuilder.tsx"), "utf8");
+
+  it("marks the ladder dirty on every edit", () => {
+    const commit = SRC.slice(SRC.indexOf("const commitLevels"), SRC.indexOf("const applyHistory"));
+    expect(commit).toMatch(/setDirty\(true\)/);
+  });
+
+  /** The case that motivated it: stepping back cannot step the file back. */
+  it("marks it dirty again after an undo", () => {
+    const apply = SRC.slice(SRC.indexOf("const applyHistory"), SRC.indexOf("const createNewLevel"));
+    expect(apply).toMatch(/setDirty\(true\)/);
+  });
+
+  it("clears it on load and on a successful save, and nowhere else", () => {
+    const clears = SRC.split(/\r?\n/).filter(l => l.includes("setDirty(false)"));
+    expect(clears.length, `cleared at: ${clears.map(c => c.trim()).join(" | ")}`).toBe(2);
+    // One of them must be behind the save's ok check, or a failed write would
+    // report the file as up to date.
+    const save = SRC.slice(SRC.indexOf("const saveToServer"), SRC.indexOf("const copyYaml"));
+    // Index comparison rather than one regex: what matters is that the clear
+    // sits INSIDE the ok branch, since a failed write reporting the file as up
+    // to date is worse than no indicator at all.
+    const ok = save.indexOf("if (res.ok)");
+    expect(ok, "the save must check its response").toBeGreaterThan(-1);
+    expect(save.indexOf("setDirty(false)")).toBeGreaterThan(ok);
+  });
+
+  it("refuses to leave with unsaved geometry, and only then", () => {
+    expect(SRC).toMatch(/beforeunload/);
+    const guard = SRC.slice(SRC.indexOf("if (!dirty) return;"), SRC.indexOf("// Load levels from map.yml"));
+    expect(guard, "the guard must be gated on the flag").toMatch(/beforeunload/);
+  });
+
+  it("shows it on the Save button", () => {
+    expect(SRC).toMatch(/dirty && saveStatus === 'idle'/);
+  });
+});
