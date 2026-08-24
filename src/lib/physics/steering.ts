@@ -19,10 +19,17 @@
  * added here reaches both; anything added to only one of them is a bug that
  * reports itself as "the tracker is broken".
  *
- * Ball-specific steering (the Compass turn, the Lodestone pull) is deliberately
- * NOT here: both depend on per-ball state the preview cannot know a second
- * ahead, and pretending otherwise would draw a different wrong line. See
- * `steerablePathIsApproximate`.
+ * Ball-specific steering (the Compass turn, the Lodestone pull) is not here,
+ * because it is not a property of the BOARD: it belongs to a ball and travels
+ * with it. Both are modelled in the path preview through the ball snapshots
+ * instead (gameUtils: TrajectoryTurns and TrajectoryBall.attractTurnRate).
+ *
+ * They were once written off here as unprojectable, and half of that was
+ * wrong. A compass turn is exact, timed and chosen a cycle in advance
+ * precisely so it can be planned around; the preview draws it. A lodestone's
+ * pull genuinely is an approximation, and it is the same one the preview
+ * already makes for every other ball: a static snapshot, because a ball's own
+ * motion is unknowable a second ahead.
  */
 import type { Vector2 } from "@/lib/polygon";
 import type { GravityWell } from "@/types/level";
@@ -121,15 +128,16 @@ export function anySteeringActive(world: SteerWorld, activeSeconds: number): boo
 }
 
 /**
- * Is a ball's path bent by something the preview cannot see ahead?
+ * Is a ball's previewed path an APPROXIMATION rather than a projection?
  *
- * The Compass turns on its own timer and the Lodestone pulls toward a ball that
- * is itself moving unpredictably. Neither can be honestly projected, so this
- * exists to let a caller say so rather than quietly draw a line that is wrong
- * for a reason the player cannot deduce.
+ * Only the lodestone now. Its pull is modelled from a static snapshot, so the
+ * further ahead the preview goes the more the real stone has moved; the drift
+ * at the end of the line fades for exactly this reason. The compass used to be
+ * listed here and should not have been: its turn is exact and its schedule is
+ * published a cycle ahead, which is the whole point of the ability.
  */
 export function steerablePathIsApproximate(ability: string | undefined): boolean {
-  return ability === "turnTimer" || ability === "attract";
+  return ability === "attract";
 }
 
 /** Where a ball inside a live well is being pulled, for the preview's marching. */

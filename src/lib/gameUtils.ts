@@ -1,5 +1,7 @@
 import { Region, Ball } from "@/types/game";
 import { gravityVectorAt, steerToward } from "@/lib/physics/gravity";
+import { DEFAULT_TURN_INTERVAL } from "@/lib/physics/turnTimer";
+import { DEFAULT_ATTRACT_TURN_RATE, DEFAULT_ATTRACT_RADIUS } from "@/lib/physics/lodestone";
 import {
   mapGravityActive, wellPullAt, wellTurnRateAt, type SteerWorld,
 } from "@/lib/physics/steering";
@@ -251,6 +253,39 @@ export interface TrajectoryBall {
   radius: number;
   /** Tap-frozen (infinite mass): the moving ball REFLECTS off it. */
   frozen?: boolean;
+  /**
+   * A LODESTONE pulls the predicted ball toward itself, so it steers the path
+   * as well as sitting in it.
+   *
+   * Modelled from a static snapshot, exactly as the collision half of this
+   * already is: a lodestone is a ball and its own motion is unknowable a second
+   * ahead. That makes later legs increasingly approximate, which is inherent to
+   * a forward preview and is why the drift at the end fades. Drawing a straight
+   * line THROUGH a live pull is not more honest, it is just wrong in a way the
+   * player cannot see coming.
+   */
+  attractTurnRate?: number;
+  attractRadius?: number;
+}
+
+/**
+ * The compass ball's turn schedule, so the preview can put the ninety-degree
+ * turn where it will actually happen.
+ *
+ * This one is not an approximation at all. The turn is exact, its time is
+ * known, and its direction is chosen a whole cycle in advance precisely so the
+ * player can plan around it (turnTimer.ts). The ability was designed to be
+ * planned around and the tool for planning - the path preview - was the one
+ * thing that could not see it, drawing a confident straight line through a turn
+ * the ball had already committed to.
+ */
+export interface TrajectoryTurns {
+  /** Prediction-relative seconds until the first turn. */
+  firstTurnIn: number;
+  /** Seconds between turns thereafter. */
+  intervalSeconds: number;
+  /** +1 clockwise, -1 counter-clockwise. */
+  direction: 1 | -1;
 }
 
 /**
@@ -275,9 +310,32 @@ export function trajectoryBallSnapshots(
       position: b.renderPosition ?? b.position,
       radius: b.radius,
       frozen: b.frozenUntil !== undefined && now < b.frozenUntil,
+      // Only a lodestone carries these; every other ball leaves them undefined
+      // and steers nothing.
+      attractTurnRate: b.ability === "attract" ? b.attractTurnRate ?? DEFAULT_ATTRACT_TURN_RATE : undefined,
+      attractRadius: b.ability === "attract" ? b.attractRadius ?? DEFAULT_ATTRACT_RADIUS : undefined,
     });
   }
   return out;
+}
+
+/**
+ * The predicted ball's own turn schedule, or null when it does not turn.
+ *
+ * Reads the same fields the ring unwinds on, so the preview and the countdown
+ * the player is watching can never disagree about when the turn lands.
+ */
+export function trajectoryTurnsFor(
+  ball: Ball, activeSeconds: number,
+): TrajectoryTurns | null {
+  if (ball.ability !== "turnTimer" || ball.nextTurnAt === undefined) return null;
+  const intervalSeconds = ball.turnIntervalSeconds ?? DEFAULT_TURN_INTERVAL;
+  if (!(intervalSeconds > 0)) return null;
+  return {
+    firstTurnIn: Math.max(0, ball.nextTurnAt - activeSeconds),
+    intervalSeconds,
+    direction: ball.turnClockwise === false ? -1 : 1,
+  };
 }
 
 /**
@@ -401,6 +459,12 @@ export function computeBallTrajectory(
    * instead is what collapsed the preview to three chords on the well maps.
    */
   out?: { bounceAt: number[] },
+  /**
+   * The predicted ball's own quarter-turn schedule (the compass), or null.
+   * Unlike everything else here this is exact, not an approximation: see
+   * trajectoryTurnsFor.
+   */
+  turns?: TrajectoryTurns | null,
 ): Vector2[] {
   const points: Vector2[] = [{ ...ballPosition }];
   const vLen = Math.sqrt(ballVelocity.x * ballVelocity.x + ballVelocity.y * ballVelocity.y);
@@ -438,6 +502,28 @@ export function computeBallTrajectory(
     let chordDist = Infinity;
     let pull: Vector2 | null = null;
     let turnRate = 0;
+
+    // A LODESTONE bends the path toward itself wherever the predicted ball is,
+    // so it decides the chord the same way a well does. Summed with the board's
+    // own pull rather than replacing it: a ball inside a well AND in range of a
+    // lodestone feels both, and the physics adds them too.
+    let attractX = 0, attractY = 0, attractRate = 0;
+    for (const ob of otherBalls) {
+      if (!ob.attractTurnRate) continue;
+      const ax = ob.position.x - ox, ay = ob.position.y - oy;
+      const dist = Math.hypot(ax, ay);
+      const radius = ob.attractRadius ?? DEFAULT_ATTRACT_RADIUS;
+      if (dist > radius || dist < 1) continue;
+      // Linear falloff to zero at the rim, matching lodestone.ts exactly: a
+      // preview that eased off differently would drift from the ball wherever
+      // the pull is weakest, which is most of the well's area.
+      const strength = ob.attractTurnRate * (1 - dist / radius);
+      if (strength <= 0) continue;
+      attractX += (ax / dist) * strength;
+      attractY += (ay / dist) * strength;
+      attractRate += strength;
+    }
+
     if (steer) {
       const here = { x: ox, y: oy };
       const wellPull = wellPullAt(here, steer.world);
@@ -452,14 +538,42 @@ export function computeBallTrajectory(
       // the forecast wrong in proportion to how much the player had spent on it.
       const bend = steer.world.gravityBendMultiplier ?? 1;
       turnRate *= Number.isFinite(bend) && bend > 0 ? bend : 1;
-      if (pull && turnRate > 0) {
-        const cross = dx * pull.y - dy * pull.x;
-        const dot2 = dx * pull.x + dy * pull.y;
-        const remaining = Math.abs(Math.atan2(cross, dot2));
-        if (remaining > ALIGNED) chordDist = speed * (MAX_TURN_PER_CHORD / turnRate);
-      } else {
-        pull = null;
+      if (!(turnRate > 0)) pull = null;
+    }
+
+    if (attractRate > 0) {
+      // Blend the board's pull with the lodestone's, weighted by how hard each
+      // is pulling, so a strong well and a weak lodestone read as the well.
+      const px = (pull ? pull.x * turnRate : 0) + attractX;
+      const py = (pull ? pull.y * turnRate : 0) + attractY;
+      const len = Math.hypot(px, py);
+      if (len > 1e-9) {
+        pull = { x: px / len, y: py / len };
+        turnRate += attractRate;
       }
+    }
+
+    if (pull && turnRate > 0) {
+      const cross = dx * pull.y - dy * pull.x;
+      const dot2 = dx * pull.x + dy * pull.y;
+      const remaining = Math.abs(Math.atan2(cross, dot2));
+      if (remaining > ALIGNED) chordDist = speed * (MAX_TURN_PER_CHORD / turnRate);
+    } else {
+      pull = null;
+    }
+
+    // The COMPASS turn, which is exact. Cut the leg at the moment the turn
+    // lands so the waypoint is where the ball really changes heading, rather
+    // than drawing straight through a turn it has already committed to.
+    let turnAt = Infinity;
+    if (turns && turns.intervalSeconds > 0) {
+      const since = tNow - turns.firstTurnIn;
+      const next = since < 0
+        ? turns.firstTurnIn
+        : turns.firstTurnIn + (Math.floor(since / turns.intervalSeconds) + 1) * turns.intervalSeconds;
+      const until = next - tNow;
+      if (until >= 0) turnAt = until * speed;
+      if (turnAt < chordDist) chordDist = turnAt;
     }
     // Earliest static hit, converted to TIME so movers compete on equal terms.
     let bestTime = Infinity, bnx = 0, bny = 0, bestId = "";
@@ -498,12 +612,25 @@ export function computeBallTrajectory(
     // carry on WITHOUT spending a bounce. This is what draws the arc.
     const chordTime = chordDist / speed;
     if (!Number.isFinite(bestTime) || bestTime > chordTime) {
-      if (!pull || !Number.isFinite(chordTime)) break;
+      // A compass turn ends the leg even on a board that pulls at nothing, so
+      // the chord is only pointless when neither is happening.
+      const turnEndsLeg = Number.isFinite(turnAt) && turnAt <= chordDist + 1e-6;
+      if ((!pull && !turnEndsLeg) || !Number.isFinite(chordTime)) break;
       const nx2 = ox + dx * chordDist, ny2 = oy + dy * chordDist;
       points.push({ x: nx2, y: ny2 });
-      const steered = steerToward({ x: dx, y: dy }, pull, turnRate, chordTime);
-      const sl = Math.hypot(steered.x, steered.y) || 1;
-      dx = steered.x / sl; dy = steered.y / sl;
+      if (pull) {
+        const steered = steerToward({ x: dx, y: dy }, pull, turnRate, chordTime);
+        const sl = Math.hypot(steered.x, steered.y) || 1;
+        dx = steered.x / sl; dy = steered.y / sl;
+      }
+      if (turnEndsLeg && turns) {
+        // Exactly ninety degrees, in the direction the ring has been showing
+        // for a whole cycle. Rotating the HEADING, magnitude untouched, which
+        // is what tickTurnTimer does to the velocity.
+        const rot = turns.direction;
+        const ndx = -dy * rot, ndy = dx * rot;
+        dx = ndx; dy = ndy;
+      }
       ox = nx2; oy = ny2;
       tNow += chordTime;
       skipId = ""; // a new heading may legitimately meet the last surface again

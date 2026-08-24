@@ -18,7 +18,10 @@ import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
 // Imported, never re-declared: these govern how long the physics keeps a marker
 // alive, and a local copy that drifts makes markers disappear early.
 import { PICKUP_DRAW_RADIUS, PICKUP_FEEDBACK_MS } from "@/lib/pickups";
-import { computeBallTrajectory, trajectoryBallSnapshots, buildTrajectorySegments } from "@/lib/gameUtils";
+import {
+  computeBallTrajectory, trajectoryBallSnapshots, buildTrajectorySegments,
+  trajectoryTurnsFor,
+} from "@/lib/gameUtils";
 import { steerWorldOf } from "@/lib/physics/steering";
 import { dashedLine } from "./dashedLine";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -197,6 +200,11 @@ export class FxLayer {
         // expression than the physics used.
         { world: steerWorldOf(game), atSeconds: game.activePlaySeconds },
         { bounceAt: marks },
+        // The compass turn is EXACT and telegraphed a whole cycle ahead, so the
+        // preview puts it where it really lands. Drawing straight through a
+        // turn the ball has already committed to made the tracker useless on
+        // precisely the ball it is most needed for.
+        trajectoryTurnsFor(ball, game.activePlaySeconds),
       );
       if (wps.length < 2) continue;
 
