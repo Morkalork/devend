@@ -174,7 +174,7 @@ upgrades:
   - id: memory_footprint_principal_b
     name: Memory Footprint
     tier: Principal
-    description: "Paging: balls shrink only 5%, but a ball locks in a noticeably roomier pocket."
+    description: "On maps with a mover, balls 5% smaller, and the lock threshold widens by 8."
     unlockLevel: 10
     prerequisites:
       - memory_footprint_senior
@@ -182,7 +182,8 @@ upgrades:
     tags: [safety]
     modifiers:
       ballSizeMultiplier: 0.95
-      lockThresholdBonus: 4
+      lockThresholdBonus: 8
+    condition: { kind: mapHas, feature: mover }
 
   # Benchmarking (the map-highscore HUD bar, #45) used to live here, hanging off
   # Memory Footprint. It is now the `benchmarking` CERTIFICATE - see
@@ -290,15 +291,16 @@ upgrades:
   - id: hot_start_architect_b
     name: Hot Start
     tier: Architect
-    description: "Warm Pool: only one instant fence per map, but you can draw an additional fence at the same time."
+    description: "From level 20, two fences complete instantly each map, and you can grow one more at a time."
     unlockLevel: 20
     prerequisites:
       - hot_start_principal
     choiceGroup: hot_start_architect
     tags: [tempo]
     modifiers:
-      instantFencesPerMap: 1
+      instantFencesPerMap: 2
       additionalConcurrentFences: 1
+    condition: { kind: levelAtLeast, value: 20 }
 
 
   # ===============================
@@ -444,14 +446,15 @@ upgrades:
   - id: fault_tolerance_architect_b
     name: Fault Tolerance
     tier: Architect
-    description: "Redundancy: no extra life, but every map starts with two shields that each absorb a ball hit."
+    description: "While you are down to 2 lives or fewer, 4 fence shields every map."
     unlockLevel: 15
     prerequisites:
       - fault_tolerance_senior
     choiceGroup: fault_tolerance_architect
     tags: [safety]
     modifiers:
-      wallShieldsPerMap: 2
+      wallShieldsPerMap: 4
+    condition: { kind: livesAtMost, value: 2 }
 
 
   # ===============================
@@ -587,14 +590,15 @@ upgrades:
   - id: venture_capital_architect_b
     name: Runway
     tier: Architect
-    description: "Burn Rate: no banked-balance freeze, but every chunk you spend in the store grants an instant fence next map."
+    description: "While you hold 150h or more, every spend chunk grants 2 instant fences."
     unlockLevel: 11
     prerequisites:
       - venture_capital_principal
     choiceGroup: venture_capital_architect
     tags: [bank, risk]
     modifiers:
-      spendInstantFencePerChunk: 1
+      spendInstantFencePerChunk: 2
+    condition: { kind: bankedAtLeast, value: 150 }
 
 
   # ===============================
@@ -686,14 +690,15 @@ upgrades:
   - id: severance_package_principal_b
     name: Severance Package
     tier: Principal
-    description: "Equity Package: locks still pay 10h, and each Superior Lock (a tight pocket) pays 20 more."
+    description: "On maps with a coloured area, +45 overtime for every superior lock."
     unlockLevel: 18
     prerequisites:
       - severance_package_senior
     choiceGroup: severance_package_principal
     tags: [lock, risk]
     modifiers:
-      overtimePerSuperiorLock: 20
+      overtimePerSuperiorLock: 45
+    condition: { kind: mapHas, feature: area }
 
 
   # ===============================
@@ -822,14 +827,15 @@ upgrades:
   - id: free_fall_principal_b
     name: Free Fall
     tier: Principal
-    description: "Escape Velocity: gravity locks still pay triple, and gravity bends your balls a third less, in wells and on gravity maps alike."
+    description: "On maps with a gravity well, the pull bends your ball half as hard."
     unlockLevel: 24
     prerequisites:
       - free_fall_senior
     choiceGroup: free_fall_principal
     tags: [lock, safety]
     modifiers:
-      gravityBendMultiplier: 0.67
+      gravityBendMultiplier: 0.5
+    condition: { kind: mapHas, feature: well }
 
   # ===============================
   # EXPENSE ACCOUNT & WAR CHEST (Bank payoffs)
@@ -1007,7 +1013,7 @@ upgrades:
   - id: deadline_extension_principal_b
     name: Deadline Extension
     tier: Principal
-    description: "Hard Cutoff: the window grows by only 2 seconds per ball, but shipping early pays 60% more."
+    description: "On maps with 3 or more balls, +1s per ball on every Ship Early window, and 2.2x the Tempo payout."
     unlockLevel: 16
     prerequisites:
       - deadline_extension_senior
@@ -1015,7 +1021,8 @@ upgrades:
     tags: [tempo, risk]
     modifiers:
       shipEarlySecondsPerBall: 1
-      shipEarlyBonusMultiplier: 1.6
+      shipEarlyBonusMultiplier: 2.2
+    condition: { kind: ballsAtLeast, value: 3 }
 
 
   # ===============================
@@ -1205,15 +1212,16 @@ upgrades:
   - id: technical_debt_architect_b
     name: Technical Debt
     tier: Architect
-    description: "Ship It Anyway: Ship Early bonuses pay double, paid over the per-map ceiling, and balls grow 15% instead of speeding up."
+    description: "While you are on your last life, 2.6x the Tempo payout, and balls 15% bigger."
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
     choiceGroup: technical_debt_architect
     tags: [risk]
     modifiers:
-      shipEarlyBonusMultiplier: 2
+      shipEarlyBonusMultiplier: 2.6
       ballSizeMultiplier: 1.15
+    condition: { kind: livesAtMost, value: 1 }
 
 
   # ===============================
@@ -1277,14 +1285,15 @@ upgrades:
   - id: defensive_programming_architect_b
     name: Defensive Programming
     tier: Architect
-    description: "Nanobots: shrink all balls another 15%, with no extra lives. Built to dodge."
+    description: "On maps with 3 or more balls, balls are 25% smaller."
     unlockLevel: 25
     prerequisites:
       - defensive_programming_principal
     choiceGroup: defensive_programming_architect
     tags: [safety]
     modifiers:
-      ballSizeMultiplier: 0.85
+      ballSizeMultiplier: 0.75
+    condition: { kind: ballsAtLeast, value: 3 }
 
 
   # ===============================
@@ -1794,7 +1803,7 @@ upgrades:
   - id: breaking_change_principal_b
     name: Breaking Change
     tier: Principal
-    description: "Blameless Postmortem: smashing a mirror or a mover no longer costs the ball its lock multiplier."
+    description: "On maps with something breakable, smashing never costs a ball its lock multiplier, and each break pays 15% more."
     unlockLevel: 18
     prerequisites:
       - breaking_change_senior
@@ -1802,3 +1811,5 @@ upgrades:
     tags: [tempo, lock]
     modifiers:
       smashKeepsLockMultiplier: 1
+      breakMultiplierBonus: 0.15
+    condition: { kind: mapHas, feature: breakable }

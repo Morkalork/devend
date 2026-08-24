@@ -787,6 +787,24 @@
     "detailCertificate": "Certifikatframsteg",
     "detailCertificateBody": "Att köpa den här i {{required}} separata omgångar låser upp certifikatet {{name}}, en permanent bonus som gäller varje omgång. Hittills tillgodoräknat: {{current}} av {{required}}."
   },
+  "upgradeConditions": {
+    "liveNow": "Aktiv på nästa uppdrag",
+    "notNow": "Inte aktiv på nästa uppdrag",
+    "livesAtMost_one": "På ditt sista liv",
+    "livesAtMost_other": "Vid {{count}} liv eller färre",
+    "bankedAtLeast": "När du har {{hours}}h eller mer",
+    "levelAtLeast": "Från nivå {{level}}",
+    "ballsAtLeast_one": "Banor med {{count}} boll eller fler",
+    "ballsAtLeast_other": "Banor med {{count}} bollar eller fler",
+    "depthAtLeast": "Från uppstigningsdjup {{depth}}",
+    "mapHas": {
+      "well": "Banor med en gravitationsbrunn",
+      "mover": "Banor med ett rörligt hinder",
+      "breakable": "Banor med något krossbart",
+      "area": "Banor med ett färgat område",
+      "boss": "Bossbanor"
+    }
+  },
   "runDraft": {
     "title": "Sprintplanering",
     "back": "Tillbaka",

@@ -13,6 +13,8 @@ export type UpgradeTier = 'Junior' | 'Senior' | 'Principal' | 'Architect' | 'Wiz
  */
 export type UpgradeTag = 'lock' | 'freeze' | 'bank' | 'tempo' | 'risk' | 'safety';
 
+import type { UpgradeCondition } from "@/lib/upgradeConditions";
+
 export interface UpgradeConfig {
   id: string;
   name: string;
@@ -50,6 +52,17 @@ export interface UpgradeConfig {
    * archetype (src/lib/upgradeScaling.ts). Omit for a flat upgrade.
    */
   scaling?: UpgradeScaling;
+  /**
+   * Situational: the modifiers apply only while this holds, evaluated once at
+   * map start (src/lib/upgradeConditions.ts).
+   *
+   * This is the lever against "same build every run". A flat number is a
+   * strictly-best pick at its price, so the shop resolves to the same order
+   * every time; a conditional one is a bet, worth more to a player whose run
+   * suits it and nothing to one whose does not. Omit for an unconditional
+   * upgrade, which is still most of the catalogue.
+   */
+  condition?: UpgradeCondition;
 }
 
 /**

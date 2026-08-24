@@ -787,6 +787,24 @@
     "detailCertificate": "Progreso de certificación",
     "detailCertificateBody": "Comprar esto en {{required}} partidas distintas desbloquea la certificación {{name}}, una bonificación permanente que se aplica a todas las partidas. Acumulado hasta ahora: {{current}} de {{required}}."
   },
+  "upgradeConditions": {
+    "liveNow": "Activa en la próxima misión",
+    "notNow": "No activa en la próxima misión",
+    "livesAtMost_one": "En tu última vida",
+    "livesAtMost_other": "Con {{count}} vidas o menos",
+    "bankedAtLeast": "Mientras tengas {{hours}}h o más",
+    "levelAtLeast": "A partir del nivel {{level}}",
+    "ballsAtLeast_one": "Mapas con {{count}} bola o más",
+    "ballsAtLeast_other": "Mapas con {{count}} bolas o más",
+    "depthAtLeast": "A partir de la profundidad de ascensión {{depth}}",
+    "mapHas": {
+      "well": "Mapas con un pozo de gravedad",
+      "mover": "Mapas con un obstáculo móvil",
+      "breakable": "Mapas con algo rompible",
+      "area": "Mapas con un área de color",
+      "boss": "Mapas de jefe"
+    }
+  },
   "runDraft": {
     "title": "Planificación de sprint",
     "back": "Atrás",

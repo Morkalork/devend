@@ -23,6 +23,8 @@ import { GameModifiers } from '@/hooks/useActiveModifiers';
 import { runwayStatus, spendChunks, spendChunkCap, SPEND_CHUNK_HOURS, RunwayPerk } from '@/lib/treasury';
 import { inflationForLevel } from '@/lib/upgradePricing';
 import { TagChip } from './TagChip';
+import { ConditionChip } from './ConditionChip';
+import { conditionMet, type RunContext } from '@/lib/upgradeConditions';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info, Vault, ShoppingCart } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
 import { getRunRng } from '@/lib/runRng';
@@ -32,6 +34,12 @@ import { Certificate } from '@/types/certificate';
 import { contentText } from '@/i18n/content';
 
 interface UpgradeShopProps {
+  /**
+   * The run as it stands, so a conditional upgrade can say whether it is LIVE
+   * for the map about to be played. Optional: without it every condition reads
+   * as met, which is the right default for a preview.
+   */
+  runContext?: RunContext | null;
   playerPoints: number;
   upgrades: UpgradeConfig[];
   ownedUpgradeIds: string[];
@@ -97,6 +105,7 @@ function deselectWithDependents(
 }
 
 export function UpgradeShop({
+  runContext = null,
   playerPoints,
   upgrades,
   ownedUpgradeIds,
@@ -798,9 +807,15 @@ export function UpgradeShop({
                 </div>
 
                 {/* Archetype tag chips */}
-                {(upgrade.tags?.length ?? 0) > 0 && (
+                {((upgrade.tags?.length ?? 0) > 0 || upgrade.condition) && (
                   <div className="flex justify-center gap-1 mb-1 flex-wrap">
-                    {upgrade.tags!.map(tag => <TagChip key={tag} tag={tag} />)}
+                    {upgrade.tags?.map(tag => <TagChip key={tag} tag={tag} />)}
+                    {upgrade.condition && (
+                      <ConditionChip
+                        condition={upgrade.condition}
+                        live={conditionMet(upgrade.condition, runContext)}
+                      />
+                    )}
                   </div>
                 )}
 
@@ -995,9 +1010,15 @@ export function UpgradeShop({
                   </div>
                 </div>
 
-                {(u.tags?.length ?? 0) > 0 && (
+                {((u.tags?.length ?? 0) > 0 || u.condition) && (
                   <div className="flex gap-1 mb-2 flex-wrap">
-                    {u.tags!.map(tag => <TagChip key={tag} tag={tag} sizeClass="text-[10px]" />)}
+                    {u.tags?.map(tag => <TagChip key={tag} tag={tag} sizeClass="text-[10px]" />)}
+                    {u.condition && (
+                      <ConditionChip
+                        condition={u.condition}
+                        live={conditionMet(u.condition, runContext)}
+                      />
+                    )}
                   </div>
                 )}
 

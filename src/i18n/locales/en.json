@@ -802,6 +802,24 @@
     "detailCertificate": "Certificate progress",
     "detailCertificateBody": "Buying this in {{required}} separate runs unlocks the {{name}} certificate, a permanent bonus that applies to every run. Credited so far: {{current}} of {{required}}."
   },
+  "upgradeConditions": {
+    "liveNow": "Live on the next assignment",
+    "notNow": "Not active on the next assignment",
+    "livesAtMost_one": "On your last life",
+    "livesAtMost_other": "At {{count}} lives or fewer",
+    "bankedAtLeast": "While you hold {{hours}}h or more",
+    "levelAtLeast": "From level {{level}}",
+    "ballsAtLeast_one": "Maps with {{count}} ball or more",
+    "ballsAtLeast_other": "Maps with {{count}} balls or more",
+    "depthAtLeast": "From ascension depth {{depth}}",
+    "mapHas": {
+      "well": "Maps with a gravity well",
+      "mover": "Maps with a mover",
+      "breakable": "Maps with something breakable",
+      "area": "Maps with a coloured area",
+      "boss": "Boss maps"
+    }
+  },
   "runDraft": {
     "title": "Sprint Planning",
     "back": "Back",

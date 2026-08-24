@@ -62,6 +62,7 @@ import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '
 import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
 import { registerRunFlush, installRunFlushListeners } from '@/lib/runSaveFlush';
+import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 
 /**
  * Drop one debug query param, keeping the rest. The old code replaced the whole
@@ -517,7 +518,45 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // a second pass folds in run-state-dependent effects that READ base values
   // (War Chest keys off bankedSlowPer50h + the bank; Clean Release off the
   // under-par carry). Both fold through the same merge rules as everything else.
-  const baseModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses);
+  /**
+   * The run as it stands, for upgrades that only pay in a situation.
+   *
+   * Rebuilt when the map or the run state changes, and NOT per frame: a
+   * modifier set that shifted mid-map would mean a fence started under one rule
+   * finishing under another, and the HUD drifting while the player watched.
+   */
+  const runContext = useMemo<RunContext>(() => ({
+    level: currentLevelIndex + 1,
+    lives: livesAtLevelStart,
+    banked: totalScore,
+    depth: ascensionDepth,
+    map: mapContextOf(currentLevel),
+  }), [currentLevelIndex, livesAtLevelStart, totalScore, ascensionDepth, currentLevel]);
+
+  /**
+   * The run as it will stand on the NEXT map, for the shop.
+   *
+   * The shop sits between maps, and `runContext` still describes the one just
+   * finished. A card that says "live" about the map you already played is worse
+   * than saying nothing: the player buys on the strength of it and the number
+   * never appears. So the shop asks about the map it is selling into.
+   *
+   * Null past the final level, which reads as "no map known" and shows every
+   * condition as unmet rather than falsely promising one.
+   */
+  const nextRunContext = useMemo<RunContext | null>(() => {
+    const next = levels[currentLevelIndex + 1];
+    if (!next) return null;
+    return {
+      level: currentLevelIndex + 2,
+      lives: currentLives,
+      banked: totalScore,
+      depth: ascensionDepth,
+      map: mapContextOf(next),
+    };
+  }, [levels, currentLevelIndex, currentLives, totalScore, ascensionDepth]);
+
+  const baseModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, mergedBonuses, runContext);
   const dynamicBonuses = useMemo(() => {
     let bonuses: Partial<Record<keyof GameModifiers, number>> | undefined;
     if (baseModifiers.bankedSlowPer50h > 0 && totalScore > 0) {
@@ -570,7 +609,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     () => mergeBonuses(mergedBonuses, dynamicBonuses),
     [mergedBonuses, dynamicBonuses]
   );
-  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, finalBonuses);
+  const activeModifiers = useActiveModifiers(ownedUpgradeIds, upgrades, finalBonuses, runContext);
 
   // Mid-run extraContinues grants (Insurance Policy set bonus): when the
   // aggregated value rises, credit the difference to the live counter. Drops
@@ -2047,6 +2086,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleContinueFromSummary,
     // The map the door draft previews (null past the final level).
     nextLevel: levels[currentLevelIndex + 1] ?? null,
+    // What the shop's condition chips are judged against.
+    nextRunContext,
     handleSelectDoor,
     // Capstone ("Promotion")
     capstoneOffers,

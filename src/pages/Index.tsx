@@ -362,6 +362,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
             )}
             {navigation.currentScreen === 'upgradeShop' && (
               <UpgradeShop
+                runContext={session.nextRunContext}
                 playerPoints={session.totalScore}
                 upgrades={session.upgrades.filter(u => !u.ascensionOnly || session.ascensionDepth > 0)}
                 ownedUpgradeIds={session.ownedUpgradeIds}

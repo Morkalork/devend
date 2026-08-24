@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { UpgradeConfig } from '@/types/upgrade';
+import { conditionMet, type RunContext } from '@/lib/upgradeConditions';
 
 /**
  * Central GameModifiers — the ONLY structure gameplay systems should read.
@@ -336,6 +337,12 @@ export function computeGameModifiers(
   ownedUpgradeIds: string[],
   upgradeLookup: Map<string, UpgradeConfig>,
   extraBonuses?: Partial<Record<keyof GameModifiers, number>>,
+  /**
+   * The run as it stands, for upgrades that only pay in a situation. Omitted
+   * (the Playground, previews) every condition reads as met, so a card shows
+   * its real numbers rather than a column of zeroes.
+   */
+  context?: RunContext | null,
 ): GameModifiers {
   const result = { ...DEFAULT_MODIFIERS };
 
@@ -346,6 +353,11 @@ export function computeGameModifiers(
   for (const id of ownedUpgradeIds) {
     const upgrade = upgradeLookup.get(id);
     if (!upgrade) continue;
+
+    // A conditional upgrade contributes NOTHING while its condition is unmet.
+    // Not a reduced amount: half an effect is unreadable, and the whole point
+    // is that the player can tell whether the bet came in.
+    if (!conditionMet(upgrade.condition, context)) continue;
 
     for (const [key, value] of Object.entries(upgrade.modifiers)) {
       if (!(key in result)) continue; // ignore unknown keys from YAML gracefully
@@ -389,6 +401,8 @@ export function useActiveModifiers(
   ownedUpgradeIds: string[],
   upgrades: UpgradeConfig[],
   extraBonuses?: Partial<Record<keyof GameModifiers, number>>,
+  /** The run as it stands, for situational upgrades. See upgradeConditions. */
+  context?: RunContext | null,
 ): GameModifiers {
   // Rebuilds only when YAML reloads — not on every upgrade purchase
   const upgradeLookup = useMemo(
@@ -396,7 +410,7 @@ export function useActiveModifiers(
     [upgrades],
   );
   return useMemo(
-    () => computeGameModifiers(ownedUpgradeIds, upgradeLookup, extraBonuses),
-    [ownedUpgradeIds, upgradeLookup, extraBonuses],
+    () => computeGameModifiers(ownedUpgradeIds, upgradeLookup, extraBonuses, context),
+    [ownedUpgradeIds, upgradeLookup, extraBonuses, context],
   );
 }
