@@ -2088,6 +2088,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     nextLevel: levels[currentLevelIndex + 1] ?? null,
     // What the shop's condition chips are judged against.
     nextRunContext,
+    // The map being played, for anything asking whether a conditional upgrade
+    // is live right now rather than on the next map.
+    runContext,
     handleSelectDoor,
     // Capstone ("Promotion")
     capstoneOffers,
