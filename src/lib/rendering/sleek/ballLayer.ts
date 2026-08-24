@@ -24,7 +24,7 @@ import { getSquishEffect, getWallHitEffect, getBallHitEffect } from "@/lib/ballE
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
 import { contactFor, shadowFor, type LightScope } from "./light";
-import { turnProgress, turnDirection } from "@/lib/physics/turnTimer";
+import { compassRing } from "./compassRing";
 import type { Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -169,32 +169,31 @@ export class SleekBallLayer {
    * Driven from turnProgress, which is the same function the turn itself uses,
    * so the ring cannot unwind on a different clock from the event it promises.
    * A countdown that disagrees with what it counts down to is worse than none.
+   *
+   * The geometry lives in compassRing.ts, which hands back the arc's starting
+   * point so this cannot forget to open a subpath on it. See the note there.
    */
   private drawTurnRing(
     ball: Ball, c: Pt, r: number, scale: number, activeSeconds: number,
   ): void {
-    const progress = turnProgress(ball, activeSeconds);
-    if (progress === null) return;
-
-    const radius = r + Math.max(2, 3 * scale);
-    const sweep = (1 - progress) * Math.PI * 2;   // unwinds as the turn nears
-    if (sweep <= 0.01) return;
-
-    // Wound in the direction of the coming turn, so the ring says WHICH WAY as
-    // well as when: that is what makes the countdown a plan rather than a
-    // warning, and it is the whole reason the direction is chosen a cycle early.
-    const cw = turnDirection(ball) > 0;
-    const start = -Math.PI / 2;
-    const end = cw ? start + sweep : start - sweep;
+    const ring = compassRing(ball, c.x, c.y, r, scale, activeSeconds);
+    if (!ring) return;
 
     this.overlays
-      .arc(c.x, c.y, radius, Math.min(start, end), Math.max(start, end), !cw)
+      // Opens a fresh subpath ON the arc. Pixi's arc() continues the current
+      // path, so without this it draws a straight line from wherever the path
+      // last was to the ring's first point: a beam right across the board to
+      // the ball, in the ring's colour, reddening with it in the last second.
+      // Every other round thing here uses circle(), which opens its own
+      // subpath, which is why this was the only call that could do it.
+      .moveTo(ring.start.x, ring.start.y)
+      .arc(c.x, c.y, ring.radius, ring.from, ring.to, ring.anticlockwise)
       .stroke({
         width: Math.max(1.5, 2.2 * scale),
         // Reddens as it runs out: the last second should catch the eye of a
         // player who is looking somewhere else entirely, which is exactly when
         // this ball is about to punish them.
-        color: progress > 0.8 ? PALETTE.danger : PALETTE.compassRing,
+        color: ring.urgent ? PALETTE.danger : PALETTE.compassRing,
         alpha: 0.9,
         cap: "round",
       });
