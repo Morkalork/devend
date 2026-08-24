@@ -74,6 +74,11 @@ export function blockLockCapacity(
     if (!map || seen.has(n)) continue;
     seen.add(n);
     total += map.maxBalls ?? map.balls?.length ?? 1;
+    // A terminal's sleeper is a ball you have to wake and then trap, so it is
+    // lockable capacity that `maxBalls` does not mention. Level 15 declares
+    // maxBalls: 0 and puts two balls on the board; counting only maxBalls made
+    // that block look thinner than it is.
+    total += map.circuit?.terminals?.length ?? 0;
   }
   return total;
 }

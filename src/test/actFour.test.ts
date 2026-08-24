@@ -1,0 +1,203 @@
+/**
+ * Act IV: Crunch (31-35), the last stretch to be migrated.
+ *
+ * It was the ladder's one real regression, and a measured one. It sat at 70-72%
+ * clear with 4-5 cuts while act III asked for 86-93% and 9, so level 31 demanded
+ * LESS of the player than level 4 did, and its five maps between them put 8
+ * balls on the board against act III's 15.
+ *
+ * It is also the first act to state its own win conditions rather than lean on
+ * the implicit clear. That is the part worth guarding: a `win:` block can ask
+ * for something the map cannot deliver, and the failure is silent - the map
+ * simply never completes and the player assumes they misplayed it.
+ */
+import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import yaml from "js-yaml";
+import { resolveWinSpec, winSpecProblems } from "@/lib/winSpec";
+import { blockLockCapacity } from "@/lib/assignmentScaling";
+import { getBallType } from "@/lib/ballTypes";
+import type { LevelConfig } from "@/types/level";
+
+const LEVELS = (yaml.load(
+  readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
+) as { levels: LevelConfig[] }).levels;
+
+const at = (n: number) => LEVELS.find(l => l.level === n)!;
+const ACT_IV = [31, 32, 33, 34, 35].map(at);
+const PLAYABLE = ACT_IV.filter(l => !l.boss);
+
+describe("the act exists and is the right shape", () => {
+  it("has all five maps", () => {
+    for (const l of ACT_IV) expect(l, "a map is missing").toBeTruthy();
+  });
+
+  /** The regression, stated as a number: 31 asked for less than 4 did. */
+  it("no longer asks less of the player than act I", () => {
+    const clear = (l: LevelConfig) => 100 - l.sizeThreshold;
+    for (const l of PLAYABLE) {
+      expect(clear(l), `level ${l.level}`).toBeGreaterThan(clear(at(4)));
+    }
+  });
+
+  it("sits above act III's peak, which it follows", () => {
+    const clear = (l: LevelConfig) => 100 - l.sizeThreshold;
+    const actIIIPeak = Math.max(...[21, 22, 23, 24, 25, 26, 27, 28, 29].map(n => clear(at(n))));
+    // Only the LAST playable map has to beat the previous act outright; the
+    // first is the post-boss breather and is allowed to sit at the peak.
+    expect(clear(at(34))).toBeGreaterThan(actIIIPeak);
+    expect(clear(at(31))).toBeGreaterThanOrEqual(actIIIPeak - 1);
+  });
+
+  it("does not collapse its cut count the way it used to", () => {
+    // 9 cuts at level 19 and then 4 at 31-33 was the shape of the collapse.
+    for (const l of PLAYABLE) expect(l.expectedCuts, `level ${l.level}`).toBeGreaterThanOrEqual(8);
+  });
+
+  /**
+   * The knock-on nobody would look for: the assignment block spanning 31-35
+   * scales its lock targets to how many balls the block puts on the board, so a
+   * thin act quietly gave the last block of the run the weakest missions.
+   */
+  it("puts enough balls on the board to carry its assignment block", () => {
+    const actIV = blockLockCapacity(LEVELS, 31);
+    const actIII = blockLockCapacity(LEVELS, 26);
+    expect(actIV, `act IV block has ${actIV} against act III's ${actIII}`)
+      .toBeGreaterThanOrEqual(actIII - 3);
+  });
+});
+
+describe("the win conditions it states", () => {
+  it("authors a win on the maps that combine, and leaves the rest deriving", () => {
+    expect(resolveWinSpec(at(32)).authored).toBe(true);
+    expect(resolveWinSpec(at(33)).authored).toBe(true);
+    expect(resolveWinSpec(at(34)).authored).toBe(true);
+    // 31 opens the act on rules the player already knows, deliberately.
+    expect(resolveWinSpec(at(31)).authored).toBe(false);
+  });
+
+  it("flags none of them as unwinnable", () => {
+    for (const l of ACT_IV) {
+      expect(winSpecProblems(resolveWinSpec(l), l), `level ${l.level}`).toEqual([]);
+    }
+  });
+
+  it("still requires the clear, so a gate is never a way to skip the map", () => {
+    for (const n of [32, 33, 34]) {
+      expect(resolveWinSpec(at(n)).require.some(c => c.kind === "space"), `level ${n}`).toBe(true);
+    }
+  });
+
+  /**
+   * An authored spec gets no alternatives it did not ask for, so listing
+   * allLocked is a deliberate mercy: on 32 and 33 sealing everything is a
+   * legitimate way to finish. On 34 it is NOT, or locking all four balls
+   * anywhere would walk around the const box the map is built on.
+   */
+  it("gives 34's gate no all-locked back door", () => {
+    expect(resolveWinSpec(at(34)).alsoWinIf).toEqual([]);
+    for (const n of [32, 33]) {
+      expect(resolveWinSpec(at(n)).alsoWinIf.map(c => c.kind), `level ${n}`).toContain("allLocked");
+    }
+  });
+});
+
+describe("what the act charges for its gates", () => {
+  const premiums = ACT_IV.flatMap(l =>
+    resolveWinSpec(l).require.map(c => ({ level: l.level, kind: c.kind, pct: c.bonusPercent ?? 0 })));
+
+  it("prices every extra ask, and nothing else", () => {
+    const priced = premiums.filter(p => p.pct > 0);
+    expect(priced.length, "the gates should carry a premium").toBeGreaterThanOrEqual(3);
+    // The clear itself is the baseline and is never what pays extra.
+    expect(priced.every(p => p.kind !== "space")).toBe(true);
+  });
+
+  it("keeps every premium inside what the economy is tuned for", () => {
+    for (const p of premiums) {
+      expect(p.pct, `level ${p.level} ${p.kind}`).toBeLessThanOrEqual(50);
+    }
+  });
+
+  it("pays more for the harder ask", () => {
+    const pct = (n: number, kind: string) =>
+      resolveWinSpec(at(n)).require.find(c => c.kind === kind)?.bonusPercent ?? 0;
+    // One superior lock is the gentlest gate; herding two balls into one box
+    // under a live pull is the hardest.
+    expect(pct(32, "superiorLocks")).toBeLessThan(pct(34, "area"));
+  });
+});
+
+/**
+ * The gate that worried me most. `lockType` names a ball, and ball types are
+ * otherwise picked from maxBalls and unlock levels - so left to the roll, the
+ * named ball may simply not spawn and the map is unwinnable through no fault of
+ * the player.
+ */
+describe("naming a ball in a win condition", () => {
+  const L33 = at(33);
+
+  it("pins the roster on the map that names one", () => {
+    expect(L33.ballTypeIds, "the roster must not be a roll").toBeTruthy();
+    expect(L33.ballTypeIds).toContain("freight");
+  });
+
+  it("keeps the roster and the ball count consistent", () => {
+    expect(L33.ballTypeIds!.length).toBe(L33.maxBalls);
+  });
+
+  /**
+   * The freight is on this map precisely because it CANNOT use the map's hook:
+   * it needs room, and the nook is the tightest pocket in the game. So it must
+   * not be the first ball, which is the one a player herds by instinct and the
+   * one the map's own payout test seals into that nook.
+   */
+  it("does not put the freight first", () => {
+    expect(L33.ballTypeIds![0]).not.toBe("freight");
+  });
+
+  it("is asking for a ball that really refuses tight pockets", () => {
+    const freight = getBallType("freight")!;
+    expect(freight, "freight missing from balls.yml").toBeTruthy();
+    expect(freight.minLockFraction, "the whole point of putting it here")
+      .toBeGreaterThan(0);
+  });
+
+  /** The validator that catches the next person doing this without a roster. */
+  it("would flag the same win with the roster left to the roll", () => {
+    const unpinned = { ...L33 };
+    delete (unpinned as { ballTypeIds?: string[] }).ballTypeIds;
+    expect(winSpecProblems(resolveWinSpec(unpinned), unpinned).join(" "))
+      .toMatch(/may not spawn/);
+  });
+
+  it("would flag a ball the pinned roster does not contain", () => {
+    const wrong = { ...L33, ballTypeIds: ["red", "blue"] };
+    expect(winSpecProblems(resolveWinSpec(wrong), wrong).join(" "))
+      .toMatch(/not in this map's pinned roster/);
+  });
+});
+
+describe("34 is built for the gate it sets", () => {
+  const L34 = at(34);
+
+  it("has a gate area for the balls to be herded into", () => {
+    const gates = (L34.coloredAreas ?? []).filter(a => a.required !== false);
+    expect(gates, "the area clause needs a gate area").toHaveLength(1);
+    expect(gates[0].kind).toBe("const");
+  });
+
+  it("spawns more balls than the gate asks for", () => {
+    // Asking for two of exactly two would make one bad bounce fatal.
+    const need = resolveWinSpec(L34).require.find(c => c.kind === "area");
+    expect(need?.kind === "area" && need.count).toBe(2);
+    expect(L34.maxBalls!).toBeGreaterThan(2);
+  });
+
+  it("pins the pull rather than hoping the roll delivers it", () => {
+    // A map authored around a live pull that only sometimes pulls is a
+    // different map most of the time.
+    expect(L34.mutator).toBe("gravity");
+  });
+});

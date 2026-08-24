@@ -103,9 +103,22 @@ describe("every shipped map still means what it meant", () => {
     readFileSync(resolve(__dirname, "../../public/map.yml"), "utf8"),
   ) as { levels: LevelConfig[] }).levels;
 
-  it("derives a spec for all of them, none authored yet", () => {
+  /**
+   * Act IV states its own win conditions; every other map still derives one.
+   * Pinned as a LIST rather than a count so authoring a `win:` block on a map
+   * is a deliberate act that shows up here, not something that drifts in.
+   */
+  it("authors a win only on the maps that mean to", () => {
     expect(MAPS.length).toBeGreaterThan(30);
-    for (const m of MAPS) expect(resolveWinSpec(m).authored, String(m.id)).toBe(false);
+    const authored = MAPS.filter(m => resolveWinSpec(m).authored).map(m => String(m.id));
+    expect(authored.sort()).toEqual(["level-32", "level-33", "level-34"]);
+  });
+
+  it("still derives a working spec for every other map", () => {
+    for (const m of MAPS) {
+      if (resolveWinSpec(m).authored) continue;
+      expect(resolveWinSpec(m).require.length, String(m.id)).toBeGreaterThan(0);
+    }
   });
 
   it("gives every map at least one required clause", () => {

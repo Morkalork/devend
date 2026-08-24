@@ -1745,113 +1745,216 @@ levels:
         cx: 620
         cy: 560
         radius: 55
+  # ===========================================================================
+  # ACT IV - CRUNCH (31-35): everything at once.
+  #
+  # The act that was never migrated, and it showed. It sat at 70-72% clear with
+  # 4-5 cuts while act III asked for 86-93% and 9: level 31 demanded LESS of the
+  # player than level 4 did. Its five maps between them put 8 balls on the board
+  # against act III's 15, which also gave the assignment block spanning it the
+  # thinnest targets on the ladder.
+  #
+  # It owns no new primitives, by design (LEVELDESIGN.md): this is where the
+  # vocabulary the other acts taught gets combined and then turned around. What
+  # IS new is that these maps state their own win conditions rather than leaning
+  # on the implicit clear, and PRICE them: a map that asks for something harder
+  # than emptying the board pays for it.
+  # ===========================================================================
+
+  # 31 "Oncall" - FIGHT: terminals crossed with gravity.
+  # The post-boss breather that is not one. A sleeper reserves space you cannot
+  # capture, so you have to wake it, and it wakes directly above a live well:
+  # the problem you just created falls into the one part of the board where you
+  # cannot steer it. Act IV opens on rules the player already knows, on purpose.
+  # The gates on 32-34 only land if the first map plays straight.
   - id: level-31
     level: 31
-    sizeThreshold: 30
-    expectedCuts: 4
+    sizeThreshold: 8
+    expectedCuts: 8
     points: 20
-    variety: 0
-    randomShapes: 0
+    variety: 12
+    randomShapes: 8
     maxBalls: 2
+    gravityWells:
+      - x: 320
+        'y': 540
+        width: 260
+        height: 180
+        turnRate: 2.6
+    circuit:
+      radius: 28
+      announce: game.circuitComplete
+      terminals:
+        - x: 180
+          'y': 200
+          ball: { x: 450, y: 430 }
     entities:
-      - id: target-1
+      # Two chambers over a 220-wide neck. Wide enough to be a corridor rather
+      # than a seal, so the neck is where you fight, not where you finish.
+      - id: shelf-left
         kind: wall
         shape: rect
-        x: 400
-        'y': 400
-        width: 100
-        height: 100
-        breakable: true
-        objective: true
-        hitsToBreak: 3
+        x: -20
+        'y': 330
+        width: 360
+        height: 26
+      - id: shelf-right
+        kind: wall
+        shape: rect
+        x: 560
+        'y': 330
+        width: 320
+        height: 26
+      # The greed hook: a tight corner pocket hanging off the top right, whose
+      # only approach runs back over the well's mouth.
+      # Lifted so the way in is a 70-wide neck rather than the 50 it was: a gap
+      # a ball only half-fits through is the one thing LEVELDESIGN forbids, and
+      # 50 against a 36 diameter is precisely that.
+      - id: hook-lip
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 110
+        width: 26
+        height: 150
+      - id: pillar
+        kind: wall
+        shape: circle
+        cx: 250
+        cy: 640
+        radius: 54
+
+  # 32 "Controlled Burn" - FIGHT: the chest crossed with the charge, under a WIP
+  # limit. Every fence is rationed, the chest is behind a slab, and the charge
+  # that opens the slab costs one of the twelve. The map asks for a SUPERIOR
+  # lock on top of the clear, which is the squeeze: a tight pocket wants cuts
+  # you have already spent on the burn. The nook that can grade sits at the far
+  # corner from the vault, so the map will not let you do both cheaply.
   - id: level-32
     level: 32
-    sizeThreshold: 30
-    expectedCuts: 4
+    sizeThreshold: 7
+    expectedCuts: 9
     points: 20
-    variety: 0
-    randomShapes: 0
-    maxBalls: 1
+    variety: 14
+    randomShapes: 10
+    maxBalls: 3
+    fenceBudget: 12
+    win:
+      require:
+        - kind: space
+          threshold: 7
+        - kind: superiorLocks
+          count: 1
+          bonusPercent: 20
+      alsoWinIf:
+        - kind: allLocked
     entities:
-      - id: target-1
+      - id: vault-slab
         kind: wall
         shape: rect
-        x: 380
-        'y': 560
-        width: 160
-        height: 40
+        x: 340
+        'y': 250
+        width: 220
+        height: 28
         breakable: true
-        objective: true
-        hitsToBreak: 3
-      - id: box-1
+        hitsToBreak: 4
+      # Sized to FILL the vault rather than sit in the middle of it: at 80 wide
+      # it left 44 either side and 20 above the slab, three gaps a ball
+      # half-fits through. Now every gap around it is a seam.
+      - id: chest-32
         kind: wall
         shape: rect
-        x: 380
-        'y': 520
+        x: 372
+        'y': 150
+        width: 156
+        height: 92
+        chest: true
+        breakable: true
+        hitsToBreak: 2
+      - id: vault-wall-l
+        kind: wall
+        shape: rect
+        x: 340
+        'y': 45
+        width: 26
+        height: 210
+      - id: vault-wall-r
+        kind: wall
+        shape: rect
+        x: 534
+        'y': 45
+        width: 26
+        height: 210
+      - id: nook-lip
+        kind: wall
+        shape: rect
+        x: 45
+        'y': 700
         width: 160
-        height: 40
-      - id: box-2
+        height: 24
+      - id: baffle
         kind: wall
         shape: rect
-        x: 405
-        'y': 480
-        width: 110
-        height: 40
-      - id: box-3
-        kind: wall
-        shape: rect
-        x: 425
-        'y': 440
-        width: 70
-        height: 40
-  # RELOCATED from level 22 by the feature schedule: act III needs slot 22
-  # for the gravity Slingshot, and the stacked 6x hook is mastery-tier work
-  # that belongs in act IV. Geometry is byte-for-byte unchanged, because the
-  # two pockets are sized against the lock-grade denominator swing rather
-  # than by eye (see codeFreezeMap.test.ts before touching any rect).
-  # "Code Freeze" - the STACKED greed hook (LEVELDESIGN.md C2 + lock quality).
+        x: 620
+        'y': 520
+        width: 26
+        height: 240
+    charges:
+      - fuse: { x: 450, y: 330 }
+        radius: 32
+        targetId: vault-slab
+        delaySeconds: 1.4
+        blastRadius: 200
+        announce: game.chargeBlown
+
+  # 33 "Code Freeze" - FIGHT: the 6x stacked hook crossed with a mover, and now
+  # with the one ball that cannot use it.
   #
-  # The economy has TWO lock multipliers that multiply each other: the Colored
-  # Area kind (const = 3x) and lock QUALITY (a pocket at most 40% of the base
-  # lock threshold grades SUPERIOR = 2x). No map had ever set up both at once,
-  # so the top of the payout curve (3 x 2 = 6x) was unreachable. This map is
-  # built around exactly that stack, and gives the choice three rungs:
+  # Relocated from level 22 intact, and its geometry stays exactly as it was:
+  # the alcove and nook margins are pinned against the lock-grade denominator
+  # swing (codeFreezeMap.test.ts), so a stray obstacle or a moved lip would cost
+  # the superior grade the whole map is built around. randomShapes stays 0.
   #
-  #   skip it            base pay. The safe line: clear the lower half and go.
-  #   seal the alcove    138 cells inside the const box: 3x, but far too roomy
-  #                      to grade superior. One 85-long fence across the corner
-  #                      doorway, drawn with the ball loose in a big room.
-  #   seal the nook      35 cells behind the shelf: 3x AND superior = 6x. The
-  #                      fence is no longer, but you draw it in a pocket barely
-  #                      three ball-widths across, with the ball already inside.
+  # What is new is the FREIGHT. Every other ball wants the tightest chamber it
+  # can get; the freight needs ROOM, so the nook that is this map's prize is the
+  # one place it can never be sealed. Locking it means using the safe, roomy
+  # lower line the map has always offered as the coward's route, and the map now
+  # pays 30% for taking it. The const box stays a BONUS, not a gate: making it
+  # mandatory would delete the choice the whole map exists to pose.
   #
-  # Both rungs are robust by construction, not by tuning luck. The lock grade is
-  # cells/denominator, and the denominator swings ~2x over a map (it is
-  # max(active cells, initial/active balls)), so a pocket sized by eye grades
-  # differently depending on WHEN you seal it. These two sit outside that swing,
-  # with ~32% of headroom each way: the alcove is larger than 4% of the ENTIRE
-  # board (so no denominator can make it superior) and the nook is under 4% of
-  # the smallest denominator this map can produce (so none can take superior
-  # away). Pinned in codeFreezeMap.test.ts, which is where to look before
-  # nudging any of these rects.
-  #
-  # NOTE on the area size: LEVELDESIGN.md says to draw const smallest, but a
-  # const box small enough to look "hardest" is itself superior-sized, which
-  # collapses the two multipliers back into one. The box marks WHERE, the
-  # geometry inside it marks HOW TIGHT, so it has to be roomy enough to hold
-  # both a sloppy and a tight seal. That is why the alcove is a 200x205 const.
-  # It also means the sloppy seal locks by the area-containment rule rather than
-  # the % threshold, which is what keeps rung 2 available all map long.
+  # The roster is pinned because the win names a ball. Left to the usual roll
+  # the freight might not spawn at all, and a map whose win condition depends on
+  # a ball that is not there is unwinnable through no fault of the player.
   - id: level-33
     level: 33
-    sizeThreshold: 16
-    expectedCuts: 6
+    sizeThreshold: 6
+    expectedCuts: 9
     points: 20
     variety: 0
     # A stray mini-obstacle inside the nook would change its cell count and cost
     # the superior grade, so this map has to stay deterministic.
     randomShapes: 0
+    # TWO balls, not three. The nook's superior grade is pinned against the
+    # lock-grade denominator, which is max(active cells, initial / ACTIVE
+    # BALLS): a third ball lowers that floor enough that the nook stops grading,
+    # and the 6x hook this map exists for quietly becomes a 3x one. Raising it
+    # was the first thing I tried and codeFreezeMap.test.ts caught it.
     maxBalls: 2
+    # Yellow FIRST. The freight cannot lock in the nook or the alcove at all -
+    # that is the whole point of putting it here - so it must not be the ball a
+    # player instinctively herds into the hook, and the map's own payout test
+    # seals the first ball into that nook to check the 6x stack.
+    ballTypeIds: [yellow, freight]
+    win:
+      require:
+        - kind: space
+          threshold: 6
+        - kind: lockType
+          ballType: freight
+          count: 1
+          bonusPercent: 30
+      alsoWinIf:
+        - kind: allLocked
     coloredAreas:
       - kind: const
         x: 630
@@ -1889,7 +1992,8 @@ levels:
         height: 24
       # The safe line has to be real or the hook is not a choice: the lower half
       # is an ordinary chamber behind a 100-wide neck, playable start to finish
-      # without ever going near the const box.
+      # without ever going near the const box. It is also the only chamber roomy
+      # enough to hold the freight.
       - id: divider-left
         kind: wall
         shape: rect
@@ -1914,52 +2018,89 @@ levels:
         range: 380
         speed: 140
         phase: 0.5
+
+  # 34 "Crunch" - BREAK: the act's inversion, and the last playable map.
+  #
+  # Gravity is act III's signature and the player has spent ten maps learning to
+  # read a pull and seal against it. Here the pull is pinned on for the whole
+  # map and the win is not only the clear: TWO balls have to end up inside one
+  # const box. Every instinct the ladder trained - split the board, seal each
+  # ball where it happens to be, take the tightest pocket - is wrong. You have
+  # to herd, on a board that is pulling, and the box pays 30% for it.
+  #
+  # The clear is still required alongside it, so herding is not a way to skip
+  # the map: it is a second thing to do while doing the first.
   - id: level-34
     level: 34
-    sizeThreshold: 28
-    expectedCuts: 5
+    sizeThreshold: 5
+    expectedCuts: 10
     points: 20
-    variety: 0
-    randomShapes: 0
-    maxBalls: 2
+    variety: 16
+    randomShapes: 10
+    maxBalls: 4
+    threadLockRequired: 2
+    # Pinned, not hoped for. The whole map is authored around a live pull; a
+    # gravity map that only sometimes pulls is a different map most of the time.
+    mutator: gravity
+    coloredAreas:
+      - kind: const
+        x: 350
+        'y': 330
+        width: 220
+        height: 210
+        required: true
+    win:
+      require:
+        - kind: space
+          threshold: 5
+        - kind: area
+          count: 2
+          bonusPercent: 30
     entities:
-      - id: gate-1
+      # A funnel either side of the box: under a live pull you cannot aim, so
+      # the only way to steer a second ball in is to use the walls.
+      - id: funnel-l
         kind: wall
         shape: rect
-        x: 40
-        'y': 470
-        width: 820
-        height: 24
-        breakable: true
-        objective: true
-        fence: true
-        hitsToBreak: 4
-        reveals:
-          x: 50
-          'y': 55
-          width: 800
-          height: 408
-      - id: target-1
+        x: 190
+        'y': 300
+        width: 26
+        height: 200
+      - id: funnel-r
         kind: wall
         shape: rect
-        x: 380
-        'y': 660
-        width: 140
-        height: 40
-        breakable: true
-        objective: true
-        hitsToBreak: 3
-      - id: box-1
+        x: 690
+        'y': 300
+        width: 26
+        height: 200
+      - id: cap-l
         kind: wall
         shape: rect
-        x: 380
-        'y': 620
-        width: 140
-        height: 40
+        x: 45
+        'y': 274
+        width: 170
+        height: 26
+      - id: cap-r
+        kind: wall
+        shape: rect
+        x: 690
+        'y': 274
+        width: 165
+        height: 26
+      - id: floor-post
+        kind: wall
+        shape: circle
+        cx: 460
+        cy: 700
+        radius: 58
+
+  # 35 "End of Life" - BOSS: the finale, unchanged in what it asks and raised to
+  # the act it now sits in. It was the one act IV map already pulling its
+  # weight; it was still scored against the old, softer band.
   - id: level-35
     level: 35
-    sizeThreshold: 18
-    expectedCuts: 7
+    sizeThreshold: 14
+    expectedCuts: 8
     points: 20
     variety: 0
     randomShapes: 0

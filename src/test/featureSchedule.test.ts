@@ -41,7 +41,9 @@ const ACTS = [
 ] as const;
 
 /** Acts whose maps have been authored to the schedule. May only grow. */
-const MIGRATED_ACTS: string[] = ["III Legacy Code"];
+const MIGRATED_ACTS: string[] = [
+  "I Onboarding", "II The Sprint", "III Legacy Code", "IV Crunch",
+];
 
 const BOSS_LEVELS = [10, 20, 30, 35];
 
@@ -242,7 +244,7 @@ describe("every gap is a seam or a neck, never in between", () => {
    * comes off when its act is authored, and none is ever added to silence a
    * new map.
    */
-  const UNMIGRATED: string[] = ["level-32"];
+  const UNMIGRATED: string[] = [];
 
   type Rect = { id: string; x0: number; x1: number; y0: number; y1: number };
 

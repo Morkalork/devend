@@ -211,9 +211,23 @@ export function winSpecProblems(spec: WinSpec, level: LevelConfig): string[] {
       problems.push(
         `Asks for ${c.count} ${c.kind === "locks" ? "locks" : "superior locks"}, but the map spawns at most ${level.maxBalls ?? 1} balls.`);
     }
-    if (c.kind === "lockType" && c.count > (level.maxBalls ?? 1)) {
-      problems.push(
-        `Asks for ${c.count} ${c.ballType} locks, but the map spawns at most ${level.maxBalls ?? 1} balls.`);
+    if (c.kind === "lockType") {
+      if (c.count > (level.maxBalls ?? 1)) {
+        problems.push(
+          `Asks for ${c.count} ${c.ballType} locks, but the map spawns at most ${level.maxBalls ?? 1} balls.`);
+      }
+      // A win that names a ball needs that ball to be THERE. Ball types are
+      // otherwise picked from maxBalls and unlock levels, so left to the roll
+      // the named ball may simply not spawn and the map is unwinnable through
+      // no fault of the player.
+      const roster = level.ballTypeIds;
+      if (!roster) {
+        problems.push(
+          `Asks to lock a ${c.ballType}, but the roster is left to the roll: pin ballTypeIds or the ball may not spawn.`);
+      } else if (!roster.includes(c.ballType)) {
+        problems.push(
+          `Asks to lock a ${c.ballType}, which is not in this map's pinned roster (${roster.join(", ")}).`);
+      }
     }
     if (c.kind === "underPar" && level.expectedCuts + c.delta < 1) {
       problems.push("The cut budget this allows is less than one cut.");

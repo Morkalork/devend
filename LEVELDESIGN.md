@@ -117,7 +117,19 @@ collapse, so a map may sit at most one cut below its act's high-water mark.
 | I | 1-10 | Onboarding: the basics of sealing | locking, 2 balls, chambers & necks, movers, breakables, the BONUS area |
 | II | 11-20 | The Sprint: pressure and space | chests, `reveals`, terminals + dormant balls, WIP limit, mirrors, 4 balls |
 | III | 21-30 | Legacy Code: the board fights back | every gravity idea, the tilt, `dataStream`, charges, phasing |
-| IV | 31-35 | Crunch: everything at once | no new primitives; combination set-pieces and pinned mutators |
+| IV | 31-35 | Crunch: everything at once | no new primitives; combination set-pieces, pinned mutators, and the first maps to state their own win conditions |
+
+**Act IV states its win.** It is the only act whose maps carry a `win:` block
+rather than leaning on the implicit clear, and each gate is priced with a
+`bonusPercent` (see `winSpec.ts`). Two rules fell out of authoring it:
+
+- **A gate never replaces the clear.** Every authored map still requires
+  `space`, so a gate is a second thing to do while doing the first, not a way
+  to skip the map.
+- **A win that names a ball must pin the roster.** Ball types are otherwise
+  picked from `maxBalls` and unlock levels, so a `lockType` clause left to the
+  roll can produce a map that is unwinnable through no fault of the player.
+  `winSpecProblems` flags it, and the map builder shows the flag.
 
 `src/test/featureSchedule.test.ts` enforces the parts of this that are
 machine-checkable: no mechanic debuts before its gate, headline mechanics appear
