@@ -23,11 +23,66 @@ import { PALETTE, mix } from "./palette";
 import { ambientAt, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
+import type { ImpactDent } from "@/types/game";
 
 type W2S = (x: number, y: number) => Pt;
 
 /** Longest edge piece, in world units, while an object is taking a hit. */
 const DENT_STEP = 22;
+
+/**
+ * How deep a single recorded hit bites into the hull, in world units.
+ *
+ * Bigger than the transient impact give (12) on purpose: that one is a wall
+ * flexing and springing back, this one is material that is gone. If damage did
+ * not read deeper than a bounce, the permanent thing would look like the
+ * temporary one.
+ */
+export const CARVE_DEPTH = 16;
+/** How far along the hull one bite is felt, in world units. */
+export const CARVE_SIGMA = 26;
+
+/**
+ * Bite the recorded impact points OUT of an outline.
+ *
+ * The dents were drawn as radiating cracks and a small dark pit, which reads as
+ * a mark ON the surface rather than material missing FROM it. A breakable that
+ * has taken three of four hits should be visibly chewed at its silhouette, so
+ * you can see how close it is to going without counting anything.
+ *
+ * Pulls the contour toward the object's centre with a Gaussian falloff, which
+ * gives the rounded half-circle bite a ball would leave rather than a notch cut
+ * with a knife. Depth rides the hit's own strength, so a graze scallops it and
+ * a heavy strike takes a chunk.
+ */
+export function carveContour(pts: Pt[], w2s: W2S, dents?: ImpactDent[]): Pt[] {
+  if (!dents || dents.length === 0) return pts;
+  let cx = 0, cy = 0;
+  for (const p of pts) { cx += p.x; cy += p.y; }
+  cx /= pts.length; cy /= pts.length;
+
+  // Screen units per world unit, so the bite is the same physical size at any
+  // zoom. Taken from the transform rather than assumed.
+  const o = w2s(0, 0), u = w2s(1, 0);
+  const k = Math.hypot(u.x - o.x, u.y - o.y) || 1;
+
+  return pts.map(p => {
+    let depth = 0;
+    for (const d of dents) {
+      const hit = w2s(d.x, d.y);
+      const dist = Math.hypot(p.x - hit.x, p.y - hit.y) / k;
+      if (dist > CARVE_SIGMA * 2.5) continue;
+      depth += CARVE_DEPTH * (d.s ?? 1) * Math.exp(-(dist * dist) / (2 * CARVE_SIGMA * CARVE_SIGMA));
+    }
+    if (depth <= 0.01) return p;
+    // Never past the centre: a bite deep enough to cross the middle would fold
+    // the polygon inside out and render as a bow tie.
+    const toX = cx - p.x, toY = cy - p.y;
+    const reach = Math.hypot(toX, toY) || 1;
+    const move = Math.min(depth * k, reach * 0.45);
+    return { x: p.x + (toX / reach) * move, y: p.y + (toY / reach) * move };
+  });
+}
 
 /**
  * An object's outline, dented where balls have struck it.
@@ -125,15 +180,103 @@ export class ObjectLayer {
    * nothing has hit anything the snapped four-corner path is untouched, which
    * is every object on almost every frame.
    */
-  private prep(poly: Polygon, w2s: W2S): { pts: Pt[]; cx: number; cy: number } | null {
-    const pts = anyObstacleImpactsActive()
-      ? dentedContour(poly.vertices, w2s)
+  private prep(
+    poly: Polygon, w2s: W2S, dents?: ImpactDent[],
+  ): { pts: Pt[]; cx: number; cy: number } | null {
+    // Detail is needed for a LIVE impact (the transient outward give) and for
+    // RECORDED damage (the permanent inward bite). Both need points between the
+    // corners to land on; a four-corner slab pushed at its corners just moves.
+    const damaged = (dents?.length ?? 0) > 0;
+    const pts = anyObstacleImpactsActive() || damaged
+      ? carveContour(dentedContour(poly.vertices, w2s), w2s, dents)
       : snapContour(poly.vertices.map(v => w2s(v.x, v.y)));
     if (pts.length < 3) return null;
     let cx = 0, cy = 0;
     for (const p of pts) { cx += p.x; cy += p.y; }
     cx /= pts.length; cy /= pts.length;
     return { pts, cx, cy };
+  }
+
+  /**
+   * A rim drawn in PIECES rather than as one line.
+   *
+   * The load-bearing "this is breakable" cue. A solid slab is outlined
+   * continuously; break the outline into segments with gaps between them and
+   * the silhouette reads as something already in pieces, held together. That
+   * works at rest, at any damage level, at any zoom, and it does not compete
+   * with the colours the board already uses for chests, objectives and mirrors.
+   *
+   * Segments are laid out by ARC LENGTH along each edge, not per vertex, so a
+   * long face and a short one break up at the same rate instead of a small
+   * object looking finely cracked and a big one barely marked.
+   */
+  private brokenRim(
+    pts: Pt[], cx: number, cy: number, light: LightScope,
+    color: number, strength: number, scale: number,
+  ): void {
+    const dash = Math.max(3, 7 * scale);
+    const gap = Math.max(2, 5 * scale);
+    const n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const a = pts[i];
+      const b = pts[(i + 1) % n];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 0.5) continue;
+      let nx = -dy / len, ny = dx / len;
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      if ((mx - cx) * nx + (my - cy) * ny < 0) { nx = -nx; ny = -ny; }
+      const lit = facing(light, mx, my, nx, ny);
+      if (lit <= 0.05) continue;
+      const ux = dx / len, uy = dy / len;
+      for (let d = 0; d < len; d += dash + gap) {
+        const e = Math.min(d + dash, len);
+        this.rims.moveTo(a.x + ux * d, a.y + uy * d).lineTo(a.x + ux * e, a.y + uy * e);
+      }
+      this.rims.stroke({
+        width: hairline(), color,
+        alpha: Math.min(0.95, lit * strength * light.level),
+      });
+    }
+  }
+
+  /**
+   * Fracture seams across the body: the piece lines the broken rim implies.
+   *
+   * Two of them, placed from the object's own centre so they are identical
+   * every frame - a per-frame random would make them crawl and read as noise,
+   * which is the same reason the impact cracks are seeded from their hit point.
+   * They darken as damage lands, so an object about to go looks like it is
+   * already coming apart rather than merely dirty.
+   */
+  private drawSeams(pts: Pt[], cx: number, cy: number, scale: number, damage: number): void {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of pts) {
+      if (p.x < minX) minX = p.x; if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y; if (p.y > maxY) maxY = p.y;
+    }
+    const w = maxX - minX, h = maxY - minY;
+    // Too small to carry a seam without becoming a smudge.
+    if (Math.min(w, h) < 14 * scale) return;
+
+    const seed = Math.abs(Math.round(cx * 73856093) ^ Math.round(cy * 19349663));
+    for (let i = 0; i < 2; i++) {
+      const hx = Math.sin(seed * 0.0001 + i * 1.7) * 43758.5453;
+      const t = 0.3 + (hx - Math.floor(hx)) * 0.4;   // keep them off the edges
+      // Seam the SHORT way across, so a long thin wall is cut into blocks
+      // rather than sliced lengthwise into two long thin walls.
+      if (w >= h) {
+        const x = minX + w * t;
+        this.rims.moveTo(x, minY).lineTo(x, maxY);
+      } else {
+        const y = minY + h * t;
+        this.rims.moveTo(minX, y).lineTo(maxX, y);
+      }
+    }
+    this.rims.stroke({
+      width: hairline(), color: PALETTE.shadow,
+      alpha: 0.35 + damage * 0.4,
+    });
   }
 
   /** Per-edge rim on the faces pointing at the monitor. */
@@ -187,7 +330,7 @@ export class ObjectLayer {
     w2s: W2S,
     scale: number,
   ): void {
-    const g = this.prep(poly, w2s);
+    const g = this.prep(poly, w2s, d.dents);
     if (!g) return;
     const { pts, cx, cy } = g;
 
@@ -195,11 +338,33 @@ export class ObjectLayer {
 
     const amb = ambientAt(light, cx, cy);
     // A chest is loot, not obstruction: amber body so it reads as a prize.
-    const base = d.chest ? PALETTE.amber : d.objective ? 0x8a6a3a : PALETTE.obstacle;
+    //
+    // An ordinary breakable gets a warm shift off the plain obstacle colour.
+    // Small on purpose: colour alone is a weak signal here because the board
+    // already carries several object types, and the LOAD-BEARING cue is the
+    // broken rim below. This just stops a breakable being pixel-identical to
+    // the wall beside it, which is what it was.
+    const base = d.chest ? PALETTE.amber
+      : d.objective ? 0x8a6a3a
+      : mix(PALETTE.obstacle, PALETTE.amber, 0.18);
     const body = mix(PALETTE.shadow, base, (0.55 + amb * 0.45) * (1 - damage * 0.45));
     this.bodies.poly(pts).fill({ color: body, alpha: 1 });
 
-    this.rimEdges(pts, cx, cy, light, d.chest ? 0xffe9b0 : PALETTE.obstacleEdge, 0.95 * (1 - damage * 0.7));
+    const rimColor = d.chest ? 0xffe9b0 : PALETTE.obstacleEdge;
+    const rimStrength = 0.95 * (1 - damage * 0.7);
+    if (d.chest) {
+      this.rimEdges(pts, cx, cy, light, rimColor, rimStrength);
+    } else {
+      // A BROKEN rim, and this is the whole point of the change. A solid slab
+      // is outlined continuously; this one is outlined in pieces, so the
+      // silhouette itself says "this comes apart" before a ball has touched it.
+      //
+      // It used to be told apart only by DAMAGE, which is backwards: you had to
+      // hit it to learn it was hittable, and a fresh breakable was the same
+      // colour and the same outline as the wall next to it.
+      this.brokenRim(pts, cx, cy, light, rimColor, rimStrength, scale);
+      this.drawSeams(pts, cx, cy, scale, damage);
+    }
 
     // Dents + cracks: each recorded impact notches the surface and throws a few
     // splits out from it. Placed at the real world hit point, so damage reads as

@@ -495,7 +495,16 @@ export function updateBall(
       // Black ball wears down movers (its heavy mass makes short work of them).
       if (ball.ability === 'breakObjects') {
         const d = findMoverDestructible(game, mover.id);
-        if (d) registerObjectHit(game, d, ball.id, now, ballImpactDamage(ball, vec2Length(ball.velocity)));
+        // The ball's own position at contact is the impact point. Passing it
+        // matters: registerObjectHit records the dent and sheds the chips only
+        // when it is given one, so a mover being worn down used to take damage
+        // in complete silence - no bite out of its hull, no fragments.
+        if (d) {
+          registerObjectHit(
+            game, d, ball.id, now, ballImpactDamage(ball, vec2Length(ball.velocity)),
+            { x: ball.position.x, y: ball.position.y },
+          );
+        }
       }
     }
   }
@@ -620,9 +629,11 @@ export function updateBall(
               registerObjectHit(game, d, ball.id, now, dmg, impactPoint ?? undefined);
             }
           }
-          // Gentle bulge for plain green obstacles only (mirrors + breakables,
-          // which have their own crack/dent visuals, are excluded; movers never
-          // reach this path). Push the boundary outward, away from the ball.
+          // Gentle bulge for every obstacle except a mirror: glass that flexes
+          // reads as rubber, and its specular treatment already says breakable.
+          // Breakables DO bulge (they used to be excluded on the grounds their
+          // cracks told the story, and they did not). Movers never reach this
+          // path. Push the boundary outward, away from the ball.
           // Breakables DO bulge now. They were excluded on the grounds that
           // cracks and dent notches already told the story, and they did not:
           // a breakable wall took a hit and sat there, so nothing distinguished

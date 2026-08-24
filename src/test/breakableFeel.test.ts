@@ -49,7 +49,13 @@ describe("the object layer draws the give", () => {
   });
 
   it("keeps the snapped fast path when nothing has been hit", () => {
-    expect(OBJ).toMatch(/anyObstacleImpactsActive\(\)\s*\?\s*dentedContour/);
+    // The condition grew a second arm when recorded damage started carving the
+    // hull too, so this checks the PROPERTY rather than the exact expression:
+    // detail costs something, and an object nobody has touched must not pay it.
+    const prep = OBJ.slice(OBJ.indexOf("private prep("), OBJ.indexOf("private brokenRim("));
+    expect(prep).toMatch(/anyObstacleImpactsActive\(\)/);
+    expect(prep, "an untouched object still takes the four-corner path")
+      .toMatch(/:\s*snapContour\(/);
   });
 
   it("subdivides, or a four-corner slab would just move", () => {
