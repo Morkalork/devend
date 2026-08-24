@@ -187,7 +187,7 @@ export class SleekBallLayer {
       // Every other round thing here uses circle(), which opens its own
       // subpath, which is why this was the only call that could do it.
       .moveTo(ring.start.x, ring.start.y)
-      .arc(c.x, c.y, ring.radius, ring.from, ring.to, ring.anticlockwise)
+      .arc(c.x, c.y, ring.radius, ring.from, ring.to)
       .stroke({
         width: Math.max(1.5, 2.2 * scale),
         // Reddens as it runs out: the last second should catch the eye of a

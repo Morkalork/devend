@@ -20,11 +20,22 @@ export interface CompassRing {
   radius: number;
   /** Where the arc begins, so the caller can open a fresh subpath there. */
   start: { x: number; y: number };
-  /** Arc bounds, already ordered low to high for Pixi. */
+  /**
+   * Arc bounds, ordered low to high, to be swept in that order.
+   *
+   * There is deliberately no `anticlockwise` flag. Which way the ball will turn
+   * is already carried by WHICH bounds these are: a clockwise turn puts the
+   * wedge after twelve o'clock, a counter-clockwise one before it. Handing the
+   * caller a direction flag as well means the same fact is stated twice, and
+   * the two statements can disagree - which is exactly what happened. Setting
+   * it from the turn direction made Pixi sweep the LONG way round the circle
+   * for every counter-clockwise ball, so half of all compass balls wore a ring
+   * that was nearly full when the turn was about to fire and nearly empty just
+   * after it landed. Precisely inverted, on a countdown whose whole job is to
+   * be trusted.
+   */
   from: number;
   to: number;
-  /** Pixi's `anticlockwise` flag for this sweep. */
-  anticlockwise: boolean;
   /** The last moments before the turn, when the ring should catch the eye. */
   urgent: boolean;
 }
@@ -59,14 +70,13 @@ export function compassRing(
   const lo = Math.min(from, to);
   const hi = Math.max(from, to);
 
-  // Pixi begins the arc at `lo` whichever way it then sweeps, so that is the
-  // point a fresh subpath has to open on.
+  // Pixi begins the arc at `lo` and sweeps forward to `hi`, so that is the
+  // point a fresh subpath has to open on, and lo->hi is the whole sweep.
   return {
     radius,
     start: { x: cx + Math.cos(lo) * radius, y: cy + Math.sin(lo) * radius },
     from: lo,
     to: hi,
-    anticlockwise: !cw,
     urgent: progress > URGENT_FROM,
   };
 }

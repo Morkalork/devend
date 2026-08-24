@@ -81,8 +81,15 @@ describe("the ring still says what it always said", () => {
   /** The direction is chosen a cycle early precisely so the ring can lean the
    *  way the ball is about to turn; that is what makes it a plan. */
   it("leans the way the ball will turn", () => {
-    expect(ringAt(1, { turnClockwise: true })!.anticlockwise).toBe(false);
-    expect(ringAt(1, { turnClockwise: false })!.anticlockwise).toBe(true);
+    // Twelve o'clock is -PI/2. A clockwise turn puts the whole wedge after it,
+    // a counter-clockwise one before it. That is where the lean lives: in
+    // WHICH bounds these are, not in a separate direction flag.
+    const cw = ringAt(1, { turnClockwise: true })!;
+    const ccw = ringAt(1, { turnClockwise: false })!;
+    expect(cw.from).toBeCloseTo(-Math.PI / 2);
+    expect(ccw.to).toBeCloseTo(-Math.PI / 2);
+    expect(cw.to).toBeGreaterThan(-Math.PI / 2);
+    expect(ccw.from).toBeLessThan(-Math.PI / 2);
   });
 
   it("goes urgent only in the last stretch", () => {
