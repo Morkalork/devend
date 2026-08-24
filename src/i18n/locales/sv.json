@@ -1590,5 +1590,11 @@
       "title": "Markerad zon",
       "body": "Lås en boll med zonen intagen så betalar den en multiplikator. På vissa banor är det enda sättet att vinna."
     }
+  },
+  "gameMessages": {
+    "breakableAnchor": "Ett stangsel kan inte forankras i nagot krossbart. Slog sonder det forst, eller dra snittet till en solid vagg.",
+    "fenceLimit": "Du bygger redan sa manga stangsel samtidigt som du kan. Vanta tills ett blir klart, eller uppgradera for fler.",
+    "capturedStart": "Borja stangslet i oppen yta. Den marken ar redan intagen.",
+    "wallInTheWay": "Ett stangsel ar redan forankrat dar. Borja fran oppen yta lite langre bort."
   }
 }

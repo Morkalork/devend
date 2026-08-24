@@ -1590,5 +1590,11 @@
       "title": "Zona marcada",
       "body": "Encierra una bola con esta zona capturada y pagará un multiplicador. En algunos mapas es la única forma de ganar."
     }
+  },
+  "gameMessages": {
+    "breakableAnchor": "Una valla no puede anclarse en algo rompible. Rompelo primero, o lleva el corte hasta un muro solido.",
+    "fenceLimit": "Ya estas levantando todas las vallas que puedes a la vez. Espera a que una termine, o mejora para levantar mas.",
+    "capturedStart": "Empieza la valla en espacio abierto. Ese terreno ya esta capturado.",
+    "wallInTheWay": "Ya hay una valla anclada ahi. Empieza desde espacio abierto un poco mas alla."
   }
 }

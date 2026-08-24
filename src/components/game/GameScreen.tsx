@@ -23,6 +23,7 @@ import type { BoardEntityHit } from '@/lib/boardEntityInfo';
 import { GameTopBar } from './GameTopBar';
 import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
+import { GameMessageBar } from './GameMessageBar';
 import { AbilityCountdownBar } from './AbilityCountdownBar';
 import { TopBarDetailsPanel } from './TopBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
@@ -307,6 +308,7 @@ export function GameScreen({
     ballCount: 1,
     pickupPresent: false,
     onBankAndContinue: undefined,
+    gameMessage: null,
   });
 
   // "Loading..." overlay for the run-start intro: the board takes ~half a
@@ -857,6 +859,16 @@ export function GameScreen({
               />
             </div>
           )}
+          {/* Why the last thing you tried did nothing.
+              Above the controls and below the board, so it never covers the
+              play area: a message explaining a failed cut is useless if it
+              hides the board you were cutting. */}
+          <GameMessageBar
+            message={gameState.gameMessage ?? null}
+            accentColor={accentColor}
+            visible={!mapComplete}
+          />
+
           {/* Stop pushing and take what you have.
               Push Your Luck had no exit once it started: the prompt's Bank
               button vanishes the moment you choose to push, and from there the

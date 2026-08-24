@@ -32,6 +32,7 @@ import { drawPerfOverlay, recordSurface, isPerfHudEnabled } from "@/lib/renderin
 import { PerfOverlay } from "./PerfOverlay";
 import { RenderContext, RainState } from "@/lib/rendering/types";
 import { calculateScore, ensureScoringConfigLoaded, getShipEarlyPercent } from "@/lib/scoring";
+import { raiseMessage, type GameMessage, type GameMessageId } from "@/lib/gameMessages";
 import { readLockAxes } from "@/lib/lockCapacity";
 import { isTimingExempt, getMapTimeLimit } from "@/lib/mapTiming";
 import { tickRainbowSpawns } from "@/lib/physics/rainbowSpawner";
@@ -139,6 +140,8 @@ export interface GameStateInfo {
   /** True once a power-up has appeared this map, for the one-time explainer (#59). */
   pickupPresent: boolean;
   onBankAndContinue?: () => void;
+  /** The one live feedback message, or null. See lib/gameMessages. */
+  gameMessage?: GameMessage | null;
   /** Fire a chest-earned ability by id (Freeze All / Slow All / Clear Fences). */
   onUseAbility?: (abilityId: string) => void;
   /** Active time-based abilities, for the countdown bar (drain in active-play seconds). */
@@ -530,6 +533,17 @@ export function GameCanvas({
   useEffect(() => { totalScoreRef.current = totalScore; }, [totalScore]);
 
   const [pushMode, setPushMode] = useState<"none" | "prompt" | "pushing">("none");
+  /**
+   * The single feedback slot. One message at a time by construction: raising a
+   * new one replaces whatever was there, and repeating the same one refreshes
+   * its clock rather than queueing a second copy of the same sentence.
+   */
+  const [gameMessage, setGameMessage] = useState<GameMessage | null>(null);
+  const raiseGameMessage = useCallback((id: GameMessageId) => {
+    setGameMessage(current => raiseMessage(current, id, Date.now()));
+  }, []);
+  const onMessageRef = useRef<((id: GameMessageId) => void) | null>(null);
+  onMessageRef.current = raiseGameMessage;
   const [clearedPercent, setClearedPercent] = useState<number | null>(null);
 
   const gameRef = useRef<CanvasGameState>({
@@ -663,7 +677,7 @@ export function GameCanvas({
     pickupFeedback: [] as PickupFeedback[],
   });
 
-  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleTapRemoveRef, handleEntityInfoRef);
+  useGameInput(canvasRef, gameRef, activeModifiers, setCutCount, setIsPlayerDragging, setFreezeUsesRemaining, handleAbilityTargetRef, handleSuperiorInfoRef, handleTapRemoveRef, handleEntityInfoRef, onMessageRef);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -673,6 +687,8 @@ export function GameCanvas({
     if (initializedLevelRef.current !== level.id) {
       gameInitializedRef.current = false;
       initializedLevelRef.current = level.id;
+      // A refusal from the previous map explains nothing about this one.
+      setGameMessage(null);
     }
 
     const game = gameRef.current;
@@ -1534,12 +1550,13 @@ export function GameCanvas({
         ballCount,
         pickupPresent,
         onBankAndContinue: handleBankAndContinue,
+        gameMessage,
         onUseAbility: handleUseAbility,
         abilityTimers,
         armedAbility,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

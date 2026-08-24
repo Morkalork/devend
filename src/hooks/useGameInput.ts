@@ -34,6 +34,7 @@ import { isPositionActive } from "@/lib/spaceGrid";
 import { wallBlocksCutStart } from "@/lib/physics/cutStart";
 import { findRegionContainingPoint } from "@/lib/gameUtils";
 import { cutAnchorsBreakable } from "@/lib/physics/destructibles";
+import type { GameMessageId } from "@/lib/gameMessages";
 import { abilityFenceRushFactor } from "@/lib/abilityEffects";
 import { isTappableBall } from "@/lib/ballTypes";
 import { initAudio } from "@/lib/gameAudio";
@@ -76,6 +77,15 @@ export function useGameInput(
   /** Press-and-hold on a board object: opens its explainer. Read from a ref so
    *  the listeners stay wired once. */
   onEntityInfoRef?: RefObject<((hit: BoardEntityHit) => void) | null>,
+  /**
+   * Say why a cut was refused.
+   *
+   * Every refusal below used to be a bare `return`, or a console.warn the
+   * player will never see. From their side the fence simply did not appear,
+   * which reads as a bug rather than a rule. Read from a ref so the listeners
+   * stay wired once.
+   */
+  onMessageRef?: RefObject<((id: GameMessageId) => void) | null>,
 ): void {
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -194,7 +204,10 @@ export function useGameInput(
       }
 
       // At the concurrent-fence limit, no new cut can start.
-      if (game.activeWalls.length >= concurrentFenceLimit(game, activeModifiers)) return;
+      if (game.activeWalls.length >= concurrentFenceLimit(game, activeModifiers)) {
+        onMessageRef?.current?.("fenceLimit");
+        return;
+      }
 
       const { screenX, screenY } = getCanvasCoords(e);
 
@@ -204,12 +217,17 @@ export function useGameInput(
 
       if (!game.spaceGrid || !isPositionActive(game.spaceGrid, worldPos)) {
         if (import.meta.env.DEV) console.warn(`[cut-refused] start cell not active at (${worldPos.x | 0},${worldPos.y | 0}) - wrongly-captured cell?`);
+        onMessageRef?.current?.("capturedStart");
         return;
       }
 
       const region = findRegionContainingPoint(game.regions, worldPos.x, worldPos.y);
       if (!region) {
         if (import.meta.env.DEV) console.warn(`[cut-refused] no region contains (${worldPos.x | 0},${worldPos.y | 0})`);
+        // Same thing from the player's side as starting on captured ground:
+        // there is nothing here to cut. Naming the internal difference would
+        // explain the code rather than the game.
+        onMessageRef?.current?.("capturedStart");
         return;
       }
 
@@ -219,6 +237,7 @@ export function useGameInput(
       for (const w of game.walls) {
         if (wallBlocksCutStart(worldPos, w, game.spaceGrid)) {
           if (import.meta.env.DEV) console.warn(`[cut-refused] blocked by wall "${w.id}" at (${worldPos.x | 0},${worldPos.y | 0})`);
+          onMessageRef?.current?.("wallInTheWay");
           return;
         }
       }
@@ -373,6 +392,10 @@ export function useGameInput(
             // cut would anchor on one, it "duds" (no wall, brief feedback).
             if (cutAnchorsBreakable(game, targetStart, targetEnd, WALL_THICKNESS + 6)) {
               game.lastDudAt = performance.now();
+              // The buzz and the flash say "no" without saying why, and this is
+              // the refusal the player is most likely to read as a bug: the
+              // fence grows all the way and then simply is not there.
+              onMessageRef?.current?.("breakableAnchor");
               if (navigator.vibrate) navigator.vibrate([8, 30, 8]);
               game.swipeStart = null;
               game.swipeRegionId = null;

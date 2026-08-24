@@ -1057,5 +1057,11 @@
       "title": "Marked zone",
       "body": "Lock a ball with this zone captured and it pays a multiplier. On some maps it is the only way to win."
     }
+  },
+  "gameMessages": {
+    "breakableAnchor": "A fence cannot anchor on something breakable. Smash it out of the way first, or run your cut to solid wall.",
+    "fenceLimit": "You are already growing as many fences as you can at once. Wait for one to finish, or upgrade to grow more.",
+    "capturedStart": "Start your fence in open space. That ground has already been captured.",
+    "wallInTheWay": "A fence is already anchored there. Start from open space a little further along."
   }
 }
