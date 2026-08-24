@@ -1,0 +1,59 @@
+# Dev/End CI.
+#
+# The 2000-odd tests in this repo guard a lot that is invisible when broken: an
+# unwinnable map, a path preview that lies, an economy that silently caps a
+# skilled run. Until now they ran only when someone remembered to run them,
+# which makes them a habit rather than a safety net.
+#
+# Runs on every push and every pull request, on both branches that matter:
+# `dev` is where work lands and `main` is what deploys to Heroku, so a red
+# `main` is a red release.
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+# A new push to the same branch makes the previous run irrelevant. Cancelling
+# it keeps the queue short without ever cancelling a `main` run, which is the
+# one whose result gates a deploy.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Plain `tsc --noEmit` is a NO-OP in this repo: the root tsconfig has
+      # `files: []` plus project references, and outside build mode tsc does not
+      # traverse references, so it checks zero files and always passes. The
+      # project flag is what actually checks src (see CLAUDE.md).
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.app.json
+
+      # Pinned at the current baseline rather than zero. Zero would mean either
+      # a red board from day one or a rush of drive-by suppressions; pinning
+      # means the count can only come down, and a new warning fails the build.
+      - name: Lint
+        run: npx eslint . --max-warnings 26
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build

@@ -19,6 +19,8 @@ import { WelcomeScreen } from '@/components/game/WelcomeScreen';
 import { TutorialScreen } from '@/components/game/TutorialScreen';
 import { OptionsScreen } from '@/components/game/OptionsScreen';
 import { GameScreen } from '@/components/game/GameScreen';
+import { GameErrorBoundary } from '@/components/GameErrorBoundary';
+import { flushRunSave } from '@/lib/runSaveFlush';
 import { ResultScreen } from '@/components/game/ResultScreen';
 import { LevelCompleteOverlay } from '@/components/game/LevelCompleteOverlay';
 import { UpgradeShop } from '@/components/game/UpgradeShop';
@@ -272,7 +274,16 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 accentColor={accentHex}
               />
             )}
+            {/* The game screen gets its own boundary so a crash on the board
+                costs the MAP, not the app: the run is saved to the current map
+                and you land back on the menu able to resume. The outer
+                boundary in App is the backstop for everything else. */}
             {navigation.currentScreen === 'game' && session.currentLevel && !session.showLevelComplete && (
+              <GameErrorBoundary
+                scope="game"
+                onCrash={flushRunSave}
+                onRecover={navigation.goToWelcome}
+              >
               <GameScreen
                 // Bumping gameInstanceKey (spending a Continue) remounts this so
                 // the current level re-inits fresh with score + upgrades intact.
@@ -329,6 +340,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 pickupLifetimeFactor={session.ascensionRules.pickupLifetimeFactor}
                 introAssemble={session.introAssemblePending}
               />
+              </GameErrorBoundary>
             )}
             {navigation.currentScreen === 'tenureDraft' && session.pendingTenure && (
               <TenureDraftScreen

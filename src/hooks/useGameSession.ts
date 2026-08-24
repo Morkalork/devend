@@ -61,6 +61,7 @@ import { hasAnyMapTuning } from '@/lib/mapTuning';
 import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '@/lib/tenure';
 import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
+import { registerRunFlush, installRunFlushListeners } from '@/lib/runSaveFlush';
 
 /**
  * Drop one debug query param, keeping the rest. The old code replaced the whole
@@ -775,6 +776,26 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (!snap || snap.levelSequenceIds.length === 0) return;
     saveRun(snap);
   }, [nav.currentScreen, currentLevelIndex, gameInstanceKey, saveRun]);
+
+  /**
+   * Also persist when the page is hidden or torn down, and when the error
+   * boundary catches a crash.
+   *
+   * Per-map writes are the right granularity for the map, but they leave
+   * everything BETWEEN maps unsaved: upgrades bought, a draft taken, an
+   * assignment accepted. On a phone that window is very reachable - clear a
+   * map, open the shop, get distracted, the OS reclaims the tab - and you come
+   * back to the map's start with the purchases gone, having paid for them.
+   */
+  useEffect(() => {
+    registerRunFlush(() => {
+      const snap = runSnapshotRef.current;
+      if (!snap || snap.levelSequenceIds.length === 0) return;
+      saveRun(snap);
+    });
+    const uninstall = installRunFlushListeners();
+    return () => { uninstall(); registerRunFlush(null); };
+  }, [saveRun]);
 
   /** Leave any seeded-run context: normal runs roll Math.random again. */
   const clearDailyMode = useCallback(() => {
