@@ -6,7 +6,7 @@ import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { GameCallbacks } from "./gameCallbacks";
 import { checkAndUpdateBallWonStates, applyMicroManagerSpeedCap } from "./checkBallWonState";
 import { handleGameOverFn } from "./handleGameOver";
-import { fenceBudgetExhausted } from "@/lib/fenceBudget";
+import { fenceBudgetOutcome } from "@/lib/fenceBudget";
 import {
   pointToSegmentDistance,
   lineSegmentIntersection,
@@ -421,14 +421,19 @@ export function applyCutFn(
     callbacks.onTutorialCutSuccess?.();
   }
 
-  // Fence budget / WIP Limit: the last allowed fence just completed and it did
-  // not finish the map -> lose a life + restart (evaluateWinConditions ran
-  // first, so a winning final cut wins instead of failing here).
-  if (fenceBudgetExhausted(level.fenceBudget, game.completedCuts, {
+  // Fence budget / WIP Limit. In normal play the last allowed fence completing
+  // without finishing the map costs a life (evaluateWinConditions ran first, so
+  // a winning final cut wins instead of failing here). Mid-PUSH it banks
+  // instead: the map was already won when the prompt opened, so running out of
+  // fences ends the bet rather than taking back the win.
+  const budget = fenceBudgetOutcome(level.fenceBudget, game.completedCuts, {
     levelComplete: game.levelComplete, gameOver: game.gameOver,
     pushMode: game.pushMode, pushPromptPending: game.pushPromptPending,
-  })) {
+  });
+  if (budget === "fail") {
     handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+  } else if (budget === "bank") {
+    triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'space');
   }
 }
 
