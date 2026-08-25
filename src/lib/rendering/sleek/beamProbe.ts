@@ -70,19 +70,37 @@ export function showBeamReadout(lines: string[]): void {
 
 export interface BeamHit {
   layer: string;
+  /** True when this is a stray at the origin rather than a dump entry. */
+  stray?: boolean;
   /** Screen-space endpoints, so the report can be checked against the picture. */
   from: { x: number; y: number };
   to: { x: number; y: number };
   length: number;
 }
 
-/** Is the live URL asking for the probe? */
-export function beamProbeOn(): boolean {
+/**
+ * Probe mode from the URL: 0 off, 1 detect, 2 dump.
+ *
+ * Mode 2 exists because mode 1 only finds what I already believe the beam is.
+ * Three theories have been wrong so far, and a detector that encodes a fourth
+ * would go quiet on the reporter's screen and tell us nothing at all. The dump
+ * has no theory: it reports the longest run in every layer, every time, so
+ * whatever is drawing the line shows up as a span whose endpoints can be
+ * matched against the picture.
+ */
+export function beamProbeMode(): 0 | 1 | 2 {
   try {
-    return new URLSearchParams(window.location.search).get("beam") === "1";
+    const raw = new URLSearchParams(window.location.search).get("beam");
+    if (raw === "2") return 2;
+    return raw === "1" ? 1 : 0;
   } catch {
-    return false; // no window (SSR / test env without a location)
+    return 0; // no window (SSR / test env without a location)
   }
+}
+
+/** Is the live URL asking for the probe at all? */
+export function beamProbeOn(): boolean {
+  return beamProbeMode() !== 0;
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -115,18 +133,50 @@ function straysIn(g: any): Array<{ to: { x: number; y: number }; length: number 
   return strays;
 }
 
-function walk(node: Container, label: string, out: BeamHit[]): void {
+/** The single longest run in one Graphics, whatever it is. */
+function longestIn(g: any): BeamHit | null {
+  const paths: any[] = [];
+  for (const ins of g.context?.instructions ?? []) if (ins.data?.path) paths.push(ins.data.path);
+  if (g.context?._activePath) paths.push(g.context._activePath);
+
+  let best: BeamHit | null = null;
+  for (const path of paths) {
+    for (const prim of path.shapePath?.shapePrimitives ?? []) {
+      const pts: number[] = (prim.shape as any).points ?? [];
+      for (let i = 0; i + 3 < pts.length; i += 2) {
+        const d = Math.hypot(pts[i + 2] - pts[i], pts[i + 3] - pts[i + 1]);
+        if (!best || d > best.length) {
+          best = {
+            layer: "", length: Math.round(d),
+            from: { x: pts[i], y: pts[i + 1] },
+            to: { x: pts[i + 2], y: pts[i + 3] },
+          };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+function walk(node: Container, label: string, out: BeamHit[], dump: boolean): void {
   const g = node as unknown as { context?: unknown };
   if (g.context) {
     for (const s of straysIn(node)) {
       // A zero-length stray is a duplicated first point, not a line anyone can
       // see. Only a stray that actually goes somewhere is a beam.
       if (s.length <= ORIGIN_TOL) continue;
-      out.push({ layer: label, from: { x: 0, y: 0 }, to: s.to, length: Math.round(s.length) });
+      out.push({
+        layer: label, stray: true,
+        from: { x: 0, y: 0 }, to: s.to, length: Math.round(s.length),
+      });
+    }
+    if (dump) {
+      const best = longestIn(node);
+      if (best && best.length > 0) out.push({ ...best, layer: label });
     }
   }
   const kids = (node as any).children ?? [];
-  for (let i = 0; i < kids.length; i++) walk(kids[i], `${label}[${i}]`, out);
+  for (let i = 0; i < kids.length; i++) walk(kids[i], `${label}[${i}]`, out, dump);
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -148,16 +198,30 @@ export class BeamProbe {
   /** So a beam that comes and goes still gets reported once per appearance. */
   private lastReport = "";
 
-  /** null when throttled or when nothing is wrong. */
-  run(roots: Array<[string, Container | Graphics]>, now: number): BeamHit[] | null {
+  /**
+   * null when throttled, or (in detect mode) when nothing is wrong.
+   *
+   * In DUMP mode it always reports, because "nothing exceeded my threshold" is
+   * precisely the useless answer that made dump mode necessary.
+   */
+  run(
+    roots: Array<[string, Container | Graphics]>, now: number, dump = false,
+  ): BeamHit[] | null {
     if (now - this.lastRun < PROBE_MS) return null;
     this.lastRun = now;
 
     const hits: BeamHit[] = [];
-    for (const [label, root] of roots) walk(root as Container, label, hits);
+    for (const [label, root] of roots) walk(root as Container, label, hits, dump);
     if (hits.length === 0) { this.lastReport = ""; return null; }
 
     hits.sort((a, b) => b.length - a.length);
+
+    if (dump) {
+      // Longest first, trimmed: a phone banner holds a handful of lines, and
+      // the interesting one is never the twentieth.
+      return hits.slice(0, 6);
+    }
+
     // Report on change only. A beam that persists for thirty seconds is one
     // fact, not eighteen hundred console lines.
     const key = hits.map(h => h.layer).join(",");

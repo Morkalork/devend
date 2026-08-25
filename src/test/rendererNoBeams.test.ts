@@ -38,6 +38,8 @@ import { ChromeLayer } from "@/lib/rendering/sleek/chromeLayer";
 import type { LevelData, LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Ball } from "@/types/game";
+import { boardAngleFor } from "@/lib/boardTilt";
+import { tiltWorldPoint } from "@/lib/boardConstants";
 
 const levels = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
@@ -108,7 +110,22 @@ function strayOriginPoints(g: any): string[] {
  * with a compass ball on the board, and leaving that to a 1-in-N draw would
  * make this test pass most of the time for the wrong reason.
  */
-function stateWithCompass(level: LevelConfig, seconds: number): CanvasGameState {
+/**
+ * The gravity mutator, as public/mapMutators.yml authors it.
+ *
+ * The reporter's session had "gravity over the whole map", and that is not a
+ * variation on the ordinary case - it is a different renderer. A gravity map
+ * TURNS, so `boardAngleFor` becomes non-zero and every layer is handed a
+ * ROTATED world-to-screen. Every earlier sweep ran the identity transform, so
+ * the entire tilted path was untested.
+ */
+const GRAVITY_CFG = {
+  turnRate: 1.1,
+  period: 9,
+  sequence: ["down", "none", "left", "none", "up", "none", "right", "none"],
+};
+
+function stateWithCompass(level: LevelConfig, seconds: number, gravity = false): CanvasGameState {
   const data = createInitialGameData(level, level.level, DEFAULT_MODIFIERS);
   const game = data as unknown as CanvasGameState;
   game.activePlaySeconds = seconds;
@@ -130,6 +147,7 @@ function stateWithCompass(level: LevelConfig, seconds: number): CanvasGameState 
   // never been photographed without, and an empty activeWalls skips the whole
   // growing-wall path.
   g.objectDebris ??= [];
+  if (gravity) g.gravityConfig = GRAVITY_CFG;
   g.fallingObjects ??= [];
   g.pickupFeedback ??= [];
   g.swipeTrail ??= null;
@@ -234,5 +252,88 @@ describe("no layer of the renderer draws across the board", () => {
     // A layer that threw drew NOTHING, so every assertion above passed for it
     // vacuously. That is the failure mode this whole file exists to avoid.
     expect([...syncFailures].join(", ") || "none", "layers that failed to sync").toBe("none");
+  });
+
+  /**
+   * The same sweep on a map that is TURNING.
+   *
+   * "Everything started with gravity over the whole map" is what the reporter
+   * said, and that is not a variation on the ordinary case - it is a different
+   * renderer. A gravity map turns so its pull always reads as screen-down, so
+   * `boardAngleFor` goes non-zero and every layer is handed a ROTATED
+   * world-to-screen. Every sweep before this one ran the identity transform,
+   * which means the whole tilted path was untested.
+   *
+   * Rotation is exactly where an untransformed coordinate stops being
+   * invisible: a point some code forgot to put through w2s sits somewhere
+   * plausible while the angle is zero, and swings away from everything else the
+   * moment it is not.
+   *
+   * Walks the mutator's full 72-second sequence rather than one arbitrary
+   * angle, so quiet stretches and turning stretches are both covered.
+   */
+  it("holds while the board is turning under gravity", () => {
+    const light = lightScope({ left: 0, top: 0, width: 900, height: 1600, scale: 1 }, 0);
+    const failures: string[] = [];
+    let swept = 0;
+    const angles = new Set<number>();
+
+    for (let seconds = 1; seconds <= 72; seconds += 3) {
+      const game = stateWithCompass(level, seconds, true);
+      const angle = boardAngleFor(
+        seconds,
+        (game as unknown as { gravityConfig?: never }).gravityConfig,
+        null,
+      );
+      angles.add(Math.round(angle * 100));
+
+      // The renderer's own transform, composed exactly as SleekRenderer does:
+      // tilt the world point, THEN place it. Offsetting after the rotation is
+      // what keeps the origin a tell.
+      const w2s = (x: number, y: number) => {
+        const p = tiltWorldPoint(x, y, angle);
+        return { x: 100 + p.x * 0.5, y: 200 + p.y * 0.5 };
+      };
+
+      const shadowPlane = new Graphics();
+      const board = new BoardLayer(), areas = new AreaLayer(), props = new PropLayer();
+      const entities = new EntityLayer(), objects = new ObjectLayer(), walls = new WallLayer();
+      const fx = new FxLayer(), balls = new SleekBallLayer(), chrome = new ChromeLayer();
+
+      const failed: string[] = [];
+      const run = (name: string, fn: () => void) => {
+        try { fn(); } catch { failed.push(name); }
+      };
+      run("board", () => board.sync(game, light, w2s, true));
+      run("areas", () => areas.sync(game, light, w2s, 1, angle as never));
+      run("props", () => props.sync(game, light, shadowPlane, w2s, 1, 0));
+      run("entities", () => entities.sync(game, light, shadowPlane, w2s, 1));
+      run("objects", () => objects.sync(game, light, shadowPlane, w2s, 1));
+      run("walls", () => walls.sync(game, light, shadowPlane, w2s, 1));
+      run("fx", () => fx.sync(game, light, PREDICTING, w2s, 1, 0));
+      run("balls", () => balls.sync(game, light, shadowPlane, w2s, 1, 0));
+      run("chrome", () => chrome.sync(game, light, 1, 0, 9));
+      expect(failed.join(",") || "none", `sync failures @${seconds}s`).toBe("none");
+
+      const named: Array<[string, Container | Graphics]> = [
+        ["shadowPlane", shadowPlane], ["board", board.container], ["areas", areas.container],
+        ["props", props.container], ["entities", entities.container],
+        ["objects", objects.container], ["walls", walls.container],
+        ["fx", fx.container], ["balls", balls.container], ["chrome", chrome.container],
+      ];
+      for (const [name, node] of named) {
+        const gs = node instanceof Graphics ? [node] : graphicsIn(node);
+        for (const g of gs) {
+          swept++;
+          for (const stray of strayOriginPoints(g)) failures.push(`${name} @${seconds}s: ${stray}`);
+        }
+      }
+    }
+
+    // The board really did turn through several angles rather than sit at zero,
+    // or this is the untilted sweep wearing a different name.
+    expect(angles.size, "the board never actually tilted").toBeGreaterThan(3);
+    expect(swept, "no layer drew anything measurable").toBeGreaterThan(10);
+    expect([...new Set(failures)].join(" | ") || "none", "stray origin points").toBe("none");
   });
 });

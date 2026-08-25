@@ -9,7 +9,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { Container, Graphics } from "pixi.js";
-import { BeamProbe, showBeamReadout } from "@/lib/rendering/sleek/beamProbe";
+import { BeamProbe, showBeamReadout, beamProbeMode } from "@/lib/rendering/sleek/beamProbe";
 
 const LONG = 1400;
 
@@ -87,6 +87,61 @@ describe("the beam probe", () => {
     expect(probe.run(beam, 0)).not.toBeNull();
     expect(probe.run(clean, 1000)).toBeNull();
     expect(probe.run(beam, 2000)).not.toBeNull();
+  });
+
+  /**
+   * Dump mode: report regardless of any threshold.
+   *
+   * It exists because a detector only ever finds what its author already
+   * believes. Three theories about this beam have been wrong, and a fourth
+   * encoded as a threshold would simply stay quiet on the one screen that can
+   * reproduce it. The dump has no theory.
+   */
+  it("dumps the longest run in every layer, even when nothing looks wrong", () => {
+    const probe = new BeamProbe();
+    const hits = probe.run([["walls", withOrdinaryMarks()], ["fx", withBeam()]], 0, true);
+    expect(hits).not.toBeNull();
+    const layers = hits!.map(h => h.layer);
+    // Detect mode reports only fx here; dump reports the innocent layer too,
+    // which is the entire difference.
+    expect(layers).toContain("walls");
+    expect(layers).toContain("fx");
+    // Longest first: the interesting line must not be buried.
+    expect(hits![0].length).toBeGreaterThanOrEqual(hits![hits!.length - 1].length);
+    // A stray is still flagged as one, so dump mode never loses detect's answer.
+    expect(hits!.some(h => h.stray)).toBe(true);
+  });
+
+  it("keeps reporting in dump mode while a beam persists", () => {
+    // Detect mode deliberately reports a standing beam once. Dump mode must
+    // not: the reporter needs a readable banner whenever they take the
+    // screenshot, not only in the frame it first appeared.
+    const probe = new BeamProbe();
+    const roots: Array<[string, Container | Graphics]> = [["fx", withBeam()]];
+    expect(probe.run(roots, 0, true)).not.toBeNull();
+    expect(probe.run(roots, 5000, true)).not.toBeNull();
+  });
+
+  it("reads the mode off the URL, and is off unless asked for", () => {
+    const set = (q: string) => window.history.replaceState(null, "", q);
+    try {
+      set("/");
+      expect(beamProbeMode(), "absent").toBe(0);
+      set("/?beam=1");
+      expect(beamProbeMode(), "detect").toBe(1);
+      set("/?beam=2");
+      expect(beamProbeMode(), "dump").toBe(2);
+      // Anything else is OFF. A probe that switches itself on for `?beam=0`
+      // or a stray `?beam` would put a red banner over a real player's game.
+      set("/?beam=0");
+      expect(beamProbeMode(), "zero").toBe(0);
+      set("/?beam");
+      expect(beamProbeMode(), "bare").toBe(0);
+      set("/?level=19&beam=2&tilt=1");
+      expect(beamProbeMode(), "among other params").toBe(2);
+    } finally {
+      set("/");
+    }
   });
 
   it("puts the answer on screen, where a phone can show it", () => {

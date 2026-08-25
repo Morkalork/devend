@@ -31,7 +31,7 @@
 
 import { Application, Container, Graphics, RenderTexture } from "pixi.js";
 import { boardAngleFor, tiltWorldPoint } from "@/lib/boardTilt";
-import { BeamProbe, beamProbeOn, showBeamReadout } from "./beamProbe";
+import { BeamProbe, beamProbeMode, showBeamReadout } from "./beamProbe";
 import type { CanvasGameState } from "@/types/gameState";
 import type { RenderContext } from "../types";
 import { BoardLayer } from "./boardLayer";
@@ -78,8 +78,8 @@ export class SleekRenderer {
   private shatterRT: RenderTexture | null = null;
 
   private staticDirty = true;
-  /** `?beam=1` diagnostic. Read once: the URL cannot change mid-session. */
-  private readonly probeEnabled = beamProbeOn();
+  /** `?beam=1` detect / `?beam=2` dump. Read once: the URL cannot change. */
+  private readonly probeMode = beamProbeMode();
   private readonly probe = new BeamProbe();
   private maskKey = "";
   private reportedMissing = new Set<string>();
@@ -264,7 +264,7 @@ export class SleekRenderer {
   }
 
   /**
-   * `?beam=1`: name whichever layer is drawing a line across the board.
+   * `?beam=1` names a stray; `?beam=2` dumps the longest run in every layer.
    *
    * A reported beam has survived two correct fixes, a nine-layer headless
    * sweep and several minutes of local play. When a bug will not reproduce
@@ -275,7 +275,7 @@ export class SleekRenderer {
    * without it this returns before touching the display tree.
    */
   private probeForBeams(now: number): void {
-    if (!this.probeEnabled) return;
+    if (this.probeMode === 0) return;
     const hits = this.probe.run([
       ["shadowPlane", this.shadowPlane],
       ["board", this.board.container],
@@ -287,12 +287,12 @@ export class SleekRenderer {
       ["fx", this.fx.container],
       ["balls", this.balls.container],
       ["chrome", this.chrome.container],
-    ], now);
+    ], now, this.probeMode === 2);
     if (!hits) return;
     const lines = hits.map(h =>
-      `[beam] ${h.layer}  ${h.length}px  `
+      `${h.stray ? "STRAY " : ""}${h.layer} ${h.length}px `
       + `(${Math.round(h.from.x)},${Math.round(h.from.y)})`
-      + ` -> (${Math.round(h.to.x)},${Math.round(h.to.y)})`);
+      + `->(${Math.round(h.to.x)},${Math.round(h.to.y)})`);
     for (const line of lines) console.warn(line);
     showBeamReadout(lines);
   }
