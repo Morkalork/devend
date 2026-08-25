@@ -691,6 +691,19 @@ export function updateBall(
   // minimumSpeed for ANY reason — collisions, the MicroManager upgrade, etc.
   // (The post-cut recovery freeze is exempt; it's held in place on purpose.)
   if (ball.minimumSpeed > 0 && !(game.frozenBallId && ball.id === game.frozenBallId)) {
+    // NaN first, and SAID OUT LOUD.
+    //
+    // `cur > 1e-6` is FALSE for NaN, so a corrupt velocity used to fall into
+    // the stopped-ball branch below and be laundered into a clean, wrong nudge
+    // every frame: the ball then stood still forever and nothing anywhere
+    // reported a fault. Checked ahead of the floor so the value is still
+    // visibly broken when it is caught, rather than after some other recovery
+    // has quietly tidied it away.
+    if (!Number.isFinite(ball.velocity.x) || !Number.isFinite(ball.velocity.y)) {
+      console.warn("[PHYSICS] non-finite velocity on", ball.id, "- reset to the speed floor");
+      ball.velocity.x = 0;
+      ball.velocity.y = 0;
+    }
     const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
     if (cur > 1e-6) {
       if (cur < ball.minimumSpeed) {
@@ -701,8 +714,24 @@ export function updateBall(
       }
     } else {
       // Fully stopped but should be moving — nudge it back to its floor.
-      ball.velocity.x = ball.minimumSpeed;
-      ball.velocity.y = 0;
+      //
+      // AIMED INWARD, not along +x. A fixed +x nudge is a trap on the right
+      // wall: the ball is pushed into it, the board resolver reflects it, this
+      // branch fires again and points it straight back at the wall. That is a
+      // permanent standstill, and a ball that has stopped is one the player can
+      // fence around for free on a map whose gate is a size threshold.
+      //
+      // The board centre is the one direction guaranteed to be into open space
+      // from anywhere on the board, so the recovery cannot re-wedge itself.
+      const c = game.boardPolygon ? polygonCentroid(game.boardPolygon) : null;
+      let dx = c ? c.x - ball.position.x : 1;
+      let dy = c ? c.y - ball.position.y : 0;
+      const len = Math.hypot(dx, dy);
+      // Dead centre (or no board): any heading is as good as any other.
+      if (!(len > 1e-6)) { dx = 1; dy = 0; }
+      else { dx /= len; dy /= len; }
+      ball.velocity.x = dx * ball.minimumSpeed;
+      ball.velocity.y = dy * ball.minimumSpeed;
       ball.speed = ball.minimumSpeed;
     }
   }
