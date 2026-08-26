@@ -44,7 +44,7 @@ import { loadMapMutators } from '@/lib/mapMutators';
 import { loadMapObjectives } from '@/lib/mapObjectives';
 import { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
 import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
-import { loadCapstones, getCapstones, getCapstoneTriggerLevel, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
+import { loadCapstones, getCapstones, capstoneDueAfter, drawCapstoneOffers, CAPSTONE_OFFER_COUNT } from '@/lib/capstones';
 import { CapstoneConfig } from '@/types/capstone';
 import { getHighscoreBonusMultiplier } from '@/lib/scoring';
 import { highscoreBonus } from '@/lib/highscore';
@@ -1479,19 +1479,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [nav.goToDoorDraft, nav.goToUpgradeShop, currentLevelIndex, ascRules.doorOffers, levels]);
 
   /**
-   * After the finished assignment's reward is granted, route into the capstone
-   * draft when the Promotion is due, otherwise into the assignment draft.
+   * After the finished assignment's reward is granted, route into the next
+   * assignment draft.
+   *
+   * The Promotion used to be spliced in here, which is why finishing level 10
+   * handed the player five reward screens in a row. It now rides an ORDINARY
+   * level instead (see capstoneDueAfter), so the assignment phase is the
+   * contract and nothing else.
    */
-  const routeAfterAssignmentReward = useCallback(() => {
-    const capstonePool = getCapstones();
-    // Promotion Freeze (ascension rung 3): no capstone is awarded at all.
-    if (!ascRules.noCapstone && !capstone && capstonePool.length > 0 && currentLevelIndex + 1 >= getCapstoneTriggerLevel()) {
-      setCapstoneOffers(drawCapstoneOffers(capstonePool, CAPSTONE_OFFER_COUNT, getRunRng(`capstones:${currentLevelIndex + 1}`)));
-      nav.goToCapstoneDraft();
-      return;
-    }
-    proceedToAssignment();
-  }, [capstone, currentLevelIndex, ascRules.noCapstone, nav.goToCapstoneDraft, proceedToAssignment]);
+  const routeAfterAssignmentReward = proceedToAssignment;
 
   /**
    * Grant the just-finished assignment's reward (issue #60): the reward of the
@@ -1615,6 +1611,55 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     nav.goToGame();
   }, [currentLevelIndex, ascensionDepth, saveRunCheckpoint, totalScore, ownedUpgradeIds, currentLives, takePendingUnlocks, advanceToNextLevel, nav.goToGame]);
 
+  /**
+   * Open this level's shop (or skip past it), the ordinary end of an ordinary
+   * level.
+   *
+   * Extracted because the Promotion draft now sits in FRONT of it: the perk
+   * changes what is worth buying, so it has to be picked first, and both routes
+   * have to land in the same place afterwards.
+   */
+  const proceedToShop = useCallback(() => {
+    // The shop is only earned by locking balls this round: at least one lock,
+    // or two when the map offered three or more balls. We still OPEN the shop
+    // when short, but it opens "closed" (no purchases) so the player sees what
+    // they missed instead of the store being silently skipped.
+    const locksThisRound = pendingLevelScore?.lockedBallsCount ?? 0;
+    const ballsOnMap = currentLevel?.maxBalls ?? currentLevel?.balls?.length ?? 1;
+    // Corporate Card relaxes the toll: one level caps it at a single lock,
+    // two waives it entirely and the shop is simply always open.
+    const relief = Math.max(0, Math.round(activeModifiers.storeLockRelief ?? 0));
+    const locksRequired = relief >= 2 ? 0 : Math.min(relief >= 1 ? 1 : 2, ballsOnMap >= 3 ? 2 : 1);
+    // Hiring Freeze (ascension rung 1): on the levels the store skips there is
+    // nothing to show, so go straight on. Assignment levels never reach here,
+    // so a contract can never be swallowed by the cadence.
+    if (!shopOpensAfter(currentLevelIndex + 1, ascRules)) {
+      finishShopPhase();
+      return;
+    }
+    setStoreClosed(locksThisRound < locksRequired);
+    setStoreLockProgress({ have: locksThisRound, need: locksRequired });
+    nav.goToUpgradeShop();
+  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, currentLevelIndex, ascRules, finishShopPhase, nav.goToUpgradeShop]);
+
+  /**
+   * The Promotion, on a level of its own.
+   *
+   * Offered after an ORDINARY level and before that level's shop, rather than
+   * spliced into the assignment phase where it used to arrive fourth in a queue
+   * of five reward screens. Returns true when it took the wheel.
+   */
+  const offerCapstoneIfDue = useCallback((): boolean => {
+    // Promotion Freeze (ascension rung 3): no capstone is awarded at all.
+    if (ascRules.noCapstone || capstone) return false;
+    const pool = getCapstones();
+    if (pool.length === 0) return false;
+    if (!capstoneDueAfter(currentLevelIndex + 1)) return false;
+    setCapstoneOffers(drawCapstoneOffers(pool, CAPSTONE_OFFER_COUNT, getRunRng(`capstones:${currentLevelIndex + 1}`)));
+    nav.goToCapstoneDraft();
+    return true;
+  }, [ascRules.noCapstone, capstone, currentLevelIndex, nav.goToCapstoneDraft]);
+
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
     setPendingCertUnlocks([]);
@@ -1640,29 +1685,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       }
     } else if (isAssignmentLevel(currentLevelIndex + 1)) {
       beginAssignmentPhase();
-    } else {
-      // The shop is only earned by locking balls this round: at least one lock,
-      // or two when the map offered three or more balls. We still OPEN the shop
-      // when short, but it opens "closed" (no purchases) so the player sees what
-      // they missed instead of the store being silently skipped.
-      const locksThisRound = pendingLevelScore?.lockedBallsCount ?? 0;
-      const ballsOnMap = currentLevel?.maxBalls ?? currentLevel?.balls?.length ?? 1;
-      // Corporate Card relaxes the toll: one level caps it at a single lock,
-      // two waives it entirely and the shop is simply always open.
-      const relief = Math.max(0, Math.round(activeModifiers.storeLockRelief ?? 0));
-      const locksRequired = relief >= 2 ? 0 : Math.min(relief >= 1 ? 1 : 2, ballsOnMap >= 3 ? 2 : 1);
-      // Hiring Freeze (ascension rung 1): on the levels the store skips there is
-      // nothing to show, so go straight on. Assignment levels never reach here,
-      // so a contract can never be swallowed by the cadence.
-      if (!shopOpensAfter(currentLevelIndex + 1, ascRules)) {
-        finishShopPhase();
-        return;
-      }
-      setStoreClosed(locksThisRound < locksRequired);
-      setStoreLockProgress({ have: locksThisRound, need: locksRequired });
-      nav.goToUpgradeShop();
+    } else if (!offerCapstoneIfDue()) {
+      proceedToShop();
     }
-  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, pendingLevelScore, currentLevel, activeDoor, grantAssignmentReward, ascRules, activeModifiers.storeLockRelief, finishShopPhase, nav.goToAssignmentSummary, nav.goToAscensionDraft, nav.goToUpgradeShop]);
+  }, [isLastLevel, currentLevelIndex, beginAssignmentPhase, activeDoor, grantAssignmentReward, offerCapstoneIfDue, proceedToShop, nav.goToAssignmentSummary, nav.goToAscensionDraft]);
 
   const handleDismissFeatureUnlocked = useCallback(() => {
     // Advance to the next queued unlock, or close if none remain.
@@ -1797,8 +1823,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleSelectCapstone = useCallback((pick: CapstoneConfig) => {
     analytics.capstoneSelected({ capstoneId: pick.id });
     setCapstone(pick);
-    proceedToAssignment();
-  }, [proceedToAssignment]);
+    // Into this level's shop. The draft interrupted an ordinary level, so the
+    // level has to finish the ordinary way - and the perk is now in hand while
+    // the player decides what to buy.
+    proceedToShop();
+  }, [proceedToShop]);
 
   /**
    * Assignment pick (mandatory): the chosen contract replaces the previous

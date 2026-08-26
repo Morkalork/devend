@@ -1,13 +1,22 @@
 # Capstones — the once-per-run exclusive perk ("Promotion").
 #
-# The first assignment level at/past `offeredAfterLevel` routes through a
-# mandatory 1-of-3 draft before the door pick. The pick applies for the rest of
-# the run (surviving ascension); the two passed-over capstones are gone for
-# good. These are rule-breakers, not stat bumps - one per archetype, so the
-# pick can crown a build or rescue a weak one. Keys are GameModifiers
+# The first ORDINARY level at/past `offeredAfterLevel` routes through a mandatory
+# 1-of-3 draft, before that level's shop. The pick applies for the rest of the
+# run (surviving ascension); the two passed-over capstones are gone for good.
+# These are rule-breakers, not stat bumps - one per archetype, so the pick can
+# crown a build or rescue a weak one. Keys are GameModifiers
 # (see README-modifiers.md).
-
-offeredAfterLevel: 10
+#
+# NOT an assignment level (every 5th by default). The draft used to ride the
+# assignment phase, so it arrived fourth in a queue of five reward screens after
+# the level-10 boss and read as more confetti rather than as the rarest choice
+# in the game. capstoneDueAfter() skips assignment levels whatever this says, so
+# setting it to a multiple of 5 pushes the draft to the next ordinary level
+# rather than rebuilding the pile-up.
+#
+# 12 rather than 11: two maps of clear air after the boss, and still two thirds
+# of the run left for the pick to matter.
+offeredAfterLevel: 12
 
 capstones:
 
