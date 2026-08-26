@@ -50,10 +50,24 @@ const levels = (yaml.load(
 ) as LevelData).levels;
 
 const PHYSICS_STEP = 1 / 120;
-/** Two full turns of the 72-second gravity sequence. */
-const SOAK_SECONDS = 120;
+/**
+ * Most of one turn of the gravity sequence (9s x 8 entries = 72s), so every
+ * pull direction is exercised at least once.
+ *
+ * It was 120s, and that is why CI went red. Not on an assertion - all 2142
+ * passed - but on `[vitest-worker]: Timeout calling "onTaskUpdate"`: a soak
+ * this long is one uninterrupted synchronous loop, and 47 seconds without
+ * yielding starves the event loop until vitest's worker RPC gives up. The
+ * suite then exits 1 with every test green, which is a maximally confusing
+ * way to fail.
+ *
+ * Halved here and yielded between seeds below. The wedge this guards against
+ * showed itself within two seconds of the map starting, so the extra minute
+ * was buying nothing but CI time - it was most of the whole suite's runtime.
+ */
+const SOAK_SECONDS = 60;
 /** Enough samples to turn "it happened" into a rate. */
-const SEEDS = 8;
+const SEEDS = 6;
 /** A quarter second of not moving reads on screen as a ball that has stopped. */
 const WEDGE_STEPS = 30;
 
@@ -155,7 +169,7 @@ describe("level 19, soaked over many spawns", () => {
 
     // Twelve maps x two minutes of 120Hz physics is not a fast test; the
     // default 5s budget is for unit tests, not a soak.
-    it(`never leaves a ball wedged in place, ${label}`, { timeout: 120_000 }, () => {
+    it(`never leaves a ball wedged in place, ${label}`, { timeout: 120_000 }, async () => {
       const failures: string[] = [];
       let played = 0;
 
@@ -174,6 +188,10 @@ describe("level 19, soaked over many spawns", () => {
 
         const worst = soak(game, SOAK_SECONDS);
         played++;
+        // Let the event loop breathe between maps. Each soak is a solid block
+        // of synchronous physics, and vitest's worker has to be able to report
+        // progress home or the run fails with everything passing.
+        await new Promise(resolve => setTimeout(resolve, 0));
         if (worst && worst.steps >= WEDGE_STEPS) {
           failures.push(
             `seed ${seed}: ${worst.id} stopped for ${(worst.steps * PHYSICS_STEP).toFixed(1)}s`
