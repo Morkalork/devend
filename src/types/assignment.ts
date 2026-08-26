@@ -31,7 +31,11 @@ export type AssignmentConditionKind =
    * objective draws from a shared pool with its own eligibility rules, and this
    * only makes sense once something has picked a type for the block.
    */
-  | 'ballType';
+  | 'ballType'
+  /** Clear the map without sealing a single ball. */
+  | 'noLocks'
+  /** Breakables destroyed, summed over the block. */
+  | 'smashCount';
 
 /** How a condition is tracked across the 5-map block. */
 export type AssignmentTrack =
@@ -112,4 +116,6 @@ export interface AssignmentMapResult {
   allBallsLocked: boolean;
   /** Balls sealed this map by ball type id, for a `ballType` bounty. */
   lockedByType?: Record<string, number>;
+  /** Breakables destroyed this map, smashed or toppled. */
+  smashes?: number;
 }

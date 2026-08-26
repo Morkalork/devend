@@ -13,7 +13,7 @@
 #   everyMap    the count of maps whose per-map condition was met; tier
 #               thresholds are maps-passed (out of 5).
 # mission.track.kind: lockCount | superiorLocks | underPar | speedClear |
-#                      allBallsLocked | ballType
+#                      allBallsLocked | ballType | noLocks | smashCount
 #
 # `ballType` is a BOUNTY: seal a named type of ball. Author it WITHOUT a type -
 # the draft names one from the block's real roster (assignmentScaling.ts), and
@@ -22,6 +22,13 @@
 # Its mission text must carry a {{ballType}} placeholder. If no type in the
 # block covers the top tier the assignment is dropped from the draft rather
 # than offered unclearable. `ballType: green` pins one explicitly (tests).
+#
+# `noLocks` and `smashCount` are CONTENT-GATED the same way: their tiers are
+# capped to what the block holds (maps winnable without a lock; breakables on
+# the board), and the assignment is dropped from the draft when that is under
+# two. So a clean-clear mission does not appear in act IV, where nearly every
+# win is priced in locks, and a demolition mission does not appear in blocks
+# with one breakable in them. See assignmentScaling.resolveForBlock.
 # tiers: ascending thresholds; the highest reached pays.
 #
 # IMPORTANT for cumulative lockCount / superiorLocks missions: the thresholds
@@ -189,3 +196,42 @@ assignments:
         - { threshold: 2, label: "+2 lives", reward: { type: lives, count: 2 } }
         - { threshold: 3, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
     clarify: Client asked for one by name. The ball is picked from the types this block actually spawns, and it is the scarcest one that still leaves the top tier reachable, so expect to hunt for it. Two maps pays two lives; four of five earns a free Senior upgrade.
+
+  # The opposite of every other mission here. Locks are the entire economy, so
+  # a map cleared clean is a map you deliberately left money on the board for -
+  # wide sweeps instead of tight pockets, and every ball you COULD have sealed
+  # is a temptation to refuse.
+  #
+  # The constraint is not a modifier, it is the truth: the store's lock toll
+  # already shuts it when you do not lock, so a clean map is a map you cannot
+  # shop after. That was going to happen whether or not it was written down.
+  # Writing it down is the difference between a cost and an ambush.
+  - id: ship_it
+    name: Ship It
+    constraint:
+      text: The store stays shut after any map you ship clean.
+    mission:
+      text: Clear a map without sealing a single ball.
+      track: { mode: everyMap, kind: noLocks }
+      tiers:
+        - { threshold: 2, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 3, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
+    clarify: Lock nothing, clear everything. Sealing a ball fails that map for the mission, and the store's lock toll means a clean map is one you cannot shop after, so the run's income comes entirely from space and speed. Maps whose win demands a lock cannot count, and the target shrinks to fit the block.
+
+  # Every other mission rewards steering balls AWAY from things. This one asks
+  # you to aim them into something, which is the same skill pointed backwards,
+  # and it gives the black ball and Deploy Charge a reason to exist on maps
+  # that did not hand them to you.
+  - id: tech_debt_writedown
+    name: Tech Debt Writedown
+    constraint:
+      text: Fences grow 10% slower.
+      modifiers:
+        fenceGenerationSpeedMultiplier: 0.9
+    mission:
+      text: Smash breakable blocks across the next 5 maps.
+      track: { mode: cumulative, kind: smashCount }
+      tiers:
+        - { threshold: 2, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 4, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
+    clarify: Demolition work. Blocks break when balls hit them hard enough, and anything resting on one falls with it, so a well-aimed cut can bring down a stack. Slower fences make herding a ball into a block harder, which is the whole job. The target is sized to how many blocks the block's maps actually carry.

@@ -47,6 +47,12 @@ export function conditionMetForMap(
       return r.clearSeconds <= Math.max(1, Math.round(params?.seconds ?? 30));
     case 'allBallsLocked':
       return r.allBallsLocked;
+    case 'noLocks':
+      // Every recorded result is a map that was WON - results are captured on
+      // level complete - so "no locks" already means "cleared it clean".
+      return r.locks === 0;
+    case 'smashCount':
+      return (r.smashes ?? 0) >= Math.max(1, Math.round(params?.count ?? 1));
     default:
       return false;
   }
@@ -54,7 +60,7 @@ export function conditionMetForMap(
 
 /** Whether a metric is a summed quantity (locks) vs a count of qualifying maps. */
 function isSummedKind(kind: AssignmentConditionKind): boolean {
-  return kind === 'lockCount' || kind === 'superiorLocks';
+  return kind === 'lockCount' || kind === 'superiorLocks' || kind === 'smashCount';
 }
 
 /**
@@ -65,6 +71,9 @@ function isSummedKind(kind: AssignmentConditionKind): boolean {
  */
 export function assignmentMetric(track: AssignmentTrack, results: AssignmentMapResult[]): number {
   if (track.mode === 'cumulative' && isSummedKind(track.kind)) {
+    if (track.kind === 'smashCount') {
+      return results.reduce((sum, r) => sum + (r.smashes ?? 0), 0);
+    }
     const key = track.kind === 'lockCount' ? 'locks' : 'superiorLocks';
     return results.reduce((sum, r) => sum + r[key], 0);
   }

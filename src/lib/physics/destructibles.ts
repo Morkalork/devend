@@ -481,6 +481,7 @@ function completeBreakable(
   modifiers?: Pick<GameModifiers, "breakMultiplierBonus" | "smashKeepsLockMultiplier">,
 ): number {
   let opened = 0;
+  game.breakablesSmashed = (game.breakablesSmashed ?? 0) + 1;
   // Not a win requirement (you still win by shrinking the board), but an
   // objective-counting gate reads this, so a break that is not counted can
   // strand the map.

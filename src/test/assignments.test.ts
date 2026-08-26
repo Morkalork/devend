@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from "@/lib/doorDraft";
+import { drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT, CONDITION_KINDS } from "@/lib/doorDraft";
 import {
   evaluateAssignment,
   assignmentRewardForBlock,
@@ -20,7 +20,9 @@ const doc = yaml.load(
 ) as AssignmentData;
 const assignments = doc.assignments;
 const VALID_KEYS = new Set(Object.keys(computeGameModifiers([], new Map())));
-const VALID_KINDS = new Set(["lockCount", "superiorLocks", "underPar", "speedClear", "allBallsLocked", "ballType"]);
+// The parser's own set, not a copy of it: a hand-maintained duplicate would
+// let the YAML pass here while the parser silently dropped the entry.
+const VALID_KINDS = CONDITION_KINDS;
 
 describe("assignment pool integrity", () => {
   it("has at least enough assignments for a full roll", () => {

@@ -436,6 +436,8 @@ export interface LevelScoreData {
   zoneLockBonus?: number;
   // Bonus from smashing breakable objects (issue #38)
   breakBonus?: number;
+  /** How many breakables were destroyed this map (smashed or toppled). */
+  smashCount?: number;
   // Demolition multiplier applied to the map payout (×1.15 per smash, issue #38)
   breakMultiplier?: number;
   // Ship Early tempo bonus (folded under the cap like lock/push/break)

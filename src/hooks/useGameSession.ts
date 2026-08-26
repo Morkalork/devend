@@ -1421,6 +1421,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         ballCount: scoreData.wonByAllLocked ? (scoreData.lockedBallsCount ?? 0) : 0,
         allBallsLocked: scoreData.wonByAllLocked ?? false,
         lockedByType: scoreData.lockedByType ?? {},
+        smashes: scoreData.smashCount ?? 0,
       };
       setBlockResults(prev => [...prev, mapResult]);
     }

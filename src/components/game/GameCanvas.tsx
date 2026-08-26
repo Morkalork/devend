@@ -629,6 +629,7 @@ export function GameCanvas({
     lockedByType: {},
     superiorLockCount: 0,
     superiorLockBonus: 0,
+    breakablesSmashed: 0,
     zoneLockCount: 0,
     zoneLockBonus: 0,
     moneyMultiplier: 1,
@@ -972,6 +973,7 @@ export function GameCanvas({
       game.magnetMarker = undefined;
       setAbilityIconFx(null);
       setBallCount(game.balls.length || 1);
+      game.breakablesSmashed = 0;
       game.wallCount = 0;
       game.completedCuts = 0;
       setCompletedCuts(0);

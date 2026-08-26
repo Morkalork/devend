@@ -23,8 +23,15 @@ export const ASSIGNMENT_OFFER_COUNT = 3;
 /** Default assignment cadence: one every N completed levels. */
 export const DEFAULT_DOOR_LEVEL = 5;
 
-const CONDITION_KINDS = new Set<AssignmentConditionKind>([
+/**
+ * The condition kinds the parser accepts. Exported because an entry whose kind
+ * is not in here is DROPPED silently - a typo removes an assignment from the
+ * game and nothing says so - and the pool test guards the YAML against this
+ * set rather than keeping a second copy of it to drift from.
+ */
+export const CONDITION_KINDS = new Set<AssignmentConditionKind>([
   'lockCount', 'superiorLocks', 'underPar', 'speedClear', 'allBallsLocked', 'ballType',
+  'noLocks', 'smashCount',
 ]);
 const TIERS = new Set<UpgradeTier>(['Junior', 'Senior', 'Principal', 'Architect', 'Wizard']);
 

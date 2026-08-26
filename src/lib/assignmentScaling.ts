@@ -25,6 +25,7 @@
 import type { AssignmentConfig } from "@/types/assignment";
 import type { LevelConfig } from "@/types/level";
 import { selectBallTypesForMap, getBallType } from "@/lib/ballTypes";
+import type { WinCondition } from "@/types/winSpec";
 
 /** Maps in one assignment block. Matches assignments.yml's cadence. */
 export const BLOCK_SIZE = 5;
@@ -144,12 +145,13 @@ export function scaleOffersForBlock(
   const fromLevel = completedLevel + 1;
   const capacity = blockLockCapacity(levels, fromLevel);
   return offers
-    // Bounties are named here for the same reason lock tiers are sized here:
-    // both only mean anything once the block is known. An unresolvable one is
-    // kept rather than dropped at this point - the pool filter upstream should
-    // already have removed it, and silently shrinking a drawn offer set would
-    // hand the player a two-card draft with no explanation.
-    .map(a => resolveBountyForBlock(a, levels, fromLevel) ?? a)
+    // Content-gated missions are sized (and bounties named) here for the same
+    // reason lock tiers are: all of it only means anything once the block is
+    // known. An unresolvable one is kept rather than dropped at this point -
+    // the pool filter upstream should already have removed it, and silently
+    // shrinking a drawn offer set would hand the player a two-card draft with
+    // no explanation.
+    .map(a => resolveForBlock(a, levels, fromLevel) ?? a)
     .map(a => scaleAssignmentToBlock(a, capacity, fromLevel));
 }
 
@@ -288,14 +290,112 @@ function capTiersTo(
   });
 }
 
+// ── Content-gated missions ──────────────────────────────────────────────────
+
+/**
+ * Win conditions that cannot be met without sealing a ball.
+ *
+ * A map REQUIRING one of these can never be cleared clean, so it is not an
+ * opportunity for a no-lock mission - it is a map that mission simply cannot
+ * use.
+ */
+const LOCK_REQUIRING: ReadonlySet<string> = new Set([
+  "locks", "superiorLocks", "area", "lockType", "boss", "allLocked",
+]);
+
+/** How many of the block's maps can be won WITHOUT sealing a ball. */
+export function blockSpaceWinnableMaps(
+  levels: readonly LevelConfig[], fromLevel: number, blockSize = BLOCK_SIZE,
+): number {
+  let n = 0;
+  const seen = new Set<number>();
+  for (let lv = fromLevel; lv < fromLevel + blockSize; lv++) {
+    const map = levels.find(l => l.level === lv);
+    if (!map || seen.has(lv)) continue;
+    seen.add(lv);
+    // A boss map's whole objective is trapping the boss.
+    if (map.boss) continue;
+    const require = (map.win?.require ?? []) as WinCondition[];
+    if (require.some(c => LOCK_REQUIRING.has(c.kind))) continue;
+    n++;
+  }
+  return n;
+}
+
+/** How many breakables the block's maps put on the board. */
+export function blockBreakableCount(
+  levels: readonly LevelConfig[], fromLevel: number, blockSize = BLOCK_SIZE,
+): number {
+  let n = 0;
+  const seen = new Set<number>();
+  for (let lv = fromLevel; lv < fromLevel + blockSize; lv++) {
+    const map = levels.find(l => l.level === lv);
+    if (!map || seen.has(lv)) continue;
+    seen.add(lv);
+    n += (map.entities ?? []).filter(e => (e as { breakable?: boolean }).breakable).length;
+  }
+  return n;
+}
+
+/**
+ * A player will not convert every breakable on the board: some sit where no
+ * ball goes, and steering one into them costs fences and time. The same
+ * argument as the lock shares above, and the same direction of error.
+ */
+export const SMASH_TOP_TIER_SHARE = 0.7;
+
+/**
+ * The smallest ask worth offering, per kind.
+ *
+ * Below these a mission is not hard, it is a formality: "clear one map clean"
+ * or "smash one breakable" would pay a reward for something that happens by
+ * accident. The assignment is dropped from the draft instead.
+ */
+const MIN_TOP_TIER = 2;
+
+/**
+ * Size an assignment to the block, or refuse it.
+ *
+ * Every content-gated mission asks the same two questions - how much of the
+ * thing does this block contain, and is that enough to be worth a mission -
+ * so they are answered in one place. Returns the assignment sized for the
+ * block, unchanged if it is not content-gated, or NULL when the block cannot
+ * carry it.
+ */
+export function resolveForBlock(
+  a: AssignmentConfig, levels: readonly LevelConfig[], fromLevel: number,
+): AssignmentConfig | null {
+  const kind = a.mission?.track?.kind;
+  if (kind === "ballType") return resolveBountyForBlock(a, levels, fromLevel);
+
+  if (kind === "noLocks") {
+    // Act IV prices nearly every win in locks by design, so a clean-clear
+    // mission has almost no maps to work with there and is dropped rather
+    // than offered as a near-impossible one.
+    return capOrRefuse(a, blockSpaceWinnableMaps(levels, fromLevel));
+  }
+  if (kind === "smashCount") {
+    return capOrRefuse(a, Math.floor(blockBreakableCount(levels, fromLevel) * SMASH_TOP_TIER_SHARE));
+  }
+  return a;
+}
+
+/** Cap a mission's tiers to `capacity`, or refuse it if that is too small. */
+function capOrRefuse(a: AssignmentConfig, capacity: number): AssignmentConfig | null {
+  if (capacity < MIN_TOP_TIER) return null;
+  const tiers = a.mission.tiers;
+  if (tiers.length === 0) return null;
+  return { ...a, mission: { ...a.mission, tiers: capTiersTo(tiers, capacity) } };
+}
+
 /**
  * The assignments that can actually be run over the block starting at
  * `fromLevel`. Filter the POOL with this before drawing the draft, so a
- * bounty with no eligible type costs the player an offer slot rather than
- * appearing as a mission they cannot clear.
+ * mission the block cannot supply costs the player an offer slot rather than
+ * appearing as one they cannot clear.
  */
 export function assignmentsPlayableInBlock(
   pool: readonly AssignmentConfig[], levels: readonly LevelConfig[], fromLevel: number,
 ): AssignmentConfig[] {
-  return pool.filter(a => resolveBountyForBlock(a, levels, fromLevel) !== null);
+  return pool.filter(a => resolveForBlock(a, levels, fromLevel) !== null);
 }
