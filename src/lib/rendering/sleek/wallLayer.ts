@@ -30,6 +30,7 @@ import { getEffectsAtPoint, hasNearbyImpacts, N_NODES } from "@/lib/wallImpactEf
  *  fence (6) so the enclosure reads as structure rather than as a cut. */
 const OUTER_WALL_THICKNESS = 14;
 import { snapSegment, snapWidth, hairline, type Pt } from "./pixelGrid";
+import { transformKey } from "./transformKey";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -134,7 +135,14 @@ export class WallLayer {
     );
     // The phase count is part of the key, or the mask would keep whatever it
     // cut on the frame a pillar last changed state and never catch up.
-    const key = `${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}_${intangible.size}`;
+    // The transform belongs in the key as much as the counts do: this mask is
+    // cut in SCREEN space, and on a gravity map the board turns underneath it
+    // while the rect, the scale and both counts stay put. Stale, it clips every
+    // fence against a board outline and a set of obstacle holes that have since
+    // rotated away, which plays exactly like an invisible object breaking fence
+    // generation. See transformKey.
+    const key = `${Math.round(game.boardRect.left)}_${Math.round(game.boardRect.top)}_${Math.round(scale * 10000)}_${game.obstaclePolygons.length}_${intangible.size}`
+      + `_${transformKey(w2s)}`;
     if (key === this.fenceMaskKey) return;
     this.fenceMaskKey = key;
 

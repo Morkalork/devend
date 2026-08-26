@@ -20,6 +20,22 @@ import { vibrateFenceBreak } from "@/lib/gameHaptics";
  */
 export const FREEZE_MAX_MS = 1500;
 
+/**
+ * Drop the post-break freeze, whatever state it is in.
+ *
+ * One function rather than the four copies of the same four assignments that
+ * used to be scattered through this file. The copies are exactly how the
+ * deadline came to be missing from one of them in the first place, and how the
+ * whole freeze came to be missing from the per-map reset: a clear that has to
+ * be remembered in N places is a clear that will be forgotten in one.
+ */
+export function clearFreeze(game: CanvasGameState): void {
+  game.frozenBallId = null;
+  game.frozenBallPosition = null;
+  game.frozenBallVelocity = null;
+  game.frozenBallReleaseAt = null;
+}
+
 export function updateFenceWallFn(
   dt: number,
   game: CanvasGameState,
@@ -160,10 +176,7 @@ export function updateFenceWallFn(
     }
     if (!moverHit) continue;
 
-    game.frozenBallId = null;
-    game.frozenBallPosition = null;
-    game.frozenBallVelocity = null;
-    game.frozenBallReleaseAt = null;
+    clearFreeze(game);
     playFenceBreakSound(); vibrateFenceBreak();
     const newLives = callbacks.getLives() - 1;
     callbacks.setLivesRef(newLives);
@@ -223,15 +236,17 @@ export function updateFenceWallFn(
     ball.velocity = { x: 0, y: 0 };
 
     const unfreezeAfterShake = () => {
-      const frozen = game.balls.find(b => b.id === game.frozenBallId);
-      if (frozen) {
-        if (game.frozenBallPosition) frozen.position = game.frozenBallPosition;
-        if (game.frozenBallVelocity) frozen.velocity = game.frozenBallVelocity;
+      // Identity, not an id lookup. Ball ids are `${type.id}-${index}` and are
+      // therefore only unique WITHIN a map, while this timer can outlive the
+      // map that scheduled it: looking "grey-0" up on the next map finds a
+      // different ball and teleports it to the previous map's coordinates. The
+      // per-map reset clears the freeze so this should never see a stale one,
+      // but the restore is the destructive half and gets its own check.
+      if (game.frozenBallId === ball.id && game.balls.includes(ball)) {
+        if (game.frozenBallPosition) ball.position = { ...game.frozenBallPosition };
+        if (game.frozenBallVelocity) ball.velocity = { ...game.frozenBallVelocity };
       }
-      game.frozenBallId = null;
-      game.frozenBallPosition = null;
-      game.frozenBallVelocity = null;
-      game.frozenBallReleaseAt = null;
+      clearFreeze(game);
     };
 
     // Shield absorbs the hit
@@ -274,10 +289,7 @@ export function updateFenceWallFn(
     game.activeWalls = [];
 
     if (newLives <= 0) {
-      game.frozenBallId = null;
-      game.frozenBallPosition = null;
-      game.frozenBallVelocity = null;
-      game.frozenBallReleaseAt = null;
+      clearFreeze(game);
       handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
       return;
     }

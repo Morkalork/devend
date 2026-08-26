@@ -94,6 +94,23 @@ describe("the map opens flat", () => {
     }
   });
 
+  it("opens UPRIGHT when the first phase is a gravity-free one", () => {
+    // The same defect one level down, in phaseAngle's walk-back rather than in
+    // the ease. A "none" phase holds the orientation it INHERITED, and the
+    // walk-back that implements that used to wrap round to the end of the
+    // sequence - so a map opening on "none" opened at whatever angle it was
+    // going to finish its first cycle on, with nothing pulling and no turn the
+    // player could have seen. Nothing behind phase 0 means upright.
+    const cfg: GravityConfig = { ...CFG, sequence: ["none", "down", "left", "up"] };
+    for (const t of [0, 0.1, 0.35, 1, CFG.period - 0.01]) {
+      expect(tiltAngleAt(t, cfg), `t=${t}`).toBe(0);
+    }
+    // And the inheritance still works once there IS something behind it: the
+    // "none" at the top of the SECOND cycle inherits the "up" before it.
+    const secondCycle = CFG.period * 4 + 1;
+    expect(tiltAngleAt(secondCycle, cfg)).toBeCloseTo(phaseAngle(3, cfg), 6);
+  });
+
   it("still eases every LATER phase change, including the wrap", () => {
     // The fix must not turn the whole feature off. The board genuinely turns
     // at each phase boundary, and the wrap back to index 0 one cycle in is a

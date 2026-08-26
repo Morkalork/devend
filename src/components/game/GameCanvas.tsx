@@ -111,7 +111,7 @@ import { createGameLoop, GameLoopCallbacks } from "@/hooks/useGameLoop";
 import type { BoardRenderer } from "@/lib/rendering/boardRenderer";
 import { GameCallbacks } from "@/lib/physics/gameCallbacks";
 import { applyCutFn, checkSpaceWin, evaluateWinConditions } from "@/lib/physics/applyCut";
-import { updateFenceWallFn } from "@/lib/physics/updateFenceWall";
+import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
 
@@ -919,6 +919,21 @@ export function GameCanvas({
       removedSamplesSet = new Set();
       repaintRegionCanvas();
       game.activeWalls = [];
+      // The post-break freeze does NOT belong to the next map.
+      //
+      // gameRef is built once and mutated per map, so anything this block
+      // forgets survives the transition. A freeze that did was the worst kind
+      // of leftover: `frozenBallId` holds a `${type.id}-${index}` id, which is
+      // only unique within one map, so the new map's ball of the same name was
+      // skipped by updateBall and by collisions for the whole level - a ball
+      // standing still in mid-air from the opening frame - or teleported to the
+      // previous map's coordinates when the pending shake timer fired.
+      clearFreeze(game);
+      // Same reasoning: a map must not open inside the previous map's recovery
+      // window, unable to cut.
+      game.isRecovering = false;
+      game.recoveryEndTime = 0;
+      setIsRecovering(false);
       game.gameOver = false;
       game.levelComplete = false;
       game.pushPromptPending = false;

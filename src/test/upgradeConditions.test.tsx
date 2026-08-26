@@ -26,6 +26,7 @@ import { computeGameModifiers } from "@/hooks/useActiveModifiers";
 import { UpgradeShop } from "@/components/game/UpgradeShop";
 import type { UpgradeConfig, UpgradeData } from "@/types/upgrade";
 import type { LevelConfig, LevelData } from "@/types/level";
+import { NORMAL_LIVES } from "@/hooks/useGameSession";
 
 const upgrades = (yaml.load(
   readFileSync(resolve(process.cwd(), "public/upgrades.yml"), "utf8"),
@@ -289,6 +290,62 @@ describe("the converted catalogue", () => {
       // Same for a level gate past the end of the ladder: it would never fire.
       if (c.kind === "levelAtLeast") {
         expect(c.value, `${u.id} gates past the final level`).toBeLessThanOrEqual(levels.length);
+      }
+    }
+  });
+
+  it("gates on something that is sometimes true and sometimes not", () => {
+    // Reachability alone is not enough. A condition every map satisfies is a
+    // FLAT upgrade wearing a costume: it always pays, the shop resolves to the
+    // same order it always did, and the player has been sold a bet with no
+    // downside. The whole mechanic is that the wager can lose.
+    const maps = levels.map(mapContextOf);
+    const split = (met: (m: ReturnType<typeof mapContextOf>) => boolean) => {
+      const yes = maps.filter(met).length;
+      return { yes, no: maps.length - yes };
+    };
+
+    for (const u of conditional) {
+      const c = u.condition!;
+      let s: { yes: number; no: number } | null = null;
+      if (c.kind === "mapHas") {
+        const feature = c.feature;
+        s = split(m => (
+          feature === "well" ? m.hasWell
+          : feature === "mover" ? m.hasMover
+          : feature === "breakable" ? m.hasBreakable
+          : feature === "area" ? m.hasArea
+          : m.hasBoss
+        ));
+      } else if (c.kind === "ballsAtLeast") {
+        s = split(m => m.balls >= c.value);
+      }
+      if (!s) continue;  // run-state conditions are not map-decidable
+
+      expect(s.yes, `${u.id}: no map satisfies it, so it never pays`).toBeGreaterThan(0);
+      expect(s.no, `${u.id}: every map satisfies it, so it is flat`).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps the run-state gates inside the range a run can reach", () => {
+    // The same argument for the conditions the map cannot decide. A lives gate
+    // above the starting lives is always on; one at zero never fires, because
+    // zero lives is a game over rather than a map.
+    // Imported, not restated: a gate tuned against a stale copy of this number
+    // is the exact failure the test exists to catch.
+    const startingLives = NORMAL_LIVES;
+    for (const u of conditional) {
+      const c = u.condition!;
+      if (c.kind === "livesAtMost") {
+        expect(c.value, `${u.id}: a lives gate at 0 can never be live`).toBeGreaterThan(0);
+        expect(c.value, `${u.id}: gates at or above the starting lives, so it is flat`)
+          .toBeLessThan(startingLives);
+      }
+      if (c.kind === "bankedAtLeast" || c.kind === "depthAtLeast") {
+        expect(c.value, `${u.id}: a gate at 0 is always met`).toBeGreaterThan(0);
+      }
+      if (c.kind === "levelAtLeast") {
+        expect(c.value, `${u.id}: a level gate at 1 is always met`).toBeGreaterThan(1);
       }
     }
   });

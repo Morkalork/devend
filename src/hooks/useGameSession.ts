@@ -80,7 +80,7 @@ function stripQueryParam(name: string): void {
   }
 }
 
-const NORMAL_LIVES = 3;
+export const NORMAL_LIVES = 3;
 /**
  * Lives a run starts with, before certificate/loadout bonuses. A function, not a
  * constant, because the admin "Infinite lives" flag overrides it and must take

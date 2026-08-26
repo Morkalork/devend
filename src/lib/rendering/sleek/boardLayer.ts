@@ -18,6 +18,7 @@ import { traceActiveContours, snapContoursToWalls, traceLockContours } from "@/l
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapStroke, hairline, type Pt } from "./pixelGrid";
+import { transformKey } from "./transformKey";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -194,7 +195,14 @@ export class BoardLayer {
 
   private syncGeometry(game: CanvasGameState, w2s: W2S, dirty: boolean): void {
     const { boardRect, spaceGrid } = game;
-    const key = `${boardRect.left},${boardRect.top},${boardRect.width},${boardRect.height}`;
+    // The TRANSFORM is part of the identity of this bake, not just the rect.
+    // Everything below is projected through w2s, and on a gravity map w2s
+    // rotates while the rect stays exactly where it was - so keying on the rect
+    // alone left the live-space split and the lock tints frozen at whatever
+    // angle they were last traced at, while every uncached layer swung round.
+    // That is the "lock that didn't fill its area". See transformKey.
+    const key = `${boardRect.left},${boardRect.top},${boardRect.width},${boardRect.height}`
+      + `|${transformKey(w2s)}`;
     if (!dirty && key === this.geometryKey) return;
     this.geometryKey = key;
 

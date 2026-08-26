@@ -98,11 +98,6 @@ export function beamProbeMode(): 0 | 1 | 2 {
   }
 }
 
-/** Is the live URL asking for the probe at all? */
-export function beamProbeOn(): boolean {
-  return beamProbeMode() !== 0;
-}
-
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Every straight run in one Graphics, longest first.

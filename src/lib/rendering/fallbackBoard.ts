@@ -21,6 +21,8 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { RenderContext } from "./types";
 import { traceActiveContours } from "./regionContour";
 import { PALETTE, withAlpha } from "./sleek/palette";
+import { boardAngleFor } from "@/lib/boardTilt";
+import { tiltWorldPoint } from "@/lib/boardConstants";
 
 export function renderFallbackBoard(
   ctx: CanvasRenderingContext2D,
@@ -29,10 +31,23 @@ export function renderFallbackBoard(
 ): void {
   const { boardRect, spaceGrid } = game;
   const scale = boardRect.scale;
-  const w2s = (x: number, y: number) => ({
-    x: boardRect.left + x * scale,
-    y: boardRect.top + y * scale,
-  });
+  // Board tilt (issue #77), for the same reason the sleek renderer applies it
+  // in its own w2s: on a gravity map the whole board turns so the pull reads as
+  // screen-down. Skipping it here is not a cosmetic difference on the emergency
+  // path - useGameInput un-turns every tap by this exact angle whichever
+  // renderer is running, so an untilted board would put the fence up to ninety
+  // degrees away from the finger that asked for it. A board that is plain is
+  // fine; a board you cannot aim at is not.
+  const tilt = boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
+  const w2s = tilt === 0
+    ? (x: number, y: number) => ({
+        x: boardRect.left + x * scale,
+        y: boardRect.top + y * scale,
+      })
+    : (x: number, y: number) => {
+        const p = tiltWorldPoint(x, y, tilt);
+        return { x: boardRect.left + p.x * scale, y: boardRect.top + p.y * scale };
+      };
 
   ctx.clearRect(0, 0, game.screenSize.width, game.screenSize.height);
 

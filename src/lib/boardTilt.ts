@@ -28,7 +28,7 @@
 import { fitScale, tiltWorldPoint, untiltWorldPoint } from "@/lib/boardConstants";
 export { fitScale, tiltWorldPoint, untiltWorldPoint };
 import {
-  gravityPhaseIndex, type GravityConfig, type GravityDirection,
+  gravityPhaseCount, type GravityConfig, type GravityDirection,
 } from "@/lib/physics/gravity";
 
 /** Seconds a turn takes. Long enough to read as a move, short enough to play. */
@@ -60,12 +60,31 @@ const ANGLE: Record<Exclude<GravityDirection, "none">, number> = {
  * gravity-free stretches the busiest part of the map.
  */
 export function phaseAngle(index: number, cfg: GravityConfig): number {
+  return restAngle(index, cfg, cfg.sequence.length);
+}
+
+/**
+ * `phaseAngle`, with a limit on how far back the inheritance may reach.
+ *
+ * The walk-back is the whole of "a none phase holds what it inherited", and it
+ * must not reach past the START OF THE MAP. On the first cycle there is nothing
+ * behind phase 0 to inherit: wrapping round to the end of the sequence opens the
+ * board at whatever angle the map is going to FINISH its first cycle on, which
+ * is a rotation the player never saw happen. Same defect as the opening ease
+ * this file already fixes, one level down, and it bites any map whose sequence
+ * starts with "none".
+ *
+ * `phase` is counted from the map's start, not modulo the sequence, which is
+ * what makes "how many phases are actually behind me" answerable at all.
+ */
+function restAngle(phase: number, cfg: GravityConfig, maxBack: number): number {
   const n = cfg.sequence.length;
-  for (let back = 0; back < n; back++) {
-    const dir = cfg.sequence[((index - back) % n + n) % n];
+  const limit = Math.max(1, Math.min(n, maxBack));
+  for (let back = 0; back < limit; back++) {
+    const dir = cfg.sequence[((phase - back) % n + n) % n];
     if (dir !== "none") return ANGLE[dir];
   }
-  return 0; // a sequence of nothing but "none" never turns
+  return 0; // nothing to inherit, or a sequence of nothing but "none"
 }
 
 /** Shortest signed angle from `a` to `b`, so a turn never takes the long way. */
@@ -89,24 +108,24 @@ export const ease = (u: number) => u * u * (3 - 2 * u);
 export function tiltAngleAt(activeSeconds: number, cfg: GravityConfig | null): number {
   if (!cfg) return 0;
   const t = Number.isFinite(activeSeconds) && activeSeconds > 0 ? activeSeconds : 0;
-  const index = gravityPhaseIndex(t, cfg);
-  const to = phaseAngle(index, cfg);
 
-  // The map's FIRST phase has no predecessor, so it is not a TURN.
-  //
-  // `gravityPhaseIndex` is taken modulo the sequence length, so index 0 at
-  // t=0 is indistinguishable from index 0 at t=period*n. Reading `index - 1`
-  // therefore wrapped to the END of the sequence and started the board part
-  // way through a turn that had never happened: with the authored sequence
-  // that is a board sitting at 90 degrees on the opening frame and spinning
-  // upright over the next 0.7 seconds, every single time a gravity map loads.
-  //
-  // The raw clock is what distinguishes them, so it is what decides here. A
-  // later wrap (t=72 with this sequence) really is a turn from the phase
+  // Counted from the map's start rather than modulo the sequence, because the
+  // question this function keeps getting wrong is "what came BEFORE this?", and
+  // a modulo index cannot answer it: index 0 at t=0 is indistinguishable from
+  // index 0 one full cycle later. Reading `index - 1` off it wrapped to the END
+  // of the sequence and started the board part way through a turn that had
+  // never happened - a board sitting at 90 degrees on the opening frame and
+  // spinning upright over the next 0.7 seconds, every time a gravity map loads.
+  // gravity.ts owns this clock; the tilt must never keep its own copy of it.
+  const phase = gravityPhaseCount(t, cfg);
+  const to = restAngle(phase, cfg, phase + 1);
+
+  // The map's FIRST phase has no predecessor, so it is not a TURN. A later
+  // wrap (t=72 with the authored sequence) really is a turn from the phase
   // before it, and still eases.
-  if (t < cfg.period) return to;
+  if (phase === 0) return to;
 
-  const from = phaseAngle(index - 1, cfg);
+  const from = restAngle(phase - 1, cfg, phase);
   const into = t % cfg.period;                       // seconds into this phase
   if (into >= TILT_SECONDS) return to;               // settled
   const u = ease(into / TILT_SECONDS);

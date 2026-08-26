@@ -271,7 +271,7 @@ export class SleekRenderer {
    * anywhere but in the reporter's session, the cheapest next move is to put
    * the instrument in that session rather than build a tenth theory.
    *
-   * Costs nothing when the flag is absent: `beamProbeOn()` is read once, and
+   * Costs nothing when the flag is absent: `beamProbeMode()` is read once, and
    * without it this returns before touching the display tree.
    */
   private probeForBeams(now: number): void {

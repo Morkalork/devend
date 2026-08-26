@@ -28,6 +28,7 @@ import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
 import { applyLodestones } from "@/lib/physics/lodestone";
+import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
 
 export interface GameLoopCallbacks {
@@ -403,10 +404,7 @@ export function createGameLoop(
           if (game.frozenBallPosition) stranded.position = { ...game.frozenBallPosition };
         }
         console.warn("[FREEZE] freeze outlived its window; released", game.frozenBallId);
-        game.frozenBallId = null;
-        game.frozenBallPosition = null;
-        game.frozenBallVelocity = null;
-        game.frozenBallReleaseAt = null;
+        clearFreeze(game);
       }
 
       // Intangible phased-out obstacles are identical for every ball this step,

@@ -188,6 +188,52 @@ function collideBallWithWall(ball: Ball, wall: Wall): Vector2 | null {
  * passes it in; the default keeps standalone callers (tests) working. On a
  * phasing map this avoids re-allocating the set per ball per substep.
  */
+/**
+ * Catch a non-finite ball before the physics spreads it.
+ *
+ * This runs FIRST, and the order is the whole point. Integration is the step
+ * that turns one bad number into an unrecoverable one: a NaN velocity becomes a
+ * NaN position, and a NaN position cannot be rescued by anything downstream.
+ * The escaped-board recovery below looks like it would catch it - the ball is
+ * certainly not inside the board polygon any more - but every comparison it
+ * makes against NaN is false, so `minDist` never improves, the "nearest point"
+ * stays the ball's own broken position, and it writes NaN straight back. The
+ * ball is then invisible, uncollidable and unlockable for the rest of the map
+ * while still counting as an active ball the player has to clear around.
+ *
+ * Loud, always. A non-finite value here means something upstream is broken, and
+ * a silent repair would hide the actual fault - which is exactly what happened
+ * once already: an undefined tuning value produced NaN, the minimum-speed floor
+ * quietly laundered it into a fixed nudge, and the result looked for all the
+ * world like a physics bug in the floor.
+ */
+function sanitise(ball: Ball, game: CanvasGameState): void {
+  const badV = !Number.isFinite(ball.velocity.x) || !Number.isFinite(ball.velocity.y);
+  const badP = !Number.isFinite(ball.position.x) || !Number.isFinite(ball.position.y);
+  if (!badV && !badP) return;
+
+  console.warn(
+    "[PHYSICS] non-finite ball", ball.id,
+    badP ? "position" : "", badV ? "velocity" : "", "- recovered",
+  );
+
+  if (badP) {
+    // The board centre: the one point guaranteed to be on the board when the
+    // ball's own coordinates say nothing at all.
+    const c = game.boardPolygon ? polygonCentroid(game.boardPolygon) : null;
+    ball.position = { x: c?.x ?? 0, y: c?.y ?? 0 };
+    ball.prevPosition = { x: ball.position.x, y: ball.position.y };
+    ball.renderPosition = { x: ball.position.x, y: ball.position.y };
+  }
+  if (badV) {
+    // Zero, not a guess at a heading. The minimum-speed floor further down owns
+    // "a ball that should be moving and is not", and it aims into open space;
+    // inventing a direction here would be a second, worse copy of that rule.
+    ball.velocity = { x: 0, y: 0 };
+    ball.speed = 0;
+  }
+}
+
 export function updateBall(
   ball: Ball,
   dt: number,
@@ -196,6 +242,8 @@ export function updateBall(
 ): void {
   if (ball.state === 'won') return; // stopped and disintegrating
   if (ball.state === 'dormant') return; // un-booted (#73): no physics until woken
+
+  sanitise(ball, game);
 
   const now = performance.now();
 
@@ -691,19 +739,11 @@ export function updateBall(
   // minimumSpeed for ANY reason — collisions, the MicroManager upgrade, etc.
   // (The post-cut recovery freeze is exempt; it's held in place on purpose.)
   if (ball.minimumSpeed > 0 && !(game.frozenBallId && ball.id === game.frozenBallId)) {
-    // NaN first, and SAID OUT LOUD.
-    //
-    // `cur > 1e-6` is FALSE for NaN, so a corrupt velocity used to fall into
-    // the stopped-ball branch below and be laundered into a clean, wrong nudge
-    // every frame: the ball then stood still forever and nothing anywhere
-    // reported a fault. Checked ahead of the floor so the value is still
-    // visibly broken when it is caught, rather than after some other recovery
-    // has quietly tidied it away.
-    if (!Number.isFinite(ball.velocity.x) || !Number.isFinite(ball.velocity.y)) {
-      console.warn("[PHYSICS] non-finite velocity on", ball.id, "- reset to the speed floor");
-      ball.velocity.x = 0;
-      ball.velocity.y = 0;
-    }
+    // Nothing is non-finite by here: sanitise() runs at the top of this
+    // function, before the step that would spread the damage. `cur > 1e-6` is
+    // FALSE for NaN, so without that a corrupt velocity fell into the
+    // stopped-ball branch below and was laundered into a clean, wrong nudge
+    // every frame - a permanent standstill that nothing reported.
     const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
     if (cur > 1e-6) {
       if (cur < ball.minimumSpeed) {

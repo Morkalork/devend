@@ -139,7 +139,53 @@ describe("the speed floor's stopped-ball recovery", () => {
     expect(Number.isFinite(ball.velocity.y), "y still NaN").toBe(true);
     expect(Math.hypot(ball.velocity.x, ball.velocity.y)).toBeCloseTo(150, 5);
     expect(
-      warn.mock.calls.some(c => String(c[0]).includes("non-finite velocity")),
+      warn.mock.calls.some(c => String(c[0]).includes("non-finite ball")),
+      "recovered silently",
+    ).toBe(true);
+  });
+
+  it("does not let a NaN velocity reach the position first", () => {
+    // Order matters more than the repair does. Integration happens near the
+    // top of updateBall and the floor near the bottom, so a velocity checked
+    // only at the floor has already been multiplied into the position by the
+    // time it is caught - and a NaN POSITION is unrecoverable: the escaped-board
+    // rescue compares distances, every comparison against NaN is false, so it
+    // leaves the ball exactly where it found it, invisible and uncollidable for
+    // the rest of the map.
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const ball = ballAt(450, 450, NaN, NaN);
+    const game = gameWith(ball);
+
+    updateBall(ball, STEP, game);
+
+    expect(Number.isFinite(ball.position.x), "position x was corrupted").toBe(true);
+    expect(Number.isFinite(ball.position.y), "position y was corrupted").toBe(true);
+    // Untouched, because it was fine before the step and the velocity was
+    // zeroed before it could be integrated.
+    expect(ball.position.x).toBeCloseTo(450, 5);
+    expect(ball.position.y).toBeCloseTo(450, 5);
+  });
+
+  it("puts a ball with no coordinates at all back on the board", () => {
+    // A ball whose position is already NaN cannot be rescued by anything
+    // downstream, so it is put back at the one point that is certainly on the
+    // board rather than left as a phantom the player must still clear around.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const ball = ballAt(NaN, NaN, 100, 0);
+    const game = gameWith(ball);
+
+    updateBall(ball, STEP, game);
+
+    expect(Number.isFinite(ball.position.x), "still nowhere in x").toBe(true);
+    expect(Number.isFinite(ball.position.y), "still nowhere in y").toBe(true);
+    expect(ball.position.x).toBeGreaterThan(LEFT);
+    expect(ball.position.x).toBeLessThan(RIGHT);
+    expect(ball.position.y).toBeGreaterThan(TOP);
+    expect(ball.position.y).toBeLessThan(BOTTOM);
+    // A healthy velocity is not the fault and is not touched.
+    expect(Math.hypot(ball.velocity.x, ball.velocity.y)).toBeGreaterThan(0);
+    expect(
+      warn.mock.calls.some(c => String(c[0]).includes("non-finite ball")),
       "recovered silently",
     ).toBe(true);
   });

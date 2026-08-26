@@ -89,8 +89,23 @@ export function normaliseGravity(raw?: RawGravityConfig | null): GravityConfig |
  * for every player. Same rule the map beats follow.
  */
 export function gravityPhaseIndex(activeSeconds: number, cfg: GravityConfig): number {
+  return gravityPhaseCount(activeSeconds, cfg) % cfg.sequence.length;
+}
+
+/**
+ * How many phases have BEGUN since the map started, NOT folded into the
+ * sequence length.
+ *
+ * The modulo index above cannot answer "what came before this one?": index 0 at
+ * t=0 and index 0 one full cycle later are the same number, and the board tilt
+ * reads the previous phase to know what it is turning FROM. Counting from the
+ * map's start is what tells those two cases apart, so it is exported rather
+ * than re-derived beside the tilt, where it would be a second statement of the
+ * same fact and free to drift from this one.
+ */
+export function gravityPhaseCount(activeSeconds: number, cfg: GravityConfig): number {
   const t = Number.isFinite(activeSeconds) && activeSeconds > 0 ? activeSeconds : 0;
-  return Math.floor(t / cfg.period) % cfg.sequence.length;
+  return Math.floor(t / cfg.period);
 }
 
 /** Which way the current phase pulls, or "none". */
