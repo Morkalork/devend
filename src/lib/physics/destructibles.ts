@@ -451,18 +451,85 @@ export function reopenCells(game: CanvasGameState, cells: number[]): void {
   pushReopenedSamplePoints(game, cells);
 }
 
+/**
+ * Everything that happens BECAUSE a breakable broke, once its body is gone.
+ *
+ * Split out because a breakable leaves the board two ways and only one of them
+ * used to run this. A ball spending its hit budget queues the object and
+ * `processDestroysFn` does the whole job; but smash the thing a stack rests on
+ * and `toppleSupportedBy` brought the rest down by hand - detaching the
+ * polygon, setting `destroyed`, and stopping there.
+ *
+ * So a GATE breakable that came down with its supporter took its sealed area
+ * with it: those cells stayed REMOVED with nothing left on the board that could
+ * ever reopen them. The player watched the gate break and the space behind it
+ * never arrived - dead, uncuttable ground, permanently. A toppled chest paid
+ * nothing, and a toppled objective was never counted, which can leave a map
+ * whose win gate counts broken objectives unwinnable.
+ *
+ * The bonus and the demolition multiplier come along too. A break the player
+ * caused is a break; paying differently depending on which end of the stack
+ * they hit is the kind of arbitrary rule that reads as a bug from the seat.
+ *
+ * Returns the number of grid cells it reopened.
+ */
+function completeBreakable(
+  game: CanvasGameState,
+  d: DestructibleState,
+  levelNumber: number,
+  callbacks: DestroyCallbacks,
+  modifiers?: Pick<GameModifiers, "breakMultiplierBonus" | "smashKeepsLockMultiplier">,
+): number {
+  let opened = 0;
+  // Not a win requirement (you still win by shrinking the board), but an
+  // objective-counting gate reads this, so a break that is not counted can
+  // strand the map.
+  if (d.objective) game.objectivesBroken++;
+  game.breakBonus += d.objective ? BREAK_BONUS_OBJECTIVE : BREAK_BONUS_BASE;
+  // Every smash compounds the demolition multiplier, so stopping to break
+  // things offsets the ship-early time it cost (issue #38). Write-Off
+  // compounds harder per smash.
+  game.breakMultiplier = (game.breakMultiplier ?? 1)
+    * (BREAK_MULTIPLIER_PER + Math.max(0, modifiers?.breakMultiplierBonus ?? 0));
+
+  // Treasure chest (#38): a smash rolls a reward, grants it, and drops a gem
+  // showing what it was.
+  if (d.chest) grantChestReward(game, d, levelNumber, callbacks.onChestReward);
+
+  // A gate breakable re-opens its sealed (locked) area as capturable space.
+  if (d.sealedCells && d.sealedCells.length > 0 && game.spaceGrid) {
+    reopenCells(game, d.sealedCells);
+    opened += d.sealedCells.length;
+  }
+  return opened;
+}
+
 /** Topple every obstacle resting on `supporterId` (recursively): detach + fall. */
-function toppleSupportedBy(game: CanvasGameState, supporterId: string, now: number): number {
+function toppleSupportedBy(
+  game: CanvasGameState,
+  supporterId: string,
+  now: number,
+  levelNumber: number,
+  callbacks: DestroyCallbacks,
+  modifiers?: Pick<GameModifiers, "breakMultiplierBonus" | "smashKeepsLockMultiplier">,
+): number {
   let opened = 0;
   for (const so of game.stackObjects) {
     if (so.toppled || so.supporterId !== supporterId) continue;
     so.toppled = true;
     opened += detachObstacle(game, so.id, so.polygon);
     game.fallingObjects.push(makeFalling(so.polygon, OBSTACLE_FALL_COLOR, now));
-    // If this object was itself a breakable destructible, retire its descriptor.
+    // If this object was itself a breakable, it has just been DESTROYED, not
+    // merely removed from the board - so it gets the same consequences a
+    // smashed one does. Retiring the descriptor by hand here was the bug: it
+    // skipped the sealed area, the chest reward and the objective count.
     const dd = game.destructibles.find(d => d.kind === 'breakable' && d.id === so.id && !d.destroyed);
-    if (dd) dd.destroyed = true;
-    opened += toppleSupportedBy(game, so.id, now); // things resting on it fall too
+    if (dd) {
+      dd.destroyed = true;
+      opened += completeBreakable(game, dd, levelNumber, callbacks, modifiers);
+    }
+    // Things resting on it fall too.
+    opened += toppleSupportedBy(game, so.id, now, levelNumber, callbacks, modifiers);
   }
   return opened;
 }
@@ -584,30 +651,11 @@ export function processDestroysFn(
       continue;
     }
 
-    // Breakable obstacle (issue #38): smashing it awards bonus points (it is
-    // NOT a win requirement — you still win by shrinking the board) and topples
-    // whatever rests on it.
-    if (d.objective) game.objectivesBroken++;
-    game.breakBonus += d.objective ? BREAK_BONUS_OBJECTIVE : BREAK_BONUS_BASE;
-    // Every smash also compounds the demolition multiplier, so stopping to
-    // break things offsets the ship-early time it cost (issue #38).
-    // Write-Off compounds harder per smash.
-    game.breakMultiplier = (game.breakMultiplier ?? 1)
-      * (BREAK_MULTIPLIER_PER + Math.max(0, modifiers?.breakMultiplierBonus ?? 0));
-
-    // Treasure chest (#38): a smash rolls a reward, grants it, and drops a gem
-    // showing what it was.
-    if (d.chest) grantChestReward(game, d, levelNumber, callbacks.onChestReward);
-
-    // A gate breakable re-opens its sealed (locked) area as capturable space.
-    if (d.sealedCells && d.sealedCells.length > 0 && game.spaceGrid) {
-      reopenCells(game, d.sealedCells);
-      opened += d.sealedCells.length;
-    }
+    opened += completeBreakable(game, d, levelNumber, callbacks, modifiers);
 
     const so = game.stackObjects.find(s => s.id === d.id);
     if (so) so.toppled = true;
-    opened += toppleSupportedBy(game, d.id, now);
+    opened += toppleSupportedBy(game, d.id, now, levelNumber, callbacks, modifiers);
   }
 
   if (opened > 0 && game.spaceGrid) {
