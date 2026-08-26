@@ -26,9 +26,12 @@ vi.mock("@/lib/gameHaptics", () => ({
   vibrateBallLock: () => {}, vibrateFenceComplete: () => {}, vibrateFenceBreak: () => {},
 }));
 
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { createInitialGameData } from "@/lib/initGame";
 import { applyCutFn } from "@/lib/physics/applyCut";
 import { areaStyle } from "@/lib/coloredAreas";
+import type { AreaKind } from "@/types/level";
 import { getLockValue } from "@/lib/scoring";
 import {
   getLockDecisions, setLockDebugEnabled, clearLockDecisions,
@@ -375,4 +378,38 @@ describe("dormant opacity stays below live, for every element", () => {
       expect(Math.min(d.fill, d.border, d.label)).toBeGreaterThan(0);
     }
   });
+});
+
+/**
+ * The numbers on the explainer card have to be the numbers the code pays.
+ *
+ * This is the same shape as the bug that prompted it: the Zone Locks row's own
+ * explainer said it "shows only the hours the zone added" while the code
+ * rendered a bare tally, so the copy and the behaviour disagreed and the player
+ * believed the copy. The multipliers are quoted verbatim in three locales and
+ * nothing connected them to AREA_KINDS, so retuning a kind would leave three
+ * translations quietly lying about the payout.
+ */
+describe("the explainer quotes the multipliers the code actually pays", () => {
+  const KINDS: AreaKind[] = ["var", "let", "const"];
+
+  for (const locale of ["en", "es", "sv"] as const) {
+    it(`matches in ${locale}`, () => {
+      const bundle = JSON.parse(
+        readFileSync(resolve(process.cwd(), `src/i18n/locales/${locale}.json`), "utf8"),
+      );
+      const body: string = bundle.levelComplete.info.zoneLocks.body;
+      expect(body.length, "the zone explainer is missing").toBeGreaterThan(0);
+
+      for (const kind of KINDS) {
+        const m = areaStyle(kind).multiplier;
+        // Swedish writes 1,5x rather than 1.5x, so accept either decimal mark.
+        const quoted = new RegExp(`(?<![0-9.,])${String(m).replace(".", "[.,]")}x`);
+        expect(
+          quoted.test(body),
+          `${locale}: says nothing about ${kind} paying ${m}x`,
+        ).toBe(true);
+      }
+    });
+  }
 });

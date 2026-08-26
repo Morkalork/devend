@@ -417,7 +417,13 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                   <Target className="w-3 h-3 sm:w-4 sm:h-4" />
                   {t('levelComplete.zoneLocks', { count: zoneLockCount })}
                 </span>
-                <span className="font-bold text-fuchsia-300">x{zoneLockCount}</span>
+                {/* Hours, like every other row on this screen. It used to show
+                    the COUNT with an "x" in front of it, so a single zone lock
+                    read as "x1" - the arithmetic for "you got nothing" - on a
+                    row whose own explainer says it shows the hours the zone
+                    added. The pay was always real: the zone multiplier is
+                    folded into lock income long before this screen sees it. */}
+                <span className="font-bold text-fuchsia-300">+{zoneLockBonus}h</span>
               </div>
             )}
 

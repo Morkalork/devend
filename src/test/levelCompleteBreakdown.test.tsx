@@ -115,3 +115,42 @@ describe('post-map screen names the win condition', () => {
     expect(screen.getByText('Remaining')).toBeTruthy();
   });
 });
+
+/**
+ * Every itemised row answers the same question: how many hours did this earn?
+ *
+ * Reported from a real session: "I just got a zone-lock and it says x1, which
+ * presumably means I got nothing for it?" It did pay - the zone multiplier is
+ * folded into lock income before this screen ever sees it - but the row showed
+ * the COUNT of zone locks with an "x" in front of it, so one zone lock read as
+ * a times-one multiplier, which is the arithmetic for "nothing". The row's own
+ * hold-to-explain text says outright that it "shows only the hours the zone
+ * added", so the copy and the code disagreed and the code was wrong.
+ */
+describe('every bonus row reports hours, not a tally', () => {
+  const withZone = {
+    ...scoreData,
+    lockBonus: 24,
+    lockedBallsCount: 2,
+    standardLockBonus: 24,
+    zoneLockCount: 1,
+    zoneLockBonus: 7,
+  } as LevelScoreData;
+
+  it('shows what a zone lock paid, not how many there were', () => {
+    renderOverlay({ scoreData: withZone });
+    fireEvent.click(screen.getByText('Score breakdown'));
+
+    expect(screen.getByText('Zone Locks (1)'), 'the zone row is missing').toBeTruthy();
+    // "x1" is the failure: a count wearing a multiplier's clothes.
+    expect(screen.queryByText('x1'), 'the row still shows a bare tally').toBeNull();
+    expect(screen.getByText('+7h'), 'the hours the zone added are not shown').toBeTruthy();
+  });
+
+  it('keeps the row hidden when the zones added nothing', () => {
+    // Better silent than a row that says a zone paid and cannot say how much.
+    renderOverlay({ scoreData: { ...withZone, zoneLockBonus: 0 } });
+    fireEvent.click(screen.getByText('Score breakdown'));
+    expect(screen.queryByText(/Zone Locks/)).toBeNull();
+  });
+});
