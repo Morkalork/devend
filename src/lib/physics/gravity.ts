@@ -8,9 +8,11 @@
  * velocity vector to an absolute target magnitude every frame.
  *
  * So the obvious implementation, `velocity.y += g * dt`, is erased the same
- * frame it happens. The conveyor mutator already documents the same discovery
- * from the other side: it moves the POSITION, "not a velocity change, so it
- * never compounds into speed".
+ * frame it happens. The removed conveyor mutator had found the same thing from
+ * the other side and moved the POSITION instead - which avoided the rescalers,
+ * but let a strong enough current hold a ball against a wall, since the ball's
+ * own motion and the current were then being arbitrated by the collision
+ * clamp. Steering the heading avoids both traps.
  *
  * Gravity here is therefore a STEERING force, not an accelerating one. The
  * velocity direction bends toward "down" at a fixed angular rate; the magnitude

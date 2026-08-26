@@ -19,16 +19,6 @@ mutators:
       maxPercent: 56
     overtimePremium: 3
 
-  - id: conveyor
-    name: Conveyor
-    description: A steady current pushes the balls across the board.
-    clarify: A constant drift nudges every ball one way all map. Read the current and cut with it, not against it.
-    behavior: conveyor
-    weight: 3
-    params:
-      speed: 55
-    overtimePremium: 2
-
   - id: overclock
     name: Overclock
     description: The whole board runs hot. Balls and movers are faster all map.
@@ -39,27 +29,6 @@ mutators:
       factor: 1.18
     overtimePremium: 2
 
-  - id: riptide
-    name: Riptide
-    description: A strong current drags everything one way.
-    clarify: Like Conveyor, but the drift is stronger. Small pockets fill fast on the downstream side.
-    behavior: conveyor
-    minLevel: 15
-    weight: 2
-    params:
-      speed: 82
-    overtimePremium: 3
-
-  # Shifting gravity (issue #77). Balls are PULLED toward a cardinal direction
-  # that rotates through the sequence, with gravity-free stretches between so
-  # the map reads as shifting rather than as permanently tilted.
-  #
-  # The pull bends a ball's heading and never its speed, which is not a
-  # shortcut: this game rewrites velocity to absolute magnitudes every frame
-  # (the minimum-speed floor, grey wind-down, yellow variable speed), so any
-  # gravity that accumulated INTO speed would be erased the same frame. Steering
-  # also makes "they must bounce" structural, since a ball at constant speed can
-  # never come to rest. See src/lib/physics/gravity.ts.
   - id: gravity_well
     name: Technical Gravity
     description: Everything is pulled one way, and the way keeps changing.

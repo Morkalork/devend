@@ -50,19 +50,6 @@ export interface Ball {
   assimColorFade: number; // 0→1 fade from ball color to accent color (default 0)
   prevPosition?: Vector2;    // position at start of last fixed physics step (for interpolation)
   renderPosition?: Vector2;  // interpolated render position (set each frame, used by render only)
-  /**
-   * The surface this ball is currently resting against, if any.
-   *
-   * `n` is the outward normal (the direction the collision resolvers pushed it
-   * out along) and `d` is the ball's projection onto that normal at the moment
-   * of contact, so `position . n - d` is how far it has climbed away since.
-   * Cleared once that exceeds a ball's resting clearance.
-   *
-   * Exists for the conveyor mutator, which is a POSITIONAL current: without
-   * knowing what the ball is leaning on, a current stronger than the ball's
-   * speed into a wall holds it there forever. See updateBall's drift site.
-   */
-  surfaceContact?: { nx: number; ny: number; d: number };
   trailPositions?: Vector2[]; // ring buffer of last N render positions for motion trail (world coords); slots reused in place
   trailHead?: number;         // ring-buffer write cursor (index of the next slot to overwrite)
   trailCount?: number;        // number of valid entries in the ring buffer (<= its length)

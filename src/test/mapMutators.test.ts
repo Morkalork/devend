@@ -2,11 +2,14 @@
  * mapMutators — per-map environmental modifiers (issue #54).
  *
  * Covers the deterministic per-map roll (seed determinism, eligibility gate,
- * none-bucket, variety), the conveyor drift resolution, the pure speed-factor
+ * none-bucket, variety), the pure speed-factor
  * and overtime-premium helpers (including the winnability cap on crunch), and
  * that the premium folds UNDER the per-map score cap.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import yaml from "js-yaml";
 import { createRng } from "@/lib/runRng";
 import {
   selectMapMutator,
@@ -21,19 +24,16 @@ const CRUNCH: MapMutator = {
   id: "crunch", name: "Crunch", description: "d", behavior: "crunch",
   weight: 1, params: { perLockPercent: 7, maxPercent: 56 }, overtimePremium: 3,
 };
-const CONVEYOR: MapMutator = {
-  id: "conveyor", name: "Conveyor", description: "d", behavior: "conveyor",
-  weight: 1, params: { speed: 55 }, overtimePremium: 2,
-};
 const OVERCLOCK: MapMutator = {
   id: "overclock", name: "Overclock", description: "d", behavior: "overclock",
   weight: 1, params: { factor: 1.18 }, overtimePremium: 2,
 };
-const RIPTIDE: MapMutator = {
-  id: "riptide", name: "Riptide", description: "d", behavior: "conveyor",
-  minLevel: 15, weight: 50, params: { speed: 82 },
+/** The level-gated entry, so the eligibility range is tested against a real one. */
+const GRAVITY: MapMutator = {
+  id: "gravity_well", name: "Technical Gravity", description: "d", behavior: "gravity",
+  minLevel: 14, weight: 50, overtimePremium: 4,
 };
-const POOL = [CRUNCH, CONVEYOR, OVERCLOCK, RIPTIDE];
+const POOL = [CRUNCH, OVERCLOCK, GRAVITY];
 
 describe("selectMapMutator (#54)", () => {
   it("returns null below the procedural band", () => {
@@ -47,16 +47,16 @@ describe("selectMapMutator (#54)", () => {
     expect(a).not.toBeNull();
   });
 
-  it("respects the eligible level range (riptide is level 15+)", () => {
-    expect(eligibleMutators(12, POOL).map(m => m.id)).not.toContain("riptide");
-    expect(eligibleMutators(15, POOL).map(m => m.id)).toContain("riptide");
-    // At level 12, riptide can never be picked even though its weight is huge.
+  it("respects the eligible level range (gravity is level 14+)", () => {
+    expect(eligibleMutators(12, POOL).map(m => m.id)).not.toContain("gravity_well");
+    expect(eligibleMutators(14, POOL).map(m => m.id)).toContain("gravity_well");
+    // At level 12 it can never be picked even though its weight is huge.
     for (const s of ["1", "2", "3", "4", "5", "6", "7", "8"]) {
-      expect(selectMapMutator(12, createRng(s), POOL, 0)?.id).not.toBe("riptide");
+      expect(selectMapMutator(12, createRng(s), POOL, 0)?.id).not.toBe("gravity_well");
     }
-    // At level 15 its heavy weight means it shows up across seeds.
-    const picks = ["1", "2", "3", "4", "5", "6"].map(s => selectMapMutator(15, createRng(s), POOL, 0)?.id);
-    expect(picks).toContain("riptide");
+    // At level 14 its heavy weight means it shows up across seeds.
+    const picks = ["1", "2", "3", "4", "5", "6"].map(s => selectMapMutator(14, createRng(s), POOL, 0)?.id);
+    expect(picks).toContain("gravity_well");
   });
 
   it("never mutates below the band even with a level-1 minLevel entry", () => {
@@ -77,21 +77,19 @@ describe("selectMapMutator (#54)", () => {
     expect(ids.size).toBeGreaterThan(1);
   });
 
-  it("resolves a conveyor drift vector along one axis, magnitude = speed", () => {
-    for (const s of ["1", "2", "3", "4", "5", "6"]) {
-      const m = selectMapMutator(12, createRng(s), [CONVEYOR], 0)!;
-      expect(m.behavior).toBe("conveyor");
-      const dx = m.driftX ?? 0, dy = m.driftY ?? 0;
-      expect(Math.min(Math.abs(dx), Math.abs(dy))).toBe(0);       // exactly one axis
-      expect(Math.hypot(dx, dy)).toBeCloseTo(55, 5);              // magnitude = speed
-    }
+  it("hands out a COPY, never the catalogue entry itself", () => {
+    // game.mapMutator is written to during play. Returning the shared entry
+    // would leak one map's state into every later map that rolled the same one.
+    const picked = selectMapMutator(12, createRng("s"), POOL, 0)!;
+    expect(POOL.some(m => m === picked)).toBe(false);
+    expect(POOL.some(m => m.id === picked.id)).toBe(true);
   });
 });
 
 describe("mutatorSpeedFactor (#54)", () => {
-  it("is 1 with no mutator, or a conveyor (positional, not speed)", () => {
+  it("is 1 with no mutator, or one that does not touch speed", () => {
     expect(mutatorSpeedFactor(null, 5)).toBe(1);
-    expect(mutatorSpeedFactor({ ...CONVEYOR } as ActiveMapMutator, 5)).toBe(1);
+    expect(mutatorSpeedFactor({ ...GRAVITY } as ActiveMapMutator, 5)).toBe(1);
   });
 
   it("applies the flat overclock factor regardless of locks", () => {
@@ -128,5 +126,43 @@ describe("mutatorOvertimePremium (#54)", () => {
     const without = calculateScore(5, 5, 10, 30, base, {}).levelScore;
     const withPremium = calculateScore(5, 5, 10, 30, base, { flatBonus: premium }).levelScore;
     expect(withPremium).toBe(without + premium);
+  });
+});
+
+/**
+ * The shipped pool, checked against the behaviours the code actually implements.
+ *
+ * parseMutatorEntry DROPS an entry whose behaviour it does not know, silently,
+ * so a typo in the YAML does not break anything - it just quietly removes a
+ * mutator from the game and nothing says so. This is the thing that would say
+ * so.
+ */
+describe("public/mapMutators.yml", () => {
+  const doc = yaml.load(
+    readFileSync(resolve(process.cwd(), "public/mapMutators.yml"), "utf8"),
+  ) as { mutators: Array<{ id: string; behavior: string }> };
+
+  /** Every behaviour updateBall / mapMutators.ts has a rule for. */
+  const IMPLEMENTED = new Set(["crunch", "overclock", "gravity", "none"]);
+
+  it("only authors behaviours the code implements", () => {
+    expect(doc.mutators.length, "the pool is empty").toBeGreaterThan(0);
+    for (const m of doc.mutators) {
+      expect(IMPLEMENTED.has(m.behavior), `${m.id}: unknown behavior "${m.behavior}"`).toBe(true);
+    }
+  });
+
+  it("has no invisible current", () => {
+    // The conveyor was removed deliberately, not by accident. It applied a
+    // steady drift to every ball for a whole map with nothing on screen to say
+    // so, in a game whose entire skill is predicting where a ball will be:
+    // LEVELDESIGN.md's third convention says a Turn has to be visible coming or
+    // it is an ambush, and an invisible force acting all map is exactly that.
+    // Players read it as the map being broken, which is what it looks like.
+    //
+    // If it comes back it needs to be drawn first.
+    for (const m of doc.mutators) {
+      expect(m.behavior, `${m.id} is a conveyor`).not.toBe("conveyor");
+    }
   });
 });

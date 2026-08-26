@@ -16,7 +16,10 @@ import { PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { eligibleByLevel, weightedPick, finiteOrUndefined } from "@/lib/mapPools";
 import type { Rng } from "@/lib/runRng";
 
-const VALID_BEHAVIORS = new Set(["crunch", "overclock", "conveyor", "gravity", "none"]);
+// A behaviour not on this list makes parseMutatorEntry drop the whole entry, so
+// an authored `behavior: conveyor` left in the YAML simply never loads rather
+// than half-applying.
+const VALID_BEHAVIORS = new Set(["crunch", "overclock", "gravity", "none"]);
 
 let liveMutators: MapMutator[] = [];
 /** Odds weight of "no mutator this map", so some eligible maps stay vanilla. */
@@ -84,7 +87,7 @@ export function eligibleMutators(levelNumber: number, pool: MapMutator[] = liveM
 /**
  * Pick one mutator for a map (or null for a vanilla map), deterministically
  * from `rng`. A synthetic "none" bucket of weight `noneWeight` leaves some maps
- * unmodified. Resolves per-map rolled fields (conveyor drift). Returns null when
+ * unmodified. Returns null when
  * the level is below the procedural band or nothing is eligible.
  */
 export function selectMapMutator(
@@ -96,20 +99,19 @@ export function selectMapMutator(
   const chosen = weightedPick(eligibleMutators(levelNumber, pool), noneWeight, rng);
   // null = drew the "none" bucket; a `none`-behavior entry is also a vanilla map.
   if (!chosen || chosen.behavior === "none") return null;
-  return resolveMutator(chosen, rng);
+  return resolveMutator(chosen);
 }
 
-/** Fill in per-map rolled fields for a chosen mutator. */
-function resolveMutator(m: MapMutator, rng: Rng): ActiveMapMutator {
-  const active: ActiveMapMutator = { ...m };
-  if (m.behavior === "conveyor") {
-    const speed = m.params?.speed ?? 55;
-    const horizontal = rng() < 0.5;
-    const sign = rng() < 0.5 ? 1 : -1;
-    active.driftX = horizontal ? speed * sign : 0;
-    active.driftY = horizontal ? 0 : speed * sign;
-  }
-  return active;
+/**
+ * Fill in per-map rolled fields for a chosen mutator.
+ *
+ * Nothing rolls anything today - the conveyor's drift vector was the only one -
+ * but the COPY still matters: `game.mapMutator` is written to during play, and
+ * handing out the catalogue entry itself would let one map's state leak into
+ * every later map that rolls the same mutator.
+ */
+function resolveMutator(m: MapMutator): ActiveMapMutator {
+  return { ...m };
 }
 
 // ── Pure application helpers (called from physics/scoring) ────────────────────
@@ -117,7 +119,7 @@ function resolveMutator(m: MapMutator, rng: Rng): ActiveMapMutator {
 /**
  * The map-mutator speed multiplier applied to BOTH ball displacement (folded
  * into game.creepFactor so the aim line stays in sync) and mover speed. 1 for
- * conveyor/none/no-mutator.
+ * none/no-mutator.
  */
 export function mutatorSpeedFactor(mut: ActiveMapMutator | null, lockedBallsCount: number): number {
   if (!mut) return 1;

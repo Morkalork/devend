@@ -197,7 +197,7 @@ describe("with Free Fall owned", () => {
    */
   it("pays nothing under a non-gravity mutator", () => {
     const r = lockInCorner(
-      { mapMutator: { behavior: "conveyor" } as never, gravityConfig: DEFAULT_GRAVITY },
+      { mapMutator: { behavior: "overclock" } as never, gravityConfig: DEFAULT_GRAVITY },
       mods({ gravityLockBonus: 1 }),
     );
     expect(r.pay).toBe(plainPayFor(r.ball));
