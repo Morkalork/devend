@@ -353,14 +353,10 @@ export function updateBall(
   ball.position.x += ball.velocity.x * moveDt;
   ball.position.y += ball.velocity.y * moveDt;
 
-  // Conveyor mutator (issue #54): a steady positional drift, not a velocity
-  // change, so it never compounds into speed and the wall resolver keeps the
-  // ball in bounds (a gentle current). Uses the raw step, independent of creep.
-  const mut = game.mapMutator;
-  if (mut && mut.behavior === "conveyor") {
-    ball.position.x += (mut.driftX || 0) * dt;
-    ball.position.y += (mut.driftY || 0) * dt;
-  }
+  // The conveyor mutator's drift is NOT applied here. It is a positional
+  // current, and a current applied before the collision pass can hold a ball
+  // against the surface it flows into: see the note at the drift site, below
+  // the resolvers.
 
   // Shifting gravity (issue #77): bend the HEADING toward the current pull,
   // never the speed. Placed here, after the move and before the speed
@@ -479,6 +475,13 @@ export function updateBall(
 
     console.warn("[PHYSICS] Ball escaped board, recovered to:", ball.position);
   }
+
+  // Where the ball was before anything resolved a collision. The total push-out
+  // across every resolver below is `position - this`, and its direction is the
+  // surface normal the ball is resting against - which is what the conveyor
+  // drift needs in order not to press the ball into it.
+  const preResolveX = ball.position.x;
+  const preResolveY = ball.position.y;
 
   // Resolve collisions with board boundary (always use original board, not region bounding box).
   // Broad-phase: the board is an axis-aligned rectangle, so a ball further than
@@ -701,6 +704,76 @@ export function updateBall(
         }
       }
     }
+  }
+
+  // ── Conveyor mutator (issue #54) ─────────────────────────────────────────
+  //
+  // A steady positional drift, not a velocity change, so it never compounds
+  // into speed. It runs AFTER the collision pass and never pushes into a
+  // surface, and both halves of that are the fix for a ball that got stuck to
+  // the floor and slid left and right as though tethered to it.
+  //
+  // Applied before the resolvers, the current was fighting the ball's own
+  // motion for the same frame, and winning. A ball arriving at the floor with a
+  // vertical speed below the current's speed bounced upward, the drift pushed
+  // it back down further than it had risen, and the resolver then clamped it to
+  // a fixed distance from the surface - discarding the climb entirely. Its
+  // velocity still said "moving up" while its position never changed, every
+  // frame, forever. The threshold was exactly the current's speed: at 250 units
+  // that is any approach shallower than about 13 degrees, which a ball meets
+  // several times a map and never recovers from.
+  //
+  // So the wall wins over the current, which is the only self-consistent
+  // reading: a current cannot push something through a wall, so it must not be
+  // able to push it into one either. Only the component ALONG the contact
+  // survives, so a ball touching the floor is still swept sideways by it, and
+  // its own bounce carries it away exactly as it would on a still board.
+  const mut = game.mapMutator;
+  if (mut && mut.behavior === "conveyor") {
+    // What the ball is leaning on. The resolvers above only ever push a ball
+    // OUT, so the total push across all of them points along the surface
+    // normal.
+    //
+    // Remembered rather than tested per frame, because contact is
+    // INTERMITTENT: a ball held against the floor by the current settles into a
+    // cycle where it sinks for four frames and is snapped clear on the fifth,
+    // so "did a resolver fire this frame" is false most of the time and answers
+    // the wrong question. Released by DISTANCE rather than by a timer, so it
+    // behaves identically at any frame rate.
+    //
+    // Tracked only on a conveyor map, because that is the only thing that reads
+    // it and this runs per ball per 120Hz step.
+    const pushX = ball.position.x - preResolveX;
+    const pushY = ball.position.y - preResolveY;
+    const pushLen = Math.hypot(pushX, pushY);
+    if (pushLen > 1e-6) {
+      const nx = pushX / pushLen, ny = pushY / pushLen;
+      const d = ball.position.x * nx + ball.position.y * ny;
+      // Mutated in place: a fresh object on every contact frame is exactly the
+      // kind of per-step garbage the broad-phases above exist to avoid.
+      if (ball.surfaceContact) {
+        ball.surfaceContact.nx = nx; ball.surfaceContact.ny = ny; ball.surfaceContact.d = d;
+      } else {
+        ball.surfaceContact = { nx, ny, d };
+      }
+    } else if (ball.surfaceContact) {
+      const { nx, ny, d } = ball.surfaceContact;
+      // Clear of the surface once a whole body width of open space is between
+      // them: the ball is in open water again rather than mid-bounce.
+      if (ball.position.x * nx + ball.position.y * ny - d > ball.radius) {
+        ball.surfaceContact = undefined;
+      }
+    }
+
+    let dx = (mut.driftX || 0) * dt;
+    let dy = (mut.driftY || 0) * dt;
+    const contact = ball.surfaceContact;
+    if (contact) {
+      const into = dx * contact.nx + dy * contact.ny;  // negative: into the wall
+      if (into < 0) { dx -= into * contact.nx; dy -= into * contact.ny; }
+    }
+    ball.position.x += dx;
+    ball.position.y += dy;
   }
 
   // ── Ball-type speed abilities (issue #37) ────────────────────────────────
