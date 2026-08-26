@@ -58,6 +58,55 @@ describe("which way the board rests", () => {
   });
 });
 
+describe("the map opens flat", () => {
+  /**
+   * Reported from a real session: "it started out by tilting, which should
+   * never happen, not on start".
+   *
+   * `gravityPhaseIndex` is taken modulo the sequence length, so index 0 at
+   * t=0 looks identical to index 0 one full cycle later. Reading `index - 1`
+   * therefore wrapped to the END of the sequence and eased the board in from a
+   * phase that had never happened. With the authored sequence that is 90
+   * degrees on the opening frame, spinning upright over the next 0.7 seconds,
+   * on every gravity map that loads.
+   */
+  it("does not turn on the opening frames", () => {
+    const rest = phaseAngle(0, CFG);
+    for (const t of [0, 0.05, 0.1, 0.35, TILT_SECONDS / 2, TILT_SECONDS]) {
+      expect(tiltAngleAt(t, CFG), `t=${t}`).toBeCloseTo(rest, 6);
+    }
+  });
+
+  it("holds that rest angle for the whole first phase", () => {
+    // Not just the ease window: nothing at all happens until the phase changes.
+    for (const t of [1, 3, 5, 8, CFG.period - 0.01]) {
+      expect(tiltAngleAt(t, CFG), `t=${t}`).toBeCloseTo(phaseAngle(0, CFG), 6);
+    }
+  });
+
+  it("opens flat whatever the sequence starts with", () => {
+    // The bug was not specific to a "down" opener. Any first phase must be
+    // rested, because none of them has a predecessor.
+    for (const first of ["down", "left", "up", "right"] as const) {
+      const cfg: GravityConfig = { ...CFG, sequence: [first, "none", "up"] };
+      expect(tiltAngleAt(0, cfg), first).toBeCloseTo(phaseAngle(0, cfg), 6);
+      expect(tiltAngleAt(0.2, cfg), first).toBeCloseTo(phaseAngle(0, cfg), 6);
+    }
+  });
+
+  it("still eases every LATER phase change, including the wrap", () => {
+    // The fix must not turn the whole feature off. The board genuinely turns
+    // at each phase boundary, and the wrap back to index 0 one cycle in is a
+    // real turn with a real predecessor.
+    const wrap = CFG.period * CFG.sequence.length;   // back to index 0
+    const before = tiltAngleAt(wrap - 0.01, CFG);
+    const mid = tiltAngleAt(wrap + TILT_SECONDS / 2, CFG);
+    const after = tiltAngleAt(wrap + TILT_SECONDS, CFG);
+    expect(after).toBeCloseTo(phaseAngle(0, CFG), 6);
+    expect(Math.abs(mid - before), "the wrap stopped turning").toBeGreaterThan(1e-3);
+  });
+});
+
 describe("the turn itself", () => {
   it("is settled by the time the phase is old", () => {
     const settled = tiltAngleAt(TILT_SECONDS + 0.01, CFG);

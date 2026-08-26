@@ -305,6 +305,20 @@ export interface CanvasGameState {
   frozenBallId: string | null;
   frozenBallVelocity: Vector2 | null;
   frozenBallPosition: Vector2 | null;
+  /**
+   * When the post-break freeze must be over, on the performance clock.
+   *
+   * The freeze is lifted by a setTimeout stored in the SHARED shake-timer ref,
+   * and several unrelated paths (applyCut, handleGameOver, the canvas cleanup)
+   * clear that ref and install callbacks of their own that know nothing about
+   * unfreezing. A freeze whose timer is cancelled never lifts, and a ball whose
+   * id is still in `frozenBallId` is skipped by the physics entirely - it stops
+   * dead in open space and stays there for the rest of the map.
+   *
+   * So the deadline lives on the game itself and the loop enforces it. The
+   * timer stays the normal path; this is the net under it.
+   */
+  frozenBallReleaseAt: number | null;
 
   // ── Lock bonus ─────────────────────────────────────────────────────────
   /** This map's base points (level.points), the map's overtime scale. Used to

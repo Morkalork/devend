@@ -618,6 +618,7 @@ export function GameCanvas({
     recoveryEndTime: 0,
     initialSamplePoints: [] as Vector2[],
     frozenBallId: null as string | null,
+    frozenBallReleaseAt: null as number | null,
     frozenBallVelocity: null as Vector2 | null,
     frozenBallPosition: null as Vector2 | null,
     lockedBallsCount: 0,

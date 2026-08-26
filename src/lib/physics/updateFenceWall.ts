@@ -11,6 +11,15 @@ import { MINIMUM_WALL_TIME, RECOVERY_WINDOW_MS } from "@/lib/gameConstants";
 import { playFenceBreakSound } from "@/lib/gameAudio";
 import { vibrateFenceBreak } from "@/lib/gameHaptics";
 
+/**
+ * How long a post-break freeze may last before the loop lifts it regardless.
+ *
+ * The shake timer that normally lifts it runs at 400ms. This is comfortably
+ * past that, so the ordinary path always wins and this only ever fires when
+ * that timer was cancelled by something with no idea a ball was frozen.
+ */
+export const FREEZE_MAX_MS = 1500;
+
 export function updateFenceWallFn(
   dt: number,
   game: CanvasGameState,
@@ -154,6 +163,7 @@ export function updateFenceWallFn(
     game.frozenBallId = null;
     game.frozenBallPosition = null;
     game.frozenBallVelocity = null;
+    game.frozenBallReleaseAt = null;
     playFenceBreakSound(); vibrateFenceBreak();
     const newLives = callbacks.getLives() - 1;
     callbacks.setLivesRef(newLives);
@@ -206,6 +216,10 @@ export function updateFenceWallFn(
     game.frozenBallId = ball.id;
     game.frozenBallPosition = { ...ball.position };
     game.frozenBallVelocity = { ...ball.velocity };
+    // The deadline the loop falls back on if the shake timer is cancelled by
+    // something that does not know about the freeze. Generous: the timer is
+    // the normal path and must be allowed to win.
+    game.frozenBallReleaseAt = performance.now() + FREEZE_MAX_MS;
     ball.velocity = { x: 0, y: 0 };
 
     const unfreezeAfterShake = () => {
@@ -217,6 +231,7 @@ export function updateFenceWallFn(
       game.frozenBallId = null;
       game.frozenBallPosition = null;
       game.frozenBallVelocity = null;
+      game.frozenBallReleaseAt = null;
     };
 
     // Shield absorbs the hit
@@ -262,6 +277,7 @@ export function updateFenceWallFn(
       game.frozenBallId = null;
       game.frozenBallPosition = null;
       game.frozenBallVelocity = null;
+      game.frozenBallReleaseAt = null;
       handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
       return;
     }

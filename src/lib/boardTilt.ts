@@ -91,6 +91,21 @@ export function tiltAngleAt(activeSeconds: number, cfg: GravityConfig | null): n
   const t = Number.isFinite(activeSeconds) && activeSeconds > 0 ? activeSeconds : 0;
   const index = gravityPhaseIndex(t, cfg);
   const to = phaseAngle(index, cfg);
+
+  // The map's FIRST phase has no predecessor, so it is not a TURN.
+  //
+  // `gravityPhaseIndex` is taken modulo the sequence length, so index 0 at
+  // t=0 is indistinguishable from index 0 at t=period*n. Reading `index - 1`
+  // therefore wrapped to the END of the sequence and started the board part
+  // way through a turn that had never happened: with the authored sequence
+  // that is a board sitting at 90 degrees on the opening frame and spinning
+  // upright over the next 0.7 seconds, every single time a gravity map loads.
+  //
+  // The raw clock is what distinguishes them, so it is what decides here. A
+  // later wrap (t=72 with this sequence) really is a turn from the phase
+  // before it, and still eases.
+  if (t < cfg.period) return to;
+
   const from = phaseAngle(index - 1, cfg);
   const into = t % cfg.period;                       // seconds into this phase
   if (into >= TILT_SECONDS) return to;               // settled

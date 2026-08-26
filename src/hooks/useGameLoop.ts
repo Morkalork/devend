@@ -379,6 +379,36 @@ export function createGameLoop(
       // the phased-out collision skips this step read the current phase.
       tickPhasing(game, game.activePlaySeconds);
 
+      // A freeze that outlived its window is lifted here, whatever happened to
+      // its timer.
+      //
+      // The post-break freeze is normally released by a setTimeout kept in the
+      // SHARED shake-timer ref, and several paths that know nothing about
+      // freezing (applyCut, handleGameOver, the canvas cleanup) clear that ref
+      // and install callbacks of their own. When that happens the release never
+      // runs, `frozenBallId` stays set, and this loop plus updateBall both skip
+      // that ball for the rest of the map: it stops dead in open space and
+      // never moves again. Reported as balls stopping mid-air.
+      //
+      // The timer is still the normal path - the deadline is well past it - so
+      // this only ever fires for a freeze that was going to be permanent.
+      if (game.frozenBallId && game.frozenBallReleaseAt !== null
+          && performance.now() > game.frozenBallReleaseAt) {
+        const stranded = game.balls.find(b => b.id === game.frozenBallId);
+        if (stranded) {
+          // Give back the velocity it was carrying. Without this the ball
+          // restarts from the speed floor in an arbitrary direction, which is
+          // a second, quieter way for the break to rob the player.
+          if (game.frozenBallVelocity) stranded.velocity = { ...game.frozenBallVelocity };
+          if (game.frozenBallPosition) stranded.position = { ...game.frozenBallPosition };
+        }
+        console.warn("[FREEZE] freeze outlived its window; released", game.frozenBallId);
+        game.frozenBallId = null;
+        game.frozenBallPosition = null;
+        game.frozenBallVelocity = null;
+        game.frozenBallReleaseAt = null;
+      }
+
       // Intangible phased-out obstacles are identical for every ball this step,
       // so compute the set once here instead of per ball inside updateBall.
       const phasedOut = collectPhasedOut(game);
