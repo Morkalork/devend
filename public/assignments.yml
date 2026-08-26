@@ -12,7 +12,16 @@
 #               condition (underPar, speedClear, allBallsLocked).
 #   everyMap    the count of maps whose per-map condition was met; tier
 #               thresholds are maps-passed (out of 5).
-# mission.track.kind: lockCount | superiorLocks | underPar | speedClear | allBallsLocked
+# mission.track.kind: lockCount | superiorLocks | underPar | speedClear |
+#                      allBallsLocked | ballType
+#
+# `ballType` is a BOUNTY: seal a named type of ball. Author it WITHOUT a type -
+# the draft names one from the block's real roster (assignmentScaling.ts), and
+# picks the RAREST type that still covers the top tier, because a bounty on a
+# ball that turns up everywhere is an ordinary lock mission with extra words.
+# Its mission text must carry a {{ballType}} placeholder. If no type in the
+# block covers the top tier the assignment is dropped from the draft rather
+# than offered unclearable. `ballType: green` pins one explicitly (tests).
 # tiers: ascending thresholds; the highest reached pays.
 #
 # IMPORTANT for cumulative lockCount / superiorLocks missions: the thresholds
@@ -156,3 +165,27 @@ assignments:
         - { threshold: 30, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
         - { threshold: 40, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
     clarify: A pure volume grind with no push safety net. Three tiers, so you rarely walk away empty. An overtime bonus, then a free Senior upgrade, then a Principal for a heavy 40-lock block.
+
+  # A bounty, not a quota. Every other mission here counts locks you were going
+  # to make anyway; this one names the ball, so the question stops being "can I
+  # seal something" and becomes "can I seal THAT". You pass up easy pockets on
+  # the wrong colour and wait for the right one, which is a different map plan
+  # rather than more of the same one.
+  #
+  # The speed tax is not decoration. Cornering ONE named ball is the whole
+  # skill here, and a faster board is precisely what makes a specific target
+  # hard to corner - so the constraint bites on the same thing the mission
+  # asks for, rather than being a generic tax bolted on to justify the reward.
+  - id: named_delivery
+    name: Named Delivery
+    constraint:
+      text: Balls move 10% faster.
+      modifiers:
+        ballSpeedMultiplier: 1.1
+    mission:
+      text: Seal a {{ballType}} ball in each of the next 5 maps.
+      track: { mode: everyMap, kind: ballType, params: { count: 1 } }
+      tiers:
+        - { threshold: 2, label: "+2 lives", reward: { type: lives, count: 2 } }
+        - { threshold: 3, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
+    clarify: Client asked for one by name. The ball is picked from the types this block actually spawns, and it is the scarcest one that still leaves the top tier reachable, so expect to hunt for it. Two maps pays two lives; four of five earns a free Senior upgrade.

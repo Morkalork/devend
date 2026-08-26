@@ -423,6 +423,14 @@ export interface LevelScoreData {
   // the results screen's Locks / Superior Locks split
   superiorLockCount?: number;
   superiorLockBonus?: number;
+  /**
+   * How many balls of each TYPE were sealed this map, keyed by ball type id.
+   *
+   * Already maintained on the game state so a win condition can name the ball
+   * it wants sealed; carried out to the results so an assignment can set the
+   * same kind of bounty across a block.
+   */
+  lockedByType?: Record<string, number>;
   /** Locks that landed in a Colored Area, and the hours those zones added. */
   zoneLockCount?: number;
   zoneLockBonus?: number;

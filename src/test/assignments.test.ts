@@ -20,7 +20,7 @@ const doc = yaml.load(
 ) as AssignmentData;
 const assignments = doc.assignments;
 const VALID_KEYS = new Set(Object.keys(computeGameModifiers([], new Map())));
-const VALID_KINDS = new Set(["lockCount", "superiorLocks", "underPar", "speedClear", "allBallsLocked"]);
+const VALID_KINDS = new Set(["lockCount", "superiorLocks", "underPar", "speedClear", "allBallsLocked", "ballType"]);
 
 describe("assignment pool integrity", () => {
   it("has at least enough assignments for a full roll", () => {

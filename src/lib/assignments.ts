@@ -26,8 +26,17 @@ export function conditionMetForMap(
   kind: AssignmentConditionKind,
   params: Record<string, number> | undefined,
   r: AssignmentMapResult,
+  /** The named type, for a `ballType` bounty. Resolved per block at draft time. */
+  ballType?: string,
 ): boolean {
   switch (kind) {
+    case 'ballType': {
+      // No type resolved means no bounty was ever set, and a mission that
+      // passes on every map would pay the top tier for nothing.
+      if (!ballType) return false;
+      const sealed = r.lockedByType?.[ballType] ?? 0;
+      return sealed >= Math.max(1, Math.round(params?.count ?? 1));
+    }
     case 'lockCount':
       return r.locks >= Math.max(1, Math.round(params?.count ?? 1));
     case 'superiorLocks':
@@ -60,7 +69,7 @@ export function assignmentMetric(track: AssignmentTrack, results: AssignmentMapR
     return results.reduce((sum, r) => sum + r[key], 0);
   }
   // everyMap, or cumulative over a pass/fail condition: count qualifying maps.
-  return results.reduce((n, r) => n + (conditionMetForMap(track.kind, track.params, r) ? 1 : 0), 0);
+  return results.reduce((n, r) => n + (conditionMetForMap(track.kind, track.params, r, track.ballType) ? 1 : 0), 0);
 }
 
 export interface AssignmentTierProgress {

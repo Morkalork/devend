@@ -21,18 +21,25 @@ import type { ObjectiveKind } from '@/types/objective';
 import type { UpgradeTier } from '@/types/upgrade';
 
 /** Per-map condition a mission tracks. Subset of ObjectiveKind that reads a live counter. */
-export type AssignmentConditionKind = Extract<
-  ObjectiveKind,
-  'lockCount' | 'superiorLocks' | 'underPar' | 'speedClear' | 'allBallsLocked'
->;
+export type AssignmentConditionKind =
+  | Extract<
+      ObjectiveKind,
+      'lockCount' | 'superiorLocks' | 'underPar' | 'speedClear' | 'allBallsLocked'
+    >
+  /**
+   * Seal a NAMED ball type. Deliberately not part of ObjectiveKind: a boss
+   * objective draws from a shared pool with its own eligibility rules, and this
+   * only makes sense once something has picked a type for the block.
+   */
+  | 'ballType';
 
 /** How a condition is tracked across the 5-map block. */
 export type AssignmentTrack =
   // Sum a metric over the block (e.g. total locks across 5 maps). `params` tunes
   // the per-map condition when `everyMap`, and is ignored here except `count`.
-  | { mode: 'cumulative'; kind: AssignmentConditionKind; params?: Record<string, number> }
+  | { mode: 'cumulative'; kind: AssignmentConditionKind; params?: Record<string, number>; ballType?: string }
   // Pass the per-map condition in at least `minMaps` of the block (default 5).
-  | { mode: 'everyMap'; kind: AssignmentConditionKind; params?: Record<string, number>; minMaps?: number };
+  | { mode: 'everyMap'; kind: AssignmentConditionKind; params?: Record<string, number>; minMaps?: number; ballType?: string };
 
 /**
  * A reward paid when a mission tier is reached at block end:
@@ -103,4 +110,6 @@ export interface AssignmentMapResult {
   clearSeconds: number;
   ballCount: number;
   allBallsLocked: boolean;
+  /** Balls sealed this map by ball type id, for a `ballType` bounty. */
+  lockedByType?: Record<string, number>;
 }

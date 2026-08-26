@@ -780,6 +780,7 @@ export function triggerLevelComplete(
         lockedBallsCount: game.lockedBallsCount,
         superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
         zoneLockCount: game.zoneLockCount, zoneLockBonus: game.zoneLockBonus,
+        lockedByType: { ...(game.lockedByType ?? {}) },
         breakBonus: game.breakBonus,
         breakMultiplier: game.breakMultiplier,
         chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,

@@ -24,7 +24,7 @@ export const ASSIGNMENT_OFFER_COUNT = 3;
 export const DEFAULT_DOOR_LEVEL = 5;
 
 const CONDITION_KINDS = new Set<AssignmentConditionKind>([
-  'lockCount', 'superiorLocks', 'underPar', 'speedClear', 'allBallsLocked',
+  'lockCount', 'superiorLocks', 'underPar', 'speedClear', 'allBallsLocked', 'ballType',
 ]);
 const TIERS = new Set<UpgradeTier>(['Junior', 'Senior', 'Principal', 'Architect', 'Wizard']);
 
@@ -100,11 +100,16 @@ function parseTrack(raw: unknown): AssignmentTrack | null {
   if (typeof r.kind !== 'string' || !CONDITION_KINDS.has(r.kind as AssignmentConditionKind)) return null;
   const kind = r.kind as AssignmentConditionKind;
   const params = parseParams(r.params);
+  // A `ballType` bounty is normally authored WITHOUT a type: the right one
+  // depends on which maps the block turns out to contain, so it is named at
+  // draft time (assignmentScaling.resolveBountyForBlock). An explicit one is
+  // honoured, which is what makes a bounty testable and pinnable in a Daily.
+  const ballType = typeof r.ballType === 'string' && r.ballType ? r.ballType : undefined;
   if (r.mode === 'everyMap') {
     const minMaps = Number(r.minMaps);
-    return { mode: 'everyMap', kind, params, minMaps: Number.isFinite(minMaps) ? Math.round(minMaps) : undefined };
+    return { mode: 'everyMap', kind, params, ballType, minMaps: Number.isFinite(minMaps) ? Math.round(minMaps) : undefined };
   }
-  if (r.mode === 'cumulative') return { mode: 'cumulative', kind, params };
+  if (r.mode === 'cumulative') return { mode: 'cumulative', kind, params, ballType };
   return null;
 }
 

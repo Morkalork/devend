@@ -15,12 +15,17 @@
  * same `t` here means content re-localizes automatically on language change.
  */
 import type { TFunction } from 'i18next';
+import { getBallType } from '@/lib/ballTypes';
 
 type WithId = { id: string };
 
-function field(t: TFunction, kind: string, id: string, name: string, fallback?: string): string {
+function field(
+  t: TFunction, kind: string, id: string, name: string, fallback?: string,
+  /** Interpolation values, for content whose text has a {{placeholder}}. */
+  vars?: Record<string, string>,
+): string {
   if (!id) return fallback ?? '';
-  return t(`content.${kind}.${id}.${name}`, { defaultValue: fallback ?? '' }) as string;
+  return t(`content.${kind}.${id}.${name}`, { defaultValue: fallback ?? '', ...vars }) as string;
 }
 
 export const contentText = {
@@ -59,10 +64,32 @@ export const contentText = {
   doorName: (t: TFunction, d: WithId & { name?: string }) => field(t, 'assignments', d.id, 'name', d.name),
   assignmentConstraint: (t: TFunction, a: WithId & { constraint?: { text?: string } }) =>
     field(t, 'assignments', a.id, 'constraint', a.constraint?.text),
-  assignmentMission: (t: TFunction, a: WithId & { mission?: { text?: string } }) =>
-    field(t, 'assignments', a.id, 'mission', a.mission?.text),
+  /**
+   * The mission line. A ball-type bounty's text carries a `{{ballType}}`
+   * placeholder, because the type is not known until the block is drawn - the
+   * assignment is authored as "seal a {{ballType}} ball" and the draft names
+   * it. Interpolating here rather than at each call site keeps every screen
+   * that shows a mission (draft, top bar, summary) reading the same string.
+   */
+  assignmentMission: (
+    t: TFunction,
+    a: WithId & { mission?: { text?: string; track?: { ballType?: string } } },
+  ) => field(t, 'assignments', a.id, 'mission', a.mission?.text, {
+    ballType: contentText.ballName(t, a.mission?.track?.ballType),
+  }),
   assignmentClarify: (t: TFunction, a: WithId & { clarify?: string }) =>
     field(t, 'assignments', a.id, 'clarify', a.clarify),
+
+  /**
+   * Ball type (balls.yml), by id. Falls back to the authored English name, and
+   * to the id itself for a type the catalogue does not know - a mission that
+   * renders "seal a grey ball" is still playable, one that renders "seal a
+   * ball" is not.
+   */
+  ballName: (t: TFunction, id?: string): string => {
+    if (!id) return '';
+    return t(`content.balls.${id}.name`, { defaultValue: getBallType(id)?.name ?? id }) as string;
+  },
 
   /** Boss (map.yml boss block, issue #56): keyed on the level id. */
   bossName: (t: TFunction, b: WithId & { name?: string }) => field(t, 'bosses', b.id, 'name', b.name),

@@ -24,6 +24,7 @@
  */
 import type { AssignmentConfig } from "@/types/assignment";
 import type { LevelConfig } from "@/types/level";
+import { selectBallTypesForMap, getBallType } from "@/lib/ballTypes";
 
 /** Maps in one assignment block. Matches assignments.yml's cadence. */
 export const BLOCK_SIZE = 5;
@@ -142,5 +143,159 @@ export function scaleOffersForBlock(
 ): AssignmentConfig[] {
   const fromLevel = completedLevel + 1;
   const capacity = blockLockCapacity(levels, fromLevel);
-  return offers.map(a => scaleAssignmentToBlock(a, capacity, fromLevel));
+  return offers
+    // Bounties are named here for the same reason lock tiers are sized here:
+    // both only mean anything once the block is known. An unresolvable one is
+    // kept rather than dropped at this point - the pool filter upstream should
+    // already have removed it, and silently shrinking a drawn offer set would
+    // hand the player a two-card draft with no explanation.
+    .map(a => resolveBountyForBlock(a, levels, fromLevel) ?? a)
+    .map(a => scaleAssignmentToBlock(a, capacity, fromLevel));
+}
+
+// ── Ball-type bounties ──────────────────────────────────────────────────────
+
+/**
+ * Which ball types the block's maps will ACTUALLY put on the board, and on how
+ * many of the five.
+ *
+ * `selectBallTypesForMap` is seeded on the map id and level alone - no run
+ * seed, no Math.random - so this is not a forecast, it is the roster. That is
+ * what makes a named bounty safe to set: a mission asking for a green over a
+ * block whose maps never spawn one is the same dead mission the lock scaling
+ * above exists to prevent, just wearing a different hat.
+ *
+ * An authored `ballTypeIds` (the Playground override) wins, the same way it
+ * does in initGame. A circuit terminal's sleeper is counted too: it is a ball
+ * you wake and then trap, and it carries an authored type of its own.
+ */
+export function blockBallTypeSpread(
+  levels: readonly LevelConfig[], fromLevel: number, blockSize = BLOCK_SIZE,
+): Map<string, number> {
+  const spread = new Map<string, number>();
+  const seen = new Set<number>();
+  for (let n = fromLevel; n < fromLevel + blockSize; n++) {
+    const map = levels.find(l => l.level === n);
+    if (!map || seen.has(n)) continue;
+    seen.add(n);
+    const maxBalls = map.maxBalls ?? map.balls?.length ?? 1;
+    const ids = new Set<string>();
+    const roster = map.ballTypeIds !== undefined
+      ? map.ballTypeIds.filter(id => !!getBallType(id))
+      : selectBallTypesForMap(map.id, n, maxBalls).map(t => t.id);
+    for (const id of roster) ids.add(id);
+    for (const term of map.circuit?.terminals ?? []) {
+      const id = term.ball?.typeId ?? roster[0];
+      if (id) ids.add(id);
+    }
+    // Counted once per MAP, not once per ball: the mission asks for a map you
+    // sealed one on, so a map with three greens is still one opportunity.
+    for (const id of ids) spread.set(id, (spread.get(id) ?? 0) + 1);
+  }
+  return spread;
+}
+
+/**
+ * Name the block's bounty: the type that appears on the FEWEST maps while still
+ * covering every tier.
+ *
+ * Not the most common one. A bounty on a type that turns up on all five maps is
+ * an ordinary lock mission with extra words, because you would have sealed one
+ * anyway; the interesting ask is a type you have to go looking for. So this
+ * takes the rarest type that still makes the top tier reachable, which is the
+ * hardest honest mission the block can carry.
+ *
+ * Returns null when nothing clears the top tier, and the caller then drops the
+ * assignment from the draft rather than offering a bounty that cannot be paid.
+ */
+export function pickBountyType(
+  spread: Map<string, number>, topTier: number,
+): string | null {
+  let best: string | null = null;
+  let bestMaps = Infinity;
+  // Sorted for determinism: two types on the same number of maps must not
+  // depend on Map insertion order, or a Daily would differ between players.
+  for (const id of [...spread.keys()].sort()) {
+    const maps = spread.get(id)!;
+    if (maps < topTier) continue;
+    if (maps < bestMaps) { best = id; bestMaps = maps; }
+  }
+  return best;
+}
+
+/**
+ * Resolve a ball-type bounty for the block, or refuse the assignment.
+ *
+ * Authored without a type (`kind: ballType` and no `ballType`), because the
+ * right one depends entirely on which maps the block turned out to contain.
+ * Returns the assignment with its bounty named, unchanged if it is not a bounty
+ * at all, and NULL when no type in the block covers the top tier - the caller
+ * drops it from the draft rather than offering a mission that cannot be paid.
+ */
+export function resolveBountyForBlock(
+  a: AssignmentConfig, levels: readonly LevelConfig[], fromLevel: number,
+): AssignmentConfig | null {
+  const track = a.mission?.track;
+  if (!track || track.kind !== "ballType") return a;
+
+  const tiers = a.mission.tiers;
+  if (tiers.length === 0) return null;
+
+  const spread = blockBallTypeSpread(levels, fromLevel);
+  if (spread.size === 0) return null;          // no roster at all: unplayable
+
+  // Cap the ask at what the block's best-covered type can actually deliver.
+  //
+  // The same argument as the lock scaling above, and measured the same way:
+  // authored at "four of five maps" this mission was refused outright in three
+  // of the six blocks a run drafts over, because late maps field a WIDER
+  // roster spread thinner - L31-35 has seven types and none of them on more
+  // than two maps. A fixed threshold cannot survive that, so the author writes
+  // the shape and the block places it.
+  const scaledTiers = capTiersTo(tiers, Math.max(...spread.values()));
+  const topTier = Math.max(...scaledTiers.map(t => t.threshold));
+  const mission = { ...a.mission, tiers: scaledTiers };
+
+  // An explicitly authored type is trusted even where the block is thin: it
+  // exists so a test or a Daily can pin the bounty, and second-guessing it
+  // would make that unpredictable.
+  if (track.ballType) return { ...a, mission };
+
+  const picked = pickBountyType(spread, topTier);
+  if (!picked) return null;
+  return { ...a, mission: { ...mission, track: { ...track, ballType: picked } } };
+}
+
+/**
+ * Pull a mission's tiers down so its top rung asks for at most `available`.
+ *
+ * Keeps the author's shape: the same number of rungs at the same relative
+ * spacing, floored at 1 and kept strictly ascending so two rungs never collapse
+ * onto one number and pay the lower reward for the higher effort. Never scales
+ * UP - a generous block should make a mission easier, not move the goalposts.
+ */
+function capTiersTo(
+  tiers: AssignmentConfig["mission"]["tiers"], available: number,
+): AssignmentConfig["mission"]["tiers"] {
+  const authoredTop = Math.max(...tiers.map(t => t.threshold));
+  if (authoredTop <= 0 || available <= 0 || authoredTop <= available) return tiers;
+  const factor = available / authoredTop;
+  let previous = 0;
+  return tiers.map(t => {
+    const next = Math.max(1, previous + 1, Math.round(t.threshold * factor));
+    previous = next;
+    return { ...t, threshold: next };
+  });
+}
+
+/**
+ * The assignments that can actually be run over the block starting at
+ * `fromLevel`. Filter the POOL with this before drawing the draft, so a
+ * bounty with no eligible type costs the player an offer slot rather than
+ * appearing as a mission they cannot clear.
+ */
+export function assignmentsPlayableInBlock(
+  pool: readonly AssignmentConfig[], levels: readonly LevelConfig[], fromLevel: number,
+): AssignmentConfig[] {
+  return pool.filter(a => resolveBountyForBlock(a, levels, fromLevel) !== null);
 }

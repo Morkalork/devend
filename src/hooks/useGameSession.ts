@@ -36,7 +36,7 @@ import { loadAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
-import { scaleOffersForBlock } from '@/lib/assignmentScaling';
+import { scaleOffersForBlock, assignmentsPlayableInBlock } from '@/lib/assignmentScaling';
 import { assignmentRewardForBlock, eligibleTierUpgrades } from '@/lib/assignments';
 import { drawRandom } from '@/lib/yamlCatalogue';
 import { isOnboardingMap, ONBOARDING_MAP_ID } from '@/lib/onboardingMap';
@@ -1420,6 +1420,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         clearSeconds: scoreData.clearTimeSeconds ?? 9999,
         ballCount: scoreData.wonByAllLocked ? (scoreData.lockedBallsCount ?? 0) : 0,
         allBallsLocked: scoreData.wonByAllLocked ?? false,
+        lockedByType: scoreData.lockedByType ?? {},
       };
       setBlockResults(prev => [...prev, mapResult]);
     }
@@ -1465,7 +1466,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // Reduced Headcount (ascension rung 2) narrows the contract draft. No
       // upgrade sells a third door, so this rung cannot be bought back.
       const offerCount = Math.max(1, Math.min(ASSIGNMENT_OFFER_COUNT, ascRules.doorOffers ?? ASSIGNMENT_OFFER_COUNT));
-      const drawn = drawDoorOffers(doorPool, offerCount, getRunRng(`doors:${currentLevelIndex + 1}`));
+      // Drop anything this block cannot carry BEFORE drawing, not after: a
+      // ball-type bounty whose named type never spawns over these five maps is
+      // a dead mission, and removing it post-draw would leave a short draft.
+      const playable = assignmentsPlayableInBlock(doorPool, levels, currentLevelIndex + 1);
+      const drawn = drawDoorOffers(playable.length > 0 ? playable : doorPool, offerCount, getRunRng(`doors:${currentLevelIndex + 1}`));
       // Size the lock targets to the block they are actually set over. Authored
       // as absolute numbers they were mostly impossible: lock_quota wanted 20
       // locks from blocks that put 8 to 15 balls on the board, and taking the
