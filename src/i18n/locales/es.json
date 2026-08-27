@@ -881,7 +881,9 @@
     "reachedBadge": "Alcanzado",
     "rewardEarnedLabel": "Has ganado",
     "missed": "No alcanzaste la misión, así que esta vez no hay recompensa.",
-    "continueButton": "Continuar"
+    "continueButton": "Continuar",
+    "pickButton": "Elige tu mejora",
+    "pickHint": "La eliges en la siguiente pantalla."
   },
   "continue": {
     "title": "¿Continuar?",

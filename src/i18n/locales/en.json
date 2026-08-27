@@ -896,7 +896,9 @@
     "reachedBadge": "Reached",
     "rewardEarnedLabel": "You earned",
     "missed": "You fell short of the mission, so no reward this time.",
-    "continueButton": "Continue"
+    "continueButton": "Continue",
+    "pickButton": "Pick your upgrade",
+    "pickHint": "Choose it on the next screen."
   },
   "continue": {
     "title": "Continue?",

@@ -1499,17 +1499,20 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * Grant the just-finished assignment's reward (issue #60): the reward of the
    * highest mission tier reached over the block (completed maps only). Lives and
    * overtime are banked immediately; run-scoped modifier bundles fold in like a
-   * capstone; a tier-draft reward is queued (returns true) so the caller shows
-   * the 1-of-3 upgrade pick before the next draft. Also writes the report card.
+   * capstone; a tier-draft reward is queued in `pendingTierDraft`, which is the
+   * ONLY thing that decides whether the summary's Continue leads to the 1-of-3
+   * upgrade pick. (It used to also return a `tierDraftOwed` flag, described as
+   * being for the caller - both callers ignored it, so it was a second reading
+   * of the same fact that could only ever go stale.) Also writes the report
+   * card the summary and the next draft both read.
    */
-  const grantAssignmentReward = useCallback((): { tierDraftOwed: boolean } => {
+  const grantAssignmentReward = useCallback((): void => {
     if (!activeDoor) {
       setLastContractSummary(null);
-      return { tierDraftOwed: false };
+      return;
     }
     const outcome = assignmentRewardForBlock(activeDoor, blockResults);
     let rewardLabel: string | null = null;
-    let tierDraftOwed = false;
     if (outcome) {
       const r = outcome.reward;
       rewardLabel = activeDoor.mission.tiers[outcome.tierIndex]?.label ?? null;
@@ -1535,7 +1538,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
           const offers = drawRandom(pool, 3, getRunRng(`tierDraft:${currentLevelIndex + 1}`));
           if (offers.length > 0) {
             setPendingTierDraft({ tier: r.tier, offers });
-            tierDraftOwed = true;
           } else {
             rewardLabel = null; // no eligible upgrades to grant
           }
@@ -1550,7 +1552,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       missionText: activeDoor.mission.text,
       rewardLabel,
     });
-    return { tierDraftOwed };
   }, [activeDoor, blockResults, ownedUpgradeIds, upgrades, currentLevelIndex]);
 
   /**

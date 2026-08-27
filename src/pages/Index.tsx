@@ -410,6 +410,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 results={session.blockResults}
                 blockStats={session.lastContractSummary}
                 rewardLabel={session.lastContractSummary.rewardLabel ?? null}
+                nextIsUpgradePick={!!session.pendingTierDraft}
                 onContinue={session.handleContinueFromSummary}
               />
             )}

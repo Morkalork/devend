@@ -881,7 +881,9 @@
     "reachedBadge": "Uppnått",
     "rewardEarnedLabel": "Du tjänade",
     "missed": "Du klarade inte uppdraget, så ingen belöning den här gången.",
-    "continueButton": "Fortsätt"
+    "continueButton": "Fortsätt",
+    "pickButton": "Valj din uppgradering",
+    "pickHint": "Du valjer den pa nasta skarm."
   },
   "continue": {
     "title": "Fortsätta?",

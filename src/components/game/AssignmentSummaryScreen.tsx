@@ -25,6 +25,14 @@ interface AssignmentSummaryScreenProps {
   blockStats: { locks: number; livesLost: number };
   /** The reached tier's reward label, or null when the mission was missed. */
   rewardLabel: string | null;
+  /**
+   * True when the earned reward is an upgrade PICK, which happens on the next
+   * screen rather than here. Without this the button says "Continue" and the
+   * reward reads as a label nobody can act on: reported as "the Pick a
+   * Principal Upgrade label is not a button, nor do I get to pick an upgrade
+   * in any other way".
+   */
+  nextIsUpgradePick?: boolean;
   onContinue: () => void;
   accentColor?: string;
 }
@@ -34,6 +42,7 @@ export function AssignmentSummaryScreen({
   results,
   blockStats,
   rewardLabel,
+  nextIsUpgradePick = false,
   onContinue,
   accentColor = '#ffb347',
 }: AssignmentSummaryScreenProps) {
@@ -150,6 +159,11 @@ export function AssignmentSummaryScreen({
               <div className="text-xl font-display font-black" style={{ color: '#ffd54a', textShadow: '0 0 20px #ffd54a55' }}>
                 {rewardLabel}
               </div>
+              {nextIsUpgradePick && (
+                <div className="text-[11px] text-center" style={{ color: '#ffd54a', opacity: 0.75 }}>
+                  {t('assignmentSummary.pickHint')}
+                </div>
+              )}
             </motion.div>
           ) : (
             <div className="w-full text-center text-sm" style={{ color: '#b58a5a', opacity: 0.9 }}>
@@ -167,8 +181,8 @@ export function AssignmentSummaryScreen({
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            <Play className="w-5 h-5" />
-            {t('assignmentSummary.continueButton')}
+            {nextIsUpgradePick ? <Sparkles className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            {t(nextIsUpgradePick ? 'assignmentSummary.pickButton' : 'assignmentSummary.continueButton')}
           </motion.button>
         </motion.div>
       </div>
