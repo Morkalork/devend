@@ -1813,3 +1813,90 @@ upgrades:
       smashKeepsLockMultiplier: 1
       breakMultiplierBonus: 0.15
     condition: { kind: mapHas, feature: breakable }
+
+  # ===============================
+  # GHOST PROTOCOL (Fence Grace)
+  # ===============================
+  #
+  # A fence you have JUST started ignores balls for a moment. It is the only
+  # upgrade in the early catalogue that changes a RULE rather than a number,
+  # and it changes the one the whole game is built on: normally a ball touching
+  # a growing fence costs a life, so you wait for a gap. With grace you stop
+  # reading gaps and start reading timing - you cut straight into traffic and
+  # only the tail of the fence is exposed.
+  #
+  # The rule already existed and was reserved for `Hotfix in Prod`, a LOADOUT
+  # with uniqueWinsRequired: 1. The most transformative rule in the game was
+  # therefore unavailable to anyone who had not already finished it, which is
+  # exactly backwards: this is what makes an early run feel different from the
+  # last one.
+  #
+  # Tagged tempo AND safety on purpose. The effect is protective (your fence
+  # survives a graze) but the PLAY is aggressive (cut sooner, not safer), and
+  # the catalogue already multi-tags where an upgrade genuinely serves two
+  # archetypes.
+  #
+  # Sized against the fence itself: a cut takes at least MINIMUM_WALL_TIME
+  # (0.35s) to build and longer the further it runs. So 0.2s at Junior makes a
+  # SHORT defensive snip mostly immune while a long committal cut is still
+  # exposed for most of its growth, which is the right way round: the cheap cut
+  # gets safe, the valuable one still costs nerve. The full family reaches
+  # 0.65s, above the 0.4s the Hotfix in Prod loadout grants, which is fair for
+  # three shop slots against one run-defining bundle.
+  #
+  # fenceGraceMs is ADDITIVE, so the values below are INCREMENTS and the
+  # descriptions state the running total, exactly as the Feature Freeze line
+  # does. Authoring them as absolutes would have made owning the family stack
+  # to 1.3 seconds while every card claimed something smaller.
+  - id: ghost_protocol_junior
+    name: Ghost Protocol
+    tier: Junior
+    description: A new fence passes through balls for the first 0.2 seconds of its growth.
+    # First-hire priced, like the other level-1 Juniors: one normal lock on map
+    # one should be able to buy the run's identity, not just a stat.
+    cost: 30
+    unlockLevel: 1
+    icon: ghost
+    tags: [tempo, safety]
+    modifiers:
+      fenceGraceMs: 200
+
+  - id: ghost_protocol_senior
+    name: Ghost Protocol
+    tier: Senior
+    description: Your fences now pass through balls for their first 0.4 seconds.
+    unlockLevel: 4
+    prerequisites:
+      - ghost_protocol_junior
+    tags: [tempo, safety]
+    modifiers:
+      fenceGraceMs: 200
+
+  # Principal is a CHOICE: a longer window on every map, or a much longer one
+  # only where it matters. A quiet two-ball map rarely needs grace at all (you
+  # can simply wait for the gap), so the conditional side trades uptime for a
+  # window long enough to cut a busy board straight through the traffic.
+  - id: ghost_protocol_principal_a
+    name: Ghost Protocol
+    tier: Principal
+    description: Your fences now pass through balls for their first 0.65 seconds.
+    unlockLevel: 8
+    prerequisites:
+      - ghost_protocol_senior
+    choiceGroup: ghost_protocol_principal
+    tags: [tempo, safety]
+    modifiers:
+      fenceGraceMs: 250
+
+  - id: ghost_protocol_principal_b
+    name: Ghost Protocol
+    tier: Principal
+    description: "On busy maps (three balls or more), your fences pass through balls for a full 1 second. On quieter maps you keep the 0.4 seconds the earlier tiers gave you."
+    unlockLevel: 8
+    prerequisites:
+      - ghost_protocol_senior
+    choiceGroup: ghost_protocol_principal
+    tags: [tempo, risk]
+    modifiers:
+      fenceGraceMs: 600
+    condition: { kind: ballsAtLeast, value: 3 }

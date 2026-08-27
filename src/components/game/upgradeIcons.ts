@@ -46,6 +46,7 @@ import {
   Crown,
   LifeBuoy,
   Hammer,
+  Ghost,
   type LucideIcon,
 } from 'lucide-react';
 import { UpgradeConfig } from '@/types/upgrade';
@@ -87,6 +88,7 @@ const UPGRADE_ICONS: Record<string, LucideIcon> = {
   'clipboard-check': ClipboardCheck,
   power: Power,
   orbit: Orbit,
+  ghost: Ghost,
   gift: Gift,
   crown: Crown,
   'life-buoy': LifeBuoy,

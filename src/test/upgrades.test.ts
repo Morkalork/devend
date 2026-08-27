@@ -43,6 +43,7 @@ const EXPECTED_ROOTS = [
   "fault_tolerance_junior",
   "technical_debt_senior",
   "feature_freeze_junior",
+  "ghost_protocol_junior",
   "severance_package_junior",
   "deadline_extension_junior",
   "code_review",

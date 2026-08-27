@@ -357,14 +357,17 @@ describe("the family-name assumption Tenure is built on", () => {
     const counts = TENURE_THRESHOLDS.map(
       r => eligibleTenureChains(REAL_UPGRADES, r, Math.random).length,
     );
-    // 16/14/12: the first threshold is unchanged and the later two each gained
-    // a chain when Free Fall was added (Junior at 12, so it is not offerable at
-    // the shallowest threshold but is at both deeper ones).
+    // 17/15/13: every threshold gained one when Ghost Protocol was added. Its
+    // Junior unlocks at level 1, so unlike Free Fall it is offerable at the
+    // shallowest threshold too.
     //
-    // The count before that was 16/13/11, itself a gain of one over the
-    // Garbage Collector line it replaced: those three families used three
-    // DIFFERENT names, so Tenure could never walk them as a chain at all.
-    expect(counts).toEqual([16, 14, 12]);
+    // Before that, 16/14/12: the first threshold was unchanged and the later
+    // two each gained a chain when Free Fall was added (Junior at 12, so not
+    // offerable at the shallowest threshold but offerable at both deeper
+    // ones). Before THAT, 16/13/11, itself a gain of one over the Garbage
+    // Collector line it replaced: those three families used three DIFFERENT
+    // names, so Tenure could never walk them as a chain at all.
+    expect(counts).toEqual([17, 15, 13]);
   });
 });
 

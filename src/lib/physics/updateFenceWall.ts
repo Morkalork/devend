@@ -200,9 +200,13 @@ export function updateFenceWallFn(
     return;
   }
 
-  // Ghost Protocol capstone: a young fence phases through balls entirely for
-  // its first fenceGraceMs of growth (no bounce either — growing fences never
-  // deflect balls, so "ignore" is symmetric).
+  // Ghost Protocol: a young fence phases through balls entirely for its first
+  // fenceGraceMs of growth (no bounce either - growing fences never deflect
+  // balls, so "ignore" is symmetric).
+  //
+  // Sourced from the Ghost Protocol upgrade family and from the Hotfix in Prod
+  // loadout; it was loadout-only, and this comment used to say "capstone",
+  // which it has never been.
   if (
     activeModifiers.fenceGraceMs > 0 &&
     wall.startTime &&
