@@ -25,6 +25,7 @@ import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
 import { contactFor, shadowFor, type LightScope } from "./light";
 import { compassRing } from "./compassRing";
+import { ballTrail } from "./ballTrail";
 import type { Pt } from "./pixelGrid";
 
 type W2S = (x: number, y: number) => Pt;
@@ -104,6 +105,11 @@ interface BallView {
 export class SleekBallLayer {
   readonly container = new Container();
 
+  /**
+   * Motion smears, UNDER the bodies: a trail drawn over its own ball would sit
+   * on the lit sphere and flatten it.
+   */
+  private trails = new Graphics();
   private bodies = new Container();
   private speculars = new Graphics();
   /** Frost + fastest-ball ring: informational marks drawn over the bodies. */
@@ -116,7 +122,7 @@ export class SleekBallLayer {
 
   constructor() {
     // No shadow child: cast shadows go to the renderer's shared floor plane.
-    this.container.addChild(this.bodies, this.speculars, this.overlays);
+    this.container.addChild(this.trails, this.bodies, this.speculars, this.overlays);
   }
 
   sync(
@@ -152,6 +158,7 @@ export class SleekBallLayer {
     }
     for (let i = balls.length; i < this.views.length; i++) this.views[i].holder.visible = false;
 
+    this.trails.clear();
     for (let i = 0; i < balls.length; i++) {
       this.drawBall(balls[i], this.views[i], light, w2s, scale, game.activePlaySeconds);
     }
@@ -207,6 +214,20 @@ export class SleekBallLayer {
     const p = ball.renderPosition ?? ball.position;
     const c = w2s(p.x, p.y);
     const r = Math.max(2, ball.radius * scale * (ball.assimScale ?? 1));
+
+    // The smear first, so the sphere lands on top of its own blur.
+    const trail = ballTrail(ball, c, r, scale, this.now);
+    if (trail) {
+      this.trails
+        .moveTo(trail.from.x, trail.from.y)
+        .lineTo(trail.to.x, trail.to.y)
+        .stroke({
+          width: trail.width,
+          color: parseColor(ball.color),
+          alpha: trail.alpha,
+          cap: "round",
+        });
+    }
 
     const dormant = ball.state === "dormant";
     // Bearing toward the monitor: everything below orients off this.

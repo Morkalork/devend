@@ -24,6 +24,7 @@ import {
 } from "@/lib/gameUtils";
 import { steerWorldOf } from "@/lib/physics/steering";
 import { dashedLine } from "./dashedLine";
+import { lockImpact } from "./lockImpact";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
 import { vec2Sub, vec2Length, vec2Normalize } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
@@ -509,8 +510,24 @@ export class FxLayer {
       }
       this.under.stroke({ width: Math.max(1, 2 * scale), color: tint, alpha: 0.85 * intensity });
 
-      // Dust: each particle flies its own bearing from the catch point.
+      // The thump. Struck at the catch point, where the player is already
+      // looking, and before the dust so the particles fly out over it.
       const origin = w2s(a.ballPos.x, a.ballPos.y);
+      const impact = lockImpact(t, scale);
+      if (impact) {
+        if (impact.ringAlpha > 0.01 && impact.ringRadius > 0.5) {
+          this.over
+            .circle(origin.x, origin.y, impact.ringRadius)
+            .stroke({ width: impact.ringWidth, color: tint, alpha: impact.ringAlpha });
+        }
+        if (impact.coreAlpha > 0.01) {
+          this.over
+            .circle(origin.x, origin.y, impact.coreRadius)
+            .fill({ color: tint, alpha: impact.coreAlpha });
+        }
+      }
+
+      // Dust: each particle flies its own bearing from the catch point.
       const age = now - a.startTime;
       for (const p of a.particles) {
         const pt = age / p.lifetime;

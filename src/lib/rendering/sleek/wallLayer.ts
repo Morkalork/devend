@@ -380,8 +380,22 @@ export class WallLayer {
     // The growing TIPS stay bright, and are now the only emissive thing a fence
     // has. That is deliberate: the tip is live, in-progress, and the one moment
     // a cut genuinely is energy rather than material.
-    for (const tip of [wall.startPoint, wall.endPoint]) {
+    //
+    // Skipped until the tip has actually moved, for exactly the reason
+    // drawGrowTip gives for skipping the head: both tips start ON the swipe
+    // point, so drawing them unconditionally put two stacked bright dots on the
+    // board the instant a cut was armed and before anything had grown. The head
+    // refused to do that and this did it anyway, which made the refusal
+    // pointless.
+    for (const [waypoints, segIndex, tip] of [
+      [wall.startWaypoints, wall.startSegmentIndex, wall.startPoint],
+      [wall.endWaypoints, wall.endSegmentIndex, wall.endPoint],
+    ] as const) {
+      const from = waypoints[Math.min(segIndex, waypoints.length - 1)];
+      if (!from) continue;
+      const a = w2s(from.x, from.y);
       const p = w2s(tip.x, tip.y);
+      if (Math.hypot(p.x - a.x, p.y - a.y) < 1) continue;
       this.rims
         .circle(p.x, p.y, thickness * 0.7)
         .fill({ color: PALETTE.accentGlow, alpha: 0.85 * light.level });
@@ -476,6 +490,8 @@ export class WallLayer {
     if (len < 1) return;
     const ux = dx / len, uy = dy / len;
 
+    // The hot stretch behind the head: the fence is being EXTRUDED, and the
+    // metal nearest the tip has not cooled yet.
     const trail = Math.min(len, 30 * scale);
     this.bodies
       .moveTo(t.x - ux * trail, t.y - uy * trail)
@@ -486,9 +502,34 @@ export class WallLayer {
         alpha: 0.5,
         cap: "round",
       });
+
+    // A halo around the head.
+    //
+    // The tip is the one thing on the board the player is actually watching
+    // while a cut runs - it is the answer to "do I make it" - and it was a flat
+    // 2px dot, dimmer than the ball it is racing. Two soft passes under the
+    // core give it presence without another texture or a blur filter, the same
+    // trick the board rim uses to stand in for a glow.
+    //
+    // Unsnapped on purpose: it is a circle, and pixelGrid's rule is that curves
+    // are left at native resolution for MSAA to resolve.
+    const head = Math.max(1.5, thickness * 0.55);
     this.bodies
-      .circle(t.x, t.y, Math.max(1.5, thickness * 0.55))
+      .circle(t.x, t.y, head * 3.4)
+      .fill({ color: PALETTE.accent, alpha: 0.1 });
+    this.bodies
+      .circle(t.x, t.y, head * 1.9)
+      .fill({ color: PALETTE.accent, alpha: 0.22 });
+    this.bodies
+      .circle(t.x, t.y, head)
       .fill({ color: PALETTE.accentGlow, alpha: 0.95 });
+
+    // A leading spark, thrown ahead of the head along its own direction. It is
+    // what makes the tip read as ADVANCING rather than as a dot that happens to
+    // be somewhere new each frame.
+    this.bodies
+      .circle(t.x + ux * head * 1.6, t.y + uy * head * 1.6, head * 0.45)
+      .fill({ color: PALETTE.accentGlow, alpha: 0.55 });
   }
 
   private drawSegment(
