@@ -21,6 +21,7 @@ import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { BoardEntityInfoModal } from './BoardEntityInfoModal';
 import type { BoardEntityHit } from '@/lib/boardEntityInfo';
 import { GameTopBar } from './GameTopBar';
+import { MapRuleBanner } from './MapRuleBanner';
 import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
 import { GameMessageBar } from './GameMessageBar';
@@ -706,7 +707,6 @@ export function GameScreen({
             lockedBalls={totalLockedBalls}
             threadLockRequired={level.threadLockRequired}
             scopeCreepPercent={gameState.creepPercent}
-            mapMutator={mapMutator}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
             ascensionDepth={ascensionDepth}
@@ -717,6 +717,12 @@ export function GameScreen({
             onExpand={() => setTopPanelOpen(true)}
           />
         </div>
+
+        {/* The map's rule, if it has one. Between the bar and the board, in the
+            slack a square board leaves in a taller frame: it is a condition of
+            the whole map rather than a number to read, so it does not belong
+            among the stats. */}
+        <MapRuleBanner mutator={mapMutator} onExplain={() => setTopPanelOpen(true)} />
 
         {/* Game Canvas Area */}
         <div className="flex-1 min-h-0 relative">
