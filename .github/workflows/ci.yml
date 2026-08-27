@@ -49,8 +49,12 @@ jobs:
       # Pinned at the current baseline rather than zero. Zero would mean either
       # a red board from day one or a rush of drive-by suppressions; pinning
       # means the count can only come down, and a new warning fails the build.
+      # A ratchet, not a budget: it only ever moves DOWN. Lowered 26 -> 25
+      # after two of them were fixed rather than tolerated. `npm run lint`
+      # exits 0 on warnings, so this gate is the only thing that catches a new
+      # one - check against THIS command, not the script, before pushing.
       - name: Lint
-        run: npx eslint . --max-warnings 26
+        run: npx eslint . --max-warnings 25
 
       - name: Test
         run: npm run test

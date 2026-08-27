@@ -1625,6 +1625,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
    * changes what is worth buying, so it has to be picked first, and both routes
    * have to land in the same place afterwards.
    */
+  // Destructured rather than reached through `nav` inside the callback. The
+  // navigation functions are useCallback(..., []) and so permanently stable,
+  // but `nav` itself is a fresh object every render, and a dep array listing
+  // `nav.goToX` is a member expression the exhaustive-deps rule cannot verify.
+  // Pulling them out satisfies the rule with no extra re-creation, and CI
+  // lints with --max-warnings, so a new warning is a broken build rather than
+  // a note.
+  const { goToUpgradeShop, goToCapstoneDraft } = nav;
+
   const proceedToShop = useCallback(() => {
     // The shop is only earned by locking balls this round: at least one lock,
     // or two when the map offered three or more balls. We still OPEN the shop
@@ -1645,8 +1654,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     }
     setStoreClosed(locksThisRound < locksRequired);
     setStoreLockProgress({ have: locksThisRound, need: locksRequired });
-    nav.goToUpgradeShop();
-  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, currentLevelIndex, ascRules, finishShopPhase, nav.goToUpgradeShop]);
+    goToUpgradeShop();
+  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, currentLevelIndex, ascRules, finishShopPhase, goToUpgradeShop]);
 
   /**
    * The Promotion, on a level of its own.
@@ -1662,9 +1671,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (pool.length === 0) return false;
     if (!capstoneDueAfter(currentLevelIndex + 1)) return false;
     setCapstoneOffers(drawCapstoneOffers(pool, CAPSTONE_OFFER_COUNT, getRunRng(`capstones:${currentLevelIndex + 1}`)));
-    nav.goToCapstoneDraft();
+    goToCapstoneDraft();
     return true;
-  }, [ascRules.noCapstone, capstone, currentLevelIndex, nav.goToCapstoneDraft]);
+  }, [ascRules.noCapstone, capstone, currentLevelIndex, goToCapstoneDraft]);
 
   const handleContinueFromOverlay = useCallback(() => {
     setShowLevelComplete(false);
