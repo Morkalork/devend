@@ -801,7 +801,16 @@
     "tutorialBody": "Spend overtime hours on upgrades between maps, they multiply future earnings. Press and hold any upgrade for details.",
     "certRuns": "{{current}}/{{required}} runs",
     "detailCertificate": "Certificate progress",
-    "detailCertificateBody": "Buying this in {{required}} separate runs unlocks the {{name}} certificate, a permanent bonus that applies to every run. Credited so far: {{current}} of {{required}}."
+    "detailCertificateBody": "Buying this in {{required}} separate runs unlocks the {{name}} certificate, a permanent bonus that applies to every run. Credited so far: {{current}} of {{required}}.",
+    "carouselLabel": "Upgrade offers",
+    "prevOffer": "Previous offer",
+    "nextOffer": "Next offer",
+    "offerPosition": "Offer {{index}} of {{total}}",
+    "marketRatesChip": "Rates +{{percent}}%",
+    "restockChip": "Restocks {{count}}",
+    "budgetCycleChip": "Budget Cycle {{spent}}/{{next}}h",
+    "budgetCycleChipCharged_one": "Budget Cycle: {{count}} boon",
+    "budgetCycleChipCharged_other": "Budget Cycle: {{count}} boons"
   },
   "upgradeConditions": {
     "liveNow": "Live on the next assignment",

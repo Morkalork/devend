@@ -786,7 +786,16 @@
     "tutorialBody": "Spendera övertidstimmar på uppgraderingar mellan kartor; de mångdubblar framtida vinster. Håll in en uppgradering för detaljer.",
     "certRuns": "{{current}}/{{required}} omgångar",
     "detailCertificate": "Certifikatframsteg",
-    "detailCertificateBody": "Att köpa den här i {{required}} separata omgångar låser upp certifikatet {{name}}, en permanent bonus som gäller varje omgång. Hittills tillgodoräknat: {{current}} av {{required}}."
+    "detailCertificateBody": "Att köpa den här i {{required}} separata omgångar låser upp certifikatet {{name}}, en permanent bonus som gäller varje omgång. Hittills tillgodoräknat: {{current}} av {{required}}.",
+    "carouselLabel": "Uppgraderingserbjudanden",
+    "prevOffer": "Föregående erbjudande",
+    "nextOffer": "Nästa erbjudande",
+    "offerPosition": "Erbjudande {{index}} av {{total}}",
+    "marketRatesChip": "Priser +{{percent}}%",
+    "restockChip": "Påfyllningar {{count}}",
+    "budgetCycleChip": "Budgetcykel {{spent}}/{{next}}h",
+    "budgetCycleChipCharged_one": "Budgetcykel: {{count}} förmån",
+    "budgetCycleChipCharged_other": "Budgetcykel: {{count}} förmåner"
   },
   "upgradeConditions": {
     "liveNow": "Aktiv på nästa uppdrag",

@@ -786,7 +786,16 @@
     "tutorialBody": "Gasta horas extra en mejoras entre mapas; multiplican tus ganancias futuras. Manten pulsada una mejora para ver detalles.",
     "certRuns": "{{current}}/{{required}} partidas",
     "detailCertificate": "Progreso de certificación",
-    "detailCertificateBody": "Comprar esto en {{required}} partidas distintas desbloquea la certificación {{name}}, una bonificación permanente que se aplica a todas las partidas. Acumulado hasta ahora: {{current}} de {{required}}."
+    "detailCertificateBody": "Comprar esto en {{required}} partidas distintas desbloquea la certificación {{name}}, una bonificación permanente que se aplica a todas las partidas. Acumulado hasta ahora: {{current}} de {{required}}.",
+    "carouselLabel": "Ofertas de mejoras",
+    "prevOffer": "Oferta anterior",
+    "nextOffer": "Oferta siguiente",
+    "offerPosition": "Oferta {{index}} de {{total}}",
+    "marketRatesChip": "Tarifas +{{percent}}%",
+    "restockChip": "Reposiciones {{count}}",
+    "budgetCycleChip": "Ciclo de Presupuesto {{spent}}/{{next}}h",
+    "budgetCycleChipCharged_one": "Ciclo de Presupuesto: {{count}} ventaja",
+    "budgetCycleChipCharged_other": "Ciclo de Presupuesto: {{count}} ventajas"
   },
   "upgradeConditions": {
     "liveNow": "Activa en la próxima misión",

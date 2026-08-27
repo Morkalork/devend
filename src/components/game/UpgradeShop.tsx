@@ -14,7 +14,7 @@
  * to deselect anything that depended on it. Deselecting does not remove
  * restocked offers or refund the restock.
  */
-import { useState, useMemo, useCallback, useRef, useLayoutEffect, useEffect } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
@@ -29,6 +29,7 @@ import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info, Vault, Shopp
 import { getUpgradeIcon } from './upgradeIcons';
 import { getRunRng } from '@/lib/runRng';
 import { CRTBackground } from './CRTBackground';
+import { Carousel } from './Carousel';
 import { TutorialOverlay } from './TutorialOverlay';
 import { Certificate } from '@/types/certificate';
 import { contentText } from '@/i18n/content';
@@ -130,7 +131,7 @@ export function UpgradeShop({
   locksHave,
   locksNeed,
 }: UpgradeShopProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [purchasedThisSession, setPurchasedThisSession] = useState<string[]>([]);
   const [lockedInfoId, setLockedInfoId] = useState<string | null>(null);
@@ -243,24 +244,11 @@ export function UpgradeShop({
     return offers;
   });
 
-  // Equal-height cards across wrapped rows: flexbox centers every row (incl. a
-  // partial last one), but can't equalise heights across rows. So we measure the
-  // tallest card's natural height and expose it as a `--card-h` CSS variable that
-  // every card uses as its min-height. Re-runs when the offered set or language
-  // changes (both can change how many lines a description wraps to).
-  const gridRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const grid = gridRef.current;
-    if (!grid) return;
-    // Release the constraint so each card reports its natural content height…
-    grid.style.setProperty('--card-h', 'auto');
-    let tallest = 0;
-    for (const child of Array.from(grid.children)) {
-      tallest = Math.max(tallest, (child as HTMLElement).offsetHeight);
-    }
-    // …then pin every card to the tallest.
-    grid.style.setProperty('--card-h', `${tallest}px`);
-  }, [offeredUpgrades, i18n.language]);
+  // Cards used to be measured and pinned to the tallest via a `--card-h` CSS
+  // variable, because a wrapped flex GRID centres each row but cannot equalise
+  // heights across rows. The strip has no rows: it is one flex line, and
+  // `align-items: stretch` equalises it for free. The measuring pass went with
+  // the grid rather than being carried forward out of habit.
 
   const [restocksUsed, setRestocksUsed] = useState(0);
   const restocksLeft = Math.max(0, shopRestockCount - restocksUsed);
@@ -455,25 +443,21 @@ export function UpgradeShop({
         exit={{ opacity: 0 }}
         className="absolute inset-0 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-6 z-50 overflow-y-auto"
       >
-        {/* Store title — above the items */}
+        {/* Store title and which level you just cleared, on ONE line.
+            Two stacked rows to say six words was the header's whole problem in
+            miniature: every fact got its own row whatever its weight. */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
+          className="flex flex-wrap items-baseline justify-center gap-x-3 gap-y-1"
         >
           <span className="text-2xl font-bold text-foreground/30 tracking-widest uppercase">
             {t('upgradeShop.storeLabel')}
           </span>
-        </motion.div>
-
-        {/* Level completed */}
-        <motion.div
-          initial={{ y: -20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.05 }}
-          className="text-sm text-muted-foreground"
-        >
-          {t('upgradeShop.levelComplete', { level: completedLevel })}
+          <span className="text-sm text-muted-foreground">
+            {t('upgradeShop.levelComplete', { level: completedLevel })}
+          </span>
         </motion.div>
 
         {/* Closed banner — the round didn't lock enough balls to earn the store.
@@ -560,97 +544,90 @@ export function UpgradeShop({
           </motion.div>
         )}
 
-        {/* Overtime display */}
+        {/* Budget, and the three modifiers that change what it buys.
+            These were four stacked rows: a headline number, a sentence about
+            market rates, a sentence about restocks and a sentence about the
+            Budget Cycle. Three of them are a name and a number, which is a
+            chip, not a sentence. The balance keeps the row it earns. */}
         <motion.div
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="flex items-center justify-center gap-2 text-xl"
+          className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2"
         >
-          <Clock className="w-6 h-6 text-yellow-500" />
-          <span className="font-semibold text-foreground">{t('upgradeShop.hoursValue', { hours: effectiveOvertime })}</span>
-          <span className="text-muted-foreground">{t('upgradeShop.overtime')}</span>
-        </motion.div>
+          <span className="flex items-center gap-2 text-xl">
+            <Clock className="w-6 h-6 text-yellow-500" />
+            <span className="font-semibold text-foreground tabular-nums">{t('upgradeShop.hoursValue', { hours: effectiveOvertime })}</span>
+            <span className="text-muted-foreground">{t('upgradeShop.overtime')}</span>
+          </span>
 
-        {/* Market rates: prices rise each assignment block */}
-        {inflationPercent > 0 && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.12 }}
-            className="text-center text-[11px] tracking-widest uppercase"
-            style={{ fontFamily: "'JetBrains Mono', monospace", color: '#c9a227' }}
-          >
-            {t('upgradeShop.marketRates', { percent: inflationPercent })}
-          </motion.p>
-        )}
+          {/* Market rates: prices rise each assignment block. */}
+          {inflationPercent > 0 && (
+            <span
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border tabular-nums"
+              style={{ color: '#c9a227', borderColor: '#c9a22755', background: '#c9a2270f' }}
+              title={t('upgradeShop.marketRates', { percent: inflationPercent })}
+            >
+              {t('upgradeShop.marketRatesChip', { percent: inflationPercent })}
+            </span>
+          )}
 
-        {/* Treasury strip: Runway thresholds + Budget Cycle charge, live against
-            the balance after the current selection (see remainingBudget above). */}
-        {!closed && (runwayPerks.length > 0 || hasBudgetCycle) && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.12 }}
-            className="flex flex-col items-center gap-1.5"
-          >
-            {runwayPerks.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-1.5">
-                {runwayPerks.map(p => (
-                  <span
-                    key={p.perk}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
-                    style={p.met
-                      ? { color: '#2dd4bf', borderColor: '#2dd4bf66', background: '#2dd4bf14' }
-                      : { color: '#8a8f98', borderColor: '#8a8f9833', background: 'transparent', opacity: 0.8 }}
-                    title={t('upgradeShop.runwayTitle')}
-                  >
-                    <Vault className="w-3 h-3" />
-                    {t(RUNWAY_CHIP_KEYS[p.perk], { hours: p.thresholdHours })}
-                    {p.met ? ' ✓' : ''}
-                  </span>
-                ))}
-              </div>
-            )}
-            {hasBudgetCycle && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <ShoppingCart className={`w-3.5 h-3.5 ${budgetChunks > 0 ? 'text-cyan-400' : ''}`} />
-                <span>
-                  {budgetChunks > 0
-                    ? t('upgradeShop.budgetCycleCharged', { count: budgetChunks, spent: selectedTotalCost })
-                    : t('upgradeShop.budgetCycleProgress', { spent: selectedTotalCost, next: chunkHours })}
-                </span>
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {/* Restock counter — only when the Procurement upgrades are owned */}
-        {!closed && shopRestockCount > 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.15 }}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${restocksLeft > 0 ? 'text-cyan-400' : ''}`} />
-            <span>
-              {restocksLeft > 0
+          {/* Restocks: buying an item adds a fresh offer to the strip. */}
+          {!closed && shopRestockCount > 0 && (
+            <span
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border tabular-nums
+                ${restocksLeft > 0 ? 'text-cyan-400 border-cyan-400/40 bg-cyan-400/5' : 'text-muted-foreground border-muted/40'}`}
+              title={restocksLeft > 0
                 ? t('upgradeShop.restocksLeft', { count: restocksLeft })
                 : t('upgradeShop.noRestocksLeft')}
+            >
+              <RefreshCw className="w-3 h-3" />
+              {t('upgradeShop.restockChip', { count: restocksLeft })}
             </span>
-          </motion.div>
-        )}
+          )}
 
-        {/* Build readout: per-tag piece count toward the set bonus. A ✓ chip
-            means that archetype's set bonus is active (or will be on buy). */}
-        {!closed && buildTagCounts.size > 0 && (
+          {/* Budget Cycle: spending charges a boon for the next map. */}
+          {!closed && hasBudgetCycle && (
+            <span
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border tabular-nums
+                ${budgetChunks > 0 ? 'text-cyan-400 border-cyan-400/40 bg-cyan-400/5' : 'text-muted-foreground border-muted/40'}`}
+              title={budgetChunks > 0
+                ? t('upgradeShop.budgetCycleCharged', { count: budgetChunks, spent: selectedTotalCost })
+                : t('upgradeShop.budgetCycleProgress', { spent: selectedTotalCost, next: chunkHours })}
+            >
+              <ShoppingCart className="w-3 h-3" />
+              {budgetChunks > 0
+                ? t('upgradeShop.budgetCycleChipCharged', { count: budgetChunks })
+                : t('upgradeShop.budgetCycleChip', { spent: selectedTotalCost, next: chunkHours })}
+            </span>
+          )}
+        </motion.div>
+
+        {/* Runway thresholds and the per-archetype set-bonus counts, on ONE
+            wrapping row. Both are chips saying "this perk is on or off"; they
+            were split across two rows only because they came from different
+            features. The player reads them as one status line. */}
+        {!closed && (runwayPerks.length > 0 || buildTagCounts.size > 0) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.16 }}
-            className="flex flex-wrap justify-center gap-1.5"
+            transition={{ delay: 0.12 }}
+            className="flex flex-wrap justify-center gap-1.5 max-w-2xl"
           >
+            {runwayPerks.map(p => (
+              <span
+                key={p.perk}
+                className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+                style={p.met
+                  ? { color: '#2dd4bf', borderColor: '#2dd4bf66', background: '#2dd4bf14' }
+                  : { color: '#8a8f98', borderColor: '#8a8f9833', background: 'transparent', opacity: 0.8 }}
+                title={t('upgradeShop.runwayTitle')}
+              >
+                <Vault className="w-3 h-3" />
+                {t(RUNWAY_CHIP_KEYS[p.perk], { hours: p.thresholdHours })}
+                {p.met ? ' ✓' : ''}
+              </span>
+            ))}
             {[...buildTagCounts.entries()]
               .sort((a, b) => b[1] - a[1])
               .map(([tag, count]) => {
@@ -669,30 +646,36 @@ export function UpgradeShop({
           </motion.div>
         )}
 
-        {/* Press-and-hold discovery hint */}
-        {!closed && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.18 }}
-            className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70"
-          >
-            <Info className="w-3 h-3" />
-            <span>{t('upgradeShop.holdHint')}</span>
-          </motion.div>
-        )}
-
-        {/* Upgrade Tree — flex-wrap keeps every row centered (including a partial
-            last row); the measured `--card-h` var (see useLayoutEffect) makes all
-            cards the same height as the tallest, growing to fit any line count. */}
+        {/* The shelf, as a strip rather than a grid.
+            Testers all said the same thing: too much text. No single card was
+            the problem - five cards talking at once, in the smallest type in
+            the game, was. A grid has to shrink the description until N cards
+            fit across a phone; a strip does not, so one card gets most of the
+            width and its description gets a size people actually read. See
+            Carousel.tsx for what that trade costs and how the pips pay it back.
+            `--card-h` (see useLayoutEffect) still equalises the heights, so the
+            pips do not jump as you swipe. */}
         <motion.div
-          ref={gridRef}
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: closed ? 0.4 : 1 }}
           transition={{ delay: 0.2 }}
-          className={`flex flex-wrap justify-center gap-4 max-w-5xl ${closed ? 'pointer-events-none grayscale' : ''}`}
+          // -mx-6 cancels the screen's own padding so the strip runs edge to
+          // edge. The peek IS the strip's padding, and inside a padded column
+          // there is not enough width left to show one: the neighbours end up
+          // a sliver wide, which reads as a rendering fault rather than as
+          // "there is more this way".
+          className={`w-full max-w-4xl -mx-6 ${closed ? 'pointer-events-none grayscale' : ''}`}
         >
-          {offeredUpgrades.map((upgrade, index) => {
+          <Carousel
+            label={t('upgradeShop.carouselLabel')}
+            prevLabel={t('upgradeShop.prevOffer')}
+            nextLabel={t('upgradeShop.nextOffer')}
+            positionLabel={(index, total) => t('upgradeShop.offerPosition', { index, total })}
+            cardWidth="min(76vw, 340px)"
+            marks={offeredUpgrades.map(u => u.choiceGroup
+              ? upgrades.some(o => o.choiceGroup === u.choiceGroup && (selectedIds.includes(o.id) || allOwnedIds.includes(o.id)))
+              : selectedIds.includes(u.id) || allOwnedIds.includes(u.id))}
+            items={offeredUpgrades.map((upgrade, index) => {
                 // Tier-3 "choice" card: one card standing in for a mutually
                 // exclusive group. It shows the chosen option once picked, else a
                 // "choose" prompt; tapping opens the chooser.
@@ -732,8 +715,11 @@ export function UpgradeShop({
             return (
               <motion.div
                 key={upgrade.id}
-                className="select-none w-[calc(50%-0.5rem)] sm:w-44"
-                style={{ touchAction: 'pan-y' }}
+                className="select-none w-full h-full"
+                // pan-x too: the card is now inside a horizontal scroller, and
+                // pan-y alone tells the browser this element does not scroll
+                // sideways, which kills the swipe on touch.
+                style={{ touchAction: 'pan-x pan-y' }}
                 onPointerDown={(e) => startLongPress(upgrade.id, e)}
                 onPointerUp={cancelLongPress}
                 onPointerLeave={cancelLongPress}
@@ -768,13 +754,9 @@ export function UpgradeShop({
                   } else handleItemClick(upgrade, selected, remainingBudget);
                 }}
                 disabled={owned || locked}
-                whileHover={{ scale: purchasable ? 1.05 : 1 }}
-                whileTap={{ scale: purchasable ? 0.95 : 1 }}
-                // min-height comes from the measured `--card-h` var so all cards
-                // match the tallest; falls back to auto before the first measure.
-                style={{ minHeight: 'var(--card-h, auto)' }}
+                whileTap={{ scale: purchasable ? 0.97 : 1 }}
                 className={`
-                  relative w-full p-3 rounded-lg transition-all duration-200 text-center flex flex-col
+                  relative w-full h-full p-5 rounded-xl transition-all duration-200 text-left flex flex-col gap-3
                   ${cantAfford ? 'border-dashed' : ''} border-2
                   ${selected ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black' : ''}
                   ${owned
@@ -789,26 +771,26 @@ export function UpgradeShop({
                   }
                 `}
               >
-                {/* Tier badge */}
-                <div className={`text-xs font-medium mb-1 ${tierColors.text}`}>
-                  {contentText.tier(t, upgrade.tier)}
-                </div>
-
-                {/* Icon */}
-                {Icon && (
-                  <div className="flex justify-center mb-1">
-                    <Icon className={`w-7 h-7 ${tierColors.text}`} strokeWidth={1.5} />
+                {/* Identity: icon, tier, name. One block rather than three
+                    stacked centred rows - at this width the name has room to
+                    be a heading instead of a truncated label. */}
+                <div className="flex items-start gap-3 pr-6">
+                  {Icon && (
+                    <Icon className={`w-10 h-10 shrink-0 ${tierColors.text}`} strokeWidth={1.5} />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${tierColors.text}`}>
+                      {contentText.tier(t, upgrade.tier)}
+                    </div>
+                    <div className="text-xl font-bold text-foreground leading-tight">
+                      {contentText.upgradeName(t, upgrade)}
+                    </div>
                   </div>
-                )}
-
-                {/* Name */}
-                <div className="text-sm font-semibold text-foreground mb-1 truncate">
-                  {contentText.upgradeName(t, upgrade)}
                 </div>
 
                 {/* Archetype tag chips */}
                 {((upgrade.tags?.length ?? 0) > 0 || upgrade.condition) && (
-                  <div className="flex justify-center gap-1 mb-1 flex-wrap">
+                  <div className="flex gap-1 flex-wrap">
                     {upgrade.tags?.map(tag => <TagChip key={tag} tag={tag} />)}
                     {upgrade.condition && (
                       <ConditionChip
@@ -821,28 +803,35 @@ export function UpgradeShop({
 
                 {/* Status icon */}
                 {selected && (
-                  <div className="absolute top-1 right-1">
-                    <Check className="w-4 h-4 text-white" />
+                  <div className="absolute top-3 right-3">
+                    <Check className="w-5 h-5 text-white" />
                   </div>
                 )}
                 {owned && (
-                  <div className="absolute top-1 right-1">
-                    <Check className="w-3 h-3 text-green-500" />
+                  <div className="absolute top-3 right-3">
+                    <Check className="w-4 h-4 text-green-500" />
                   </div>
                 )}
                 {locked && !owned && (
                   <div
-                    className="absolute top-1 right-1 cursor-help"
+                    className="absolute top-3 right-3 cursor-help"
                     onClick={(e) => {
                       e.stopPropagation();
                       setLockedInfoId(prev => prev === upgrade.id ? null : upgrade.id);
                     }}
                   >
-                    <Lock className="w-3 h-3 text-muted-foreground" />
+                    <Lock className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
+                {/* Holdable affordance. The header used to carry a "hold an
+                    upgrade to see its track" line for every card at once; the
+                    hint belongs ON the thing that is holdable, which is the
+                    convention the rest of the game already uses. */}
+                {!selected && !owned && !locked && (
+                  <Info className="absolute top-3 right-3 w-4 h-4 opacity-30" aria-hidden />
+                )}
                 {locked && !owned && lockedInfoId === upgrade.id && (
-                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full z-10 bg-popover border border-border rounded px-2 py-1 text-[10px] text-muted-foreground whitespace-nowrap shadow-md">
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 translate-y-full z-10 bg-popover border border-border rounded px-2 py-1 text-xs text-muted-foreground shadow-md">
                     {t('upgradeShop.requires')} {(upgrade.prerequisites || []).filter(p => !effectiveOwned.includes(p)).map(p => {
                       const prereq = upgrades.find(u => u.id === p);
                       return prereq ? contentText.upgradeName(t, prereq) : p;
@@ -850,9 +839,11 @@ export function UpgradeShop({
                   </div>
                 )}
 
-                {/* Description — grows to fit its full text (no clamp); the grid
-                    keeps every card the same height as the tallest one. */}
-                <p className="text-xs text-muted-foreground">
+                {/* Description — the reason the card got bigger. This is the
+                    only text on the screen the player has to actually read, so
+                    it is set at body size rather than at whatever size made
+                    five of them fit across a phone. */}
+                <p className="text-base text-muted-foreground leading-relaxed">
                   {isChoice && !chosenMember
                     ? t('upgradeShop.choicePrompt')
                     : contentText.upgradeDesc(t, displayUpgrade)}
@@ -862,15 +853,11 @@ export function UpgradeShop({
                     permanent unlock, which was previously invisible until the
                     unlock itself fired, a run or more later. */}
                 {certChase && (
-                  <div className={`mt-1.5 flex flex-col items-center gap-0.5 text-[10px] leading-tight
+                  <div className={`flex items-center gap-1.5 text-xs leading-tight
                     ${certShown >= certChase.required ? 'text-yellow-300' : 'text-yellow-400/80'}`}>
-                    {/* Stacked, not inline: the card is ~176px, and sharing that
-                        row with the fraction truncated the name to "Runtime Aug…". */}
-                    <div className="flex items-center gap-1 max-w-full">
-                      <Medal className="w-3 h-3 shrink-0" />
-                      <span className="truncate">{contentText.certName(t, certChase.cert)}</span>
-                    </div>
-                    <span className="font-bold tabular-nums">
+                    <Medal className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{contentText.certName(t, certChase.cert)}</span>
+                    <span className="font-bold tabular-nums shrink-0">
                       {t('upgradeShop.certRuns', { current: certShown, required: certChase.required })}
                     </span>
                   </div>
@@ -879,15 +866,15 @@ export function UpgradeShop({
                 {/* Cost — mt-auto pins it to the card bottom regardless of how
                     many lines the description above it takes. */}
                 {!owned && (
-                  <div className={`mt-auto pt-1 flex items-center justify-center gap-1 text-sm font-bold
+                  <div className={`mt-auto pt-2 flex items-center gap-1.5 text-lg font-bold
                     ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
                   `}>
-                    <Clock className="w-4 h-4" />
+                    <Clock className="w-5 h-5" />
                     {(hasDiscount || shownPrice === 0) && (
-                      <span className="text-xs font-normal line-through opacity-50">{t('upgradeShop.hoursValue', { hours: displayUpgrade.cost })}</span>
+                      <span className="text-sm font-normal line-through opacity-50">{t('upgradeShop.hoursValue', { hours: displayUpgrade.cost })}</span>
                     )}
                     {isChoice && !chosenMember && (
-                      <span className="text-[10px] font-normal opacity-70">{t('upgradeShop.fromLabel')}</span>
+                      <span className="text-xs font-normal opacity-70">{t('upgradeShop.fromLabel')}</span>
                     )}
                     {shownPrice === 0
                       ? t('upgradeShop.freeLabel')
@@ -898,6 +885,7 @@ export function UpgradeShop({
               </motion.div>
             );
           })}
+          />
         </motion.div>
 
         {/* Certificate unlock banner */}
