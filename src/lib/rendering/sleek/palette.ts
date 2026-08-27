@@ -44,21 +44,29 @@ export function shade(c: number, t: number): number {
 export const PALETTE = {
   // ── Substrate ────────────────────────────────────────────────────────────
   /** Deep console black-green the whole board sits on. */
-  boardVoid: 0x060b08,
+  boardVoid: 0x080e0a,
   /**
    * Uncut, still-playable space. Deliberately NOT near-black: this is the
    * surface every shadow in the game falls on, and a shadow cast onto black is
    * no shadow at all. It has to sit far enough above the shadow colour for the
    * light model to exist, which is the one place this renderer must depart from
    * the classic board's pure-black live area.
+   *
+   * Lifted about 60% from the original 0x111e19 after repeated tester reports
+   * that the game is too dark. That value composited to RGB(16,28,23) at the
+   * near edge and RGB(9,15,13) at the far corner once the ambient falloff had
+   * taken its cut, which on a phone in daylight is black. Every surface below
+   * moved by the same factor, so the live/captured contrast the whole game is
+   * read by is unchanged (1.72 before, 1.73 after), and the shadow colour did
+   * NOT move - so the light model gained range rather than losing it.
    */
-  active: 0x111e19,
+  active: 0x1b3028,
   /** Captured/fenced-off territory. The classic #1a3020, lifted to match. */
-  captured: 0x1e3529,
+  captured: 0x305542,
   /** The faint lattice over uncut space. Barely there by design. */
-  grid: 0x244434,
+  grid: 0x3a6d53,
   /** Territory where a ball was locked: captured, plus an accent wash. */
-  locked: 0x1c3b2a,
+  locked: 0x2d5e43,
 
   // ── The accent (fences, the player's own marks) ───────────────────────────
   accent: 0x00ff88,

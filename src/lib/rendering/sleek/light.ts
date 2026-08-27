@@ -151,7 +151,10 @@ export function facing(light: LightScope, x: number, y: number, nx: number, ny: 
 export function ambientAt(light: LightScope, x: number, y: number): number {
   const dist = Math.hypot(x - light.x, y - light.y);
   const t = Math.min(1, dist / (light.reach * 1.6));
-  return (1 - t * 0.45) * light.level;
+  // Falloff softened from 0.45 to 0.30 with the palette lift: taking 45% back
+  // off the far corner was half of why the board read as unlit there, and a
+  // wash that strong on an already dark surface is a dimmer, not a light.
+  return (1 - t * 0.30) * light.level;
 }
 
 /**
