@@ -22,6 +22,8 @@ import { resolve } from 'node:path';
 import yaml from 'js-yaml';
 import '@/i18n';
 import { AssignmentSummaryScreen } from '@/components/game/AssignmentSummaryScreen';
+import { TierDraftScreen } from '@/components/game/TierDraftScreen';
+import i18n from '@/i18n';
 import { assignmentRewardForBlock, eligibleTierUpgrades } from '@/lib/assignments';
 import type { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
 import type { UpgradeConfig } from '@/types/upgrade';
@@ -154,5 +156,48 @@ describe('the screens are wired to each other', () => {
     // caller"; both callers ignored it. A second statement of the same fact
     // that nothing reads can only go stale.
     expect(read('src/hooks/useGameSession.ts')).not.toContain('tierDraftOwed: boolean');
+  });
+});
+
+describe('the pick screen says what to do', () => {
+  const offers = upgrades.filter(u => u.tier === 'Principal').slice(0, 3);
+
+  it('has three cards to choose between', () => {
+    expect(offers.length).toBe(3);
+  });
+
+  it('leads with the instruction, not with where the reward came from', () => {
+    // Reported after the previous fix: "the next screen says Assignment
+    // Reward, is that it?" The headline is the largest type on the page, the
+    // confirm button starts DISABLED, and the only instruction was small
+    // dimmed subtitle text - so the screen read as an announcement rather than
+    // a prompt.
+    render(
+      <TierDraftScreen offers={offers} tier="Principal" onSelect={vi.fn()} />,
+    );
+    const heading = screen.getByRole('heading', { level: 1 });
+    expect(heading.textContent, 'the headline is not an instruction').toMatch(/pick/i);
+    // Provenance is kept, just no longer shouted.
+    expect(screen.getByText(/assignment reward/i)).toBeTruthy();
+    // And every offer is on screen to choose from.
+    for (const u of offers) expect(screen.getAllByText(u.name).length).toBeGreaterThan(0);
+  });
+
+  it('uses the same words as the button that led here', () => {
+    // The summary promises "Pick your upgrade"; if this screen calls it
+    // something else the player cannot tell they have arrived.
+    const promise = i18n.t('assignmentSummary.pickButton') as string;
+    const arrival = i18n.t('tierDraft.title') as string;
+    expect(arrival.toLowerCase()).toBe(promise.toLowerCase());
+  });
+
+  it('keeps promise and arrival matching in every language', () => {
+    for (const loc of ['en', 'es', 'sv']) {
+      const bundle = i18n.getResourceBundle(loc, 'translation');
+      expect(
+        (bundle.tierDraft.title as string).toLowerCase(),
+        `${loc}: the pick screen and the button that leads to it disagree`,
+      ).toBe((bundle.assignmentSummary.pickButton as string).toLowerCase());
+    }
   });
 });

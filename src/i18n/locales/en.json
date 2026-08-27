@@ -995,8 +995,8 @@
     "shippedIt": "Shipped It!"
   },
   "tierDraft": {
-    "title": "Assignment Reward",
-    "subtitle": "Pick one {{tier}} upgrade",
+    "title": "Pick Your Upgrade",
+    "subtitle": "Assignment reward: choose one {{tier}} upgrade.",
     "holdHint": "Press and hold a card for details.",
     "confirmButton": "Take Upgrade",
     "pickHint": "Select an upgrade",

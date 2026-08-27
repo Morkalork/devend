@@ -1528,8 +1528,8 @@
     "shippedIt": "¡Publicado!"
   },
   "tierDraft": {
-    "title": "Recompensa de asignación",
-    "subtitle": "Elige una mejora de {{tier}}",
+    "title": "Elige tu mejora",
+    "subtitle": "Recompensa de asignación: elige una mejora de {{tier}}.",
     "holdHint": "Mantén pulsada una carta para ver detalles.",
     "confirmButton": "Tomar mejora",
     "pickHint": "Selecciona una mejora",

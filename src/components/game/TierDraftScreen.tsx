@@ -4,6 +4,15 @@
  * Shown when a completed assignment's reached tier pays a `tierDraft` reward:
  * a free 1-of-3 upgrade of a given tier (the tough-mission payoff). Mirrors the
  * capstone/door card UI; the pick is granted for the rest of the run.
+ *
+ * The headline is an INSTRUCTION, not a provenance label. It used to read
+ * "Assignment Reward" in the largest type on screen with "pick one" beneath it
+ * in small dimmed text, and the confirm button starts DISABLED reading "Select
+ * an upgrade" - so a player who had not spotted that the cards are tappable saw
+ * a title about a reward and a dead button, and asked whether this screen was
+ * the reward itself. It also has to match the words on the button that led
+ * here ("Pick your upgrade"), or the promise and the payoff are two different
+ * things. Where the reward came from is still on the subtitle.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';

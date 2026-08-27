@@ -882,8 +882,8 @@
     "rewardEarnedLabel": "Du tjänade",
     "missed": "Du klarade inte uppdraget, så ingen belöning den här gången.",
     "continueButton": "Fortsätt",
-    "pickButton": "Valj din uppgradering",
-    "pickHint": "Du valjer den pa nasta skarm."
+    "pickButton": "Välj din uppgradering",
+    "pickHint": "Du väljer den på nästa skärm."
   },
   "continue": {
     "title": "Fortsätta?",
@@ -1528,8 +1528,8 @@
     "shippedIt": "Levererat!"
   },
   "tierDraft": {
-    "title": "Uppdragsbelöning",
-    "subtitle": "Välj en {{tier}}-uppgradering",
+    "title": "Välj din uppgradering",
+    "subtitle": "Uppdragsbelöning: välj en {{tier}}-uppgradering.",
     "holdHint": "Håll in ett kort för detaljer.",
     "confirmButton": "Ta uppgradering",
     "pickHint": "Välj en uppgradering",
