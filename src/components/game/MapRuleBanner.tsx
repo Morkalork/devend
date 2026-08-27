@@ -46,7 +46,7 @@ export function MapRuleBanner({ mutator, onExplain }: MapRuleBannerProps) {
     <button
       onClick={onExplain}
       aria-label={t('topBar.mutatorTitle', { name })}
-      className="w-full flex items-center justify-center gap-2 px-3 py-1 focus:outline-none"
+      className="w-full flex items-center justify-center gap-2 px-3 py-1.5 focus:outline-none"
       style={{
         // A hazard rule top and bottom rather than a box: it spans the frame,
         // so a border would read as a second bar competing with the top bar.
@@ -56,13 +56,13 @@ export function MapRuleBanner({ mutator, onExplain }: MapRuleBannerProps) {
       }}
     >
       <TriangleAlert
-        className="w-4 h-4 flex-shrink-0"
+        className="w-5 h-5 flex-shrink-0"
         style={{ color: MAP_RULE_VIOLET }}
         aria-hidden
       />
       <span
-        className="font-display text-xs font-black uppercase tracking-widest flex-shrink-0"
-        style={{ color: MAP_RULE_VIOLET, textShadow: `0 0 10px ${MAP_RULE_VIOLET}88` }}
+        className="font-display text-base sm:text-lg font-black uppercase tracking-widest flex-shrink-0"
+        style={{ color: MAP_RULE_VIOLET, textShadow: `0 0 14px ${MAP_RULE_VIOLET}aa` }}
       >
         {name}
       </span>
@@ -71,7 +71,7 @@ export function MapRuleBanner({ mutator, onExplain }: MapRuleBannerProps) {
         // "everything is pulled one way" is the thing that stops the bent
         // trajectories reading as a bug.
         <span
-          className="text-[11px] leading-tight truncate min-w-0"
+          className="text-xs sm:text-sm font-semibold leading-tight truncate min-w-0"
           style={{ color: '#d9c9ff', opacity: 0.85 }}
         >
           {detail}

@@ -79,16 +79,36 @@ describe('the map rule banner', () => {
 describe('where it sits', () => {
   const read = (p: string) => readFileSync(resolve(process.cwd(), p), 'utf8');
 
-  it('is rendered between the top bar and the board', () => {
-    // In the flow, in the slack a square board leaves in a taller frame -
-    // not floating over the play surface where it would cover the board.
+  it('is placed from the board top edge, not pinned under the bar', () => {
+    // Centred in the GUTTER: the board is square in a taller frame, so how much
+    // space sits above it depends on the surface and only GameCanvas can
+    // measure it. Half the board's top offset, pulled back by half its own
+    // height, is the middle of that gap.
     const src = read('src/components/game/GameScreen.tsx');
-    const bar = src.indexOf('<GameTopBar');
-    const banner = src.indexOf('<MapRuleBanner');
-    const canvas = src.indexOf('{/* Game Canvas Area */}');
-    expect(banner, 'the banner is never rendered').toBeGreaterThan(-1);
-    expect(banner, 'the banner is above the top bar').toBeGreaterThan(bar);
-    expect(banner, 'the banner is below the board').toBeLessThan(canvas);
+    const i = src.indexOf('<MapRuleBanner');
+    expect(i, 'the banner is never rendered').toBeGreaterThan(-1);
+    const block = src.slice(Math.max(0, i - 700), i + 200);
+    expect(block, 'the banner does not use the measured gutter').toContain('boardTopPct / 2');
+    expect(block, 'the banner is not centred on that point').toContain('translateY(-50%)');
+  });
+
+  it('is measured, not guessed', () => {
+    // GameCanvas has to actually report the edge, or the placement above is
+    // reading a number that never changes.
+    const screen_ = read('src/components/game/GameScreen.tsx');
+    expect(screen_, 'GameScreen never asks for the board edge').toContain('onBoardTopPct={handleBoardTopPct}');
+    const canvas = read('src/components/game/GameCanvas.tsx');
+    expect(canvas, 'GameCanvas never reports the board edge').toContain('onBoardTopPctRef.current?.(');
+  });
+
+  it('cannot swallow a cut aimed near the top of the board', () => {
+    // It floats over the play surface, so the wrapper must be inert; only the
+    // banner itself takes a press.
+    const src = read('src/components/game/GameScreen.tsx');
+    const i = src.indexOf('<MapRuleBanner');
+    const block = src.slice(Math.max(0, i - 700), i + 200);
+    expect(block, 'the floating wrapper eats pointer events').toContain('pointer-events-none');
+    expect(block, 'the banner itself cannot be pressed').toContain('pointer-events-auto');
   });
 
   it('is given the map mutator to state', () => {

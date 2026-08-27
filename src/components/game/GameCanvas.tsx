@@ -236,6 +236,15 @@ interface GameCanvasProps {
    *  starts presenting its tiles, or the loop's first frame for a normal start.
    *  Lets the shell fade out its "Loading..." overlay. */
   onCanvasReady?: () => void;
+  /**
+   * The board's top edge, as a percentage of this canvas's height.
+   *
+   * Only this component knows it: the board is square and centred in a taller
+   * frame, so how much gutter sits above it depends on the surface size. Sent
+   * up so GameScreen can place the map-rule banner in the middle of that
+   * gutter instead of guessing. Fires on resize, not per frame.
+   */
+  onBoardTopPct?: (pct: number) => void;
 }
 
 /**
@@ -310,6 +319,7 @@ export function GameCanvas({
   showPerfOverlay = false,
   freezeOnComplete = false,
   onCanvasReady,
+  onBoardTopPct,
 }: GameCanvasProps) {
   const { t } = useTranslation();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -342,6 +352,8 @@ export function GameCanvas({
   useEffect(() => { onBallTypeLockedRef.current = onBallTypeLocked; }, [onBallTypeLocked]);
   const onCanvasReadyRef = useRef(onCanvasReady);
   useEffect(() => { onCanvasReadyRef.current = onCanvasReady; }, [onCanvasReady]);
+  const onBoardTopPctRef = useRef(onBoardTopPct);
+  useEffect(() => { onBoardTopPctRef.current = onBoardTopPct; }, [onBoardTopPct]);
   // Live ref so toggling the speed-label overlay takes effect without restarting
   // the render loop (the rctx is rebuilt only per level).
   const showBallSpeedsRef = useRef(showBallSpeeds);
@@ -1020,6 +1032,7 @@ export function GameCanvas({
         // Top-anchored toasts use this to sit ABOVE the board, never over it.
         boardTopPct: physH > 0 ? (game.boardRect.top / physH) * 100 : 5,
       });
+      onBoardTopPctRef.current?.(physH > 0 ? (game.boardRect.top / physH) * 100 : 5);
       if (!gameInitializedRef.current) {
         gameInitializedRef.current = true;
         initGame();

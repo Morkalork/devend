@@ -319,6 +319,14 @@ export function GameScreen({
   const [canvasReady, setCanvasReady] = useState(false);
   const handleCanvasReady = useCallback(() => setCanvasReady(true), []);
 
+  // Where the board's top edge sits inside the canvas area, as a percentage.
+  // The board is square and centred in a taller frame, so the gutter above it
+  // depends on the surface size and only GameCanvas can measure it. The
+  // map-rule banner is centred in that gutter rather than pinned under the top
+  // bar. 5 is GameCanvas's own pre-measurement default.
+  const [boardTopPct, setBoardTopPct] = useState(5);
+  const handleBoardTopPct = useCallback((pct: number) => setBoardTopPct(pct), []);
+
   const handleGameStateChange = useCallback((state: GameStateInfo) => {
     setGameState(state);
     onGameStateChange?.(state); // forward to a parent (Playground ability tester)
@@ -718,14 +726,23 @@ export function GameScreen({
           />
         </div>
 
-        {/* The map's rule, if it has one. Between the bar and the board, in the
-            slack a square board leaves in a taller frame: it is a condition of
-            the whole map rather than a number to read, so it does not belong
-            among the stats. */}
-        <MapRuleBanner mutator={mapMutator} onExplain={() => setTopPanelOpen(true)} />
-
         {/* Game Canvas Area */}
         <div className="flex-1 min-h-0 relative">
+          {/* The map's rule, if it has one: centred in the gutter between the
+              top bar and the board's top edge, rather than pinned under the bar.
+              Floating rather than in the flow so it costs the board no height.
+              The wrapper takes no pointer events; the banner itself does, so it
+              can never swallow a cut aimed near the top of the board. */}
+          {mapMutator && (
+            <div
+              className="absolute left-0 right-0 z-30 flex justify-center pointer-events-none"
+              style={{ top: `${boardTopPct / 2}%`, transform: 'translateY(-50%)' }}
+            >
+              <div className="pointer-events-auto w-full">
+                <MapRuleBanner mutator={mapMutator} onExplain={() => setTopPanelOpen(true)} />
+              </div>
+            </div>
+          )}
           {/* Run-start "Loading..." sign: sits over the animating background
               while the board loads, and fades out the moment the canvas begins
               assembling in. Only for the run-intro map (introAssemble). */}
@@ -804,6 +821,7 @@ export function GameScreen({
             onBallTypeLocked={onBallTypeLocked}
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
             onCanvasReady={handleCanvasReady}
+            onBoardTopPct={handleBoardTopPct}
             introAssemble={introAssemble}
             freezeOnComplete={freezeOnClear}
             onGameStateChange={handleGameStateChange}
