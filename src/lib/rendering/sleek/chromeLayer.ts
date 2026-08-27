@@ -19,7 +19,7 @@ import { getRemainingPercent } from "@/lib/spaceGrid";
 import { BALL_DANGER_SPEED } from "@/lib/gameConstants";
 import { PALETTE } from "./palette";
 import type { LightScope } from "./light";
-import { snapRect, snapStroke, snapWidth, hairline } from "./pixelGrid";
+import { snapRect, snapStroke, snapWidth, snapEdge, hairline } from "./pixelGrid";
 import { boardAngleFor } from "@/lib/boardTilt";
 import { gravityCue, pullEdge, URGENT_SECONDS } from "./gravityCue";
 
@@ -141,14 +141,21 @@ export class ChromeLayer {
     if (!cue) return;
 
     const { left, top, width, height } = game.boardRect;
-    const band = Math.max(3, 10 * scale);
+    // Snapped like everything else axis-aligned in this layer. All of it is
+    // straight edges and flat fills, and an unsnapped 3px bar is precisely the
+    // 2px grey smear pixelGrid exists to prevent. The chevrons below are the
+    // one exception, and deliberately: their arms are diagonals, and rounding a
+    // diagonal's endpoints quantises its slope.
+    const band = snapWidth(Math.max(3, 10 * scale));
 
     if (cue.pull) {
       // The low side of a tipped table. Two stacked bands rather than a
       // gradient: Graphics has no cheap one, and the wide faint pass under a
       // narrow bright one reads as a glow at a fraction of the cost.
-      const outer = pullEdge(cue.pull, { left, top, width, height }, band * 2.2);
-      const inner = pullEdge(cue.pull, { left, top, width, height }, band);
+      const wide = pullEdge(cue.pull, { left, top, width, height }, snapWidth(band * 2.2));
+      const near = pullEdge(cue.pull, { left, top, width, height }, band);
+      const outer = snapRect(wide.x, wide.y, wide.width, wide.height);
+      const inner = snapRect(near.x, near.y, near.width, near.height);
       const breathe = 0.85 + 0.15 * Math.sin(now * 0.0016);
       g.rect(outer.x, outer.y, outer.width, outer.height)
         .fill({ color: PALETTE.gravity, alpha: 0.07 * breathe });
@@ -166,17 +173,17 @@ export class ChromeLayer {
     // ending is the moment the board starts dragging again.
     const remaining = 1 - cue.progress;
     const urgent = cue.urgent;
-    const barW = Math.max(2, 3 * scale);
+    const barW = snapWidth(Math.max(2, 3 * scale));
     const colour = urgent ? PALETTE.amber : PALETTE.gravity;
     // Along the TOP edge, away from the pull band, so the two never overlap on
     // a downward pull (the most common phase there is).
-    const full = width - band * 2;
-    const lit = full * Math.max(0, Math.min(1, remaining));
-    const y = top + band;
-    g.rect(left + band, y, full, barW).fill({ color: colour, alpha: 0.12 });
+    const track = snapRect(left + band, top + band, width - band * 2, barW);
+    // The lit width is snapped too: a fractional end would shimmer as it drains.
+    const lit = snapEdge(track.width * Math.max(0, Math.min(1, remaining)));
+    g.rect(track.x, track.y, track.width, track.height).fill({ color: colour, alpha: 0.12 });
     if (lit > 0) {
       const pulse = urgent ? 0.75 + 0.25 * Math.sin(now * 0.012) : 1;
-      g.rect(left + band, y, lit, barW).fill({ color: colour, alpha: 0.7 * pulse });
+      g.rect(track.x, track.y, lit, track.height).fill({ color: colour, alpha: 0.7 * pulse });
     }
 
     // Where it goes next, once the shift is close enough to act on. A ghost of
@@ -184,7 +191,8 @@ export class ChromeLayer {
     // cut to where the board is about to tip rather than where it is tipped.
     if (cue.next && cue.urgent) {
       const t = 1 - cue.secondsLeft / URGENT_SECONDS;    // 0 -> 1 as it lands
-      const ghost = pullEdge(cue.next, { left, top, width, height }, band);
+      const edge = pullEdge(cue.next, { left, top, width, height }, band);
+      const ghost = snapRect(edge.x, edge.y, edge.width, edge.height);
       g.rect(ghost.x, ghost.y, ghost.width, ghost.height)
         .fill({ color: PALETTE.amber, alpha: 0.05 + 0.18 * t });
     }

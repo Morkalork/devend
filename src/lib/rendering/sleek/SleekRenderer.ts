@@ -9,6 +9,17 @@
  *
  * WHAT MAKES IT "SLEEK", in priority order:
  *
+ * A note on what is NOT here any more: this used to carry a `noteMissing` list
+ * that logged "not yet ported" for board features the sleek slice did not draw.
+ * Both of its entries had since been ported - the boss splash is drawn by the
+ * ball layer, and breakable damage is drawn as dents carved into the hull's
+ * silhouette rather than as the cracks the note named - so it had become a
+ * console message crying wolf, sending the next reader after work already done.
+ * The principle it stood for is still right and worth keeping in mind: a
+ * silently missing mechanic is far worse than a noisy console, because a chest
+ * that simply is not rendered looks like a physics bug rather than an
+ * unfinished renderer.
+ *
  * 1. PIXEL DISCIPLINE. The surface is created at `resolution: 1` over a canvas
  *    GameCanvas sized in physical pixels, so this coordinate space IS the device
  *    pixel grid. Axis-aligned geometry snaps to it exactly (see pixelGrid.ts);
@@ -82,7 +93,6 @@ export class SleekRenderer {
   private readonly probeMode = beamProbeMode();
   private readonly probe = new BeamProbe();
   private maskKey = "";
-  private reportedMissing = new Set<string>();
 
   async init(canvas: HTMLCanvasElement, width: number, height: number): Promise<void> {
     await this.app.init({
@@ -258,7 +268,6 @@ export class SleekRenderer {
     this.staticDirty = false;
 
     this.probeForBeams(now);
-    this.noteMissing(game);
 
     this.app.render();
   }
@@ -318,24 +327,6 @@ export class SleekRenderer {
       this.boardMask
         .rect(boardRect.left, boardRect.top, boardRect.width, boardRect.height)
         .fill({ color: 0xffffff });
-    }
-  }
-
-  /**
-   * Log board features this slice does not draw yet, once each per session.
-   * A silently missing mechanic is far worse than a noisy console: a chest that
-   * simply isn't rendered looks like a physics bug, not an unfinished renderer.
-   */
-  private noteMissing(game: CanvasGameState): void {
-    const check: Array<[string, boolean]> = [
-      ["bossSplash", game.bossActive],
-      ["damageCracks", game.destructibles.some(d => d.hits > 0)],
-    ];
-    for (const [name, present] of check) {
-      if (present && !this.reportedMissing.has(name)) {
-        this.reportedMissing.add(name);
-        console.info(`[sleek] not yet ported: ${name}`);
-      }
     }
   }
 
