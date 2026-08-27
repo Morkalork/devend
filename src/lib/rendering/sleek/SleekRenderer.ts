@@ -50,6 +50,7 @@ import { WallLayer } from "./wallLayer";
 import { EntityLayer } from "./entityLayer";
 import { AreaLayer } from "./areaLayer";
 import { SleekBallLayer, clearSphereCache } from "./ballLayer";
+import { BallLightPass, clearPoolTexture } from "./ballLightPass";
 import { ObjectLayer } from "./objectLayer";
 import { PropLayer } from "./propLayer";
 import { FxLayer } from "./fxLayer";
@@ -72,6 +73,12 @@ export class SleekRenderer {
    * that casts it - see the draw order in init().
    */
   private shadowPlane = new Graphics();
+  /**
+   * Pools of light travelling with the balls, occluded by the board's geometry.
+   * Composited over the floor and UNDER everything standing on it, so a wall
+   * blocks the pool the same way it blocks the monitor's light.
+   */
+  private ballLights = new BallLightPass();
 
   private board = new BoardLayer();
   private areas = new AreaLayer();
@@ -135,6 +142,11 @@ export class SleekRenderer {
       this.areas.container,
       this.board.shadowMask,
       this.shadowPlane,
+      // Above the shadow plane on purpose: a ball's own light falls INTO the
+      // monitor's shadows, which is what light does. Below everything that
+      // stands on the floor, so those objects occlude the pool - the shadow
+      // quads handle the floor beyond them, and this handles the object itself.
+      this.ballLights.sprite,
       this.props.container,
       this.entities.container,
       this.objects.container,
@@ -266,6 +278,13 @@ export class SleekRenderer {
     this.balls.sync(game, light, this.shadowPlane, w2s, scale, now);
     this.chrome.sync(game, light, scale, now, rctx.spaceThreshold);
     this.staticDirty = false;
+
+    // Composed after the layers so it sees this frame's walls, and committed
+    // before app.render() because it is a separate pass into its own target.
+    this.ballLights.build(game, w2s, scale);
+    this.ballLights.commit(
+      this.app.renderer, this.app.renderer.width, this.app.renderer.height,
+    );
 
     this.probeForBeams(now);
 
@@ -399,6 +418,7 @@ export class SleekRenderer {
 
   destroy(): void {
     clearSphereCache();
+    clearPoolTexture();
     this.sweep.teardown();
     this.shatter.clear();
     this.clearShatterRT();
@@ -410,6 +430,7 @@ export class SleekRenderer {
     this.walls.destroy();
     this.fx.destroy();
     this.balls.destroy();
+    this.ballLights.destroy();
     this.chrome.destroy();
     try {
       this.app.destroy(true, { children: true });
