@@ -27,6 +27,7 @@ import { UpgradeShop } from '@/components/game/UpgradeShop';
 import { DoorDraftScreen } from '@/components/game/DoorDraftScreen';
 import { CapstoneDraftScreen } from '@/components/game/CapstoneDraftScreen';
 import { TierDraftScreen } from '@/components/game/TierDraftScreen';
+import { REWARD_GOLD } from '@/components/game/rewardTheme';
 import { AssignmentSummaryScreen } from '@/components/game/AssignmentSummaryScreen';
 import { RunDraftScreen } from '@/components/game/RunDraftScreen';
 import { TenureDraftScreen } from '@/components/game/TenureDraftScreen';
@@ -419,7 +420,12 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 offers={session.pendingTierDraft.offers}
                 tier={session.pendingTierDraft.tier}
                 onSelect={session.handleSelectTierUpgrade}
-                accentColor={accentHex}
+                /* Gold, not the run accent: this screen is the second half of
+                   the Assignment Complete summary, whose reward button is gold,
+                   and two screens in one handover have to look like one thing.
+                   The accent is also the player's own colour and gets re-skinned
+                   red on boss maps, neither of which a reward should follow. */
+                accentColor={REWARD_GOLD}
               />
             )}
             {navigation.currentScreen === 'ascensionDraft' && (

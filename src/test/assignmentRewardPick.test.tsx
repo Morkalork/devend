@@ -16,7 +16,7 @@
  * really produced and really draftable, and the screen says how to take it.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import yaml from 'js-yaml';
@@ -106,27 +106,44 @@ describe('the summary tells the player how to take it', () => {
     );
   }
 
-  it('names the pick on the button when one is owed', () => {
-    // The fix. "Continue" under a reward that reads as an instruction is what
-    // made the pick look missing.
+  it('makes the prize itself the button', () => {
+    // Reported: "the text above the continue button looks clickable". It was a
+    // bordered, tinted gold panel sitting directly on top of a button, which
+    // reads as two buttons only one of which does anything. There is now ONE
+    // control, and the reward is inside it.
+    const onContinue = vi.fn();
+    renderSummary({ nextIsUpgradePick: true, onContinue });
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.length, 'the screen still offers more than one thing to press').toBe(1);
+    expect(buttons[0].textContent).toContain('Pick a Principal upgrade');
+    fireEvent.click(buttons[0]);
+    expect(onContinue).toHaveBeenCalledTimes(1);
+  });
+
+  it('names the pick on that button when one is owed', () => {
     renderSummary({ nextIsUpgradePick: true });
-    expect(screen.getByText('Pick your upgrade'), 'the button still just says Continue').toBeTruthy();
-    expect(screen.getByText('Choose it on the next screen.')).toBeTruthy();
+    expect(
+      screen.getByRole('button').textContent,
+      'the button does not say a pick is coming',
+    ).toContain('Pick your upgrade');
   });
 
   it('still says Continue when the reward is not a pick', () => {
     // Lives and overtime are banked already; there is nothing to choose, and a
     // button promising a pick would be the same lie in reverse.
     renderSummary({ nextIsUpgradePick: false, rewardLabel: '+2 lives' });
-    expect(screen.getByText('Continue')).toBeTruthy();
-    expect(screen.queryByText('Pick your upgrade')).toBeNull();
-    expect(screen.queryByText('Choose it on the next screen.')).toBeNull();
+    const button = screen.getByRole('button');
+    expect(button.textContent).toContain('+2 lives');
+    expect(button.textContent).toContain('Continue');
+    expect(button.textContent).not.toContain('Pick your upgrade');
   });
 
-  it('says nothing about a pick when the mission was missed', () => {
+  it('falls back to a plain Continue when nothing was earned', () => {
+    // No prize means nothing to press ON, so the ordinary button stays.
     renderSummary({ nextIsUpgradePick: false, rewardLabel: null });
-    expect(screen.getByText('Continue')).toBeTruthy();
-    expect(screen.queryByText('Pick your upgrade')).toBeNull();
+    const button = screen.getByRole('button');
+    expect(button.textContent).toContain('Continue');
+    expect(screen.getByText(/fell short/i)).toBeTruthy();
   });
 });
 
@@ -199,5 +216,30 @@ describe('the pick screen says what to do', () => {
         `${loc}: the pick screen and the button that leads to it disagree`,
       ).toBe((bundle.assignmentSummary.pickButton as string).toLowerCase());
     }
+  });
+});
+
+describe('the two screens look like one handover', () => {
+  it('dresses the reward button and the pick screen in the same gold', () => {
+    // The point of the shared constant: told what you earned on one screen and
+    // taking it on the next, in two different colours, reads as two unrelated
+    // parts of the game.
+    const index = readFileSync(resolve(process.cwd(), 'src/pages/Index.tsx'), 'utf8');
+    const i = index.indexOf('<TierDraftScreen');
+    expect(i, 'the pick screen is gone').toBeGreaterThan(-1);
+    expect(
+      index.slice(i, i + 700),
+      'the pick screen wears the run accent rather than the reward gold',
+    ).toContain('accentColor={REWARD_GOLD}');
+  });
+
+  it('keeps one definition of that gold', () => {
+    // Two hexes that happen to match today are two hexes that will not tomorrow.
+    const summary = readFileSync(
+      resolve(process.cwd(), 'src/components/game/AssignmentSummaryScreen.tsx'), 'utf8',
+    );
+    expect(summary, 'the summary hard-codes the gold instead of sharing it')
+      .not.toMatch(/#ffd54a/i);
+    expect(summary).toContain('REWARD_GOLD');
   });
 });

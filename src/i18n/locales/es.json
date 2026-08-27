@@ -883,8 +883,7 @@
     "rewardEarnedLabel": "Has ganado",
     "missed": "No alcanzaste la misión, así que esta vez no hay recompensa.",
     "continueButton": "Continuar",
-    "pickButton": "Elige tu mejora",
-    "pickHint": "La eliges en la siguiente pantalla."
+    "pickButton": "Elige tu mejora"
   },
   "continue": {
     "title": "¿Continuar?",

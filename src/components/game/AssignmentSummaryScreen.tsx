@@ -14,6 +14,7 @@
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { Ticket, CheckCircle2, Circle, Sparkles, Play, Target } from 'lucide-react';
+import { REWARD_GOLD, REWARD_GOLD_FILL, REWARD_GOLD_GLOW } from './rewardTheme';
 import type { AssignmentConfig, AssignmentMapResult } from '@/types/assignment';
 import { evaluateAssignment } from '@/lib/assignments';
 import { contentText } from '@/i18n/content';
@@ -143,47 +144,69 @@ export function AssignmentSummaryScreen({
             ))}
           </div>
 
-          {/* Reward earned, or a "missed" note (closure either way). */}
+          {/*
+            The reward and the button that collects it are ONE control.
+            They used to be a bordered, tinted gold panel sitting directly above
+            a separate Continue button, which reads as two buttons, only one of
+            which does anything: reported as "the text above the continue button
+            looks clickable". Now the prize IS the button, so there is nothing
+            on the screen that looks pressable and is not.
+          */}
           {rewardLabel ? (
-            <motion.div
+            <motion.button
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="w-full rounded-lg p-4 flex flex-col items-center gap-1"
-              style={{ border: '1px solid #ffd54a66', backgroundColor: '#ffd54a12' }}
+              onClick={onContinue}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="arcade-button w-full rounded-lg flex flex-col items-center gap-1 normal-case tracking-normal"
+              style={{
+                borderColor: REWARD_GOLD,
+                backgroundColor: REWARD_GOLD_FILL,
+                color: REWARD_GOLD,
+                boxShadow: `0 0 20px ${REWARD_GOLD}33, inset 0 0 20px ${REWARD_GOLD}11`,
+              }}
             >
-              <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider" style={{ color: '#ffd54a' }}>
+              <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
                 {t('assignmentSummary.rewardEarnedLabel')}
-              </div>
-              <div className="text-xl font-display font-black" style={{ color: '#ffd54a', textShadow: '0 0 20px #ffd54a55' }}>
+              </span>
+              <span
+                className="text-xl font-display font-black"
+                style={{ textShadow: `0 0 20px ${REWARD_GOLD_GLOW}` }}
+              >
                 {rewardLabel}
-              </div>
-              {nextIsUpgradePick && (
-                <div className="text-[11px] text-center" style={{ color: '#ffd54a', opacity: 0.75 }}>
-                  {t('assignmentSummary.pickHint')}
-                </div>
-              )}
-            </motion.div>
+              </span>
+              {/* What pressing it does. On the button rather than above it, so
+                  the promise and the press are the same object. */}
+              <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider opacity-80">
+                {nextIsUpgradePick ? <Sparkles className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                {t(nextIsUpgradePick ? 'assignmentSummary.pickButton' : 'assignmentSummary.continueButton')}
+              </span>
+            </motion.button>
           ) : (
-            <div className="w-full text-center text-sm" style={{ color: '#b58a5a', opacity: 0.9 }}>
-              {t('assignmentSummary.missed')}
-            </div>
+            <>
+              <div className="w-full text-center text-sm" style={{ color: '#b58a5a', opacity: 0.9 }}>
+                {t('assignmentSummary.missed')}
+              </div>
+              {/* Nothing was earned, so there is no prize to press: the plain
+                  Continue stays. */}
+              <motion.button
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45 }}
+                className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
+                onClick={onContinue}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Play className="w-5 h-5" />
+                {t('assignmentSummary.continueButton')}
+              </motion.button>
+            </>
           )}
 
-          {/* Continue */}
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.45 }}
-            className="arcade-button-primary rounded-lg flex items-center justify-center gap-2"
-            onClick={onContinue}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {nextIsUpgradePick ? <Sparkles className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-            {t(nextIsUpgradePick ? 'assignmentSummary.pickButton' : 'assignmentSummary.continueButton')}
-          </motion.button>
         </motion.div>
       </div>
     </>

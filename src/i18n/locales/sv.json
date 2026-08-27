@@ -883,8 +883,7 @@
     "rewardEarnedLabel": "Du tjänade",
     "missed": "Du klarade inte uppdraget, så ingen belöning den här gången.",
     "continueButton": "Fortsätt",
-    "pickButton": "Välj din uppgradering",
-    "pickHint": "Du väljer den på nästa skärm."
+    "pickButton": "Välj din uppgradering"
   },
   "continue": {
     "title": "Fortsätta?",
