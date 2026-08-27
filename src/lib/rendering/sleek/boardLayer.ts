@@ -461,7 +461,7 @@ export class BoardLayer {
     // Eased back from 0.62: at that strength the far corner crushed obstacle
     // bodies down into the substrate and they lost their silhouette entirely.
     // The wash exists to give the surface depth, not to hide what stands on it.
-    grad.addColorStop(0, withAlpha(PALETTE.monitor, 0.0));
+    grad.addColorStop(0, withAlpha(light.color, 0.0));
     grad.addColorStop(0.45, withAlpha(PALETTE.shadow, 0.1));
     grad.addColorStop(1, withAlpha(PALETTE.shadow, 0.42));
     ctx.fillStyle = grad;

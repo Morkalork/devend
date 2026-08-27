@@ -20,6 +20,7 @@ import type { TiltState } from "@/lib/boardTilt";
 import { ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
+import type { LampState } from "@/lib/lampBall";
 
 /** A circuit terminal in world space with its runtime lit state (issue #73). */
 export interface CircuitRuntimeTerminal {
@@ -352,6 +353,13 @@ export interface CanvasGameState {
   zoneLockBonus: number;
   /** Green "money ball" multiplier applied to subsequent locks this map (default 1). */
   moneyMultiplier: number;
+  /**
+   * Which ball currently holds the board's light, and the handover in flight.
+   * Absent until the first frame sets it; a map with no eligible ball (every
+   * one still dormant) leaves `ballId` null and the renderer falls back to the
+   * monitor. See src/lib/lampBall.ts.
+   */
+  lamp?: LampState;
   /** ballSpeedMultiplier captured at map init — scales ability speed constants. */
   ballSpeedScale: number;
 

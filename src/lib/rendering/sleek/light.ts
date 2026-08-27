@@ -42,6 +42,7 @@
 
 import type { BoardRect } from "@/lib/boardConstants";
 import { monitorLevel } from "./monitorSignal";
+import { PALETTE } from "./palette";
 
 /**
  * Where the monitor sits, in board-widths past the bottom-right corner. Far
@@ -88,6 +89,14 @@ export interface LightScope {
   level: number;
   /** Board diagonal, the reference length for all falloff maths. */
   reach: number;
+  /**
+   * The light's own colour, for rims and washes.
+   *
+   * The monitor's is a cold screen blue. A lamp's is the ball's, which is the
+   * point of the mechanic: you can tell which ball has the light without
+   * looking at the ball.
+   */
+  color: number;
 }
 
 /**
@@ -103,6 +112,36 @@ export function lightScope(boardRect: BoardRect, now: number): LightScope {
     y: boardRect.top + h * (1 + LIGHT_OFFSET_Y),
     level: monitorLevel(now),
     reach: Math.hypot(w, h),
+    color: PALETTE.monitor,
+  };
+}
+
+/**
+ * The same model with the light standing ON the board, at a ball.
+ *
+ * Everything downstream is unchanged, which is the whole reason `lightScope`
+ * was a function of a POSITION rather than a set of baked constants: shadows,
+ * rims and the ambient wash all read `light.x/y`, so moving the source moves
+ * the entire scene's lighting with no layer knowing anything happened.
+ *
+ * No monitor flicker. A ball is not a screen, and the two sources pulsing
+ * together would read as one badly-implemented source (the rule light.ts opened
+ * with). Its brightness comes from the handover dip instead.
+ *
+ * `reach` stays the board diagonal even though the light is now inside the
+ * board. The falloff denominator is `reach * 1.6`, so the far corner of a board
+ * lit from its own edge still keeps about 81% of the light: dimmer toward the
+ * corners, never dark. Shrinking reach to match the shorter distances would
+ * make a lamp in one corner leave the opposite corner black, which is the
+ * complaint this renderer has spent three commits fixing.
+ */
+export function lampScope(
+  boardRect: BoardRect, x: number, y: number, level: number, color: number,
+): LightScope {
+  return {
+    x, y, level,
+    reach: Math.hypot(boardRect.width, boardRect.height),
+    color,
   };
 }
 

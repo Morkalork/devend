@@ -272,6 +272,7 @@ export const DEFAULT_SCORING_CONFIG: ScoringConfig = {
       superiorThresholdFraction: 0.4,
       superiorMultiplier: 2.0,
     },
+    lampLockMultiplier: 1.5,
     highscoreBonusMultiplier: 1.25,
     shipEarly: {
       maxPercent: 30,
@@ -308,6 +309,7 @@ export function loadScoringConfig(): Promise<ScoringConfig> {
             lockValue: parsed.scoring.lockValue ?? DEFAULT_SCORING_CONFIG.scoring.lockValue,
             axes: { ...DEFAULT_SCORING_CONFIG.scoring.axes, ...parsed.scoring.axes },
             lockQuality: { ...DEFAULT_SCORING_CONFIG.scoring.lockQuality, ...parsed.scoring.lockQuality },
+            lampLockMultiplier: parsed.scoring.lampLockMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.lampLockMultiplier,
             highscoreBonusMultiplier: parsed.scoring.highscoreBonusMultiplier ?? DEFAULT_SCORING_CONFIG.scoring.highscoreBonusMultiplier,
             shipEarly: { ...DEFAULT_SCORING_CONFIG.scoring.shipEarly, ...parsed.scoring.shipEarly },
             performanceMultiplier: { ...DEFAULT_SCORING_CONFIG.scoring.performanceMultiplier, ...parsed.scoring.performanceMultiplier },
@@ -351,6 +353,17 @@ export function getLockQuality(): { superiorThresholdFraction: number; superiorM
   const multiplier = Number.isFinite(q?.superiorMultiplier) && q.superiorMultiplier > 0
     ? q.superiorMultiplier : 1;
   return { superiorThresholdFraction: fraction, superiorMultiplier: multiplier };
+}
+
+/**
+ * What sealing the lit ball pays, on top of everything else (scoring-config).
+ *
+ * Guarded to 1 on a bad config rather than NaN: the lamp is a bonus, so the
+ * failure mode has to be "no bonus", never "no pay".
+ */
+export function getLampLockMultiplier(): number {
+  const m = loadedConfig.scoring?.lampLockMultiplier;
+  return Number.isFinite(m) && m > 0 ? m : DEFAULT_SCORING_CONFIG.scoring.lampLockMultiplier;
 }
 
 /** The beat-the-highscore score multiplier from the loaded config (#45). */

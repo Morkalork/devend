@@ -56,8 +56,11 @@ import { PropLayer } from "./propLayer";
 import { FxLayer } from "./fxLayer";
 import { ChromeLayer } from "./chromeLayer";
 import { SweepTransition, ShatterTransition } from "./transitions";
-import { lightScope } from "./light";
-import { PALETTE } from "./palette";
+import { lightScope, lampScope, type LightScope } from "./light";
+import { handoverProgress, lampSample } from "@/lib/lampBall";
+import type { Ball } from "@/types/game";
+import type { BoardRect } from "@/lib/boardConstants";
+import { PALETTE, mix } from "./palette";
 
 export class SleekRenderer {
   private app = new Application();
@@ -245,7 +248,14 @@ export class SleekRenderer {
 
     // ONE light for the whole frame, sampled once so the flicker can't drift
     // between layers.
-    const light = lightScope(boardRect, now);
+    //
+    // Normally that light is the monitor. When a ball holds the lamp it is the
+    // BALL instead, at its own position and in its own colour, and every layer
+    // picks that up for free because they all read the scope rather than baking
+    // the monitor's position in. The monitor is the fallback for a board with
+    // no eligible ball, which is every circuit map's opening seconds.
+    const light = this.lampLight(game, boardRect, now)
+      ?? lightScope(boardRect, now);
 
     // Board tilt (issue #77): a gravity map turns so its pull always reads as
     // screen-down. Applied HERE, in the one transform every layer already goes
@@ -289,6 +299,55 @@ export class SleekRenderer {
     this.probeForBeams(now);
 
     this.app.render();
+  }
+
+  /**
+   * The light, if a ball is holding it.
+   *
+   * The handover is the delicate part and it is two curves working together
+   * (see lampBall.ts): the light TRAVELS between the two balls on a smootherstep
+   * so it is slowest at both ends and fastest through the middle, while its
+   * brightness DIPS on a half-sine to its lowest at exactly that midpoint. The
+   * effect is that the light does its moving, and therefore its shadow-sweeping,
+   * while there is least shadow to see. Without the dip, every shadow on the
+   * board swings through a huge arc in three quarters of a second, which is the
+   * version that makes people ill.
+   *
+   * Returns null when no ball is eligible, and the caller falls back.
+   */
+  private lampLight(
+    game: CanvasGameState, boardRect: BoardRect, now: number,
+  ): LightScope | null {
+    const lamp = game.lamp;
+    if (!lamp?.ballId) return null;
+    const to = game.balls.find(b => b.id === lamp.ballId);
+    if (!to) return null;
+
+    const t = handoverProgress(lamp, now);
+    const from = lamp.fromBallId
+      ? game.balls.find(b => b.id === lamp.fromBallId)
+      : undefined;
+
+    const pos = (b: Ball) => b.renderPosition ?? b.position;
+    const world = lampSample(from ? pos(from) : pos(to), pos(to), t);
+
+    // Screen space, through the same tilt transform every layer uses. Rebuilt
+    // here rather than threaded down because the light is computed before the
+    // transform exists; the maths is the two lines below and duplicating them
+    // is cheaper than reordering the frame.
+    const scale = boardRect.scale;
+    const tilt = boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
+    const p = tilt === 0 ? world : tiltWorldPoint(world.x, world.y, tilt);
+    const sx = boardRect.left + p.x * scale;
+    const sy = boardRect.top + p.y * scale;
+
+    // The colour crosses over with the travel, so the board is already turning
+    // the new ball's hue by the time it brightens again.
+    const colour = from
+      ? mix(parseBallColor(from.color), parseBallColor(to.color), world.blend)
+      : parseBallColor(to.color);
+
+    return lampScope(boardRect, sx, sy, world.level, colour);
   }
 
   /**
@@ -439,4 +498,10 @@ export class SleekRenderer {
     }
     this.ready = false;
   }
+}
+
+/** A ball's `#rrggbb` as a packed number, falling back to white. */
+function parseBallColor(c: string): number {
+  const n = Number.parseInt(c.replace("#", ""), 16);
+  return Number.isFinite(n) ? n : 0xffffff;
 }

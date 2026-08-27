@@ -80,6 +80,19 @@ scoring:
     superiorThresholdFraction: 0.4
     superiorMultiplier: 2.0
 
+  # The Lamp (one ball lights the board; see src/lib/lampBall.ts)
+  # Sealing the ball currently holding the light pays its lock points times
+  # this, stacking with superiorMultiplier: a superior lock on the lit ball is
+  # 2.0 x 1.5 = 3x, which is the combo worth playing for.
+  #
+  # It cannot break the economy no matter what it is set to, and that is
+  # structural rather than a matter of picking a safe number. The multiplier
+  # sits outside `rawCapacity`, so it never touches DELIVERY (the "did you ship
+  # the roster" axis); all of it lands in CRAFT, which is capped at
+  # totalCapacity x (superiorMultiplier - 1). A bigger number here reaches that
+  # ceiling with fewer perfect locks; it cannot go past it.
+  lampLockMultiplier: 1.5
+
   # Beat-the-highscore bonus (#45)
   # When you finish a map with a higher score than its previous highscore, the
   # map's score is multiplied by this. Applied after the per-map cap, so beating

@@ -17,6 +17,7 @@ import { creepFactor } from "@/lib/scopeCreep";
 import { mutatorSpeedFactor } from "@/lib/mapMutators";
 import { PHYSICS_STEP, DISSOLVE_DURATION, AUTO_FREEZE_INTERVAL_MS, FREEZE_COOLDOWN_MULTIPLIER, LEVEL_CLEAR_SHIMMER_MS, LOCK_PULSE_DURATION, LOCK_TOTAL_DURATION } from "@/lib/gameConstants";
 import { updateBall } from "@/lib/physics/updateBall";
+import { advanceLamp } from "@/lib/lampBall";
 import { tickChains } from "@/lib/physics/chain";
 import { tickPhasing, collectPhasedOut } from "@/lib/physics/phasing";
 import { tickCharges } from "@/lib/physics/charge";
@@ -443,6 +444,12 @@ export function createGameLoop(
       callbacks.updateWall(PHYSICS_STEP);
       game.accumulator -= PHYSICS_STEP;
     }
+
+    // The Lamp: which ball is lighting the board. Once per frame rather than
+    // per physics step, because it is a rendering fact, and because the only
+    // thing that can change it is a ball leaving play, which cannot happen
+    // twice inside one frame.
+    game.lamp = advanceLamp(game.lamp, game.balls, game.gridRegions, performance.now());
 
     // Pickups: expire stale tokens and roll spawns. Once per frame (not per
     // physics step) — all its timing keys off game.activePlaySeconds, so the

@@ -88,6 +88,13 @@ export interface ScoringConfig {
       superiorThresholdFraction: number;
       superiorMultiplier: number;
     };
+    /**
+     * The Lamp: what sealing the ball currently lighting the board pays, on
+     * top of everything else. Stacks with superiorMultiplier. See
+     * src/lib/lampBall.ts and the note in scoring-config.yml for why this is
+     * safe to tune: all of it lands in the capped Craft axis.
+     */
+    lampLockMultiplier: number;
     // Multiplier applied to a map's score when the player beats that map's
     // existing highscore (#45). Applied AFTER the per-map cap, so it genuinely
     // rewards a record instead of being clamped away.

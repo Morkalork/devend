@@ -34,7 +34,7 @@ import { LockDustParticle } from "@/types/game";
 import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
-import { getLockValue, getLockQuality } from "@/lib/scoring";
+import { getLockValue, getLockQuality, getLampLockMultiplier } from "@/lib/scoring";
 import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
@@ -626,6 +626,7 @@ export function checkAndUpdateBallWonStates(
     // Whole-map gravity (the shifting-gravity mutator). A property of the map
     // rather than of any ball, so it is read once per pass.
     const mapGravity = game.mapMutator?.behavior === 'gravity' && !!game.gravityConfig;
+    const lampMultiplier = getLampLockMultiplier();
     let standardPoints = 0;
     let superiorPoints = 0;
     // Raw lock capacity: lockMultiplier alone, with every quality multiplier
@@ -668,6 +669,17 @@ export function checkAndUpdateBallWonStates(
             b.position.x, b.position.y, game.gravityWells, game.spaceRemainingPercent,
           ) !== null);
       const gravityMult = underGravity ? 1 + activeModifiers.gravityLockBonus : 1;
+      // The Lamp: this is the ball currently lighting the board, and sealing it
+      // pays extra. Read from the lamp state BEFORE this pass reassigns it
+      // (advanceLamp runs on the next frame, once these balls are no longer
+      // active), so a ball is still the lamp at the moment it is locked.
+      //
+      // Sat here with frozen and gravity rather than beside zoneMult on
+      // purpose: everything in `basePoints` is a QUALITY multiplier, which is
+      // to say it never touches `rawCapacity` below and therefore never touches
+      // Delivery. The whole bonus lands in Craft, where the ceiling already
+      // bounds it. That is what makes the number safe to tune.
+      const lampMult = game.lamp?.ballId === b.id ? lampMultiplier : 1;
       // Colored Area: a ball locked inside a map-authored area pays its kind
       // multiplier on top of everything else. Gate and bonus areas both pay.
       // Uses the SAME verdict that lit the zone up, so the zone can never glow
@@ -680,7 +692,7 @@ export function checkAndUpdateBallWonStates(
         const byType = (game.lockedByType ??= {});
         byType[b.typeId] = (byType[b.typeId] ?? 0) + 1;
       }
-      const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult * gravityMult;
+      const basePoints = (b.lockMultiplier ?? 1) * mult * frozenMult * gravityMult * lampMult;
       const ballPoints = basePoints * zoneMult;
       if (superiorIds.has(b.id)) { superiorPoints += ballPoints; superiorBase += basePoints; }
       else { standardPoints += ballPoints; standardBase += basePoints; }
