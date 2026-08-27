@@ -1,28 +1,48 @@
 /**
- * Balls, lit as spheres by the shared scope.
+ * Balls, as lamps.
  *
- * A ball is the one object on the board that is unambiguously round, so it is
- * where the light either convinces or doesn't. Four parts, cheapest first:
+ * They used to be spheres lit BY the monitor: a highlight baked toward one
+ * edge, the sprite rotated so that highlight always faced the light, and a dark
+ * terminator on the limb curving away from it. That is the correct way to draw
+ * an object in a scene with one light, and it is the wrong way to draw the
+ * thing the player is tracking on a board everyone called too dark. It made the
+ * ball a surface that RECEIVED light, so a third of every ball was the darkest
+ * pixel on it.
  *
- *   ELLIPSE SHADOW - cast up-left and flattened perpendicular to the light
- *     bearing, because a sphere's shadow on a flat surface is an ellipse, not a
- *     circle. This one detail does most of the work of seating the ball.
- *   CONTACT        - a tight dark crescent hugging the shaded limb.
- *   BODY           - a baked sphere gradient, rotated per ball so the highlight
- *     always faces the monitor no matter where the ball sits.
- *   SPECULAR       - a small hot spot on the lit limb, flicker-modulated.
+ * A ball now has a bulb in it. That single decision is what the rest of this
+ * file follows from:
  *
- * The body gradient is baked ONCE per (colour, radius) into a texture and then
- * reused: the highlight direction is applied by rotating the sprite, not by
- * re-baking, so a board full of balls costs one texture per distinct ball type.
+ *   NO TERMINATOR   the gradient is brightest in the middle and never goes
+ *     dark, because a lamp has no shaded side. This is what makes the ball
+ *     easier to see, which was the point.
+ *   NO ROTATION     the bulb is centred, so the sprite has no direction to aim.
+ *     The whole "rotate the sprite, counter-rotate inside the squash" dance
+ *     existed only to keep a baked highlight pointed at the monitor, and it is
+ *     gone with the highlight.
+ *   NO SPECULAR     a hot spot on the limb facing the monitor says "this object
+ *     is lit from over there", which is the opposite of what a lamp says.
+ *   A CORONA        an additive bloom hugging the rim, drawn OVER the body and
+ *     over whatever the ball is passing. Without it a bright disc reads as a
+ *     bright disc; the bleed past its own edge is what reads as emitting.
+ *
+ * Its shadow stays, softened. A glowing ball is still opaque and still blocks
+ * the monitor, and without a shadow it floats off the board - but a lamp fills
+ * in its own shadow, and a hard dark ellipse beside a bulb looks like a mistake.
+ *
+ * The light this ball throws ONTO the board is a separate pass (ballLightPass),
+ * because that has to be occluded by walls and this does not.
+ *
+ * Parts, cheapest first: cast shadow and contact, the baked bulb body, the
+ * corona, then the informational overlays (frost, rings, splash) that are not
+ * lighting at all.
  */
-
 import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import { getSquishEffect, getWallHitEffect, getBallHitEffect } from "@/lib/ballEffects";
 import { bossSplashFrame } from "@/lib/rendering/bossSplash";
 import { BALL_FALLBACK, PALETTE, mix, withAlpha } from "./palette";
+import { CORONA_RADII, bulbStops, coronaStops } from "./bulb";
 import { contactFor, shadowFor, type LightScope } from "./light";
 import { compassRing } from "./compassRing";
 import { ballTrail } from "./ballTrail";
@@ -44,9 +64,17 @@ function parseColor(c: string): number {
 }
 
 /**
- * Bake a lit sphere: the highlight sits at a FIXED offset (up-right in texture
- * space) and callers rotate the sprite so it points at the light. Baking the
- * direction in would mean one texture per position, which is unaffordable.
+ * Bake a bulb: white-hot in the middle, the ball's colour through the body, and
+ * still lit at the rim.
+ *
+ * Centred, so callers never rotate it. The old bake put the highlight at a
+ * fixed offset and rotated the sprite to aim it, which cost nothing but bought
+ * an effect this no longer wants.
+ *
+ * The last stop is the one that matters: it used to be PALETTE.shadow at 0.88,
+ * the terminator of a sphere turning away from the light. A lamp has no such
+ * edge, so the rim stays the ball's own colour and the corona takes over from
+ * there. Nothing on a ball is darker than the board it sits on any more.
  */
 function sphereTexture(color: number, radius: number): Texture {
   const key = `${color}:${radius}`;
@@ -60,15 +88,8 @@ function sphereTexture(color: number, radius: number): Texture {
   const ctx = canvas.getContext("2d");
   if (!ctx) return Texture.WHITE;
 
-  // Highlight offset toward the texture's +x axis; the sprite's rotation aims it.
-  const hx = radius + radius * 0.38;
-  const hy = radius;
-  const grad = ctx.createRadialGradient(hx, hy, radius * 0.05, radius, radius, radius);
-  grad.addColorStop(0, withAlpha(0xffffff, 0.92));
-  grad.addColorStop(0.18, withAlpha(color, 1));
-  grad.addColorStop(0.72, withAlpha(color, 1));
-  // The terminator: the limb curving away from the light, not a black ring.
-  grad.addColorStop(1, withAlpha(PALETTE.shadow, 0.88));
+  const grad = ctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
+  for (const stop of bulbStops(color)) grad.addColorStop(stop.offset, withAlpha(stop.color, stop.alpha));
 
   ctx.beginPath();
   ctx.arc(radius, radius, radius, 0, Math.PI * 2);
@@ -81,10 +102,59 @@ function sphereTexture(color: number, radius: number): Texture {
   return tex;
 }
 
+/**
+ * How much of its monitor shadow a self-lit ball keeps.
+ *
+ * Set by looking at it. Half was still too much: a bulb's own pool washes the
+ * floor right where its monitor shadow falls, so at anything near full strength
+ * the shadow reads as a dark smudge stuck to the ball rather than as shading.
+ * Not zero, though - without a shadow the ball floats off the board, and it is
+ * still an opaque object between the monitor and the floor.
+ */
+export const SELF_LIT_SHADOW = 0.35;
+
+/** Corona bake radius, in texture pixels. Scaled per ball by the sprite. */
+const CORONA_BAKE = 96;
+let coronaTexture: Texture | null = null;
+
+/**
+ * The bloom around a bulb: nothing at the centre, peaking exactly at the ball's
+ * edge, gone by the outside.
+ *
+ * Zero in the middle ON PURPOSE. This is drawn additively OVER the body, so any
+ * brightness here would blow the ball out to white and throw away the colour
+ * that tells the player which ball it is. The peak sits at 1/CORONA_RADII of
+ * the texture, which is exactly where the ball's edge lands.
+ *
+ * One texture for every ball, tinted per colour: a white radial tinted is
+ * exactly the coloured version of itself, which is not true of the body bake.
+ */
+function coronaTex(): Texture {
+  if (coronaTexture) return coronaTexture;
+  const size = CORONA_BAKE * 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return (coronaTexture = Texture.WHITE);
+
+  const g = ctx.createRadialGradient(
+    CORONA_BAKE, CORONA_BAKE, 0, CORONA_BAKE, CORONA_BAKE, CORONA_BAKE,
+  );
+  for (const stop of coronaStops()) g.addColorStop(stop.offset, `rgba(255,255,255,${stop.alpha})`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+
+  coronaTexture = Texture.from(canvas);
+  return coronaTexture;
+}
+
 /** Drop every baked sphere (level change / resize). */
 export function clearSphereCache(): void {
   for (const t of sphereCache.values()) t.destroy(true);
   sphereCache.clear();
+  coronaTexture?.destroy(true);
+  coronaTexture = null;
 }
 
 /**
@@ -100,6 +170,8 @@ export function clearSphereCache(): void {
 interface BallView {
   holder: Container;
   sprite: Sprite;
+  /** Additive bloom at the rim, in its own layer above every body. */
+  corona: Sprite;
 }
 
 export class SleekBallLayer {
@@ -111,7 +183,16 @@ export class SleekBallLayer {
    */
   private trails = new Graphics();
   private bodies = new Container();
-  private speculars = new Graphics();
+  /**
+   * Every corona, in ONE additive layer above every body.
+   *
+   * Above, so a ball's bloom spills over the fence or obstacle it is passing,
+   * which is what a light does and what a glow drawn underneath cannot. One
+   * shared layer rather than a child of each ball, so two balls close together
+   * add their blooms together instead of the later one painting over the
+   * earlier one's.
+   */
+  private coronas = new Container();
   /** Frost + fastest-ball ring: informational marks drawn over the bodies. */
   private overlays = new Graphics();
   private views: BallView[] = [];
@@ -122,7 +203,7 @@ export class SleekBallLayer {
 
   constructor() {
     // No shadow child: cast shadows go to the renderer's shared floor plane.
-    this.container.addChild(this.trails, this.bodies, this.speculars, this.overlays);
+    this.container.addChild(this.trails, this.bodies, this.coronas, this.overlays);
   }
 
   sync(
@@ -134,7 +215,6 @@ export class SleekBallLayer {
     now: number,
   ): void {
     this.shadows = shadows;
-    this.speculars.clear();
     this.overlays.clear();
     this.fastestId = game.fastestBallId;
     this.now = now;
@@ -154,9 +234,18 @@ export class SleekBallLayer {
       sprite.anchor.set(0.5);
       holder.addChild(sprite);
       this.bodies.addChild(holder);
-      this.views.push({ holder, sprite });
+
+      const corona = new Sprite();
+      corona.anchor.set(0.5);
+      corona.blendMode = "add";
+      this.coronas.addChild(corona);
+
+      this.views.push({ holder, sprite, corona });
     }
-    for (let i = balls.length; i < this.views.length; i++) this.views[i].holder.visible = false;
+    for (let i = balls.length; i < this.views.length; i++) {
+      this.views[i].holder.visible = false;
+      this.views[i].corona.visible = false;
+    }
 
     this.trails.clear();
     for (let i = 0; i < balls.length; i++) {
@@ -210,7 +299,7 @@ export class SleekBallLayer {
     ball: Ball, view: BallView, light: LightScope, w2s: W2S, scale: number,
     activeSeconds: number,
   ): void {
-    const { holder, sprite } = view;
+    const { holder, sprite, corona } = view;
     const p = ball.renderPosition ?? ball.position;
     const c = w2s(p.x, p.y);
     const r = Math.max(2, ball.radius * scale * (ball.assimScale ?? 1));
@@ -230,17 +319,19 @@ export class SleekBallLayer {
     }
 
     const dormant = ball.state === "dormant";
-    // Bearing toward the monitor: everything below orients off this.
-    const bearing = Math.atan2(light.y - c.y, light.x - c.x);
 
     // ── Cast shadow + contact ───────────────────────────────────────────────
     // Skipped while dormant: a sleeper is not yet part of the scene, and seating
     // it on the board with a shadow makes it read as a live ball to be locked.
     if (!dormant) {
+      // SELF_LIT_SHADOW: a lamp fills in its own shadow. The shadow still has
+      // to exist (a glowing ball is still opaque, and without one it floats off
+      // the board), but at full strength a hard dark ellipse beside a bulb
+      // reads as a mistake rather than as shading.
       const cast = shadowFor(light, c.x, c.y, r);
       this.shadows
         .ellipse(c.x + cast.dx * cast.length, c.y + cast.dy * cast.length, r * 1.02, r * 0.72)
-        .fill({ color: PALETTE.shadow, alpha: cast.alpha });
+        .fill({ color: PALETTE.shadow, alpha: cast.alpha * SELF_LIT_SHADOW });
 
       const contact = contactFor(light, c.x, c.y, r);
       this.shadows
@@ -250,7 +341,7 @@ export class SleekBallLayer {
           r * 0.95,
           r * 0.68,
         )
-        .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.45 });
+        .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.45 * SELF_LIT_SHADOW });
     }
 
     // ── Dormant: asleep, not gone ───────────────────────────────────────────
@@ -294,42 +385,41 @@ export class SleekBallLayer {
 
     // ── Squash & stretch ────────────────────────────────────────────────────
     // The ball flattens along the impact normal and springs back (physics owns
-    // the envelope; this only draws it). Applied to the HOLDER so the sphere
-    // keeps its own rotation for the highlight - and because the child inherits
-    // the squash, the highlight smears with the deformation, which is what makes
-    // it read as a soft ball rather than a scaled sprite.
+    // the envelope; this only draws it). Applied to the HOLDER, and the sprite
+    // inherits the non-uniform scale, so the bulb smears with the deformation
+    // and reads as a soft ball rather than a scaled disc.
+    //
+    // The sprite itself is never rotated now. It used to be, in both branches,
+    // purely to keep a baked highlight aimed at the monitor while the holder
+    // turned to the impact axis. The bulb is centred and radially symmetric, so
+    // there is no direction left to preserve and the counter-rotation went with
+    // the highlight it existed for.
     const squish = getSquishEffect(ball.effects, ball.isBoss ? 0.5 : 1);
     if (squish.active) {
-      const impact = Math.atan2(squish.ny, squish.nx);
-      holder.rotation = impact;
+      holder.rotation = Math.atan2(squish.ny, squish.nx);
       holder.scale.set(squish.scaleAlong, squish.scalePerp);
-      // Counter-rotate so the highlight still faces the monitor in world space.
-      sprite.rotation = bearing - impact;
     } else {
       holder.rotation = 0;
       holder.scale.set(1, 1);
-      sprite.rotation = bearing;
     }
 
-    // ── Specular ────────────────────────────────────────────────────────────
-    if (ball.state === "won" || dormant) return;
-    // Drawn in screen space, so it has to be deformed by hand - otherwise the
-    // hot spot floats off the surface of a squashed ball. Rotate the offset into
-    // the impact frame, scale it, rotate back.
-    let ox = Math.cos(bearing) * r * 0.42;
-    let oy = Math.sin(bearing) * r * 0.42;
-    if (squish.active) {
-      const ca = squish.nx, sa = squish.ny;
-      const along = ox * ca + oy * sa;
-      const perp = -ox * sa + oy * ca;
-      const a2 = along * squish.scaleAlong;
-      const p2 = perp * squish.scalePerp;
-      ox = a2 * ca - p2 * sa;
-      oy = a2 * sa + p2 * ca;
+    // ── Corona ──────────────────────────────────────────────────────────────
+    // The bleed past the ball's own edge. A bright disc reads as a bright disc;
+    // this is the part that reads as emitting. It follows the body's dimming,
+    // so a sleeper is an unlit bulb and a locked ball goes out as it drains.
+    corona.visible = !dormant && sprite.alpha > 0.01;
+    if (corona.visible) {
+      corona.texture = coronaTex();
+      corona.position.set(c.x, c.y);
+      corona.scale.set((r * CORONA_RADII) / CORONA_BAKE);
+      // Whitened like the light pool, for the same reason: a pure hue bloom
+      // over a pure hue ball is invisible, and it is the WHITENING that reads
+      // as heat.
+      corona.tint = mix(bodyColor, 0xffffff, 0.4);
+      corona.alpha = sprite.alpha;
     }
-    this.speculars
-      .circle(c.x + ox, c.y + oy, Math.max(0.8, r * 0.17))
-      .fill({ color: PALETTE.monitor, alpha: 0.5 * light.level });
+
+    if (ball.state === "won" || dormant) return;
 
     // ── Frost: this ball is held by a tap-freeze ────────────────────────────
     // Informational, not decorative - a frozen ball is one the player has spent

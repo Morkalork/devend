@@ -1,5 +1,21 @@
 ﻿/**
- * The board's one and only light source.
+ * The board's KEY light: the monitor that lights everything standing still.
+ *
+ * It is no longer the only source. The balls carry their own (ballLight.ts,
+ * ballLightPass.ts, and the bulb bake in ballLayer.ts), and the split is along
+ * a clean line rather than being two systems that overlap:
+ *
+ *   THE MONITOR lights the board and its furniture - surfaces, walls, obstacles,
+ *     props. Everything here obeys it, and everything it lights is stationary.
+ *   THE BALLS are lamps. They are not shaded by the monitor at all: they have no
+ *     terminator, no monitor specular and no baked highlight aimed at it. They
+ *     light the floor around them and they are the only things that move.
+ *
+ * The one place the two meet is the ball's cast shadow, which is still the
+ * monitor's (a glowing ball is opaque) but at half strength, because a lamp
+ * fills in its own shadow. See SELF_LIT_SHADOW in ballLayer.ts.
+ *
+ * Everything below is the monitor's model.
  *
  * A monitor sits just past the BOTTOM-RIGHT corner of the screen, off-frame.
  * It is never drawn - the player only ever sees its consequences: everything on
@@ -8,10 +24,11 @@
  *
  * Two rules make it coherent, and every layer must obey both:
  *
- * 1. ONE SCOPE. Every shadow in the scene comes from `shadowFor()`. No layer
- *    invents its own offset, and nothing casts symmetrically (the old renderer's
- *    wall shadows fanned out both sides of every fence, which is why the board
- *    read flat).
+ * 1. ONE SCOPE. Every MONITOR shadow in the scene comes from `shadowFor()`. No
+ *    layer invents its own offset, and nothing casts symmetrically (the old
+ *    renderer's wall shadows fanned out both sides of every fence, which is why
+ *    the board read flat). Shadows thrown by a ball's own light are a separate
+ *    and equally single-sourced thing, in ballLight.ts.
  * 2. SCREEN SPACE. The light is pinned to the viewport, not the world. Maps are
  *    shown in one of four random orientations (mapRotation.ts), and a light that
  *    rotated with the map would tell the player which orientation they drew -

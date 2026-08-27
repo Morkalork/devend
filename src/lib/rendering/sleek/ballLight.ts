@@ -47,8 +47,17 @@ import type { Pt } from "./pixelGrid";
  */
 export const REACH_RADII = 5.4;
 
-/** Peak pool alpha, before the per-ball dimming below. */
-export const BASE_INTENSITY = 0.34;
+/**
+ * Peak pool alpha, before the per-ball dimming below.
+ *
+ * Raised from 0.34: the first pass was tuned as an accent, and the ask was for
+ * the balls to LIGHT the board. The ceiling is not taste either - the pool is
+ * additive, so it adds the same amount to cut and live space and compresses the
+ * contrast between them, which is the read the whole game runs on. At 0.55 that
+ * ratio is still 1.24 against a floor of 1.15 (see ballLighting.test.ts); much
+ * past here and the board starts going flat where the balls are.
+ */
+export const BASE_INTENSITY = 0.55;
 
 /**
  * How far the pool colour is pulled toward white.
