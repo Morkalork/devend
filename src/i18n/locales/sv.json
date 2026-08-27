@@ -937,7 +937,7 @@
       },
       "runtime_optimisation_principal_a": {
         "name": "Runtime-optimering",
-        "description": "Minska alla bollars hastighet med 15%."
+        "description": "Alla bollar rör sig 15% långsammare. 2% till per annan Säkerhet-uppgradering (max 4)."
       },
       "runtime_optimisation_principal_b": {
         "name": "Runtime-optimering",
@@ -985,7 +985,7 @@
       },
       "ultrathreading_principal": {
         "name": "Ultratrådning",
-        "description": "Tillåt att ytterligare ett stängsel byggs samtidigt."
+        "description": "Dra ett stängsel till samtidigt, och ännu ett vid fem andra Tempo-uppgraderingar."
       },
       "garbage_collector_senior": {
         "name": "Garbage Collector",
@@ -1017,7 +1017,7 @@
       },
       "performance_bonus_principal": {
         "name": "Prestationsbonus",
-        "description": "Få 15% mer övertid per karta."
+        "description": "15% mer övertid per karta. +4% per annan Bank-uppgradering (max 5)."
       },
       "venture_capital_senior": {
         "name": "Landningsbana",
@@ -1033,7 +1033,7 @@
       },
       "budget_cycle_junior": {
         "name": "Budgetcykel",
-        "description": "Varje utgiftsblock under ett butiksbesök köper ett direktstängsel på nästa karta. Blocken börjar på 60h och växer med marknadstaxorna."
+        "description": "Varje utgiftsblock per besök köper ett direktstängsel på nästa karta. Blocken börjar på 60h och stiger."
       },
       "budget_cycle_senior": {
         "name": "Budgetcykel",
@@ -1041,7 +1041,7 @@
       },
       "micro_manager_principal": {
         "name": "MicroManager",
-        "description": "Varje låst boll minskar alla bollhastigheter med 1%, ner till ett golv på 50%. En kraftfull och dyr nivå."
+        "description": "Varje låst boll sänker alla bollars hastighet med 1%, ner till ett golv på 50%."
       },
       "procurement_junior": {
         "name": "Inköp",
@@ -1053,7 +1053,7 @@
       },
       "procurement_principal": {
         "name": "Inköp",
-        "description": "Dina första tre köp per butiksbesök lägger vardera till ett nytt erbjudande på hyllan."
+        "description": "Dina 3 första köp per besök fyller på hyllan. +1 per 4 andra Bank-uppgraderingar (max 2)."
       },
       "system_architect": {
         "name": "Systemarkitekt",
@@ -1065,7 +1065,7 @@
       },
       "technical_debt_senior": {
         "name": "Teknisk skuld",
-        "description": "Tjäna 20% mer övertid per karta - men bollarna rör sig 8% snabbare. Kortsiktig vinst, långsiktig smärta."
+        "description": "20% mer övertid per karta, men bollarna rör sig 8% snabbare. Kortsiktig vinst, långsiktig smärta."
       },
       "technical_debt_principal": {
         "name": "Teknisk skuld",
@@ -1073,7 +1073,7 @@
       },
       "technical_debt_architect": {
         "name": "Teknisk skuld",
-        "description": "Tjäna 50% mer övertid per karta - men bollarna rör sig 25% snabbare."
+        "description": "+20h till kartans övertidstak denna runda, så en staplad multiplikator betalar. Bollarna rör sig 25% snabbare."
       },
       "cron_job_senior": {
         "name": "Schemalagt jobb",
@@ -1085,7 +1085,7 @@
       },
       "cron_job_architect": {
         "name": "Schemalagt jobb",
-        "description": "Schemalagda frysningar håller nu en boll i 5 sekunder."
+        "description": "Schemalagda frysningar håller en boll i 5s. +0,4s per annan Frysning-uppgradering (max 4)."
       },
       "benefits_package_junior": {
         "name": "Förmånspaket",
@@ -1097,7 +1097,7 @@
       },
       "benefits_package_principal": {
         "name": "Förmånspaket",
-        "description": "Power-up-symboler dyker upp märkbart oftare."
+        "description": "Power-up-symboler dyker upp mycket oftare, och ännu oftare per annan Risk-uppgradering (max 5)."
       },
       "total_compensation_junior": {
         "name": "Totalersättning",
@@ -1109,7 +1109,7 @@
       },
       "total_compensation_principal": {
         "name": "Totalersättning",
-        "description": "Toppförmåner. Bolldelaren delar nu en boll i tre."
+        "description": "Toppförmåner: bolldelaren delar bollen i tre, och symbolutdelningen stiger ett steg vid 5 andra Risk-uppgraderingar."
       },
       "defensive_programming_junior": {
         "name": "Defensiv programmering",

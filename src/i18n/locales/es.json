@@ -937,7 +937,7 @@
       },
       "runtime_optimisation_principal_a": {
         "name": "Optimización en Tiempo de Ejecución",
-        "description": "Reduce la velocidad de todas las bolas un 15%."
+        "description": "Todas las bolas van un 15% más lentas. Un 2% más por cada otra mejora de Seguridad (máx. 4)."
       },
       "runtime_optimisation_principal_b": {
         "name": "Optimización en Tiempo de Ejecución",
@@ -985,7 +985,7 @@
       },
       "ultrathreading_principal": {
         "name": "Ultrahilo",
-        "description": "Permite que una valla adicional esté en progreso simultáneamente."
+        "description": "Dibuja una valla más a la vez, y otra al tener cinco mejoras de Ritmo más."
       },
       "garbage_collector_senior": {
         "name": "Recolector de Basura",
@@ -1017,7 +1017,7 @@
       },
       "performance_bonus_principal": {
         "name": "Bonificación por Rendimiento",
-        "description": "Gana un 15% más de horas extra por mapa."
+        "description": "Un 15% más de horas extra por mapa. +4% por cada otra mejora de Banca (máx. 5)."
       },
       "venture_capital_senior": {
         "name": "Pista de Despegue",
@@ -1033,7 +1033,7 @@
       },
       "budget_cycle_junior": {
         "name": "Ciclo Presupuestario",
-        "description": "Cada bloque de gasto en una visita a la tienda compra una valla instantánea en el siguiente mapa. Los bloques empiezan en 60h y crecen con las tarifas del mercado."
+        "description": "Cada bloque de gasto por visita compra una valla instantánea en el siguiente mapa. Empiezan en 60h y suben."
       },
       "budget_cycle_senior": {
         "name": "Ciclo Presupuestario",
@@ -1041,7 +1041,7 @@
       },
       "micro_manager_principal": {
         "name": "MicroManager",
-        "description": "Cada bola bloqueada reduce la velocidad de todas las bolas un 1%, hasta un suelo del 50%. Un nivel potente y costoso."
+        "description": "Cada bola bloqueada reduce la velocidad de todas un 1%, hasta un suelo del 50%."
       },
       "procurement_junior": {
         "name": "Aprovisionamiento",
@@ -1053,7 +1053,7 @@
       },
       "procurement_principal": {
         "name": "Aprovisionamiento",
-        "description": "Tus tres primeras compras por visita a la tienda añaden cada una una nueva oferta a la estantería."
+        "description": "Tus 3 primeras compras por visita reponen la estantería. +1 por cada 4 mejoras de Banca más (máx. 2)."
       },
       "system_architect": {
         "name": "Arquitecto de Sistemas",
@@ -1065,7 +1065,7 @@
       },
       "technical_debt_senior": {
         "name": "Deuda Técnica",
-        "description": "Gana un 20% más de horas extra por mapa, pero las bolas se mueven un 8% más rápido. Beneficio a corto plazo, dolor a largo plazo."
+        "description": "Un 20% más de horas extra por mapa, pero las bolas van un 8% más rápido. Ganancia a corto, dolor a largo."
       },
       "technical_debt_principal": {
         "name": "Deuda Técnica",
@@ -1073,7 +1073,7 @@
       },
       "technical_debt_architect": {
         "name": "Deuda Técnica",
-        "description": "Gana un 50% más de horas extra por mapa, pero las bolas se mueven un 25% más rápido."
+        "description": "+20h al techo de horas extra por mapa de esta partida, para que el multiplicador pague. Bolas un 25% más rápidas."
       },
       "cron_job_senior": {
         "name": "Tarea Programada",
@@ -1085,7 +1085,7 @@
       },
       "cron_job_architect": {
         "name": "Tarea Programada",
-        "description": "Las congelaciones programadas ahora retienen una bola durante 5 segundos."
+        "description": "Las congelaciones programadas retienen una bola 5s. +0,4s por cada otra mejora de Congelación (máx. 4)."
       },
       "benefits_package_junior": {
         "name": "Paquete de Beneficios",
@@ -1097,7 +1097,7 @@
       },
       "benefits_package_principal": {
         "name": "Paquete de Beneficios",
-        "description": "Las fichas potenciadoras aparecen notablemente más a menudo."
+        "description": "Las fichas aparecen mucho más a menudo, y más aún por cada otra mejora de Riesgo (máx. 5)."
       },
       "total_compensation_junior": {
         "name": "Compensación Total",
@@ -1109,7 +1109,7 @@
       },
       "total_compensation_principal": {
         "name": "Compensación Total",
-        "description": "Beneficios de lujo. El divisor ahora parte una bola en tres."
+        "description": "Beneficios de lujo: el divisor parte la bola en tres; los pagos suben un nivel con 5 mejoras de Riesgo más."
       },
       "scrum_master_1": {
         "name": "SCRUM Master",

@@ -90,15 +90,18 @@ describe("the window the cards promise is the window the code gives", () => {
     });
   }
 
-  it("states each total on the card in seconds", () => {
+  it("states each total on the card", () => {
+    // Written "0.2s" rather than "0.2 seconds": the catalogue was split between
+    // the two forms and the copy pass settled on the compact one, which is also
+    // what the shrinking of these cards was for.
     const stated = (id: string) => byId.get(id)!.description!;
-    expect(stated(JUNIOR)).toContain("0.2 seconds");
-    expect(stated(SENIOR)).toContain("0.4 seconds");
-    expect(stated(PRINCIPAL_A)).toContain("0.65 seconds");
+    expect(stated(JUNIOR)).toContain("0.2s");
+    expect(stated(SENIOR)).toContain("0.4s");
+    expect(stated(PRINCIPAL_A)).toContain("0.65s");
     // The conditional side must say what a quiet map still gives, or the
     // player reads "on quieter maps" as "nothing".
-    expect(stated(PRINCIPAL_B)).toContain("1 second");
-    expect(stated(PRINCIPAL_B)).toContain("0.4 seconds");
+    expect(stated(PRINCIPAL_B)).toContain("1s");
+    expect(stated(PRINCIPAL_B)).toContain("0.4s");
   });
 
   it("keeps the whole family under a cut's own build time at Junior", () => {

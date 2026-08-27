@@ -202,8 +202,8 @@ export function DoorDraftScreen({
                 </div>
                 <div className="space-y-0.5 pl-6">
                   {door.mission.tiers.map(tier => (
-                    <div key={tier.threshold} className="flex items-center gap-1.5 text-[11px]" style={{ color: '#c8ffd8', opacity: 0.85 }}>
-                      <ChevronsUp className="w-3 h-3 flex-shrink-0" style={{ color: accentColor }} />
+                    <div key={tier.threshold} className="flex items-center gap-1.5 text-xs" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                      <ChevronsUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: accentColor }} />
                       <span className="tabular-nums font-bold" style={{ color: accentColor }}>{tier.threshold}</span>
                       <span className="opacity-70">{t('doorDraft.tierArrow')}</span>
                       <span>{tier.label}</span>

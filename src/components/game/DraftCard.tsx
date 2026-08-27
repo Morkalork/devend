@@ -101,7 +101,7 @@ export function DraftCard({ index, accentColor, selected, onClick, name, headerE
       )}
       <div className="flex items-center gap-2 mb-3">
         <p
-          className="font-display font-bold text-base flex-1"
+          className="font-display font-bold text-lg flex-1"
           style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
         >
           {name}

@@ -311,7 +311,16 @@ describe("the scaling blocks in upgrades.yml", () => {
 
   it("says so on the card, so the effect is not invisible", () => {
     for (const u of scaled) {
-      expect(u.description ?? "", `${u.id}`).toMatch(/every other|for each|up to|once you own|for every/i);
+      // The word "other" rather than a list of accepted phrasings.
+      //
+      // This used to enumerate the wordings in use at the time ("every other",
+      // "once you own", ...), which made it a spell-checker for a house style
+      // instead of a guard: the copy pass that shortened these cards rewrote
+      // every clause into one consistent form and the test failed on prose it
+      // should not have had an opinion about. What it actually needs to know is
+      // that the card tells you the effect scales with your OTHER upgrades, and
+      // there is no way to say that without the word.
+      expect(u.description ?? "", `${u.id}`).toMatch(/\bother\b/i);
       expect(u.description ?? "", `${u.id} description`).not.toContain("—");
     }
   });

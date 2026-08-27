@@ -103,7 +103,7 @@ export function TierDraftScreen({
                 >
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
+                    <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8' }}>
                       {contentText.upgradeDesc(t, u)}
                     </p>
                   </div>
