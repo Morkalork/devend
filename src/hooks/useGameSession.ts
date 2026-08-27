@@ -133,7 +133,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     loadLoadouts,
   } = useLoadoutManager();
 
-  const isLoading = isLoadingLevels || isLoadingUpgrades;
+  /**
+   * A run is booting: every catalogue is being fetched before the first map.
+   *
+   * `isLoadingLevels || isLoadingUpgrades` alone was not enough. A run start
+   * awaits ELEVEN catalogues in one Promise.all, and those two are only the
+   * first pair to resolve - so the menu's spinner stopped while nine fetches
+   * were still in flight and the navigation was still waiting on them. The
+   * player got a normal-looking button and a pause with nothing happening,
+   * which is the "brief pause before the game starts" that was reported.
+   */
+  const [bootingRun, setBootingRun] = useState(false);
+  const isLoading = isLoadingLevels || isLoadingUpgrades || bootingRun;
   const error = levelError || upgradeError;
 
   const [totalScore, setTotalScore] = useState(0);
@@ -887,25 +898,34 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     clearDailyMode();
     // The loadout catalogue backs the run-start draft, but a load failure
     // should not hard-gate starting a run.
-    const [levelsSuccess, upgradesSuccess] = await Promise.all([
-      loadLevels(),
-      loadUpgrades(),
-      loadCertificates(),
-      loadLoadouts(),
-      // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
-      // it does not gate starting a run — same treatment as loadouts.
-      loadBallTypes(),
-      loadAbilities(),
-      loadFeatures(),
-      // Door pool (doors.yml). On failure assignment levels fall back to the shop.
-      loadDoors(),
-      // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
-      loadCapstones(),
-      // Map mutator pool (mapMutators.yml). Failure just plays maps unmutated.
-      loadMapMutators(),
-      // Map objective pool (objectives.yml). Failure just plays maps without a goal.
-      loadMapObjectives(),
-    ]);
+    // Held across the WHOLE fetch, not just until the first pair land.
+    setBootingRun(true);
+    let levelsSuccess = false, upgradesSuccess = false;
+    try {
+      [levelsSuccess, upgradesSuccess] = await Promise.all([
+        loadLevels(),
+        loadUpgrades(),
+        loadCertificates(),
+        loadLoadouts(),
+        // Ball catalogue (balls.yml). Failure falls back to built-in defaults, so
+        // it does not gate starting a run — same treatment as loadouts.
+        loadBallTypes(),
+        loadAbilities(),
+        loadFeatures(),
+        // Door pool (doors.yml). On failure assignment levels fall back to the shop.
+        loadDoors(),
+        // Capstone pool (capstones.yml). Failure just skips the Promotion draft.
+        loadCapstones(),
+        // Map mutator pool (mapMutators.yml). Failure just plays maps unmutated.
+        loadMapMutators(),
+        // Map objective pool (objectives.yml). Failure just plays maps without a goal.
+        loadMapObjectives(),
+      ]);
+    } finally {
+      // finally, so a catalogue that rejects cannot leave the menu
+      // spinning forever with no way back.
+      setBootingRun(false);
+    }
 
     if (levelsSuccess && upgradesSuccess) {
       resetRunScopedState();
@@ -988,19 +1008,28 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     dailyKeyRef.current = key;
     setDailyKey(key);
 
-    const [levelsSuccess, upgradesSuccess] = await Promise.all([
-      loadLevels(),
-      loadUpgrades(),
-      loadCertificates(),
-      loadLoadouts(),
-      loadBallTypes(),
-      loadAbilities(),
-      loadFeatures(),
-      loadDoors(),
-      loadCapstones(),
-      loadMapMutators(),
-      loadMapObjectives(),
-    ]);
+    // Held across the WHOLE fetch, not just until the first pair land.
+    setBootingRun(true);
+    let levelsSuccess = false, upgradesSuccess = false;
+    try {
+      [levelsSuccess, upgradesSuccess] = await Promise.all([
+        loadLevels(),
+        loadUpgrades(),
+        loadCertificates(),
+        loadLoadouts(),
+        loadBallTypes(),
+        loadAbilities(),
+        loadFeatures(),
+        loadDoors(),
+        loadCapstones(),
+        loadMapMutators(),
+        loadMapObjectives(),
+      ]);
+    } finally {
+      // finally, so a catalogue that rejects cannot leave the menu
+      // spinning forever with no way back.
+      setBootingRun(false);
+    }
     if (!levelsSuccess || !upgradesSuccess) {
       clearDailyMode();
       return;
@@ -1045,19 +1074,28 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     dailyKeyRef.current = savedDaily;
     setDailyKey(savedDaily);
 
-    const [levelsSuccess, upgradesSuccess] = await Promise.all([
-      loadLevels(),
-      loadUpgrades(),
-      loadCertificates(),
-      loadLoadouts(),
-      loadBallTypes(),
-      loadAbilities(),
-      loadFeatures(),
-      loadDoors(),
-      loadCapstones(),
-      loadMapMutators(),
-      loadMapObjectives(),
-    ]);
+    // Held across the WHOLE fetch, not just until the first pair land.
+    setBootingRun(true);
+    let levelsSuccess = false, upgradesSuccess = false;
+    try {
+      [levelsSuccess, upgradesSuccess] = await Promise.all([
+        loadLevels(),
+        loadUpgrades(),
+        loadCertificates(),
+        loadLoadouts(),
+        loadBallTypes(),
+        loadAbilities(),
+        loadFeatures(),
+        loadDoors(),
+        loadCapstones(),
+        loadMapMutators(),
+        loadMapObjectives(),
+      ]);
+    } finally {
+      // finally, so a catalogue that rejects cannot leave the menu
+      // spinning forever with no way back.
+      setBootingRun(false);
+    }
     if (!levelsSuccess || !upgradesSuccess) return;
 
     setTotalScore(save.totalScore);
