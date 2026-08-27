@@ -601,7 +601,8 @@
     "contractModifier": "Modificador de mapa",
     "contractObjective": "Objetivo",
     "objectiveReward": "+{{hours}}h si se cumple",
-    "specsNew": "{{count}} entradas nuevas del manual"
+    "specsNew": "{{count}} entradas nuevas del manual",
+    "mutatorTitle": "Regla del mapa: {{name}}. Toca para ver detalles."
   },
   "shipEarlyBar": {
     "title": "Entrega temprana: completa el mapa antes de que se agote la barra para ganar horas extra",

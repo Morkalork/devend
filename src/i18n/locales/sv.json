@@ -601,7 +601,8 @@
     "contractModifier": "Kartmodifierare",
     "contractObjective": "Mål",
     "objectiveReward": "+{{hours}}h om uppfyllt",
-    "specsNew": "{{count}} nya manualposter"
+    "specsNew": "{{count}} nya manualposter",
+    "mutatorTitle": "Kartregel: {{name}}. Tryck för detaljer."
   },
   "shipEarlyBar": {
     "title": "Tidig leverans: klara kartan innan mätaren tar slut för bonusövertid",

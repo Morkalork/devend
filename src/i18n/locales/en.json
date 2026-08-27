@@ -604,7 +604,8 @@
     "contractModifier": "Map Modifier",
     "contractObjective": "Objective",
     "objectiveReward": "+{{hours}}h if met",
-    "specsNew": "{{count}} new manual entries"
+    "specsNew": "{{count}} new manual entries",
+    "mutatorTitle": "Map rule: {{name}}. Tap for details."
   },
   "shipEarlyBar": {
     "title": "Map deadline: clear the map before the bar runs out. Finish early for bonus overtime.",

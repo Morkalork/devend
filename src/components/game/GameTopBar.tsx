@@ -7,7 +7,9 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { unreadManualCount } from '@/lib/manual';
-import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X } from 'lucide-react';
+import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X, FlaskConical } from 'lucide-react';
+import { contentText } from '@/i18n/content';
+import type { ActiveMapMutator } from '@/types/mapMutator';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -29,6 +31,15 @@ interface GameTopBarProps {
   threadLockRequired?: number;
   /** Scope Creep speed boost in percent (0 = inactive, chip hidden). */
   scopeCreepPercent?: number;
+  /**
+   * This map's mutator, or null on an ordinary map (chip hidden).
+   *
+   * Named here rather than only inside the Specs panel because a mutator is a
+   * RULE the map is playing by, and the panel is shut by default. Technical
+   * Gravity bends every path on the board, and with the name one tap away and
+   * nothing to say it mattered, it was reported three times as a malfunction.
+   */
+  mapMutator?: ActiveMapMutator | null;
   accentColor?: string;
   certificateProgress?: CertificateHourProgress;
   ascensionDepth?: number;
@@ -55,6 +66,7 @@ export function GameTopBar({
   lockedBalls,
   threadLockRequired,
   scopeCreepPercent = 0,
+  mapMutator = null,
   accentColor = '#00ff88',
   certificateProgress,
   ascensionDepth = 0,
@@ -319,6 +331,31 @@ export function GameTopBar({
             {lockReq > 0 ? `${lockedBalls}/${lockReq}` : lockedBalls}
           </span>
         </div>
+
+        {/* The map's mutator, when it has one.
+            A <button> rather than a <span>, but with NO handler of its own: the
+            whole row already carries onClick={onExpand}, so a click here
+            reaches the Specs panel by bubbling, and an own handler would just
+            intercept and re-call the same thing. What the button buys is the
+            part the row cannot give a chip inside it - keyboard focus and an
+            accessible name, so the rule is reachable without seeing the colour.
+            (It had a redundant onClick + stopPropagation until a mutation test
+            showed removing it changed nothing.) */}
+        {mapMutator && (
+          <button
+            className="flex items-center gap-1.5 min-w-0 focus:outline-none"
+            aria-label={t('topBar.mutatorTitle', { name: contentText.mutatorName(t, mapMutator) })}
+            title={t('topBar.mutatorTitle', { name: contentText.mutatorName(t, mapMutator) })}
+          >
+            <FlaskConical className="w-4 h-4 flex-shrink-0" style={{ color: '#c084fc' }} />
+            <span
+              className="font-display text-sm font-bold truncate"
+              style={{ color: '#c084fc', textShadow: '0 0 10px #c084fc88' }}
+            >
+              {contentText.mutatorName(t, mapMutator)}
+            </span>
+          </button>
+        )}
 
         {/* Scope Creep: appears once the anti-stall speed surge kicks in */}
         {scopeCreepPercent > 0 && (

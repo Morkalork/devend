@@ -706,6 +706,7 @@ export function GameScreen({
             lockedBalls={totalLockedBalls}
             threadLockRequired={level.threadLockRequired}
             scopeCreepPercent={gameState.creepPercent}
+            mapMutator={mapMutator}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
             ascensionDepth={ascensionDepth}
