@@ -72,7 +72,9 @@ purposeful), and **ANDROID.md** for Capacitor/Play-Store packaging.
 ## Git
 
 - Default working branch is `dev`; the release branch is `main`.
-- Commit or push only when asked.
+- Push to `dev` automatically once work is committed; no need to ask.
+- `main` is the release branch: merging or pushing there still needs an
+  explicit ask.
 
 ## Github
 
