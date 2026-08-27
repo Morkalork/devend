@@ -15,6 +15,5 @@
 export const REWARD_GOLD = '#ffd54a';
 
 /** The same gold at the alphas the reward surfaces use. */
-export const REWARD_GOLD_BORDER = `${REWARD_GOLD}66`;
 export const REWARD_GOLD_FILL = `${REWARD_GOLD}12`;
 export const REWARD_GOLD_GLOW = `${REWARD_GOLD}55`;
