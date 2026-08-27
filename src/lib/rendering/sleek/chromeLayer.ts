@@ -1,5 +1,6 @@
 /**
- * Board chrome: the perimeter rim, the speed-danger frame and the space bar.
+ * Board chrome: the perimeter rim, the speed-danger frame, the gravity cue and
+ * the space bar.
  *
  * This is the frame AROUND the play surface, so it plays by different rules to
  * everything else. It is UI, not scenery: it does not sit in the scene, so it
@@ -19,6 +20,8 @@ import { BALL_DANGER_SPEED } from "@/lib/gameConstants";
 import { PALETTE } from "./palette";
 import type { LightScope } from "./light";
 import { snapRect, snapStroke, snapWidth, hairline } from "./pixelGrid";
+import { boardAngleFor } from "@/lib/boardTilt";
+import { gravityCue, pullEdge, URGENT_SECONDS } from "./gravityCue";
 
 /** Ball speed (as a fraction of the danger threshold) before the frame shows. */
 const DANGER_FLOOR = 0.55;
@@ -39,10 +42,11 @@ export class ChromeLayer {
 
   private rim = new Graphics();
   private danger = new Graphics();
+  private gravity = new Graphics();
   private bar = new Graphics();
 
   constructor() {
-    this.container.addChild(this.rim, this.danger);
+    this.container.addChild(this.rim, this.danger, this.gravity);
     this.outer.addChild(this.bar);
   }
 
@@ -55,6 +59,7 @@ export class ChromeLayer {
   ): void {
     this.drawRim(game, light, scale, now);
     this.drawDanger(game, scale, now);
+    this.drawGravity(game, scale, now);
     this.drawBar(game, scale, now, spaceThreshold);
   }
 
@@ -110,6 +115,110 @@ export class ChromeLayer {
 
     g.rect(left, top, width, height).stroke({ width: 12 * scale, color: PALETTE.danger, alpha: alpha * 0.35 });
     g.rect(left, top, width, height).stroke({ width: 5 * scale, color: PALETTE.danger, alpha });
+  }
+
+  /**
+   * The pull, and when it changes.
+   *
+   * A band on the edge the board is tipping toward, chevrons running that way,
+   * and a bar draining to the next shift. Drawn as chrome rather than scenery
+   * because it is a statement ABOUT the board rather than a thing on it, and
+   * because the danger frame beside it already established that a coloured
+   * frame is how this game says "a condition is in force".
+   *
+   * The direction comes from gravityCue in SCREEN space, so during the 0.7s of
+   * a turn the band slides round the frame with the board instead of jumping.
+   *
+   * Costs nothing on a map without gravity: the cue is null and this returns
+   * before touching anything.
+   */
+  private drawGravity(game: CanvasGameState, scale: number, now: number): void {
+    const g = this.gravity;
+    g.clear();
+
+    const tilt = boardAngleFor(game.activePlaySeconds, game.gravityConfig, game.boardTilt);
+    const cue = gravityCue(game.gravityConfig, game.activePlaySeconds, tilt);
+    if (!cue) return;
+
+    const { left, top, width, height } = game.boardRect;
+    const band = Math.max(3, 10 * scale);
+
+    if (cue.pull) {
+      // The low side of a tipped table. Two stacked bands rather than a
+      // gradient: Graphics has no cheap one, and the wide faint pass under a
+      // narrow bright one reads as a glow at a fraction of the cost.
+      const outer = pullEdge(cue.pull, { left, top, width, height }, band * 2.2);
+      const inner = pullEdge(cue.pull, { left, top, width, height }, band);
+      const breathe = 0.85 + 0.15 * Math.sin(now * 0.0016);
+      g.rect(outer.x, outer.y, outer.width, outer.height)
+        .fill({ color: PALETTE.gravity, alpha: 0.07 * breathe });
+      g.rect(inner.x, inner.y, inner.width, inner.height)
+        .fill({ color: PALETTE.gravity, alpha: 0.16 * breathe });
+
+      // Chevrons drifting the way the pull runs. The band alone says WHICH
+      // EDGE; only motion says which way things are being dragged, and on a
+      // square board those are not the same statement.
+      this.drawChevrons(cue.pull, game, scale, now);
+    }
+
+    // The countdown. It runs whether or not a pull is active, because the
+    // arrival of one is as worth telegraphing as its departure: a calm stretch
+    // ending is the moment the board starts dragging again.
+    const remaining = 1 - cue.progress;
+    const urgent = cue.urgent;
+    const barW = Math.max(2, 3 * scale);
+    const colour = urgent ? PALETTE.amber : PALETTE.gravity;
+    // Along the TOP edge, away from the pull band, so the two never overlap on
+    // a downward pull (the most common phase there is).
+    const full = width - band * 2;
+    const lit = full * Math.max(0, Math.min(1, remaining));
+    const y = top + band;
+    g.rect(left + band, y, full, barW).fill({ color: colour, alpha: 0.12 });
+    if (lit > 0) {
+      const pulse = urgent ? 0.75 + 0.25 * Math.sin(now * 0.012) : 1;
+      g.rect(left + band, y, lit, barW).fill({ color: colour, alpha: 0.7 * pulse });
+    }
+
+    // Where it goes next, once the shift is close enough to act on. A ghost of
+    // the same band on the edge the pull jumps to, so the player can commit a
+    // cut to where the board is about to tip rather than where it is tipped.
+    if (cue.next && cue.urgent) {
+      const t = 1 - cue.secondsLeft / URGENT_SECONDS;    // 0 -> 1 as it lands
+      const ghost = pullEdge(cue.next, { left, top, width, height }, band);
+      g.rect(ghost.x, ghost.y, ghost.width, ghost.height)
+        .fill({ color: PALETTE.amber, alpha: 0.05 + 0.18 * t });
+    }
+  }
+
+  /** Three chevrons mid-board, pointing (and drifting) along the pull. */
+  private drawChevrons(
+    dir: { x: number; y: number },
+    game: CanvasGameState,
+    scale: number,
+    now: number,
+  ): void {
+    const g = this.gravity;
+    const { left, top, width, height } = game.boardRect;
+    const cx = left + width / 2, cy = top + height / 2;
+    const size = Math.max(4, 9 * scale);
+    const gap = size * 2.6;
+    // A slow crawl along the pull, so the cue has motion without competing
+    // with anything the player is actually aiming at.
+    const drift = ((now * 0.02) % gap);
+    const px = -dir.y, py = dir.x;   // perpendicular, for the chevron's arms
+
+    for (let i = 0; i < 3; i++) {
+      const along = (i - 1) * gap + drift;
+      const tipX = cx + dir.x * along, tipY = cy + dir.y * along;
+      // Fade the ends so they emerge and dissolve rather than popping.
+      const edge = Math.abs(along) / (gap * 1.8);
+      const alpha = 0.3 * Math.max(0, 1 - edge * edge);
+      if (alpha <= 0.01) continue;
+      g.moveTo(tipX - dir.x * size + px * size, tipY - dir.y * size + py * size)
+        .lineTo(tipX, tipY)
+        .lineTo(tipX - dir.x * size - px * size, tipY - dir.y * size - py * size)
+        .stroke({ width: Math.max(1, 2 * scale), color: PALETTE.gravity, alpha, cap: "round" });
+    }
   }
 
   /**

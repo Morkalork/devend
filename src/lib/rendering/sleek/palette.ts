@@ -97,6 +97,11 @@ export const PALETTE = {
   compassRing: 0xc08cff,
   amber: 0xffd76b,
   frost: 0xbfefff,
+  /** The gravity indicator. Its own violet-blue rather than the accent or the
+   *  danger red: the pull is not something the player did and it is not a
+   *  threat, it is a condition of the room. Kin to compassRing for the same
+   *  reason - both are the board acting on its own schedule. */
+  gravity: 0x8aa8ff,
 
   // ── Colored areas (var / let / const) ─────────────────────────────────────
   areaVar: 0xff9ebf,
