@@ -513,9 +513,14 @@
       "craft": "Oficio",
       "tempo": "Ritmo",
       "thrift": "Ahorro",
-      "greed": "Codicia"
+      "greed": "Codicia",
+      "full": "{{hours}}h ✓",
+      "short": "-{{hours}}h"
     },
-    "winBonus": "Bono de victoria (+{{percent}}%)"
+    "winBonus": "Bono de victoria (+{{percent}}%)",
+    "flawless": "Impecable",
+    "flawlessDetail_one": "cada bola sellada con precisión",
+    "flawlessDetail_other": "las {{count}} bolas selladas con precisión"
   },
   "notFound": {
     "message": "¡Vaya! Página no encontrada",

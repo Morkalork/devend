@@ -513,9 +513,14 @@
       "craft": "Hantverk",
       "tempo": "Tempo",
       "thrift": "Sparsamhet",
-      "greed": "Girighet"
+      "greed": "Girighet",
+      "full": "{{hours}}h ✓",
+      "short": "-{{hours}}h"
     },
-    "winBonus": "Vinstbonus (+{{percent}}%)"
+    "winBonus": "Vinstbonus (+{{percent}}%)",
+    "flawless": "Felfritt",
+    "flawlessDetail_one": "varje boll tätt förseglad",
+    "flawlessDetail_other": "alla {{count}} bollar tätt förseglade"
   },
   "notFound": {
     "message": "Hoppsan! Sidan hittades inte",

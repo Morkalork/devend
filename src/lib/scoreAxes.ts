@@ -263,3 +263,29 @@ export function bankAxes(input: ScoreAxisInput, ceilings: AxisCeilings): BankedA
     },
   };
 }
+
+/**
+ * FLAWLESS: every ball on the map locked, and every one of those locks tight.
+ *
+ * Defined on COUNTS rather than on the Craft ratio, and the difference matters.
+ * Craft can be pushed past a full axis by the zone and simultaneous multipliers,
+ * so a run with a SLOPPY lock inside a const area can fill it - and would have
+ * claimed a flawless run without being one. The counts cannot be flattered:
+ * n balls on the map, n locked, n of them superior.
+ *
+ * Deliberately not "max every axis". The four tactical axes fight each other by
+ * construction, so about two are reachable in a run and an all-five badge would
+ * be unwinnable by design. This is the perfection the economy actually offers:
+ * the whole roster delivered, and delivered cleanly. It is also the one lane
+ * with no trade-off against another - being tight costs you time and fences,
+ * but nothing pays you for being sloppy.
+ */
+export function isFlawlessRun(
+  lockedBalls: number, superiorLocks: number, deliveryRatioValue: number,
+): boolean {
+  if (!Number.isFinite(lockedBalls) || lockedBalls <= 0) return false;
+  if (!Number.isFinite(superiorLocks) || superiorLocks < lockedBalls) return false;
+  // Every ball the map HELD, not just every ball you happened to seal: locking
+  // two of three perfectly is a good run, not a flawless one.
+  return Number.isFinite(deliveryRatioValue) && deliveryRatioValue >= 1;
+}

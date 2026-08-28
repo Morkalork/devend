@@ -516,9 +516,14 @@
       "craft": "Craft",
       "tempo": "Tempo",
       "thrift": "Thrift",
-      "greed": "Greed"
+      "greed": "Greed",
+      "full": "{{hours}}h ✓",
+      "short": "-{{hours}}h"
     },
-    "winBonus": "Win bonus (+{{percent}}%)"
+    "winBonus": "Win bonus (+{{percent}}%)",
+    "flawless": "Flawless",
+    "flawlessDetail_one": "every ball sealed tight",
+    "flawlessDetail_other": "all {{count}} balls sealed tight"
   },
   "notFound": {
     "message": "Oops! Page not found",

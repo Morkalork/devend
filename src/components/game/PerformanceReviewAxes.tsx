@@ -10,6 +10,19 @@
  * Deliberately shows empty axes too. An axis at zero is the more useful half of
  * the readout: it is the hours that were on the table and left there, and the
  * ring is built so that you can never fill all five.
+ *
+ * THE RIGHT-HAND NUMBER IS THE SHORTFALL, not the earning. It used to read
+ * "18/30h", which is neutral to the point of being congratulatory - the eye
+ * reads the 18. It now reads "-12h", because what makes a player chase a full
+ * axis next time is seeing what the last one cost, and because that is what the
+ * bar's empty half has always meant without ever saying so. The hours actually
+ * banked are on the bar's length and in the itemised rows below.
+ *
+ * There is deliberately NO grand "you missed Nh" total. The four tactical axes
+ * fight each other by construction, so about two are reachable in one run and
+ * the sum of all five ceilings is not a score anyone can get. A deficit against
+ * an impossible number would make every run look like a failure, which is both
+ * demoralising and false.
  */
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
@@ -51,6 +64,11 @@ export function PerformanceReviewAxes({ axes, hold }: Props) {
           // empty rather than dividing by nothing.
           const fill = ceiling > 0 ? Math.min(1, earned / ceiling) : 0;
           const spent = earned > 0;
+          // Rounded the same way the axis itself is, so the shortfall and the
+          // banked hours always add up to the ceiling on screen. Deriving it
+          // from the unrounded ratio instead would show 18 + 13 = 30.
+          const short = Math.max(0, ceiling - earned);
+          const full = ceiling > 0 && short === 0;
 
           return (
             <div key={name} {...(hold?.(`axis_${name}`) ?? {})} className="flex items-center gap-2">
@@ -74,10 +92,14 @@ export function PerformanceReviewAxes({ axes, hold }: Props) {
 
               <span
                 className={`text-xs font-bold tabular-nums w-[3.5rem] text-right shrink-0 ${
-                  spent ? style.color : 'text-muted-foreground'
+                  full ? style.color : short > 0 ? 'text-destructive/80' : 'text-muted-foreground'
                 }`}
               >
-                {earned}/{ceiling}h
+                {ceiling <= 0
+                  ? '-'
+                  : full
+                    ? t('levelComplete.axes.full', { hours: earned })
+                    : t('levelComplete.axes.short', { hours: short })}
               </span>
             </div>
           );

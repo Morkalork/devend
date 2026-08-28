@@ -5,6 +5,7 @@ import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, C
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { getAbility } from '@/lib/abilities';
+import { isFlawlessRun } from '@/lib/scoreAxes';
 import { contentText } from '@/i18n/content';
 import { PerformanceReviewAxes } from './PerformanceReviewAxes';
 
@@ -190,6 +191,24 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   const hasBreakBonus = breakBonus > 0;
   const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;
+  /**
+   * FLAWLESS: every ball on the map locked, and every one of those locks tight.
+   *
+   * Defined on COUNTS rather than on the Craft ratio, because that ratio can be
+   * pushed past 1 by zone and simultaneous multipliers - so a run with one
+   * sloppy lock in a const area could reach a full axis and would have claimed
+   * this without being flawless at all. The counts cannot lie: n balls, n
+   * locks, n of them superior.
+   *
+   * Deliberately not "max every axis". The tactical axes fight each other by
+   * construction and about two are reachable per run, so an all-five badge
+   * would be unwinnable. This is the perfection the economy actually offers:
+   * you delivered the whole roster and you did it cleanly.
+   */
+  const flawless = isFlawlessRun(
+    lockedBallsCount, superiorLockCount, axes?.ratios.delivery ?? 0,
+  );
+
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
   // The five axes ARE the bonus. Push-your-luck and demolition hours bank into
   // Greed and the lock stack into Delivery + Craft, so summing the itemised
@@ -310,6 +329,33 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <span className="text-muted-foreground">{t('levelComplete.remaining')}</span>
                 <span className="font-bold text-foreground">{remainingPercent}%</span>
               </div>
+            )}
+
+            {/* FLAWLESS. Above the axes because it is a verdict on the run, not
+                a line item in it: the axes say which lanes you took, this says
+                you left nothing behind in the one lane that has no trade-off. */}
+            {flawless && (
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.35, type: 'spring', stiffness: 260, damping: 18 }}
+                className="flex items-center justify-center gap-2 my-2 py-2 rounded-lg"
+                style={{
+                  border: '1px solid #ffd54a66',
+                  background: 'linear-gradient(90deg, transparent, #ffd54a14 20%, #ffd54a14 80%, transparent)',
+                }}
+              >
+                <Sparkles className="w-4 h-4 shrink-0" style={{ color: '#ffd54a' }} />
+                <span
+                  className="font-display text-sm font-black uppercase tracking-widest"
+                  style={{ color: '#ffd54a', textShadow: '0 0 12px #ffd54a66' }}
+                >
+                  {t('levelComplete.flawless')}
+                </span>
+                <span className="text-xs" style={{ color: '#ffd54a', opacity: 0.75 }}>
+                  {t('levelComplete.flawlessDetail', { count: lockedBallsCount })}
+                </span>
+              </motion.div>
             )}
 
             {/* The Performance Review: which lanes this run committed to.
