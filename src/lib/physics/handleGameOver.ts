@@ -10,6 +10,7 @@ import { playDeathSound } from "@/lib/gameAudio";
 import { vibrateDeath } from "@/lib/gameHaptics";
 import { polygonArea } from "@/lib/polygon";
 import { getRemainingPercent } from "@/lib/spaceGrid";
+import { pushBonusEarned } from "@/lib/pushLuck";
 
 export function getCombinedArea(game: CanvasGameState): number {
   if (game.spaceGrid) {
@@ -35,13 +36,16 @@ export function handleGameOverFn(
   const percent = Math.round((getCombinedArea(game) / game.originalArea) * 100);
 
   if (game.pushMode === "pushing") {
+    // NOT game.pushStartPercent, despite the name: the score is graded on the
+    // best clear the player reached, which is what they had banked the moment
+    // the prompt appeared. Kept as its own binding because calculateScore below
+    // grades on it too.
     const pushStartPercent = game.bestRemainingPercent;
-    const areaAtPushStart = game.pushStartPercent ?? pushStartPercent;
-    const areaCleared = Math.max(0, areaAtPushStart - percent);
-    const chunkSize = areaAtPushStart * 0.25;
-    const pushBonus = chunkSize > 0
-      ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
-      : 0;
+    const pushBonus = pushBonusEarned(
+      game.pushStartPercent ?? pushStartPercent,
+      percent,
+      activeModifiers.pushBonusMultiplier,
+    );
     // Ship Early: the threshold was met before the push began, so the earned
     // tempo bonus survives a failed push (pushing is never taxed). Disabled on
     // the tutorial band (levels 1-3).
@@ -108,12 +112,9 @@ export function handlePushFailedFn(
   game.gameOver = true;
   const percent = Math.round((getCombinedArea(game) / game.originalArea) * 100);
 
-  const areaAtPushStart = game.pushStartPercent ?? percent;
-  const areaCleared = Math.max(0, areaAtPushStart - percent);
-  const chunkSize = areaAtPushStart * 0.25;
-  const pushBonus = chunkSize > 0
-    ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
-    : 0;
+  const pushBonus = pushBonusEarned(
+    game.pushStartPercent ?? percent, percent, activeModifiers.pushBonusMultiplier,
+  );
   // Ship Early: threshold met before the push, so the bonus survives the fail
   // (disabled on the tutorial band, levels 1-3).
   const shipEarlyPercent = isTimingExempt(levelNumber)

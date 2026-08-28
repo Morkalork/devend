@@ -548,7 +548,8 @@
     "bonusPerRemoved": "+1h per {{percent}}% borttaget",
     "noRisk": "Ingen risk - du behåller poängen om du misslyckas!",
     "bankAndContinue": "Säkra & fortsätt",
-    "pushYourLuck": "Pressa lyckan"
+    "pushYourLuck": "Pressa lyckan",
+    "bankedSoFar": "(+{{hours}}h)"
   },
   "result": {
     "youWin": "DU VANN!",

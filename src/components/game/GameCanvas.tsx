@@ -114,6 +114,7 @@ import { applyCutFn, checkSpaceWin, evaluateWinConditions } from "@/lib/physics/
 import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
+import { pushBonusEarned } from "@/lib/pushLuck";
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -140,6 +141,12 @@ export interface GameStateInfo {
   /** True once a power-up has appeared this map, for the one-time explainer (#59). */
   pickupPresent: boolean;
   onBankAndContinue?: () => void;
+  /**
+   * Hours a push has earned so far, for the exit button's readout. Computed
+   * with the same pushBonusEarned the payout uses, so the number on the button
+   * is the number that gets banked.
+   */
+  pushBonusSoFar: number;
   /** The one live feedback message, or null. See lib/gameMessages. */
   gameMessage?: GameMessage | null;
   /** Fire a chest-earned ability by id (Freeze All / Slow All / Clear Fences). */
@@ -1419,12 +1426,11 @@ export function GameCanvas({
     startGameLoop(game);
     // Dev/playground freeze: play the shimmer, hold the drained frame, no overlay.
     if (freezeOnCompleteRef.current) return;
-    const areaAtPushStart = game.pushStartPercent;
-    const areaCleared = Math.max(0, areaAtPushStart - game.bestRemainingPercent);
-    const chunkSize = areaAtPushStart * 0.25;
-    const pushBonus = chunkSize > 0
-      ? Math.round(Math.floor(areaCleared / chunkSize) * activeModifiers.pushBonusMultiplier)
-      : 0;
+    // Pays on the BEST remaining reached, not the current: space creeping back
+    // after a good cut must not take an already-earned hour away.
+    const pushBonus = pushBonusEarned(
+      game.pushStartPercent, game.bestRemainingPercent, activeModifiers.pushBonusMultiplier,
+    );
     // Ship Early: the tempo clock froze when the prompt opened, so push time
     // never counts against it (disabled on the tutorial band, levels 1-3).
     const shipEarlyPercent = isTimingExempt(levelNumber)
@@ -1566,6 +1572,17 @@ export function GameCanvas({
   }, []);
   useEffect(() => { handleTapRemoveRef.current = handleTapRemove; }, [handleTapRemove]);
 
+  // What the push has banked so far. bestRemainingPercent is a ref updated in
+  // the loop, so this is recomputed each render rather than tracked separately;
+  // remainingPercent is a dep of the state push below and moves with it.
+  const pushBonusSoFar = pushMode === "pushing"
+    ? pushBonusEarned(
+        gameRef.current.pushStartPercent,
+        gameRef.current.bestRemainingPercent,
+        activeModifiers.pushBonusMultiplier,
+      )
+    : 0;
+
   useEffect(() => {
     if (onGameStateChange) {
       onGameStateChange({
@@ -1587,13 +1604,14 @@ export function GameCanvas({
         ballCount,
         pickupPresent,
         onBankAndContinue: handleBankAndContinue,
+        pushBonusSoFar,
         gameMessage,
         onUseAbility: handleUseAbility,
         abilityTimers,
         armedAbility,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

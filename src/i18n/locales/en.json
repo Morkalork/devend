@@ -551,7 +551,8 @@
     "bonusPerRemoved": "+1h per {{percent}}% removed",
     "noRisk": "No risk - you keep your score if you fail!",
     "bankAndContinue": "Bank & Continue",
-    "pushYourLuck": "Push Your Luck"
+    "pushYourLuck": "Push Your Luck",
+    "bankedSoFar": "(+{{hours}}h)"
   },
   "result": {
     "youWin": "YOU WIN!",
