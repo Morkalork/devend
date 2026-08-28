@@ -85,10 +85,43 @@ describe("the win conditions it states", () => {
     }
   });
 
-  it("still requires the clear, so a gate is never a way to skip the map", () => {
-    for (const n of [32, 33, 34]) {
+  it("still requires the clear on the maps whose gate is a bonus", () => {
+    // 32 and 33 hang their gate off a map that is otherwise won by clearing, so
+    // the gate is extra credit and the clear still has to happen.
+    for (const n of [32, 33]) {
       expect(resolveWinSpec(at(n)).require.some(c => c.kind === "space"), `level ${n}`).toBe(true);
     }
+  });
+
+  /**
+   * 34 is the exception, and it is deliberate.
+   *
+   * It used to carry the clear as well, and the pair asked for something
+   * neither clause says on its own. Reaching 5% remaining on a four-ball map
+   * means sealing every ball into a sliver, so the real demand was "lock all
+   * four AND land two of them in the box" - on a map with a live pull, where
+   * you cannot aim. Worse, an authored spec carries no all-locked alternative,
+   * so locking the last ball with only one ball in the box did not merely fail
+   * to win: it emptied the board of targets and tripped the area fail check,
+   * losing the map outright.
+   *
+   * The cost of dropping it is real and is the thing the rule above exists to
+   * prevent: 34 can now be finished without clearing much board. That is the
+   * trade, taken with eyes open, because a coherent short map beats an
+   * incoherent long one.
+   */
+  it("makes 34's gate the whole win, with no clear beside it", () => {
+    const spec = resolveWinSpec(at(34));
+    expect(spec.require.map(c => c.kind)).toEqual(["area"]);
+    const area = spec.require.find(c => c.kind === "area");
+    expect(area?.kind === "area" && area.count).toBe(2);
+  });
+
+  it("leaves 34 no lock count the win does not read", () => {
+    // threadLockRequired is ignored outright once a map authors a `win:` block,
+    // so it could only ever reach the HUD - drawing a Thread Locks objective
+    // for a requirement that cannot affect the outcome.
+    expect(at(34).threadLockRequired).toBeUndefined();
   });
 
   /**

@@ -2038,7 +2038,11 @@ levels:
     variety: 16
     randomShapes: 10
     maxBalls: 4
-    threadLockRequired: 2
+    # No threadLockRequired. The win is the ZONE, and a lock count sitting
+    # beside it is a second objective the win does not read: with an authored
+    # `win:` block resolveWinSpec ignores this field entirely, so it only ever
+    # reached the HUD, where it drew a Thread Locks card for a requirement that
+    # could not affect the outcome.
     # Pinned, not hoped for. The whole map is authored around a live pull; a
     # gravity map that only sometimes pulls is a different map most of the time.
     mutator: gravity_well
@@ -2049,10 +2053,22 @@ levels:
         width: 220
         height: 210
         required: true
+    # Two balls in the box. That is the whole win.
+    #
+    # It used to ALSO require clearing to 5% remaining, and the two together
+    # asked for something quite different from what either says. Getting to 5%
+    # on a four-ball map means sealing every ball into a sliver, so the real
+    # demand was "lock all four, and make two of them land in the zone" - and
+    # since an authored spec carries no all-locked alternative, locking the last
+    # ball with only one in the box did not merely fail to win, it tripped the
+    # area fail check and lost the map outright.
+    #
+    # The zone is 220x210, a little over 7% of the arena, so the space clause
+    # also asked the player to capture ground the win wanted them to be aiming
+    # balls into. Under a live pull, with no aiming, that is not a hard map, it
+    # is an incoherent one.
     win:
       require:
-        - kind: space
-          threshold: 5
         - kind: area
           count: 2
           bonusPercent: 30
