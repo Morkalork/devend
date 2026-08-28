@@ -657,7 +657,8 @@
     "missionMapsPassed": "Klarade banor",
     "manual": "Manual",
     "buildScaling": "Build-skalning",
-    "buildScalingFrom": "{{count}} x {{tag}}"
+    "buildScalingFrom": "{{count}} x {{tag}}",
+    "mapRule": "Kartregel"
   },
   "tutorial": {
     "back": "Tillbaka",

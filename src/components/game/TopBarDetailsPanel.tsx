@@ -71,7 +71,21 @@ interface TopBarDetailsPanelProps {
   mapMutator?: ActiveMapMutator | null;
   objective?: ActiveMapObjective | null;
   objectiveProgress?: ObjectiveProgress | null;
+  /**
+   * What the player asked about, when they got here by tapping something
+   * rather than by opening Specs.
+   *
+   * A panel opened from a question should answer that question first. The map
+   * rule normally sits third, inside ASSIGNMENT, behind the build and the
+   * objectives - fine when you opened Specs to browse, useless when you tapped
+   * a banner that said "Technical Gravity" because you wanted to know what
+   * Technical Gravity does.
+   */
+  focus?: PanelFocus;
 }
+
+/** Which card the panel was opened to answer for. */
+export type PanelFocus = "mapRule" | null;
 
 export function TopBarDetailsPanel({
   visible,
@@ -103,6 +117,7 @@ export function TopBarDetailsPanel({
   mapMutator = null,
   objective = null,
   objectiveProgress = null,
+  focus = null,
 }: TopBarDetailsPanelProps) {
   // Entries the player has met. Opening the panel is what clears the badge:
   // the badge means "there is something new in here", so reading counts as
@@ -116,6 +131,9 @@ export function TopBarDetailsPanel({
   const lockReq = threadLockRequired ?? 0;
   const lockMet = lockedBalls >= lockReq;
   const overPar = cutsUsed > parCuts;
+
+  // The map rule leads when the player got here by tapping it.
+  const mapRuleFirst = focus === 'mapRule' && !!mapMutator;
 
   const objectiveComplete = objectiveProgress?.mode === 'accumulate' && !!objectiveProgress?.met;
   const objectiveOverBudget = objectiveProgress?.mode === 'limit' && objectiveProgress?.met === false;
@@ -145,6 +163,27 @@ export function TopBarDetailsPanel({
     backgroundColor: `${accentColor}0d`,
     border: `1px solid ${accentColor}55`,
   };
+
+  /**
+   * The map rule, as one card built once and placed in one of two spots.
+   *
+   * Defined here rather than inlined twice on purpose: two copies of a card
+   * that must stay identical is how the hoisted one quietly drifts from the
+   * one in ASSIGNMENT, and the player would see a different explanation
+   * depending on which way they opened the panel.
+   */
+  const mutatorCard = mapMutator ? (
+    <div style={{ ...cardStyle, border: '1px solid #c084fc55' }}>
+      <div className="flex items-center gap-2 mb-2">
+        <Wind className="w-4 h-4 flex-shrink-0" style={{ color: '#c084fc' }} />
+        <span className="font-bold text-sm" style={{ color: '#c084fc' }}>{contentText.mutatorName(t, mapMutator)}</span>
+      </div>
+      <p className="text-xs" style={{ color: '#c8ffd8', opacity: 0.75 }}>{contentText.mutatorDesc(t, mapMutator)}</p>
+      {mapMutator.clarify && (
+        <p className="text-xs mt-2" style={{ color: '#c8ffd8', opacity: 0.6 }}>{contentText.mutatorClarify(t, mapMutator)}</p>
+      )}
+    </div>
+  ) : null;
 
   return (
     <div
@@ -179,6 +218,17 @@ export function TopBarDetailsPanel({
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto px-5 py-5 space-y-7">
+
+        {/* ── THE QUESTION THAT OPENED THIS ──────────────────────────────────
+            Tapping the map-rule banner is a question, and a panel opened from
+            a question answers it first. The same card, in its normal place,
+            when Specs was opened to browse instead. */}
+        {mapRuleFirst && mapMutator && (
+          <section>
+            <p style={sectionHeadStyle}>{t('topBarDetails.mapRule')}</p>
+            {mutatorCard}
+          </section>
+        )}
 
         {/* ── BUILD ── archetype tags + ascension + loadout: the run's identity.
             At depth 0 the drafted loadout is the run-start pick; past it they're
@@ -415,18 +465,9 @@ export function TopBarDetailsPanel({
                   )}
                 </div>
               )}
-              {mapMutator && (
-                <div style={{ ...cardStyle, border: '1px solid #c084fc55' }}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Wind className="w-4 h-4 flex-shrink-0" style={{ color: '#c084fc' }} />
-                    <span className="font-bold text-sm" style={{ color: '#c084fc' }}>{contentText.mutatorName(t, mapMutator)}</span>
-                  </div>
-                  <p className="text-xs" style={{ color: '#c8ffd8', opacity: 0.75 }}>{contentText.mutatorDesc(t, mapMutator)}</p>
-                  {mapMutator.clarify && (
-                    <p className="text-xs mt-2" style={{ color: '#c8ffd8', opacity: 0.6 }}>{contentText.mutatorClarify(t, mapMutator)}</p>
-                  )}
-                </div>
-              )}
+              {/* Absent when the panel was opened BY this card: it is hoisted
+                  to the top instead, and showing it twice would read as a bug. */}
+              {mapMutator && !mapRuleFirst && mutatorCard}
               {objective && (
                 <div style={{ ...cardStyle, border: `1px solid ${objectiveOverBudget ? '#f8717155' : '#34d39955'}` }}>
                   <div className="flex items-center gap-2 mb-2">

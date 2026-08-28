@@ -657,7 +657,8 @@
     "missionMapsPassed": "Mapas superados",
     "manual": "Manual",
     "buildScaling": "Escalado de Build",
-    "buildScalingFrom": "{{count}} x {{tag}}"
+    "buildScalingFrom": "{{count}} x {{tag}}",
+    "mapRule": "Regla del mapa"
   },
   "tutorial": {
     "back": "Atrás",

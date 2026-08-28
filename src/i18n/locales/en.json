@@ -660,7 +660,8 @@
     "missionMapsPassed": "Maps passed",
     "manual": "Manual",
     "buildScaling": "Build Scaling",
-    "buildScalingFrom": "{{count}} x {{tag}}"
+    "buildScalingFrom": "{{count}} x {{tag}}",
+    "mapRule": "Map rule"
   },
   "tutorial": {
     "back": "Back",

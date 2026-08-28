@@ -26,7 +26,7 @@ import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
 import { GameMessageBar } from './GameMessageBar';
 import { AbilityCountdownBar } from './AbilityCountdownBar';
-import { TopBarDetailsPanel } from './TopBarDetailsPanel';
+import { TopBarDetailsPanel, type PanelFocus } from './TopBarDetailsPanel';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -473,6 +473,12 @@ export function GameScreen({
   const accentColor = level.boss ? BOSS_ACCENT : (externalAccentColor || getAccentColor());
 
   const [topPanelOpen, setTopPanelOpen] = useState(false);
+  /**
+   * What the player asked about, when Specs was opened by tapping something
+   * rather than by the Specs button. Cleared on close so the next plain open
+   * is an ordinary browse.
+   */
+  const [topPanelFocus, setTopPanelFocus] = useState<PanelFocus>(null);
   const [abilityInfoOpen, setAbilityInfoOpen] = useState(false);
   const [superiorInfoOpen, setSuperiorInfoOpen] = useState(false);
   // Press-and-hold on a board object. Owned here rather than in GameCanvas so it
@@ -722,7 +728,10 @@ export function GameScreen({
             highscoreCurrent={projectedScore}
             highscoreTarget={highscoreTarget}
             runPaceDelta={runPaceDelta}
-            onExpand={() => setTopPanelOpen(true)}
+            // Opened to BROWSE, so nothing leads. Clearing here as well as on
+            // close means this does not depend on the panel having been closed
+            // the tidy way to behave correctly.
+            onExpand={() => { setTopPanelFocus(null); setTopPanelOpen(true); }}
           />
         </div>
 
@@ -739,7 +748,10 @@ export function GameScreen({
               style={{ top: `${boardTopPct / 2}%`, transform: 'translateY(-50%)' }}
             >
               <div className="pointer-events-auto w-full">
-                <MapRuleBanner mutator={mapMutator} onExplain={() => setTopPanelOpen(true)} />
+                <MapRuleBanner
+                  mutator={mapMutator}
+                  onExplain={() => { setTopPanelFocus('mapRule'); setTopPanelOpen(true); }}
+                />
               </div>
             </div>
           )}
@@ -1164,7 +1176,8 @@ export function GameScreen({
           upgrades and the full attribute breakdown. */}
       <TopBarDetailsPanel
         visible={topPanelOpen}
-        onClose={() => setTopPanelOpen(false)}
+        focus={topPanelFocus}
+        onClose={() => { setTopPanelOpen(false); setTopPanelFocus(null); }}
         levelNumber={levelNumber}
         cutsUsed={gameState.cutsUsed}
         parCuts={level.expectedCuts}
