@@ -275,15 +275,18 @@ export class SleekBallLayer {
     const ring = compassRing(ball, c.x, c.y, r, scale, activeSeconds);
     if (!ring) return;
 
+    // Stroked as an explicit polyline, NOT with arc(). compassRing.ts has the
+    // long version; the short one is that arc() both continues whatever path is
+    // open AND leaves a corrupt "last point" behind it (Pixi reads a plain
+    // arc's data as if it were an arcToSvg), which every later mark on this
+    // SHARED Graphics then inherits. moveTo + lineTo has neither problem, and
+    // the ring is flattened to the same steps Pixi used, so it looks identical.
+    const pts = ring.points;
+    this.overlays.moveTo(pts[0], pts[1]);
+    for (let i = 2; i + 1 < pts.length; i += 2) {
+      this.overlays.lineTo(pts[i], pts[i + 1]);
+    }
     this.overlays
-      // Opens a fresh subpath ON the arc. Pixi's arc() continues the current
-      // path, so without this it draws a straight line from wherever the path
-      // last was to the ring's first point: a beam right across the board to
-      // the ball, in the ring's colour, reddening with it in the last second.
-      // Every other round thing here uses circle(), which opens its own
-      // subpath, which is why this was the only call that could do it.
-      .moveTo(ring.start.x, ring.start.y)
-      .arc(c.x, c.y, ring.radius, ring.from, ring.to)
       .stroke({
         width: Math.max(1.5, 2.2 * scale),
         // Reddens as it runs out: the last second should catch the eye of a

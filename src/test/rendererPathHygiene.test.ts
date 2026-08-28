@@ -17,18 +17,31 @@ const read = (f: string) => readFileSync(resolve(DIR, f), "utf8");
 
 describe("nothing continues a path it did not start", () => {
   /**
-   * arc, arcTo and the curve methods all continue the current path, exactly as
-   * the Canvas2D API they mirror does. circle/rect/poly/ellipse open their own,
-   * which is why every other round thing in the renderer was fine.
+   * lineTo, arcTo and the curve methods all continue the current path, exactly
+   * as the Canvas2D API they mirror does. circle/rect/poly/ellipse open their
+   * own, which is why every other round thing in the renderer was fine.
+   *
+   * `lineTo` is on this list now, and leaving it off was a real gap rather than
+   * an oversight about tidiness. Pixi's ShapePath sends the continuing calls
+   * through `_ensurePoly(true)`, which, on a path with nothing completed on it
+   * yet, seeds the subpath with a literal (0, 0) before adding your point - a
+   * line from the canvas origin, which is precisely what the beam looks like.
+   * `arc()` alone takes `_ensurePoly(false)` and seeds nothing, so the call the
+   * first two fixes guarded was in fact the least dangerous of the family. It
+   * is no longer in the renderer at all (see compassRing.ts), and `lineTo`,
+   * which is everywhere, is guarded in its place.
    */
-  const CONTINUES = ["arc", "arcTo", "bezierCurveTo", "quadraticCurveTo"];
+  const CONTINUES = ["lineTo", "arc", "arcTo", "bezierCurveTo", "quadraticCurveTo"];
 
   it.each(LAYERS)("%s opens a subpath before any continuing call", (file) => {
     const lines = read(file).split("\n");
     for (let i = 0; i < lines.length; i++) {
-      const hit = CONTINUES.find(m => new RegExp(`^\\s*\\.${m}\\(`).test(lines[i]));
+      const hit = CONTINUES.find(m => new RegExp(`\\.${m}\\(`).test(lines[i]));
       if (!hit) continue;
-      const before = lines.slice(Math.max(0, i - 3), i).join("\n");
+      // Canvas2D contexts have beginPath to manage instead, and draw into their
+      // own offscreen canvas: not this rule's business.
+      if (/\b(ctx|c)\.(moveTo|lineTo|arc|bezierCurveTo|quadraticCurveTo)\(/.test(lines[i])) continue;
+      const before = lines.slice(Math.max(0, i - 4), i + 1).join("\n");
       expect(before, `${file}:${i + 1} .${hit}() joins to whatever was drawn last`)
         .toMatch(/\.moveTo\(/);
     }
