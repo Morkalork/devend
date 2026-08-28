@@ -392,7 +392,23 @@ export function GameScreen({
       level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier,
       activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus]);
 
-  const totalLockedBalls = cumulativeLockedBalls + gameState.lockedBalls;
+  /**
+   * Locks THIS MAP, for every readout that sits next to a per-map requirement.
+   *
+   * It used to be `cumulativeLockedBalls + gameState.lockedBalls`, a whole-RUN
+   * tally (reset only at run start, added to after every level), handed to a
+   * HUD that compares it against `threadLockRequired`, which is per-map. The
+   * gate is per-map too - checkSpaceWin reads game.lockedBallsCount - so from
+   * the second level onward the top bar and Specs both announced an objective
+   * the map had not met and would not clear on: "47/1", and "Lock objective
+   * met! 84 of 2 balls locked" on an untouched board.
+   *
+   * One meaning per readout. The lock chip is part of the map HUD, so it counts
+   * the map, with or without a requirement to compare against; the run-long
+   * tally still drives the Micro Manager speed cap, which is the thing that
+   * actually wanted it.
+   */
+  const mapLockedBalls = gameState.lockedBalls;
 
   // Scope Creep tuning (game-config.yml snake_case -> ScopeCreepConfig).
   // Memoized so GameCanvas's live-config effect only re-runs on real changes.
@@ -791,7 +807,7 @@ export function GameScreen({
             continuesRemaining={continuesRemaining}
             spaceRemaining={gameState.spaceRemaining}
             spaceRequired={level.sizeThreshold}
-            lockedBalls={totalLockedBalls}
+            lockedBalls={mapLockedBalls}
             threadLockRequired={level.threadLockRequired}
             scopeCreepPercent={gameState.creepPercent}
             accentColor={accentColor}
@@ -1258,7 +1274,7 @@ export function GameScreen({
         continuesRemaining={continuesRemaining}
         spaceRemaining={gameState.spaceRemaining}
         spaceRequired={level.sizeThreshold}
-        lockedBalls={totalLockedBalls}
+        lockedBalls={mapLockedBalls}
         threadLockRequired={level.threadLockRequired}
         ownedUpgrades={ownedUpgrades}
         accentColor={accentColor}

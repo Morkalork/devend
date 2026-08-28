@@ -129,6 +129,22 @@ export function TopBarDetailsPanel({
   if (!visible) return null;
 
   const lockReq = threadLockRequired ?? 0;
+
+  /**
+   * The card is called Territory CAPTURE, so it has to speak in captured
+   * percent. `spaceRemaining` and `spaceRequired` are both REMAINING percent
+   * (the map is won when remaining falls to the threshold), and the card used
+   * to print them raw under a capture heading. On an untouched level 34 that
+   * read "100% / 5%" and "Capture at least 5% of the board. Currently at 100%",
+   * which is the exact inverse of the truth: 0% captured, 95% needed. The
+   * "goal met" line had it too, congratulating you on capturing 5%.
+   *
+   * Converted once, here, rather than in each of the three strings that read
+   * them: the strings were always phrased correctly, it was the numbers going
+   * into them that were the wrong way round.
+   */
+  const captured = 100 - spaceRemaining;
+  const captureRequired = 100 - spaceRequired;
   const lockMet = lockedBalls >= lockReq;
   const overPar = cutsUsed > parCuts;
 
@@ -356,13 +372,14 @@ export function TopBarDetailsPanel({
                   className="font-bold text-base tabular-nums"
                   style={{ color: spaceRemaining <= spaceRequired ? accentColor : 'hsl(var(--foreground))' }}
                 >
-                  {spaceRemaining}% / {spaceRequired}%
+                  {captured}% / {captureRequired}%
                 </span>
               </div>
               <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.6 }}>
                 {spaceRemaining <= spaceRequired
-                  ? t('topBarDetails.territoryGoalMet', { remaining: spaceRemaining, required: spaceRequired })
-                  : t('topBarDetails.territoryGoalPending', { required: spaceRequired, remaining: spaceRemaining, more: spaceRemaining - spaceRequired })}
+                  ? t('topBarDetails.territoryGoalMet', { captured, required: captureRequired })
+                  : t('topBarDetails.territoryGoalPending', {
+                      required: captureRequired, captured, more: spaceRemaining - spaceRequired })}
               </p>
             </div>
 
