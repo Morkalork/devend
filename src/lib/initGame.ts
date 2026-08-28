@@ -113,7 +113,6 @@ export function createBall(
     lastSpeedStepAt: 0,
     spawnActiveSeconds,
     rainbowSpawnCount: 0,
-    minLockFraction: type.minLockFraction,
     attractTurnRate: type.attractTurnRate,
     attractRadius: type.attractRadius,
   };

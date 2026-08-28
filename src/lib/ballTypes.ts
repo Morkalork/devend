@@ -56,7 +56,6 @@ export type BallAbility =
   | 'rainbow'       // rainbow: fast, shifts hue, spits out a random eligible ball on a timer
   | 'tappable'      // white: TAP to remove it for nothing, or LOCK it for a huge bonus (#57)
   | 'turnTimer'     // compass: turns ninety degrees on a timer, wearing the countdown
-  | 'heavyLock'     // freight: too big for a tight pocket, so it needs room to be locked
   | 'attract';      // lodestone: continuously pulls the other balls toward it
 
 export interface BallTypeDef {
@@ -74,12 +73,6 @@ export interface BallTypeDef {
   minimumSpeed: number;
   /** `turnTimer` only: seconds between its quarter turns. */
   turnIntervalSeconds?: number;
-  /**
-   * `heavyLock` only: the smallest pocket that can hold it, as a fraction of
-   * the map's lock threshold. 0.55 means the chamber must be over half the
-   * largest lockable size, so a tight nook will not do.
-   */
-  minLockFraction?: number;
   /** `attract` only: radians per second it bends other balls toward itself. */
   attractTurnRate?: number;
   /** `attract` only: world-unit range beyond which it has no pull. */
@@ -136,7 +129,7 @@ export const DEFAULT_RAINBOW_SPAWN_INTERVAL = 10;
 
 const VALID_ABILITIES: ReadonlySet<string> = new Set<BallAbility>([
   'none', 'variableSpeed', 'slowOthers', 'moneyBall', 'slowDown', 'breakObjects', 'rainbow', 'tappable',
-  'turnTimer', 'heavyLock', 'attract',
+  'turnTimer', 'attract',
 ]);
 
 /** White "tappable" ball (#57): tap to discard for nothing, or lock for a big bonus. */
@@ -198,9 +191,6 @@ function parseBallTypeEntry(raw: unknown): BallTypeDef | null {
     lockMultiplier: Number.isFinite(Number(r.lockMultiplier)) ? Number(r.lockMultiplier) : 1,
     turnIntervalSeconds: Number.isFinite(Number(r.turnIntervalSeconds)) && Number(r.turnIntervalSeconds) > 0
       ? Number(r.turnIntervalSeconds)
-      : undefined,
-    minLockFraction: Number.isFinite(Number(r.minLockFraction)) && Number(r.minLockFraction) > 0
-      ? Math.min(1, Number(r.minLockFraction))
       : undefined,
     attractTurnRate: Number.isFinite(Number(r.attractTurnRate)) && Number(r.attractTurnRate) > 0
       ? Number(r.attractTurnRate)

@@ -65,8 +65,6 @@ export interface Ball {
   speedReduction?: number;   // purple (slowOthers): scaled speed each struck ball loses per hit
   speedRange?: [number, number]; // yellow: current (scaled) [lo, hi] random-speed range; shrinks when slowed
   lastSpeedStepAt?: number;  // yellow: debounce so one contact changes speed once
-  /** Freight: smallest pocket that can hold it, as a fraction of the lock threshold. */
-  minLockFraction?: number;
   /** Lodestone: how hard, and how far, it pulls the other balls. */
   attractTurnRate?: number;
   attractRadius?: number;

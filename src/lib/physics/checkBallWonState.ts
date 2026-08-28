@@ -244,27 +244,8 @@ export function checkAndUpdateBallWonStates(
     const threshold = game.lockWinThresholdPercent ?? BALL_WON_REGION_THRESHOLD;
     const minCells = game.lockMinRegionCells ?? 0;
     const percentage = (regionCells / denominator) * 100;
-    let lockedByPercent = percentage <= threshold;
-    let lockedBySliver = minCells > 0 && regionCells <= minCells;
-
-    // FREIGHT: a pocket can be too SMALL for it.
-    //
-    // Every other ball wants the tightest chamber it can get, because the lock
-    // gate is "small enough" and a tighter seal grades superior on top. This
-    // ball inverts that: it needs ROOM, so the chamber has to be over half the
-    // largest lockable size. You cannot corner it, you have to leave it space,
-    // and space is the thing the whole game is spending.
-    //
-    // A consequence worth stating rather than discovering: the band it locks in
-    // sits entirely above the superior bar, so a Freight can never grade
-    // superior. Its lockMultiplier carries the pay instead.
-    if (ball.minLockFraction !== undefined && ball.minLockFraction > 0) {
-      const roomEnough = percentage >= threshold * ball.minLockFraction;
-      if (!roomEnough) {
-        lockedByPercent = false;
-        lockedBySliver = false;   // the sliver floor is exactly what it must not use
-      }
-    }
+    const lockedByPercent = percentage <= threshold;
+    const lockedBySliver = minCells > 0 && regionCells <= minCells;
 
     // Boss + Colored Area (level-10 fix): fencing the boss INTO the pink area
     // ships it - its whole region sealed WITHIN the area - without needing the
