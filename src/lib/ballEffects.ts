@@ -93,10 +93,16 @@ const CONFIG = {
   // compression dies inside 4-5 frames and reads as nothing at ball size (~13px),
   // especially with the round highlight ring and glow masking the silhouette.
   squishDuration: 500,       // ms spring-back to round (compress ~165ms, stretch, settle)
-  // Peak compression fraction along the impact axis at full speed. Dialled back
-  // 30% from the original 0.35 on play feedback: at that strength a square hit
-  // read as rubbery rather than as a ball with some give.
-  squishMaxCompress: 0.245,
+  // Peak compression fraction along the impact axis at full speed.
+  //
+  // Dialled back twice, both times on play feedback, and the second time for a
+  // reason worth recording: 0.35 -> 0.245 because a square hit read as rubbery
+  // rather than as a ball with some give, then 0.245 -> 0.1715 (another 30%)
+  // once the board's objects started casting readable shadows. The squash used
+  // to be carrying the whole impact on its own, on a ~13px ball, against a flat
+  // board. With the geometry throwing real shadows the hit is legible from the
+  // scene, so the deformation can stop over-acting.
+  squishMaxCompress: 0.1715,
   squishReferenceSpeed: 250, // world speed at which the squish magnitude saturates
 };
 
