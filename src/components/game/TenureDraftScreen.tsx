@@ -129,7 +129,7 @@ export function TenureDraftScreen({
                         <p className="text-[10px] uppercase tracking-wide" style={{ color: accentColor, opacity: 0.8 }}>
                           {contentText.tier(t, u.tier)}
                         </p>
-                        <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
+                        <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8' }}>
                           {contentText.upgradeDesc(t, u)}
                         </p>
                       </div>

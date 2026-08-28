@@ -103,7 +103,7 @@ export function TierDraftScreen({
                 >
                   <div className="flex items-start gap-2">
                     <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8' }}>
+                    <p className="text-base leading-relaxed" style={{ color: '#c8ffd8' }}>
                       {contentText.upgradeDesc(t, u)}
                     </p>
                   </div>
@@ -169,7 +169,7 @@ export function TierDraftScreen({
                     {contentText.upgradeName(t, u)} [{contentText.tier(t, u.tier)}]
                   </div>
                 </div>
-                <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.9 }}>
+                <p className="text-base leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.9 }}>
                   {contentText.upgradeDesc(t, u)}
                 </p>
               </motion.div>

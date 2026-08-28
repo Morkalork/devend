@@ -9,9 +9,14 @@
  * fine, which is exactly how this comes back.
  *
  * So the budget is a RULE, not a preference, and it is derived rather than
- * chosen: the card is 340px wide with 20px of padding either side, and the
- * description is set at 16px, which is about 37 characters a line. 100
- * characters is therefore just under three lines. That is the number.
+ * chosen: the card is 340px wide with 20px of padding either side, so about
+ * 300px of text. The description is set at 18px (raised from 16px on the same
+ * readability feedback that produced this file), which is roughly 33 characters
+ * a line, so 100 characters is about three lines. That is the number.
+ *
+ * Note which way that trade runs. Bigger type spends the same budget on FEWER
+ * lines, so the next increase in font size has to come with a smaller character
+ * count rather than on its own. 100 at 18px is where the two currently balance.
  *
  * Translations get more room because they legitimately need it: Spanish and
  * Swedish run 10-20% longer than English for the same content, and squeezing a

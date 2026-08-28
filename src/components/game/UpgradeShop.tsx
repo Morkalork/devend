@@ -841,9 +841,11 @@ export function UpgradeShop({
 
                 {/* Description — the reason the card got bigger. This is the
                     only text on the screen the player has to actually read, so
-                    it is set at body size rather than at whatever size made
-                    five of them fit across a phone. */}
-                <p className="text-base text-muted-foreground leading-relaxed">
+                    it gets the largest type on the card after the name itself.
+                    Raised again from text-base once the strip had proved it had
+                    the room: the card was sized for one description, and there
+                    was no reason left to set it at body size. */}
+                <p className="text-lg text-muted-foreground leading-relaxed">
                   {isChoice && !chosenMember
                     ? t('upgradeShop.choicePrompt')
                     : contentText.upgradeDesc(t, displayUpgrade)}
@@ -1010,7 +1012,7 @@ export function UpgradeShop({
                   </div>
                 )}
 
-                <p className="text-sm text-muted-foreground mb-4">{contentText.upgradeDesc(t, u)}</p>
+                <p className="text-base text-muted-foreground mb-4">{contentText.upgradeDesc(t, u)}</p>
 
                 {/* Unlocked by (prerequisites) */}
                 <div className="mb-3">
@@ -1150,7 +1152,7 @@ export function UpgradeShop({
                           ${affordable ? `cursor-pointer hover:border-primary ${tc.border}` : 'opacity-60 border-muted cursor-pointer'}`}
                       >
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-semibold text-foreground flex-1">
+                          <span className="text-base font-semibold text-foreground flex-1">
                             {contentText.upgradeDesc(t, opt)}
                           </span>
                           {isSel && <Check className="w-4 h-4 text-white shrink-0" />}
