@@ -11,7 +11,7 @@ certificates:
 
   - id: signing-bonus
     name: Signing Bonus
-    description: Start every run with overtime hours already banked, before you have cleared anything.
+    description: Start every run with overtime hours already banked.
     unlockType: always
     # Three levels of +10. The first is the one that matters: 10h is most of a
     # first upgrade, so the opening shop is a real decision instead of a shelf
@@ -26,7 +26,7 @@ certificates:
 
   - id: corporate-card
     name: Corporate Card
-    description: The store stops asking how many balls you locked before it will sell to you.
+    description: The store sells to you however few balls you have locked.
     unlockType: always
     # The shop is normally earned: one lock, or two on a map with three or more
     # balls. Level 1 caps that at a single lock however busy the map; level 2
@@ -46,7 +46,7 @@ certificates:
 
   - id: runtime-augmentation
     name: Runtime Augmentation
-    description: Perpetually reduced ball speeds - a permanent reward for mastering Runtime Optimisation.
+    description: Perpetually reduced ball speeds.
     unlockType: upgrade-chain
     sourceUpgradeId: runtime_optimisation_principal
     requiredRuns: 3
@@ -60,7 +60,7 @@ certificates:
 
   - id: memory-compression
     name: Memory Compression
-    description: Perpetually smaller balls - a permanent reward for mastering Memory Footprint.
+    description: Perpetually smaller balls.
     unlockType: upgrade-chain
     sourceUpgradeId: memory_footprint_principal
     requiredRuns: 3
@@ -74,7 +74,7 @@ certificates:
 
   - id: compile-cache
     name: Compile Cache
-    description: Perpetually faster fence generation - a permanent reward for mastering Fast Compile.
+    description: Perpetually faster fence generation.
     unlockType: upgrade-chain
     sourceUpgradeId: fast_compile_principal
     requiredRuns: 3
@@ -88,7 +88,7 @@ certificates:
 
   - id: warm-deploy
     name: Warm Deploy
-    description: Permanently gain one instant fence at map start - a reward for mastering Hot Start.
+    description: One instant fence at every map start.
     unlockType: upgrade-chain
     sourceUpgradeId: hot_start_architect
     requiredRuns: 3
@@ -100,7 +100,7 @@ certificates:
 
   - id: parallel-processing
     name: Parallel Processing
-    description: Permanently one extra concurrent fence - a reward for mastering Multithreading.
+    description: One extra fence you can grow at a time.
     unlockType: upgrade-chain
     sourceUpgradeId: multithreading_principal
     requiredRuns: 3
@@ -112,7 +112,7 @@ certificates:
 
   - id: resilience-protocol
     name: Resilience Protocol
-    description: Permanently start with an extra life - a reward for mastering Fault Tolerance.
+    description: Start every run with an extra life.
     unlockType: upgrade-chain
     sourceUpgradeId: fault_tolerance_architect
     requiredRuns: 3
@@ -126,7 +126,7 @@ certificates:
 
   - id: performance-suite
     name: Performance Suite
-    description: Permanently higher score multiplier - a reward for mastering Performance Bonus.
+    description: A permanently higher score multiplier.
     unlockType: upgrade-chain
     sourceUpgradeId: performance_bonus_principal
     requiredRuns: 3
@@ -140,7 +140,7 @@ certificates:
 
   - id: investment-strategy
     name: Investment Strategy
-    description: Your investments work for you, balls spawn 1% slower per 50h banked. A reward for mastering Runway.
+    description: Balls spawn 1% slower per 50h banked.
     unlockType: upgrade-chain
     sourceUpgradeId: venture_capital_architect
     requiredRuns: 3
@@ -152,7 +152,7 @@ certificates:
 
   - id: process-optimiser
     name: Process Optimiser
-    description: Permanently reduce ball speed by 1% per locked ball, even without the upgrade. A reward for mastering MicroManager.
+    description: Ball speed drops 1% per locked ball, even without the upgrade.
     unlockType: upgrade-chain
     sourceUpgradeId: micro_manager_principal
     requiredRuns: 3
@@ -164,7 +164,7 @@ certificates:
 
   - id: sprint-protocol
     name: Sprint Protocol
-    description: Permanent extra bounce in path preview - a reward for mastering SCRUM Master.
+    description: One extra bounce in the path preview.
     unlockType: upgrade-chain
     sourceUpgradeId: scrum_master_6
     requiredRuns: 3
@@ -181,7 +181,7 @@ certificates:
 
   - id: head-start-i
     name: Head Start I
-    description: Begin every run at level 5. Awarded to those who have proven they can reach level 25.
+    description: Begin every run at level 5.
     unlockType: achievement
     # NOTE: must match an existing id in achievements.yml ("reach level 25")
     sourceAchievementId: principal-engineer
@@ -191,7 +191,7 @@ certificates:
 
   - id: head-start-ii
     name: Head Start II
-    description: Begin every run at level 10. Awarded for exceptional consistency across 50 perfect levels.
+    description: Begin every run at level 10.
     unlockType: achievement
     # NOTE: must match an existing id in achievements.yml ("50 flawless levels")
     sourceAchievementId: ci-cd-pipeline
@@ -206,7 +206,7 @@ certificates:
 
   - id: equity-grant
     name: Equity Grant
-    description: Start every map with part of the board already captured. Vesting begins immediately.
+    description: Start every map with part of the board already captured.
     unlockType: hours-spent
     requiredHoursSpent: 25
     levels:
@@ -223,7 +223,7 @@ certificates:
 
   - id: night-school-diploma
     name: Night School Diploma
-    description: Bank extra Certificate Hours every run. Ascending accelerates everything.
+    description: Bank extra Certificate Hours every run.
     unlockType: achievement
     # "Beyond The Backlog" — ascend past the final level
     sourceAchievementId: beyond-the-backlog
@@ -235,7 +235,7 @@ certificates:
 
   - id: bulk-licensing
     name: Bulk Licensing
-    description: Permanent discount on all upgrade-shop prices. Procurement finally negotiated a framework agreement.
+    description: A permanent discount on all upgrade-shop prices.
     unlockType: achievement
     # "Staff Engineer" — reach level 30
     sourceAchievementId: staff-engineer
@@ -249,7 +249,7 @@ certificates:
 
   - id: risk-assessment-certified
     name: Risk Assessment Certified
-    description: Push-Your-Luck bonuses pay out more. Audited, stamped, and underwritten.
+    description: Push Your Luck bonuses pay out more.
     unlockType: achievement
     # "Calculated Risk" — bank 5 push bonuses
     sourceAchievementId: calculated-risk

@@ -236,7 +236,7 @@ upgrades:
   - id: fast_compile_principal_b
     name: Fast Compile
     tier: Principal
-    description: "Incremental Build: fences start 10% faster, +5% with every fence you finish this map."
+    description: "Incremental Build: fences start 10% faster, +5% per fence finished this map."
     unlockLevel: 10
     prerequisites:
       - fast_compile_senior
@@ -291,7 +291,7 @@ upgrades:
   - id: hot_start_architect_b
     name: Hot Start
     tier: Architect
-    description: "From level 20: two fences complete instantly each map, and you can grow one more at a time."
+    description: "From level 20: two instant fences each map, and one more growing at a time."
     unlockLevel: 20
     prerequisites:
       - hot_start_principal
@@ -322,7 +322,7 @@ upgrades:
   - id: ultrathreading_principal
     name: Ultrathreading
     tier: Principal
-    description: "Draw one more fence at the same time, and another at five other tempo upgrades."
+    description: "Draw one more fence at a time, and another at five other tempo upgrades."
     unlockLevel: 30
     prerequisites:
       - multithreading_principal
@@ -382,7 +382,7 @@ upgrades:
   - id: padded_estimate_principal
     name: Padded Estimate
     tier: Principal
-    description: "Sandbagging: maps are scored against 3 extra fences of par, 4 with 4 other tempo upgrades."
+    description: "Sandbagging: +3 fences of par, 4 at 4 other tempo upgrades."
     unlockLevel: 20
     prerequisites:
       - padded_estimate_senior
@@ -469,7 +469,7 @@ upgrades:
   - id: golden_parachute
     name: Golden Parachute
     tier: Wizard
-    description: "Start each run with an extra Continue, and one more again at six other safety upgrades."
+    description: "Start each run with an extra Continue, and another at six other safety upgrades."
     unlockLevel: 5
     icon: life-buoy
     cost: 250
@@ -553,7 +553,7 @@ upgrades:
   - id: venture_capital_senior
     name: Runway
     tier: Senior
-    description: While you have 100h or more banked, one fence completes instantly at each map start.
+    description: With 100h or more banked, one fence completes instantly at each map start.
     unlockLevel: 6
     prerequisites:
       - performance_bonus_senior
@@ -633,7 +633,7 @@ upgrades:
   - id: code_review
     name: Code Review
     tier: Junior
-    description: "Sloppy pockets count: a pocket up to 3% over the lock limit still locks its ball."
+    description: "A pocket up to 3% over the lock limit still locks its ball."
     unlockLevel: 2
     icon: clipboard-check
     tags: [lock]
@@ -652,7 +652,7 @@ upgrades:
   - id: severance_package_junior
     name: Severance Package
     tier: Junior
-    description: Each ball you lock away pays 5 bonus overtime hours (counted under the map cap).
+    description: Each lock pays 5 bonus hours, counted under the map cap.
     unlockLevel: 6
     icon: banknote
     tags: [lock]
@@ -709,7 +709,7 @@ upgrades:
   - id: knowledge_transfer_senior
     name: Knowledge Transfer
     tier: Senior
-    description: Each ball locked away speeds up fence generation by 4% for the rest of the map.
+    description: Each lock speeds fence generation 4% for the rest of the map.
     unlockLevel: 7
     prerequisites:
       - severance_package_junior
@@ -758,7 +758,7 @@ upgrades:
   - id: frozen_assets_principal_b
     name: Frozen Assets
     tier: Principal
-    description: "Cold Storage: frozen locks still pay double, but every freeze lasts a second longer."
+    description: "Cold Storage: frozen locks still pay double, and every freeze lasts 1s longer."
     unlockLevel: 16
     prerequisites:
       - frozen_assets_senior
@@ -789,7 +789,7 @@ upgrades:
   - id: free_fall_junior
     name: Free Fall
     tier: Junior
-    description: "Under gravity, in a live well, or on a gravity map: locks pay double the bonus."
+    description: "Under gravity, in a live well, or on a gravity map: locks pay double."
     unlockLevel: 12
     icon: gem
     tags: [lock, risk]
@@ -846,7 +846,7 @@ upgrades:
   - id: expense_account
     name: Expense Account
     tier: Senior
-    description: "Shop prices 10% lower for the rest of the run. 3% lower again per other bank upgrade (max 4)."
+    description: "Shop prices 10% lower, and 3% lower again per other bank upgrade (max 4)."
     unlockLevel: 9
     prerequisites:
       - performance_bonus_junior
@@ -860,7 +860,7 @@ upgrades:
   - id: war_chest
     name: War Chest
     tier: Principal
-    description: "Balls spawn 2% slower per 50h banked, up to 8%. Each other bank upgrade adds 0.5% per 50h (max 4)."
+    description: "Balls spawn 2% slower per 50h banked, up to 8%. +0.5% per other bank upgrade (max 4)."
     unlockLevel: 13
     prerequisites:
       - venture_capital_senior
@@ -888,7 +888,7 @@ upgrades:
   - id: budget_cycle_junior
     name: Budget Cycle
     tier: Junior
-    description: "Each chunk per visit buys an instant fence next map. Chunks start at 60h and rise with rates."
+    description: "Each chunk spent per visit buys an instant fence next map. Chunks start at 60h and rise with rates."
     unlockLevel: 10
     prerequisites:
       - expense_account
@@ -900,7 +900,7 @@ upgrades:
   - id: budget_cycle_senior
     name: Budget Cycle
     tier: Senior
-    description: Each spending chunk in one shop visit also speeds fence growth 5% on the next map.
+    description: Each chunk spent per visit also speeds fence growth 5% next map.
     unlockLevel: 13
     prerequisites:
       - budget_cycle_junior
@@ -925,7 +925,7 @@ upgrades:
   - id: budget_cycle_principal_b
     name: Budget Cycle
     tier: Principal
-    description: "Leveraged Buyout: spending now counts up to 5 chunks per visit, from 3. Splurge in one go."
+    description: "Leveraged Buyout: spending counts up to 5 chunks per visit, from 3."
     unlockLevel: 16
     prerequisites:
       - budget_cycle_senior
@@ -944,7 +944,7 @@ upgrades:
   - id: clean_release
     name: Clean Release
     tier: Senior
-    description: "Finish under par and the next map starts with 1 instant fence, 2 with 4 other tempo upgrades."
+    description: "Finish under par: next map starts with 1 instant fence, 2 at 4 other tempo upgrades."
     unlockLevel: 6
     prerequisites:
       - fast_compile_junior
@@ -1013,7 +1013,7 @@ upgrades:
   - id: deadline_extension_principal_b
     name: Deadline Extension
     tier: Principal
-    description: "On maps with 3+ balls: +1s per ball on every Ship Early window, and 2.2x the Tempo payout."
+    description: "On maps with 3+ balls: +1s per ball on Ship Early windows, and 2.2x Tempo."
     unlockLevel: 16
     prerequisites:
       - deadline_extension_senior
@@ -1105,7 +1105,7 @@ upgrades:
   - id: procurement_principal
     name: Procurement
     tier: Principal
-    description: "Your first 3 buys per visit each restock the shelf. +1 per 4 other bank upgrades (max 2)."
+    description: "Your first 3 buys per visit restock the shelf. +1 per 4 other bank upgrades (max 2)."
     unlockLevel: 12
     prerequisites:
       - procurement_senior
@@ -1120,7 +1120,7 @@ upgrades:
   - id: procurement_principal_b
     name: Procurement
     tier: Principal
-    description: "Bulk Discount: no extra restocks, but one more offer on the shelf and the cheapest is free."
+    description: "Bulk Discount: no restocks, but one more offer and the cheapest is free."
     unlockLevel: 12
     prerequisites:
       - procurement_senior
@@ -1194,7 +1194,7 @@ upgrades:
   - id: technical_debt_architect
     name: Technical Debt
     tier: Architect
-    description: "+20h to this run's per-map overtime ceiling, so a stacked multiplier pays. Balls move 25% faster."
+    description: "+20h to this run's per-map overtime ceiling. Balls move 25% faster."
     unlockLevel: 14
     prerequisites:
       - technical_debt_principal
@@ -1372,7 +1372,7 @@ upgrades:
   - id: scrum_master_6_b
     name: SCRUM Master
     tier: Architect
-    description: "Deep Dive: same balls covered, 3 more bounces traced. +1 per 4 other safety upgrades (max 8)."
+    description: "Deep Dive: 3 more bounces traced. +1 per 4 other safety upgrades (max 8)."
     unlockLevel: 19
     prerequisites:
       - scrum_master_5
@@ -1400,7 +1400,7 @@ upgrades:
   - id: cold_boot
     name: Cold Boot
     tier: Junior
-    description: "Every map starts frozen: balls hold still for 2s. +0.25s per other freeze upgrade (max 4)."
+    description: "Every map starts frozen for 2s. +0.25s per other freeze upgrade (max 4)."
     unlockLevel: 3
     icon: power
     tags: [freeze]
@@ -1579,7 +1579,7 @@ upgrades:
   - id: cron_job_architect_b
     name: Cron Job
     tier: Architect
-    description: "Watchdog Timer: scheduled freezes stay 4s, but every ball freezes briefly the moment it spawns."
+    description: "Watchdog Timer: scheduled freezes stay 4s, and every ball freezes briefly on spawn."
     unlockLevel: 24
     prerequisites:
       - cron_job_principal
@@ -1621,7 +1621,7 @@ upgrades:
   - id: benefits_package_principal
     name: Benefits Package
     tier: Principal
-    description: "Power-up tokens turn up much more often, and more still per other risk upgrade (max 5)."
+    description: "Power-up tokens turn up much more often, more still per other risk upgrade (max 5)."
     unlockLevel: 14
     prerequisites:
       - benefits_package_senior
@@ -1681,7 +1681,7 @@ upgrades:
   - id: total_compensation_principal
     name: Total Compensation
     tier: Principal
-    description: "Peak perks: the splitter now makes 3 balls, and token payouts rise a level at 5 other risk upgrades."
+    description: "Peak perks: the splitter makes 3 balls; tokens pay a level higher at 5 other risk upgrades."
     unlockLevel: 19
     prerequisites:
       - total_compensation_senior
@@ -1698,7 +1698,7 @@ upgrades:
   - id: total_compensation_principal_b
     name: Total Compensation
     tier: Principal
-    description: "Profit Sharing: perks stay at the previous level, but tokens turn up far more often."
+    description: "Profit Sharing: perks stay a level lower, but tokens turn up far more often."
     unlockLevel: 19
     prerequisites:
       - total_compensation_senior
@@ -1803,7 +1803,7 @@ upgrades:
   - id: breaking_change_principal_b
     name: Breaking Change
     tier: Principal
-    description: "On breakable maps, smashing never costs a lock multiplier, and each break pays 15% more."
+    description: "On breakable maps, smashing costs no lock multiplier and each break pays 15% more."
     unlockLevel: 18
     prerequisites:
       - breaking_change_senior
@@ -1891,7 +1891,7 @@ upgrades:
   - id: ghost_protocol_principal_b
     name: Ghost Protocol
     tier: Principal
-    description: "On maps with 3+ balls, fences pass through balls for a full 1s. Elsewhere, 0.4s as before."
+    description: "On maps with 3+ balls, fences pass through balls for 1s. Elsewhere 0.4s."
     unlockLevel: 8
     prerequisites:
       - ghost_protocol_senior

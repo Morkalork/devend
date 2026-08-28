@@ -36,7 +36,7 @@ balls:
     lockMultiplier: 1
     density: 1
     ability: none
-    description: A standard ball. No special behaviour - just bounces.
+    description: A standard ball. No special behaviour.
 
   - id: blue
     name: Blue
@@ -47,7 +47,7 @@ balls:
     lockMultiplier: 1
     density: 1
     ability: none
-    description: A standard ball, a touch faster than the red one.
+    description: A standard ball, a touch faster than red.
 
   - id: yellow
     name: Yellow
@@ -71,7 +71,7 @@ balls:
     density: 0.9
     ability: slowOthers
     speedReduction: 20
-    description: "Saps momentum: every ball it clashes with loses speed, down to the balls' minimum speed."
+    description: "Saps momentum: every ball it hits loses speed, down to its minimum."
 
   - id: green
     name: Green
@@ -82,7 +82,7 @@ balls:
     lockMultiplier: 2
     density: 1.1
     ability: moneyBall
-    description: "Money ball: locking it away triples the gains of every later lock this round."
+    description: "Money ball: locking it triples every later lock this round."
 
   - id: grey
     name: Grey
@@ -93,7 +93,7 @@ balls:
     lockMultiplier: 1
     density: 1.6
     ability: slowDown
-    description: "Winds down: slows down 10 speedUnits ever 5 seconds. Down to minimum speed."
+    description: "Winds down: loses 10 speed every 5 seconds, down to its minimum."
 
   # Black: a heavy wrecking ball (issue #64). Besides smashing mirrors and movers,
   # it now fractures the player's own fences: three hits crack a fence apart. It
@@ -115,7 +115,7 @@ balls:
     density: 1
     ability: turnTimer
     turnIntervalSeconds: 9
-    description: "Turns a quarter circle every few seconds. The ring around it counts down, and leans the way it will turn."
+    description: "Turns a quarter circle every few seconds. The ring counts down and leans the way it will turn."
 
   # FREIGHT. Every other ball wants the tightest chamber it can get, because the
   # lock gate is "small enough" and a tighter seal grades superior on top. This
@@ -132,7 +132,7 @@ balls:
     density: 2.4
     ability: heavyLock
     minLockFraction: 0.55
-    description: "Too big for a tight corner. It only locks in a roomy pocket, so you have to leave space for it while the board shrinks."
+    description: "Too big for a tight corner: it only locks in a roomy pocket."
 
   # LODESTONE. Not the Magnet ability: that is a one-shot you aim at a point you
   # chose, this is always on and aimed at a ball that is moving. It changes
@@ -150,7 +150,7 @@ balls:
     ability: attract
     attractTurnRate: 1.6
     attractRadius: 320
-    description: "Draws the other balls toward it. Gather them for a multi-lock, or watch them pile into the pocket you were keeping clear."
+    description: "Draws other balls toward it: gather them for a multi-lock, or lose the pocket you kept clear."
 
   - id: black
     name: Black
@@ -161,7 +161,7 @@ balls:
     lockMultiplier: 4
     density: 2.6
     ability: breakObjects
-    description: "Wrecking ball: heavy enough to smash obstacles, and it cracks your own fences apart in three hits."
+    description: "Wrecking ball: smashes obstacles, and cracks your own fences in three hits."
 
   # Rainbow: a fast, hue-shifting ball that shows up occasionally past level 10.
   # Every 10 seconds it spits out one random ball type available for the current
@@ -179,7 +179,7 @@ balls:
     ability: rainbow
     spawnIntervalSeconds: 10
     spawnChance: 0.4
-    description: "Prism ball: fast and unstable, it spits out a new ball every 10 seconds. Lock it away before the board fills up."
+    description: "Prism ball: fast and unstable. Spits out a new ball every 10 seconds."
 
   # White: a rare, bright "decision" ball (issue #57). TAP it to discard it for
   # nothing (one fewer ball to deal with), or LOCK it for the biggest single-lock
@@ -195,4 +195,4 @@ balls:
     density: 0.8
     ability: tappable
     spawnChance: 0.12
-    description: "Bright and yours to judge: tap it to throw it away for nothing, or lock it for the biggest single bonus in the game."
+    description: "Tap it to discard it for nothing, or lock it for the biggest bonus in the game."
