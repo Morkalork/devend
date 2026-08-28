@@ -297,9 +297,7 @@ export class SleekRenderer {
     // Composed after the layers so it sees this frame's walls, and committed
     // before app.render() because it is a separate pass into its own target.
     this.ballLights.build(game, w2s, scale);
-    this.ballLights.commit(
-      this.app.renderer, this.app.renderer.width, this.app.renderer.height,
-    );
+    this.ballLights.commit(this.app.renderer, boardRect);
 
     this.probeForBeams(now);
 

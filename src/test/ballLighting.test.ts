@@ -18,7 +18,7 @@ import { Container, Graphics } from "pixi.js";
 import {
   ballLight, shadowQuad, segmentDistance, REACH_RADII, BASE_INTENSITY,
 } from "@/lib/rendering/sleek/ballLight";
-import { BallLightPass } from "@/lib/rendering/sleek/ballLightPass";
+import { BallLightPass, lightBufferPlan, LIGHT_RESOLUTION } from "@/lib/rendering/sleek/ballLightPass";
 import { PALETTE } from "@/lib/rendering/sleek/palette";
 import type { Ball } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
@@ -290,5 +290,51 @@ describe("the pool does not undo the board's readability", () => {
       .toBeGreaterThan(1.15);
     // And it has to be actually visible, or none of this was worth a pass.
     expect(add, "the pool is too faint to see").toBeGreaterThan(30);
+  });
+});
+
+describe("the light buffer covers the board, not the window", () => {
+  // A wide desktop window with a square board sitting in the middle of it: the
+  // shape the surface actually has (the HUD reported 3840x1499 with a board
+  // about a thousand pixels across).
+  const WINDOW = { w: 3840, h: 1499 };
+  const BOARD = { left: 1420, top: 250, width: 1000, height: 1000, scale: 1 };
+
+  it("sizes itself from the board", () => {
+    const plan = lightBufferPlan(BOARD);
+    expect(plan.w).toBe(Math.ceil(BOARD.width * LIGHT_RESOLUTION));
+    expect(plan.h).toBe(Math.ceil(BOARD.height * LIGHT_RESOLUTION));
+  });
+
+  it("is a small fraction of a window-sized buffer", () => {
+    // THE point. Every light is a ball, every ball is on the board, and
+    // boardScope is masked to the board - so a window-sized buffer cleared and
+    // composited a majority of pixels that were guaranteed to be clipped away.
+    const plan = lightBufferPlan(BOARD);
+    const windowPixels = (WINDOW.w * LIGHT_RESOLUTION) * (WINDOW.h * LIGHT_RESOLUTION);
+    expect(plan.w * plan.h).toBeLessThan(windowPixels / 4);
+  });
+
+  it("maps the board's corners onto the buffer's corners", () => {
+    // The pass keeps composing in SCREEN coordinates, so the transform is the
+    // only thing that knows the buffer moved. Off by the board's offset and
+    // every pool lands somewhere else entirely.
+    const { w, h, transform } = lightBufferPlan(BOARD);
+    const topLeft = transform.apply({ x: BOARD.left, y: BOARD.top });
+    expect(topLeft.x).toBeCloseTo(0, 6);
+    expect(topLeft.y).toBeCloseTo(0, 6);
+
+    const bottomRight = transform.apply({
+      x: BOARD.left + BOARD.width, y: BOARD.top + BOARD.height,
+    });
+    expect(bottomRight.x).toBeCloseTo(w, 6);
+    expect(bottomRight.y).toBeCloseTo(h, 6);
+  });
+
+  it("still holds for a board that starts at the origin", () => {
+    const plan = lightBufferPlan({ left: 0, top: 0, width: 900, height: 900, scale: 1 });
+    const p = plan.transform.apply({ x: 450, y: 450 });
+    expect(p.x).toBeCloseTo(450 * LIGHT_RESOLUTION, 6);
+    expect(p.y).toBeCloseTo(450 * LIGHT_RESOLUTION, 6);
   });
 });

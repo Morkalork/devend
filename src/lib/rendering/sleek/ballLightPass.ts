@@ -32,6 +32,7 @@
 import { Container, Graphics, Matrix, RenderTexture, Sprite, Texture } from "pixi.js";
 import type { Renderer } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
+import type { BoardRect } from "@/lib/boardConstants";
 import { PALETTE } from "./palette";
 import { ballLight, segmentDistance, shadowQuad, type BallLight } from "./ballLight";
 import type { Pt } from "./pixelGrid";
@@ -93,6 +94,31 @@ export function clearPoolTexture(): void {
   poolTexture = null;
 }
 
+/**
+ * How big the light buffer is, and how board space maps into it.
+ *
+ * Sized to the BOARD, not to the window. Every light is a ball, every ball is
+ * on the board, and `boardScope` is masked to the board anyway - so a
+ * window-sized buffer spent most of its pixels clearing and compositing area
+ * that was guaranteed to be clipped away. On a wide desktop window the board is
+ * well under a fifth of the surface; even on a portrait phone, where the board
+ * comes closest to filling the screen, it is about half.
+ *
+ * The transform maps the board's top-left to the buffer's origin and scales by
+ * LIGHT_RESOLUTION, so the pass can keep composing in screen coordinates and
+ * nothing upstream has to know the buffer moved.
+ */
+export function lightBufferPlan(rect: BoardRect): {
+  w: number; h: number; transform: Matrix;
+} {
+  const r = LIGHT_RESOLUTION;
+  return {
+    w: Math.max(1, Math.ceil(rect.width * r)),
+    h: Math.max(1, Math.ceil(rect.height * r)),
+    transform: new Matrix(r, 0, 0, r, -rect.left * r, -rect.top * r),
+  };
+}
+
 interface Emitter {
   glow: Sprite;
   shade: Graphics;
@@ -110,16 +136,6 @@ export class BallLightPass {
   private rtH = 0;
   /** Lights built this frame; zero means the composite is skipped entirely. */
   private live = 0;
-
-  /**
-   * The half-resolution downscale, applied as the render pass's transform
-   * rather than as a scale on `stage`. A detached container is rendered by
-   * handing it to the renderer as a pass root, and whether a pass root's own
-   * transform is honoured is exactly the kind of thing that is true until a
-   * Pixi version says otherwise; stating it as the pass transform cannot be
-   * misread.
-   */
-  private readonly downscale = new Matrix().scale(LIGHT_RESOLUTION, LIGHT_RESOLUTION);
 
   constructor() {
     this.sprite.blendMode = "add";
@@ -209,24 +225,24 @@ export class BallLightPass {
    * Separate from build() because this is the only part that needs a GPU: a
    * headless test can drive build() and read the quads back off the Graphics.
    */
-  commit(renderer: Renderer, width: number, height: number): void {
+  commit(renderer: Renderer, boardRect: BoardRect): void {
     if (this.live === 0) return;
-    const w = Math.max(1, Math.ceil(width * LIGHT_RESOLUTION));
-    const h = Math.max(1, Math.ceil(height * LIGHT_RESOLUTION));
-    if (!this.rt || this.rtW !== w || this.rtH !== h) {
+    const plan = lightBufferPlan(boardRect);
+    if (!this.rt || this.rtW !== plan.w || this.rtH !== plan.h) {
       this.rt?.destroy(true);
-      this.rt = RenderTexture.create({ width: w, height: h });
-      this.rtW = w;
-      this.rtH = h;
+      this.rt = RenderTexture.create({ width: plan.w, height: plan.h });
+      this.rtW = plan.w;
+      this.rtH = plan.h;
       this.sprite.texture = this.rt;
       this.sprite.scale.set(1 / LIGHT_RESOLUTION);
     }
-    // Cleared to fully transparent black, which under "add" contributes nothing:
-    // the untouched parts of the buffer must be invisible, not merely dark.
+    // The buffer's origin is the board's top-left, so the composite sprite has
+    // to sit there rather than at the window's origin.
+    this.sprite.position.set(boardRect.left, boardRect.top);
     renderer.render({
       container: this.stage,
       target: this.rt,
-      transform: this.downscale,
+      transform: plan.transform,
       clear: true,
       // Fully transparent black. Under "add" the untouched parts of the buffer
       // must contribute nothing, which means transparent - not merely dark.
