@@ -17,6 +17,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import { traceActiveContours, snapContoursToWalls, traceLockContours } from "@/lib/rendering/regionContour";
 import { PALETTE, withAlpha } from "./palette";
 import { ambientAt, lightScope, shadowFor, slabHeight, type LightScope } from "./light";
+import { washSpriteAlpha, washStops } from "./boardWash";
 import { snapStroke, hairline, type Pt } from "./pixelGrid";
 import { transformKey } from "./transformKey";
 
@@ -494,9 +495,8 @@ export class BoardLayer {
     );
     this.wash.position.set(room.x, room.y);
     this.wash.scale.set(Math.max(1e-3, far) / WASH_BAKE_RADIUS);
-    // Brighter monitor = less darkening. Inverted because the wash is a
-    // multiply layer: its job is to REMOVE light from the far corner.
-    this.wash.alpha = Math.max(0, Math.min(1, 1.25 - room.level));
+    // Brighter monitor = less darkening; see washSpriteAlpha.
+    this.wash.alpha = washSpriteAlpha(room.level);
   }
 
   /**
@@ -517,12 +517,12 @@ export class BoardLayer {
 
     const r = WASH_BAKE_RADIUS;
     const grad = ctx.createRadialGradient(r, r, 0, r, r, r);
-    // Eased back from 0.62: at that strength the far corner crushed obstacle
-    // bodies down into the substrate and they lost their silhouette entirely.
-    // The wash exists to give the surface depth, not to hide what stands on it.
-    grad.addColorStop(0, withAlpha(PALETTE.shadow, 0.0));
-    grad.addColorStop(0.45, withAlpha(PALETTE.shadow, 0.1));
-    grad.addColorStop(1, withAlpha(PALETTE.shadow, 0.42));
+    // Stops come from boardWash.ts, which states them as the effective alpha a
+    // player sees rather than as raw stops: a stop means nothing without the
+    // sprite alpha it is multiplied by, and that moves with the flicker.
+    for (const stop of washStops()) {
+      grad.addColorStop(stop.offset, withAlpha(PALETTE.shadow, stop.alpha));
+    }
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
 
