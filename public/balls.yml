@@ -86,7 +86,7 @@ balls:
 
   - id: grey
     name: Grey
-    color: "#9aa3ad"
+    color: "#aeaeae"
     baseSpeed: 200
     minimumSpeed: 150
     unlockLevel: 10
@@ -124,7 +124,7 @@ balls:
   # grade superior as a result, so its lock multiplier carries the pay.
   - id: freight
     name: Freight
-    color: "#8fa6b8"
+    color: "#3b7470"
     baseSpeed: 190
     minimumSpeed: 140
     unlockLevel: 16

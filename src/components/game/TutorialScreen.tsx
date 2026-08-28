@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Move, Scissors, Target, AlertTriangle, Heart, Flag, Star, Hammer } from 'lucide-react';
 import { CRTBackground } from './CRTBackground';
 import { getImplementedBallTypes } from '@/lib/ballTypes';
+import { BallMark } from '@/components/game/BallMark';
 
 interface TutorialScreenProps {
   onBack: () => void;
@@ -110,15 +111,21 @@ export function TutorialScreen({ onBack, accentColor, encounteredBallTypeIds = [
               transition={{ delay: 0.65 + index * 0.06 }}
               className="flex gap-4 p-4 bg-card/50 border border-border rounded-lg"
             >
-              <div
-                className="flex-shrink-0 w-12 h-12 rounded-full self-center"
-                style={{
-                  backgroundColor: ball.color,
-                  boxShadow: `0 0 14px ${ball.color}, inset -4px -4px 8px rgba(0,0,0,0.35)`,
-                  border: '1px solid rgba(255,255,255,0.25)',
-                }}
-                aria-hidden
-              />
+              {/* The swatch carries the ability mark the board draws, so this
+                  roster is where a player learns to read it. Same shape table
+                  as the renderer - see BallMark. */}
+              <div className="flex-shrink-0 self-center relative w-12 h-12">
+                <div
+                  className="w-12 h-12 rounded-full"
+                  style={{
+                    backgroundColor: ball.color,
+                    boxShadow: `0 0 14px ${ball.color}, inset -4px -4px 8px rgba(0,0,0,0.35)`,
+                    border: '1px solid rgba(255,255,255,0.25)',
+                  }}
+                  aria-hidden
+                />
+                <BallMark ability={ball.ability} color={ball.color} size={48} />
+              </div>
               <div className="min-w-0">
                 <h3 className="font-display font-semibold text-foreground mb-1">{ball.name}</h3>
                 <p className={`text-sm leading-relaxed mb-2 ${isRevealed ? 'text-muted-foreground' : 'text-muted-foreground/50 italic'}`}>

@@ -47,6 +47,9 @@ import { contactFor, shadowFor, type LightScope } from "./light";
 import { compassRing } from "./compassRing";
 import { ballTrail } from "./ballTrail";
 import type { Pt } from "./pixelGrid";
+import {
+  markFor, markColor, markWidth, MARK_MIN_RADIUS_PX,
+} from "@/lib/rendering/sleek/ballMark";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -295,6 +298,48 @@ export class SleekBallLayer {
       });
   }
 
+  /**
+   * The ability mark: what this ball DOES, said without using its colour.
+   *
+   * Ball identity was hue and nothing else, and hue is the channel that fails
+   * in daylight, on the dark maps the game now offers on purpose, and for the
+   * ~8% of men with a colour vision deficiency - for whom purple and compass
+   * measure 4.6 apart in CIELAB, against the ~15 where two colours stop being
+   * confusable. See ballMark.ts for the shapes and why they are so plain.
+   *
+   * Drawn into `overlays` rather than onto the holder, like the frost and the
+   * collision halos, so it stays upright while the body squashes and spins.
+   * A mark that rolled with the ball would be unreadable exactly when the ball
+   * is doing something worth reading.
+   */
+  private drawMark(ball: Ball, c: Pt, r: number): void {
+    // Too small to resolve: a mark that cannot hold its shape is not a faint
+    // mark, it is a smudge, and it reads as damage to the ball.
+    if (r < MARK_MIN_RADIUS_PX) return;
+    const strokes = markFor(ball.ability);
+    if (!strokes) return;
+
+    const color = markColor(ball.color);
+    const width = markWidth(r);
+    for (const st of strokes) {
+      if (st.kind === "dot") {
+        this.overlays
+          .circle(c.x + st.at[0] * r, c.y + st.at[1] * r, st.r * r)
+          .fill({ color, alpha: 0.92 });
+      } else {
+        // moveTo first, for the same reason drawTurnRing does: Pixi continues
+        // the current path, so without opening a subpath every mark would be
+        // joined to the previous ball's by a line across the board.
+        this.overlays.moveTo(c.x + st.pts[0][0] * r, c.y + st.pts[0][1] * r);
+        for (let i = 1; i < st.pts.length; i++) {
+          this.overlays.lineTo(c.x + st.pts[i][0] * r, c.y + st.pts[i][1] * r);
+        }
+        if (st.close) this.overlays.lineTo(c.x + st.pts[0][0] * r, c.y + st.pts[0][1] * r);
+        this.overlays.stroke({ width, color, alpha: 0.92, cap: "round", join: "round" });
+      }
+    }
+  }
+
   private drawBall(
     ball: Ball, view: BallView, light: LightScope, w2s: W2S, scale: number,
     activeSeconds: number,
@@ -418,6 +463,13 @@ export class SleekBallLayer {
       corona.tint = mix(bodyColor, 0xffffff, 0.4);
       corona.alpha = sprite.alpha;
     }
+
+    // The ability mark rides on top of the body, including on a sleeper: what a
+    // dormant ball will be once a fence wakes it is exactly what the player
+    // needs to know while deciding whether to route through its terminal. Not
+    // on a locked ball, which is draining toward the accent and has stopped
+    // being a thing you can act on.
+    if (ball.state !== "won") this.drawMark(ball, c, r);
 
     if (ball.state === "won" || dormant) return;
 
