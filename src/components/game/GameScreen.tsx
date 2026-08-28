@@ -27,6 +27,7 @@ import { AbilityBar } from './AbilityBar';
 import { GameMessageBar } from './GameMessageBar';
 import { AbilityCountdownBar } from './AbilityCountdownBar';
 import { TopBarDetailsPanel, type PanelFocus } from './TopBarDetailsPanel';
+import { shouldAutoPause } from '@/lib/autoPause';
 import { CRTBackground } from './CRTBackground';
 import { MemoryParallaxLayer } from './MemoryParallaxLayer';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -571,7 +572,17 @@ export function GameScreen({
     onGameEnd(result);
   }, [onGameEnd]);
 
+  /**
+   * Set once the map ends, so the auto-pause below never drops a PAUSED sheet
+   * over the results. GameScreen stays mounted underneath that overlay - it is
+   * owned by the screen above this one - so "is the game running" is not
+   * something this component can otherwise tell.
+   */
+  const levelEndedRef = useRef(false);
+  useEffect(() => { levelEndedRef.current = false; }, [level.id, levelNumber]);
+
   const handleLevelComplete = useCallback((scoreData: LevelScoreData) => {
+    levelEndedRef.current = true;
     setIsPaused(false);
     onLevelComplete(scoreData);
   }, [onLevelComplete]);
@@ -639,6 +650,29 @@ export function GameScreen({
 
   const modalOverlayActive =
     topPanelOpen || menuOpen || abilityInfoOpen || superiorInfoOpen || !!entityInfo || anyExplainerModal;
+
+  /**
+   * Pause when the page is hidden: a call, a notification, a lock screen, an
+   * app switch. See src/lib/autoPause.ts for why the conditions are worth their
+   * own module.
+   *
+   * `visibilitychange` rather than `blur`: blur also fires when the player
+   * clicks another window while still watching this one, and pausing a game
+   * somebody is looking at is worse than not pausing one they are not.
+   */
+  useEffect(() => {
+    const onVisibility = () => {
+      if (shouldAutoPause({
+        hidden: document.visibilityState === 'hidden',
+        alreadyPaused: isPaused,
+        modalActive: modalOverlayActive,
+        levelEnded: levelEndedRef.current,
+      })) setIsPaused(true);
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [isPaused, modalOverlayActive]);
+
 
   useEffect(() => {
     if (!menuOpen) return;
