@@ -17,7 +17,7 @@
  * the shape of the function makes the bug hard to write again.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { compassRing, URGENT_FROM } from "@/lib/rendering/sleek/compassRing";
 import { DEFAULT_TURN_INTERVAL } from "@/lib/physics/turnTimer";
@@ -112,34 +112,63 @@ describe("the ring still says what it always said", () => {
 });
 
 /**
- * The whole class, not just this one call. An `arc()` anywhere in the Pixi
- * renderer that does not open its own subpath will draw a line to itself from
- * whatever was drawn before it.
+ * The rule is no longer "open a subpath before an arc" but "no arc at all".
+ *
+ * Guarding the moveTo was the previous fix, and it was correct: delete it and
+ * the beam comes straight back. It was not ENOUGH, because arc() is dangerous
+ * on both sides. Pixi reads a plain arc's instruction data as if it were an
+ * arcToSvg when it works out where the path finished (`data[5], data[6]`, which
+ * on a real arc are the counterclockwise flag and nothing at all), so a stroked
+ * arc leaves a corrupt point behind for the next mark on the same Graphics to
+ * start from. A moveTo in front of the arc cannot do anything about what the
+ * arc leaves behind it.
+ *
+ * So the Pixi renderer has no arcs. A ring is flattened to points in the layer
+ * that owns it and stroked as an ordinary polyline, which Pixi handles
+ * correctly at both ends.
  */
-describe("no arc in the renderer joins itself to the last thing drawn", () => {
-  const SLEEK = ["ballLayer", "fxLayer", "wallLayer", "objectLayer", "entityLayer", "boardLayer"];
+describe("the pixi renderer contains no arc at all", () => {
+  const SLEEK = readdirSync(resolve(__dirname, "../lib/rendering/sleek"))
+    .filter(f => f.endsWith(".ts"));
 
-  it.each(SLEEK)("%s opens a subpath before every arc", (file) => {
-    let src: string;
-    try {
-      src = readFileSync(resolve(__dirname, `../lib/rendering/sleek/${file}.ts`), "utf8");
-    } catch {
-      return; // a layer that does not exist is not a failure of this rule
-    }
-    const lines = src.split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      // Pixi arcs only: a Canvas2D `ctx.arc` has beginPath to manage instead.
-      if (!/^\s*\.arc\(/.test(lines[i])) continue;
-      const before = lines.slice(Math.max(0, i - 3), i).join("\n");
-      expect(before, `${file}:${i + 1} arcs without opening a subpath first`)
-        .toMatch(/\.moveTo\(/);
+  it.each(SLEEK)("%s calls no arc on a Graphics", (file) => {
+    const src = readFileSync(resolve(__dirname, `../lib/rendering/sleek/${file}`), "utf8");
+    for (const [i, line] of src.split("\n").entries()) {
+      // Canvas2D arcs are a different API with beginPath to manage instead, and
+      // they draw into their own offscreen canvas, so they are not this rule's
+      // business. Only a chained `.arc(` on a Pixi Graphics is.
+      if (/\bctx\.arc\(|\bc\.arc\(/.test(line)) continue;
+      expect(/^\s*\.arc\(|\)\.arc\(/.test(line),
+        `${file}:${i + 1} calls Pixi arc(): flatten it to points instead`).toBe(false);
     }
   });
 
-  it("is actually finding the arc it is meant to guard", () => {
+  it("is actually reading the file the ring is drawn in", () => {
+    // The mutation that made the previous version of this guard worth having:
+    // a test that finds nothing passes forever. The ring has to be in here.
     const ball = readFileSync(
       resolve(__dirname, "../lib/rendering/sleek/ballLayer.ts"), "utf8");
-    expect(ball, "the compass ring arc should still be here").toMatch(/^\s*\.arc\(/m);
-    expect(ball).toMatch(/\.moveTo\(ring\.start\.x, ring\.start\.y\)/);
+    expect(ball, "drawTurnRing should still be here").toMatch(/drawTurnRing/);
+    expect(ball, "the ring should be stroked from compassRing's points")
+      .toMatch(/const pts = ring\.points/);
+  });
+
+  it("hands back points that lie on the ring and span the whole sweep", () => {
+    // The polyline replaced an arc, so the thing to prove is that it IS the
+    // arc: every point on the circle, first point at `from`, last at `to`.
+    for (const t of [0, 2, 5, 8]) {
+      const ring = ringAt(t);
+      if (!ring) continue;
+      expect(ring.points.length, `at t=${t}`).toBeGreaterThanOrEqual(26);
+      for (let i = 0; i + 1 < ring.points.length; i += 2) {
+        expect(Math.hypot(ring.points[i] - CX, ring.points[i + 1] - CY), `t=${t} pt${i / 2}`)
+          .toBeCloseTo(ring.radius, 6);
+      }
+      const n = ring.points.length;
+      expect(ring.points[0]).toBeCloseTo(CX + Math.cos(ring.from) * ring.radius, 6);
+      expect(ring.points[1]).toBeCloseTo(CY + Math.sin(ring.from) * ring.radius, 6);
+      expect(ring.points[n - 2]).toBeCloseTo(CX + Math.cos(ring.to) * ring.radius, 6);
+      expect(ring.points[n - 1]).toBeCloseTo(CY + Math.sin(ring.to) * ring.radius, 6);
+    }
   });
 });
