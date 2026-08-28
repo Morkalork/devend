@@ -92,13 +92,11 @@ export function CapstoneDraftScreen({
                 onLongPress={() => setDetailId(cap.id)}
                 name={contentText.capstoneName(t, cap)}
                 headerExtra={cap.tag ? <TagChip tag={cap.tag} /> : undefined}
+                icon={<Award className="w-10 h-10 shrink-0" strokeWidth={1.5} style={{ color: accentColor }} />}
               >
-                <div className="flex items-start gap-2">
-                  <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                  <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8' }}>
-                    {contentText.capstoneDesc(t, cap)}
-                  </p>
-                </div>
+                <p className="text-lg leading-relaxed" style={{ color: '#c8ffd8' }}>
+                  {contentText.capstoneDesc(t, cap)}
+                </p>
               </DraftCard>
             ))}
           </div>

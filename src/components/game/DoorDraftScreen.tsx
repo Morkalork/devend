@@ -183,27 +183,30 @@ export function DoorDraftScreen({
                 onClick={() => setSelectedId(prev => (prev === door.id ? null : door.id))}
                 onLongPress={() => setDetailId(door.id)}
                 name={contentText.doorName(t, door)}
+                icon={<Target className="w-10 h-10 shrink-0" strokeWidth={1.5} style={{ color: accentColor }} />}
               >
+                {/* THE MISSION is this card's headline - the equivalent of an
+                    upgrade's description - so it takes the same size. The
+                    constraint and the reward ladder step down from it rather
+                    than matching it: a door card carries three things where an
+                    upgrade card carries one, and setting all three at text-lg
+                    would be a wall rather than a card. */}
+                <p className="text-lg leading-relaxed" style={{ color: '#c8ffd8' }}>
+                  {contentText.assignmentMission(t, door)}
+                </p>
                 {/* Constraint taken on by accepting (red). Absent = pure upside. */}
                 {door.constraint && (
-                  <div className="flex items-start gap-2 mb-2">
-                    <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>
+                  <div className="flex items-start gap-2">
+                    <Skull className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                    <p className="text-base leading-relaxed" style={{ color: '#ff6b6b' }}>
                       {contentText.assignmentConstraint(t, door)}
                     </p>
                   </div>
                 )}
-                {/* Mission task + its reward tiers. */}
-                <div className="flex items-start gap-2 mb-1.5">
-                  <Target className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                  <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>
-                    {contentText.assignmentMission(t, door)}
-                  </p>
-                </div>
-                <div className="space-y-0.5 pl-6">
+                <div className="space-y-0.5">
                   {door.mission.tiers.map(tier => (
-                    <div key={tier.threshold} className="flex items-center gap-1.5 text-xs" style={{ color: '#c8ffd8', opacity: 0.85 }}>
-                      <ChevronsUp className="w-3.5 h-3.5 flex-shrink-0" style={{ color: accentColor }} />
+                    <div key={tier.threshold} className="flex items-center gap-1.5 text-sm" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                      <ChevronsUp className="w-4 h-4 flex-shrink-0" style={{ color: accentColor }} />
                       <span className="tabular-nums font-bold" style={{ color: accentColor }}>{tier.threshold}</span>
                       <span className="opacity-70">{t('doorDraft.tierArrow')}</span>
                       <span>{tier.label}</span>

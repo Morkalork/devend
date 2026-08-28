@@ -96,7 +96,7 @@ export function TenureDraftScreen({
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => setSelectedId(selected ? null : offer.headId)}
-                  className="text-left rounded-lg p-4 transition-colors"
+                  className="text-left rounded-xl p-5 transition-colors"
                   style={{
                     backgroundColor: selected ? `${accentColor}1a` : 'rgba(255,255,255,0.04)',
                     border: `2px solid ${selected ? accentColor : `${accentColor}44`}`,
@@ -104,7 +104,7 @@ export function TenureDraftScreen({
                   }}
                 >
                   <p
-                    className="font-display font-bold text-base mb-1"
+                    className="font-display font-bold text-xl mb-1 leading-tight"
                     style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
                   >
                     {contentText.upgradeName(t, offer.upgrades[0])}
@@ -129,7 +129,10 @@ export function TenureDraftScreen({
                         <p className="text-[10px] uppercase tracking-wide" style={{ color: accentColor, opacity: 0.8 }}>
                           {contentText.tier(t, u.tier)}
                         </p>
-                        <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8' }}>
+                        {/* One step below the other draft cards, not two: a
+                            tenure card STACKS several upgrades, so it is a list
+                            and cannot spend the room a single description can. */}
+                        <p className="text-base leading-relaxed" style={{ color: '#c8ffd8' }}>
                           {contentText.upgradeDesc(t, u)}
                         </p>
                       </div>

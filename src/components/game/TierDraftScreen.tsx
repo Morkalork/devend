@@ -17,7 +17,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Trophy, Play, Sparkles, X } from 'lucide-react';
+import { Trophy, Play, X } from 'lucide-react';
 import { UpgradeConfig, UpgradeTier } from '@/types/upgrade';
 import { CRTBackground } from './CRTBackground';
 import { DraftCard } from './DraftCard';
@@ -99,14 +99,17 @@ export function TierDraftScreen({
                   onClick={() => setSelectedId(prev => (prev === u.id ? null : u.id))}
                   onLongPress={() => setDetailId(u.id)}
                   name={contentText.upgradeName(t, u)}
-                  headerExtra={Icon ? <Icon className="w-4 h-4" strokeWidth={1.5} style={{ color: accentColor }} /> : undefined}
+                  icon={Icon
+                    ? <Icon className="w-10 h-10 shrink-0" strokeWidth={1.5} style={{ color: accentColor }} />
+                    : undefined}
                 >
-                  <div className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-base leading-relaxed" style={{ color: '#c8ffd8' }}>
-                      {contentText.upgradeDesc(t, u)}
-                    </p>
-                  </div>
+                  {/* No second glyph beside the text: the leading icon above is
+                      the card's identity, and the Sparkles that used to sit here
+                      was decorating a line that now has room to speak for
+                      itself. */}
+                  <p className="text-lg leading-relaxed" style={{ color: '#c8ffd8' }}>
+                    {contentText.upgradeDesc(t, u)}
+                  </p>
                 </DraftCard>
               );
             })}
