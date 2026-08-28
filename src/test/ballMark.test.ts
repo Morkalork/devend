@@ -81,9 +81,11 @@ const IDS = Object.keys(BALL_MARKS);
 
 describe("telling two marks apart", () => {
   it("has a mark for every ability, all different from each other", () => {
-    // The measured floor is 0.42 (heavyLock/turnTimer, which share a horizontal
-    // bar). 0.35 leaves room to nudge a shape without the guard going quiet,
-    // and is far above the ~0.15 where two marks start reading as one.
+    // The measured floor is 0.40 (turnTimer/rainbow, which share a horizontal
+    // run through the middle). 0.35 leaves room to nudge a shape without the
+    // guard going quiet, and is far above the ~0.15 where two marks read as one.
+    // It was 0.42 for heavyLock/turnTimer until the Freight was retired and
+    // took the heavyLock mark with it.
     const worst: { pair: string; d: number }[] = [];
     for (let i = 0; i < IDS.length; i++) {
       for (let j = i + 1; j < IDS.length; j++) {

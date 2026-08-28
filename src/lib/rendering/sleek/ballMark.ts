@@ -53,7 +53,7 @@ export function markWidth(radiusPx: number): number {
  *
  * Each is chosen to fit its ability where that was possible without costing
  * legibility - a bolt for the ball whose speed jumps around, a wedge for the
- * one that smashes things, a bar pair for the heavy one - and to differ in
+ * one that smashes things - and to differ in
  * stroke COUNT and DIRECTION from every other, which is the part that survives
  * being sixteen pixels wide.
  */
@@ -81,11 +81,6 @@ export const BALL_MARKS: Record<string, MarkStroke[]> = {
   turnTimer: [
     { kind: "poly", pts: [[-0.58, 0], [0.58, 0]] },
     { kind: "poly", pts: [[0, -0.58], [0, 0.58]] },
-  ],
-  // Stacked ingots: the heavy one.
-  heavyLock: [
-    { kind: "poly", pts: [[-0.5, -0.24], [0.5, -0.24]] },
-    { kind: "poly", pts: [[-0.5, 0.24], [0.5, 0.24]] },
   ],
   // Pulling inward from both sides.
   attract: [

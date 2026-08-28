@@ -143,8 +143,8 @@ describe("what the act charges for its gates", () => {
  * NAMES a ball already has its own "this one matters" signal, and stacking the
  * Lamp's on top of it would put two competing markers on one board - exactly
  * the legibility risk that mechanic was designed around. Level 33 is that map:
- * it names the freight, pins its roster to match, and is built around herding
- * one ball into the tightest pocket in the game.
+ * it names the compass, pins its roster to match, and is built around herding
+ * the OTHER ball into the tightest pocket in the game.
  */
 describe("act IV is busy enough for the Lamp to be a choice", () => {
   const ACT_IV = [31, 32, 33, 34, 35].map(at);
@@ -188,7 +188,7 @@ describe("naming a ball in a win condition", () => {
 
   it("pins the roster on the map that names one", () => {
     expect(L33.ballTypeIds, "the roster must not be a roll").toBeTruthy();
-    expect(L33.ballTypeIds).toContain("freight");
+    expect(L33.ballTypeIds).toContain("compass");
   });
 
   it("keeps the roster and the ball count consistent", () => {
@@ -196,20 +196,22 @@ describe("naming a ball in a win condition", () => {
   });
 
   /**
-   * The freight is on this map precisely because it CANNOT use the map's hook:
-   * it needs room, and the nook is the tightest pocket in the game. So it must
-   * not be the first ball, which is the one a player herds by instinct and the
-   * one the map's own payout test seals into that nook.
+   * The named ball is the one still on the board once the hook is taken, so it
+   * must not be the FIRST ball: that is the one a player herds by instinct and
+   * the one the map's own payout test seals into the nook.
    */
-  it("does not put the freight first", () => {
-    expect(L33.ballTypeIds![0]).not.toBe("freight");
+  it("does not put the named ball first", () => {
+    const named = resolveWinSpec(L33).require
+      .find(c => c.kind === "lockType") as { ballType: string };
+    expect(L33.ballTypeIds![0]).not.toBe(named.ballType);
   });
 
-  it("is asking for a ball that really refuses tight pockets", () => {
-    const freight = getBallType("freight")!;
-    expect(freight, "freight missing from balls.yml").toBeTruthy();
-    expect(freight.minLockFraction, "the whole point of putting it here")
-      .toBeGreaterThan(0);
+  it("is asking for a ball that actually exists", () => {
+    // The roster pin is only worth anything if the id it pins resolves: a typo
+    // here spawns nothing and the map cannot be won.
+    for (const id of L33.ballTypeIds!) {
+      expect(getBallType(id), `${id} missing from balls.yml`).toBeTruthy();
+    }
   });
 
   /** The validator that catches the next person doing this without a roster. */

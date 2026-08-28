@@ -1,17 +1,21 @@
 /**
- * Two balls that change the decision rather than the workload.
+ * A ball that changes the decision rather than the workload.
  *
- * The design constraint they were built against: a splitter is tedious because
- * it adds WORK without adding a DECISION. Every ball it makes is one more thing
- * to seal and the seal is the same problem again, so it scales a map's length
+ * The design constraint it was built against: a splitter is tedious because it
+ * adds WORK without adding a DECISION. Every ball it makes is one more thing to
+ * seal and the seal is the same problem again, so it scales a map's length
  * rather than its difficulty and cannot be outplayed, only ground through.
  *
- * Neither of these adds a ball or repeats a task. Freight changes what SHAPE of
- * pocket you need; Lodestone changes WHERE everything tends to be.
+ * The lodestone adds no ball and repeats no task: it changes WHERE everything
+ * tends to be.
+ *
+ * It shipped alongside a Freight ball, whose heavyLock ability inverted the
+ * lock gate (it needed a pocket over half the largest lockable size). That ball
+ * was removed: fencing it tighter was what stopped it locking, which read as a
+ * broken lock rather than a rule, and once a pocket was under the floor there
+ * was no way back - pockets only shrink. Its tests went with it.
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import { attractStep, applyLodestones, isLodestone, DEFAULT_ATTRACT_RADIUS } from "@/lib/physics/lodestone";
 import { getAllBallTypes } from "@/lib/ballTypes";
 import type { Ball } from "@/types/game";
@@ -129,50 +133,8 @@ describe("applying it across the board", () => {
   });
 });
 
-/**
- * Freight inverts the lock gate. Every other ball wants the tightest chamber it
- * can get; this one needs room, so the pocket can be too SMALL.
- */
-describe("the freight needs room", () => {
-  const CUT = readFileSync(
-    resolve(__dirname, "../lib/physics/checkBallWonState.ts"), "utf8",
-  );
-
-  it("refuses a pocket below its fraction of the threshold", () => {
-    expect(CUT).toMatch(/percentage >= threshold \* ball\.minLockFraction/);
-  });
-
-  it("closes the sliver floor too, which is exactly what it must not use", () => {
-    // The sliver rule locks any ball in a small enough absolute cell count.
-    // Leaving it open would hand the freight the tight pocket by the back door.
-    const block = CUT.slice(CUT.indexOf("if (ball.minLockFraction"), CUT.indexOf("// Boss + Colored Area"));
-    expect(block).toMatch(/lockedByPercent = false/);
-    expect(block).toMatch(/lockedBySliver = false/);
-  });
-
-  it("leaves every other ball's gate untouched", () => {
-    expect(CUT).toMatch(/ball\.minLockFraction !== undefined && ball\.minLockFraction > 0/);
-  });
-});
-
-describe("both ship in the catalogue", () => {
+describe("it ships in the catalogue", () => {
   const byId = (id: string) => getAllBallTypes().find(b => b.id === id);
-
-  it("carries the freight, and it needs over half the threshold", () => {
-    const t = byId("freight");
-    expect(t, "freight missing from balls.yml").toBeTruthy();
-    expect(t!.ability).toBe("heavyLock");
-    // Superior is 40% of the threshold, so anything at or above that bar makes
-    // a superior freight lock impossible, which is the intended inversion.
-    expect(t!.minLockFraction!).toBeGreaterThan(0.4);
-    expect(t!.minLockFraction!).toBeLessThan(1);
-  });
-
-  it("pays more, since it can never grade superior", () => {
-    const freight = byId("freight")!;
-    const plain = byId("red")!;
-    expect(freight.lockMultiplier).toBeGreaterThan(plain.lockMultiplier);
-  });
 
   it("carries the lodestone, with a reach short of the board", () => {
     const t = byId("lodestone");
@@ -181,12 +143,10 @@ describe("both ship in the catalogue", () => {
     expect(t!.attractRadius!).toBeLessThan(900);
   });
 
-  it("debuts them in the gap the schedule left", () => {
+  it("debuts it in the gap the schedule left", () => {
     // Ball unlocks ran 1,2,4,7,10,11,12,13 and then nothing until black at 25.
-    for (const id of ["freight", "lodestone"]) {
-      const lv = byId(id)!.unlockLevel;
-      expect(lv, `${id} debut`).toBeGreaterThan(13);
-      expect(lv, `${id} debut`).toBeLessThan(25);
-    }
+    const lv = byId("lodestone")!.unlockLevel;
+    expect(lv, "lodestone debut").toBeGreaterThan(13);
+    expect(lv, "lodestone debut").toBeLessThan(25);
   });
 });

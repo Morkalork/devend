@@ -1907,23 +1907,23 @@ levels:
         blastRadius: 200
         announce: game.chargeBlown
 
-  # 33 "Code Freeze" - FIGHT: the 6x stacked hook crossed with a mover, and now
-  # with the one ball that cannot use it.
+  # 33 "Code Freeze" - FIGHT: the 6x stacked hook crossed with a mover, and the
+  # second ball you still have to answer for.
   #
   # Relocated from level 22 intact, and its geometry stays exactly as it was:
   # the alcove and nook margins are pinned against the lock-grade denominator
   # swing (codeFreezeMap.test.ts), so a stray obstacle or a moved lip would cost
   # the superior grade the whole map is built around. randomShapes stays 0.
   #
-  # What is new is the FREIGHT. Every other ball wants the tightest chamber it
-  # can get; the freight needs ROOM, so the nook that is this map's prize is the
-  # one place it can never be sealed. Locking it means using the safe, roomy
-  # lower line the map has always offered as the coward's route, and the map now
-  # pays 30% for taking it. The const box stays a BONUS, not a gate: making it
-  # mandatory would delete the choice the whole map exists to pose.
+  # The win NAMES the compass. Only one ball can take the nook that is this
+  # map's prize, so naming the other one means the map is not finished when the
+  # greedy line pays out: the compass still has to be put away on the safe,
+  # roomy lower line, and the map pays 30% for closing that out. The const box
+  # stays a BONUS, not a gate: making it mandatory would delete the choice the
+  # whole map exists to pose.
   #
   # The roster is pinned because the win names a ball. Left to the usual roll
-  # the freight might not spawn at all, and a map whose win condition depends on
+  # the compass might not spawn at all, and a map whose win condition depends on
   # a ball that is not there is unwinnable through no fault of the player.
   - id: level-33
     level: 33
@@ -1940,17 +1940,17 @@ levels:
     # and the 6x hook this map exists for quietly becomes a 3x one. Raising it
     # was the first thing I tried and codeFreezeMap.test.ts caught it.
     maxBalls: 2
-    # Yellow FIRST. The freight cannot lock in the nook or the alcove at all -
-    # that is the whole point of putting it here - so it must not be the ball a
-    # player instinctively herds into the hook, and the map's own payout test
-    # seals the first ball into that nook to check the 6x stack.
-    ballTypeIds: [yellow, freight]
+    # Yellow FIRST. The named ball is the one left over once the hook is taken,
+    # so it must not be the ball a player instinctively herds into the nook, and
+    # the map's own payout test seals the first ball into that nook to check the
+    # 6x stack.
+    ballTypeIds: [yellow, compass]
     win:
       require:
         - kind: space
           threshold: 6
         - kind: lockType
-          ballType: freight
+          ballType: compass
           count: 1
           bonusPercent: 30
       alsoWinIf:
@@ -1992,8 +1992,8 @@ levels:
         height: 24
       # The safe line has to be real or the hook is not a choice: the lower half
       # is an ordinary chamber behind a 100-wide neck, playable start to finish
-      # without ever going near the const box. It is also the only chamber roomy
-      # enough to hold the freight.
+      # without ever going near the const box. It is where the named ball gets
+      # put away.
       - id: divider-left
         kind: wall
         shape: rect
