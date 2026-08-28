@@ -16,7 +16,7 @@ import { Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import { traceActiveContours, snapContoursToWalls, traceLockContours } from "@/lib/rendering/regionContour";
 import { PALETTE, withAlpha } from "./palette";
-import { ambientAt, shadowFor, slabHeight, type LightScope } from "./light";
+import { ambientAt, lightScope, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapStroke, hairline, type Pt } from "./pixelGrid";
 import { transformKey } from "./transformKey";
 
@@ -52,6 +52,8 @@ const LOCK_TIER_ALPHA = 0.13;
 
 /** The board panel's own height above the page, as a multiple of the furniture. */
 const BOARD_HEIGHT_FACTOR = 2.4;
+/** Radius of the baked wash gradient, in texture pixels. Scaled to fit any board. */
+const WASH_BAKE_RADIUS = 256;
 /** Softness of the board's drop shadow, in screen px per unit scale. */
 const DROP_BLUR = 22;
 
@@ -123,10 +125,28 @@ export class BoardLayer {
    * repaints its region canvases (i.e. after a cut), so the expensive contour
    * trace only runs when the board's shape actually changed.
    */
-  sync(game: CanvasGameState, light: LightScope, w2s: W2S, dirty: boolean): void {
+  /**
+   * `room` is the MONITOR, never the lamp, and that is load-bearing.
+   *
+   * Both things this layer draws with a light are room facts rather than board
+   * facts: the panel's drop shadow falls on the page BEHIND the board, and the
+   * wash is the room's ambient falloff across the panel. A lamp lying on the
+   * board's surface does not relight the room, so neither should follow it.
+   * Everything that stands ON the board - walls, obstacles, props, balls - takes
+   * the lamp instead, which is the whole point of the mechanic.
+   *
+   * It is also what keeps this layer cheap. Both of these are BAKED CANVASES
+   * keyed partly on the light's position, and they were written when the light
+   * could never move. Handing them a light that moves every frame allocates a
+   * board-sized canvas, fills a gradient or a blur into it, and uploads a new
+   * GPU texture SIXTY TIMES A SECOND. That is not a slow frame, it is a
+   * compounding one, and it is exactly what "it starts lagging after a few
+   * seconds" was.
+   */
+  sync(game: CanvasGameState, room: LightScope, w2s: W2S, dirty: boolean): void {
     this.syncGeometry(game, w2s, dirty);
-    this.syncWash(game, light);
-    this.syncDrop(game, light);
+    this.syncWash(game, room);
+    this.syncDrop(game, room);
   }
 
   /**
@@ -142,21 +162,41 @@ export class BoardLayer {
    * surface you would otherwise see the shadow through the board it belongs to,
    * which reads as a smudge under the glass.
    */
-  private syncDrop(game: CanvasGameState, light: LightScope): void {
+  private syncDrop(game: CanvasGameState, room: LightScope): void {
     const { boardRect } = game;
-    const key = `${boardRect.width}x${boardRect.height}|${Math.round(light.x)},${Math.round(light.y)}`;
+    // Board size ONLY, and `bakeDrop` builds its own room light rather than
+    // taking one, so this key CANNOT go stale and the bake CANNOT churn.
+    //
+    // Unlike the wash, this one is not a pure translation: the board's own
+    // footprint is punched out of the blurred silhouette, so the visible
+    // crescent's shape really does depend on which way the shadow falls. There
+    // is no positioning trick that avoids re-baking it. What there is instead
+    // is the observation that a panel's shadow on the page BEHIND it is a fact
+    // about the room, and a lamp lying on the board does not move it.
+    const key = `${boardRect.width}x${boardRect.height}`;
     if (key !== this.dropKey) {
       this.dropKey = key;
-      this.drop?.destroy();
-      this.drop = this.bakeDrop(game, light);
+      // `{ texture: true, textureSource: true }`, not a bare destroy(). Pixi's
+      // default frees the SPRITE and leaves its GPU texture allocated, so every
+      // re-bake used to orphan a board-sized texture that nothing would ever
+      // collect. That is what turned the per-frame bake from "a slow frame"
+      // into "fine for a few seconds, then unplayable": two textures a frame at
+      // sixty frames a second is hundreds of megabytes of VRAM a second.
+      this.drop?.destroy({ texture: true, textureSource: true });
+      this.drop = this.bakeDrop(game);
       if (this.drop) this.underlay.addChild(this.drop);
     }
     // Only the intensity rides the flicker; re-baking per frame would be absurd.
-    if (this.drop) this.drop.alpha = 0.5 + 0.25 * light.level;
+    if (this.drop) this.drop.alpha = 0.5 + 0.25 * room.level;
   }
 
-  private bakeDrop(game: CanvasGameState, light: LightScope): Sprite | null {
+
+  private bakeDrop(game: CanvasGameState): Sprite | null {
     const { boardRect, boardRect: { scale } } = game;
+    // The ROOM's light, rebuilt here from the board rect rather than accepted
+    // as an argument. A caller cannot accidentally hand this a moving light,
+    // which is what turned a once-per-map blur into a per-frame one.
+    const light = lightScope(boardRect, 0);
     const w = Math.max(1, Math.round(boardRect.width));
     const h = Math.max(1, Math.round(boardRect.height));
 
@@ -427,52 +467,72 @@ export class BoardLayer {
    * shadow. Baked once per board size; the per-frame flicker only rides on the
    * sprite's alpha, which costs nothing.
    */
-  private syncWash(game: CanvasGameState, light: LightScope): void {
+  private syncWash(game: CanvasGameState, room: LightScope): void {
     const { boardRect } = game;
-    const key = `${boardRect.width}x${boardRect.height}|${Math.round(light.x)},${Math.round(light.y)}`;
+    // Board size ONLY. The bake is a radial gradient, which is rotationally
+    // symmetric, so where the light is can be expressed by MOVING the sprite
+    // rather than re-drawing it - and that is the difference between a canvas
+    // allocation per frame and one per map.
+    const key = `${boardRect.width}x${boardRect.height}`;
     if (key !== this.washKey) {
       this.washKey = key;
-      this.wash?.destroy();
-      this.wash = this.bakeWash(game, light);
+      this.wash?.destroy({ texture: true, textureSource: true });
+      this.wash = this.bakeWash();
       if (this.wash) this.container.addChild(this.wash);
     }
     if (!this.wash) return;
+
+    // Scaled so the gradient's outer stop lands on the furthest board corner,
+    // which is exactly what the old per-position bake computed as `far`. Same
+    // picture, no bake. Every board pixel is inside `far` of the light by that
+    // definition, so the circle always covers the whole board.
+    const lx = room.x - boardRect.left;
+    const ly = room.y - boardRect.top;
+    const far = Math.hypot(
+      Math.max(lx, boardRect.width - lx),
+      Math.max(ly, boardRect.height - ly),
+    );
+    this.wash.position.set(room.x, room.y);
+    this.wash.scale.set(Math.max(1e-3, far) / WASH_BAKE_RADIUS);
     // Brighter monitor = less darkening. Inverted because the wash is a
     // multiply layer: its job is to REMOVE light from the far corner.
-    this.wash.alpha = Math.max(0, Math.min(1, 1.25 - light.level));
+    this.wash.alpha = Math.max(0, Math.min(1, 1.25 - room.level));
   }
 
-  private bakeWash(game: CanvasGameState, light: LightScope): Sprite | null {
-    const { boardRect } = game;
-    const w = Math.max(1, Math.round(boardRect.width));
-    const h = Math.max(1, Math.round(boardRect.height));
+  /**
+   * One unit radial, centred in its own texture. Callers place and scale it.
+   *
+   * No light in the signature, on purpose. The stops are the shadow colour
+   * throughout (the innermost is fully transparent, so the colour it nominally
+   * carried never showed), and the geometry is a plain circle. Nothing about it
+   * CAN depend on where the light is, which is what makes it safe to bake once.
+   */
+  private bakeWash(): Sprite | null {
+    const size = WASH_BAKE_RADIUS * 2;
     const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
+    canvas.width = size;
+    canvas.height = size;
     const ctx = canvas.getContext("2d");
     if (!ctx) return null;
 
-    // Gradient centred on the (off-canvas) light, so the falloff is genuinely
-    // radial about the monitor rather than a fake corner-to-corner ramp.
-    const lx = light.x - boardRect.left;
-    const ly = light.y - boardRect.top;
-    const far = Math.hypot(Math.max(lx, w - lx), Math.max(ly, h - ly));
-    const grad = ctx.createRadialGradient(lx, ly, 0, lx, ly, far);
+    const r = WASH_BAKE_RADIUS;
+    const grad = ctx.createRadialGradient(r, r, 0, r, r, r);
     // Eased back from 0.62: at that strength the far corner crushed obstacle
     // bodies down into the substrate and they lost their silhouette entirely.
     // The wash exists to give the surface depth, not to hide what stands on it.
-    grad.addColorStop(0, withAlpha(light.color, 0.0));
+    grad.addColorStop(0, withAlpha(PALETTE.shadow, 0.0));
     grad.addColorStop(0.45, withAlpha(PALETTE.shadow, 0.1));
     grad.addColorStop(1, withAlpha(PALETTE.shadow, 0.42));
     ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
+    ctx.fillRect(0, 0, size, size);
 
     const sprite = new Sprite(Texture.from(canvas));
-    sprite.position.set(boardRect.left, boardRect.top);
+    sprite.anchor.set(0.5);
     // Ambient occlusion of the whole surface: strictly subtractive.
     sprite.blendMode = "multiply";
     return sprite;
   }
+
 
   /** Ambient level under an object, for layers that tint themselves by it. */
   static ambient(light: LightScope, x: number, y: number): number {
@@ -480,8 +540,8 @@ export class BoardLayer {
   }
 
   destroy(): void {
-    this.wash?.destroy();
-    this.drop?.destroy();
+    this.wash?.destroy({ texture: true, textureSource: true });
+    this.drop?.destroy({ texture: true, textureSource: true });
     this.container.destroy({ children: true });
     this.underlay.destroy({ children: true });
   }

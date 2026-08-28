@@ -254,8 +254,13 @@ export class SleekRenderer {
     // picks that up for free because they all read the scope rather than baking
     // the monitor's position in. The monitor is the fallback for a board with
     // no eligible ball, which is every circuit map's opening seconds.
-    const light = this.lampLight(game, boardRect, now)
-      ?? lightScope(boardRect, now);
+    //
+    // The monitor is kept alongside it. The BOARD layer always uses the
+    // monitor: its wash and its drop shadow are properties of the room the
+    // panel sits in, not of a lamp lying on its surface - and both are baked
+    // canvases that would otherwise be rebuilt every frame as the lamp moves.
+    const monitor = lightScope(boardRect, now);
+    const light = this.lampLight(game, boardRect, now) ?? monitor;
 
     // Board tilt (issue #77): a gravity map turns so its pull always reads as
     // screen-down. Applied HERE, in the one transform every layer already goes
@@ -278,7 +283,7 @@ export class SleekRenderer {
     // One clear per frame: every layer draws its shadows into this same plane.
     this.shadowPlane.clear();
 
-    this.board.sync(game, light, w2s, this.staticDirty);
+    this.board.sync(game, monitor, w2s, this.staticDirty);
     this.areas.sync(game, light, w2s, scale, tilt);
     this.props.sync(game, light, this.shadowPlane, w2s, scale, now);
     this.entities.sync(game, light, this.shadowPlane, w2s, scale);
