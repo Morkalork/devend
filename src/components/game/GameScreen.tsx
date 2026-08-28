@@ -59,6 +59,8 @@ import { isSoundMuted, setSoundMuted } from '@/lib/soundSettings';
 import { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
 import { PushExitBar } from '@/components/game/PushExitBar';
 import { canStopPushing } from '@/lib/pushLuck';
+import { WinGateFrame } from '@/components/game/WinGateFrame';
+import { gateSatisfied } from '@/lib/winHud';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -313,6 +315,7 @@ export function GameScreen({
     pickupPresent: false,
     onBankAndContinue: undefined,
     pushBonusSoFar: 0,
+    winGates: [],
     gameMessage: null,
   });
 
@@ -757,6 +760,8 @@ export function GameScreen({
             spaceRequired={level.sizeThreshold}
             lockedBalls={totalLockedBalls}
             threadLockRequired={level.threadLockRequired}
+            winGates={gameState.winGates}
+            onExplainWin={() => setWinModalOpen(true)}
             scopeCreepPercent={gameState.creepPercent}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
@@ -905,6 +910,13 @@ export function GameScreen({
             parallaxTickRef={memParallaxTickRef}
             showBallSpeeds={showBallSpeeds}
             showPerfOverlay={showPerfOverlay}
+          />
+          {/* This map wants something beyond an ordinary clear. One state, not
+              a colour per kind: see WinGateFrame for why a border language does
+              not survive being seen three times in a run. */}
+          <WinGateFrame
+            present={gameState.winGates.length > 0 && !mapComplete}
+            outstanding={gameState.winGates.some(g => !gateSatisfied(g))}
           />
           {/* Admin lock diagnostics. `absolute` inside this relative wrapper, not
               `fixed`: the page-transition transform breaks fixed positioning. */}

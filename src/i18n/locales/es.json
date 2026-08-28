@@ -1632,5 +1632,14 @@
     "fenceLimit": "Ya estas levantando todas las vallas que puedes a la vez. Espera a que una termine, o mejora para levantar mas.",
     "capturedStart": "Empieza la valla en espacio abierto. Ese terreno ya esta capturado.",
     "wallInTheWay": "Ya hay una valla anclada ahi. Empieza desde espacio abierto un poco mas alla."
+  },
+  "winGate": {
+    "superiorLocks": "Superior",
+    "area": "En la zona",
+    "lockType": "Sellar {{type}}",
+    "boss": "Jefe",
+    "allLocked": "Todas cerradas",
+    "underPar": "Bajo par",
+    "speedClear": "Contrarreloj"
   }
 }

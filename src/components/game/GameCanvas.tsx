@@ -115,6 +115,10 @@ import { updateFenceWallFn, clearFreeze } from "@/lib/physics/updateFenceWall";
 import { processWallBreaksFn } from "@/lib/physics/breakFenceWall";
 import { processDestroysFn } from "@/lib/physics/destructibles";
 import { pushBonusEarned } from "@/lib/pushLuck";
+import { extraGates } from "@/lib/winHud";
+import { resolveWinSpec } from "@/lib/winSpec";
+import { readWinSnapshot } from "@/lib/physics/applyCut";
+import type { WinConditionProgress } from "@/types/winSpec";
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -147,6 +151,13 @@ export interface GameStateInfo {
    * is the number that gets banked.
    */
   pushBonusSoFar: number;
+  /**
+   * The map's unusual win requirements with live progress, for the top-bar
+   * chips and the board frame. Empty on an ordinary space-and-locks map.
+   * Read through the same evaluator the win check uses, so a chip cannot claim
+   * a requirement the gate disagrees with.
+   */
+  winGates: WinConditionProgress[];
   /** The one live feedback message, or null. See lib/gameMessages. */
   gameMessage?: GameMessage | null;
   /** Fire a chest-earned ability by id (Freeze All / Slow All / Clear Fences). */
@@ -1583,6 +1594,11 @@ export function GameCanvas({
       )
     : 0;
 
+  // The unusual win requirements, recomputed each render off the live game.
+  // resolveWinSpec + readWinSnapshot are exactly what applyCut's win check
+  // calls, so there is one reading of the map's win, not two.
+  const winGates = extraGates(resolveWinSpec(level), readWinSnapshot(gameRef.current, level));
+
   useEffect(() => {
     if (onGameStateChange) {
       onGameStateChange({
@@ -1605,13 +1621,14 @@ export function GameCanvas({
         pickupPresent,
         onBankAndContinue: handleBankAndContinue,
         pushBonusSoFar,
+        winGates,
         gameMessage,
         onUseAbility: handleUseAbility,
         abilityTimers,
         armedAbility,
       });
     }
-  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage]);
+  }, [cutCount, completedCuts, remainingPercent, pushMode, creepPercent, activeSeconds, ballCount, pickupPresent, handleBankAndContinue, pushBonusSoFar, winGates, handleUseAbility, onGameStateChange, lockedBallsCount, freezeUsesRemaining, bossHud, abilityTimers, armedAbility, gameMessage]);
 
   const handlePushYourLuck = useCallback(() => {
     const game = gameRef.current;

@@ -8,6 +8,8 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { unreadManualCount } from '@/lib/manual';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X } from 'lucide-react';
+import { WinGateChip } from '@/components/game/WinGateChip';
+import type { WinConditionProgress } from '@/types/winSpec';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -27,6 +29,13 @@ interface GameTopBarProps {
   spaceRequired: number;
   lockedBalls: number;
   threadLockRequired?: number;
+  /**
+   * The map's unusual win requirements with live progress. Empty on an ordinary
+   * space-and-locks map, which is most of them.
+   */
+  winGates?: WinConditionProgress[];
+  /** Opens the "How to win" text, which carries the full wording. */
+  onExplainWin?: () => void;
   /** Scope Creep speed boost in percent (0 = inactive, chip hidden). */
   scopeCreepPercent?: number;
   accentColor?: string;
@@ -54,6 +63,8 @@ export function GameTopBar({
   spaceRequired,
   lockedBalls,
   threadLockRequired,
+  winGates,
+  onExplainWin,
   scopeCreepPercent = 0,
   accentColor = '#00ff88',
   certificateProgress,
@@ -319,6 +330,18 @@ export function GameTopBar({
             {lockReq > 0 ? `${lockedBalls}/${lockReq}` : lockedBalls}
           </span>
         </div>
+
+        {/* The unusual requirement, where the player already looks to find out
+            where they stand. Only ever rendered on the few maps that have one:
+            a chip on every map is chrome the eye learns to skip. */}
+        {(winGates ?? []).map(g => (
+          <WinGateChip
+            key={g.condition.kind + ('ballType' in g.condition ? g.condition.ballType : '')}
+            gate={g}
+            accentColor={accentColor}
+            onExplain={onExplainWin}
+          />
+        ))}
 
         {/* Scope Creep: appears once the anti-stall speed surge kicks in */}
         {scopeCreepPercent > 0 && (

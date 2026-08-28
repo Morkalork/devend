@@ -1632,5 +1632,14 @@
     "fenceLimit": "Du bygger redan sa manga stangsel samtidigt som du kan. Vanta tills ett blir klart, eller uppgradera for fler.",
     "capturedStart": "Borja stangslet i oppen yta. Den marken ar redan intagen.",
     "wallInTheWay": "Ett stangsel ar redan forankrat dar. Borja fran oppen yta lite langre bort."
+  },
+  "winGate": {
+    "superiorLocks": "Perfekt",
+    "area": "I zonen",
+    "lockType": "Forsegla {{type}}",
+    "boss": "Boss",
+    "allLocked": "Alla lasta",
+    "underPar": "Under par",
+    "speedClear": "Mot klockan"
   }
 }

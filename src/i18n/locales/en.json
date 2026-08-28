@@ -1099,5 +1099,14 @@
     "fenceLimit": "You are already growing as many fences as you can at once. Wait for one to finish, or upgrade to grow more.",
     "capturedStart": "Start your fence in open space. That ground has already been captured.",
     "wallInTheWay": "A fence is already anchored there. Start from open space a little further along."
+  },
+  "winGate": {
+    "superiorLocks": "Superior",
+    "area": "In zone",
+    "lockType": "Seal {{type}}",
+    "boss": "Boss",
+    "allLocked": "All locked",
+    "underPar": "Under par",
+    "speedClear": "On the clock"
   }
 }
