@@ -130,6 +130,54 @@ describe("what the act charges for its gates", () => {
 });
 
 /**
+ * How busy act IV is, which is now a gameplay rule and not just a feel.
+ *
+ * Act IV is the "everything at once" act, so a map here being LESS populated
+ * than the act before it is odd on its own terms. The Lamp (src/lib/lampBall.ts)
+ * gave that a second, sharper edge: one ball at a time lights the board and
+ * sealing it pays a premium, and on a two-ball map "another ball is picked"
+ * means the other one. There is no choice to make, so the bonus stops being a
+ * decision and becomes a tax on whichever ball you were sealing anyway.
+ *
+ * The exception is deliberate rather than a gap. A map whose win condition
+ * NAMES a ball already has its own "this one matters" signal, and stacking the
+ * Lamp's on top of it would put two competing markers on one board - exactly
+ * the legibility risk that mechanic was designed around. Level 33 is that map:
+ * it names the freight, pins its roster to match, and is built around herding
+ * one ball into the tightest pocket in the game.
+ */
+describe("act IV is busy enough for the Lamp to be a choice", () => {
+  const ACT_IV = [31, 32, 33, 34, 35].map(at);
+
+  it("gives every non-boss map three balls, unless its win names one", () => {
+    const thin = ACT_IV
+      .filter(l => !l.boss)
+      .filter(l => (l.maxBalls ?? 1) < 3)
+      .filter(l => !resolveWinSpec(l).require.some(c => c.kind === "lockType"))
+      .map(l => `${l.id} (${l.maxBalls ?? 1})`);
+    expect(thin, "a two-ball act IV map hands the Lamp a coin flip").toEqual([]);
+  });
+
+  it("leaves the boss maps alone", () => {
+    // The obvious wrong way to satisfy the rule above. A boss map is ABOUT the
+    // boss, which splits into its own minions; padding the roster to give the
+    // Lamp something to choose between would be the tail wagging the dog.
+    for (const l of ACT_IV.filter(l => l.boss)) {
+      expect(l.maxBalls, `${l.id} is a boss map`).toBe(1);
+    }
+  });
+
+  it("keeps a named-ball map's pinned roster matching its count", () => {
+    // The exception above is only safe while the roster really is pinned: an
+    // unpinned one can roll without the named ball and the map is unwinnable.
+    for (const l of ACT_IV.filter(l => resolveWinSpec(l).require.some(c => c.kind === "lockType"))) {
+      expect(l.ballTypeIds, `${l.id} names a ball`).toBeTruthy();
+      expect(l.ballTypeIds!.length, `${l.id} roster vs count`).toBe(l.maxBalls);
+    }
+  });
+});
+
+/**
  * The gate that worried me most. `lockType` names a ball, and ball types are
  * otherwise picked from maxBalls and unlock levels - so left to the roll, the
  * named ball may simply not spawn and the map is unwinnable through no fault of

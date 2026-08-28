@@ -1774,7 +1774,7 @@ levels:
     points: 20
     variety: 12
     randomShapes: 8
-    maxBalls: 2
+    maxBalls: 3
     gravityWells:
       - x: 320
         'y': 540
