@@ -1631,5 +1631,24 @@
     "fenceLimit": "Ya estas levantando todas las vallas que puedes a la vez. Espera a que una termine, o mejora para levantar mas.",
     "capturedStart": "Empieza la valla en espacio abierto. Ese terreno ya esta capturado.",
     "wallInTheWay": "Ya hay una valla anclada ahi. Empieza desde espacio abierto un poco mas alla."
+  },
+  "mapFailure": {
+    "title": "Mapa fallido",
+    "timeUp": "Se acabó el tiempo",
+    "outOfFences": "Sin vallas",
+    "areaUnreachable": "Ya no se puede alcanzar la zona",
+    "stillNeeded": "Aún te faltaba",
+    "livesLeft_one": "Queda {{count}} vida",
+    "livesLeft_other": "Quedan {{count}} vidas",
+    "tapToRetry": "Toca para reintentar",
+    "needSpace": "Despejar hasta el {{target}}% restante (estabas en {{current}}%)",
+    "needLocks": "Encerrar {{target}} bolas (tenías {{current}})",
+    "needSuperior": "Lograr {{target}} cierres superiores (tenías {{current}})",
+    "needArea": "Encerrar {{target}} bolas en la zona (tenías {{current}})",
+    "needLockType": "Encerrar {{target}} bolas {{ball}} (tenías {{current}})",
+    "needBoss": "Derrotar al jefe",
+    "needAllLocked": "Encerrar todas las bolas",
+    "needUnderPar": "Terminar en {{target}} cortes (usaste {{current}})",
+    "needSpeed": "Terminar en {{target}}s (tardaste {{current}}s)"
   }
 }

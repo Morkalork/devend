@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useState } from 'react';
 import { Trophy, Skull, Home, Hexagon, ArrowUpCircle, RotateCcw, Backpack, Award, Medal, CalendarDays, Flame, Share2, Check } from 'lucide-react';
 import { GameResult } from '@/types/game';
+import { failHeadline, failLines } from '@/lib/mapFailure';
 import { RunRecap } from '@/lib/buildRecap';
 import { RunRankInfo } from '@/lib/runLedger';
 import { shareRunCard } from '@/lib/shareCard';
@@ -57,7 +58,7 @@ export function ResultScreen({
   onRecords,
 }: ResultScreenProps) {
   const { t } = useTranslation();
-  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames } = result;
+  const { isWin, remainingPercent, levelId, levelNumber, completedAllLevels, ascensionDepth, loadoutNames, failure } = result;
   const [shareState, setShareState] = useState<'idle' | 'done'>('idle');
 
   // Build name: "Freeze-Lock" from the archetype lean, or Generalist. The
@@ -237,6 +238,29 @@ export function ResultScreen({
             </p>
             <p className="text-muted-foreground text-xs mt-1">{levelId}</p>
           </div>
+
+          {/* Why. A run that ends on a win condition the player never saw stated
+              is the same silent loss the in-map overlay exists to prevent, so
+              the last screen of the run says it too. */}
+          {!isWin && failure && (
+            <div className="rounded-lg px-4 py-3 bg-danger/10 border border-danger/30 text-left">
+              <p className="text-danger text-sm font-semibold mb-1">
+                {failHeadline(t, failure)}
+              </p>
+              {failLines(t, failure).length > 0 && (
+                <>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wider mt-2 mb-1">
+                    {t('mapFailure.stillNeeded')}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {failLines(t, failure).map((line, i) => (
+                      <li key={i} className="text-foreground text-sm">{line}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
 
           {/* Arena remaining is only meaningful on a win; on a loss the number
               says nothing about the run, so the row is dropped. */}

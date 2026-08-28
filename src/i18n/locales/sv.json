@@ -1631,5 +1631,24 @@
     "fenceLimit": "Du bygger redan sa manga stangsel samtidigt som du kan. Vanta tills ett blir klart, eller uppgradera for fler.",
     "capturedStart": "Borja stangslet i oppen yta. Den marken ar redan intagen.",
     "wallInTheWay": "Ett stangsel ar redan forankrat dar. Borja fran oppen yta lite langre bort."
+  },
+  "mapFailure": {
+    "title": "Kartan misslyckades",
+    "timeUp": "Tiden är ute",
+    "outOfFences": "Slut på staket",
+    "areaUnreachable": "Zonen går inte längre att nå",
+    "stillNeeded": "Du behövde fortfarande",
+    "livesLeft_one": "{{count}} liv kvar",
+    "livesLeft_other": "{{count}} liv kvar",
+    "tapToRetry": "Tryck för att försöka igen",
+    "needSpace": "Rensa ner till {{target}}% kvar (du var på {{current}}%)",
+    "needLocks": "Lås in {{target}} bollar (du hade {{current}})",
+    "needSuperior": "Klara {{target}} överlägsna lås (du hade {{current}})",
+    "needArea": "Lås in {{target}} bollar i zonen (du hade {{current}})",
+    "needLockType": "Lås in {{target}} {{ball}}-bollar (du hade {{current}})",
+    "needBoss": "Besegra bossen",
+    "needAllLocked": "Lås in alla bollar",
+    "needUnderPar": "Klara på {{target}} snitt (du använde {{current}})",
+    "needSpeed": "Klara inom {{target}}s (du tog {{current}}s)"
   }
 }

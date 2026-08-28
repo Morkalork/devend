@@ -21,7 +21,10 @@ import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { BoardEntityInfoModal } from './BoardEntityInfoModal';
 import type { BoardEntityHit } from '@/lib/boardEntityInfo';
 import { GameTopBar } from './GameTopBar';
+import { AnimatePresence } from 'framer-motion';
 import { MapRuleBanner } from './MapRuleBanner';
+import { MapFailedOverlay } from './MapFailedOverlay';
+import type { MapFailure } from '@/lib/mapFailure';
 import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
 import { GameMessageBar } from './GameMessageBar';
@@ -93,6 +96,8 @@ interface GameScreenProps {
   abilitySlots?: number;
   onGameEnd: (result: GameResult) => void;
   /** Out of time with lives left: restart the current level (session remount). */
+  /** Dismissing the failure overlay is what triggers this: the session
+   *  remounts the level for the retry. */
   onMapTimedOut?: () => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired once per ball the instant it locks, with its ball-type id (drives the
@@ -261,6 +266,19 @@ export function GameScreen({
   // first, then (once dismissed) the running board with the draw-hint animation.
   // The modal was previously an overlay on the LIVE board, which hid it.
   const [fenceIntroOpen, setFenceIntroOpen] = useState(showInGameTutorial && levelNumber === 1);
+
+  /**
+   * The map ran out of time and a life went with it. Held here so the RESTART
+   * waits on the explanation instead of racing it: the remount only happens
+   * when the overlay is dismissed. Before this, the level came back inside the
+   * red flash and a player who blinked never learned the clock had run out.
+   */
+  const [mapFailure, setMapFailure] = useState<MapFailure | null>(null);
+  const handleMapFailed = useCallback((failure: MapFailure) => setMapFailure(failure), []);
+  const dismissMapFailure = useCallback(() => {
+    setMapFailure(null);
+    onMapTimedOut?.();
+  }, [onMapTimedOut]);
 
   const levelHasMovers = (level.entities ?? []).some(e => e.kind === 'mover');
   const [moverTutorialDismissed, setMoverTutorialDismissed] = useState(false);
@@ -883,7 +901,7 @@ export function GameScreen({
             onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
             onRequestEntityInfo={setEntityInfo}
             onGameEnd={handleGameEnd}
-            onMapTimedOut={onMapTimedOut}
+            onMapTimedOut={handleMapFailed}
             onLevelComplete={handleLevelComplete}
             onBallTypeLocked={onBallTypeLocked}
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
@@ -1261,6 +1279,19 @@ export function GameScreen({
         objective={mapObjective}
         objectiveProgress={objectiveProgress}
       />
+
+      {/* Above everything: a life just went, and nothing else on screen says
+          why. Dismissing it is what restarts the map. */}
+      <AnimatePresence>
+        {mapFailure && (
+          <MapFailedOverlay
+            failure={mapFailure}
+            livesLeft={lives}
+            accentColor={accentColor}
+            onDismiss={dismissMapFailure}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -1098,5 +1098,24 @@
     "fenceLimit": "You are already growing as many fences as you can at once. Wait for one to finish, or upgrade to grow more.",
     "capturedStart": "Start your fence in open space. That ground has already been captured.",
     "wallInTheWay": "A fence is already anchored there. Start from open space a little further along."
+  },
+  "mapFailure": {
+    "title": "Map failed",
+    "timeUp": "Out of time",
+    "outOfFences": "Out of fences",
+    "areaUnreachable": "The zone can no longer be reached",
+    "stillNeeded": "You still needed",
+    "livesLeft_one": "{{count}} life left",
+    "livesLeft_other": "{{count}} lives left",
+    "tapToRetry": "Tap to try again",
+    "needSpace": "Clear down to {{target}}% remaining (you were at {{current}}%)",
+    "needLocks": "Lock {{target}} balls (you had {{current}})",
+    "needSuperior": "Land {{target}} superior locks (you had {{current}})",
+    "needArea": "Lock {{target}} balls in the zone (you had {{current}})",
+    "needLockType": "Lock {{target}} {{ball}} balls (you had {{current}})",
+    "needBoss": "Defeat the boss",
+    "needAllLocked": "Lock every ball",
+    "needUnderPar": "Finish in {{target}} cuts (you used {{current}})",
+    "needSpeed": "Finish within {{target}}s (you took {{current}}s)"
   }
 }

@@ -186,6 +186,8 @@ export interface SwipeData {
 
 export interface GameResult {
   isWin: boolean;
+  /** Why the map was lost, when it was. Absent on a win. */
+  failure?: import("@/lib/mapFailure").MapFailure;
   remainingPercent: number;
   levelId: string;
   levelNumber: number;

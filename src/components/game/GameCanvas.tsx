@@ -16,6 +16,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
+import type { MapFailure } from "@/lib/mapFailure";
 import { LevelConfig } from "@/types/level";
 
 import { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -185,7 +186,7 @@ interface GameCanvasProps {
   onRequestEntityInfo?: (hit: BoardEntityHit) => void;
   onGameEnd: (result: GameResult) => void;
   /** Out of time with lives to spare: the session should restart this level. */
-  onMapTimedOut?: () => void;
+  onMapTimedOut?: (failure: MapFailure) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired the instant the map is won, so the shell can freeze the code background. */
   onMapComplete?: () => void;
@@ -1194,7 +1195,7 @@ export function GameCanvas({
       freezeOnComplete: () => freezeOnCompleteRef.current,
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
-      onMapTimedOut: () => onMapTimedOutRef.current?.(),
+      onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(failure),
       onTutorialCutSuccess,
       onBallTypeLocked: id => onBallTypeLockedRef.current?.(id) ?? false,
       // Fork pickup split a ball: rescale the Ship Early countdown windows.

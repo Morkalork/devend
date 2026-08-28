@@ -10,6 +10,7 @@ import { playDeathSound } from "@/lib/gameAudio";
 import { vibrateDeath } from "@/lib/gameHaptics";
 import { polygonArea } from "@/lib/polygon";
 import { getRemainingPercent } from "@/lib/spaceGrid";
+import type { MapFailure } from "@/lib/mapFailure";
 
 export function getCombinedArea(game: CanvasGameState): number {
   if (game.spaceGrid) {
@@ -28,6 +29,13 @@ export function handleGameOverFn(
   levelNumber: number,
   activeModifiers: GameModifiers,
   callbacks: GameCallbacks,
+  /**
+   * Why the map was lost, when the caller knows. Optional because the ordinary
+   * death (a ball through your fence) is a hazard the player watched happen and
+   * needs no sentence; every WIN-CONDITION failure passes one, and the result
+   * screen says so rather than showing a bare GAME OVER.
+   */
+  failure?: MapFailure,
 ): void {
   game.gameOver = true;
   playDeathSound();
@@ -94,6 +102,7 @@ export function handleGameOverFn(
     callbacks.onGameEnd({
       isWin: false, remainingPercent: percent, levelId: level.id, levelNumber,
       cutCount: game.wallCount, expectedCuts: effectivePar(level.expectedCuts, activeModifiers), basePoints: level.points,
+      failure,
     });
   }, 1000);
 }
