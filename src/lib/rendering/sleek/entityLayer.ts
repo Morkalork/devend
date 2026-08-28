@@ -133,6 +133,17 @@ export class EntityLayer {
       .poly(pts.map(p => ({ x: p.x + ox, y: p.y + oy })))
       .fill({ color: PALETTE.shadow, alpha: cast.alpha });
 
+    // Contact band, the same one the movers, props and balls get. The static
+    // slabs were the only things standing on this board without it, which is
+    // most of why they read as painted on rather than placed.
+    const contact = contactFor(light, cx, cy, slabHeight(scale));
+    this.shadows
+      .poly(pts.map(p => ({
+        x: p.x + contact.dx * contact.length,
+        y: p.y + contact.dy * contact.length,
+      })))
+      .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.5 });
+
     // Body, tinted by how much light reaches this part of the board.
     const amb = ambientAt(light, cx, cy);
     this.bodies

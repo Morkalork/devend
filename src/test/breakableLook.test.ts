@@ -14,6 +14,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { PALETTE } from "@/lib/rendering/sleek/palette";
 import { resolve } from "node:path";
 import { carveContour, CARVE_DEPTH, CARVE_SIGMA } from "@/lib/rendering/sleek/objectLayer";
 import type { ImpactDent } from "@/types/game";
@@ -151,8 +152,16 @@ describe("a breakable is told apart before it is touched", () => {
   const draw = SRC.slice(SRC.indexOf("private drawBreakable("), SRC.indexOf("private drawCracks("));
 
   it("no longer uses the plain obstacle colour untouched", () => {
-    expect(draw, "an undamaged breakable was pixel-identical to a wall")
-      .toMatch(/mix\(PALETTE\.obstacle, PALETTE\.amber/);
+    // Asserted on the COLOUR rather than on the expression that produces it.
+    // This used to grep the source for `mix(PALETTE.obstacle, PALETTE.amber`,
+    // which pinned one implementation of the idea: when the breakable moved to
+    // its own palette entry - warm at the same brightness, so it stands in the
+    // light like the wall does rather than outshining it - the intent was
+    // better served and the test failed anyway.
+    expect(PALETTE.breakable, "an undamaged breakable is pixel-identical to a wall")
+      .not.toBe(PALETTE.obstacle);
+    // And it is the body actually drawn, not a constant nothing reads.
+    expect(draw).toMatch(/PALETTE\.breakable/);
   });
 
   /** The load-bearing cue: an outline in pieces reads as something that comes

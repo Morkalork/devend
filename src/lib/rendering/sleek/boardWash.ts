@@ -25,7 +25,7 @@
  */
 
 /** Uniform darkening across the whole board, as an effective multiply alpha. */
-export const WASH_FLOOR = 0.20;
+export const WASH_FLOOR = 0.26;
 
 /**
  * Total darkening at the corner furthest from the light, floor included.
@@ -34,7 +34,7 @@ export const WASH_FLOOR = 0.20;
  * some: with none, the surface is a flat sheet again, which is the thing the
  * wash was originally added to fix.
  */
-export const WASH_FAR = 0.305;
+export const WASH_FAR = 0.37;
 
 /**
  * The sprite's alpha at the monitor's idle level, which the baked stops are

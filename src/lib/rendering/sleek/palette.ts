@@ -91,6 +91,22 @@ export const PALETTE = {
    */
   obstacle: 0x51705f,
   /** Lit obstacle edge: bright enough to draw the silhouette on its own. */
+  /**
+   * Breakable slabs: the obstacle colour shifted warm at the SAME brightness.
+   *
+   * It used to be `mix(obstacle, amber, 0.18)`, which shifted the hue and took
+   * the luma up 20% with it. That made a breakable the brightest thing on the
+   * board, and once the wash gained a floor it stopped reading as an object
+   * standing in the light and started reading as a flat sticker lying on top of
+   * it - the one thing on the board that did not respond to the lighting.
+   *
+   * Warmth still separates it from the wall beside it. Brightness does not,
+   * because brightness here means "how much light is falling on this", and a
+   * breakable is made of the same stuff standing in the same room. The broken
+   * rim is what says it comes apart, which is what objectLayer already called
+   * the load-bearing cue.
+   */
+  breakable: 0x5e6d51,
   obstacleEdge: 0x9fd0b6,
   /** Board perimeter. */
   edge: 0x5c8172,

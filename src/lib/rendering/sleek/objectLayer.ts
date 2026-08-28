@@ -20,7 +20,7 @@ import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon, Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
-import { ambientAt, facing, shadowFor, slabHeight, type LightScope } from "./light";
+import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import type { ImpactDent } from "@/types/game";
@@ -315,6 +315,18 @@ export class ObjectLayer {
     this.shadows
       .poly(pts.map(p => ({ x: p.x + ox, y: p.y + oy })))
       .fill({ color: PALETTE.shadow, alpha: cast.alpha * alphaScale });
+
+    // Contact band: short, dense, hard against the body. Balls, movers and
+    // props have had this from the start and it is what stops an object looking
+    // like it hovers; the slabs never got it, which is most of why they read as
+    // painted on rather than standing up.
+    const contact = contactFor(light, cx, cy, slabHeight(scale));
+    this.shadows
+      .poly(pts.map(p => ({
+        x: p.x + contact.dx * contact.length,
+        y: p.y + contact.dy * contact.length,
+      })))
+      .fill({ color: PALETTE.shadow, alpha: contact.alpha * 0.5 * alphaScale });
   }
 
   /**
@@ -346,7 +358,7 @@ export class ObjectLayer {
     // the wall beside it, which is what it was.
     const base = d.chest ? PALETTE.amber
       : d.objective ? 0x8a6a3a
-      : mix(PALETTE.obstacle, PALETTE.amber, 0.18);
+      : PALETTE.breakable;
     const body = mix(PALETTE.shadow, base, (0.55 + amb * 0.45) * (1 - damage * 0.45));
     this.bodies.poly(pts).fill({ color: body, alpha: 1 });
 
