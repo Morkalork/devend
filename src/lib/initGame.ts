@@ -288,7 +288,14 @@ export function createInitialGameData(
   const randomObstacles = generateRandomObstacles(
     level.randomShapes ?? 20,
     authoredEntities, // random shapes avoid both fixed and slot-resolved entities
-    [], // balls now spawn at game-chosen positions (after obstacles), so none to avoid here
+    // Ordinary balls need no avoidance: they are placed AFTER the obstacles, in
+    // whatever open space is left. A circuit's sleepers are the exception and
+    // the reason this is not an empty list - their positions are AUTHORED on the
+    // map and fixed before anything random is rolled, so a decoration is free to
+    // land on top of one. A sleeper inside a wall cannot be woken, and the space
+    // it reserves cannot be cleared, which makes the map unwinnable with nothing
+    // on screen to explain why.
+    circuit?.terminals.map(t => ({ startX: t.ball.x, startY: t.ball.y })) ?? [],
     getRunRng(`obstacles:${level.id}`),
   );
   const allEntities = [...authoredEntities, ...randomObstacles];
