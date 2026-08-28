@@ -9,12 +9,13 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
-import { ArrowUpCircle, Flag, Skull, Sparkles } from 'lucide-react';
+import { ArrowUpCircle, Flag, Package, Skull, Sparkles } from 'lucide-react';
 import { LoadoutConfig } from '@/types/loadout';
 import { drawOffers } from '@/lib/loadoutDraft';
 import { getRunRng } from '@/lib/runRng';
 import { draftableAtAscension } from '@/lib/loadoutUnlock';
 import { CRTBackground } from './CRTBackground';
+import { DraftCard } from './DraftCard';
 import { contentText } from '@/i18n/content';
 
 interface AscensionDraftScreenProps {
@@ -101,36 +102,27 @@ export function AscensionDraftScreen({
             {offers.map((loadout, i) => {
               const selected = selectedId === loadout.id;
               return (
-                <motion.button
+                <DraftCard
                   key={loadout.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + i * 0.1 }}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  index={i}
+                  accentColor={accentColor}
+                  selected={selected}
                   onClick={() => setSelectedId(selected ? null : loadout.id)}
-                  className="text-left rounded-lg p-4 transition-colors"
-                  style={{
-                    backgroundColor: selected ? `${accentColor}1a` : 'rgba(255,255,255,0.04)',
-                    border: `2px solid ${selected ? accentColor : `${accentColor}44`}`,
-                    boxShadow: selected ? `0 0 24px ${accentColor}66` : 'none',
-                  }}
+                  name={contentText.loadoutName(t, loadout)}
+                  icon={<Package className="w-10 h-10 shrink-0" strokeWidth={1.5} style={{ color: accentColor }} />}
                 >
-                  <p
-                    className="font-display font-bold text-base mb-3"
-                    style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
-                  >
-                    {contentText.loadoutName(t, loadout)}
-                  </p>
-                  <div className="flex items-start gap-2 mb-2">
-                    <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.loadoutCurse(t, loadout)}</p>
+                  {/* Upside first at the headline size, cost under it, matching
+                      the assignment card: what you gain leads, what it charges
+                      you steps down from it. */}
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                    <p className="text-lg leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.loadoutBlessing(t, loadout)}</p>
                   </div>
                   <div className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.loadoutBlessing(t, loadout)}</p>
+                    <Skull className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                    <p className="text-base leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.loadoutCurse(t, loadout)}</p>
                   </div>
-                </motion.button>
+                </DraftCard>
               );
             })}
             {offers.length === 0 && (

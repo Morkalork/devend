@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import { Rocket, Play, ChevronsUp } from 'lucide-react';
 import { isContinuation, type TenureOffer } from '@/lib/tenure';
 import { CRTBackground } from './CRTBackground';
+import { DraftCard } from './DraftCard';
 import { contentText } from '@/i18n/content';
 
 interface TenureDraftScreenProps {
@@ -88,43 +89,33 @@ export function TenureDraftScreen({
             {offers.map((offer, i) => {
               const selected = selectedId === offer.headId;
               return (
-                <motion.button
+                /* The "continued" flag rides in the header slot the other
+                   drafts use for their archetype chip, so it sits where the eye
+                   already looks. Without it the guaranteed slot is invisible:
+                   the card reads like any other draw and the continuity never
+                   lands. */
+                <DraftCard
                   key={offer.headId}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + i * 0.1 }}
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
+                  index={i}
+                  accentColor={accentColor}
+                  selected={selected}
                   onClick={() => setSelectedId(selected ? null : offer.headId)}
-                  className="text-left rounded-xl p-5 transition-colors"
-                  style={{
-                    backgroundColor: selected ? `${accentColor}1a` : 'rgba(255,255,255,0.04)',
-                    border: `2px solid ${selected ? accentColor : `${accentColor}44`}`,
-                    boxShadow: selected ? `0 0 24px ${accentColor}66` : 'none',
-                  }}
-                >
-                  <p
-                    className="font-display font-bold text-xl mb-1 leading-tight"
-                    style={{ color: accentColor, textShadow: selected ? `0 0 12px ${accentColor}88` : 'none' }}
-                  >
-                    {contentText.upgradeName(t, offer.upgrades[0])}
-                  </p>
-                  {/* Without this the guaranteed slot is invisible: the card
-                      looks like any other draw, so the continuity never lands. */}
-                  {isContinuation(offer, lastRunUpgradeIds) && (
-                    <p
-                      className="text-[10px] uppercase tracking-wide mb-2"
+                  name={contentText.upgradeName(t, offer.upgrades[0])}
+                  icon={<Rocket className="w-10 h-10 shrink-0" strokeWidth={1.5} style={{ color: accentColor }} />}
+                  headerExtra={isContinuation(offer, lastRunUpgradeIds) ? (
+                    <span
+                      className="text-[10px] uppercase tracking-wide"
                       style={{ color: accentColor, opacity: 0.75 }}
                     >
                       {t('tenure.continued')}
-                    </p>
-                  )}
-                  <div className="mb-2" />
+                    </span>
+                  ) : undefined}
+                >
                   {/* Every tier that lands, so a 30-level reward visibly beats a
                       20-level one rather than looking like the same card. */}
                   {offer.upgrades.map(u => (
-                    <div key={u.id} className="flex items-start gap-2 mb-2 last:mb-0">
-                      <ChevronsUp className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                    <div key={u.id} className="flex items-start gap-2">
+                      <ChevronsUp className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
                       <div>
                         <p className="text-[10px] uppercase tracking-wide" style={{ color: accentColor, opacity: 0.8 }}>
                           {contentText.tier(t, u.tier)}
@@ -138,7 +129,7 @@ export function TenureDraftScreen({
                       </div>
                     </div>
                   ))}
-                </motion.button>
+                </DraftCard>
               );
             })}
           </div>
