@@ -393,6 +393,12 @@ export function GameCanvas({
     gameRef.current.gravityConfig = mapMutator?.behavior === "gravity"
       ? normaliseGravity(mapMutator.gravity) : null;
   }, [mapMutator]);
+  // The map's authored light. Lives on the game state rather than being read
+  // from the level inside the renderer, so the renderer keeps taking one object
+  // and nothing has to thread a LevelConfig down through the layers.
+  useEffect(() => {
+    gameRef.current.mapLight = level.light;
+  }, [level]);
   // Same live-sync for the per-map objective (issue #55).
   useEffect(() => {
     gameRef.current.objective = objective ?? null;

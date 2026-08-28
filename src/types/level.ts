@@ -114,6 +114,18 @@ export interface LevelConfig {
   points: number; // base points for the level
   variety?: number; // 0-100: controlled randomness for organic variation (default 0)
   randomShapes?: number; // 0-100: percentage of random mini-obstacles added (default 20)
+  /**
+   * How lit this map is: 1 (or absent) is the normal board, lower is darker,
+   * down to MIN_MAP_LIGHT. A darkness you author, not a global one.
+   *
+   * It darkens the BOARD SURFACE only, through the wash (boardWash.ts), which
+   * is a multiply - so live and captured space scale together and stay exactly
+   * as distinguishable as ever. What a dark map takes away is your view of the
+   * board at rest, which makes the light the balls carry the way you read it.
+   * Obstacles and fences are drawn above the wash and stay visible, because a
+   * map where you cannot see the walls is not a challenge.
+   */
+  light?: number;
   threadLockRequired?: number; // minimum number of balls that must be thread-locked to win
   /**
    * The map's win, stated outright.

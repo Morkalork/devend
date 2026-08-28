@@ -1,4 +1,5 @@
 import { LevelConfig } from '@/types/level';
+import { MIN_MAP_LIGHT } from "@/lib/rendering/sleek/boardWash";
 import { ScoringPreviewPanel } from './ScoringPreviewPanel';
 import { WinConditionsPanel } from './WinConditionsPanel';
 
@@ -55,6 +56,31 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
               onChange={(e) => onUpdateLevel({ ...level, points: Number(e.target.value) })}
               className="w-full px-2 py-1 rounded bg-background border border-border"
               min={1}
+            />
+          </label>
+
+          {/* Map light: 1 (or blank) is the normal board; lower is an authored
+              dark map. Blank rather than 1 when unset, so the YAML stays clean
+              and a map that never wanted this carries no field. */}
+          <label className="space-y-1">
+            <span className="text-muted-foreground">
+              Map Light ({MIN_MAP_LIGHT}-1, blank = normal)
+            </span>
+            <input
+              type="number"
+              value={level.light ?? ''}
+              placeholder="1"
+              onChange={(e) => {
+                const raw = e.target.value.trim();
+                const next = { ...level };
+                if (raw === '') delete next.light;
+                else next.light = Math.max(MIN_MAP_LIGHT, Math.min(1, Number(raw)));
+                onUpdateLevel(next);
+              }}
+              className="w-full px-2 py-1 rounded bg-background border border-border"
+              min={MIN_MAP_LIGHT}
+              max={1}
+              step={0.05}
             />
           </label>
 

@@ -474,11 +474,15 @@ export class BoardLayer {
     // symmetric, so where the light is can be expressed by MOVING the sprite
     // rather than re-drawing it - and that is the difference between a canvas
     // allocation per frame and one per map.
-    const key = `${boardRect.width}x${boardRect.height}`;
+    // Board size AND the map's light. `light` is authored per map and never
+    // changes while one is being played, so this is one extra bake per map and
+    // not a per-frame one - the distinction that mattered here before.
+    const light = game.mapLight ?? 1;
+    const key = `${boardRect.width}x${boardRect.height}|${light}`;
     if (key !== this.washKey) {
       this.washKey = key;
       this.wash?.destroy({ texture: true, textureSource: true });
-      this.wash = this.bakeWash();
+      this.wash = this.bakeWash(light);
       if (this.wash) this.container.addChild(this.wash);
     }
     if (!this.wash) return;
@@ -496,7 +500,7 @@ export class BoardLayer {
     this.wash.position.set(room.x, room.y);
     this.wash.scale.set(Math.max(1e-3, far) / WASH_BAKE_RADIUS);
     // Brighter monitor = less darkening; see washSpriteAlpha.
-    this.wash.alpha = washSpriteAlpha(room.level);
+    this.wash.alpha = washSpriteAlpha(room.level, light);
   }
 
   /**
@@ -507,7 +511,7 @@ export class BoardLayer {
    * carried never showed), and the geometry is a plain circle. Nothing about it
    * CAN depend on where the light is, which is what makes it safe to bake once.
    */
-  private bakeWash(): Sprite | null {
+  private bakeWash(light: number): Sprite | null {
     const size = WASH_BAKE_RADIUS * 2;
     const canvas = document.createElement("canvas");
     canvas.width = size;
@@ -520,7 +524,7 @@ export class BoardLayer {
     // Stops come from boardWash.ts, which states them as the effective alpha a
     // player sees rather than as raw stops: a stop means nothing without the
     // sprite alpha it is multiplied by, and that moves with the flicker.
-    for (const stop of washStops()) {
+    for (const stop of washStops(light)) {
       grad.addColorStop(stop.offset, withAlpha(PALETTE.shadow, stop.alpha));
     }
     ctx.fillStyle = grad;

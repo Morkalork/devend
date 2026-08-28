@@ -24,6 +24,20 @@
  * reacting to, which is what boardBrightness.test.ts pins.
  */
 
+/**
+ * A map's light, 1 = normal and lower = darker. `MIN_MAP_LIGHT` is as dark as a
+ * map may be authored.
+ *
+ * The bound is not timidity. Below it the board stops being readable at all,
+ * and a map you cannot read is not a hard map, it is a broken one. What makes
+ * the range safe as far as it goes is that the wash is a MULTIPLY: it scales
+ * live and captured space by the same factor, so the ratio between them stays
+ * exactly 1.74 at every darkness. A dark map costs you absolute visibility, and
+ * never the ability to tell what you have already taken - which is the one read
+ * the game cannot be played without.
+ */
+export const MIN_MAP_LIGHT = 0.35;
+
 /** Uniform darkening across the whole board, as an effective multiply alpha. */
 export const WASH_FLOOR = 0.26;
 
@@ -36,32 +50,49 @@ export const WASH_FLOOR = 0.26;
  */
 export const WASH_FAR = 0.37;
 
-/**
- * The sprite's alpha at the monitor's idle level, which the baked stops are
- * expressed against.
- *
- * It has to be at least WASH_FAR or the far stop would need an alpha above 1
- * to reach its target and would silently clamp instead.
- */
-export const WASH_NOMINAL_ALPHA = 0.45;
+/** The same two at MIN_MAP_LIGHT: the darkest a map is allowed to be. */
+export const DARK_FLOOR = 0.55;
+export const DARK_FAR = 0.68;
 
 /**
- * The most the wash may ever darken a pixel, whatever the flicker is doing.
+ * How much darker than its idle value the flicker may drive the wash.
  *
- * Found by the brightness test rather than chosen: raising the floor also
- * raised the gradient stops, and since the monitor's flicker multiplies the
- * WHOLE texture, the same swing in sprite alpha now moves the effective alpha
- * much further. At the flicker's deepest dip the far corner was landing at
- * luma 17.9, under the floor testers reacted to, in a state that only appears
- * for a fraction of a second and would never have been caught by eye.
- *
- * 0.45 leaves the darkest live pixel at luma ~22 against a floor of 20. The
- * cap is applied to the SPRITE alpha rather than to the modelled result,
- * because clamping the model alone would let the render drift past a limit its
- * own test believed was being enforced - which is exactly the class of bug
- * this file was extracted to end.
+ * Also the gap between the far stop and the sprite's nominal alpha, so the far
+ * stop is always below 1 and can never silently clamp inside the bake.
  */
-const WASH_MAX = 0.45;
+const FLICKER_HEADROOM = 0.08;
+
+export interface WashProfile {
+  /** Effective multiply alpha at the light. */
+  floor: number;
+  /** Effective multiply alpha at the far corner. */
+  far: number;
+  /** Sprite alpha at the monitor's idle level; the baked stops assume it. */
+  nominal: number;
+  /** The most the wash may darken a pixel, whatever the flicker is doing. */
+  max: number;
+}
+
+/**
+ * The wash for a map's light setting. `light` absent or 1 is the default map.
+ *
+ * Everything is derived from the two endpoints rather than tuned per setting,
+ * so a designer turning one dial cannot produce a combination nobody checked.
+ */
+export function washProfile(light = 1): WashProfile {
+  // NaN is the one that matters: this comes from a number field an author types
+  // into, and an empty or half-typed value would otherwise carry NaN through
+  // every alpha below and paint the board with a gradient of nothing.
+  const asked = Number.isFinite(light) ? light : 1;
+  // ONE clamp, on the normalised position. Clamping `light` to the range first
+  // as well was redundant - anything outside it normalises outside [0, 1] and
+  // is caught here - and a mutation test caught the second guard doing nothing.
+  const t = Math.max(0, Math.min(1, (asked - MIN_MAP_LIGHT) / (1 - MIN_MAP_LIGHT)));
+  const floor = DARK_FLOOR + (WASH_FLOOR - DARK_FLOOR) * t;
+  const far = DARK_FAR + (WASH_FAR - DARK_FAR) * t;
+  const nominal = far + FLICKER_HEADROOM;
+  return { floor, far, nominal, max: nominal };
+}
 
 /** Where the middle stop sits between floor and far, keeping the old curve. */
 const MID_FRACTION = 0.24;
@@ -71,15 +102,16 @@ const MID_STOP = 0.45;
 /**
  * The gradient, as {offset, alpha} pairs for the baked texture.
  *
- * Divided by the nominal sprite alpha, because the sprite multiplies the whole
- * texture: a stop of 0.44 under a 0.45 sprite is the 0.20 floor above.
+ * Divided by the profile's nominal alpha, because the sprite multiplies the
+ * whole texture: a stop of 0.58 under a 0.45 sprite is the 0.26 floor above.
  */
-export function washStops(): { offset: number; alpha: number }[] {
-  const a = (effective: number) => effective / WASH_NOMINAL_ALPHA;
+export function washStops(light = 1): { offset: number; alpha: number }[] {
+  const p = washProfile(light);
+  const a = (effective: number) => effective / p.nominal;
   return [
-    { offset: 0, alpha: a(WASH_FLOOR) },
-    { offset: MID_STOP, alpha: a(WASH_FLOOR + (WASH_FAR - WASH_FLOOR) * MID_FRACTION) },
-    { offset: 1, alpha: a(WASH_FAR) },
+    { offset: 0, alpha: a(p.floor) },
+    { offset: MID_STOP, alpha: a(p.floor + (p.far - p.floor) * MID_FRACTION) },
+    { offset: 1, alpha: a(p.far) },
   ];
 }
 
@@ -87,27 +119,27 @@ export function washStops(): { offset: number; alpha: number }[] {
  * The sprite's alpha for a given monitor level.
  *
  * Brighter monitor, less darkening: the wash is subtractive, so it has to move
- * opposite to the light. Same slope as before (one unit of level to one unit of
- * alpha), so the flicker still reads exactly as it did; only the level it rides
- * around has moved up to make room for the floor.
+ * opposite to the light. The ceiling is what keeps the flicker's downswing from
+ * driving the board past `max`, and it is applied to the SPRITE rather than to
+ * the modelled result - clamping the model alone would let the render drift
+ * past a limit its own test believed was being enforced.
  */
-export function washSpriteAlpha(level: number): number {
-  // The far stop is the one that hits the floor first, so the cap is expressed
-  // against it: the alpha that keeps THAT stop at WASH_MAX.
-  const ceiling = Math.min(1, (WASH_MAX * WASH_NOMINAL_ALPHA) / WASH_FAR);
-  return Math.max(0, Math.min(ceiling, 1 + WASH_NOMINAL_ALPHA - level));
+export function washSpriteAlpha(level: number, light = 1): number {
+  const p = washProfile(light);
+  const ceiling = Math.min(1, (p.max * p.nominal) / p.far);
+  return Math.max(0, Math.min(ceiling, 1 + p.nominal - level));
 }
 
 /**
  * The effective multiply alpha at gradient position `t` (0 at the light, 1 at
- * the far corner), for a given monitor level.
+ * the far corner), for a monitor level and a map light.
  *
  * This is the number that actually darkens a pixel, and the reason this module
  * exists: it is what a brightness test has to model, and it is not readable
  * from either the stops or the sprite alpha alone.
  */
-export function washAlphaAt(t: number, level = 1): number {
-  const stops = washStops();
+export function washAlphaAt(t: number, level = 1, light = 1): number {
+  const stops = washStops(light);
   const x = Math.max(0, Math.min(1, t));
   let lo = stops[0], hi = stops[stops.length - 1];
   for (let i = 0; i < stops.length - 1; i++) {
@@ -120,5 +152,5 @@ export function washAlphaAt(t: number, level = 1): number {
   const span = hi.offset - lo.offset;
   const k = span <= 0 ? 0 : (x - lo.offset) / span;
   const stopAlpha = lo.alpha + (hi.alpha - lo.alpha) * k;
-  return Math.max(0, Math.min(1, stopAlpha * washSpriteAlpha(level)));
+  return Math.max(0, Math.min(1, stopAlpha * washSpriteAlpha(level, light)));
 }

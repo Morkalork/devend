@@ -166,6 +166,8 @@ export interface CanvasGameState {
   /** Active per-map mutator (issue #54), or null. Rolled per map from the run
    *  seed; applied in the physics/scoring layer, not the GameModifiers merge. */
   mapMutator: ActiveMapMutator | null;
+  /** This map's authored light (LevelConfig.light). Absent = the normal board. */
+  mapLight?: number;
   /** Resolved gravity schedule while a `gravity` mutator is active (issue #77).
    *  Null on every other map. See src/lib/physics/gravity.ts. */
   gravityConfig?: GravityConfig | null;
