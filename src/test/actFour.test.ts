@@ -18,6 +18,8 @@ import yaml from "js-yaml";
 import { resolveWinSpec, winSpecProblems } from "@/lib/winSpec";
 import { blockLockCapacity } from "@/lib/assignmentScaling";
 import { getBallType } from "@/lib/ballTypes";
+import { parseMutatorEntry } from "@/lib/mapMutators";
+import type { MapMutator } from "@/types/mapMutator";
 import type { LevelConfig } from "@/types/level";
 
 const LEVELS = (yaml.load(
@@ -248,6 +250,20 @@ describe("34 is built for the gate it sets", () => {
   it("pins the pull rather than hoping the roll delivers it", () => {
     // A map authored around a live pull that only sometimes pulls is a
     // different map most of the time.
-    expect(L34.mutator).toBe("gravity");
+    //
+    // Asserted through the CATALOGUE, not against a literal. This test used to
+    // read `expect(L34.mutator).toBe("gravity")`, which passed for two years of
+    // nothing pulling: "gravity" is the behavior name, no entry has it as an
+    // id, and a pin that resolves to nothing is exactly the map being unpinned.
+    // A string compared to a string cannot tell the difference; a lookup can.
+    const catalogue = (
+      (yaml.load(
+        readFileSync(resolve(process.cwd(), "public/mapMutators.yml"), "utf8"),
+      ) as { mutators?: unknown[] }).mutators ?? []
+    ).map(parseMutatorEntry).filter((m): m is MapMutator => !!m);
+    const pinned = catalogue.find(m => m.id === L34.mutator);
+    expect(pinned, `level-34 pins "${L34.mutator}", which no mutator has as an id`)
+      .toBeTruthy();
+    expect(pinned!.behavior, "the pull is what this map is built around").toBe("gravity");
   });
 });

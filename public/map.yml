@@ -2041,7 +2041,7 @@ levels:
     threadLockRequired: 2
     # Pinned, not hoped for. The whole map is authored around a live pull; a
     # gravity map that only sometimes pulls is a different map most of the time.
-    mutator: gravity
+    mutator: gravity_well
     coloredAreas:
       - kind: const
         x: 350

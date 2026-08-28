@@ -157,6 +157,30 @@ interface GameScreenProps {
   tagSetThreshold?: number;
 }
 
+/**
+ * A mutator by `id`, or null when the catalogue has no such entry.
+ *
+ * Every pinned mutator goes through here: an unknown id leaves the map vanilla
+ * rather than handing the UI a half-object. map.yml pinned `gravity` for a
+ * while, which is the BEHAVIOR name and not any entry's id, and because the pin
+ * used to be dropped straight into `mapMutator` unresolved, the map showed an
+ * empty rule card and never actually pulled. mapPins.test.ts refuses a pin that
+ * names nothing now.
+ *
+ * At module scope because it closes over nothing: declared inside the component
+ * it is a new function every render, which the mutator useMemo would then have
+ * to list as a dependency and re-roll on.
+ */
+function mutatorById(id: string | undefined | null): MapMutator | null {
+  if (!id) return null;
+  return getMapMutators().find(m => m.id === id) ?? null;
+}
+
+/** The mutator named by ?mutator=<id>, if it is in the catalogue. */
+function forcedMutator(): MapMutator | null {
+  return mutatorById(debugMutatorId());
+}
+
 export function GameScreen({
   backRef,
   level,
@@ -237,13 +261,6 @@ export function GameScreen({
   // first, then (once dismissed) the running board with the draw-hint animation.
   // The modal was previously an overlay on the LIVE board, which hid it.
   const [fenceIntroOpen, setFenceIntroOpen] = useState(showInGameTutorial && levelNumber === 1);
-
-  /** The mutator named by ?mutator=<id>, if it is in the catalogue. */
-  const forcedMutator = (): MapMutator | null => {
-    const id = debugMutatorId();
-    if (!id) return null;
-    return getMapMutators().find(m => m.id === id) ?? null;
-  };
 
   const levelHasMovers = (level.entities ?? []).some(e => e.kind === 'mover');
   const [moverTutorialDismissed, setMoverTutorialDismissed] = useState(false);
@@ -382,10 +399,14 @@ export function GameScreen({
     // Authored first (a boss's forced mutator, then a map that pins one), then
     // the ?mutator= debug override, then the procedural roll. The override sits
     // below the authored pins so it can never silently replace a set-piece.
-    () => level.boss?.mutator ?? level.mutator ?? forcedMutator() ?? selectMapMutator(
-      levelNumber, getRunRng(`mapMutator:${level.id}`), undefined,
-      everyMapMutated ? 0 : undefined,
-    ),
+    // Authored pins are IDS into mapMutators.yml and have to be looked up; the
+    // catalogue entry is what carries the name, description and behavior the
+    // rest of the game reads off `mapMutator`.
+    () => mutatorById(level.boss?.mutator) ?? mutatorById(level.mutator)
+      ?? forcedMutator() ?? selectMapMutator(
+        levelNumber, getRunRng(`mapMutator:${level.id}`), undefined,
+        everyMapMutated ? 0 : undefined,
+      ),
     [levelNumber, level.id, level.boss, level.mutator, everyMapMutated],
   );
 
