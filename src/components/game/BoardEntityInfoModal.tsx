@@ -37,7 +37,7 @@ export function BoardEntityInfoModal({
         initial={{ scale: 0.92, y: 8 }}
         animate={{ scale: 1, y: 0 }}
         onClick={e => e.stopPropagation()}
-        className="relative w-full max-w-xs rounded-xl border-2 bg-card p-5 shadow-xl"
+        className="relative w-full max-w-xs max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
         style={{ borderColor: `${accent}66` }}
       >
         <button
@@ -47,16 +47,21 @@ export function BoardEntityInfoModal({
         >
           <X className="w-4 h-4" />
         </button>
+        {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+            clips a card taller than the viewport out of BOTH ends, and neither
+            end can be scrolled to. The close button stays outside the scroller. */}
+        <div className="overflow-y-auto p-5">
 
-        <h3 className="font-display font-bold text-base mb-1.5 pr-6" style={{ color: accent }}>
-          {t(`boardInfo.${hit.kind}.title`)}
-        </h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          {t(`boardInfo.${hit.kind}.body`)}
-        </p>
-        <p className="mt-3 text-[11px] text-muted-foreground/60">
-          {t('boardInfo.hint')}
-        </p>
+          <h3 className="font-display font-bold text-base mb-1.5 pr-6" style={{ color: accent }}>
+            {t(`boardInfo.${hit.kind}.title`)}
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {t(`boardInfo.${hit.kind}.body`)}
+          </p>
+          <p className="mt-3 text-[11px] text-muted-foreground/60">
+            {t('boardInfo.hint')}
+          </p>
+        </div>
       </motion.div>
     </motion.div>
   );

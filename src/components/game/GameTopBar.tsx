@@ -437,7 +437,7 @@ export function GameTopBar({
             onClick={() => setSpaceDetail(false)}
           >
             <div
-              className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+              className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
               style={{ borderColor: `${accentColor}66` }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -448,25 +448,30 @@ export function GameTopBar({
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="flex items-center gap-3 mb-3 pr-6">
-                <Target className="w-7 h-7 shrink-0" style={{ color: accentColor }} />
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceTitle')}</div>
-                  <div className="text-base font-bold" style={{ color: goalMet ? accentColor : 'hsl(var(--foreground))' }}>
-                    {goalMet ? t('topBar.spaceGoalReached') : t('topBar.percentToGo', { percent: toGo })}
+              {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+                  clips a card taller than the viewport out of BOTH ends, and neither
+                  end can be scrolled to. The close button stays outside the scroller. */}
+              <div className="overflow-y-auto p-5">
+                <div className="flex items-center gap-3 mb-3 pr-6">
+                  <Target className="w-7 h-7 shrink-0" style={{ color: accentColor }} />
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceTitle')}</div>
+                    <div className="text-base font-bold" style={{ color: goalMet ? accentColor : 'hsl(var(--foreground))' }}>
+                      {goalMet ? t('topBar.spaceGoalReached') : t('topBar.percentToGo', { percent: toGo })}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceLeft')}</div>
-                  <div className="font-display text-3xl font-bold tabular-nums" style={{ color: accentColor, textShadow: `0 0 12px ${accentColor}66` }}>
-                    {remaining}%
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceLeft')}</div>
+                    <div className="font-display text-3xl font-bold tabular-nums" style={{ color: accentColor, textShadow: `0 0 12px ${accentColor}66` }}>
+                      {remaining}%
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceCleared')}</div>
-                  <div className="font-display text-3xl font-bold tabular-nums text-foreground">{cleared}%</div>
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceCleared')}</div>
+                    <div className="font-display text-3xl font-bold tabular-nums text-foreground">{cleared}%</div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -276,7 +276,7 @@ export function DoorDraftScreen({
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.92, y: 8, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
                 style={{ borderColor: `${accentColor}66` }}
               >
                 <button
@@ -286,49 +286,57 @@ export function DoorDraftScreen({
                 >
                   <X className="w-4 h-4" />
                 </button>
+                {/* Bounded and scrollable. This is a `fixed inset-0` overlay with
+                    items-center, so a card taller than the viewport overflows out
+                    of BOTH ends and neither end can be scrolled to: the text was
+                    simply gone. max-h-full stops at the overlay's padding box, and
+                    the body below scrolls. The close button stays outside that
+                    scroller so it cannot scroll away from a long entry. */}
+                <div className="overflow-y-auto p-5">
 
-                {/* Header */}
-                <div className="flex items-center gap-2 mb-3 pr-6">
-                  <Ticket className="w-6 h-6 shrink-0" style={{ color: accentColor }} />
-                  <div className="text-base font-display font-bold" style={{ color: accentColor }}>{title}</div>
-                </div>
-
-                {/* Constraint / mission recap */}
-                <div className="space-y-2 mb-3">
-                  {door.constraint && (
-                    <div className="flex items-start gap-2">
-                      <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
-                      <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.assignmentConstraint(t, door)}</p>
-                    </div>
-                  )}
-                  <div className="flex items-start gap-2">
-                    <Target className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
-                    <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.assignmentMission(t, door)}</p>
+                  {/* Header */}
+                  <div className="flex items-center gap-2 mb-3 pr-6">
+                    <Ticket className="w-6 h-6 shrink-0" style={{ color: accentColor }} />
+                    <div className="text-base font-display font-bold" style={{ color: accentColor }}>{title}</div>
                   </div>
-                  <div className="space-y-0.5 pl-6">
-                    {door.mission.tiers.map(tier => (
-                      <div key={tier.threshold} className="flex items-center gap-1.5 text-[11px]" style={{ color: '#c8ffd8', opacity: 0.85 }}>
-                        <ChevronsUp className="w-3 h-3 flex-shrink-0" style={{ color: accentColor }} />
-                        <span className="tabular-nums font-bold" style={{ color: accentColor }}>{tier.threshold}</span>
-                        <span className="opacity-70">{t('doorDraft.tierArrow')}</span>
-                        <span>{tier.label}</span>
+
+                  {/* Constraint / mission recap */}
+                  <div className="space-y-2 mb-3">
+                    {door.constraint && (
+                      <div className="flex items-start gap-2">
+                        <Skull className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#ff6b6b' }} />
+                        <p className="text-xs leading-relaxed" style={{ color: '#ff6b6b' }}>{contentText.assignmentConstraint(t, door)}</p>
                       </div>
-                    ))}
+                    )}
+                    <div className="flex items-start gap-2">
+                      <Target className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: accentColor }} />
+                      <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8' }}>{contentText.assignmentMission(t, door)}</p>
+                    </div>
+                    <div className="space-y-0.5 pl-6">
+                      {door.mission.tiers.map(tier => (
+                        <div key={tier.threshold} className="flex items-center gap-1.5 text-[11px]" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                          <ChevronsUp className="w-3 h-3 flex-shrink-0" style={{ color: accentColor }} />
+                          <span className="tabular-nums font-bold" style={{ color: accentColor }}>{tier.threshold}</span>
+                          <span className="opacity-70">{t('doorDraft.tierArrow')}</span>
+                          <span>{tier.label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Clarification */}
+                  {clarify && (
+                    <p className="text-sm leading-relaxed mb-3" style={{ color: '#c8ffd8', opacity: 0.9 }}>{clarify}</p>
+                  )}
+
+                  {/* Scope note */}
+                  <p
+                    className="text-[11px] leading-relaxed pt-2.5"
+                    style={{ color: '#4a7a5a', borderTop: `1px solid ${accentColor}22` }}
+                  >
+                    {t('doorDraft.scopeNote')}
+                  </p>
                 </div>
-
-                {/* Clarification */}
-                {clarify && (
-                  <p className="text-sm leading-relaxed mb-3" style={{ color: '#c8ffd8', opacity: 0.9 }}>{clarify}</p>
-                )}
-
-                {/* Scope note */}
-                <p
-                  className="text-[11px] leading-relaxed pt-2.5"
-                  style={{ color: '#4a7a5a', borderTop: `1px solid ${accentColor}22` }}
-                >
-                  {t('doorDraft.scopeNote')}
-                </p>
               </motion.div>
             </motion.div>
           );
@@ -355,7 +363,7 @@ export function DoorDraftScreen({
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.92, y: 8, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
                 style={{ borderColor: `${accentColor}66` }}
               >
                 <button
@@ -365,16 +373,24 @@ export function DoorDraftScreen({
                 >
                   <X className="w-4 h-4" />
                 </button>
-                <div className="flex items-center gap-2 mb-3 pr-6">
-                  <span
-                    className="inline-block w-5 h-5 rounded-full shrink-0"
-                    style={{ backgroundColor: ball.color, boxShadow: `0 0 10px ${ball.color}` }}
-                  />
-                  <div className="text-base font-display font-bold" style={{ color: accentColor }}>{ball.name}</div>
+                {/* Bounded and scrollable. This is a `fixed inset-0` overlay with
+                    items-center, so a card taller than the viewport overflows out
+                    of BOTH ends and neither end can be scrolled to: the text was
+                    simply gone. max-h-full stops at the overlay's padding box, and
+                    the body below scrolls. The close button stays outside that
+                    scroller so it cannot scroll away from a long entry. */}
+                <div className="overflow-y-auto p-5">
+                  <div className="flex items-center gap-2 mb-3 pr-6">
+                    <span
+                      className="inline-block w-5 h-5 rounded-full shrink-0"
+                      style={{ backgroundColor: ball.color, boxShadow: `0 0 10px ${ball.color}` }}
+                    />
+                    <div className="text-base font-display font-bold" style={{ color: accentColor }}>{ball.name}</div>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.9 }}>
+                    {ball.description}
+                  </p>
                 </div>
-                <p className="text-sm leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.9 }}>
-                  {ball.description}
-                </p>
               </motion.div>
             </motion.div>
           );

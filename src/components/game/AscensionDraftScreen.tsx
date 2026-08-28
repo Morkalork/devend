@@ -178,7 +178,9 @@ export function AscensionDraftScreen({
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="max-w-md rounded-lg p-6 text-center"
+              // max-h-full + scroll: a fixed, centered overlay clips a card taller
+              // than the viewport out of both ends with no way to scroll to either.
+              className="max-w-md max-h-full overflow-y-auto rounded-lg p-6 text-center"
               style={{
                 backgroundColor: '#0a0f0a',
                 border: `2px solid ${accentColor}`,
