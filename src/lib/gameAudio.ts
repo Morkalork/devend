@@ -65,12 +65,55 @@ function ensureAudioContext(): AudioContext | null {
 }
 
 /**
+ * How long a sound's sub-mix stays attached before it is released.
+ *
+ * The longest sound in this file ends 1.33s after it starts (the ball-lock
+ * sweep: st = now + 0.98, stopped at st + 0.35), so 2.5s is roughly double the
+ * worst case. It is a release timer rather than an 'ended' listener on purpose:
+ * the bug this fixes is that mobile WebViews do not reliably auto-release
+ * stopped nodes, and those are the same WebViews whose 'ended' events cannot be
+ * relied on either. A timer fires whatever the platform does.
+ */
+const SFX_RELEASE_MS = 2500;
+
+/**
+ * A disposable sub-mix for one sound, which cleans itself up.
+ *
+ * Every sound used to connect its ~6 oscillator/filter/gain nodes straight to
+ * the module-singleton masterGain and never disconnect them. Stopped nodes are
+ * meant to auto-release; mobile WebViews do it unreliably, so the dead nodes
+ * piled up on masterGain - which outlives the per-round GameScreen remount, so
+ * the graph grew round over round. That is the reported "slower after a few
+ * rounds".
+ *
+ * Each sound now hangs off its own bus and the BUS is what gets disconnected,
+ * which is the whole point of doing it this way: one disconnect frees the
+ * entire subtree no matter how many nodes are in it, so this cannot be defeated
+ * by someone adding a node to a chain and forgetting to release it. Once the
+ * bus is off masterGain nothing in the graph references the subtree and the
+ * locals have gone out of scope, so all of it becomes collectable.
+ *
+ * The release is scheduled here, at the point the bus is created, so a sound
+ * function cannot forget to do it.
+ */
+function openSfxBus(ctx: AudioContext): GainNode | null {
+  if (!masterGain) return null;
+  const bus = ctx.createGain();
+  bus.gain.value = 1;
+  bus.connect(masterGain);
+  setTimeout(() => bus.disconnect(), SFX_RELEASE_MS);
+  return bus;
+}
+
+/**
  * Play a "thud" sound for wall collisions
  * Low-frequency impact with quick decay
  */
 export function playWallHitSound(intensity: number = 0.5): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   
   const now = ctx.currentTime;
   const volume = VOLUME.wallHit * Math.min(1, Math.max(0.3, intensity));
@@ -87,7 +130,7 @@ export function playWallHitSound(intensity: number = 0.5): void {
   
   oscillator.connect(filter);
   filter.connect(gainNode);
-  gainNode.connect(masterGain);
+  gainNode.connect(bus);
   
   // Thud: quick pitch drop
   oscillator.type = 'sine';
@@ -114,7 +157,7 @@ export function playWallHitSound(intensity: number = 0.5): void {
   
   noiseSource.connect(noiseFilter);
   noiseFilter.connect(noiseGain);
-  noiseGain.connect(masterGain);
+  noiseGain.connect(bus);
   
   noiseGain.gain.setValueAtTime(volume * 0.3, now);
   noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
@@ -130,6 +173,8 @@ export function playWallHitSound(intensity: number = 0.5): void {
 export function playBallCollideSound(intensity: number = 0.5): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
 
   const nowMs = performance.now();
   if (nowMs - lastCollideTime < MIN_COLLIDE_INTERVAL_MS) return;
@@ -164,7 +209,7 @@ export function playBallCollideSound(intensity: number = 0.5): void {
     
     osc.connect(highpass);
     highpass.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(bus);
     
     const partialVolume = volume * partial.amp;
     const decayTime = partial.decay;
@@ -192,7 +237,7 @@ export function playBallCollideSound(intensity: number = 0.5): void {
   
   shimmer1.connect(shimmerGain);
   shimmer2.connect(shimmerGain);
-  shimmerGain.connect(masterGain);
+  shimmerGain.connect(bus);
   
   shimmerGain.gain.setValueAtTime(0, now);
   shimmerGain.gain.linearRampToValueAtTime(volume * 0.08, now + 0.006);
@@ -211,6 +256,8 @@ export function playBallCollideSound(intensity: number = 0.5): void {
 export function playFenceBreakSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   
   const now = ctx.currentTime;
   const volume = VOLUME.fenceBreak;
@@ -228,7 +275,7 @@ export function playFenceBreakSound(): void {
   
   crackSource.connect(crackFilter);
   crackFilter.connect(crackGain);
-  crackGain.connect(masterGain);
+  crackGain.connect(bus);
   
   crackGain.gain.setValueAtTime(0, now);
   crackGain.gain.linearRampToValueAtTime(volume, now + 0.006);
@@ -246,7 +293,7 @@ export function playFenceBreakSound(): void {
   thump.frequency.exponentialRampToValueAtTime(50, now + 0.1);
   
   thump.connect(thumpGain);
-  thumpGain.connect(masterGain);
+  thumpGain.connect(bus);
   
   thumpGain.gain.setValueAtTime(0, now);
   thumpGain.gain.linearRampToValueAtTime(volume * 0.6, now + 0.005);
@@ -267,7 +314,7 @@ export function playFenceBreakSound(): void {
   
   debrisSource.connect(debrisFilter);
   debrisFilter.connect(debrisGain);
-  debrisGain.connect(masterGain);
+  debrisGain.connect(bus);
   
   debrisGain.gain.setValueAtTime(0, now);
   debrisGain.gain.linearRampToValueAtTime(volume * 0.3, now + 0.02);
@@ -284,6 +331,8 @@ export function playFenceBreakSound(): void {
 export function playDeathSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   
   const now = ctx.currentTime;
   const volume = VOLUME.death;
@@ -302,7 +351,7 @@ export function playDeathSound(): void {
   
   drop.connect(dropFilter);
   dropFilter.connect(dropGain);
-  dropGain.connect(masterGain);
+  dropGain.connect(bus);
   
   dropGain.gain.setValueAtTime(0, now);
   dropGain.gain.linearRampToValueAtTime(volume * 0.5, now + 0.01);
@@ -321,7 +370,7 @@ export function playDeathSound(): void {
   boom.frequency.exponentialRampToValueAtTime(30, now + 0.4);
   
   boom.connect(boomGain);
-  boomGain.connect(masterGain);
+  boomGain.connect(bus);
   
   boomGain.gain.setValueAtTime(0, now);
   boomGain.gain.linearRampToValueAtTime(volume * 0.7, now + 0.06);
@@ -343,7 +392,7 @@ export function playDeathSound(): void {
   
   crashSource.connect(crashFilter);
   crashFilter.connect(crashGain);
-  crashGain.connect(masterGain);
+  crashGain.connect(bus);
   
   crashGain.gain.setValueAtTime(0, now);
   crashGain.gain.linearRampToValueAtTime(volume * 0.4, now + 0.02);
@@ -376,6 +425,8 @@ function createNoiseBuffer(ctx: AudioContext, duration: number): AudioBuffer {
 export function playBallLockSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
 
   const now = ctx.currentTime;
   const vol = 0.22;
@@ -396,7 +447,7 @@ export function playBallLockSound(): void {
     osc.type = 'sine';
     osc.frequency.value = freq;
 
-    osc.connect(flt); flt.connect(gn); gn.connect(masterGain!);
+    osc.connect(flt); flt.connect(gn); gn.connect(bus);
 
     gn.gain.setValueAtTime(0, t);
     gn.gain.linearRampToValueAtTime(vol, t + 0.008);
@@ -412,7 +463,7 @@ export function playBallLockSound(): void {
     const ng  = ctx.createGain();
     ns.buffer = nb;
     nf.type = 'bandpass'; nf.frequency.value = freq * 1.5; nf.Q.value = 3;
-    ns.connect(nf); nf.connect(ng); ng.connect(masterGain!);
+    ns.connect(nf); nf.connect(ng); ng.connect(bus);
     ng.gain.setValueAtTime(vol * 0.25, t);
     ng.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
     ns.start(t); ns.stop(t + 0.06);
@@ -431,7 +482,7 @@ export function playBallLockSound(): void {
   nf2.frequency.setValueAtTime(2200, ft);
   nf2.frequency.exponentialRampToValueAtTime(260, ft + 0.38);
   nf2.Q.value = 2;
-  ns2.connect(nf2); nf2.connect(ng2); ng2.connect(masterGain!);
+  ns2.connect(nf2); nf2.connect(ng2); ng2.connect(bus);
   ng2.gain.setValueAtTime(0, ft);
   ng2.gain.linearRampToValueAtTime(vol * 0.9, ft + 0.015);
   ng2.gain.exponentialRampToValueAtTime(0.001, ft + 0.38);
@@ -443,7 +494,7 @@ export function playBallLockSound(): void {
   sw.type = 'sawtooth';
   sw.frequency.setValueAtTime(520, ft);
   sw.frequency.exponentialRampToValueAtTime(110, ft + 0.38);
-  sw.connect(swg); swg.connect(masterGain!);
+  sw.connect(swg); swg.connect(bus);
   swg.gain.setValueAtTime(0, ft);
   swg.gain.linearRampToValueAtTime(vol * 0.35, ft + 0.01);
   swg.gain.exponentialRampToValueAtTime(0.001, ft + 0.42);
@@ -456,7 +507,7 @@ export function playBallLockSound(): void {
   const slg = ctx.createGain();
   slf.type = 'bandpass'; slf.frequency.value = 200; slf.Q.value = 8;
   sl.type = 'sine'; sl.frequency.value = 200;
-  sl.connect(slf); slf.connect(slg); slg.connect(masterGain!);
+  sl.connect(slf); slf.connect(slg); slg.connect(bus);
   slg.gain.setValueAtTime(vol * 0.45, st);
   slg.gain.exponentialRampToValueAtTime(0.001, st + 0.3);
   sl.start(st); sl.stop(st + 0.35);
@@ -466,6 +517,8 @@ export function playBallLockSound(): void {
 export function playCutClaimedSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   const now = ctx.currentTime;
   const vol = 0.14;
 
@@ -479,7 +532,7 @@ export function playCutClaimedSound(): void {
   nf.frequency.setValueAtTime(800, now);
   nf.frequency.exponentialRampToValueAtTime(3200, now + 0.12);
   nf.Q.value = 2;
-  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ns.connect(nf); nf.connect(ng); ng.connect(bus);
   ng.gain.setValueAtTime(0, now);
   ng.gain.linearRampToValueAtTime(vol, now + 0.02);
   ng.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
@@ -491,7 +544,7 @@ export function playCutClaimedSound(): void {
   osc.type = "sine";
   osc.frequency.setValueAtTime(880, now + 0.04);
   osc.frequency.linearRampToValueAtTime(1320, now + 0.10);
-  osc.connect(ogn); ogn.connect(masterGain);
+  osc.connect(ogn); ogn.connect(bus);
   ogn.gain.setValueAtTime(0, now + 0.04);
   ogn.gain.linearRampToValueAtTime(vol * 0.7, now + 0.06);
   ogn.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
@@ -506,6 +559,8 @@ export function playCutClaimedSound(): void {
 export function playPickupClaimedSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   const now = ctx.currentTime;
   const vol = 0.15;
 
@@ -525,7 +580,7 @@ export function playPickupClaimedSound(): void {
       const gn = ctx.createGain();
       osc.type = type;
       osc.frequency.value = freq * mul;
-      osc.connect(gn); gn.connect(masterGain!);
+      osc.connect(gn); gn.connect(bus);
       gn.gain.setValueAtTime(0, t);
       gn.gain.linearRampToValueAtTime(vol * gain * g, t + 0.01);
       gn.gain.exponentialRampToValueAtTime(0.001, t + ring);
@@ -538,7 +593,7 @@ export function playPickupClaimedSound(): void {
   const bg = ctx.createGain();
   bell.type = "sine";
   bell.frequency.value = 2637; // E7
-  bell.connect(bg); bg.connect(masterGain);
+  bell.connect(bg); bg.connect(bus);
   bg.gain.setValueAtTime(0, now + 0.165);
   bg.gain.linearRampToValueAtTime(vol * 0.35, now + 0.18);
   bg.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
@@ -551,7 +606,7 @@ export function playPickupClaimedSound(): void {
   const ng = ctx.createGain();
   ns.buffer = nb;
   nf.type = "highpass"; nf.frequency.value = 6000;
-  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ns.connect(nf); nf.connect(ng); ng.connect(bus);
   ng.gain.setValueAtTime(vol * 0.3, now + 0.16);
   ng.gain.exponentialRampToValueAtTime(0.001, now + 0.42);
   ns.start(now + 0.16); ns.stop(now + 0.45);
@@ -564,6 +619,8 @@ export function playPickupClaimedSound(): void {
 export function playBossJumpSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   const now = ctx.currentTime;
   const vol = VOLUME.bossJump;
 
@@ -575,7 +632,7 @@ export function playBossJumpSound(): void {
   osc.type = 'triangle';
   osc.frequency.setValueAtTime(160, now);
   osc.frequency.exponentialRampToValueAtTime(640, now + 0.22);
-  osc.connect(flt); flt.connect(gn); gn.connect(masterGain);
+  osc.connect(flt); flt.connect(gn); gn.connect(bus);
   gn.gain.setValueAtTime(0, now);
   gn.gain.linearRampToValueAtTime(vol, now + 0.02);
   gn.gain.exponentialRampToValueAtTime(0.001, now + 0.26);
@@ -591,7 +648,7 @@ export function playBossJumpSound(): void {
   nf.frequency.setValueAtTime(500, now);
   nf.frequency.exponentialRampToValueAtTime(2600, now + 0.22);
   nf.Q.value = 1.2;
-  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ns.connect(nf); nf.connect(ng); ng.connect(bus);
   ng.gain.setValueAtTime(0, now);
   ng.gain.linearRampToValueAtTime(vol * 0.5, now + 0.03);
   ng.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
@@ -605,6 +662,8 @@ export function playBossJumpSound(): void {
 export function playHeartbeatSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   const now = ctx.currentTime;
   const vol = VOLUME.heartbeat;
   const thump = (at: number, gain: number) => {
@@ -615,7 +674,7 @@ export function playHeartbeatSound(): void {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(85, at);
     osc.frequency.exponentialRampToValueAtTime(45, at + 0.12);
-    osc.connect(flt); flt.connect(g); g.connect(masterGain!);
+    osc.connect(flt); flt.connect(g); g.connect(bus);
     g.gain.setValueAtTime(0.0001, at);
     g.gain.linearRampToValueAtTime(vol * gain, at + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, at + 0.16);
@@ -632,6 +691,8 @@ export function playHeartbeatSound(): void {
 export function playBossChargeSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   const now = ctx.currentTime;
   const vol = VOLUME.bossCharge;
   const dur = 0.55;
@@ -647,7 +708,7 @@ export function playBossChargeSound(): void {
   osc.type = 'sawtooth';
   osc.frequency.setValueAtTime(90, now);
   osc.frequency.exponentialRampToValueAtTime(300, now + dur);
-  osc.connect(flt); flt.connect(gn); gn.connect(masterGain);
+  osc.connect(flt); flt.connect(gn); gn.connect(bus);
   gn.gain.setValueAtTime(0.0001, now);
   gn.gain.exponentialRampToValueAtTime(vol, now + dur * 0.85);
   gn.gain.exponentialRampToValueAtTime(0.0001, now + dur + 0.05);
@@ -661,6 +722,8 @@ export function playBossChargeSound(): void {
 export function playBossLandSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   const now = ctx.currentTime;
   const vol = VOLUME.bossLand;
 
@@ -672,7 +735,7 @@ export function playBossLandSound(): void {
   boom.type = 'sine';
   boom.frequency.setValueAtTime(150, now);
   boom.frequency.exponentialRampToValueAtTime(38, now + 0.18);
-  boom.connect(bf); bf.connect(bg); bg.connect(masterGain);
+  boom.connect(bf); bf.connect(bg); bg.connect(bus);
   bg.gain.setValueAtTime(0, now);
   bg.gain.linearRampToValueAtTime(vol, now + 0.006);
   bg.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
@@ -687,7 +750,7 @@ export function playBossLandSound(): void {
   nf.type = 'lowpass';
   nf.frequency.setValueAtTime(1200, now);
   nf.frequency.exponentialRampToValueAtTime(300, now + 0.16);
-  ns.connect(nf); nf.connect(ng); ng.connect(masterGain);
+  ns.connect(nf); nf.connect(ng); ng.connect(bus);
   ng.gain.setValueAtTime(vol * 0.5, now);
   ng.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
   ns.start(now); ns.stop(now + 0.2);
@@ -697,6 +760,8 @@ export function playBossLandSound(): void {
 export function playLevelCompleteSound(): void {
   const ctx = ensureAudioContext();
   if (!ctx || !masterGain || isMuted) return;
+  const bus = openSfxBus(ctx);
+  if (!bus) return;
   const now = ctx.currentTime;
   const vol = 0.18;
 
@@ -714,7 +779,7 @@ export function playLevelCompleteSound(): void {
   flt.frequency.setValueAtTime(300, now);
   flt.frequency.exponentialRampToValueAtTime(8000, now + 0.65);
   flt.Q.value = 2;
-  osc1.connect(flt); osc2.connect(flt); flt.connect(gn); gn.connect(masterGain!);
+  osc1.connect(flt); osc2.connect(flt); flt.connect(gn); gn.connect(bus);
   gn.gain.setValueAtTime(0, now);
   gn.gain.linearRampToValueAtTime(vol, now + 0.45);
   gn.gain.exponentialRampToValueAtTime(vol * 0.3, now + 0.65);
@@ -732,7 +797,7 @@ export function playLevelCompleteSound(): void {
   nf.frequency.setValueAtTime(200, now);
   nf.frequency.exponentialRampToValueAtTime(4000, now + 0.6);
   nf.Q.value = 3;
-  ns.connect(nf); nf.connect(ng); ng.connect(masterGain!);
+  ns.connect(nf); nf.connect(ng); ng.connect(bus);
   ng.gain.setValueAtTime(0, now);
   ng.gain.linearRampToValueAtTime(vol * 0.35, now + 0.3);
   ng.gain.exponentialRampToValueAtTime(0.001, now + 0.7);

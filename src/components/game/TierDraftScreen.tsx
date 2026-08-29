@@ -156,7 +156,7 @@ export function TierDraftScreen({
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.92, y: 8, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
                 style={{ borderColor: `${accentColor}66` }}
               >
                 <button
@@ -166,15 +166,23 @@ export function TierDraftScreen({
                 >
                   <X className="w-4 h-4" />
                 </button>
-                <div className="flex items-center gap-2 mb-3 pr-6">
-                  {Icon && <Icon className="w-6 h-6 shrink-0" strokeWidth={1.5} style={{ color: accentColor }} />}
-                  <div className="text-base font-display font-bold flex-1" style={{ color: accentColor }}>
-                    {contentText.upgradeName(t, u)} [{contentText.tier(t, u.tier)}]
+                {/* Bounded and scrollable. This is a `fixed inset-0` overlay with
+                    items-center, so a card taller than the viewport overflows out
+                    of BOTH ends and neither end can be scrolled to: the text was
+                    simply gone. max-h-full stops at the overlay's padding box, and
+                    the body below scrolls. The close button stays outside that
+                    scroller so it cannot scroll away from a long entry. */}
+                <div className="overflow-y-auto p-5">
+                  <div className="flex items-center gap-2 mb-3 pr-6">
+                    {Icon && <Icon className="w-6 h-6 shrink-0" strokeWidth={1.5} style={{ color: accentColor }} />}
+                    <div className="text-base font-display font-bold flex-1" style={{ color: accentColor }}>
+                      {contentText.upgradeName(t, u)} [{contentText.tier(t, u.tier)}]
+                    </div>
                   </div>
+                  <p className="text-base leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.9 }}>
+                    {contentText.upgradeDesc(t, u)}
+                  </p>
                 </div>
-                <p className="text-base leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.9 }}>
-                  {contentText.upgradeDesc(t, u)}
-                </p>
               </motion.div>
             </motion.div>
           );

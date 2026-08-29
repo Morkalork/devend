@@ -557,7 +557,8 @@
     "bonusPerRemoved": "+1h per {{percent}}% removed",
     "noRisk": "No risk - you keep your score if you fail!",
     "bankAndContinue": "Bank & Continue",
-    "pushYourLuck": "Push Your Luck"
+    "pushYourLuck": "Push Your Luck",
+    "bankedSoFar": "(+{{hours}}h)"
   },
   "result": {
     "youWin": "YOU WIN!",
@@ -1123,5 +1124,14 @@
     "needAllLocked": "Lock every ball",
     "needUnderPar": "Finish in {{target}} cuts (you used {{current}})",
     "needSpeed": "Finish within {{target}}s (you took {{current}}s)"
+  },
+  "winGate": {
+    "superiorLocks": "Superior",
+    "area": "In zone",
+    "lockType": "Seal {{type}}",
+    "boss": "Boss",
+    "allLocked": "All locked",
+    "underPar": "Under par",
+    "speedClear": "On the clock"
   }
 }

@@ -721,7 +721,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.92, y: 8, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
                 style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
               >
                 <button
@@ -731,18 +731,23 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 >
                   <X className="w-4 h-4" />
                 </button>
+                {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+                    clips a card taller than the viewport out of BOTH ends, and neither
+                    end can be scrolled to. The close button stays outside the scroller. */}
+                <div className="overflow-y-auto p-5">
 
-                <div className="flex items-center gap-3 mb-2 pr-6">
-                  <StatIcon className={`w-7 h-7 shrink-0 ${color}`} strokeWidth={1.5} />
-                  <div className="text-base font-bold text-foreground">{t(`levelComplete.info.${infoKey}.title`)}</div>
+                  <div className="flex items-center gap-3 mb-2 pr-6">
+                    <StatIcon className={`w-7 h-7 shrink-0 ${color}`} strokeWidth={1.5} />
+                    <div className="text-base font-bold text-foreground">{t(`levelComplete.info.${infoKey}.title`)}</div>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground mb-4">{t(`levelComplete.info.${infoKey}.body`)}</p>
+
+                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
+                    {t('levelComplete.infoTipLabel')}
+                  </div>
+                  <p className="text-sm text-foreground">{t(`levelComplete.info.${infoKey}.tip`)}</p>
                 </div>
-
-                <p className="text-sm text-muted-foreground mb-4">{t(`levelComplete.info.${infoKey}.body`)}</p>
-
-                <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
-                  {t('levelComplete.infoTipLabel')}
-                </div>
-                <p className="text-sm text-foreground">{t(`levelComplete.info.${infoKey}.tip`)}</p>
               </motion.div>
             </motion.div>
           );

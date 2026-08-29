@@ -60,6 +60,10 @@ import { useGameConfig } from '@/hooks/useGameConfig';
 import { playMusicForLevel } from '@/lib/gameMusic';
 import { isSoundMuted, setSoundMuted } from '@/lib/soundSettings';
 import { GameModifiers, ModifierSource } from '@/hooks/useActiveModifiers';
+import { PushExitBar } from '@/components/game/PushExitBar';
+import { canStopPushing } from '@/lib/pushLuck';
+import { WinGateFrame } from '@/components/game/WinGateFrame';
+import { gateSatisfied } from '@/lib/winHud';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -345,6 +349,8 @@ export function GameScreen({
     ballCount: 1,
     pickupPresent: false,
     onBankAndContinue: undefined,
+    pushBonusSoFar: 0,
+    winGates: [],
     gameMessage: null,
   });
 
@@ -832,6 +838,8 @@ export function GameScreen({
             spaceRequired={level.sizeThreshold}
             lockedBalls={mapLockedBalls}
             threadLockRequired={level.threadLockRequired}
+            winGates={gameState.winGates}
+            onExplainWin={() => setWinModalOpen(true)}
             scopeCreepPercent={gameState.creepPercent}
             accentColor={accentColor}
             certificateProgress={certificateProgress}
@@ -983,6 +991,13 @@ export function GameScreen({
             showBallSpeeds={showBallSpeeds}
             showPerfOverlay={showPerfOverlay}
           />
+          {/* This map wants something beyond an ordinary clear. One state, not
+              a colour per kind: see WinGateFrame for why a border language does
+              not survive being seen three times in a run. */}
+          <WinGateFrame
+            present={gameState.winGates.length > 0 && !mapComplete}
+            outstanding={gameState.winGates.some(g => !gateSatisfied(g))}
+          />
           {/* Admin lock diagnostics. `absolute` inside this relative wrapper, not
               `fixed`: the page-transition transform breaks fixed positioning. */}
           <LockDebugOverlay visible={lockDebug} />
@@ -1020,29 +1035,20 @@ export function GameScreen({
             visible={!mapComplete}
           />
 
-          {/* Stop pushing and take what you have.
-              Push Your Luck had no exit once it started: the prompt's Bank
-              button vanishes the moment you choose to push, and from there the
-              only ends were locking every ball or failing. On a map where the
-              last ball cannot be sealed that is a dead run with no way out, and
-              the player is left cutting at a board that will never finish.
-              handleBankAndContinue existed and was plumbed all the way into
-              this component's state; nothing ever rendered it. */}
-          {!mapComplete && gameState.pushMode === 'pushing' && gameState.onBankAndContinue && (
-            <div className="pointer-events-auto px-3 pb-1.5">
-              <button
-                onClick={gameState.onBankAndContinue}
-                className="w-full max-w-4xl mx-auto flex items-center justify-center gap-2 rounded-lg border py-2 text-sm font-semibold transition-colors"
-                style={{
-                  color: accentColor,
-                  borderColor: `${accentColor}66`,
-                  backgroundColor: `${accentColor}1a`,
-                }}
-              >
-                <Landmark className="w-4 h-4" />
-                {t('pushYourLuck.bankAndContinue')}
-              </button>
-            </div>
+          {/* Stop pushing and take what you have. See PushExitBar and
+              lib/pushLuck: the rule about when a push may be abandoned is a
+              rule about a trap, so it lives in a tested function rather than
+              in this condition. */}
+          {canStopPushing({
+            mapComplete,
+            pushMode: gameState.pushMode,
+            hasHandler: gameState.onBankAndContinue != null,
+          }) && (
+            <PushExitBar
+              bonusSoFar={gameState.pushBonusSoFar}
+              onBank={gameState.onBankAndContinue!}
+              accentColor={accentColor}
+            />
           )}
           <ShipEarlyBar
             seconds={gameState.activeSeconds}

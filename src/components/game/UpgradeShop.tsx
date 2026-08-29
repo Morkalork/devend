@@ -980,7 +980,7 @@ export function UpgradeShop({
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.92, y: 8, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
                 style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
               >
                 <button
@@ -990,74 +990,79 @@ export function UpgradeShop({
                 >
                   <X className="w-4 h-4" />
                 </button>
+                {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+                    clips a card taller than the viewport out of BOTH ends, and neither
+                    end can be scrolled to. The close button stays outside the scroller. */}
+                <div className="overflow-y-auto p-5">
 
-                {/* Header */}
-                <div className="flex items-center gap-3 mb-2 pr-6">
-                  {DetailIcon && <DetailIcon className={`w-8 h-8 shrink-0 ${tc.text}`} strokeWidth={1.5} />}
-                  <div className="min-w-0">
-                    <div className="text-base font-bold text-foreground truncate">{contentText.upgradeName(t, u)}</div>
-                    <div className={`text-xs ${tc.text}`}>{contentText.tier(t, u.tier)}</div>
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-2 pr-6">
+                    {DetailIcon && <DetailIcon className={`w-8 h-8 shrink-0 ${tc.text}`} strokeWidth={1.5} />}
+                    <div className="min-w-0">
+                      <div className="text-base font-bold text-foreground truncate">{contentText.upgradeName(t, u)}</div>
+                      <div className={`text-xs ${tc.text}`}>{contentText.tier(t, u.tier)}</div>
+                    </div>
                   </div>
-                </div>
 
-                {((u.tags?.length ?? 0) > 0 || u.condition) && (
-                  <div className="flex gap-1 mb-2 flex-wrap">
-                    {u.tags?.map(tag => <TagChip key={tag} tag={tag} sizeClass="text-[10px]" />)}
-                    {u.condition && (
-                      <ConditionChip
-                        condition={u.condition}
-                        live={conditionMet(u.condition, runContext)}
-                      />
+                  {((u.tags?.length ?? 0) > 0 || u.condition) && (
+                    <div className="flex gap-1 mb-2 flex-wrap">
+                      {u.tags?.map(tag => <TagChip key={tag} tag={tag} sizeClass="text-[10px]" />)}
+                      {u.condition && (
+                        <ConditionChip
+                          condition={u.condition}
+                          live={conditionMet(u.condition, runContext)}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <p className="text-base text-muted-foreground mb-4">{contentText.upgradeDesc(t, u)}</p>
+
+                  {/* Unlocked by (prerequisites) */}
+                  <div className="mb-3">
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
+                      {t('upgradeShop.detailUnlockedBy')}
+                    </div>
+                    {prereqs.length > 0 ? (
+                      <ul className="space-y-1.5">{prereqs.map(relRow)}</ul>
+                    ) : (
+                      <p className="text-xs italic text-muted-foreground/60">{t('upgradeShop.detailNoPrereqs')}</p>
                     )}
                   </div>
-                )}
 
-                <p className="text-base text-muted-foreground mb-4">{contentText.upgradeDesc(t, u)}</p>
-
-                {/* Unlocked by (prerequisites) */}
-                <div className="mb-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
-                    {t('upgradeShop.detailUnlockedBy')}
-                  </div>
-                  {prereqs.length > 0 ? (
-                    <ul className="space-y-1.5">{prereqs.map(relRow)}</ul>
-                  ) : (
-                    <p className="text-xs italic text-muted-foreground/60">{t('upgradeShop.detailNoPrereqs')}</p>
-                  )}
-                </div>
-
-                {/* Unlocks (dependents) */}
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
-                    {t('upgradeShop.detailUnlocks')}
-                  </div>
-                  {dependents.length > 0 ? (
-                    <ul className="space-y-1.5">{dependents.map(relRow)}</ul>
-                  ) : (
-                    <p className="text-xs italic text-muted-foreground/60">{t('upgradeShop.detailNoUnlocks')}</p>
-                  )}
-                </div>
-
-                {/* The card note only has room for a fraction; this is where the
-                    rule behind it gets stated, including that the runs must be
-                    SEPARATE, which is the part nothing else in the game says. */}
-                {detailCert && (
-                  <div className="mt-3 pt-3 border-t border-border">
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Medal className="w-3.5 h-3.5 shrink-0 text-yellow-400" />
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-yellow-400">
-                        {t('upgradeShop.detailCertificate')}
-                      </span>
+                  {/* Unlocks (dependents) */}
+                  <div>
+                    <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80 mb-1.5">
+                      {t('upgradeShop.detailUnlocks')}
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {t('upgradeShop.detailCertificateBody', {
-                        name: contentText.certName(t, detailCert.cert),
-                        required: detailCert.required,
-                        current: detailCert.current,
-                      })}
-                    </p>
+                    {dependents.length > 0 ? (
+                      <ul className="space-y-1.5">{dependents.map(relRow)}</ul>
+                    ) : (
+                      <p className="text-xs italic text-muted-foreground/60">{t('upgradeShop.detailNoUnlocks')}</p>
+                    )}
                   </div>
-                )}
+
+                  {/* The card note only has room for a fraction; this is where the
+                      rule behind it gets stated, including that the runs must be
+                      SEPARATE, which is the part nothing else in the game says. */}
+                  {detailCert && (
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <div className="flex items-center gap-1.5 mb-1.5">
+                        <Medal className="w-3.5 h-3.5 shrink-0 text-yellow-400" />
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-yellow-400">
+                          {t('upgradeShop.detailCertificate')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {t('upgradeShop.detailCertificateBody', {
+                          name: contentText.certName(t, detailCert.cert),
+                          required: detailCert.required,
+                          current: detailCert.current,
+                        })}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </motion.div>
             </motion.div>
           );
@@ -1081,7 +1086,7 @@ export function UpgradeShop({
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.92, y: 8, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+              className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
               style={{ borderColor: '#ff6b6b66' }}
             >
               <button
@@ -1091,13 +1096,18 @@ export function UpgradeShop({
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="flex items-center gap-2 mb-2 pr-6">
-                <Lock className="w-5 h-5 shrink-0" style={{ color: '#ff6b6b' }} />
-                <h3 className="text-base font-bold text-foreground">{t('upgradeShop.closedInfoTitle')}</h3>
+              {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+                  clips a card taller than the viewport out of BOTH ends, and neither
+                  end can be scrolled to. The close button stays outside the scroller. */}
+              <div className="overflow-y-auto p-5">
+                <div className="flex items-center gap-2 mb-2 pr-6">
+                  <Lock className="w-5 h-5 shrink-0" style={{ color: '#ff6b6b' }} />
+                  <h3 className="text-base font-bold text-foreground">{t('upgradeShop.closedInfoTitle')}</h3>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {t('upgradeShop.closedInfoBody')}
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                {t('upgradeShop.closedInfoBody')}
-              </p>
             </motion.div>
           </motion.div>
         )}
@@ -1123,7 +1133,7 @@ export function UpgradeShop({
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.92, y: 8, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
-                className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+                className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
                 style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
               >
                 <button
@@ -1133,37 +1143,42 @@ export function UpgradeShop({
                 >
                   <X className="w-4 h-4" />
                 </button>
-                <div className="text-base font-bold text-foreground mb-1 pr-6">
-                  {contentText.upgradeName(t, options[0])}
-                </div>
-                <p className="text-xs text-muted-foreground mb-4">{t('upgradeShop.choiceModalHint')}</p>
-                <div className="flex flex-col gap-2">
-                  {options.map(opt => {
-                    const price = priceFor(opt);
-                    const isSel = selectedIds.includes(opt.id);
-                    const affordable = price <= effectiveOvertime;
-                    const tc = TIER_COLORS[opt.tier];
-                    return (
-                      <button
-                        key={opt.id}
-                        onClick={() => chooseVariant(opt)}
-                        className={`text-left rounded-lg border-2 p-3 transition-colors
-                          ${isSel ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black ' + tc.border : ''}
-                          ${affordable ? `cursor-pointer hover:border-primary ${tc.border}` : 'opacity-60 border-muted cursor-pointer'}`}
-                      >
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-base font-semibold text-foreground flex-1">
-                            {contentText.upgradeDesc(t, opt)}
-                          </span>
-                          {isSel && <Check className="w-4 h-4 text-white shrink-0" />}
-                        </div>
-                        <div className="flex items-center gap-1 text-xs font-bold text-yellow-500">
-                          <Clock className="w-3.5 h-3.5" />
-                          {price === 0 ? t('upgradeShop.freeLabel') : t('upgradeShop.hoursValue', { hours: price })}
-                        </div>
-                      </button>
-                    );
-                  })}
+                {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+                    clips a card taller than the viewport out of BOTH ends, and neither
+                    end can be scrolled to. The close button stays outside the scroller. */}
+                <div className="overflow-y-auto p-5">
+                  <div className="text-base font-bold text-foreground mb-1 pr-6">
+                    {contentText.upgradeName(t, options[0])}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-4">{t('upgradeShop.choiceModalHint')}</p>
+                  <div className="flex flex-col gap-2">
+                    {options.map(opt => {
+                      const price = priceFor(opt);
+                      const isSel = selectedIds.includes(opt.id);
+                      const affordable = price <= effectiveOvertime;
+                      const tc = TIER_COLORS[opt.tier];
+                      return (
+                        <button
+                          key={opt.id}
+                          onClick={() => chooseVariant(opt)}
+                          className={`text-left rounded-lg border-2 p-3 transition-colors
+                            ${isSel ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black ' + tc.border : ''}
+                            ${affordable ? `cursor-pointer hover:border-primary ${tc.border}` : 'opacity-60 border-muted cursor-pointer'}`}
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-base font-semibold text-foreground flex-1">
+                              {contentText.upgradeDesc(t, opt)}
+                            </span>
+                            {isSel && <Check className="w-4 h-4 text-white shrink-0" />}
+                          </div>
+                          <div className="flex items-center gap-1 text-xs font-bold text-yellow-500">
+                            <Clock className="w-3.5 h-3.5" />
+                            {price === 0 ? t('upgradeShop.freeLabel') : t('upgradeShop.hoursValue', { hours: price })}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </motion.div>
             </motion.div>

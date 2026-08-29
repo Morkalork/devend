@@ -554,7 +554,8 @@
     "bonusPerRemoved": "+1h per {{percent}}% borttaget",
     "noRisk": "Ingen risk - du behåller poängen om du misslyckas!",
     "bankAndContinue": "Säkra & fortsätt",
-    "pushYourLuck": "Pressa lyckan"
+    "pushYourLuck": "Pressa lyckan",
+    "bankedSoFar": "(+{{hours}}h)"
   },
   "result": {
     "youWin": "DU VANN!",
@@ -1656,5 +1657,14 @@
     "needAllLocked": "Lås in alla bollar",
     "needUnderPar": "Klara på {{target}} snitt (du använde {{current}})",
     "needSpeed": "Klara inom {{target}}s (du tog {{current}}s)"
+  },
+  "winGate": {
+    "superiorLocks": "Perfekt",
+    "area": "I zonen",
+    "lockType": "Forsegla {{type}}",
+    "boss": "Boss",
+    "allLocked": "Alla lasta",
+    "underPar": "Under par",
+    "speedClear": "Mot klockan"
   }
 }

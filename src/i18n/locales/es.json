@@ -554,7 +554,8 @@
     "bonusPerRemoved": "+1h por cada {{percent}}% eliminado",
     "noRisk": "Sin riesgo: ¡conservas tu puntuación si fallas!",
     "bankAndContinue": "Asegurar y continuar",
-    "pushYourLuck": "Tienta tu suerte"
+    "pushYourLuck": "Tienta tu suerte",
+    "bankedSoFar": "(+{{hours}}h)"
   },
   "result": {
     "youWin": "¡GANASTE!",
@@ -1656,5 +1657,14 @@
     "needAllLocked": "Encerrar todas las bolas",
     "needUnderPar": "Terminar en {{target}} cortes (usaste {{current}})",
     "needSpeed": "Terminar en {{target}}s (tardaste {{current}}s)"
+  },
+  "winGate": {
+    "superiorLocks": "Superior",
+    "area": "En la zona",
+    "lockType": "Sellar {{type}}",
+    "boss": "Jefe",
+    "allLocked": "Todas cerradas",
+    "underPar": "Bajo par",
+    "speedClear": "Contrarreloj"
   }
 }

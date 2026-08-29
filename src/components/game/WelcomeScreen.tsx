@@ -486,7 +486,7 @@ export function WelcomeScreen({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.92, y: 8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+            className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
             style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
           >
             <button
@@ -496,20 +496,25 @@ export function WelcomeScreen({
             >
               <X className="w-4 h-4" />
             </button>
+            {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+                clips a card taller than the viewport out of BOTH ends, and neither
+                end can be scrolled to. The close button stays outside the scroller. */}
+            <div className="overflow-y-auto p-5">
 
-            <div className="flex items-center gap-3 mb-3 pr-6">
-              <Sparkles className="w-7 h-7 shrink-0 text-primary" />
-              <div className="text-base font-bold text-foreground">{t('welcome.certLockedTitle')}</div>
+              <div className="flex items-center gap-3 mb-3 pr-6">
+                <Sparkles className="w-7 h-7 shrink-0 text-primary" />
+                <div className="text-base font-bold text-foreground">{t('welcome.certLockedTitle')}</div>
+              </div>
+
+              <p className="text-sm text-muted-foreground whitespace-pre-line">{t('welcome.certLockedBody')}</p>
+
+              <button
+                onClick={() => setShowCertInfo(false)}
+                className="arcade-button-primary arcade-button-sm rounded-lg w-full mt-5"
+              >
+                {t('welcome.certLockedGotIt')}
+              </button>
             </div>
-
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{t('welcome.certLockedBody')}</p>
-
-            <button
-              onClick={() => setShowCertInfo(false)}
-              className="arcade-button-primary arcade-button-sm rounded-lg w-full mt-5"
-            >
-              {t('welcome.certLockedGotIt')}
-            </button>
           </motion.div>
         </motion.div>
       )}
@@ -532,7 +537,7 @@ export function WelcomeScreen({
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.92, y: 8, opacity: 0 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+            className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
             style={{ borderColor: accentColor ? `${accentColor}66` : undefined }}
           >
             <button
@@ -542,24 +547,29 @@ export function WelcomeScreen({
             >
               <X className="w-4 h-4" />
             </button>
+            {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+                clips a card taller than the viewport out of BOTH ends, and neither
+                end can be scrolled to. The close button stays outside the scroller. */}
+            <div className="overflow-y-auto p-5">
 
-            <div className="flex items-center gap-3 mb-3 pr-6">
-              <CalendarDays className="w-7 h-7 shrink-0 text-primary" />
-              <div className="text-base font-bold text-foreground">{t('welcome.dailyIntroTitle')}</div>
+              <div className="flex items-center gap-3 mb-3 pr-6">
+                <CalendarDays className="w-7 h-7 shrink-0 text-primary" />
+                <div className="text-base font-bold text-foreground">{t('welcome.dailyIntroTitle')}</div>
+              </div>
+
+              <p className="text-sm text-muted-foreground whitespace-pre-line">{t('welcome.dailyIntroBody')}</p>
+
+              <button
+                onClick={() => {
+                  setShowDailyInfo(false);
+                  onDailyIntroSeen?.();
+                  onDaily?.();
+                }}
+                className="arcade-button-primary arcade-button-sm rounded-lg w-full mt-5"
+              >
+                {t('welcome.dailyIntroStart')}
+              </button>
             </div>
-
-            <p className="text-sm text-muted-foreground whitespace-pre-line">{t('welcome.dailyIntroBody')}</p>
-
-            <button
-              onClick={() => {
-                setShowDailyInfo(false);
-                onDailyIntroSeen?.();
-                onDaily?.();
-              }}
-              className="arcade-button-primary arcade-button-sm rounded-lg w-full mt-5"
-            >
-              {t('welcome.dailyIntroStart')}
-            </button>
           </motion.div>
         </motion.div>
       )}

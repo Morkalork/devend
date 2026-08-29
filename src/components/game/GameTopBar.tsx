@@ -8,6 +8,8 @@ import { useRef, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { unreadManualCount } from '@/lib/manual';
 import { Heart, Lock, Scissors, Target, Hexagon, ChevronDown, RotateCcw, TrendingUp, Gauge, Medal, ClipboardList, Info, X } from 'lucide-react';
+import { WinGateChip } from '@/components/game/WinGateChip';
+import type { WinConditionProgress } from '@/types/winSpec';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -27,6 +29,13 @@ interface GameTopBarProps {
   spaceRequired: number;
   lockedBalls: number;
   threadLockRequired?: number;
+  /**
+   * The map's unusual win requirements with live progress. Empty on an ordinary
+   * space-and-locks map, which is most of them.
+   */
+  winGates?: WinConditionProgress[];
+  /** Opens the "How to win" text, which carries the full wording. */
+  onExplainWin?: () => void;
   /** Scope Creep speed boost in percent (0 = inactive, chip hidden). */
   scopeCreepPercent?: number;
   accentColor?: string;
@@ -54,6 +63,8 @@ export function GameTopBar({
   spaceRequired,
   lockedBalls,
   threadLockRequired,
+  winGates,
+  onExplainWin,
   scopeCreepPercent = 0,
   accentColor = '#00ff88',
   certificateProgress,
@@ -320,6 +331,18 @@ export function GameTopBar({
           </span>
         </div>
 
+        {/* The unusual requirement, where the player already looks to find out
+            where they stand. Only ever rendered on the few maps that have one:
+            a chip on every map is chrome the eye learns to skip. */}
+        {(winGates ?? []).map(g => (
+          <WinGateChip
+            key={g.condition.kind + ('ballType' in g.condition ? g.condition.ballType : '')}
+            gate={g}
+            accentColor={accentColor}
+            onExplain={onExplainWin}
+          />
+        ))}
+
         {/* Scope Creep: appears once the anti-stall speed surge kicks in */}
         {scopeCreepPercent > 0 && (
           <div
@@ -437,7 +460,7 @@ export function GameTopBar({
             onClick={() => setSpaceDetail(false)}
           >
             <div
-              className="relative w-full max-w-sm rounded-xl border-2 bg-card p-5 shadow-xl"
+              className="relative w-full max-w-sm max-h-full flex flex-col rounded-xl border-2 bg-card shadow-xl"
               style={{ borderColor: `${accentColor}66` }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -448,25 +471,30 @@ export function GameTopBar({
               >
                 <X className="w-4 h-4" />
               </button>
-              <div className="flex items-center gap-3 mb-3 pr-6">
-                <Target className="w-7 h-7 shrink-0" style={{ color: accentColor }} />
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceTitle')}</div>
-                  <div className="text-base font-bold" style={{ color: goalMet ? accentColor : 'hsl(var(--foreground))' }}>
-                    {goalMet ? t('topBar.spaceGoalReached') : t('topBar.percentToGo', { percent: toGo })}
+              {/* Bounded and scrollable: a `fixed inset-0` overlay with items-center
+                  clips a card taller than the viewport out of BOTH ends, and neither
+                  end can be scrolled to. The close button stays outside the scroller. */}
+              <div className="overflow-y-auto p-5">
+                <div className="flex items-center gap-3 mb-3 pr-6">
+                  <Target className="w-7 h-7 shrink-0" style={{ color: accentColor }} />
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceTitle')}</div>
+                    <div className="text-base font-bold" style={{ color: goalMet ? accentColor : 'hsl(var(--foreground))' }}>
+                      {goalMet ? t('topBar.spaceGoalReached') : t('topBar.percentToGo', { percent: toGo })}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceLeft')}</div>
-                  <div className="font-display text-3xl font-bold tabular-nums" style={{ color: accentColor, textShadow: `0 0 12px ${accentColor}66` }}>
-                    {remaining}%
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceLeft')}</div>
+                    <div className="font-display text-3xl font-bold tabular-nums" style={{ color: accentColor, textShadow: `0 0 12px ${accentColor}66` }}>
+                      {remaining}%
+                    </div>
                   </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceCleared')}</div>
-                  <div className="font-display text-3xl font-bold tabular-nums text-foreground">{cleared}%</div>
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{t('topBar.spaceCleared')}</div>
+                    <div className="font-display text-3xl font-bold tabular-nums text-foreground">{cleared}%</div>
+                  </div>
                 </div>
               </div>
             </div>
