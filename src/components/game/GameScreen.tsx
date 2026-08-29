@@ -14,7 +14,7 @@ import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal, TrendingUp, Landmark } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
-import { ascensionAnnouncement, rungsUpTo } from '@/lib/ascensionLadder';
+import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib/ascensionLadder';
 import { MapTuningModal } from './MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
@@ -581,11 +581,34 @@ export function GameScreen({
   );
   const [ascModalOpen, setAscModalOpen] = useState(false);
   const announcedDepth = useRef<number | null>(null);
+  /**
+   * Announce the ascension rules on LEVEL 1 of a depth, and nowhere else.
+   *
+   * The gate used to be the `announcedDepth` ref alone, on the reasoning that a
+   * depth should be announced once rather than once per map. The reasoning was
+   * right and the mechanism could not deliver it: Index renders this component
+   * only while `currentScreen === 'game'` and the level-complete overlay is
+   * down, so GameScreen UNMOUNTS after every single map (through the overlay,
+   * the shop, every draft) and the ref went back to null with it. A ref cannot
+   * remember something across the remount it is supposed to survive, so the
+   * modal reappeared on every map of an ascended run.
+   *
+   * Level 1 is the honest test, and it needs no memory at all: an ascension
+   * always restarts at level 1, so that IS the moment a depth begins. The ref
+   * stays to stop a re-render firing it twice within one mount, which is all a
+   * ref can honestly promise here.
+   *
+   * The cost is the debug jump (`?ascension=9&level=12`), which never passes
+   * through level 1 and so no longer self-announces. That is covered: the rules
+   * are re-openable from the pause menu (`ascension.menuItem`), which is where
+   * a player who wants them again looks anyway.
+   */
   useEffect(() => {
-    if (!announcement || announcedDepth.current === ascensionDepth) return;
+    if (!shouldAnnounceAscension(ascensionDepth, levelNumber, ascensionLadder)) return;
+    if (announcedDepth.current === ascensionDepth) return;
     announcedDepth.current = ascensionDepth;
     setAscModalOpen(true);
-  }, [announcement, ascensionDepth]);
+  }, [ascensionDepth, levelNumber, ascensionLadder]);
 
   // Handle a BACK gesture while the game is active (wired via backRef from the
   // popstate guard in Index): close an open pause overlay/menu, otherwise open
