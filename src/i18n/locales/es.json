@@ -35,7 +35,12 @@
     "gotIt": "Entendido",
     "ladderTitle": "Ascensión {{depth}}",
     "alsoInForce": "También en vigor: {{names}}.",
-    "menuItem": "Reglas de Ascensión"
+    "menuItem": "Reglas de Ascensión",
+    "youWin": "Has Ganado",
+    "congrats": "Enhorabuena. Has superado todos los niveles y entregado la hoja de ruta completa.",
+    "congratsAscended": "Enhorabuena. Has vuelto a superar todos los niveles, en Ascensión {{depth}}.",
+    "whatDepthAdds": "Qué añade la Ascensión {{depth}}",
+    "noNewRung": "Ninguna regla nueva. La escalera está completa, así que un bucle más profundo es más rápido y vale más, pero no añade nada más."
   },
   "bottomBar": {
     "ballSpeed": "Velocidad de bola",

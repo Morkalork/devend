@@ -205,6 +205,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Issue #60: a tier-draft reward owed by the just-finished assignment, shown
   // as a 1-of-3 upgrade pick before the next assignment draft. null = none owed.
   const [pendingTierDraft, setPendingTierDraft] = useState<{ tier: UpgradeTier; offers: UpgradeConfig[] } | null>(null);
+  /** True while a tier pick is being shown on the way into an ascension loop,
+   *  so its Continue plays the map instead of re-entering the block summary. */
+  const tierDraftLeadsToGameRef = useRef(false);
   /**
    * Tenure (issue #75): offers rolled at run start from the PREVIOUS ended
    * run's depth, plus whether the loadout draft still follows once picked.
@@ -220,7 +223,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Issue #63: when the "Assignment Complete" summary is showing, whether its
   // Continue should route into the run finale (ascension) rather than the next
   // block's drafts. Set for the final block; cleared for mid-run boundaries.
-  const [summaryIsFinal, setSummaryIsFinal] = useState(false);
 
   // Assignments (doors): every 5th completed level replaces the shop with a
   // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
@@ -1604,7 +1606,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (hadAssignment) {
       // #63: recap how the finished mission went on its own screen before the
       // next draft. Continuing from it routes into the tier pick / next draft.
-      setSummaryIsFinal(false);
       nav.goToAssignmentSummary();
       return;
     }
@@ -1614,16 +1615,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [activeDoor, grantAssignmentReward, routeAfterAssignmentReward, nav.goToAssignmentSummary]);
 
   /**
-   * Route out of the "Assignment Complete" summary: into the run finale for the
-   * final block, otherwise into the capstone/assignment draft. (#63)
+   * Route out of the "Assignment Complete" summary: on into the
+   * capstone/assignment draft. (#63)
+   *
+   * It used to fork here, with a `summaryIsFinal` flag sending the final
+   * block's summary to the run finale instead. The final level no longer opens
+   * a summary at all - it goes straight to the finale - so the flag could only
+   * ever be false and the branch was unreachable. Removed rather than left
+   * looking like a live route.
    */
-  const routeAfterSummary = useCallback(() => {
-    if (summaryIsFinal) {
-      nav.goToAscensionDraft();
-      return;
-    }
-    routeAfterAssignmentReward();
-  }, [summaryIsFinal, routeAfterAssignmentReward, nav.goToAscensionDraft]);
+  const routeAfterSummary = routeAfterAssignmentReward;
 
   /**
    * Continue button on the assignment summary: a tier-draft reward is picked
@@ -1671,7 +1672,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Pulling them out satisfies the rule with no extra re-creation, and CI
   // lints with --max-warnings, so a new warning is a broken build rather than
   // a note.
-  const { goToUpgradeShop, goToCapstoneDraft } = nav;
+  const { goToUpgradeShop, goToCapstoneDraft, goToTierDraft, goToGame } = nav;
 
   const proceedToShop = useCallback(() => {
     // The shop is only earned by locking balls this round: at least one lock,
@@ -1725,18 +1726,19 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setUnlockedFeature(pendingFeatureUnlocksRef.current.shift()!);
     }
     if (isLastLevel) {
-      // Beat the final level: grant the final block's assignment reward and, if
-      // there was an assignment, recap it (#63) before the ascend-or-retire
-      // choice. The pending level score is kept so handleRetire can put it on
-      // the result screen.
-      const hadAssignment = !!activeDoor;
+      // Beat the final level: grant the final block's assignment reward, then
+      // go STRAIGHT to the finale. The pending level score is kept so
+      // handleRetire can put it on the result screen.
+      //
+      // No contract recap in between. Level 35 is a multiple of the assignment
+      // cadence, so beating the game used to hand the player a report card and
+      // then a 1-of-3 upgrade pick before anything congratulated them - two
+      // admin screens between the last ball and the win. The material rewards
+      // (lives, overtime, modifier bundles) are still granted here; only the
+      // SCREENS are skipped, and the one reward that needs a screen is offered
+      // after the ascend choice, below, where it can still be spent.
       grantAssignmentReward();
-      if (hadAssignment) {
-        setSummaryIsFinal(true);
-        nav.goToAssignmentSummary();
-      } else {
-        nav.goToAscensionDraft();
-      }
+      nav.goToAscensionDraft();
     } else if (isAssignmentLevel(currentLevelIndex + 1)) {
       beginAssignmentPhase();
     } else if (!offerCapstoneIfDue()) {
@@ -1769,12 +1771,22 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setActiveDoor(null); // the pre-ascension map's door does not follow into the loop
     blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
     setBlockResults([]); // fresh mission block for the new loop (#60)
-    setPendingTierDraft(null);
     setLastContractSummary(null);
     // Assignment reward modifiers persist across ascension (part of the run's build).
     resetToFirstLevel(); // also re-randomizes the level variants for the new loop
-    nav.goToGame();
-  }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, nav.goToGame]);
+
+    // The final block's upgrade pick, if one was owed, is spent HERE rather
+    // than before the finale: retiring makes it worthless, so showing it to
+    // everyone put a reward screen in front of a player who was about to stop
+    // playing. An ascending player still gets it, on the way into the loop.
+    if (pendingTierDraft) {
+      tierDraftLeadsToGameRef.current = true;
+      goToTierDraft();
+      return;
+    }
+    setPendingTierDraft(null);
+    goToGame();
+  }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, pendingTierDraft, goToTierDraft, goToGame]);
 
   /**
    * Confirm the run-start loadout draft: adopt the chosen loadout (or none on
@@ -1920,8 +1932,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const extraLives = upgrade?.modifiers?.extraLives;
     if (typeof extraLives === 'number' && extraLives !== 0) setCurrentLives(prev => prev + extraLives);
     setPendingTierDraft(null);
+    // Picked on the way INTO an ascension loop (see handleAscend): the run is
+    // already reset and waiting, so play, rather than routing back through a
+    // summary that belongs to the block just finished.
+    if (tierDraftLeadsToGameRef.current) {
+      tierDraftLeadsToGameRef.current = false;
+      goToGame();
+      return;
+    }
     routeAfterSummary();
-  }, [upgrades, routeAfterSummary]);
+  }, [upgrades, routeAfterSummary, goToGame]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);

@@ -35,7 +35,12 @@
     "gotIt": "Got It",
     "ladderTitle": "Ascension {{depth}}",
     "alsoInForce": "Also in force: {{names}}.",
-    "menuItem": "Ascension Rules"
+    "menuItem": "Ascension Rules",
+    "youWin": "You Win",
+    "congrats": "Congratulations. You cleared every level and shipped the whole roadmap.",
+    "congratsAscended": "Congratulations. You cleared every level again, at Ascension {{depth}}.",
+    "whatDepthAdds": "What Ascension {{depth}} adds",
+    "noNewRung": "No new rule. The ladder is fully climbed, so a deeper loop is faster and worth more, but adds nothing further."
   },
   "bottomBar": {
     "ballSpeed": "Ball Speed",

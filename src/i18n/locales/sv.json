@@ -35,7 +35,12 @@
     "gotIt": "Uppfattat",
     "ladderTitle": "Ascension {{depth}}",
     "alsoInForce": "Gäller också: {{names}}.",
-    "menuItem": "Ascension-regler"
+    "menuItem": "Ascension-regler",
+    "youWin": "Du Vann",
+    "congrats": "Grattis. Du klarade varje bana och levererade hela färdplanen.",
+    "congratsAscended": "Grattis. Du klarade varje bana igen, på Ascension {{depth}}.",
+    "whatDepthAdds": "Vad Ascension {{depth}} lägger till",
+    "noNewRung": "Ingen ny regel. Stegen är helt klättrad, så ett djupare varv går fortare och ger mer, men lägger inte till något mer."
   },
   "bottomBar": {
     "ballSpeed": "Bollhastighet",
