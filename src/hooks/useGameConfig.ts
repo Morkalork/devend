@@ -63,6 +63,10 @@ export interface GameConfig {
     max_lives: number;
     cut_completion_threshold: number;
   };
+  mover: {
+    fence_drag_per_fence: number; // speed one overlapping fence takes (0 = off)
+    fence_drag_floor: number;     // slowest a mover may be dragged to (1 = off)
+  };
   lock: {
     win_threshold_percent: number; // region <= this % of the denominator -> lock
     min_region_cells: number;      // region <= this many cells always locks (0 = off)
@@ -111,6 +115,10 @@ const defaultConfig: GameConfig = {
     max_lives: 5,
     cut_completion_threshold: 0.75,
   },
+  mover: {
+    fence_drag_per_fence: 0.45,
+    fence_drag_floor: 0.3,
+  },
   lock: {
     win_threshold_percent: 10,
     min_region_cells: 0,
@@ -151,6 +159,7 @@ export function useGameConfig() {
           ball: { ...defaultConfig.ball, ...parsed?.ball },
           fence: { ...defaultConfig.fence, ...parsed?.fence },
           gameplay: { ...defaultConfig.gameplay, ...parsed?.gameplay },
+          mover: { ...defaultConfig.mover, ...parsed?.mover },
           lock: { ...defaultConfig.lock, ...parsed?.lock },
           scope_creep: { ...defaultConfig.scope_creep, ...parsed?.scope_creep },
           crt_word_highlight: { ...defaultConfig.crt_word_highlight, ...parsed?.crt_word_highlight },

@@ -937,6 +937,8 @@ export function GameScreen({
             fenceSpeedBase={config.fence.speed_base}
             fenceSpeedMin={config.fence.speed_min}
             fenceSpeedPerLevel={config.fence.speed_per_level}
+            moverFenceDragPerFence={config.mover.fence_drag_per_fence}
+            moverFenceDragFloor={config.mover.fence_drag_floor}
             lockWinThresholdPercent={config.lock.win_threshold_percent}
             lockMinRegionCells={config.lock.min_region_cells}
             scopeCreep={scopeCreepConfig}

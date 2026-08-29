@@ -35,6 +35,7 @@ import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
 import { getLockValue, getLockQuality, getLampLockMultiplier } from "@/lib/scoring";
+import { isPlayerFence } from "@/lib/wallGeometry";
 import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
@@ -78,8 +79,7 @@ export function escalateBoss(ball: Ball): void {
 function queueBossClawback(game: CanvasGameState): void {
   let best: (typeof game.walls)[number] | null = null;
   for (const w of game.walls) {
-    if (w.isBoardEdge) continue;
-    if (w.id && w.id.startsWith("obstacle-")) continue;
+    if (!isPlayerFence(w)) continue;
     const rc = w.rasterCells;
     if (!rc || rc.length === 0) continue;
     if (!best || rc.length > (best.rasterCells?.length ?? 0)) best = w;

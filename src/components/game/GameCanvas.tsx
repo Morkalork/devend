@@ -207,6 +207,8 @@ interface GameCanvasProps {
   fenceSpeedMin?: number;
   fenceSpeedPerLevel?: number;
   /** Lock rule (from game-config.yml `lock:`). */
+  moverFenceDragPerFence?: number;
+  moverFenceDragFloor?: number;
   lockWinThresholdPercent?: number;
   lockMinRegionCells?: number;
   /** Scope Creep tuning (from game-config.yml `scope_creep:`). */
@@ -303,6 +305,8 @@ export function GameCanvas({
   fenceSpeedBase = 1200,
   fenceSpeedMin = 750,
   fenceSpeedPerLevel = 50,
+  moverFenceDragPerFence = 0.45,
+  moverFenceDragFloor = 0.3,
   lockWinThresholdPercent = BALL_WON_REGION_THRESHOLD,
   lockMinRegionCells = 0,
   scopeCreep,
@@ -372,7 +376,10 @@ export function GameCanvas({
     gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
     gameRef.current.lockBaseThresholdPercent = lockWinThresholdPercent;
     gameRef.current.lockMinRegionCells = lockMinRegionCells;
-  }, [lockWinThresholdPercent, lockMinRegionCells, activeModifiers.lockThresholdBonus]);
+    gameRef.current.moverFenceDragPerFence = moverFenceDragPerFence;
+    gameRef.current.moverFenceDragFloor = moverFenceDragFloor;
+  }, [lockWinThresholdPercent, lockMinRegionCells, activeModifiers.lockThresholdBonus,
+      moverFenceDragPerFence, moverFenceDragFloor]);
   // Same live-config treatment for the Scope Creep tuning.
   // Mirror the banked ability charges onto the game so the chest roll can honour
   // the slot cap. Live rather than set once at map init, because a chest smashed
@@ -659,6 +666,9 @@ export function GameCanvas({
     lockWinThresholdPercent: BALL_WON_REGION_THRESHOLD,
     lockBaseThresholdPercent: BALL_WON_REGION_THRESHOLD,
     lockMinRegionCells: 0,
+    moverFriction: [],
+    moverFenceDragPerFence: 0.45,
+    moverFenceDragFloor: 0.3,
     fenceDurability: null as number | null,
     pendingWallBreaks: [] as Wall[],
     destructibles: [] as import("@/types/game").DestructibleState[],
@@ -826,6 +836,8 @@ export function GameCanvas({
       game.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
       game.lockBaseThresholdPercent = lockWinThresholdPercent;
       game.lockMinRegionCells = lockMinRegionCells;
+      game.moverFenceDragPerFence = moverFenceDragPerFence;
+      game.moverFenceDragFloor = moverFenceDragFloor;
       game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
       game.pendingDestroys = [];

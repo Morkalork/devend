@@ -99,6 +99,7 @@ export class FxLayer {
     this.drawAbilityFx(game, w2s, scale, now);
     this.drawMagnetMarker(game, w2s, scale, now);
     this.drawPickupFeedback(game, w2s, scale, now);
+    this.drawMoverFriction(game, w2s, scale, now);
     this.drawLockMarkers(game, w2s, scale);
     this.drawBallPops(game, w2s, scale, now);
     this.drawTrajectory(game, mods, w2s, scale);
@@ -351,6 +352,55 @@ export class FxLayer {
    * reports the value, and floating text is the one thing that would fight the
    * board's typography.
    */
+  /**
+   * A mover grinding through a fence.
+   *
+   * Drawn straight from this frame's contacts rather than from a particle list
+   * with lifetimes: the contact IS the frame, so a mover that has cleared the
+   * fence stops sparking immediately instead of trailing a puff behind it.
+   *
+   * The look is a scuff, not an explosion. A bright short arc across the fence
+   * line plus a few sparks thrown off it: enough to say "this is costing the
+   * hazard something", quiet enough that a map with four patrols crossing eight
+   * fences does not become a light show.
+   */
+  private drawMoverFriction(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
+    const contacts = game.moverFriction ?? [];
+    if (contacts.length === 0) return;
+
+    for (let i = 0; i < contacts.length; i++) {
+      const contact = contacts[i];
+      const c = w2s(contact.x, contact.y);
+      const heat = Math.max(0.15, Math.min(1, contact.intensity));
+
+      // Hot core, sized by how hard it is being worked.
+      this.over
+        .circle(c.x, c.y, Math.max(1, (2 + 2.5 * heat) * scale))
+        .fill({ color: 0xffd9a0, alpha: 0.5 + 0.35 * heat });
+      this.over
+        .circle(c.x, c.y, Math.max(1.5, (5 + 5 * heat) * scale))
+        .fill({ color: PALETTE.mover, alpha: 0.18 * heat });
+
+      // Sparks. Seeded off the contact's own position and the clock so they
+      // shimmer without a random() call that would also make them untestable.
+      const sparks = 2 + Math.round(3 * heat);
+      for (let k = 0; k < sparks; k++) {
+        const seed = Math.sin((contact.x + contact.y) * 0.37 + k * 2.399 + now * 0.02);
+        const ang = seed * Math.PI;
+        const len = (3 + 7 * heat * Math.abs(seed)) * scale;
+        this.over
+          .moveTo(c.x, c.y)
+          .lineTo(c.x + Math.cos(ang) * len, c.y + Math.sin(ang) * len)
+          .stroke({
+            width: Math.max(1, 1.2 * scale),
+            color: 0xffd9a0,
+            alpha: (0.35 + 0.45 * heat) * (0.5 + 0.5 * Math.abs(seed)),
+            cap: "round",
+          });
+      }
+    }
+  }
+
   private drawPickupFeedback(game: CanvasGameState, w2s: W2S, scale: number, now: number): void {
     const list = game.pickupFeedback;
     if (!list || list.length === 0) return;

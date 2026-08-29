@@ -111,6 +111,16 @@ export interface CanvasGameState {
   // ── Entities ───────────────────────────────────────────────────────────
   balls: Ball[];
   movers: MoverState[];
+  /**
+   * Where movers are grinding against player fences THIS FRAME, for the fx
+   * layer to spark. Rebuilt every physics step: a contact is only true for the
+   * frame it was measured on.
+   */
+  moverFriction?: import("@/lib/physics/moverFriction").FrictionContact[];
+  /** Speed one overlapping fence takes off a mover (game-config.yml `mover:`). */
+  moverFenceDragPerFence?: number;
+  /** Slowest a fence-dragged mover may be pushed (game-config.yml `mover:`). */
+  moverFenceDragFloor?: number;
   /** Fences currently growing. Usually one; the concurrent-fence limit
    *  (1 + additionalConcurrentFences, +1 while Fence Overclock is active) lets
    *  more than one grow at once (#38). */
