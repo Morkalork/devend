@@ -1475,6 +1475,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         allBallsLocked: scoreData.wonByAllLocked ?? false,
         lockedByType: scoreData.lockedByType ?? {},
         smashes: scoreData.smashCount ?? 0,
+        // Lives lost on THIS map: the level-start count against what is left.
+        // blockStatsRef tracks the same thing for the whole block, which cannot
+        // answer a per-map condition.
+        livesLost: Math.max(0, livesAtLevelStart - currentLives),
+        // Filled in by handlePurchaseUpgrade if the player buys anything in the
+        // store visit that follows. Zero here is the honest starting point: no
+        // shop has opened yet.
+        spent: 0,
+        // A push taken and banked. A push that FAILED still reports here (the
+        // map ends through handleGameOverFn's pushing branch), which is exactly
+        // why the bonus alone is not enough to call it a win.
+        pushWon: !scoreData.pushFailed && (scoreData.pushBonus ?? 0) > 0,
       };
       setBlockResults(prev => [...prev, mapResult]);
     }
@@ -1871,6 +1883,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     analytics.upgradePurchased({ upgradeId, price, level: currentLevelIndex + 1 });
     setTotalScore(prev => prev - price);
+    // Charge the spend to the map this visit followed, so a `noSpend` mission
+    // can ask a per-map question about something that happens between maps.
+    // Only while a contract is running; outside one there is nothing to record.
+    if (activeDoor && price > 0) {
+      setBlockResults(prev => prev.length === 0 ? prev : prev.map((r, i) =>
+        i === prev.length - 1 ? { ...r, spent: (r.spent ?? 0) + price } : r));
+    }
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
     // Budget Cycle: purchases land as a synchronous burst right before the
     // shop-exit handler, so the visit's spend accumulates in a ref.
@@ -1890,7 +1909,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       const unlocks = recordMaxTierPurchase(certKey);
       if (unlocks.length > 0) setShopUnlockedCerts(prev => [...prev, ...unlocks]);
     }
-  }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex]);
+  }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex, activeDoor]);
 
   const handleContinueFromShop = useCallback(() => {
     // Budget Cycle: this visit's spend buys next-map boons. Granted here and

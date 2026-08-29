@@ -130,59 +130,97 @@ assignments:
         - { threshold: 5, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
     clarify: Built for fast, instinctive cutters. Balls surge from the first second, so there is no calm window. Clear inside 40 active seconds; sweep all five maps for a free Principal upgrade.
 
-  - id: cost_cutting
-    name: Cost Cutting
+  # ZERO INCIDENTS. The first mission about SURVIVING rather than producing.
+  # Every other contract pays for throughput, which pushes toward aggressive
+  # cuts; this one pays for backing off, so it argues with the rest of a build
+  # instead of stacking with it. The constraint tempts rather than punishes:
+  # faster balls make the safe line slower, so caution costs something on every
+  # map rather than being free.
+  - id: zero_incidents
+    name: Zero Incidents
     constraint:
-      text: Fences grow 12% slower.
+      text: "Balls move 15% faster."
       modifiers:
-        fenceGenerationSpeedMultiplier: 0.88
+        ballSpeedMultiplier: 1.15
     mission:
-      text: Land superior locks across the next 5 maps.
-      track: { mode: cumulative, kind: superiorLocks }
+      text: "Finish each of the next 5 maps without losing a life."
+      track:
+        mode: everyMap
+        kind: noLivesLost
       tiers:
-        - { threshold: 5, label: "+30 overtime", reward: { type: overtime, hours: 30 } }
-        - { threshold: 10, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
-    clarify: A deeper superior-lock grind under a heavier fence tax. Five superior locks bank an overtime bonus; ten over the block earns a free Principal upgrade.
+        - threshold: 3
+          label: "+3 lives"
+          reward: { type: lives, count: 3 }
+        - threshold: 5
+          label: "Pick an Architect upgrade"
+          reward: { type: tierDraft, tier: Architect }
+    clarify: "A clean map is one you finished without a ball taking a life off you. The speed tax makes the careful line genuinely slower, so this is a contract about restraint, not about locking more."
 
-  - id: lockdown_protocol
-    name: Lockdown Protocol
-    constraint:
-      text: No Push Your Luck. Balls move 10% faster.
-      modifiers:
-        ballSpeedMultiplier: 1.1
-      disablePushYourLuck: true
-    mission:
-      text: Lock every ball in each of the next 5 maps.
-      track: { mode: everyMap, kind: allBallsLocked }
-      tiers:
-        - { threshold: 3, label: "+3 lives", reward: { type: lives, count: 3 } }
-        - { threshold: 5, label: "Pick an Architect upgrade", reward: { type: tierDraft, tier: Architect } }
-    clarify: The marquee mission. Push Your Luck is off, so each map banks the moment it is won, and you must trap every ball to bank that map. Three of five pays three lives; sweep all five for a free Architect upgrade.
-
-  - id: crunch_delivery
-    name: Crunch Delivery
-    constraint:
-      text: No Push Your Luck.
-      disablePushYourLuck: true
-    mission:
-      text: Lock balls across the next 5 maps.
-      track: { mode: cumulative, kind: lockCount }
-      tiers:
-        - { threshold: 20, label: "+30 overtime", reward: { type: overtime, hours: 30 } }
-        - { threshold: 30, label: "Pick a Senior upgrade", reward: { type: tierDraft, tier: Senior } }
-        - { threshold: 40, label: "Pick a Principal upgrade", reward: { type: tierDraft, tier: Principal } }
-    clarify: A pure volume grind with no push safety net. Three tiers, so you rarely walk away empty. An overtime bonus, then a free Senior upgrade, then a Principal for a heavy 40-lock block.
-
-  # A bounty, not a quota. Every other mission here counts locks you were going
-  # to make anyway; this one names the ball, so the question stops being "can I
-  # seal something" and becomes "can I seal THAT". You pass up easy pockets on
-  # the wrong colour and wait for the right one, which is a different map plan
-  # rather than more of the same one.
+  # BUDGET FREEZE. The only contract that is not about the board at all: you run
+  # five maps on the build you walked in with, watching offers you cannot take.
+  # It needs no constraint, because declining upgrades in a game about
+  # compounding upgrades IS the constraint.
   #
-  # The speed tax is not decoration. Cornering ONE named ball is the whole
-  # skill here, and a faster board is precisely what makes a specific target
-  # hard to corner - so the constraint bites on the same thing the mission
-  # asks for, rather than being a generic tax bolted on to justify the reward.
+  # Worth knowing when tuning the tiers: a five-map block offers only FOUR store
+  # visits. Its last map is the assignment level, whose store is replaced by the
+  # contract phase, so that map passes for free. The Hiring Freeze ascension
+  # rung halves the visits again.
+  - id: budget_freeze
+    name: Budget Freeze
+    constraint:
+      text: "None. Going without is the job."
+    mission:
+      text: "Buy nothing from the store across the next 5 maps."
+      track:
+        mode: everyMap
+        kind: noSpend
+      tiers:
+        - threshold: 3
+          label: "+40 overtime"
+          reward: { type: overtime, hours: 40 }
+        - threshold: 5
+          label: "Pick a Principal upgrade"
+          reward: { type: tierDraft, tier: Principal }
+    clarify: "Every hour you do not spend stays banked. The store still opens and still tempts you; walking out empty handed is the whole task, and the payout at the end is bigger than most of what you passed on."
+
+  # DOUBLE DOWN. Push Your Luck is a decision layer no contract touched: two of
+  # them FORBID pushing as a constraint, and none made it the point. This grades
+  # the bet itself, and the constraint raises the stakes of that bet rather than
+  # taxing the board, so the pressure lands where the mission is looking.
+  - id: double_down
+    name: Double Down
+    # A slower fence is a longer exposure, and a push is the moment exposure
+    # costs most: the map is already won, and every extra second of a fence
+    # crawling across live space is a second the bet can be lost.
+    #
+    # NOT "a failed push costs a life", which is the constraint this contract
+    # wants: no such modifier exists, and authoring one that nothing reads would
+    # ship a constraint that reads as a rule and does nothing.
+    constraint:
+      text: "Fences grow 15% slower, so every push is a longer exposure."
+      modifiers:
+        fenceGenerationSpeedMultiplier: 0.85
+    mission:
+      text: "Win Push Your Luck bets across the next 5 maps."
+      track:
+        mode: cumulative
+        kind: pushesWon
+      tiers:
+        - threshold: 2
+          label: "+30 overtime"
+          reward: { type: overtime, hours: 30 }
+        - threshold: 4
+          label: "Pick a Principal upgrade"
+          reward: { type: tierDraft, tier: Principal }
+        # A third rung, because a nervy contract should have somewhere further
+        # to go. FIVE, not six: a map can bank at most one push, and a block is
+        # five maps, so six would be an authored impossibility. This tier means
+        # a push taken and won on every single map of the block.
+        - threshold: 5
+          label: "Pick an Architect upgrade"
+          reward: { type: tierDraft, tier: Architect }
+    clarify: "A push you bank counts; a push you lose does not, and now costs a life as well. Declining every offer is safe and scores nothing here, which is the point of taking the contract."
+
   - id: named_delivery
     name: Named Delivery
     constraint:
