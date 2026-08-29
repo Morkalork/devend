@@ -705,6 +705,32 @@ export function checkAndUpdateBallWonStates(
     if (zonePay > 0) game.zoneLockBonus += zonePay;
     game.zoneLockCount += wonThisPass.filter(b => lockAreaById.has(b.id)).length;
 
+    // Multi-locks, reported for the same reason the zones above are: sealing
+    // three balls in one cut pays triple, and NOTHING said so. The multiplier
+    // sits inside the same product as everything else, so from the player's
+    // side a big multi-lock and three ordinary locks looked identical.
+    //
+    // The baseline is the same balls locked ONE AT A TIME, which is the choice
+    // the player actually had - not "with no multiplier at all", which is a
+    // board state they could never have reached. Locking them separately would
+    // have paid (1 + chainBonus) per pass, so the difference is what holding
+    // the cut until they lined up was worth. Zero by construction for a single
+    // lock, and it never claims hours that were not paid: it is a second
+    // pricing of a payout already added to lockBonus, rounded the same way.
+    if (newlyLocked > 1) {
+      const soloMultiplier = 1 + activeModifiers.simultaneousLockBonus;
+      const soloStandardPay = Math.round(standardPoints * soloMultiplier * lockValue);
+      const soloSuperiorPay = Math.round(
+        superiorPoints * soloMultiplier * lockValue * lockQuality.superiorMultiplier,
+      );
+      const multiPay = (standardPay + superiorPay) - (soloStandardPay + soloSuperiorPay);
+      if (multiPay > 0) game.multiLockBonus += multiPay;
+      // The BIGGEST cut of the map, not a running total: "you locked 3 at once"
+      // is the thing worth saying, and summing passes would turn three separate
+      // doubles into an unearned "6".
+      game.multiLockBest = Math.max(game.multiLockBest, newlyLocked);
+    }
+
     // Severance Package: flat overtime per locked ball, deliberately outside
     // the money/simultaneous/quality multipliers so it reads as a predictable
     // "+N per lock" (still folded under the per-map cap with the rest of

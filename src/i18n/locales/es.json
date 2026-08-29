@@ -339,6 +339,7 @@
     "threadLocks": "Bloqueos de hilo ({{count}})",
     "superiorLocks": "Bloqueos superiores ({{count}})",
     "zoneLocks": "Bloqueos de zona ({{count}})",
+    "multiLocks": "Cierre múltiple (x{{count}} a la vez)",
     "pushBonus": "Bono de presión",
     "pickupBonus": "Bono de potenciadores",
     "chestBonus": "Botín obtenido",
@@ -391,6 +392,11 @@
         "title": "Bloqueos de zona",
         "body": "Las cajas de color var, let y const de un mapa pagan un multiplicador (1.5x, 2x, 3x) por cualquier bola bloqueada dentro. Se acumula con todo lo demás, así que un bloqueo superior y ajustado dentro de una caja const es el mayor pago individual del juego. Esta fila muestra solo las horas que añadió la zona; ya están contadas en tus ingresos de bloqueo de arriba.",
         "tip": "La zona se ilumina en cuanto un bloqueo cuenta. Si sigue apagada, el rincón que sellaste no cayó dentro de la caja: busca que la bola quede dentro del borde, no solo cerca."
+      },
+      "multiLocks": {
+        "title": "Cierre múltiple",
+        "body": "Encerrar varias bolas con un solo corte multiplica los ingresos de ese corte: dos a la vez paga el doble, tres el triple, y el resto de multiplicadores se acumulan encima. Esta fila muestra solo las horas que aportó el acumulado frente a encerrarlas una a una; ya están contadas en tus ingresos por cierre de arriba.",
+        "tip": "No selles una bolsa en cuanto sea seguro. Deja que entre una segunda bola: un corte alrededor de dos bolas vale más que dos cortes alrededor de una."
       },
       "breakBonus": {
         "title": "Bono de demolición",

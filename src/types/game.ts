@@ -433,6 +433,10 @@ export interface LevelScoreData {
   lockedByType?: Record<string, number>;
   /** Locks that landed in a Colored Area, and the hours those zones added. */
   zoneLockCount?: number;
+  /** Hours the simultaneous-lock multiplier added (see CanvasGameState). */
+  multiLockBonus?: number;
+  /** Most balls sealed by one cut this map. */
+  multiLockBest?: number;
   zoneLockBonus?: number;
   // Bonus from smashing breakable objects (issue #38)
   breakBonus?: number;

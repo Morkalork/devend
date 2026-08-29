@@ -47,6 +47,12 @@ export interface AbilityDef {
   size?: number;
   /** true = arm on tap, then the player taps the board to pick a point (magnet). */
   targeted?: boolean;
+  /**
+   * Charges this ability is topped up to at the start of every map, once the
+   * player has earned it. Absent (or 0) for an ordinary consumable, which is
+   * every ability but Shockwave. See abilityReplenish.ts.
+   */
+  replenishTo?: number;
   /** Info modal: one-line "what it does". */
   description?: string;
   /** Info modal: one-line "how to use it". */
@@ -70,6 +76,9 @@ function parseAbilityEntry(raw: unknown): AbilityDef | null {
     : undefined;
   const factor = Number.isFinite(Number(r.factor)) && Number(r.factor) > 0 ? Number(r.factor) : undefined;
   const size = Number.isFinite(Number(r.size)) && Number(r.size) > 0 ? Number(r.size) : undefined;
+  const replenishTo = Number.isFinite(Number(r.replenishTo)) && Number(r.replenishTo) > 0
+    ? Math.round(Number(r.replenishTo))
+    : undefined;
 
   return {
     id,
@@ -81,6 +90,7 @@ function parseAbilityEntry(raw: unknown): AbilityDef | null {
     durationSeconds,
     factor,
     size,
+    replenishTo,
     targeted: r.targeted === true,
     description: typeof r.description === "string" ? r.description : undefined,
     howTo: typeof r.howTo === "string" ? r.howTo : undefined,

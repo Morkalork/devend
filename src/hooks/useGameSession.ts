@@ -32,7 +32,7 @@ import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
 import { performTotalReset } from '@/lib/totalReset';
-import { loadAbilities } from '@/lib/abilities';
+import { loadAbilities, getAllAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
@@ -62,6 +62,7 @@ import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '
 import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
 import { registerRunFlush, installRunFlushListeners } from '@/lib/runSaveFlush';
+import { replenishAbilityCharges, heldAbilityIds } from '@/lib/abilityReplenish';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 
 /**
@@ -165,6 +166,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // { abilityId -> count }. Banked across maps for the rest of the run; the
   // ability bar reads them, pressing a button spends one.
   const [abilityCharges, setAbilityCharges] = useState<Record<string, number>>({});
+  // Every ability EARNED this run, including ones already spent. A replenishing
+  // ability (abilities.yml `replenishTo`) is keyed on this rather than on the
+  // live stack, so spending your last Shockwave does not end the replenishment.
+  const everHeldAbilityIdsRef = useRef<string[]>([]);
 
   // Budget Cycle: boons carried into the NEXT map, charged by hours spent in
   // the shop visit just left (see src/lib/treasury.ts). Set on shop exit,
@@ -762,6 +767,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
     setAbilityCharges({});
+    everHeldAbilityIdsRef.current = [];
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
     setCarrySpendCapture(0);
@@ -830,6 +836,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordEligible: recordEligibleRef.current,
     dailyKey,
     abilityCharges,
+    heldAbilityIds: everHeldAbilityIdsRef.current,
   };
 
   // Persist the run whenever a new map begins (map advance or a Continue-revive
@@ -1121,6 +1128,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCumulativeLockedBalls(save.cumulativeLockedBalls);
     setCarryInstantFences(save.carryInstantFences);
     setAbilityCharges(save.abilityCharges ?? {});
+    // A run saved before `heldAbilityIds` existed has no record, so seed from
+    // the charges it is carrying: what you hold is proof you earned it.
+    everHeldAbilityIdsRef.current = heldAbilityIds(save.abilityCharges ?? {}, save.heldAbilityIds ?? []);
     setCarrySpendFences(save.carrySpendFences);
     setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
@@ -1323,6 +1333,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // A smashed chest granted one charge of an ability (issue #38): bank it
   // run-wide so it persists into every later map this run.
   const handleGrantAbility = useCallback((abilityId: string) => {
+    // Remember it was EARNED, separately from the stack: spending the last
+    // charge must not make a replenishing ability stop replenishing.
+    if (!everHeldAbilityIdsRef.current.includes(abilityId)) {
+      everHeldAbilityIdsRef.current = [...everHeldAbilityIdsRef.current, abilityId];
+    }
     setAbilityCharges(prev => ({ ...prev, [abilityId]: (prev[abilityId] ?? 0) + 1 }));
   }, []);
 
@@ -2069,24 +2084,41 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleTotalReset = useCallback(() => {
     resetCertData();
     resetProgression();
+    // Abort the run in progress too. The reload inside performTotalReset would
+    // normally take care of this, but it is not guaranteed to happen (a
+    // Capacitor webview or a host that blocks reload), and a reset that leaves
+    // the player mid-map with their progression deleted underneath them is
+    // worse than either outcome on its own. Doing it here also means the
+    // in-memory state is already clean if the reload never lands.
+    clearRun();
+    resetRunScopedState();
+    nav.goToWelcome();
     performTotalReset();
-  }, [resetCertData, resetProgression]);
+  }, [resetCertData, resetProgression, clearRun, resetRunScopedState, nav.goToWelcome]);
 
   // Load the ball catalogue (balls.yml) once on mount so the Tutorial reflects
   // edits even before a run starts. handleStartGame reloads it per run.
   useEffect(() => { loadBallTypes(); loadAbilities(); }, []);
 
-  // Panic Button (features.yml 'panicShockwave', unlocked by beating the first
-  // boss at level 10): once unlocked, every map starts topped up to at least one
-  // free Shockwave charge - the game's "get the balls moving again" safety valve.
-  // Keyed on the level index so it re-tops each new map; idempotent and never
-  // lowers a bigger stack, so chest-earned charges are left untouched. Runs the
-  // moment the feature flips unlocked too (deps include isFeatureUnlocked).
+  // Replenishing abilities (abilities.yml `replenishTo`, today just Shockwave):
+  // every map opens topped up to the authored floor for anything the player has
+  // EARNED this run. Keyed on the level index so it re-tops each new map;
+  // idempotent and never lowers a bigger stack, so chest-earned charges pile on
+  // top rather than being trimmed back.
+  //
+  // The trigger is HAVING the ability, not the level-10 'panicShockwave'
+  // feature. That feature did the same job but was armed by beating the first
+  // boss, while Shockwave itself drops from chests at level 4 - so a player who
+  // found it early spent their charge, watched it not return for five maps, and
+  // reasonably concluded it did not replenish. The feature is still honoured, so
+  // a player who reached level 10 without ever finding one still gets it.
   useEffect(() => {
-    if (!isFeatureUnlocked('panicShockwave')) return;
-    setAbilityCharges(prev =>
-      (prev.shockwave ?? 0) >= 1 ? prev : { ...prev, shockwave: 1 },
-    );
+    setAbilityCharges(prev => replenishAbilityCharges(
+      prev,
+      heldAbilityIds(prev, everHeldAbilityIdsRef.current),
+      getAllAbilities(),
+      isFeatureUnlocked('panicShockwave') ? ['shockwave'] : [],
+    ));
   }, [currentLevelIndex, isFeatureUnlocked, setAbilityCharges]);
 
   // Sync completed achievements into cert manager for achievement-locked certs

@@ -13,6 +13,7 @@
  * storage - the reliable way to flush all in-memory React state at once.
  */
 import { LANGUAGE_STORAGE_KEY } from '@/i18n';
+import { disableRunFlush } from '@/lib/runSaveFlush';
 
 // Device/app preferences that are NOT game progression. A total reset keeps
 // these so the player isn't dropped back into the wrong UI language, a blaring
@@ -41,6 +42,12 @@ export function clearAllGameState(): void {
 }
 
 export function performTotalReset(): void {
+  // FIRST, before anything is cleared. The reload below fires `pagehide`, which
+  // the run-save flush listens to, so the run in memory was being written back
+  // into the storage this function had just wiped - and a player who asked for
+  // a clean install came back to the game they were in the middle of. The reset
+  // has to silence the flush before it gives it a chance to run.
+  disableRunFlush();
   clearAllGameState();
   // Reboot so every in-memory store re-initialises from clean storage.
   try {

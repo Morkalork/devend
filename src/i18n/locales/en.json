@@ -341,6 +341,7 @@
     "threadLocks": "Thread Locks ({{count}})",
     "superiorLocks": "Superior Locks ({{count}})",
     "zoneLocks": "Zone Locks ({{count}})",
+    "multiLocks": "Multi-Lock (x{{count}} at once)",
     "pushBonus": "Push Bonus",
     "pickupBonus": "Power-Up Bonus",
     "breakBonus": "Demolition Bonus",
@@ -394,6 +395,11 @@
         "title": "Zone Locks",
         "body": "A map's coloured var, let and const boxes pay a multiplier (1.5x, 2x, 3x) on any ball locked inside them. It stacks with everything else, so a tight, Superior lock inside a const box is the biggest single payout in the game. This row shows only the hours the zone added; they are already counted in your lock income above.",
         "tip": "The zone lights up the moment a lock counts. If it stays dark, the pocket you sealed did not land inside the box: aim for the ball to settle within the border, not merely near it."
+      },
+      "multiLocks": {
+        "title": "Multi-Lock",
+        "body": "Sealing several balls with a single cut multiplies that cut's lock income: two at once pays double, three pays triple, and every other multiplier stacks on top of it. This row shows only the hours the stacking added over locking the same balls one at a time; they are already counted in your lock income above.",
+        "tip": "Do not seal a pocket the moment it is safe. Let a second ball wander in first: one cut around two balls is worth two cuts around one."
       },
       "breakBonus": {
         "title": "Demolition Bonus",

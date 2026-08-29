@@ -15,6 +15,7 @@
  * restocked offers or refund the restock.
  */
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import { selectedCardClasses } from '@/components/game/upgradeCardState';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UpgradeConfig, TIER_COLORS, UpgradeTag, UpgradeTier } from '@/types/upgrade';
@@ -755,20 +756,22 @@ export function UpgradeShop({
                 }}
                 disabled={owned || locked}
                 whileTap={{ scale: purchasable ? 0.97 : 1 }}
+                /* Selection has to be readable at arm's length on a phone, in a
+                   horizontal strip where a neighbouring card is always half in
+                   frame. It used to be a thin white ring and nothing else: the
+                   card kept its ordinary background and border, so "chosen" and
+                   "not chosen" differed by two pixels of outline. The drafting
+                   screens next door already had the answer, so selected cards
+                   now take the same three-part treatment DraftCard uses - tinted
+                   ground, solid accent border, outward glow - which is also what
+                   makes the two screens read as one shop. */
                 className={`
                   relative w-full h-full p-5 rounded-xl transition-all duration-200 text-left flex flex-col gap-3
-                  ${cantAfford ? 'border-dashed' : ''} border-2
-                  ${selected ? 'ring-2 ring-white/90 ring-offset-2 ring-offset-black' : ''}
-                  ${owned
-                    ? 'bg-green-500/20 border-green-500/50'
-                    : locked
-                      ? 'bg-muted/30 border-muted/30 opacity-40 cursor-not-allowed'
-                      : purchasable
-                        ? `bg-card ${tierColors.border} hover:border-primary cursor-pointer`
-                        : cantAfford
-                          ? 'bg-card/50 border-muted-foreground/30 opacity-60 cursor-pointer'
-                          : 'bg-card/50 border-muted cursor-not-allowed opacity-40'
-                  }
+                  ${cantAfford && !selected ? 'border-dashed' : ''} border-2
+                  ${selectedCardClasses(
+                    { selected, owned, locked, purchasable, cantAfford },
+                    tierColors.border,
+                  )}
                 `}
               >
                 {/* Identity: icon, tier, name. One block rather than three
@@ -801,10 +804,12 @@ export function UpgradeShop({
                   </div>
                 )}
 
-                {/* Status icon */}
+                {/* Status icon. A filled badge rather than a bare glyph: a thin
+                    white tick sat directly on the card art and was lost against
+                    a bright icon or a pale tag chip underneath it. */}
                 {selected && (
-                  <div className="absolute top-3 right-3">
-                    <Check className="w-5 h-5 text-white" />
+                  <div className="absolute top-3 right-3 rounded-full bg-primary p-1 shadow-[0_0_10px_hsl(var(--primary)/0.7)]">
+                    <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
                   </div>
                 )}
                 {owned && (

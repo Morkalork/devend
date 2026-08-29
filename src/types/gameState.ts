@@ -361,6 +361,15 @@ export interface CanvasGameState {
    */
   breakablesSmashed: number;
   zoneLockCount: number;
+  /**
+   * Hours the SIMULTANEOUS-lock multiplier added, over locking the same balls
+   * one at a time. Reported so a multi-lock is distinguishable from the same
+   * number of ordinary locks, which it was not: the multiplier is folded into
+   * lockBonus long before any screen sees it.
+   */
+  multiLockBonus: number;
+  /** Most balls sealed by a single cut this map (1 when none stacked). */
+  multiLockBest: number;
   /** Overtime the Colored Area multipliers ADDED, over the same locks unzoned. */
   zoneLockBonus: number;
   /** Green "money ball" multiplier applied to subsequent locks this map (default 1). */
