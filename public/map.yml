@@ -876,6 +876,15 @@ levels:
     variety: 14
     randomShapes: 10
     maxBalls: 4
+    coloredAreas:
+      # A first taste of the bonus pocket in a mirror map: the reflected lanes make
+      # the corner easy to reach and hard to hold.
+      - kind: var
+        x: 45
+        'y': 630
+        width: 225
+        height: 225
+        required: false
     entities:
       - id: mirror-1
         kind: wall
@@ -933,6 +942,18 @@ levels:
           'y': 620
           ball: { x: 665, y: 390 }
     entities:
+      # A chest away from the terminals, so waking a sleeper and cashing the chest
+      # pull you to opposite ends of the board.
+      - id: chest-15
+        kind: wall
+        shape: rect
+        x: 620
+        'y': 180
+        width: 88
+        height: 70
+        chest: true
+        breakable: true
+        hitsToBreak: 2
       - id: hub
         kind: wall
         shape: circle
@@ -1010,6 +1031,15 @@ levels:
     variety: 10
     randomShapes: 8
     maxBalls: 3
+    coloredAreas:
+      # Opposite the pillar, across the divider: the pocket is cheap to fence and
+      # expensive to reach, which is the trade the map is about.
+      - kind: let
+        x: 655
+        'y': 45
+        width: 200
+        height: 200
+        required: false
     fenceBudget: 10
     entities:
       - id: divider-top
@@ -1047,6 +1077,17 @@ levels:
     maxBalls: 4
     fenceBudget: 11
     entities:
+      # A breakable lip under the mirror: smash it and the bottom-right corner
+      # becomes one pocket instead of two.
+      - id: gate-18
+        kind: wall
+        shape: rect
+        x: 640
+        'y': 760
+        width: 130
+        height: 26
+        breakable: true
+        hitsToBreak: 2
       - id: mirror-v
         kind: wall
         mirror: true
@@ -1135,7 +1176,9 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 1
-    timeLimit: 75
+    # Four traps (two halves x two hits) plus the ground each break-out
+    # reverts. The old 75s was sized for a single seal per half.
+    timeLimit: 95
     # Colored Area win gate: fence BOTH chained boss halves into this var area.
     coloredAreas:
       - kind: var
@@ -1149,23 +1192,31 @@ levels:
     boss:
       name: Merge Conflict
       intro: >-
-        Two commits tangled by a chain that shreds every fence it sweeps. Fence
-        BOTH halves into the pink var area to resolve them. The chain snags on the
-        phasing pillars, pinning the pair, but each pillar blinks out on a timer and
-        the burst flings them loose. A freeze buys you a clean window.
+        Two commits tangled by a chain that shreds every fence it sweeps. Neither
+        resolves on the first try: trap a half anywhere on the board and it tears
+        free, faster and smaller, taking your biggest fence with it. Wear both
+        halves down, then fence them into the pink var area. The chain snags on the
+        phasing pillars, and a freeze buys you a clean window.
       creepFromStart: true
       objective:
         id: defeat-merge
         name: Resolve the Merge Conflict
-        description: Fence both chained halves into the var area.
+        description: Wear both chained halves down, then fence them into the var area.
         clarify: >-
-          Trap BOTH boss balls inside the pink var area to win. Their chain breaks
-          any fence it sweeps across and snags on the phasing pillars; when a pillar
-          phases out it shoves the pair free. Running out of time fails the map.
+          Each half takes TWO traps. The first can be anywhere on the board and
+          costs you no life: the half breaks out faster and smaller, and one of your
+          fences is reverted. The second must be inside the pink var area, and both
+          halves must end up there. Their chain breaks any fence it sweeps across
+          and snags on the phasing pillars; when a pillar phases out it shoves the
+          pair free. Running out of time fails the map.
         kind: defeatBoss
         reward: 16
       bossBall:
-        hp: 1
+        # Two traps per half. The fight is ATTRITION, which is what tells it apart
+        # from the level 10 boss: that one is a single precise seal, this is a war
+        # you are losing ground in. Every non-final trap reverts your biggest
+        # fence, so the board you finish on is not the board you built.
+        hp: 2
         count: 2
         chained: true
         radiusScale: 1.6
@@ -1218,6 +1269,15 @@ levels:
     variety: 12
     randomShapes: 8
     maxBalls: 2
+    coloredAreas:
+      # Act III opens the board up again. The spine keeps this corner honest: you
+      # have to commit to the left half to bank it.
+      - kind: let
+        x: 45
+        'y': 45
+        width: 200
+        height: 200
+        required: false
     gravityWells:
       - x: 345
         'y': 250
@@ -1330,6 +1390,18 @@ levels:
         turnRate: 2.6
         pull: up
     entities:
+      # Above the mover's lane. The chest is easy to see and awkward to reach
+      # while the neck guard is sweeping.
+      - id: chest-23
+        kind: wall
+        shape: rect
+        x: 700
+        'y': 120
+        width: 88
+        height: 70
+        chest: true
+        breakable: true
+        hitsToBreak: 2
       - id: divider-left
         kind: wall
         shape: rect
@@ -1383,6 +1455,15 @@ levels:
     variety: 16
     randomShapes: 10
     maxBalls: 3
+    coloredAreas:
+      # Above the catch shelf, where the pillars cannot help you. Taking it means
+      # working the top of the board while the shelf collects everything else.
+      - kind: let
+        x: 655
+        'y': 45
+        width: 200
+        height: 200
+        required: false
     gravityWells:
       - x: 330
         'y': 210
@@ -1489,6 +1570,14 @@ levels:
     variety: 18
     randomShapes: 12
     maxBalls: 3
+    coloredAreas:
+      # Far from the core and both nodes, so the greedy line is the long one.
+      - kind: let
+        x: 45
+        'y': 45
+        width: 200
+        height: 200
+        required: false
     dataStream:
       path:
         - { x: 200, y: 300 }
@@ -1540,6 +1629,18 @@ levels:
       reward: { kind: overtime, value: 38 }
       announce: game.streamHarvested
     entities:
+      # Dead centre, between the four racks: the map's one focal reward, and every
+      # route to it crosses a lane.
+      - id: chest-27
+        kind: wall
+        shape: rect
+        x: 406
+        'y': 415
+        width: 88
+        height: 70
+        chest: true
+        breakable: true
+        hitsToBreak: 2
       - id: rack-tl
         kind: wall
         shape: rect
@@ -1583,6 +1684,15 @@ levels:
     variety: 14
     randomShapes: 8
     maxBalls: 3
+    coloredAreas:
+      # Small, high, and on the far side of the phasing roof: reachable only in the
+      # window where the roof is out.
+      - kind: const
+        x: 685
+        'y': 45
+        width: 170
+        height: 170
+        required: false
     gravityWells:
       - x: 340
         'y': 470
@@ -1709,27 +1819,35 @@ levels:
     boss:
       name: Force Push
       intro: >-
-        A heavy black build that wrecks your work: every 30 seconds it stops,
-        vibrates, and shatters EVERY fence you have drawn. It is fast, so pin it
-        down. The moment it freezes to wind up a wipe is your window to fence it
-        into the pink var area. A freeze holds it right there.
+        A heavy black build that wrecks your work: every 20 seconds it stops,
+        vibrates, and shatters EVERY fence you have drawn. Nothing you build
+        outlives the next push, so this is not a boss you grind down. It is one
+        clean run at the pink var area, start to finish, between two wipes. The
+        wind-up is when it stands still. A freeze holds it right there.
       creepFromStart: false
       objective:
         id: defeat-force-push
         name: Contain the Force Push
-        description: Fence the black boss into the var area.
+        description: Fence the black boss into the var area, between two wipes.
         clarify: >-
-          Trap the black boss inside the pink var area to win. Every 30 seconds it
-          stops and vibrates, then destroys all of your fences; that stationary
-          wind-up is your chance to fence it. Running out of time fails the map.
+          Trap the black boss inside the pink var area to win, in ONE trap. Every 20
+          seconds it stops and vibrates, then destroys every fence you have drawn,
+          finished or not; that stationary wind-up is your chance to fence it.
+          Trapping it outside the area fails the map, and so does running out of
+          time.
         kind: defeatBoss
         reward: 16
       bossBall:
+        # One trap, like level 10, but the clock is on YOUR BUILD rather than on
+        # the boss: the wipe is frequent enough that no fence survives two of them,
+        # so the whole job has to fit inside one window. Slower than it was (1.45
+        # was a fast boss AND a short window, which reads as unfair rather than
+        # tense); the pressure now comes from the wipe, which is this fight's idea.
         hp: 1
         radiusScale: 2.2
-        speedScale: 1.45
+        speedScale: 1.25
         color: "#2b2f3a"
-        fenceWipeSeconds: 30
+        fenceWipeSeconds: 20
         spitIntervalSeconds: 0
         maxMinions: 0
     entities:
@@ -1775,6 +1893,15 @@ levels:
     variety: 12
     randomShapes: 8
     maxBalls: 3
+    coloredAreas:
+      # Act IV: a const pocket tucked under the right shelf. Worth 3x, and the
+      # shelf is in the way of every comfortable cut to it.
+      - kind: const
+        x: 685
+        'y': 685
+        width: 170
+        height: 170
+        required: false
     gravityWells:
       - x: 320
         'y': 540
@@ -2121,7 +2248,9 @@ levels:
     variety: 0
     randomShapes: 0
     maxBalls: 1
-    timeLimit: 90
+    # Four traps under a wipe and live minions: the longest fight in the
+    # game, and the only one that has to survive two wipes on purpose.
+    timeLimit: 115
     coloredAreas:
       - kind: var
         x: 500
@@ -2134,23 +2263,32 @@ levels:
     boss:
       name: Production Outage
       intro: >-
-        Everything at once. A chained pair that shreds your fences, wipes the whole
-        board every 25 seconds, and spits oversized hotfixes, on an arena of phasing
-        pillars. Fence BOTH halves into the pink var area to recover. Snag them on a
-        pillar, save a freeze for the wipe, and ship it.
+        Everything at once, and everything you have learned. A chained pair that
+        takes two traps each like the Merge Conflict, wipes the board every 25
+        seconds like the Force Push, and spits oversized hotfixes like the Release
+        Candidate. Wear both halves down, then fence them into the pink var area.
+        Snag them on a pillar, save a freeze for the wipe, and ship it.
       creepFromStart: true
       objective:
         id: defeat-outage
         name: Resolve the Outage
-        description: Fence both chained halves into the var area.
+        description: Wear both chained halves down, then fence them into the var area.
         clarify: >-
-          Trap BOTH boss balls inside the pink var area. Their chain breaks fences
-          and snags on the phasing pillars; every 25 seconds the boss wipes every
-          fence (telegraphed by a stop and a vibrate). Running out of time fails.
+          Each half takes TWO traps. The first can be anywhere and costs nothing but
+          the fence it reverts; the second must be inside the pink var area, and both
+          halves must end up there. Their chain breaks fences and snags on the
+          phasing pillars; every 25 seconds the boss wipes every fence (telegraphed
+          by a stop and a vibrate), and it spits oversized minions throughout.
+          Running out of time fails.
         kind: defeatBoss
         reward: 24
       bossBall:
-        hp: 1
+        # The finale is the only fight carrying all three ideas at once: the
+        # attrition of level 20 (hp on a pair), the wipe of level 30, and the
+        # minions of level 10. Act IV's brief is combination rather than new
+        # primitives, so nothing here is unfamiliar - there is just no longer a
+        # moment when only one of them is happening.
+        hp: 2
         count: 2
         chained: true
         radiusScale: 1.7
