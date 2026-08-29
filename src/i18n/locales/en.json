@@ -21,7 +21,7 @@
   "ascension": {
     "allLevelsCleared": "All Levels Cleared",
     "ascensionComplete": "Ascension {{depth}} complete. ",
-    "retireOrAscend": "Retire and bank everything - or draft a loadout and ascend to depth {{depth}}.",
+    "retireOrAscend": "Retire and bank this run - or draft a loadout and ascend to depth {{depth}}.",
     "ascendedLevelsInfo": "Ascended levels are faster and count {{multiplier}}× toward Certificate Hours. ",
     "bankedOvertime": "Banked overtime: {{score}}h",
     "noLoadouts": "No loadouts available - loadouts.yml failed to load. You can still retire below.",
@@ -29,9 +29,9 @@
     "selectLoadout": "Select a Loadout",
     "retireBankRun": "Retire - Bank This Run",
     "ascensionUnlocked": "Ascension Unlocked",
-    "tutorialIntro1": "You beat every level. Ascend to restart at level 1 with your score, upgrades and lives intact, plus one ",
+    "tutorialIntro1": "You beat every level. Ascend to start again at level 1, harder, keeping your depth, your Certificate Hours and one ",
     "tutorialLoadoutWord": "loadout",
-    "tutorialIntro2": ": a curse with a blessing. Loadouts stack each ascension, levels speed up, and cleared levels count more toward Certificate Hours. Retire anytime to bank it all.",
+    "tutorialIntro2": " per ascension: a curse with a blessing. Upgrades and overtime do NOT carry, so each loop is rebuilt from nothing under one more rule. Retire anytime to bank it all.",
     "gotIt": "Got It",
     "ladderTitle": "Ascension {{depth}}",
     "alsoInForce": "Also in force: {{names}}.",
@@ -40,7 +40,8 @@
     "congrats": "Congratulations. You cleared every level and shipped the whole roadmap.",
     "congratsAscended": "Congratulations. You cleared every level again, at Ascension {{depth}}.",
     "whatDepthAdds": "What Ascension {{depth}} adds",
-    "noNewRung": "No new rule. The ladder is fully climbed, so a deeper loop is faster and worth more, but adds nothing further."
+    "noNewRung": "No new rule. The ladder is fully climbed, so a deeper loop is faster and worth more, but adds nothing further.",
+    "resetWarning": "Ascending starts a FRESH run: upgrades, overtime and the Promotion are cleared. Your loadouts, your depth and your Certificate Hours carry."
   },
   "bottomBar": {
     "ballSpeed": "Ball Speed",

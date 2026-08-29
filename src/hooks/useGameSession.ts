@@ -205,9 +205,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Issue #60: a tier-draft reward owed by the just-finished assignment, shown
   // as a 1-of-3 upgrade pick before the next assignment draft. null = none owed.
   const [pendingTierDraft, setPendingTierDraft] = useState<{ tier: UpgradeTier; offers: UpgradeConfig[] } | null>(null);
-  /** True while a tier pick is being shown on the way into an ascension loop,
-   *  so its Continue plays the map instead of re-entering the block summary. */
-  const tierDraftLeadsToGameRef = useRef(false);
   /**
    * Tenure (issue #75): offers rolled at run start from the PREVIOUS ended
    * run's depth, plus whether the loadout draft still follows once picked.
@@ -737,12 +734,22 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   );
 
   /**
-   * Clear every piece of run-scoped state. Shared by all four run-reset paths
-   * (start, play-again, restart, back-to-welcome) so a newly added field can
-   * never be forgotten in one of them again. Lives, continues, level index and
-   * navigation stay with the call sites - they legitimately differ per path.
+   * Clear every piece of run-scoped state. Shared by all five run-reset paths
+   * (start, play-again, restart, back-to-welcome, ASCEND) so a newly added
+   * field can never be forgotten in one of them again. Lives, continues, level
+   * index and navigation stay with the call sites - they legitimately differ
+   * per path.
+   *
+   * `keepAscension` is what makes ascending a reset at all. An ascension is a
+   * fresh run at a harder rung, so it clears the same list as any other run
+   * start; what it must NOT clear is the three things that are the POINT of
+   * ascending - the depth, the loadouts stacked on the way up, and
+   * runLevelsCompleted, which is the certificate-hours accumulator and the only
+   * meta progress a run carries while it is still being played. Sharing the
+   * list rather than keeping a second one beside it is deliberate: two lists of
+   * "everything run-scoped" is how one of them goes stale.
    */
-  const resetRunScopedState = useCallback(() => {
+  const resetRunScopedState = useCallback((opts?: { keepAscension?: boolean }) => {
     // Signing Bonus: the run opens with hours already banked. Set here rather
     // than at one of the run-start handlers so every path gets it, the Daily
     // included: certs already apply to a seeded run (Equity Grant, Head Start
@@ -774,8 +781,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setStoreClosed(false);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
-    setAscensionDepth(0);
-    setDraftedLoadoutIds([]);
+    if (!opts?.keepAscension) {
+      setAscensionDepth(0);
+      setDraftedLoadoutIds([]);
+    }
     setLastRunSummary(null);
     setLastRunLoadoutUnlocks([]);
     runTrajectoryRef.current = [];
@@ -783,7 +792,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     pbCelebratedRef.current = false;
     setLevelPace(null);
     setLastRunRank(null);
-    resetRunProgress();
+    // Certificate hours accrue across the whole session of play, ascensions
+    // included, and are banked when the run finally ends. Zeroing this on an
+    // ascension would quietly delete the meta progress the player ascended to
+    // keep earning.
+    if (!opts?.keepAscension) resetRunProgress();
   }, [resetRunProgress]);
 
   // Latest run snapshot, refreshed every render, so the save effect can fire
@@ -1733,10 +1746,12 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       // No contract recap in between. Level 35 is a multiple of the assignment
       // cadence, so beating the game used to hand the player a report card and
       // then a 1-of-3 upgrade pick before anything congratulated them - two
-      // admin screens between the last ball and the win. The material rewards
-      // (lives, overtime, modifier bundles) are still granted here; only the
-      // SCREENS are skipped, and the one reward that needs a screen is offered
-      // after the ascend choice, below, where it can still be spent.
+      // admin screens between the last ball and the win.
+      //
+      // The rewards that can still matter are granted here: overtime and lives
+      // count toward a retiring player's final score. The 1-of-3 UPGRADE pick
+      // is not offered, because there is no longer anywhere for it to go - an
+      // ascension resets upgrades, and retiring ends the run.
       grantAssignmentReward();
       nav.goToAscensionDraft();
     } else if (isAssignmentLevel(currentLevelIndex + 1)) {
@@ -1751,42 +1766,55 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setUnlockedFeature(pendingFeatureUnlocksRef.current.shift() ?? null);
   }, []);
 
-  /** Ascend: draft a loadout and loop back to level 1 at depth + 1. */
+  /**
+   * Ascend: start a FRESH run at depth + 1, keeping only what ascending is for.
+   *
+   * It used to carry the whole run across - score, every upgrade owned, the
+   * capstone, the assignment modifiers - which made the loop pointless: you
+   * re-entered level 1 with a build assembled over thirty-five maps, and the
+   * ladder's rung was the only thing that had changed. The harder rules landed
+   * on a player who could already buy everything back on the first shop, so
+   * ascending was easier than the run that earned it.
+   *
+   * So it resets exactly like any other run start, through the same shared
+   * list, and keeps three things:
+   *
+   *   - the DEPTH, and with it the ladder rung now in force;
+   *   - the LOADOUTS drafted on the way up, which stack and are the reason to
+   *     ascend at all;
+   *   - runLevelsCompleted, the certificate-hours accumulator, so meta progress
+   *     keeps building across loops and banks when the run finally ends.
+   *
+   * Upgrades, overtime, the Promotion, assignment rewards and the mission block
+   * all go. Lives and continues refill to a run's starting values, because that
+   * is what starting a run means.
+   */
   const handleAscend = useCallback((loadoutId: string) => {
     const newDepth = ascensionDepth + 1;
     analytics.ascensionStarted({ depth: newDepth, loadoutId });
+
+    // Clear the run first, then re-establish what survives. Ordering matters:
+    // the shared reset is told to leave the ascension state alone, so the
+    // append below cannot be clobbered by it.
+    resetRunScopedState({ keepAscension: true });
     setDraftedLoadoutIds(prev => [...prev, loadoutId]);
     setAscensionDepth(newDepth);
     recordAscensionDepth(newDepth);
 
-    // Refill lives to the run's starting value (never down), then apply the
-    // drafted loadout's life delta once — same as buying an extraLives upgrade.
-    const startingLives = baseLives() + ((certBonuses.extraLives as number | undefined) ?? 0);
+    // A fresh run's lives and continues, plus the drafted loadout's life delta
+    // once - the same arithmetic a run start does, not a carry-over of whatever
+    // the last loop happened to end on.
+    const certs = getLoadedCertBonuses();
+    const startingLives = baseLives() + ((certs.extraLives as number | undefined) ?? 0);
     const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
-    const refilled = Math.max(1, Math.max(currentLives, startingLives) + livesDelta);
-    setCurrentLives(refilled);
-    setLivesAtLevelStart(refilled);
+    const lives = Math.max(1, startingLives + livesDelta);
+    setCurrentLives(lives);
+    setLivesAtLevelStart(lives);
+    setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
 
-    setPendingLevelScore(null);
-    setActiveDoor(null); // the pre-ascension map's door does not follow into the loop
-    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
-    setBlockResults([]); // fresh mission block for the new loop (#60)
-    setLastContractSummary(null);
-    // Assignment reward modifiers persist across ascension (part of the run's build).
     resetToFirstLevel(); // also re-randomizes the level variants for the new loop
-
-    // The final block's upgrade pick, if one was owed, is spent HERE rather
-    // than before the finale: retiring makes it worthless, so showing it to
-    // everyone put a reward screen in front of a player who was about to stop
-    // playing. An ascending player still gets it, on the way into the loop.
-    if (pendingTierDraft) {
-      tierDraftLeadsToGameRef.current = true;
-      goToTierDraft();
-      return;
-    }
-    setPendingTierDraft(null);
     goToGame();
-  }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, pendingTierDraft, goToTierDraft, goToGame]);
+  }, [ascensionDepth, recordAscensionDepth, resetRunScopedState, loadoutLookup, resetToFirstLevel, goToGame]);
 
   /**
    * Confirm the run-start loadout draft: adopt the chosen loadout (or none on
@@ -1932,16 +1960,8 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     const extraLives = upgrade?.modifiers?.extraLives;
     if (typeof extraLives === 'number' && extraLives !== 0) setCurrentLives(prev => prev + extraLives);
     setPendingTierDraft(null);
-    // Picked on the way INTO an ascension loop (see handleAscend): the run is
-    // already reset and waiting, so play, rather than routing back through a
-    // summary that belongs to the block just finished.
-    if (tierDraftLeadsToGameRef.current) {
-      tierDraftLeadsToGameRef.current = false;
-      goToGame();
-      return;
-    }
     routeAfterSummary();
-  }, [upgrades, routeAfterSummary, goToGame]);
+  }, [upgrades, routeAfterSummary]);
 
   const handlePurchaseCertLevel = useCallback((certId: string, targetLevel: number) => {
     purchaseCertLevel(certId, targetLevel);

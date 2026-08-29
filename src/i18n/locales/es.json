@@ -21,17 +21,17 @@
   "ascension": {
     "allLevelsCleared": "Todos los niveles superados",
     "ascensionComplete": "Ascensión {{depth}} completada. ",
-    "retireOrAscend": "Retírate y asegura todo, o elige un equipamiento y asciende a la profundidad {{depth}}.",
-    "ascendedLevelsInfo": "Los niveles ascendidos son más rápidos y cuentan {{multiplier}}× para las horas de certificado. ",
+    "retireOrAscend": "Retírate y guarda esta partida, o elige un equipamiento y asciende al nivel {{depth}}.",
+    "ascendedLevelsInfo": "Los niveles ascendidos son más rápidos y cuentan {{multiplier}}× para las Horas de Certificado. ",
     "bankedOvertime": "Horas extra aseguradas: {{score}}h",
     "noLoadouts": "No hay equipamientos disponibles: no se pudo cargar loadouts.yml. Aun así puedes retirarte abajo.",
     "ascendToDepth": "Ascender a la profundidad {{depth}}",
     "selectLoadout": "Selecciona un equipamiento",
     "retireBankRun": "Retirarse - asegurar esta partida",
     "ascensionUnlocked": "Ascensión desbloqueada",
-    "tutorialIntro1": "Superaste todos los niveles. Asciende para empezar de nuevo en el nivel 1 con tu puntuacion, mejoras y vidas intactas, mas un ",
+    "tutorialIntro1": "Has superado todos los niveles. Asciende para empezar de nuevo en el nivel 1, más difícil, conservando tu profundidad, tus Horas de Certificado y un ",
     "tutorialLoadoutWord": "equipamiento",
-    "tutorialIntro2": ": una maldicion con una bendicion. Los loadouts se acumulan con cada ascension, los niveles se aceleran y cada nivel cuenta mas para las Horas de Certificado. Retirate cuando quieras para cobrarlo todo.",
+    "tutorialIntro2": " por ascensión: una maldición con una bendición. Las mejoras y las horas extra NO se conservan, así que cada vuelta se reconstruye desde cero con una regla más. Retírate cuando quieras para guardarlo todo.",
     "gotIt": "Entendido",
     "ladderTitle": "Ascensión {{depth}}",
     "alsoInForce": "También en vigor: {{names}}.",
@@ -40,7 +40,8 @@
     "congrats": "Enhorabuena. Has superado todos los niveles y entregado la hoja de ruta completa.",
     "congratsAscended": "Enhorabuena. Has vuelto a superar todos los niveles, en Ascensión {{depth}}.",
     "whatDepthAdds": "Qué añade la Ascensión {{depth}}",
-    "noNewRung": "Ninguna regla nueva. La escalera está completa, así que un bucle más profundo es más rápido y vale más, pero no añade nada más."
+    "noNewRung": "Ninguna regla nueva. La escalera está completa, así que un bucle más profundo es más rápido y vale más, pero no añade nada más.",
+    "resetWarning": "Ascender inicia una partida NUEVA: se borran las mejoras, las horas extra y el Ascenso. Conservas tus equipamientos, tu nivel de ascensión y tus Horas de Certificado."
   },
   "bottomBar": {
     "ballSpeed": "Velocidad de bola",

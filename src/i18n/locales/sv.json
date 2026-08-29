@@ -21,17 +21,17 @@
   "ascension": {
     "allLevelsCleared": "Alla nivåer klara",
     "ascensionComplete": "Uppstigning {{depth}} klar. ",
-    "retireOrAscend": "Dra dig tillbaka och säkra allt - eller välj en loadout och stig upp till djup {{depth}}.",
-    "ascendedLevelsInfo": "Uppstigna nivåer är snabbare och räknas {{multiplier}}× mot certifikattimmar. ",
+    "retireOrAscend": "Gå i pension och banka den här rundan, eller välj en loadout och stig till djup {{depth}}.",
+    "ascendedLevelsInfo": "Ascension-banor går fortare och räknas {{multiplier}}× mot Certifikattimmar. ",
     "bankedOvertime": "Säkrad övertid: {{score}}h",
     "noLoadouts": "Inga loadouts tillgängliga - loadouts.yml kunde inte laddas. Du kan ändå dra dig tillbaka nedan.",
     "ascendToDepth": "Stig upp till djup {{depth}}",
     "selectLoadout": "Välj en loadout",
     "retireBankRun": "Dra dig tillbaka - säkra denna omgång",
     "ascensionUnlocked": "Uppstigning upplåst",
-    "tutorialIntro1": "Du klarade varje nivå. Stig upp för att börja om på nivå 1 med poäng, uppgraderingar och liv i behåll, plus en ",
+    "tutorialIntro1": "Du klarade varje bana. Stig för att börja om på bana 1, svårare, och behåll ditt djup, dina Certifikattimmar och en ",
     "tutorialLoadoutWord": "loadout",
-    "tutorialIntro2": ": en förbannelse med en välsignelse. Loadouts staplas för varje uppstigning, nivåerna går snabbare och varje klarad nivå räknas mer mot Certifikattimmar. Gå i pension när du vill för att banka allt.",
+    "tutorialIntro2": " per ascension: en förbannelse med en välsignelse. Uppgraderingar och övertid följer INTE med, så varje varv byggs upp från noll under ännu en regel. Gå i pension när du vill för att banka allt.",
     "gotIt": "Uppfattat",
     "ladderTitle": "Ascension {{depth}}",
     "alsoInForce": "Gäller också: {{names}}.",
@@ -40,7 +40,8 @@
     "congrats": "Grattis. Du klarade varje bana och levererade hela färdplanen.",
     "congratsAscended": "Grattis. Du klarade varje bana igen, på Ascension {{depth}}.",
     "whatDepthAdds": "Vad Ascension {{depth}} lägger till",
-    "noNewRung": "Ingen ny regel. Stegen är helt klättrad, så ett djupare varv går fortare och ger mer, men lägger inte till något mer."
+    "noNewRung": "Ingen ny regel. Stegen är helt klättrad, så ett djupare varv går fortare och ger mer, men lägger inte till något mer.",
+    "resetWarning": "Att stiga startar en NY runda: uppgraderingar, övertid och befordran nollställs. Dina loadouts, ditt djup och dina Certifikattimmar följer med."
   },
   "bottomBar": {
     "ballSpeed": "Bollhastighet",

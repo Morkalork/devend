@@ -154,6 +154,15 @@ export function AscensionDraftScreen({
                 })}
               </p>
             )}
+            {/* The cost, stated where the choice is made. Ascending wipes the
+                run; the screen used to promise the opposite and the mechanic
+                used to deliver it. */}
+            <p
+              className="text-xs mt-3 pt-3 leading-relaxed"
+              style={{ color: '#ffb4b4', borderTop: `1px solid ${accentColor}33` }}
+            >
+              {t('ascension.resetWarning')}
+            </p>
           </div>
 
           {/* Loadout cards */}
