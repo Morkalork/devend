@@ -69,6 +69,22 @@ purposeful), and **ANDROID.md** for Capacitor/Play-Store packaging.
   comma, colon, parentheses, or a spaced hyphen (`-`) instead. (Code comments
   are not UI text and are exempt.)
 
+## Closing recap
+
+End every reply with a short recap, after the work, as a markdown blockquote so
+it stands apart from the answer itself:
+
+> **You asked:** the prompt, quoted, or tightly paraphrased when it was long.
+> **I read it as:** the task I actually acted on.
+
+Keep it to a couple of lines. Its job is to surface a misread while it is still
+cheap to fix, so state the interpretation I really worked from, not a tidied-up
+version of it. Anything I assumed, any ambiguity I resolved on my own, any part
+of the ask I deliberately left out or deferred belongs in the second line.
+
+When the prompt was a screenshot, a file or a link, say what I took FROM it,
+since that reading is the most likely thing to be wrong.
+
 ## Git
 
 - Default working branch is `dev`; the release branch is `main`.

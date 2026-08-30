@@ -32,7 +32,7 @@ import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
 import { performTotalReset } from '@/lib/totalReset';
-import { loadAbilities } from '@/lib/abilities';
+import { loadAbilities, getAllAbilities } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
@@ -62,6 +62,7 @@ import { TenureOffer, TENURE_OFFER_COUNT, tenureSteps, rollTenureOffers } from '
 import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } from '@/lib/ascensionLadder';
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
 import { registerRunFlush, installRunFlushListeners } from '@/lib/runSaveFlush';
+import { replenishAbilityCharges, heldAbilityIds } from '@/lib/abilityReplenish';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
 import { liveUpgradeIds } from '@/lib/upgradeMigration';
 
@@ -166,6 +167,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // { abilityId -> count }. Banked across maps for the rest of the run; the
   // ability bar reads them, pressing a button spends one.
   const [abilityCharges, setAbilityCharges] = useState<Record<string, number>>({});
+  // Every ability EARNED this run, including ones already spent. A replenishing
+  // ability (abilities.yml `replenishTo`) is keyed on this rather than on the
+  // live stack, so spending your last Shockwave does not end the replenishment.
+  const everHeldAbilityIdsRef = useRef<string[]>([]);
 
   // Budget Cycle: boons carried into the NEXT map, charged by hours spent in
   // the shop visit just left (see src/lib/treasury.ts). Set on shop exit,
@@ -221,7 +226,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Issue #63: when the "Assignment Complete" summary is showing, whether its
   // Continue should route into the run finale (ascension) rather than the next
   // block's drafts. Set for the final block; cleared for mid-run boundaries.
-  const [summaryIsFinal, setSummaryIsFinal] = useState(false);
 
   // Assignments (doors): every 5th completed level replaces the shop with a
   // mandatory 1-of-3 door draft. `doorOffers` is rolled entering the draft;
@@ -736,12 +740,22 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   );
 
   /**
-   * Clear every piece of run-scoped state. Shared by all four run-reset paths
-   * (start, play-again, restart, back-to-welcome) so a newly added field can
-   * never be forgotten in one of them again. Lives, continues, level index and
-   * navigation stay with the call sites - they legitimately differ per path.
+   * Clear every piece of run-scoped state. Shared by all five run-reset paths
+   * (start, play-again, restart, back-to-welcome, ASCEND) so a newly added
+   * field can never be forgotten in one of them again. Lives, continues, level
+   * index and navigation stay with the call sites - they legitimately differ
+   * per path.
+   *
+   * `keepAscension` is what makes ascending a reset at all. An ascension is a
+   * fresh run at a harder rung, so it clears the same list as any other run
+   * start; what it must NOT clear is the three things that are the POINT of
+   * ascending - the depth, the loadouts stacked on the way up, and
+   * runLevelsCompleted, which is the certificate-hours accumulator and the only
+   * meta progress a run carries while it is still being played. Sharing the
+   * list rather than keeping a second one beside it is deliberate: two lists of
+   * "everything run-scoped" is how one of them goes stale.
    */
-  const resetRunScopedState = useCallback(() => {
+  const resetRunScopedState = useCallback((opts?: { keepAscension?: boolean }) => {
     // Signing Bonus: the run opens with hours already banked. Set here rather
     // than at one of the run-start handlers so every path gets it, the Daily
     // included: certs already apply to a seeded run (Equity Grant, Head Start
@@ -754,6 +768,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
     setAbilityCharges({});
+    everHeldAbilityIdsRef.current = [];
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
     setCarrySpendCapture(0);
@@ -773,8 +788,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setStoreClosed(false);
     setShowLevelComplete(false);
     setCumulativeLockedBalls(0);
-    setAscensionDepth(0);
-    setDraftedLoadoutIds([]);
+    if (!opts?.keepAscension) {
+      setAscensionDepth(0);
+      setDraftedLoadoutIds([]);
+    }
     setLastRunSummary(null);
     setLastRunLoadoutUnlocks([]);
     runTrajectoryRef.current = [];
@@ -782,7 +799,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     pbCelebratedRef.current = false;
     setLevelPace(null);
     setLastRunRank(null);
-    resetRunProgress();
+    // Certificate hours accrue across the whole session of play, ascensions
+    // included, and are banked when the run finally ends. Zeroing this on an
+    // ascension would quietly delete the meta progress the player ascended to
+    // keep earning.
+    if (!opts?.keepAscension) resetRunProgress();
   }, [resetRunProgress]);
 
   // Latest run snapshot, refreshed every render, so the save effect can fire
@@ -816,6 +837,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     recordEligible: recordEligibleRef.current,
     dailyKey,
     abilityCharges,
+    heldAbilityIds: everHeldAbilityIdsRef.current,
   };
 
   // Persist the run whenever a new map begins (map advance or a Continue-revive
@@ -1110,6 +1132,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCumulativeLockedBalls(save.cumulativeLockedBalls);
     setCarryInstantFences(save.carryInstantFences);
     setAbilityCharges(save.abilityCharges ?? {});
+    // A run saved before `heldAbilityIds` existed has no record, so seed from
+    // the charges it is carrying: what you hold is proof you earned it.
+    everHeldAbilityIdsRef.current = heldAbilityIds(save.abilityCharges ?? {}, save.heldAbilityIds ?? []);
     setCarrySpendFences(save.carrySpendFences);
     setCarrySpendFenceSpeed(save.carrySpendFenceSpeed);
     setCarrySpendCapture(save.carrySpendCapture ?? 0);
@@ -1312,6 +1337,11 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // A smashed chest granted one charge of an ability (issue #38): bank it
   // run-wide so it persists into every later map this run.
   const handleGrantAbility = useCallback((abilityId: string) => {
+    // Remember it was EARNED, separately from the stack: spending the last
+    // charge must not make a replenishing ability stop replenishing.
+    if (!everHeldAbilityIdsRef.current.includes(abilityId)) {
+      everHeldAbilityIdsRef.current = [...everHeldAbilityIdsRef.current, abilityId];
+    }
     setAbilityCharges(prev => ({ ...prev, [abilityId]: (prev[abilityId] ?? 0) + 1 }));
   }, []);
 
@@ -1464,6 +1494,18 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
         allBallsLocked: scoreData.wonByAllLocked ?? false,
         lockedByType: scoreData.lockedByType ?? {},
         smashes: scoreData.smashCount ?? 0,
+        // Lives lost on THIS map: the level-start count against what is left.
+        // blockStatsRef tracks the same thing for the whole block, which cannot
+        // answer a per-map condition.
+        livesLost: Math.max(0, livesAtLevelStart - currentLives),
+        // Filled in by handlePurchaseUpgrade if the player buys anything in the
+        // store visit that follows. Zero here is the honest starting point: no
+        // shop has opened yet.
+        spent: 0,
+        // A push taken and banked. A push that FAILED still reports here (the
+        // map ends through handleGameOverFn's pushing branch), which is exactly
+        // why the bonus alone is not enough to call it a win.
+        pushWon: !scoreData.pushFailed && (scoreData.pushBonus ?? 0) > 0,
       };
       setBlockResults(prev => [...prev, mapResult]);
     }
@@ -1608,7 +1650,6 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (hadAssignment) {
       // #63: recap how the finished mission went on its own screen before the
       // next draft. Continuing from it routes into the tier pick / next draft.
-      setSummaryIsFinal(false);
       nav.goToAssignmentSummary();
       return;
     }
@@ -1618,16 +1659,16 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   }, [activeDoor, grantAssignmentReward, routeAfterAssignmentReward, nav.goToAssignmentSummary]);
 
   /**
-   * Route out of the "Assignment Complete" summary: into the run finale for the
-   * final block, otherwise into the capstone/assignment draft. (#63)
+   * Route out of the "Assignment Complete" summary: on into the
+   * capstone/assignment draft. (#63)
+   *
+   * It used to fork here, with a `summaryIsFinal` flag sending the final
+   * block's summary to the run finale instead. The final level no longer opens
+   * a summary at all - it goes straight to the finale - so the flag could only
+   * ever be false and the branch was unreachable. Removed rather than left
+   * looking like a live route.
    */
-  const routeAfterSummary = useCallback(() => {
-    if (summaryIsFinal) {
-      nav.goToAscensionDraft();
-      return;
-    }
-    routeAfterAssignmentReward();
-  }, [summaryIsFinal, routeAfterAssignmentReward, nav.goToAscensionDraft]);
+  const routeAfterSummary = routeAfterAssignmentReward;
 
   /**
    * Continue button on the assignment summary: a tier-draft reward is picked
@@ -1675,7 +1716,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // Pulling them out satisfies the rule with no extra re-creation, and CI
   // lints with --max-warnings, so a new warning is a broken build rather than
   // a note.
-  const { goToUpgradeShop, goToCapstoneDraft } = nav;
+  const { goToUpgradeShop, goToCapstoneDraft, goToTierDraft, goToGame } = nav;
 
   const proceedToShop = useCallback(() => {
     // The shop is only earned by locking balls this round: at least one lock,
@@ -1729,18 +1770,21 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       setUnlockedFeature(pendingFeatureUnlocksRef.current.shift()!);
     }
     if (isLastLevel) {
-      // Beat the final level: grant the final block's assignment reward and, if
-      // there was an assignment, recap it (#63) before the ascend-or-retire
-      // choice. The pending level score is kept so handleRetire can put it on
-      // the result screen.
-      const hadAssignment = !!activeDoor;
+      // Beat the final level: grant the final block's assignment reward, then
+      // go STRAIGHT to the finale. The pending level score is kept so
+      // handleRetire can put it on the result screen.
+      //
+      // No contract recap in between. Level 35 is a multiple of the assignment
+      // cadence, so beating the game used to hand the player a report card and
+      // then a 1-of-3 upgrade pick before anything congratulated them - two
+      // admin screens between the last ball and the win.
+      //
+      // The rewards that can still matter are granted here: overtime and lives
+      // count toward a retiring player's final score. The 1-of-3 UPGRADE pick
+      // is not offered, because there is no longer anywhere for it to go - an
+      // ascension resets upgrades, and retiring ends the run.
       grantAssignmentReward();
-      if (hadAssignment) {
-        setSummaryIsFinal(true);
-        nav.goToAssignmentSummary();
-      } else {
-        nav.goToAscensionDraft();
-      }
+      nav.goToAscensionDraft();
     } else if (isAssignmentLevel(currentLevelIndex + 1)) {
       beginAssignmentPhase();
     } else if (!offerCapstoneIfDue()) {
@@ -1753,32 +1797,55 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setUnlockedFeature(pendingFeatureUnlocksRef.current.shift() ?? null);
   }, []);
 
-  /** Ascend: draft a loadout and loop back to level 1 at depth + 1. */
+  /**
+   * Ascend: start a FRESH run at depth + 1, keeping only what ascending is for.
+   *
+   * It used to carry the whole run across - score, every upgrade owned, the
+   * capstone, the assignment modifiers - which made the loop pointless: you
+   * re-entered level 1 with a build assembled over thirty-five maps, and the
+   * ladder's rung was the only thing that had changed. The harder rules landed
+   * on a player who could already buy everything back on the first shop, so
+   * ascending was easier than the run that earned it.
+   *
+   * So it resets exactly like any other run start, through the same shared
+   * list, and keeps three things:
+   *
+   *   - the DEPTH, and with it the ladder rung now in force;
+   *   - the LOADOUTS drafted on the way up, which stack and are the reason to
+   *     ascend at all;
+   *   - runLevelsCompleted, the certificate-hours accumulator, so meta progress
+   *     keeps building across loops and banks when the run finally ends.
+   *
+   * Upgrades, overtime, the Promotion, assignment rewards and the mission block
+   * all go. Lives and continues refill to a run's starting values, because that
+   * is what starting a run means.
+   */
   const handleAscend = useCallback((loadoutId: string) => {
     const newDepth = ascensionDepth + 1;
     analytics.ascensionStarted({ depth: newDepth, loadoutId });
+
+    // Clear the run first, then re-establish what survives. Ordering matters:
+    // the shared reset is told to leave the ascension state alone, so the
+    // append below cannot be clobbered by it.
+    resetRunScopedState({ keepAscension: true });
     setDraftedLoadoutIds(prev => [...prev, loadoutId]);
     setAscensionDepth(newDepth);
     recordAscensionDepth(newDepth);
 
-    // Refill lives to the run's starting value (never down), then apply the
-    // drafted loadout's life delta once — same as buying an extraLives upgrade.
-    const startingLives = baseLives() + ((certBonuses.extraLives as number | undefined) ?? 0);
+    // A fresh run's lives and continues, plus the drafted loadout's life delta
+    // once - the same arithmetic a run start does, not a carry-over of whatever
+    // the last loop happened to end on.
+    const certs = getLoadedCertBonuses();
+    const startingLives = baseLives() + ((certs.extraLives as number | undefined) ?? 0);
     const livesDelta = loadoutLookup.get(loadoutId)?.modifiers.extraLives ?? 0;
-    const refilled = Math.max(1, Math.max(currentLives, startingLives) + livesDelta);
-    setCurrentLives(refilled);
-    setLivesAtLevelStart(refilled);
+    const lives = Math.max(1, startingLives + livesDelta);
+    setCurrentLives(lives);
+    setLivesAtLevelStart(lives);
+    setContinuesRemaining(BASE_CONTINUES + ((certs.extraContinues as number | undefined) ?? 0));
 
-    setPendingLevelScore(null);
-    setActiveDoor(null); // the pre-ascension map's door does not follow into the loop
-    blockStatsRef.current = { overtime: 0, maps: 0, locks: 0, livesLost: 0 };
-    setBlockResults([]); // fresh mission block for the new loop (#60)
-    setPendingTierDraft(null);
-    setLastContractSummary(null);
-    // Assignment reward modifiers persist across ascension (part of the run's build).
     resetToFirstLevel(); // also re-randomizes the level variants for the new loop
-    nav.goToGame();
-  }, [ascensionDepth, recordAscensionDepth, certBonuses, loadoutLookup, currentLives, resetToFirstLevel, nav.goToGame]);
+    goToGame();
+  }, [ascensionDepth, recordAscensionDepth, resetRunScopedState, loadoutLookup, resetToFirstLevel, goToGame]);
 
   /**
    * Confirm the run-start loadout draft: adopt the chosen loadout (or none on
@@ -1835,6 +1902,13 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handlePurchaseUpgrade = useCallback((upgradeId: string, price: number) => {
     analytics.upgradePurchased({ upgradeId, price, level: currentLevelIndex + 1 });
     setTotalScore(prev => prev - price);
+    // Charge the spend to the map this visit followed, so a `noSpend` mission
+    // can ask a per-map question about something that happens between maps.
+    // Only while a contract is running; outside one there is nothing to record.
+    if (activeDoor && price > 0) {
+      setBlockResults(prev => prev.length === 0 ? prev : prev.map((r, i) =>
+        i === prev.length - 1 ? { ...r, spent: (r.spent ?? 0) + price } : r));
+    }
     setOwnedUpgradeIds(prev => [...prev, upgradeId]);
     // Budget Cycle: purchases land as a synchronous burst right before the
     // shop-exit handler, so the visit's spend accumulates in a ref.
@@ -1854,7 +1928,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       const unlocks = recordMaxTierPurchase(certKey);
       if (unlocks.length > 0) setShopUnlockedCerts(prev => [...prev, ...unlocks]);
     }
-  }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex]);
+  }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex, activeDoor]);
 
   const handleContinueFromShop = useCallback(() => {
     // Budget Cycle: this visit's spend buys next-map boons. Granted here and
@@ -2014,24 +2088,41 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   const handleTotalReset = useCallback(() => {
     resetCertData();
     resetProgression();
+    // Abort the run in progress too. The reload inside performTotalReset would
+    // normally take care of this, but it is not guaranteed to happen (a
+    // Capacitor webview or a host that blocks reload), and a reset that leaves
+    // the player mid-map with their progression deleted underneath them is
+    // worse than either outcome on its own. Doing it here also means the
+    // in-memory state is already clean if the reload never lands.
+    clearRun();
+    resetRunScopedState();
+    nav.goToWelcome();
     performTotalReset();
-  }, [resetCertData, resetProgression]);
+  }, [resetCertData, resetProgression, clearRun, resetRunScopedState, nav.goToWelcome]);
 
   // Load the ball catalogue (balls.yml) once on mount so the Tutorial reflects
   // edits even before a run starts. handleStartGame reloads it per run.
   useEffect(() => { loadBallTypes(); loadAbilities(); }, []);
 
-  // Panic Button (features.yml 'panicShockwave', unlocked by beating the first
-  // boss at level 10): once unlocked, every map starts topped up to at least one
-  // free Shockwave charge - the game's "get the balls moving again" safety valve.
-  // Keyed on the level index so it re-tops each new map; idempotent and never
-  // lowers a bigger stack, so chest-earned charges are left untouched. Runs the
-  // moment the feature flips unlocked too (deps include isFeatureUnlocked).
+  // Replenishing abilities (abilities.yml `replenishTo`, today just Shockwave):
+  // every map opens topped up to the authored floor for anything the player has
+  // EARNED this run. Keyed on the level index so it re-tops each new map;
+  // idempotent and never lowers a bigger stack, so chest-earned charges pile on
+  // top rather than being trimmed back.
+  //
+  // The trigger is HAVING the ability, not the level-10 'panicShockwave'
+  // feature. That feature did the same job but was armed by beating the first
+  // boss, while Shockwave itself drops from chests at level 4 - so a player who
+  // found it early spent their charge, watched it not return for five maps, and
+  // reasonably concluded it did not replenish. The feature is still honoured, so
+  // a player who reached level 10 without ever finding one still gets it.
   useEffect(() => {
-    if (!isFeatureUnlocked('panicShockwave')) return;
-    setAbilityCharges(prev =>
-      (prev.shockwave ?? 0) >= 1 ? prev : { ...prev, shockwave: 1 },
-    );
+    setAbilityCharges(prev => replenishAbilityCharges(
+      prev,
+      heldAbilityIds(prev, everHeldAbilityIdsRef.current),
+      getAllAbilities(),
+      isFeatureUnlocked('panicShockwave') ? ['shockwave'] : [],
+    ));
   }, [currentLevelIndex, isFeatureUnlocked, setAbilityCharges]);
 
   // Sync completed achievements into cert manager for achievement-locked certs

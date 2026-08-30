@@ -19,10 +19,33 @@ import { PALETTE, mix } from "./palette";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
+import { dashedLine } from "./dashedLine";
 
 type W2S = (x: number, y: number) => Pt;
 
-const MOVER_SEGMENTS = 28;
+/**
+ * Hazard bars across a disc, as chords, so no clipping is needed: a chord at
+ * signed distance d from the centre has half-length sqrt(r^2 - d^2), and its
+ * ends therefore sit exactly ON the circle.
+ *
+ * `roll` rotates them with the mover's travel, so the thing visibly turns as it
+ * patrols. A ball spins invisibly (it is a smooth sphere); this reads as a
+ * roller, which is the whole point.
+ */
+function hazardBars(g: Graphics, cx: number, cy: number, r: number, roll: number): void {
+  const ca = Math.cos(roll), sa = Math.sin(roll);
+  const width = r * 0.26;
+  for (const d of [-r * 0.45, r * 0.05, r * 0.55]) {
+    const halfLen = Math.sqrt(Math.max(0, r * r - d * d));
+    if (halfLen < 0.5) continue;
+    // Bar corners in the disc's own frame, then rotated by `roll`.
+    const corners: Array<[number, number]> = [
+      [-halfLen, d - width / 2], [halfLen, d - width / 2],
+      [halfLen, d + width / 2], [-halfLen, d + width / 2],
+    ];
+    g.poly(corners.map(([x, y]) => ({ x: cx + x * ca - y * sa, y: cy + x * sa + y * ca })));
+  }
+}
 
 /**
  * Longest edge piece, in world units, when an obstacle is taking a hit.
@@ -71,12 +94,14 @@ export class EntityLayer {
 
   /** The renderer's shared floor plane, set each frame in sync(). */
   private shadows!: Graphics;
+  /** Patrol rails, under everything: a mover is a machine on a track. */
+  private rails = new Graphics();
   private bodies = new Graphics();
   private rims = new Graphics();
 
   constructor() {
     // No shadow child: cast shadows go to the shared floor plane.
-    this.container.addChild(this.bodies, this.rims);
+    this.container.addChild(this.rails, this.bodies, this.rims);
   }
 
   sync(
@@ -87,6 +112,7 @@ export class EntityLayer {
     scale: number,
   ): void {
     this.shadows = shadows;
+    this.rails.clear();
     this.bodies.clear();
     this.rims.clear();
 
@@ -104,6 +130,7 @@ export class EntityLayer {
     }
 
     for (const m of game.movers) {
+      this.drawRail(m, w2s, scale);
       this.drawMover(m, light, w2s, scale);
     }
   }
@@ -213,19 +240,64 @@ export class EntityLayer {
       .circle(c.x, c.y, r)
       .fill({ color: mix(PALETTE.shadow, PALETTE.mover, 0.6 + amb * 0.4), alpha: 1 });
 
-    // Rim arc on the lit side only: stroke the arc centred on the light bearing.
-    const bearing = Math.atan2(light.y - c.y, light.x - c.x);
-    const g = this.rims;
-    const span = Math.PI * 0.62;
-    for (let i = 0; i <= MOVER_SEGMENTS; i++) {
-      const t = i / MOVER_SEGMENTS;
-      const ang = bearing - span / 2 + span * t;
-      const px = c.x + Math.cos(ang) * r;
-      const py = c.y + Math.sin(ang) * r;
-      if (i === 0) g.moveTo(px, py);
-      else g.lineTo(px, py);
+    // ── Not a ball ───────────────────────────────────────────────────────────
+    // Testers read these as balls, and they were right to: a lit disc with a
+    // rim highlight is exactly what a ball is here, and the lodestone ball is
+    // orange too. Colour alone was never going to separate them.
+    //
+    // So the difference is made STRUCTURAL rather than tonal. A ball is round
+    // all the way through and glows; this gets straight lines inside it, a hard
+    // machined ring around it, and a rail underneath (drawn by drawRail). No
+    // ball in the game has a straight edge anywhere on it, so the read is
+    // immediate and survives any palette change.
+    const roll = m.offset / Math.max(1, m.radius ?? 18);
+    hazardBars(this.bodies, c.x, c.y, r, roll);
+    this.bodies.fill({ color: 0x1a1206, alpha: 0.85 });
+
+    // Hub: the thing a wheel turns on, and the strongest single "machine" cue.
+    this.bodies.circle(c.x, c.y, Math.max(1, r * 0.22)).fill({ color: 0x1a1206, alpha: 0.9 });
+
+    // Hard machined ring, whole circumference, not a soft lit arc. A ball's rim
+    // fades away from the light; this one does not, because it is an edge, not
+    // a highlight.
+    this.rims
+      .circle(c.x, c.y, r * 0.94)
+      .stroke({ width: Math.max(1, r * 0.13), color: 0xffd9a0, alpha: 0.5 + 0.4 * light.level });
+  }
+
+  /**
+   * The track a mover patrols, drawn under it.
+   *
+   * Half the confusion with balls was that a mover appeared to wander the board
+   * freely, which is what a ball does. Showing the rail says the opposite in one
+   * glance: this thing is bolted to a line, it will come back, and here is
+   * exactly how far it goes. That is hazard telegraphing as well as
+   * identification, so it earns its ink twice.
+   */
+  private drawRail(
+    m: CanvasGameState["movers"][number],
+    w2s: W2S,
+    scale: number,
+  ): void {
+    const half = m.range / 2;
+    if (half <= 0.5) return;
+    const horizontal = m.axis === "horizontal";
+    const a = w2s(m.homeX - (horizontal ? half : 0), m.homeY - (horizontal ? 0 : half));
+    const b = w2s(m.homeX + (horizontal ? half : 0), m.homeY + (horizontal ? 0 : half));
+
+    dashedLine(this.rails, a.x, a.y, b.x, b.y, 6 * scale, 5 * scale);
+    this.rails.stroke({ width: Math.max(1, 1.5 * scale), color: PALETTE.mover, alpha: 0.28 });
+
+    // End stops, so the range reads as a bounded track rather than a line that
+    // happens to end where it was cropped.
+    const cap = Math.max(2, 4 * scale);
+    const nx = horizontal ? 0 : 1, ny = horizontal ? 1 : 0;
+    for (const p of [a, b]) {
+      this.rails
+        .moveTo(p.x - nx * cap, p.y - ny * cap)
+        .lineTo(p.x + nx * cap, p.y + ny * cap)
+        .stroke({ width: Math.max(1, 1.5 * scale), color: PALETTE.mover, alpha: 0.4 });
     }
-    g.stroke({ width: Math.max(1, r * 0.1), color: 0xffd9a0, alpha: 0.85 * light.level });
   }
 
   /** Rect mover: the physics-updated polygon, lit like a slab but hazard-coloured. */

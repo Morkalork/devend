@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem, ChevronDown } from 'lucide-react';
+import { Trophy, ArrowRight, Sparkles, TrendingUp, TrendingDown, Target, Lock, Clock, Zap, Medal, Hammer, Timer, Info, X, Gift, Gem, ChevronDown, Layers } from 'lucide-react';
 import { LevelScoreData } from '@/types/game';
 import { Certificate } from '@/types/certificate';
 import { getAbility } from '@/lib/abilities';
@@ -151,6 +151,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     superiorLockBonus = 0,
     zoneLockCount = 0,
     zoneLockBonus = 0,
+    multiLockBonus = 0,
+    multiLockBest = 1,
     pushBonus = 0,
     breakBonus = 0,
     breakMultiplier = 1,
@@ -188,6 +190,12 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // reports what the zones ADDED; it is already inside lockBonus, so it must
   // NOT be added to the total again.
   const hasZoneLocks = zoneLockCount > 0 && zoneLockBonus > 0;
+  // Multi-locks, for exactly the reason the zone row above exists. Sealing
+  // three balls in one cut pays triple, and nothing on this screen said so, so
+  // a big multi-lock was indistinguishable from three ordinary locks. Like the
+  // zone row this reports what the play ADDED and is already inside lockBonus,
+  // so it must NOT be added to the total again.
+  const hasMultiLock = multiLockBest > 1 && multiLockBonus > 0;
   const hasBreakBonus = breakBonus > 0;
   const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;
@@ -470,6 +478,16 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                     added. The pay was always real: the zone multiplier is
                     folded into lock income long before this screen sees it. */}
                 <span className="font-bold text-fuchsia-300">+{zoneLockBonus}h</span>
+              </div>
+            )}
+
+            {hasMultiLock && (
+              <div {...hold('multiLocks')} className="flex justify-between items-center py-2 border-b border-violet-400/50 bg-violet-400/15 rounded px-2">
+                <span className="text-violet-300 flex items-center gap-1">
+                  <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
+                  {t('levelComplete.multiLocks', { count: multiLockBest })}
+                </span>
+                <span className="font-bold text-violet-300">+{multiLockBonus}h</span>
               </div>
             )}
 

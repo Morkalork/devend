@@ -21,7 +21,7 @@
   "ascension": {
     "allLevelsCleared": "All Levels Cleared",
     "ascensionComplete": "Ascension {{depth}} complete. ",
-    "retireOrAscend": "Retire and bank everything - or draft a loadout and ascend to depth {{depth}}.",
+    "retireOrAscend": "Retire and bank this run - or draft a loadout and ascend to depth {{depth}}.",
     "ascendedLevelsInfo": "Ascended levels are faster and count {{multiplier}}× toward Certificate Hours. ",
     "bankedOvertime": "Banked overtime: {{score}}h",
     "noLoadouts": "No loadouts available - loadouts.yml failed to load. You can still retire below.",
@@ -29,13 +29,19 @@
     "selectLoadout": "Select a Loadout",
     "retireBankRun": "Retire - Bank This Run",
     "ascensionUnlocked": "Ascension Unlocked",
-    "tutorialIntro1": "You beat every level. Ascend to restart at level 1 with your score, upgrades and lives intact, plus one ",
+    "tutorialIntro1": "You beat every level. Ascend to start again at level 1, harder, keeping your depth, your Certificate Hours and one ",
     "tutorialLoadoutWord": "loadout",
-    "tutorialIntro2": ": a curse with a blessing. Loadouts stack each ascension, levels speed up, and cleared levels count more toward Certificate Hours. Retire anytime to bank it all.",
+    "tutorialIntro2": " per ascension: a curse with a blessing. Upgrades and overtime do NOT carry, so each loop is rebuilt from nothing under one more rule. Retire anytime to bank it all.",
     "gotIt": "Got It",
     "ladderTitle": "Ascension {{depth}}",
     "alsoInForce": "Also in force: {{names}}.",
-    "menuItem": "Ascension Rules"
+    "menuItem": "Ascension Rules",
+    "youWin": "You Win",
+    "congrats": "Congratulations. You cleared every level and shipped the whole roadmap.",
+    "congratsAscended": "Congratulations. You cleared every level again, at Ascension {{depth}}.",
+    "whatDepthAdds": "What Ascension {{depth}} adds",
+    "noNewRung": "No new rule. The ladder is fully climbed, so a deeper loop is faster and worth more, but adds nothing further.",
+    "resetWarning": "Ascending starts a FRESH run: upgrades, overtime and the Promotion are cleared. Your loadouts, your depth and your Certificate Hours carry."
   },
   "bottomBar": {
     "ballSpeed": "Ball Speed",
@@ -336,6 +342,7 @@
     "threadLocks": "Thread Locks ({{count}})",
     "superiorLocks": "Superior Locks ({{count}})",
     "zoneLocks": "Zone Locks ({{count}})",
+    "multiLocks": "Multi-Lock (x{{count}} at once)",
     "pushBonus": "Push Bonus",
     "pickupBonus": "Power-Up Bonus",
     "breakBonus": "Demolition Bonus",
@@ -389,6 +396,11 @@
         "title": "Zone Locks",
         "body": "A map's coloured var, let and const boxes pay a multiplier (1.5x, 2x, 3x) on any ball locked inside them. It stacks with everything else, so a tight, Superior lock inside a const box is the biggest single payout in the game. This row shows only the hours the zone added; they are already counted in your lock income above.",
         "tip": "The zone lights up the moment a lock counts. If it stays dark, the pocket you sealed did not land inside the box: aim for the ball to settle within the border, not merely near it."
+      },
+      "multiLocks": {
+        "title": "Multi-Lock",
+        "body": "Sealing several balls with a single cut multiplies that cut's lock income: two at once pays double, three pays triple, and every other multiplier stacks on top of it. This row shows only the hours the stacking added over locking the same balls one at a time; they are already counted in your lock income above.",
+        "tip": "Do not seal a pocket the moment it is safe. Let a second ball wander in first: one cut around two balls is worth two cuts around one."
       },
       "breakBonus": {
         "title": "Demolition Bonus",
@@ -629,8 +641,8 @@
     "closePanel": "Close panel",
     "objectives": "Objectives",
     "territoryCapture": "Territory Capture",
-    "territoryGoalMet": "Goal met! You have captured {{remaining}}% (needed {{required}}%).",
-    "territoryGoalPending": "Capture at least {{required}}% of the board. Currently at {{remaining}}% - need {{more}}% more.",
+    "territoryGoalMet": "Goal met! You have captured {{captured}}% (needed {{required}}%).",
+    "territoryGoalPending": "Capture at least {{required}}% of the board. Currently at {{captured}}% - need {{more}}% more.",
     "fenceCuts": "Fence Cuts",
     "cutsParValue": "{{used}} / {{par}} par",
     "cutsOverPar_one": "Over par by {{count}} cut. Score multiplier is reduced when exceeding par.",
@@ -1100,6 +1112,25 @@
     "fenceLimit": "You are already growing as many fences as you can at once. Wait for one to finish, or upgrade to grow more.",
     "capturedStart": "Start your fence in open space. That ground has already been captured.",
     "wallInTheWay": "A fence is already anchored there. Start from open space a little further along."
+  },
+  "mapFailure": {
+    "title": "Map failed",
+    "timeUp": "Out of time",
+    "outOfFences": "Out of fences",
+    "areaUnreachable": "The zone can no longer be reached",
+    "stillNeeded": "You still needed",
+    "livesLeft_one": "{{count}} life left",
+    "livesLeft_other": "{{count}} lives left",
+    "tapToRetry": "Tap to try again",
+    "needSpace": "Clear down to {{target}}% remaining (you were at {{current}}%)",
+    "needLocks": "Lock {{target}} balls (you had {{current}})",
+    "needSuperior": "Land {{target}} superior locks (you had {{current}})",
+    "needArea": "Lock {{target}} balls in the zone (you had {{current}})",
+    "needLockType": "Lock {{target}} {{ball}} balls (you had {{current}})",
+    "needBoss": "Defeat the boss",
+    "needAllLocked": "Lock every ball",
+    "needUnderPar": "Finish in {{target}} cuts (you used {{current}})",
+    "needSpeed": "Finish within {{target}}s (you took {{current}}s)"
   },
   "winGate": {
     "superiorLocks": "Superior",

@@ -111,6 +111,16 @@ export interface CanvasGameState {
   // ── Entities ───────────────────────────────────────────────────────────
   balls: Ball[];
   movers: MoverState[];
+  /**
+   * Where movers are grinding against player fences THIS FRAME, for the fx
+   * layer to spark. Rebuilt every physics step: a contact is only true for the
+   * frame it was measured on.
+   */
+  moverFriction?: import("@/lib/physics/moverFriction").FrictionContact[];
+  /** Speed one overlapping fence takes off a mover (game-config.yml `mover:`). */
+  moverFenceDragPerFence?: number;
+  /** Slowest a fence-dragged mover may be pushed (game-config.yml `mover:`). */
+  moverFenceDragFloor?: number;
   /** Fences currently growing. Usually one; the concurrent-fence limit
    *  (1 + additionalConcurrentFences, +1 while Fence Overclock is active) lets
    *  more than one grow at once (#38). */
@@ -351,6 +361,15 @@ export interface CanvasGameState {
    */
   breakablesSmashed: number;
   zoneLockCount: number;
+  /**
+   * Hours the SIMULTANEOUS-lock multiplier added, over locking the same balls
+   * one at a time. Reported so a multi-lock is distinguishable from the same
+   * number of ordinary locks, which it was not: the multiplier is folded into
+   * lockBonus long before any screen sees it.
+   */
+  multiLockBonus: number;
+  /** Most balls sealed by a single cut this map (1 when none stacked). */
+  multiLockBest: number;
   /** Overtime the Colored Area multipliers ADDED, over the same locks unzoned. */
   zoneLockBonus: number;
   /** Green "money ball" multiplier applied to subsequent locks this map (default 1). */

@@ -113,10 +113,33 @@ describe("every mission is finishable on every block", () => {
 });
 
 describe("scaling preserves what the author wrote", () => {
-  const threeTier = LOCK_MISSIONS.find(a => a.mission.tiers.length === 3)!;
+  /**
+   * A purpose-built three-tier mission, not one plucked from the roster.
+   *
+   * It used to be `LOCK_MISSIONS.find(tiers.length === 3)`, which was Crunch
+   * Delivery and nothing else - so retiring that contract took this test's
+   * subject with it and left the scaler's spacing maths untested. What is being
+   * measured here is a property of scaleAssignmentToBlock, not of the content,
+   * and it should not stop working because someone edited the roster.
+   */
+  const threeTier: AssignmentConfig = {
+    ...LOCK_MISSIONS[0],
+    id: "spacing-probe",
+    mission: {
+      ...LOCK_MISSIONS[0].mission,
+      tiers: [
+        { threshold: 10, label: "a", reward: { type: "overtime", hours: 1 } },
+        { threshold: 20, label: "b", reward: { type: "overtime", hours: 2 } },
+        { threshold: 50, label: "c", reward: { type: "overtime", hours: 3 } },
+      ],
+    },
+  };
 
   it("has a multi-tier mission to check", () => {
-    expect(threeTier, "expected an assignment with three tiers").toBeTruthy();
+    // The fixture is only worth anything if the roster still has a lock mission
+    // to base it on, and if it really carries three ascending tiers.
+    expect(LOCK_MISSIONS.length, "no cumulative lock mission to model").toBeGreaterThan(0);
+    expect(threeTier.mission.tiers).toHaveLength(3);
   });
 
   it("keeps the number of tiers", () => {

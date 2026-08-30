@@ -32,8 +32,16 @@ export function getMutatorNoneWeight(): number {
   return liveNoneWeight;
 }
 
-/** Coerce one raw YAML entry into a MapMutator, or null if unusable. */
-function parseMutatorEntry(raw: unknown): MapMutator | null {
+/**
+ * Coerce one raw YAML entry into a MapMutator, or null if unusable.
+ *
+ * Exported so a test can build the catalogue from public/mapMutators.yml
+ * through the SAME parser the game uses. The live pool is fetched at runtime,
+ * so it is empty under Node, and a test that read the YAML itself would accept
+ * entries the game silently drops (a bad `behavior`, a missing description) and
+ * so would bless a pin that resolves to nothing in play.
+ */
+export function parseMutatorEntry(raw: unknown): MapMutator | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   if (typeof r.id !== "string" || typeof r.name !== "string") return null;

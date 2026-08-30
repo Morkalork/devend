@@ -35,7 +35,33 @@ export type AssignmentConditionKind =
   /** Clear the map without sealing a single ball. */
   | 'noLocks'
   /** Breakables destroyed, summed over the block. */
-  | 'smashCount';
+  | 'smashCount'
+  /**
+   * Finish the map without losing a life.
+   *
+   * The first mission about SURVIVING rather than producing. Every other kind
+   * rewards throughput, which pushes toward aggressive cuts; this one pays for
+   * backing off, so it argues with the rest of a build instead of stacking
+   * with it.
+   */
+  | 'noLivesLost'
+  /**
+   * Buy nothing from the store in the visit that follows this map.
+   *
+   * The only condition that is not about the board at all. Spend is recorded
+   * against the map it follows, because that is the visit the player earned
+   * with it. Note a five-map block only offers FOUR visits: its last map is the
+   * assignment level, whose store is replaced by the contract phase, so that
+   * map passes for free.
+   */
+  | 'noSpend'
+  /**
+   * Push Your Luck bets won, summed over the block.
+   *
+   * A whole decision layer no mission touched. Two assignments FORBID pushing
+   * as a constraint; none made it the point.
+   */
+  | 'pushesWon';
 
 /** How a condition is tracked across the 5-map block. */
 export type AssignmentTrack =
@@ -118,4 +144,10 @@ export interface AssignmentMapResult {
   lockedByType?: Record<string, number>;
   /** Breakables destroyed this map, smashed or toppled. */
   smashes?: number;
+  /** Lives lost during this map (0 on a clean one). */
+  livesLost?: number;
+  /** Overtime spent in the store visit that FOLLOWED this map. */
+  spent?: number;
+  /** True when a Push Your Luck bet was taken on this map and banked. */
+  pushWon?: boolean;
 }

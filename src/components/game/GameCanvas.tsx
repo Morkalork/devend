@@ -16,6 +16,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
+import type { MapFailure } from "@/lib/mapFailure";
 import { LevelConfig } from "@/types/level";
 
 import { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -203,7 +204,7 @@ interface GameCanvasProps {
   onRequestEntityInfo?: (hit: BoardEntityHit) => void;
   onGameEnd: (result: GameResult) => void;
   /** Out of time with lives to spare: the session should restart this level. */
-  onMapTimedOut?: () => void;
+  onMapTimedOut?: (failure: MapFailure) => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired the instant the map is won, so the shell can freeze the code background. */
   onMapComplete?: () => void;
@@ -224,6 +225,8 @@ interface GameCanvasProps {
   fenceSpeedMin?: number;
   fenceSpeedPerLevel?: number;
   /** Lock rule (from game-config.yml `lock:`). */
+  moverFenceDragPerFence?: number;
+  moverFenceDragFloor?: number;
   lockWinThresholdPercent?: number;
   lockMinRegionCells?: number;
   /** Scope Creep tuning (from game-config.yml `scope_creep:`). */
@@ -320,6 +323,8 @@ export function GameCanvas({
   fenceSpeedBase = 1200,
   fenceSpeedMin = 750,
   fenceSpeedPerLevel = 50,
+  moverFenceDragPerFence = 0.45,
+  moverFenceDragFloor = 0.3,
   lockWinThresholdPercent = BALL_WON_REGION_THRESHOLD,
   lockMinRegionCells = 0,
   scopeCreep,
@@ -389,7 +394,10 @@ export function GameCanvas({
     gameRef.current.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
     gameRef.current.lockBaseThresholdPercent = lockWinThresholdPercent;
     gameRef.current.lockMinRegionCells = lockMinRegionCells;
-  }, [lockWinThresholdPercent, lockMinRegionCells, activeModifiers.lockThresholdBonus]);
+    gameRef.current.moverFenceDragPerFence = moverFenceDragPerFence;
+    gameRef.current.moverFenceDragFloor = moverFenceDragFloor;
+  }, [lockWinThresholdPercent, lockMinRegionCells, activeModifiers.lockThresholdBonus,
+      moverFenceDragPerFence, moverFenceDragFloor]);
   // Same live-config treatment for the Scope Creep tuning.
   // Mirror the banked ability charges onto the game so the chest roll can honour
   // the slot cap. Live rather than set once at map init, because a chest smashed
@@ -668,6 +676,8 @@ export function GameCanvas({
     breakablesSmashed: 0,
     zoneLockCount: 0,
     zoneLockBonus: 0,
+    multiLockBonus: 0,
+    multiLockBest: 1,
     moneyMultiplier: 1,
     ballSpeedScale: 1,
     assimilations: new Map<string, LockFlashState>(),
@@ -676,6 +686,9 @@ export function GameCanvas({
     lockWinThresholdPercent: BALL_WON_REGION_THRESHOLD,
     lockBaseThresholdPercent: BALL_WON_REGION_THRESHOLD,
     lockMinRegionCells: 0,
+    moverFriction: [],
+    moverFenceDragPerFence: 0.45,
+    moverFenceDragFloor: 0.3,
     fenceDurability: null as number | null,
     pendingWallBreaks: [] as Wall[],
     destructibles: [] as import("@/types/game").DestructibleState[],
@@ -843,6 +856,8 @@ export function GameCanvas({
       game.lockWinThresholdPercent = lockWinThresholdPercent + activeModifiers.lockThresholdBonus;
       game.lockBaseThresholdPercent = lockWinThresholdPercent;
       game.lockMinRegionCells = lockMinRegionCells;
+      game.moverFenceDragPerFence = moverFenceDragPerFence;
+      game.moverFenceDragFloor = moverFenceDragFloor;
       game.fenceDurability = fenceDurability;
       game.pendingWallBreaks = [];
       game.pendingDestroys = [];
@@ -1212,7 +1227,7 @@ export function GameCanvas({
       freezeOnComplete: () => freezeOnCompleteRef.current,
       onGameEnd: r => onGameEndRef.current(r),
       onLivesChange,
-      onMapTimedOut: () => onMapTimedOutRef.current?.(),
+      onMapTimedOut: (failure: MapFailure) => onMapTimedOutRef.current?.(failure),
       onTutorialCutSuccess,
       onBallTypeLocked: id => onBallTypeLockedRef.current?.(id) ?? false,
       // Fork pickup split a ball: rescale the Ship Early countdown windows.
@@ -1487,6 +1502,7 @@ export function GameCanvas({
           lockedBallsCount: game.lockedBallsCount,
           superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
           zoneLockCount: game.zoneLockCount, zoneLockBonus: game.zoneLockBonus,
+          multiLockBonus: game.multiLockBonus, multiLockBest: game.multiLockBest,
           shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
           breakBonus: game.breakBonus, breakMultiplier: game.breakMultiplier,
           pickupBonus: game.pickupOvertime || undefined,

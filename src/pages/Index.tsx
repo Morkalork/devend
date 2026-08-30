@@ -433,6 +433,7 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 loadouts={session.loadouts}
                 draftedLoadoutIds={session.draftedLoadoutIds}
                 ascensionDepth={session.ascensionDepth}
+                ladder={session.ascensionLadder}
                 totalScore={session.totalScore}
                 onAscend={session.handleAscend}
                 onRetire={session.handleRetire}

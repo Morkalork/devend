@@ -35,6 +35,7 @@ import { BALL_WON_REGION_THRESHOLD } from "@/lib/gameConstants";
 import { playBallLockSound } from "@/lib/gameAudio";
 import { vibrateBallLock } from "@/lib/gameHaptics";
 import { getLockValue, getLockQuality, getLampLockMultiplier } from "@/lib/scoring";
+import { isPlayerFence } from "@/lib/wallGeometry";
 import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
@@ -79,8 +80,7 @@ export function escalateBoss(ball: Ball): void {
 function queueBossClawback(game: CanvasGameState): void {
   let best: (typeof game.walls)[number] | null = null;
   for (const w of game.walls) {
-    if (w.isBoardEdge) continue;
-    if (w.id && w.id.startsWith("obstacle-")) continue;
+    if (!isPlayerFence(w)) continue;
     const rc = w.rasterCells;
     if (!rc || rc.length === 0) continue;
     if (!best || rc.length > (best.rasterCells?.length ?? 0)) best = w;
@@ -353,10 +353,21 @@ export function checkAndUpdateBallWonStates(
     // instead of locking; only its final HP actually locks and marks it defeated.
     // It never counts as a normal lock (no lockedBallsCount bump, no lock bonus).
     // Colored Area win gate (LEVELDESIGN.md): the target ball's lock LOCATION
-    // decides the map. With a gate present the boss does NOT break out — one trap
-    // settles it: trapped INSIDE the area defeats it (win); OUTSIDE locks it but
-    // leaves the gate unsatisfied, so evaluateWinConditions fails the map. Boss
-    // map -> the boss is the target; otherwise any ball is.
+    // decides the map. Boss map -> the boss is the target; otherwise any ball is.
+    //
+    // HP AND THE GATE. The damage branch below used to be skipped whenever a
+    // gate was present, which meant multi-HP bosses could not exist: every boss
+    // map in the game has a gate, so `hp` was inert on all four and the whole
+    // break-out/escalate/REVERTED system was unreachable content. Worse, it made
+    // all four fights the same question - seal it in the box on the first try,
+    // or lose a life - with only an added annoyance to tell them apart.
+    //
+    // So HP now applies whether or not there is a gate, and the two rules
+    // compose instead of one cancelling the other: while the boss has HP to
+    // spare a trap ANYWHERE wears it down (and costs no life, which is what
+    // makes a long fight fair), and only the FINAL hit is judged by location.
+    // hp: 1, which is what the teaching boss on level 10 uses, is exactly the
+    // behaviour it always had, because a one-HP boss never enters this branch.
     // A contained boss (region sealed within the area) counts as inside even if
     // its exact centre sits a hair past the rect edge on a boundary cell.
     // A locked ball counts as INSIDE the gate if its centre is in one OR its
@@ -369,7 +380,7 @@ export function checkAndUpdateBallWonStates(
       || containedInGate;
     const isAreaTarget = game.balls.some(x => x.isBoss) ? ball.isBoss : true;
 
-    if (bossTrapIsDamage(ball) && !areaGate) {
+    if (bossTrapIsDamage(ball)) {
       ball.bossHp = (ball.bossHp ?? 1) - 1;
       game.bossHp = ball.bossHp;
       breakBossOut(game, ball, gridRegionMap, denominator);
@@ -711,6 +722,32 @@ export function checkAndUpdateBallWonStates(
     const zonePay = (standardPay + superiorPay) - (baseStandardPay + baseSuperiorPay);
     if (zonePay > 0) game.zoneLockBonus += zonePay;
     game.zoneLockCount += wonThisPass.filter(b => lockAreaById.has(b.id)).length;
+
+    // Multi-locks, reported for the same reason the zones above are: sealing
+    // three balls in one cut pays triple, and NOTHING said so. The multiplier
+    // sits inside the same product as everything else, so from the player's
+    // side a big multi-lock and three ordinary locks looked identical.
+    //
+    // The baseline is the same balls locked ONE AT A TIME, which is the choice
+    // the player actually had - not "with no multiplier at all", which is a
+    // board state they could never have reached. Locking them separately would
+    // have paid (1 + chainBonus) per pass, so the difference is what holding
+    // the cut until they lined up was worth. Zero by construction for a single
+    // lock, and it never claims hours that were not paid: it is a second
+    // pricing of a payout already added to lockBonus, rounded the same way.
+    if (newlyLocked > 1) {
+      const soloMultiplier = 1 + activeModifiers.simultaneousLockBonus;
+      const soloStandardPay = Math.round(standardPoints * soloMultiplier * lockValue);
+      const soloSuperiorPay = Math.round(
+        superiorPoints * soloMultiplier * lockValue * lockQuality.superiorMultiplier,
+      );
+      const multiPay = (standardPay + superiorPay) - (soloStandardPay + soloSuperiorPay);
+      if (multiPay > 0) game.multiLockBonus += multiPay;
+      // The BIGGEST cut of the map, not a running total: "you locked 3 at once"
+      // is the thing worth saying, and summing passes would turn three separate
+      // doubles into an unearned "6".
+      game.multiLockBest = Math.max(game.multiLockBest, newlyLocked);
+    }
 
     // Severance Package: flat overtime per locked ball, deliberately outside
     // the money/simultaneous/quality multipliers so it reads as a predictable

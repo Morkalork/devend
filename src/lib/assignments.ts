@@ -53,6 +53,15 @@ export function conditionMetForMap(
       return r.locks === 0;
     case 'smashCount':
       return (r.smashes ?? 0) >= Math.max(1, Math.round(params?.count ?? 1));
+    case 'noLivesLost':
+      // Absent means the map predates the field, and an old result must not
+      // silently pass a mission it was never measured against.
+      return (r.livesLost ?? 0) === 0;
+    case 'noSpend':
+      return (r.spent ?? 0) === 0;
+    case 'pushesWon':
+      // Per-map form: did this map bank a push. The cumulative form sums these.
+      return r.pushWon === true;
     default:
       return false;
   }
@@ -61,6 +70,9 @@ export function conditionMetForMap(
 /** Whether a metric is a summed quantity (locks) vs a count of qualifying maps. */
 function isSummedKind(kind: AssignmentConditionKind): boolean {
   return kind === 'lockCount' || kind === 'superiorLocks' || kind === 'smashCount';
+  // pushesWon is deliberately NOT here: one map banks at most one push, so
+  // counting qualifying maps and summing the metric are the same number, and
+  // the generic path below already does it.
 }
 
 /**

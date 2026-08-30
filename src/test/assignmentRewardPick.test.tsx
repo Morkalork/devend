@@ -74,6 +74,11 @@ describe('an assignment that pays an upgrade pick', () => {
       const perfect = Array.from({ length: 5 }, () => mk({
         locks: 20, superiorLocks: 20, cutsDelta: -5, clearSeconds: 1,
         allBallsLocked: true, smashes: 20, lockedByType: {},
+        // A perfect block is also a clean, thrifty, nervy one: no life lost, no
+        // overtime spent, every push taken and banked. Without these the
+        // survival, restraint and nerve contracts score zero on a block that is
+        // perfect by every other measure.
+        livesLost: 0, spent: 0, pushWon: true,
       }));
       // ...except Ship It, which is cleared by sealing NOTHING.
       const results = a.mission.track.kind === 'noLocks'

@@ -186,6 +186,8 @@ export interface SwipeData {
 
 export interface GameResult {
   isWin: boolean;
+  /** Why the map was lost, when it was. Absent on a win. */
+  failure?: import("@/lib/mapFailure").MapFailure;
   remainingPercent: number;
   levelId: string;
   levelNumber: number;
@@ -431,6 +433,10 @@ export interface LevelScoreData {
   lockedByType?: Record<string, number>;
   /** Locks that landed in a Colored Area, and the hours those zones added. */
   zoneLockCount?: number;
+  /** Hours the simultaneous-lock multiplier added (see CanvasGameState). */
+  multiLockBonus?: number;
+  /** Most balls sealed by one cut this map. */
+  multiLockBest?: number;
   zoneLockBonus?: number;
   // Bonus from smashing breakable objects (issue #38)
   breakBonus?: number;

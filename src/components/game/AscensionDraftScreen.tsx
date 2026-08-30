@@ -1,16 +1,31 @@
 /**
- * AscensionDraftScreen — shown after beating the final level.
+ * AscensionDraftScreen - the finale, shown the moment the last level falls.
  *
- * The player either retires (banks the run, sees the result screen) or
- * ascends: drafts one of three randomly offered loadouts (curse + blessing
- * bundles from public/loadouts.yml) and loops back to level 1 with every
- * drafted loadout still active.
+ * It is the FIRST thing after the final map now, not the fourth. Level 35 is a
+ * multiple of the assignment cadence, so beating the game used to open a
+ * contract report card and then a 1-of-3 upgrade pick before anything
+ * congratulated the player. Two admin screens between the last ball and the
+ * win. So this leads with the win, and the pick that needs a screen is offered
+ * after the ascend choice, where it can still be spent.
+ *
+ * The player either retires (banks the run, sees the result screen) or ascends:
+ * drafts one of three randomly offered loadouts (curse + blessing bundles from
+ * public/loadouts.yml) and loops back to level 1 with every drafted loadout
+ * still active.
+ *
+ * It also has to say what ASCENDING WOULD DO. The ladder rung a depth imposes
+ * was only ever announced on the far side of the decision, when the player
+ * landed on level 1 of the new loop - so "ascend to depth 4" was a choice made
+ * blind, and the answer to "what did I just agree to" arrived after agreeing.
+ * The incoming rung is named and described here, beside the button.
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { motion } from 'framer-motion';
 import { ArrowUpCircle, Flag, Package, Skull, Sparkles } from 'lucide-react';
 import { LoadoutConfig } from '@/types/loadout';
+import type { AscensionRung } from '@/types/loadout';
+import { rungAt, rungsUpTo } from '@/lib/ascensionLadder';
 import { drawOffers } from '@/lib/loadoutDraft';
 import { getRunRng } from '@/lib/runRng';
 import { draftableAtAscension } from '@/lib/loadoutUnlock';
@@ -23,6 +38,8 @@ interface AscensionDraftScreenProps {
   draftedLoadoutIds: string[];
   /** Depth completed so far; ascending enters depth + 1. */
   ascensionDepth: number;
+  /** The ladder, so the screen can say what the depth being offered imposes. */
+  ladder?: AscensionRung[];
   totalScore: number;
   onAscend: (loadoutId: string) => void;
   onRetire: () => void;
@@ -35,6 +52,7 @@ export function AscensionDraftScreen({
   loadouts,
   draftedLoadoutIds,
   ascensionDepth,
+  ladder = [],
   totalScore,
   onAscend,
   onRetire,
@@ -55,6 +73,11 @@ export function AscensionDraftScreen({
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const nextDepth = ascensionDepth + 1;
+  // What ascending would switch on. Past the ladder's end no NEW rung lands, so
+  // there is nothing to promise and the block below says only what already
+  // holds - which is honest: a deeper loop is faster, but adds no new rule.
+  const incoming = rungAt(nextDepth, ladder);
+  const alreadyInForce = rungsUpTo(ascensionDepth, ladder);
 
   return (
     <>
@@ -85,15 +108,61 @@ export function AscensionDraftScreen({
               className="text-3xl sm:text-4xl font-display font-black tracking-wider uppercase"
               style={{ color: accentColor, textShadow: `0 0 30px ${accentColor}88` }}
             >
-              {t('ascension.allLevelsCleared')}
+              {t('ascension.youWin')}
             </h1>
+            <p className="mt-2 text-sm font-semibold" style={{ color: '#c8ffd8' }}>
+              {ascensionDepth > 0
+                ? t('ascension.congratsAscended', { depth: ascensionDepth })
+                : t('ascension.congrats')}
+            </p>
             <p className="mt-2 text-sm" style={{ color: '#c8ffd8', opacity: 0.75 }}>
-              {ascensionDepth > 0 ? t('ascension.ascensionComplete', { depth: ascensionDepth }) : ''}
               {t('ascension.retireOrAscend', { depth: nextDepth })}
             </p>
             <p className="mt-1 text-xs" style={{ color: '#4a7a5a' }}>
               {t('ascension.ascendedLevelsInfo', { multiplier: nextDepth + 1 })}
               {t('ascension.bankedOvertime', { score: totalScore })}
+            </p>
+          </div>
+
+          {/* What ascending would actually switch on. Beside the choice, not
+              after it: this used to be announced only once the player had
+              already committed and loaded into level 1 of the new loop. */}
+          <div
+            className="w-full rounded-lg p-4"
+            style={{ border: `1px solid ${accentColor}55`, backgroundColor: `${accentColor}0d` }}
+          >
+            <p className="text-xs uppercase tracking-widest mb-2" style={{ color: accentColor }}>
+              {t('ascension.whatDepthAdds', { depth: nextDepth })}
+            </p>
+            {incoming ? (
+              <>
+                <p className="font-display font-bold text-sm mb-1" style={{ color: '#ffd76b' }}>
+                  {contentText.rungName(t, incoming)}
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                  {contentText.rungDesc(t, incoming)}
+                </p>
+              </>
+            ) : (
+              <p className="text-xs leading-relaxed" style={{ color: '#c8ffd8', opacity: 0.85 }}>
+                {t('ascension.noNewRung')}
+              </p>
+            )}
+            {alreadyInForce.length > 0 && (
+              <p className="text-xs mt-2" style={{ color: '#4a7a5a' }}>
+                {t('ascension.alsoInForce', {
+                  names: alreadyInForce.map(r => contentText.rungName(t, r)).join(', '),
+                })}
+              </p>
+            )}
+            {/* The cost, stated where the choice is made. Ascending wipes the
+                run; the screen used to promise the opposite and the mechanic
+                used to deliver it. */}
+            <p
+              className="text-xs mt-3 pt-3 leading-relaxed"
+              style={{ color: '#ffb4b4', borderTop: `1px solid ${accentColor}33` }}
+            >
+              {t('ascension.resetWarning')}
             </p>
           </div>
 

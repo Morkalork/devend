@@ -19,6 +19,9 @@
 #   durationSeconds (freeze / slow) how long the effect lasts
 #   factor          (slow only) creepFactor multiplier while active (<1 = slower)
 #   targeted        true = tap to arm, then tap the board to pick a point (magnet)
+#   replenishTo     charges every map STARTS with, once the player has earned this
+#                   ability (chest charges stack on top; a bigger stack is never
+#                   trimmed). Omit for an ordinary one-shot consumable.
 #   description     one-line "what it does" (shown in the info modal)
 #   howTo           one-line "how to use it" (shown in the info modal)
 
@@ -97,7 +100,11 @@ abilities:
     howTo: "Tap to activate, then tap the board where you want the balls pulled."
 
   # Shockwave: push every active ball away from the centre, scattering a
-  # cluster and driving balls to the edges. One-shot.
+  # cluster and driving balls to the edges.
+  #
+  # The one ability that comes back. Shockwave is the "get the balls moving
+  # again" button, and a safety valve a player is afraid to spend is not a
+  # safety valve, so every map opens with one once it has been earned.
   - id: shockwave
     name: Shockwave
     kind: shockwave
@@ -105,8 +112,9 @@ abilities:
     weight: 2
     startLevel: 4
     factor: 1.25
-    description: "Blasts every ball outward from the centre."
-    howTo: "Tap to push the balls apart and clear a space."
+    replenishTo: 1
+    description: "Blasts every ball outward from the centre. Comes back every map."
+    howTo: "Tap to push the balls apart and clear a space. You always start a map with one."
 
   # Fence Overclock: your cuts build much faster for a few seconds - carve the
   # board aggressively (great right after a Freeze or Slow).

@@ -72,6 +72,12 @@ export interface RunSave {
   // Chest-earned ability charges banked this run (#38): { abilityId -> count }.
   // Optional; pre-feature saves default to {} on restore.
   abilityCharges?: Record<string, number>;
+  // Every ability EARNED this run, spent ones included. Kept apart from
+  // abilityCharges because a replenishing ability (abilities.yml `replenishTo`)
+  // must keep coming back after its last charge is spent, and a zeroed entry
+  // cannot say whether it was earned-and-spent or never held. Optional;
+  // pre-feature saves seed it from whatever charges they carry.
+  heldAbilityIds?: string[];
 }
 
 /** Payload the caller supplies; version + savedAt are stamped on write. */

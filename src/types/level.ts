@@ -1,6 +1,5 @@
 import type { MapObjective } from "@/types/objective";
 import type { WinCondition } from "@/types/winSpec";
-import type { MapMutator } from "@/types/mapMutator";
 
 export interface BallConfig {
   id: string;
@@ -221,15 +220,25 @@ export interface LevelConfig {
    */
   tiltChance?: number;
   /**
-   * Pin a mutator to this map instead of leaving it to the procedural roll.
+   * Pin a mutator to this map instead of leaving it to the procedural roll, by
+   * its `id` in public/mapMutators.yml.
    *
    * Boss maps could already force one; ordinary maps could not, so a mutator
    * could only ever be a random visitor. A set-piece built AROUND its mutator
    * (the shifting-gravity map of issue #77 is the case that needed this) has to
    * be able to author it, the same way LEVELDESIGN.md expects a map's Turn to
    * be authored rather than hoped for.
+   *
+   * An ID, not an inline MapMutator, because that is how every map.yml that has
+   * ever used this field authored it. Typing it as the whole object made the
+   * declaration and the data disagree with nothing to catch it: js-yaml casts
+   * map.yml to LevelData unchecked, so `mutator: gravity` type-checked as a
+   * MapMutator and shipped as a bare string. Every reader then got `undefined`
+   * off it - the Specs card rendered its border and icon with no name or
+   * description, and `behavior === "gravity"` was false, so the map that is
+   * authored around a live pull never pulled at all.
    */
-  mutator?: MapMutator;
+  mutator?: string;
   /**
    * Scripted "Turn" beats (LEVELDESIGN.md convention 3): threshold-triggered
    * one-shot events so the endgame differs from the opening. Generalizes boss
@@ -524,8 +533,8 @@ export interface BossConfig {
   intro: string;
   /** The mandatory objective that gates the win (a #55 MapObjective). */
   objective: MapObjective;
-  /** Forced environmental modifier for the whole fight (a #54 MapMutator). */
-  mutator?: MapMutator;
+  /** Forced environmental modifier for the whole fight: a #54 mutator `id`. */
+  mutator?: string;
   /** When true, Scope Creep runs from second 0 (no grace) for extra pressure. */
   creepFromStart?: boolean;
   /** Phase events fired as the fight escalates. */

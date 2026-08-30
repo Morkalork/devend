@@ -31,7 +31,9 @@ export interface GameCallbacks {
   /** Time ran out with lives to spare: the map is lost for ONE life and must be
    *  restarted fresh (the session remounts the current level). Only fired when
    *  a life remains; at zero lives the normal game-over path runs instead. */
-  onMapTimedOut?: () => void;
+  /** Out of time with lives to spare: the reason travels with it, because the
+   *  map is about to restart and nothing else on screen will say what happened. */
+  onMapTimedOut?: (failure: import("@/lib/mapFailure").MapFailure) => void;
   onTutorialCutSuccess?: () => void;
   /** Fired once per ball the instant it locks, with its ball-type id (#tutorial
    *  encountered-ball-types tracking). Returns true iff this was the player's

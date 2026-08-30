@@ -145,6 +145,28 @@ export function rungAt(depth: number, ladder: AscensionRung[]): AscensionRung | 
  * Returns null when there is nothing to announce (depth 0, or a ladder that
  * failed to load), which is the caller's cue not to open a modal at all.
  */
+/**
+ * Should the ascension rules open themselves right now?
+ *
+ * The whole condition, in one place the component and its test can share. It
+ * used to live inline in GameScreen as `announcement && ref.current !== depth`,
+ * and the ref was the bug: Index renders GameScreen only while the game screen
+ * is up, so it UNMOUNTS after every map (through the level-complete overlay,
+ * the shop, every draft) and the ref went back to null with it. "Have I
+ * announced this depth" was therefore forgotten exactly when it mattered, and
+ * an ascended run reopened the modal on every single map.
+ *
+ * Level 1 replaces the memory rather than repairing it. An ascension always
+ * restarts at level 1, so the level number IS the event, and it cannot be
+ * forgotten by a remount because it is not remembered in the first place.
+ */
+export function shouldAnnounceAscension(
+  depth: number, levelNumber: number, ladder: AscensionRung[],
+): boolean {
+  if (levelNumber !== 1) return false;
+  return rungsUpTo(depth, ladder).length > 0;
+}
+
 export function ascensionAnnouncement(
   t: TFunction, depth: number, ladder: AscensionRung[],
 ): { title: string; body: string } | null {

@@ -14,14 +14,17 @@ import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal, TrendingUp, Landmark, ClipboardList } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
-import { ascensionAnnouncement, rungsUpTo } from '@/lib/ascensionLadder';
+import { ascensionAnnouncement, rungsUpTo, shouldAnnounceAscension } from '@/lib/ascensionLadder';
 import { MapTuningModal } from './MapTuningModal';
 import { GameCanvas, GameStateInfo } from './GameCanvas';
 import { SuperiorLockInfoModal } from './SuperiorLockInfoModal';
 import { BoardEntityInfoModal } from './BoardEntityInfoModal';
 import type { BoardEntityHit } from '@/lib/boardEntityInfo';
 import { GameTopBar } from './GameTopBar';
+import { AnimatePresence } from 'framer-motion';
 import { MapRuleBanner } from './MapRuleBanner';
+import { MapFailedOverlay } from './MapFailedOverlay';
+import type { MapFailure } from '@/lib/mapFailure';
 import { ShipEarlyBar } from './ShipEarlyBar';
 import { AbilityBar } from './AbilityBar';
 import { GameMessageBar } from './GameMessageBar';
@@ -100,6 +103,8 @@ interface GameScreenProps {
   abilitySlots?: number;
   onGameEnd: (result: GameResult) => void;
   /** Out of time with lives left: restart the current level (session remount). */
+  /** Dismissing the failure overlay is what triggers this: the session
+   *  remounts the level for the retry. */
   onMapTimedOut?: () => void;
   onLevelComplete: (scoreData: LevelScoreData) => void;
   /** Fired once per ball the instant it locks, with its ball-type id (drives the
@@ -162,6 +167,30 @@ interface GameScreenProps {
   introAssemble?: boolean;
   /** Owned upgrades of a tag needed to activate its set bonus (build readout). */
   tagSetThreshold?: number;
+}
+
+/**
+ * A mutator by `id`, or null when the catalogue has no such entry.
+ *
+ * Every pinned mutator goes through here: an unknown id leaves the map vanilla
+ * rather than handing the UI a half-object. map.yml pinned `gravity` for a
+ * while, which is the BEHAVIOR name and not any entry's id, and because the pin
+ * used to be dropped straight into `mapMutator` unresolved, the map showed an
+ * empty rule card and never actually pulled. mapPins.test.ts refuses a pin that
+ * names nothing now.
+ *
+ * At module scope because it closes over nothing: declared inside the component
+ * it is a new function every render, which the mutator useMemo would then have
+ * to list as a dependency and re-roll on.
+ */
+function mutatorById(id: string | undefined | null): MapMutator | null {
+  if (!id) return null;
+  return getMapMutators().find(m => m.id === id) ?? null;
+}
+
+/** The mutator named by ?mutator=<id>, if it is in the catalogue. */
+function forcedMutator(): MapMutator | null {
+  return mutatorById(debugMutatorId());
 }
 
 export function GameScreen({
@@ -245,12 +274,18 @@ export function GameScreen({
   // The modal was previously an overlay on the LIVE board, which hid it.
   const [fenceIntroOpen, setFenceIntroOpen] = useState(showInGameTutorial && levelNumber === 1);
 
-  /** The mutator named by ?mutator=<id>, if it is in the catalogue. */
-  const forcedMutator = (): MapMutator | null => {
-    const id = debugMutatorId();
-    if (!id) return null;
-    return getMapMutators().find(m => m.id === id) ?? null;
-  };
+  /**
+   * The map ran out of time and a life went with it. Held here so the RESTART
+   * waits on the explanation instead of racing it: the remount only happens
+   * when the overlay is dismissed. Before this, the level came back inside the
+   * red flash and a player who blinked never learned the clock had run out.
+   */
+  const [mapFailure, setMapFailure] = useState<MapFailure | null>(null);
+  const handleMapFailed = useCallback((failure: MapFailure) => setMapFailure(failure), []);
+  const dismissMapFailure = useCallback(() => {
+    setMapFailure(null);
+    onMapTimedOut?.();
+  }, [onMapTimedOut]);
 
   const levelHasMovers = (level.entities ?? []).some(e => e.kind === 'mover');
   const [moverTutorialDismissed, setMoverTutorialDismissed] = useState(false);
@@ -366,7 +401,23 @@ export function GameScreen({
       level.expectedCuts, level.sizeThreshold, level.points, activeModifiers.scoreMultiplier,
       activeModifiers.spaceBonusMultiplier, activeModifiers.overtimeCapBonus]);
 
-  const totalLockedBalls = cumulativeLockedBalls + gameState.lockedBalls;
+  /**
+   * Locks THIS MAP, for every readout that sits next to a per-map requirement.
+   *
+   * It used to be `cumulativeLockedBalls + gameState.lockedBalls`, a whole-RUN
+   * tally (reset only at run start, added to after every level), handed to a
+   * HUD that compares it against `threadLockRequired`, which is per-map. The
+   * gate is per-map too - checkSpaceWin reads game.lockedBallsCount - so from
+   * the second level onward the top bar and Specs both announced an objective
+   * the map had not met and would not clear on: "47/1", and "Lock objective
+   * met! 84 of 2 balls locked" on an untouched board.
+   *
+   * One meaning per readout. The lock chip is part of the map HUD, so it counts
+   * the map, with or without a requirement to compare against; the run-long
+   * tally still drives the Micro Manager speed cap, which is the thing that
+   * actually wanted it.
+   */
+  const mapLockedBalls = gameState.lockedBalls;
 
   // Scope Creep tuning (game-config.yml snake_case -> ScopeCreepConfig).
   // Memoized so GameCanvas's live-config effect only re-runs on real changes.
@@ -391,10 +442,14 @@ export function GameScreen({
     // Authored first (a boss's forced mutator, then a map that pins one), then
     // the ?mutator= debug override, then the procedural roll. The override sits
     // below the authored pins so it can never silently replace a set-piece.
-    () => level.boss?.mutator ?? level.mutator ?? forcedMutator() ?? selectMapMutator(
-      levelNumber, getRunRng(`mapMutator:${level.id}`), undefined,
-      everyMapMutated ? 0 : undefined,
-    ),
+    // Authored pins are IDS into mapMutators.yml and have to be looked up; the
+    // catalogue entry is what carries the name, description and behavior the
+    // rest of the game reads off `mapMutator`.
+    () => mutatorById(level.boss?.mutator) ?? mutatorById(level.mutator)
+      ?? forcedMutator() ?? selectMapMutator(
+        levelNumber, getRunRng(`mapMutator:${level.id}`), undefined,
+        everyMapMutated ? 0 : undefined,
+      ),
     [levelNumber, level.id, level.boss, level.mutator, everyMapMutated],
   );
 
@@ -535,11 +590,34 @@ export function GameScreen({
   );
   const [ascModalOpen, setAscModalOpen] = useState(false);
   const announcedDepth = useRef<number | null>(null);
+  /**
+   * Announce the ascension rules on LEVEL 1 of a depth, and nowhere else.
+   *
+   * The gate used to be the `announcedDepth` ref alone, on the reasoning that a
+   * depth should be announced once rather than once per map. The reasoning was
+   * right and the mechanism could not deliver it: Index renders this component
+   * only while `currentScreen === 'game'` and the level-complete overlay is
+   * down, so GameScreen UNMOUNTS after every single map (through the overlay,
+   * the shop, every draft) and the ref went back to null with it. A ref cannot
+   * remember something across the remount it is supposed to survive, so the
+   * modal reappeared on every map of an ascended run.
+   *
+   * Level 1 is the honest test, and it needs no memory at all: an ascension
+   * always restarts at level 1, so that IS the moment a depth begins. The ref
+   * stays to stop a re-render firing it twice within one mount, which is all a
+   * ref can honestly promise here.
+   *
+   * The cost is the debug jump (`?ascension=9&level=12`), which never passes
+   * through level 1 and so no longer self-announces. That is covered: the rules
+   * are re-openable from the pause menu (`ascension.menuItem`), which is where
+   * a player who wants them again looks anyway.
+   */
   useEffect(() => {
-    if (!announcement || announcedDepth.current === ascensionDepth) return;
+    if (!shouldAnnounceAscension(ascensionDepth, levelNumber, ascensionLadder)) return;
+    if (announcedDepth.current === ascensionDepth) return;
     announcedDepth.current = ascensionDepth;
     setAscModalOpen(true);
-  }, [announcement, ascensionDepth]);
+  }, [ascensionDepth, levelNumber, ascensionLadder]);
 
   // Handle a BACK gesture while the game is active (wired via backRef from the
   // popstate guard in Index): close an open pause overlay/menu, otherwise open
@@ -770,7 +848,7 @@ export function GameScreen({
             continuesRemaining={continuesRemaining}
             spaceRemaining={gameState.spaceRemaining}
             spaceRequired={level.sizeThreshold}
-            lockedBalls={totalLockedBalls}
+            lockedBalls={mapLockedBalls}
             threadLockRequired={level.threadLockRequired}
             winGates={gameState.winGates}
             onExplainWin={() => setWinModalOpen(true)}
@@ -885,7 +963,7 @@ export function GameScreen({
             onRequestSuperiorInfo={() => setSuperiorInfoOpen(true)}
             onRequestEntityInfo={setEntityInfo}
             onGameEnd={handleGameEnd}
-            onMapTimedOut={onMapTimedOut}
+            onMapTimedOut={handleMapFailed}
             onLevelComplete={handleLevelComplete}
             onBallTypeLocked={onBallTypeLocked}
             onMapComplete={() => { setMapComplete(true); onMapComplete?.(); }}
@@ -905,6 +983,8 @@ export function GameScreen({
             fenceSpeedBase={config.fence.speed_base}
             fenceSpeedMin={config.fence.speed_min}
             fenceSpeedPerLevel={config.fence.speed_per_level}
+            moverFenceDragPerFence={config.mover.fence_drag_per_fence}
+            moverFenceDragFloor={config.mover.fence_drag_floor}
             lockWinThresholdPercent={config.lock.win_threshold_percent}
             lockMinRegionCells={config.lock.min_region_cells}
             scopeCreep={scopeCreepConfig}
@@ -1293,7 +1373,7 @@ export function GameScreen({
         continuesRemaining={continuesRemaining}
         spaceRemaining={gameState.spaceRemaining}
         spaceRequired={level.sizeThreshold}
-        lockedBalls={totalLockedBalls}
+        lockedBalls={mapLockedBalls}
         threadLockRequired={level.threadLockRequired}
         ownedUpgrades={ownedUpgrades}
         accentColor={accentColor}
@@ -1314,6 +1394,19 @@ export function GameScreen({
         objective={mapObjective}
         objectiveProgress={objectiveProgress}
       />
+
+      {/* Above everything: a life just went, and nothing else on screen says
+          why. Dismissing it is what restarts the map. */}
+      <AnimatePresence>
+        {mapFailure && (
+          <MapFailedOverlay
+            failure={mapFailure}
+            livesLeft={lives}
+            accentColor={accentColor}
+            onDismiss={dismissMapFailure}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 }

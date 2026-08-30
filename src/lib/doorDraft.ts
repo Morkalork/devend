@@ -32,6 +32,8 @@ export const DEFAULT_DOOR_LEVEL = 5;
 export const CONDITION_KINDS = new Set<AssignmentConditionKind>([
   'lockCount', 'superiorLocks', 'underPar', 'speedClear', 'allBallsLocked', 'ballType',
   'noLocks', 'smashCount',
+  // Not about locking or clearing: lives kept, money not spent, bets won.
+  'noLivesLost', 'noSpend', 'pushesWon',
 ]);
 const TIERS = new Set<UpgradeTier>(['Junior', 'Senior', 'Principal', 'Architect', 'Wizard']);
 

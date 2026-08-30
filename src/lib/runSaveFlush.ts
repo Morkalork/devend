@@ -23,6 +23,20 @@ type Flush = () => void;
 let current: Flush | null = null;
 
 /**
+ * Latched by a Total Reset, after which no flush ever writes again.
+ *
+ * A reset clears storage and reloads, and the reload fires `pagehide` - which
+ * is one of the listeners below, so the run being wiped was written straight
+ * back into the storage that had just been cleared. The player asked for a
+ * clean install, the page came back, and their run was waiting for them.
+ *
+ * A latch rather than `registerRunFlush(null)`: the session hook re-registers
+ * on its own schedule, so a null would be quietly undone by any render between
+ * the reset and the reload actually happening.
+ */
+let disabled = false;
+
+/**
  * Register (or clear, with null) the function that persists the live run.
  *
  * A single slot rather than a list: there is exactly one run, and letting two
@@ -34,6 +48,17 @@ export function registerRunFlush(flush: Flush | null): void {
 }
 
 /**
+ * Stop persisting the run, permanently, for a Total Reset.
+ *
+ * There is no re-enable: the only caller is about to reload the page, which
+ * resets this module along with everything else.
+ */
+export function disableRunFlush(): void {
+  disabled = true;
+  current = null;
+}
+
+/**
  * Persist the run now, if there is one.
  *
  * Never throws. Every caller is a last-chance path - a page being torn down, or
@@ -41,6 +66,7 @@ export function registerRunFlush(flush: Flush | null): void {
  * would turn one failure into a worse one.
  */
 export function flushRunSave(): void {
+  if (disabled) return;
   try {
     current?.();
   } catch (err) {

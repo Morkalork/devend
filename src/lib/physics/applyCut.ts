@@ -7,6 +7,7 @@ import { GameCallbacks } from "./gameCallbacks";
 import { checkAndUpdateBallWonStates, applyMicroManagerSpeedCap } from "./checkBallWonState";
 import { handleGameOverFn } from "./handleGameOver";
 import { fenceBudgetOutcome } from "@/lib/fenceBudget";
+import { mapFailure } from "@/lib/mapFailure";
 import {
   pointToSegmentDistance,
   lineSegmentIntersection,
@@ -431,7 +432,10 @@ export function applyCutFn(
     pushMode: game.pushMode, pushPromptPending: game.pushPromptPending,
   });
   if (budget === "fail") {
-    handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+    // Out of moves. Name the budget AND what was still outstanding, or the map
+    // just stops with the player's last fence looking like it did nothing.
+    handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
+      mapFailure("outOfFences", resolveWinSpec(level), readWinSnapshot(game, level)));
   } else if (budget === "bank") {
     triggerLevelComplete(game, level, levelNumber, activeModifiers, callbacks, 'space');
   }
@@ -469,15 +473,22 @@ export function evaluateWinConditions(
   // when the last life is spent.
   const timeLimit = getMapTimeLimit(level, levelNumber);
   if (timeLimit != null && game.activePlaySeconds >= timeLimit) {
+    // Worked out BEFORE the life is docked and the board is torn down: this is
+    // the only record of what the player had actually achieved, and the map is
+    // about to restart from nothing.
+    const failure = mapFailure("timeUp", resolveWinSpec(level), readWinSnapshot(game, level));
     const newLives = callbacks.getLives() - 1;
     callbacks.setLivesRef(newLives);
     callbacks.setDisplayLives(newLives);
     callbacks.onLivesChange(newLives);
     if (newLives <= 0) {
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks, failure);
       return null;
     }
-    // A life remains: freeze the loop, flash red, then remount this level.
+    // A life remains: freeze the loop, flash red, then hand the reason up so it
+    // can be READ before the level remounts. The remount used to happen behind
+    // the flash, which is how a life could go with nothing having named the
+    // clock.
     game.gameOver = true;
     if (callbacks.shakeTimeoutRef.current) clearTimeout(callbacks.shakeTimeoutRef.current);
     callbacks.setScreenFlash("red");
@@ -486,7 +497,7 @@ export function evaluateWinConditions(
       callbacks.shakeTimeoutRef.current = null;
       callbacks.setScreenFlash("none");
       callbacks.setIsShaking(false);
-      callbacks.onMapTimedOut?.();
+      callbacks.onMapTimedOut?.(failure);
     }, 700);
     return null;
   }
@@ -508,7 +519,10 @@ export function evaluateWinConditions(
     const activeTargets = game.balls.some(b =>
       b.state !== "won" && b.speed > 0 && (!hasBoss || b.isBoss));
     if (!activeTargets) {
-      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks);
+      // No target left that could still reach the zone. Nothing on the board
+      // shows this - the map simply becomes unwinnable - so it has to be said.
+      handleGameOverFn(game, level, levelNumber, activeModifiers, callbacks,
+        mapFailure("areaUnreachable", spec, snap));
       return null;
     }
   }
@@ -780,6 +794,7 @@ export function triggerLevelComplete(
         lockedBallsCount: game.lockedBallsCount,
         superiorLockCount: game.superiorLockCount, superiorLockBonus: game.superiorLockBonus,
         zoneLockCount: game.zoneLockCount, zoneLockBonus: game.zoneLockBonus,
+        multiLockBonus: game.multiLockBonus, multiLockBest: game.multiLockBest,
         lockedByType: { ...(game.lockedByType ?? {}) },
         smashCount: game.breakablesSmashed ?? 0,
         breakBonus: game.breakBonus,
