@@ -89,7 +89,16 @@ export function compassRing(
 
   const radius = ballRadius + Math.max(2, 3 * scale);
   const sweep = (1 - progress) * Math.PI * 2;   // unwinds as the turn nears
-  if (sweep <= 0.01) return null;
+  // `!(sweep > 0.01)` rather than `sweep <= 0.01`, which is not the same test
+  // when the sweep is NaN: NaN fails every comparison, so a NaN sailed straight
+  // through the old guard. It then reached `Math.max(12, Math.ceil(NaN))`,
+  // which is NaN, so the loop below never ran and this returned a ring with
+  // ZERO points - a truthy object the caller happily strokes into nothing. The
+  // ring simply vanished, with no error and no null to explain it.
+  //
+  // turnProgress divides by the turn interval and reads the ball's clock, so a
+  // non-finite activeSeconds or a zero interval is all it takes.
+  if (!(sweep > 0.01)) return null;
 
   // Wound in the direction of the coming turn, so the ring says WHICH WAY as
   // well as when: that is what makes the countdown a plan rather than a

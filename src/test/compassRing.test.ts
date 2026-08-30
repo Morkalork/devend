@@ -172,3 +172,29 @@ describe("the pixi renderer contains no arc at all", () => {
     }
   });
 });
+
+describe("a ring that cannot be computed", () => {
+  it("returns null rather than a ring with no points in it", () => {
+    // Found while chasing a report of a shape missing from the balls. A
+    // non-finite clock makes turnProgress NaN, and NaN fails every comparison -
+    // so `sweep <= 0.01` was false, the guard passed, and Math.ceil(NaN) gave a
+    // NaN step count whose loop never ran. The result was a TRUTHY ring holding
+    // zero points, which the layer strokes into nothing at all: the countdown
+    // disappears with no error and nothing to explain it.
+    
+    for (const clock of [NaN, Infinity, undefined as unknown as number]) {
+      const ring = compassRing(compass(), CX, CY, R, SCALE, clock);
+      expect(ring, `a broken clock (${clock}) produced a ring`).toBeNull();
+    }
+  });
+
+  it("never hands back a ring the caller would draw as nothing", () => {
+    // The general form: whatever comes back must be strokeable. A zero-point
+    // ring is the one shape that passes every truthiness check and draws
+    // nothing.
+    for (const t of [0, 1, 3, 5, 7, 8.5, 8.99]) {
+      const ring = compassRing(compass(), CX, CY, R, SCALE, t);
+      if (ring) expect(ring.points.length, `empty ring at t=${t}`).toBeGreaterThanOrEqual(4);
+    }
+  });
+});
