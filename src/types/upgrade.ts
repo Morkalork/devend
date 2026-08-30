@@ -37,6 +37,17 @@ export interface UpgradeConfig {
    * UpgradeShop (the chooser card).
    */
   choiceGroup?: string;
+  /**
+   * A deliberate price adjustment on top of the derived cost, as a multiplier.
+   *
+   * Costs are normally computed from unlock level x tier, which is what keeps
+   * the shelf coherent as levels are re-tuned. This exists for the upgrade
+   * whose VALUE the formula cannot see - most often because it is a door, and
+   * the player is buying access to a line as well as the effect itself.
+   *
+   * Composes with the choiceGroup surcharge rather than replacing it.
+   */
+  costMultiplier?: number;
   /** Only offered while ascended (Ascension mode, depth ≥ 1) */
   ascensionOnly?: boolean;
   /**

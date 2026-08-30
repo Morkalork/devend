@@ -10,7 +10,7 @@ import yaml from 'js-yaml';
 import { UpgradeConfig, UpgradeData, UpgradeTier, TagSetsConfig } from '@/types/upgrade';
 import { DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { LevelData } from '@/types/level';
-import { buildLevelPoints, mergePricing, computeUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
+import { buildLevelPoints, mergePricing, resolveUpgradeCost, setLivePricing } from '@/lib/upgradePricing';
 
 const VALID_TIERS: UpgradeTier[] = ['Junior', 'Senior', 'Principal', 'Architect', 'Wizard'];
 
@@ -110,24 +110,16 @@ export function useUpgradeManager() {
           throw new Error(`Upgrade "${upgrade.id}" has invalid tier. Must be one of: ${VALID_TIERS.join(', ')}`);
         }
 
-        // Resolve the effective cost: an explicit `cost` overrides the formula,
-        // otherwise derive it from the unlock level's base points x tier factor.
-        if (typeof upgrade.cost !== 'number') {
-          const computed = computeUpgradeCost(upgrade.unlockLevel ?? 1, upgrade.tier, levelPoints, pricing);
-          if (computed === null) {
-            throw new Error(
-              `Upgrade "${upgrade.id}" has no explicit cost and could not be priced (missing level points or tier factor).`,
-            );
-          }
-          upgrade.cost = computed;
+        // One reading of the price, shared with everything that quotes it.
+        // See resolveUpgradeCost: explicit or derived, then the deliberate
+        // costMultiplier, then the choice surcharge.
+        const resolved = resolveUpgradeCost(upgrade, levelPoints, pricing);
+        if (resolved === null) {
+          throw new Error(
+            `Upgrade "${upgrade.id}" has no explicit cost and could not be priced (missing level points or tier factor).`,
+          );
         }
-
-        // A tier-3 "choice" upgrade (choiceGroup) costs 50% more: the price of
-        // getting to pick between alternatives. Applies to both explicit and
-        // derived costs, so it flows to every reader (shop, Budget Cycle, ...).
-        if (upgrade.choiceGroup && typeof upgrade.cost === 'number') {
-          upgrade.cost = Math.round(upgrade.cost * 1.5);
-        }
+        upgrade.cost = resolved;
 
         if (!upgrade.modifiers || typeof upgrade.modifiers !== 'object') {
           throw new Error(`Upgrade "${upgrade.id}" is missing modifiers object`);

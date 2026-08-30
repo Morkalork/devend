@@ -130,3 +130,31 @@ export function computeUpgradeCost(
   if (typeof factor !== 'number') return null;
   return Math.max(pricing.minCost, Math.round(base * factor));
 }
+
+/**
+ * The price the shop will actually charge, from the catalogue entry.
+ *
+ * The whole resolution in one place, in order:
+ *   explicit `cost`, else derived from unlock level x tier
+ *   x `costMultiplier`  - a deliberate adjustment the formula cannot see,
+ *                         usually because the upgrade is a DOOR and the player
+ *                         is buying access to a line as well as an effect
+ *   x 1.5 if `choiceGroup` - the price of getting to pick between alternatives
+ *
+ * Extracted from useUpgradeManager because a test that recomputed this
+ * arithmetic alongside it proved nothing: deleting the multiplier from the hook
+ * left every assertion green. One reading, or the guard is decorative.
+ */
+export function resolveUpgradeCost(
+  upgrade: { cost?: number; unlockLevel?: number; tier: UpgradeTier; costMultiplier?: number; choiceGroup?: string },
+  levelPoints: Map<number, number>,
+  pricing: UpgradePricing = DEFAULT_UPGRADE_PRICING,
+): number | null {
+  let cost = typeof upgrade.cost === 'number'
+    ? upgrade.cost
+    : computeUpgradeCost(upgrade.unlockLevel ?? 1, upgrade.tier, levelPoints, pricing);
+  if (cost === null) return null;
+  if (typeof upgrade.costMultiplier === 'number') cost = Math.round(cost * upgrade.costMultiplier);
+  if (upgrade.choiceGroup) cost = Math.round(cost * 1.5);
+  return cost;
+}

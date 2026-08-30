@@ -81,6 +81,10 @@ upgrades:
     cost: 30
     unlockLevel: 1
     icon: clock
+    # +20%: it is the best opening buy in the game AND the door to Load
+    # Balancer, and the level x tier formula can see neither. A door should
+    # cost something over and above the effect it happens to carry.
+    costMultiplier: 1.2
     tags: [safety]
     modifiers:
       ballSpeedMultiplier: 0.95
@@ -1917,6 +1921,11 @@ upgrades:
     tier: Junior
     description: "Every map starts with 8% of the board already captured."
     unlockLevel: 1
+    # Explicit, like the four upgrades it shares the opening shelf with. The
+    # level x tier formula prices a level-1 Junior at 40; those four are set to
+    # 30 so the first shop is affordable at all, and a new arrival on that shelf
+    # has to join them or it is simply the expensive one for no stated reason.
+    cost: 30
     icon: rocket
     tags: [tempo]
     modifiers:
