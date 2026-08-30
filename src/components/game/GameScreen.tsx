@@ -798,7 +798,10 @@ export function GameScreen({
               className="absolute left-0 right-0 z-30 flex justify-center pointer-events-none"
               style={{ top: `${boardTopPct / 2}%`, transform: 'translateY(-50%)' }}
             >
-              <div className="pointer-events-auto w-full">
+              {/* w-full so the announcing strip spans the frame, and centred
+                  so the collapsed chip sits in the middle rather than hugging
+                  the left edge. */}
+              <div className="pointer-events-auto w-full flex justify-center">
                 <MapRuleBanner
                   mutator={mapMutator}
                   onExplain={() => { setTopPanelFocus('mapRule'); setTopPanelOpen(true); }}

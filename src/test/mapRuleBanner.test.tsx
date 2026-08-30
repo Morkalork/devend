@@ -12,14 +12,26 @@
  * rule that changes the physics is not a stat, and rendering it as one is what
  * made it disappear.
  *
- * It has its own strip now, between the top bar and the board.
+ * The second attempt gave it its own full-width strip between the top bar and
+ * the board, and that came back as "too big and you can't see all of it". Both
+ * halves are true and they have one cause: the strip did TWO jobs on one line.
+ * The name was black letterspaced caps marked flex-shrink-0, so on a 393px
+ * phone it took the whole row and truncated the description to "Everything is
+ * pulled ..." - the clause that actually stops bent trajectories reading as a
+ * bug. Too tall to spare AND too narrow to finish its sentence is not a size
+ * problem, it is two things in one place.
+ *
+ * So the strip is two STATES in one place: it announces the rule in full for a
+ * few seconds in the empty band above the board, then collapses to a compact
+ * hazard chip that persists. Noticing and remembering are different jobs and
+ * they get different sizes.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import '@/i18n';
-import { MapRuleBanner } from '@/components/game/MapRuleBanner';
+import { MapRuleBanner, ANNOUNCE_MS } from '@/components/game/MapRuleBanner';
 import type { ActiveMapMutator } from '@/types/mapMutator';
 
 const GRAVITY: ActiveMapMutator = {
@@ -124,5 +136,70 @@ describe('where it sits', () => {
     // chip was the one that did not work.
     const bar = read('src/components/game/GameTopBar.tsx');
     expect(bar, 'the top bar still renders a mutator chip').not.toContain('mapMutator');
+  });
+});
+
+describe('announcing, then reminding', () => {
+  it('opens with the rule stated in full', () => {
+    // The half that has to be NOTICED. It can afford to be big because it is
+    // temporary, and it is in band that was empty anyway.
+    render(<MapRuleBanner mutator={GRAVITY} />);
+    expect(screen.getByText(GRAVITY.name)).toBeTruthy();
+    expect(screen.getByText(GRAVITY.description!)).toBeTruthy();
+  });
+
+  it('never truncates the sentence it exists to deliver', () => {
+    // THE reported defect. A description ending in an ellipsis is worse than no
+    // description: it says there was an explanation and then withholds it.
+    render(<MapRuleBanner mutator={GRAVITY} />);
+    const detail = screen.getByText(GRAVITY.description!);
+    expect(detail.className, 'the rule is truncated again').not.toContain('truncate');
+    expect(detail.textContent).not.toMatch(/…|\.\.\.$/);
+  });
+
+  it('collapses to a chip once it has been read', () => {
+    // The half that has to PERSIST. Small is fine here precisely because it is
+    // no longer the only signal, which is what the first attempt got wrong.
+    vi.useFakeTimers();
+    try {
+      render(<MapRuleBanner mutator={GRAVITY} />);
+      act(() => { vi.advanceTimersByTime(ANNOUNCE_MS + 100); });
+      expect(screen.getByText(GRAVITY.name), 'the rule stopped being stated at all').toBeTruthy();
+      expect(screen.queryByText(GRAVITY.description!), 'the prose never collapsed').toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still leads to the explanation once collapsed', () => {
+    // Losing the sentence is only acceptable because the full text stays one
+    // tap away. A chip that explained nothing and led nowhere would be the
+    // first failed attempt again.
+    vi.useFakeTimers();
+    try {
+      const onExplain = vi.fn();
+      render(<MapRuleBanner mutator={GRAVITY} onExplain={onExplain} />);
+      act(() => { vi.advanceTimersByTime(ANNOUNCE_MS + 100); });
+      fireEvent.click(screen.getByRole('button'));
+      expect(onExplain).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('announces again on the next map rather than starting collapsed', () => {
+    // A player meeting a NEW rule has not read it yet. Inheriting the previous
+    // map's collapsed state would silently skip the announcement exactly when
+    // it matters most.
+    vi.useFakeTimers();
+    try {
+      const view = render(<MapRuleBanner mutator={GRAVITY} />);
+      act(() => { vi.advanceTimersByTime(ANNOUNCE_MS + 100); });
+      expect(screen.queryByText(GRAVITY.description!)).toBeNull();
+      view.rerender(<MapRuleBanner mutator={CRUNCH} />);
+      expect(screen.getByText(CRUNCH.description!), 'the new rule never announced').toBeTruthy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
