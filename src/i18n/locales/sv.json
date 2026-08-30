@@ -308,7 +308,8 @@
     "pickupFreeShopItem": "Gratis butiksvara!",
     "pickupExtraLife": "+1 liv",
     "pickupRainbow": "Regnbågsboll!",
-    "bossIntroTitle": "Bosstrid: {{name}}"
+    "bossIntroTitle": "Bosstrid: {{name}}",
+    "timeAlarm": "Tiden"
   },
   "interactiveTutorial": {
     "drawAFence": "RITA ETT STÄNGSEL",

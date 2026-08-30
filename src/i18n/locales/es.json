@@ -308,7 +308,8 @@
     "pickupFreeShopItem": "¡Artículo gratis!",
     "pickupExtraLife": "+1 vida",
     "pickupRainbow": "¡Bola arcoíris!",
-    "bossIntroTitle": "Combate de jefe: {{name}}"
+    "bossIntroTitle": "Combate de jefe: {{name}}",
+    "timeAlarm": "Tiempo"
   },
   "interactiveTutorial": {
     "drawAFence": "TRAZA UNA VALLA",

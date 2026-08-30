@@ -13,6 +13,7 @@ import {
   raiseMessage, messageExpired, GAME_MESSAGE_IDS, MESSAGE_MS,
   type GameMessage, type GameMessageId,
 } from "@/lib/gameMessages";
+import { pickContext } from "@/lib/hudContext";
 
 describe("exactly one message at a time", () => {
   it("starts empty and takes the first message raised", () => {
@@ -167,13 +168,20 @@ describe("it sits below the board", () => {
   });
 
   it("hides the instant the map is won, like everything else down there", () => {
-    // Scoped to this component's own props. Matching `visible={!mapComplete}`
-    // anywhere in the file found AbilityCountdownBar's identical prop, so the
-    // bar could be pinned permanently visible and the test stayed green.
-    const start = SCREEN.indexOf("<GameMessageBar");
-    expect(start, "the bar must be rendered").toBeGreaterThan(-1);
-    const props = SCREEN.slice(start, SCREEN.indexOf("/>", start));
-    expect(props).toMatch(/visible=\{!mapComplete\}/);
+    // The rule has not changed; where it is enforced has. The bar used to carry
+    // `visible={!mapComplete}` itself. It now shares one reserved-height slot
+    // with the Ship Early countdown and the ability timers, and the slot's
+    // owner is chosen by pickContext - so THAT is where "not once the map is
+    // over" has to hold, and asserting the old prop would only pin a mechanism
+    // that moved.
+    expect(pickContext({
+      mapComplete: true, hasMessage: true, shipEarlyVisible: true, timerCount: 3,
+    }), "a readout outlived the board").toBeNull();
+    // And it is still reachable while the map is running, or the above passes
+    // for the wrong reason.
+    expect(pickContext({
+      mapComplete: false, hasMessage: true, shipEarlyVisible: false, timerCount: 0,
+    })).toBe("message");
   });
 
   it("never eats a tap meant for the board", () => {

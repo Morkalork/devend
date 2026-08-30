@@ -61,6 +61,8 @@ import { PushExitBar } from '@/components/game/PushExitBar';
 import { canStopPushing } from '@/lib/pushLuck';
 import { WinGateFrame } from '@/components/game/WinGateFrame';
 import { gateSatisfied } from '@/lib/winHud';
+import { BoardAlert } from '@/components/game/BoardAlert';
+import { pickContext } from '@/lib/hudContext';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -562,6 +564,13 @@ export function GameScreen({
   // Deadline tension ramp (issue #56): in the final 10s of a timed map a red
   // vignette pulses and a heartbeat thumps once per second (the effect re-fires
   // as the whole-second countdown changes).
+  const contextLane = pickContext({
+    mapComplete,
+    hasMessage: gameState.gameMessage != null,
+    shipEarlyVisible: mapTimeLimit != null && gameState.pushMode === 'none',
+    timerCount: gameState.abilityTimers?.length ?? 0,
+  });
+
   const deadlineRemaining = mapTimeLimit != null
     ? Math.max(0, Math.ceil(mapTimeLimit - gameState.activeSeconds))
     : null;
@@ -911,6 +920,10 @@ export function GameScreen({
             showBallSpeeds={showBallSpeeds}
             showPerfOverlay={showPerfOverlay}
           />
+          {/* Out of time. Over the board because that is where the eyes are;
+              red and pulsing so it stays separable from the win frame's steady
+              amber on the same edge. Never takes a tap. */}
+          <BoardAlert urgent={deadlineUrgent && !mapComplete} seconds={deadlineRemaining} />
           {/* This map wants something beyond an ordinary clear. One state, not
               a colour per kind: see WinGateFrame for why a border language does
               not survive being seen three times in a run. */}
@@ -945,20 +958,40 @@ export function GameScreen({
               />
             </div>
           )}
-          {/* Why the last thing you tried did nothing.
-              Above the controls and below the board, so it never covers the
-              play area: a message explaining a failed cut is useless if it
-              hides the board you were cutting. */}
-          <GameMessageBar
-            message={gameState.gameMessage ?? null}
-            accentColor={accentColor}
-            visible={!mapComplete}
-          />
+          {/* ONE line for the three readouts that used to have a bar each.
+              None of them is on most of the time, but each appeared and
+              disappeared independently, so the whole bottom of the screen moved
+              whenever any of them changed - with the ability buttons directly
+              underneath. The wrapper reserves its height whether or not a lane
+              is using it, which is the part that stops the shifting; see
+              lib/hudContext for who gets the slot. */}
+          <div className="min-h-[34px] flex items-end">
+            {contextLane === 'message' && (
+              <GameMessageBar
+                message={gameState.gameMessage ?? null}
+                accentColor={accentColor}
+                visible
+              />
+            )}
+            {contextLane === 'shipEarly' && (
+              <ShipEarlyBar
+                seconds={gameState.activeSeconds}
+                ballCount={gameState.ballCount}
+                timeLimit={mapTimeLimit ?? 0}
+                extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
+                bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
+                visible
+              />
+            )}
+            {contextLane === 'abilityTimers' && (
+              <AbilityCountdownBar timers={gameState.abilityTimers ?? []} visible />
+            )}
+          </div>
 
-          {/* Stop pushing and take what you have. See PushExitBar and
-              lib/pushLuck: the rule about when a push may be abandoned is a
-              rule about a trap, so it lives in a tested function rather than
-              in this condition. */}
+          {/* Stays its own row rather than joining the slot above: it is an
+              ACTION, not a readout, and it was reported missing once already
+              while it was on screen. It is not going into a queue behind a
+              transient message. */}
           {canStopPushing({
             mapComplete,
             pushMode: gameState.pushMode,
@@ -970,18 +1003,6 @@ export function GameScreen({
               accentColor={accentColor}
             />
           )}
-          <ShipEarlyBar
-            seconds={gameState.activeSeconds}
-            ballCount={gameState.ballCount}
-            timeLimit={mapTimeLimit ?? 0}
-            extraSecondsPerBall={activeModifiers.shipEarlySecondsPerBall}
-            bonusMultiplier={activeModifiers.shipEarlyBonusMultiplier}
-            visible={mapTimeLimit != null && gameState.pushMode === 'none' && !mapComplete}
-          />
-          <AbilityCountdownBar
-            timers={gameState.abilityTimers ?? []}
-            visible={!mapComplete}
-          />
                 {/* Every control the map has, in one place, in the thumb zone.
                     These used to float at top-left at 32px, on top of the status
                     bar, while abilities sat at the bottom - four homes for one

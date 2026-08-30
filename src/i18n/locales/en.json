@@ -310,7 +310,8 @@
     "pickupFreeShopItem": "Free store item!",
     "pickupExtraLife": "+1 Life",
     "pickupRainbow": "Rainbow ball!",
-    "bossIntroTitle": "Boss Fight: {{name}}"
+    "bossIntroTitle": "Boss Fight: {{name}}",
+    "timeAlarm": "Time"
   },
   "interactiveTutorial": {
     "drawAFence": "DRAW A FENCE",
