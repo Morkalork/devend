@@ -982,6 +982,147 @@ export function GameScreen({
             timers={gameState.abilityTimers ?? []}
             visible={!mapComplete}
           />
+                {/* Every control the map has, in one place, in the thumb zone.
+                    These used to float at top-left at 32px, on top of the status
+                    bar, while abilities sat at the bottom - four homes for one
+                    category of thing, which is why nothing could be found. */}
+                <div ref={menuRef} className="pointer-events-auto relative flex items-center justify-center gap-2 px-3 pb-2 pt-1">
+            <button
+              onClick={() => setMenuOpen(prev => !prev)}
+              className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
+              style={{
+                backgroundColor: menuOpen ? `${accentColor}33` : 'rgba(0,10,5,0.85)',
+                border: `1px solid ${accentColor}55`,
+                color: accentColor,
+              }}
+              aria-label={t('game.gameMenu')}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            {canPause && (
+              <button
+                onClick={() => { setMenuOpen(false); setIsPaused(prev => !prev); }}
+                className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
+                style={{
+                  backgroundColor: isPaused ? `${accentColor}33` : 'rgba(0,10,5,0.85)',
+                  border: `1px solid ${accentColor}55`,
+                  color: accentColor,
+                }}
+                aria-label={isPaused ? t('game.resume') : t('game.pause')}
+              >
+                {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              </button>
+            )}
+              <button
+                onClick={() => setWinModalOpen(true)}
+                className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
+                style={{
+                  backgroundColor: 'rgba(0,10,5,0.85)',
+                  border: `1px solid ${accentColor}55`,
+                  color: accentColor,
+                }}
+                aria-label={t('winConditions.menuItem')}
+              >
+                <Target className="w-5 h-5" />
+              </button>
+            {menuOpen && (
+              <div
+                className="absolute bottom-full left-0 mb-2 rounded-lg overflow-hidden min-w-[180px]"
+                style={{
+                  backgroundColor: 'rgba(0, 15, 8, 0.95)',
+                  border: `1px solid ${accentColor}55`,
+                  boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 15px ${accentColor}22`,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    const next = !soundMuted;
+                    setSoundMuted(next);
+                    setSoundMutedState(next);
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
+                  style={{ color: accentColor, backgroundColor: 'transparent' }}
+                  onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+                  onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+                  onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  {soundMuted ? t('game.soundOff') : t('game.soundOn')}
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); setWinModalOpen(true); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
+                  style={{ color: accentColor, backgroundColor: 'transparent' }}
+                  onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+                  onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+                  onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <Target className="w-4 h-4" />
+                  {t('winConditions.menuItem')}
+                </button>
+                {announcement && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setAscModalOpen(true); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
+                    style={{ color: '#ffb347', backgroundColor: 'transparent' }}
+                    onPointerEnter={e => (e.currentTarget.style.backgroundColor = '#ffb34718')}
+                    onPointerDown={e => (e.currentTarget.style.backgroundColor = '#ffb34730')}
+                    onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    {t('ascension.menuItem')}
+                  </button>
+                )}
+                {adminMode && (
+                  <button
+                    onClick={() => { setMenuOpen(false); setTuningOpen(true); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
+                    style={{ color: accentColor, backgroundColor: 'transparent' }}
+                    onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+                    onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+                    onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <SlidersHorizontal className="w-4 h-4" />
+                    Tune map
+                  </button>
+                )}
+                <button
+                  onClick={() => { setMenuOpen(false); onRestart(); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
+                  style={{ color: accentColor, backgroundColor: 'transparent' }}
+                  onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+                  onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+                  onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  {t('game.restartRun')}
+                </button>
+                <button
+                  onClick={() => { setMenuOpen(false); onMainMenu(); }}
+                  className="w-full flex items-center gap-2 px-4 py-3 min-h-[44px] text-sm font-bold transition-colors"
+                  style={{ color: accentColor, backgroundColor: 'transparent' }}
+                  onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
+                  onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
+                  onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+                >
+                  <Home className="w-4 h-4" />
+                  {t('game.mainMenu')}
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1014,131 +1155,6 @@ export function GameScreen({
       )}
 
       {/* Always-visible menu — floats above all overlays */}
-      <div ref={menuRef} className="fixed top-2 left-2 z-[70] flex items-center gap-1">
-        <button
-          onClick={() => setMenuOpen(prev => !prev)}
-          className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-          style={{
-            backgroundColor: menuOpen ? `${accentColor}33` : 'rgba(0,10,5,0.85)',
-            border: `1px solid ${accentColor}55`,
-            color: accentColor,
-          }}
-          aria-label={t('game.gameMenu')}
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-        {canPause && (
-          <button
-            onClick={() => { setMenuOpen(false); setIsPaused(prev => !prev); }}
-            className="flex items-center justify-center w-8 h-8 rounded-md transition-all"
-            style={{
-              backgroundColor: isPaused ? `${accentColor}33` : 'rgba(0,10,5,0.85)',
-              border: `1px solid ${accentColor}55`,
-              color: accentColor,
-            }}
-            aria-label={isPaused ? t('game.resume') : t('game.pause')}
-          >
-            {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
-          </button>
-        )}
-        {menuOpen && (
-          <div
-            className="absolute top-full left-0 mt-1 rounded-lg overflow-hidden min-w-[160px]"
-            style={{
-              backgroundColor: 'rgba(0, 15, 8, 0.95)',
-              border: `1px solid ${accentColor}55`,
-              boxShadow: `0 4px 20px rgba(0,0,0,0.5), 0 0 15px ${accentColor}22`,
-            }}
-          >
-            <button
-              onClick={() => {
-                const next = !soundMuted;
-                setSoundMuted(next);
-                setSoundMutedState(next);
-              }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
-              style={{ color: accentColor, backgroundColor: 'transparent' }}
-              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              {soundMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              {soundMuted ? t('game.soundOff') : t('game.soundOn')}
-            </button>
-            <button
-              onClick={() => { setMenuOpen(false); setWinModalOpen(true); }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
-              style={{ color: accentColor, backgroundColor: 'transparent' }}
-              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <Target className="w-4 h-4" />
-              {t('winConditions.menuItem')}
-            </button>
-            {announcement && (
-              <button
-                onClick={() => { setMenuOpen(false); setAscModalOpen(true); }}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
-                style={{ color: '#ffb347', backgroundColor: 'transparent' }}
-                onPointerEnter={e => (e.currentTarget.style.backgroundColor = '#ffb34718')}
-                onPointerDown={e => (e.currentTarget.style.backgroundColor = '#ffb34730')}
-                onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <TrendingUp className="w-4 h-4" />
-                {t('ascension.menuItem')}
-              </button>
-            )}
-            {adminMode && (
-              <button
-                onClick={() => { setMenuOpen(false); setTuningOpen(true); }}
-                className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
-                style={{ color: accentColor, backgroundColor: 'transparent' }}
-                onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-                onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-                onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-                onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              >
-                <SlidersHorizontal className="w-4 h-4" />
-                Tune map
-              </button>
-            )}
-            <button
-              onClick={() => { setMenuOpen(false); onRestart(); }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
-              style={{ color: accentColor, backgroundColor: 'transparent' }}
-              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <RotateCcw className="w-4 h-4" />
-              {t('game.restartRun')}
-            </button>
-            <button
-              onClick={() => { setMenuOpen(false); onMainMenu(); }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-colors"
-              style={{ color: accentColor, backgroundColor: 'transparent' }}
-              onPointerEnter={e => (e.currentTarget.style.backgroundColor = `${accentColor}18`)}
-              onPointerDown={e => (e.currentTarget.style.backgroundColor = `${accentColor}30`)}
-              onPointerUp={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              onPointerLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-              onPointerCancel={e => (e.currentTarget.style.backgroundColor = 'transparent')}
-            >
-              <Home className="w-4 h-4" />
-              {t('game.mainMenu')}
-            </button>
-          </div>
-        )}
-      </div>
 
       {/* Explainer modal QUEUE: only ONE shows at a time. Ordered by priority;
           dismissing the active one flips its trigger off, so the next queued

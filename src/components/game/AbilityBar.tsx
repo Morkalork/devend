@@ -93,7 +93,7 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
     <>
       {owned.length > 0 && (
         <div
-          className="pointer-events-auto flex flex-wrap justify-center gap-2 px-3 py-1.5"
+          className="pointer-events-auto flex flex-wrap justify-center gap-2 px-3 py-1"
           style={{ backgroundColor: 'rgba(0,0,0,0.55)', fontFamily: "'JetBrains Mono', monospace" }}
         >
           {owned.map(a => {
@@ -119,7 +119,7 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
                 onPointerLeave={clearPress}
                 onPointerCancel={clearPress}
                 onContextMenu={(e) => e.preventDefault()}
-                className="relative flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-bold transition-transform active:scale-95"
+                className="relative flex items-center gap-1.5 rounded-md px-3 min-h-[44px] text-xs font-bold transition-transform active:scale-95"
                 style={{
                   color,
                   border: `1px solid ${color}`,
