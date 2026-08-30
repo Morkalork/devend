@@ -3,9 +3,16 @@
  *
  * The HUD was reported as cluttered, unclear and impossible to navigate: "not
  * even I can figure where the buttons that I'm looking for are at." Measured at
- * iPhone 15 size the board was 46% of the screen, ten status readouts shared one
- * 393px row, five separately positioned bars stacked under the board, and the
- * controls lived in four different places.
+ * iPhone 15 size: the board was 46% of the screen with 150px of dead band above
+ * it, five separately positioned bars stacked under it, and the controls lived
+ * in four different places at 32px each.
+ *
+ * The density of the status rows turned out to be the least of it. An early
+ * count of "ten readouts in one row" was wrong - it had swept both rows, two
+ * conditional sub-rows and a modal into one figure. The rows actually carry
+ * three permanent readouts each, so this file guards their CONTENTS rather than
+ * counting them, and the ceilings below are on the bottom stack, where the
+ * stacking really was.
  *
  * None of that was anyone's decision. Every readout was individually worth
  * adding and nothing ever removed one, which is the same way the upgrade copy
@@ -30,9 +37,6 @@ afterEach(cleanup);
 const GAME = resolve(process.cwd(), "src/components/game");
 const read = (f: string) => readFileSync(resolve(GAME, f), "utf8");
 
-/** Apple's Human Interface Guidelines minimum tappable target. */
-const MIN_TOUCH = 44;
-
 describe("every control a player has to hit mid-map", () => {
   it("declares at least a 44px target", () => {
     // The concrete failure behind the report. A 32px control is not merely
@@ -40,6 +44,7 @@ describe("every control a player has to hit mid-map", () => {
     const src = read("GameScreen.tsx");
     // Buttons in the control row and the menu sheet. w-8 h-8 was the old size.
     expect(src, "a 32px control is back in the game screen").not.toMatch(/w-8 h-8/);
+    // 44px is Apple's Human Interface Guidelines minimum tappable target.
     const targets = src.match(/min-h-\[44px\]/g) ?? [];
     expect(targets.length, "the control row lost its 44px floor").toBeGreaterThan(4);
   });
@@ -117,6 +122,42 @@ describe("how much the HUD is allowed to say at once", () => {
     const src = read("GameScreen.tsx");
     for (const bar of ["AbilityBar", "PushExitBar", "GameMessageBar"]) {
       expect(src, `${bar} was dropped rather than consolidated`).toContain(`<${bar}`);
+    }
+  });
+});
+
+describe("what the status bar is allowed to carry", () => {
+  it("reserves no space for controls that no longer live there", () => {
+    // Row 1 was padded 88px on the left to clear the floating menu and pause
+    // buttons. Those moved to the thumb zone in phase 1, so the padding became
+    // dead width on the narrowest screen the game supports.
+    expect(read("GameTopBar.tsx"), "the bar still reserves room for the old floating cluster")
+      .not.toContain("pl-[88px]");
+  });
+
+  it("keeps a between-run currency off a map-state bar", () => {
+    // Certificate hours are earned across runs and spent in a store. They are
+    // not map state, and the Specs panel already renders them in full, so the
+    // permanent bar is the one place they do not need to be.
+    const bar = read("GameTopBar.tsx");
+    const rowOne = bar.slice(bar.indexOf("Row 1"), bar.indexOf("Row 2"));
+    expect(rowOne, "certificate hours are back on the permanent bar")
+      .not.toMatch(/<Hexagon/);
+  });
+
+  it("did not delete them on the way out", () => {
+    // The relocation is only legitimate because the destination exists. A
+    // budget met by dropping information is not a tidier HUD, it is a smaller
+    // game.
+    expect(read("TopBarDetailsPanel.tsx")).toContain("certificateProgress");
+  });
+
+  it("leaves the map's own numbers alone", () => {
+    // Cuts, space and locks are what the map is about. They stay on the bar
+    // whatever else moves.
+    const bar = read("GameTopBar.tsx");
+    for (const kept of ["cutsUsed", "spaceRemaining", "lockedBalls"]) {
+      expect(bar, `${kept} was moved off the status bar`).toContain(kept);
     }
   });
 });

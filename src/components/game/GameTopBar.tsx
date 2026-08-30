@@ -167,7 +167,7 @@ export function GameTopBar({
     <div className="flex-shrink-0 flex flex-col">
       {/* Row 1: Navigation — menu, level, lives, certificate-hour progress */}
       <div
-        className={`pl-[88px] pr-3 py-2 flex items-center justify-between gap-2${onExpand ? ' cursor-pointer' : ''}`}
+        className={`px-3 py-2 flex items-center justify-between gap-2${onExpand ? ' cursor-pointer' : ''}`}
         onClick={onExpand}
         onTouchStart={handleSwipeTouchStart}
         onTouchEnd={handleSwipeTouchEnd}
@@ -231,26 +231,9 @@ export function GameTopBar({
         </div>
 
         {/* Certificate-hour progress */}
-        {certificateProgress && (
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Hexagon
-              className="w-5 h-5 flex-shrink-0"
-              style={{
-                color: '#ffffff',
-                fill: certificateProgress.hoursEarned > 0 ? 'rgba(255,255,255,0.3)' : 'transparent',
-              }}
-            />
-            <span
-              className="font-display text-base font-bold tabular-nums"
-              style={{
-                color: '#ffffff',
-                textShadow: certificateProgress.hoursEarned > 0 ? '0 0 8px rgba(255,255,255,0.6)' : 'none',
-              }}
-            >
-              {certificateProgress.progressInCurrentHour}/{certificateProgress.levelsPerHour}
-            </span>
-          </div>
-        )}
+        {/* Certificate hours have moved off the permanent bar: they are a
+            between-run currency rather than map state, and the Specs panel
+            already renders them in full. Nothing was deleted, only relocated. */}
 
         {/* Expand indicator — only when onExpand is provided */}
         {onExpand && (
