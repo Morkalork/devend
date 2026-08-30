@@ -21,6 +21,7 @@ import {
   DEFAULT_CERT_PERSISTENCE,
 } from '@/types/certificate';
 import { GameModifiers, MULTIPLICATIVE_KEYS } from '@/hooks/useActiveModifiers';
+import { migrateTierCounts } from '@/lib/upgradeMigration';
 
 const LEVELS_PER_HOUR = 5;
 
@@ -33,7 +34,12 @@ function loadPersistence(): CertPersistence {
     const storedHours = parsed.totalCertificateHours ?? parsed.totalAugmentPoints;
     return {
       totalCertificateHours: typeof storedHours === 'number' ? storedHours : 0,
-      maxTierCounts: typeof parsed.maxTierCounts === 'object' && parsed.maxTierCounts !== null ? parsed.maxTierCounts : {},
+      // Folded through the alias map on load. A certificate gated on "max tier
+      // of X in N runs" counts these, so a retired id left here would strand
+      // progress the player had genuinely earned.
+      maxTierCounts: typeof parsed.maxTierCounts === 'object' && parsed.maxTierCounts !== null
+        ? migrateTierCounts(parsed.maxTierCounts as Record<string, number>)
+        : {},
       unlockedCertIds: Array.isArray(parsed.unlockedCertIds) ? parsed.unlockedCertIds : [],
       certLevelsOwned: typeof parsed.certLevelsOwned === 'object' && parsed.certLevelsOwned !== null ? parsed.certLevelsOwned : {},
       lifetimeHoursSpent: typeof parsed.lifetimeHoursSpent === 'number' ? parsed.lifetimeHoursSpent : 0,

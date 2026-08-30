@@ -1237,34 +1237,34 @@ upgrades:
   - id: defensive_programming_junior
     name: Defensive Programming
     tier: Junior
-    description: Shrink all balls by 8%. Safety first.
+    description: "Each map starts with a shield that absorbs one ball hit for free."
     unlockLevel: 5
     icon: shield
     tags: [safety]
     modifiers:
-      ballSizeMultiplier: 0.92
+      wallShieldsPerMap: 1
 
   - id: defensive_programming_senior
     name: Defensive Programming
     tier: Senior
-    description: Shrink all balls by an additional 8%.
+    description: "One more shield at every map start."
     unlockLevel: 10
     prerequisites:
       - defensive_programming_junior
     tags: [safety]
     modifiers:
-      ballSizeMultiplier: 0.92
+      wallShieldsPerMap: 1
 
   - id: defensive_programming_principal
     name: Defensive Programming
     tier: Principal
-    description: Shrink all balls by an additional 8%.
+    description: "One more shield again at every map start."
     unlockLevel: 20
     prerequisites:
       - defensive_programming_senior
     tags: [safety]
     modifiers:
-      ballSizeMultiplier: 0.92
+      wallShieldsPerMap: 1
 
   # Architect is a CHOICE (choiceGroup, +50% cost) that splits the line into a
   # build identity: soak the hits (Bunker: a per-map shield that eats one ball
@@ -1273,19 +1273,19 @@ upgrades:
   - id: defensive_programming_architect_a
     name: Defensive Programming
     tier: Architect
-    description: "Bunker: each map starts with a shield that absorbs one ball hit for free."
+    description: "Bunker: two more shields at every map start."
     unlockLevel: 25
     prerequisites:
       - defensive_programming_principal
     choiceGroup: defensive_programming_architect
     tags: [safety]
     modifiers:
-      wallShieldsPerMap: 1
+      wallShieldsPerMap: 2
 
   - id: defensive_programming_architect_b
     name: Defensive Programming
     tier: Architect
-    description: "On maps with 3 or more balls, balls are 25% smaller."
+    description: "Nanobots: on maps with 3 or more balls, balls are 25% smaller."
     unlockLevel: 25
     prerequisites:
       - defensive_programming_principal
@@ -1320,18 +1320,8 @@ upgrades:
       - scrum_master_1
     tags: [safety]
     modifiers:
-      ballPathPredictionBalls: 1
+      ballPathPredictionBalls: 2
 
-  - id: scrum_master_3
-    name: SCRUM Master
-    tier: Senior
-    description: Also preview the 3rd fastest ball's path.
-    unlockLevel: 10
-    prerequisites:
-      - scrum_master_2
-    tags: [safety]
-    modifiers:
-      ballPathPredictionBalls: 1
 
   - id: scrum_master_4
     name: SCRUM Master
@@ -1339,21 +1329,11 @@ upgrades:
     description: Extend path preview to 3 bounces ahead for tracked balls.
     unlockLevel: 13
     prerequisites:
-      - scrum_master_3
+      - scrum_master_2
     tags: [safety]
     modifiers:
-      ballPathPredictionBounces: 1
+      ballPathPredictionBounces: 2
 
-  - id: scrum_master_5
-    name: SCRUM Master
-    tier: Principal
-    description: Extend path preview to 4 bounces ahead.
-    unlockLevel: 16
-    prerequisites:
-      - scrum_master_4
-    tags: [safety]
-    modifiers:
-      ballPathPredictionBounces: 1
 
   # Last tier is a CHOICE: see every ball one step ahead, or one ball much
   # further ahead. Breadth versus depth.
@@ -1363,7 +1343,7 @@ upgrades:
     description: Show path preview for all balls simultaneously.
     unlockLevel: 19
     prerequisites:
-      - scrum_master_5
+      - scrum_master_4
     choiceGroup: scrum_master_6
     tags: [safety]
     modifiers:
@@ -1375,7 +1355,7 @@ upgrades:
     description: "Deep Dive: 3 more bounces traced. +1 per 4 other safety upgrades (max 8)."
     unlockLevel: 19
     prerequisites:
-      - scrum_master_5
+      - scrum_master_4
     choiceGroup: scrum_master_6
     tags: [safety]
     modifiers:

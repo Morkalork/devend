@@ -63,6 +63,7 @@ import { ascensionRules, shopOpensAfter, NO_ASCENSION_RULES, LADDER_LENGTH } fro
 import { computeScalingBonuses, scalingReadouts } from '@/lib/upgradeScaling';
 import { registerRunFlush, installRunFlushListeners } from '@/lib/runSaveFlush';
 import { mapContextOf, type RunContext } from '@/lib/upgradeConditions';
+import { liveUpgradeIds } from '@/lib/upgradeMigration';
 
 /**
  * Drop one debug query param, keeping the rest. The old code replaced the whole
@@ -1099,7 +1100,10 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     if (!levelsSuccess || !upgradesSuccess) return;
 
     setTotalScore(save.totalScore);
-    setOwnedUpgradeIds(save.ownedUpgradeIds);
+    // Through the alias map: a checkpoint written before two upgrades were
+    // merged still names the retired ids, and dropping them would silently
+    // strip effects the player had already bought.
+    setOwnedUpgradeIds(liveUpgradeIds(save.ownedUpgradeIds));
     setCurrentLives(save.currentLives);
     setLivesAtLevelStart(save.livesAtLevelStart);
     setContinuesRemaining(save.continuesRemaining);
