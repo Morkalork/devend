@@ -43,6 +43,7 @@ import { findMoverDestructible, findObstacleDestructibleById, obstacleIdFromWall
 import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
 import { collectPhasedOut } from "@/lib/physics/phasing";
 import { queryWallsNear } from "@/lib/physics/wallGrid";
+import { runStream } from "@/lib/runRng";
 
 /** Slack added to the wall-index query radius (world units). Comfortably
  *  covers the "+2" collision margin plus any small push-out drift within the
@@ -702,7 +703,7 @@ export function updateBall(
       ball.lastSpeedStepAt = now;
       const lo = Math.max(ball.minimumSpeed, ball.speedRange[0]);
       const hi = Math.max(lo, ball.speedRange[1]);
-      const target = lo + Math.random() * (hi - lo);
+      const target = lo + runStream("variableSpeed")() * (hi - lo);
       const cur = Math.hypot(ball.velocity.x, ball.velocity.y);
       if (cur > 1e-6) {
         const r = target / cur;

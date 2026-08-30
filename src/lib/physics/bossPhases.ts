@@ -18,6 +18,7 @@ import { BIRTH_START_FRAC } from "@/lib/physics/updateBall";
 import { playBossChargeSound } from "@/lib/gameAudio";
 import { BIG_BALL_RADIUS_SCALE } from "@/lib/ballGifts";
 import { gateAreas } from "@/lib/coloredAreas";
+import { runStream } from "@/lib/runRng";
 
 let _bossAddCounter = 0;
 
@@ -124,7 +125,7 @@ function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: num
   // Ball-generating bosses spit a WHITE "tappable" ball ~25% of the time (#57):
   // tap it away to relieve pressure, or lock it for the big bonus. The white
   // type falls back to the boss's own minion type if it isn't in the catalogue.
-  const wantWhite = Math.random() < 0.25;
+  const wantWhite = runStream("bossMinionWhite")() < 0.25;
   const white = wantWhite ? getBallType('white') : null;
   const minionType = (white && white.baseSpeed > 0) ? white : getBallType(boss.typeId);
   if (!minionType || minionType.baseSpeed <= 0) return;
@@ -136,7 +137,7 @@ function spawnMinion(game: CanvasGameState, bb: BossBall, boss: Ball, nowMs: num
   // Boss-35 spits enlarged minions (the big-ball gift made hostile).
   const enlarge = bb.spawnEnlargedMinions ? BIG_BALL_RADIUS_SCALE : 1;
   const minionRadius = (base / Math.max(0.1, bb.radiusScale ?? 2)) * enlarge;
-  const angle = Math.random() * Math.PI * 2;
+  const angle = runStream("bossMinionAngle")() * Math.PI * 2;
   const dir = { x: Math.cos(angle), y: Math.sin(angle) };
   const position = { x: boss.position.x + dir.x * boss.radius * 0.85, y: boss.position.y + dir.y * boss.radius * 0.85 };
   const child = createBall(
@@ -251,9 +252,9 @@ export function spawnAdds(
     const anchorType = getBallType(anchor.typeId);
     // Match the run's speed scaling from the anchor (as rainbowSpawner does).
     const speedScale = anchorType && anchorType.baseSpeed > 0 ? anchor.baseSpeed / anchorType.baseSpeed : 1;
-    const type = spawnable[Math.floor(Math.random() * spawnable.length)];
+    const type = spawnable[Math.floor(runStream("bossSpitType")() * spawnable.length)];
     const nowMs = performance.now();
-    const angle = Math.random() * Math.PI * 2;
+    const angle = runStream("bossSpitAngle")() * Math.PI * 2;
     const dir = { x: Math.cos(angle), y: Math.sin(angle) };
     const position = mode === "rim"
       ? budPosition(anchor)
@@ -293,7 +294,7 @@ export function spawnAdds(
 /** Just off the anchor's rim: the boss "spitting out" placement. */
 function budPosition(anchor: Ball): { x: number; y: number } {
   const offset = anchor.radius * 0.75;
-  const angle = Math.random() * Math.PI * 2;
+  const angle = runStream("bossBudAngle")() * Math.PI * 2;
   return {
     x: anchor.position.x + Math.cos(angle) * offset,
     y: anchor.position.y + Math.sin(angle) * offset,

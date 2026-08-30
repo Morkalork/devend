@@ -16,6 +16,7 @@ import { getBallType, getSpawnableBallTypes, DEFAULT_RAINBOW_SPAWN_INTERVAL } fr
 import { createBall } from '@/lib/initGame';
 import { MAX_LIVE_BALLS } from '@/lib/gameConstants';
 import { spawnClearOfParent } from '@/lib/physics/spawnPlacement';
+import { runStream } from "@/lib/runRng";
 
 let _rainbowCounter = 0;
 
@@ -59,7 +60,10 @@ export function tickRainbowSpawns(game: CanvasGameState, levelNumber: number): v
     const toSpawn = Math.min(due - already, MAX_CATCHUP_SPAWNS);
     for (let k = 0; k < toSpawn; k++) {
       if (game.balls.length >= MAX_LIVE_BALLS) break; // hard safety cap
-      const type = spawnable[Math.floor(Math.random() * spawnable.length)];
+      // Seeded: a Daily Stand-up run must spit the same types in the same
+      // order for every player. One persistent stream, not getRunRng, or
+      // every spit would draw the same colour.
+      const type = spawnable[Math.floor(runStream("rainbowSpit")() * spawnable.length)];
       // A clear gap from the parent, not the old sub-radius offset: a rainbow
       // child is the SAME size as its parent and its type is picked at random,
       // so being born on top of it read as the ball duplicating itself.

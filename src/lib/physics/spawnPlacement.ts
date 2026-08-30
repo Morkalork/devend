@@ -24,6 +24,7 @@
 import type { CanvasGameState } from "@/types/gameState";
 import type { Ball } from "@/types/game";
 import { isPositionActive } from "@/lib/spaceGrid";
+import { runStream } from "@/lib/runRng";
 
 /** Headings tried before giving up and using the fallback offset. */
 const HEADINGS = 8;
@@ -82,7 +83,7 @@ export function spawnClearOfParent(
   const floor = parent.radius * MIN_GAP_RADII;
   const grid = game.spaceGrid;
   // Random start so repeated spawns don't all fire off in the same direction.
-  const start = Math.random() * Math.PI * 2;
+  const start = runStream("spawnAngle")() * Math.PI * 2;
 
   if (grid) {
     // The PARENT is excluded from the proximity test: it is inherently close -

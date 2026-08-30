@@ -54,6 +54,8 @@ let runSeedText: string | null = null;
 /** Arm (or clear, with null) the seeded-run context. Set on run start/resume. */
 export function setRunSeedText(seed: string | null): void {
   runSeedText = seed;
+  // Every persistent stream belonged to the run that just ended.
+  streams.clear();
 }
 
 export function getRunSeedText(): string | null {
@@ -69,6 +71,31 @@ export function getRunSeedText(): string | null {
 export function getRunRng(context: string): Rng {
   if (runSeedText === null) return Math.random;
   return createRng(`${runSeedText}::${context}`);
+}
+
+/**
+ * One PERSISTENT generator per context, for rolls made repeatedly during play.
+ *
+ * getRunRng is deliberately fresh every call, which is right at init: a
+ * StrictMode double-invocation must not deal a different board. It is exactly
+ * wrong during play. A rainbow asking `getRunRng('rainbowSpit')()` on every
+ * spit gets the SAME number every time, so it would spit one colour forever -
+ * which is worse than the unseeded randomness it replaced, and would look like
+ * a content bug rather than a seeding one.
+ *
+ * This keeps the stream and advances it, so a seeded run replays the same
+ * SEQUENCE of rolls. Cleared whenever the run seed changes, or run two would
+ * continue run one's stream.
+ */
+const streams = new Map<string, Rng>();
+export function runStream(context: string): Rng {
+  if (runSeedText === null) return Math.random;
+  let stream = streams.get(context);
+  if (!stream) {
+    stream = createRng(`${runSeedText}::${context}`);
+    streams.set(context, stream);
+  }
+  return stream;
 }
 
 // ── Daily Stand-up seed source ──────────────────────────────────────────────

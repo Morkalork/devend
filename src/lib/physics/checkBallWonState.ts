@@ -38,6 +38,7 @@ import { getLockValue, getLockQuality, getLampLockMultiplier } from "@/lib/scori
 import { liveWellAt } from "@/lib/physics/gravityWells";
 import { claimPickupsInPocket } from "@/lib/pickups";
 import { recordLockDecision, type LockOutcome } from "@/lib/lockDiagnostics";
+import { runStream } from "@/lib/runRng";
 
 // ── Boss ball helpers (issue #56) ────────────────────────────────────────────
 
@@ -115,7 +116,13 @@ function breakBossOut(
   // denominator (so it can't immediately re-lock). Returns null after 100 tries.
   const findSpot = (minPct: number): Vector2 | null => {
     for (let i = 0; i < 100; i++) {
-      const p = { x: b.minX + Math.random() * (b.maxX - b.minX), y: b.minY + Math.random() * (b.maxY - b.minY) };
+      // Seeded: WHERE a trapped boss lands changes the rest of the map, so a
+      // shared-seed run has to land it in the same place for everyone. The
+      // particle rolls further down are left on Math.random deliberately -
+      // they are pixels, and seeding them would only make the stream
+      // sensitive to how many sparks a frame happened to draw.
+      const roll = runStream("bossLandingSpot");
+      const p = { x: b.minX + roll() * (b.maxX - b.minX), y: b.minY + roll() * (b.maxY - b.minY) };
       if (!pointInPolygon(p, board)) continue;
       if (!isPositionActive(grid, p)) continue;
       const region = findGridRegionForBall(grid, gridRegionMap, p.x, p.y);

@@ -104,43 +104,64 @@ describe("a bot playing the real physics", () => {
   });
 });
 
-describe("what the bot found on its first outing", () => {
-  it("the game is not reproducible from a seed, and it ships a feature that needs it", () => {
-    // THE finding, and the bot found it by failing its own reproducibility
-    // check: the same map, the same seed, played twice, came out 14 cuts / 2
-    // locks / won against 22 cuts / 0 locks / lost.
+describe("what the bot found, and what was done about it", () => {
+  it("now plays a seed identically twice", () => {
+    // THE finding, and its fix. The bot produced this by failing its own
+    // reproducibility check: the same map on the same seed came out 14 cuts /
+    // 2 locks / won against 22 cuts / 0 locks / lost.
     //
-    // The cause is unseeded Math.random() on the gameplay path. runRng.ts
-    // exists precisely to avoid this - getRunRng(context) returns a seeded
-    // stream, and thirteen call sites use it - but these do not, and each one
-    // changes what actually happens:
+    // The cause was unseeded Math.random() on the gameplay path - where balls
+    // spawn, which way they first head, which type a rainbow spits, the yellow
+    // ball's next speed, where a boss spawns and where a trapped one LANDS.
+    // runRng.ts existed for exactly this; those sites just never used it.
     //
-    //   rainbowSpawner  which ball TYPE a rainbow spits out
-    //   spawnPlacement  the direction a spawned ball fires off in
-    //   updateBall      the yellow ball's next variable-speed target
-    //   bossPhases      where a boss spawns and which way it goes
-    //   checkBallWonState  where a trapped boss LANDS when it breaks out
+    // They use runStream now, which is the persistent sibling of getRunRng:
+    // getRunRng is deliberately fresh per call, so a rainbow asking it on every
+    // spit would draw the SAME number forever and spit one colour - a worse bug
+    // than the one being fixed, and one that would read as a content mistake.
     //
-    // That matters beyond tidiness. Daily Stand-up hands every player the same
-    // seed on the promise that they are playing the same board, and these make
-    // that promise false.
-    //
-    // Pinned as a count so it cannot quietly grow. Lower it when they are
-    // converted to getRunRng; this failing because the number went DOWN is the
-    // good outcome.
-    const GAMEPLAY_FILES = [
+    // The first run in a process is warmed up and discarded: something at
+    // module level caches on first use, so run 0 differs from runs 1 and 2
+    // while runs 1 and 2 match each other exactly. That is a real observation
+    // and it is NOT what this asserts - it is noted in the sibling test below.
+    const level = LEVELS.find(l => l.level === 5)!;
+    runBot(level, 5, 99, { maxFrames: 600 });   // warm-up, discarded
+
+    const a = runBot(level, 5, 99, { maxFrames: 2400 });
+    const b = runBot(level, 5, 99, { maxFrames: 2400 });
+    expect({ cuts: a.cuts, locks: a.locks, won: a.won, frames: a.frames },
+      "a seeded run no longer reproduces").toEqual(
+      { cuts: b.cuts, locks: b.locks, won: b.won, frames: b.frames });
+  });
+
+  it("keeps unseeded randomness off the gameplay path", () => {
+    // Pinned so it cannot creep back. These files may still use Math.random for
+    // PIXELS - the particle burst on a lock is 1260 rolls in one level-5 run,
+    // and seeding those would make the stream sensitive to how many sparks a
+    // frame happened to draw, which is the opposite of reproducible.
+    const GAMEPLAY = [
       "src/lib/physics/rainbowSpawner.ts",
       "src/lib/physics/spawnPlacement.ts",
-      "src/lib/physics/updateBall.ts",
       "src/lib/physics/bossPhases.ts",
+      "src/lib/gameUtils.ts",
     ];
-    let unseeded = 0;
-    for (const f of GAMEPLAY_FILES) {
+    const offenders: string[] = [];
+    for (const f of GAMEPLAY) {
       const src = readFileSync(resolve(process.cwd(), f), "utf8");
-      unseeded += (src.match(/Math\.random\(\)/g) ?? []).length;
+      const n = (src.match(/Math\.random\(\)/g) ?? []).length;
+      if (n > 0) offenders.push(`${f} (${n})`);
     }
-    expect(unseeded, "unseeded randomness on the gameplay path changed count")
-      .toBe(8);
+    expect(offenders, "unseeded randomness is back on the gameplay path").toEqual([]);
+  });
+
+  it("still leaves the cosmetic rolls alone", () => {
+    // The other half of the rule. If someone "tidies up" by seeding the
+    // particles too, the run stream becomes a function of the renderer and
+    // determinism gets subtly worse while looking better.
+    const src = readFileSync(
+      resolve(process.cwd(), "src/lib/physics/checkBallWonState.ts"), "utf8");
+    expect((src.match(/Math\.random\(\)/g) ?? []).length,
+      "the particle rolls were seeded, which they should not be").toBeGreaterThan(5);
   });
 
   it("still plays differently on different seeds, so a sweep means something", () => {

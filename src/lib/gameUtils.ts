@@ -7,6 +7,7 @@ import {
 } from "@/lib/physics/steering";
 import { Vector2, pointInPolygon, Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
+import { runStream } from "@/lib/runRng";
 
 // ── Colour helpers ────────────────────────────────────────────────────────
 
@@ -35,8 +36,11 @@ export function generateWallId(): string {
 export function getRandomDirection(): Vector2 {
   const minAngle = 15 * (Math.PI / 180);
   const maxAngle = 75 * (Math.PI / 180);
-  const quadrant = Math.floor(Math.random() * 4);
-  const baseAngle = minAngle + Math.random() * (maxAngle - minAngle);
+  // Seeded: which way a ball first heads decides the whole map, so a shared
+  // seed has to send it the same way for everyone.
+  const roll = runStream("ballDirection");
+  const quadrant = Math.floor(roll() * 4);
+  const baseAngle = minAngle + roll() * (maxAngle - minAngle);
   const angle = baseAngle + (quadrant * Math.PI) / 2;
   return { x: Math.cos(angle), y: Math.sin(angle) };
 }

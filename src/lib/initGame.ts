@@ -47,7 +47,7 @@ import {
   resetRunSeed,
   setRunSeed,
 } from "@/lib/varietySystem";
-import { getRunSeedText, getRunRng, hashString } from "@/lib/runRng";
+import { getRunSeedText, getRunRng, runStream, hashString } from "@/lib/runRng";
 import {
   BOARD_WIDTH,
   BOARD_HEIGHT,
@@ -505,10 +505,14 @@ export function createInitialGameData(
 
   const findValidSpawnPosition = (ballRadius: number): Vector2 => {
     for (let attempt = 0; attempt < 300; attempt++) {
+      const spawnRoll = runStream("spawnPosition");
       const spreadFactor = Math.min(0.8, 0.3 + (attempt / 300) * 0.5);
       const pos = {
-        x: centroid.x + (Math.random() - 0.5) * rWidth  * spreadFactor,
-        y: centroid.y + (Math.random() - 0.5) * rHeight * spreadFactor,
+        // Seeded: WHERE the balls start is most of what makes one deal
+        // different from another, so it is the first thing a shared seed has
+        // to pin down.
+        x: centroid.x + (spawnRoll() - 0.5) * rWidth  * spreadFactor,
+        y: centroid.y + (spawnRoll() - 0.5) * rHeight * spreadFactor,
       };
       if (isBallPositionValid(pos, ballRadius)) return pos;
     }
