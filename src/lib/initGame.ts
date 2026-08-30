@@ -546,6 +546,40 @@ export function createInitialGameData(
   } else {
     selectedTypes = selectBallTypesForMap(level.id, levelNumber, maxBalls);
   }
+  /**
+   * Load Balancer: the map's fastest ball TYPE, and only that one, is slowed.
+   *
+   * Picked by base speed rather than by whichever ball is quickest right now,
+   * which would be a feedback loop - slow the leader, it stops being the
+   * leader, it speeds back up, forever. Base speed belongs to the type, so the
+   * target is settled the moment the map is dealt and stays settled.
+   *
+   * Ties go to the first, which is deterministic because selectBallTypesForMap
+   * is. Two balls of the same type means the FIRST is the marked one; slowing
+   * both would double an upgrade the card sells as singular.
+   *
+   * This is also why the line is gated behind Runtime Optimisation rather than
+   * sold at level 1: level 1 spawns exactly one ball, so "the fastest" would be
+   * "the only", and a 20% cut to it dwarfs Runtime Optimisation's flat 5%.
+   * From level 2 there is a second ball and it becomes a real trade.
+   */
+  const slowPct = Math.max(0, activeModifiers.fastestBallSlowPercent ?? 0);
+  let fastestIdx = -1;
+  if (slowPct > 0 && selectedTypes.length > 0) {
+    let best = -Infinity;
+    selectedTypes.forEach((t, i) => {
+      if (t.baseSpeed > best) { best = t.baseSpeed; fastestIdx = i; }
+    });
+  }
+  /** The speed factor for ball `i`, with the Load Balancer cut if it is the one. */
+  const scaleFor = (i: number): number => (
+    i === fastestIdx
+      // Floored the same way the global factor is: a stacked slow build must
+      // not put a ball under half its normal speed (issue #42).
+      ? effectiveBallSpeedFactor(activeModifiers.ballSpeedMultiplier * (1 - slowPct / 100), 1)
+      : speedScale
+  );
+
   const spawnTime  = performance.now();
 
   // Keep spawned balls from overlapping each other (findValidSpawnPosition only
@@ -588,7 +622,7 @@ export function createInitialGameData(
   const balls: Ball[] = selectedTypes.map((type, i) => {
     const enlarged = levelNumber >= BIG_BALL_MIN_LEVEL && enlargeRng() < BIG_BALL_CHANCE;
     const r = enlarged ? ballRadius * BIG_BALL_RADIUS_SCALE : ballRadius;
-    const ball = createBall(type, findSpacedSpawn(r), speedScale, r, `${type.id}-${i}`, spawnTime, 0);
+    const ball = createBall(type, findSpacedSpawn(r), scaleFor(i), r, `${type.id}-${i}`, spawnTime, 0);
     if (enlarged) {
       ball.enlarged = true;
       ball.lockMultiplier = ball.lockMultiplier + BIG_BALL_LOCK_BONUS;

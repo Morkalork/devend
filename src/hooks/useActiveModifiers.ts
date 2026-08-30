@@ -49,6 +49,16 @@ export interface GameModifiers {
 
   // Additive (sum) — dynamic: applied per locked ball in-game
   microManagerPerLock: number;
+  /**
+   * Load Balancer: percent knocked off the speed of the map's FASTEST ball
+   * type, and only that one. Additive across tiers (10 -> 15 -> 20).
+   *
+   * Chosen by base speed rather than by whichever ball happens to be quickest
+   * this frame, which would be a feedback loop: slow the leader, it stops being
+   * the leader, it speeds back up. Base speed is a property of the ball TYPE,
+   * so the target is fixed for the whole map and the player can see who it is.
+   */
+  fastestBallSlowPercent: number;
   overtimePerLock: number;   // flat overtime hours added to the lock bonus per locked ball (Severance Package)
   overtimePerSuperiorLock: number; // extra flat overtime per SUPERIOR lock, on top of overtimePerLock (Severance Package: Equity Package)
   fenceSpeedPerLock: number; // fence-speed bonus per ball locked this map (0.04 = +4% per lock; Knowledge Transfer)
@@ -205,6 +215,13 @@ export interface GameModifiers {
  * aggregated value so physics and every HUD readout see the same capped number.
  */
 export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
+/**
+ * Ceiling on Load Balancer. The full ladder pays 20; anything beyond that is a
+ * stacking accident rather than an intended build, and the fastest ball is the
+ * one the danger frame and the path preview are both about - making it the
+ * SLOWEST thing on the board would quietly invert the map's read.
+ */
+export const MAX_FASTEST_BALL_SLOW_PERCENT = 20;
 
 /**
  * A single named contributor to the merged GameModifiers — an owned upgrade,
@@ -280,6 +297,7 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   startingCapturePercent: 0,
   fenceDurabilityBonus: 0,
   microManagerPerLock: 0,
+  fastestBallSlowPercent: 0,
   overtimePerLock: 0,
   overtimePerSuperiorLock: 0,
   fenceSpeedPerLock: 0,
@@ -388,6 +406,8 @@ export function computeGameModifiers(
 
   // Cap the MicroManager per-lock reduction at 1% across all sources.
   result.microManagerPerLock = Math.min(result.microManagerPerLock, MAX_MICRO_MANAGER_PER_LOCK);
+  result.fastestBallSlowPercent = Math.min(
+    result.fastestBallSlowPercent, MAX_FASTEST_BALL_SLOW_PERCENT);
 
   return result;
 }

@@ -1896,3 +1896,138 @@ upgrades:
     modifiers:
       fenceGraceMs: 600
     condition: { kind: ballsAtLeast, value: 3 }
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # ONBOARDING — the first shop's only answer to "finish sooner".
+  #
+  # Every other level-1 upgrade answers one question: don't let the ball hit my
+  # growing fence. Runtime Optimisation (slower ball), Memory Footprint (smaller
+  # ball), Fast Compile (fence finishes sooner), Ghost Protocol (fence briefly
+  # immune). Four answers, one question - so players took the most legible one
+  # and the opening shop stopped being a choice.
+  #
+  # This shortens the map instead. Level 1 asks for 60% cleared; starting eight
+  # points ahead is about an eighth of the work gone, on every map, at no risk.
+  # It shares startingCapturePercent with the Equity Grant certificate, which is
+  # a different economy: they stack, and initGame clamps the total at 40%.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: onboarding_junior
+    name: Onboarding
+    tier: Junior
+    description: "Every map starts with 8% of the board already captured."
+    unlockLevel: 1
+    icon: rocket
+    tags: [tempo]
+    modifiers:
+      startingCapturePercent: 8
+
+  - id: onboarding_senior
+    name: Onboarding
+    tier: Senior
+    description: "Start with 12% of the board captured instead of 8%."
+    unlockLevel: 4
+    icon: rocket
+    prerequisites:
+      - onboarding_junior
+    tags: [tempo]
+    modifiers:
+      startingCapturePercent: 4
+
+  # The family's last step is a choice, not one more percentage point: a flat
+  # 16% against a head start that grows with how committed the run is to tempo.
+  - id: onboarding_principal_a
+    name: Onboarding
+    tier: Principal
+    description: "Probation Waived: start with 16% of the board captured instead of 12%."
+    unlockLevel: 9
+    icon: rocket
+    prerequisites:
+      - onboarding_senior
+    choiceGroup: onboarding_principal
+    tags: [tempo]
+    modifiers:
+      startingCapturePercent: 4
+
+  - id: onboarding_principal_b
+    name: Onboarding
+    tier: Principal
+    description: "Fast Track: 13% captured, and 1% more per 2 other tempo upgrades (max 5)."
+    unlockLevel: 9
+    icon: rocket
+    prerequisites:
+      - onboarding_senior
+    choiceGroup: onboarding_principal
+    scaling: { tag: tempo, key: startingCapturePercent, per: 1, every: 2, max: 5 }
+    tags: [tempo]
+    modifiers:
+      startingCapturePercent: 1
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # LOAD BALANCER — Runtime Optimisation's specialist branch.
+  #
+  # Runtime Optimisation slows everything a little, forever. This slows the one
+  # ball that is actually the problem, a lot - and it decays as the board fills,
+  # because at four balls it is helping with one of four. That is the trade, and
+  # it is why the two lines are worth owning separately rather than ranking.
+  #
+  # Behind Runtime Optimisation on purpose. Sold at level 1 it would be strictly
+  # better than its own parent: level 1 spawns exactly ONE ball, so "the fastest
+  # ball" is "the ball", and 20% off it dwarfs a flat 5%. From level 2 there is
+  # a second ball and the choice becomes real, so the line opens at 4.
+  #
+  # Additive: 10 -> 15 -> 20, capped at 20 in useActiveModifiers.
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  - id: load_balancer_senior
+    name: Load Balancer
+    tier: Senior
+    description: "The map's fastest ball moves 10% slower. Only that one."
+    unlockLevel: 4
+    icon: gauge
+    prerequisites:
+      - runtime_optimisation_junior
+    tags: [safety]
+    modifiers:
+      fastestBallSlowPercent: 10
+
+  - id: load_balancer_principal
+    name: Load Balancer
+    tier: Principal
+    description: "The fastest ball is slowed 15% instead of 10%."
+    unlockLevel: 8
+    icon: gauge
+    prerequisites:
+      - load_balancer_senior
+    tags: [safety]
+    modifiers:
+      fastestBallSlowPercent: 5
+
+  # Same rule at the top of this line: take the flat 20, or take less now and
+  # more the deeper the safety build goes.
+  - id: load_balancer_architect_a
+    name: Load Balancer
+    tier: Architect
+    description: "Round Robin: the fastest ball is slowed 20% instead of 15%."
+    unlockLevel: 13
+    icon: gauge
+    prerequisites:
+      - load_balancer_principal
+    choiceGroup: load_balancer_architect
+    tags: [safety]
+    modifiers:
+      fastestBallSlowPercent: 5
+
+  - id: load_balancer_architect_b
+    name: Load Balancer
+    tier: Architect
+    description: "Autoscaling: 16%, and 1% more per 2 other safety upgrades (max 4)."
+    unlockLevel: 13
+    icon: gauge
+    prerequisites:
+      - load_balancer_principal
+    choiceGroup: load_balancer_architect
+    scaling: { tag: safety, key: fastestBallSlowPercent, per: 1, every: 2, max: 4 }
+    tags: [safety]
+    modifiers:
+      fastestBallSlowPercent: 1

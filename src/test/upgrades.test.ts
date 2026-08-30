@@ -62,6 +62,10 @@ const EXPECTED_ROOTS = [
   // Replaced the three Garbage Collector roots, whose modifier keys were never
   // read by any game logic (see the Padded Estimate block in upgrades.yml).
   "padded_estimate_junior",
+  // The first shop had four upgrades and they all answered one question:
+  // do not let the ball hit my growing fence. Onboarding shortens the map
+  // instead, so the opening choice has a second direction in it.
+  "onboarding_junior",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.

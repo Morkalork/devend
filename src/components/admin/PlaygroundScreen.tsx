@@ -48,6 +48,7 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   shopRestockCount:                 { label: 'Shop Restocks',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Purchases per shop visit that refill their slot with a new offer' },
   extraCertificateHours:          { label: 'Extra Cert. Hours',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Certificate Hours banked when the run ends' },
   microManagerPerLock:              { label: 'MicroManager/Lock',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Speed reduction per locked ball (0.01 = 1%, max 50%)' },
+  fastestBallSlowPercent:           { label: 'Fastest Ball Slow %',    kind: 'additive',       step: 5,    min: 0,    defaultValue: 0,    description: 'Load Balancer: percent off the fastest ball type only' },
   ballPathPredictionBounces:        { label: 'Path Preview Bounces',   kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'SCRUM Master: bounces ahead to preview (0 = off)' },
   ballPathPredictionBalls:          { label: 'Path Preview Balls',     kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'SCRUM Master: fastest N balls to track (≥100 = all, 0 = off)' },
   shopDiscountMultiplier:           { label: 'Shop Discount',          kind: 'multiplicative', step: 0.05, min: 0.1,  defaultValue: 1,    description: 'Multiplies upgrade-shop prices (< 1 = cheaper)' },
