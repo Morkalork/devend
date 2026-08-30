@@ -22,6 +22,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { TopBarDetailsPanel } from "@/components/game/TopBarDetailsPanel";
 import "@/i18n";
 
@@ -91,5 +93,51 @@ describe("territory capture counts what was captured", () => {
     panel({ lockedBalls: 0, threadLockRequired: 2, spaceRemaining: 5, spaceRequired: 5 });
     expect(screen.getByText(/captured 95%/)).toBeTruthy();
     expect(screen.queryByText(/captured 5%/)).toBeNull();
+  });
+});
+
+/**
+ * The half of the thread-lock bug that the tests above cannot see.
+ *
+ * Everything above renders TopBarDetailsPanel with props handed to it, which
+ * pins how the panel DISPLAYS a number. But the thread-lock bug was never in
+ * the panel - the panel rendered exactly what it was given. It was in
+ * GameScreen deciding WHICH number to give it, and that line has no test at
+ * all: swapping `gameState.lockedBalls` back to `cumulativeLockedBalls +
+ * gameState.lockedBalls` leaves every assertion above green, because the panel
+ * still faithfully renders the wrong tally it was passed.
+ *
+ * Verified by doing exactly that. So the fix needs a guard on the wiring, not
+ * just on the rendering.
+ *
+ * This reads the source rather than rendering GameScreen, which is the weaker
+ * kind of test and is a deliberate trade: GameScreen wants a live canvas, a
+ * level, modifiers and a run, and a render harness for it would be a large
+ * fragile thing guarding one assignment. The repo already takes this trade in
+ * botSoak.test.ts for the same reason. It is pinned to the exact shape rather
+ * than a loose "no cumulative anywhere" search so it fails with a readable
+ * message when someone edits the line, and does not fire on the legitimate
+ * cumulative prop passed elsewhere for the Micro Manager speed cap.
+ */
+describe("GameScreen hands the HUD the per-map count", () => {
+  const src = readFileSync(
+    resolve(process.cwd(), "src/components/game/GameScreen.tsx"), "utf8");
+
+  it("measures the HUD's lock count in the same thing the gate does", () => {
+    // checkSpaceWin gates on the per-map count, so the readout beside a
+    // per-map requirement must be the per-map count and nothing added to it.
+    expect(src, "mapLockedBalls is no longer the per-map count")
+      .toContain("const mapLockedBalls = gameState.lockedBalls;");
+  });
+
+  it("passes that count to every HUD readout, not the run-long tally", () => {
+    // `cumulativeLockedBalls={...}` is a different prop and stays legal: the
+    // Micro Manager speed cap genuinely wants the run tally.
+    const passed = [...src.matchAll(/[^A-Za-z]lockedBalls=\{([^}]*)\}/g)]
+      .map(m => m[1].trim());
+    expect(passed.length, "no lockedBalls prop is passed at all any more")
+      .toBeGreaterThan(0);
+    expect([...new Set(passed)], "a HUD readout is being fed something other than the per-map count")
+      .toEqual(["mapLockedBalls"]);
   });
 });
