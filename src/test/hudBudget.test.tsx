@@ -161,3 +161,33 @@ describe("what the status bar is allowed to carry", () => {
     }
   });
 });
+
+describe("controls do not leak back into the status band", () => {
+  it("keeps the Specs button out of the top bar", () => {
+    // It was a full-width row there, costing 44px of the band to duplicate four
+    // affordances that already existed: swipe down, tap either row, and the
+    // chevron. It was also a control living in the status band, which is the
+    // one thing the band is not for.
+    const bar = read("GameTopBar.tsx");
+    expect(bar, "the Specs button is back in the status band")
+      .not.toMatch(/aria-label=\{t\('topBar\.specs'\)\}/);
+  });
+
+  it("puts it in the control row instead, not nowhere", () => {
+    // Removing a button is not the same as moving one. The panel it opens is
+    // the game's whole reference surface.
+    const screen = read("GameScreen.tsx");
+    expect(screen, "Specs was deleted rather than relocated")
+      .toMatch(/aria-label=\{t\('topBar\.specs'\)\}/);
+    expect(screen, "the unread badge did not come with it").toContain("manualUnread");
+  });
+
+  it("leaves the shortcuts that cost no space", () => {
+    // Tapping either row and swiping down still open Specs. They were never the
+    // problem: they take no room at all. Only the button that claimed a row did.
+    const bar = read("GameTopBar.tsx");
+    expect((bar.match(/onClick=\{onExpand\}/g) ?? []).length,
+      "the row taps went with the button").toBeGreaterThanOrEqual(2);
+    expect(bar, "the there-is-more-here hint went too").toContain("ChevronDown");
+  });
+});

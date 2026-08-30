@@ -393,41 +393,12 @@ export function GameTopBar({
 
       {/* Row 3: Specs — opens the full run sheet (build, upgrades, assignment,
           attributes). Replaces the old per-upgrade icon row (#61). */}
-      {onExpand && (
-        <div
-          className="px-3 py-1.5"
-          style={{
-            backgroundColor: 'rgba(0, 10, 5, 0.9)',
-            borderBottom: `1px solid ${accentColor}33`,
-          }}
-        >
-          <button
-            onClick={(e) => { e.stopPropagation(); onExpand(); }}
-            className="w-full h-8 rounded-md flex items-center justify-center gap-2 transition-all duration-200 hover:brightness-125 focus:outline-none"
-            style={{
-              backgroundColor: `${accentColor}18`,
-              border: `1px solid ${accentColor}55`,
-              color: accentColor,
-            }}
-            aria-label={t('topBar.specs')}
-          >
-            <ClipboardList className="w-4 h-4" strokeWidth={1.5} />
-            <span className="font-display text-sm font-bold tracking-widest uppercase">{t('topBar.specs')}</span>
-            {/* A new mechanic has been filed in the Manual. This badge is what
-                replaced the modal that used to announce it: the player learns
-                something is there without losing the frame they were playing. */}
-            {manualUnread > 0 && (
-              <span
-                className="ml-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
-                style={{ background: accentColor, color: '#04160d' }}
-                aria-label={t('topBar.specsNew', { count: manualUnread })}
-              >
-                {manualUnread}
-              </span>
-            )}
-          </button>
-        </div>
-      )}
+      {/* The full-width SPECS button used to sit here, costing a whole 44px
+          row of the status band to duplicate four affordances that already
+          exist: swipe down, tap either row, and the chevron above. It was also
+          a CONTROL living in the status band, which is the one thing the band
+          is not for - so it moved to the control row at the bottom with the
+          other controls. The row-taps and the swipe stay as shortcuts. */}
 
       {/* Hold-detail for the Space readout: exact remaining/cleared numbers.
           Reads live, so during Push Your Luck you can watch the board shrink.

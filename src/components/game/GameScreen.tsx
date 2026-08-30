@@ -11,7 +11,7 @@ import { useState, useCallback, useRef, useEffect, useMemo, type MutableRefObjec
 import { useTranslation } from 'react-i18next';
 import { calculateScore } from '@/lib/scoring';
 import { ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
-import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal, TrendingUp, Landmark } from 'lucide-react';
+import { Menu, Home, RotateCcw, Pause, Play, Volume2, VolumeX, Snowflake, Fence, Target, SlidersHorizontal, TrendingUp, Landmark, ClipboardList } from 'lucide-react';
 import { fencesLeft } from '@/lib/fenceBudget';
 import { winConditionsBody, shouldAnnounceWinConditions } from '@/lib/winConditions';
 import { ascensionAnnouncement, rungsUpTo } from '@/lib/ascensionLadder';
@@ -63,6 +63,7 @@ import { WinGateFrame } from '@/components/game/WinGateFrame';
 import { gateSatisfied } from '@/lib/winHud';
 import { BoardAlert } from '@/components/game/BoardAlert';
 import { pickContext } from '@/lib/hudContext';
+import { unreadManualCount } from '@/lib/manual';
 
 interface CertificateHourProgress {
   levelsCompleted: number;
@@ -564,6 +565,8 @@ export function GameScreen({
   // Deadline tension ramp (issue #56): in the final 10s of a timed map a red
   // vignette pulses and a heartbeat thumps once per second (the effect re-fires
   // as the whole-second countdown changes).
+  const manualUnread = unreadManualCount();
+
   const contextLane = pickContext({
     mapComplete,
     hasMessage: gameState.gameMessage != null,
@@ -1037,6 +1040,31 @@ export function GameScreen({
                 {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
               </button>
             )}
+              <button
+                onClick={() => { setTopPanelFocus(null); setTopPanelOpen(true); }}
+                className="relative flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
+                style={{
+                  backgroundColor: 'rgba(0,10,5,0.85)',
+                  border: `1px solid ${accentColor}55`,
+                  color: accentColor,
+                }}
+                aria-label={t('topBar.specs')}
+              >
+                <ClipboardList className="w-5 h-5" strokeWidth={1.5} />
+                {/* A new mechanic has been filed in the Manual. The badge came
+                    with the button: it is what replaced the modal that used to
+                    announce one, so the player learns something is there
+                    without losing the frame they were playing. */}
+                {manualUnread > 0 && (
+                  <span
+                    className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center"
+                    style={{ background: accentColor, color: '#04160d' }}
+                    aria-label={t('topBar.specsNew', { count: manualUnread })}
+                  >
+                    {manualUnread}
+                  </span>
+                )}
+              </button>
               <button
                 onClick={() => setWinModalOpen(true)}
                 className="flex items-center justify-center min-w-[44px] min-h-[44px] rounded-lg transition-all"
