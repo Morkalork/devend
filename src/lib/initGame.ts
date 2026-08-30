@@ -14,7 +14,7 @@ import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2, DestructibleState, StackObject, ChainState, PhasingObjectState } from "@/types/game";
 import { Polygon } from "@/lib/polygon";
 import { Wall } from "@/lib/wallGeometry";
-import { SpaceGrid, GridRegion } from "@/lib/spaceGrid";
+import { SpaceGrid, GridRegion, resetGridRegionIds } from "@/lib/spaceGrid";
 import {
   vec2Length,
   pointInPolygon,
@@ -59,6 +59,7 @@ import {
 import {
   generateRegionId,
   getRandomDirection,
+  resetMapIds,
 } from "@/lib/gameUtils";
 import { createBallEffectState } from "@/lib/ballEffects";
 import { selectBallTypesForMap, getBallType, BallTypeDef, effectiveBallSpeedFactor } from "@/lib/ballTypes";
@@ -172,6 +173,11 @@ export function createInitialGameData(
   levelNumber: number,
   activeModifiers: GameModifiers,
 ): InitialGameData {
+  // A map's ids start from scratch, so the same seed deals the same names
+  // whatever else the session has already played. See resetMapIds.
+  resetMapIds();
+  resetGridRegionIds();
+
   const margin = Math.min(BOARD_WIDTH, BOARD_HEIGHT) * ARENA_MARGIN;
   const arenaWidth  = BOARD_WIDTH  - margin * 2;
   const arenaHeight = BOARD_HEIGHT - margin * 2;

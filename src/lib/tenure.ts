@@ -148,11 +148,41 @@ export function eligibleTenureChains(
   const steps = tenureSteps(levelsReached);
   if (steps === 0) return [];
 
-  const heads = upgrades.filter(u =>
-    u.tier === TENURE_PATH[0]
-    && (u.prerequisites ?? []).length === 0
-    && isAvailable(u, shoppedThrough),
-  );
+  // A head is the bottom of its own ladder, entered through at most a
+  // doorstep.
+  //
+  // The original rule was "no prerequisites at all", and that cost Deadline
+  // Extension its whole existence here the day it was gated behind Padded
+  // Estimate: a complete Junior -> Senior -> Principal ladder that Tenure
+  // silently stopped mentioning, with nothing erroring to say so.
+  //
+  // But the strict rule was also protecting something real, and the test
+  // "does not offer a Junior that sits mid-chain" says what: a Junior hanging
+  // off another family's PRINCIPAL is a continuation of a deep investment, not
+  // a line you start. Total Compensation behind Benefits Package's Principal is
+  // exactly that, and offering it as a fresh chain would hand a player the
+  // middle of someone else's build.
+  //
+  // So the line is drawn at the DOOR'S OWN tier. A first rung gated behind
+  // another family's first rung is still a beginning - that is a doorstep. One
+  // gated behind a Senior, Principal or Architect is a continuation, and stays
+  // out. Budget Cycle (behind an Expense Account Senior), Procurement (behind
+  // an Architect) and Total Compensation (behind a Principal) remain
+  // unofferable by that reading, deliberately rather than by accident.
+  const byId = new Map(upgrades.map(u => [u.id, u] as const));
+  const heads = upgrades.filter(u => {
+    if (u.tier !== TENURE_PATH[0]) return false;
+    if (!isAvailable(u, shoppedThrough)) return false;
+    for (const p of u.prerequisites ?? []) {
+      const parent = byId.get(p);
+      if (!parent) return false;
+      // Something earlier in THIS ladder exists, so this is not its bottom.
+      if (parent.name === u.name) return false;
+      // A door deeper than a doorstep makes this a continuation.
+      if (parent.tier !== TENURE_PATH[0]) return false;
+    }
+    return true;
+  });
 
   const offers: TenureOffer[] = [];
   for (const head of heads) {

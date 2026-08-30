@@ -340,6 +340,12 @@ export function getFencedPercent(grid: SpaceGrid): number {
  * Returns array of regions, each containing the indices of connected cells.
  */
 let regionIdCounter = 0;
+
+/** Start a map's grid-region ids from scratch. See resetMapIds in gameUtils. */
+export function resetGridRegionIds(): void {
+  regionIdCounter = 0;
+}
+
 export function findGridRegions(grid: SpaceGrid): GridRegion[] {
   const regions: GridRegion[] = [];
   const visited = new Uint8Array(grid.cells.length);

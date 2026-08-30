@@ -20,6 +20,14 @@ export function hexToRgba(hex: string, alpha: number = 1): string {
 }
 
 // ── ID generators ─────────────────────────────────────────────────────────
+//
+// Reset per map by resetMapIds(), called from createInitialGameData. These used
+// to count up for the whole session, so the same map dealt from the same seed
+// got region-1 on the first play and region-57 on the fifth. Ids never leave a
+// map - nothing persists or compares them across maps - so the only thing that
+// global counter bought was making the first map of a session subtly different
+// from every later one. A bot playing the same seed three times found it: runs
+// two and three matched exactly, run one did not.
 
 let regionIdCounter = 0;
 export function generateRegionId(): string {
@@ -29,6 +37,12 @@ export function generateRegionId(): string {
 let wallIdCounter = 0;
 export function generateWallId(): string {
   return `wall-${++wallIdCounter}`;
+}
+
+/** Start a map's ids from scratch. Called once per deal. */
+export function resetMapIds(): void {
+  regionIdCounter = 0;
+  wallIdCounter = 0;
 }
 
 // ── Direction helpers ─────────────────────────────────────────────────────

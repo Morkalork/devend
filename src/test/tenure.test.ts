@@ -132,6 +132,36 @@ describe("selection is by tier, not by graph position", () => {
     expect(eligibleTenureChains(mid, 10, first).map(o => o.headId)).toEqual(["x_junior"]);
   });
 
+  it("does not offer a second Junior of the SAME family as a head", () => {
+    // The other half of "is this the bottom of its ladder". A family can carry
+    // two Junior rungs, the second gated on the first - and only the first is
+    // where the line begins. Untested until now: no shipped family happens to
+    // be shaped that way, so removing the guard broke nothing and the rule was
+    // being taken on trust.
+    const twoJuniors = [
+      up("z_junior", "Junior", 1),
+      up("z_junior2", "Junior", 2, ["z_junior"]),
+      up("z_senior", "Senior", 3, ["z_junior"]),
+      up("z_principal", "Principal", 4, ["z_senior"]),
+    ];
+    expect(eligibleTenureChains(twoJuniors, 10, first).map(o => o.headId))
+      .toEqual(["z_junior"]);
+  });
+
+  it("does offer a Junior gated behind another family's Junior", () => {
+    // The doorstep case, and the regression this rule change exists for.
+    // Deadline Extension sits behind Padded Estimate's Junior and had gone
+    // silently unofferable.
+    const doorstep = [
+      up("a_junior", "Junior", 1),
+      up("b_junior", "Junior", 2, ["a_junior"]),
+      up("b_senior", "Senior", 3, ["b_junior"]),
+      up("b_principal", "Principal", 4, ["b_senior"]),
+    ];
+    expect(eligibleTenureChains(doorstep, 10, first).map(o => o.headId))
+      .toContain("b_junior");
+  });
+
   it("never offers ascension-only upgrades", () => {
     const asc = [
       up("asc_junior", "Junior", 1, [], { ascensionOnly: true }),
@@ -357,7 +387,21 @@ describe("the family-name assumption Tenure is built on", () => {
     const counts = TENURE_THRESHOLDS.map(
       r => eligibleTenureChains(REAL_UPGRADES, r, Math.random).length,
     );
-    // 17/15/14: Onboarding arrived as a complete Junior->Senior->Principal
+    // 18/16/15: the head rule now admits a Junior gated behind another
+    // family's JUNIOR - a doorstep - which recovers Deadline Extension. It had
+    // been silently unofferable since it was gated behind Padded Estimate, a
+    // complete ladder Tenure simply stopped mentioning.
+    //
+    // Budget Cycle, Procurement and Total Compensation stay out, and that is
+    // deliberate rather than accidental: their doors are a Senior, an Architect
+    // and a Principal, so they are continuations of a deep investment rather
+    // than lines you start. Offering one as a fresh chain would hand a player
+    // the middle of somebody else's build - see the mid-chain test below.
+    //
+    // Fault Tolerance is absent for a third reason, which is content and not
+    // the rule: Junior -> Senior -> ARCHITECT, with no Principal to walk to.
+    //
+    // Before that, 17/15/14: Onboarding arrived as a complete Junior->Senior->Principal
     // ladder with an ungated head, so Tenure can walk it - which is what put
     // back the chain Deadline Extension's door had cost. Load Balancer does
     // NOT count: it branches off Runtime Optimisation and has no Junior.
@@ -387,7 +431,7 @@ describe("the family-name assumption Tenure is built on", () => {
     // ones). Before THAT, 16/13/11, itself a gain of one over the Garbage
     // Collector line it replaced: those three families used three DIFFERENT
     // names, so Tenure could never walk them as a chain at all.
-    expect(counts).toEqual([17, 15, 14]);
+    expect(counts).toEqual([18, 16, 15]);
   });
 });
 
