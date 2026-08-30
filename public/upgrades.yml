@@ -470,9 +470,15 @@ upgrades:
     name: Golden Parachute
     tier: Wizard
     description: "Start each run with an extra Continue, and another at six other safety upgrades."
-    unlockLevel: 5
+    unlockLevel: 7
     icon: life-buoy
     cost: 250
+    # A golden parachute IS a severance package, so you do not get one without
+    # the other. This was a Wizard-tier root reachable from nothing at all -
+    # the capstone tier hanging off no ladder - and its unlock moved 5 -> 7 so
+    # the door cannot open after the room.
+    prerequisites:
+      - severance_package_junior
     tags: [safety]
     modifiers:
       extraContinues: 1
@@ -981,6 +987,11 @@ upgrades:
     description: Every Ship Early bonus window lasts 2s longer per ball on the map.
     unlockLevel: 10
     icon: timer
+    # Padding an estimate and extending a deadline are the same move, and this
+    # is what you do when the first one was not enough. Both make the clock
+    # kinder: extra par, then longer Ship Early windows.
+    prerequisites:
+      - padded_estimate_junior
     tags: [tempo]
     modifiers:
       shipEarlySecondsPerBall: 2
@@ -1172,6 +1183,11 @@ upgrades:
     description: "20% more overtime per map, but balls move 8% faster. Short-term gain, long-term pain."
     unlockLevel: 4
     icon: credit-card
+    # You take on the debt to hit the bonus. This is Performance Bonus's own
+    # trade escalated into recklessness, and it gives Technical Debt an
+    # entrance: it opens Risk Appetite and the Wizard, and had no door itself.
+    prerequisites:
+      - performance_bonus_junior
     tags: [risk]
     modifiers:
       scoreMultiplier: 1.20

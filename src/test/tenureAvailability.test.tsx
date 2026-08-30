@@ -55,19 +55,29 @@ describe("what a run's depth makes available", () => {
   });
 
   /**
-   * The concrete case this was reported for. Deadline Extension unlocks at
-   * exactly level 10, so dying ON level 10 used to offer the one upgrade in
-   * the catalogue that had never been on sale that run.
+   * The concrete case this was reported for: an upgrade unlocking at exactly
+   * the level you died on had never been on sale that run, and Tenure offered
+   * it anyway.
+   *
+   * Written against the RULE rather than one id. It used to name
+   * deadline_extension_junior, which was the only level-10 upgrade with no
+   * prerequisite - and then Deadline Extension was gated behind Padded Estimate
+   * and the fixture evaporated. The rule did not change; only the example did,
+   * so the example is now found rather than hardcoded.
    */
-  it("does not offer the level-10 upgrade to a run that died on level 10", () => {
-    expect(unlockLevelOf("deadline_extension_junior"), "fixture assumption").toBe(10);
+  it("never offers an upgrade from a shop the run never reached", () => {
+    for (const reached of [8, 10, 12, 14]) {
+      const died = grantedAt(reached, reached - 1);
+      const tooNew = died.filter(u => (u.unlockLevel ?? 1) >= reached);
+      expect(tooNew.map(u => u.id), `offered after dying on level ${reached}`).toEqual([]);
+    }
+  });
 
-    const died = grantedAt(10, 9).map(u => u.id);
-    expect(died).not.toContain("deadline_extension_junior");
-
-    // ...but clearing level 10 and retiring did include that shop.
-    const cleared = grantedAt(10, 10).map(u => u.id);
-    expect(cleared).toContain("deadline_extension_junior");
+  it("does offer it once that shop was actually visited", () => {
+    // The other half: the guard above is trivially satisfied by offering
+    // nothing at all, so something reaching the level must still come through.
+    const cleared = grantedAt(14, 14);
+    expect(cleared.length, "nothing offered at all").toBeGreaterThan(0);
   });
 
   it("still pays the full chain at depth 30, since the gate is not a tier limit", () => {

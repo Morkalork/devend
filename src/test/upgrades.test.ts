@@ -32,6 +32,15 @@ const prereqsOf = (id: string): string[] => byId.get(id)?.prerequisites ?? [];
 // One head per archetype line: the synergy rework promoted Fault Tolerance,
 // Technical Debt, Feature Freeze and Severance Package to roots (their old
 // cross-family prereqs were whimsical, not tactical).
+//
+// Three of those roots have since been gated again, deliberately and against
+// that earlier judgement: the shop had 22 always-available heads and wanted
+// fewer, so the doors were re-cut where the NAMES carry the logic rather than
+// where they used to be. Technical Debt now needs Performance Bonus (you take
+// on the debt to hit the bonus), Deadline Extension needs Padded Estimate (the
+// same move, escalated), and Golden Parachute needs Severance Package (a golden
+// parachute IS one). Each was checked for the unlock inversion that got the old
+// ones removed; Golden Parachute moved 5 -> 7 to clear it.
 const EXPECTED_ROOTS = [
   "runtime_optimisation_junior",
   "memory_footprint_junior",
@@ -41,17 +50,14 @@ const EXPECTED_ROOTS = [
   "scrum_master_1",
   "defensive_programming_junior",
   "fault_tolerance_junior",
-  "technical_debt_senior",
   "feature_freeze_junior",
   "ghost_protocol_junior",
   "severance_package_junior",
-  "deadline_extension_junior",
   "code_review",
   "cold_boot",
   "moonshot",
   "benefits_package_junior",
   "free_fall_junior",
-  "golden_parachute",
   "breaking_change_junior",
   // Replaced the three Garbage Collector roots, whose modifier keys were never
   // read by any game logic (see the Padded Estimate block in upgrades.yml).

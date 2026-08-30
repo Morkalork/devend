@@ -357,7 +357,15 @@ describe("the family-name assumption Tenure is built on", () => {
     const counts = TENURE_THRESHOLDS.map(
       r => eligibleTenureChains(REAL_UPGRADES, r, Math.random).length,
     );
-    // 17/15/14: the deepest threshold gained one when SCRUM Master's duplicate
+    // 16/14/13: Deadline Extension was gated behind Padded Estimate to thin out
+    // the 22 always-available shop heads, and a gated Junior cannot be a chain
+    // head, so Tenure lost it. That is the price of the door and it is worth
+    // naming: the content is still reachable, it just stops being offerable as
+    // a whole-family reward. Three other complete ladders (Budget Cycle,
+    // Procurement, Total Compensation) are already invisible to Tenure for the
+    // same reason.
+    //
+    // Before that, 17/15/14: the deepest threshold gained one when SCRUM Master's duplicate
     // rungs were merged. That family carried TWO Senior rungs and TWO Principal
     // rungs, so the Junior->Senior->Principal->Architect walk could never
     // resolve it and Tenure had never once been able to offer it. Collapsing
@@ -374,7 +382,7 @@ describe("the family-name assumption Tenure is built on", () => {
     // ones). Before THAT, 16/13/11, itself a gain of one over the Garbage
     // Collector line it replaced: those three families used three DIFFERENT
     // names, so Tenure could never walk them as a chain at all.
-    expect(counts).toEqual([17, 15, 14]);
+    expect(counts).toEqual([16, 14, 13]);
   });
 });
 
