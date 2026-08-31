@@ -10,6 +10,7 @@ import { abilityFenceRushFactor, abilityFenceShieldActive } from "@/lib/abilityE
 import { MINIMUM_WALL_TIME, RECOVERY_WINDOW_MS } from "@/lib/gameConstants";
 import { playFenceBreakSound } from "@/lib/gameAudio";
 import { vibrateFenceBreak } from "@/lib/gameHaptics";
+import { cutSpeedFactor } from "@/lib/physics/fenceZones";
 
 /**
  * How long a post-break freeze may last before the loop lifts it regardless.
@@ -63,7 +64,14 @@ export function updateFenceWallFn(
     + activeModifiers.fenceSpeedPerFence * game.wallCount;
   // Fence Overclock ability (#38): cuts build much faster for a few seconds.
   const rush = abilityFenceRushFactor(game);
-  const wallSpeedEffective = wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo * rush;
+  // Fence-speed ground. Folded in here with the other multipliers rather than
+  // applied to each frame's growth: growth is driven by an ease curve over
+  // elapsed time and force-snapped when it completes, so a per-tip factor would
+  // change the SHAPE of the build and not its duration - the one thing a slow
+  // zone exists to change. Computed over the longer half's whole path, once.
+  const terrain = cutSpeedFactor(game.fenceZones, wall.startWaypoints, wall.endWaypoints);
+  const wallSpeedEffective =
+    wallSpeedBase * activeModifiers.fenceGenerationSpeedMultiplier * lockTempo * rush * terrain;
 
   let totalStartPath = 0;
   for (let i = 0; i < wall.startWaypoints.length - 1; i++) {
@@ -78,7 +86,13 @@ export function updateFenceWallFn(
   // but it also swallows Overclock's speed-up (short cuts already sit at the
   // floor). Lower the floor by the rush factor too, so Overclock actually makes
   // cuts near-instant instead of just nudging the longest ones.
-  const minWallTime = MINIMUM_WALL_TIME / rush;
+  // The floor is a MINIMUM build time, i.e. a maximum speed, and it swallows
+  // speed-ups on short cuts - the note above records Overclock hitting exactly
+  // this. Fast ground would hit it too, so it lifts the floor the same way.
+  // Only when terrain > 1: slow ground already sits well under the cap, and
+  // dividing by a factor below 1 would RAISE the floor and cap a slow fence
+  // twice.
+  const minWallTime = MINIMUM_WALL_TIME / (rush * Math.max(1, terrain));
   const wallSpeedFinal = Math.min(wallSpeedEffective, longestHalf / minWallTime);
 
   const easeInOut = (t: number) => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;

@@ -38,6 +38,9 @@ import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, rotateDat
 import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import { bendOutline, bowOutline, hasBend, shapeOutline } from "@/lib/bend";
+import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
+import { rotateFenceZones } from "@/lib/mapRotation";
+import type { FenceZone } from "@/lib/physics/fenceZones";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
 import { armTurnTimer, DEFAULT_TURN_INTERVAL } from "@/lib/physics/turnTimer";
 import {
@@ -136,6 +139,10 @@ export function createBall(
 export interface InitialGameData {
   walls: Wall[];
   obstaclePolygons: Polygon[];
+  /** Pass rules for the obstacles above, keyed by polygon identity. */
+  obstacleRules: ObstacleRuleMap;
+  /** Fence-speed ground, already rotated into this deal's orientation. */
+  fenceZones?: FenceZone[];
   mirrorPolygons: Polygon[];
   boardPolygon: Polygon;
   originalArea: number;
@@ -214,6 +221,10 @@ export function createInitialGameData(
   // ── Build walls array (board edges → obstacle edges) ───────────────────
   const allWalls: Wall[] = createWallsFromPolygon(boardPolygon, "board");
   const obstaclePolygons: Polygon[] = [];
+  // Keyed by polygon identity, not by index: updateBall walks a flat Polygon[]
+  // and the phasing system already looks obstacles up this way. A parallel
+  // array would be one careless insert from applying the wrong rule.
+  const obstacleRules: ObstacleRuleMap = new Map();
   const mirrorPolygons:   Polygon[] = [];
   const destructibles:    DestructibleState[] = [];
   // Non-mirror obstacles participating in the break/topple support graph (#38).
@@ -425,7 +436,20 @@ export function createInitialGameData(
           });
         }
         obstaclePolygons.push(obstaclePolygon);
+        // One-way membranes and ball-type gates. Recorded only when they say
+        // something, so an ordinary wall costs nothing and the map stays empty
+        // of no-op entries.
+        const rule: ObstacleRule = {
+          ...(entity.oneWay ? { oneWay: entity.oneWay } : {}),
+          ...(entity.passTypes?.length ? { passTypes: entity.passTypes } : {}),
+        };
         const obstacleWalls = createWallsFromPolygon(obstaclePolygon, `obstacle-${entity.id}`, isMirror);
+        if (!isEmptyRule(rule)) {
+          obstacleRules.set(obstaclePolygon, rule);
+          // The SAME object on both, so a future edit cannot update one path
+          // and leave the other solid.
+          for (const w of obstacleWalls) w.passRule = rule;
+        }
         allWalls.push(...obstacleWalls);
 
         // Phasing obstacle (#64): register it so the phasing tick can toggle its
@@ -953,6 +977,10 @@ export function createInitialGameData(
   return {
     walls:               allWalls,
     obstaclePolygons,
+    obstacleRules,
+    // Rotated here rather than at the consumer: a zone is a rect on the board
+    // and has to turn with everything else on it.
+    fenceZones: rotateFenceZones(level.fenceZones, mapRotation),
     mirrorPolygons,
     boardPolygon,
     originalArea:        initialEstimatedArea,

@@ -11,6 +11,8 @@ import { BOARD_WIDTH } from '@/lib/boardConstants';
 import { ARENA_MARGIN } from '@/lib/gameConstants';
 import type { LevelMoverEntity } from '@/types/level';
 import { withCurve, MAX_BEND } from "@/lib/admin/bendHandles";
+import { getAllBallTypes } from '@/lib/ballTypes';
+import { clampZoneSpeed, MIN_ZONE_SPEED, MAX_ZONE_SPEED, type FenceZone } from '@/lib/physics/fenceZones';
 
 /** The four bearings, laid out the way they point. */
 const PULL_ORDER: WellPull[] = ['up', 'left', 'down', 'right'];
@@ -36,6 +38,11 @@ interface EntityPanelProps {
   onDuplicateEntity: (id: string) => void;
   onDeleteBall: (id: string) => void;
   onDeleteArea: (index: number) => void;
+  selectedZoneIndex?: number | null;
+  onSelectZone?: (index: number | null) => void;
+  onAddZone?: () => void;
+  onDeleteZone?: (index: number) => void;
+  onUpdateZone?: (index: number, updates: Partial<FenceZone>) => void;
   onUpdateEntity: (id: string, updates: Partial<LevelEntity>) => void;
   onUpdateBall: (id: string, updates: Partial<BallConfig>) => void;
   onUpdateArea: (index: number, updates: Partial<ColoredArea>) => void;
@@ -67,6 +74,11 @@ export function EntityPanel({
   onDuplicateEntity,
   onDeleteBall,
   onDeleteArea,
+  selectedZoneIndex = null,
+  onSelectZone,
+  onAddZone,
+  onDeleteZone,
+  onUpdateZone,
   onUpdateEntity,
   onUpdateBall,
   onUpdateArea,
@@ -452,8 +464,88 @@ export function EntityPanel({
             entity={selectedEntity}
             onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates as Partial<LevelEntity>)}
           />
+
+          {!isMoverEntity(selectedEntity) && (
+            <PassRulesEditor
+              entity={selectedEntity as WallRectEntity}
+              onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates as Partial<LevelEntity>)}
+            />
+          )}
         </div>
       )}
+
+      {/* Fence-speed ground: the only mechanic that acts on the CUT. */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">Fence ground</h3>
+          <button
+            onClick={onAddZone}
+            className="p-1.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+            title="Add a fence-speed zone"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div className="space-y-1">
+          {(level.fenceZones ?? []).length === 0 && (
+            <p className="text-[10px] text-muted-foreground">
+              None. A zone changes how fast fences build across it: below 1 slows the cut,
+              above 1 speeds it.
+            </p>
+          )}
+          {(level.fenceZones ?? []).map((zone, index) => (
+            <div
+              key={index}
+              onClick={() => onSelectZone?.(index)}
+              className={`p-2 rounded cursor-pointer transition-colors ${
+                index === selectedZoneIndex
+                  ? 'bg-primary/20 border border-primary/50'
+                  : 'bg-muted/50 hover:bg-muted'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs" style={{ color: zone.speed < 1 ? '#7dd3fc' : '#fbbf24' }}>
+                  {zone.speed < 1 ? 'Slow' : 'Fast'} ground {zone.speed}x
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); onDeleteZone?.(index); }}
+                  className="p-1 rounded hover:bg-destructive/20 text-destructive"
+                  title="Delete zone"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+              {index === selectedZoneIndex && (
+                <div className="mt-2 space-y-1">
+                  <label className="flex items-center gap-2 text-[10px]">
+                    <span className="text-muted-foreground">Speed</span>
+                    <input
+                      type="range"
+                      min={MIN_ZONE_SPEED}
+                      max={MAX_ZONE_SPEED}
+                      step={0.05}
+                      value={zone.speed}
+                      onChange={(e) => onUpdateZone?.(index, { speed: clampZoneSpeed(Number(e.target.value)) })}
+                      className="flex-1"
+                    />
+                    <input
+                      type="number"
+                      step={0.05}
+                      value={zone.speed}
+                      onChange={(e) => onUpdateZone?.(index, { speed: clampZoneSpeed(Number(e.target.value)) })}
+                      className="w-14 px-1 py-0.5 rounded bg-background border border-border"
+                    />
+                  </label>
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    A cut is priced by its longer half, so this only bites when that half
+                    crosses the zone.
+                  </p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Balls Section */}
       <div>
@@ -690,6 +782,87 @@ function RectEditor({ entity, onUpdate }: { entity: WallRectEntity; onUpdate: (u
  * pin an axis: the handles read "auto", which follows the longer side, and a
  * bar that is nearly square needs to be told.
  */
+/**
+ * Walls that do not stop every ball: one-way membranes and ball-type gates.
+ *
+ * Both live here together because they are the same question - may this ball
+ * pass - and because seeing them side by side is what stops someone setting
+ * both and expecting an AND. The note in the panel says which it is.
+ */
+function PassRulesEditor({ entity, onUpdate }: {
+  entity: WallRectEntity;
+  onUpdate: (updates: Partial<WallRectEntity>) => void;
+}) {
+  const types = getAllBallTypes();
+  const pass = entity.passTypes ?? [];
+
+  const toggleType = (id: string) => {
+    const next = pass.includes(id) ? pass.filter(t => t !== id) : [...pass, id];
+    // Absent, not empty: an empty list must leave an ordinary solid wall, or a
+    // half-finished edit silently ships a wall nothing can cross.
+    onUpdate({ passTypes: next.length ? next : undefined });
+  };
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-border">
+      <span className="text-xs font-semibold text-sky-400">Pass rules</span>
+
+      <label className="flex items-center gap-2 text-xs">
+        <span className="text-muted-foreground whitespace-nowrap">One-way</span>
+        <select
+          value={entity.oneWay ?? ''}
+          onChange={(e) => onUpdate({
+            oneWay: e.target.value ? e.target.value as 'up' | 'down' | 'left' | 'right' : undefined,
+          })}
+          className="flex-1 px-1 py-0.5 rounded bg-background border border-border"
+        >
+          <option value="">solid both ways</option>
+          <option value="up">balls pass going up</option>
+          <option value="down">balls pass going down</option>
+          <option value="left">balls pass going left</option>
+          <option value="right">balls pass going right</option>
+        </select>
+      </label>
+
+      <div className="space-y-1">
+        <span className="text-[10px] text-muted-foreground">
+          Gate: ball types that may pass (either way)
+        </span>
+        <div className="flex flex-wrap gap-1">
+          {types.map(t => {
+            const on = pass.includes(t.id);
+            return (
+              <button
+                key={t.id}
+                onClick={() => toggleType(t.id)}
+                title={on ? `${t.id} may pass` : `${t.id} bounces`}
+                className="px-1.5 py-0.5 rounded text-[10px] border transition-colors"
+                style={{
+                  borderColor: on ? '#38bdf8' : 'transparent',
+                  background: on ? '#38bdf833' : 'hsl(var(--muted))',
+                  color: on ? '#7dd3fc' : 'hsl(var(--muted-foreground))',
+                }}
+              >
+                {t.id}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {(entity.oneWay || pass.length > 0) && (
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          {entity.oneWay && pass.length > 0
+            ? 'Either rule lets a ball through: the named types pass from both sides, and anything else passes only the one way.'
+            : entity.oneWay
+              ? 'Balls bounce coming the other way, so this is a funnel: drive one through and seal behind it.'
+              : 'Only the named types pass. Everything else treats this as a solid wall.'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 function BendEditor({ entity, onUpdate }: {
   entity: LevelEntity;
   onUpdate: (updates: Partial<LevelEntity>) => void;

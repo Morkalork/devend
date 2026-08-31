@@ -18,7 +18,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { BOARD_WIDTH } from '@/lib/boardConstants';
-import { rotateEntities, rotateColoredArea, ROTATION_MIN_LEVEL, type MapRotation } from '@/lib/mapRotation';
+import { rotateEntities, rotateColoredArea, rotateFenceZones, ROTATION_MIN_LEVEL, type MapRotation } from '@/lib/mapRotation';
 import { hasBend } from '@/lib/bend';
 import { previewOutline } from '@/lib/admin/bendHandles';
 import { isMirrorEntity, type LevelConfig, type LevelEntity } from '@/types/level';
@@ -54,6 +54,12 @@ function drawBoard(
   ctx.strokeStyle = '#1c4030';
   ctx.lineWidth = 1;
   ctx.strokeRect(0.5, 0.5, size - 1, size - 1);
+
+  // Fence ground first: it is terrain, and everything else sits on it.
+  for (const z of rotateFenceZones(level.fenceZones, r) ?? []) {
+    ctx.fillStyle = z.speed < 1 ? 'rgba(91, 141, 217, 0.22)' : 'rgba(224, 149, 74, 0.22)';
+    ctx.fillRect(z.x * s, z.y * s, z.width * s, z.height * s);
+  }
 
   for (const area of (level.coloredAreas ?? []).map(a => rotateColoredArea(a, r))) {
     ctx.fillStyle = 'rgba(52, 211, 153, 0.18)';

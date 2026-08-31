@@ -44,6 +44,8 @@ import { registerFenceFracture } from "@/lib/physics/breakFenceWall";
 import { collectPhasedOut } from "@/lib/physics/phasing";
 import { queryWallsNear } from "@/lib/physics/wallGrid";
 import { runStream } from "@/lib/runRng";
+import { ballMayPass } from "@/lib/physics/obstacleRules";
+import { WALL_THICKNESS } from "@/lib/wallGeometry";
 
 /** Slack added to the wall-index query radius (world units). Comfortably
  *  covers the "+2" collision margin plus any small push-out drift within the
@@ -559,6 +561,14 @@ export function updateBall(
   // obstacles are 64-gons, so this skips 64 segment tests per miss.
   for (const obstacle of game.obstaclePolygons) {
     if (phasedOut && phasedOut.polys.has(obstacle)) continue;
+    // One-way membranes and ball-type gates. Checked before the cheap AABB
+    // reject rather than after, because a ball that MAY pass should behave
+    // exactly as if the obstacle were not there - including not paying for a
+    // bounds test on it every frame it is nearby.
+    if (game.obstacleRules?.size
+      && ballMayPass(game.obstacleRules.get(obstacle), ball, ball.velocity)) {
+      continue;
+    }
     const b = getObstacleBounds(obstacle);
     const reach = ball.radius + 1;
     if (
@@ -612,6 +622,11 @@ export function updateBall(
     if (wall.isBoardEdge) continue;
     // A phased-out obstacle's edge walls are intangible this frame (#64).
     if (phasedOut && phasedOut.walls.has(wall.id)) continue;
+    // ...and so are the edges of a membrane or gate this ball may cross. An
+    // obstacle is in BOTH collision systems; honouring the rule only in the
+    // polygon check above gives a wall that lets balls through its middle and
+    // bounces them off its edges, which is worse than not having the mechanic.
+    if (wall.passRule && ballMayPass(wall.passRule, ball, ball.velocity)) continue;
 
     const vBefore = { x: ball.velocity.x, y: ball.velocity.y };
     const impactPoint = collideBallWithWall(ball, wall);
@@ -779,6 +794,31 @@ export function updateBall(
   // escape — cells near walls are unpainted — so fall through to the full
   // sample-based validation below.
   if (game.spaceGrid && isBallCellInRegion(game.spaceGrid, ball.position, ball.regionId)) return;
+
+  // A ball part-way through a membrane or gate is inside an obstacle, and an
+  // obstacle's footprint is SUBTRACTED from the playable space - so it is
+  // legitimately in no region at all for a few frames. Without this it gets
+  // "recovered" straight back out the side it came in, which looks exactly
+  // like the membrane being solid and is how this mechanic first appeared not
+  // to work at all. It is transiting; leave it alone until it lands.
+  //
+  // The test is the ball's BODY against the obstacle's bounds, not its centre
+  // against the outline. A ball whose centre has just cleared the far face is
+  // still straddling it, still overlapping space that belongs to no region,
+  // and gets thrown back the way it came - which is what the first version of
+  // this did: the ball entered the gate, crossed it, and bounced out a frame
+  // after its centre emerged.
+  if (game.obstacleRules?.size) {
+    for (const [poly, rule] of game.obstacleRules) {
+      if (!ballMayPass(rule, ball, ball.velocity)) continue;
+      const b = getObstacleBounds(poly);
+      const reach = ball.radius + WALL_THICKNESS;
+      if (ball.position.x >= b.minX - reach && ball.position.x <= b.maxX + reach
+        && ball.position.y >= b.minY - reach && ball.position.y <= b.maxY + reach) {
+        return;
+      }
+    }
+  }
 
   const ballRegion = game.regions.find(r => r.id === ball.regionId);
   if (!ballRegion) return;

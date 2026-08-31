@@ -21,6 +21,8 @@ import { ColoredArea } from "@/types/level";
 import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 import type { LampState } from "@/lib/lampBall";
+import type { ObstacleRuleMap } from "@/lib/physics/obstacleRules";
+import type { FenceZone } from "@/lib/physics/fenceZones";
 
 /** A circuit terminal in world space with its runtime lit state (issue #73). */
 export interface CircuitRuntimeTerminal {
@@ -99,6 +101,10 @@ export interface CanvasGameState {
   wallGrid?: WallGrid | null;
   /** Obstacle polygons used to clip user-drawn walls. */
   obstaclePolygons: Polygon[];
+  /** Per-obstacle pass rules (one-way membranes, ball-type gates), by polygon identity. */
+  obstacleRules?: ObstacleRuleMap;
+  /** Ground that changes how fast a fence builds across it. */
+  fenceZones?: FenceZone[];
   /** Mirror obstacle polygons (rendered in distinct cyan). */
   mirrorPolygons: Polygon[];
   /** Original board boundary polygon for ball collision. */

@@ -21,7 +21,7 @@
  * which is why the order below is commented against its source.
  */
 import { PHYSICS_STEP } from "@/lib/gameConstants";
-import { RUNTIME_DEFAULTS } from "./runtimeDefaults";
+import { runtimeDefaults } from "./runtimeDefaults";
 import { DEFAULT_SCOPE_CREEP } from "@/lib/scopeCreep";
 import { createInitialGameData } from "@/lib/initGame";
 import { castRayWithReflections } from "@/lib/wallGeometry";
@@ -184,7 +184,7 @@ export function createBotGame(
   // BOARD; the loop also needs the mutable play state (activeWalls, the swipe,
   // the beat trackers) that the component owns.
   const game = {
-    ...RUNTIME_DEFAULTS,
+    ...runtimeDefaults(),
     creepConfig: DEFAULT_SCOPE_CREEP,
     mapMutator: null,
     gravityConfig: null,

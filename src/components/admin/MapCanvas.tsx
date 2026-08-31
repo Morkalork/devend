@@ -12,6 +12,7 @@ import { ARENA_MARGIN } from '@/lib/gameConstants';
 import { hexToRgba } from '@/lib/gameUtils';
 import { PULL_VECTORS } from '@/lib/physics/gravityWells';
 import { hasBend } from "@/lib/bend";
+import { clampZoneSpeed, type FenceZone } from "@/lib/physics/fenceZones";
 import {
   bendHandlePos, bendFromHandle, curveHandlePos, curveFromHandle, withCurve,
   previewOutline, MAX_BEND,
@@ -25,6 +26,10 @@ interface MapCanvasProps {
   selectedWellIndex?: number | null;
   onSelectWell?: (index: number | null) => void;
   onUpdateWell?: (index: number, updates: Partial<GravityWell>) => void;
+  /** Index into level.fenceZones (they have no id), or null. */
+  selectedZoneIndex?: number | null;
+  onSelectZone?: (index: number | null) => void;
+  onUpdateZone?: (index: number, updates: Partial<FenceZone>) => void;
   /** Index into level.coloredAreas (they have no id), or null. */
   selectedAreaIndex: number | null;
   snapToGrid: boolean;
@@ -57,6 +62,8 @@ type DragMode =
   | { type: 'polygon-edge'; id: string; edgeIndex: number; startX: number; startY: number; originalPoints: [number, number][] }
   | { type: 'well'; index: number; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
   | { type: 'well-resize'; index: number; handle: RectHandle; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
+  | { type: 'zone'; index: number; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
+  | { type: 'zone-resize'; index: number; handle: RectHandle; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
   | { type: 'rect-resize'; id: string; handle: 'tl' | 'tr' | 'bl' | 'br' | 't' | 'b' | 'l' | 'r'; startX: number; startY: number; originalRect: { x: number; y: number; width: number; height: number } }
   // Dragging the far end of a mover's patrol. Sets `range` from the distance to
   // home, and flips `axis` when the drag is mostly the other way, so the path
@@ -75,6 +82,9 @@ export function MapCanvas({
   selectedWellIndex = null,
   onSelectWell,
   onUpdateWell,
+  selectedZoneIndex = null,
+  onSelectZone,
+  onUpdateZone,
   snapToGrid,
   onSelectEntity,
   onSelectBall,
@@ -337,6 +347,67 @@ export function MapCanvas({
           ctx.lineWidth = 2;
           ctx.strokeRect(pos.x - size / 2, pos.y - size / 2, size, size);
         });
+
+    // Fence-speed ground. Drawn first and hatched rather than filled: it is
+    // terrain, not an object, and a solid fill at this size is indistinguishable
+    // from a colored area. Slow ground reads cold, fast ground warm, so which
+    // one you are looking at is legible without reading the number.
+    (level.fenceZones || []).forEach((zone, index) => {
+      const isSel = index === selectedZoneIndex ||
+        ((dragMode.type === 'zone' || dragMode.type === 'zone-resize') && dragMode.index === index);
+      const tl = worldToScreen(zone.x, zone.y);
+      const zw = zone.width * boardRect.scale;
+      const zh = zone.height * boardRect.scale;
+      const speed = clampZoneSpeed(zone.speed);
+      const COLOR = speed < 1 ? '#5b8dd9' : '#e0954a';
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(tl.x, tl.y, zw, zh);
+      ctx.clip();
+      ctx.fillStyle = hexToRgba(COLOR, isSel ? 0.16 : 0.09);
+      ctx.fillRect(tl.x, tl.y, zw, zh);
+      // Diagonal hatching, leaning the way the speed goes: slow ground leans
+      // back, fast ground leans forward.
+      ctx.strokeStyle = hexToRgba(COLOR, isSel ? 0.6 : 0.35);
+      ctx.lineWidth = 1;
+      const step = 12;
+      const lean = speed < 1 ? -1 : 1;
+      for (let o = -zh; o < zw + zh; o += step) {
+        ctx.beginPath();
+        ctx.moveTo(tl.x + o, tl.y);
+        ctx.lineTo(tl.x + o + lean * zh, tl.y + zh);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      ctx.strokeStyle = hexToRgba(COLOR, isSel ? 1 : 0.55);
+      ctx.lineWidth = isSel ? 3 : 1.5;
+      ctx.strokeRect(tl.x, tl.y, zw, zh);
+
+      if (zw > 40 && zh > 20) {
+        ctx.fillStyle = hexToRgba(COLOR, 0.95);
+        ctx.font = 'bold 11px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${speed}x fence`, tl.x + zw / 2, tl.y + zh / 2);
+      }
+
+      if (isSel) {
+        for (const handle of rectHandlePositions(tl.x, tl.y, zw, zh)) {
+          const size = handle.name.length === 2 ? HANDLE_SIZE : EDGE_HANDLE_SIZE;
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(handle.pos.x - size / 2, handle.pos.y - size / 2, size, size);
+          ctx.strokeStyle = COLOR;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(handle.pos.x - size / 2, handle.pos.y - size / 2, size, size);
+        }
+        ctx.fillStyle = '#4488ff';
+        ctx.beginPath();
+        ctx.arc(tl.x + zw / 2, tl.y + zh / 2, HANDLE_SIZE / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
 
     // Gravity wells (issue #77). Drawn after the areas and in their own colour,
     // because they are a different KIND of thing: an area scores a lock, a well
@@ -809,13 +880,36 @@ export function MapCanvas({
       }
     });
 
-  }, [level, boardRect, selectedEntityId, selectedBallId, selectedAreaIndex, selectedWellIndex, ballPositions, worldToScreen, getEdgeInfo, dragMode, authoredOutline, drawnOutline]);
+  }, [level, boardRect, selectedEntityId, selectedBallId, selectedAreaIndex, selectedWellIndex, selectedZoneIndex, ballPositions, worldToScreen, getEdgeInfo, dragMode, authoredOutline, drawnOutline]);
 
   // Hit testing
-  const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle' | 'area' | 'area-handle' | 'well' | 'well-handle'; id: string; areaIndex?: number; wellIndex?: number; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: RectHandle } | null => {
+  const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle' | 'area' | 'area-handle' | 'well' | 'well-handle' | 'zone' | 'zone-handle'; id: string; areaIndex?: number; wellIndex?: number; zoneIndex?: number; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: RectHandle } | null => {
     if (!boardRect) return null;
 
     const world = screenToWorld(sx, sy);
+
+    // The selected zone's handles. Zones are drawn UNDER everything - they are
+    // ground, not furniture - so they are tested last among the rect things,
+    // but the selected one's handles still come first or they are unreachable
+    // under an obstacle sitting on the same spot.
+    if (selectedZoneIndex !== null) {
+      const zone = (level.fenceZones || [])[selectedZoneIndex];
+      if (zone) {
+        const tl = worldToScreen(zone.x, zone.y);
+        const zw = zone.width * boardRect.scale;
+        const zh = zone.height * boardRect.scale;
+        const center = { x: tl.x + zw / 2, y: tl.y + zh / 2 };
+        if (Math.abs(sx - center.x) < HANDLE_HIT_SIZE && Math.abs(sy - center.y) < HANDLE_HIT_SIZE) {
+          return { type: 'zone-handle', id: '', zoneIndex: selectedZoneIndex, handleType: 'move' };
+        }
+        for (const handle of rectHandlePositions(tl.x, tl.y, zw, zh)) {
+          const hitSize = handle.name.length === 2 ? HANDLE_HIT_SIZE : HANDLE_HIT_SIZE - 4;
+          if (Math.abs(sx - handle.pos.x) < hitSize && Math.abs(sy - handle.pos.y) < hitSize) {
+            return { type: 'zone-handle', id: '', zoneIndex: selectedZoneIndex, handleType: 'rect', rectHandle: handle.name };
+          }
+        }
+      }
+    }
 
     // The selected well's handles, before the area's: a well is drawn on top of
     // an area, so its handles must win a click in the same order.
@@ -1001,6 +1095,19 @@ export function MapCanvas({
       }
     }
 
+    // Zones are ground: they lose every overlap, so they are tested after the
+    // wells and areas below. (Their own handles were tested first, above.)
+    const zoneHit = (): { type: 'zone'; id: string; zoneIndex: number } | null => {
+      const zones = level.fenceZones || [];
+      for (let i = zones.length - 1; i >= 0; i--) {
+        const z = zones[i];
+        if (world.x >= z.x && world.x <= z.x + z.width && world.y >= z.y && world.y <= z.y + z.height) {
+          return { type: 'zone', id: '', zoneIndex: i };
+        }
+      }
+      return null;
+    };
+
     // Wells before areas, matching the draw order: a well sits on top, so it
     // must take the click when the two overlap.
     const wells = level.gravityWells || [];
@@ -1021,8 +1128,8 @@ export function MapCanvas({
       }
     }
 
-    return null;
-  }, [boardRect, level, selectedEntityId, selectedAreaIndex, selectedWellIndex, ballPositions, worldToScreen, screenToWorld, getEdgeInfo, authoredOutline]);
+    return zoneHit();
+  }, [boardRect, level, selectedEntityId, selectedAreaIndex, selectedWellIndex, selectedZoneIndex, ballPositions, worldToScreen, screenToWorld, getEdgeInfo, authoredOutline]);
 
   // Mouse handlers
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -1068,6 +1175,33 @@ export function MapCanvas({
         setDragMode(hit.handleType === 'move'
           ? { type: 'well', index: hit.wellIndex, startX: world.x, startY: world.y, originalRect }
           : { type: 'well-resize', index: hit.wellIndex, handle: hit.rectHandle!, startX: world.x, startY: world.y, originalRect });
+      }
+      return;
+    }
+
+    if (hit.type === 'zone-handle' && hit.zoneIndex !== undefined) {
+      const zone = (level.fenceZones || [])[hit.zoneIndex];
+      if (zone) {
+        const originalRect = { x: zone.x, y: zone.y, width: zone.width, height: zone.height };
+        setDragMode(hit.handleType === 'move'
+          ? { type: 'zone', index: hit.zoneIndex, startX: world.x, startY: world.y, originalRect }
+          : { type: 'zone-resize', index: hit.zoneIndex, handle: hit.rectHandle!, startX: world.x, startY: world.y, originalRect });
+      }
+      return;
+    }
+
+    if (hit.type === 'zone' && hit.zoneIndex !== undefined) {
+      onSelectZone?.(hit.zoneIndex);
+      onSelectEntity(null);
+      onSelectBall(null);
+      onSelectArea(null);
+      onSelectWell?.(null);
+      const zone = (level.fenceZones || [])[hit.zoneIndex];
+      if (zone) {
+        setDragMode({
+          type: 'zone', index: hit.zoneIndex, startX: world.x, startY: world.y,
+          originalRect: { x: zone.x, y: zone.y, width: zone.width, height: zone.height },
+        });
       }
       return;
     }
@@ -1202,7 +1336,7 @@ export function MapCanvas({
         });
       }
     }
-  }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, onSelectArea, onSelectWell, selectedEntityId]);
+  }, [boardRect, hitTest, level, ballPositions, screenToWorld, getCanvasCoords, onSelectEntity, onSelectBall, onSelectArea, onSelectWell, onSelectZone, selectedEntityId]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     // Panning runs before the drag check: it is not an edit, so it has no
@@ -1299,6 +1433,18 @@ export function MapCanvas({
       onUpdateWell?.(dragMode.index, {
         x: snap(next.x), y: snap(next.y), width: snap(next.width), height: snap(next.height),
       });
+    } else if (dragMode.type === 'zone') {
+      const orig = dragMode.originalRect;
+      onUpdateZone?.(dragMode.index, {
+        x: snap(orig.x + (world.x - dragMode.startX)),
+        y: snap(orig.y + (world.y - dragMode.startY)),
+      });
+    } else if (dragMode.type === 'zone-resize') {
+      const orig = dragMode.originalRect;
+      const next = resizeRect(orig, dragMode.handle, world.x - dragMode.startX, world.y - dragMode.startY, AREA_MIN_SIZE);
+      onUpdateZone?.(dragMode.index, {
+        x: snap(next.x), y: snap(next.y), width: snap(next.width), height: snap(next.height),
+      });
     } else if (dragMode.type === 'area') {
       const orig = dragMode.originalRect;
       onUpdateArea(dragMode.index, {
@@ -1382,7 +1528,7 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     }
-  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, onUpdateWell, snap, authoredOutline]);
+  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, onUpdateWell, onUpdateZone, snap, authoredOutline]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const canvas = canvasRef.current;

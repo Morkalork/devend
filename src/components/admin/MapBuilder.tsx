@@ -12,6 +12,7 @@ import {
   createHistory, pushHistory, undo as undoHistory, redo as redoHistory,
   canUndo, canRedo, historyGesture, HISTORY_LIMIT, type History,
 } from '@/lib/editHistory';
+import type { FenceZone } from '@/lib/physics/fenceZones';
 import { PlaytestPanel } from './PlaytestPanel';
 import { RotationStrip } from './RotationStrip';
 import { MechanicSpreadPanel } from './MechanicSpreadPanel';
@@ -37,6 +38,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   // Colored Areas have no id in the schema, so selection is by index.
   const [selectedAreaIndex, setSelectedAreaIndex] = useState<number | null>(null);
   const [selectedWellIndex, setSelectedWellIndex] = useState<number | null>(null);
+  const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
@@ -365,6 +367,44 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
    * mid-board rather than near an edge, since a well that pulls into a wall it
    * is sitting against pins balls against it (see pullsIntoWall).
    */
+  // ── Fence-speed ground ───────────────────────────────────────────────────
+  const addZone = useCallback(() => {
+    if (!currentLevel) return;
+    const existing = currentLevel.fenceZones || [];
+    const offset = existing.length * 30;
+    updateLevel({
+      ...currentLevel,
+      // Starts slow, because that is the interesting direction: fast ground
+      // makes a cut safer and slow ground makes it a decision.
+      fenceZones: [...existing, {
+        x: 300 + offset, y: 300 + offset, width: 240, height: 200, speed: 0.5,
+      }],
+    });
+    setSelectedZoneIndex(existing.length);
+    setSelectedWellIndex(null);
+    setSelectedAreaIndex(null);
+    setSelectedEntityId(null);
+    setSelectedBallId(null);
+  }, [currentLevel, updateLevel]);
+
+  const updateZone = useCallback((index: number, updates: Partial<FenceZone>) => {
+    if (!currentLevel) return;
+    updateLevel({
+      ...currentLevel,
+      fenceZones: (currentLevel.fenceZones || []).map((z, i) =>
+        i === index ? { ...z, ...updates } : z),
+    });
+  }, [currentLevel, updateLevel]);
+
+  const deleteZone = useCallback((index: number) => {
+    if (!currentLevel) return;
+    updateLevel({
+      ...currentLevel,
+      fenceZones: (currentLevel.fenceZones || []).filter((_, i) => i !== index),
+    });
+    setSelectedZoneIndex(null);
+  }, [currentLevel, updateLevel]);
+
   const addWell = useCallback(() => {
     if (!currentLevel) return;
     const existing = currentLevel.gravityWells || [];
@@ -844,6 +884,15 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
               selectedBallId={selectedBallId}
               selectedAreaIndex={selectedAreaIndex}
               selectedWellIndex={selectedWellIndex}
+              selectedZoneIndex={selectedZoneIndex}
+              onSelectZone={(index) => {
+                setSelectedZoneIndex(index);
+                setSelectedWellIndex(null);
+                setSelectedEntityId(null);
+                setSelectedBallId(null);
+                setSelectedAreaIndex(null);
+              }}
+              onUpdateZone={updateZone}
               snapToGrid={snapToGrid}
               onSelectEntity={(id) => {
                 setSelectedEntityId(id);
@@ -891,6 +940,17 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
                 selectedBallId={selectedBallId}
                 selectedAreaIndex={selectedAreaIndex}
                 selectedWellIndex={selectedWellIndex}
+                selectedZoneIndex={selectedZoneIndex}
+                onSelectZone={(index) => {
+                  setSelectedZoneIndex(index);
+                  setSelectedWellIndex(null);
+                  setSelectedEntityId(null);
+                  setSelectedBallId(null);
+                  setSelectedAreaIndex(null);
+                }}
+                onAddZone={addZone}
+                onDeleteZone={deleteZone}
+                onUpdateZone={updateZone}
                 onSelectWell={(index) => {
                   setSelectedWellIndex(index);
                   setSelectedEntityId(null);

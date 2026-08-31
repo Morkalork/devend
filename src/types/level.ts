@@ -18,6 +18,8 @@ export interface BallConfig {
  * admin. See src/lib/bend.ts.
  */
 export type { BendAxis, BendFields } from "@/lib/bend";
+export type { FenceZone } from "@/lib/physics/fenceZones";
+import type { FenceZone } from "@/lib/physics/fenceZones";
 
 export interface RectShape {
   shape: "rect";
@@ -103,6 +105,17 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
   isPhasing?: boolean;
   /** Seconds for one full in/out phasing cycle (default 10). */
   phaseCycleSeconds?: number;
+  // ── Obstacles that do not stop every ball (see lib/physics/obstacleRules) ──
+  /**
+   * One-way membrane. Balls travelling roughly this way pass through; the other
+   * way they bounce. The herding tool: drive a ball in and seal behind it.
+   */
+  oneWay?: "up" | "down" | "left" | "right";
+  /**
+   * Ball-type gate. Only these ball type ids may pass; everything else bounces.
+   * Empty or absent leaves an ordinary solid wall.
+   */
+  passTypes?: string[];
 }
 
 // Combined entity type with shape
@@ -200,6 +213,12 @@ export interface LevelConfig {
    * this list and falls back to a random open cell when none qualifies.
    */
   pickupSpots?: { x: number; y: number }[];
+  /**
+   * Ground that changes how fast a fence builds across it. speed < 1 slows the
+   * cut, > 1 speeds it. The only mechanic that acts on the CUT rather than on
+   * the balls or the space. See lib/physics/fenceZones.
+   */
+  fenceZones?: FenceZone[];
   /**
    * Procedural layout slots (issue #53). When present on a level >=
    * PROCEDURAL_MIN_LEVEL, each slot resolves through the run seed into concrete

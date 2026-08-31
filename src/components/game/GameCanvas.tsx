@@ -596,6 +596,8 @@ export function GameCanvas({
     regions: [] as Region[],
     walls: [] as Wall[],
     obstaclePolygons: [] as Polygon[],
+    obstacleRules: new Map() as import('@/lib/physics/obstacleRules').ObstacleRuleMap,
+    fenceZones: [] as import('@/lib/physics/fenceZones').FenceZone[],
     mirrorPolygons: [] as Polygon[],
     boardPolygon: null as Polygon | null,
     originalArea: 0,
@@ -927,6 +929,10 @@ export function GameCanvas({
       // so it does not earn an interruption (see manual.ts on what does).
       if (game.gravityWells.length > 0) fileManualEntry('gravityWell');
       game.coloredAreaSatisfied = false;
+      // One-way membranes and ball-type gates, keyed by polygon identity, and
+      // the fence-speed ground - both already rotated in initGame.
+      game.obstacleRules = data.obstacleRules;
+      game.fenceZones = data.fenceZones;
       // "Wire the Integration" circuit (already rotated + sealed in initGame).
       game.circuit = data.circuit;
       // "Deploy Charge" fuses (already rotated in initGame).

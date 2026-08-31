@@ -31,6 +31,7 @@ import {
 } from "./quad";
 import { PALETTE } from "./palette";
 import { wellIsLive, wellPullVector } from "@/lib/physics/gravityWells";
+import { clampZoneSpeed } from "@/lib/physics/fenceZones";
 import { mix } from "./palette";
 
 type W2S = (x: number, y: number) => Pt;
@@ -225,7 +226,9 @@ export class AreaLayer {
       + `|${Math.round(game.boardRect.left)},${Math.round(game.boardRect.top)},${Math.round(scale * 1000)}`
       + `|${Math.round(tilt * 2000)}`
       + "#s" + (game.slowAreas ?? [])
-        .map(a => `${a.x},${a.y},${a.width},${a.height}`).join("|");
+        .map(a => `${a.x},${a.y},${a.width},${a.height}`).join("|")
+      + "#f" + (game.fenceZones ?? [])
+        .map(z => `${z.x},${z.y},${z.width},${z.height},${z.speed}`).join("|");
     if (key === this.key) return;
     this.key = key;
 
@@ -235,6 +238,7 @@ export class AreaLayer {
 
     this.drawGravityWells(game, w2s, scale);
     this.drawSlowAreas(game, w2s, scale);
+    this.drawFenceZones(game, w2s, scale);
 
     for (const a of areas) {
       const st = areaStyle(a.kind);
@@ -509,6 +513,48 @@ export class AreaLayer {
    * Goes through the same quad machinery as everything else on this layer, so
    * it stays correct on a turned board.
    */
+  /**
+   * Fence-speed ground.
+   *
+   * The player has to be able to see this before they commit a cut, or the
+   * mechanic is just a fence that inexplicably crawls. So it is drawn as
+   * TEXTURE rather than as a marking: closely spaced combs running across the
+   * zone, dense where the ground is slow and open where it is fast, because
+   * "how thick is the hatching" is legible at a glance in a way a border and a
+   * number never are while a ball is bearing down on you.
+   *
+   * Cold for slow, warm for fast, which matches the editor. No brackets and no
+   * closed border, for the same reason drawSlowAreas has none: a boxed region
+   * reads as something a ball bounces off, and this is ground.
+   */
+  private drawFenceZones(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const zones = game.fenceZones ?? [];
+    if (zones.length === 0) return;
+
+    for (const z of zones) {
+      const speed = clampZoneSpeed(z.speed);
+      const slow = speed < 1;
+      const COLOR = slow ? 0x5b8dd9 : 0xe0954a;
+      const q = worldRectQuad(z.x, z.y, z.width, z.height, w2s);
+
+      shapeOf(this.g, q, 0).fill({ color: COLOR, alpha: slow ? 0.09 : 0.07 });
+
+      // Comb spacing carries the number: at 0.25x the teeth are four times as
+      // dense as at 1x, so two zones side by side are comparable without
+      // reading either label.
+      const teeth = Math.max(4, Math.min(28, Math.round(9 / speed)));
+      for (let i = 1; i <= teeth; i++) {
+        const t = i / (teeth + 1);
+        const a = quadLocal(q, q.w * t, q.h * 0.06);
+        const b = quadLocal(q, q.w * t, q.h * 0.94);
+        this.g.moveTo(a.x, a.y).lineTo(b.x, b.y);
+      }
+      this.g.stroke({
+        width: Math.max(1, 1.4 * scale), color: COLOR, alpha: slow ? 0.5 : 0.42,
+      });
+    }
+  }
+
   private drawSlowAreas(game: CanvasGameState, w2s: W2S, scale: number): void {
     const areas = game.slowAreas ?? [];
     if (areas.length === 0) return;

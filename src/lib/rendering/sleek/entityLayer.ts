@@ -20,6 +20,8 @@ import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope }
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
 import { dashedLine } from "./dashedLine";
+import { BEARING_VECTOR, type ObstacleRule } from "@/lib/physics/obstacleRules";
+import { getBallType } from "@/lib/ballTypes";
 
 type W2S = (x: number, y: number) => Pt;
 
@@ -127,11 +129,88 @@ export class EntityLayer {
     for (const poly of game.obstaclePolygons) {
       if (skip.has(poly as Polygon)) continue;
       this.drawSlab(poly as Polygon, light, w2s, scale);
+      // A membrane or a gate that looks exactly like a wall is not a mechanic,
+      // it is a bug the player has to reverse-engineer by dying. Drawn after
+      // the slab so the cue sits on top of its own face.
+      const rule = game.obstacleRules?.get(poly as Polygon);
+      if (rule) this.drawPassCue(poly as Polygon, rule, w2s, scale);
     }
 
     for (const m of game.movers) {
       this.drawRail(m, w2s, scale);
       this.drawMover(m, light, w2s, scale);
+    }
+  }
+
+  /**
+   * The cue that says a wall is not solid to everything.
+   *
+   * ONE-WAY gets chevrons pointing the way balls may travel, repeated along the
+   * face so the direction reads from any part of it. An arrow at the centre
+   * would be invisible on the long walls where this mechanic is most useful.
+   *
+   * A GATE gets a dashed rim in the colour of the ball type it admits, which
+   * ties it to the ball marks rather than inventing a second vocabulary: the
+   * player already learned that colour on the ball, and a gate that admits it
+   * should look like it belongs to it. With more than one type admitted the rim
+   * alternates between their colours.
+   */
+  private drawPassCue(
+    poly: Polygon, rule: ObstacleRule, w2s: W2S, scale: number,
+  ): void {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const v of poly.vertices) {
+      if (v.x < minX) minX = v.x;
+      if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.y > maxY) maxY = v.y;
+    }
+    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const spanX = maxX - minX, spanY = maxY - minY;
+
+    if (rule.oneWay) {
+      const [bx, by] = BEARING_VECTOR[rule.oneWay];
+      // March along the LONG axis and point across it, which is the direction
+      // balls actually cross a membrane.
+      const alongX = spanX >= spanY;
+      const runLength = alongX ? spanX : spanY;
+      const count = Math.max(1, Math.min(9, Math.floor(runLength / 55)));
+      const arm = Math.max(3, Math.min(spanX, spanY) * 0.3);
+
+      for (let i = 0; i < count; i++) {
+        const t = (i + 0.5) / count;
+        const wx = alongX ? minX + spanX * t : cx;
+        const wy = alongX ? cy : minY + spanY * t;
+        // Chevron: two arms swept back from a tip that points along the bearing.
+        const tip = w2s(wx + bx * arm * 0.5, wy + by * arm * 0.5);
+        const backA = w2s(wx - bx * arm * 0.5 - by * arm * 0.5, wy - by * arm * 0.5 + bx * arm * 0.5);
+        const backB = w2s(wx - bx * arm * 0.5 + by * arm * 0.5, wy - by * arm * 0.5 - bx * arm * 0.5);
+        this.rims.moveTo(backA.x, backA.y).lineTo(tip.x, tip.y).lineTo(backB.x, backB.y);
+      }
+      this.rims.stroke({
+        width: Math.max(1.5, 2.2 * scale), color: 0x9fe8ff, alpha: 0.85,
+        cap: "round", join: "round",
+      });
+    }
+
+    if (rule.passTypes?.length) {
+      const colors = rule.passTypes
+        .map(id => getBallType(id)?.color)
+        .filter((c): c is string => !!c)
+        .map(c => Number.parseInt(c.replace("#", ""), 16));
+      const palette = colors.length ? colors : [0xffffff];
+
+      // A dashed rim, alternating through the admitted types' colours.
+      const pts = poly.vertices.map(v => w2s(v.x, v.y));
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i], b = pts[(i + 1) % pts.length];
+        this.rims.moveTo(a.x, a.y).lineTo(b.x, b.y);
+        this.rims.stroke({
+          width: Math.max(1.5, 2.4 * scale),
+          color: palette[i % palette.length],
+          alpha: 0.9,
+        });
+      }
     }
   }
 

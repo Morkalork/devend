@@ -21,6 +21,7 @@ import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
 import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig, GravityWell, WellPull } from "@/types/level";
 import { rotateBend, rotateBendAxis, rotateCurves } from "./bendRotation";
+import type { FenceZone } from "./physics/fenceZones";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -128,6 +129,12 @@ export function rotateEntity(entity: LevelEntity, r: MapRotation): LevelEntity {
     : undefined;
 
   const bendFields = rotatedBend(entity, r);
+  // A one-way membrane faces a direction, so it turns with the map. Reuses
+  // rotateWellPull rather than repeating the derivation: a membrane and a well
+  // are the same kind of thing (a bearing) and must not rotate differently.
+  const oneWayField = entity.kind === "wall" && entity.oneWay
+    ? { oneWay: rotateWellPull(entity.oneWay, r) }
+    : {};
 
   if (entity.kind === "mover") {
     const { axis, phase } = rotateMoverAxisPhase(entity.axis, entity.phase, r);
@@ -142,17 +149,30 @@ export function rotateEntity(entity: LevelEntity, r: MapRotation): LevelEntity {
   // Wall entity: rotate whichever shape it carries.
   if (entity.shape === "circle") {
     const c = rotatePoint(entity.cx, entity.cy, r);
-    return { ...entity, cx: c.x, cy: c.y, ...bendFields, ...(reveals ? { reveals } : {}) };
+    return { ...entity, cx: c.x, cy: c.y, ...bendFields, ...oneWayField, ...(reveals ? { reveals } : {}) };
   }
   if (entity.shape === "polygon") {
     const points = entity.points.map(([px, py]) => {
       const p = rotatePoint(px, py, r);
       return [p.x, p.y] as [number, number];
     });
-    return { ...entity, points, ...bendFields, ...(reveals ? { reveals } : {}) };
+    return { ...entity, points, ...bendFields, ...oneWayField, ...(reveals ? { reveals } : {}) };
   }
   const rect = rotateRect(entity.x, entity.y, entity.width, entity.height, r);
-  return { ...entity, ...rect, ...bendFields, ...(reveals ? { reveals } : {}) };
+  return { ...entity, ...rect, ...bendFields, ...oneWayField, ...(reveals ? { reveals } : {}) };
+}
+
+/**
+ * Rotate a fence-speed zone. A plain rect, like a colored area.
+ */
+export function rotateFenceZone(zone: FenceZone, r: MapRotation): FenceZone {
+  if (r === 0) return zone;
+  return { ...zone, ...rotateRect(zone.x, zone.y, zone.width, zone.height, r) };
+}
+
+export function rotateFenceZones(zones: FenceZone[] | undefined, r: MapRotation): FenceZone[] | undefined {
+  if (!zones?.length || r === 0) return zones;
+  return zones.map(z => rotateFenceZone(z, r));
 }
 
 /** Rotate a whole entity list (no-op at r === 0). */

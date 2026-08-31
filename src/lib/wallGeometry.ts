@@ -3,6 +3,7 @@
 // All walls are identical in behavior and appearance
 
 import { Vector2, Polygon, pointInPolygon, vec2Sub, vec2Add, vec2Scale, vec2Normalize, vec2Distance, vec2Dot, vec2Reflect, lineSegmentIntersection, pointToSegmentDistance } from "./polygon";
+import type { ObstacleRule } from "./physics/obstacleRules";
 
 export interface Wall {
   id: string;
@@ -11,6 +12,15 @@ export interface Wall {
   thickness: number;
   isMirror?: boolean;
   isObstacleBoundary?: boolean;
+  /**
+   * Pass rule for the obstacle this edge belongs to (one-way membrane, ball
+   * gate). An obstacle lives in TWO collision systems - the polygon
+   * penetration check and the unified wall model - and honouring the rule in
+   * only one of them produces a membrane that lets balls through the middle
+   * and bounces them off the edges. Set from the same object as the polygon's
+   * entry, so the two cannot disagree.
+   */
+  passRule?: ObstacleRule;
   /** ms timestamp when the fence segment was drawn; absent on board edges / obstacles */
   createdAt?: number;
   /** Cached `id.startsWith("board-")`, filled lazily by the physics hot loop. */
