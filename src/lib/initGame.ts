@@ -8,7 +8,7 @@
  * (canvas repaints, React state setters, etc.) that cannot live here.
  */
 
-import { LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity } from "@/types/level";
+import { BendShapeFields, LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity } from "@/types/level";
 import { MoverState, buildMoverPolygon } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2, DestructibleState, StackObject, ChainState, PhasingObjectState } from "@/types/game";
@@ -37,6 +37,7 @@ import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, rotateDataStream, MapRotation } from "@/lib/mapRotation";
 import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
+import { bendOutline, bowOutline, hasBend, shapeOutline } from "@/lib/bend";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
 import { armTurnTimer, DEFAULT_TURN_INTERVAL } from "@/lib/physics/turnTimer";
 import {
@@ -369,6 +370,14 @@ export function createInitialGameData(
           continue;
         }
 
+        // Edge curves are indexed against the AUTHORED points, so they are
+        // applied here, before decoration adds vertices of its own. The
+        // whole-object bow waits until after (see below).
+        const bendFields: BendShapeFields = entity;
+        if (bendFields.curves?.some(c => !!c)) {
+          basePolygon = { vertices: shapeOutline(basePolygon.vertices, bendFields.curves) };
+        }
+
         let obstaclePolygon: Polygon;
         if (isMirror) {
           obstaclePolygon = basePolygon;
@@ -388,6 +397,17 @@ export function createInitialGameData(
               vertices: weldPolygonToBoard(obstaclePolygon.vertices, pinned, left, right),
             };
           }
+        }
+
+        // The bow goes last: it subdivides the outline down to ~9 units, and
+        // decoratePolygon skips any edge under 20, so bowing earlier would
+        // leave every bent wall silently undecorated. Applied to mirrors too -
+        // they skip variety, not geometry.
+        if (bendFields.bend) {
+          obstaclePolygon = {
+            ...obstaclePolygon,
+            vertices: bowOutline(obstaclePolygon.vertices, bendFields.bend, bendFields.bendAxis),
+          };
         }
         obstacleIndex++;
 
@@ -854,6 +874,13 @@ export function createInitialGameData(
       polygon:   { vertices: [] },
       ...shapeProps,
     };
+    // A bent mover carries its arc as an offset-from-home outline, computed
+    // once here. See MoverState.bentOutline for why it cannot be per-step.
+    if (hasBend(e)) {
+      const straight = buildMoverPolygon({ ...mover, offset: 0 }).vertices;
+      const bent = bendOutline(straight, { bend: e.bend, bendAxis: e.bendAxis, curves: e.curves });
+      mover.bentOutline = bent.map(v => ({ x: v.x - homeX, y: v.y - homeY }));
+    }
     mover.polygon = buildMoverPolygon(mover);
     movers.push(mover);
     // Movers can be broken by the black ball (Phase 2).

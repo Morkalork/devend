@@ -11,6 +11,11 @@ import {
 import { ARENA_MARGIN } from '@/lib/gameConstants';
 import { hexToRgba } from '@/lib/gameUtils';
 import { PULL_VECTORS } from '@/lib/physics/gravityWells';
+import { hasBend } from "@/lib/bend";
+import {
+  bendHandlePos, bendFromHandle, curveHandlePos, curveFromHandle, withCurve,
+  previewOutline, MAX_BEND,
+} from "@/lib/admin/bendHandles";
 
 interface MapCanvasProps {
   level: LevelConfig;
@@ -56,7 +61,11 @@ type DragMode =
   // Dragging the far end of a mover's patrol. Sets `range` from the distance to
   // home, and flips `axis` when the drag is mostly the other way, so the path
   // is authored by pulling it rather than by typing a number and re-checking.
-  | { type: 'mover-end'; id: string };
+  | { type: 'mover-end'; id: string }
+  // Bow the whole object, and bow one edge of it. Both write a parameter
+  // rather than points, so a bend stays re-editable and map.yml stays short.
+  | { type: 'bend'; id: string }
+  | { type: 'curve'; id: string; edgeIndex: number };
 
 export function MapCanvas({
   level,
@@ -177,6 +186,36 @@ export function MapCanvas({
       y: (sy - boardRect.top) / boardRect.scale,
     };
   }, [boardRect]);
+
+  /**
+   * An entity's authored outline in world space, straight, before bending.
+   *
+   * A circle is sampled at 64 sides to match what initGame builds, so a bent
+   * circle in the editor is the same shape the game will deal rather than a
+   * smoother or coarser one.
+   */
+  const authoredOutline = useCallback((entity: LevelEntity): { x: number; y: number }[] => {
+    if (entity.shape === 'rect') {
+      return [
+        { x: entity.x, y: entity.y },
+        { x: entity.x + entity.width, y: entity.y },
+        { x: entity.x + entity.width, y: entity.y + entity.height },
+        { x: entity.x, y: entity.y + entity.height },
+      ];
+    }
+    if (entity.shape === 'polygon') return entity.points.map(([x, y]) => ({ x, y }));
+    return Array.from({ length: 64 }, (_, i) => {
+      const a = (i / 64) * Math.PI * 2;
+      return { x: entity.cx + Math.cos(a) * entity.radius, y: entity.cy + Math.sin(a) * entity.radius };
+    });
+  }, []);
+
+  /** The outline to DRAW: bent when the entity is bent, authored when it is not. */
+  const drawnOutline = useCallback((entity: LevelEntity): { x: number; y: number }[] => {
+    const points = authoredOutline(entity);
+    if (!hasBend(entity)) return points;
+    return previewOutline({ points, bend: entity.bend, bendAxis: entity.bendAxis, curves: entity.curves });
+  }, [authoredOutline]);
 
   // Get edge midpoints and normals for a polygon
   const getEdgeInfo = useCallback((points: [number, number][]) => {
@@ -486,6 +525,22 @@ export function MapCanvas({
 
     // Draw entities
     (level.entities || []).forEach(entity => {
+      /**
+       * Trace an entity's bent outline. Returns false when it is straight, so
+       * each shape keeps its existing fillRect / arc fast path and an unbent
+       * map draws byte for byte as it did before.
+       */
+      const traceIfBent = (entity: LevelEntity): boolean => {
+        if (!hasBend(entity)) return false;
+        const pts = drawnOutline(entity).map(v => worldToScreen(v.x, v.y));
+        if (pts.length < 3) return false;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        return true;
+      };
+
       // Consider entity selected if it matches selectedEntityId OR if we're dragging it
       const isDraggingThisEntity = dragMode.type !== 'none' && 'id' in dragMode && dragMode.id === entity.id;
       const isSelected = entity.id === selectedEntityId || isDraggingThisEntity;
@@ -502,8 +557,11 @@ export function MapCanvas({
           : isMirror
           ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
           : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
-        ctx.beginPath();
-        ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        const circleBent = traceIfBent(entity);
+        if (!circleBent) {
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, radius, 0, Math.PI * 2);
+        }
         ctx.fill();
 
         ctx.strokeStyle = isMirror
@@ -552,7 +610,8 @@ export function MapCanvas({
           : isMirror
           ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
           : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
-        ctx.fillRect(topLeft.x, topLeft.y, width, height);
+        const rectBent = traceIfBent(entity);
+        if (rectBent) ctx.fill(); else ctx.fillRect(topLeft.x, topLeft.y, width, height);
 
         ctx.strokeStyle = isMover
           ? (isSelected ? '#fbbf24' : '#d19a1c')
@@ -560,7 +619,7 @@ export function MapCanvas({
           ? (isSelected ? '#88ddff' : '#66bbdd')
           : (isSelected ? '#ff6b6b' : '#cc5555');
         ctx.lineWidth = isSelected ? 3 : 2;
-        ctx.strokeRect(topLeft.x, topLeft.y, width, height);
+        if (rectBent) ctx.stroke(); else ctx.strokeRect(topLeft.x, topLeft.y, width, height);
         
         // Draw resize handles when selected
         if (isSelected) {
@@ -607,10 +666,12 @@ export function MapCanvas({
         ctx.fillStyle = isMirror
           ? (isSelected ? 'rgba(136, 221, 255, 0.5)' : 'rgba(136, 221, 255, 0.3)')
           : (isSelected ? 'rgba(255, 100, 100, 0.5)' : 'rgba(255, 100, 100, 0.3)');
-        ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
-        ctx.closePath();
+        if (!traceIfBent(entity)) {
+          ctx.beginPath();
+          ctx.moveTo(points[0].x, points[0].y);
+          points.slice(1).forEach(p => ctx.lineTo(p.x, p.y));
+          ctx.closePath();
+        }
         ctx.fill();
 
         ctx.strokeStyle = isMirror
@@ -668,6 +729,57 @@ export function MapCanvas({
           });
         }
       }
+
+      // ── Bend handles ──────────────────────────────────────────────────
+      // Drawn last and for every shape, so the gesture is the same whether the
+      // thing selected is a rect, a circle or a polygon. Violet, because every
+      // other handle in here is already spoken for: white = vertex, green =
+      // edge, blue = move.
+      if (isSelected) {
+        const authored = authoredOutline(entity);
+
+        // The whole-object bow. Sits ON the arc's apex, so it follows the
+        // cursor rather than acting as a slider parked off to one side.
+        const bendW = bendHandlePos({ points: authored, bend: entity.bend, bendAxis: entity.bendAxis });
+        const bendS = worldToScreen(bendW.x, bendW.y);
+        const centreW = bendHandlePos({ points: authored });
+        const centreS = worldToScreen(centreW.x, centreW.y);
+        // A leash back to the unbent centre, so it reads as a pull, and so a
+        // handle dragged far from its object is still traceable to it.
+        ctx.strokeStyle = 'rgba(192, 140, 255, 0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(centreS.x, centreS.y);
+        ctx.lineTo(bendS.x, bendS.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.fillStyle = '#c08cff';
+        ctx.beginPath();
+        ctx.arc(bendS.x, bendS.y, HANDLE_SIZE / 2 + 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#7a3fd0';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // One curve handle per edge, polygons only: `curves` is indexed against
+        // authored points, and a rect's four corners are implied rather than
+        // stored, so there is nothing stable to index on a rect.
+        if (entity.shape === 'polygon') {
+          for (let i = 0; i < authored.length; i++) {
+            const hw = curveHandlePos(authored, i, entity.curves?.[i] ?? 0);
+            const hs = worldToScreen(hw.x, hw.y);
+            ctx.fillStyle = '#c08cff';
+            ctx.beginPath();
+            ctx.arc(hs.x, hs.y, POINT_HANDLE_SIZE - 1, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#7a3fd0';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+          }
+        }
+      }
     });
 
     // Draw balls
@@ -697,7 +809,7 @@ export function MapCanvas({
       }
     });
 
-  }, [level, boardRect, selectedEntityId, selectedBallId, selectedAreaIndex, selectedWellIndex, ballPositions, worldToScreen, getEdgeInfo, dragMode]);
+  }, [level, boardRect, selectedEntityId, selectedBallId, selectedAreaIndex, selectedWellIndex, ballPositions, worldToScreen, getEdgeInfo, dragMode, authoredOutline, drawnOutline]);
 
   // Hit testing
   const hitTest = useCallback((sx: number, sy: number): { type: 'entity' | 'ball' | 'handle' | 'area' | 'area-handle' | 'well' | 'well-handle'; id: string; areaIndex?: number; wellIndex?: number; handleType?: string; pointIndex?: number; edgeIndex?: number; rectHandle?: RectHandle } | null => {
@@ -752,6 +864,26 @@ export function MapCanvas({
     if (selectedEntityId) {
       const entity = (level.entities || []).find(e => e.id === selectedEntityId);
       if (entity) {
+        // The bend handles go first. The whole-object one sits at the arc's
+        // apex, which on a straight object is the dead centre - exactly where
+        // the move handle is - and on a bent one can be anywhere over the body.
+        // Testing it after either would make it unreachable.
+        const authored = authoredOutline(entity);
+        const bw = bendHandlePos({ points: authored, bend: entity.bend, bendAxis: entity.bendAxis });
+        const bs = worldToScreen(bw.x, bw.y);
+        if (Math.hypot(sx - bs.x, sy - bs.y) < HANDLE_HIT_SIZE) {
+          return { type: 'handle', id: entity.id, handleType: 'bend' };
+        }
+        if (entity.shape === 'polygon') {
+          for (let i = 0; i < authored.length; i++) {
+            const hw = curveHandlePos(authored, i, entity.curves?.[i] ?? 0);
+            const hs = worldToScreen(hw.x, hw.y);
+            if (Math.hypot(sx - hs.x, sy - hs.y) < HANDLE_HIT_SIZE - 2) {
+              return { type: 'handle', id: entity.id, handleType: 'curve', edgeIndex: i };
+            }
+          }
+        }
+
         // A mover's end handle sits at the far extreme, well clear of the body,
         // so it is tested before the body's own handles rather than after.
         if (isMoverEntity(entity)) {
@@ -890,7 +1022,7 @@ export function MapCanvas({
     }
 
     return null;
-  }, [boardRect, level, selectedEntityId, selectedAreaIndex, selectedWellIndex, ballPositions, worldToScreen, screenToWorld, getEdgeInfo]);
+  }, [boardRect, level, selectedEntityId, selectedAreaIndex, selectedWellIndex, ballPositions, worldToScreen, screenToWorld, getEdgeInfo, authoredOutline]);
 
   // Mouse handlers
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
@@ -1015,6 +1147,10 @@ export function MapCanvas({
             originalRect: { x: entity.x, y: entity.y, width: entity.width, height: entity.height },
           });
         }
+      } else if (hit.handleType === 'bend') {
+        setDragMode({ type: 'bend', id: hit.id });
+      } else if (hit.handleType === 'curve' && hit.edgeIndex !== undefined) {
+        setDragMode({ type: 'curve', id: hit.id, edgeIndex: hit.edgeIndex });
       } else if (hit.handleType === 'point' && hit.pointIndex !== undefined) {
         setDragMode({
           type: 'polygon-point',
@@ -1183,6 +1319,28 @@ export function MapCanvas({
         width: snap(r.width),
         height: snap(r.height),
       });
+    } else if (dragMode.type === 'bend') {
+      const entity = (level.entities || []).find(e => e.id === dragMode.id);
+      if (entity) {
+        const authored = authoredOutline(entity);
+        const bend = bendFromHandle({ points: authored, bendAxis: entity.bendAxis }, world);
+        // Rounded, and dropped entirely at rest. A bend of 0.0000001 in map.yml
+        // is noise that reads as intent, and a straight wall that has merely
+        // been clicked must not start carrying a field.
+        const rounded = Math.round(bend * 1000) / 1000;
+        onUpdateEntity(dragMode.id, { bend: rounded === 0 ? undefined : rounded });
+      }
+    } else if (dragMode.type === 'curve') {
+      const entity = (level.entities || []).find(e => e.id === dragMode.id);
+      if (entity && entity.shape === 'polygon') {
+        const authored = authoredOutline(entity);
+        const raw = curveFromHandle(authored, dragMode.edgeIndex, world);
+        const clamped = Math.max(-MAX_BEND, Math.min(MAX_BEND, raw));
+        const rounded = Math.round(clamped * 1000) / 1000;
+        onUpdateEntity(dragMode.id, {
+          curves: withCurve(entity.curves, authored.length, dragMode.edgeIndex, rounded),
+        });
+      }
     } else if (dragMode.type === 'polygon-point') {
       const entity = (level.entities || []).find(e => e.id === dragMode.id) as WallPolygonEntity;
       if (entity) {
@@ -1224,7 +1382,7 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     }
-  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, onUpdateWell, snap]);
+  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, onUpdateWell, snap, authoredOutline]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const canvas = canvasRef.current;

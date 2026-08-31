@@ -17,6 +17,17 @@ export interface MoverState {
   polygon: { vertices: { x: number; y: number }[] };
   /** Cached bounding-circle radius (circle: radius; rect: half diagonal), filled lazily. */
   boundRadius?: number;
+  /**
+   * A bent mover's outline, relative to its home centre.
+   *
+   * Bending is not recomputed per step and must not be: this update runs at
+   * 120 Hz per mover, and the whole reason updateMoverPolygon writes in place
+   * is that rebuilding 25 vertex objects a step was measurable GC pressure -
+   * a bend would make that a 90-vertex arc rebuild instead. A mover only ever
+   * translates, never rotates, so the bent shape is computed once at build and
+   * the step just adds the offset to it.
+   */
+  bentOutline?: { x: number; y: number }[];
 }
 
 const CIRCLE_SIDES = 24;
@@ -24,6 +35,12 @@ const CIRCLE_SIDES = 24;
 export function buildMoverPolygon(m: MoverState): MoverState["polygon"] {
   const dx = m.axis === "horizontal" ? m.offset : 0;
   const dy = m.axis === "vertical"   ? m.offset : 0;
+
+  if (m.bentOutline) {
+    return {
+      vertices: m.bentOutline.map(p => ({ x: m.homeX + p.x + dx, y: m.homeY + p.y + dy })),
+    };
+  }
 
   if (m.shape === "circle") {
     const cx = m.homeX + dx;
@@ -58,6 +75,15 @@ export function updateMoverPolygon(m: MoverState): void {
   const dx = m.axis === "horizontal" ? m.offset : 0;
   const dy = m.axis === "vertical"   ? m.offset : 0;
   const verts = m.polygon.vertices;
+
+  if (m.bentOutline) {
+    const base = m.bentOutline;
+    for (let i = 0; i < verts.length; i++) {
+      verts[i].x = m.homeX + base[i].x + dx;
+      verts[i].y = m.homeY + base[i].y + dy;
+    }
+    return;
+  }
 
   if (m.shape === "circle") {
     const cx = m.homeX + dx;

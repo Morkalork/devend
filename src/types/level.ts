@@ -12,6 +12,13 @@ export interface BallConfig {
 }
 
 // Entity shape types
+/**
+ * Bending is authored as a parameter and resolved into vertices at load, so a
+ * bent wall stays a readable rect in map.yml and stays re-editable in the
+ * admin. See src/lib/bend.ts.
+ */
+export type { BendAxis, BendFields } from "@/lib/bend";
+
 export interface RectShape {
   shape: "rect";
   x: number;
@@ -35,6 +42,22 @@ export interface CircleShape {
 
 export type EntityShape = RectShape | PolygonShape | CircleShape;
 
+/**
+ * The bend parameters every solid entity can carry.
+ *
+ * Declared here rather than extending the lib type directly so the level schema
+ * stays readable on its own, and kept structurally identical to BendFields -
+ * bendFieldsMatchSchema in the tests is what stops the two drifting apart.
+ */
+export interface BendShapeFields {
+  /** Whole-object bow along its long axis. 1 is a half turn; the editor clamps well inside that. */
+  bend?: number;
+  /** Which way the bow runs. Omitted means the longer side of the bounds. */
+  bendAxis?: "auto" | "x" | "y";
+  /** Per-edge bows for a polygon, parallel to `points`. Entry i bows point i to point i+1. */
+  curves?: number[];
+}
+
 // Base entity interface - extensible for future kinds
 export interface BaseEntity {
   id: string;
@@ -43,7 +66,7 @@ export interface BaseEntity {
 }
 
 // Wall entity - carves away playable space (subtracted from regions like cuts)
-export interface WallEntity extends BaseEntity {
+export interface WallEntity extends BaseEntity, BendShapeFields {
   kind: "wall";
   mirror?: boolean; // When true, growing fences reflect off this obstacle
   // ── Breakable obstacles (issue #38) ──────────────────────────────────────
@@ -94,7 +117,7 @@ export function isMirrorEntity(entity: LevelEntity): boolean {
 }
 
 // ── Mover entities — obstacles that oscillate back and forth ──────────────
-export interface MoverEntityBase extends BaseEntity {
+export interface MoverEntityBase extends BaseEntity, BendShapeFields {
   kind: "mover";
   axis: "horizontal" | "vertical";
   range: number;   // total oscillation distance (moves ±range/2 from home center)

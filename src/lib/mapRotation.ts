@@ -20,6 +20,7 @@
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
 import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig, GravityWell, WellPull } from "@/types/level";
+import { rotateBend, rotateBendAxis, rotateCurves } from "./bendRotation";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
 export type MapRotation = 0 | 1 | 2 | 3;
@@ -82,6 +83,41 @@ function rotateMoverAxisPhase(
   }
 }
 
+/**
+ * Whether this entity's bow runs along x, BEFORE rotation - the frame the
+ * stored bend was authored in. An explicit bendAxis decides; only "auto" falls
+ * back to the bounds, exactly as bendsAlongX does.
+ */
+function bendRunsAlongX(entity: LevelEntity): boolean {
+  const axis = entity.kind === "wall" || entity.kind === "mover" ? entity.bendAxis : undefined;
+  if (axis === "x") return true;
+  if (axis === "y") return false;
+  return boundsAreWide(entity);
+}
+
+function boundsAreWide(entity: LevelEntity): boolean {
+  if (entity.shape === "circle") return true;              // a circle ties, and ties go to x
+  if (entity.shape === "polygon") {
+    const xs = entity.points.map(p => p[0]);
+    const ys = entity.points.map(p => p[1]);
+    return (Math.max(...xs) - Math.min(...xs)) >= (Math.max(...ys) - Math.min(...ys));
+  }
+  return entity.width >= entity.height;
+}
+
+/** The bend fields a rotated copy of this entity should carry. */
+function rotatedBend(entity: LevelEntity, r: MapRotation) {
+  if (entity.bend === undefined && entity.bendAxis === undefined && entity.curves === undefined) {
+    return {};
+  }
+  const alongX = bendRunsAlongX(entity);
+  return {
+    ...(entity.bend !== undefined ? { bend: rotateBend(entity.bend, alongX, r) } : {}),
+    ...(entity.bendAxis !== undefined ? { bendAxis: rotateBendAxis(entity.bendAxis, r) } : {}),
+    ...(entity.curves !== undefined ? { curves: rotateCurves(entity.curves, r) } : {}),
+  };
+}
+
 /** Rotate one level entity (walls, movers) into the target orientation. */
 export function rotateEntity(entity: LevelEntity, r: MapRotation): LevelEntity {
   if (r === 0) return entity;
@@ -91,30 +127,32 @@ export function rotateEntity(entity: LevelEntity, r: MapRotation): LevelEntity {
     ? rotateRect(entity.reveals.x, entity.reveals.y, entity.reveals.width, entity.reveals.height, r)
     : undefined;
 
+  const bendFields = rotatedBend(entity, r);
+
   if (entity.kind === "mover") {
     const { axis, phase } = rotateMoverAxisPhase(entity.axis, entity.phase, r);
     if (entity.shape === "circle") {
       const c = rotatePoint(entity.cx, entity.cy, r);
-      return { ...entity, cx: c.x, cy: c.y, axis, phase };
+      return { ...entity, cx: c.x, cy: c.y, axis, phase, ...bendFields };
     }
     const rect = rotateRect(entity.x, entity.y, entity.width, entity.height, r);
-    return { ...entity, ...rect, axis, phase };
+    return { ...entity, ...rect, axis, phase, ...bendFields };
   }
 
   // Wall entity: rotate whichever shape it carries.
   if (entity.shape === "circle") {
     const c = rotatePoint(entity.cx, entity.cy, r);
-    return { ...entity, cx: c.x, cy: c.y, ...(reveals ? { reveals } : {}) };
+    return { ...entity, cx: c.x, cy: c.y, ...bendFields, ...(reveals ? { reveals } : {}) };
   }
   if (entity.shape === "polygon") {
     const points = entity.points.map(([px, py]) => {
       const p = rotatePoint(px, py, r);
       return [p.x, p.y] as [number, number];
     });
-    return { ...entity, points, ...(reveals ? { reveals } : {}) };
+    return { ...entity, points, ...bendFields, ...(reveals ? { reveals } : {}) };
   }
   const rect = rotateRect(entity.x, entity.y, entity.width, entity.height, r);
-  return { ...entity, ...rect, ...(reveals ? { reveals } : {}) };
+  return { ...entity, ...rect, ...bendFields, ...(reveals ? { reveals } : {}) };
 }
 
 /** Rotate a whole entity list (no-op at r === 0). */

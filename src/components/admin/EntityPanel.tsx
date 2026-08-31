@@ -10,6 +10,7 @@ import {
 import { BOARD_WIDTH } from '@/lib/boardConstants';
 import { ARENA_MARGIN } from '@/lib/gameConstants';
 import type { LevelMoverEntity } from '@/types/level';
+import { withCurve, MAX_BEND } from "@/lib/admin/bendHandles";
 
 /** The four bearings, laid out the way they point. */
 const PULL_ORDER: WellPull[] = ['up', 'left', 'down', 'right'];
@@ -446,6 +447,11 @@ export function EntityPanel({
               onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates)}
             />
           )}
+
+          <BendEditor
+            entity={selectedEntity}
+            onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates as Partial<LevelEntity>)}
+          />
         </div>
       )}
 
@@ -671,6 +677,106 @@ function RectEditor({ entity, onUpdate }: { entity: WallRectEntity; onUpdate: (u
           className="w-full px-2 py-1 rounded bg-background border border-border"
         />
       </label>
+    </div>
+  );
+}
+
+/**
+ * Numbers for the two bend gestures, alongside the handles on the canvas.
+ *
+ * The canvas is where bending is actually done - you pull the shape and watch
+ * it - but a map is a config file that gets hand-edited and diffed, so the
+ * value has to be legible and typeable too. This is also the only place to
+ * pin an axis: the handles read "auto", which follows the longer side, and a
+ * bar that is nearly square needs to be told.
+ */
+function BendEditor({ entity, onUpdate }: {
+  entity: LevelEntity;
+  onUpdate: (updates: Partial<LevelEntity>) => void;
+}) {
+  const bend = entity.bend ?? 0;
+  const curves = entity.curves ?? [];
+  const curved = curves.some(c => !!c);
+
+  // Absent, not zero: a straight wall should leave no trace in map.yml.
+  const setBend = (v: number) => {
+    const clamped = Math.max(-MAX_BEND, Math.min(MAX_BEND, v));
+    const rounded = Math.round(clamped * 1000) / 1000;
+    onUpdate({ bend: rounded === 0 ? undefined : rounded } as Partial<LevelEntity>);
+  };
+
+  return (
+    <div className="space-y-2 pt-2 border-t border-border">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold text-violet-400">Bend</span>
+        {(bend !== 0 || curved) && (
+          <button
+            onClick={() => onUpdate({ bend: undefined, bendAxis: undefined, curves: undefined } as Partial<LevelEntity>)}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground"
+            title="Straighten: remove the bow and every edge curve"
+          >
+            Straighten
+          </button>
+        )}
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="range"
+          min={-MAX_BEND}
+          max={MAX_BEND}
+          step={0.01}
+          value={bend}
+          onChange={(e) => setBend(Number(e.target.value))}
+          className="flex-1"
+        />
+        <input
+          type="number"
+          step={0.05}
+          value={bend}
+          onChange={(e) => setBend(Number(e.target.value))}
+          className="w-16 px-1 py-0.5 text-xs rounded bg-background border border-border"
+        />
+      </div>
+
+      <label className="flex items-center gap-2 text-xs">
+        <span className="text-muted-foreground">Axis</span>
+        <select
+          value={entity.bendAxis ?? 'auto'}
+          onChange={(e) => onUpdate({
+            bendAxis: e.target.value === 'auto' ? undefined : e.target.value as 'x' | 'y',
+          } as Partial<LevelEntity>)}
+          className="flex-1 px-1 py-0.5 rounded bg-background border border-border"
+        >
+          <option value="auto">auto (longer side)</option>
+          <option value="x">across x</option>
+          <option value="y">across y</option>
+        </select>
+      </label>
+
+      {entity.shape === 'polygon' && (
+        <div className="space-y-1">
+          <span className="text-[10px] text-muted-foreground">
+            Edge curves (drag the violet dots on the canvas)
+          </span>
+          <div className="grid grid-cols-4 gap-1">
+            {entity.points.map((_, i) => (
+              <input
+                key={i}
+                type="number"
+                step={0.05}
+                title={`Edge ${i + 1} to ${((i + 1) % entity.points.length) + 1}`}
+                value={curves[i] ?? 0}
+                onChange={(e) => onUpdate({
+                  curves: withCurve(entity.curves, entity.points.length, i,
+                    Math.max(-MAX_BEND, Math.min(MAX_BEND, Number(e.target.value)))),
+                } as Partial<LevelEntity>)}
+                className="w-full px-1 py-0.5 text-xs rounded bg-background border border-border"
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
