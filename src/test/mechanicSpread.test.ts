@@ -69,23 +69,18 @@ describe("no mechanic is introduced and then dropped", () => {
     expect(singles.map(w => w.key).sort()).toEqual(["bend", "mutator", "threadLock"]);
   });
 
-  it("pins the mechanics that are built but not yet placed on a map", () => {
-    const unused = spreadWarnings(LEVELS).filter(w => w.kind === "unused").map(w => w.label);
-    // These three shipped as engine + editor on 2026-08-31 and are deliberately
-    // on no map yet. Where they go is a DESIGN decision, not a plumbing one:
-    // levels 1-10 are one-new-idea-per-map teaching set-pieces and adding a
-    // second idea to one breaks that cadence, and the maps further up already
-    // argue for the ideas they carry. Placing them by eye to make a lint go
-    // green would be the tail wagging the dog.
-    //
-    // This is the tool working, not failing: "built and never used" is exactly
-    // what it was written to make impossible to forget. Each name comes out of
-    // this list the moment it lands on a map.
-    expect(unused.sort()).toEqual(["Ball gate", "Fence ground", "One-way"]);
+  it("has no headline mechanic the engine supports but no map uses", () => {
+    const unused = spreadWarnings(LEVELS).filter(w => w.kind === "unused");
+    // Empty again. One-way, ball gates and fence ground spent a day on this
+    // list between shipping as engine + editor and being placed on maps 23/31,
+    // 33/34 and 24/27 - which is exactly the window this rule exists to make
+    // visible rather than let become permanent.
+    expect(unused.map(w => w.label), "a supported mechanic is on no map at all").toEqual([]);
   });
 
   it("holds the mechanics that ARE developed above the floor", () => {
-    for (const key of ["mover", "breakable", "chest", "gravityWell", "coloredArea", "reveals", "mirror"]) {
+    for (const key of ["mover", "breakable", "chest", "gravityWell", "coloredArea", "reveals", "mirror",
+                       "oneWay", "gate", "fenceGround"]) {
       expect(use(key).levels.length, `${key} fell below the floor`)
         .toBeGreaterThanOrEqual(MIN_HEADLINE_MAPS);
     }
@@ -98,15 +93,19 @@ describe("no single idea owns an act", () => {
       .filter(w => w.kind === "act-monopoly")
       .map(w => `${w.label}: ${w.detail}`)
       .sort();
-    // Act I is six maps of mover, act II six of breakable, act III six wells
-    // and seven colored areas, act IV four colored areas of five maps. These
-    // are the monotony the spread readout exists to surface; they are pinned so
-    // that the number moving is visible, in either direction.
+    // Act I is six maps of mover, act II six of breakable, act III seven
+    // colored areas, act IV four of five. Pinned so the number moving is
+    // visible in either direction.
+    //
+    // Gravity well used to be on this list at 6 of act III's 10. Giving 23 and
+    // 24 to the membrane and to fence ground took it to 4, which is the first
+    // time one of these warnings has been cleared rather than added to - and it
+    // was cleared as a side effect of having somewhere to put new mechanics,
+    // not by trimming the well for its own sake.
     expect(monopolies).toEqual([
       "Breakable: on 6 of act II's 10 maps",
       "Colored area: on 4 of act IV's 5 maps",
       "Colored area: on 7 of act III's 10 maps",
-      "Gravity well: on 6 of act III's 10 maps",
       "Mover: on 6 of act I's 10 maps",
     ]);
   });

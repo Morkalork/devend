@@ -1176,11 +1176,17 @@ levels:
         range: 300
         speed: 150
 
-  # 23 "Fountain" - MEET the inverted well.
-  # Everything about a well says things fall here; this one throws them back at
-  # the ceiling. It sits low, over the strip a player would normally treat as
-  # free space to mop up last, so the easy end of the map becomes the part that
-  # will not settle.
+  # 23 "No Rollback" - MEET the one-way membrane.
+  # The two dividers already made a neck; now the neck only works downwards.
+  # Balls fall through it and cannot come back, so the bottom of the board is a
+  # basin that fills and never empties. Every other mechanic so far changes
+  # where a ball GOES; this is the first one that lets you decide where a ball
+  # STAYS, and the map is built so that the decision is the whole difficulty:
+  # send a ball down early and the top clears easily but the basin gets crowded,
+  # hold them up top and you are sealing around traffic.
+  #
+  # Took act III's slot from the inverted well, which had four beats to itself
+  # (21, 22, 23, 24) on a ten-map act. The well keeps its MEET and its USE.
   - id: level-23
     level: 23
     sizeThreshold: 11
@@ -1189,14 +1195,16 @@ levels:
     variety: 14
     randomShapes: 8
     maxBalls: 3
-    gravityWells:
-      - x: 310
-        'y': 595
-        width: 280
-        height: 160
-        turnRate: 2.6
-        pull: up
     entities:
+      # The membrane fills the 150-wide gap the two dividers leave. Down only.
+      - id: one-way-neck
+        kind: wall
+        shape: rect
+        x: 375
+        'y': 430
+        width: 150
+        height: 26
+        oneWay: down
       # Above the mover's lane. The chest is easy to see and awkward to reach
       # while the neck guard is sweeping.
       - id: chest-23
@@ -1248,12 +1256,16 @@ levels:
         spawnAdds: 1
         announce: game.beatReorg
 
-  # 24 "Deferred" - BREAK the well: this one is asleep.
-  # Drawn from the first frame, inert, sitting over the map's best pocket. Bank
-  # it early and it is the easiest money on the board; leave it and at 50% the
-  # well wakes and that same pocket starts filling with balls you did not send.
-  # The Turn is the mechanic itself, and it is visible the whole time, which is
-  # what makes it a turn rather than an ambush.
+  # 24 "Cold Cache" - MEET fence ground.
+  # The first map where the board changes what a CUT costs rather than what a
+  # ball does. The money sits in the top-right corner and the ground around it
+  # is cold: a fence across it builds at half speed, so the cheapest pocket on
+  # the map is also the longest time spent exposed. Everywhere else runs normal,
+  # which is what makes the corner read as a decision instead of as a tax.
+  #
+  # Took the well's fourth beat. The deferred-wake Turn it used to carry was the
+  # well's own trick told a second time; the slow corner is a standing cost that
+  # is legible from frame one, which suits a MEET better than an ambush does.
   - id: level-24
     level: 24
     sizeThreshold: 10
@@ -1271,13 +1283,14 @@ levels:
         width: 200
         height: 200
         required: false
-    gravityWells:
-      - x: 330
-        'y': 210
-        width: 250
-        height: 180
-        turnRate: 2.9
-        activeFrom: 50
+    fenceZones:
+      # Over the let-zone corner: taking the money means a cut that crawls.
+      - x: 610
+        'y': 20
+        width: 270
+        height: 265
+        speed: 0.5
+        name: cold cache
     entities:
       - id: catch-shelf
         kind: wall
@@ -1286,13 +1299,6 @@ levels:
         'y': 560
         width: 270
         height: 24
-    beats:
-      # Telegraph only, fired at the well's own threshold. The beat carries no
-      # effect because the well IS the effect; this exists so the wake-up is
-      # announced rather than noticed three seconds too late.
-      - id: well-wakes
-        atSpaceRemaining: 50
-        announce: game.beatWellWakes
     slots:
       - id: pillar-left
         candidates:
@@ -1413,11 +1419,17 @@ levels:
         cy: 620
         radius: 58
 
-  # 27 "Bandwidth" - FIGHT: the seam against a fence budget.
-  # Same greed, no slack. Tracing the vein spends a fence on a cut that seals
-  # almost nothing, and here the fences are counted. The seam runs vertically so
-  # following it splits the board the long way, which is the worst possible
-  # partition and exactly why taking the money hurts.
+  # 27 "Bandwidth" - FIGHT: the seam against fence ground.
+  # Same greed, and now the pipe is narrow. Tracing the vein spends a cut that
+  # seals almost nothing, and the ground the vein runs through builds fences at
+  # 45%, so the greedy line is not just wasteful, it is the longest you will
+  # ever stand still. The seam runs vertically, so following it splits the board
+  # the long way - the worst possible partition, taken slowly.
+  #
+  # Crossed with the ground rather than the budget it used to carry: a budget
+  # and slow ground are the same idea twice (the cut is scarce), and a fight
+  # between two versions of one idea is not a fight. The WIP limit keeps 17, 18
+  # and 32.
   - id: level-27
     level: 27
     sizeThreshold: 9
@@ -1426,7 +1438,15 @@ levels:
     variety: 15
     randomShapes: 10
     maxBalls: 4
-    fenceBudget: 12
+    fenceZones:
+      # A band straddling the seam for the full height of the board, so any cut
+      # that follows the vein pays for the whole run of it.
+      - x: 380
+        'y': 45
+        width: 160
+        height: 810
+        speed: 0.45
+        name: the narrow pipe
     dataStream:
       path:
         - { x: 450, y: 120 }
@@ -1686,11 +1706,14 @@ levels:
   # than emptying the board pays for it.
   # ===========================================================================
 
-  # 31 "Oncall" - FIGHT: terminals crossed with gravity.
+  # 31 "Oncall" - FIGHT: terminals crossed with the one-way membrane.
   # The post-boss breather that is not one. A sleeper reserves space you cannot
-  # capture, so you have to wake it, and it wakes directly above a live well:
-  # the problem you just created falls into the one part of the board where you
-  # cannot steer it. Act IV opens on rules the player already knows, on purpose.
+  # capture, so you have to wake it - and the neck it wakes above only works
+  # downwards. Page yourself and the problem goes to the lower chamber, where
+  # the const pocket is, and it does not come back up. The decision is the
+  # ORDER: bank the pocket first and wake it into a half you have finished with,
+  # or wake it early for the space and spend the rest of the map working around
+  # it downstairs. Act IV opens on rules the player already knows, on purpose.
   # The gates on 32-34 only land if the first map plays straight.
   - id: level-31
     level: 31
@@ -1709,12 +1732,6 @@ levels:
         width: 170
         height: 170
         required: false
-    gravityWells:
-      - x: 320
-        'y': 540
-        width: 260
-        height: 180
-        turnRate: 2.6
     circuit:
       radius: 28
       announce: game.circuitComplete
@@ -1739,6 +1756,16 @@ levels:
         'y': 330
         width: 320
         height: 26
+      # The 220-wide neck between the shelves, now one-way. This is what turns
+      # waking the sleeper from a chore into a choice.
+      - id: escalation
+        kind: wall
+        shape: rect
+        x: 340
+        'y': 330
+        width: 220
+        height: 26
+        oneWay: down
       # The greed hook: a tight corner pocket hanging off the top right, whose
       # only approach runs back over the well's mouth.
       # Lifted so the way in is a 70-wide neck rather than the 50 it was: a gap
@@ -1942,6 +1969,25 @@ levels:
         'y': 600
         width: 400
         height: 26
+      # MEET the ball gate. The 100-wide neck into the safe lower line now
+      # admits the compass and nothing else - which is the map's own thesis made
+      # literal, because the compass is the ball the win names and the lower
+      # line is where it has to be put away. Yellow is locked out of the safe
+      # half, so the two balls can no longer be solved in the same place.
+      #
+      # Met inside a cross rather than on a map of its own: act IV is
+      # combination-land and the gate is simple enough to read in one, and the
+      # black ball it would most obviously pair with does not arrive until 25 -
+      # which leaves no clean MEET slot that does not cost the seam or phasing
+      # its only introduction.
+      - id: compass-gate
+        kind: wall
+        shape: rect
+        x: 380
+        'y': 600
+        width: 100
+        height: 26
+        passTypes: [compass]
       - id: sweeper
         kind: mover
         shape: circle
@@ -1972,6 +2018,10 @@ levels:
     variety: 16
     randomShapes: 10
     maxBalls: 4
+    # Pinned because the map now names a ball type. Same rule as a win that
+    # names a ball: a gate whose type never spawns is not a gate, it is a wall,
+    # and nothing anywhere would say so. Grey is the one the gate admits.
+    ballTypeIds: [grey, blue, yellow, purple]
     # No threadLockRequired. The win is the ZONE, and a lock count sitting
     # beside it is a second objective the win does not read: with an authored
     # `win:` block resolveWinSpec ignores this field entirely, so it only ever
@@ -2043,6 +2093,20 @@ levels:
         cx: 460
         cy: 700
         radius: 58
+      # The gate, inverted - the act's BREAK applied to the newest mechanic.
+      # On 33 the gate let the ball you needed through. Here it stands between
+      # the box's right side and the right funnel, and it admits the GREY ball
+      # only: the slow one, the one you least want taking up a place in a box
+      # that needs two. The lane is open to exactly the wrong ball, and closed
+      # to the three you would rather steer through it.
+      - id: wrong-lane
+        kind: wall
+        shape: rect
+        x: 600
+        'y': 330
+        width: 24
+        height: 210
+        passTypes: [grey]
 
   # 35 "End of Life" - BOSS: the finale, unchanged in what it asks and raised to
   # the act it now sits in. It was the one act IV map already pulling its
