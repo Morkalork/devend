@@ -500,6 +500,13 @@ export function calculateScore(
   // negative must not have its penalty softened by ignoring the zones.
   const grossMapPay = multipliedBase + breakdown.axes.total;
   const zoneShareWithheld = withheldFromPay(grossMapPay, zoneShareMissed);
+  breakdown.multipliedBase = multipliedBase;
+  // What the map could have paid: the base plus every lane at its own ceiling.
+  // The player's ceiling multipliers are already inside axes.ceilings, so this
+  // is THEIR maximum on this map rather than a generic one.
+  const c = breakdown.axes.ceilings;
+  breakdown.mapCeiling =
+    multipliedBase + c.delivery + c.craft + c.tempo + c.thrift + c.greed;
   const mapPay = grossMapPay - zoneShareWithheld;
   breakdown.zoneShareWithheld = zoneShareWithheld;
   const winBonus = Math.round(mapPay * safeWinPct / 100);

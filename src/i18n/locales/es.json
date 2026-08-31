@@ -342,6 +342,7 @@
     "baseOvertime": "Horas extra base",
     "zonesMissed": "Zonas perdidas",
     "zonesMissedHint": "Áreas de color no tomadas",
+    "scoreOutOf": "Puntuación",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Bloqueos de hilo ({{count}})",
     "superiorLocks": "Bloqueos superiores ({{count}})",
@@ -534,7 +535,8 @@
       "thrift": "Ahorro",
       "greed": "Codicia",
       "full": "{{hours}}h ✓",
-      "short": "-{{hours}}h"
+      "short": "-{{hours}}h",
+      "outOf": "{{earned}}/{{ceiling}}h"
     },
     "winBonus": "Bono de victoria (+{{percent}}%)",
     "flawless": "Impecable",

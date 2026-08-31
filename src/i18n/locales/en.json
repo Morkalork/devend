@@ -344,6 +344,7 @@
     "baseOvertime": "Base Overtime",
     "zonesMissed": "Zones Missed",
     "zonesMissedHint": "Colored areas not taken",
+    "scoreOutOf": "Score",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Thread Locks ({{count}})",
     "superiorLocks": "Superior Locks ({{count}})",
@@ -537,7 +538,8 @@
       "thrift": "Thrift",
       "greed": "Greed",
       "full": "{{hours}}h ✓",
-      "short": "-{{hours}}h"
+      "short": "-{{hours}}h",
+      "outOf": "{{earned}}/{{ceiling}}h"
     },
     "winBonus": "Win bonus (+{{percent}}%)",
     "flawless": "Flawless",

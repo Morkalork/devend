@@ -139,6 +139,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     spaceBonus = 0,
     spaceBonusRaw = 0,
     zoneShareWithheld = 0,
+    multipliedBase,
+    mapCeiling,
     performanceMultiplier = 1,
     fencesUnderPar = 0,
     fencesOverPar = 0,
@@ -220,7 +222,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
 
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
   // Hours the map withheld because its colored areas were left alone.
+  // The base the SCORER used, not a recomputation of it. The overlay used to
+  // derive it as basePoints x performanceMultiplier and drop the build's score
+  // multiplier, so a 1.25x run showed a 20h base inside a 130h total whose
+  // visible parts summed to 125.
+  const paidBase = Math.round(multipliedBase ?? Math.floor(basePoints * performanceMultiplier));
   const zonesMissedCost = Math.max(0, Math.round(zoneShareWithheld));
+  // "Score: x / y". Both ends come from the scorer: y is the base plus every
+  // lane's own ceiling, so the fraction adds up to the rows above it and cannot
+  // drift from the numerator.
+  const earnedTotal = Math.max(0, Math.round(paidBase + (axes?.total ?? 0) - zonesMissedCost));
+  const availableTotal = Math.max(earnedTotal, Math.round(mapCeiling ?? 0));
   // The five axes ARE the bonus. Push-your-luck and demolition hours bank into
   // Greed and the lock stack into Delivery + Craft, so summing the itemised
   // rows would count each of them twice.
@@ -432,7 +444,18 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
-            {/* Base Overtime with performance multiplier */}
+            {/* ── One list, one idiom ──────────────────────────────────
+                This used to be the five axes AND an itemised list of the very
+                same hours: Delivery WAS Thread Locks, Craft WAS Superior Locks,
+                Thrift WAS under-par, Greed WAS the Space Bonus. The same money
+                twice, in two vocabularies, plus rows like "Zone Locks +9h" that
+                looked like income and were actually contributors to a Craft
+                axis already sitting at its ceiling - so a player who took the
+                zone read a number that had bought them nothing.
+
+                Now: the base the scorer actually used, the five lanes with what
+                each could have paid, then anything earned OUTSIDE those lanes,
+                then the fraction. */}
             <div {...hold('baseOvertime')} className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Clock className="w-3 h-3" />
@@ -442,16 +465,13 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 )}
               </span>
               <span className={`font-bold ${isOverPar ? 'text-destructive' : 'text-foreground'}`}>
-                {scaledBase}h
+                {paidBase}h
               </span>
             </div>
 
-            {/* What skipping the colored areas cost. Shown as its own line
-                rather than folded into the total: a player who cannot see what
-                the zones were worth has no way to learn that they were worth
-                anything, which is exactly how the first version of this
-                landed - a 40% rule that changed 8h of a 130h map and read as
-                nothing at all. */}
+            {/* What skipping the colored areas cost. A percentage, because that
+                is what it is: the share comes off everything above, not out of
+                a lane of its own. */}
             {zonesMissedCost > 0 && (
               <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
                 <span className="text-muted-foreground flex items-center gap-1">
@@ -462,140 +482,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
-            {/* Thread Lock Bonus Section: plain locks, then the superior
-                (tight-pocket) locks on their own brighter row so the quality
-                gap in the pay is visible at a glance. */}
-            {hasLockBonus && (
-              <div {...hold('threadLocks')} className="flex justify-between items-center py-2 border-b border-cyan-500/30 bg-cyan-500/10 rounded px-2">
-                <span className="text-cyan-400 flex items-center gap-1">
-                  <Lock className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.threadLocks', { count: standardLockCount })}
-                </span>
-                <span className="font-bold text-cyan-400">+{standardLockBonus}h</span>
-              </div>
-            )}
-            {hasSuperiorLocks && (
-              <div {...hold('superiorLocks')} className="flex justify-between items-center py-2 border-b border-cyan-300/50 bg-cyan-400/20 rounded px-2">
-                <span className="text-cyan-300 flex items-center gap-1">
-                  <Medal className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.superiorLocks', { count: superiorLockCount })}
-                </span>
-                <span className="font-bold text-cyan-300">+{craftPay}h</span>
-              </div>
-            )}
-
-            {hasZoneLocks && (
-              <div {...hold('zoneLocks')} className="flex justify-between items-center py-2 border-b border-fuchsia-400/50 bg-fuchsia-400/15 rounded px-2">
-                <span className="text-fuchsia-300 flex items-center gap-1">
-                  <Target className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.zoneLocks', { count: zoneLockCount })}
-                </span>
-                {/* Hours, like every other row on this screen. It used to show
-                    the COUNT with an "x" in front of it, so a single zone lock
-                    read as "x1" - the arithmetic for "you got nothing" - on a
-                    row whose own explainer says it shows the hours the zone
-                    added. The pay was always real: the zone multiplier is
-                    folded into lock income long before this screen sees it. */}
-                <span className="font-bold text-fuchsia-300">+{zoneLockBonus}h</span>
-              </div>
-            )}
-
-            {hasMultiLock && (
-              <div {...hold('multiLocks')} className="flex justify-between items-center py-2 border-b border-violet-400/50 bg-violet-400/15 rounded px-2">
-                <span className="text-violet-300 flex items-center gap-1">
-                  <Layers className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.multiLocks', { count: multiLockBest })}
-                </span>
-                <span className="font-bold text-violet-300">+{multiLockBonus}h</span>
-              </div>
-            )}
-
-            {/* Break Bonus Section (issue #38) */}
-            {hasBreakBonus && (
-              <div {...hold('breakBonus')} className="flex justify-between items-center py-2 border-b border-amber-500/30 bg-amber-500/10 rounded px-2">
-                <span className="text-amber-400 flex items-center gap-1">
-                  <Hammer className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.breakBonus')}
-                </span>
-                <span className="font-bold text-amber-400">
-                  {breakMultiplier > 1 && (
-                    <span className="mr-2 text-amber-300">&times;{breakMultiplier.toFixed(2)}</span>
-                  )}
-                  +{breakBonus}h
-                </span>
-              </div>
-            )}
-
-            {/* Ship Early Bonus: fast clears pay a tempo bonus (time factor) */}
-            {hasShipEarlyBonus && (
-              <div {...hold('shipEarly')} className="flex justify-between items-center py-2 border-b border-teal-500/30 bg-teal-500/10 rounded px-2">
-                <span className="text-teal-400 flex items-center gap-1">
-                  <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.shipEarly', { seconds: Math.round(clearTimeSeconds) })}
-                </span>
-                <span className="font-bold text-teal-400">+{shipEarlyBonus}h</span>
-              </div>
-            )}
-
-            {/* Push Bonus Section */}
-            {hasPushBonus && (
-              <div {...hold('pushBonus')} className="flex justify-between items-center py-2 border-b border-orange-500/30 bg-orange-500/10 rounded px-2">
-                <span className="text-orange-400 flex items-center gap-1">
-                  <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
-                  {t('levelComplete.pushBonus')}
-                </span>
-                <span className="font-bold text-orange-400">+{pushBonus}h</span>
-              </div>
-            )}
-
-            {/* Pickup tokens claimed by locks (paid after the cap, like the
-                highscore bonus below - deliberately outside Total Bonus).
-                Every claim is listed with its effect right here, so what was
-                taken and what it did is visible without the hold card. */}
-            {(pickupBonus > 0 || claimedPickups.length > 0) && (
-              <div {...hold('pickupBonus')} className="py-2 border-b border-fuchsia-500/30 bg-fuchsia-500/10 rounded px-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-fuchsia-400 flex items-center gap-1">
-                    <Gift className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {t('levelComplete.pickupBonus')}
-                  </span>
-                  <span className="font-bold text-fuchsia-400">
-                    {pickupBonus > 0 ? `+${pickupBonus}h` : `x${claimedPickups.length}`}
-                  </span>
-                </div>
-                {claimedPickups.map((c, i) => (
-                  <div key={i} className="text-xs mt-1 pl-4">
-                    <span className="font-semibold text-foreground">
-                      {t(`levelComplete.info.pickupBonus.effects.${c.effect}.name`, { value: c.value })}
-                    </span>
-                    <span className="text-muted-foreground"> {t(`levelComplete.info.pickupBonus.effects.${c.effect}.desc`, { value: c.value })}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* Treasure chests smashed this map (issue #38): what was hauled. */}
-            {chestRewards.length > 0 && (
-              <div className="py-2 border-b border-yellow-500/30 bg-yellow-500/10 rounded px-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-yellow-300 flex items-center gap-1">
-                    <Gem className="w-3 h-3 sm:w-4 sm:h-4" />
-                    {t('levelComplete.chestBonus')}
-                  </span>
-                  <span className="font-bold text-yellow-300">x{chestRewards.length}</span>
-                </div>
-                {Object.entries(chestRewardCounts).map(([id, n]) => (
-                  <div key={id} className="text-xs mt-1 pl-4">
-                    <span className="font-semibold text-foreground">{getAbility(id)?.name ?? id}</span>
-                    {n > 1 && <span className="text-muted-foreground"> x{n}</span>}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {/* The map's own win premium: what its conditions were priced at.
-                Sits with the earned rows rather than the post-cap ones because
-                it scales the earned pay and nothing else. */}
             {winBonus > 0 && (
               <div {...hold('winBonus')} className="flex justify-between items-center py-2 border-b border-violet-500/30 bg-violet-500/10 rounded px-2">
                 <span className="text-violet-400 flex items-center gap-1">
@@ -605,8 +491,6 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 <span className="font-bold text-violet-400">+{winBonus}h</span>
               </div>
             )}
-
-            {/* New highscore (#45): beat this map's previous record for a bonus */}
             {beatHighscore && (
               <div {...hold('newHighscore')} className="flex justify-between items-center py-2 border-b rounded px-2" style={{ borderColor: '#ffd54a55', background: '#ffd54a1a', touchAction: 'pan-y' }}>
                 <span className="flex items-center gap-1" style={{ color: '#ffd54a' }}>
@@ -617,14 +501,17 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
               </div>
             )}
 
-            {/* Total Bonus Summary: the breakdown's own subtotal, so it closes
-                the itemised list rather than joining the totals below. */}
-            {totalBonus > 0 && (
-              <div {...hold('totalBonus')} className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
-                <span className="font-semibold text-foreground">{t('levelComplete.totalBonus')}</span>
-                <span className="text-lg sm:text-xl font-bold text-success">+{totalBonus}h</span>
-              </div>
-            )}
+            {/* Score: x / y - what you took of what this map could pay.
+                Both ends come from the scorer. The overlay adding up its own
+                rows is exactly how the base row came to disagree with the
+                total by five hours. */}
+            <div {...hold('totalBonus')} className="flex justify-between items-center py-2 sm:py-3 bg-success/10 rounded-lg px-2 sm:px-3">
+              <span className="font-semibold text-foreground">{t('levelComplete.scoreOutOf')}</span>
+              <span className="text-lg sm:text-xl font-bold">
+                <span className="text-success">{earnedTotal}</span>
+                <span className="text-muted-foreground"> / {availableTotal}h</span>
+              </span>
+            </div>
 
                   </div>
                 </motion.div>

@@ -408,6 +408,10 @@ export interface LevelScoreData {
    * seeing only a smaller total with no explanation.
    */
   zoneShareWithheld?: number;
+  /** The base pay the scorer actually used, multipliers included. */
+  multipliedBase?: number;
+  /** What this map could have paid: base + every axis ceiling. The "y". */
+  mapCeiling?: number;
   /** Hours the map's win conditions paid on top of its earned pay, and the
    *  percent they asked for, so the results row can name the premium. */
   winBonus?: number;

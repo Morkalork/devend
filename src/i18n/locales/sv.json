@@ -342,6 +342,7 @@
     "baseOvertime": "Bas-övertid",
     "zonesMissed": "Missade zoner",
     "zonesMissedHint": "Färgade områden som inte togs",
+    "scoreOutOf": "Poäng",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Trådlås ({{count}})",
     "superiorLocks": "Överlägsna lås ({{count}})",
@@ -534,7 +535,8 @@
       "thrift": "Sparsamhet",
       "greed": "Girighet",
       "full": "{{hours}}h ✓",
-      "short": "-{{hours}}h"
+      "short": "-{{hours}}h",
+      "outOf": "{{earned}}/{{ceiling}}h"
     },
     "winBonus": "Vinstbonus (+{{percent}}%)",
     "flawless": "Felfritt",

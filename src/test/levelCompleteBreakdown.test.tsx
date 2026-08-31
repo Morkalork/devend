@@ -52,7 +52,7 @@ describe('post-map score breakdown collapses', () => {
     // The itemisation is behind the toggle.
     expect(screen.getByText('Score breakdown')).toBeTruthy();
     expect(screen.queryByText('Fences Used')).toBeNull();
-    expect(screen.queryByText('Total Bonus')).toBeNull();
+    expect(screen.queryByText('Score')).toBeNull();
   });
 
   it('reveals the itemised rows when opened', () => {
@@ -60,7 +60,7 @@ describe('post-map score breakdown collapses', () => {
     fireEvent.click(screen.getByText('Score breakdown'));
 
     expect(screen.getByText('Fences Used')).toBeTruthy();
-    expect(screen.getByText('Total Bonus')).toBeTruthy();
+    expect(screen.getByText('Score')).toBeTruthy();
   });
 
   // Closing by default would otherwise bury the good news, so the collapsed
@@ -117,40 +117,90 @@ describe('post-map screen names the win condition', () => {
 });
 
 /**
- * Every itemised row answers the same question: how many hours did this earn?
+ * The breakdown lists what the map offered, and closes with what you took.
  *
- * Reported from a real session: "I just got a zone-lock and it says x1, which
- * presumably means I got nothing for it?" It did pay - the zone multiplier is
- * folded into lock income before this screen ever sees it - but the row showed
- * the COUNT of zone locks with an "x" in front of it, so one zone lock read as
- * a times-one multiplier, which is the arithmetic for "nothing". The row's own
- * hold-to-explain text says outright that it "shows only the hours the zone
- * added", so the copy and the code disagreed and the code was wrong.
+ * It used to itemise the scoring mechanics one row per mechanic - Thread Locks,
+ * Superior Locks, Zone Locks, Multi Locks, Break, Ship Early, Push - ABOVE the
+ * five Performance Review axes those same hours had already been banked into.
+ * On the level-3 run that prompted the rewrite the itemised rows summed to
+ * exactly the axis total, so the screen showed every hour twice and invited the
+ * player to add them up to a number the scorer never paid. Zone Locks was worse
+ * than redundant: it showed +9h for a lock that CONTRIBUTED to an already-full
+ * Craft axis and therefore paid nothing at all.
+ *
+ * The rows are gone. What is left is one row per thing the map actually offers
+ * - the base, the five axes, the zone share - each showing what it paid out of
+ * what it could, and a Score line that comes from the scorer rather than from
+ * this screen adding its own rows up.
  */
-describe('every bonus row reports hours, not a tally', () => {
-  const withZone = {
+describe('the breakdown says what was on offer, not just what landed', () => {
+  const withAxes = {
     ...scoreData,
-    lockBonus: 24,
-    lockedBallsCount: 2,
-    standardLockBonus: 24,
-    zoneLockCount: 1,
-    zoneLockBonus: 7,
+    multipliedBase: 20,
+    mapCeiling: 100,
+    levelScore: 56,
+    axes: {
+      delivery: 18, craft: 0, tempo: 12, thrift: 6, greed: 0,
+      total: 36,
+      ratios: { delivery: 0.6, craft: 0, tempo: 0.6, thrift: 0.3, greed: 0 },
+      ceilings: { delivery: 30, craft: 20, tempo: 20, thrift: 20, greed: 10 },
+    },
   } as LevelScoreData;
 
-  it('shows what a zone lock paid, not how many there were', () => {
-    renderOverlay({ scoreData: withZone });
+  it('shows an axis that paid nothing, rather than hiding it', () => {
+    // The empty axis is the more useful half of the readout: it is the hours
+    // that were on the table and left there. A screen that lists only what you
+    // earned cannot tell you what you passed up.
+    renderOverlay({ scoreData: withAxes });
     fireEvent.click(screen.getByText('Score breakdown'));
 
-    expect(screen.getByText('Zone Locks (1)'), 'the zone row is missing').toBeTruthy();
-    // "x1" is the failure: a count wearing a multiplier's clothes.
-    expect(screen.queryByText('x1'), 'the row still shows a bare tally').toBeNull();
-    expect(screen.getByText('+7h'), 'the hours the zone added are not shown').toBeTruthy();
+    expect(screen.getByText('Craft')).toBeTruthy();
+    expect(screen.getByText('0/20h'), 'an unearned axis is missing its row').toBeTruthy();
   });
 
-  it('keeps the row hidden when the zones added nothing', () => {
-    // Better silent than a row that says a zone paid and cannot say how much.
-    renderOverlay({ scoreData: { ...withZone, zoneLockBonus: 0 } });
+  it('says what each axis paid, not only what it missed', () => {
+    // The right-hand number was the bare shortfall ("-12h") back when the
+    // itemised rows below carried the hours banked. With those rows deleted it
+    // is the only number on the row, so an axis that paid 18h of 30h would
+    // report nothing but its deficit.
+    renderOverlay({ scoreData: withAxes });
     fireEvent.click(screen.getByText('Score breakdown'));
+
+    expect(screen.getByText('18/30h'), 'the hours the axis paid are not shown').toBeTruthy();
+    expect(screen.queryByText('-12h'), 'the row still shows only the shortfall').toBeNull();
+  });
+
+  it('no longer itemises the same hours a second time', () => {
+    // The duplication itself. These rows restated axis income that the axis
+    // block above them had already reported.
+    renderOverlay({ scoreData: { ...withAxes, zoneLockCount: 1, zoneLockBonus: 9 } });
+    fireEvent.click(screen.getByText('Score breakdown'));
+
+    expect(screen.queryByText(/Thread Locks/)).toBeNull();
+    expect(screen.queryByText(/Superior Locks/)).toBeNull();
     expect(screen.queryByText(/Zone Locks/)).toBeNull();
+  });
+
+  it("closes with the scorer's own numbers, not a sum of its rows", () => {
+    // THE guard. Every earlier version of this screen recomputed some part of
+    // the payout and drifted from it - the base row was showing 20h while the
+    // scorer had paid 25h, a 5h gap, because the row applied the performance
+    // multiplier and forgot the run's score multiplier. Both ends of this line
+    // now come from the breakdown the scorer produced.
+    renderOverlay({ scoreData: withAxes });
+    fireEvent.click(screen.getByText('Score breakdown'));
+
+    expect(screen.getByText('Score')).toBeTruthy();
+    expect(screen.getByText('56'), 'the score is not what the scorer paid').toBeTruthy();
+    expect(screen.getByText('/ 100h'), "the map ceiling is not the scorer's").toBeTruthy();
+  });
+
+  it('never claims a ceiling smaller than what was earned', () => {
+    // A ceiling that has drifted below the payout renders "56 / 40h", which
+    // reads as a bug in the player's favour and destroys trust in the line.
+    renderOverlay({ scoreData: { ...withAxes, mapCeiling: 10 } });
+    fireEvent.click(screen.getByText('Score breakdown'));
+    expect(screen.queryByText('/ 10h')).toBeNull();
+    expect(screen.getByText('/ 56h')).toBeTruthy();
   });
 });

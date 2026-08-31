@@ -142,6 +142,25 @@ export interface ScoreBreakdown {
    * Zero on a map with no areas, and on one where every area was taken.
    */
   zoneShareWithheld?: number;
+  /**
+   * The base pay the scorer ACTUALLY used: basePoints x performanceMultiplier x
+   * scoreMultiplier.
+   *
+   * Reported rather than left to the overlay to recompute. It recomputed it
+   * without the score multiplier, so a run with a 1.25x build showed a 20h base
+   * against a 130h total whose parts summed to 125 - five hours on screen with
+   * no row to explain them. Two readings of one number, and the display had the
+   * wrong one.
+   */
+  multipliedBase?: number;
+  /**
+   * What this map could have paid: the base plus every axis ceiling, after the
+   * player's own ceiling multipliers.
+   *
+   * The denominator of "Score: x / y". Computed here so it cannot drift from
+   * the numerator, which is the failure this file keeps finding.
+   */
+  mapCeiling?: number;
 }
 
 export interface ScoringPreviewScenario {

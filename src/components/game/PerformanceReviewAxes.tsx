@@ -11,12 +11,20 @@
  * the readout: it is the hours that were on the table and left there, and the
  * ring is built so that you can never fill all five.
  *
- * THE RIGHT-HAND NUMBER IS THE SHORTFALL, not the earning. It used to read
- * "18/30h", which is neutral to the point of being congratulatory - the eye
- * reads the 18. It now reads "-12h", because what makes a player chase a full
- * axis next time is seeing what the last one cost, and because that is what the
- * bar's empty half has always meant without ever saying so. The hours actually
- * banked are on the bar's length and in the itemised rows below.
+ * THE RIGHT-HAND NUMBER IS "earned/ceiling", and it has been both ways. It read
+ * "18/30h", was changed to the shortfall "-12h" on the argument that a player
+ * chases a full axis when they can see what the last one cost, and is now back.
+ * What changed is the premise, not the taste: that argument leaned on the hours
+ * banked being visible "in the itemised rows below", and those rows are gone.
+ * They were duplicates of these five axes - Thread Locks restated Delivery,
+ * Superior Locks restated Craft - so the screen showed the same hours twice and
+ * invited the player to add them up to a number the scorer never paid. With
+ * them deleted, a bare "-12h" is the ONLY number on the row, and an axis that
+ * paid 18h would report nothing but its deficit.
+ *
+ * A full axis still gets its own copy ("30h ✓") rather than "30/30h": the tick
+ * is the thing worth seeing at a glance, and it is what the eye finds when
+ * scanning five rows for which lanes actually landed.
  *
  * There is deliberately NO grand "you missed Nh" total. The four tactical axes
  * fight each other by construction, so about two are reachable in one run and
@@ -64,9 +72,9 @@ export function PerformanceReviewAxes({ axes, hold }: Props) {
           // empty rather than dividing by nothing.
           const fill = ceiling > 0 ? Math.min(1, earned / ceiling) : 0;
           const spent = earned > 0;
-          // Rounded the same way the axis itself is, so the shortfall and the
-          // banked hours always add up to the ceiling on screen. Deriving it
-          // from the unrounded ratio instead would show 18 + 13 = 30.
+          // Rounded the same way the axis itself is, so the earned and missing
+          // hours always add up to the ceiling on screen. Deriving it from the
+          // unrounded ratio instead would show 18 + 13 = 30.
           const short = Math.max(0, ceiling - earned);
           const full = ceiling > 0 && short === 0;
 
@@ -91,7 +99,7 @@ export function PerformanceReviewAxes({ axes, hold }: Props) {
               </div>
 
               <span
-                className={`text-xs font-bold tabular-nums w-[3.5rem] text-right shrink-0 ${
+                className={`text-xs font-bold tabular-nums w-[4.25rem] text-right shrink-0 ${
                   full ? style.color : short > 0 ? 'text-destructive/80' : 'text-muted-foreground'
                 }`}
               >
@@ -99,7 +107,7 @@ export function PerformanceReviewAxes({ axes, hold }: Props) {
                   ? '-'
                   : full
                     ? t('levelComplete.axes.full', { hours: earned })
-                    : t('levelComplete.axes.short', { hours: short })}
+                    : t('levelComplete.axes.outOf', { earned, ceiling })}
               </span>
             </div>
           );

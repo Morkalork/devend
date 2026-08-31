@@ -1541,6 +1541,8 @@ export function GameCanvas({
           levelNumber, levelId: level.id, cutCount: game.wallCount,
           expectedCuts: level.expectedCuts, basePoints: level.points,
           zoneShareWithheld: breakdown.zoneShareWithheld ?? 0,
+          multipliedBase: breakdown.multipliedBase,
+          mapCeiling: breakdown.mapCeiling,
           levelScore,
           remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
           thresholdPercent: level.sizeThreshold, pushBonus,

@@ -14,6 +14,20 @@
  * nothing on the screen ever said a run had been perfect. So this is the same
  * economy, read the other way round.
  *
+ * ── The rows read "18/30h" again, and that is not a regression ─────────────
+ *
+ * The bare shortfall was only ever safe because the ITEMISED ROWS below this
+ * block carried the hours banked. Those rows turned out to be restatements of
+ * these same five axes - Thread Locks was Delivery, Superior Locks was Craft -
+ * so the screen reported every hour twice and a player summing it got a number
+ * the scorer never paid. They were deleted, which left "-12h" as the only
+ * number on the row: an axis that paid 18h reported nothing but its deficit.
+ *
+ * So the row shows both halves and the DEFICIT IS STILL THE POINT, carried by
+ * everything around the number rather than by the number alone: the bar's empty
+ * half, the destructive colour on any row that is short, and the tick that only
+ * a full axis gets. The tests below now pin that reading instead of the string.
+ *
  * Two things are deliberately NOT here, and both are the interesting part:
  *
  *   NO GRAND DEFICIT. The tactical axes fight each other by construction, so
@@ -50,11 +64,21 @@ function axes(
 }
 
 describe("the axis readout", () => {
-  it("names what each axis cost you rather than what it paid", () => {
-    // THE change. "18/30h" is read as eighteen earned; "-12h" is read as twelve
-    // lost, and the second is what makes a player chase a full axis next time.
+  it("names what each axis cost you as well as what it paid", () => {
+    // Both halves, because the itemised rows that used to carry the earned
+    // hours are gone. The deficit is still legible: 30 - 18 is on the row.
     render(<PerformanceReviewAxes axes={axes({ craft: 18 })} />);
-    expect(screen.getByText("-12h"), "the shortfall is not shown").toBeTruthy();
+    expect(screen.getByText("18/30h"), "the axis row is missing").toBeTruthy();
+  });
+
+  it("marks a short axis as a loss, so the eye does not read only the 18", () => {
+    // THE reason the bare "-12h" existed. With both numbers on the row the
+    // warning has to come from somewhere else, or "18/30h" reads as a score
+    // out of thirty and a half-empty axis looks like a result.
+    render(<PerformanceReviewAxes axes={axes({ craft: 18 })} />);
+    const row = screen.getByText("18/30h");
+    expect(row.className, "a short axis is not marked as one")
+      .toMatch(/destructive/);
   });
 
   it("marks a full axis rather than showing it as a loss of nothing", () => {
@@ -68,21 +92,22 @@ describe("the axis readout", () => {
     // An axis at zero is the most useful row on the readout: it is the hours
     // that were on the table and left there.
     render(<PerformanceReviewAxes axes={axes({ tempo: 0 })} />);
-    expect(screen.getByText("-24h")).toBeTruthy();
+    expect(screen.getByText("0/24h")).toBeTruthy();
   });
 
   it("says nothing rather than a deficit when the map never offered the axis", () => {
     // A ceiling of zero means this map had no such play available. Reporting
-    // "-0h" would invent a failure out of a map that never asked.
+    // "0/0h" would invent a failure out of a map that never asked.
     render(<PerformanceReviewAxes axes={axes({ greed: 0 }, { greed: 0 })} />);
     expect(screen.queryByText("-0h")).toBeNull();
+    expect(screen.queryByText("0/0h")).toBeNull();
   });
 
   it("makes the shortfalls and the banked hours add up on screen", () => {
     // Derived from the rounded axis rather than from the raw ratio, so a player
     // adding the two numbers gets the ceiling instead of 18 + 13 = 30.
     render(<PerformanceReviewAxes axes={axes({ greed: 5 })} />);
-    expect(screen.getByText("-20h")).toBeTruthy(); // 25 ceiling - 5 banked
+    expect(screen.getByText("5/25h")).toBeTruthy();
   });
 
   it("never reports a total the ring makes unreachable", () => {
