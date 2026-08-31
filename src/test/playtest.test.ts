@@ -70,14 +70,21 @@ describe("covering the four orientations", () => {
 });
 
 describe("the verdict", () => {
+  // Explicit timeout, and a deliberately short budget. This drives the real
+  // physics four times over, and at 3600 frames it fits inside vitest's 5s
+  // default on a developer machine and does NOT on a shared CI runner - which
+  // is exactly how it was found. The assertions below are about the plumbing
+  // (four orientations, the aggregation, nothing thrown), and none of them
+  // needs a map to be WON, so the frame budget can be a fraction of a real
+  // playtest's. The timeout is belt and braces for a slow runner.
   it("plays a real map and reports something usable", () => {
-    const v = playtestMap(lvl(6), 6, { perRotation: 1, maxFrames: 3600 });
+    const v = playtestMap(lvl(6), 6, { perRotation: 1, maxFrames: 900 });
     expect(v.total).toBe(4);
     expect(v.possibleRotations).toEqual([0, 1, 2, 3]);
     expect(v.won + v.lost + v.timedOut).toBe(v.total);
     expect(v.byRotation.reduce((n, r) => n + r.runs, 0)).toBe(v.total);
     expect(v.expectedCuts).toBe(lvl(6).expectedCuts);
-  });
+  }, 30_000);
 
   it("reports the median over the runs that were WON", () => {
     // Averaging in the losses would make a map look cheap precisely when it is

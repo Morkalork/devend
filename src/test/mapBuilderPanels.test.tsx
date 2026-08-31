@@ -125,7 +125,11 @@ describe("the playtest panel", () => {
     } finally {
       vi.useRealTimers();
     }
-  });
+    // Explicit timeout: this one drives two real games of physics through a
+    // real component on purpose, because the bug it guards is only visible once
+    // a verdict exists. It is comfortably the slowest test in this file and it
+    // sits near vitest's 5s default on a shared runner.
+  }, 30_000);
 
   it("renders for a level that cannot rotate without asking for four orientations", () => {
     expect(() => render(<PlaytestPanel level={lvl(2)} />)).not.toThrow();
