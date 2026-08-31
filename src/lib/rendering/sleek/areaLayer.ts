@@ -228,7 +228,9 @@ export class AreaLayer {
       + "#s" + (game.slowAreas ?? [])
         .map(a => `${a.x},${a.y},${a.width},${a.height}`).join("|")
       + "#f" + (game.fenceZones ?? [])
-        .map(z => `${z.x},${z.y},${z.width},${z.height},${z.speed}`).join("|");
+        .map(z => `${z.x},${z.y},${z.width},${z.height},${z.speed}`).join("|")
+      + "#b" + (game.deliveryBoxes ?? [])
+        .map(b => `${b.id},${b.delivered}/${b.capacity}`).join("|");
     if (key === this.key) return;
     this.key = key;
 
@@ -239,6 +241,7 @@ export class AreaLayer {
     this.drawGravityWells(game, w2s, scale);
     this.drawSlowAreas(game, w2s, scale);
     this.drawFenceZones(game, w2s, scale);
+    this.drawDeliveryBoxes(game, w2s, scale);
 
     for (const a of areas) {
       const st = areaStyle(a.kind);
@@ -552,6 +555,62 @@ export class AreaLayer {
       this.g.stroke({
         width: Math.max(1, 1.4 * scale), color: COLOR, alpha: slow ? 0.5 : 0.42,
       });
+    }
+  }
+
+  /**
+   * Delivery boxes: the interior, the mouth, and the count.
+   *
+   * The four walls draw themselves as ordinary obstacles, so this layer only
+   * adds what makes it read as a CONTAINER rather than four walls that happen
+   * to touch: a tinted floor, a bright dashed line across the mouth so the way
+   * in is unmistakable, and a running count. Without the mouth marking, a box
+   * is a sealed room the player has no reason to think they can get into.
+   *
+   * Amber while it wants more, green once satisfied - the same before/after
+   * distance the colored areas needed, because a player never sees the two
+   * states side by side.
+   */
+  private drawDeliveryBoxes(game: CanvasGameState, w2s: W2S, scale: number): void {
+    const boxes = game.deliveryBoxes ?? [];
+    if (boxes.length === 0) return;
+
+    for (const box of boxes) {
+      const done = box.delivered >= box.capacity;
+      const COLOR = done ? 0x34d399 : 0xffb347;
+      const q = worldRectQuad(box.inner.x, box.inner.y, box.inner.width, box.inner.height, w2s);
+
+      shapeOf(this.g, q, 0).fill({ color: COLOR, alpha: done ? 0.20 : 0.11 });
+
+      // The mouth, as a dashed line across the side it is on. Drawn INSIDE the
+      // interior rect so it sits in the opening rather than under the wall.
+      const m = box.mouth;
+      const a = m === "up" ? quadLocal(q, 0, 0)
+        : m === "down" ? quadLocal(q, 0, q.h)
+        : m === "left" ? quadLocal(q, 0, 0)
+        : quadLocal(q, q.w, 0);
+      const b = m === "up" ? quadLocal(q, q.w, 0)
+        : m === "down" ? quadLocal(q, q.w, q.h)
+        : m === "left" ? quadLocal(q, 0, q.h)
+        : quadLocal(q, q.w, q.h);
+      dashedLine(this.g, a.x, a.y, b.x, b.y, Math.max(6, 9 * scale), Math.max(4, 6 * scale));
+      this.g.stroke({ width: Math.max(2, 3 * scale), color: COLOR, alpha: 0.95 });
+
+      const label = `${box.delivered}/${box.capacity}`;
+      const centre = quadLocal(q, q.w / 2, q.h / 2);
+      const t = new Text({
+        text: label,
+        style: new TextStyle({
+          fontFamily: "monospace",
+          fontSize: Math.max(12, Math.round(18 * scale)),
+          fontWeight: "bold",
+          fill: COLOR,
+        }),
+      });
+      t.anchor.set(0.5);
+      t.position.set(centre.x, centre.y);
+      this.container.addChild(t);
+      this.labels.push(t);
     }
   }
 

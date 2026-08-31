@@ -40,6 +40,7 @@ import type { GrowingWall, Vector2 } from "@/types/game";
 import type { CanvasGameState } from "@/types/gameState";
 import type { LevelConfig } from "@/types/level";
 import { DEFAULT_MODIFIERS, type GameModifiers } from "@/hooks/useActiveModifiers";
+import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
 
 /**
  * A clock the bot controls.
@@ -227,6 +228,13 @@ export function stepBot(ctx: BotGame, dt: number = PHYSICS_STEP): void {
   tickPhasing(game, game.activePlaySeconds);
 
   for (const ball of game.balls) updateBall(ball, dt, game);
+
+  // Deliveries: a ball that has crossed a box's membrane is taken out of play
+  // and counted. After ball movement so a ball that entered this step counts
+  // this step, and before the cut pass so the win sees it.
+  for (const ev of collectDeliveries(game)) {
+    if (ev.satisfied) releaseReservedSpace(game, ev.box);
+  }
 
   // Growing fences, then the cuts any of them just finished. applyCutFn
   // removes the wall itself, so the list is snapshotted exactly as the loop

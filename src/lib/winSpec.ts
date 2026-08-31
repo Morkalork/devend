@@ -101,6 +101,8 @@ export function evaluateWinCondition(
       return accumulate(snap.bossDefeated ? 1 : 0, 1);
     case "allLocked":
       return accumulate(snap.allLocked ? 1 : 0, 1);
+    case "delivered":
+      return accumulate(snap.delivered, condition.count);
     case "underPar":
       return limit(snap.cuts, snap.par + condition.delta);
     case "speedClear":
@@ -168,8 +170,11 @@ export function winningCondition(spec: WinSpec, snap: WinSnapshot): WinCondition
   // Among met requirements, the most specific one reads best as "why you won":
   // "boss beaten" beats "cleared to 12%" on a map that asked for both.
   const rank: Record<WinCondition["kind"], number> = {
-    boss: 0, area: 1, lockType: 2, superiorLocks: 3, allLocked: 4,
-    locks: 5, speedClear: 6, underPar: 7, space: 8,
+    // A delivery ranks just under a gate zone: both are "you put a ball
+    // somewhere specific", and that reads better as the reason you won than a
+    // plain lock count does.
+    boss: 0, area: 1, delivered: 2, lockType: 3, superiorLocks: 4, allLocked: 5,
+    locks: 6, speedClear: 7, underPar: 8, space: 9,
   };
   return [...spec.require].sort((a, b) => rank[a.kind] - rank[b.kind])[0];
 }

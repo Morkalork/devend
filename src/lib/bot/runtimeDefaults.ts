@@ -141,6 +141,7 @@ export function runtimeDefaults() {
     pickupConfig: null,
     pickupSpots: [],
     obstacleRules: new Map(),
+    deliveryBoxes: [],
     fenceZones: [],
     lastPickupRollAt: 0,
     pickupRollContext: 'pickups',

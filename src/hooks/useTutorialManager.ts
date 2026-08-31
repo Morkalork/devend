@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { CIRCUIT_SEEN_PREFIX, LEGACY_CIRCUIT_SEEN_KEY } from '@/lib/circuitHint';
+import { BOX_SEEN_KEY, CIRCUIT_SEEN_PREFIX, LEGACY_CIRCUIT_SEEN_KEY } from '@/lib/circuitHint';
 
 /**
  * Tracks which one-time tutorials the player has already seen, persisted in
@@ -140,6 +140,9 @@ export function useTutorialManager() {
       // explainer back - a tutorial you could not re-enable from the button
       // whose whole job is re-enabling tutorials.
       localStorage.removeItem(LEGACY_CIRCUIT_SEEN_KEY);
+      // Added WITH the mechanic this time. The circuit explainer sat outside
+      // this list for months and "Re-enable All Tutorials" silently skipped it.
+      localStorage.removeItem(BOX_SEEN_KEY);
       for (const key of Object.keys(localStorage)) {
         if (key.startsWith(CIRCUIT_SEEN_PREFIX)) localStorage.removeItem(key);
       }

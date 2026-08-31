@@ -37,7 +37,7 @@ import { TutorialOverlay } from './TutorialOverlay';
 import { LockDebugOverlay } from './LockDebugOverlay';
 import { isLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { fileManualEntry } from '@/lib/manual';
-import { circuitSeenKey, FIRST_CIRCUIT_MAP_ID, LEGACY_CIRCUIT_SEEN_KEY } from '@/lib/circuitHint';
+import { circuitSeenKey, FIRST_CIRCUIT_MAP_ID, LEGACY_CIRCUIT_SEEN_KEY, BOX_SEEN_KEY } from '@/lib/circuitHint';
 import { isStaticBgEnabled } from '@/lib/rendering/perfStats';
 import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
@@ -304,6 +304,18 @@ export function GameScreen({
     try { seen = !!localStorage.getItem('devend_break_tutorial_seen'); } catch { /* ignore */ }
     setShowBreakIntro(!seen);
   }, [levelHasBreakObjective, level.id]);
+
+  // The delivery box: a genuinely new rule (a door that only opens inward, and
+  // holds space hostage until fed), so it earns a real modal rather than being
+  // filed quietly like the mover or the breakable.
+  const levelHasBox = (level.entities ?? []).some(e => e.kind === 'box');
+  const [showBoxIntro, setShowBoxIntro] = useState(false);
+  useEffect(() => {
+    if (!levelHasBox) { setShowBoxIntro(false); return; }
+    let seen = false;
+    try { seen = !!localStorage.getItem(BOX_SEEN_KEY); } catch { /* ignore */ }
+    setShowBoxIntro(!seen);
+  }, [levelHasBox, level.id]);
 
   // "Wire the Integration" intro — shown the first time EACH circuit map loads.
   //
@@ -732,7 +744,7 @@ export function GameScreen({
   // explainer.
   const anyExplainerModal =
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal
-    || fenceIntroOpen || ascModalOpen;
+    || fenceIntroOpen || ascModalOpen || showBoxIntro;
 
 
   // Mechanics the player has just met. These used to stop the game to deliver a
@@ -1330,6 +1342,17 @@ export function GameScreen({
             body: announcement.body,
             onDismiss: () => setAscModalOpen(false),
           }] : []),
+          {
+            show: showBoxIntro,
+            accentColor: '#ffb347',
+            title: t('game.boxIntroTitle'),
+            body: t('game.boxIntroBody'),
+            onDismiss: () => {
+              fileManualEntry('box');
+              setShowBoxIntro(false);
+              try { localStorage.setItem(BOX_SEEN_KEY, '1'); } catch { /* ignore */ }
+            },
+          },
           {
             show: showWinModal, accentColor,
             title: t('winConditions.title'), body: winConditionsBody(t, level, levelNumber),

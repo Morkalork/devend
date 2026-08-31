@@ -120,3 +120,6 @@ export const CIRCUIT_SEEN_PREFIX = "devend_circuit_tutorial_seen:";
  */
 export const FIRST_CIRCUIT_MAP_ID = "level-15";
 export const LEGACY_CIRCUIT_SEEN_KEY = "devend_circuit_tutorial_seen";
+
+/** One-time flag for the delivery-box explainer. Swept by resetAllTutorials. */
+export const BOX_SEEN_KEY = "devend_box_tutorial_seen";

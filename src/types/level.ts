@@ -128,12 +128,49 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
 export type WallRectEntity = WallEntity & RectShape;
 export type WallPolygonEntity = WallEntity & PolygonShape;
 export type WallCircleEntity = WallEntity & CircleShape;
-export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity | LevelMoverEntity;
+export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity | LevelMoverEntity | BoxRectEntity;
 
 /** True when the entity is a wall with the mirror flag set. Movers can never be mirrors. */
 export function isMirrorEntity(entity: LevelEntity): boolean {
   return entity.kind === "wall" && !!entity.mirror;
 }
+
+/**
+ * A delivery box: four walls with one MEMBRANE side.
+ *
+ * A ball that crosses the membrane is inside for good, and the box counts it as
+ * DELIVERED. Deliberately not "locked": the lock rule is that a ball only locks
+ * in a genuinely sealed pocket, never one closed off by a gap too narrow for
+ * it, and that rule is the game's core lesson. A ball that wandered into a box
+ * has not been sealed by anyone, so it earns a different word and its own
+ * counter.
+ *
+ * The verb is different too. Every lock in the game is "seal a ball where it
+ * happens to be"; a delivery is "take a ball somewhere", which is the one thing
+ * the one-way membrane was good for and nothing rewarded.
+ *
+ * Making the mouth hard to reach is the DESIGNER's job, not the mechanic's: put
+ * a breakable over it, or a phasing cover, or a charge. Those compose already
+ * and the box should not try to own them.
+ */
+export interface BoxEntity extends BaseEntity, BendShapeFields {
+  kind: "box";
+  /** Which side carries the membrane. Balls pass inward here and cannot leave. */
+  mouth: "up" | "down" | "left" | "right";
+  /** Deliveries it wants. A win can require this many. */
+  capacity: number;
+  /**
+   * Hold the box's interior off the board until it is satisfied.
+   *
+   * Without this the box is a side quest: feeding it removes threats and makes
+   * the rest of the map calmer, so the difficulty curve inverts as you do the
+   * hard thing. Reserving the space makes the two halves need each other -
+   * the same trick the circuit's sleepers use to stop waking them being
+   * optional.
+   */
+  reserves?: boolean;
+}
+export type BoxRectEntity = BoxEntity & RectShape;
 
 // ── Mover entities — obstacles that oscillate back and forth ──────────────
 export interface MoverEntityBase extends BaseEntity, BendShapeFields {

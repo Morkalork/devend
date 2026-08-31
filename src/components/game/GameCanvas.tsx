@@ -628,6 +628,7 @@ export function GameCanvas({
     walls: [] as Wall[],
     obstaclePolygons: [] as Polygon[],
     obstacleRules: new Map() as import('@/lib/physics/obstacleRules').ObstacleRuleMap,
+    deliveryBoxes: [] as import('@/lib/physics/deliveryBox').DeliveryBoxState[],
     fenceZones: [] as import('@/lib/physics/fenceZones').FenceZone[],
     mirrorPolygons: [] as Polygon[],
     boardPolygon: null as Polygon | null,
@@ -963,6 +964,7 @@ export function GameCanvas({
       // One-way membranes and ball-type gates, keyed by polygon identity, and
       // the fence-speed ground - both already rotated in initGame.
       game.obstacleRules = data.obstacleRules;
+      game.deliveryBoxes = data.deliveryBoxes;
       game.fenceZones = data.fenceZones;
       // "Wire the Integration" circuit (already rotated + sealed in initGame).
       game.circuit = data.circuit;

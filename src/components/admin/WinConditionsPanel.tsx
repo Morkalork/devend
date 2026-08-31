@@ -37,6 +37,7 @@ const KIND_LABEL: Record<WinConditionKind, string> = {
   lockType: 'Lock a specific ball',
   boss: 'Defeat the boss',
   allLocked: 'Lock every ball',
+  delivered: 'Deliver N balls into a box',
   underPar: 'Finish under par',
   speedClear: 'Finish within N seconds',
 };

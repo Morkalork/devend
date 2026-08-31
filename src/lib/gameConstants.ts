@@ -42,3 +42,12 @@ export const COLORS = {
   fastestBallHighlight: "#00ffff",
   debugOutline:         "#ff00ff",
 };
+
+/**
+ * Wall thickness of a delivery box's four sides, in world units.
+ *
+ * Thicker than an ordinary obstacle edge on purpose: the box has to read as a
+ * container at a glance, and its mouth has to be visibly a way IN rather than a
+ * gap someone forgot to close.
+ */
+export const BOX_WALL_THICKNESS = 18;

@@ -23,6 +23,7 @@ import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types
 import type { LampState } from "@/lib/lampBall";
 import type { ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import type { FenceZone } from "@/lib/physics/fenceZones";
+import type { DeliveryBoxState } from "@/lib/physics/deliveryBox";
 
 /** A circuit terminal in world space with its runtime lit state (issue #73). */
 export interface CircuitRuntimeTerminal {
@@ -105,6 +106,8 @@ export interface CanvasGameState {
   obstacleRules?: ObstacleRuleMap;
   /** Ground that changes how fast a fence builds across it. */
   fenceZones?: FenceZone[];
+  /** Delivery boxes on this map, with their running counts. */
+  deliveryBoxes?: DeliveryBoxState[];
   /** Mirror obstacle polygons (rendered in distinct cyan). */
   mirrorPolygons: Polygon[];
   /** Original board boundary polygon for ball collision. */

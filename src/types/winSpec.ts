@@ -60,6 +60,15 @@ export type WinCondition = (
   | { kind: "boss" }
   /** Lock every ball that is still in play. */
   | { kind: "allLocked" }
+  /**
+   * Deliver at least `count` balls into delivery boxes.
+   *
+   * Deliberately separate from "locks": a delivered ball was herded through a
+   * membrane, not sealed into a pocket, and the two are different verbs with
+   * different difficulty. Counting them together would let a map that asked for
+   * herding be satisfied by ordinary sealing.
+   */
+  | { kind: "delivered"; count: number }
   /** Finish using at most `par + delta` cuts (delta may be negative). */
   | { kind: "underPar"; delta: number }
   /** Meet the rest of the win inside `seconds` of ACTIVE play. */
@@ -105,6 +114,8 @@ export interface WinSnapshot {
   areaTargets: number;
   /** Locked balls by their ball-type id, for `lockType`. */
   lockedByType: Record<string, number>;
+  /** Balls herded into delivery boxes. Counted apart from locks on purpose. */
+  delivered: number;
   bossDefeated: boolean;
   /** True when no ball is still in play. */
   allLocked: boolean;

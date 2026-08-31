@@ -35,7 +35,7 @@ describe("win reason reaches the results screen", () => {
   it("maps every win condition kind to a reason", () => {
     const snap: WinSnapshot = {
       remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-      lockedByType: { black: 9 }, bossDefeated: true, allLocked: true,
+      lockedByType: { black: 9 }, delivered: 0, bossDefeated: true, allLocked: true,
       cuts: 0, par: 9, activeSeconds: 0,
     };
     const sample: Record<WinConditionKind, WinCondition> = {
@@ -46,6 +46,7 @@ describe("win reason reaches the results screen", () => {
       lockType: { kind: "lockType", ballType: "black", count: 1 },
       boss: { kind: "boss" },
       allLocked: { kind: "allLocked" },
+    delivered: { kind: "delivered", count: 1 },
       underPar: { kind: "underPar", delta: 0 },
       speedClear: { kind: "speedClear", seconds: 60 },
     };
@@ -59,7 +60,7 @@ describe("win reason reaches the results screen", () => {
   it("uses each of the four reasons somewhere", () => {
     const snap: WinSnapshot = {
       remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-      lockedByType: {}, bossDefeated: true, allLocked: true,
+      lockedByType: {}, delivered: 0, bossDefeated: true, allLocked: true,
       cuts: 0, par: 9, activeSeconds: 0,
     };
     const reasonOf = (c: WinCondition) =>

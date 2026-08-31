@@ -39,6 +39,7 @@ import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/g
 import { decoratePolygon } from "@/lib/obstacleDecorations";
 import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline } from "@/lib/bend";
 import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
+import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
 import { rotateFenceZones } from "@/lib/mapRotation";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
@@ -59,6 +60,7 @@ import {
 import {
   ARENA_MARGIN,
   BASE_BALL_RADIUS,
+  BOX_WALL_THICKNESS,
 } from "@/lib/gameConstants";
 import {
   generateRegionId,
@@ -141,6 +143,8 @@ export interface InitialGameData {
   obstaclePolygons: Polygon[];
   /** Pass rules for the obstacles above, keyed by polygon identity. */
   obstacleRules: ObstacleRuleMap;
+  /** Delivery boxes: four walls with a membrane mouth, and what each wants. */
+  deliveryBoxes: DeliveryBoxState[];
   /** Fence-speed ground, already rotated into this deal's orientation. */
   fenceZones?: FenceZone[];
   mirrorPolygons: Polygon[];
@@ -225,6 +229,8 @@ export function createInitialGameData(
   // and the phasing system already looks obstacles up this way. A parallel
   // array would be one careless insert from applying the wrong rule.
   const obstacleRules: ObstacleRuleMap = new Map();
+  const deliveryBoxes: DeliveryBoxState[] = [];
+  const reservingBoxes: Array<{ id: string; poly: Polygon }> = [];
   const mirrorPolygons:   Polygon[] = [];
   const destructibles:    DestructibleState[] = [];
   // Non-mirror obstacles participating in the break/topple support graph (#38).
@@ -320,6 +326,42 @@ export function createInitialGameData(
   if (allEntities.length > 0) {
     let obstacleIndex = 0;
     for (const entity of allEntities) {
+      if (entity.kind === "box") {
+        // Four walls around the rect, one of them a membrane. Built here rather
+        // than authored as four entities so a box is one thing a designer moves
+        // and one thing a lint can check; the sides are ordinary walls, so
+        // fences stop against them exactly as they would against anything else.
+        const T = BOX_WALL_THICKNESS;
+        const { x, y, width: w, height: h } = entity;
+        const sides: Array<{ side: Mouth; poly: Polygon }> = [
+          { side: "up",    poly: createRectPolygon(x,         y,         x + w,     y + T) },
+          { side: "down",  poly: createRectPolygon(x,         y + h - T, x + w,     y + h) },
+          { side: "left",  poly: createRectPolygon(x,         y,         x + T,     y + h) },
+          { side: "right", poly: createRectPolygon(x + w - T, y,         x + w,     y + h) },
+        ];
+        for (const { side, poly } of sides) {
+          obstaclePolygons.push(poly);
+          const walls = createWallsFromPolygon(poly, `box-${entity.id}-${side}`, false);
+          if (side === entity.mouth) {
+            // The mouth admits balls travelling INTO the box: a lid on top is
+            // crossed by a ball moving down.
+            const rule: ObstacleRule = { oneWay: INWARD_FROM_MOUTH[entity.mouth] };
+            obstacleRules.set(poly, rule);
+            for (const wl of walls) wl.passRule = rule;
+          }
+          allWalls.push(...walls);
+        }
+        if (entity.reserves) reservingBoxes.push({ id: entity.id, poly: createRectPolygon(x + T, y + T, x + w - T, y + h - T) });
+        deliveryBoxes.push({
+          id: entity.id,
+          inner: { x: x + T, y: y + T, width: w - 2 * T, height: h - 2 * T },
+          mouth: entity.mouth,
+          capacity: Math.max(1, Math.round(entity.capacity)),
+          delivered: 0,
+          reservedCells: [],
+        });
+        continue;
+      }
       if (entity.kind === "wall") {
         const isMirror = !!entity.mirror;
         let basePolygon: Polygon;
@@ -783,7 +825,11 @@ export function createInitialGameData(
   const initBounds   = polygonBounds(boardPolygon);
   const initSamplePoints: Vector2[] = [];
 
-  const sealedPolys = [...sealedAreas.map(s => s.poly)];
+  // A reserving box holds its interior off the board until it is satisfied, the
+  // same way a sleeper's pocket is held until it is woken - so feeding the box
+  // is how you get the space to clear, not an optional side quest that makes
+  // the rest of the map easier.
+  const sealedPolys = [...sealedAreas.map(s => s.poly), ...reservingBoxes.map(b => b.poly)];
   const insideSealed = (p: Vector2) => sealedPolys.some(poly => pointInPolygon(p, poly));
 
   for (let x = initBounds.minX + initGridSize / 2; x < initBounds.maxX; x += initGridSize) {
@@ -803,6 +849,27 @@ export function createInitialGameData(
   // counted in initialActiveCount), so they read as locked until their gate
   // breaks and restores them.
   const spaceGrid   = createSpaceGrid(boardPolygon, sealedPolys.length ? [...obstaclePolygons, ...sealedPolys] : obstaclePolygons, initGridSize);
+  // The same for a reserving box, so satisfying it hands back exactly its own
+  // interior and nothing else.
+  for (const rb of reservingBoxes) {
+    const box = deliveryBoxes.find(b => b.id === rb.id);
+    if (!box) continue;
+    const b = polygonBounds(rb.poly);
+    const c0 = Math.max(0, Math.floor((b.minX - spaceGrid.originX) / spaceGrid.cellSize));
+    const c1 = Math.min(spaceGrid.width - 1, Math.ceil((b.maxX - spaceGrid.originX) / spaceGrid.cellSize));
+    const r0 = Math.max(0, Math.floor((b.minY - spaceGrid.originY) / spaceGrid.cellSize));
+    const r1 = Math.min(spaceGrid.height - 1, Math.ceil((b.maxY - spaceGrid.originY) / spaceGrid.cellSize));
+    for (let row = r0; row <= r1; row++) {
+      for (let col = c0; col <= c1; col++) {
+        const idx = row * spaceGrid.width + col;
+        if (spaceGrid.cells[idx] !== CellState.REMOVED) continue;
+        const wx = spaceGrid.originX + col * spaceGrid.cellSize + spaceGrid.cellSize / 2;
+        const wy = spaceGrid.originY + row * spaceGrid.cellSize + spaceGrid.cellSize / 2;
+        if (pointInPolygon({ x: wx, y: wy }, rb.poly)) box.reservedCells.push(idx);
+      }
+    }
+  }
+
   // Record each sealed area's grid cells so its gate can re-open exactly those.
   for (const sealed of sealedAreas) {
     const b = polygonBounds(sealed.poly);
@@ -987,6 +1054,7 @@ export function createInitialGameData(
     walls:               allWalls,
     obstaclePolygons,
     obstacleRules,
+    deliveryBoxes,
     // Rotated here rather than at the consumer: a zone is a rect on the board
     // and has to turn with everything else on it.
     fenceZones: rotateFenceZones(level.fenceZones, mapRotation),

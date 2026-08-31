@@ -31,7 +31,7 @@ const level = (over: Partial<LevelConfig> = {}): LevelConfig => ({
 
 const snap = (over: Partial<WinSnapshot> = {}): WinSnapshot => ({
   remainingPercent: 100, lockedBalls: 0, superiorLocks: 0, areaTargets: 0,
-  lockedByType: {}, bossDefeated: false, allLocked: false,
+  lockedByType: {}, delivered: 0, bossDefeated: false, allLocked: false,
   cuts: 0, par: 6, activeSeconds: 0,
   ...over,
 });
@@ -230,7 +230,7 @@ describe("deciding the win", () => {
 describe("reporting the reason", () => {
   const won = snap({
     remainingPercent: 0, lockedBalls: 9, superiorLocks: 9, areaTargets: 9,
-    lockedByType: { black: 9 }, bossDefeated: true, allLocked: true, par: 9,
+    lockedByType: { black: 9 }, delivered: 0, bossDefeated: true, allLocked: true, par: 9,
   });
 
   it("maps every condition kind to one of the four stored reasons", () => {
@@ -238,7 +238,8 @@ describe("reporting the reason", () => {
       space: { kind: "space", threshold: 50 }, locks: { kind: "locks", count: 1 },
       superiorLocks: { kind: "superiorLocks", count: 1 }, area: { kind: "area", count: 1 },
       lockType: { kind: "lockType", ballType: "black", count: 1 }, boss: { kind: "boss" },
-      allLocked: { kind: "allLocked" }, underPar: { kind: "underPar", delta: 0 },
+      allLocked: { kind: "allLocked" },
+    delivered: { kind: "delivered", count: 1 }, underPar: { kind: "underPar", delta: 0 },
       speedClear: { kind: "speedClear", seconds: 60 },
     };
     for (const kind of WIN_CONDITION_KINDS) {

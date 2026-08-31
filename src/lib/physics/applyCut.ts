@@ -51,6 +51,7 @@ import {
   resolveWinSpec, isWinMet, winReasonFor, winBonusPercent, metAlternative, requirementsMet,
 } from "@/lib/winSpec";
 import type { WinSnapshot, WinSpec } from "@/types/winSpec";
+import { deliveredCount } from "@/lib/physics/deliveryBox";
 
 function isBallOnCutLine(ball: Ball, wall: GrowingWall): boolean {
   const checkWaypoints = (waypoints: Vector2[]): boolean => {
@@ -567,6 +568,7 @@ export function readWinSnapshot(game: CanvasGameState, level: LevelConfig): WinS
     remainingPercent: Math.round(getGridRemainingPercent(game)),
     lockedBalls: game.lockedBallsCount,
     superiorLocks: game.superiorLockCount,
+    delivered: deliveredCount(game),
     areaTargets: game.coloredAreaTargets ?? 0,
     lockedByType: game.lockedByType ?? {},
     bossDefeated: game.bossDefeated,

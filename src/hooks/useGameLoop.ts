@@ -31,6 +31,7 @@ import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffect
 import { applyLodestones } from "@/lib/physics/lodestone";
 import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
+import { collectDeliveries, releaseReservedSpace } from "@/lib/physics/deliveryBox";
 
 export interface GameLoopCallbacks {
   /** Called every physics step to advance wall growth. */
@@ -438,6 +439,14 @@ export function createGameLoop(
         updateBall(ball, PHYSICS_STEP, game, phasedOut);
       }
       handleBallCollisions(game);
+
+      // Deliveries: a ball that has crossed a box's membrane is taken out of
+      // play and counted. Runs after ball movement so a ball that arrived this
+      // step counts this step, and a satisfied box hands back the space it was
+      // holding immediately rather than a frame later.
+      for (const ev of collectDeliveries(game)) {
+        if (ev.satisfied) releaseReservedSpace(game, ev.box);
+      }
       // Chains (#64): solve the verlet rope AFTER ball physics so it reads the
       // balls' new positions, tethers/snags them, and sweeps fences.
       tickChains(game, PHYSICS_STEP, performance.now());

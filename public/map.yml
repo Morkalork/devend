@@ -1204,7 +1204,7 @@ levels:
         range: 300
         speed: 150
 
-  # 23 "No Rollback" - MEET the one-way membrane.
+  # 23 "No Rollback" - MEET the one-way membrane, and the box it feeds.
   # The two dividers already made a neck; now the neck only works downwards.
   # Balls fall through it and cannot come back, so the bottom of the board is a
   # basin that fills and never empties. Every other mechanic so far changes
@@ -1268,6 +1268,20 @@ levels:
         'y': 690
         width: 205
         height: 24
+      # The membrane's payoff. Balls that fall through the one-way neck land in
+      # this half; the box is where you put them. It holds its own floor off the
+      # board until it is fed, so the basin cannot simply be cleared around it -
+      # the map's two halves need each other.
+      - id: done-column
+        kind: box
+        shape: rect
+        x: 600
+        'y': 560
+        width: 190
+        height: 190
+        mouth: up
+        capacity: 2
+        reserves: true
       - id: neck-guard
         kind: mover
         shape: rect
