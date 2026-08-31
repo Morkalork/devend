@@ -37,6 +37,7 @@ import { TutorialOverlay } from './TutorialOverlay';
 import { LockDebugOverlay } from './LockDebugOverlay';
 import { isLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { fileManualEntry } from '@/lib/manual';
+import { circuitSeenKey, FIRST_CIRCUIT_MAP_ID, LEGACY_CIRCUIT_SEEN_KEY } from '@/lib/circuitHint';
 import { isStaticBgEnabled } from '@/lib/rendering/perfStats';
 import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
@@ -304,13 +305,26 @@ export function GameScreen({
     setShowBreakIntro(!seen);
   }, [levelHasBreakObjective, level.id]);
 
-  // "Wire the Integration" intro — shown the first time a circuit map loads.
+  // "Wire the Integration" intro — shown the first time EACH circuit map loads.
+  //
+  // It used to be one flag for the whole game, so it appeared on level 15 and
+  // never again. Level 16 is the map whose point is waking BOTH terminals, and
+  // level 31 is sixteen levels further on with the mechanic crossed against a
+  // one-way membrane; both were silent, and a returning player met a teal dot
+  // with nothing attached to it. Per map is the smallest honest fix: three
+  // maps, three explanations, still never twice for the same one.
+  //
+  // The old key is still read, so a player who has seen level 15's copy is not
+  // shown it again on their next run through level 15.
   const levelHasCircuit = !!level.circuit;
   const [showCircuitIntro, setShowCircuitIntro] = useState(false);
   useEffect(() => {
     if (!levelHasCircuit) { setShowCircuitIntro(false); return; }
     let seen = false;
-    try { seen = !!localStorage.getItem('devend_circuit_tutorial_seen'); } catch { /* ignore */ }
+    try {
+      seen = !!localStorage.getItem(circuitSeenKey(level.id))
+        || (level.id === FIRST_CIRCUIT_MAP_ID && !!localStorage.getItem(LEGACY_CIRCUIT_SEEN_KEY));
+    } catch { /* ignore */ }
     setShowCircuitIntro(!seen);
   }, [levelHasCircuit, level.id]);
 
@@ -732,8 +746,10 @@ export function GameScreen({
     if (showBreakOverlay) { fileManualEntry('break'); setShowBreakIntro(false); try { localStorage.setItem('devend_break_tutorial_seen', '1'); } catch { /* ignore */ } }
   }, [showBreakOverlay]);
   useEffect(() => {
-    if (showCircuitOverlay) { fileManualEntry('circuit'); setShowCircuitIntro(false); try { localStorage.setItem('devend_circuit_tutorial_seen', '1'); } catch { /* ignore */ } }
-  }, [showCircuitOverlay]);
+    if (showCircuitOverlay) { fileManualEntry('circuit'); setShowCircuitIntro(false); try { localStorage.setItem(circuitSeenKey(level.id), '1'); } catch { /* ignore */ } }
+    // level.id is a real dependency now that the key is per map: without it the
+    // effect could file the wrong map's key after a level change.
+  }, [showCircuitOverlay, level.id]);
   useEffect(() => {
     if (showTopBarOverlay) { fileManualEntry('topBar'); onTopBarTutorialSeen?.(); }
   }, [showTopBarOverlay, onTopBarTutorialSeen]);

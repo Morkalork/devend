@@ -9,6 +9,17 @@ interface InteractiveTutorialOverlayProps {
   canvasHeight: number;
   canvasOffsetTop: number;
   canvasOffsetLeft: number;
+  /**
+   * Where to draw the gesture, in the same CSS-pixel space as the offsets
+   * above. Omitted keeps the original behaviour: a diagonal swipe centred in
+   * the canvas, which is what the level-1 tutorial wants because it is teaching
+   * the gesture itself and has nowhere in particular to point at.
+   *
+   * Supplied, the gesture is aimed - at a circuit terminal, say - and the hand
+   * traces that line instead. Kept optional rather than made required so the
+   * L1 caller does not have to compute a position it does not care about.
+   */
+  gesture?: { fromX: number; fromY: number; toX: number; toY: number };
 }
 
 // Animation timing constants (in seconds)
@@ -40,6 +51,7 @@ export function InteractiveTutorialOverlay({
   canvasHeight,
   canvasOffsetTop,
   canvasOffsetLeft,
+  gesture,
 }: InteractiveTutorialOverlayProps) {
   const [showHand, setShowHand] = useState(true);
   const [loopCount, setLoopCount] = useState(0);
@@ -66,10 +78,10 @@ export function InteractiveTutorialOverlay({
   // side (which left it offset right-and-down).
   const DRAG_WIDTH = 140;
   const DRAG_HEIGHT = 90;
-  const startX = canvasOffsetLeft + canvasWidth / 2 - DRAG_WIDTH / 2;
-  const startY = canvasOffsetTop + canvasHeight / 2 - DRAG_HEIGHT / 2;
-  const endX = startX + DRAG_WIDTH;
-  const endY = startY + DRAG_HEIGHT;
+  const startX = gesture ? gesture.fromX : canvasOffsetLeft + canvasWidth / 2 - DRAG_WIDTH / 2;
+  const startY = gesture ? gesture.fromY : canvasOffsetTop + canvasHeight / 2 - DRAG_HEIGHT / 2;
+  const endX = gesture ? gesture.toX : startX + DRAG_WIDTH;
+  const endY = gesture ? gesture.toY : startY + DRAG_HEIGHT;
 
   // Easing function for smooth motion
   const easeInOutCubic = (t: number): number => {

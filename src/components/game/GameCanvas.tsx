@@ -45,6 +45,7 @@ import type { BoardEntityHit } from "@/lib/boardEntityInfo";
 import { LockExplainerModal } from "./LockExplainerModal";
 import { AbilityIcon } from "./AbilityIcon";
 import { InteractiveTutorialOverlay } from "./InteractiveTutorialOverlay";
+import { circuitHintTarget, circuitHintGesture, type HintTerminal } from "@/lib/circuitHint";
 import { TutorialStep } from "@/types/game";
 import {
   Polygon,
@@ -531,6 +532,36 @@ export function GameCanvas({
   // Boss ball HUD mirror (issue #56): updated on init and on every boss hit/defeat.
   const [bossHud, setBossHud] = useState({ active: false, hp: 0, maxHp: 0, defeated: false });
   const [isPlayerDragging, setIsPlayerDragging] = useState(false);
+
+  /**
+   * The circuit nudge: after a while on a map with an unlit terminal, draw the
+   * gesture that lights one instead of leaving the player to guess.
+   *
+   * Polled rather than driven from the physics loop. The decision changes at
+   * most twice a map - once when the delay elapses, once when a terminal
+   * lights - so putting it on the 120Hz path to be recomputed and discarded
+   * thousands of times would be all cost and no benefit. Half a second is far
+   * below the threshold at which a hint appearing feels late.
+   */
+  const [circuitHint, setCircuitHint] = useState<HintTerminal | null>(null);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      const game = gameRef.current;
+      const next = circuitHintTarget({
+        terminals: game?.circuit?.terminals,
+        activePlaySeconds: game?.activePlaySeconds ?? 0,
+        paused: !!game?.paused,
+        levelEnded: !!game?.levelComplete || !!game?.gameOver,
+        isDragging: isPlayerDragging,
+      });
+      // Compare by identity of the terminal's position, not by object: the
+      // runtime terminal is mutated in place when it lights, so a reference
+      // check would never see the change.
+      setCircuitHint(prev =>
+        (prev?.x === next?.x && prev?.y === next?.y) ? prev : next);
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [isPlayerDragging]);
   const [canvasOffsetTop, setCanvasOffsetTop] = useState(0);
   const [canvasOffsetLeft, setCanvasOffsetLeft] = useState(0);
   // CSS (layout) size of the canvas, used to position the tutorial overlay.
@@ -1826,6 +1857,26 @@ export function GameCanvas({
             canvasHeight={canvasCssHeight}
             canvasOffsetTop={canvasOffsetTop}
             canvasOffsetLeft={canvasOffsetLeft}
+          />
+        )}
+        {/* The same hand, aimed. Board-aligned, so it lives in the container's
+            coordinate space with the rest of the overlays rather than in the
+            viewport's - a `fixed` element here would be thrown off by the page
+            transition's transform. */}
+        {circuitHint && boardMaterialized && !tutorialMode && (
+          <InteractiveTutorialOverlay
+            tutorialStep="showingHint"
+            isPlayerDragging={isPlayerDragging}
+            canvasWidth={canvasCssWidth}
+            canvasHeight={canvasCssHeight}
+            canvasOffsetTop={canvasOffsetTop}
+            canvasOffsetLeft={canvasOffsetLeft}
+            gesture={(() => {
+              const g = circuitHintGesture(circuitHint, BOARD_WIDTH);
+              const sx = (wx: number) => canvasOffsetLeft + (wx / BOARD_WIDTH) * canvasCssWidth;
+              const sy = (wy: number) => canvasOffsetTop + (wy / BOARD_HEIGHT) * canvasCssHeight;
+              return { fromX: sx(g.from.x), fromY: sy(g.from.y), toX: sx(g.to.x), toY: sy(g.to.y) };
+            })()}
           />
         )}
       </div>

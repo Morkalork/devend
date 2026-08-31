@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { CIRCUIT_SEEN_PREFIX, LEGACY_CIRCUIT_SEEN_KEY } from '@/lib/circuitHint';
 
 /**
  * Tracks which one-time tutorials the player has already seen, persisted in
@@ -130,6 +131,18 @@ export function useTutorialManager() {
       localStorage.removeItem('devend_creep_tutorial_seen');
       // One-time "how locks work" explainer (GameCanvas, zero-lock finish).
       localStorage.removeItem('devend_lock_tutorial_seen');
+      // The circuit explainer is keyed PER MAP (devend_circuit_tutorial_seen:
+      // level-15, :level-16, :level-31), so it cannot be removed by name.
+      // Swept by prefix instead, and the retired single key goes with it.
+      //
+      // It was missing from this list entirely before the per-map change, which
+      // meant "Re-enable All Tutorials" quietly never brought the circuit
+      // explainer back - a tutorial you could not re-enable from the button
+      // whose whole job is re-enabling tutorials.
+      localStorage.removeItem(LEGACY_CIRCUIT_SEEN_KEY);
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith(CIRCUIT_SEEN_PREFIX)) localStorage.removeItem(key);
+      }
     } catch {
       // ignore
     }
