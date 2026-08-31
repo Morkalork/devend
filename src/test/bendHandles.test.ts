@@ -93,6 +93,31 @@ describe("the whole-object bend handle", () => {
   });
 });
 
+describe("the bend handle sits on the shape it controls", () => {
+  // The claim the round trips above cannot check: they compare bendHandlePos
+  // with bendFromHandle, which share a formula and agree with each other
+  // whether or not either matches the geometry. This compares the handle
+  // against the OUTLINE, which is the thing the user is looking at.
+  it("lands on the bent outline, not out in space beside it", () => {
+    for (const bend of [0.2, 0.35, 0.6, -0.45]) {
+      const handle = bendHandlePos({ points: BAR, bend });
+      const outline = previewOutline({ points: BAR, bend });
+      const nearest = Math.min(...outline.map(p => Math.hypot(p.x - handle.x, p.y - handle.y)));
+      // The bar is 24 thick and the handle rides its centreline, so anything
+      // beyond half the thickness plus a tessellation step is off the shape.
+      expect(nearest, `bend ${bend} put the handle ${nearest.toFixed(1)} from the wall`)
+        .toBeLessThan(14);
+    }
+  });
+
+  it("tracks the belly, so dragging it actually moves something", () => {
+    // A handle parked on a point that never moves is a dead control.
+    const a = bendHandlePos({ points: BAR, bend: 0.2 });
+    const b = bendHandlePos({ points: BAR, bend: 0.5 });
+    expect(Math.abs(b.y - a.y)).toBeGreaterThan(20);
+  });
+});
+
 describe("the per-edge curve handle", () => {
   it("sits on the edge midpoint when the edge is straight", () => {
     near(curveHandlePos(BAR, 0, 0), { x: 300, y: 288 });

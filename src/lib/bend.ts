@@ -183,9 +183,33 @@ export function bendVertices(
   const span = alongX ? maxX - minX : maxY - minY;
   if (span <= 0) return vertices.map(v => ({ ...v }));
 
-  // bend 1 == a half turn, so the arc's total sweep is bend * PI.
-  const theta = bend * Math.PI;
+  // bend 1 == a half turn, so the arc's total sweep is bend * PI. Negated so
+  // that a positive bend bellies toward +n; see the re-anchoring below, which
+  // flips which end of the shape does the moving.
+  const theta = -bend * Math.PI;
   const R = span / theta;
+
+  /**
+   * Where the ENDS would land without re-anchoring, and the whole reason this
+   * subtraction exists.
+   *
+   * The bare arc map holds the middle of the shape fixed and swings both ends
+   * round it. That is a correct bend and completely wrong for authoring a
+   * level: a wall placed to span a gap, given a bend, pulls both its ends away
+   * from the gap while its middle sits where it was. You cannot aim it, and a
+   * handle on the middle would have nothing to drag, because the middle is the
+   * one point that does not move.
+   *
+   * Subtracting the endpoint offset re-anchors the arc onto its own chord:
+   * the ends stay on the line the shape was authored along and the belly bows
+   * out, which is what bending a bar held at both ends looks like and what a
+   * designer means by "bend this wall". It also makes the handle honest, since
+   * the belly is now a point that actually tracks the cursor.
+   *
+   * The chord is shorter than the original span, and that is not a bug: the
+   * arc keeps its length, so it spans less. A bent wall is a shorter wall.
+   */
+  const endOffset = R * (1 - Math.cos(theta / 2));
 
   return vertices.map(p => {
     const d = sub(p, centre);
@@ -194,7 +218,7 @@ export function bendVertices(
     const th = u / R;
     const r = R - v;
     const nu = r * Math.sin(th);
-    const nv = R - r * Math.cos(th);
+    const nv = R - r * Math.cos(th) - endOffset;
     return {
       x: centre.x + nu * a.x + nv * n.x,
       y: centre.y + nu * a.y + nv * n.y,

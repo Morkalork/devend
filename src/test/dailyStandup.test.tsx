@@ -45,13 +45,29 @@ describe("Daily Stand-up", () => {
     expect(idsA.length).toBeGreaterThan(0);
     expect(idsA).toEqual(idsB);
 
-    // A different day rolls a different lineup (35 multi-variant slots make an
-    // identical lineup astronomically unlikely; equality would mean the seed
-    // is being ignored).
+    // Every level number now has exactly one map, so the lineup is the same
+    // every day BY CONSTRUCTION. This used to assert the opposite - a different
+    // day rolling a different lineup - and it was a real guard at the time,
+    // because the b-variants gave the seeded picker something to choose. With
+    // the variants retired there is nothing left for it to vary, and the old
+    // assertion is not merely unsupported but provably false.
+    //
+    // What it was protecting - that a daily seed actually reaches the run's
+    // content - has not gone away, it has moved: the board itself is dealt
+    // through getRunRng (rotation, obstacle placement, ball types), and
+    // botSoak.test.ts pins it as "still plays differently on different seeds".
+    // So what is worth asserting here is the shape the lineup must now have.
     setRunSeedText(dailySeedText("2026-07-17"));
     const c = renderHook(() => useLevelManager());
     await act(async () => { await c.result.current.loadLevels(); });
-    expect(c.result.current.levels.map(l => l.id)).not.toEqual(idsA);
+    expect(c.result.current.levels.map(l => l.id)).toEqual(idsA);
+
+    // One map per level number, in order, none repeated: the invariant that
+    // retiring the variants was supposed to produce.
+    const numbers = a.result.current.levels.map(l => l.level);
+    expect(numbers).toEqual([...numbers].sort((x, y) => x - y));
+    expect(new Set(numbers).size).toBe(numbers.length);
+    expect(new Set(idsA).size).toBe(idsA.length);
   });
 
   it("handleStartDaily arms today's seed, saves the dailyKey, and Continue restores it", async () => {

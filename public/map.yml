@@ -89,46 +89,6 @@ levels:
         width: 160
         height: 22
 
-  # 2b - the same job turned ninety degrees: a horizontal split instead of a
-  # vertical one. A variant only earns its place by teaching the SAME beat a
-  # different way, or it is just another map at the same number.
-  - id: level-2b
-    level: 2
-    sizeThreshold: 34
-    expectedCuts: 4
-    points: 20
-    variety: 8
-    randomShapes: 6
-    maxBalls: 2
-    entities:
-      - id: divider-left
-        kind: wall
-        shape: rect
-        x: 45
-        'y': 437
-        width: 300
-        height: 26
-      - id: divider-right
-        kind: wall
-        shape: rect
-        x: 555
-        'y': 437
-        width: 300
-        height: 26
-      - id: pillar
-        kind: wall
-        shape: circle
-        cx: 450
-        cy: 190
-        radius: 65
-      - id: corner-shelf
-        kind: wall
-        shape: rect
-        x: 695
-        'y': 700
-        width: 160
-        height: 22
-
   # 3 "Standup" - USE the topology: the necks ARE the hook.
   # An alcove in the top-left whose only way in is a corner gap one short fence
   # closes. Sized at roughly 150x150 on purpose, comfortably under 4% of the
@@ -169,46 +129,6 @@ levels:
         kind: wall
         shape: rect
         x: 550
-        'y': 620
-        width: 24
-        height: 235
-
-  # 3b - the same alcove in the opposite corner, so the habit does not become
-  # "the money is top-left".
-  - id: level-3b
-    level: 3
-    sizeThreshold: 30
-    expectedCuts: 4
-    points: 20
-    variety: 8
-    randomShapes: 6
-    maxBalls: 2
-    entities:
-      - id: alcove-lip-v
-        kind: wall
-        shape: rect
-        x: 683
-        'y': 765
-        width: 22
-        height: 90
-      - id: alcove-lip-h
-        kind: wall
-        shape: rect
-        x: 765
-        'y': 683
-        width: 90
-        height: 22
-      - id: spine-top
-        kind: wall
-        shape: rect
-        x: 326
-        'y': 45
-        width: 24
-        height: 300
-      - id: spine-bottom
-        kind: wall
-        shape: rect
-        x: 326
         'y': 620
         width: 24
         height: 235
@@ -256,49 +176,6 @@ levels:
         x: 700
         'y': 200
         width: 155
-        height: 22
-
-  # 4b - the patrol runs along the neck instead of across it, so timing it is a
-  # different read: you wait for a gap rather than for a pass.
-  - id: level-4b
-    level: 4
-    sizeThreshold: 28
-    expectedCuts: 5
-    points: 20
-    variety: 10
-    randomShapes: 8
-    maxBalls: 2
-    entities:
-      - id: divider-left
-        kind: wall
-        shape: rect
-        x: 45
-        'y': 437
-        width: 310
-        height: 26
-      - id: divider-right
-        kind: wall
-        shape: rect
-        x: 545
-        'y': 437
-        width: 310
-        height: 26
-      - id: guard
-        kind: mover
-        shape: rect
-        x: 437
-        'y': 400
-        width: 26
-        height: 100
-        axis: vertical
-        range: 280
-        speed: 130
-      - id: corner-shelf
-        kind: wall
-        shape: rect
-        x: 45
-        'y': 700
-        width: 150
         height: 22
 
   # 5 "Nice To Have" - USE the marked zone: the game's first Colored Area.
@@ -350,47 +227,6 @@ levels:
         range: 260
         speed: 150
 
-  # 5b - the pay pocket in the opposite corner, guarded by a circular patrol.
-  - id: level-5b
-    level: 5
-    sizeThreshold: 26
-    expectedCuts: 5
-    points: 20
-    variety: 10
-    randomShapes: 8
-    maxBalls: 2
-    coloredAreas:
-      - kind: var
-        x: 45
-        'y': 45
-        width: 225
-        height: 225
-        required: false
-    entities:
-      - id: pocket-shelf
-        kind: wall
-        shape: rect
-        x: 45
-        'y': 270
-        width: 245
-        height: 24
-      - id: pocket-lip
-        kind: wall
-        shape: rect
-        x: 290
-        'y': 45
-        width: 24
-        height: 155
-      - id: guard
-        kind: mover
-        shape: circle
-        cx: 450
-        cy: 250
-        radius: 45
-        axis: horizontal
-        range: 260
-        speed: 150
-
   # 6 "Legacy Wall" - MEET the breakable.
   # A thin wall across the board with the good space behind it. Smashing costs
   # time you could have spent sealing, which is the whole lesson: a breakable is
@@ -404,6 +240,10 @@ levels:
     randomShapes: 8
     maxBalls: 2
     entities:
+      # Bowed into the near chamber, so the wall you have to price up is not a
+      # straight line you can read at a glance. The waist bulges left to about
+      # x 473, which pinches the near side in the middle and opens the far side
+      # out: the cheap seal is no longer the same cut at the top and the bottom.
       - id: soft-wall
         kind: wall
         shape: rect
@@ -411,6 +251,7 @@ levels:
         'y': 100
         width: 26
         height: 700
+        bend: 0.3
         breakable: true
         hitsToBreak: 3
       - id: nub
@@ -423,40 +264,6 @@ levels:
         kind: wall
         shape: rect
         x: 700
-        'y': 690
-        width: 155
-        height: 22
-
-  # 6b - the same wall laid the other way, so the cut that opens it is a
-  # different shape.
-  - id: level-6b
-    level: 6
-    sizeThreshold: 24
-    expectedCuts: 5
-    points: 20
-    variety: 10
-    randomShapes: 8
-    maxBalls: 2
-    entities:
-      - id: soft-wall
-        kind: wall
-        shape: rect
-        x: 100
-        'y': 530
-        width: 700
-        height: 26
-        breakable: true
-        hitsToBreak: 3
-      - id: nub
-        kind: wall
-        shape: circle
-        cx: 450
-        cy: 230
-        radius: 45
-      - id: corner-shelf
-        kind: wall
-        shape: rect
-        x: 45
         'y': 690
         width: 155
         height: 22

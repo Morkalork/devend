@@ -115,6 +115,43 @@ describe("a bent bar keeps its thickness", () => {
   });
 });
 
+describe("a bend pivots on its ends, not its middle", () => {
+  // The bug none of the round-trip tests could see, because they all compared
+  // this file against itself. The bare arc map holds the MIDDLE fixed and
+  // swings both ends round it, which is a correct bend and useless for
+  // authoring: a wall placed to span a gap pulls its ends out of the gap while
+  // its middle stays put, so there is nothing to aim and nothing to grab.
+  //
+  // Found by bending a real wall on level 6 and reading the coordinates, not
+  // by any assertion here - hence these.
+  it("leaves the ends on the line the shape was authored along", () => {
+    const bent = bendOutline(BAR, { bend: 0.35 });
+    const leftEnd = bent.reduce((a, p) => (p.x < a.x ? p : a));
+    const rightEnd = bent.reduce((a, p) => (p.x > a.x ? p : a));
+    // The bar was authored spanning y 288..312; its ends must still sit there.
+    expect(leftEnd.y).toBeGreaterThan(280);
+    expect(leftEnd.y).toBeLessThan(320);
+    expect(rightEnd.y).toBeGreaterThan(280);
+    expect(rightEnd.y).toBeLessThan(320);
+  });
+
+  it("bulges the middle away from the chord", () => {
+    const bent = bendOutline(BAR, { bend: 0.35 });
+    // The point nearest mid-length has to have MOVED off the original y.
+    const belly = bent.reduce((a, p) => (Math.abs(p.x - 300) < Math.abs(a.x - 300) ? p : a));
+    expect(Math.abs(belly.y - 300)).toBeGreaterThan(40);
+  });
+
+  it("spans less than it did, because the arc keeps its length", () => {
+    // A bent bar is a shorter bar. Stated so that a future change which
+    // silently stretches the chord back to 400 has to argue with a test.
+    const bent = bendOutline(BAR, { bend: 0.35 });
+    const width = Math.max(...bent.map(p => p.x)) - Math.min(...bent.map(p => p.x));
+    expect(width).toBeLessThan(400);
+    expect(width).toBeGreaterThan(330);
+  });
+});
+
 describe("which way a bend runs", () => {
   it("follows the longer side when nobody says", () => {
     expect(bendsAlongX(BAR)).toBe(true);                                  // 400 wide
