@@ -214,6 +214,16 @@ export interface GameModifiers {
  * how the upgrade, certificate and loadout stack. Enforced once on the final
  * aggregated value so physics and every HUD readout see the same capped number.
  */
+/**
+ * Ceiling on total fence grace, in milliseconds.
+ *
+ * Deliberately below MINIMUM_WALL_TIME (350ms), which is the floor on how fast
+ * any fence can build: grace at or above it means a fence that cannot be
+ * broken. Raising this past 350 re-opens the "I can't lose" bug, so it is not a
+ * tuning dial - it is a hard structural limit with a reason.
+ */
+export const MAX_FENCE_GRACE_MS = 250;
+
 export const MAX_MICRO_MANAGER_PER_LOCK = 0.01;
 /**
  * Ceiling on Load Balancer. The full ladder pays 20; anything beyond that is a
@@ -403,6 +413,27 @@ export function computeGameModifiers(
       }
     }
   }
+
+  /**
+   * Cap the total fence grace, across every source, below the shortest possible
+   * build.
+   *
+   * Ghost Protocol makes a growing fence completely intangible for its first
+   * fenceGraceMs. Stacked to Principal it reached 1000ms - against a longest
+   * cut of about 850ms and a MINIMUM_WALL_TIME floor of 350ms, which meant
+   * every fence in the game finished before it could be hit. Junior and Senior
+   * alone are 400ms, so short cuts were already untouchable by level 4.
+   * Reported from play as "I can't seem to lose a fence", and it was not a
+   * stacking-of-many-upgrades problem: this one family did it alone.
+   *
+   * 250ms leaves at least 100ms of exposure on the very shortest cut and
+   * proportionally more on a long one, so grace stays a real advantage - it
+   * covers the moment a fence is born, which is when it is most fragile - while
+   * never covering a whole build. The cap is on the TOTAL rather than on the
+   * upgrade, because the loadout and the ability grant it too and three sources
+   * that are each fine can still add up to immunity.
+   */
+  result.fenceGraceMs = Math.min(result.fenceGraceMs, MAX_FENCE_GRACE_MS);
 
   // Cap the MicroManager per-lock reduction at 1% across all sources.
   result.microManagerPerLock = Math.min(result.microManagerPerLock, MAX_MICRO_MANAGER_PER_LOCK);

@@ -229,7 +229,7 @@ upgrades:
     name: Fast Compile
     tier: Principal
     description: Increase fence generation speed by 30%.
-    unlockLevel: 10
+    unlockLevel: 26
     prerequisites:
       - fast_compile_senior
     choiceGroup: fast_compile_principal
@@ -241,7 +241,7 @@ upgrades:
     name: Fast Compile
     tier: Principal
     description: "Incremental Build: fences start 10% faster, +5% per fence finished this map."
-    unlockLevel: 10
+    unlockLevel: 26
     prerequisites:
       - fast_compile_senior
     choiceGroup: fast_compile_principal
@@ -1268,7 +1268,7 @@ upgrades:
     name: Defensive Programming
     tier: Senior
     description: "One more shield at every map start."
-    unlockLevel: 10
+    unlockLevel: 14
     prerequisites:
       - defensive_programming_junior
     tags: [safety]
@@ -1279,7 +1279,7 @@ upgrades:
     name: Defensive Programming
     tier: Principal
     description: "One more shield again at every map start."
-    unlockLevel: 20
+    unlockLevel: 26
     prerequisites:
       - defensive_programming_senior
     tags: [safety]
@@ -1294,7 +1294,7 @@ upgrades:
     name: Defensive Programming
     tier: Architect
     description: "Bunker: two more shields at every map start."
-    unlockLevel: 25
+    unlockLevel: 32
     prerequisites:
       - defensive_programming_principal
     choiceGroup: defensive_programming_architect
@@ -1306,7 +1306,7 @@ upgrades:
     name: Defensive Programming
     tier: Architect
     description: "Nanobots: on maps with 3 or more balls, balls are 25% smaller."
-    unlockLevel: 25
+    unlockLevel: 32
     prerequisites:
       - defensive_programming_principal
     choiceGroup: defensive_programming_architect
@@ -1848,29 +1848,47 @@ upgrades:
   # descriptions state the running total, exactly as the Feature Freeze line
   # does. Authoring them as absolutes would have made owning the family stack
   # to 1.3 seconds while every card claimed something smaller.
+  # Ghost Protocol is the game's only source of true fence INVULNERABILITY, and
+  # it used to run 1/4/8 as a free root - so a player had the whole chain before
+  # act II. Reported from play as "I can't seem to lose a fence".
+  #
+  # It was not a stacking problem across several upgrades. This family did it
+  # alone: the grace is absolute milliseconds, the chain reached 1000ms, and the
+  # LONGEST cut in the game builds in about 850ms with a floor of 350ms - so
+  # every fence finished before it could be hit, and short ones were already
+  # untouchable at Junior+Senior (400ms) by level 4.
+  #
+  # Three changes. The chain is re-authored to 100/150/250ms, so the numbers on
+  # the cards are the numbers the player gets - capping a 1000ms chain down to
+  # 250 would have fixed the exploit and left every description lying, which is
+  # the exact drift ghostProtocol.test.ts exists to catch. The TOTAL is then
+  # capped at MAX_FENCE_GRACE_MS as a structural backstop, because the loadout
+  # and the Fence Shield ability grant grace too and three reasonable sources
+  # can still add up to immunity. And the family moved to 18/24/30 behind
+  # Defensive Programming's Senior, so it reads as the specialist end of a
+  # safety build rather than an opening buy.
   - id: ghost_protocol_junior
     name: Ghost Protocol
     tier: Junior
-    description: A new fence passes through balls for the first 0.2s of its growth.
-    # First-hire priced, like the other level-1 Juniors: one normal lock on map
-    # one should be able to buy the run's identity, not just a stat.
-    cost: 30
-    unlockLevel: 1
+    description: A new fence passes through balls for the first 0.1s of its growth.
+    unlockLevel: 18
+    prerequisites:
+      - defensive_programming_senior
     icon: ghost
     tags: [tempo, safety]
     modifiers:
-      fenceGraceMs: 200
+      fenceGraceMs: 100
 
   - id: ghost_protocol_senior
     name: Ghost Protocol
     tier: Senior
-    description: Your fences now pass through balls for their first 0.4s.
-    unlockLevel: 4
+    description: Your fences now pass through balls for their first 0.15s.
+    unlockLevel: 24
     prerequisites:
       - ghost_protocol_junior
     tags: [tempo, safety]
     modifiers:
-      fenceGraceMs: 200
+      fenceGraceMs: 50
 
   # Principal is a CHOICE: a longer window on every map, or a much longer one
   # only where it matters. A quiet two-ball map rarely needs grace at all (you
@@ -1879,26 +1897,26 @@ upgrades:
   - id: ghost_protocol_principal_a
     name: Ghost Protocol
     tier: Principal
-    description: Your fences now pass through balls for their first 0.65s.
-    unlockLevel: 8
+    description: Your fences now pass through balls for their first 0.2s.
+    unlockLevel: 30
     prerequisites:
       - ghost_protocol_senior
     choiceGroup: ghost_protocol_principal
     tags: [tempo, safety]
     modifiers:
-      fenceGraceMs: 250
+      fenceGraceMs: 50
 
   - id: ghost_protocol_principal_b
     name: Ghost Protocol
     tier: Principal
-    description: "On maps with 3+ balls, fences pass through balls for 1s. Elsewhere 0.4s."
-    unlockLevel: 8
+    description: "On maps with 3+ balls, fences pass through balls for 0.25s. Elsewhere 0.15s."
+    unlockLevel: 30
     prerequisites:
       - ghost_protocol_senior
     choiceGroup: ghost_protocol_principal
     tags: [tempo, risk]
     modifiers:
-      fenceGraceMs: 600
+      fenceGraceMs: 100
     condition: { kind: ballsAtLeast, value: 3 }
 
   # ═══════════════════════════════════════════════════════════════════════════

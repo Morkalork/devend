@@ -57,12 +57,16 @@ function graceFor(ids: string[], busyMap = false) {
   return computeGameModifiers(ids, lookup, undefined, ctx).fenceGraceMs;
 }
 
-describe("the family exists and starts at level 1", () => {
-  it("is buyable from the first shop", () => {
+describe("the family exists, late and behind a door", () => {
+  it("is not reachable in the first two acts, and is not a free root", () => {
+    // It opened the shop at level 1 with no prerequisite, which meant the whole
+    // chain was owned before act II - and the chain is total fence
+    // invulnerability. Reported from play as "I can't seem to lose a fence".
     const j = byId.get(JUNIOR);
     expect(j, "Ghost Protocol has no Junior tier").toBeTruthy();
-    expect(j!.unlockLevel ?? 1).toBe(1);
-    expect((j!.prerequisites ?? []).length, "the entry point has a prerequisite").toBe(0);
+    expect(j!.unlockLevel).toBeGreaterThanOrEqual(18);
+    expect(j!.prerequisites, "the entry point is a free root again")
+      .toEqual(["defensive_programming_senior"]);
   });
 
   it("is off by default, so every other run is untouched", () => {
@@ -77,11 +81,11 @@ describe("the window the cards promise is the window the code gives", () => {
   // family would stack to 1.25s while every card claimed something smaller,
   // which is the exact copy-versus-code split that has bitten this game before.
   const cases: Array<[string, string[], number, boolean]> = [
-    ["Junior alone", [JUNIOR], 200, false],
-    ["through Senior", [JUNIOR, SENIOR], 400, false],
-    ["through Principal A", [JUNIOR, SENIOR, PRINCIPAL_A], 650, false],
-    ["Principal B on a busy map", [JUNIOR, SENIOR, PRINCIPAL_B], 1000, true],
-    ["Principal B on a quiet map", [JUNIOR, SENIOR, PRINCIPAL_B], 400, false],
+    ["Junior alone", [JUNIOR], 100, false],
+    ["through Senior", [JUNIOR, SENIOR], 150, false],
+    ["through Principal A", [JUNIOR, SENIOR, PRINCIPAL_A], 200, false],
+    ["Principal B on a busy map", [JUNIOR, SENIOR, PRINCIPAL_B], 250, true],
+    ["Principal B on a quiet map", [JUNIOR, SENIOR, PRINCIPAL_B], 150, false],
   ];
 
   for (const [name, ids, expected, busy] of cases) {
@@ -95,19 +99,34 @@ describe("the window the cards promise is the window the code gives", () => {
     // the two forms and the copy pass settled on the compact one, which is also
     // what the shrinking of these cards was for.
     const stated = (id: string) => byId.get(id)!.description!;
-    expect(stated(JUNIOR)).toContain("0.2s");
-    expect(stated(SENIOR)).toContain("0.4s");
-    expect(stated(PRINCIPAL_A)).toContain("0.65s");
+    expect(stated(JUNIOR)).toContain("0.1s");
+    expect(stated(SENIOR)).toContain("0.15s");
+    expect(stated(PRINCIPAL_A)).toContain("0.2s");
     // The conditional side must say what a quiet map still gives, or the
     // player reads "on quieter maps" as "nothing".
-    expect(stated(PRINCIPAL_B)).toContain("1s");
-    expect(stated(PRINCIPAL_B)).toContain("0.4s");
+    expect(stated(PRINCIPAL_B)).toContain("0.25s");
+    expect(stated(PRINCIPAL_B)).toContain("0.15s");
   });
 
-  it("keeps the whole family under a cut's own build time at Junior", () => {
-    // A cut takes at least MINIMUM_WALL_TIME to build. A Junior window at or
-    // past that would make every short snip completely free.
-    expect(graceFor([JUNIOR])).toBeLessThan(MINIMUM_WALL_TIME * 1000);
+  it("keeps the WHOLE CHAIN under a cut's own build time", () => {
+    // This is the test that let the bug through, and the fix to it is one word:
+    // it checked JUNIOR against the build floor and stopped there. Junior was
+    // 200ms against a 350ms floor and passed happily, while Junior + Senior was
+    // already 400ms and every short cut was untouchable from level 4 on.
+    //
+    // A cut takes at least MINIMUM_WALL_TIME to build, so any TOTAL at or past
+    // that is a fence which finishes before it can be hit. Every reachable
+    // combination has to clear it, not just the cheapest one.
+    const floorMs = MINIMUM_WALL_TIME * 1000;
+    const combos: Array<[string, string[], boolean]> = [
+      ["Junior", [JUNIOR], false],
+      ["Junior+Senior", [JUNIOR, SENIOR], false],
+      ["full chain via A", [JUNIOR, SENIOR, PRINCIPAL_A], false],
+      ["full chain via B, busy", [JUNIOR, SENIOR, PRINCIPAL_B], true],
+    ];
+    for (const [name, ids, busy] of combos) {
+      expect(graceFor(ids, busy), `${name} covers a whole build`).toBeLessThan(floorMs);
+    }
   });
 
   it("locks the two Principals against each other", () => {

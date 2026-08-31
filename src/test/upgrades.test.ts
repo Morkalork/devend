@@ -51,7 +51,11 @@ const EXPECTED_ROOTS = [
   "defensive_programming_junior",
   "fault_tolerance_junior",
   "feature_freeze_junior",
-  "ghost_protocol_junior",
+  // ghost_protocol_junior is deliberately NOT here any more. It was a level-1
+  // root, and the chain it opens is total fence invulnerability - a player had
+  // all of it before act II and could not lose a fence. It now sits at 18
+  // behind Defensive Programming's Senior, so committing to a safety build is
+  // the price of reaching it.
   "severance_package_junior",
   "code_review",
   "cold_boot",
