@@ -30,6 +30,7 @@ import {
   type ScreenQuad,
 } from "./quad";
 import { PALETTE } from "./palette";
+import { startupPulse } from "../startupPulse";
 import { wellIsLive, wellPullVector } from "@/lib/physics/gravityWells";
 import { clampZoneSpeed } from "@/lib/physics/fenceZones";
 import { mix } from "./palette";
@@ -210,11 +211,13 @@ export class AreaLayer {
    */
   sync(
     game: CanvasGameState, light: LightScope, w2s: W2S, scale: number, tilt = 0,
+    accentColor = "#00ff88",
   ): void {
     const areas = game.coloredAreas ?? [];
     // Before the key check: the pulse is time-driven, so it must run on frames
     // where nothing about the areas themselves changed.
     this.drawPulse(areas, light, w2s);
+    this.drawStartupPulse(game, accentColor, w2s);
     const key =
       areas
         .map(a => `${a.x},${a.y},${a.width},${a.height},${a.kind},${isGateArea(a) ? 1 : 0},${a.satisfied ? 1 : 0}`)
@@ -333,6 +336,45 @@ export class AreaLayer {
    * zone; the breath is what answers "did that count?" thirty seconds later,
    * when the flare is long gone and a static border would tell them nothing.
    */
+  /**
+   * The one-off "look here" ring on every marked zone as a map opens.
+   *
+   * Drawn into pulseG with the occupied pulse, which is cleared and rebuilt
+   * every frame, and BEFORE the key check for the same reason that one is: this
+   * is driven by time rather than by anything about the zones, so a key-gated
+   * layer would draw the first frame of it and then freeze.
+   *
+   * Rings expand OUTWARD from the marking rather than brightening it, so the
+   * zone announces its edges - which is the thing a player needs in order to
+   * judge whether a ball will fit - rather than just going briefly lighter.
+   */
+  private drawStartupPulse(game: CanvasGameState, accentColor: string, w2s: W2S): void {
+    const pulse = startupPulse(game.activePlaySeconds ?? 0);
+    if (!pulse.active) return;
+    const color = Number.parseInt(accentColor.replace("#", ""), 16);
+
+    // Everything the player is meant to aim AT gets one, and nothing they are
+    // meant to avoid does: an announcement on every obstacle would be noise.
+    const rects: Array<{ x: number; y: number; width: number; height: number }> = [
+      ...(game.coloredAreas ?? []),
+      ...(game.deliveryBoxes ?? []).map(b => b.inner),
+    ];
+    if (rects.length === 0) return;
+
+    // Two rings a half-beat apart, so the eye catches the second even if it
+    // arrived after the first.
+    for (const r of rects) {
+      const q = worldRectQuad(r.x, r.y, r.width, r.height, w2s);
+      for (const phase of [pulse.beat, (pulse.beat + 0.5) % 1]) {
+        const grow = -phase * 26;
+        const alpha = pulse.strength * (1 - phase) * 0.85;
+        if (alpha < 0.02) continue;
+        shapeOf(this.pulseG, q, grow)
+          .stroke({ width: 1.5 + (1 - phase) * 2.5, color, alpha });
+      }
+    }
+  }
+
   private drawPulse(areas: CanvasGameState["coloredAreas"], light: LightScope, w2s: W2S): void {
     const list = areas ?? [];
     const now = performance.now();
