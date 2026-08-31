@@ -30,6 +30,48 @@
  */
 import type { Vector2 } from "./polygon";
 
+/**
+ * Turning an object on the spot.
+ *
+ * Stored in DEGREES, and stored as a parameter for the same reason a bend is:
+ * baking a turned rect into four rotated points would cost it its width and
+ * height, so it could never be resized, re-turned, or read in map.yml as the
+ * rect it still is. Positive turns clockwise on screen, matching how every
+ * other angle in this codebase reads with y pointing down.
+ *
+ * Applied LAST, after the bend, and that order matters. A bend runs along the
+ * shape's own long axis, so bending first and turning after gives "a bent bar,
+ * turned" - which is what a designer means. Turning first would make the bend
+ * axis follow the new orientation and the two controls would fight: nudging the
+ * angle would silently re-aim the bow.
+ */
+export function turnOutline(vertices: Vector2[], degrees: number | undefined): Vector2[] {
+  if (!degrees || vertices.length === 0) return vertices.map(v => ({ ...v }));
+  const rad = (degrees * Math.PI) / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const v of vertices) {
+    if (v.x < minX) minX = v.x;
+    if (v.x > maxX) maxX = v.x;
+    if (v.y < minY) minY = v.y;
+    if (v.y > maxY) maxY = v.y;
+  }
+  // About the bounds centre, so an object turns on the spot rather than
+  // swinging away from wherever the origin happens to be.
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+
+  return vertices.map(p => {
+    const dx = p.x - cx, dy = p.y - cy;
+    return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+  });
+}
+
+/** True when an angle would actually turn something. */
+export function hasAngle(degrees: number | undefined | null): boolean {
+  return !!degrees && Math.abs(degrees % 360) > 1e-6;
+}
+
 /** Which way the object bows. "auto" reads the longer side of its bounds. */
 export type BendAxis = "auto" | "x" | "y";
 
@@ -48,6 +90,8 @@ export interface BendFields {
    * are fine; missing entries are 0.
    */
   curves?: number[];
+  /** Whole-object turn in degrees, clockwise. Applied after the bend. */
+  angle?: number;
 }
 
 /** Below this the arc is indistinguishable from a straight line, and R explodes. */
@@ -272,13 +316,13 @@ export function bowOutline(
  * like without reimplementing the order and getting it subtly different.
  */
 export function bendOutline(vertices: Vector2[], fields: BendFields): Vector2[] {
-  const { bend = 0, bendAxis = "auto", curves } = fields;
-  return bowOutline(shapeOutline(vertices, curves), bend, bendAxis);
+  const { bend = 0, bendAxis = "auto", curves, angle } = fields;
+  return turnOutline(bowOutline(shapeOutline(vertices, curves), bend, bendAxis), angle);
 }
 
 /** True when an entity carries any bending at all - the cheap early-out. */
 export function hasBend(fields: BendFields | undefined | null): boolean {
   if (!fields) return false;
   const bending = !!fields.bend && Math.abs(fields.bend) >= STRAIGHT_EPSILON;
-  return bending || !!fields.curves?.some(c => !!c);
+  return bending || !!fields.curves?.some(c => !!c) || hasAngle(fields.angle);
 }

@@ -20,7 +20,7 @@
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { getRunRng } from "@/lib/runRng";
 import type { LevelEntity, ColoredArea, CircuitConfig, ChargeConfig, DataStreamConfig, GravityWell, WellPull } from "@/types/level";
-import { rotateBend, rotateBendAxis, rotateCurves } from "./bendRotation";
+import { rotateAngle, rotateBend, rotateBendAxis, rotateCurves } from "./bendRotation";
 import type { FenceZone } from "./physics/fenceZones";
 
 /** 0 = standard, 1 = turned left (CCW 90°), 2 = upside down, 3 = turned right (CW 90°). */
@@ -96,6 +96,30 @@ function bendRunsAlongX(entity: LevelEntity): boolean {
   return boundsAreWide(entity);
 }
 
+/**
+ * True when the entity's bounds are square, so "auto" cannot follow the board.
+ *
+ * `bendsAlongX("auto")` reads the longer side, and a square has no longer side -
+ * it resolves the tie to x every time, including after a quarter turn that
+ * should have carried the bow round with it. A bent circle is always this case
+ * (its bounds are rotation-invariant), and so is a square rect.
+ *
+ * Measured before the fix: a bent circle with an auto axis failed the
+ * commutation property on both quarter turns and passed on 0 and 180, which is
+ * the signature of an axis that will not turn.
+ */
+function boundsAreSquare(entity: LevelEntity): boolean {
+  if (entity.shape === "circle") return true;
+  if (entity.shape === "polygon") {
+    const xs = entity.points.map(p => p[0]);
+    const ys = entity.points.map(p => p[1]);
+    const w = Math.max(...xs) - Math.min(...xs);
+    const h = Math.max(...ys) - Math.min(...ys);
+    return Math.abs(w - h) < 1e-6;
+  }
+  return Math.abs(entity.width - entity.height) < 1e-6;
+}
+
 function boundsAreWide(entity: LevelEntity): boolean {
   if (entity.shape === "circle") return true;              // a circle ties, and ties go to x
   if (entity.shape === "polygon") {
@@ -112,9 +136,18 @@ function rotatedBend(entity: LevelEntity, r: MapRotation) {
     return {};
   }
   const alongX = bendRunsAlongX(entity);
+  // A square shape's "auto" axis is a tie that always resolves to x, so it
+  // cannot turn with the board. Pin it to the axis auto WOULD have picked here,
+  // once, and from then on the ordinary swap rule carries it round. Only for
+  // squares: on any other shape auto re-reads the rotated bounds correctly and
+  // pinning it would freeze a decision the designer left open.
+  const pinAxis = entity.bend !== undefined
+    && (entity.bendAxis === undefined || entity.bendAxis === "auto")
+    && boundsAreSquare(entity);
+  const axis = pinAxis ? (alongX ? "x" : "y") : entity.bendAxis;
   return {
     ...(entity.bend !== undefined ? { bend: rotateBend(entity.bend, alongX, r) } : {}),
-    ...(entity.bendAxis !== undefined ? { bendAxis: rotateBendAxis(entity.bendAxis, r) } : {}),
+    ...(axis !== undefined ? { bendAxis: rotateBendAxis(axis, r) } : {}),
     ...(entity.curves !== undefined ? { curves: rotateCurves(entity.curves, r) } : {}),
   };
 }
@@ -135,31 +168,34 @@ export function rotateEntity(entity: LevelEntity, r: MapRotation): LevelEntity {
   const oneWayField = entity.kind === "wall" && entity.oneWay
     ? { oneWay: rotateWellPull(entity.oneWay, r) }
     : {};
+  const angleField = entity.angle !== undefined
+    ? { angle: rotateAngle(entity.angle, entity.shape, r) }
+    : {};
 
   if (entity.kind === "mover") {
     const { axis, phase } = rotateMoverAxisPhase(entity.axis, entity.phase, r);
     if (entity.shape === "circle") {
       const c = rotatePoint(entity.cx, entity.cy, r);
-      return { ...entity, cx: c.x, cy: c.y, axis, phase, ...bendFields };
+      return { ...entity, cx: c.x, cy: c.y, axis, phase, ...bendFields, ...angleField };
     }
     const rect = rotateRect(entity.x, entity.y, entity.width, entity.height, r);
-    return { ...entity, ...rect, axis, phase, ...bendFields };
+    return { ...entity, ...rect, axis, phase, ...bendFields, ...angleField };
   }
 
   // Wall entity: rotate whichever shape it carries.
   if (entity.shape === "circle") {
     const c = rotatePoint(entity.cx, entity.cy, r);
-    return { ...entity, cx: c.x, cy: c.y, ...bendFields, ...oneWayField, ...(reveals ? { reveals } : {}) };
+    return { ...entity, cx: c.x, cy: c.y, ...bendFields, ...oneWayField, ...angleField, ...(reveals ? { reveals } : {}) };
   }
   if (entity.shape === "polygon") {
     const points = entity.points.map(([px, py]) => {
       const p = rotatePoint(px, py, r);
       return [p.x, p.y] as [number, number];
     });
-    return { ...entity, points, ...bendFields, ...oneWayField, ...(reveals ? { reveals } : {}) };
+    return { ...entity, points, ...bendFields, ...oneWayField, ...angleField, ...(reveals ? { reveals } : {}) };
   }
   const rect = rotateRect(entity.x, entity.y, entity.width, entity.height, r);
-  return { ...entity, ...rect, ...bendFields, ...oneWayField, ...(reveals ? { reveals } : {}) };
+  return { ...entity, ...rect, ...bendFields, ...oneWayField, ...angleField, ...(reveals ? { reveals } : {}) };
 }
 
 /**

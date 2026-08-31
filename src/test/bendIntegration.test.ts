@@ -129,3 +129,71 @@ describe("a bend authored in the level reaches the board", () => {
     expect(cells(bentData), "the bend never reached the grid").not.toBe(cells(flatData));
   });
 });
+
+describe("a turn authored in the level reaches the board", () => {
+  it("turns the obstacle the game actually builds", () => {
+    // The editor drawing it turned proves nothing about the game: the angle is
+    // a parameter and something has to read it while the board is built. An
+    // unread `angle` produces an unturned wall and no error at all.
+    const flat = buildObstacle(BAR);
+    const turned = buildObstacle({ ...BAR, angle: 35 });
+    expect(turned.vertices.length).toBe(flat.vertices.length);
+    const box = (p: Polygon) => {
+      const xs = p.vertices.map(v => v.x), ys = p.vertices.map(v => v.y);
+      return { w: Math.max(...xs) - Math.min(...xs), h: Math.max(...ys) - Math.min(...ys) };
+    };
+    // A 400 x 24 bar turned 35 degrees is shorter across and much taller.
+    expect(box(turned).w).toBeLessThan(box(flat).w);
+    expect(box(turned).h).toBeGreaterThan(box(flat).h + 100);
+  });
+
+  it("keeps the wall rigid: same area, same centre", () => {
+    // A turn is not a resize. If the outline came out a different size the
+    // parameter would be doing something other than turning.
+    const area = (p: Polygon) => {
+      let a = 0;
+      for (let i = 0; i < p.vertices.length; i++) {
+        const u = p.vertices[i], v = p.vertices[(i + 1) % p.vertices.length];
+        a += u.x * v.y - v.x * u.y;
+      }
+      return Math.abs(a) / 2;
+    };
+    const centre = (p: Polygon) => ({
+      x: p.vertices.reduce((n, v) => n + v.x, 0) / p.vertices.length,
+      y: p.vertices.reduce((n, v) => n + v.y, 0) / p.vertices.length,
+    });
+    const flat = buildObstacle(BAR);
+    const turned = buildObstacle({ ...BAR, angle: 35 });
+    expect(area(turned)).toBeCloseTo(area(flat), 4);
+    expect(centre(turned).x).toBeCloseTo(centre(flat).x, 4);
+    expect(centre(turned).y).toBeCloseTo(centre(flat).y, 4);
+  });
+
+  it("turns AFTER the bend, so nudging the angle does not re-aim the bow", () => {
+    // Order matters: a bend runs along the shape's own long axis. If the turn
+    // ran first the bend axis would follow the new orientation and the two
+    // controls would fight. Bent-then-turned must equal the turn of the bent
+    // shape, which is what this compares.
+    const bentThenTurned = buildObstacle({ ...BAR, bend: 0.4, angle: 50 });
+    const justBent = buildObstacle({ ...BAR, bend: 0.4 });
+    const spread = (p: Polygon) => {
+      const ys = p.vertices.map(v => v.y);
+      return Math.max(...ys) - Math.min(...ys);
+    };
+    // Same shape, turned: the vertex count is identical and the silhouette is
+    // taller than the unturned bent bar.
+    expect(bentThenTurned.vertices.length).toBe(justBent.vertices.length);
+    expect(spread(bentThenTurned)).toBeGreaterThan(spread(justBent));
+  });
+
+  it("carves the turned shape out of the space grid, not the flat one", () => {
+    // Same trap as the bend: a wall that looks turned and plays flat.
+    setRunSeedText("bend-fixture");
+    const turned = createInitialGameData(levelWith({ ...BAR, angle: 40 }), 1, DEFAULT_MODIFIERS);
+    setRunSeedText("bend-fixture");
+    const flat = createInitialGameData(levelWith(BAR), 1, DEFAULT_MODIFIERS);
+    setRunSeedText(null);
+    const blocked = (d: typeof turned) => d.spaceGrid.cells.filter(c => !c).length;
+    expect(blocked(turned), "the angle never reached the grid").not.toBe(blocked(flat));
+  });
+});

@@ -15,7 +15,7 @@ import { hasBend } from "@/lib/bend";
 import { clampZoneSpeed, type FenceZone } from "@/lib/physics/fenceZones";
 import {
   bendHandlePos, bendFromHandle, curveHandlePos, curveFromHandle, withCurve,
-  previewOutline, MAX_BEND,
+  previewOutline, anglePivot, angleHandlePos, angleFromHandle, MAX_BEND,
 } from "@/lib/admin/bendHandles";
 
 interface MapCanvasProps {
@@ -72,7 +72,9 @@ type DragMode =
   // Bow the whole object, and bow one edge of it. Both write a parameter
   // rather than points, so a bend stays re-editable and map.yml stays short.
   | { type: 'bend'; id: string }
-  | { type: 'curve'; id: string; edgeIndex: number };
+  | { type: 'curve'; id: string; edgeIndex: number }
+  // Turning an object on the spot. Writes `angle`, so a rect stays a rect.
+  | { type: 'angle'; id: string };
 
 export function MapCanvas({
   level,
@@ -224,7 +226,10 @@ export function MapCanvas({
   const drawnOutline = useCallback((entity: LevelEntity): { x: number; y: number }[] => {
     const points = authoredOutline(entity);
     if (!hasBend(entity)) return points;
-    return previewOutline({ points, bend: entity.bend, bendAxis: entity.bendAxis, curves: entity.curves });
+    return previewOutline({
+      points, bend: entity.bend, bendAxis: entity.bendAxis,
+      curves: entity.curves, angle: entity.angle,
+    });
   }, [authoredOutline]);
 
   // Get edge midpoints and normals for a polygon
@@ -834,6 +839,28 @@ export function MapCanvas({
         ctx.lineWidth = 2;
         ctx.stroke();
 
+        // The turn knob, on a stalk from the centre. Amber, and outside the
+        // shape: every other handle already lives inside its footprint.
+        const pivotW = anglePivot(authored);
+        const pivotS = worldToScreen(pivotW.x, pivotW.y);
+        const knobW = angleHandlePos(authored, entity.angle ?? 0);
+        const knobS = worldToScreen(knobW.x, knobW.y);
+        ctx.strokeStyle = 'rgba(251, 191, 36, 0.55)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(pivotS.x, pivotS.y);
+        ctx.lineTo(knobS.x, knobS.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#fbbf24';
+        ctx.beginPath();
+        ctx.arc(knobS.x, knobS.y, HANDLE_SIZE / 2 + 1, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
         // One curve handle per edge, polygons only: `curves` is indexed against
         // authored points, and a rect's four corners are implied rather than
         // stored, so there is nothing stable to index on a rect.
@@ -963,6 +990,11 @@ export function MapCanvas({
         // the move handle is - and on a bent one can be anywhere over the body.
         // Testing it after either would make it unreachable.
         const authored = authoredOutline(entity);
+        const knob = angleHandlePos(authored, entity.angle ?? 0);
+        const knobS = worldToScreen(knob.x, knob.y);
+        if (Math.hypot(sx - knobS.x, sy - knobS.y) < HANDLE_HIT_SIZE) {
+          return { type: 'handle', id: entity.id, handleType: 'angle' };
+        }
         const bw = bendHandlePos({ points: authored, bend: entity.bend, bendAxis: entity.bendAxis });
         const bs = worldToScreen(bw.x, bw.y);
         if (Math.hypot(sx - bs.x, sy - bs.y) < HANDLE_HIT_SIZE) {
@@ -1281,6 +1313,8 @@ export function MapCanvas({
             originalRect: { x: entity.x, y: entity.y, width: entity.width, height: entity.height },
           });
         }
+      } else if (hit.handleType === 'angle') {
+        setDragMode({ type: 'angle', id: hit.id });
       } else if (hit.handleType === 'bend') {
         setDragMode({ type: 'bend', id: hit.id });
       } else if (hit.handleType === 'curve' && hit.edgeIndex !== undefined) {
@@ -1465,6 +1499,14 @@ export function MapCanvas({
         width: snap(r.width),
         height: snap(r.height),
       });
+    } else if (dragMode.type === 'angle') {
+      const entity = (level.entities || []).find(e => e.id === dragMode.id);
+      if (entity) {
+        // 15-degree snap while snap-to-grid is on, which is what makes a
+        // deliberate right angle land on 90 rather than 89.6.
+        const deg = angleFromHandle(authoredOutline(entity), world, snapToGrid ? 15 : 0);
+        onUpdateEntity(dragMode.id, { angle: deg === 0 ? undefined : deg });
+      }
     } else if (dragMode.type === 'bend') {
       const entity = (level.entities || []).find(e => e.id === dragMode.id);
       if (entity) {
@@ -1528,7 +1570,7 @@ export function MapCanvas({
         onUpdateEntity(dragMode.id, { points: newPoints });
       }
     }
-  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, onUpdateWell, onUpdateZone, snap, authoredOutline]);
+  }, [dragMode, boardRect, level, screenToWorld, getCanvasCoords, onUpdateEntity, onUpdateBall, onUpdateArea, onUpdateWell, onUpdateZone, snap, snapToGrid, authoredOutline]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const canvas = canvasRef.current;

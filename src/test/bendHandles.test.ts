@@ -11,6 +11,7 @@ import { describe, it, expect } from "vitest";
 import {
   apexOffset, bendHandlePos, bendFromHandle, bendFrame,
   curveHandlePos, curveFromHandle, withCurve, previewOutline, MAX_BEND,
+  anglePivot, angleHandlePos, angleFromHandle,
 } from "@/lib/admin/bendHandles";
 import type { Vector2 } from "@/lib/polygon";
 
@@ -184,5 +185,69 @@ describe("what the editor draws", () => {
     const bent = previewOutline({ points: BAR, bend: 0.4 });
     expect(bent.length).toBeGreaterThan(BAR.length);
     expect(bent).not.toEqual(BAR);
+  });
+});
+
+describe("the turn knob", () => {
+  it("sits straight up from the centre at zero", () => {
+    const k = angleHandlePos(BAR, 0);
+    expect(k.x).toBeCloseTo(300, 6);
+    expect(k.y).toBeLessThan(300);
+  });
+
+  it("carries round with the angle, so its position reads the rotation", () => {
+    const right = angleHandlePos(BAR, 90);
+    expect(right.y).toBeCloseTo(300, 6);
+    expect(right.x).toBeGreaterThan(300);
+
+    const down = angleHandlePos(BAR, 180);
+    expect(down.x).toBeCloseTo(300, 6);
+    expect(down.y).toBeGreaterThan(300);
+  });
+
+  it("comes back to the angle it was placed from", () => {
+    for (const deg of [-170, -90, -30, 0, 15, 45, 120, 179]) {
+      const pos = angleHandlePos(BAR, deg);
+      expect(angleFromHandle(BAR, pos), `angle ${deg}`).toBeCloseTo(deg, 4);
+    }
+  });
+
+  it("stays clear of a thin bar rather than landing inside it", () => {
+    // The bar is 24 tall, so half its height is 12: without the minimum arm the
+    // knob would sit 17 units above centre, on top of the shape and under the
+    // bend handle.
+    const k = angleHandlePos(BAR, 0);
+    expect(300 - k.y).toBeGreaterThan(40);
+  });
+
+  it("snaps to 15 when asked, so a right angle actually lands on 90", () => {
+    const nearlyRight = { x: 300 + 100, y: 300 - 3 };
+    expect(angleFromHandle(BAR, nearlyRight, 0)).not.toBe(90);
+    expect(angleFromHandle(BAR, nearlyRight, 15)).toBe(90);
+  });
+
+  it("normalises what it returns, so a knob dragged twice round stays readable", () => {
+    for (const p of [{ x: 300, y: 100 }, { x: 500, y: 300 }, { x: 300, y: 500 }, { x: 100, y: 300 }]) {
+      const a = angleFromHandle(BAR, p);
+      expect(a).toBeGreaterThan(-180);
+      expect(a).toBeLessThanOrEqual(180);
+    }
+  });
+
+  it("survives a drop exactly on the pivot instead of returning NaN", () => {
+    expect(angleFromHandle(BAR, anglePivot(BAR))).toBe(0);
+    expect(angleFromHandle([], { x: 5, y: 5 })).toBe(0);
+  });
+
+  it("shows the turn in the preview, so the editor is not lying", () => {
+    const turned = previewOutline({ points: BAR, angle: 40 });
+    expect(turned).not.toEqual(BAR);
+    // A rigid turn: the outline keeps its vertex count and its centre.
+    expect(turned).toHaveLength(BAR.length);
+    const mean = (pts: typeof BAR) => ({
+      x: pts.reduce((n, p) => n + p.x, 0) / pts.length,
+      y: pts.reduce((n, p) => n + p.y, 0) / pts.length,
+    });
+    near(mean(turned), mean(BAR), 6);
   });
 });

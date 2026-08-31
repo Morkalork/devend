@@ -11,6 +11,7 @@
 import { describe, it, expect } from "vitest";
 import {
   bendVertices, curveEdge, applyEdgeCurves, bendOutline, bendsAlongX, hasBend, segmentsFor,
+  turnOutline, hasAngle, bowOutline, shapeOutline,
 } from "@/lib/bend";
 import type { Vector2 } from "@/lib/polygon";
 
@@ -275,5 +276,68 @@ describe("the two gestures together", () => {
     expect(segmentsFor(8000)).toBeLessThanOrEqual(48);
     expect(segmentsFor(0)).toBe(1);
     expect(segmentsFor(-5)).toBe(1);
+  });
+});
+
+describe("turning an object", () => {
+  it("is rigid: same vertices, same centre, same size", () => {
+    const turned = turnOutline(BAR, 37);
+    expect(turned).toHaveLength(BAR.length);
+    const mean = (p: Vector2[]) => ({
+      x: p.reduce((n, q) => n + q.x, 0) / p.length,
+      y: p.reduce((n, q) => n + q.y, 0) / p.length,
+    });
+    expect(mean(turned).x).toBeCloseTo(mean(BAR).x, 9);
+    expect(mean(turned).y).toBeCloseTo(mean(BAR).y, 9);
+    // Edge lengths are preserved by a rotation; a shear or a scale would not.
+    const len = (p: Vector2[], i: number) =>
+      Math.hypot(p[(i + 1) % p.length].x - p[i].x, p[(i + 1) % p.length].y - p[i].y);
+    for (let i = 0; i < BAR.length; i++) expect(len(turned, i)).toBeCloseTo(len(BAR, i), 9);
+  });
+
+  it("turns clockwise for a positive angle", () => {
+    // y points down, so a quarter turn clockwise sends the right-hand end down.
+    const right = BAR.reduce((a, p) => (p.x > a.x ? p : a));
+    const turned = turnOutline([right, ...BAR.filter(p => p !== right)], 90);
+    expect(turned[0].y).toBeGreaterThan(right.y);
+  });
+
+  it("does nothing for zero, undefined, or a full turn", () => {
+    expect(turnOutline(BAR, 0)).toEqual(BAR);
+    expect(turnOutline(BAR, undefined)).toEqual(BAR);
+    expect(hasAngle(0)).toBe(false);
+    expect(hasAngle(undefined)).toBe(false);
+    expect(hasAngle(360)).toBe(false);
+    expect(hasAngle(37)).toBe(true);
+  });
+
+  it("returns copies rather than writing through into the level config", () => {
+    const out = turnOutline(BAR, 0);
+    out[0].x = -999;
+    expect(BAR[0].x).toBe(100);
+  });
+
+  it("happens AFTER the bend, not before", () => {
+    // The order is load-bearing and nothing else catches it: swapping the two
+    // in bendOutline left every other test in this repo green.
+    //
+    // It matters because the bend axis is read from the shape's bounds. A wide
+    // bar bows along x; turn it first and the bow follows the NEW bounds, so
+    // nudging the angle silently re-aims the bend and the two controls fight.
+    //
+    // 30 degrees, not 90. At a quarter turn the two orders happen to agree -
+    // a wide bar bowed along x and then turned is the same shape as a tall bar
+    // bowed along y - so a test written at 90 proves nothing. That was the
+    // first version of this, and it failed on its own control assertion.
+    const bendFirst = turnOutline(bowOutline(shapeOutline(BAR, undefined), 0.4, "auto"), 30);
+    const turnFirst = bowOutline(turnOutline(BAR, 30), 0.4, "auto");
+    const got = bendOutline(BAR, { bend: 0.4, angle: 30 });
+
+    const same = (a: Vector2[], b: Vector2[]) =>
+      a.length === b.length
+      && a.every((p, i) => Math.abs(p.x - b[i].x) < 1e-6 && Math.abs(p.y - b[i].y) < 1e-6);
+
+    expect(same(got, bendFirst), "bendOutline is not bending before turning").toBe(true);
+    expect(same(got, turnFirst), "the two orders are indistinguishable here, so this proves nothing").toBe(false);
   });
 });

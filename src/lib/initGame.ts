@@ -37,7 +37,7 @@ import { resolveSlots, PROCEDURAL_MIN_LEVEL } from "@/lib/mapSlots";
 import { pickMapRotation, rotateEntities, rotateCircuit, rotateCharge, rotateDataStream, MapRotation } from "@/lib/mapRotation";
 import type { CircuitRuntime, ChargeRuntime, DataStreamRuntime } from "@/types/gameState";
 import { decoratePolygon } from "@/lib/obstacleDecorations";
-import { bendOutline, bowOutline, hasBend, shapeOutline } from "@/lib/bend";
+import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline } from "@/lib/bend";
 import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import { rotateFenceZones } from "@/lib/mapRotation";
 import type { FenceZone } from "@/lib/physics/fenceZones";
@@ -418,6 +418,15 @@ export function createInitialGameData(
           obstaclePolygon = {
             ...obstaclePolygon,
             vertices: bowOutline(obstaclePolygon.vertices, bendFields.bend, bendFields.bendAxis),
+          };
+        }
+        // The turn goes after the bow: a bend runs along the shape's own long
+        // axis, so bending then turning gives "a bent bar, turned". Turning
+        // first would re-aim the bow every time the angle was nudged.
+        if (hasAngle(bendFields.angle)) {
+          obstaclePolygon = {
+            ...obstaclePolygon,
+            vertices: turnOutline(obstaclePolygon.vertices, bendFields.angle),
           };
         }
         obstacleIndex++;

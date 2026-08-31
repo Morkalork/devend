@@ -13,6 +13,7 @@ import type { LevelMoverEntity } from '@/types/level';
 import { withCurve, MAX_BEND } from "@/lib/admin/bendHandles";
 import { getAllBallTypes } from '@/lib/ballTypes';
 import { clampZoneSpeed, MIN_ZONE_SPEED, MAX_ZONE_SPEED, type FenceZone } from '@/lib/physics/fenceZones';
+import { normaliseDegrees } from '@/lib/bendRotation';
 
 /** The four bearings, laid out the way they point. */
 const PULL_ORDER: WellPull[] = ['up', 'left', 'down', 'right'];
@@ -871,6 +872,13 @@ function BendEditor({ entity, onUpdate }: {
   const curves = entity.curves ?? [];
   const curved = curves.some(c => !!c);
 
+  // Absent, not zero, for the same reason the bend is: an object nobody turned
+  // should leave no trace in map.yml.
+  const setAngle = (v: number) => {
+    const d = normaliseDegrees(v);
+    onUpdate({ angle: d === 0 ? undefined : d } as Partial<LevelEntity>);
+  };
+
   // Absent, not zero: a straight wall should leave no trace in map.yml.
   const setBend = (v: number) => {
     const clamped = Math.max(-MAX_BEND, Math.min(MAX_BEND, v));
@@ -880,13 +888,37 @@ function BendEditor({ entity, onUpdate }: {
 
   return (
     <div className="space-y-2 pt-2 border-t border-border">
+      <label className="flex items-center gap-2 text-xs">
+        <span className="text-amber-400 font-semibold whitespace-nowrap">Angle</span>
+        <input
+          type="range"
+          min={-180}
+          max={180}
+          step={1}
+          value={entity.angle ?? 0}
+          onChange={(e) => setAngle(Number(e.target.value))}
+          className="flex-1"
+        />
+        <input
+          type="number"
+          step={5}
+          value={entity.angle ?? 0}
+          onChange={(e) => setAngle(Number(e.target.value))}
+          className="w-16 px-1 py-0.5 rounded bg-background border border-border"
+        />
+      </label>
+      <p className="text-[10px] text-muted-foreground leading-relaxed">
+        Degrees clockwise, turned about the object's own centre. Drag the amber knob on
+        the canvas; snap-to-grid quantises it to 15.
+      </p>
+
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-violet-400">Bend</span>
-        {(bend !== 0 || curved) && (
+        {(bend !== 0 || curved || !!entity.angle) && (
           <button
-            onClick={() => onUpdate({ bend: undefined, bendAxis: undefined, curves: undefined } as Partial<LevelEntity>)}
+            onClick={() => onUpdate({ bend: undefined, bendAxis: undefined, curves: undefined, angle: undefined } as Partial<LevelEntity>)}
             className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 text-muted-foreground"
-            title="Straighten: remove the bow and every edge curve"
+            title="Straighten: remove the turn, the bow and every edge curve"
           >
             Straighten
           </button>

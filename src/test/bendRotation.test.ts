@@ -21,7 +21,7 @@
  */
 import { describe, it, expect } from "vitest";
 import { rotateEntity, rotatePoint, type MapRotation } from "@/lib/mapRotation";
-import { rotateBend, rotateBendAxis, rotateCurves } from "@/lib/bendRotation";
+import { normaliseDegrees, rotateAngle, rotateBend, rotateBendAxis, rotateCurves } from "@/lib/bendRotation";
 import { bendOutline } from "@/lib/bend";
 import type { Vector2 } from "@/lib/polygon";
 import type { LevelEntity, WallRectEntity, WallPolygonEntity } from "@/types/level";
@@ -47,11 +47,19 @@ function outlineOf(e: LevelEntity): Vector2[] {
        { x: e.x + e.width, y: e.y + e.height }, { x: e.x, y: e.y + e.height }]
     : e.shape === "polygon"
       ? e.points.map(([x, y]) => ({ x, y }))
-      : [];
+      // Circles were [] here, which quietly excused the circle branch of
+      // rotateAngle from the commutation property - the one branch whose rule
+      // differs from the other two, and the one I got wrong by reasoning.
+      // Sampled the way initGame samples it.
+      : Array.from({ length: 64 }, (_, i) => {
+          const a = (i / 64) * Math.PI * 2;
+          return { x: e.cx + Math.cos(a) * e.radius, y: e.cy + Math.sin(a) * e.radius };
+        });
   return bendOutline(base, {
     bend: e.kind === "wall" || e.kind === "mover" ? e.bend : undefined,
     bendAxis: e.kind === "wall" || e.kind === "mover" ? e.bendAxis : undefined,
     curves: e.kind === "wall" || e.kind === "mover" ? e.curves : undefined,
+    angle: e.kind === "wall" || e.kind === "mover" ? e.angle : undefined,
   });
 }
 
@@ -161,5 +169,115 @@ describe("what rotation leaves alone", () => {
     expect("bend" in rotated).toBe(false);
     expect("bendAxis" in rotated).toBe(false);
     expect("curves" in rotated).toBe(false);
+  });
+});
+
+describe("turning an object commutes with turning the map", () => {
+  // The same property the bend is held to, for the same reason: a turned wall
+  // has to come out looking like the same wall, just rotated, whichever of the
+  // four ways the board is dealt.
+  //
+  // This one has a wrinkle the bend does not. A rect and a polygon absorb the
+  // board's quarter turn differently - rotateEntity gives a rect another
+  // AXIS-ALIGNED rect with width and height swapped (shape changed, orientation
+  // unchanged), while it rotates a polygon's points outright (orientation baked
+  // in). So the angle gains the board turn for one and not the other, and this
+  // test is what says which.
+  for (const angle of [30, -45, 90, 157]) {
+    it(`holds for a rect turned ${angle}`, () => {
+      for (const r of ROTATIONS) {
+        expectSameShape(
+          outlineOf(rotateEntity({ ...WIDE, angle }, r)),
+          rotateAll(outlineOf({ ...WIDE, angle }), r),
+          `rect angle ${angle} rotation ${r}`,
+        );
+      }
+    });
+
+    it(`holds for a polygon turned ${angle}`, () => {
+      for (const r of ROTATIONS) {
+        expectSameShape(
+          outlineOf(rotateEntity({ ...POLY, angle }, r)),
+          rotateAll(outlineOf({ ...POLY, angle }), r),
+          `polygon angle ${angle} rotation ${r}`,
+        );
+      }
+    });
+  }
+
+  it("holds for a bent circle, whose rule is the odd one out", () => {
+    // A plain circle is rotationally symmetric and would pass under any rule at
+    // all. Bending it gives it an orientation to get wrong.
+    const circle = {
+      id: "c", kind: "wall", shape: "circle", cx: 400, cy: 350, radius: 90,
+      bend: 0.4, angle: 40,
+    } as unknown as LevelEntity;
+    for (const r of ROTATIONS) {
+      expectSameShape(
+        outlineOf(rotateEntity(circle, r)),
+        rotateAll(outlineOf(circle), r),
+        `bent circle rotation ${r}`,
+      );
+    }
+  });
+
+  it("holds for a bent SQUARE rect, the other shape auto cannot turn", () => {
+    // Same defect as the circle and the same fix: a square has no longer side,
+    // so bendsAlongX resolves the tie to x on every rotation and the bow never
+    // follows the board. Non-square rects were fine all along, which is why the
+    // original bend tests missed it.
+    const square: WallRectEntity = {
+      id: "sq", kind: "wall", shape: "rect", x: 300, y: 300, width: 200, height: 200,
+      bend: 0.45,
+    };
+    for (const r of ROTATIONS) {
+      expectSameShape(
+        outlineOf(rotateEntity(square, r)),
+        rotateAll(outlineOf(square), r),
+        `bent square rotation ${r}`,
+      );
+    }
+  });
+
+  it("holds for a turn and a bend together", () => {
+    const both: WallRectEntity = { ...WIDE, bend: 0.4, angle: 35 };
+    for (const r of ROTATIONS) {
+      expectSameShape(
+        outlineOf(rotateEntity(both, r)),
+        rotateAll(outlineOf(both), r),
+        `bend+angle rotation ${r}`,
+      );
+    }
+  });
+});
+
+describe("the angle the rotation rule produces", () => {
+  it("leaves the angle alone for every shape", () => {
+    // A board rotation is rigid: it adds the same quarter turn to everything on
+    // the board, including the object that was already turned. So the stored
+    // angle carries through untouched. The first two rules tried to compensate
+    // for how much of the turn each shape had "already absorbed" - a rect's
+    // width/height swap, a polygon's rotated points - and the commutation
+    // property above rejected both.
+    for (const r of ROTATIONS) {
+      expect(rotateAngle(30, "polygon", r)).toBe(30);
+      expect(rotateAngle(30, "rect", r)).toBe(30);
+      expect(rotateAngle(30, "circle", r)).toBe(30);
+    }
+  });
+
+  it("normalises degrees, so map.yml never accumulates 450", () => {
+    // Not used by rotateAngle any more, but the editor writes through it: a
+    // knob dragged round twice must not leave 450 in the file, and 180 must not
+    // come back as -180, which is the same angle and a different diff.
+    expect(normaliseDegrees(180)).toBe(180);
+    expect(normaliseDegrees(-180)).toBe(180);
+    expect(normaliseDegrees(450)).toBe(90);
+    expect(normaliseDegrees(-270)).toBe(90);
+    expect(Object.is(normaliseDegrees(-360), 0)).toBe(true);
+  });
+
+  it("leaves an absent angle absent rather than writing a zero into the map", () => {
+    expect(rotateAngle(undefined, "circle", 2)).toBeUndefined();
   });
 });

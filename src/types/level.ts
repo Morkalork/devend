@@ -58,6 +58,12 @@ export interface BendShapeFields {
   bendAxis?: "auto" | "x" | "y";
   /** Per-edge bows for a polygon, parallel to `points`. Entry i bows point i to point i+1. */
   curves?: number[];
+  /**
+   * Whole-object turn, in degrees clockwise. A rect stays a rect in map.yml -
+   * width, height and position all keep meaning - and the turn is applied when
+   * the board is built, so it can be re-turned or resized later.
+   */
+  angle?: number;
 }
 
 // Base entity interface - extensible for future kinds

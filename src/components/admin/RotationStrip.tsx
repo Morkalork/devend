@@ -39,7 +39,7 @@ function outlineOf(e: LevelEntity): { x: number; y: number }[] {
           return { x: e.cx + Math.cos(a) * e.radius, y: e.cy + Math.sin(a) * e.radius };
         });
   return hasBend(e)
-    ? previewOutline({ points: base, bend: e.bend, bendAxis: e.bendAxis, curves: e.curves })
+    ? previewOutline({ points: base, bend: e.bend, bendAxis: e.bendAxis, curves: e.curves, angle: e.angle })
     : base;
 }
 

@@ -85,3 +85,53 @@ export function rotateCurves(
 ): number[] | undefined {
   return curves;
 }
+
+/**
+ * How many degrees the board itself turns for each orientation.
+ *
+ * Read off rotatePoint rather than assumed: r=1 maps a direction (dx,dy) to
+ * (dy,-dx), which with y pointing down is a quarter turn anticlockwise on
+ * screen, i.e. -90. Getting this backwards is invisible - the object still
+ * turns, it is simply not the map that was authored.
+ */
+const BOARD_TURN: Record<MapRotation, number> = { 0: 0, 1: -90, 2: 180, 3: 90 };
+
+/**
+ * An object's angle after the map turns: unchanged, for every shape.
+ *
+ * This took three attempts and the commutation property rejected the first two,
+ * so the reasoning is worth writing down. `turnOutline` rotates a shape about
+ * its OWN bounds centre, and a board rotation is rigid - it adds the same
+ * quarter turn to every orientation on the board, the turned object's included.
+ * So turning then rotating and rotating then turning differ by nothing, and the
+ * stored angle carries through untouched.
+ *
+ * What went wrong twice was reasoning about how much of the turn rotateEntity
+ * had "already applied" to each shape - the width/height swap for a rect, the
+ * rotated points for a polygon, neither for a circle. All three of those are
+ * true and none of them matters, because the angle is measured against the
+ * shape's own frame either way.
+ *
+ * Kept as a named function rather than dropped, for the same reason
+ * rotateCurves is: it is where the argument lives, and where a negation would
+ * belong if a mirrored orientation were ever added.
+ */
+export function rotateAngle(
+  angle: number | undefined, _shape: "rect" | "polygon" | "circle", _r: MapRotation,
+): number | undefined {
+  return angle;
+}
+
+/**
+ * Into (-180, 180]. Keeps map.yml from accumulating 450 or -630 across edits,
+ * and makes two angles that mean the same thing compare equal.
+ *
+ * The +180 case is why this is a named function rather than one modulo: the
+ * naive expression sends a half turn to -180, and -180 and 180 are the same
+ * angle but not the same string in a YAML diff.
+ */
+export function normaliseDegrees(deg: number): number {
+  const wrapped = ((deg + 180) % 360 + 360) % 360 - 180;
+  const out = wrapped === -180 ? 180 : wrapped;
+  return Object.is(out, -0) ? 0 : out;
+}

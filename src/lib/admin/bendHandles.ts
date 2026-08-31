@@ -14,6 +14,7 @@
  * you left it.
  */
 import { bendsAlongX, bendOutline, type BendAxis, type BendFields } from "../bend";
+import { normaliseDegrees } from "../bendRotation";
 import type { Vector2 } from "../polygon";
 
 /** Anything the editor can bend, reduced to what these functions need. */
@@ -151,4 +152,69 @@ export function withCurve(
 /** The outline the editor should draw: what the game will actually build. */
 export function previewOutline(target: BendTarget): Vector2[] {
   return bendOutline(target.points, target);
+}
+
+// ── Turning ────────────────────────────────────────────────────────────────
+
+/**
+ * How far the turn knob sits outside the shape, as a fraction of its half-size.
+ *
+ * Outside rather than on it, because a turn handle ON the object competes with
+ * the move handle, the resize handles and the bend handle, all of which already
+ * live inside its footprint. A knob on a stalk is how every editor draws this
+ * and it is what makes the gesture obvious without a label.
+ */
+const KNOB_STANDOFF = 1.45;
+/** Never closer than this to the centre, so a tiny object still gets a usable arm. */
+const KNOB_MIN_ARM = 46;
+
+/** Where the turn knob sits for a shape at this angle. */
+export function anglePivot(points: Vector2[]): Vector2 {
+  if (points.length === 0) return { x: 0, y: 0 };
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of points) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  return { x: (minX + maxX) / 2, y: (minY + maxY) / 2 };
+}
+
+export function angleHandlePos(points: Vector2[], angleDegrees = 0): Vector2 {
+  const c = anglePivot(points);
+  if (points.length === 0) return c;
+  let maxY = -Infinity, minY = Infinity;
+  for (const p of points) {
+    if (p.y > maxY) maxY = p.y;
+    if (p.y < minY) minY = p.y;
+  }
+  // Straight up from the centre at angle 0, then carried round by the angle -
+  // so the knob is always on the same corner of the object, and its position
+  // reads the current rotation at a glance.
+  const arm = Math.max(KNOB_MIN_ARM, ((maxY - minY) / 2) * KNOB_STANDOFF);
+  const rad = (angleDegrees * Math.PI) / 180;
+  return { x: c.x + Math.sin(rad) * arm, y: c.y - Math.cos(rad) * arm };
+}
+
+/**
+ * The angle a knob dropped at `world` means, in degrees clockwise.
+ *
+ * Measured from straight up, matching angleHandlePos, so the pair round-trips.
+ * `snapDegrees` quantises it - the editor passes 15 while snap-to-grid is on,
+ * which is what makes a deliberate right angle actually land on 90 instead of
+ * 89.6.
+ */
+export function angleFromHandle(
+  points: Vector2[], world: Vector2, snapDegrees = 0,
+): number {
+  // No shape, no angle. Without this the pivot defaults to the origin and a
+  // drop anywhere returns a confident bearing from (0, 0).
+  if (points.length === 0) return 0;
+  const c = anglePivot(points);
+  const dx = world.x - c.x, dy = world.y - c.y;
+  if (dx === 0 && dy === 0) return 0;
+  const deg = (Math.atan2(dx, -dy) * 180) / Math.PI;
+  const snapped = snapDegrees > 0 ? Math.round(deg / snapDegrees) * snapDegrees : deg;
+  return normaliseDegrees(Math.round(snapped * 10) / 10);
 }
