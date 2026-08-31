@@ -59,14 +59,16 @@ describe("no mechanic is introduced and then dropped", () => {
     // Pinned rather than asserted empty, because these are real and known.
     // Each is a decision someone should make, not a bug to fix silently:
     //
-    //   Bent shape     added 2026-08-31, level 6 is its debut
     //   Thread lock    level 19 only, and it is act II's whole Break beat
     //   Pinned mutator level 34 only, the one map that pins a mutator
+    //
+    // Bent shape came OFF this list when the designer bent walls on 2, 6 and 7.
+    // That is the intended direction of travel for every name here.
     //
     // When one of these gains a second map the test fails and the line comes
     // out. When a NEW name appears here, something was introduced once and
     // forgotten - which is the failure this file exists to catch.
-    expect(singles.map(w => w.key).sort()).toEqual(["bend", "mutator", "threadLock"]);
+    expect(singles.map(w => w.key).sort()).toEqual(["mutator", "threadLock"]);
   });
 
   it("has no headline mechanic the engine supports but no map uses", () => {

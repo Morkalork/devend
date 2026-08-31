@@ -30,24 +30,32 @@ levels:
       - id: stub-top
         kind: wall
         shape: rect
-        x: 437
-        'y': 45
-        width: 26
+        x: 425
+        'y': 25
+        width: 25
         height: 200
       - id: stub-bottom
         kind: wall
         shape: rect
-        x: 437
-        'y': 655
+        x: 450
+        'y': 675
         width: 26
         height: 200
       - id: corner-shelf
         kind: wall
         shape: rect
         x: 700
-        'y': 690
-        width: 155
-        height: 22
+        'y': 475
+        width: 175
+        height: 25
+      - id: wall-1788189135085
+        kind: wall
+        shape: rect
+        x: 25
+        'y': 475
+        width: 175
+        height: 25
+    balls: []
 
   # 2 "Pair Programming" - MEET the second ball.
   # The same wide neck, now crossed by two balls on their own schedules. Nothing
@@ -78,16 +86,18 @@ levels:
       - id: pillar
         kind: wall
         shape: circle
-        cx: 225
-        cy: 450
+        cx: 700
+        cy: 475
         radius: 70
       - id: corner-shelf
         kind: wall
         shape: rect
-        x: 45
-        'y': 190
-        width: 160
-        height: 22
+        x: 150
+        'y': 450
+        width: 150
+        height: 125
+        bend: -0.427
+    balls: []
 
   # 3 "Standup" - USE the topology: the necks ARE the hook.
   # An alcove in the top-left whose only way in is a corner gap one short fence
@@ -107,15 +117,15 @@ levels:
       - id: alcove-lip-v
         kind: wall
         shape: rect
-        x: 195
-        'y': 45
+        x: 250
+        'y': 25
         width: 22
         height: 90
       - id: alcove-lip-h
         kind: wall
         shape: rect
-        x: 45
-        'y': 195
+        x: 25
+        'y': 250
         width: 90
         height: 22
       - id: spine-top
@@ -132,6 +142,14 @@ levels:
         'y': 620
         width: 24
         height: 235
+    balls: []
+    coloredAreas:
+      - kind: var
+        x: 25
+        'y': 25
+        width: 225
+        height: 225
+        required: false
 
   # 4 "Blocker" - MEET the mover.
   # A patrol crossing the one neck, so the question stops being "can I draw this
@@ -163,9 +181,9 @@ levels:
       - id: guard
         kind: mover
         shape: rect
-        x: 400
-        'y': 470
-        width: 100
+        x: 300
+        'y': 475
+        width: 300
         height: 26
         axis: horizontal
         range: 280
@@ -177,6 +195,7 @@ levels:
         'y': 200
         width: 155
         height: 22
+    balls: []
 
   # 5 "Nice To Have" - USE the marked zone: the game's first Colored Area.
   # A BONUS var pocket (required: false), so ignoring it costs nothing and the
@@ -196,36 +215,43 @@ levels:
     maxBalls: 2
     coloredAreas:
       - kind: var
-        x: 630
-        'y': 620
-        width: 225
-        height: 225
+        x: 600
+        'y': 625
+        width: 275
+        height: 250
+        required: false
+      - kind: let
+        x: 0
+        'y': 625
+        width: 300
+        height: 250
         required: false
     entities:
       - id: pocket-shelf
         kind: wall
         shape: rect
-        x: 610
-        'y': 596
-        width: 245
+        x: 575
+        'y': 600
+        width: 350
         height: 24
       - id: pocket-lip
         kind: wall
         shape: rect
-        x: 586
-        'y': 700
-        width: 24
-        height: 155
+        x: -25
+        'y': 600
+        width: 350
+        height: 25
       - id: guard
         kind: mover
         shape: rect
-        x: 380
-        'y': 640
+        x: 400
+        'y': 575
         width: 110
         height: 26
         axis: horizontal
         range: 260
         speed: 150
+    balls: []
 
   # 6 "Legacy Wall" - MEET the breakable.
   # A thin wall across the board with the good space behind it. Smashing costs
@@ -240,10 +266,6 @@ levels:
     randomShapes: 8
     maxBalls: 2
     entities:
-      # Bowed into the near chamber, so the wall you have to price up is not a
-      # straight line you can read at a glance. The waist bulges left to about
-      # x 473, which pinches the near side in the middle and opens the far side
-      # out: the cheap seal is no longer the same cut at the top and the bottom.
       - id: soft-wall
         kind: wall
         shape: rect
@@ -257,16 +279,18 @@ levels:
       - id: nub
         kind: wall
         shape: circle
-        cx: 230
-        cy: 450
+        cx: 225
+        cy: 525
         radius: 45
-      - id: corner-shelf
+        bend: 0.95
+      - id: wall-1788191964368
         kind: wall
-        shape: rect
-        x: 700
-        'y': 690
-        width: 155
-        height: 22
+        shape: circle
+        cx: 225
+        cy: 375
+        radius: 45
+        bend: -0.95
+    balls: []
 
   # 7 "Refactor" - FIGHT: the breakable crossed with the mover, and the act's
   # first TURN.
@@ -285,33 +309,37 @@ levels:
       - id: gate
         kind: wall
         shape: rect
-        x: 430
-        'y': 230
-        width: 26
-        height: 440
+        x: 225
+        'y': 150
+        width: 25
+        height: 625
         breakable: true
         hitsToBreak: 4
       - id: patrol
         kind: mover
         shape: circle
-        cx: 660
-        cy: 450
+        cx: 450
+        cy: 475
         radius: 45
         axis: vertical
-        range: 300
+        range: 525
         speed: 150
-      - id: corner-shelf
+        bend: -0.41
+      - id: wall-1788192072207
         kind: wall
         shape: rect
-        x: 700
-        'y': 690
-        width: 155
-        height: 22
+        x: 650
+        'y': 150
+        width: 25
+        height: 625
+        breakable: true
+        hitsToBreak: 4
     beats:
       - id: crunch
         atSpaceRemaining: 50
         speedSpike: 0.15
         announce: game.beatCrunchTime
+    balls: []
 
   # 8 "Scope" - FIGHT: the marked zone behind a guarded chokepoint, with three
   # balls. Also where POWER-UP TOKENS begin (game-config.yml pickups.start_level

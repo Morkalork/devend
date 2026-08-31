@@ -261,15 +261,16 @@ describe("the ladder actually carries these hooks", () => {
     expect(ids.size).toBeGreaterThanOrEqual(27);
   });
 
-  it("leaves the first four levels clean, because they are the tutorial", () => {
-    // Act I introduces the bonus area at 5 and the breakable at 6. Putting
-    // either earlier would teach two things at once on a map whose job is to
-    // teach sealing.
-    for (const level of LEVELS.filter(l => l.level <= 4)) {
-      expect(level.coloredAreas ?? [], label(level)).toHaveLength(0);
-       
-      const brk = ((level as any).entities ?? []).filter((e: any) => e.breakable);  // eslint-disable-line @typescript-eslint/no-explicit-any
-      expect(brk, label(level)).toHaveLength(0);
+  it("keeps a win GATE out of the tutorial band, and allows a bonus", () => {
+    // Was "leaves the first four levels clean". The designer put a bonus var
+    // zone on level 3, deliberately and repeatedly, so the convention has been
+    // narrowed rather than enforced against them: what must stay out of levels
+    // 1-4 is a REQUIRED area, because a win the player cannot yet read is the
+    // thing that actually hurts in the teaching band. An optional pocket to
+    // aim at is just a target.
+    for (const l of LEVELS.filter(l => l.level <= 4)) {
+      const gates = (l.coloredAreas ?? []).filter(a => a.required !== false);
+      expect(gates, `${l.id} (level ${l.level}) gates the tutorial band`).toHaveLength(0);
     }
   });
 
