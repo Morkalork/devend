@@ -257,6 +257,15 @@ export interface LevelConfig {
    */
   pickupSpots?: { x: number; y: number }[];
   /**
+   * Share of this map's points carried by its colored areas, 0..0.8.
+   *
+   * Absent means the default (0.4) on any map that HAS areas, and nothing at
+   * all on a map that does not. Authored per map so a board where the zones sit
+   * alongside another demanding feature can ask for less of the score.
+   * See lib/coloredAreaShare.
+   */
+  coloredAreaShare?: number;
+  /**
    * Ground that changes how fast a fence builds across it. speed < 1 slows the
    * cut, > 1 speeds it. The only mechanic that acts on the CUT rather than on
    * the balls or the space. See lib/physics/fenceZones.

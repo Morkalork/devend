@@ -1,0 +1,85 @@
+/**
+ * What a map's colored areas are worth.
+ *
+ * A colored area used to pay purely as a MULTIPLIER on the locks made inside
+ * it, and the Craft axis treats zone locks as one route to a full axis among
+ * several - superior locks, simultaneous cuts, money balls and frozen locks all
+ * reach the same ceiling. That is a reasonable economy and it makes an area
+ * optional: a player who never goes near one is not behind, so the zones read
+ * as decoration for people who like them.
+ *
+ * They are meant to be the early answer to "why would I lock anywhere in
+ * particular", so they need to cost something to skip. A map that has areas now
+ * attaches a SHARE of its own points to them - 40% by default - and pays that
+ * share in proportion to the areas satisfied. Clear the map and ignore the
+ * zones and you bank 60% of what the map was worth, which is a price worth
+ * paying only when the clock is about to beat you.
+ *
+ * ── Out of the map's points, not on top of them ────────────────────────────
+ *
+ * The share is withheld from the map's existing points rather than added
+ * alongside. Adding would make every zone map pay MORE than a zone-free one for
+ * the same play, which inflates the ladder and makes the areas a bonus again
+ * by another name. Withholding makes them a target.
+ *
+ * Because basePoints scales both the map's payout and its overtime cap, a
+ * player who skips the zones gets a proportionally smaller cap too - which is
+ * correct: they attempted less of the map.
+ */
+import type { LevelConfig } from "@/types/level";
+
+/** The share of a map's points its colored areas carry, unless the map says otherwise. */
+export const DEFAULT_COLORED_AREA_SHARE = 0.4;
+
+/**
+ * Clamped hard. A share of 1 would make a map pay nothing at all for clearing
+ * it, and a negative one would pay a bonus for ignoring the zones.
+ */
+export const MAX_COLORED_AREA_SHARE = 0.8;
+
+export const clampAreaShare = (v: number): number =>
+  Math.max(0, Math.min(MAX_COLORED_AREA_SHARE, v));
+
+/**
+ * How much of THIS map's points ride on its areas.
+ *
+ * Zero when the map has none, which is what keeps every existing zone-free map
+ * scoring exactly as it did.
+ */
+export function areaShareOf(
+  level: Pick<LevelConfig, "coloredAreas" | "coloredAreaShare"> | null | undefined,
+): number {
+  const areas = level?.coloredAreas ?? [];
+  if (areas.length === 0) return 0;
+  const authored = level?.coloredAreaShare;
+  return clampAreaShare(typeof authored === "number" ? authored : DEFAULT_COLORED_AREA_SHARE);
+}
+
+/**
+ * The points a map actually pays out of, given how many of its areas were used.
+ *
+ * Proportional rather than all-or-nothing. A map with three zones and two taken
+ * should not pay as though the player ignored all of them: partial credit is
+ * what makes a third zone worth attempting when the clock is short, and
+ * all-or-nothing would make the LAST zone the only one that mattered.
+ */
+export function effectiveBasePoints(
+  basePoints: number,
+  share: number,
+  satisfiedAreas: number,
+  totalAreas: number,
+): number {
+  if (!Number.isFinite(basePoints) || basePoints <= 0) return 0;
+  if (share <= 0 || totalAreas <= 0) return basePoints;
+  const taken = Math.max(0, Math.min(totalAreas, satisfiedAreas)) / totalAreas;
+  const missed = clampAreaShare(share) * (1 - taken);
+  return basePoints * (1 - missed);
+}
+
+/** How many of a map's areas have been satisfied, and how many there are. */
+export function areaProgress(
+  areas: ReadonlyArray<{ satisfied?: boolean }> | undefined,
+): { satisfied: number; total: number } {
+  const list = areas ?? [];
+  return { satisfied: list.filter(a => !!a.satisfied).length, total: list.length };
+}

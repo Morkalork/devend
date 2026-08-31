@@ -121,6 +121,7 @@ import { extraGates } from "@/lib/winHud";
 import { resolveWinSpec } from "@/lib/winSpec";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
+import { areaShareOf, areaProgress, effectiveBasePoints } from "@/lib/coloredAreaShare";
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -1504,8 +1505,18 @@ export function GameCanvas({
     // Fold lock + push in before the cap (issue #43); ship-early pays a percent
     // above the cap. Previously this site added lockBonus + pushBonus AFTER
     // calculateScore, letting a banked push exceed the per-map ceiling.
+    // Colored areas carry a share of the map's points (40% by default), paid in
+    // proportion to how many were satisfied. Applied to basePoints because that
+    // scales both the payout and the overtime cap: a player who skipped the
+    // zones attempted less of the map, so a smaller ceiling is correct rather
+    // than incidental.
+    const areaShare = areaShareOf(level);
+    const { satisfied: areasTaken, total: areasOnMap } = areaProgress(game.coloredAreas);
+    const payableBasePoints = effectiveBasePoints(
+      level.points, areaShare, areasTaken, areasOnMap);
+
     const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
-      game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
+      game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, payableBasePoints, {
         scoreMultiplier: activeModifiers.scoreMultiplier,
         locks: readLockAxes(game),
         tempoCeilingMultiplier: activeModifiers.shipEarlyBonusMultiplier,

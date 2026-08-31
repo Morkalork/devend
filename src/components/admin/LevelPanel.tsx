@@ -2,6 +2,7 @@ import { LevelConfig } from '@/types/level';
 import { MIN_MAP_LIGHT } from "@/lib/rendering/sleek/boardWash";
 import { ScoringPreviewPanel } from './ScoringPreviewPanel';
 import { WinConditionsPanel } from './WinConditionsPanel';
+import { areaShareOf, clampAreaShare, DEFAULT_COLORED_AREA_SHARE, MAX_COLORED_AREA_SHARE } from '@/lib/coloredAreaShare';
 
 interface LevelPanelProps {
   level: LevelConfig;
@@ -58,6 +59,35 @@ export function LevelPanel({ level, onUpdateLevel }: LevelPanelProps) {
               min={1}
             />
           </label>
+
+          {/* What this map's colored areas are worth, as a share of its points.
+              Only meaningful on a map that HAS areas, so it is hidden otherwise
+              rather than sitting there implying an effect it cannot have. */}
+          {(level.coloredAreas ?? []).length > 0 && (
+            <label className="space-y-1 col-span-2">
+              <span className="text-muted-foreground">
+                Colored areas carry {Math.round(areaShareOf(level) * 100)}% of this map's points
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={MAX_COLORED_AREA_SHARE}
+                step={0.05}
+                value={areaShareOf(level)}
+                onChange={(e) => onUpdateLevel({
+                  ...level,
+                  coloredAreaShare: clampAreaShare(Number(e.target.value)),
+                })}
+                className="w-full"
+              />
+              <span className="block text-[10px] text-muted-foreground leading-relaxed">
+                Paid in proportion to the areas satisfied, and withheld from the map's own
+                points rather than added on top, so skipping the zones costs that share of
+                the payout AND of the overtime cap. Default {Math.round(DEFAULT_COLORED_AREA_SHARE * 100)}%;
+                lower it on maps where the zones sit alongside another demanding feature.
+              </span>
+            </label>
+          )}
 
           {/* Map light: 1 (or blank) is the normal board; lower is an authored
               dark map. Blank rather than 1 when unset, so the YAML stays clean
