@@ -51,6 +51,20 @@ const MODS = {
 
 const LEVEL: LevelConfig = {
   id: "lamp-test", name: "Lamp", sizeThreshold: 40, expectedCuts: 4, entities: [],
+  // randomShapes: 0 is not tidiness, it is the difference between this file
+  // passing and failing. Without it createInitialGameData scatters one or two
+  // random mini-obstacles across the board, and measured over 300 builds they
+  // land inside the 5x5 pocket this harness seals around (450, 450) in 4.7% of
+  // them - which removes a cell the seal needs and leaves the ball `active`,
+  // reported as "the harness failed to lock the ball".
+  //
+  // With several lock harnesses per run that is a coin-toss the suite loses
+  // regularly, and it lost one on CI while passing five times in a row locally.
+  // The same flake was diagnosed and fixed once before in the lock-tint tests:
+  // any test that asserts on CELL COVERAGE has to switch the random obstacles
+  // off, because they are the one thing on the board it did not put there.
+  randomShapes: 0,
+  variety: 0,
 } as unknown as LevelConfig;
 
 /** Seal one ball into a tiny island so it locks on the next pass. */

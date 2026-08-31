@@ -50,6 +50,14 @@ const mods = (over: Partial<GameModifiers> = {}) => ({
 
 const LEVEL: LevelConfig = {
   id: "multi-lock-test", name: "Multi", sizeThreshold: 40, expectedCuts: 4, entities: [],
+  // randomShapes: 0 - the board must contain only what this test put on it.
+  // createInitialGameData otherwise scatters one or two random mini-obstacles,
+  // and they land inside a small sealed pocket often enough to matter: measured
+  // at 4.7% per build on the sibling lamp-payout harness, which failed on CI
+  // after passing five times running locally. Any test that asserts on cell
+  // coverage has to switch them off.
+  randomShapes: 0,
+  variety: 0,
 } as unknown as LevelConfig;
 
 interface Pass { pay: number; delivery: number; multiBonus: number; best: number; locked: number }
