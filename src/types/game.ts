@@ -402,6 +402,12 @@ export interface LevelScoreData {
    * different tactic, or an upgrade to support it.
    */
   axes?: BankedAxes;
+  /**
+   * Hours withheld because the map's colored areas were left alone, so the
+   * results screen can show what skipping them cost rather than the player
+   * seeing only a smaller total with no explanation.
+   */
+  zoneShareWithheld?: number;
   /** Hours the map's win conditions paid on top of its earned pay, and the
    *  percent they asked for, so the results row can name the premium. */
   winBonus?: number;

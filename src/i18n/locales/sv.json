@@ -340,6 +340,8 @@
     "extraSpaceRemoved": "Extra utrymme borttaget",
     "spaceBonus": "Utrymmesbonus",
     "baseOvertime": "Bas-övertid",
+    "zonesMissed": "Missade zoner",
+    "zonesMissedHint": "Färgade områden som inte togs",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Trådlås ({{count}})",
     "superiorLocks": "Överlägsna lås ({{count}})",

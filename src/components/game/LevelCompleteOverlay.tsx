@@ -138,6 +138,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     underParBonus = 0,
     spaceBonus = 0,
     spaceBonusRaw = 0,
+    zoneShareWithheld = 0,
     performanceMultiplier = 1,
     fencesUnderPar = 0,
     fencesOverPar = 0,
@@ -218,6 +219,8 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   );
 
   const scaledBase = Math.floor(basePoints * performanceMultiplier);
+  // Hours the map withheld because its colored areas were left alone.
+  const zonesMissedCost = Math.max(0, Math.round(zoneShareWithheld));
   // The five axes ARE the bonus. Push-your-luck and demolition hours bank into
   // Greed and the lock stack into Delivery + Craft, so summing the itemised
   // rows would count each of them twice.
@@ -442,6 +445,22 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
                 {scaledBase}h
               </span>
             </div>
+
+            {/* What skipping the colored areas cost. Shown as its own line
+                rather than folded into the total: a player who cannot see what
+                the zones were worth has no way to learn that they were worth
+                anything, which is exactly how the first version of this
+                landed - a 40% rule that changed 8h of a 130h map and read as
+                nothing at all. */}
+            {zonesMissedCost > 0 && (
+              <div className="flex justify-between items-center py-1.5 sm:py-2 border-b border-border">
+                <span className="text-muted-foreground flex items-center gap-1">
+                  <Target className="w-3 h-3" />
+                  {t('levelComplete.zonesMissed')}
+                </span>
+                <span className="font-bold text-destructive">-{zonesMissedCost}h</span>
+              </div>
+            )}
 
             {/* Thread Lock Bonus Section: plain locks, then the superior
                 (tight-pocket) locks on their own brighter row so the quality

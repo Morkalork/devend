@@ -340,6 +340,8 @@
     "extraSpaceRemoved": "Espacio extra eliminado",
     "spaceBonus": "Bono de espacio",
     "baseOvertime": "Horas extra base",
+    "zonesMissed": "Zonas perdidas",
+    "zonesMissedHint": "Áreas de color no tomadas",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Bloqueos de hilo ({{count}})",
     "superiorLocks": "Bloqueos superiores ({{count}})",

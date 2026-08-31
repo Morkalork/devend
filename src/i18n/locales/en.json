@@ -342,6 +342,8 @@
     "extraSpaceRemoved": "Extra Space Removed",
     "spaceBonus": "Space Bonus",
     "baseOvertime": "Base Overtime",
+    "zonesMissed": "Zones Missed",
+    "zonesMissedHint": "Colored areas not taken",
     "multiplierParen": "(x{{multiplier}})",
     "threadLocks": "Thread Locks ({{count}})",
     "superiorLocks": "Superior Locks ({{count}})",

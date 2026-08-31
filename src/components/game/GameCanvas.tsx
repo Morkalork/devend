@@ -121,7 +121,7 @@ import { extraGates } from "@/lib/winHud";
 import { resolveWinSpec } from "@/lib/winSpec";
 import { readWinSnapshot } from "@/lib/physics/applyCut";
 import type { WinConditionProgress } from "@/types/winSpec";
-import { areaShareOf, areaProgress, effectiveBasePoints } from "@/lib/coloredAreaShare";
+import { missedAreaShare } from "@/lib/coloredAreaShare";
 
 export interface GameStateInfo {
   cutsUsed: number;
@@ -1505,18 +1505,19 @@ export function GameCanvas({
     // Fold lock + push in before the cap (issue #43); ship-early pays a percent
     // above the cap. Previously this site added lockBonus + pushBonus AFTER
     // calculateScore, letting a banked push exceed the per-map ceiling.
-    // Colored areas carry a share of the map's points (40% by default), paid in
-    // proportion to how many were satisfied. Applied to basePoints because that
-    // scales both the payout and the overtime cap: a player who skipped the
-    // zones attempted less of the map, so a smaller ceiling is correct rather
-    // than incidental.
-    const areaShare = areaShareOf(level);
-    const { satisfied: areasTaken, total: areasOnMap } = areaProgress(game.coloredAreas);
-    const payableBasePoints = effectiveBasePoints(
-      level.points, areaShare, areasTaken, areasOnMap);
+    // Colored areas carry a share of what the MAP pays (40% by default), in
+    // proportion to how many were satisfied.
+    //
+    // Passed to calculateScore rather than applied to basePoints, which was the
+    // first attempt and was nearly invisible: basePoints feeds only the first
+    // term of `multipliedBase + axes.total`, so on a level-3 run it was 20h of
+    // a 130h payout and withholding 40% of it cost 8h. The share has to come
+    // off the map's pay or it does not mean what the number says.
+    const zoneShareMissed = missedAreaShare(level, game.coloredAreas);
 
     const { levelScore, breakdown, shipEarlyBonus } = calculateScore(
-      game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, payableBasePoints, {
+      game.wallCount, level.expectedCuts, game.bestRemainingPercent, level.sizeThreshold, level.points, {
+        zoneShareMissed,
         scoreMultiplier: activeModifiers.scoreMultiplier,
         locks: readLockAxes(game),
         tempoCeilingMultiplier: activeModifiers.shipEarlyBonusMultiplier,
@@ -1539,6 +1540,7 @@ export function GameCanvas({
         onLevelCompleteRef.current({
           levelNumber, levelId: level.id, cutCount: game.wallCount,
           expectedCuts: level.expectedCuts, basePoints: level.points,
+          zoneShareWithheld: breakdown.zoneShareWithheld ?? 0,
           levelScore,
           remainingPercent: game.bestRemainingPercent, overcutBonus: 0,
           thresholdPercent: level.sizeThreshold, pushBonus,

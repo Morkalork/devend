@@ -134,6 +134,14 @@ export interface ScoreBreakdown {
   lockBonus: number; // Bonus from locking balls
   /** The full axis banking behind the numbers above. */
   axes: BankedAxes;
+  /**
+   * Hours withheld because the map's colored areas were not satisfied.
+   *
+   * Reported rather than folded silently into the total, because a player who
+   * cannot see what skipping the zones cost has no way to learn that it did.
+   * Zero on a map with no areas, and on one where every area was taken.
+   */
+  zoneShareWithheld?: number;
 }
 
 export interface ScoringPreviewScenario {

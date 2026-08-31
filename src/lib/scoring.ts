@@ -12,6 +12,7 @@
 import yaml from 'js-yaml';
 import { ScoringConfig, ScoreBreakdown, ShipEarlyThreshold, AxisCeilings, BankedAxes } from '@/types/scoring';
 import { bankAxes } from '@/lib/scoreAxes';
+import { withheldFromPay } from "@/lib/coloredAreaShare";
 
 /**
  * Get the overtime reward cap for a level, scaled from its own base points.
@@ -421,6 +422,11 @@ export interface ScoreOptions {
    * Tempo, so the offset belongs on the axes you traded it for.
    */
   payoutMultiplier?: number;
+  /**
+   * Share of the map's pay withheld because its colored areas were not taken,
+   * 0..1. See lib/coloredAreaShare: 0.4 x the fraction of areas missed.
+   */
+  zoneShareMissed?: number;
 }
 
 /**
@@ -475,6 +481,7 @@ export function calculateScore(
   );
 
   // Guard against a NaN/negative scoreMultiplier leaking in from bad config.
+  const { zoneShareMissed = 0 } = options;
   const safeMultiplier = Number.isFinite(scoreMultiplier) && scoreMultiplier > 0 ? scoreMultiplier : 1;
   const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
   const safeFlat = Number.isFinite(flatBonus) && flatBonus > 0 ? Math.round(flatBonus) : 0;
@@ -483,7 +490,18 @@ export function calculateScore(
   // The win premium scales the map's own earned pay. Applied before the
   // backstop, so a runaway authored percent is still caught by it.
   const safeWinPct = Number.isFinite(winBonusPercent) && winBonusPercent > 0 ? winBonusPercent : 0;
-  const mapPay = multipliedBase + breakdown.axes.total;
+  // Colored areas carry a share of what the MAP pays, which is the base plus
+  // the axes - not basePoints alone. basePoints feeds only the first term:
+  // on a level-3 run it was 20h of a 130h payout, so withholding 40% of it
+  // cost 8h, about 6% of the map, and the change was invisible in play. The
+  // share has to come off mapPay or it does not mean what the number says.
+  //
+  // Only ever off a POSITIVE pay. A map where Tempo has driven the total
+  // negative must not have its penalty softened by ignoring the zones.
+  const grossMapPay = multipliedBase + breakdown.axes.total;
+  const zoneShareWithheld = withheldFromPay(grossMapPay, zoneShareMissed);
+  const mapPay = grossMapPay - zoneShareWithheld;
+  breakdown.zoneShareWithheld = zoneShareWithheld;
   const winBonus = Math.round(mapPay * safeWinPct / 100);
   const earned = mapPay + winBonus + safeFlat + safePostCap;
   // The backstop bounds the BASE and the flat bonuses, never the axes: the five
