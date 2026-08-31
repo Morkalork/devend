@@ -12,6 +12,9 @@ import {
   createHistory, pushHistory, undo as undoHistory, redo as redoHistory,
   canUndo, canRedo, historyGesture, HISTORY_LIMIT, type History,
 } from '@/lib/editHistory';
+import { PlaytestPanel } from './PlaytestPanel';
+import { RotationStrip } from './RotationStrip';
+import { MechanicSpreadPanel } from './MechanicSpreadPanel';
 
 interface MapBuilderProps {
   onBack: () => void;
@@ -923,6 +926,12 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
                 onUpdateBall={updateBall}
                 onUpdateArea={updateArea}
               />
+              {/* The three questions the YAML cannot answer: does it play, what
+                  does it look like the other three ways up, and is this idea
+                  already everywhere in its act. */}
+              <PlaytestPanel level={currentLevel} />
+              <RotationStrip level={currentLevel} />
+              <MechanicSpreadPanel levels={levels} current={currentLevel} />
             </>
           )}
         </div>

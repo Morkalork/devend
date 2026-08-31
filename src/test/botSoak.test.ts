@@ -34,6 +34,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
 import { runBot, type BotRunResult } from "@/lib/bot/runBot";
+import { HARD_RULES } from "@/lib/bot/invariants";
 import type { LevelConfig, LevelData } from "@/types/level";
 
 const LEVELS = (yaml.load(
@@ -45,12 +46,13 @@ const SAMPLE = [1, 5, 10, 16, 22, 28, 34];
 const SEEDS = [1, 2];
 const FRAMES = 5400; // 45s of game time
 
-/** Findings with no innocent explanation, independent of how well the bot plays. */
-const HARD = new Set([
-  "ball-position-nan", "ball-velocity-nan", "ball-speed-invalid",
-  "ball-escaped", "region-area-invalid", "fence-pileup",
-  "won-and-lost", "no-legal-cut",
-]);
+/**
+ * Findings with no innocent explanation, independent of how well the bot plays.
+ * Imported rather than restated: the map builder's playtest button reports the
+ * same verdict, and two copies of this list would be two answers to "did the
+ * game break".
+ */
+const HARD = HARD_RULES;
 
 const RUNS: BotRunResult[] = [];
 for (const n of SAMPLE) {

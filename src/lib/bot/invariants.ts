@@ -24,6 +24,26 @@ export interface Violation {
 const finite = (n: unknown): boolean => typeof n === "number" && Number.isFinite(n);
 
 /**
+ * The findings that have no innocent explanation.
+ *
+ * Lives here rather than in whichever caller happens to need it, because both
+ * the test suite and the map builder's playtest button have to agree on what
+ * counts as "the game broke" - and a second copy of this list is a second
+ * answer to that question. Everything NOT in here (progress-stalled) is a lead
+ * to chase, not a verdict: see checkTerminal.
+ */
+export const HARD_RULES: ReadonlySet<string> = new Set([
+  "ball-position-nan", "ball-velocity-nan", "ball-speed-invalid",
+  "ball-escaped", "region-area-invalid", "fence-pileup",
+  "won-and-lost", "no-legal-cut",
+]);
+
+/** True when this violation is a defect rather than a lead. */
+export function isHardViolation(v: Violation): boolean {
+  return HARD_RULES.has(v.rule);
+}
+
+/**
  * Check one frame.
  *
  * Returns every violation rather than the first, because one root cause often
