@@ -23,6 +23,7 @@ import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types
 import type { LampState } from "@/lib/lampBall";
 import type { ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import type { BouncerSpec } from "@/lib/physics/bouncer";
+import type { PortalSpec } from "@/lib/physics/portal";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import type { LauncherState } from "@/lib/physics/launcher";
 import type { DeliveryBoxState } from "@/lib/physics/deliveryBox";
@@ -108,6 +109,8 @@ export interface CanvasGameState {
   obstacleRules?: ObstacleRuleMap;
   /** Pop bumpers, keyed by polygon identity the same way obstacleRules is. */
   bouncers?: Map<Polygon, BouncerSpec>;
+  /** Portal mouths, keyed the same way. Balls pass through; fences do not. */
+  portals?: Map<Polygon, PortalSpec>;
   /**
    * Bouncer firings this frame, for the renderer to flash. Drained by whatever
    * draws them; a kick with no visible cause reads as the ball randomly

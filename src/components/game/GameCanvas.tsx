@@ -1017,6 +1017,7 @@ export function GameCanvas({
       // shipped inert. launcherWiring.test.ts now fails if a field initGame
       // returns is never read here.
       game.bouncers = data.bouncers;
+      game.portals = data.portals;
       game.bouncerFlashes = [];
       game.deliveryBoxes = data.deliveryBoxes;
       game.fenceZones = data.fenceZones;

@@ -8,6 +8,7 @@
 import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
 import { bouncerKick, bouncerReady, BOUNCER_FLASH_MS, type BouncerSpec } from "@/lib/physics/bouncer";
+import { portalAt, portalExit, portalArrival, portalReady } from "@/lib/physics/portal";
 import { wellStep } from "@/lib/physics/gravityWells";
 import { slowFactorAt } from "@/lib/physics/slowAreas";
 import { steerHeading, steerWorldOf } from "@/lib/physics/steering";
@@ -596,8 +597,31 @@ export function updateBall(
   // Obstacles are static, so a cached AABB (inflated by the ball radius)
   // rejects far-away polygons before the per-edge resolver runs — circle
   // obstacles are 64-gons, so this skips 64 segment tests per miss.
+  // PORTALS, before any collision. A ball entering one comes out of its
+  // partner, so the portal must never be resolved as a solid for balls - it is
+  // still an obstacle for FENCES, which is what makes it a hole you cannot
+  // cover over.
+  if (game.portals?.size) {
+    const mouth = portalAt(ball.position, game.portals);
+    if (mouth && portalReady(ball, now)) {
+      const exit = portalExit(mouth, [...game.portals.values()]);
+      // A link with only one portal on it is inert rather than a ball-eater.
+      if (exit) {
+        ball.position = portalArrival(ball, exit);
+        ball.lastPortalAt = now;
+        const owner = game.regions.find(r => pointInPolygon(ball.position, r.polygon));
+        // Reassigned with the move, for the same reason waking a dormant ball
+        // does it: a ball owning a region it is no longer standing in breaks
+        // every reachability answer downstream.
+        if (owner) ball.regionId = owner.id;
+      }
+    }
+  }
+
   for (const obstacle of game.obstaclePolygons) {
     if (phasedOut && phasedOut.polys.has(obstacle)) continue;
+    // A portal is open to balls at its face...
+    if (game.portals?.has(obstacle)) continue;
     // One-way membranes and ball-type gates. Checked before the cheap AABB
     // reject rather than after, because a ball that MAY pass should behave
     // exactly as if the obstacle were not there - including not paying for a
@@ -670,6 +694,10 @@ export function updateBall(
     // polygon check above gives a wall that lets balls through its middle and
     // bounces them off its edges, which is worse than not having the mechanic.
     if (wall.passRule && ballMayPass(wall.passRule, ball, ball.velocity)) continue;
+    // ...and at its edges. Honouring it in only one of the two collision
+    // systems would give a portal balls fall into and then bounce off the rim
+    // of, which is the trap the pass-rule comment above already warns about.
+    if (wall.portal) continue;
 
     const vBefore = { x: ball.velocity.x, y: ball.velocity.y };
     const impactPoint = collideBallWithWall(ball, wall);

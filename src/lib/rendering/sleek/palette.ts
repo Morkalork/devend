@@ -116,6 +116,8 @@ export const PALETTE = {
   mirror: 0x88ddff,
   /** Pop bumper: a warm sprung orange, apart from the cool mirror blue. */
   bouncer: 0xffb347,
+  /** Portal mouth: a cold violet, so it never reads as the warm sprung bumper. */
+  portal: 0xa77cff,
   danger: 0xff2244,
   /** The compass ball's countdown ring, in its own violet rather than the accent:
    *  the ring belongs to the BALL, and wearing the player's colour would read as

@@ -185,6 +185,50 @@ export function applyMicroManagerSpeedCap(
   }
 }
 
+/**
+ * Can a ball sealed in this region reach a portal mouth?
+ *
+ * Asked as "does the pocket TOUCH the mouth", not "does the pocket contain its
+ * centre". A portal is built as an obstacle, so the grid has already removed
+ * the cells underneath it - its centre cell belongs to no region at all, and
+ * the containment version of this test could never fire. It passed its own unit
+ * test and refused nothing in a real game, which is the failure shape this file
+ * keeps producing: a guard that is exactly as expensive to run as a working one
+ * and does nothing.
+ *
+ * So the scan is over the cells AROUND each mouth. The margin is TWO cells, and
+ * that is measured rather than guessed: a portal is a solid, so the grid has
+ * already removed everything under it, and the first ACTIVE cell around a
+ * 30-unit mouth on a 15-unit grid sits about 46 units out - one inflation cell
+ * was not enough and the guard silently refused nothing. Two cells is 30 units,
+ * still less than a ball's 36-unit diameter, so it cannot reach into a pocket
+ * the ball could not physically get to the mouth from.
+ *
+ * Bounded work: a handful of portals, each a small box, rather than a walk of
+ * the region.
+ */
+function regionHoldsPortal(game: CanvasGameState, cellIndices: number[]): boolean {
+  const grid = game.spaceGrid;
+  if (!grid || !game.portals?.size) return false;
+  const cells = new Set(cellIndices);
+  for (const spec of game.portals.values()) {
+    const reach = spec.radius + grid.cellSize * 2;
+    const c0 = Math.max(0, Math.floor((spec.centre.x - reach - grid.originX) / grid.cellSize));
+    const c1 = Math.min(grid.width - 1, Math.ceil((spec.centre.x + reach - grid.originX) / grid.cellSize));
+    const r0 = Math.max(0, Math.floor((spec.centre.y - reach - grid.originY) / grid.cellSize));
+    const r1 = Math.min(grid.height - 1, Math.ceil((spec.centre.y + reach - grid.originY) / grid.cellSize));
+    for (let row = r0; row <= r1; row++) {
+      for (let col = c0; col <= c1; col++) {
+        if (!cells.has(row * grid.width + col)) continue;
+        const wx = grid.originX + col * grid.cellSize + grid.cellSize / 2;
+        const wy = grid.originY + row * grid.cellSize + grid.cellSize / 2;
+        if (Math.hypot(wx - spec.centre.x, wy - spec.centre.y) <= reach) return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function checkAndUpdateBallWonStates(
   game: CanvasGameState,
   activeModifiers: GameModifiers,
@@ -320,6 +364,19 @@ export function checkAndUpdateBallWonStates(
       // Near-misses only. Every ball on the open board fails this gate on every
       // cut, and logging those would push the interesting entries out of the ring.
       if (percentage <= threshold * 3) diagnose('below-gate', null);
+      continue;
+    }
+
+    // A pocket with a PORTAL in it is not a pocket. The ball can leave through
+    // it, so sealing it is not a lock however small the region is - paying out
+    // for a seal the ball escapes from a second later is the one outcome no
+    // screen could ever explain.
+    //
+    // A rule rather than an oversight, and the most interesting thing about the
+    // object: a portal makes one pocket a place you must NOT use, which is what
+    // gives a portal map an order to solve it in.
+    if (game.portals?.size && regionHoldsPortal(game, ballRegion.cellIndices)) {
+      diagnose('below-gate', null);
       continue;
     }
 

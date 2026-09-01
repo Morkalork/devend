@@ -93,6 +93,8 @@ export interface Ball {
   /** Bouncer that last kicked this ball, and when, for the per-bouncer cooldown. */
   lastBouncerId?: string;
   lastBouncerAt?: number;
+  /** When this ball last came out of a portal, so a pair cannot become a loop. */
+  lastPortalAt?: number;
   leapFromX?: number; leapFromY?: number; // arc start (where it was trapped)
   leapToX?: number;   leapToY?: number;   // arc end (open-space landing spot)
   // ── Mitosis birth (boss minion split-off, issue #56) ─────────────────────

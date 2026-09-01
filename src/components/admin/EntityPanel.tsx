@@ -467,6 +467,22 @@ export function EntityPanel({
           </label>
           )}
 
+          {/* Portal. The link is the pairing: two obstacles sharing a link are
+              two ends of one hole. A lone link is inert, which the map lint
+              reports rather than the game swallowing balls into it. */}
+          {!isMoverEntity(selectedEntity) && (
+          <label className="flex items-center gap-2 text-xs">
+            <span className="text-violet-400">Portal link</span>
+            <input
+              type="text"
+              value={(selectedEntity as { portal?: string }).portal ?? ''}
+              placeholder="blank = not a portal"
+              onChange={(e) => onUpdateEntity(selectedEntity.id, { portal: e.target.value || undefined } as Partial<LevelEntity>)}
+              className="flex-1 rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+            />
+          </label>
+          )}
+
           {selectedEntity.shape === 'circle' && (
             <CircleEditor
               entity={selectedEntity as WallCircleEntity}

@@ -17,6 +17,7 @@ import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon, Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
 import { BOUNCER_FLASH_MS, type BouncerSpec } from "@/lib/physics/bouncer";
+import type { PortalSpec } from "@/lib/physics/portal";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
@@ -141,6 +142,11 @@ export class EntityLayer {
       // flares for a moment after it fires.
       const bouncer = game.bouncers?.get(poly as Polygon);
       if (bouncer) this.drawBouncer(poly as Polygon, bouncer, game, w2s, scale);
+      // A portal is the one obstacle balls go THROUGH, so it must not read as
+      // solid at all. Drawn as an open mouth over the slab rather than beside
+      // it: a player who reads it as a pillar will aim to bounce off it.
+      const portal = game.portals?.get(poly as Polygon);
+      if (portal) this.drawPortal(portal, w2s, scale);
     }
 
     for (const m of game.movers) {
@@ -204,6 +210,26 @@ export class EntityLayer {
     // The core, which is what actually lights up.
     g.circle(c.x, c.y, r * (0.3 + flare * 0.22))
       .fill({ color: PALETTE.bouncer, alpha: 0.45 + flare * 0.55 });
+  }
+
+  /**
+   * A portal mouth: nested rings with a dark middle, so it reads as a hole.
+   *
+   * Deliberately open in the centre. Every other object on this layer is drawn
+   * as a lit solid, and the one fact a player has to know about this one before
+   * they aim at it is that it is not one.
+   */
+  private drawPortal(spec: PortalSpec, w2s: W2S, scale: number): void {
+    const c = w2s(spec.centre.x, spec.centre.y);
+    const r = spec.radius * scale;
+    if (!(r > 0)) return;
+    const g = this.rims;
+    // The dark middle first, so the slab beneath does not read through it.
+    g.circle(c.x, c.y, r * 0.82).fill({ color: 0x05060a, alpha: 0.92 });
+    for (const [k, a] of [[0.95, 0.85], [0.7, 0.55], [0.45, 0.35]] as const) {
+      g.circle(c.x, c.y, r * k)
+        .stroke({ width: Math.max(1, 1.8 * scale), color: PALETTE.portal, alpha: a });
+    }
   }
 
   private drawPassCue(

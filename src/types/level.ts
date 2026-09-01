@@ -89,6 +89,14 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
   /** Ceiling as a multiple of the ball's base speed (default BOUNCER_MAX_SPEED_SCALE). */
   bounceMaxSpeedScale?: number;
   /**
+   * PORTAL: balls entering this obstacle leave the other one sharing this link.
+   *
+   * Solid to FENCES and open to BALLS, so it is a hole you cannot fence over.
+   * A region containing one cannot be locked, because a ball in it can leave -
+   * see physics/portal.ts for why that is the rule rather than a bug.
+   */
+  portal?: string;
+  /**
    * KICKER: fire every ball along this bearing rather than radially outward.
    * A bouncer scatters; a kicker aims, so a lane of them feeds a ball
    * somewhere on purpose. Requires `bouncer: true`.

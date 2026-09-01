@@ -5,6 +5,7 @@
 import { Vector2, Polygon, pointInPolygon, vec2Sub, vec2Add, vec2Scale, vec2Normalize, vec2Distance, vec2Dot, vec2Reflect, lineSegmentIntersection, pointToSegmentDistance } from "./polygon";
 import type { ObstacleRule } from "./physics/obstacleRules";
 import type { BouncerSpec } from "./physics/bouncer";
+import type { PortalSpec } from "./physics/portal";
 
 export interface Wall {
   id: string;
@@ -29,6 +30,8 @@ export interface Wall {
    * inert at its edges.
    */
   bouncer?: BouncerSpec;
+  /** The portal this wall is an edge of. Balls skip it; fences do not. */
+  portal?: PortalSpec;
   /** ms timestamp when the fence segment was drawn; absent on board edges / obstacles */
   createdAt?: number;
   /** Cached `id.startsWith("board-")`, filled lazily by the physics hot loop. */

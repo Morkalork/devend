@@ -43,6 +43,7 @@ import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/phys
 import { type LauncherState } from "@/lib/physics/launcher";
 import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
 import { BOUNCER_KICK, BOUNCER_MAX_SPEED_SCALE, type BouncerSpec } from "@/lib/physics/bouncer";
+import type { PortalSpec } from "@/lib/physics/portal";
 import { rotateFenceZones } from "@/lib/mapRotation";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
@@ -150,6 +151,7 @@ export interface InitialGameData {
   deliveryBoxes: DeliveryBoxState[];
   launchers: LauncherState[];
   bouncers: Map<Polygon, BouncerSpec>;
+  portals: Map<Polygon, PortalSpec>;
   /** Fence-speed ground, already rotated into this deal's orientation. */
   fenceZones?: FenceZone[];
   mirrorPolygons: Polygon[];
@@ -235,6 +237,7 @@ export function createInitialGameData(
   // array would be one careless insert from applying the wrong rule.
   const obstacleRules: ObstacleRuleMap = new Map();
   const bouncers = new Map<Polygon, BouncerSpec>();
+  const portals = new Map<Polygon, PortalSpec>();
   const deliveryBoxes: DeliveryBoxState[] = [];
   const launchers: LauncherState[] = [];
   // Collected in the entity pass and turned into sleeping balls after the
@@ -564,6 +567,21 @@ export function createInitialGameData(
           // The SAME object on both, so a future edit cannot update one path
           // and leave the other solid.
           for (const w of obstacleWalls) w.passRule = rule;
+        }
+        // Portal. Registered on the polygon and every edge wall like the bouncer,
+        // but for the opposite purpose: the wall path skips the collision
+        // entirely for balls, so they pass through rather than bounce. Fences
+        // still stop at it, which is what makes it a hole you cannot cover.
+        if ((entity as WallEntity).portal) {
+          const pb = polygonBounds(obstaclePolygon);
+          const spec: PortalSpec = {
+            id: entity.id,
+            link: (entity as WallEntity).portal as string,
+            centre: { x: (pb.minX + pb.maxX) / 2, y: (pb.minY + pb.maxY) / 2 },
+            radius: Math.min(pb.maxX - pb.minX, pb.maxY - pb.minY) / 2,
+          };
+          portals.set(obstaclePolygon, spec);
+          for (const w of obstacleWalls) w.portal = spec;
         }
         // Pop bumper. Registered on the polygon AND on every edge wall, and for
         // the same reason the rule above is: an obstacle sits in both collision
@@ -1224,6 +1242,7 @@ export function createInitialGameData(
     deliveryBoxes,
     launchers,
     bouncers,
+    portals,
     // Rotated here rather than at the consumer: a zone is a rect on the board
     // and has to turn with everything else on it.
     fenceZones: rotateFenceZones(level.fenceZones, mapRotation),
