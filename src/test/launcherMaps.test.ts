@@ -19,13 +19,13 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import yaml from "js-yaml";
-import { bearingVector, type LaunchFacing } from "@/lib/launcher";
+import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
 import { BOX_WALL_THICKNESS } from "@/lib/gameConstants";
 import { BOARD_WIDTH, BOARD_HEIGHT } from "@/lib/boardConstants";
 import { ARENA_MARGIN } from "@/lib/gameConstants";
 
 interface Cup {
-  id: string; kind: string; facing: LaunchFacing;
+  id: string; kind: string; facing: LaunchFacing; angle?: number;
   x: number; y: number; width: number; height: number;
 }
 interface Level {
@@ -86,14 +86,19 @@ describe("the launchers in map.yml", () => {
     // opens by wasting the player's one shot.
     for (const { level, cups } of withCups) {
       for (const c of cups) {
-        const dir = bearingVector(c.facing);
+        // The TURNED muzzle, not the bare facing: a canted barrel fires
+        // somewhere its facing alone does not describe, and reading only the
+        // facing would clear a barrel aimed straight at the wall beside it.
+        const dir = muzzleVector(c.facing, c.angle);
         const mouthX = c.x + c.width / 2 + dir.x * (c.width / 2);
         const mouthY = c.y + c.height / 2 + dir.y * (c.height / 2);
-        const runway =
-          dir.x > 0 ? BOARD_WIDTH - MARGIN - mouthX
-          : dir.x < 0 ? mouthX - MARGIN
-          : dir.y > 0 ? BOARD_HEIGHT - MARGIN - mouthY
-          : mouthY - MARGIN;
+        // How far the muzzle ray runs before it leaves the arena, in either
+        // axis: the shorter of the two is the real runway for a diagonal shot.
+        const runX = dir.x > 0 ? (BOARD_WIDTH - MARGIN - mouthX) / dir.x
+          : dir.x < 0 ? (mouthX - MARGIN) / -dir.x : Infinity;
+        const runY = dir.y > 0 ? (BOARD_HEIGHT - MARGIN - mouthY) / dir.y
+          : dir.y < 0 ? (mouthY - MARGIN) / -dir.y : Infinity;
+        const runway = Math.min(runX, runY);
         expect(runway, `${level.id}/${c.id} has no room to fire`)
           .toBeGreaterThan(BOARD_WIDTH * 0.25);
       }
@@ -112,27 +117,60 @@ describe("the launchers in map.yml", () => {
 describe("level 11 pays for the launcher it gained", () => {
   const l11 = MAP.levels.find(l => l.id === "level-11")!;
 
-  it("drops a random ball, so the roster is the size it was", () => {
-    // The cup adds a ball of its own. Left at 3 the map would quietly gain a
-    // fourth, which is a different map from the one the ladder was tuned on.
-    expect(l11.maxBalls).toBe(2);
+  it("keeps its full roster, because the barrel holds it rather than adding to it", () => {
+    // This used to read `toBe(2)`: the cup created a ball of its own, so the
+    // authored count was dropped by one to keep the map's roster at three. The
+    // barrel now LOADS the balls the map already has instead of adding one, so
+    // the authored number is the roster again. Same three balls either way; the
+    // difference is that all three are now in the barrel.
+    expect(l11.maxBalls).toBe(3);
   });
 
   it("aims through the gap in the spine rather than into it", () => {
     // The map's shape IS the shot: the spine has a gap, and a full-power run
     // through it is the reward for pulling hard. Firing into the spine instead
     // would make the wager pointless.
+    //
+    // Traced along the muzzle rather than read off the cup's y. The barrel is
+    // canted, so its middle sits nowhere near the height it fires at - the old
+    // check only worked while every launcher was axis-aligned, and it would
+    // have gone on passing for a barrel turned to point at the floor.
     const cup = cupsOf(l11)[0];
     const spineTop = (l11.entities ?? []).find(e => e.id === "spine-top") as
-      unknown as { y: number; height: number };
+      unknown as { x: number; y: number; height: number };
     const spineBottom = (l11.entities ?? []).find(e => e.id === "spine-bottom") as
       unknown as { y: number };
     const gapFrom = spineTop.y + spineTop.height;
     const gapTo = spineBottom.y;
 
     expect(cup.facing).toBe("right");
-    const cupMidY = cup.y + cup.height / 2;
-    expect(cupMidY, "the cup does not line up with the gap").toBeGreaterThan(gapFrom);
-    expect(cupMidY, "the cup does not line up with the gap").toBeLessThan(gapTo);
+    const dir = muzzleVector(cup.facing, cup.angle);
+    const cx = cup.x + cup.width / 2;
+    const cy = cup.y + cup.height / 2;
+    // From the muzzle, straight down the barrel, to the spine's x.
+    const reach = (Math.abs(dir.x) > Math.abs(dir.y) ? cup.width : cup.height) / 2;
+    const muzzleX = cx + dir.x * reach;
+    const muzzleY = cy + dir.y * reach;
+    const t = (spineTop.x - muzzleX) / dir.x;
+    const crossesAt = muzzleY + dir.y * t;
+
+    expect(t, "the barrel does not point at the spine at all").toBeGreaterThan(0);
+    expect(crossesAt, `a straight shot hits the spine at y=${crossesAt.toFixed(0)}`)
+      .toBeGreaterThan(gapFrom);
+    expect(crossesAt, `a straight shot hits the spine at y=${crossesAt.toFixed(0)}`)
+      .toBeLessThan(gapTo);
+  });
+
+  it("is a barrel rather than a cup: long, and turned off the axis", () => {
+    // Both halves of "not what I had in mind". A short axis-aligned box reads as
+    // one more wall; the length is what says "this is loaded" and the angle is
+    // what says "it is pointing somewhere".
+    const cup = cupsOf(l11)[0];
+    const long = Math.max(cup.width, cup.height);
+    const short = Math.min(cup.width, cup.height);
+    expect(long / short, "the barrel is too stubby to read as one").toBeGreaterThan(2);
+    expect(cup.angle ?? 0, "an axis-aligned barrel is just a wall").not.toBe(0);
+    expect(Math.abs((cup.angle ?? 0) % 90), "a right-angle turn is still axis-aligned")
+      .toBeGreaterThan(5);
   });
 });

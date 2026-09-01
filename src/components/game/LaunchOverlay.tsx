@@ -1,5 +1,6 @@
 /**
- * The plunger: drag back anywhere on the board, release, and the map begins.
+ * The plunger: pull the band across the back of the barrel, release, and the
+ * map begins.
  *
  * Board-aligned UI, so it is `absolute` inside GameCanvas's container and takes
  * the board box in CSS pixels. It must never be `fixed`: the page-transition
@@ -17,7 +18,8 @@ import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 import { BOARD_WIDTH, BOARD_HEIGHT } from '@/lib/boardConstants';
 import {
-  launchAim, bearingVector, LAUNCH_SPREAD, LAUNCH_MAX_POWER, LAUNCH_MIN_POWER,
+  launchAim, muzzleVector, bandEnds, LAUNCH_SPREAD, LAUNCH_MAX_POWER, LAUNCH_MIN_POWER,
+  LAUNCH_FULL_PULL,
   type LaunchAim, type LaunchFacing,
 } from '@/lib/launcher';
 import type { Vector2 } from '@/types/game';
@@ -28,8 +30,14 @@ interface Props {
   canvasHeight: number;
   canvasOffsetTop: number;
   canvasOffsetLeft: number;
-  /** Where the loaded ball is sitting, in world units. */
+  /** Where the muzzle-end ball is sitting, in world units. */
   ballPosition: Vector2;
+  /** Every loaded ball, so the stack behind the band is drawn as it really is. */
+  loadedPositions: Vector2[];
+  /** The barrel's interior, in its own axis-aligned frame. */
+  inner: { x: number; y: number; width: number; height: number };
+  /** The barrel's turn in degrees; the muzzle is `facing` turned by this. */
+  angle?: number;
   facing: LaunchFacing;
   /** Predicted path for an aim, in WORLD points. Supplied by the caller so the
    *  preview comes from the same physics the ball will obey. */
@@ -39,7 +47,7 @@ interface Props {
 
 export function LaunchOverlay({
   canvasWidth, canvasHeight, canvasOffsetTop, canvasOffsetLeft,
-  ballPosition, facing, predict, onFire,
+  ballPosition, loadedPositions, inner, angle, facing, predict, onFire,
 }: Props) {
   const { t } = useTranslation();
   const [aim, setAim] = useState<LaunchAim | null>(null);
@@ -59,7 +67,7 @@ export function LaunchOverlay({
     const py = e.clientY - rect.top;
     // The pull is measured in WORLD units so the dead zone and the full-pull
     // length mean the same thing on a phone and on a desktop.
-    return launchAim({ x: (px - start.x) / scale, y: (py - start.y) / scale }, facing);
+    return launchAim({ x: (px - start.x) / scale, y: (py - start.y) / scale }, facing, angle);
   };
 
   const onDown = (e: React.PointerEvent) => {
@@ -81,8 +89,25 @@ export function LaunchOverlay({
 
   const bx = sx(ballPosition.x);
   const by = sy(ballPosition.y);
-  const bearing = bearingVector(facing);
+  const bearing = muzzleVector(facing, angle);
   const baseAngle = Math.atan2(bearing.y, bearing.x);
+
+  // The band across the closed end: the thing that is actually pulled. It is
+  // drawn from the barrel's real back corners rather than from the ball, so it
+  // sits on the barrel at any angle and a longer barrel gets a longer draw.
+  const band = bandEnds(inner, facing, angle);
+  const bandA = { x: sx(band.a.x), y: sy(band.a.y) };
+  const bandB = { x: sx(band.b.x), y: sy(band.b.y) };
+  // How far the band's midpoint is dragged back, in screen pixels: the pull the
+  // player is making, shown on the band they are making it with.
+  const draw = aim
+    ? ((aim.power - LAUNCH_MIN_POWER) / (LAUNCH_MAX_POWER - LAUNCH_MIN_POWER))
+      * LAUNCH_FULL_PULL * scale * 0.5
+    : 0;
+  const bandMid = {
+    x: (bandA.x + bandB.x) / 2 - bearing.x * draw,
+    y: (bandA.y + bandB.y) / 2 - bearing.y * draw,
+  };
 
   // Cone edges, drawn so the limit on the aim is visible rather than felt as
   // the shot refusing to go where the finger asked.
@@ -132,19 +157,32 @@ export function LaunchOverlay({
           />
         )}
 
-        {/* The stretched band, from the ball back along the pull. */}
-        {aim && (
-          <line
-            x1={bx} y1={by}
-            x2={bx - aim.direction.x * 46 * (0.4 + powerT)}
-            y2={by - aim.direction.y * 46 * (0.4 + powerT)}
-            stroke={aim.clamped ? '#ff6b6b' : '#ffb347'}
-            strokeWidth={5}
-            strokeLinecap="round"
-          />
-        )}
+        {/* The rubber band across the closed end, bowed back by the pull. A
+            quadratic through the dragged midpoint, so it stretches the way a
+            band does instead of hinging like a lever. Always drawn, at rest as
+            well as under tension, because it is the control: a player has to be
+            able to see what to pull before they have pulled it. */}
+        <path
+          d={`M ${bandA.x} ${bandA.y} Q ${bandMid.x} ${bandMid.y} ${bandB.x} ${bandB.y}`}
+          fill="none"
+          stroke={aim?.clamped ? '#ff6b6b' : '#ffb347'}
+          strokeWidth={aim ? 6 : 4}
+          strokeLinecap="round"
+        />
+        {/* The grip, at the middle of the band. */}
+        <circle cx={bandMid.x} cy={bandMid.y} r={aim ? 9 : 7} fill={aim?.clamped ? '#ff6b6b' : '#ffb347'} />
 
-        <circle cx={bx} cy={by} r={7} fill="#ffb347" />
+        {/* The loaded stack, pressed back against the band as it is drawn. */}
+        {loadedPositions.map((p, i) => (
+          <circle
+            key={i}
+            cx={sx(p.x) - bearing.x * draw}
+            cy={sy(p.y) - bearing.y * draw}
+            r={7}
+            fill="#ffb347"
+            opacity={i === 0 ? 1 : 0.65}
+          />
+        ))}
       </svg>
 
       {/* Read-out. Says what the pull BUYS, not just how hard it is: the whole

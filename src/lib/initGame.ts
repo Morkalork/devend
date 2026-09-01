@@ -41,7 +41,7 @@ import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline }
 import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
 import { type LauncherState } from "@/lib/physics/launcher";
-import { type LaunchFacing } from "@/lib/launcher";
+import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
 import { rotateFenceZones } from "@/lib/mapRotation";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
@@ -237,7 +237,7 @@ export function createInitialGameData(
   // Collected in the entity pass and turned into sleeping balls after the
   // roster is built, the same two-stage shape the circuit's terminals use.
   const launcherSpecs: Array<{
-    id: string; facing: LaunchFacing; ballType?: string;
+    id: string; facing: LaunchFacing; angle?: number; ballType?: string;
     inner: { x: number; y: number; width: number; height: number };
   }> = [];
   const reservingBoxes: Array<{ id: string; poly: Polygon }> = [];
@@ -338,9 +338,10 @@ export function createInitialGameData(
     for (const entity of allEntities) {
       if (entity.kind === "launcher") {
         // THREE walls, not four: the side named by `facing` is left open so the
-        // ball can leave and so the empty shell is still worth fencing around
+        // balls can leave and so the empty shell is still worth fencing around
         // afterwards. Otherwise identical to a delivery box, deliberately - a
-        // cup and a box are the same construction with a different missing side.
+        // barrel and a box are the same construction with a different missing
+        // side.
         const T = BOX_WALL_THICKNESS;
         const { x, y, width: w, height: h } = entity;
         const sides: Array<{ side: LaunchFacing; poly: Polygon }> = [
@@ -349,15 +350,39 @@ export function createInitialGameData(
           { side: "left",  poly: createRectPolygon(x,         y,         x + T,     y + h) },
           { side: "right", poly: createRectPolygon(x + w - T, y,         x + w,     y + h) },
         ];
+        // The whole barrel turns as one piece, about the barrel's centre rather
+        // than each wall's own centre - turnOutline pivots on the bounds it is
+        // given, so rotating the sides individually would spin three small
+        // rects in place and leave the cup in pieces.
+        const cx = x + w / 2, cy = y + h / 2;
+        const turn = hasAngle(entity.angle) ? (entity.angle! * Math.PI) / 180 : 0;
+        const spin = (poly: Polygon): Polygon => {
+          if (!turn) return poly;
+          const cos = Math.cos(turn), sin = Math.sin(turn);
+          return {
+            ...poly,
+            vertices: poly.vertices.map(v => {
+              const dx = v.x - cx, dy = v.y - cy;
+              return { x: cx + dx * cos - dy * sin, y: cy + dx * sin + dy * cos };
+            }),
+          };
+        };
         for (const { side, poly } of sides) {
           if (side === entity.facing) continue; // the muzzle
-          obstaclePolygons.push(poly);
-          allWalls.push(...createWallsFromPolygon(poly, `launcher-${entity.id}-${side}`, false));
+          const turned = spin(poly);
+          obstaclePolygons.push(turned);
+          allWalls.push(...createWallsFromPolygon(turned, `launcher-${entity.id}-${side}`, false));
         }
         launcherSpecs.push({
           id: entity.id,
           facing: entity.facing,
+          angle: entity.angle,
           ballType: entity.ballType,
+          // Kept axis-aligned and un-turned on purpose: it is the barrel's own
+          // frame, and every consumer (the ball stack, the band, the muzzle
+          // vector) turns it by the same angle when it needs world coordinates.
+          // Two independently-rotated copies of one rectangle is exactly how the
+          // band would come to sit somewhere the balls are not.
           inner: { x: x + T, y: y + T, width: w - 2 * T, height: h - 2 * T },
         });
         continue;
@@ -948,28 +973,58 @@ export function createInitialGameData(
     circuitRuntime = { terminals, announce: circuit.announce };
   }
 
-  // Launcher cups: one sleeping ball each, sitting in the middle of its cup.
+  // Launcher barrels: the map's WHOLE roster loaded in, asleep.
+  //
+  // Not one ball in a cup with the rest already loose on the board. That made
+  // the launch a curiosity happening in a corner of an otherwise ordinary map -
+  // you pulled, one ball left, and the other two had been bouncing since the
+  // first frame. Loading the roster is what makes the pull the map: nothing
+  // moves at all until you fire, and then everything does.
+  //
+  // The balls already exist (they were spawned with the rest of the map above),
+  // so they are MOVED into the barrel rather than created here. Creating extras
+  // would leave the originals loose and quietly change the map's ball count,
+  // which is the number every win condition and every payout is scaled against.
   //
   // Dormant for the same reason the circuit's sleepers are, and it is doing
   // more work here than it looks: a dormant ball anchors reachability, so the
-  // region holding an unfired cup cannot be captured. Without that a player
-  // could fence the ball in before ever pulling the plunger and take the map
+  // region holding an unfired barrel cannot be captured. Without that a player
+  // could fence the balls in before ever pulling the band and take the map
   // without making the wager.
   for (const spec of launcherSpecs) {
-    const redType = getBallType("red");
-    const type = (spec.ballType ? getBallType(spec.ballType) : undefined)
-      ?? selectedTypes[0] ?? redType!;
-    const id = `launch-${spec.id}`;
-    const at = {
-      x: spec.inner.x + spec.inner.width / 2,
-      y: spec.inner.y + spec.inner.height / 2,
-    };
-    const ball = createBall(type, at, 1, ballRadius, id, spawnTime, 0);
-    ball.state = "dormant";
-    ball.speed = 0;
-    ball.velocity = { x: 0, y: 0 };
-    balls.push(ball);
-    launchers.push({ id: spec.id, inner: spec.inner, facing: spec.facing, ballId: id, fired: false });
+    // Bosses stay where they spawned: a boss map is about the boss arriving on
+    // its own terms, and stuffing it down a barrel would let the player choose
+    // its speed for the whole fight.
+    const loaded = balls.filter(b => !b.isBoss && b.state !== "dormant");
+    if (loaded.length === 0) continue;
+
+    const dir = muzzleVector(spec.facing, spec.angle);
+    const alongX = Math.abs(dir.x) > Math.abs(dir.y);
+    const barrelLength = alongX ? spec.inner.width : spec.inner.height;
+    const cx = spec.inner.x + spec.inner.width / 2;
+    const cy = spec.inner.y + spec.inner.height / 2;
+
+    // Stacked down the barrel, muzzle-end first, so a longer barrel visibly
+    // holds more and the front ball is the one at the opening.
+    const usable = Math.max(0, barrelLength - 2 * ballRadius);
+    const gap = loaded.length > 1 ? usable / (loaded.length - 1) : 0;
+    loaded.forEach((ball, i) => {
+      // +half the usable run is the muzzle end, so index 0 sits at the front.
+      const offset = usable / 2 - i * gap;
+      ball.position = { x: cx + dir.x * offset, y: cy + dir.y * offset };
+      ball.state = "dormant";
+      ball.speed = 0;
+      ball.velocity = { x: 0, y: 0 };
+    });
+
+    launchers.push({
+      id: spec.id,
+      inner: spec.inner,
+      facing: spec.facing,
+      angle: spec.angle,
+      ballIds: loaded.map(b => b.id),
+      fired: false,
+    });
   }
 
   const gridRegions = findGridRegions(spaceGrid);

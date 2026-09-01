@@ -1907,7 +1907,13 @@ export function GameCanvas({
             which is also exactly while the board is held. */}
         {pendingLaunch && boardMaterialized && (() => {
           const game = gameRef.current;
-          const ball = game.balls.find(b => b.id === pendingLaunch.ballId);
+          const loaded = pendingLaunch.ballIds
+            .map(id => game.balls.find(b => b.id === id))
+            .filter((b): b is NonNullable<typeof b> => !!b);
+          // The ball at the muzzle is the one the preview follows: it is the
+          // first thing out and the only one whose path is not perturbed by the
+          // fan behind it.
+          const ball = loaded[0];
           if (!ball) return null;
           return (
             <LaunchOverlay
@@ -1916,6 +1922,9 @@ export function GameCanvas({
               canvasOffsetTop={canvasOffsetTop}
               canvasOffsetLeft={canvasOffsetLeft}
               ballPosition={ball.position}
+              loadedPositions={loaded.map(b => b.position)}
+              inner={pendingLaunch.inner}
+              angle={pendingLaunch.angle}
               facing={pendingLaunch.facing}
               predict={(aim: LaunchAim) => {
                 // The SAME predictor the Scrum Master preview uses, fed the

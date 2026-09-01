@@ -559,11 +559,18 @@ levels:
   #
   # It is also the launcher's debut, and the two share a theme rather than
   # competing: both are a bet you place before you know how the map goes. The
-  # cup sits on the left aimed through the gap in the spine, so a full-power
-  # shot is a clean run into the right half and an over-aimed one buries a very
-  # fast ball in the cramped left side with the chest. Base pay is multiplied by
-  # the power fired at, so the wager is priced in before the first fence.
-  # maxBalls drops to 2 because the launcher adds the third.
+  # barrel sits in the bottom-left corner and is CANTED UP through the gap in
+  # the spine (a full-power shot crosses it around y=597, mid-gap),
+  # so a full-power shot is a clean run into the right half and an over-aimed
+  # one buries the whole roster in the cramped left side with the chest. Base
+  # pay is multiplied by the power fired at, so the wager is priced in before
+  # the first fence.
+  #
+  # The barrel holds every ball on the map, so maxBalls is the real roster
+  # again: nothing moves until the band is released, and then all of it does.
+  # The angle is deliberately not a multiple of 90 - an axis-aligned barrel
+  # reads as another wall, and the whole point of the thing is that it is
+  # pointing somewhere.
   - id: level-11
     level: 11
     sizeThreshold: 16
@@ -571,16 +578,17 @@ levels:
     points: 20
     variety: 12
     randomShapes: 10
-    maxBalls: 2
+    maxBalls: 3
     entities:
       - id: plunger-11
         kind: launcher
         shape: rect
-        x: 60
-        'y': 440
-        width: 110
-        height: 92
+        x: 70
+        'y': 720
+        width: 240
+        height: 84
         facing: right
+        angle: -24
       - id: chest-cover
         kind: wall
         shape: rect

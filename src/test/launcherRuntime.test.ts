@@ -57,16 +57,30 @@ describe("building the cup", () => {
     }
   });
 
-  it("loads exactly one sleeping ball, sitting in the cup", () => {
+  it("loads the map's whole roster, asleep, inside the barrel", () => {
+    // Was "exactly one ball": the barrel now holds every ball on the map, so
+    // nothing at all moves until the band is released. One ball loaded and the
+    // rest already loose made the launch a thing happening in a corner of an
+    // otherwise ordinary map.
     const d = build();
     const loaded = d.balls.filter(b => b.state === "dormant");
-    expect(loaded).toHaveLength(1);
-    const ball = loaded[0];
-    // Centre of the interior, which is the cup minus its wall thickness.
-    expect(ball.position.x).toBeCloseTo(CUP.x + CUP.width / 2, 6);
-    expect(ball.position.y).toBeCloseTo(CUP.y + CUP.height / 2, 6);
-    expect(ball.velocity).toEqual({ x: 0, y: 0 });
-    expect(ball.speed).toBe(0);
+    expect(loaded.length).toBe(d.balls.length);
+    expect(loaded.length).toBeGreaterThan(0);
+    for (const ball of loaded) {
+      expect(ball.velocity).toEqual({ x: 0, y: 0 });
+      expect(ball.speed).toBe(0);
+      // Inside the interior, which is the cup minus its wall thickness.
+      expect(ball.position.x).toBeGreaterThanOrEqual(CUP.x);
+      expect(ball.position.x).toBeLessThanOrEqual(CUP.x + CUP.width);
+      expect(ball.position.y).toBeGreaterThanOrEqual(CUP.y);
+      expect(ball.position.y).toBeLessThanOrEqual(CUP.y + CUP.height);
+    }
+  });
+
+  it("leaves no ball loose on the board while the barrel is loaded", () => {
+    // The property that makes the pull the map, rather than a garnish on it.
+    const d = build();
+    expect(d.balls.some(b => b.state === "active")).toBe(false);
   });
 
   it("leaves the ball room to sit inside the walls", () => {
@@ -83,6 +97,7 @@ describe("building the cup", () => {
     const d = build("down");
     expect(d.launchers).toHaveLength(1);
     expect(d.launchers[0]).toMatchObject({ id: "cup", facing: "down", fired: false });
+    expect(d.launchers[0].ballIds.length).toBeGreaterThan(0);
     expect(launchPending({ launchers: d.launchers })).toBe(true);
     expect(pendingLauncher({ launchers: d.launchers })?.id).toBe("cup");
   });
@@ -103,13 +118,15 @@ describe("firing", () => {
     const d = build("right");
     const game = gameFrom(d);
     const cup = game.launchers![0];
-    const ball = game.balls.find(b => b.id === cup.ballId)!;
+    const ball = game.balls.find(b => b.id === cup.ballIds[0])!;
 
     expect(fireLauncher(game, cup, straight("right", 2))).toBe(2);
 
     expect(ball.state).toBe("active");
-    expect(ball.velocity.x).toBeCloseTo(ball.baseSpeed * 2, 6);
-    expect(ball.velocity.y).toBeCloseTo(0, 6);
+    // Speed is the contract; the HEADING is fanned across the cone when there
+    // is more than one ball, so only the magnitude is pinned here.
+    expect(Math.hypot(ball.velocity.x, ball.velocity.y))
+      .toBeCloseTo(ball.baseSpeed * 2, 6);
     expect(Math.hypot(ball.velocity.x, ball.velocity.y)).toBeCloseTo(ball.speed, 6);
   });
 
@@ -143,11 +160,11 @@ describe("firing", () => {
     // Taking the safe shot second must not refund the brave one.
     const game = gameFrom(build());
     const a = game.launchers![0];
-    const b: LauncherState = { ...a, id: "cup2", ballId: a.ballId, fired: false };
+    const b: LauncherState = { ...a, id: "cup2", ballIds: [...a.ballIds], fired: false };
     fireLauncher(game, a, straight("right", 3));
-    // The second cup is fired with a fresh dormant ball in the real game; here
-    // only the bookkeeping matters, so re-sleeping the ball is enough.
-    game.balls.find(x => x.id === a.ballId)!.state = "dormant";
+    // The second cup is fired with fresh dormant balls in the real game; here
+    // only the bookkeeping matters, so re-sleeping them is enough.
+    for (const id of a.ballIds) game.balls.find(x => x.id === id)!.state = "dormant";
     fireLauncher(game, b, straight("right", 1.2));
     expect(game.launchPower).toBe(3);
   });
@@ -155,7 +172,7 @@ describe("firing", () => {
   it("refuses a ball that is not asleep", () => {
     const game = gameFrom(build());
     const cup = game.launchers![0];
-    game.balls.find(b => b.id === cup.ballId)!.state = "active";
+    for (const id of cup.ballIds) game.balls.find(b => b.id === id)!.state = "active";
     expect(fireLauncher(game, cup, straight("right", 2))).toBeNull();
     expect(cup.fired).toBe(false);
   });

@@ -61,6 +61,63 @@ export function bearingVector(facing: LaunchFacing): Vector2 {
   return { x, y };
 }
 
+/**
+ * Unit vector the muzzle actually points along: the facing, turned by the cup's
+ * own angle.
+ *
+ * A launcher is authored as an axis-aligned rect plus an `angle`, exactly like
+ * every other entity that can be turned, so `facing` names which SIDE is open
+ * and the angle says where that side ends up pointing. Reading only the facing
+ * is what made every launcher fire along an axis: a cup drawn at 20 degrees
+ * still shot straight right, and the barrel and the shot disagreed on screen.
+ */
+export function muzzleVector(facing: LaunchFacing, angleDeg = 0): Vector2 {
+  const base = bearingVector(facing);
+  if (!angleDeg) return base;
+  const rad = (angleDeg * Math.PI) / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  return { x: base.x * cos - base.y * sin, y: base.x * sin + base.y * cos };
+}
+
+/**
+ * The rubber band across the closed end of the cup, in world units.
+ *
+ * The band is the thing you actually pull, so it has to be a real segment on
+ * the board rather than a decoration: it spans the back wall, perpendicular to
+ * the muzzle, and the balls rest against it. `inner` is the cup's interior and
+ * the returned points are its two back corners, turned with the cup.
+ */
+export function bandEnds(
+  inner: { x: number; y: number; width: number; height: number },
+  facing: LaunchFacing,
+  angleDeg = 0,
+): { a: Vector2; b: Vector2 } {
+  const cx = inner.x + inner.width / 2;
+  const cy = inner.y + inner.height / 2;
+  const dir = muzzleVector(facing, angleDeg);
+  // Back along the barrel, then out to both sides of it.
+  const halfLength = (Math.abs(dir.x) > Math.abs(dir.y) ? inner.width : inner.height) / 2;
+  const halfWidth = (Math.abs(dir.x) > Math.abs(dir.y) ? inner.height : inner.width) / 2;
+  const backX = cx - dir.x * halfLength;
+  const backY = cy - dir.y * halfLength;
+  // Perpendicular to the muzzle.
+  const px = -dir.y, py = dir.x;
+  return {
+    a: { x: backX - px * halfWidth, y: backY - py * halfWidth },
+    b: { x: backX + px * halfWidth, y: backY + py * halfWidth },
+  };
+}
+
+/** The midpoint of the band: where the pull is anchored. */
+export function bandAnchor(
+  inner: { x: number; y: number; width: number; height: number },
+  facing: LaunchFacing,
+  angleDeg = 0,
+): Vector2 {
+  const { a, b } = bandEnds(inner, facing, angleDeg);
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
 /** Weakest launch: the ball leaves at its ordinary speed and the base pays 1x. */
 export const LAUNCH_MIN_POWER = 1;
 
@@ -119,11 +176,13 @@ export interface LaunchAim {
  * Returns null for a pull too short to mean anything, which the caller shows as
  * "not yet a launch" rather than as a weak one.
  */
-export function launchAim(pull: Vector2, facing: LaunchFacing): LaunchAim | null {
+export function launchAim(
+  pull: Vector2, facing: LaunchFacing, angleDeg = 0,
+): LaunchAim | null {
   const len = Math.hypot(pull.x, pull.y);
   if (!(len > LAUNCH_DEAD_PULL)) return null;
 
-  const bearing = bearingVector(facing);
+  const bearing = muzzleVector(facing, angleDeg);
   // Fire opposite the pull.
   const wanted = { x: -pull.x / len, y: -pull.y / len };
 
