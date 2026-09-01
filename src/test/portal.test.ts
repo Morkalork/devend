@@ -16,7 +16,7 @@
  * Made a rule rather than left as a bug, it is the most interesting thing about
  * the object: a portal turns one pocket into a place you must not use.
  */
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@/lib/gameAudio", () => ({
   playWallHitSound: () => {}, playBallCollideSound: () => {}, playFenceBreakSound: () => {},
   playDeathSound: () => {}, playBallLockSound: () => {}, playCutClaimedSound: () => {},
@@ -37,6 +37,8 @@ import { createInitialGameData } from "@/lib/initGame";
 import { updateBall } from "@/lib/physics/updateBall";
 import { checkAndUpdateBallWonStates } from "@/lib/physics/checkBallWonState";
 import { CellState, worldToGridIndex } from "@/lib/spaceGrid";
+import { rotatePoint, type MapRotation } from "@/lib/mapRotation";
+import { setRunSeedText } from "@/lib/runRng";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
 import type { Ball } from "@/types/game";
 import type { LevelConfig } from "@/types/level";
@@ -129,8 +131,36 @@ const level = (portal: boolean): LevelConfig => ({
 } as unknown as LevelConfig);
  
 
+/**
+ * One seed per rotation, so the deal is CHOSEN rather than rolled.
+ *
+ * Unseeded, `pickMapRotation` falls through to Math.random, and a test that
+ * builds the map twice gets two different orientations - which is how the
+ * control below came to compare a point on one board against an obstacle on
+ * another and pass or fail by luck. Seeded, `getRunRng` is deterministic and
+ * both builds are dealt the same way.
+ *
+ * The seeds are checked against the rotations they claim (see the test right
+ * below), so a change to the RNG shows up as a failure here rather than as
+ * four runs of the same orientation quietly pretending to be four.
+ */
+const SEED_FOR: Record<MapRotation, string> = {
+  0: "deal-d", 1: "deal-a", 2: "deal-b", 3: "deal-c",
+};
+const ROTATIONS = [0, 1, 2, 3] as const;
+
+afterEach(() => setRunSeedText(null));
+
 describe("in the running game", () => {
-  const build = (portal: boolean) => createInitialGameData(level(portal), 5, DEFAULT_MODIFIERS);
+  const build = (portal: boolean, seed = SEED_FOR[0]) => {
+    setRunSeedText(seed);
+    return createInitialGameData(level(portal), 5, DEFAULT_MODIFIERS);
+  };
+
+  it("deals each of the four orientations, so the control below tests all of them", () => {
+    const dealt = ROTATIONS.map(r => build(false, SEED_FOR[r]).mapRotation);
+    expect(dealt, "the pinned seeds no longer cover every rotation").toEqual([...ROTATIONS]);
+  });
 
   it("registers both ends and puts the spec on their edge walls", () => {
     const d = build(true);
@@ -149,11 +179,13 @@ describe("in the running game", () => {
    * up. A test that assumes authored coordinates tests a board that does not
    * exist.
    */
-  const inGame = (portal: boolean) => {
-    const d = build(portal);
+  const inGame = (portal: boolean, seed = SEED_FOR[0]) => {
+    const d = build(portal, seed);
     const game = { ...d } as unknown as CanvasGameState;
     const bl = game.balls[0];
-    return { game, bl, mouths: [...(d.portals?.values() ?? [])] };
+    // The rotation comes back with the board: authored coordinates mean nothing
+    // until they are carried through it.
+    return { game, bl, rotation: d.mapRotation, mouths: [...(d.portals?.values() ?? [])] };
   };
 
   const dropInto = (bl: Ball, at: { x: number; y: number }) => {
@@ -162,8 +194,8 @@ describe("in the running game", () => {
     bl.speed = 260;
   };
 
-  it("carries a ball across the board instead of bouncing it", () => {
-    const { game, bl, mouths } = inGame(true);
+  it.each(ROTATIONS)("carries a ball across the board instead of bouncing it (rotation %i)", r => {
+    const { game, bl, mouths } = inGame(true, SEED_FOR[r]);
     const [from, to] = mouths;
     dropInto(bl, from.centre);
     const startedFrom = Math.hypot(bl.position.x - to.centre.x, bl.position.y - to.centre.y);
@@ -173,22 +205,40 @@ describe("in the running game", () => {
       .toBeLessThan(startedFrom / 2);
   });
 
-  it("bounces off the same obstacle when it is not a portal", () => {
-    // The control. Without it "it moved" proves nothing about portals: the two
-    // maps are identical but for the flag.
-    const withPortals = inGame(true);
-    const plain = inGame(false);
-    const target = withPortals.mouths[1].centre;
-    dropInto(plain.bl, withPortals.mouths[0].centre);
-    const before = Math.hypot(plain.bl.position.x - target.x, plain.bl.position.y - target.y);
-    updateBall(plain.bl, 1 / 120, plain.game);
-    const after = Math.hypot(plain.bl.position.x - target.x, plain.bl.position.y - target.y);
+  /**
+   * The control. Without it "it moved" proves nothing about portals: the two
+   * maps are identical but for the flag.
+   *
+   * A ball dropped inside a solid obstacle is SHOVED CLEAR of it on the next
+   * step, and that shove is real movement - about 71 units here, since the
+   * obstacle's radius is 45 and the ball's is 18. So the control cannot ask
+   * "did the ball stay still"; what separates a bounce from a portal is that
+   * the bounce leaves the ball beside the obstacle it hit, while the portal
+   * puts it at the far end of the board. Both halves are asserted, and against
+   * the plain map's OWN obstacle, whose position is the authored one carried
+   * through this deal's rotation.
+   */
+  const CLEARANCE = 45 + 18 + 260 / 120;   // obstacle + ball + one step of travel
+
+  it.each(ROTATIONS)("bounces off the same obstacle when it is not a portal (rotation %i)", r => {
+    const plain = inGame(false, SEED_FOR[r]);
     expect(plain.game.portals?.size ?? 0).toBe(0);
-    expect(Math.abs(after - before), "a plain obstacle teleported the ball").toBeLessThan(50);
+
+    const here = rotatePoint(250, 450, plain.rotation);
+    const far = rotatePoint(700, 450, plain.rotation);
+    dropInto(plain.bl, here);
+    updateBall(plain.bl, 1 / 120, plain.game);
+
+    const moved = Math.hypot(plain.bl.position.x - here.x, plain.bl.position.y - here.y);
+    const toFar = Math.hypot(plain.bl.position.x - far.x, plain.bl.position.y - far.y);
+    expect(moved, "a plain obstacle carried the ball somewhere")
+      .toBeLessThan(CLEARANCE * 1.3);
+    expect(toFar, "a plain obstacle teleported the ball to the far one")
+      .toBeGreaterThan(200);
   });
 
-  it("does not ping-pong: one crossing per approach", () => {
-    const { game, bl, mouths } = inGame(true);
+  it.each(ROTATIONS)("does not ping-pong: one crossing per approach (rotation %i)", r => {
+    const { game, bl, mouths } = inGame(true, SEED_FOR[r]);
     const [from, to] = mouths;
     const span = Math.hypot(to.centre.x - from.centre.x, to.centre.y - from.centre.y);
     dropInto(bl, from.centre);
