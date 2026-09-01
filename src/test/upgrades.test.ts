@@ -70,6 +70,12 @@ const EXPECTED_ROOTS = [
   // do not let the ball hit my growing fence. Onboarding shortens the map
   // instead, so the opening choice has a second direction in it.
   "onboarding_junior",
+  // The two ways to relate to the store's ability slot. Roots, and deliberately
+  // NOT a chain: Open Source Contribution removes the slot that Talent Scout
+  // widens, so gating one behind the other would sell a player an upgrade and
+  // then sell them its own deletion.
+  "talent_scout",
+  "open_source_contribution",
 ].sort();
 
 // Build archetypes — must mirror UpgradeTag in src/types/upgrade.ts.

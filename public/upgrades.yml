@@ -1150,6 +1150,30 @@ upgrades:
   # ARCHITECT & WIZARD
   # ===============================
 
+  # The store's ability slot (src/lib/abilityOffer.ts). The slot itself is free
+  # and always there; these two change its shape rather than its odds, because
+  # on a shelf this small a probability upgrade is not something a player can
+  # see working.
+  - id: talent_scout
+    name: Talent Scout
+    tier: Principal
+    description: "The store offers two abilities to choose between instead of one."
+    unlockLevel: 8
+    icon: gem
+    tags: [bank]
+    modifiers:
+      extraAbilityOffers: 1
+
+  - id: open_source_contribution
+    name: Open Source Contribution
+    tier: Architect
+    description: "No abilities for sale, but every open store hands you a random one for free."
+    unlockLevel: 14
+    icon: gift
+    tags: [bank, risk]
+    modifiers:
+      freeAbilityPerStore: 1
+
   - id: system_architect
     name: System Architect
     tier: Architect

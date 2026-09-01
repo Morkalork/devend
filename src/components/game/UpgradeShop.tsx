@@ -28,7 +28,10 @@ import { ConditionChip } from './ConditionChip';
 import { conditionMet, type RunContext } from '@/lib/upgradeConditions';
 import { Clock, ArrowRight, Lock, Check, Medal, RefreshCw, X, Info, Vault, ShoppingCart } from 'lucide-react';
 import { getUpgradeIcon } from './upgradeIcons';
+import { AbilityIcon } from './AbilityIcon';
 import { getRunRng } from '@/lib/runRng';
+import { rollAbilityOffers, abilitySlotClosed as abilityCapReached } from '@/lib/abilityOffer';
+import { MAX_ABILITY_SLOTS, getAbility } from '@/lib/abilities';
 import { CRTBackground } from './CRTBackground';
 import { Carousel } from './Carousel';
 import { TutorialOverlay } from './TutorialOverlay';
@@ -76,6 +79,30 @@ interface UpgradeShopProps {
   /** Locks made this round vs. required, shown as "X/Y" on the closed banner. */
   locksHave?: number;
   locksNeed?: number;
+  /**
+   * The store's ability slot (lib/abilityOffer.ts): retainer cards generated
+   * from abilities.yml, shown BESIDE the upgrades rather than taking one of
+   * their slots, and drawn inverted so they never read as a fourth upgrade.
+   *
+   * Rolled here, on mount, for the same reason the upgrade shelf is: a shop
+   * visit is one shelf, and a shelf that re-rolls under the player's finger is
+   * the bug this component was already written to avoid.
+   */
+  heldAbilityIds?: string[];
+  /** Distinct abilities the player may hold at once. At the cap the slot closes. */
+  abilitySlots?: number;
+  /** Maps still to come, which is exactly what a retainer is worth. */
+  mapsRemaining?: number;
+  /** How many retainers to offer. 0 removes the slot entirely, which is what
+   *  the Open Source Contribution upgrade does in exchange for a free one. */
+  abilityOfferCount?: number;
+  /** Buying a retainer is not buying an upgrade: it never touches
+   *  ownedUpgradeIds, so it gets its own channel. */
+  onPurchaseAbility?: (abilityId: string, price: number) => void;
+  /** The ability handed over free on arrival (Open Source Contribution). The
+   *  grant already happened in the session; the shop only announces it, so the
+   *  player is not left wondering where the new button came from. */
+  freeAbilityGrant?: string | null;
 }
 
 /**
@@ -131,6 +158,12 @@ export function UpgradeShop({
   closed = false,
   locksHave,
   locksNeed,
+  heldAbilityIds = [],
+  abilitySlots = MAX_ABILITY_SLOTS,
+  mapsRemaining = 0,
+  abilityOfferCount = 1,
+  onPurchaseAbility,
+  freeAbilityGrant = null,
 }: UpgradeShopProps) {
   const { t } = useTranslation();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -315,9 +348,37 @@ export function UpgradeShop({
   // All prices flow through market-rate inflation (rises each 5-level
   // assignment block) and then the discount (Bulk Licensing certificate).
   const priceInflation = inflationForLevel(completedLevel);
+  // The ability slot's cards, rolled once per visit like the upgrade shelf.
+  const [abilityOffers] = useState<UpgradeConfig[]>(() => rollAbilityOffers(
+    completedLevel,
+    mapsRemaining,
+    heldAbilityIds,
+    abilityOfferCount,
+    getRunRng(`shop:${completedLevel}:ability`),
+    abilitySlots,
+  ));
+  // Closed only when the cap is what emptied it. A player who has simply bought
+  // everything unlocked so far is not at the cap and must not be told they are.
+  const abilitySlotClosed = abilityOfferCount > 0 && abilityCapReached(heldAbilityIds, abilitySlots);
+
+  // The shelf as the player sees it. The ability slot leads, because it is the
+  // one card that is always there and the one that is not an upgrade.
+  const shelfItems = useMemo(
+    () => [...abilityOffers, ...offeredUpgrades],
+    [abilityOffers, offeredUpgrades],
+  );
+
   const priceFor = useCallback(
-    (u: UpgradeConfig) =>
-      u.id === freeOfferId ? 0 : Math.max(1, Math.round(u.cost * priceInflation * shopDiscountMultiplier)),
+    (u: UpgradeConfig) => {
+      if (u.id === freeOfferId) return 0;
+      // A retainer pays out once per REMAINING map, so it is worth less the
+      // later it is bought - the exact opposite of the curve block inflation
+      // draws. Applying it would charge six times as much on map 30 for a
+      // twentieth of the value, so retainers are exempt. The player's own
+      // discount still applies: that is a perk they earned, not a market rate.
+      if (u.grantsAbility) return Math.max(1, Math.round(u.cost * shopDiscountMultiplier));
+      return Math.max(1, Math.round(u.cost * priceInflation * shopDiscountMultiplier));
+    },
     [shopDiscountMultiplier, freeOfferId, priceInflation],
   );
   const hasDiscount = shopDiscountMultiplier < 1;
@@ -325,7 +386,7 @@ export function UpgradeShop({
 
   // Budget remaining after currently selected items
   const selectedTotalCost = selectedIds.reduce((sum, id) => {
-    const u = offeredUpgrades.find(u => u.id === id);
+    const u = shelfItems.find(u => u.id === id);
     return sum + (u ? priceFor(u) : 0);
   }, 0);
   const remainingBudget = effectiveOvertime - selectedTotalCost;
@@ -373,6 +434,11 @@ export function UpgradeShop({
     }
 
     setSelectedIds(prev => [...prev, upgrade.id]);
+
+    // A retainer is not an upgrade purchase, so it does not restock the upgrade
+    // shelf. Letting it would turn the always-present ability card into a free
+    // extra upgrade every single visit.
+    if (upgrade.grantsAbility) return;
 
     // Restock: the first N purchases per visit add a fresh offer to the shelf.
     // Candidates are re-evaluated as if the selection were already owned, so
@@ -426,14 +492,14 @@ export function UpgradeShop({
 
   const handleContinue = useCallback(() => {
     for (const id of selectedIds) {
-      const upgrade = offeredUpgrades.find(u => u.id === id) || upgrades.find(u => u.id === id);
-      if (upgrade) {
-        onPurchase(upgrade.id, priceFor(upgrade));
-        setPurchasedThisSession(prev => [...prev, upgrade.id]);
-      }
+      const upgrade = shelfItems.find(u => u.id === id) || upgrades.find(u => u.id === id);
+      if (!upgrade) continue;
+      if (upgrade.grantsAbility) onPurchaseAbility?.(upgrade.grantsAbility, priceFor(upgrade));
+      else onPurchase(upgrade.id, priceFor(upgrade));
+      setPurchasedThisSession(prev => [...prev, upgrade.id]);
     }
     onContinue();
-  }, [selectedIds, offeredUpgrades, upgrades, onPurchase, onContinue, priceFor]);
+  }, [selectedIds, shelfItems, upgrades, onPurchase, onPurchaseAbility, onContinue, priceFor]);
 
   return (
     <>
@@ -667,19 +733,41 @@ export function UpgradeShop({
           // "there is more this way".
           className={`w-full max-w-4xl -mx-6 ${closed ? 'pointer-events-none grayscale' : ''}`}
         >
+          {/* The ability slot, closed. Shown as its own line rather than as a
+              dead card: "your bar is full" is a fact about the run worth
+              reading once, not a fourth thing to swipe past every visit. */}
+          {abilitySlotClosed && !closed && (
+            <div className="mx-6 mb-2 flex items-center justify-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+              <Lock className="w-3.5 h-3.5" />
+              {t('upgradeShop.abilitySlotClosed')}
+            </div>
+          )}
+          {/* Open Source Contribution: say what turned up, or the new button in
+              the bar next map is a mystery. */}
+          {freeAbilityGrant && (
+            <div className="mx-6 mb-2 flex items-center justify-center gap-2 text-xs uppercase tracking-wide"
+              style={{ color: getAbility(freeAbilityGrant)?.color }}>
+              <AbilityIcon kind={getAbility(freeAbilityGrant)?.kind ?? ''} className="w-4 h-4" />
+              {t('upgradeShop.freeAbilityGranted', { name: getAbility(freeAbilityGrant)?.name ?? freeAbilityGrant })}
+            </div>
+          )}
           <Carousel
             label={t('upgradeShop.carouselLabel')}
             prevLabel={t('upgradeShop.prevOffer')}
             nextLabel={t('upgradeShop.nextOffer')}
             positionLabel={(index, total) => t('upgradeShop.offerPosition', { index, total })}
             cardWidth="min(76vw, 340px)"
-            marks={offeredUpgrades.map(u => u.choiceGroup
+            marks={shelfItems.map(u => u.choiceGroup
               ? upgrades.some(o => o.choiceGroup === u.choiceGroup && (selectedIds.includes(o.id) || allOwnedIds.includes(o.id)))
               : selectedIds.includes(u.id) || allOwnedIds.includes(u.id))}
-            items={offeredUpgrades.map((upgrade, index) => {
+            items={shelfItems.map((upgrade, index) => {
                 // Tier-3 "choice" card: one card standing in for a mutually
                 // exclusive group. It shows the chosen option once picked, else a
                 // "choose" prompt; tapping opens the chooser.
+                // The store's ability slot, drawn inverted (light ground, dark
+                // text) so it never reads as a fourth upgrade. See
+                // ABILITY_CARD_STATE_CLASSES for why that and not a tint.
+                const inv = !!upgrade.grantsAbility;
                 const isChoice = !!upgrade.choiceGroup;
                 const choiceOptions = isChoice ? upgrades.filter(u => u.choiceGroup === upgrade.choiceGroup) : [];
                 const chosenMember = isChoice
@@ -702,6 +790,11 @@ export function UpgradeShop({
                 // Can't afford with remaining budget (unless already selected)
                 const cantAfford = !locked && !owned && !selected && shownPrice > remainingBudget;
                 const tierColors = TIER_COLORS[upgrade.tier];
+                // On the inverted card the tier palette is unreadable (light
+                // text on a light ground), so the ability's own colour carries
+                // the icon and the rest steps down through the dark ink.
+                const headText = inv ? '' : tierColors.text;
+                const headStyle = inv ? { color: upgrade.abilityColor } : undefined;
                 const Icon = getUpgradeIcon(displayUpgrade, upgrades);
                 // Either fork of a choice credits the same certificate, so key on
                 // the group when there is one (mirrors useGameSession's certKey).
@@ -771,6 +864,7 @@ export function UpgradeShop({
                   ${selectedCardClasses(
                     { selected, owned, locked, purchasable, cantAfford },
                     tierColors.border,
+                    inv,
                   )}
                 `}
               >
@@ -778,15 +872,22 @@ export function UpgradeShop({
                     stacked centred rows - at this width the name has room to
                     be a heading instead of a truncated label. */}
                 <div className="flex items-start gap-3 pr-6">
-                  {Icon && (
-                    <Icon className={`w-10 h-10 shrink-0 ${tierColors.text}`} strokeWidth={1.5} />
-                  )}
+                  {inv
+                    ? <span className="shrink-0" style={headStyle}>
+                        <AbilityIcon kind={upgrade.abilityKind ?? ''} className="w-10 h-10" />
+                      </span>
+                    : Icon && (
+                      <Icon className={`w-10 h-10 shrink-0 ${headText}`} style={headStyle} strokeWidth={1.5} />
+                    )}
                   <div className="min-w-0 flex-1">
-                    <div className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${tierColors.text}`}>
-                      {contentText.tier(t, upgrade.tier)}
+                    <div
+                      className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${headText}`}
+                      style={headStyle}
+                    >
+                      {inv ? t('upgradeShop.abilityKicker') : contentText.tier(t, upgrade.tier)}
                     </div>
-                    <div className="text-xl font-bold text-foreground leading-tight">
-                      {contentText.upgradeName(t, upgrade)}
+                    <div className={`text-xl font-bold leading-tight ${inv ? 'text-background' : 'text-foreground'}`}>
+                      {inv ? upgrade.name : contentText.upgradeName(t, upgrade)}
                     </div>
                   </div>
                 </div>
@@ -850,11 +951,19 @@ export function UpgradeShop({
                     Raised again from text-base once the strip had proved it had
                     the room: the card was sized for one description, and there
                     was no reason left to set it at body size. */}
-                <p className="text-lg text-muted-foreground leading-relaxed">
+                <p className={`text-lg leading-relaxed ${inv ? 'text-background/75' : 'text-muted-foreground'}`}>
                   {isChoice && !chosenMember
                     ? t('upgradeShop.choicePrompt')
                     : contentText.upgradeDesc(t, displayUpgrade)}
                 </p>
+                {/* What a retainer actually buys, in the only unit that makes
+                    its price legible: maps still to come. */}
+                {inv && (
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-background/80">
+                    <RefreshCw className="w-4 h-4 shrink-0" />
+                    {t('upgradeShop.abilityEveryMap', { count: mapsRemaining })}
+                  </div>
+                )}
 
                 {/* Certificate chase: this purchase is also progress toward a
                     permanent unlock, which was previously invisible until the
@@ -874,7 +983,9 @@ export function UpgradeShop({
                     many lines the description above it takes. */}
                 {!owned && (
                   <div className={`mt-auto pt-2 flex items-center gap-1.5 text-lg font-bold
-                    ${purchasable ? 'text-yellow-500' : 'text-muted-foreground'}
+                    ${inv
+                      ? (purchasable ? 'text-amber-700' : 'text-background/60')
+                      : (purchasable ? 'text-yellow-500' : 'text-muted-foreground')}
                   `}>
                     <Clock className="w-5 h-5" />
                     {(hasDiscount || shownPrice === 0) && (

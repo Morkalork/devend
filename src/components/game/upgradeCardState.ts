@@ -32,6 +32,31 @@ export const UPGRADE_CARD_STATE_CLASSES = {
   unavailable: 'bg-card/50 border-muted cursor-not-allowed opacity-40',
 } as const;
 
+/**
+ * The store's ability slot, drawn INVERTED.
+ *
+ * Every upgrade card is a dark ground carrying light text. An ability retainer
+ * is a different kind of object - it is not an upgrade, it does not carry tags,
+ * it is not priced on the same curve - and it sits in the same strip as three
+ * things that are. Tinting it would say "an upgrade, but purple"; flipping the
+ * ground to light with dark text says "not one of these" from across the room,
+ * before a single word is read.
+ *
+ * Selection and refusal still have to read on it, so the states below invert
+ * with it rather than falling back to the dark set: a selected retainer keeps
+ * its light ground and gains the ring, and an unaffordable one dims without
+ * turning back into an upgrade.
+ */
+export const ABILITY_CARD_STATE_CLASSES = {
+  selected:
+    'bg-foreground text-background border-primary ring-2 ring-primary/70 ring-offset-2 ring-offset-black ' +
+    'shadow-[0_0_28px_hsl(var(--primary)/0.5)] -translate-y-0.5',
+  owned: 'bg-foreground/80 text-background border-green-600',
+  purchasable: 'bg-foreground text-background border-foreground hover:border-primary cursor-pointer',
+  cantAfford: 'bg-foreground/60 text-background border-foreground/40 opacity-70 cursor-pointer',
+  unavailable: 'bg-foreground/40 text-background border-foreground/30 cursor-not-allowed opacity-50',
+} as const;
+
 export interface UpgradeCardState {
   selected?: boolean;
   owned?: boolean;
@@ -51,7 +76,26 @@ export interface UpgradeCardState {
  * `tierBorder` is the per-tier border colour used only by the ordinary
  * purchasable card; every other state supplies its own.
  */
-export function selectedCardClasses(state: UpgradeCardState, tierBorder = 'border-current'): string {
+/**
+ * The state classes for one card, in whichever palette it belongs to.
+ *
+ * `inverted` picks the ability-slot set. It is a parameter rather than a second
+ * exported function because the ORDER of the state checks is the thing that
+ * must not drift between the two: selected beating owned beating unaffordable
+ * is a rule about the shop, not about a palette.
+ */
+export function selectedCardClasses(
+  state: UpgradeCardState,
+  tierBorder = 'border-current',
+  inverted = false,
+): string {
+  if (inverted) {
+    if (state.selected) return ABILITY_CARD_STATE_CLASSES.selected;
+    if (state.owned) return ABILITY_CARD_STATE_CLASSES.owned;
+    if (state.purchasable) return ABILITY_CARD_STATE_CLASSES.purchasable;
+    if (state.cantAfford) return ABILITY_CARD_STATE_CLASSES.cantAfford;
+    return ABILITY_CARD_STATE_CLASSES.unavailable;
+  }
   if (state.selected) return UPGRADE_CARD_STATE_CLASSES.selected;
   if (state.owned) return UPGRADE_CARD_STATE_CLASSES.owned;
   if (state.locked) return UPGRADE_CARD_STATE_CLASSES.locked;

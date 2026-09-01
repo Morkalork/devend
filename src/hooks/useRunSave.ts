@@ -78,6 +78,11 @@ export interface RunSave {
   // cannot say whether it was earned-and-spent or never held. Optional;
   // pre-feature saves seed it from whatever charges they carry.
   heldAbilityIds?: string[];
+  // Ability retainers BOUGHT in the store's ability slot (lib/abilityOffer.ts).
+  // Held separately from heldAbilityIds because the two answer different
+  // questions: held says the slot is spoken for, retained says the ability
+  // comes back every map. Optional; pre-feature saves default to [].
+  retainedAbilityIds?: string[];
 }
 
 /** Payload the caller supplies; version + savedAt are stamped on write. */

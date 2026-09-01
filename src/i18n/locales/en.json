@@ -854,7 +854,11 @@
     "restockChip": "Restocks {{count}}",
     "budgetCycleChip": "Budget Cycle {{spent}}/{{next}}h",
     "budgetCycleChipCharged_one": "Budget Cycle: {{count}} boon",
-    "budgetCycleChipCharged_other": "Budget Cycle: {{count}} boons"
+    "budgetCycleChipCharged_other": "Budget Cycle: {{count}} boons",
+    "abilityKicker": "Ability",
+    "abilityEveryMap": "One every map, {{count}} left",
+    "abilitySlotClosed": "Ability slot closed: your bar is full",
+    "freeAbilityGranted": "{{name}} added to your bar"
   },
   "upgradeConditions": {
     "liveNow": "Live on the next assignment",

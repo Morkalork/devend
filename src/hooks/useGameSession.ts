@@ -32,7 +32,7 @@ import { useMetaProgression } from './useMetaProgression';
 import { loadBallTypes } from '@/lib/ballTypes';
 import { GameFeature, getFeature, featuresUnlockedAtLevel, loadFeatures } from '@/lib/features';
 import { performTotalReset } from '@/lib/totalReset';
-import { loadAbilities, getAllAbilities } from '@/lib/abilities';
+import { loadAbilities, getAllAbilities, rollCappedAbilityReward } from '@/lib/abilities';
 import { computeActiveTagSets, ownedTagCounts, DEFAULT_TAG_SET_THRESHOLD } from '@/lib/upgradeTags';
 import { computeBuildIdentity, RunRecap } from '@/lib/buildRecap';
 import { loadDoors, getDoors, drawDoorOffers, isAssignmentLevel, ASSIGNMENT_OFFER_COUNT } from '@/lib/doorDraft';
@@ -167,6 +167,14 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
   // { abilityId -> count }. Banked across maps for the rest of the run; the
   // ability bar reads them, pressing a button spends one.
   const [abilityCharges, setAbilityCharges] = useState<Record<string, number>>({});
+  // Retainers bought in the store's ability slot. Kept apart from
+  // ownedUpgradeIds deliberately: an ability is not an upgrade, and letting one
+  // into that list would feed it to tag weighting, the upgrade graph, the
+  // certificate chase and the save migration, none of which know what it is.
+  const [retainedAbilityIds, setRetainedAbilityIds] = useState<string[]>([]);
+  // The ability handed over free on this store visit (Open Source Contribution),
+  // so the shop can say what arrived. Null on a visit that granted nothing.
+  const [freeAbilityGrant, setFreeAbilityGrant] = useState<string | null>(null);
   // Every ability EARNED this run, including ones already spent. A replenishing
   // ability (abilities.yml `replenishTo`) is keyed on this rather than on the
   // live stack, so spending your last Shockwave does not end the replenishment.
@@ -768,6 +776,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setOwnedUpgradeIds([]);
     setCarryInstantFences(0);
     setAbilityCharges({});
+    setRetainedAbilityIds([]);
     everHeldAbilityIdsRef.current = [];
     setCarrySpendFences(0);
     setCarrySpendFenceSpeed(0);
@@ -838,6 +847,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     dailyKey,
     abilityCharges,
     heldAbilityIds: everHeldAbilityIdsRef.current,
+    retainedAbilityIds,
   };
 
   // Persist the run whenever a new map begins (map advance or a Continue-revive
@@ -1132,6 +1142,7 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     setCumulativeLockedBalls(save.cumulativeLockedBalls);
     setCarryInstantFences(save.carryInstantFences);
     setAbilityCharges(save.abilityCharges ?? {});
+    setRetainedAbilityIds(save.retainedAbilityIds ?? []);
     // A run saved before `heldAbilityIds` existed has no record, so seed from
     // the charges it is carrying: what you hold is proof you earned it.
     everHeldAbilityIdsRef.current = heldAbilityIds(save.abilityCharges ?? {}, save.heldAbilityIds ?? []);
@@ -1736,10 +1747,33 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       finishShopPhase();
       return;
     }
-    setStoreClosed(locksThisRound < locksRequired);
+    const closed = locksThisRound < locksRequired;
+    setStoreClosed(closed);
     setStoreLockProgress({ have: locksThisRound, need: locksRequired });
+
+    // Open Source Contribution: the ability slot is gone from the shelf, and a
+    // random ability arrives free on every visit instead. A CLOSED store grants
+    // nothing - closed is closed, and a free ability every time you fail the
+    // lock toll would be the cheapest way to stop locking.
+    if (!closed && (activeModifiers.freeAbilityPerStore ?? 0) > 0) {
+      const held = heldAbilityIds(abilityCharges, everHeldAbilityIdsRef.current);
+      const rolled = rollCappedAbilityReward(
+        undefined,
+        currentLevelIndex + 1,
+        getRunRng(`shop:${currentLevelIndex + 1}:freeAbility`),
+        held,
+        ascRules.abilitySlots,
+      );
+      if (rolled) {
+        setAbilityCharges(prev => ({ ...prev, [rolled]: (prev[rolled] ?? 0) + 1 }));
+        everHeldAbilityIdsRef.current = heldAbilityIds({ [rolled]: 1 }, everHeldAbilityIdsRef.current);
+        setFreeAbilityGrant(rolled);
+      }
+    } else {
+      setFreeAbilityGrant(null);
+    }
     goToUpgradeShop();
-  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, currentLevelIndex, ascRules, finishShopPhase, goToUpgradeShop]);
+  }, [pendingLevelScore, currentLevel, activeModifiers.storeLockRelief, activeModifiers.freeAbilityPerStore, abilityCharges, currentLevelIndex, ascRules, finishShopPhase, goToUpgradeShop]);
 
   /**
    * The Promotion, on a level of its own.
@@ -1929,6 +1963,29 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       if (unlocks.length > 0) setShopUnlockedCerts(prev => [...prev, ...unlocks]);
     }
   }, [upgrades, certSourceIds, recordMaxTierPurchase, currentLevelIndex, activeDoor]);
+
+  /**
+   * Buy an ability retainer from the store's ability slot.
+   *
+   * Separate from handlePurchaseUpgrade because the two buy different kinds of
+   * thing: this one spends hours and grants an ABILITY, recorded as held (so
+   * it counts against the slot cap exactly like a chest-won one) and as
+   * retained (so it comes back every map). It deliberately does not touch
+   * ownedUpgradeIds, so nothing downstream mistakes it for an upgrade.
+   */
+  const handlePurchaseAbility = useCallback((abilityId: string, price: number) => {
+    setTotalScore(prev => prev - price);
+    if (activeDoor && price > 0) {
+      setBlockResults(prev => prev.length === 0 ? prev : prev.map((r, i) =>
+        i === prev.length - 1 ? { ...r, spent: (r.spent ?? 0) + price } : r));
+    }
+    spentThisShopVisitRef.current += price;
+    setRetainedAbilityIds(prev => prev.includes(abilityId) ? prev : [...prev, abilityId]);
+    // The first charge arrives now rather than at the next map start, so the
+    // purchase is visible in the bar the moment the shop closes.
+    setAbilityCharges(prev => ({ ...prev, [abilityId]: Math.max(1, prev[abilityId] ?? 0) }));
+    everHeldAbilityIdsRef.current = heldAbilityIds({ [abilityId]: 1 }, everHeldAbilityIdsRef.current);
+  }, [activeDoor]);
 
   const handleContinueFromShop = useCallback(() => {
     // Budget Cycle: this visit's spend buys next-map boons. Granted here and
@@ -2122,8 +2179,9 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
       heldAbilityIds(prev, everHeldAbilityIdsRef.current),
       getAllAbilities(),
       isFeatureUnlocked('panicShockwave') ? ['shockwave'] : [],
+      retainedAbilityIds,
     ));
-  }, [currentLevelIndex, isFeatureUnlocked, setAbilityCharges]);
+  }, [currentLevelIndex, isFeatureUnlocked, setAbilityCharges, retainedAbilityIds]);
 
   // Sync completed achievements into cert manager for achievement-locked certs
   useEffect(() => {
@@ -2307,6 +2365,15 @@ export function useGameSession(nav: ReturnType<typeof useScreenNavigation>) {
     handleAscend,
     handleRetire,
     handlePurchaseUpgrade,
+    handlePurchaseAbility,
+    retainedAbilityIds,
+    freeAbilityGrant,
+    // For the store's ability slot. `heldAbilityIdsNow` folds the ref into the
+    // render so the shop can roll against it on mount; nothing re-reads it
+    // mid-visit, which is what keeps the shelf still.
+    heldAbilityIdsNow: heldAbilityIds(abilityCharges, everHeldAbilityIdsRef.current),
+    abilitySlots: ascRules.abilitySlots,
+    mapsRemaining: Math.max(0, totalLevels - (currentLevelIndex + 1)),
     handleContinueFromShop,
     handlePurchaseCertLevel,
     handlePlayAgain,

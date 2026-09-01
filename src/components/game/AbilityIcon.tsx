@@ -1,10 +1,20 @@
 /**
- * AbilityIcon — the glyph shown when an ability fires (#38), by effect kind.
+ * AbilityIcon — the glyph for an effect kind, wherever one is drawn.
  * lucide covers most; "explosion" (Shockwave) and the "rushing clock" (Fence
  * Overclock, a clock with speed lines) are small inline SVGs in the same
  * stroke style.
+ *
+ * ONE map, exported, because there were two. The ability bar carried its own
+ * and this file carried a switch, and the switch had quietly fallen four kinds
+ * behind - magnet, slowArea, descope and rubberBand all resolved to null, so
+ * the fire animation drew nothing for them and nobody noticed, because the bar
+ * beside it was reading a different list. Typed as a Record over AbilityKind so
+ * the next new ability cannot be added without one.
  */
-import { Snowflake, Snail, RefreshCw, Shield } from 'lucide-react';
+import {
+  Snowflake, Snail, RefreshCw, Shield, Eraser, Magnet, Hourglass, Scissors, Spline, Sparkles,
+} from 'lucide-react';
+import type { AbilityKind } from '@/lib/abilities';
 
 const SVG_BASE = {
   viewBox: '0 0 24 24',
@@ -37,15 +47,26 @@ function RushClockIcon({ className }: { className?: string }) {
   );
 }
 
-/** Resolve a fired ability's icon by its effect kind (null for the unknown). */
+/** Every effect kind's glyph. Exhaustive by type: a new kind will not compile
+ *  until it is given one. Private, so this module exports components only and
+ *  callers all go through AbilityIcon rather than growing a second lookup. */
+const ICON_BY_KIND: Record<AbilityKind, (p: { className?: string }) => JSX.Element> = {
+  freeze: ({ className }) => <Snowflake className={className} />,
+  slow: ({ className }) => <Snail className={className} />,
+  slowArea: ({ className }) => <Hourglass className={className} />,
+  descope: ({ className }) => <Scissors className={className} />,
+  clearFences: ({ className }) => <Eraser className={className} />,
+  magnet: ({ className }) => <Magnet className={className} />,
+  shockwave: ExplosionIcon,
+  rubberBand: ({ className }) => <Spline className={className} />,
+  fenceRush: RushClockIcon,
+  fenceShield: ({ className }) => <Shield className={className} />,
+};
+
+/** The glyph for an effect kind, wherever one is drawn. Falls back to a generic
+ *  sparkle rather than nothing: a kind this does not know is a data problem,
+ *  and an empty space says less about it than a placeholder does. */
 export function AbilityIcon({ kind, className }: { kind: string; className?: string }) {
-  switch (kind) {
-    case 'freeze': return <Snowflake className={className} />;
-    case 'slow': return <Snail className={className} />;
-    case 'clearFences': return <RefreshCw className={className} />;
-    case 'fenceShield': return <Shield className={className} />;
-    case 'shockwave': return <ExplosionIcon className={className} />;
-    case 'fenceRush': return <RushClockIcon className={className} />;
-    default: return null;
-  }
+  const Glyph = ICON_BY_KIND[kind as AbilityKind] ?? Sparkles;
+  return <Glyph className={className} />;
 }

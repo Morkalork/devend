@@ -839,7 +839,11 @@
     "restockChip": "Påfyllningar {{count}}",
     "budgetCycleChip": "Budgetcykel {{spent}}/{{next}}h",
     "budgetCycleChipCharged_one": "Budgetcykel: {{count}} förmån",
-    "budgetCycleChipCharged_other": "Budgetcykel: {{count}} förmåner"
+    "budgetCycleChipCharged_other": "Budgetcykel: {{count}} förmåner",
+    "abilityKicker": "Förmåga",
+    "abilityEveryMap": "En per bana, {{count}} kvar",
+    "abilitySlotClosed": "Förmågeplatsen är stängd: din rad är full",
+    "freeAbilityGranted": "{{name}} lades till i din rad"
   },
   "upgradeConditions": {
     "liveNow": "Aktiv på nästa uppdrag",

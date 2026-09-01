@@ -46,6 +46,8 @@ const MODIFIER_META: Record<keyof GameModifiers, ModifierMeta> = {
   extraLives:                       { label: 'Extra Lives',            kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra lives granted immediately' },
   extraShopItems:                   { label: 'Extra Shop Slots',       kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Additional item slots in the upgrade shop' },
   shopRestockCount:                 { label: 'Shop Restocks',          kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Purchases per shop visit that refill their slot with a new offer' },
+  extraAbilityOffers:               { label: 'Extra Ability Offers',   kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Extra ability retainers offered beside the shop\'s standing one' },
+  freeAbilityPerStore:              { label: 'Free Ability Per Store', kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Removes the ability slot; grants a random ability on every store visit' },
   extraCertificateHours:          { label: 'Extra Cert. Hours',      kind: 'additive',       step: 1,    min: 0,    defaultValue: 0,    description: 'Bonus Certificate Hours banked when the run ends' },
   microManagerPerLock:              { label: 'MicroManager/Lock',      kind: 'additive',       step: 0.01, min: 0,    defaultValue: 0,    description: 'Speed reduction per locked ball (0.01 = 1%, max 50%)' },
   fastestBallSlowPercent:           { label: 'Fastest Ball Slow %',    kind: 'additive',       step: 5,    min: 0,    defaultValue: 0,    description: 'Load Balancer: percent off the fastest ball type only' },

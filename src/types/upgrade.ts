@@ -57,6 +57,19 @@ export interface UpgradeConfig {
   icon?: string;
   /** Build archetype tags; drives shop-offer weighting and the card chips. */
   tags?: UpgradeTag[];
+  /**
+   * Ability retainer card (the store's ability slot, see lib/abilityOffer.ts):
+   * the ability this card grants, replenished once per map for the rest of the
+   * run. Present ONLY on the synthetic cards that slot generates - never on an
+   * entry in upgrades.yml - which is what lets the shop tell the two apart
+   * without a second list to keep in step.
+   */
+  grantsAbility?: string;
+  /** Ability retainer card: the ability's own colour, for the inverted card. */
+  abilityColor?: string;
+  /** Ability retainer card: the effect kind, so the card draws the same glyph
+   *  the ability bar and the fire animation use. */
+  abilityKind?: string;
   modifiers: Record<string, number>;
   /**
    * Build scaling: this effect grows with how committed the run is to an

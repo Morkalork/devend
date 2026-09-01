@@ -387,6 +387,16 @@ function IndexContent({ navigation, session }: { navigation: Navigation; session
                 closed={session.storeClosed}
                 locksHave={session.storeLockProgress.have}
                 locksNeed={session.storeLockProgress.need}
+                heldAbilityIds={session.heldAbilityIdsNow}
+                abilitySlots={session.abilitySlots}
+                mapsRemaining={session.mapsRemaining}
+                // Open Source Contribution trades the slot away for a free
+                // ability on arrival, so the shelf loses its ability card.
+                abilityOfferCount={session.activeModifiers.freeAbilityPerStore > 0
+                  ? 0
+                  : 1 + Math.max(0, Math.round(session.activeModifiers.extraAbilityOffers))}
+                onPurchaseAbility={session.handlePurchaseAbility}
+                freeAbilityGrant={session.freeAbilityGrant}
               />
             )}
             {navigation.currentScreen === 'capstoneDraft' && (

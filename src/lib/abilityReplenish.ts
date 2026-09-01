@@ -31,7 +31,8 @@ import type { AbilityDef } from "@/lib/abilities";
  * `held` is what the player has EVER held this run (not the current stack): a
  * spent ability is still an earned one, and that is the whole point. `granted`
  * is anything owed by something other than having earned it, today the
- * `panicShockwave` feature unlock.
+ * `panicShockwave` feature unlock. `retained` is what was BOUGHT in the store's
+ * ability slot, which makes an otherwise consumable ability replenish.
  *
  * Returns the same object reference when nothing changes, so a React effect
  * calling this on every render does not loop.
@@ -41,12 +42,18 @@ export function replenishAbilityCharges(
   held: readonly string[],
   catalogue: readonly AbilityDef[],
   granted: readonly string[] = [],
+  retained: readonly string[] = [],
 ): Record<string, number> {
-  const earned = new Set([...held, ...granted]);
+  const earned = new Set([...held, ...granted, ...retained]);
+  // A retainer bought in the store makes an ORDINARY ability replenish, which
+  // is the whole product: one charge at the start of every remaining map. It
+  // reads as a floor of 1 rather than a copy of `replenishTo`, so an ability
+  // that already replenishes to more keeps its own larger number.
+  const bought = new Set(retained);
   let next: Record<string, number> | null = null;
 
   for (const ability of catalogue) {
-    const floor = ability.replenishTo ?? 0;
+    const floor = Math.max(ability.replenishTo ?? 0, bought.has(ability.id) ? 1 : 0);
     if (floor <= 0 || !earned.has(ability.id)) continue;
     // Never LOWER a stack: chest-earned charges pile on top of the free one,
     // and a player who banked three Shockwaves must not be trimmed back to one

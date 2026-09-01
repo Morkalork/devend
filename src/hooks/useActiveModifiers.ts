@@ -42,6 +42,14 @@ export interface GameModifiers {
   extraLives: number;
   extraShopItems: number;
   shopRestockCount: number; // purchases per shop visit that refill their slot with a new offer
+  // Additive (sum) - the store's ability slot (lib/abilityOffer.ts). Extra
+  // ability RETAINERS offered beside the standing one, so 1 here means two
+  // abilities to choose between rather than one to take or leave.
+  extraAbilityOffers: number;
+  // Additive (sum) - Open Source Contribution: >0 removes the ability slot from
+  // the shelf and grants a random ability on every store visit instead. The
+  // trade is control for certainty: nothing to choose, nothing to pay.
+  freeAbilityPerStore: number;
   extraContinues: number;   // extra per-run revives beyond the base 1 (cert/upgrade grantable)
   extraCertificateHours: number;
   startingCapturePercent: number; // board starts with this % already captured (Equity Grant)
@@ -302,6 +310,8 @@ export const DEFAULT_MODIFIERS: GameModifiers = {
   extraLives: 0,
   extraShopItems: 0,
   shopRestockCount: 0,
+  extraAbilityOffers: 0,
+  freeAbilityPerStore: 0,
   extraContinues: 0,
   extraCertificateHours: 0,
   startingCapturePercent: 0,

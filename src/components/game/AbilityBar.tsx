@@ -15,23 +15,10 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Snowflake, Gauge, Eraser, Sparkles, Magnet, Waves, Zap, ShieldCheck, Hourglass, Scissors, Spline } from 'lucide-react';
-import { getAllAbilities, getAbility, AbilityKind, AbilityDef } from '@/lib/abilities';
+import { getAllAbilities, getAbility, AbilityDef } from '@/lib/abilities';
 import { hasSeenAbility, markAbilitySeen } from '@/lib/abilitySeen';
 import { AbilityInfoModal } from './AbilityInfoModal';
-
-const ICON_BY_KIND: Record<AbilityKind, typeof Snowflake> = {
-  freeze: Snowflake,
-  slow: Gauge,
-  slowArea: Hourglass,
-  descope: Scissors,
-  clearFences: Eraser,
-  magnet: Magnet,
-  shockwave: Waves,
-  rubberBand: Spline,
-  fenceRush: Zap,
-  fenceShield: ShieldCheck,
-};
+import { AbilityIcon } from './AbilityIcon';
 
 const LONG_PRESS_MS = 450;
 
@@ -98,7 +85,6 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
           style={{ backgroundColor: 'rgba(0,0,0,0.55)', fontFamily: "'JetBrains Mono', monospace" }}
         >
           {owned.map(a => {
-            const Icon = ICON_BY_KIND[a.kind] ?? Sparkles;
             const count = charges[a.id] ?? 0;
             const color = a.color || accentColor;
             const armed = armedAbilityId === a.id;
@@ -139,7 +125,7 @@ export function AbilityBar({ charges, accentColor, onUse, armedAbilityId, onInfo
                     style={{ boxShadow: `0 0 14px 3px ${color}, inset 0 0 10px ${color}` }}
                   />
                 ) : null}
-                <Icon className="w-4 h-4" />
+                <AbilityIcon kind={a.kind} className="w-4 h-4" />
                 <span>{a.name}</span>
                 <span className="opacity-75">x{count}</span>
               </button>

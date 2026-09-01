@@ -839,7 +839,11 @@
     "restockChip": "Reposiciones {{count}}",
     "budgetCycleChip": "Ciclo de Presupuesto {{spent}}/{{next}}h",
     "budgetCycleChipCharged_one": "Ciclo de Presupuesto: {{count}} ventaja",
-    "budgetCycleChipCharged_other": "Ciclo de Presupuesto: {{count}} ventajas"
+    "budgetCycleChipCharged_other": "Ciclo de Presupuesto: {{count}} ventajas",
+    "abilityKicker": "Habilidad",
+    "abilityEveryMap": "Una por mapa, quedan {{count}}",
+    "abilitySlotClosed": "Ranura de habilidad cerrada: tu barra esta llena",
+    "freeAbilityGranted": "{{name}} anadida a tu barra"
   },
   "upgradeConditions": {
     "liveNow": "Activa en la próxima misión",
