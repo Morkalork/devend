@@ -454,6 +454,19 @@ export function EntityPanel({
           </label>
           )}
 
+          {!isMoverEntity(selectedEntity) && (
+          <label className="flex items-center gap-2 text-xs">
+            <input
+              type="checkbox"
+              checked={!!(selectedEntity as { bouncer?: boolean }).bouncer}
+              onChange={(e) => onUpdateEntity(selectedEntity.id, { bouncer: e.target.checked || undefined } as Partial<LevelEntity>)}
+              className="rounded"
+            />
+            <span className="text-amber-400">Bouncer</span>
+            <span className="text-muted-foreground">(kicks balls away, faster)</span>
+          </label>
+          )}
+
           {selectedEntity.shape === 'circle' && (
             <CircleEditor
               entity={selectedEntity as WallCircleEntity}

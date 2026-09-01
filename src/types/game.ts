@@ -90,6 +90,9 @@ export interface Ball {
   // onto the open map instead of teleporting. Physics is skipped while airborne.
   bossLeapAt?: number; // performance.now() the leap began (undefined = not leaping)
   bossLeapLaunched?: boolean; // the launch whoosh has fired (once, after the wind-up)
+  /** Bouncer that last kicked this ball, and when, for the per-bouncer cooldown. */
+  lastBouncerId?: string;
+  lastBouncerAt?: number;
   leapFromX?: number; leapFromY?: number; // arc start (where it was trapped)
   leapToX?: number;   leapToY?: number;   // arc end (open-space landing spot)
   // ── Mitosis birth (boss minion split-off, issue #56) ─────────────────────

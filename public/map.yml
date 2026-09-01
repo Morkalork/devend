@@ -597,6 +597,35 @@ levels:
         height: 110
         facing: right
         angle: -22
+      # Pop bumpers. The launcher fires the roster up through the gap in the
+      # spine into the right half, and this is what it arrives at: three
+      # bumpers, spread so a ball crossing the half meets one but is never
+      # trapped between two. They KICK - the ball leaves faster than it hit -
+      # which is what a pinball table does and no other solid in this game
+      # does. Speed is capped per ball (see physics/bouncer.ts), so a long
+      # rally cannot compound a ball into something that crosses a fence
+      # between two physics steps.
+      - id: bumper-a
+        kind: wall
+        shape: circle
+        cx: 700
+        cy: 490
+        radius: 42
+        bouncer: true
+      - id: bumper-b
+        kind: wall
+        shape: circle
+        cx: 720
+        cy: 720
+        radius: 42
+        bouncer: true
+      - id: bumper-c
+        kind: wall
+        shape: circle
+        cx: 720
+        cy: 290
+        radius: 42
+        bouncer: true
       - id: chest-cover
         kind: wall
         shape: rect

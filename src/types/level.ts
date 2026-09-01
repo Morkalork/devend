@@ -77,6 +77,17 @@ export interface BaseEntity {
 export interface WallEntity extends BaseEntity, BendShapeFields {
   kind: "wall";
   mirror?: boolean; // When true, growing fences reflect off this obstacle
+  /**
+   * Pop bumper: a ball that hits this leaves FASTER than it arrived, kicked
+   * radially outward from the obstacle's middle. A flag on a wall rather than
+   * a kind of its own, exactly like `mirror`, so it inherits every shape, the
+   * bend and the turn, and composes with breakable and the rest.
+   */
+  bouncer?: boolean;
+  /** Speed multiplier per kick (default BOUNCER_KICK). */
+  bounceKick?: number;
+  /** Ceiling as a multiple of the ball's base speed (default BOUNCER_MAX_SPEED_SCALE). */
+  bounceMaxSpeedScale?: number;
   // ── Breakable obstacles (issue #38) ──────────────────────────────────────
   /** When true, balls break this obstacle by hitting it (any ball; black = half). */
   breakable?: boolean;

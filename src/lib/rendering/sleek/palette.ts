@@ -114,6 +114,8 @@ export const PALETTE = {
   // ── Hazards + special objects (full chroma, these must pop) ───────────────
   mover: 0xff8800,
   mirror: 0x88ddff,
+  /** Pop bumper: a warm sprung orange, apart from the cool mirror blue. */
+  bouncer: 0xffb347,
   danger: 0xff2244,
   /** The compass ball's countdown ring, in its own violet rather than the accent:
    *  the ring belongs to the BALL, and wearing the player's colour would read as

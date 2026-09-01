@@ -7,6 +7,7 @@
 
 import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
+import { bouncerKick, bouncerReady, BOUNCER_FLASH_MS, type BouncerSpec } from "@/lib/physics/bouncer";
 import { wellStep } from "@/lib/physics/gravityWells";
 import { slowFactorAt } from "@/lib/physics/slowAreas";
 import { steerHeading, steerWorldOf } from "@/lib/physics/steering";
@@ -235,6 +236,42 @@ function sanitise(ball: Ball, game: CanvasGameState): void {
     ball.velocity = { x: 0, y: 0 };
     ball.speed = 0;
   }
+}
+
+/**
+ * Fire a bouncer at a ball, if there is one and it is off cooldown.
+ *
+ * One helper called from BOTH collision systems, because an obstacle is in both
+ * and a kick honoured in only one gives a bumper that fires from its face and
+ * is dead at its edges - the same trap the pass-rule comment further down warns
+ * about, which was found the hard way.
+ *
+ * The arithmetic is in bouncer.ts; this is only the plumbing and the cooldown.
+ */
+function applyBouncer(
+  game: CanvasGameState, ball: Ball, spec: BouncerSpec | undefined, now: number,
+): void {
+  if (!spec || !bouncerReady(ball, spec, now)) return;
+  const hit = bouncerKick(ball, spec);
+  ball.velocity = hit.velocity;
+  ball.speed = hit.speed;
+  ball.lastBouncerId = spec.id;
+  ball.lastBouncerAt = now;
+  // Told to whatever draws the board, so the kick has a visible cause rather
+  // than reading as the ball randomly speeding up.
+  //
+  // Pruned on the way in rather than by the renderer: a bumper cluster fires
+  // several times a second for a whole map, and a queue only ever appended to
+  // is a leak that also makes the flare lookup slower every minute of play.
+  // Nothing may rely on the renderer draining it - a paused or unmounted board
+  // does not draw at all, and the physics still runs.
+  const flashes = (game.bouncerFlashes ??= []);
+  for (let i = flashes.length - 1; i >= 0; i--) {
+    if (now - flashes[i].at > BOUNCER_FLASH_MS) flashes.splice(i, 1);
+  }
+  flashes.push({
+    id: spec.id, x: spec.centre.x, y: spec.centre.y, at: now, intensity: hit.intensity,
+  });
 }
 
 export function updateBall(
@@ -590,6 +627,12 @@ export function updateBall(
       ball.velocity = obstacleResult.velocity;
       surfaceHit = true;
 
+      // Pop bumper: it does not merely reflect, it KICKS - outward from the
+      // bouncer's middle, faster than the ball arrived. Applied after the
+      // resolver has already pushed the ball clear, so the kick starts from a
+      // legal position rather than from inside the solid.
+      applyBouncer(game, ball, game.bouncers?.get(obstacle), now);
+
       // Trigger wall hit effect on ball
       triggerWallHit(ball.effects, now, ...bounceImpact(vBefore, ball.velocity));
 
@@ -634,6 +677,9 @@ export function updateBall(
     // Register wall impact for visual effect
     if (impactPoint) {
       surfaceHit = true;
+      // The same kick from the edge as from the face. `wall.bouncer` is the very
+      // object the polygon map holds, so the two paths cannot disagree.
+      applyBouncer(game, ball, wall.bouncer, now);
       const spd = vec2Length(ball.velocity);
       const impactStrength = Math.min(1, spd / 400);
       const isObstacleWall = wall.id.startsWith("obstacle-");

@@ -4,6 +4,7 @@
 
 import { Vector2, Polygon, pointInPolygon, vec2Sub, vec2Add, vec2Scale, vec2Normalize, vec2Distance, vec2Dot, vec2Reflect, lineSegmentIntersection, pointToSegmentDistance } from "./polygon";
 import type { ObstacleRule } from "./physics/obstacleRules";
+import type { BouncerSpec } from "./physics/bouncer";
 
 export interface Wall {
   id: string;
@@ -21,6 +22,13 @@ export interface Wall {
    * entry, so the two cannot disagree.
    */
   passRule?: ObstacleRule;
+  /**
+   * The bouncer this wall is an edge of. The SAME object the polygon map holds,
+   * for the reason passRule is: an obstacle lives in both collision systems, and
+   * a kick honoured in only one gives a solid that fires from its face and is
+   * inert at its edges.
+   */
+  bouncer?: BouncerSpec;
   /** ms timestamp when the fence segment was drawn; absent on board edges / obstacles */
   createdAt?: number;
   /** Cached `id.startsWith("board-")`, filled lazily by the physics hot loop. */

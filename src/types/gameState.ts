@@ -22,6 +22,7 @@ import { ActiveMapObjective } from "@/types/objective";
 import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types/pickups";
 import type { LampState } from "@/lib/lampBall";
 import type { ObstacleRuleMap } from "@/lib/physics/obstacleRules";
+import type { BouncerSpec } from "@/lib/physics/bouncer";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import type { LauncherState } from "@/lib/physics/launcher";
 import type { DeliveryBoxState } from "@/lib/physics/deliveryBox";
@@ -105,6 +106,14 @@ export interface CanvasGameState {
   obstaclePolygons: Polygon[];
   /** Per-obstacle pass rules (one-way membranes, ball-type gates), by polygon identity. */
   obstacleRules?: ObstacleRuleMap;
+  /** Pop bumpers, keyed by polygon identity the same way obstacleRules is. */
+  bouncers?: Map<Polygon, BouncerSpec>;
+  /**
+   * Bouncer firings this frame, for the renderer to flash. Drained by whatever
+   * draws them; a kick with no visible cause reads as the ball randomly
+   * speeding up, which is the one way this mechanic looks like a bug.
+   */
+  bouncerFlashes?: Array<{ id: string; x: number; y: number; at: number; intensity: number }>;
   /** Ground that changes how fast a fence builds across it. */
   fenceZones?: FenceZone[];
   /** Delivery boxes on this map, with their running counts. */

@@ -1011,6 +1011,13 @@ export function GameCanvas({
       // One-way membranes and ball-type gates, keyed by polygon identity, and
       // the fence-speed ground - both already rotated in initGame.
       game.obstacleRules = data.obstacleRules;
+      // Pop bumpers, and their per-frame flash queue. Copied here for the same
+      // reason everything else in this block is: a field this block forgets is
+      // a field that is never set at all, which is exactly how the launcher
+      // shipped inert. launcherWiring.test.ts now fails if a field initGame
+      // returns is never read here.
+      game.bouncers = data.bouncers;
+      game.bouncerFlashes = [];
       game.deliveryBoxes = data.deliveryBoxes;
       game.fenceZones = data.fenceZones;
       // "Wire the Integration" circuit (already rotated + sealed in initGame).

@@ -16,6 +16,7 @@ import { Container, Graphics } from "pixi.js";
 import type { CanvasGameState } from "@/types/gameState";
 import type { Polygon, Vector2 } from "@/lib/polygon";
 import { PALETTE, mix } from "./palette";
+import { BOUNCER_FLASH_MS, type BouncerSpec } from "@/lib/physics/bouncer";
 import { ambientAt, contactFor, facing, shadowFor, slabHeight, type LightScope } from "./light";
 import { anyObstacleImpactsActive, obstacleBulgeAt } from "@/lib/wallImpactEffects";
 import { snapContour, hairline, type Pt } from "./pixelGrid";
@@ -134,6 +135,12 @@ export class EntityLayer {
       // the slab so the cue sits on top of its own face.
       const rule = game.obstacleRules?.get(poly as Polygon);
       if (rule) this.drawPassCue(poly as Polygon, rule, w2s, scale);
+      // Same argument as the pass cue above: a bumper that looks like a pillar
+      // is a pillar the player finds out about by being surprised. Concentric
+      // rings and a lit core, so it reads as sprung rather than solid, and it
+      // flares for a moment after it fires.
+      const bouncer = game.bouncers?.get(poly as Polygon);
+      if (bouncer) this.drawBouncer(poly as Polygon, bouncer, game, w2s, scale);
     }
 
     for (const m of game.movers) {
@@ -155,6 +162,50 @@ export class EntityLayer {
    * should look like it belongs to it. With more than one type admitted the rim
    * alternates between their colours.
    */
+  /**
+   * A pop bumper: concentric rings around a lit core, flaring on a hit.
+   *
+   * Deliberately not the slab treatment every other obstacle gets. The one
+   * thing a player must be able to read before touching it is that this solid
+   * gives energy back, and nothing about a flat face says that. Rings say
+   * "sprung"; the flare is what connects a ball suddenly moving faster to the
+   * thing that made it happen.
+   */
+  private drawBouncer(
+    poly: Polygon, spec: BouncerSpec, game: CanvasGameState, w2s: W2S, scale: number,
+  ): void {
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (const v of poly.vertices) {
+      if (v.x < minX) minX = v.x;
+      if (v.x > maxX) maxX = v.x;
+      if (v.y < minY) minY = v.y;
+      if (v.y > maxY) maxY = v.y;
+    }
+    const c = w2s((minX + maxX) / 2, (minY + maxY) / 2);
+    const r = (Math.min(maxX - minX, maxY - minY) / 2) * scale;
+    if (!(r > 0)) return;
+
+    // How recently it fired, 1 at the moment of the kick down to 0.
+    const now = performance.now();
+    let flare = 0;
+    for (const f of game.bouncerFlashes ?? []) {
+      if (f.id !== spec.id) continue;
+      const t = 1 - (now - f.at) / BOUNCER_FLASH_MS;
+      if (t > flare) flare = Math.min(1, t);
+    }
+
+    const g = this.rims;
+    // Outer ring, thickened by the flare.
+    g.circle(c.x, c.y, r * 0.94)
+      .stroke({ width: Math.max(1.5, (2.5 + flare * 3) * scale), color: PALETTE.bouncer, alpha: 0.75 + flare * 0.25 });
+    // Inner ring.
+    g.circle(c.x, c.y, r * 0.62)
+      .stroke({ width: Math.max(1, 1.8 * scale), color: PALETTE.bouncer, alpha: 0.5 + flare * 0.4 });
+    // The core, which is what actually lights up.
+    g.circle(c.x, c.y, r * (0.3 + flare * 0.22))
+      .fill({ color: PALETTE.bouncer, alpha: 0.45 + flare * 0.55 });
+  }
+
   private drawPassCue(
     poly: Polygon, rule: ObstacleRule, w2s: W2S, scale: number,
   ): void {

@@ -42,6 +42,7 @@ import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/phys
 import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
 import { type LauncherState } from "@/lib/physics/launcher";
 import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
+import { BOUNCER_KICK, BOUNCER_MAX_SPEED_SCALE, type BouncerSpec } from "@/lib/physics/bouncer";
 import { rotateFenceZones } from "@/lib/mapRotation";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
@@ -148,6 +149,7 @@ export interface InitialGameData {
   /** Delivery boxes: four walls with a membrane mouth, and what each wants. */
   deliveryBoxes: DeliveryBoxState[];
   launchers: LauncherState[];
+  bouncers: Map<Polygon, BouncerSpec>;
   /** Fence-speed ground, already rotated into this deal's orientation. */
   fenceZones?: FenceZone[];
   mirrorPolygons: Polygon[];
@@ -232,6 +234,7 @@ export function createInitialGameData(
   // and the phasing system already looks obstacles up this way. A parallel
   // array would be one careless insert from applying the wrong rule.
   const obstacleRules: ObstacleRuleMap = new Map();
+  const bouncers = new Map<Polygon, BouncerSpec>();
   const deliveryBoxes: DeliveryBoxState[] = [];
   const launchers: LauncherState[] = [];
   // Collected in the entity pass and turned into sleeping balls after the
@@ -561,6 +564,26 @@ export function createInitialGameData(
           // The SAME object on both, so a future edit cannot update one path
           // and leave the other solid.
           for (const w of obstacleWalls) w.passRule = rule;
+        }
+        // Pop bumper. Registered on the polygon AND on every edge wall, and for
+        // the same reason the rule above is: an obstacle sits in both collision
+        // systems, so a kick honoured in only one gives a solid that fires from
+        // its face and is inert at its edges.
+        if ((entity as WallEntity).bouncer) {
+          const we = entity as WallEntity;
+          const ob = polygonBounds(obstaclePolygon);
+          const spec: BouncerSpec = {
+            id: entity.id,
+            // Bounds centre, not the authored cx/cy: the polygon is what the
+            // ball actually hits, and it may have been bowed and turned since.
+            centre: { x: (ob.minX + ob.maxX) / 2, y: (ob.minY + ob.maxY) / 2 },
+            kick: Number.isFinite(we.bounceKick) && (we.bounceKick as number) > 0
+              ? (we.bounceKick as number) : BOUNCER_KICK,
+            maxSpeedScale: Number.isFinite(we.bounceMaxSpeedScale) && (we.bounceMaxSpeedScale as number) > 0
+              ? (we.bounceMaxSpeedScale as number) : BOUNCER_MAX_SPEED_SCALE,
+          };
+          bouncers.set(obstaclePolygon, spec);
+          for (const w of obstacleWalls) w.bouncer = spec;
         }
         allWalls.push(...obstacleWalls);
 
@@ -1177,6 +1200,7 @@ export function createInitialGameData(
     obstacleRules,
     deliveryBoxes,
     launchers,
+    bouncers,
     // Rotated here rather than at the consumer: a zone is a rect on the board
     // and has to turn with everything else on it.
     fenceZones: rotateFenceZones(level.fenceZones, mapRotation),
