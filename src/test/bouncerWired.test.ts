@@ -36,7 +36,7 @@ vi.mock("@/lib/gameHaptics", () => ({
 import { createInitialGameData } from "@/lib/initGame";
 import { updateBall } from "@/lib/physics/updateBall";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { BOUNCER_KICK } from "@/lib/physics/bouncer";
+import { BOUNCER_KICK, BOUNCER_HOURS } from "@/lib/physics/bouncer";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
@@ -127,5 +127,78 @@ describe("hitting one actually speeds a ball up", () => {
     // on a renderer draining this.
     const { game } = run(true);
     expect((game.bouncerFlashes ?? []).length).toBeLessThan(10);
+  });
+});
+
+/**
+ * The bank, through the real payment path.
+ *
+ * Tempo pays for shipping early and nothing has ever paid for STAYING, so a
+ * bumper holds a small purse and pays an hour every time a ball strikes it.
+ * Driven through updateBall rather than by re-implementing the decrement,
+ * because a second copy of the rule would agree with a broken first copy.
+ *
+ * The two properties that make a purse safe where a rate would not be: it is
+ * fixed, so parking a ball in a cluster earns nothing extra, and a spent bumper
+ * still bounces, so running one dry does not silently change the board.
+ */
+describe("bumper hours", () => {
+  /** Bounce a ball off the bumper `hits` times and report what it paid. */
+  const rally = (hits: number) => {
+    const d = build(true);
+    const game = { ...d } as unknown as CanvasGameState;
+    game.bouncerOvertime = 0;
+    const spec = [...d.bouncers.values()][0];
+    const ball = game.balls[0];
+    ball.baseSpeed = 250;
+
+    for (let i = 0; i < hits; i++) {
+      // Re-approach from outside the rim each time, and clear the cooldown, so
+      // each pass is a fresh contact rather than one long overlap.
+      ball.position = { x: spec.centre.x - 60 - ball.radius - 2, y: spec.centre.y };
+      ball.velocity = { x: 300, y: 0 };
+      ball.speed = 300;
+      ball.lastBouncerId = undefined;
+      ball.lastBouncerAt = undefined;
+      for (let step = 0; step < 8; step++) updateBall(ball, 1 / 120, game);
+    }
+    return { paid: game.bouncerOvertime ?? 0, left: spec.hours };
+  };
+
+  it("pays an hour for a bump", () => {
+    const one = rally(1);
+    expect(one.paid, "a bump paid nothing").toBe(1);
+    expect(one.left).toBe(BOUNCER_HOURS - 1);
+  });
+
+  it("pays one per bump until the bank is empty", () => {
+    const full = rally(BOUNCER_HOURS);
+    expect(full.paid).toBe(BOUNCER_HOURS);
+    expect(full.left).toBe(0);
+  });
+
+  it("pays nothing more once it is dry, however long the rally", () => {
+    // The property that stops a bumper cluster being a place to park a ball
+    // and walk away.
+    const overrun = rally(BOUNCER_HOURS + 8);
+    expect(overrun.paid, "the bank kept paying after it emptied").toBe(BOUNCER_HOURS);
+    expect(overrun.left).toBe(0);
+  });
+
+  it("keeps kicking after the money runs out", () => {
+    const d = build(true);
+    const game = { ...d } as unknown as CanvasGameState;
+    const spec = [...d.bouncers.values()][0];
+    spec.hours = 0;
+    const ball = game.balls[0];
+    ball.position = { x: spec.centre.x - 60 - ball.radius - 2, y: spec.centre.y };
+    ball.velocity = { x: 300, y: 0 };
+    ball.speed = 300; ball.baseSpeed = 250;
+    let peak = 300;
+    for (let i = 0; i < 40; i++) {
+      updateBall(ball, 1 / 120, game);
+      peak = Math.max(peak, Math.hypot(ball.velocity.x, ball.velocity.y));
+    }
+    expect(peak, "a spent bumper stopped bouncing").toBeCloseTo(300 * BOUNCER_KICK, 0);
   });
 });

@@ -89,6 +89,12 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
   /** Ceiling as a multiple of the ball's base speed (default BOUNCER_MAX_SPEED_SCALE). */
   bounceMaxSpeedScale?: number;
   /**
+   * Overtime hours this bumper holds (default BOUNCER_HOURS). It pays one per
+   * bump until empty, then keeps bouncing for nothing. A bank, not a rate: a
+   * fixed per-map amount that cannot be farmed by stalling.
+   */
+  bounceHours?: number;
+  /**
    * LATCH: this obstacle opens once the player has locked (or smashed) this
    * many things, and stays open. Phasing objects open on a clock; this is the
    * only one that opens because of something the player did, which is what

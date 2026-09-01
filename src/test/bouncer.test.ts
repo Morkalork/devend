@@ -26,7 +26,7 @@
 import { describe, it, expect } from "vitest";
 import {
   bouncerKick, bouncerReady, BOUNCER_COOLDOWN_MS, BOUNCER_KICK,
-  BOUNCER_MAX_SPEED_SCALE, type BouncerSpec,
+  BOUNCER_MAX_SPEED_SCALE, BOUNCER_HOURS, type BouncerSpec,
 } from "@/lib/physics/bouncer";
 import { PHYSICS_STEP, BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
@@ -34,7 +34,7 @@ import type { Ball } from "@/types/game";
 
 const spec = (over: Partial<BouncerSpec> = {}): BouncerSpec => ({
   id: "b1", centre: { x: 0, y: 0 }, kick: BOUNCER_KICK,
-  maxSpeedScale: BOUNCER_MAX_SPEED_SCALE, ...over,
+  maxSpeedScale: BOUNCER_MAX_SPEED_SCALE, hours: BOUNCER_HOURS, ...over,
 });
 
 /** A ball at `pos` moving with `vel`, base speed 250 like a red. */
@@ -238,5 +238,42 @@ describe("a kicker fires along its bearing, not away from itself", () => {
     const hit = bouncerKick(ball({ x: 100, y: 0 }, { x: 750, y: 0 }), spec({ bearing: "left" }));
     expect(hit.speed).toBeCloseTo(750, 6);
     expect(hit.velocity.x).toBeLessThan(0);
+  });
+});
+
+/**
+ * The bank: a reason not to take the quick win.
+ *
+ * Tempo pays for shipping early and nothing has ever paid for staying, so a
+ * bumper holds a small purse and pays a share of it every time a ball strikes
+ * it. The two properties that make the idea safe rather than exploitable are
+ * that the purse is FIXED (it cannot be farmed by parking a ball in a cluster
+ * and walking away) and that a spent bumper still bounces (it is furniture that
+ * was worth something, not a coin that vanishes and changes the board).
+ *
+ * The payout is deliberately routed above the per-map cap rather than through
+ * `greedBonus` where the break bonus goes. Greed is a CAPPED axis: a flat bonus
+ * added inside it is clamped straight back off on any map where the player
+ * earned greed anyway, which is the bug the colored-area share shipped with -
+ * "+9h" displayed for a contribution worth exactly zero. A bumper counts down
+ * in front of the player, so a bump has to be an hour, always.
+ */
+describe("the bank is authored, and an empty one is still a bumper", () => {
+  // What is SPENT is tested through the running game in bouncerWired.test.ts,
+  // against the real payment path. Re-implementing the decrement here would be
+  // a second copy of the one rule, and it would agree with a broken first copy.
+  it("starts with the authored hours", () => {
+    expect(spec().hours).toBe(BOUNCER_HOURS);
+    expect(spec({ hours: 2 }).hours).toBe(2);
+  });
+
+  it("still kicks at full strength when its bank is empty", () => {
+    // A spent bumper is furniture that happened to be worth something. If it
+    // stopped bouncing, running one dry would silently change the board.
+    const rich = bouncerKick(ball({ x: 100, y: 0 }, { x: -200, y: 0 }), spec({ hours: 5 }));
+    const broke = bouncerKick(ball({ x: 100, y: 0 }, { x: -200, y: 0 }), spec({ hours: 0 }));
+    expect(broke.speed).toBeCloseTo(rich.speed, 9);
+    expect(broke.velocity).toEqual(rich.velocity);
+    expect(broke.speed).toBeCloseTo(200 * BOUNCER_KICK, 6);
   });
 });

@@ -42,7 +42,7 @@ import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/phys
 import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
 import { type LauncherState } from "@/lib/physics/launcher";
 import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
-import { BOUNCER_KICK, BOUNCER_MAX_SPEED_SCALE, type BouncerSpec } from "@/lib/physics/bouncer";
+import { BOUNCER_KICK, BOUNCER_HOURS, BOUNCER_MAX_SPEED_SCALE, type BouncerSpec } from "@/lib/physics/bouncer";
 import type { PortalSpec } from "@/lib/physics/portal";
 import type { CageState } from "@/lib/physics/cage";
 import { rotateFenceZones } from "@/lib/mapRotation";
@@ -647,6 +647,8 @@ export function createInitialGameData(
               ? (we.bounceKick as number) : BOUNCER_KICK,
             maxSpeedScale: Number.isFinite(we.bounceMaxSpeedScale) && (we.bounceMaxSpeedScale as number) > 0
               ? (we.bounceMaxSpeedScale as number) : BOUNCER_MAX_SPEED_SCALE,
+            hours: Number.isFinite(we.bounceHours) && (we.bounceHours as number) >= 0
+              ? Math.round(we.bounceHours as number) : BOUNCER_HOURS,
             ...(we.bounceBearing ? { bearing: we.bounceBearing } : {}),
           };
           bouncers.set(obstaclePolygon, spec);

@@ -352,6 +352,7 @@
     "superiorLocks": "Överlägsna lås ({{count}})",
     "zoneLocks": "Zonlås ({{count}})",
     "multiLocks": "Multilås (x{{count}} samtidigt)",
+    "bouncerHours": "Studstimmar",
     "pushBonus": "Pressbonus",
     "pickupBonus": "Power-up-bonus",
     "chestBonus": "Skatt bärgad",
@@ -409,6 +410,11 @@
         "title": "Multilås",
         "body": "Att låsa in flera bollar med ett enda snitt multiplicerar snittets låsintäkt: två samtidigt ger dubbelt, tre ger trippelt, och alla andra multiplikatorer staplas ovanpå. Raden visar bara de timmar som staplingen gav jämfört med att låsa in samma bollar en och en; de räknas redan i din låsintäkt ovan.",
         "tip": "Försegla inte en ficka så fort det är säkert. Låt en andra boll komma in först: ett snitt runt två bollar är mer värt än två snitt runt en."
+      },
+      "bouncerHours": {
+        "title": "Studstimmar",
+        "body": "Varje studsare håller en liten kassa övertid och betalar en timme varje gång en boll träffar den, tills den är tom: grön så länge det finns timmar kvar, röd när den är tömd. Den studsar vidare oavsett. Timmarna betalas ovanpå kartans tak, så varje studs är värd exakt en timme.",
+        "tip": "Det här är belöningen för att INTE skynda. Att bli klar tidigt betalar Tempo-axeln, och en full studsare betalar dig för att låta en boll vara kvar i spel lite längre; en karta med flera tvingar dig att välja vilket du jagar."
       },
       "breakBonus": {
         "title": "Rivningsbonus",

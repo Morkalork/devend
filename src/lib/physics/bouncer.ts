@@ -56,6 +56,20 @@ export interface BouncerSpec {
   /** Ceiling, as a multiple of the ball's OWN base speed. */
   maxSpeedScale: number;
   /**
+   * Overtime hours left in this bumper's bank.
+   *
+   * A bumper pays ONE hour per bump until it runs dry, and then keeps bouncing
+   * for nothing. Mutable, and mutated in place: this object is shared by the
+   * polygon map and every edge wall, so the bank cannot be double-spent by the
+   * two collision systems seeing the same contact - which the one-kick-per-
+   * contact cooldown already guarantees.
+   *
+   * The bank is what makes the idea safe. It is a fixed, visible, per-map
+   * amount, so it cannot be farmed: a player who stalls forever gets exactly
+   * what the map authored and no more.
+   */
+  hours: number;
+  /**
    * KICKER: fire along this fixed bearing instead of radially outward.
    *
    * The difference between a pop bumper and a slingshot, and it is the whole
@@ -70,6 +84,17 @@ export interface BouncerSpec {
 
 /** Authoring defaults, so a map that just says `bouncer: true` gets a good one. */
 export const BOUNCER_KICK = 1.25;
+
+/**
+ * Hours a bumper is worth, and how many it pays per bump.
+ *
+ * Five and one. The point is a reason NOT to take the quick win: Tempo pays for
+ * shipping early, and until now nothing paid for staying. A bank rather than a
+ * rate because a rate is farmable - a player who parked a ball in a bumper
+ * cluster and went to make tea would out-earn one who played well.
+ */
+export const BOUNCER_HOURS = 5;
+export const BOUNCER_HOURS_PER_BUMP = 1;
 export const BOUNCER_MAX_SPEED_SCALE = 2.2;
 
 /**

@@ -1020,6 +1020,7 @@ export function GameCanvas({
       game.portals = data.portals;
       game.cages = data.cages;
       game.bouncerFlashes = [];
+      game.bouncerOvertime = 0;
       game.deliveryBoxes = data.deliveryBoxes;
       game.fenceZones = data.fenceZones;
       // "Wire the Integration" circuit (already rotated + sealed in initGame).
@@ -1597,7 +1598,9 @@ export function GameCanvas({
         spaceBonusMultiplier: activeModifiers.spaceBonusMultiplier,
         // Comp Time pickups raise THIS map's cap; overtime pickups pay after it.
         flatBonus: activeModifiers.overtimeCapBonus + game.pickupCapBonus,
-        postCapBonus: game.pickupOvertime,
+        // Bumper hours pay with the pickups, above the cap: a bumper counts
+        // down from five in front of the player, so one bump must be one hour.
+        postCapBonus: game.pickupOvertime + (game.bouncerOvertime ?? 0),
         // Finishing fast pays a percent of the capped overtime, above the cap.
         shipEarlyPercent,
         // Demolition multiplier: chests/breakables smashed before the push.
@@ -1633,6 +1636,7 @@ export function GameCanvas({
           multiLockBonus: game.multiLockBonus, multiLockBest: game.multiLockBest,
           shipEarlyBonus, clearTimeSeconds: game.clearedActiveSeconds ?? undefined,
           breakBonus: game.breakBonus, breakMultiplier: game.breakMultiplier,
+          bouncerOvertime: game.bouncerOvertime ?? 0,
           pickupBonus: game.pickupOvertime || undefined,
           pickupsClaimed: game.pickupsClaimedLog.length > 0 ? [...game.pickupsClaimedLog] : undefined,
           chestRewards: (game.chestRewardsLog && game.chestRewardsLog.length > 0) ? [...game.chestRewardsLog] : undefined,

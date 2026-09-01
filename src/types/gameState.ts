@@ -118,6 +118,18 @@ export interface CanvasGameState {
    * speeding up, which is the one way this mechanic looks like a bug.
    */
   bouncerFlashes?: Array<{ id: string; x: number; y: number; at: number; intensity: number }>;
+  /**
+   * Overtime collected from bumpers this map.
+   *
+   * Paid ABOVE the per-map cap, with the pickups, and deliberately NOT through
+   * `greedBonus` where the break bonus goes. Greed is a capped axis (25h) and a
+   * flat bonus added inside that cap is clamped straight back off on any map
+   * where the player earned greed anyway - the exact bug the colored-area share
+   * shipped with, displaying "+9h" for a contribution worth zero. A bumper
+   * counts down from five in front of the player, so one bump has to be one
+   * hour, always.
+   */
+  bouncerOvertime?: number;
   /** Ground that changes how fast a fence builds across it. */
   fenceZones?: FenceZone[];
   /** Delivery boxes on this map, with their running counts. */

@@ -352,6 +352,7 @@
     "superiorLocks": "Bloqueos superiores ({{count}})",
     "zoneLocks": "Bloqueos de zona ({{count}})",
     "multiLocks": "Cierre múltiple (x{{count}} a la vez)",
+    "bouncerHours": "Horas de parachoques",
     "pushBonus": "Bono de presión",
     "pickupBonus": "Bono de potenciadores",
     "chestBonus": "Botín obtenido",
@@ -409,6 +410,11 @@
         "title": "Cierre múltiple",
         "body": "Encerrar varias bolas con un solo corte multiplica los ingresos de ese corte: dos a la vez paga el doble, tres el triple, y el resto de multiplicadores se acumulan encima. Esta fila muestra solo las horas que aportó el acumulado frente a encerrarlas una a una; ya están contadas en tus ingresos por cierre de arriba.",
         "tip": "No selles una bolsa en cuanto sea seguro. Deja que entre una segunda bola: un corte alrededor de dos bolas vale más que dos cortes alrededor de una."
+      },
+      "bouncerHours": {
+        "title": "Horas de parachoques",
+        "body": "Cada parachoques guarda un pequeño fondo de horas extra y paga una hora cada vez que una bola lo golpea, hasta agotarse: verde mientras le queden horas, rojo cuando se vacía. Sigue rebotando en cualquier caso. Estas horas se pagan por encima del tope del mapa, así que cada golpe vale exactamente una hora.",
+        "tip": "Es la recompensa por NO correr. Terminar pronto paga el eje de Ritmo, y un parachoques lleno te paga por dejar una bola en juego un poco más; un mapa con varios te obliga a elegir qué persigues."
       },
       "breakBonus": {
         "title": "Bono de demolición",

@@ -116,6 +116,10 @@ export const PALETTE = {
   mirror: 0x88ddff,
   /** Pop bumper: a warm sprung orange, apart from the cool mirror blue. */
   bouncer: 0xffb347,
+  /** A bumper with hours still in it. */
+  bouncerFull: 0x4ade80,
+  /** A bumper that has paid out everything it had. */
+  bouncerSpent: 0xff5b5b,
   /** Portal mouth: a cold violet, so it never reads as the warm sprung bumper. */
   portal: 0xa77cff,
   danger: 0xff2244,

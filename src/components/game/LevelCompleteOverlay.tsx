@@ -156,6 +156,7 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
     zoneLockBonus = 0,
     multiLockBonus = 0,
     multiLockBest = 1,
+    bouncerOvertime = 0,
     pushBonus = 0,
     breakBonus = 0,
     breakMultiplier = 1,
@@ -199,6 +200,10 @@ export function LevelCompleteOverlay({ scoreData, totalScore, onContinue, accent
   // zone row this reports what the play ADDED and is already inside lockBonus,
   // so it must NOT be added to the total again.
   const hasMultiLock = multiLockBest > 1 && multiLockBonus > 0;
+  // Bumper hours. Unlike the two rows above, these are NOT already inside the
+  // lock income: they are paid above the per-map cap with the pickups, so this
+  // row reports hours the player would not otherwise see accounted for.
+  const hasBouncerHours = bouncerOvertime > 0;
   const hasBreakBonus = breakBonus > 0;
   const hasShipEarlyBonus = shipEarlyBonus > 0;
   const hasPushBonus = pushBonus > 0;

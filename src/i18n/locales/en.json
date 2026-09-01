@@ -354,6 +354,7 @@
     "superiorLocks": "Superior Locks ({{count}})",
     "zoneLocks": "Zone Locks ({{count}})",
     "multiLocks": "Multi-Lock (x{{count}} at once)",
+    "bouncerHours": "Bumper Hours",
     "pushBonus": "Push Bonus",
     "pickupBonus": "Power-Up Bonus",
     "breakBonus": "Demolition Bonus",
@@ -412,6 +413,11 @@
         "title": "Multi-Lock",
         "body": "Sealing several balls with a single cut multiplies that cut's lock income: two at once pays double, three pays triple, and every other multiplier stacks on top of it. This row shows only the hours the stacking added over locking the same balls one at a time; they are already counted in your lock income above.",
         "tip": "Do not seal a pocket the moment it is safe. Let a second ball wander in first: one cut around two balls is worth two cuts around one."
+      },
+      "bouncerHours": {
+        "title": "Bumper Hours",
+        "body": "Each bumper holds a small bank of overtime and pays one hour every time a ball strikes it, until it runs dry: green while it still holds hours, red once it is spent. It keeps bouncing either way. These hours are paid on top of the map's cap, so every bump is worth exactly one hour.",
+        "tip": "This is the reward for NOT rushing. Shipping early pays the Tempo axis, and a full bumper pays you to leave a ball in play a little longer; a map with a bumper cluster asks you to decide which of the two you are chasing."
       },
       "breakBonus": {
         "title": "Demolition Bonus",

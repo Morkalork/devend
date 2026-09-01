@@ -7,7 +7,7 @@
 
 import { Ball, Vector2 } from "@/types/game";
 import { gravityStep } from "@/lib/physics/gravity";
-import { bouncerKick, bouncerReady, BOUNCER_FLASH_MS, type BouncerSpec } from "@/lib/physics/bouncer";
+import { bouncerKick, bouncerReady, BOUNCER_FLASH_MS, BOUNCER_HOURS_PER_BUMP, type BouncerSpec } from "@/lib/physics/bouncer";
 import { portalAt, portalExit, portalArrival, portalReady } from "@/lib/physics/portal";
 import { wellStep } from "@/lib/physics/gravityWells";
 import { slowFactorAt } from "@/lib/physics/slowAreas";
@@ -254,6 +254,17 @@ function applyBouncer(
 ): void {
   if (!spec || !bouncerReady(ball, spec, now)) return;
   const hit = bouncerKick(ball, spec);
+  // Spend an hour from the bumper's bank. In here rather than in bouncerKick
+  // because the kick is pure geometry and this is a payment - and because the
+  // cooldown that makes one contact one kick is what makes it one hour too.
+  //
+  // A spent bumper still bounces. It is furniture that happened to be worth
+  // something, not a coin that vanishes.
+  if (spec.hours > 0) {
+    const paid = Math.min(BOUNCER_HOURS_PER_BUMP, spec.hours);
+    spec.hours -= paid;
+    game.bouncerOvertime = (game.bouncerOvertime ?? 0) + paid;
+  }
   ball.velocity = hit.velocity;
   ball.speed = hit.speed;
   ball.lastBouncerId = spec.id;

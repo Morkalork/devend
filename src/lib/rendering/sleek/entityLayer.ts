@@ -200,16 +200,24 @@ export class EntityLayer {
       if (t > flare) flare = Math.min(1, t);
     }
 
+    // GREEN while it still holds hours, RED once it is spent. The bank is the
+    // reason to keep a ball in play rather than take the quick win, so whether
+    // there is anything left in it has to be readable from across the board -
+    // and readable at a glance, not by remembering how many times it has been
+    // hit. Colour rather than a number for the same reason: at a phone's scale
+    // a digit inside a 40-pixel ring is not information.
+    const colour = spec.hours > 0 ? PALETTE.bouncerFull : PALETTE.bouncerSpent;
     const g = this.rims;
     // Outer ring, thickened by the flare.
     g.circle(c.x, c.y, r * 0.94)
-      .stroke({ width: Math.max(1.5, (2.5 + flare * 3) * scale), color: PALETTE.bouncer, alpha: 0.75 + flare * 0.25 });
+      .stroke({ width: Math.max(1.5, (2.5 + flare * 3) * scale), color: colour, alpha: 0.75 + flare * 0.25 });
     // Inner ring.
     g.circle(c.x, c.y, r * 0.62)
-      .stroke({ width: Math.max(1, 1.8 * scale), color: PALETTE.bouncer, alpha: 0.5 + flare * 0.4 });
-    // The core, which is what actually lights up.
+      .stroke({ width: Math.max(1, 1.8 * scale), color: colour, alpha: 0.5 + flare * 0.4 });
+    // The core, which is what actually lights up. A spent bumper's core is
+    // hollow: it is still a bumper, and it is visibly no longer worth aiming at.
     g.circle(c.x, c.y, r * (0.3 + flare * 0.22))
-      .fill({ color: PALETTE.bouncer, alpha: 0.45 + flare * 0.55 });
+      .fill({ color: colour, alpha: spec.hours > 0 ? 0.45 + flare * 0.55 : 0.12 + flare * 0.3 });
   }
 
   /**
