@@ -4,6 +4,7 @@ import { AreaKind, ColoredArea, LevelConfig, BallConfig, LevelEntity, WallRectEn
 import { makeColoredArea } from '@/lib/coloredAreas';
 import { DEFAULT_MOVER_RANGE, DEFAULT_MOVER_SPEED } from '@/lib/moverPath';
 import { MapCanvas } from './MapCanvas';
+import type { AddEntityType } from './EntityPanel';
 import { EntityPanel } from './EntityPanel';
 import { LevelPanel } from './LevelPanel';
 import yaml from 'js-yaml';
@@ -247,7 +248,7 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
   }, [levels, commitLevels]);
 
   // Add entity (obstacle)
-  const addEntity = useCallback((type: 'circle' | 'polygon' | 'rect' | 'mover-rect' | 'mover-circle') => {
+  const addEntity = useCallback((type: AddEntityType) => {
     if (!currentLevel) return;
 
     let newEntity: LevelEntity;
@@ -269,6 +270,59 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       newEntity = type === 'mover-circle'
         ? { id, ...common, shape: 'circle', cx: 450, cy: 450, radius: 40 }
         : { id, ...common, shape: 'rect', x: 400, y: 437, width: 100, height: 26 };
+    } else if (type === 'bouncer' || type === 'kicker') {
+      // A bumper is a wall with a flag, but it gets its own button: nobody
+      // finds a mechanic by placing a circle and then hunting for a checkbox,
+      // which is exactly the report this exists to answer. Sized and banked to
+      // the shipped defaults so a placed one is immediately a working bumper.
+      newEntity = {
+        id: `bumper-${Date.now()}`,
+        kind: 'wall',
+        shape: 'circle',
+        cx: 450,
+        cy: 450,
+        radius: 42,
+        bouncer: true,
+        ...(type === 'kicker' ? { bounceBearing: 'right' as const } : {}),
+      };
+    } else if (type === 'launcher') {
+      newEntity = {
+        id: `launcher-${Date.now()}`,
+        kind: 'launcher',
+        shape: 'rect',
+        x: 330,
+        y: 400,
+        width: 240,
+        // 110, not less: a narrower bore rasterises to a staircase that erodes
+        // into disconnected cells and seals its own balls off from the board.
+        // See launcherBarrel.test.ts, which pins it.
+        height: 110,
+        facing: 'right',
+      };
+    } else if (type === 'cage') {
+      newEntity = {
+        id: `cage-${Date.now()}`,
+        kind: 'cage',
+        shape: 'rect',
+        x: 360,
+        y: 390,
+        width: 180,
+        height: 180,
+        facing: 'up',
+        holdSeconds: 12,
+      };
+    } else if (type === 'box') {
+      newEntity = {
+        id: `box-${Date.now()}`,
+        kind: 'box',
+        shape: 'rect',
+        x: 360,
+        y: 390,
+        width: 180,
+        height: 180,
+        mouth: 'up',
+        capacity: 1,
+      };
     } else if (type === 'circle') {
       newEntity = {
         id: `wall-${Date.now()}`,
@@ -297,6 +351,26 @@ export function MapBuilder({ onBack }: MapBuilderProps) {
       };
     }
     
+    // A portal is the one object that is meaningless alone: a lone link is
+    // inert by design, so the button places BOTH ends already linked rather
+    // than leaving the second one as a step you can forget.
+    if (type === 'portal') {
+      const link = `p${Date.now().toString(36).slice(-4)}`;
+      const mk = (n: number, cx: number, cy: number): LevelEntity => ({
+        id: `portal-${Date.now()}-${n}`,
+        kind: 'wall', shape: 'circle', cx, cy, radius: 45, portal: link,
+      });
+      const pair = [mk(1, 250, 250), mk(2, 650, 650)];
+      updateLevel({
+        ...currentLevel,
+        entities: [...(currentLevel.entities || []), ...pair],
+      });
+      setSelectedEntityId(pair[0].id);
+      setSelectedBallId(null);
+      setSelectedAreaIndex(null);
+      return;
+    }
+
     updateLevel({
       ...currentLevel,
       entities: [...(currentLevel.entities || []), newEntity],

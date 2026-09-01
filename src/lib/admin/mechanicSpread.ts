@@ -56,6 +56,17 @@ export const MECHANICS: Mechanic[] = [
   { key: "oneWay", label: "One-way", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.oneWay) },
   { key: "gate", label: "Ball gate", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.passTypes?.length) },
   { key: "fenceGround", label: "Fence ground", headline: true, detect: l => !!l.fenceZones?.length },
+  // The machines. Registered here for the reason this file exists: its job is
+  // finding mechanics the engine supports and no map uses, and a mechanic it
+  // has never heard of is invisible to exactly the tool meant to surface quiet
+  // ones. The launcher and the bumper both shipped unregistered.
+  { key: "launcher", label: "Launcher", headline: true, detect: l => anyEntity(l, e => e.kind === "launcher") },
+  { key: "cage", label: "Cage", headline: true, detect: l => anyEntity(l, e => e.kind === "cage") },
+  { key: "box", label: "Delivery box", headline: true, detect: l => anyEntity(l, e => e.kind === "box") },
+  { key: "bouncer", label: "Bumper", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.bouncer) },
+  { key: "portal", label: "Portal", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && !!e.portal) },
+  { key: "latch", label: "Latch", headline: true, detect: l => anyEntity(l, e => e.kind === "wall" && e.latchAfter !== undefined) },
+  { key: "rotor", label: "Rotor", headline: true, detect: l => anyEntity(l, e => e.kind === "mover" && e.motion === "rotate") },
   { key: "gravityWell", label: "Gravity well", headline: true, detect: l => !!l.gravityWells?.length },
   { key: "coloredArea", label: "Colored area", headline: true, detect: l => !!l.coloredAreas?.length },
   { key: "circuit", label: "Terminals", headline: true, detect: l => !!l.circuit },

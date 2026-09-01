@@ -1,7 +1,7 @@
 import type { Bearing } from '@/lib/physics/obstacleRules';
 import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed,
   ArrowDownToLine, ArrowUpToLine, ArrowLeftToLine, ArrowRightToLine,
-  MoveHorizontal, MoveVertical, CircleDot, Timer, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap } from 'lucide-react';
+  MoveHorizontal, MoveVertical, CircleDot, Timer, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap, Target, Send, Rocket, Lock, Package } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell, WellPull } from '@/types/level';
 import { AREA_KINDS, AREA_MIN_SIZE, areaStyle } from '@/lib/coloredAreas';
 import {
@@ -25,6 +25,21 @@ const PULL_ICON: Record<WellPull, typeof ArrowDownToLine> = {
   right: ArrowRightToLine,
 };
 
+/**
+ * Everything the palette can place.
+ *
+ * Exported and shared with MapBuilder rather than written out at both ends: the
+ * two lists had already drifted once - the launcher, the delivery box and the
+ * cage all existed as entity kinds, with property editors, and none of them
+ * could be CREATED, so the only way to get one onto a map was to hand-edit the
+ * YAML. A mechanic nobody can place is a mechanic nobody has.
+ */
+export type AddEntityType =
+  | 'circle' | 'polygon' | 'rect'
+  | 'mover-rect' | 'mover-circle'
+  | 'bouncer' | 'kicker' | 'portal'
+  | 'launcher' | 'cage' | 'box';
+
 interface EntityPanelProps {
   level: LevelConfig;
   selectedEntityId: string | null;
@@ -33,7 +48,7 @@ interface EntityPanelProps {
   onSelectEntity: (id: string | null) => void;
   onSelectBall: (id: string | null) => void;
   onSelectArea: (index: number | null) => void;
-  onAddEntity: (type: 'circle' | 'polygon' | 'rect' | 'mover-rect' | 'mover-circle') => void;
+  onAddEntity: (type: AddEntityType) => void;
   onAddBall: () => void;
   onAddArea: (kind: AreaKind) => void;
   onDeleteEntity: (id: string) => void;
@@ -363,6 +378,60 @@ export function EntityPanel({
               title="Add moving circle"
             >
               <CircleDot className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* The behaving objects, on their own row.
+            Bumpers, portals, launchers and cages were all reachable ONLY by
+            placing a plain shape and finding the right checkbox - and the
+            launcher, the delivery box and the cage were not reachable at all,
+            because no button created their kind. A mechanic nobody can place is
+            a mechanic nobody has, which is exactly how it was reported. */}
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-muted-foreground">Machines</h3>
+          <div className="flex gap-1">
+            <button
+              onClick={() => onAddEntity('bouncer')}
+              className="p-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors"
+              title="Add bumper (kicks balls away, faster; holds overtime hours)"
+            >
+              <Target className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onAddEntity('kicker')}
+              className="p-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors"
+              title="Add kicker (a bumper that always fires the same way)"
+            >
+              <Send className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onAddEntity('portal')}
+              className="p-1.5 rounded bg-violet-500/20 hover:bg-violet-500/30 text-violet-400 transition-colors"
+              title="Add a linked portal PAIR (a lone portal is inert)"
+            >
+              <CircleDot className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onAddEntity('launcher')}
+              className="p-1.5 rounded bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 transition-colors"
+              title="Add launcher (holds the map's balls until you fire them)"
+            >
+              <Rocket className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onAddEntity('cage')}
+              className="p-1.5 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 transition-colors"
+              title="Add cage (shuts behind a ball, opens on a timer)"
+            >
+              <Lock className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => onAddEntity('box')}
+              className="p-1.5 rounded bg-sky-500/20 hover:bg-sky-500/30 text-sky-400 transition-colors"
+              title="Add delivery box (a one-way membrane; balls in are delivered)"
+            >
+              <Package className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
