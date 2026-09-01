@@ -40,6 +40,8 @@ import { decoratePolygon } from "@/lib/obstacleDecorations";
 import { bendOutline, bowOutline, hasAngle, hasBend, shapeOutline, turnOutline } from "@/lib/bend";
 import { isEmptyRule, type ObstacleRule, type ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import { INWARD_FROM_MOUTH, type DeliveryBoxState, type Mouth } from "@/lib/physics/deliveryBox";
+import { type LauncherState } from "@/lib/physics/launcher";
+import { type LaunchFacing } from "@/lib/launcher";
 import { rotateFenceZones } from "@/lib/mapRotation";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
@@ -145,6 +147,7 @@ export interface InitialGameData {
   obstacleRules: ObstacleRuleMap;
   /** Delivery boxes: four walls with a membrane mouth, and what each wants. */
   deliveryBoxes: DeliveryBoxState[];
+  launchers: LauncherState[];
   /** Fence-speed ground, already rotated into this deal's orientation. */
   fenceZones?: FenceZone[];
   mirrorPolygons: Polygon[];
@@ -230,6 +233,13 @@ export function createInitialGameData(
   // array would be one careless insert from applying the wrong rule.
   const obstacleRules: ObstacleRuleMap = new Map();
   const deliveryBoxes: DeliveryBoxState[] = [];
+  const launchers: LauncherState[] = [];
+  // Collected in the entity pass and turned into sleeping balls after the
+  // roster is built, the same two-stage shape the circuit's terminals use.
+  const launcherSpecs: Array<{
+    id: string; facing: LaunchFacing; ballType?: string;
+    inner: { x: number; y: number; width: number; height: number };
+  }> = [];
   const reservingBoxes: Array<{ id: string; poly: Polygon }> = [];
   const mirrorPolygons:   Polygon[] = [];
   const destructibles:    DestructibleState[] = [];
@@ -326,6 +336,32 @@ export function createInitialGameData(
   if (allEntities.length > 0) {
     let obstacleIndex = 0;
     for (const entity of allEntities) {
+      if (entity.kind === "launcher") {
+        // THREE walls, not four: the side named by `facing` is left open so the
+        // ball can leave and so the empty shell is still worth fencing around
+        // afterwards. Otherwise identical to a delivery box, deliberately - a
+        // cup and a box are the same construction with a different missing side.
+        const T = BOX_WALL_THICKNESS;
+        const { x, y, width: w, height: h } = entity;
+        const sides: Array<{ side: LaunchFacing; poly: Polygon }> = [
+          { side: "up",    poly: createRectPolygon(x,         y,         x + w,     y + T) },
+          { side: "down",  poly: createRectPolygon(x,         y + h - T, x + w,     y + h) },
+          { side: "left",  poly: createRectPolygon(x,         y,         x + T,     y + h) },
+          { side: "right", poly: createRectPolygon(x + w - T, y,         x + w,     y + h) },
+        ];
+        for (const { side, poly } of sides) {
+          if (side === entity.facing) continue; // the muzzle
+          obstaclePolygons.push(poly);
+          allWalls.push(...createWallsFromPolygon(poly, `launcher-${entity.id}-${side}`, false));
+        }
+        launcherSpecs.push({
+          id: entity.id,
+          facing: entity.facing,
+          ballType: entity.ballType,
+          inner: { x: x + T, y: y + T, width: w - 2 * T, height: h - 2 * T },
+        });
+        continue;
+      }
       if (entity.kind === "box") {
         // Four walls around the rect, one of them a membrane. Built here rather
         // than authored as four entities so a box is one thing a designer moves
@@ -912,6 +948,30 @@ export function createInitialGameData(
     circuitRuntime = { terminals, announce: circuit.announce };
   }
 
+  // Launcher cups: one sleeping ball each, sitting in the middle of its cup.
+  //
+  // Dormant for the same reason the circuit's sleepers are, and it is doing
+  // more work here than it looks: a dormant ball anchors reachability, so the
+  // region holding an unfired cup cannot be captured. Without that a player
+  // could fence the ball in before ever pulling the plunger and take the map
+  // without making the wager.
+  for (const spec of launcherSpecs) {
+    const redType = getBallType("red");
+    const type = (spec.ballType ? getBallType(spec.ballType) : undefined)
+      ?? selectedTypes[0] ?? redType!;
+    const id = `launch-${spec.id}`;
+    const at = {
+      x: spec.inner.x + spec.inner.width / 2,
+      y: spec.inner.y + spec.inner.height / 2,
+    };
+    const ball = createBall(type, at, 1, ballRadius, id, spawnTime, 0);
+    ball.state = "dormant";
+    ball.speed = 0;
+    ball.velocity = { x: 0, y: 0 };
+    balls.push(ball);
+    launchers.push({ id: spec.id, inner: spec.inner, facing: spec.facing, ballId: id, fired: false });
+  }
+
   const gridRegions = findGridRegions(spaceGrid);
 
   // Inflate the percentage baseline so the remaining% starts at targetRemaining
@@ -1055,6 +1115,7 @@ export function createInitialGameData(
     obstaclePolygons,
     obstacleRules,
     deliveryBoxes,
+    launchers,
     // Rotated here rather than at the consumer: a zone is a rect on the board
     // and has to turn with everything else on it.
     fenceZones: rotateFenceZones(level.fenceZones, mapRotation),

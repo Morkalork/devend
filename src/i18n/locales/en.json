@@ -268,6 +268,10 @@
     "circuitTutorialBody": "Draw a fence past a teal node to wake its sleeping ball. Sleepers hold their space shut until woken, then you trap them. Wake one at a time.",
     "boxIntroTitle": "✦ The Done Column",
     "boxIntroBody": "One side of this box is a membrane: balls go in, and cannot come back out. Herd them in to fill it. Until it is full it holds its own floor off the board, so you cannot finish without feeding it.",
+    "launcherIntroTitle": "The Launcher",
+    "launcherIntroBody": "This map starts in a launcher, and nothing moves until you fire it. Drag back anywhere on the board and release: the direction you pull is the direction the ball will not go, and the further you pull, the faster it leaves.\n\nThe speed is permanent. A ball fired at 2x is still travelling at 2x when you seal it, for the whole map, so a hard shot is a harder map.\n\nThat is what you are paid for: the map's base pay is multiplied by the power you fired at. Pull hard and the map is worth more before you cut a single fence. The empty launcher stays on the board as an obstacle.",
+    "launcherTutorialTitle": "The Launcher",
+    "launcherTutorialBody": "A three-sided cup holding the map's ball asleep. Nothing moves until you pull back and release, and the pull sets both the direction and the speed.\n\nThe speed never fades: a ball fired at 2x travels at 2x until you seal it. So the map's base pay is multiplied by the power you fired at, and a hard shot buys a more valuable but genuinely harder map. The empty cup stays as an obstacle.",
     "boxTutorialTitle": "✦ The Done Column",
     "boxTutorialBody": "One side of this box is a membrane: balls go in, and cannot come back out. Herd them in to fill it. Until it is full it holds its own floor off the board, so you cannot finish without feeding it.",
     "chargeTutorialTitle": "✦ Deploy Charge",
@@ -1148,5 +1152,9 @@
     "allLocked": "All locked",
     "underPar": "Under par",
     "speedClear": "On the clock"
+  },
+  "launcher": {
+    "pullToLaunch": "Pull back and release to launch",
+    "basePay": "Base x{{multiplier}}"
   }
 }

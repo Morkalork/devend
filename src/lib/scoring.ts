@@ -12,6 +12,7 @@
 import yaml from 'js-yaml';
 import { ScoringConfig, ScoreBreakdown, ShipEarlyThreshold, AxisCeilings, BankedAxes } from '@/types/scoring';
 import { bankAxes } from '@/lib/scoreAxes';
+import { launchPayMultiplier } from "@/lib/launcher";
 import { withheldFromPay } from "@/lib/coloredAreaShare";
 
 /**
@@ -404,6 +405,13 @@ export interface ScoreOptions {
   /** The Ship Early ladder's awarded percent, which Tempo is scored on. */
   shipEarlyPercent?: number;
   /**
+   * The power the map's launcher was fired at, multiplying the flat base.
+   *
+   * Absent or 1 on every map without a launcher, which is what keeps the other
+   * 34 maps scoring exactly as they did.
+   */
+  launchPower?: number;
+  /**
    * The map's win premium, in percent, from the win conditions it actually met
    * (see winSpec.ts). Scales the map's EARNED pay - the flat base plus the five
    * axes - and nothing else: pickups, objective rewards and the mutator's
@@ -481,9 +489,18 @@ export function calculateScore(
   );
 
   // Guard against a NaN/negative scoreMultiplier leaking in from bad config.
-  const { zoneShareMissed = 0 } = options;
+  const { zoneShareMissed = 0, launchPower = 1 } = options;
   const safeMultiplier = Number.isFinite(scoreMultiplier) && scoreMultiplier > 0 ? scoreMultiplier : 1;
-  const multipliedBase = Math.floor(basePoints * breakdown.performanceMultiplier * safeMultiplier);
+  // A launcher map is bought at the power it was fired at. It multiplies the
+  // BASE and nothing else, which is the one term no axis ceiling can swallow:
+  // routed through lock quality it would bank into Craft, and Craft is capped
+  // with several routes to the same ceiling, so a hard shot on a map where
+  // superior locks were already available would have paid exactly nothing.
+  // See src/lib/launcher.ts. 1 on every map without a launcher.
+  const launchMult = launchPayMultiplier(launchPower);
+  const multipliedBase = Math.floor(
+    basePoints * breakdown.performanceMultiplier * safeMultiplier * launchMult,
+  );
   const safeFlat = Number.isFinite(flatBonus) && flatBonus > 0 ? Math.round(flatBonus) : 0;
   const safePostCap = Number.isFinite(postCapBonus) && postCapBonus > 0 ? Math.round(postCapBonus) : 0;
 

@@ -123,3 +123,6 @@ export const LEGACY_CIRCUIT_SEEN_KEY = "devend_circuit_tutorial_seen";
 
 /** One-time flag for the delivery-box explainer. Swept by resetAllTutorials. */
 export const BOX_SEEN_KEY = "devend_box_tutorial_seen";
+
+/** One-time flag for the launcher explainer. Swept by resetAllTutorials. */
+export const LAUNCHER_SEEN_KEY = "devend_launcher_tutorial_seen";

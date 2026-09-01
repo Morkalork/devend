@@ -37,7 +37,7 @@ import { TutorialOverlay } from './TutorialOverlay';
 import { LockDebugOverlay } from './LockDebugOverlay';
 import { isLockDebugEnabled } from '@/lib/lockDiagnostics';
 import { fileManualEntry } from '@/lib/manual';
-import { circuitSeenKey, FIRST_CIRCUIT_MAP_ID, LEGACY_CIRCUIT_SEEN_KEY, BOX_SEEN_KEY } from '@/lib/circuitHint';
+import { circuitSeenKey, FIRST_CIRCUIT_MAP_ID, LEGACY_CIRCUIT_SEEN_KEY, BOX_SEEN_KEY, LAUNCHER_SEEN_KEY } from '@/lib/circuitHint';
 import { isStaticBgEnabled } from '@/lib/rendering/perfStats';
 import { MoverArt, BreakArt, CircuitArt, PickupArt, FenceArt } from './TutorialArt';
 import { BossBanner } from './BossBanner';
@@ -316,6 +316,18 @@ export function GameScreen({
     try { seen = !!localStorage.getItem(BOX_SEEN_KEY); } catch { /* ignore */ }
     setShowBoxIntro(!seen);
   }, [levelHasBox, level.id]);
+
+  // The launcher: the map does not start until you fire it, and the shot sets
+  // the map's difficulty AND its pay for good. A player who does not know that
+  // will flick it and never learn what the pull was for, so it earns a modal.
+  const levelHasLauncher = (level.entities ?? []).some(e => e.kind === 'launcher');
+  const [showLauncherIntro, setShowLauncherIntro] = useState(false);
+  useEffect(() => {
+    if (!levelHasLauncher) { setShowLauncherIntro(false); return; }
+    let seen = false;
+    try { seen = !!localStorage.getItem(LAUNCHER_SEEN_KEY); } catch { /* ignore */ }
+    setShowLauncherIntro(!seen);
+  }, [levelHasLauncher, level.id]);
 
   // "Wire the Integration" intro — shown the first time EACH circuit map loads.
   //
@@ -744,7 +756,7 @@ export function GameScreen({
   // explainer.
   const anyExplainerModal =
     showTimeLimitOverlay || showCreepOverlay || showBossOverlay || showWinModal
-    || fenceIntroOpen || ascModalOpen || showBoxIntro;
+    || fenceIntroOpen || ascModalOpen || showBoxIntro || showLauncherIntro;
 
 
   // Mechanics the player has just met. These used to stop the game to deliver a
@@ -1342,6 +1354,17 @@ export function GameScreen({
             body: announcement.body,
             onDismiss: () => setAscModalOpen(false),
           }] : []),
+          {
+            show: showLauncherIntro,
+            accentColor: '#ffb347',
+            title: t('game.launcherIntroTitle'),
+            body: t('game.launcherIntroBody'),
+            onDismiss: () => {
+              fileManualEntry('launcher');
+              setShowLauncherIntro(false);
+              try { localStorage.setItem(LAUNCHER_SEEN_KEY, '1'); } catch { /* ignore */ }
+            },
+          },
           {
             show: showBoxIntro,
             accentColor: '#ffb347',

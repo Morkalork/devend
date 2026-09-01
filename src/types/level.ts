@@ -128,7 +128,7 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
 export type WallRectEntity = WallEntity & RectShape;
 export type WallPolygonEntity = WallEntity & PolygonShape;
 export type WallCircleEntity = WallEntity & CircleShape;
-export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity | LevelMoverEntity | BoxRectEntity;
+export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity | LevelMoverEntity | BoxRectEntity | LauncherRectEntity;
 
 /** True when the entity is a wall with the mirror flag set. Movers can never be mirrors. */
 export function isMirrorEntity(entity: LevelEntity): boolean {
@@ -171,6 +171,30 @@ export interface BoxEntity extends BaseEntity, BendShapeFields {
   reserves?: boolean;
 }
 export type BoxRectEntity = BoxEntity & RectShape;
+
+/**
+ * A launcher: a three-sided cup holding a ball asleep until the player fires it.
+ *
+ * The side named by `facing` is left OPEN - the cup is built from the other
+ * three - so the ball leaves that way and the empty shell stays on the board as
+ * an ordinary obstacle for the rest of the map. That is the whole reason it is
+ * a cup rather than a pad: it has to be worth fencing around afterwards.
+ *
+ * The launch power multiplies the map's base pay and the ball's speed FOR THE
+ * WHOLE MAP, so a launcher map is authored knowing the player chooses its
+ * difficulty. See src/lib/launcher.ts for why the payout lands on the base.
+ */
+export interface LauncherEntity extends BaseEntity, BendShapeFields {
+  kind: "launcher";
+  /** The open side. The ball fires out of it, within a cone (LAUNCH_SPREAD). */
+  facing: "up" | "down" | "left" | "right";
+  /**
+   * Ball type loaded into the cup. Defaults to the map's first selected type,
+   * the same fallback the circuit's sleepers take.
+   */
+  ballType?: string;
+}
+export type LauncherRectEntity = LauncherEntity & RectShape;
 
 // ── Mover entities — obstacles that oscillate back and forth ──────────────
 export interface MoverEntityBase extends BaseEntity, BendShapeFields {

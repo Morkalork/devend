@@ -276,6 +276,10 @@
     "circuitTutorialBody": "Dra ett stängsel förbi en turkos nod för att väcka dess sovande boll. Sovande håller sin yta tills de väcks, sen fångar du dem. En i taget.",
     "boxIntroTitle": "✦ Klart-kolumnen",
     "boxIntroBody": "En sida av lådan är ett membran: bollar kommer in men aldrig ut. Valla in dem för att fylla den. Tills den är full håller den sitt eget golv utanför spelplanen, så du kan inte bli klar utan att mata den.",
+    "launcherIntroTitle": "Avfyraren",
+    "launcherIntroBody": "Den har banan borjar i en avfyrare, och ingenting ror sig forran du skjuter. Dra bakat var som helst pa planen och slapp: riktningen du drar ar den riktning bollen inte akar, och ju langre du drar, desto snabbare lamnar den.\n\nFarten ar permanent. En boll som skjuts i 2x hastighet holler 2x nar du forseglar den, hela banan igenom, sa ett hart skott ar en svarare bana.\n\nDet ar det du far betalt for: banans grundpoang multipliceras med kraften du skot med. Dra hart och banan ar vard mer innan du dragit ett enda stangsel. Den tomma avfyraren star kvar pa planen som ett hinder.",
+    "launcherTutorialTitle": "Avfyraren",
+    "launcherTutorialBody": "En kopp med tre sidor som haller banans boll sovande. Ingenting ror sig forran du drar tillbaka och slapper, och draget bestammer bade riktning och fart.\n\nFarten avtar aldrig: en boll som skjuts i 2x holler 2x tills du forseglar den. Darfor multipliceras banans grundpoang med kraften du skot med, och ett hart skott koper en mer vardefull men svarare bana. Den tomma koppen star kvar som ett hinder.",
     "boxTutorialTitle": "✦ Klart-kolumnen",
     "boxTutorialBody": "En sida av lådan är ett membran: bollar kommer in men aldrig ut. Valla in dem för att fylla den. Tills den är full håller den sitt eget golv utanför spelplanen, så du kan inte bli klar utan att mata den.",
     "topBarTutorialTitle": "Den övre listen",
@@ -1681,5 +1685,9 @@
     "allLocked": "Alla lasta",
     "underPar": "Under par",
     "speedClear": "Mot klockan"
+  },
+  "launcher": {
+    "pullToLaunch": "Dra tillbaka och slapp for att skjuta",
+    "basePay": "Bas x{{multiplier}}"
   }
 }

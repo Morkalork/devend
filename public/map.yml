@@ -556,6 +556,14 @@ levels:
   # act I taught about breakables costing you time for nothing but space. The
   # cover in front of it means smashing is a two-step commitment, not a reflex.
   # Rainbow balls unlock here (balls.yml), so the map stays otherwise plain.
+  #
+  # It is also the launcher's debut, and the two share a theme rather than
+  # competing: both are a bet you place before you know how the map goes. The
+  # cup sits on the left aimed through the gap in the spine, so a full-power
+  # shot is a clean run into the right half and an over-aimed one buries a very
+  # fast ball in the cramped left side with the chest. Base pay is multiplied by
+  # the power fired at, so the wager is priced in before the first fence.
+  # maxBalls drops to 2 because the launcher adds the third.
   - id: level-11
     level: 11
     sizeThreshold: 16
@@ -563,8 +571,16 @@ levels:
     points: 20
     variety: 12
     randomShapes: 10
-    maxBalls: 3
+    maxBalls: 2
     entities:
+      - id: plunger-11
+        kind: launcher
+        shape: rect
+        x: 60
+        'y': 440
+        width: 110
+        height: 92
+        facing: right
       - id: chest-cover
         kind: wall
         shape: rect

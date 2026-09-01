@@ -1,6 +1,7 @@
+import type { Bearing } from '@/lib/physics/obstacleRules';
 import { Plus, Trash2, Circle, Pentagon, Square, Copy, SquareDashed,
   ArrowDownToLine, ArrowUpToLine, ArrowLeftToLine, ArrowRightToLine,
-  MoveHorizontal, MoveVertical, CircleDot, Timer } from 'lucide-react';
+  MoveHorizontal, MoveVertical, CircleDot, Timer, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Zap } from 'lucide-react';
 import { AreaKind, ColoredArea, LevelConfig, LevelEntity, isMirrorEntity, BallConfig, WallCircleEntity, WallPolygonEntity, WallRectEntity, GravityWell, WellPull } from '@/types/level';
 import { AREA_KINDS, AREA_MIN_SIZE, areaStyle } from '@/lib/coloredAreas';
 import {
@@ -424,6 +425,19 @@ export function EntityPanel({
             <MoverEditor
               entity={selectedEntity}
               onUpdate={(updates) => onUpdateEntity(selectedEntity.id, updates as Partial<LevelEntity>)}
+            />
+          )}
+
+          {(selectedEntity.kind === 'launcher' || selectedEntity.kind === 'box') && (
+            <BearingEditor
+              kind={selectedEntity.kind}
+              bearing={selectedEntity.kind === 'launcher' ? selectedEntity.facing : selectedEntity.mouth}
+              onUpdate={(bearing) => onUpdateEntity(
+                selectedEntity.id,
+                (selectedEntity.kind === 'launcher'
+                  ? { facing: bearing }
+                  : { mouth: bearing }) as Partial<LevelEntity>,
+              )}
             />
           )}
 
@@ -1129,6 +1143,64 @@ function BallEditor({ ball, onUpdate }: { ball: BallConfig; onUpdate: (updates: 
  * owes the author is the arithmetic they were doing in their head: where does
  * this thing actually GET to, and how long does it take to get there.
  */
+/**
+ * The one side that is different: a launcher's open muzzle, a box's membrane.
+ *
+ * Both are the same authored thing - a bearing naming one side of a rect - and
+ * both are invisible in a plain rect editor, so a designer had to remember
+ * which way `facing: right` pointed and check by playing the map. Shared
+ * because they must never drift: they rotate through the same rule and a panel
+ * that showed them differently would suggest they were different kinds of
+ * field.
+ */
+function BearingEditor({ kind, bearing, onUpdate }: {
+  kind: 'launcher' | 'box';
+  bearing: Bearing;
+  onUpdate: (bearing: Bearing) => void;
+}) {
+  const label = kind === 'launcher' ? 'Fires out of' : 'Membrane on';
+  const ICON: Record<Bearing, typeof ArrowUp> = {
+    up: ArrowUp, down: ArrowDown, left: ArrowLeft, right: ArrowRight,
+  };
+  return (
+    <div className="space-y-2 rounded border border-orange-400/40 bg-orange-400/10 p-2">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-300">
+        <Zap className="w-3.5 h-3.5" />
+        {kind === 'launcher' ? 'Launcher' : 'Delivery box'}
+      </div>
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="flex gap-1">
+        {(['up', 'down', 'left', 'right'] as const).map(b => {
+          const active = bearing === b;
+          const Icon = ICON[b];
+          return (
+            <button
+              key={b}
+              onClick={() => onUpdate(b)}
+              className="flex-1 flex items-center justify-center gap-1 rounded px-1.5 py-1 text-[11px] transition-colors"
+              style={{
+                color: active ? '#0b0b12' : '#fdba74',
+                backgroundColor: active ? '#fdba74' : '#fdba7422',
+                border: `1px solid #fdba74${active ? 'ff' : '66'}`,
+              }}
+              title={`${label} the ${b} side`}
+            >
+              <Icon className="w-3 h-3" />
+              {b}
+            </button>
+          );
+        })}
+      </div>
+      {kind === 'launcher' && (
+        <div className="text-[11px] text-muted-foreground">
+          That side is left OPEN. The ball fires out within a 35 degree cone,
+          and the power it is fired at multiplies the map's base pay.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MoverEditor({ entity, onUpdate }: {
   entity: LevelMoverEntity;
   onUpdate: (updates: Partial<LevelMoverEntity>) => void;

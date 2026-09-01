@@ -9,6 +9,8 @@ import { PHYSICS_STEP } from "@/lib/gameConstants";
 import { setRunSeedText } from "@/lib/runRng";
 import { createBotGame, stepBot, tryCut, plainModifiers, installClock, releaseClock } from "./headlessGame";
 import { checkInvariants, checkTerminal, type Violation } from "./invariants";
+import { fireLauncher } from "@/lib/physics/launcher";
+import { bearingVector, LAUNCH_MIN_POWER, LAUNCH_MAX_POWER } from "@/lib/launcher";
 import { planCut, seededRandom } from "./policy";
 import type { LevelConfig } from "@/types/level";
 import type { GameModifiers } from "@/hooks/useActiveModifiers";
@@ -50,6 +52,23 @@ export function runBot(
   installClock();
   const rng = seededRandom(seed);
   const ctx = createBotGame(level, levelNumber, opts.modifiers ?? plainModifiers());
+
+  // Fire any launcher before play starts. Without this a launcher map cannot be
+  // won by a bot at all: the loaded ball stays dormant, a dormant ball holds its
+  // region uncapturable, and every run would report "progress-stalled" for a
+  // map that is perfectly fine.
+  //
+  // The POWER is drawn from the run's seeded rng rather than pinned at full, so
+  // the playtest panel samples the whole wager across its seeds instead of only
+  // ever reporting how the map plays at 3x. Straight down the cup's facing: the
+  // aim cone is a player's tool and a bot picking angles would be testing the
+  // bot, not the map.
+  for (const launcher of ctx.game.launchers ?? []) {
+    const power = LAUNCH_MIN_POWER + rng() * (LAUNCH_MAX_POWER - LAUNCH_MIN_POWER);
+    fireLauncher(ctx.game, launcher, {
+      direction: bearingVector(launcher.facing), power, clamped: false,
+    });
+  }
 
   const violations: Violation[] = [];
   const seen = new Set<string>();

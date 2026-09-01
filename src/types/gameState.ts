@@ -23,6 +23,7 @@ import { PickupState, PickupFeedback, PickupConfig, PickupEffect } from "@/types
 import type { LampState } from "@/lib/lampBall";
 import type { ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import type { FenceZone } from "@/lib/physics/fenceZones";
+import type { LauncherState } from "@/lib/physics/launcher";
 import type { DeliveryBoxState } from "@/lib/physics/deliveryBox";
 
 /** A circuit terminal in world space with its runtime lit state (issue #73). */
@@ -108,6 +109,14 @@ export interface CanvasGameState {
   fenceZones?: FenceZone[];
   /** Delivery boxes on this map, with their running counts. */
   deliveryBoxes?: DeliveryBoxState[];
+  /** Launcher cups on this map. Nothing moves while one is still loaded. */
+  launchers?: LauncherState[];
+  /**
+   * The power the hardest launch on this map was fired at, multiplying the
+   * map's base pay. 1 (or absent) on every map without a launcher, which is
+   * what keeps all 34 other maps scoring exactly as they did.
+   */
+  launchPower?: number;
   /** Mirror obstacle polygons (rendered in distinct cyan). */
   mirrorPolygons: Polygon[];
   /** Original board boundary polygon for ball collision. */

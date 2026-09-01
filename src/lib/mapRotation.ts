@@ -168,6 +168,21 @@ export function rotateEntity(entity: LevelEntity, r: MapRotation): LevelEntity {
   const oneWayField = entity.kind === "wall" && entity.oneWay
     ? { oneWay: rotateWellPull(entity.oneWay, r) }
     : {};
+  // A delivery box's membrane and a launcher's open side are bearings on a
+  // rect, exactly like a one-way wall, and turn by the same rule.
+  //
+  // The box did NOT turn before the launcher was written, and had never turned:
+  // `mouth` rode through on the spread below untouched, so in three of the four
+  // orientations a box's membrane sat on the wrong side. A ball could not be
+  // fed into it from the direction the map was built around, and the side the
+  // designer meant to be solid let balls straight through. Level 23 is well
+  // above ROTATION_MIN_LEVEL, so that was live on every deal but one.
+  const mouthField = entity.kind === "box"
+    ? { mouth: rotateWellPull(entity.mouth, r) }
+    : {};
+  const facingField = entity.kind === "launcher"
+    ? { facing: rotateWellPull(entity.facing, r) }
+    : {};
   const angleField = entity.angle !== undefined
     ? { angle: rotateAngle(entity.angle, entity.shape, r) }
     : {};
@@ -195,7 +210,7 @@ export function rotateEntity(entity: LevelEntity, r: MapRotation): LevelEntity {
     return { ...entity, points, ...bendFields, ...oneWayField, ...angleField, ...(reveals ? { reveals } : {}) };
   }
   const rect = rotateRect(entity.x, entity.y, entity.width, entity.height, r);
-  return { ...entity, ...rect, ...bendFields, ...oneWayField, ...angleField, ...(reveals ? { reveals } : {}) };
+  return { ...entity, ...rect, ...bendFields, ...oneWayField, ...mouthField, ...facingField, ...angleField, ...(reveals ? { reveals } : {}) };
 }
 
 /**

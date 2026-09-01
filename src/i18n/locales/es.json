@@ -276,6 +276,10 @@
     "circuitTutorialBody": "Traza una valla junto a un nodo turquesa para despertar su bola dormida. Las dormidas retienen su espacio hasta despertarlas; luego las atrapas. Una a una.",
     "boxIntroTitle": "✦ La columna Hecho",
     "boxIntroBody": "Un lado de esta caja es una membrana: las bolas entran y no pueden salir. Condúcelas dentro para llenarla. Mientras no esté llena retiene su propio suelo fuera del tablero, así que no puedes terminar sin alimentarla.",
+    "launcherIntroTitle": "El lanzador",
+    "launcherIntroBody": "Este mapa empieza en un lanzador y nada se mueve hasta que disparas. Arrastra hacia atras en cualquier parte del tablero y suelta: la direccion en la que tiras es la contraria a la que saldra la bola, y cuanto mas tires, mas rapido saldra.\n\nLa velocidad es permanente. Una bola disparada a 2x sigue a 2x cuando la encierras, durante todo el mapa, asi que un tiro fuerte es un mapa mas dificil.\n\nEso es lo que se te paga: la base del mapa se multiplica por la potencia del disparo. Tira fuerte y el mapa vale mas antes de trazar una sola valla. El lanzador vacio se queda en el tablero como obstaculo.",
+    "launcherTutorialTitle": "El lanzador",
+    "launcherTutorialBody": "Una copa de tres lados que sostiene dormida la bola del mapa. Nada se mueve hasta que tiras hacia atras y sueltas, y el tiron define la direccion y la velocidad.\n\nLa velocidad nunca decae: una bola disparada a 2x viaja a 2x hasta que la encierras. Por eso la base del mapa se multiplica por la potencia del disparo, y un tiro fuerte compra un mapa mas valioso pero mas dificil. La copa vacia se queda como obstaculo.",
     "boxTutorialTitle": "✦ La columna Hecho",
     "boxTutorialBody": "Un lado de esta caja es una membrana: las bolas entran y no pueden salir. Condúcelas dentro para llenarla. Mientras no esté llena retiene su propio suelo fuera del tablero, así que no puedes terminar sin alimentarla.",
     "topBarTutorialTitle": "La barra superior",
@@ -1681,5 +1685,9 @@
     "allLocked": "Todas cerradas",
     "underPar": "Bajo par",
     "speedClear": "Contrarreloj"
+  },
+  "launcher": {
+    "pullToLaunch": "Tira hacia atras y suelta para lanzar",
+    "basePay": "Base x{{multiplier}}"
   }
 }

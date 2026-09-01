@@ -16,6 +16,9 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Ball, GrowingWall, Vector2, GameResult, Region, LevelScoreData } from "@/types/game";
+import { pendingLauncher, fireLauncher, type LauncherState } from "@/lib/physics/launcher";
+import { launchAim, type LaunchAim } from "@/lib/launcher";
+import { LaunchOverlay } from "@/components/game/LaunchOverlay";
 import type { MapFailure } from "@/lib/mapFailure";
 import { LevelConfig } from "@/types/level";
 
@@ -64,6 +67,7 @@ import {
 } from "@/lib/gameConstants";
 import {
   generateRegionId,
+  computeBallTrajectory,
 } from "@/lib/gameUtils";
 import { Wall, WALL_THICKNESS } from "@/lib/wallGeometry";
 import { rotatePoint, rotateColoredArea, rotateGravityWell } from "@/lib/mapRotation";
@@ -441,14 +445,29 @@ export function GameCanvas({
     game.pickupConfig = chance > 0 ? { ...pickupConfig, spawnChance: chance } : null;
   }, [pickupConfig, level, levelNumber, activeModifiers.pickupChanceBonus]);
 
+  /**
+   * The cup still holding its ball, mirrored into React so the overlay can
+   * mount. Null on every map without a launcher.
+   *
+   * While this is set the board is HELD: the aim happens on a frozen map, so
+   * the Tempo clock is not running while the player lines up a shot and the
+   * other balls are not free to wander into a position the preview never
+   * predicted. That is the same treatment the explainer modals get, and it is
+   * why the launch is a decision rather than a race.
+   */
+  const [pendingLaunch, setPendingLaunch] = useState<LauncherState | null>(null);
+
   useEffect(() => {
     const game = gameRef.current;
     // Mirror onto the ref FIRST (before any early return): the loop body reads
     // game.paused to self-halt, which covers the case where the intro assemble
     // starts the loop after this effect has already run for the initial mount.
-    game.paused = paused;
+    // A loaded cup holds the board exactly as a modal does. Folded in here
+    // rather than bolted on at the call site so there is ONE expression that
+    // decides whether the map is running.
+    game.paused = paused || !!pendingLaunch;
     if (!game.gameLoopFn || game.gameOver || game.levelComplete) return;
-    if (paused) {
+    if (game.paused) {
       stopGameLoop(game);
       // Drop any in-progress swipe so a drag can't resume mid-gesture
       game.swipeStart = null;
@@ -467,7 +486,13 @@ export function GameCanvas({
       }
       startGameLoop(game);
     }
-  }, [paused]);
+  }, [paused, pendingLaunch]);
+
+  // Pick the cup up off the freshly built board. Runs on every level change,
+  // so a retry re-arms the plunger rather than starting an unfired map moving.
+  useEffect(() => {
+    setPendingLaunch(pendingLauncher(gameRef.current));
+  }, [level.id, levelNumber]);
 
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
@@ -1530,6 +1555,8 @@ export function GameCanvas({
         shipEarlyPercent,
         // Demolition multiplier: chests/breakables smashed before the push.
         payoutMultiplier: game.breakMultiplier ?? 1,
+        // What the plunger was pulled to. Multiplies the flat base only.
+        launchPower: game.launchPower ?? 1,
       },
     );
 
@@ -1876,6 +1903,41 @@ export function GameCanvas({
             canvasOffsetLeft={canvasOffsetLeft}
           />
         )}
+        {/* The plunger. Board-aligned and mounted only while a cup is loaded,
+            which is also exactly while the board is held. */}
+        {pendingLaunch && boardMaterialized && (() => {
+          const game = gameRef.current;
+          const ball = game.balls.find(b => b.id === pendingLaunch.ballId);
+          if (!ball) return null;
+          return (
+            <LaunchOverlay
+              canvasWidth={canvasCssWidth}
+              canvasHeight={canvasCssHeight}
+              canvasOffsetTop={canvasOffsetTop}
+              canvasOffsetLeft={canvasOffsetLeft}
+              ballPosition={ball.position}
+              facing={pendingLaunch.facing}
+              predict={(aim: LaunchAim) => {
+                // The SAME predictor the Scrum Master preview uses, fed the
+                // velocity the ball is actually about to get. A hand-rolled ray
+                // per bounce would draw a line the ball never takes, and this
+                // one already knows about movers, gravity and the other balls.
+                const speed = (ball.baseSpeed || 250) * aim.power;
+                const v = { x: aim.direction.x * speed, y: aim.direction.y * speed };
+                return computeBallTrajectory(
+                  ball.position, v, game.walls, 3, ball.radius,
+                  game.obstaclePolygons, [], game.creepFactor || 1,
+                );
+              }}
+              onFire={(aim: LaunchAim) => {
+                fireLauncher(game, pendingLaunch, aim);
+                // Re-read rather than clearing: a map with two cups arms the
+                // next one instead of starting while a ball is still asleep.
+                setPendingLaunch(pendingLauncher(game));
+              }}
+            />
+          );
+        })()}
         {/* The same hand, aimed. Board-aligned, so it lives in the container's
             coordinate space with the rest of the overlays rather than in the
             viewport's - a `fixed` element here would be thrown off by the page

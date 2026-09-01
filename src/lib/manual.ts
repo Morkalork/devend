@@ -37,6 +37,7 @@ export const MANUAL_ENTRIES: ManualEntry[] = [
   { id: 'mover', titleKey: 'game.moverTutorialTitle', bodyKey: 'game.moverTutorialBody', color: '#ff8800' },
   { id: 'break', titleKey: 'game.breakTutorialTitle', bodyKey: 'game.breakTutorialBody', color: '#ffb454' },
   { id: 'box', titleKey: 'game.boxTutorialTitle', bodyKey: 'game.boxTutorialBody', color: '#ffb347' },
+  { id: 'launcher', titleKey: 'game.launcherTutorialTitle', bodyKey: 'game.launcherTutorialBody', color: '#ffb347' },
   { id: 'circuit', titleKey: 'game.circuitTutorialTitle', bodyKey: 'game.circuitTutorialBody', color: '#7fe3d4' },
   { id: 'pickup', titleKey: 'game.pickupTutorialTitle', bodyKey: 'game.pickupTutorialBody', color: '#e879f9' },
   { id: 'gravityWell', titleKey: 'game.gravityWellTutorialTitle', bodyKey: 'game.gravityWellTutorialBody', color: '#ffa23c' },
