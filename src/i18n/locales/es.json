@@ -747,7 +747,13 @@
   },
   "abilityInfo": {
     "howToUse": "CÓMO USAR",
-    "collectHint": "Rompe una caja para soltar esto y toca la gema en menos de 2 segundos para recogerla. Si la pierdes, desaparece."
+    "collectHint": "Rompe una caja para soltar esto y toca la gema en menos de 2 segundos para recogerla. Si la pierdes, desaparece.",
+    "armed": {
+      "magnet": "Toca el tablero para atraer las bolas",
+      "slowArea": "Toca el tablero para colocar la zona lenta",
+      "descope": "Toca un obstaculo para borrarlo",
+      "fallback": "Toca el tablero para apuntar"
+    }
   },
   "winConditions": {
     "title": "Criterios de Aceptación",
@@ -1695,5 +1701,10 @@
   "launcher": {
     "pullToLaunch": "Tira hacia atras y suelta para lanzar",
     "basePay": "Base x{{multiplier}}"
+  },
+  "rubberBand": {
+    "pullToFire": "Arrastra y suelta para lanzar",
+    "power": "x{{power}} - {{n}} atrapados",
+    "tutorial": "Pulsa donde deben ir las bolas, tira hacia atras a traves de ellas y suelta."
   }
 }

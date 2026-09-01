@@ -31,7 +31,9 @@ import { renderFallbackBoard } from "@/lib/rendering/fallbackBoard";
 import { clearPickupSpriteCache } from "@/lib/rendering/pickupSprites";
 import { effectivePickupChance } from "@/lib/pickups";
 import { getAbility } from "@/lib/abilities";
-import { fireAbility, fireTargetedAbility } from "@/lib/abilityEffects";
+import { fireAbility, fireTargetedAbility, fireRubberBand } from "@/lib/abilityEffects";
+import { RubberBandOverlay, type BandTarget } from "@/components/game/RubberBandOverlay";
+import type { BandShape } from "@/lib/rubberBand";
 import { drawPerfOverlay, recordSurface, isPerfHudEnabled } from "@/lib/rendering/perfStats";
 import { PerfOverlay } from "./PerfOverlay";
 import { RenderContext, RainState } from "@/lib/rendering/types";
@@ -53,6 +55,7 @@ import { TutorialStep } from "@/types/game";
 import {
   Polygon,
   polygonArea,
+  polygonCentroid,
 } from "@/lib/polygon";
 import {
   LockFlashState,
@@ -1702,6 +1705,26 @@ export function GameCanvas({
     if (fired) onSpendAbility?.(abilityId);
   }, [onSpendAbility]);
   useEffect(() => { handleAbilityTargetRef.current = handleAbilityTarget; }, [handleAbilityTarget]);
+
+  // The Rubber Band is the one targeted ability that takes a DRAG rather than a
+  // tap, so it owns an overlay instead of riding the input hook's tap path -
+  // the same arrangement the launcher uses, and for the same reason: the
+  // gesture is not a cut and never has to be told apart from one.
+  const handleBandFire = useCallback((shape: BandShape) => {
+    setArmedAbility(null);
+    gameRef.current.armedAbility = null;
+    // A band that caught nothing spends nothing. The player can see the ring of
+    // what it would catch while they drag, so an empty release is a decision
+    // they changed their mind about, not a miss to charge them for.
+    if (fireRubberBand(gameRef.current, shape, performance.now())) {
+      onSpendAbility?.('rubberBand');
+    }
+  }, [onSpendAbility]);
+
+  const handleBandCancel = useCallback(() => {
+    setArmedAbility(null);
+    gameRef.current.armedAbility = null;
+  }, []);
   useEffect(() => { handleSuperiorInfoRef.current = onRequestSuperiorInfo ?? null; }, [onRequestSuperiorInfo]);
   useEffect(() => { handleEntityInfoRef.current = onRequestEntityInfo ?? null; }, [onRequestEntityInfo]);
 
@@ -1932,18 +1955,27 @@ export function GameCanvas({
             <AbilityIcon kind={abilityIconFx.kind} className="w-16 h-16 sm:w-20 sm:h-20" />
           </div>
         )}
-        {armedAbility && (
-          <div
-            className="absolute left-1/2 top-[12%] -translate-x-1/2 z-40 pointer-events-none whitespace-nowrap font-mono font-bold text-xs sm:text-sm px-3 py-1.5 rounded-md animate-pulse"
-            style={{
-              color: getAbility(armedAbility)?.color ?? '#b98cff',
-              background: 'rgba(10,14,20,0.8)',
-              border: `1px solid ${getAbility(armedAbility)?.color ?? '#b98cff'}`,
-            }}
-          >
-            Tap the board to attract balls
-          </div>
-        )}
+        {/* What the armed ability is waiting for. Keyed on the KIND, not left
+            as the magnet's line: three abilities arm this way and telling a
+            descope player to attract balls is worse than saying nothing. The
+            rubber band is left out on purpose - its own overlay carries a
+            header, and two prompts at once collide. */}
+        {armedAbility && getAbility(armedAbility)?.kind !== 'rubberBand' && (() => {
+          const kind = getAbility(armedAbility)?.kind;
+          const colour = getAbility(armedAbility)?.color ?? '#b98cff';
+          return (
+            <div
+              className="absolute left-1/2 top-[12%] -translate-x-1/2 z-40 pointer-events-none whitespace-nowrap font-mono font-bold text-xs sm:text-sm px-3 py-1.5 rounded-md animate-pulse"
+              style={{
+                color: colour,
+                background: 'rgba(10,14,20,0.8)',
+                border: `1px solid ${colour}`,
+              }}
+            >
+              {t(`abilityInfo.armed.${kind}`, { defaultValue: t('abilityInfo.armed.fallback') })}
+            </div>
+          );
+        })()}
         {tutorialMode && tutorialStep !== "completed" && !tutorialCutMade && boardMaterialized && (
           <InteractiveTutorialOverlay
             tutorialStep={tutorialStep}
@@ -1954,6 +1986,39 @@ export function GameCanvas({
             canvasOffsetLeft={canvasOffsetLeft}
           />
         )}
+        {/* The Rubber Band, mounted only while it is armed. Nothing is paused:
+            unlike the launcher, this is aimed at a board that is still moving,
+            which is most of the skill in it. */}
+        {armedAbility === 'rubberBand' && boardMaterialized && (
+          <RubberBandOverlay
+            canvasWidth={canvasCssWidth}
+            canvasHeight={canvasCssHeight}
+            canvasOffsetTop={canvasOffsetTop}
+            canvasOffsetLeft={canvasOffsetLeft}
+            targets={(() => {
+              const g = gameRef.current;
+              const out: BandTarget[] = [];
+              for (const b of g.balls) {
+                if (b.state !== 'active') continue;
+                out.push({ x: b.position.x, y: b.position.y, radius: b.radius, kind: 'ball' });
+              }
+              // Destructibles are highlighted from the SAME centroid the effect
+              // tests, so the ring can never promise a smash the release does
+              // not deliver.
+              for (const d of g.destructibles) {
+                if (d.destroyed) continue;
+                const poly = d.obstaclePolygon ?? d.mirrorPolygon;
+                if (!poly) continue;
+                const c = polygonCentroid(poly);
+                out.push({ x: c.x, y: c.y, radius: 22, kind: 'object' });
+              }
+              return out;
+            })()}
+            onFire={handleBandFire}
+            onCancel={handleBandCancel}
+          />
+        )}
+
         {/* The plunger. Board-aligned and mounted only while a cup is loaded,
             which is also exactly while the board is held. */}
         {pendingLaunch && boardMaterialized && (() => {

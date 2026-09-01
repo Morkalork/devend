@@ -116,6 +116,26 @@ abilities:
     description: "Blasts every ball outward from the centre. Comes back every map."
     howTo: "Tap to push the balls apart and clear a space. You always start a map with one."
 
+  # Rubber Band: a slingshot the player places. Arm it, then drag anywhere on
+  # the board: the band sits under your finger, lies across the pull, and snaps
+  # forward when you let go, throwing every ball it caught and smashing what it
+  # hit. How far you pull decides both.
+  #
+  # The wager is on the way out. Nothing in the engine slows a ball down, so a
+  # full-power throw leaves you a ball at three times its base speed for the
+  # rest of the map, which is very hard to fence. Freeze and Slow are the
+  # answer, which is the point: the ice abilities become the setup for this one
+  # rather than a panic button.
+  - id: rubberBand
+    name: Rubber Band
+    kind: rubberBand
+    color: "#7fe3d4"
+    weight: 2
+    startLevel: 6
+    targeted: true
+    description: "Flings the balls it catches and breaks what it hits."
+    howTo: "Arm it, then drag on the board and let go. The further you pull, the harder the throw; a full pull breaks anything it catches."
+
   # Fence Overclock: your cuts build much faster for a few seconds - carve the
   # board aggressively (great right after a Freeze or Slow).
   - id: fenceOverclock

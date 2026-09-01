@@ -747,7 +747,13 @@
   },
   "abilityInfo": {
     "howToUse": "SÅ HÄR ANVÄNDER DU",
-    "collectHint": "Krossa en låda för att släppa den här, tryck sedan på ädelstenen inom 2 sekunder för att ta den. Missar du den är den borta."
+    "collectHint": "Krossa en låda för att släppa den här, tryck sedan på ädelstenen inom 2 sekunder för att ta den. Missar du den är den borta.",
+    "armed": {
+      "magnet": "Tryck på planen för att dra till dig bollarna",
+      "slowArea": "Tryck på planen för att lägga ut den långsamma ytan",
+      "descope": "Tryck på ett hinder för att radera det",
+      "fallback": "Tryck på planen för att sikta"
+    }
   },
   "winConditions": {
     "title": "Acceptanskriterier",
@@ -1695,5 +1701,10 @@
   "launcher": {
     "pullToLaunch": "Dra tillbaka och slapp for att skjuta",
     "basePay": "Bas x{{multiplier}}"
+  },
+  "rubberBand": {
+    "pullToFire": "Dra och släpp för att slunga",
+    "power": "x{{power}} - {{n}} fångade",
+    "tutorial": "Tryck där bollarna ska hamna, dra bakåt genom dem och släpp."
   }
 }

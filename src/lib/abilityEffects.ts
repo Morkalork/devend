@@ -18,6 +18,7 @@ import { descopeAt } from "@/lib/physics/descope";
 import { BOARD_WIDTH } from "@/lib/boardConstants";
 import { BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { pointInPolygon, polygonCentroid, pointToSegmentDistance } from "@/lib/polygon";
+import { bandDamage, bandVelocity, inBandSweep, type BandShape } from "@/lib/rubberBand";
 import {
   CellState,
   restoreCells,
@@ -655,6 +656,61 @@ function pushAbilityFx(game: CanvasGameState, color: string, expand: boolean, no
  * effect toward `target` and plays the burst centred there. Returns false for a
  * non-targeted / unknown id.
  */
+/**
+ * Fire a Rubber Band: launch every ball it caught, and smash what it hit.
+ *
+ * Two effects from one gesture, and they are the same gesture on purpose. The
+ * band is a slingshot, so what it catches it throws; and a band drawn tight
+ * enough to throw a ball hard is drawn tight enough to break what is in front
+ * of it. Pulling harder does both, which is what makes the stretch a decision
+ * rather than a slider.
+ *
+ * The wager is on the way out, not the way in. Nothing damps a ball, so a
+ * full-power band leaves a ball travelling at three times its base speed for
+ * the rest of the map - very hard to fence, unless you have ice to slow it
+ * down. That is the synergy: freeze and slow stop being panic buttons and
+ * become the setup for this.
+ *
+ * Returns false when the band caught nothing at all, which the caller reads as
+ * "spend no charge" - the same courtesy Descope already gets, and for the same
+ * reason: a miss the player had no way to see coming should not cost them.
+ */
+export function fireRubberBand(
+  game: CanvasGameState, shape: BandShape, now: number,
+): boolean {
+  let touched = 0;
+
+  for (const ball of game.balls) {
+    if (ball.state !== "active") continue;
+    if (!inBandSweep(ball.position, shape)) continue;
+    ball.velocity = bandVelocity(shape, ball.baseSpeed || 250);
+    ball.speed = Math.hypot(ball.velocity.x, ball.velocity.y);
+    touched++;
+  }
+
+  // Destructibles in the same sweep, damaged by how hard the band was drawn.
+  // Scaled to each object's own budget, so full power really does break
+  // anything rather than anything the author has not made tough yet.
+  for (const d of game.destructibles) {
+    if (d.destroyed) continue;
+    const poly = d.obstaclePolygon ?? d.mirrorPolygon;
+    if (!poly) continue;
+    const c = polygonCentroid(poly);
+    if (!inBandSweep(c, shape)) continue;
+    // Debounced hits would swallow this: the band is one deliberate blow, not a
+    // bounce, so it is applied directly rather than through registerObjectHit.
+    d.hits = Math.min(d.maxHits, d.hits + bandDamage(shape.powerT, d.maxHits));
+    d.lastHitAt = now;
+    if (d.hits >= d.maxHits && !d.destroyed) {
+      d.destroyed = true;
+      if (!game.pendingDestroys.includes(d)) game.pendingDestroys.push(d);
+    }
+    touched++;
+  }
+
+  return touched > 0;
+}
+
 export function fireTargetedAbility(id: string, game: CanvasGameState, now: number, target: { x: number; y: number }): boolean {
   const def = getAbility(id);
   if (!def || !def.targeted) return false;

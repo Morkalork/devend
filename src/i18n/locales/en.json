@@ -762,7 +762,13 @@
   },
   "abilityInfo": {
     "howToUse": "HOW TO USE",
-    "collectHint": "Smash a box to drop this, then tap the gem within 2 seconds to grab it. Miss it and it is gone."
+    "collectHint": "Smash a box to drop this, then tap the gem within 2 seconds to grab it. Miss it and it is gone.",
+    "armed": {
+      "magnet": "Tap the board to attract balls",
+      "slowArea": "Tap the board to place the slow patch",
+      "descope": "Tap an obstacle to delete it",
+      "fallback": "Tap the board to aim"
+    }
   },
   "winConditions": {
     "title": "Acceptance Criteria",
@@ -1162,5 +1168,10 @@
   "launcher": {
     "pullToLaunch": "Pull back and release to launch",
     "basePay": "Base x{{multiplier}}"
+  },
+  "rubberBand": {
+    "pullToFire": "Drag and release to fling",
+    "power": "x{{power}} - {{n}} caught",
+    "tutorial": "Press where the balls should go, pull back through them, then let go."
   }
 }

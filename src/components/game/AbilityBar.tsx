@@ -15,7 +15,7 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Snowflake, Gauge, Eraser, Sparkles, Magnet, Waves, Zap, ShieldCheck, Hourglass, Scissors } from 'lucide-react';
+import { Snowflake, Gauge, Eraser, Sparkles, Magnet, Waves, Zap, ShieldCheck, Hourglass, Scissors, Spline } from 'lucide-react';
 import { getAllAbilities, getAbility, AbilityKind, AbilityDef } from '@/lib/abilities';
 import { hasSeenAbility, markAbilitySeen } from '@/lib/abilitySeen';
 import { AbilityInfoModal } from './AbilityInfoModal';
@@ -28,6 +28,7 @@ const ICON_BY_KIND: Record<AbilityKind, typeof Snowflake> = {
   clearFences: Eraser,
   magnet: Magnet,
   shockwave: Waves,
+  rubberBand: Spline,
   fenceRush: Zap,
   fenceShield: ShieldCheck,
 };
