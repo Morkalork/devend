@@ -28,6 +28,7 @@ import { updatePickups } from "@/lib/pickups";
 import { updateChestLoot } from "@/lib/chests";
 import { abilitySpeedFactor } from "@/lib/abilityEffects";
 import { updateWallImpacts, updateObstacleImpacts } from "@/lib/wallImpactEffects";
+import { launchPending } from "@/lib/physics/launcher";
 import { applyLodestones } from "@/lib/physics/lodestone";
 import { clearFreeze } from "@/lib/physics/updateFenceWall";
 import { recordFrame, recordCut, recordBg } from "@/lib/rendering/perfStats";
@@ -219,7 +220,21 @@ export function createGameLoop(
     // (e.g. the "how to win" card), where the loop was (re)started after the
     // pause effect had already run. The pause effect reschedules on close.
     // Level-complete/game-over keep their own end-of-map animations below.
-    if (game.paused && !game.levelComplete && !game.gameOver) return;
+    if (game.paused && !game.levelComplete && !game.gameOver) {
+      // A LAUNCHER hold is not a modal. Nothing covers the board and the player
+      // is looking straight at it, aiming down the barrel - so this one keeps
+      // drawing a static frame instead of stopping dead. Without it the hold
+      // stops the loop before the map's first paint and the band, the cone and
+      // the loaded balls hang over the page background with no board under them.
+      //
+      // Physics is still held: this returns before the step either way, so the
+      // balls do not move and the clock does not run while the wager is open.
+      if (launchPending(game)) {
+        callbacks.render();
+        schedule();
+      }
+      return;
+    }
 
     if (game.gameOver || game.pushMode === "prompt") return;
 

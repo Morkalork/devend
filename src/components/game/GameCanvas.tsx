@@ -468,7 +468,17 @@ export function GameCanvas({
     game.paused = paused || !!pendingLaunch;
     if (!game.gameLoopFn || game.gameOver || game.levelComplete) return;
     if (game.paused) {
-      stopGameLoop(game);
+      // A LAUNCHER hold keeps the loop turning; a modal stops it dead.
+      //
+      // Both hold physics - the loop's own `paused` guard returns before the
+      // step either way - but they differ in what the player is looking at. A
+      // modal covers the board, so there is nothing to draw. The launcher does
+      // not: the board IS the thing being aimed at, and stopping the loop here
+      // stopped it before the map's first paint, leaving the band, the aim cone
+      // and the loaded balls hanging over the page background with no board
+      // underneath them.
+      if (pendingLaunch && !paused) startGameLoop(game);
+      else stopGameLoop(game);
       // Drop any in-progress swipe so a drag can't resume mid-gesture
       game.swipeStart = null;
       game.swipeRegionId = null;
@@ -994,6 +1004,19 @@ export function GameCanvas({
       game.fenceZones = data.fenceZones;
       // "Wire the Integration" circuit (already rotated + sealed in initGame).
       game.circuit = data.circuit;
+      // The launcher barrels, and the whole reason the plunger appears at all.
+      //
+      // This assignment was missing, and the failure was total but silent:
+      // `game.launchers` stayed undefined, so `pendingLauncher` always answered
+      // null, the LaunchOverlay never mounted, and a launcher map opened with
+      // its balls asleep and nothing on screen to wake them. No error, no
+      // warning - just a map that could not be started or lost, because the
+      // dormant balls also hold their region uncapturable.
+      //
+      // It is the exact failure this block's own comment warns about: gameRef
+      // is built once and mutated per map, so a field this block forgets is a
+      // field that is never set at all.
+      game.launchers = data.launchers ?? [];
       // "Deploy Charge" fuses (already rotated in initGame).
       game.charges = data.charges ?? [];
       // "Data Stream" seam (already rotated in initGame).
@@ -1922,7 +1945,6 @@ export function GameCanvas({
               canvasOffsetTop={canvasOffsetTop}
               canvasOffsetLeft={canvasOffsetLeft}
               ballPosition={ball.position}
-              loadedPositions={loaded.map(b => b.position)}
               inner={pendingLaunch.inner}
               angle={pendingLaunch.angle}
               facing={pendingLaunch.facing}

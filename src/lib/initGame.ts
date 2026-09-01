@@ -1006,7 +1006,13 @@ export function createInitialGameData(
 
     // Stacked down the barrel, muzzle-end first, so a longer barrel visibly
     // holds more and the front ball is the one at the opening.
-    const usable = Math.max(0, barrelLength - 2 * ballRadius);
+    //
+    // The pad is a ball's radius plus the barrel's own wall: without it the
+    // hindmost ball sits with its edge exactly on the inner face of the back
+    // wall, which is cells the grid has already removed - "spawned in removed
+    // space" in the init log, and a ball that starts life overlapping a solid.
+    const endPad = ballRadius + BOX_WALL_THICKNESS;
+    const usable = Math.max(0, barrelLength - 2 * endPad);
     const gap = loaded.length > 1 ? usable / (loaded.length - 1) : 0;
     loaded.forEach((ball, i) => {
       // +half the usable run is the muzzle end, so index 0 sits at the front.

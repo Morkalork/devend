@@ -23,6 +23,13 @@
  *     wide leave where the player could not have aimed.
  */
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import yaml from "js-yaml";
+import { createInitialGameData } from "@/lib/initGame";
+import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
+import { captureUnreachableCells, CellState } from "@/lib/spaceGrid";
+import type { LevelConfig } from "@/types/level";
 import {
   muzzleVector, bandEnds, bandAnchor, launchAim, bearingVector,
   LAUNCH_SPREAD, LAUNCH_FULL_PULL,
@@ -211,6 +218,83 @@ describe("the pull is unchanged in the ways that matter", () => {
         { x: -dir.x * LAUNCH_FULL_PULL, y: -dir.y * LAUNCH_FULL_PULL }, "right", deg,
       )!;
       expect(full.power, `${deg}deg`).toBeCloseTo(3, 6);
+    }
+  });
+});
+
+/**
+ * A loaded barrel must not seal its own balls off from the board.
+ *
+ * The nastiest consequence of loading the whole roster, and completely
+ * invisible until something asks. Reachability is BALL-SIZE aware and runs on
+ * the rasterised grid: a turned barrel with a narrow bore rasterises to a
+ * staircase, and eroding that by a ball's radius can break the corridor into
+ * disconnected cells. The balls are then unreachable from the board and
+ * `captureUnreachableCells` writes off everything outside the barrel.
+ *
+ * Measured at the shipped 240x84 it kept SIXTEEN of 2458 active cells. Nothing
+ * reported it, because the map is paused until the shot and no cut runs the
+ * check - it sat there as a landmine for any code path that ran it first, and
+ * it did surface as breakables that could not be smashed clean.
+ *
+ * Pinned on the built map rather than on the number, because the bore, the
+ * angle, the grid size, the ball radius and the map rotation all feed it and no
+ * single constant is the rule.
+ */
+describe("the loaded barrel stays part of the board", () => {
+  const MAP = yaml.load(
+    readFileSync(resolve(process.cwd(), "public/map.yml"), "utf8"),
+  ) as { levels: LevelConfig[] };
+  const launcherMaps = MAP.levels.filter(
+    l => ((l as unknown as { entities?: Array<{ kind: string }> }).entities ?? [])
+      .some(e => e.kind === "launcher"),
+  );
+
+  it("has a launcher map to check", () => {
+    expect(launcherMaps.length).toBeGreaterThan(0);
+  });
+
+  it.each(launcherMaps.map(l => [l.id, l] as const))(
+    "%s keeps its board reachable with every ball still loaded",
+    (_id, level) => {
+      // Several builds: the map is dealt in one of four rotations and sprinkles
+      // random obstacles, and the bore only breaks up on some of them.
+      for (let i = 0; i < 6; i++) {
+        const d = createInitialGameData(level, level.level, DEFAULT_MODIFIERS);
+        const grid = d.spaceGrid!;
+        const before = grid.cells.filter(c => c === CellState.ACTIVE).length;
+        expect(before, "the map has no open space at all").toBeGreaterThan(100);
+        captureUnreachableCells(
+          grid, d.balls as never, d.walls as never,
+        );
+        const after = grid.cells.filter(c => c === CellState.ACTIVE).length;
+        expect(
+          after / before,
+          `build ${i}: the barrel sealed its balls in - ${after} of ${before} cells left reachable`,
+        ).toBeGreaterThan(0.9);
+      }
+    },
+  );
+
+  it("keeps every loaded ball inside the barrel it was loaded into", () => {
+    // The other end of the same knife: padding the stack too little puts the
+    // hindmost ball's edge inside the back wall ("spawned in removed space"),
+    // and too much stacks them out of the muzzle.
+    for (const level of launcherMaps) {
+      const d = createInitialGameData(level, level.level, DEFAULT_MODIFIERS);
+      for (const cup of d.launchers) {
+        for (const id of cup.ballIds) {
+          const ball = d.balls.find(b => b.id === id)!;
+          expect(ball.state, `${id} is not asleep`).toBe("dormant");
+          const cx = cup.inner.x + cup.inner.width / 2;
+          const cy = cup.inner.y + cup.inner.height / 2;
+          const reach = Math.hypot(cup.inner.width, cup.inner.height) / 2;
+          expect(
+            Math.hypot(ball.position.x - cx, ball.position.y - cy),
+            `${id} sits outside its barrel`,
+          ).toBeLessThanOrEqual(reach);
+        }
+      }
     }
   });
 });

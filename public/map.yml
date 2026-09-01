@@ -559,8 +559,9 @@ levels:
   #
   # It is also the launcher's debut, and the two share a theme rather than
   # competing: both are a bet you place before you know how the map goes. The
-  # barrel sits in the bottom-left corner and is CANTED UP through the gap in
-  # the spine (a full-power shot crosses it around y=597, mid-gap),
+  # barrel sits out in the middle of the left half, well clear of every edge,
+  # and is CANTED UP through the gap in the spine (a full-power shot crosses it
+  # around y=505, mid-gap),
   # so a full-power shot is a clean run into the right half and an over-aimed
   # one buries the whole roster in the cramped left side with the chest. Base
   # pay is multiplied by the power fired at, so the wager is priced in before
@@ -571,6 +572,13 @@ levels:
   # The angle is deliberately not a multiple of 90 - an axis-aligned barrel
   # reads as another wall, and the whole point of the thing is that it is
   # pointing somewhere.
+  #
+  # The 110 height is not cosmetic. Reachability is ball-size aware and works on
+  # the rasterised grid, so a turned barrel with a narrow bore rasterises to a
+  # staircase that erodes into disconnected cells: at 84 the balls inside were
+  # sealed off from the board and captureUnreachableCells wrote off everything
+  # outside the barrel. Anything from about 110 up stays connected on every
+  # rotation. See launcherBarrel.test.ts, which pins it.
   - id: level-11
     level: 11
     sizeThreshold: 16
@@ -583,12 +591,12 @@ levels:
       - id: plunger-11
         kind: launcher
         shape: rect
-        x: 70
-        'y': 720
+        x: 290
+        'y': 520
         width: 240
-        height: 84
+        height: 110
         facing: right
-        angle: -24
+        angle: -22
       - id: chest-cover
         kind: wall
         shape: rect

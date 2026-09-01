@@ -32,8 +32,6 @@ interface Props {
   canvasOffsetLeft: number;
   /** Where the muzzle-end ball is sitting, in world units. */
   ballPosition: Vector2;
-  /** Every loaded ball, so the stack behind the band is drawn as it really is. */
-  loadedPositions: Vector2[];
   /** The barrel's interior, in its own axis-aligned frame. */
   inner: { x: number; y: number; width: number; height: number };
   /** The barrel's turn in degrees; the muzzle is `facing` turned by this. */
@@ -47,7 +45,7 @@ interface Props {
 
 export function LaunchOverlay({
   canvasWidth, canvasHeight, canvasOffsetTop, canvasOffsetLeft,
-  ballPosition, loadedPositions, inner, angle, facing, predict, onFire,
+  ballPosition, inner, angle, facing, predict, onFire,
 }: Props) {
   const { t } = useTranslation();
   const [aim, setAim] = useState<LaunchAim | null>(null);
@@ -172,17 +170,10 @@ export function LaunchOverlay({
         {/* The grip, at the middle of the band. */}
         <circle cx={bandMid.x} cy={bandMid.y} r={aim ? 9 : 7} fill={aim?.clamped ? '#ff6b6b' : '#ffb347'} />
 
-        {/* The loaded stack, pressed back against the band as it is drawn. */}
-        {loadedPositions.map((p, i) => (
-          <circle
-            key={i}
-            cx={sx(p.x) - bearing.x * draw}
-            cy={sy(p.y) - bearing.y * draw}
-            r={7}
-            fill="#ffb347"
-            opacity={i === 0 ? 1 : 0.65}
-          />
-        ))}
+        {/* The loaded balls are NOT drawn here. The board keeps rendering
+            behind this overlay while the barrel is held, so it is already
+            drawing them, in their own colours; a second set of orange dots on
+            top was two balls where the player has one. */}
       </svg>
 
       {/* Read-out. Says what the pull BUYS, not just how hard it is: the whole
