@@ -498,11 +498,22 @@ export function GameCanvas({
     }
   }, [paused, pendingLaunch]);
 
-  // Pick the cup up off the freshly built board. Runs on every level change,
-  // so a retry re-arms the plunger rather than starting an unfired map moving.
-  useEffect(() => {
-    setPendingLaunch(pendingLauncher(gameRef.current));
-  }, [level.id, levelNumber]);
+  // The armed cup is published by the effect that BUILDS the map, further down,
+  // and deliberately not by an effect of its own here.
+  //
+  // It used to be its own effect keyed on [level.id, levelNumber], and that
+  // could only ever work by accident. Both effects go dirty on the same level
+  // change and React runs them in declaration order, so this one ran FIRST and
+  // read `gameRef.current.launchers` from the map the player had just left.
+  // Coming into level 11 off level 10 - which has no launcher - it read
+  // undefined, set null, and never ran again; the board was then rebuilt with a
+  // barrel that nothing had told React about, so the overlay never mounted and
+  // the balls stayed asleep with no band to pull.
+  //
+  // It looked fine on a ?level=11 debug jump, because that changes the level
+  // prop a second time and the re-run happens to read a populated ref. That is
+  // the worst possible failure shape: working exactly where it is tested and
+  // broken exactly where it is played.
 
   const [remainingPercent, setRemainingPercent] = useState(100);
   const [cutCount, setCutCount] = useState(0);
@@ -1017,6 +1028,10 @@ export function GameCanvas({
       // is built once and mutated per map, so a field this block forgets is a
       // field that is never set at all.
       game.launchers = data.launchers ?? [];
+      // Publish the armed cup from the SAME place it is built, so no ordering
+      // between effects can put the two out of step. See the note above where
+      // this used to live in an effect of its own.
+      setPendingLaunch(pendingLauncher(game));
       // "Deploy Charge" fuses (already rotated in initGame).
       game.charges = data.charges ?? [];
       // "Data Stream" seam (already rotated in initGame).

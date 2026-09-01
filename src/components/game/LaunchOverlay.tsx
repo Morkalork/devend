@@ -160,15 +160,40 @@ export function LaunchOverlay({
             band does instead of hinging like a lever. Always drawn, at rest as
             well as under tension, because it is the control: a player has to be
             able to see what to pull before they have pulled it. */}
+        {/* Drawn twice: a dark backing under a bright band, so it reads against
+            the board's own greens and against the code behind it. A single thin
+            stroke was reported as "there is no rubber band effect" - at a phone's
+            scale the bore is about thirty pixels wide, and four pixels of line
+            inside it is not a control anyone can see, let alone aim for. */}
+        <path
+          d={`M ${bandA.x} ${bandA.y} Q ${bandMid.x} ${bandMid.y} ${bandB.x} ${bandB.y}`}
+          fill="none"
+          stroke="rgba(0,0,0,0.55)"
+          strokeWidth={aim ? 13 : 10}
+          strokeLinecap="round"
+        />
         <path
           d={`M ${bandA.x} ${bandA.y} Q ${bandMid.x} ${bandMid.y} ${bandB.x} ${bandB.y}`}
           fill="none"
           stroke={aim?.clamped ? '#ff6b6b' : '#ffb347'}
-          strokeWidth={aim ? 6 : 4}
+          strokeWidth={aim ? 9 : 6}
           strokeLinecap="round"
         />
-        {/* The grip, at the middle of the band. */}
-        <circle cx={bandMid.x} cy={bandMid.y} r={aim ? 9 : 7} fill={aim?.clamped ? '#ff6b6b' : '#ffb347'} />
+        {/* The posts the band is strung between, so it reads as attached to the
+            barrel rather than floating across it. */}
+        <circle cx={bandA.x} cy={bandA.y} r={4} fill="#ffb347" opacity={0.9} />
+        <circle cx={bandB.x} cy={bandB.y} r={4} fill="#ffb347" opacity={0.9} />
+        {/* The grip, at the middle of the band: the thing to put a thumb on. A
+            halo at rest so it is findable before anything is moving. */}
+        {!aim && (
+          <circle cx={bandMid.x} cy={bandMid.y} r={20} fill="none"
+            stroke="#ffb347" strokeWidth={2} opacity={0.45} />
+        )}
+        <circle
+          cx={bandMid.x} cy={bandMid.y} r={aim ? 14 : 11}
+          fill={aim?.clamped ? '#ff6b6b' : '#ffb347'}
+          stroke="rgba(0,0,0,0.55)" strokeWidth={2}
+        />
 
         {/* The loaded balls are NOT drawn here. The board keeps rendering
             behind this overlay while the barrel is held, so it is already

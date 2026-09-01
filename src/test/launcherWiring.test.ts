@@ -39,7 +39,62 @@ describe("the per-map block hands the launcher over", () => {
   it("mounts the overlay off the live launcher list, not off the level config", () => {
     // Reading the LEVEL for a launcher would have hidden the bug: the entity is
     // in map.yml either way, so the overlay would mount and then fire nothing.
-    expect(SRC).toMatch(/pendingLauncher\(gameRef\.current\)/);
+    expect(SRC).toMatch(/pendingLauncher\(game\b/);
+  });
+});
+
+/**
+ * The armed cup is published by the effect that BUILDS the map.
+ *
+ * The second reason the band did nothing, and a much better-disguised one than
+ * the missing assignment: `setPendingLaunch` lived in its own effect keyed on
+ * [level.id, levelNumber], reading `gameRef.current.launchers`. Both that effect
+ * and the map-build effect go dirty on the same level change, React runs effects
+ * in DECLARATION order, and the little one was declared some three hundred lines
+ * earlier - so it ran first and read the launchers of the map the player had
+ * just left. Arriving at level 11 from level 10, which has no launcher, it read
+ * undefined, set null, and never ran again.
+ *
+ * What makes it worth a test rather than a comment is how it failed: a
+ * ?level=11 debug jump changes the level prop a second time, so the re-run reads
+ * a populated ref and everything looks correct. It worked exactly where it was
+ * tested and broke exactly where it was played, which no amount of jumping
+ * straight to the map would ever have shown.
+ *
+ * So the rule is positional, because the bug was positional.
+ */
+describe("nothing reads the launchers before the map is built", () => {
+  const at = (re: RegExp) => {
+    const m = SRC.match(re);
+    return m?.index ?? -1;
+  };
+
+  it("publishes the pending cup only after assigning them", () => {
+    const assigned = at(/game\.launchers\s*=\s*data\.launchers/);
+    expect(assigned, "the assignment is gone").toBeGreaterThan(-1);
+
+    // Every place the pending cup is set, other than the one inside onFire
+    // (which re-arms the NEXT cup on a two-cup map and is a user action, not a
+    // map build).
+    const sets = [...SRC.matchAll(/setPendingLaunch\(/g)].map(m => m.index ?? -1);
+    expect(sets.length, "nothing arms the plunger at all").toBeGreaterThan(0);
+
+    const beforeBuild = sets.filter(i => i < assigned);
+    expect(
+      beforeBuild,
+      "setPendingLaunch runs before game.launchers is assigned, so it reads the "
+      + "PREVIOUS map's launchers - the overlay will not mount when the player "
+      + "walks into a launcher map from an ordinary one",
+    ).toEqual([]);
+  });
+
+  it("does not arm it from a separate effect keyed on the level", () => {
+    // The specific shape that broke: its own effect, earlier in the file,
+    // racing the build. Any future one would race it the same way.
+    expect(
+      SRC,
+      "the plunger is armed from an effect that races the map build again",
+    ).not.toMatch(/setPendingLaunch\(pendingLauncher\(gameRef\.current\)\)/);
   });
 });
 
