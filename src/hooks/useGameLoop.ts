@@ -20,6 +20,7 @@ import { updateBall } from "@/lib/physics/updateBall";
 import { advanceLamp } from "@/lib/lampBall";
 import { tickChains } from "@/lib/physics/chain";
 import { tickPhasing, collectPhasedOut } from "@/lib/physics/phasing";
+import { tickCages } from "@/lib/physics/cage";
 import { tickCharges } from "@/lib/physics/charge";
 import { rebuildWallGrid } from "@/lib/physics/wallGrid";
 import { handleBallCollisions } from "@/lib/physics/handleBallCollisions";
@@ -396,6 +397,10 @@ export function createGameLoop(
       // Phasing obstacles (#64): update solid<->intangible BEFORE ball physics so
       // the phased-out collision skips this step read the current phase.
       tickPhasing(game, game.activePlaySeconds);
+      // Cages own their mouths' phase, so this runs beside tickPhasing rather
+      // than inside it: one of them knows the clock, the other knows whether a
+      // ball is in the box.
+      tickCages(game, performance.now());
 
       // A freeze that outlived its window is lifted here, whatever happened to
       // its timer.

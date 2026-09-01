@@ -428,17 +428,33 @@ export function EntityPanel({
             />
           )}
 
-          {(selectedEntity.kind === 'launcher' || selectedEntity.kind === 'box') && (
+          {(selectedEntity.kind === 'launcher' || selectedEntity.kind === 'box' || selectedEntity.kind === 'cage') && (
             <BearingEditor
               kind={selectedEntity.kind}
-              bearing={selectedEntity.kind === 'launcher' ? selectedEntity.facing : selectedEntity.mouth}
+              bearing={selectedEntity.kind === 'box' ? selectedEntity.mouth : selectedEntity.facing}
               onUpdate={(bearing) => onUpdateEntity(
                 selectedEntity.id,
-                (selectedEntity.kind === 'launcher'
-                  ? { facing: bearing }
-                  : { mouth: bearing }) as Partial<LevelEntity>,
+                (selectedEntity.kind === 'box'
+                  ? { mouth: bearing }
+                  : { facing: bearing }) as Partial<LevelEntity>,
               )}
             />
+          )}
+
+          {/* Cage: how long a caught ball is held. */}
+          {selectedEntity.kind === 'cage' && (
+            <label className="flex items-center gap-2 text-xs">
+              <span className="text-sky-400 whitespace-nowrap">Hold (sec)</span>
+              <input
+                type="number"
+                value={selectedEntity.holdSeconds ?? ''}
+                placeholder="12"
+                onChange={(e) => onUpdateEntity(selectedEntity.id, {
+                  holdSeconds: e.target.value === '' ? undefined : Number(e.target.value),
+                } as Partial<LevelEntity>)}
+                className="w-20 rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+              />
+            </label>
           )}
 
           {!isMoverEntity(selectedEntity) && (
@@ -465,6 +481,30 @@ export function EntityPanel({
             <span className="text-amber-400">Bouncer</span>
             <span className="text-muted-foreground">(kicks balls away, faster)</span>
           </label>
+          )}
+
+          {/* Latch. Opens once, on progress, and stays open. */}
+          {!isMoverEntity(selectedEntity) && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-emerald-400 whitespace-nowrap">Latch after</span>
+            <input
+              type="number"
+              value={(selectedEntity as { latchAfter?: number }).latchAfter ?? ''}
+              placeholder="never"
+              onChange={(e) => onUpdateEntity(selectedEntity.id, {
+                latchAfter: e.target.value === '' ? undefined : Number(e.target.value),
+              } as Partial<LevelEntity>)}
+              className="w-16 rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+            />
+            <select
+              value={(selectedEntity as { latchOn?: string }).latchOn ?? 'locks'}
+              onChange={(e) => onUpdateEntity(selectedEntity.id, { latchOn: e.target.value } as Partial<LevelEntity>)}
+              className="rounded border border-border bg-background px-1 py-0.5 text-xs"
+            >
+              <option value="locks">locks</option>
+              <option value="smashes">smashes</option>
+            </select>
+          </div>
           )}
 
           {/* Portal. The link is the pairing: two obstacles sharing a link are
@@ -1183,11 +1223,13 @@ function BallEditor({ ball, onUpdate }: { ball: BallConfig; onUpdate: (updates: 
  * field.
  */
 function BearingEditor({ kind, bearing, onUpdate }: {
-  kind: 'launcher' | 'box';
+  kind: 'launcher' | 'box' | 'cage';
   bearing: Bearing;
   onUpdate: (bearing: Bearing) => void;
 }) {
-  const label = kind === 'launcher' ? 'Fires out of' : 'Membrane on';
+  const label = kind === 'launcher' ? 'Fires out of'
+    : kind === 'cage' ? 'Mouth on'
+    : 'Membrane on';
   const ICON: Record<Bearing, typeof ArrowUp> = {
     up: ArrowUp, down: ArrowDown, left: ArrowLeft, right: ArrowRight,
   };
@@ -1195,7 +1237,7 @@ function BearingEditor({ kind, bearing, onUpdate }: {
     <div className="space-y-2 rounded border border-orange-400/40 bg-orange-400/10 p-2">
       <div className="flex items-center gap-1.5 text-xs font-semibold text-orange-300">
         <Zap className="w-3.5 h-3.5" />
-        {kind === 'launcher' ? 'Launcher' : 'Delivery box'}
+        {kind === 'launcher' ? 'Launcher' : kind === 'cage' ? 'Cage' : 'Delivery box'}
       </div>
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className="flex gap-1">

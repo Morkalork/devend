@@ -89,6 +89,15 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
   /** Ceiling as a multiple of the ball's base speed (default BOUNCER_MAX_SPEED_SCALE). */
   bounceMaxSpeedScale?: number;
   /**
+   * LATCH: this obstacle opens once the player has locked (or smashed) this
+   * many things, and stays open. Phasing objects open on a clock; this is the
+   * only one that opens because of something the player did, which is what
+   * lets a map have two acts.
+   */
+  latchAfter?: number;
+  /** What a latch counts. Default "locks". */
+  latchOn?: "locks" | "smashes";
+  /**
    * PORTAL: balls entering this obstacle leave the other one sharing this link.
    *
    * Solid to FENCES and open to BALLS, so it is a hole you cannot fence over.
@@ -153,7 +162,7 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
 export type WallRectEntity = WallEntity & RectShape;
 export type WallPolygonEntity = WallEntity & PolygonShape;
 export type WallCircleEntity = WallEntity & CircleShape;
-export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity | LevelMoverEntity | BoxRectEntity | LauncherRectEntity;
+export type LevelEntity = WallRectEntity | WallPolygonEntity | WallCircleEntity | LevelMoverEntity | BoxRectEntity | LauncherRectEntity | CageRectEntity;
 
 /** True when the entity is a wall with the mirror flag set. Movers can never be mirrors. */
 export function isMirrorEntity(entity: LevelEntity): boolean {
@@ -220,6 +229,24 @@ export interface LauncherEntity extends BaseEntity, BendShapeFields {
   ballType?: string;
 }
 export type LauncherRectEntity = LauncherEntity & RectShape;
+
+/**
+ * A cage: a four-sided container whose MOUTH shuts behind a ball and opens
+ * again after `holdSeconds`.
+ *
+ * The only object in the game that gives you somewhere to PUT a problem for a
+ * while. Every other tool is permanent - a lock removes a ball for good, a
+ * fence divides the board for good - and a cage is the one way to say "not this
+ * ball, not yet" while you deal with the corner it kept ruining.
+ */
+export interface CageEntity extends BaseEntity, BendShapeFields {
+  kind: "cage";
+  /** The side that opens. Balls enter and leave through it. */
+  facing: "up" | "down" | "left" | "right";
+  /** Seconds a caught ball is held. */
+  holdSeconds?: number;
+}
+export type CageRectEntity = CageEntity & RectShape;
 
 // ── Mover entities — obstacles that oscillate back and forth ──────────────
 export interface MoverEntityBase extends BaseEntity, BendShapeFields {

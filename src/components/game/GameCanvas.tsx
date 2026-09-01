@@ -1018,6 +1018,7 @@ export function GameCanvas({
       // returns is never read here.
       game.bouncers = data.bouncers;
       game.portals = data.portals;
+      game.cages = data.cages;
       game.bouncerFlashes = [];
       game.deliveryBoxes = data.deliveryBoxes;
       game.fenceZones = data.fenceZones;

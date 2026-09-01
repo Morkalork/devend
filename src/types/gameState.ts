@@ -24,6 +24,7 @@ import type { LampState } from "@/lib/lampBall";
 import type { ObstacleRuleMap } from "@/lib/physics/obstacleRules";
 import type { BouncerSpec } from "@/lib/physics/bouncer";
 import type { PortalSpec } from "@/lib/physics/portal";
+import type { CageState } from "@/lib/physics/cage";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import type { LauncherState } from "@/lib/physics/launcher";
 import type { DeliveryBoxState } from "@/lib/physics/deliveryBox";
@@ -123,6 +124,8 @@ export interface CanvasGameState {
   deliveryBoxes?: DeliveryBoxState[];
   /** Launcher cups on this map. Nothing moves while one is still loaded. */
   launchers?: LauncherState[];
+  /** Cages: containers that shut behind a ball and open again on a timer. */
+  cages?: CageState[];
   /**
    * The power the hardest launch on this map was fired at, multiplying the
    * map's base pay. 1 (or absent) on every map without a launcher, which is

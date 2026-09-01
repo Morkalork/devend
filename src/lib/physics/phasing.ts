@@ -54,6 +54,34 @@ export function tickPhasing(game: CanvasGameState, nowActiveSeconds: number): vo
   if (!objs || objs.length === 0) return;
 
   for (const obj of objs) {
+    // A CAGE mouth is driven by tickCages, which knows whether a ball is
+    // inside. Skipped here rather than given a phase by both, which would have
+    // the clock slamming a mouth shut on nothing.
+    if (obj.cageOf) continue;
+
+    // A LATCH is opened by progress, not by a clock, and once open it stays
+    // open: it is the only object that connects the furniture to the
+    // objectives, so a map can have two acts. Handled before the cycle maths
+    // because none of it applies - there is no period, and re-closing would
+    // make the thing the player earned a temporary loan.
+    if (obj.latchAfter !== undefined) {
+      const done = obj.latchOn === 'smashes'
+        ? (game.objectivesBroken ?? 0)
+        : game.lockedBallsCount;
+      const open = done >= obj.latchAfter;
+      const wasIn = obj.phase === "in";
+      obj.phase = open ? "out" : "in";
+      obj.alpha = open ? 0 : 1;
+      // The same shockwave a phasing object fires when it blinks out, so a
+      // latch opening is felt rather than merely noticed - and once only,
+      // because it never closes again.
+      if (wasIn && open && obj.firedOutAt === undefined) {
+        obj.firedOutAt = nowActiveSeconds;
+        emitPhaseShockwave(game, obj);
+      }
+      continue;
+    }
+
     const cyc = obj.cycleSeconds > 0 ? obj.cycleSeconds : 10;
     const t = ((nowActiveSeconds - obj.startedAt) % cyc + cyc) % cyc / cyc;
     const { phase, alpha } = phaseAt(t);

@@ -151,6 +151,19 @@ export interface PhasingObjectState {
   phase: 'in' | 'out';
   alpha: number;       // 1 = fully solid, 0 = fully phased out (drives render + collision)
   firedOutAt?: number; // guard so the phase-out shockwave fires once per cycle
+  /**
+   * LATCH: this object does not cycle on a clock, it opens when the player has
+   * done something - and stays open.
+   *
+   * Modelled as a phasing object rather than a mechanic of its own because
+   * `phase`/`alpha` is already the single source of truth for tangibility AND
+   * for how the thing is drawn. A latch that invented its own openness would
+   * have to be taught to every collision path and both renderers again.
+   */
+  latchAfter?: number;
+  latchOn?: 'locks' | 'smashes';
+  /** CAGE mouth: the cage owns this object's phase, so tickPhasing skips it. */
+  cageOf?: string;
 }
 
 // Diagonal growing wall - extends from origin in +/- direction

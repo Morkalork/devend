@@ -44,6 +44,7 @@ import { type LauncherState } from "@/lib/physics/launcher";
 import { muzzleVector, type LaunchFacing } from "@/lib/launcher";
 import { BOUNCER_KICK, BOUNCER_MAX_SPEED_SCALE, type BouncerSpec } from "@/lib/physics/bouncer";
 import type { PortalSpec } from "@/lib/physics/portal";
+import type { CageState } from "@/lib/physics/cage";
 import { rotateFenceZones } from "@/lib/mapRotation";
 import type { FenceZone } from "@/lib/physics/fenceZones";
 import { weldRectToBoard, weldPolygonToBoard, pinnedSidesOf, type PinnedSides } from "@/lib/weldToBoard";
@@ -152,6 +153,7 @@ export interface InitialGameData {
   launchers: LauncherState[];
   bouncers: Map<Polygon, BouncerSpec>;
   portals: Map<Polygon, PortalSpec>;
+  cages: CageState[];
   /** Fence-speed ground, already rotated into this deal's orientation. */
   fenceZones?: FenceZone[];
   mirrorPolygons: Polygon[];
@@ -238,6 +240,7 @@ export function createInitialGameData(
   const obstacleRules: ObstacleRuleMap = new Map();
   const bouncers = new Map<Polygon, BouncerSpec>();
   const portals = new Map<Polygon, PortalSpec>();
+  const cages: CageState[] = [];
   const deliveryBoxes: DeliveryBoxState[] = [];
   const launchers: LauncherState[] = [];
   // Collected in the entity pass and turned into sleeping balls after the
@@ -390,6 +393,51 @@ export function createInitialGameData(
           // Two independently-rotated copies of one rectangle is exactly how the
           // band would come to sit somewhere the balls are not.
           inner: { x: x + T, y: y + T, width: w - 2 * T, height: h - 2 * T },
+        });
+        continue;
+      }
+      if (entity.kind === "cage") {
+        // FOUR walls, unlike the launcher's three: a cage has a mouth rather
+        // than a missing side, and the mouth is a wall that comes and goes. It
+        // is registered as a phasing object so tangibility and appearance come
+        // from the one field both collision systems and both renderers already
+        // read - see physics/cage.ts on why it may not decide for itself.
+        const T = BOX_WALL_THICKNESS;
+        const { x, y, width: w, height: h } = entity;
+        const sides: Array<{ side: LaunchFacing; poly: Polygon }> = [
+          { side: "up",    poly: createRectPolygon(x,         y,         x + w,     y + T) },
+          { side: "down",  poly: createRectPolygon(x,         y + h - T, x + w,     y + h) },
+          { side: "left",  poly: createRectPolygon(x,         y,         x + T,     y + h) },
+          { side: "right", poly: createRectPolygon(x + w - T, y,         x + w,     y + h) },
+        ];
+        const mouthId = `${entity.id}-mouth`;
+        for (const { side, poly } of sides) {
+          obstaclePolygons.push(poly);
+          const walls = createWallsFromPolygon(
+            poly, side === entity.facing ? `obstacle-${mouthId}` : `cage-${entity.id}-${side}`, false,
+          );
+          if (side === entity.facing) {
+            phasingObjects.push({
+              id: mouthId,
+              polygon: poly,
+              wallIds: walls.map(wl => wl.id),
+              startedAt: 0,
+              cycleSeconds: 0,
+              // Starts OPEN, so a cage is somewhere a ball can wander into
+              // rather than a sealed box nothing can ever enter.
+              phase: 'out',
+              alpha: 0,
+              cageOf: entity.id,
+            });
+          }
+          allWalls.push(...walls);
+        }
+        cages.push({
+          id: entity.id,
+          inner: { x: x + T, y: y + T, width: w - 2 * T, height: h - 2 * T },
+          mouthId,
+          holdSeconds: Number.isFinite(entity.holdSeconds) && (entity.holdSeconds as number) > 0
+            ? (entity.holdSeconds as number) : 12,
         });
         continue;
       }
@@ -609,6 +657,24 @@ export function createInitialGameData(
         // Phasing obstacle (#64): register it so the phasing tick can toggle its
         // collision + fire the phase-out shockwave. It stays a normal obstacle
         // (polygon + edge walls); the tick just skips it while phased out.
+        // A LATCH rides the phasing system without cycling: `phase`/`alpha` is
+        // already the one source of truth for both tangibility and how the
+        // object is drawn, so a latch gets ball collision, fence collision and
+        // both renderers for free rather than teaching all of them a new idea.
+        if (Number.isFinite((entity as WallEntity).latchAfter)) {
+          const we = entity as WallEntity;
+          phasingObjects.push({
+            id: entity.id,
+            polygon: obstaclePolygon,
+            wallIds: obstacleWalls.map(w => w.id),
+            startedAt: 0,
+            cycleSeconds: 0,
+            phase: 'in',
+            alpha: 1,
+            latchAfter: Math.max(1, Math.round(we.latchAfter as number)),
+            latchOn: we.latchOn ?? 'locks',
+          });
+        }
         if ((entity as WallEntity).isPhasing) {
           phasingObjects.push({
             id: entity.id,
@@ -1243,6 +1309,7 @@ export function createInitialGameData(
     launchers,
     bouncers,
     portals,
+    cages,
     // Rotated here rather than at the consumer: a zone is a rect on the board
     // and has to turn with everything else on it.
     fenceZones: rotateFenceZones(level.fenceZones, mapRotation),
