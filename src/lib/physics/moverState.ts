@@ -10,6 +10,31 @@ export interface MoverState {
   axis: "horizontal" | "vertical";
   range: number;
   speed: number;
+  /**
+   * How this object moves. Absent or "linear" is the shuttle every mover has
+   * always been; "rotate" makes it a ROTOR, pivoting instead of sliding.
+   *
+   * A rotor is a different threat in kind rather than a faster shuttle. It
+   * sweeps an ARC through the pocket you are trying to seal, so it arrives at
+   * a fence from an angle that keeps changing, and its tip travels far faster
+   * than its hub - which part of it you cross matters, and that is a decision
+   * a linear patrol never asks you to make.
+   */
+  motion?: "linear" | "rotate";
+  /** Rotor: current angle, radians. Plays the part `offset` plays for a shuttle. */
+  angle?: number;
+  /** Rotor: half the sweep in radians. Absent means it spins all the way round. */
+  halfSweep?: number;
+  /**
+   * Rotor: the outline relative to the PIVOT, rotated in place each step.
+   *
+   * The note on bentOutline below says a mover "only ever translates, never
+   * rotates", and that was true when it was written. A rotor breaks it, so it
+   * gets its own precomputed outline for the same reason: the step is one pass
+   * that writes existing vertex objects rather than rebuilding them, and the
+   * cost of a rotation is the same two multiplies as a translation.
+   */
+  rotorOutline?: { x: number; y: number }[];
   /** Current displacement from home (−range/2 … +range/2). */
   offset: number;
   direction: 1 | -1;
@@ -32,7 +57,44 @@ export interface MoverState {
 
 const CIRCLE_SIDES = 24;
 
+/** The pivot a rotor turns about: its home centre. */
+export function rotorPivot(m: MoverState): { x: number; y: number } {
+  return { x: m.homeX, y: m.homeY };
+}
+
+/**
+ * A rotor's outline in its own frame, before any rotation.
+ *
+ * Built once. `homeX/homeY` is the pivot, so an arm that sweeps rather than a
+ * windmill that spins in place is authored by placing the pivot off the bar's
+ * middle - which the level schema does with pivotX/pivotY.
+ */
+export function buildRotorOutline(m: MoverState): { x: number; y: number }[] {
+  if (m.bentOutline) return m.bentOutline.map(p => ({ ...p }));
+  if (m.shape === "circle") {
+    return Array.from({ length: CIRCLE_SIDES }, (_, i) => {
+      const a = (i / CIRCLE_SIDES) * Math.PI * 2;
+      return { x: Math.cos(a) * m.radius!, y: Math.sin(a) * m.radius! };
+    });
+  }
+  const hw = m.width! / 2, hh = m.height! / 2;
+  return [
+    { x: -hw, y: -hh }, { x: hw, y: -hh }, { x: hw, y: hh }, { x: -hw, y: hh },
+  ];
+}
+
 export function buildMoverPolygon(m: MoverState): MoverState["polygon"] {
+  if (m.motion === "rotate") {
+    const base = m.rotorOutline ?? buildRotorOutline(m);
+    const a = m.angle ?? 0;
+    const cos = Math.cos(a), sin = Math.sin(a);
+    return {
+      vertices: base.map(p => ({
+        x: m.homeX + p.x * cos - p.y * sin,
+        y: m.homeY + p.x * sin + p.y * cos,
+      })),
+    };
+  }
   const dx = m.axis === "horizontal" ? m.offset : 0;
   const dy = m.axis === "vertical"   ? m.offset : 0;
 
@@ -72,9 +134,23 @@ export function buildMoverPolygon(m: MoverState): MoverState["polygon"] {
  * GC pressure.
  */
 export function updateMoverPolygon(m: MoverState): void {
+  const verts = m.polygon.vertices;
+
+  if (m.motion === "rotate") {
+    const base = m.rotorOutline;
+    if (!base) return;
+    const a = m.angle ?? 0;
+    const cos = Math.cos(a), sin = Math.sin(a);
+    for (let i = 0; i < verts.length; i++) {
+      const p = base[i];
+      verts[i].x = m.homeX + p.x * cos - p.y * sin;
+      verts[i].y = m.homeY + p.x * sin + p.y * cos;
+    }
+    return;
+  }
+
   const dx = m.axis === "horizontal" ? m.offset : 0;
   const dy = m.axis === "vertical"   ? m.offset : 0;
-  const verts = m.polygon.vertices;
 
   if (m.bentOutline) {
     const base = m.bentOutline;

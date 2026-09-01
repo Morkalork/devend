@@ -9,7 +9,7 @@
  */
 
 import { BendShapeFields, LevelConfig, LevelMoverEntity, MoverCircleEntity, MoverRectEntity, WallEntity } from "@/types/level";
-import { MoverState, buildMoverPolygon } from "@/lib/physics/moverState";
+import { MoverState, buildMoverPolygon, buildRotorOutline } from "@/lib/physics/moverState";
 import { GameModifiers } from "@/hooks/useActiveModifiers";
 import { Ball, Region, Vector2, DestructibleState, StackObject, ChainState, PhasingObjectState } from "@/types/game";
 import { Polygon } from "@/lib/polygon";
@@ -581,6 +581,7 @@ export function createInitialGameData(
               ? (we.bounceKick as number) : BOUNCER_KICK,
             maxSpeedScale: Number.isFinite(we.bounceMaxSpeedScale) && (we.bounceMaxSpeedScale as number) > 0
               ? (we.bounceMaxSpeedScale as number) : BOUNCER_MAX_SPEED_SCALE,
+            ...(we.bounceBearing ? { bearing: we.bounceBearing } : {}),
           };
           bouncers.set(obstaclePolygon, spec);
           for (const w of obstacleWalls) w.bouncer = spec;
@@ -1121,9 +1122,31 @@ export function createInitialGameData(
     // A bent mover carries its arc as an offset-from-home outline, computed
     // once here. See MoverState.bentOutline for why it cannot be per-step.
     if (hasBend(e)) {
-      const straight = buildMoverPolygon({ ...mover, offset: 0 }).vertices;
+      const straight = buildMoverPolygon({ ...mover, offset: 0, motion: "linear" }).vertices;
       const bent = bendOutline(straight, { bend: e.bend, bendAxis: e.bendAxis, curves: e.curves });
       mover.bentOutline = bent.map(v => ({ x: v.x - homeX, y: v.y - homeY }));
+    }
+    // ROTOR: turn the shuttle into a pivot. The pivot may sit OFF the shape,
+    // which is the difference between a windmill spinning in place and an arm
+    // sweeping a much larger circle - so the outline is taken relative to the
+    // pivot, not to the shape's own centre.
+    if (e.motion === "rotate") {
+      mover.motion = "rotate";
+      const pivotX = Number.isFinite(e.pivotX) ? (e.pivotX as number) : homeX;
+      const pivotY = Number.isFinite(e.pivotY) ? (e.pivotY as number) : homeY;
+      const base = buildRotorOutline({ ...mover, homeX, homeY });
+      // Re-based onto the pivot: the shape keeps its authored position, and the
+      // pivot decides what it swings around.
+      mover.rotorOutline = base.map(p => ({
+        x: p.x + homeX - pivotX,
+        y: p.y + homeY - pivotY,
+      }));
+      mover.homeX = pivotX;
+      mover.homeY = pivotY;
+      mover.angle = ((e.startDegrees ?? 0) * Math.PI) / 180;
+      if (Number.isFinite(e.sweepDegrees) && (e.sweepDegrees as number) > 0) {
+        mover.halfSweep = ((e.sweepDegrees as number) * Math.PI) / 360;
+      }
     }
     mover.polygon = buildMoverPolygon(mover);
     movers.push(mover);

@@ -45,6 +45,7 @@
  */
 import type { Ball } from "@/types/game";
 import type { Vector2 } from "@/lib/polygon";
+import { BEARING_VECTOR, type Bearing } from "@/lib/physics/obstacleRules";
 
 export interface BouncerSpec {
   id: string;
@@ -54,6 +55,17 @@ export interface BouncerSpec {
   kick: number;
   /** Ceiling, as a multiple of the ball's OWN base speed. */
   maxSpeedScale: number;
+  /**
+   * KICKER: fire along this fixed bearing instead of radially outward.
+   *
+   * The difference between a pop bumper and a slingshot, and it is the whole
+   * reason to have both. A radial bouncer SCATTERS - which way a ball leaves
+   * depends on where it happened to hit, so a cluster of them is a pinball
+   * and not a plan. A kicker always fires the same way, so it can be aimed:
+   * a designer can build a lane that feeds a ball somewhere on purpose, and a
+   * player can learn it.
+   */
+  bearing?: Bearing;
 }
 
 /** Authoring defaults, so a map that just says `bouncer: true` gets a good one. */
@@ -100,16 +112,24 @@ export function bouncerKick(ball: Ball, spec: BouncerSpec): BouncerHit {
   const base = ball.baseSpeed > 0 ? ball.baseSpeed : speed || 1;
   const ceiling = base * Math.max(1, spec.maxSpeedScale);
 
-  // Outward from the middle. A ball sitting exactly on the centre has no
-  // outward direction to give, so it keeps the heading it had - never a zero
-  // vector, which would strand it there for the rest of the map.
-  let dx = ball.position.x - spec.centre.x;
-  let dy = ball.position.y - spec.centre.y;
-  let len = Math.hypot(dx, dy);
-  if (len < 1e-6) {
-    dx = ball.velocity.x; dy = ball.velocity.y; len = speed;
+  // A KICKER fires along its bearing whatever the approach; a bouncer fires
+  // outward from its middle. Everything below - the gain, the ceiling, the
+  // never-slow rule - is identical, because the only thing that differs
+  // between the two is which way "away" points.
+  let dx: number, dy: number, len: number;
+  if (spec.bearing) {
+    const [bx, by] = BEARING_VECTOR[spec.bearing];
+    dx = bx; dy = by; len = 1;
+  } else {
+    // Outward from the middle. A ball sitting exactly on the centre has no
+    // outward direction to give, so it keeps the heading it had - never a zero
+    // vector, which would strand it there for the rest of the map.
+    dx = ball.position.x - spec.centre.x;
+    dy = ball.position.y - spec.centre.y;
+    len = Math.hypot(dx, dy);
+    if (len < 1e-6) { dx = ball.velocity.x; dy = ball.velocity.y; len = speed; }
+    if (len < 1e-6) { dx = 1; dy = 0; len = 1; }
   }
-  if (len < 1e-6) { dx = 1; dy = 0; len = 1; }
 
   // Never slower than it arrived: at or above the ceiling this is a pure
   // redirect. A bumper that braked a fast ball would be a damper in disguise.

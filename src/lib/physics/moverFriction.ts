@@ -79,7 +79,11 @@ export function moverFenceDrag(
 function contactWith(mover: MoverState, wall: Wall): FrictionContact | null {
   const half = (wall.thickness ?? 6) / 2;
 
-  if (mover.shape === "circle" && mover.radius !== undefined) {
+  // A ROTOR's centre is not `home + offset`: offset means nothing for it, and a
+  // circular rotor is the one shape whose polygon and whose "centre" disagree
+  // about where it is. The polygon is always what the ball and the fence
+  // actually meet, so a rotor is measured off that.
+  if (mover.motion !== "rotate" && mover.shape === "circle" && mover.radius !== undefined) {
     const cx = mover.homeX + (mover.axis === "horizontal" ? mover.offset : 0);
     const cy = mover.homeY + (mover.axis === "vertical" ? mover.offset : 0);
     const centre = { x: cx, y: cy };

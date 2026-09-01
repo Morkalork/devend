@@ -1229,9 +1229,68 @@ function MoverEditor({ entity, onUpdate }: {
     <div className="space-y-2 rounded border border-amber-500/40 bg-amber-500/10 p-2">
       <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-400">
         <AxisIcon className="w-3.5 h-3.5" />
-        Mover
+        {entity.motion === 'rotate' ? 'Rotor' : 'Mover'}
       </div>
 
+      {/* Shuttle or rotor. A rotor ignores axis, range and phase entirely and
+          reads `speed` as DEGREES per second, so the controls below are hidden
+          for one rather than left on screen doing nothing. */}
+      <label className="flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={entity.motion === 'rotate'}
+          onChange={(e) => onUpdate({ motion: e.target.checked ? 'rotate' : undefined })}
+          className="rounded"
+        />
+        <span className="text-amber-300">Rotor</span>
+        <span className="text-muted-foreground">(pivots instead of sliding)</span>
+      </label>
+
+      {entity.motion === 'rotate' && (
+        <div className="grid grid-cols-2 gap-2">
+          <label className="space-y-1">
+            <span className="text-[10px] text-muted-foreground">Degrees / sec</span>
+            <input
+              type="number"
+              value={Math.round(entity.speed)}
+              onChange={(e) => onUpdate({ speed: Number(e.target.value) })}
+              className="w-full rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+            />
+          </label>
+          <label className="space-y-1">
+            {/* Blank spins all the way round; a number makes it a wiper. */}
+            <span className="text-[10px] text-muted-foreground">Sweep (deg, blank = full)</span>
+            <input
+              type="number"
+              value={entity.sweepDegrees ?? ''}
+              onChange={(e) => onUpdate({
+                sweepDegrees: e.target.value === '' ? undefined : Number(e.target.value),
+              })}
+              className="w-full rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-[10px] text-muted-foreground">Pivot X (blank = centre)</span>
+            <input
+              type="number"
+              value={entity.pivotX ?? ''}
+              onChange={(e) => onUpdate({ pivotX: e.target.value === '' ? undefined : Number(e.target.value) })}
+              className="w-full rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-[10px] text-muted-foreground">Pivot Y (blank = centre)</span>
+            <input
+              type="number"
+              value={entity.pivotY ?? ''}
+              onChange={(e) => onUpdate({ pivotY: e.target.value === '' ? undefined : Number(e.target.value) })}
+              className="w-full rounded border border-border bg-background px-1.5 py-0.5 text-xs"
+            />
+          </label>
+        </div>
+      )}
+
+      {entity.motion !== 'rotate' && (<>
       {/* Axis. Also draggable on the canvas: pulling the end handle sideways or
           downwards flips this, so the path never has to be imagined. */}
       <div className="flex gap-1">
@@ -1324,6 +1383,7 @@ function MoverEditor({ entity, onUpdate }: {
           sit well inside it and the extreme still be half a travel past the wall.
         </div>
       )}
+      </>)}
 
       <button
         onClick={() => onUpdate({ range: DEFAULT_MOVER_RANGE, speed: DEFAULT_MOVER_SPEED })}

@@ -409,6 +409,33 @@ export class EntityLayer {
     w2s: W2S,
     scale: number,
   ): void {
+    // A ROTOR runs on a circle, not a track. Drawing its rail as a straight
+    // line would state the one thing about it that is not true - that it
+    // shuttles - and the rail is the only thing on the board that tells a
+    // player where a moving object can reach before it goes there.
+    if (m.motion === "rotate") {
+      const pivot = w2s(m.homeX, m.homeY);
+      let reach = 0;
+      for (const p of m.rotorOutline ?? []) reach = Math.max(reach, Math.hypot(p.x, p.y));
+      if (reach <= 0.5) return;
+      const r = reach * scale;
+      // The swept circle, dashed like every other rail.
+      const steps = Math.max(24, Math.round(r / 3));
+      for (let i = 0; i < steps; i += 2) {
+        const a0 = (i / steps) * Math.PI * 2;
+        const a1 = ((i + 1) / steps) * Math.PI * 2;
+        this.rails
+          .moveTo(pivot.x + Math.cos(a0) * r, pivot.y + Math.sin(a0) * r)
+          .lineTo(pivot.x + Math.cos(a1) * r, pivot.y + Math.sin(a1) * r);
+      }
+      this.rails.stroke({ width: Math.max(1, 1.5 * scale), color: PALETTE.mover, alpha: 0.28 });
+      // The hub, so the thing it turns about is visible even when the arm is
+      // on the far side of it.
+      this.rails.circle(pivot.x, pivot.y, Math.max(2, 3 * scale))
+        .stroke({ width: Math.max(1, 1.5 * scale), color: PALETTE.mover, alpha: 0.45 });
+      return;
+    }
+
     const half = m.range / 2;
     if (half <= 0.5) return;
     const horizontal = m.axis === "horizontal";

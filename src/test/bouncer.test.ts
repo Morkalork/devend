@@ -190,3 +190,53 @@ describe("the cooldown, so a resting ball is not machine-gunned", () => {
     expect(bouncerReady(b, spec({ id: "b2" }), 1001)).toBe(true);
   });
 });
+
+/**
+ * The kicker: the same solid, aimed.
+ *
+ * A bouncer SCATTERS - which way a ball leaves depends on where it happened to
+ * hit - so a cluster is a pinball rather than a plan. A kicker fires along one
+ * bearing whatever the approach, which is what lets a designer build a lane
+ * that feeds a ball somewhere on purpose and a player learn it.
+ *
+ * Everything else has to be identical, and that is most of what is checked
+ * here: two objects that differ in one way are a pair, and two that quietly
+ * differ in three are a maintenance problem.
+ */
+describe("a kicker fires along its bearing, not away from itself", () => {
+  it("sends a ball the same way whatever side it arrives on", () => {
+    const headings = [[100, 0], [-100, 0], [0, 100], [0, -100], [70, -70]].map(([px, py]) => {
+      const b = ball({ x: px, y: py }, { x: -px, y: -py });
+      const hit = bouncerKick(b, spec({ bearing: "right" }));
+      return `${(hit.velocity.x / speedOf(hit.velocity)).toFixed(4)},${(hit.velocity.y / speedOf(hit.velocity)).toFixed(4)}`;
+    });
+    expect(new Set(headings).size, "a kicker scattered like a bouncer").toBe(1);
+    expect(headings[0]).toBe("1.0000,0.0000");
+  });
+
+  it("honours every bearing", () => {
+    const dir = (bearing: "up" | "down" | "left" | "right") => {
+      const hit = bouncerKick(ball({ x: 40, y: 40 }, { x: -100, y: -100 }), spec({ bearing }));
+      return { x: Math.round(hit.velocity.x / speedOf(hit.velocity)), y: Math.round(hit.velocity.y / speedOf(hit.velocity)) };
+    };
+    expect(dir("right")).toEqual({ x: 1, y: 0 });
+    expect(dir("left")).toEqual({ x: -1, y: 0 });
+    expect(dir("down")).toEqual({ x: 0, y: 1 });   // screen coords: +y is down
+    expect(dir("up")).toEqual({ x: 0, y: -1 });
+  });
+
+  it("gains and caps exactly like a bouncer", () => {
+    // The one thing that differs is the direction. If the gain or the ceiling
+    // ever drifted apart, one of the two would quietly become the better object
+    // to place everywhere.
+    const kicked = bouncerKick(ball({ x: 100, y: 0 }, { x: -200, y: 0 }), spec({ bearing: "right" }));
+    const bounced = bouncerKick(ball({ x: 100, y: 0 }, { x: -200, y: 0 }), spec());
+    expect(kicked.speed).toBeCloseTo(bounced.speed, 9);
+  });
+
+  it("still never brakes a ball that is already faster than its ceiling", () => {
+    const hit = bouncerKick(ball({ x: 100, y: 0 }, { x: 750, y: 0 }), spec({ bearing: "left" }));
+    expect(hit.speed).toBeCloseTo(750, 6);
+    expect(hit.velocity.x).toBeLessThan(0);
+  });
+});

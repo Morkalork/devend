@@ -88,6 +88,12 @@ export interface WallEntity extends BaseEntity, BendShapeFields {
   bounceKick?: number;
   /** Ceiling as a multiple of the ball's base speed (default BOUNCER_MAX_SPEED_SCALE). */
   bounceMaxSpeedScale?: number;
+  /**
+   * KICKER: fire every ball along this bearing rather than radially outward.
+   * A bouncer scatters; a kicker aims, so a lane of them feeds a ball
+   * somewhere on purpose. Requires `bouncer: true`.
+   */
+  bounceBearing?: "up" | "down" | "left" | "right";
   // ── Breakable obstacles (issue #38) ──────────────────────────────────────
   /** When true, balls break this obstacle by hitting it (any ball; black = half). */
   breakable?: boolean;
@@ -212,8 +218,32 @@ export interface MoverEntityBase extends BaseEntity, BendShapeFields {
   kind: "mover";
   axis: "horizontal" | "vertical";
   range: number;   // total oscillation distance (moves ±range/2 from home center)
-  speed: number;   // world units per second
+  speed: number;   // world units per second, or DEGREES per second when motion is "rotate"
   phase?: number;  // 0–1 starting phase: 0 = left/top extreme, 0.5 = center, 1 = right/bottom extreme
+  /**
+   * ROTOR: pivot instead of sliding. `axis`, `range` and `phase` are ignored;
+   * `speed` becomes degrees per second, and the fields below take over.
+   *
+   * A rotor sweeps an arc through the space you are sealing rather than
+   * shuttling across it, so it comes at a fence from an angle that keeps
+   * changing - and its tip moves much faster than its hub, which makes WHERE
+   * you cross it a decision a linear patrol never asks for.
+   */
+  motion?: "linear" | "rotate";
+  /**
+   * Rotor: total sweep in degrees. Omit for a rotor that spins all the way
+   * round; set it for a wiper that reverses at both ends.
+   */
+  sweepDegrees?: number;
+  /**
+   * Rotor: where the pivot sits, in WORLD coordinates. Defaults to the shape's
+   * own centre, which spins it in place like a windmill; put it off the shape
+   * and the same bar becomes an arm that sweeps a much larger circle.
+   */
+  pivotX?: number;
+  pivotY?: number;
+  /** Rotor: starting angle in degrees. */
+  startDegrees?: number;
 }
 export type MoverRectEntity   = MoverEntityBase & RectShape;
 export type MoverCircleEntity = MoverEntityBase & CircleShape;
