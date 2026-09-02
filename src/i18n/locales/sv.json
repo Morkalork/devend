@@ -413,8 +413,8 @@
       },
       "bouncerHours": {
         "title": "Studstimmar",
-        "body": "Varje studsare håller en liten kassa övertid och betalar en timme varje gång en boll träffar den, tills den är tom: grön så länge det finns timmar kvar, röd när den är tömd. Den studsar vidare oavsett. Timmarna betalas ovanpå kartans tak, så varje studs är värd exakt en timme.",
-        "tip": "Det här är belöningen för att INTE skynda. Att bli klar tidigt betalar Tempo-axeln, och en full studsare betalar dig för att låta en boll vara kvar i spel lite längre; en karta med flera tvingar dig att välja vilket du jagar."
+        "body": "Varje studsare håller en liten kassa övertid och betalar en timme varje gång en boll träffar den, tills den är tom: grön så länge det finns timmar kvar, röd när den är tömd. En grön tar också bort 5% av bollens fart, så den är planens egen broms på en boll som blivit för snabb. En röd har inga timmar att betala med och sparkar i stället iväg bollen snabbare. Timmarna betalas ovanpå kartans tak, så varje studs är värd exakt en timme.",
+        "tip": "Det här är belöningen för att INTE skynda, och valet är vad du använder den till: varje inbromsning är en timme du inte lade undan. Tömmer du en klunga på timmar blir den en klunga som slungar dina bollar omkring."
       },
       "breakBonus": {
         "title": "Rivningsbonus",

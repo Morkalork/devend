@@ -416,8 +416,8 @@
       },
       "bouncerHours": {
         "title": "Bumper Hours",
-        "body": "Each bumper holds a small bank of overtime and pays one hour every time a ball strikes it, until it runs dry: green while it still holds hours, red once it is spent. It keeps bouncing either way. These hours are paid on top of the map's cap, so every bump is worth exactly one hour.",
-        "tip": "This is the reward for NOT rushing. Shipping early pays the Tempo axis, and a full bumper pays you to leave a ball in play a little longer; a map with a bumper cluster asks you to decide which of the two you are chasing."
+        "body": "Each bumper holds a small bank of overtime and pays one hour every time a ball strikes it, until it runs dry: green while it still holds hours, red once it is spent. A green one also takes 5% off the ball, so it is the board's own brake on a ball that has been made too fast. A red one has no hours to pay with and kicks instead, speeding the ball up. These hours are paid on top of the map's cap, so every bump is worth exactly one hour.",
+        "tip": "This is the reward for NOT rushing, and the choice is which use you want: every brake is an hour you did not bank. Drain a cluster for the hours and it turns into a cluster that throws your balls around."
       },
       "breakBonus": {
         "title": "Demolition Bonus",

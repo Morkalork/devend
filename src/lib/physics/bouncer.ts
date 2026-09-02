@@ -38,10 +38,30 @@
  * allowed the same headroom relative to themselves, not the same absolute
  * ceiling that would be generous for one and a hard stop for the other.
  *
+ * ── The brake, and why the bank pays for it ─────────────────────────────────
+ *
+ * A CHARGED bumper does not kick at all: it takes 5% off instead. Only while it
+ * still has hours, so the two states the player can already see - green with
+ * hours, red without - are two different machines:
+ *
+ *   GREEN pays an hour AND takes the edge off the ball. It is the reward for
+ *     leaving a ball in play, and the board's own answer to a ball that has
+ *     been made too fast.
+ *   RED is the pop bumper described above, and it only speeds a ball up. A
+ *     cluster you have drained is a cluster that has turned on you.
+ *
+ * This reverses an earlier rule here, which was that a bumper never slows a
+ * ball, because "a bumper that braked a fast ball would be a damper wearing a
+ * bumper's paint" and because it would make the launcher's wager - the speed is
+ * permanent - quietly false. Both objections were about a brake that was FREE.
+ * This one is not: it costs an hour out of a fixed, authored, per-map bank, so
+ * a map can spend exactly as much braking as its designer put on the board and
+ * no more, and every brake is an hour the player did not bank. The wager still
+ * holds everywhere else; it now has a second answer beside ice, one the player
+ * has to route the ball through and pay for.
+ *
  * A ball already ABOVE its ceiling (a launcher shot at 3x arrives at one) is
- * redirected but never slowed. A bumper that braked a fast ball would be a
- * damper wearing a bumper's paint, and worse, it would make the launcher's
- * whole wager - "the speed is permanent" - quietly false.
+ * still redirected and never kicked further by a SPENT bumper.
  */
 import type { Ball } from "@/types/game";
 import type { Vector2 } from "@/lib/polygon";
@@ -84,6 +104,17 @@ export interface BouncerSpec {
 
 /** Authoring defaults, so a map that just says `bouncer: true` gets a good one. */
 export const BOUNCER_KICK = 1.25;
+
+/**
+ * What a CHARGED bumper multiplies a ball's speed by, instead of kicking it.
+ *
+ * Small on purpose. Five hours in a bank is five brakes, so one bumper can only
+ * ever take a ball to 0.95^5 = 77% of what it arrived at, and undoing a
+ * launcher shot means draining a whole cluster - paying the player the entire
+ * time. A bigger number would let one well-placed bumper cancel that shot in
+ * two bumps, which would make the shot not worth taking.
+ */
+export const BOUNCER_SLOW = 0.95;
 
 /**
  * Hours a bumper is worth, and how many it pays per bump.
@@ -138,9 +169,9 @@ export function bouncerKick(ball: Ball, spec: BouncerSpec): BouncerHit {
   const ceiling = base * Math.max(1, spec.maxSpeedScale);
 
   // A KICKER fires along its bearing whatever the approach; a bouncer fires
-  // outward from its middle. Everything below - the gain, the ceiling, the
-  // never-slow rule - is identical, because the only thing that differs
-  // between the two is which way "away" points.
+  // outward from its middle. Everything below - the brake, the gain, the
+  // ceiling - is identical, because the only thing that differs between the
+  // two is which way "away" points.
   let dx: number, dy: number, len: number;
   if (spec.bearing) {
     const [bx, by] = BEARING_VECTOR[spec.bearing];
@@ -156,15 +187,31 @@ export function bouncerKick(ball: Ball, spec: BouncerSpec): BouncerHit {
     if (len < 1e-6) { dx = 1; dy = 0; len = 1; }
   }
 
-  // Never slower than it arrived: at or above the ceiling this is a pure
-  // redirect. A bumper that braked a fast ball would be a damper in disguise.
-  const wanted = speed * Math.max(1, spec.kick);
-  const next = Math.max(speed, Math.min(wanted, ceiling));
+  // A bumper with hours left BRAKES; a spent one kicks. See the header: the
+  // bank is what pays for the brake, which is what stops it being a free damper.
+  //
+  // The floor is the ball's own minimumSpeed, honoured here rather than left to
+  // the universal floor at the end of updateBall. Both would stop the ball from
+  // crawling, but only this one makes the returned `speed` true - and that is
+  // what the caller writes onto the ball and what the flash is scaled from.
+  const charged = spec.hours > 0;
+  const floor = Math.max(0, ball.minimumSpeed ?? 0);
+  const next = charged
+    ? Math.max(floor, speed * BOUNCER_SLOW)
+    // Never slower than it arrived: at or above the ceiling this is a pure
+    // redirect, so a spent bumper can only ever turn a fast ball, never add.
+    : Math.max(speed, Math.min(speed * Math.max(1, spec.kick), ceiling));
 
   return {
     velocity: { x: (dx / len) * next, y: (dy / len) * next },
     speed: next,
-    // What the player actually got, against what a full-power kick would give.
-    intensity: speed > 0 ? Math.min(1, (next - speed) / Math.max(1e-6, speed * (spec.kick - 1))) : 1,
+    // How much of what it could do it actually did, either way: a full brake and
+    // a full kick both flash at 1, and one clipped by the floor or the ceiling
+    // flashes weaker.
+    intensity: speed > 0
+      ? (charged
+          ? Math.min(1, (speed - next) / Math.max(1e-6, speed * (1 - BOUNCER_SLOW)))
+          : Math.min(1, (next - speed) / Math.max(1e-6, speed * (spec.kick - 1))))
+      : 1,
   };
 }

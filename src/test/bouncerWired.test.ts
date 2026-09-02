@@ -36,7 +36,7 @@ vi.mock("@/lib/gameHaptics", () => ({
 import { createInitialGameData } from "@/lib/initGame";
 import { updateBall } from "@/lib/physics/updateBall";
 import { DEFAULT_MODIFIERS } from "@/hooks/useActiveModifiers";
-import { BOUNCER_KICK, BOUNCER_HOURS } from "@/lib/physics/bouncer";
+import { BOUNCER_KICK, BOUNCER_HOURS, BOUNCER_SLOW } from "@/lib/physics/bouncer";
 import type { LevelConfig } from "@/types/level";
 import type { CanvasGameState } from "@/types/gameState";
 
@@ -78,11 +78,19 @@ describe("a bouncer is registered on both collision paths", () => {
   });
 });
 
-describe("hitting one actually speeds a ball up", () => {
-  /** Drive a ball into the bumper and report its speed before and after. */
-  const run = (bouncer: boolean) => {
+describe("hitting one changes the ball's speed, and the bank says which way", () => {
+  /**
+   * Drive a ball into the bumper and report the extremes of its speed.
+   *
+   * `drain` empties the bank first, through the SPEC the game built rather than
+   * by authoring a second map: the two states of a bumper have to be the same
+   * object with a different number in it, or "spent" here would not be the
+   * spent the player produces by bumping it five times.
+   */
+  const run = (bouncer: boolean, drain = false) => {
     const d = build(bouncer);
     const game = { ...d } as unknown as CanvasGameState;
+    if (drain) for (const spec of game.bouncers?.values() ?? []) spec.hours = 0;
     const ball = game.balls[0];
     // Aimed straight at the bumper from the left, just outside its rim.
     ball.position = { x: 450 - 60 - ball.radius - 2, y: 450 };
@@ -90,29 +98,39 @@ describe("hitting one actually speeds a ball up", () => {
     ball.speed = 300;
     ball.baseSpeed = 250;
 
-    let peak = 300;
+    let peak = 300, trough = 300;
     for (let i = 0; i < 40; i++) {
       updateBall(ball, 1 / 120, game);
-      peak = Math.max(peak, Math.hypot(ball.velocity.x, ball.velocity.y));
+      const v = Math.hypot(ball.velocity.x, ball.velocity.y);
+      peak = Math.max(peak, v);
+      trough = Math.min(trough, v);
     }
-    return { peak, game };
+    return { peak, trough, game };
   };
 
-  it("speeds it up, where a plain pillar would not", () => {
+  it("slows it while it still has hours, where a plain pillar would not", () => {
     const plain = run(false);
     const bumped = run(true);
-    expect(plain.peak, "a plain pillar changed the ball's speed").toBeCloseTo(300, 0);
-    expect(bumped.peak, "the bouncer never fired").toBeGreaterThan(300);
-    expect(bumped.peak).toBeCloseTo(300 * BOUNCER_KICK, 0);
+    expect(plain.trough, "a plain pillar changed the ball's speed").toBeCloseTo(300, 0);
+    expect(bumped.trough, "the bouncer never fired").toBeLessThan(300);
+    expect(bumped.trough).toBeCloseTo(300 * BOUNCER_SLOW, 0);
+    expect(bumped.peak, "a charged bumper still added speed").toBeCloseTo(300, 0);
   });
 
-  it("kicks exactly once per contact, though two systems both saw it", () => {
+  it("speeds it up once the bank is empty", () => {
+    const drained = run(true, true);
+    expect(drained.peak).toBeCloseTo(300 * BOUNCER_KICK, 0);
+  });
+
+  it("acts exactly once per contact, though two systems both saw it", () => {
     // The invariant that lets the polygon path and the wall path both be wired.
-    // A double kick would read as 1.25^2 = 1.5625, which is a bumper that hits
-    // half again as hard as it is authored to and no screen would say so.
+    // Applied twice a charged bumper would read as 0.95^2 and a spent one as
+    // 1.25^2, and no screen would say either was happening.
     const bumped = run(true);
-    expect(bumped.peak).toBeCloseTo(300 * BOUNCER_KICK, 0);
-    expect(bumped.peak).toBeLessThan(300 * BOUNCER_KICK * BOUNCER_KICK - 1);
+    expect(bumped.trough).toBeCloseTo(300 * BOUNCER_SLOW, 0);
+    expect(bumped.trough).toBeGreaterThan(300 * BOUNCER_SLOW * BOUNCER_SLOW + 1);
+    const drained = run(true, true);
+    expect(drained.peak).toBeLessThan(300 * BOUNCER_KICK * BOUNCER_KICK - 1);
   });
 
   it("publishes a flash so the speed-up has a visible cause", () => {

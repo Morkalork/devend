@@ -394,7 +394,7 @@ export function EntityPanel({
             <button
               onClick={() => onAddEntity('bouncer')}
               className="p-1.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 transition-colors"
-              title="Add bumper (kicks balls away, faster; holds overtime hours)"
+              title="Add bumper (fires balls away; slows them 5% while it has overtime hours, kicks them faster once spent)"
             >
               <Target className="w-3.5 h-3.5" />
             </button>

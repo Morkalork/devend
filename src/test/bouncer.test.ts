@@ -26,16 +26,29 @@
 import { describe, it, expect } from "vitest";
 import {
   bouncerKick, bouncerReady, BOUNCER_COOLDOWN_MS, BOUNCER_KICK,
-  BOUNCER_MAX_SPEED_SCALE, BOUNCER_HOURS, type BouncerSpec,
+  BOUNCER_MAX_SPEED_SCALE, BOUNCER_HOURS, BOUNCER_SLOW, type BouncerSpec,
 } from "@/lib/physics/bouncer";
 import { PHYSICS_STEP, BASE_BALL_RADIUS } from "@/lib/gameConstants";
 import { WALL_THICKNESS } from "@/lib/wallGeometry";
 import type { Ball } from "@/types/game";
 
+/**
+ * A SPENT bumper - the pop-bumper half, and the default here on purpose.
+ *
+ * A bumper is two machines, and which one it is depends on its bank. Charged it
+ * BRAKES (5% a hit, paid for out of its hours); spent it kicks. Almost
+ * everything below is about the kick, the gain and the ceiling, so the default
+ * is the state those rules describe. `charged()` opts into the other one, and
+ * every test that uses it says so in its name.
+ */
 const spec = (over: Partial<BouncerSpec> = {}): BouncerSpec => ({
   id: "b1", centre: { x: 0, y: 0 }, kick: BOUNCER_KICK,
-  maxSpeedScale: BOUNCER_MAX_SPEED_SCALE, hours: BOUNCER_HOURS, ...over,
+  maxSpeedScale: BOUNCER_MAX_SPEED_SCALE, hours: 0, ...over,
 });
+
+/** A bumper with hours left: the one that brakes and pays. */
+const charged = (over: Partial<BouncerSpec> = {}): BouncerSpec =>
+  spec({ hours: BOUNCER_HOURS, ...over });
 
 /** A ball at `pos` moving with `vel`, base speed 250 like a red. */
 const ball = (pos: { x: number; y: number }, vel: { x: number; y: number }, baseSpeed = 250): Ball => ({
@@ -149,7 +162,7 @@ describe("the ceiling, which is the difference between a mechanic and a bug", ()
   });
 });
 
-describe("it redirects a ball it cannot speed up, and never brakes one", () => {
+describe("a spent bumper redirects a ball it cannot speed up, and never brakes one", () => {
   it("leaves a launcher shot at its own speed", () => {
     // A launcher can put a ball at 3x base, above this ceiling. Slowing it would
     // make the launcher's whole wager - "the speed is permanent" - quietly false.
@@ -263,17 +276,81 @@ describe("the bank is authored, and an empty one is still a bumper", () => {
   // against the real payment path. Re-implementing the decrement here would be
   // a second copy of the one rule, and it would agree with a broken first copy.
   it("starts with the authored hours", () => {
-    expect(spec().hours).toBe(BOUNCER_HOURS);
-    expect(spec({ hours: 2 }).hours).toBe(2);
+    expect(charged().hours).toBe(BOUNCER_HOURS);
+    expect(charged({ hours: 2 }).hours).toBe(2);
   });
 
-  it("still kicks at full strength when its bank is empty", () => {
+  it("still bounces when its bank is empty, and only then kicks", () => {
     // A spent bumper is furniture that happened to be worth something. If it
-    // stopped bouncing, running one dry would silently change the board.
-    const rich = bouncerKick(ball({ x: 100, y: 0 }, { x: -200, y: 0 }), spec({ hours: 5 }));
+    // stopped bouncing, running one dry would silently change the board - and
+    // running one dry is what turns it from a brake into a kick.
+    const rich = bouncerKick(ball({ x: 100, y: 0 }, { x: -200, y: 0 }), charged());
     const broke = bouncerKick(ball({ x: 100, y: 0 }, { x: -200, y: 0 }), spec({ hours: 0 }));
-    expect(broke.speed).toBeCloseTo(rich.speed, 9);
-    expect(broke.velocity).toEqual(rich.velocity);
     expect(broke.speed).toBeCloseTo(200 * BOUNCER_KICK, 6);
+    expect(rich.speed).toBeLessThan(200);
+    // Both still fire the ball outward: the bank changes the speed, never the
+    // direction, so a drained cluster plays the same shapes.
+    expect(Math.sign(broke.velocity.x)).toBe(Math.sign(rich.velocity.x));
+    expect(broke.velocity.y).toBeCloseTo(0, 9);
+    expect(rich.velocity.y).toBeCloseTo(0, 9);
+  });
+});
+
+/**
+ * The brake, which is the charged half of the same object.
+ *
+ * The reason it exists: nothing else on the board takes speed off a ball. The
+ * launcher and the Rubber Band both make a ball permanently faster, bumpers
+ * used to only ever add, and a fast ball is a ball that is hard to fence. This
+ * is the board's own answer, and it is not free - every brake spends an hour
+ * the player would otherwise have banked.
+ */
+describe("a charged bumper brakes instead of kicking", () => {
+  it("takes five per cent off, rather than adding a quarter", () => {
+    const b = ball({ x: 100, y: 0 }, { x: -200, y: 0 });
+    expect(bouncerKick(b, charged()).speed).toBeCloseTo(200 * BOUNCER_SLOW, 6);
+  });
+
+  it("brakes a launcher shot that a spent bumper would leave alone", () => {
+    // The one case the old rule refused outright. It is allowed now because the
+    // bumper pays for it out of its own bank.
+    const fast = () => ball({ x: 100, y: 0 }, { x: 750, y: 0 });
+    expect(bouncerKick(fast(), spec()).speed).toBeCloseTo(750, 6);
+    expect(bouncerKick(fast(), charged()).speed).toBeCloseTo(750 * BOUNCER_SLOW, 6);
+  });
+
+  it("still fires the ball outward, so it is a bumper and not a wall", () => {
+    const b = ball({ x: 0, y: 100 }, { x: 300, y: 0 });
+    const hit = bouncerKick(b, charged());
+    expect(hit.velocity.y).toBeGreaterThan(0);
+    expect(hit.velocity.x).toBeCloseTo(0, 6);
+  });
+
+  it("cannot empty a whole bank into a standstill", () => {
+    // Five hours is five brakes, so one bumper's entire bank is 0.95^5. A ball
+    // that could be parked to a stop would be a way to break a map rather than
+    // a way to tame one.
+    let b = ball({ x: 100, y: 0 }, { x: -250, y: 0 });
+    for (let i = 0; i < BOUNCER_HOURS; i++) {
+      const hit = bouncerKick(b, charged());
+      b = ball({ x: 100, y: 0 }, { x: -hit.speed, y: 0 });
+    }
+    expect(b.speed).toBeCloseTo(250 * Math.pow(BOUNCER_SLOW, BOUNCER_HOURS), 4);
+    expect(b.speed).toBeGreaterThan(250 * 0.7);
+  });
+
+  it("never brakes a ball below its own minimum speed", () => {
+    // The engine floors every ball at minimumSpeed anyway, but the returned
+    // speed is what the caller writes on and what the flash is scaled from, so
+    // it has to be true here too rather than corrected a step later.
+    const b = ball({ x: 100, y: 0 }, { x: -200, y: 0 });
+    (b as unknown as { minimumSpeed: number }).minimumSpeed = 195;
+    expect(bouncerKick(b, charged()).speed).toBe(195);
+  });
+
+  it("flashes for a brake as brightly as for a kick", () => {
+    const b = () => ball({ x: 100, y: 0 }, { x: -200, y: 0 });
+    expect(bouncerKick(b(), charged()).intensity).toBeCloseTo(1, 6);
+    expect(bouncerKick(b(), spec()).intensity).toBeCloseTo(1, 6);
   });
 });

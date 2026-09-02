@@ -413,8 +413,8 @@
       },
       "bouncerHours": {
         "title": "Horas de parachoques",
-        "body": "Cada parachoques guarda un pequeño fondo de horas extra y paga una hora cada vez que una bola lo golpea, hasta agotarse: verde mientras le queden horas, rojo cuando se vacía. Sigue rebotando en cualquier caso. Estas horas se pagan por encima del tope del mapa, así que cada golpe vale exactamente una hora.",
-        "tip": "Es la recompensa por NO correr. Terminar pronto paga el eje de Ritmo, y un parachoques lleno te paga por dejar una bola en juego un poco más; un mapa con varios te obliga a elegir qué persigues."
+        "body": "Cada parachoques guarda un pequeño fondo de horas extra y paga una hora cada vez que una bola lo golpea, hasta agotarse: verde mientras le queden horas, rojo cuando se vacía. Uno verde también quita un 5% de velocidad a la bola, así que es el freno del propio tablero para una bola demasiado rápida. Uno rojo no tiene horas con las que pagar y en su lugar la impulsa, acelerándola. Estas horas se pagan por encima del tope del mapa, así que cada golpe vale exactamente una hora.",
+        "tip": "Es la recompensa por NO correr, y la decisión es para qué lo usas: cada frenada es una hora que no guardaste. Vacía un grupo por las horas y se convierte en un grupo que lanza tus bolas por todas partes."
       },
       "breakBonus": {
         "title": "Bono de demolición",
